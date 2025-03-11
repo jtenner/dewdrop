@@ -1,0 +1,72 @@
+[
+  [
+    "RPN should handle groups",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should perform binary operations",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should perform order of operations",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should perform right_unary operations",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should perform unary operations",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should prioritize left_unary operations over binary operations",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should prioritize right_unary operations",
+    {
+      "timestamp": "1741724698827.0",
+      "success": true
+    }
+  ],
+  [
+    "RPN should prioritize right_unary operations over left_unary operations",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ],
+  [
+    "Token Kinds should match int tokens",
+    {
+      "timestamp": "1741626370792.0",
+      "success": false
+    }
+  ],
+  [
+    "Token Kinds should match tokens",
+    {
+      "timestamp": "1741724860156.0",
+      "success": true
+    }
+  ]
+]
