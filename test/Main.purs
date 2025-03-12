@@ -11,7 +11,7 @@ import Data.Show (class Show)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Error)
-import Lexer (TokenKind(..), lex_token)
+import Lexer (Token(..), TokenKind(..), lex_token, tokenize)
 import Prelude (Unit, discard, (*), (+), (-))
 import RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Test.Spec (describe, it)
@@ -32,42 +32,88 @@ main = runSpecAndExitProcess [consoleReporter] do
   describe "Token Kinds" do
     it "should match tokens" do
       -- TokenKindPubKeyword
-      shouldEqual (lex_token (to_chars "pub") 0) (Just (Tuple TokenKindPubKeyword 3))
+      shouldEqual (lex_token (to_chars "pub") 0) (Just (Tuple TokenKindPubKeyword 3)) -- to_chars "pub"
       -- TokenKindFnKeyword
-      shouldEqual (lex_token (to_chars "fn") 0) (Just (Tuple TokenKindFnKeyword 2))
+      shouldEqual (lex_token (to_chars "fn") 0) (Just (Tuple TokenKindFnKeyword 2)) -- to_chars "fn"
       -- TokenKindWhenKeyword
-      shouldEqual (lex_token (to_chars "when") 0) (Just (Tuple TokenKindWhenKeyword 4))
+      shouldEqual (lex_token (to_chars "when") 0) (Just (Tuple TokenKindWhenKeyword 4)) -- to_chars "when"
       -- TokenKindElseKeyword
-      shouldEqual (lex_token (to_chars "else") 0) (Just (Tuple TokenKindElseKeyword 4))
+      shouldEqual (lex_token (to_chars "else") 0) (Just (Tuple TokenKindElseKeyword 4)) -- to_chars "else"
       
       -- TokenKindNameIdentifier String
-      shouldEqual (lex_token (to_chars "abc") 0) (Just (Tuple (TokenKindNameIdentifier "abc") 3))
-      shouldEqual (lex_token (to_chars "_") 0) (Just (Tuple (TokenKindNameIdentifier "_") 1))
-      shouldEqual (lex_token (to_chars "a_b_c_123") 0) (Just (Tuple (TokenKindNameIdentifier "a_b_c_123") 9))
+      shouldEqual (lex_token (to_chars "abc") 0) (Just (Tuple (TokenKindNameIdentifier "abc") 3)) -- to_chars "abc"
+      shouldEqual (lex_token (to_chars "_") 0) (Just (Tuple (TokenKindNameIdentifier "_") 1)) -- to_chars "_"
+      shouldEqual (lex_token (to_chars "a_b_c_123") 0) (Just (Tuple (TokenKindNameIdentifier "a_b_c_123") 9)) -- to_chars "a_b_c_123"
       -- TokenKindInt Int
-      shouldEqual (lex_token (to_chars "1") 0) (Just (Tuple (TokenKindInt 1) 1))
-      shouldEqual (lex_token (to_chars "12") 0) (Just (Tuple (TokenKindInt 12) 2))
+      shouldEqual (lex_token (to_chars "1") 0) (Just (Tuple (TokenKindInt 1) 1)) -- to_chars "1"
+      shouldEqual (lex_token (to_chars "12") 0) (Just (Tuple (TokenKindInt 12) 2)) -- to_chars "12"
       
       -- TokenKindLParen
-      shouldEqual (lex_token (to_chars "(") 0) (Just (Tuple TokenKindLParen 1))
+      shouldEqual (lex_token (to_chars "(") 0) (Just (Tuple TokenKindLParen 1)) -- to_chars "("
       -- TokenKindRParen
-      shouldEqual (lex_token (to_chars ")") 0) (Just (Tuple TokenKindRParen 1))
+      shouldEqual (lex_token (to_chars ")") 0) (Just (Tuple TokenKindRParen 1)) -- to_chars ")"
       -- TokenKindLBrace
-      shouldEqual (lex_token (to_chars "{") 0) (Just (Tuple TokenKindLBrace 1))
+      shouldEqual (lex_token (to_chars "{") 0) (Just (Tuple TokenKindLBrace 1)) -- to_chars "{"
       -- TokenKindRBrace
-      shouldEqual (lex_token (to_chars "}") 0) (Just (Tuple TokenKindRBrace 1))
+      shouldEqual (lex_token (to_chars "}") 0) (Just (Tuple TokenKindRBrace 1)) -- to_chars "}"
       -- TokenKindEqualsEquals
-      shouldEqual (lex_token (to_chars "==") 0) (Just (Tuple TokenKindEqualsEquals 2))
+      shouldEqual (lex_token (to_chars "==") 0) (Just (Tuple TokenKindEqualsEquals 2)) -- to_chars "=="
       -- TokenKindPlus
-      shouldEqual (lex_token (to_chars "+") 0) (Just (Tuple TokenKindPlus 1))
+      shouldEqual (lex_token (to_chars "+") 0) (Just (Tuple TokenKindPlus 1)) -- to_chars "+"
       -- TokenKindMinus
-      shouldEqual (lex_token (to_chars "-") 0) (Just (Tuple TokenKindMinus 1))
+      shouldEqual (lex_token (to_chars "-") 0) (Just (Tuple TokenKindMinus 1)) -- to_chars "-"
       -- TokenKindRArrow
-      shouldEqual (lex_token (to_chars "->") 0) (Just (Tuple TokenKindRArrow 2))
+      shouldEqual (lex_token (to_chars "->") 0) (Just (Tuple TokenKindRArrow 2)) -- to_chars "->"
       -- TokenKindEOF
-      shouldEqual (lex_token (to_chars "") 0) (Just (Tuple TokenKindEOF 0))
-      shouldEqual (lex_token (to_chars "123") 3) (Just (Tuple TokenKindEOF 3))
+      shouldEqual (lex_token (to_chars "") 0) (Just (Tuple TokenKindEOF 0)) -- to_chars ""
+      shouldEqual (lex_token (to_chars "123") 3) (Just (Tuple TokenKindEOF 3)) -- to_chars "123"
+      -- TokenKindWhiteSpace
+      shouldEqual (lex_token (to_chars " \t\r") 0) (Just (Tuple TokenKindWhiteSpace 3)) -- to_chars " \t\r"
+      -- TokenKindNewLine
+      shouldEqual (lex_token (to_chars "\n") 0) (Just (Tuple TokenKindNewLine 1)) -- to_chars "\n"
 
+    it "should generate an array of tokens" do
+      let text = """
+        pub
+        fn
+        when
+        else
+        abc
+        _
+        a_b_c_123
+        1
+        12
+        (
+        )
+        {
+        }
+        ==
+        +
+        -
+        ->
+
+        123
+        """
+      shouldEqual (tokenize text true) [ Token TokenKindPubKeyword 9
+      , Token TokenKindFnKeyword 21
+      , Token TokenKindWhenKeyword 32
+      , Token TokenKindElseKeyword 45
+      , Token (TokenKindNameIdentifier "abc") 58
+      , Token (TokenKindNameIdentifier "_") 70
+      , Token (TokenKindNameIdentifier "a_b_c_123") 80
+      , Token (TokenKindInt 1) 98
+      , Token (TokenKindInt 12) 108
+      , Token TokenKindLParen 119
+      , Token TokenKindRParen 129
+      , Token TokenKindLBrace 139
+      , Token TokenKindRBrace 149
+      , Token TokenKindEqualsEquals 159
+      , Token TokenKindPlus 170
+      , Token TokenKindMinus 180
+      , Token TokenKindRArrow 190
+      , Token (TokenKindInt 123) 202
+      , Token TokenKindEOF 214
+      ]
 
   let add = binary 5 false \x y -> x + y
   let sub = binary 5 false \x y -> x - y

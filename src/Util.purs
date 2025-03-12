@@ -13,6 +13,8 @@ module Util
   , is_alpha_num
   , is_between
   , is_char
+  , is_colon
+  , is_comma
   , is_digit
   , is_equals
   , is_int_start
@@ -128,6 +130,11 @@ is_lbrace :: Char -> Boolean
 is_lbrace = is_char '{'
 is_rbrace :: Char -> Boolean
 is_rbrace = is_char '}'
+is_comma :: Char -> Boolean
+is_comma = is_char ','
+is_colon :: Char -> Boolean
+is_colon = is_char ':'
+
 is_name_identifier_start :: Char -> Boolean
 is_name_identifier_start = is_underscore +| is_lower
 is_name_identifier_continue :: Char -> Boolean

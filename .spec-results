@@ -2,42 +2,42 @@
   [
     "RPN should handle groups",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
   [
     "RPN should perform binary operations",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
   [
     "RPN should perform order of operations",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
   [
     "RPN should perform right_unary operations",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
   [
     "RPN should perform unary operations",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
   [
     "RPN should prioritize left_unary operations over binary operations",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
@@ -51,7 +51,14 @@
   [
     "RPN should prioritize right_unary operations over left_unary operations",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
+      "success": true
+    }
+  ],
+  [
+    "Token Kinds should generate an array of tokens",
+    {
+      "timestamp": "1741790844060.0",
       "success": true
     }
   ],
@@ -65,8 +72,15 @@
   [
     "Token Kinds should match tokens",
     {
-      "timestamp": "1741724860156.0",
+      "timestamp": "1741790844060.0",
       "success": true
+    }
+  ],
+  [
+    "should generate an array of tokens",
+    {
+      "timestamp": "1741790333304.0",
+      "success": false
     }
   ]
 ]
