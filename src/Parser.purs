@@ -1,12 +1,48 @@
-module Parser where
+module Parser
+  ( (++->)
+  , (+=)
+  , (+|)
+  , (<-++)
+  , Expr(..)
+  , ExprKind(..)
+  , FnParam(..)
+  , Module(..)
+  , ModuleDeclaration(..)
+  , ModuleDeclarationKind(..)
+  , ModuleFn(..)
+  , NameIdentifier(..)
+  , Parser
+  , ParserResult
+  , TypeExpr(..)
+  , TypeExprKind(..)
+  , TypeIdentifier(..)
+  , WhenArm(..)
+  , expect
+  , expect_colon
+  , expect_name_identifier
+  , expect_type_identifier
+  , parse
+  , parse_declaration
+  , parse_fn_param
+  , parse_many
+  , parse_many_seperated
+  , parse_map
+  , parse_module
+  , parse_optional
+  , parse_otherwise
+  , parse_take_left
+  , parse_take_right
+  , parse_type_expr
+  )
+  where
 
-import Data.Array
-import Data.Maybe
-import Data.Tuple
+import Data.Array (length, snoc, (!!))
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Tuple (Tuple(..))
 import Prelude
 
-import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_pub_keyword, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
-import RPN (RPN, binary, unary, group, end_group, finalize, rpn, (++), (+.), (+.?), (++?))
+import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import RPN (Operator, RPN, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
 --   when n == 0 -> 0
@@ -14,11 +50,59 @@ import RPN (RPN, binary, unary, group, end_group, finalize, rpn, (++), (+.), (+.
 --     else -> fib(n - 1) + fib(n - 2)
 -- }
 
--- All the different operators in the example for now
-data Operator = EqualsOperator
-              | AddOperator
-              | SubOperator
-              | CallOperator
+-- grouping_precedence :: Int
+-- grouping_precedence = 18
+
+-- Ops: "." "()"
+-- access_and_call_precedence :: Int
+-- access_and_call_precedence = 17
+
+-- new_precedence = 16
+
+-- postfix_precedence = 15
+
+-- Ops: "~" "!" "-"
+-- prefix_precedence = 14
+
+-- Ops: "**"
+-- exponentiation_precedence = 13
+
+-- Ops: "*" "/" "%"
+-- multiplicative_precedence = 12
+
+-- Ops: "+" "-"
+additive_precedence :: Int
+additive_precedence = 11
+
+-- Ops: "<<" ">>"
+-- shift_precedence = 10
+
+-- Ops: "<" "<=" ">" ">="
+relational_precedence :: Int
+relational_precedence = 9
+
+-- Ops: "==" "!="
+equality_precedence :: Int
+equality_precedence = 8
+
+-- Ops: "&"
+-- and_precedence = 7
+
+-- Ops: "^"
+-- xor_precedence = 6
+
+-- Ops: "|"
+-- or_precedence = 5
+
+-- Ops: "&&"
+-- logical_and_precedence = 4
+
+-- Ops: "||" "??"
+-- logical_or_precedence = 3
+
+-- Ops: "is"
+-- is_precedence = 2
+
 
 data NameIdentifier = NameIdentifier String
 data TypeIdentifier = TypeIdentifier String
@@ -27,9 +111,9 @@ data Module = Module (Array ModuleDeclaration)
 
 data ModuleDeclaration = ModuleDeclaration ModuleDeclarationKind Int
 
-data ModuleDeclarationKind = FnDeclarationKind Boolean (Maybe NameIdentifier) ModuleFn
+data ModuleDeclarationKind = FnDeclarationKind Boolean NameIdentifier ModuleFn
 
-data ModuleFn = ModuleFn (Array FnParam) (Maybe TypeExpr) Expr
+data ModuleFn = ModuleFn (Maybe NameIdentifier) (Array FnParam) (Maybe TypeExpr) Expr
 
 data FnParam = FnParam NameIdentifier (Maybe TypeExpr)
 
@@ -46,6 +130,10 @@ data ExprKind = WhenExpr Expr (Array WhenArm) (Maybe Expr)
               | CallExpr Expr (Array Expr)
               | AddExpr Expr Expr
               | SubExpr Expr Expr
+              | GreaterThanExpr Expr Expr
+              | LessThanExpr Expr Expr
+              | GreaterThanEqualsExpr Expr Expr
+              | LessThanEqualsExpr Expr Expr
 
 data WhenArm = WhenArm Expr Expr
 
@@ -112,51 +200,63 @@ expect p = \tokens index -> case (tokens !! index) of
 
 -- parsers
 parse :: String -> Maybe Module
-parse module_text = parse_module (tokenize module_text true) 0
+parse module_text = do
+  Tuple mod _ <- parse_module (tokenize module_text true) 0
+  Just mod
 
-parse_module :: (Array Token) -> Int -> Maybe Module
+parse_module :: (Array Token) -> Int -> ParserResult Module
 parse_module tokens index = do
-  Tuple declarations next_index <- do_parse_many parse_declaration tokens index
-  case (tokens !! index) of
-    Just (Token TokenKindEOF _) -> Just (Tuple (Module declarations next_index))
+  Tuple declarations next_index <- parse_many parse_declaration tokens index
+  case (tokens !! next_index) of
+    Just (Token TokenKindEOF _) -> Just (Tuple (Module declarations) next_index)
     _ -> Nothing
 
-parse_declaration :: Parser ModuleDeclaration
-parse_declaration tokens index =
-  case expect is_token_kind_pub_keyword tokens index of
-    Nothing -> do_parse_declaration tokens index
-    Just (Tuple _ next_index) -> do_parse_pub_declaration tokens next_index
+parse_declaration :: (Array Token) -> Int -> ParserResult ModuleDeclaration
+parse_declaration tokens index = case (tokens !! index) of
+  Just (Token TokenKindPubKeyword pos) -> do_parse_pub_declaration pos tokens (index + 1)
+  Just (Token _ pos) -> do_parse_declaration pos tokens index
+  Nothing -> Nothing
 
-do_parse_declaration :: (Array Token) -> Int -> Parser ModuleDeclaration
+do_parse_declaration :: Int -> (Array Token) -> Int -> ParserResult ModuleDeclaration
 -- Imports
 -- Consts
 -- Fns
 -- Types
-do_parse_declaration _ _ = Nothing
+do_parse_declaration _ _ _ = Nothing
 
-do_parse_pub_declaration :: Parser ModuleDeclaration
+do_parse_pub_declaration :: Int -> (Array Token) -> Int -> ParserResult ModuleDeclaration
 -- Consts
 -- Fns
 -- (do_parse_const_declaration +| do_parse_type_declaration +| do_parse_fn_declaration)
-do_parse_pub_declaration = do_parse_fn_declaration += \declaration_kind -> case declaration_kind of
-  FnDeclarationKind false name fn -> ModuleDeclaration (FnDeclarationKind true name fn) 0
-  a -> ModuleDeclaration a
 
-do_parse_fn_declaration :: Parser ModuleDeclarationKind
-do_parse_fn_declaration tokens index = do
+do_parse_pub_declaration pos tokens index = do
+  -- TODO: Implement the following: -- Tuple fn next_index <- (do_parse_fn +| do_parse_type_declaration +| do_parse_fn_declaration) tokens index
+  Tuple fn next_index <- (do_parse_fn) tokens index
+  case fn of
+    ModuleFn (Just name) args return_type body -> Just (Tuple (ModuleDeclaration (FnDeclarationKind true name (ModuleFn (Just name) args return_type body)) pos) next_index)
+    _ -> Nothing
+
+do_parse_fn :: Parser ModuleFn
+do_parse_fn tokens index = do
   Tuple _ next_index <- (expect is_token_kind_fn_keyword) tokens index
-  Tuple name next_index_2 <- expect_name_identifier tokens next_index
+  Tuple maybe_name next_index_2 <- parse_optional expect_name_identifier tokens next_index
   Tuple _ next_index_3 <- expect is_token_kind_l_paren tokens next_index_2
   Tuple args next_index_4 <- parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_comma)) tokens next_index_3
   Tuple _ next_index_5 <- expect is_token_kind_r_paren tokens next_index_4
   Tuple return_type next_index_6 <- parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
   Tuple expr next_index_7 <- parse_expr tokens next_index_6
   let args' = fromMaybe [] args
-  Just (Tuple (FnDeclarationKind false (Just name) (ModuleFn args' return_type expr)) next_index_7)
+  let name = maybe Nothing (\(Tuple fn_name _) -> Just fn_name) maybe_name
+  Just (Tuple (ModuleFn name args' return_type expr) next_index_7)
 
-expect_name_identifier :: Parser NameIdentifier
+expect_name_identifier :: Parser (Tuple NameIdentifier Int)
 expect_name_identifier tokens index = case expect is_token_kind_name_identifier tokens index of
-  Just (Tuple (Token (TokenKindNameIdentifier name) pos) next_index) -> Just (Tuple (NameIdentifier name) next_index)
+  Just (Tuple (Token (TokenKindNameIdentifier name) pos) next_index) -> Just (Tuple (Tuple (NameIdentifier name) pos) next_index)
+  _ -> Nothing
+
+expect_type_identifier :: Parser (Tuple TypeIdentifier Int)
+expect_type_identifier tokens index = case expect is_token_kind_type_identifier tokens index of
+  Just (Tuple (Token (TokenKindTypeIdentifier name) pos) next_index) -> Just (Tuple (Tuple (TypeIdentifier name) pos) next_index)
   _ -> Nothing
 
 expect_colon :: Parser Token
@@ -164,15 +264,15 @@ expect_colon tokens index = expect is_token_kind_colon tokens index
 
 parse_fn_param :: Parser FnParam
 parse_fn_param tokens index = do
-  Tuple name next_index <- expect_name_identifier tokens index
+  Tuple (Tuple name _) next_index <- expect_name_identifier tokens index
   Tuple type_expr next_index_2 <- parse_optional (expect_colon ++-> parse_type_expr) tokens next_index
   Just (Tuple (FnParam name type_expr) next_index_2)
 
 parse_type_expr :: Parser TypeExpr
-parse_type_expr tokens index = case expect is_token_kind_type_identifier tokens index of
-  Just (Tuple (Token (TokenKindTypeIdentifier type_name) pos) next_index) -> Just (Tuple (TypeExpr (NamedTypeExpr (TypeIdentifier type_name)) pos) next_index)
-  _ -> Nothing
-
+parse_type_expr tokens index = do
+  Tuple (Tuple name pos) next_index <- expect_type_identifier tokens index
+  Just (Tuple (TypeExpr (NamedTypeExpr name) pos) next_index) 
+  
 parse_expr :: Parser Expr
 parse_expr tokens index = do
   Tuple rpn' next_index <- do_parse_expression_unary rpn tokens index
@@ -186,20 +286,69 @@ do_parse_expression_unary rpn' tokens index = case tokens !! index of
   Just (Token (TokenKindInt val) pos) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
   Just (Token (TokenKindNameIdentifier name) pos) -> 
     do_parse_expression_binary (rpn' ++ Expr (NameExpr (NameIdentifier name)) pos) tokens (index + 1)
+
+  -- LParen in unary position is a group
   Just (Token TokenKindLParen _) -> do
     rpn'' <- rpn' +. group
     do_parse_expression_unary rpn'' tokens (index + 1)
   _ -> Nothing
 
+add_op :: Int -> Operator Expr
+add_op pos = binary additive_precedence false \x y -> Expr (AddExpr x y) pos
+
+sub_op :: Int -> Operator Expr
+sub_op pos = binary additive_precedence false \x y -> Expr (SubExpr x y) pos
+
+equals_op :: Int -> Operator Expr
+equals_op pos = binary equality_precedence false \x y -> Expr (EqualsExpr x y) pos
+
+call_op :: Int -> Array Expr -> Operator Expr
+call_op pos args = right_unary \x -> Expr (CallExpr x args) pos
+
+greater_than_op :: Int -> Operator Expr
+greater_than_op pos = binary relational_precedence false \x y -> Expr (GreaterThanExpr x y) pos
+
+greater_than_equals_op :: Int -> Operator Expr
+greater_than_equals_op pos = binary relational_precedence false \x y -> Expr (GreaterThanEqualsExpr x y) pos
+
+less_than_op :: Int -> Operator Expr
+less_than_op pos = binary relational_precedence false \x y -> Expr (LessThanExpr x y) pos
+
+less_than_equals_op :: Int -> Operator Expr
+less_than_equals_op pos = binary relational_precedence false \x y -> Expr (LessThanEqualsExpr x y) pos
+
 -- find the next binary operator
 do_parse_expression_binary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_binary rpn' tokens index = case tokens !! index of
   Just (Token TokenKindPlus pos) -> do
-    rpn'' <- rpn' +. (binary 5 false \x y -> Expr (AddExpr x y) pos)
+    rpn'' <- rpn' +. (add_op pos)
     do_parse_expression_unary rpn'' tokens (index + 1)
   Just (Token TokenKindMinus pos) -> do
-    rpn'' <- rpn' +. (binary 5 false \x y -> Expr (SubExpr x y) pos)
+    rpn'' <- rpn' +. (sub_op pos)
     do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindEqualsEquals pos) -> do
+    rpn'' <- rpn' +. (equals_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindGreaterThan pos) -> do
+    rpn'' <- rpn' +. (greater_than_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindGreaterThanOrEqual pos) -> do
+    rpn'' <- rpn' +. (greater_than_equals_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindLessThan pos) -> do
+    rpn'' <- rpn' +. (less_than_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindLessThanOrEqual pos) -> do
+    rpn'' <- rpn' +. (less_than_equals_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+
+  -- LParen in binary position is actually a function call
+  Just (Token TokenKindLParen pos) -> do
+    Tuple exprs next_index <- parse_many parse_expr tokens (index + 1)
+    Tuple _ next_index_1 <- expect is_token_kind_r_paren tokens next_index
+    rpn'' <- rpn' +. call_op pos exprs
+    do_parse_expression_binary rpn'' tokens next_index_1
+
   Just (Token TokenKindRParen _) -> do
     rpn'' <- rpn' +. end_group
     Just (Tuple rpn'' index)

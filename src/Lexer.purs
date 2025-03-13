@@ -25,9 +25,11 @@ module Lexer
   , is_token_kind_type_identifier
   , is_token_kind_when_keyword
   , is_token_kind_white_space
+  , lex_colon
   , lex_comma
   , lex_eof
   , lex_equals_equals
+  , lex_greater_than_equals
   , lex_int
   , lex_l_brace
   , lex_l_paren
@@ -53,7 +55,7 @@ import Data.Array ((!!), snoc)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Util (Consumer, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
+import Util (Consumer, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_lcaret, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
 
 data Token = Token TokenKind Int
 
@@ -80,6 +82,10 @@ data TokenKind = TokenKindPubKeyword
                | TokenKindComma
                | TokenKindColon
                | TokenKindRArrow
+               | TokenKindGreaterThan
+               | TokenKindGreaterThanOrEqual
+               | TokenKindLessThan
+               | TokenKindLessThanOrEqual
                | TokenKindWhiteSpace
                | TokenKindNewLine
                | TokenKindEOF
@@ -242,6 +248,18 @@ lex_comma = lex_of (take is_comma) \_ -> TokenKindComma
 lex_colon :: Lexer
 lex_colon = lex_of (take is_colon) \_ -> TokenKindColon
 
+lex_greater_than_equals :: Lexer
+lex_greater_than_equals = lex_of (take is_rcaret ++ take is_equals) \_ -> TokenKindGreaterThanOrEqual
+
+lex_greater_than :: Lexer
+lex_greater_than = lex_of (take is_rcaret) \_ -> TokenKindGreaterThan
+
+lex_less_than_equals :: Lexer
+lex_less_than_equals = lex_of (take is_lcaret ++ take is_equals) \_ -> TokenKindLessThanOrEqual
+
+lex_less_than :: Lexer
+lex_less_than = lex_of (take is_lcaret) \_ -> TokenKindLessThan
+
 lex_eof :: Lexer
 lex_eof chars index = case chars !! index of
   Nothing -> Just (Tuple TokenKindEOF index)
@@ -253,6 +271,10 @@ lex_token  = lex_whitespace
           +& lex_type_identifier
           +& lex_newline
           +& lex_int
+          +& lex_greater_than_equals
+          +& lex_greater_than
+          +& lex_less_than_equals
+          +& lex_less_than
           +& lex_l_paren
           +& lex_r_paren
           +& lex_l_brace
@@ -306,6 +328,10 @@ instance showTokenKind :: Show TokenKind where
   show TokenKindComma = "TokenKindComma"
   show TokenKindColon = "TokenKindColon"
   show TokenKindRArrow = "TokenKindRArrow"
+  show TokenKindGreaterThan = "TokenKindGreaterThan"
+  show TokenKindGreaterThanOrEqual = "TokenKindGreaterThanOrEqual"
+  show TokenKindLessThan = "TokenKindLessThan"
+  show TokenKindLessThanOrEqual = "TokenKindLessThanOrEqual"
   show TokenKindEOF = "TokenKindEOF"
   show TokenKindWhiteSpace = "TokenKindWhiteSpace"
   show TokenKindNewLine = "TokenKindNewLine"

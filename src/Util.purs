@@ -19,6 +19,7 @@ module Util
   , is_equals
   , is_int_start
   , is_lbrace
+  , is_lcaret
   , is_lower
   , is_lparen
   , is_minus
@@ -42,9 +43,9 @@ module Util
   , take_int
   , take_many
   , take_name_identifier
-  , take_type_identifier
   , take_then
   , take_then_optional
+  , take_type_identifier
   , to_chars
   , union_char_predicate
   )
@@ -113,6 +114,8 @@ is_equals :: Char -> Boolean
 is_equals = is_char '='
 is_rcaret :: Char -> Boolean
 is_rcaret = is_char '>'
+is_lcaret :: Char -> Boolean
+is_lcaret = is_char '<'
 is_space :: Char -> Boolean
 is_space = is_char ' '
 is_newline :: Char -> Boolean
