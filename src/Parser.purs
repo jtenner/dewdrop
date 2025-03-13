@@ -5,10 +5,20 @@ import Data.Maybe
 import Data.Tuple
 import Prelude
 
-import Data.Array.ST.Iterator (next)
-import Data.Newtype (overF)
 import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_pub_keyword, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
-import RPN (rpn)
+import RPN (RPN, binary, unary, group, end_group, finalize, rpn, (++), (+.), (+.?), (++?))
+
+-- pub fn fib(n) {
+--   when n == 0 -> 0
+--     n == 1 -> 1
+--     else -> fib(n - 1) + fib(n - 2)
+-- }
+
+-- All the different operators in the example for now
+data Operator = EqualsOperator
+              | AddOperator
+              | SubOperator
+              | CallOperator
 
 data NameIdentifier = NameIdentifier String
 data TypeIdentifier = TypeIdentifier String
@@ -72,9 +82,9 @@ parse_optional parser = \chars index -> case parser chars index of
 
 infixl 4 parse_otherwise as +|
 parse_otherwise :: ∀ t. Parser t -> Parser t -> Parser t
-parse_otherwise p1 p2 tokens index = do
-  Nothing <- p1 tokens index
-  p2 tokens index
+parse_otherwise p1 p2 tokens index = case p1 tokens index of
+  Nothing -> p2 tokens index
+  result -> result
 
 infixr 3 parse_map as +=
 parse_map :: ∀ t u. Parser t -> (t -> u) -> Parser u
@@ -85,19 +95,19 @@ parse_map parser mapper = \tokens index -> case parser tokens index of
 infixl 4 parse_take_left as <-++
 parse_take_left :: ∀ t u. Parser t -> Parser u -> Parser t
 parse_take_left p1 p2 tokens index = do
-  Just (Tuple t next_index) <- p1 tokens index
-  Just (Tuple _ next_index_2) <- p2 tokens next_index
+  Tuple t next_index <- p1 tokens index
+  Tuple _ next_index_2 <- p2 tokens next_index
   Just (Tuple t next_index_2)
 
 infixl 4 parse_take_right as ++->
 parse_take_right :: ∀ t u. Parser t -> Parser u -> Parser u
 parse_take_right p1 p2 tokens index = do
-  Just (Tuple _ next_index) <- p1 tokens index
+  Tuple _ next_index <- p1 tokens index
   p2 tokens next_index
 
 expect :: (TokenKind -> Boolean) -> Parser Token
-expect p tokens index = case (tokens !! index) of
-  Just (Token kind pos) | p kind -> Just (Tuple (Token kind pos) index + 1)
+expect p = \tokens index -> case (tokens !! index) of
+  Just (Token kind pos) | p kind -> Just (Tuple (Token kind pos) (index + 1))
   _ -> Nothing
 
 -- parsers
@@ -116,11 +126,6 @@ parse_declaration tokens index =
   case expect is_token_kind_pub_keyword tokens index of
     Nothing -> do_parse_declaration tokens index
     Just (Tuple _ next_index) -> do_parse_pub_declaration tokens next_index
--- pub fn fib(n) {
---   when n == 0 -> 0
---     n == 1 -> 1
---     else -> fib(n - 1) + fib(n - 2)
--- }
 
 do_parse_declaration :: (Array Token) -> Int -> Parser ModuleDeclaration
 -- Imports
@@ -129,41 +134,73 @@ do_parse_declaration :: (Array Token) -> Int -> Parser ModuleDeclaration
 -- Types
 do_parse_declaration _ _ = Nothing
 
-do_parse_pub_declaration :: (Array Token) -> Int -> Parser ModuleDeclaration
+do_parse_pub_declaration :: Parser ModuleDeclaration
 -- Consts
 -- Fns
 -- (do_parse_const_declaration +| do_parse_type_declaration +| do_parse_fn_declaration)
 do_parse_pub_declaration = do_parse_fn_declaration += \declaration_kind -> case declaration_kind of
-  FnDeclarationKind false name fn -> FnDeclarationKind true name fn
-  a -> a
+  FnDeclarationKind false name fn -> ModuleDeclaration (FnDeclarationKind true name fn) 0
+  a -> ModuleDeclaration a
 
-do_parse_fn_declaration :: (Array Token) -> Int -> Parser ModuleDeclarationKind
+do_parse_fn_declaration :: Parser ModuleDeclarationKind
 do_parse_fn_declaration tokens index = do
-  Tuple _ next_index <- expect is_token_kind_fn_keyword tokens index
-  Tuple name next_index_2 <- expect is_token_kind_name_identifier tokens next_index
+  Tuple _ next_index <- (expect is_token_kind_fn_keyword) tokens index
+  Tuple name next_index_2 <- expect_name_identifier tokens next_index
   Tuple _ next_index_3 <- expect is_token_kind_l_paren tokens next_index_2
-  Tuple args next_index_4 <- parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_colon)) tokens next_index_3
+  Tuple args next_index_4 <- parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_comma)) tokens next_index_3
   Tuple _ next_index_5 <- expect is_token_kind_r_paren tokens next_index_4
   Tuple return_type next_index_6 <- parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
   Tuple expr next_index_7 <- parse_expr tokens next_index_6
-  Just (Tuple (FnDeclarationKind false name (ModuleFn args return_type expr)) next_index_7)
+  let args' = fromMaybe [] args
+  Just (Tuple (FnDeclarationKind false (Just name) (ModuleFn args' return_type expr)) next_index_7)
+
+expect_name_identifier :: Parser NameIdentifier
+expect_name_identifier tokens index = case expect is_token_kind_name_identifier tokens index of
+  Just (Tuple (Token (TokenKindNameIdentifier name) pos) next_index) -> Just (Tuple (NameIdentifier name) next_index)
+  _ -> Nothing
+
+expect_colon :: Parser Token
+expect_colon tokens index = expect is_token_kind_colon tokens index
 
 parse_fn_param :: Parser FnParam
 parse_fn_param tokens index = do
-  Tuple name next_index <- expect is_token_kind_name_identifier tokens index
-  Tuple type_expr next_index_2 <- parse_optional ((expect is_token_kind_colon) ++-> parse_type_expr) tokens next_index
+  Tuple name next_index <- expect_name_identifier tokens index
+  Tuple type_expr next_index_2 <- parse_optional (expect_colon ++-> parse_type_expr) tokens next_index
   Just (Tuple (FnParam name type_expr) next_index_2)
 
 parse_type_expr :: Parser TypeExpr
-parse_type_expr tokens index = do
-  Tuple type_name next_index <- expect is_token_kind_type_identifier tokens index
-  Just (Tuple (TypeExpr (NamedTypeExpr (TypeIdentifier type_name)) next_index))
+parse_type_expr tokens index = case expect is_token_kind_type_identifier tokens index of
+  Just (Tuple (Token (TokenKindTypeIdentifier type_name) pos) next_index) -> Just (Tuple (TypeExpr (NamedTypeExpr (TypeIdentifier type_name)) pos) next_index)
+  _ -> Nothing
 
 parse_expr :: Parser Expr
 parse_expr tokens index = do
   Tuple rpn' next_index <- do_parse_expression_unary rpn tokens index
-  Just expr <- finalize rpn'
+  expr <- finalize rpn'
   Just (Tuple expr next_index)
 
-do_parse_expression_unary :: RPN -> (Array Token) -> Int -> Parser RPN
-do_parse_expression_unary rpn' tokens index = 
+-- All the different operators in the example for now
+
+do_parse_expression_unary :: RPN Expr -> Parser (RPN Expr)
+do_parse_expression_unary rpn' tokens index = case tokens !! index of
+  Just (Token (TokenKindInt val) pos) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
+  Just (Token (TokenKindNameIdentifier name) pos) -> 
+    do_parse_expression_binary (rpn' ++ Expr (NameExpr (NameIdentifier name)) pos) tokens (index + 1)
+  Just (Token TokenKindLParen _) -> do
+    rpn'' <- rpn' +. group
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  _ -> Nothing
+
+-- find the next binary operator
+do_parse_expression_binary :: RPN Expr -> Parser (RPN Expr)
+do_parse_expression_binary rpn' tokens index = case tokens !! index of
+  Just (Token TokenKindPlus pos) -> do
+    rpn'' <- rpn' +. (binary 5 false \x y -> Expr (AddExpr x y) pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindMinus pos) -> do
+    rpn'' <- rpn' +. (binary 5 false \x y -> Expr (SubExpr x y) pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindRParen _) -> do
+    rpn'' <- rpn' +. end_group
+    Just (Tuple rpn'' index)
+  _ -> Just (Tuple rpn' index)

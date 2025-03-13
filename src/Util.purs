@@ -32,14 +32,17 @@ module Util
   , is_rparen
   , is_space
   , is_tab
+  , is_type_identifier_continue
+  , is_type_identifier_start
   , is_underscore
   , is_upper
   , is_whitespace
   , str_char
   , take
-  , take_identifier
   , take_int
   , take_many
+  , take_name_identifier
+  , take_type_identifier
   , take_then
   , take_then_optional
   , to_chars
@@ -140,6 +143,12 @@ is_name_identifier_start = is_underscore +| is_lower
 is_name_identifier_continue :: Char -> Boolean
 is_name_identifier_continue = is_name_identifier_start +| is_digit
 
+is_type_identifier_start :: Char -> Boolean
+is_type_identifier_start = is_upper
+
+is_type_identifier_continue :: Char -> Boolean
+is_type_identifier_continue = is_alpha_num
+
 type Consumer = Array Char -> Int -> Maybe (Tuple String Int)
 
 take :: (Char -> Boolean) -> Consumer
@@ -175,8 +184,11 @@ take_then_optional a b arr index = do
 
 infixl 4 take_then_optional as ++?
 
-take_identifier :: Consumer
-take_identifier = take is_name_identifier_start ++? take_many is_name_identifier_continue
+take_name_identifier :: Consumer
+take_name_identifier = take is_name_identifier_start ++? take_many is_name_identifier_continue
+
+take_type_identifier :: Consumer
+take_type_identifier = take is_type_identifier_start ++? take_many is_type_identifier_continue
 
 take_int :: Consumer
 take_int = take is_int_start ++ take_many is_digit

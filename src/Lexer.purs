@@ -41,6 +41,7 @@ module Lexer
   , lex_r_brace
   , lex_r_paren
   , lex_token
+  , lex_type_identifier
   , lex_whitespace
   , tokenize
   )
@@ -52,7 +53,7 @@ import Data.Array ((!!), snoc)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Util (Consumer, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, take, take_identifier, take_many, to_chars, (++))
+import Util (Consumer, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
 
 data Token = Token TokenKind Int
 
@@ -67,6 +68,7 @@ data TokenKind = TokenKindPubKeyword
                | TokenKindWhenKeyword
                | TokenKindElseKeyword
                | TokenKindNameIdentifier String
+               | TokenKindTypeIdentifier String
                | TokenKindInt Int
                | TokenKindLParen
                | TokenKindRParen
@@ -104,7 +106,7 @@ is_token_kind_name_identifier kind = case kind of
   _ -> false
 is_token_kind_type_identifier :: TokenKind -> Boolean
 is_token_kind_type_identifier kind = case kind of
-  TokenKindNameIdentifier _ -> true
+  TokenKindTypeIdentifier _ -> true
   _ -> false
 is_token_kind_int :: TokenKind -> Boolean
 is_token_kind_int kind = case kind of
@@ -195,12 +197,15 @@ lex_newline :: Lexer
 lex_newline = lex_of (take is_newline) \_ -> TokenKindNewLine
 
 lex_name_identifier :: Lexer
-lex_name_identifier = lex_of take_identifier \name -> case name of
+lex_name_identifier = lex_of take_name_identifier \name -> case name of
   "pub" -> TokenKindPubKeyword
   "fn" -> TokenKindFnKeyword
   "when" -> TokenKindWhenKeyword
   "else" -> TokenKindElseKeyword
   id -> TokenKindNameIdentifier id
+
+lex_type_identifier :: Lexer
+lex_type_identifier = lex_of take_type_identifier \name -> TokenKindTypeIdentifier name
 
 lex_int :: Lexer
 lex_int = lex_of (take_many is_digit) \value -> case (Int.fromString value) of
@@ -245,6 +250,7 @@ lex_eof chars index = case chars !! index of
 lex_token :: Lexer
 lex_token  = lex_whitespace
           +& lex_name_identifier
+          +& lex_type_identifier
           +& lex_newline
           +& lex_int
           +& lex_l_paren
@@ -288,6 +294,7 @@ instance showTokenKind :: Show TokenKind where
   show TokenKindWhenKeyword = "TokenKindWhenKeyword"
   show TokenKindElseKeyword = "TokenKindElseKeyword"
   show (TokenKindNameIdentifier name) = "(TokenKindNameIdentifier " <> name <> ")"
+  show (TokenKindTypeIdentifier name) = "(TokenKindTypeIdentifier " <> name <> ")"
   show (TokenKindInt value) = "(TokenKindInt " <> show value <> ")"
   show TokenKindLParen = "TokenKindLParen"
   show TokenKindRParen = "TokenKindRParen"
