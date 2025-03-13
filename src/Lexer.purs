@@ -5,12 +5,14 @@ module Lexer
   , Token(..)
   , TokenKind(..)
   , combine_accumulator
+  , is_token_kind_asterisk
   , is_token_kind_colon
   , is_token_kind_comma
   , is_token_kind_else_keyword
   , is_token_kind_eof
   , is_token_kind_equals_equals
   , is_token_kind_fn_keyword
+  , is_token_kind_fslash
   , is_token_kind_int
   , is_token_kind_l_brace
   , is_token_kind_l_paren
@@ -25,10 +27,12 @@ module Lexer
   , is_token_kind_type_identifier
   , is_token_kind_when_keyword
   , is_token_kind_white_space
+  , lex_asterisk
   , lex_colon
   , lex_comma
   , lex_eof
   , lex_equals_equals
+  , lex_fslash
   , lex_greater_than_equals
   , lex_int
   , lex_l_brace
@@ -55,7 +59,7 @@ import Data.Array ((!!), snoc)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Util (Consumer, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_lcaret, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
+import Util (Consumer, is_fslash, is_asterisk, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_lcaret, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
 
 data Token = Token TokenKind Int
 
@@ -77,6 +81,8 @@ data TokenKind = TokenKindPubKeyword
                | TokenKindLBrace
                | TokenKindRBrace
                | TokenKindEqualsEquals
+               | TokenKindAsterisk
+               | TokenKindFSlash
                | TokenKindPlus
                | TokenKindMinus
                | TokenKindComma
@@ -145,6 +151,14 @@ is_token_kind_plus kind = case kind of
 is_token_kind_minus :: TokenKind -> Boolean
 is_token_kind_minus kind = case kind of
   TokenKindMinus -> true
+  _ -> false
+is_token_kind_asterisk :: TokenKind -> Boolean
+is_token_kind_asterisk kind = case kind of
+  TokenKindAsterisk -> true
+  _ -> false
+is_token_kind_fslash :: TokenKind -> Boolean
+is_token_kind_fslash kind = case kind of
+  TokenKindFSlash -> true
   _ -> false
 is_token_kind_r_arrow :: TokenKind -> Boolean
 is_token_kind_r_arrow kind = case kind of
@@ -242,6 +256,15 @@ lex_r_arrow = lex_of (take is_minus ++ take is_rcaret) \_ -> TokenKindRArrow
 lex_minus :: Lexer
 lex_minus = lex_of (take is_minus) \_ -> TokenKindMinus
 
+lex_asterisk_asterisk :: Lexer
+lex_asterisk_asterisk = lex_of (take is_asterisk ++ take is_asterisk) \_ -> TokenKindAsterisk
+
+lex_asterisk :: Lexer
+lex_asterisk = lex_of (take is_asterisk) \_ -> TokenKindAsterisk
+
+lex_fslash :: Lexer
+lex_fslash = lex_of (take is_fslash) \_ -> TokenKindFSlash
+
 lex_comma :: Lexer
 lex_comma = lex_of (take is_comma) \_ -> TokenKindComma
 
@@ -280,6 +303,9 @@ lex_token  = lex_whitespace
           +& lex_l_brace
           +& lex_r_brace
           +& lex_equals_equals
+          +& lex_asterisk_asterisk
+          +& lex_asterisk
+          +& lex_fslash
           +& lex_plus
           +& lex_r_arrow
           +& lex_minus
@@ -325,6 +351,8 @@ instance showTokenKind :: Show TokenKind where
   show TokenKindEqualsEquals = "TokenKindEqualsEquals"
   show TokenKindPlus = "TokenKindPlus"
   show TokenKindMinus = "TokenKindMinus"
+  show TokenKindAsterisk = "TokenKindAsterisk"
+  show TokenKindFSlash = "TokenKindFSlash"
   show TokenKindComma = "TokenKindComma"
   show TokenKindColon = "TokenKindColon"
   show TokenKindRArrow = "TokenKindRArrow"

@@ -23,6 +23,7 @@ module Parser
   , expect_type_identifier
   , parse
   , parse_declaration
+  , parse_expr
   , parse_fn_param
   , parse_many
   , parse_many_seperated
@@ -68,7 +69,8 @@ import RPN (Operator, RPN, binary, end_group, finalize, group, right_unary, rpn,
 -- exponentiation_precedence = 13
 
 -- Ops: "*" "/" "%"
--- multiplicative_precedence = 12
+multiplicative_precedence :: Int
+multiplicative_precedence = 12
 
 -- Ops: "+" "-"
 additive_precedence :: Int
@@ -130,6 +132,8 @@ data ExprKind = WhenExpr Expr (Array WhenArm) (Maybe Expr)
               | CallExpr Expr (Array Expr)
               | AddExpr Expr Expr
               | SubExpr Expr Expr
+              | MulExpr Expr Expr
+              | DivExpr Expr Expr
               | GreaterThanExpr Expr Expr
               | LessThanExpr Expr Expr
               | GreaterThanEqualsExpr Expr Expr
@@ -299,6 +303,12 @@ add_op pos = binary additive_precedence false \x y -> Expr (AddExpr x y) pos
 sub_op :: Int -> Operator Expr
 sub_op pos = binary additive_precedence false \x y -> Expr (SubExpr x y) pos
 
+mul_op :: Int -> Operator Expr
+mul_op pos = binary multiplicative_precedence false \x y -> Expr (MulExpr x y) pos
+
+div_op :: Int -> Operator Expr
+div_op pos = binary multiplicative_precedence false \x y -> Expr (DivExpr x y) pos
+
 equals_op :: Int -> Operator Expr
 equals_op pos = binary equality_precedence false \x y -> Expr (EqualsExpr x y) pos
 
@@ -325,6 +335,12 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
     do_parse_expression_unary rpn'' tokens (index + 1)
   Just (Token TokenKindMinus pos) -> do
     rpn'' <- rpn' +. (sub_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindAsterisk pos) -> do
+    rpn'' <- rpn' +. (mul_op pos)
+    do_parse_expression_unary rpn'' tokens (index + 1)
+  Just (Token TokenKindFSlash pos) -> do
+    rpn'' <- rpn' +. (div_op pos)
     do_parse_expression_unary rpn'' tokens (index + 1)
   Just (Token TokenKindEqualsEquals pos) -> do
     rpn'' <- rpn' +. (equals_op pos)
@@ -353,3 +369,27 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
     rpn'' <- rpn' +. end_group
     Just (Tuple rpn'' index)
   _ -> Just (Tuple rpn' index)
+
+instance show_expr :: Show Expr where
+  show (Expr kind _) = "(Expr " <> show kind <> ")"
+
+instance show_expr_kind :: Show ExprKind where
+  show (WhenExpr expr arms default_expr) = "(WhenExpr " <> show expr <> " " <> show arms <> " " <> show default_expr <> ")"
+  show (EqualsExpr left right) = show left <> " == " <> show right
+  show (IntExpr value) = show value
+  show (NameExpr name) = show name
+  show (CallExpr expr args) = "(CallExpr " <> show expr <> " " <> show args <> ")"
+  show (AddExpr left right) = show left <> " + " <> show right
+  show (SubExpr left right) = show left <> " - " <> show right
+  show (MulExpr left right) = show left <> " * " <> show right
+  show (DivExpr left right) = show left <> " / " <> show right
+  show (GreaterThanExpr left right) = show left <> " > " <> show right
+  show (LessThanExpr left right) = show left <> " < " <> show right
+  show (GreaterThanEqualsExpr left right) = show left <> " >= " <> show right
+  show (LessThanEqualsExpr left right) = show left <> " <= " <> show right
+
+instance show_when_arm :: Show WhenArm where
+  show (WhenArm condition expr) = "(WhenArm " <> show condition <> " " <> show expr <> ")"
+
+instance show_name_identifier :: Show NameIdentifier where
+  show (NameIdentifier name) = "(NameIdentifier " <> show name <> ")"
