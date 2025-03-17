@@ -2,6 +2,7 @@ module Util
   ( (+&)
   , (++)
   , (++?)
+  , (++|)
   , (+|)
   , (..)
   , Consumer
@@ -17,9 +18,9 @@ module Util
   , is_colon
   , is_comma
   , is_digit
+  , is_dot
   , is_equals
   , is_fslash
-  , is_int_start
   , is_lbrace
   , is_lcaret
   , is_lower
@@ -29,6 +30,7 @@ module Util
   , is_name_identifier_start
   , is_newline
   , is_plus
+  , is_positive_digit
   , is_rbrace
   , is_rcaret
   , is_return_char
@@ -40,11 +42,15 @@ module Util
   , is_underscore
   , is_upper
   , is_whitespace
+  , is_zero
   , str_char
   , take
   , take_int
   , take_many
+  , take_many_joined_by
+  , take_many_seperated
   , take_name_identifier
+  , take_or
   , take_then
   , take_then_optional
   , take_type_identifier
@@ -104,8 +110,8 @@ is_alpha :: Char -> Boolean
 is_alpha = is_lower +| is_upper
 is_digit :: Char -> Boolean
 is_digit = ('0' .. '9')
-is_int_start :: Char -> Boolean
-is_int_start = ('1' .. '9')
+is_positive_digit :: Char -> Boolean
+is_positive_digit = ('1' .. '9')
 is_alpha_num :: Char -> Boolean
 is_alpha_num = is_alpha +| is_digit
 is_plus :: Char -> Boolean
@@ -146,6 +152,10 @@ is_asterisk :: Char -> Boolean
 is_asterisk = is_char '*'
 is_fslash :: Char -> Boolean
 is_fslash = is_char '/'
+is_dot :: Char -> Boolean
+is_dot = is_char '.'
+is_zero :: Char -> Boolean
+is_zero = is_char '0'
 
 is_name_identifier_start :: Char -> Boolean
 is_name_identifier_start = is_underscore +| is_lower
@@ -176,14 +186,14 @@ do_take_many acc p arr index = case (arr !! index) of
   _ | acc == "" -> Nothing
   _ -> Just (Tuple acc index)
 
+infixl 4 take_then as ++
 take_then :: Consumer -> Consumer -> Consumer
 take_then a b arr index = do
   Tuple s index2 <- a arr index
   Tuple s2 index3 <- b arr index2
   Just (Tuple (s <> s2) index3)
 
-infixl 4 take_then as ++
-
+infixl 4 take_then_optional as ++?
 take_then_optional :: Consumer -> Consumer -> Consumer
 take_then_optional a b arr index = do
   Tuple s index2 <- a arr index
@@ -191,7 +201,11 @@ take_then_optional a b arr index = do
     Nothing -> Just (Tuple s index2)
     Just (Tuple s2 index3) -> Just (Tuple (s <> s2) index3)
 
-infixl 4 take_then_optional as ++?
+infixl 4 take_or as ++|
+take_or :: Consumer -> Consumer -> Consumer
+take_or a b arr index = case a arr index of
+  Nothing -> b arr index
+  result -> result
 
 take_name_identifier :: Consumer
 take_name_identifier = take is_name_identifier_start ++? take_many is_name_identifier_continue
@@ -200,4 +214,27 @@ take_type_identifier :: Consumer
 take_type_identifier = take is_type_identifier_start ++? take_many is_type_identifier_continue
 
 take_int :: Consumer
-take_int = take is_int_start ++ take_many is_digit
+take_int = take is_zero ++| (take is_positive_digit ++ take_many is_digit)
+
+take_many_seperated :: Consumer -> Consumer -> Consumer
+take_many_seperated consumer seperator = \arr index -> do_take_many_seperated "" consumer seperator arr index
+
+do_take_many_seperated :: String -> Consumer -> Consumer -> Consumer
+do_take_many_seperated acc consumer seperator arr index = case consumer arr index of
+  Nothing | acc == "" -> Nothing
+          | otherwise -> Just (Tuple acc index)
+  Just (Tuple s index2) -> case seperator arr index2 of
+    Nothing -> Just (Tuple (acc <> s) index2)
+    Just (Tuple _ index3) -> do_take_many_seperated (acc <> s) consumer seperator arr index3
+
+take_many_joined_by :: Consumer -> Consumer -> Consumer
+take_many_joined_by consumer seperator = \arr index -> case consumer arr index of
+  Nothing -> Nothing
+  Just (Tuple s index2) -> do_take_many_joined_by s consumer seperator arr index2
+
+do_take_many_joined_by :: String -> Consumer -> Consumer -> Array Char -> Int -> Maybe (Tuple String Int)
+do_take_many_joined_by acc consumer seperator arr index = case seperator arr index of
+  Nothing -> Just (Tuple acc index)
+  Just (Tuple sep index2) -> case consumer arr index2 of
+    Nothing -> Just (Tuple acc index2)
+    Just (Tuple s index3) -> do_take_many_joined_by (acc <> sep <> s) consumer seperator arr index3

@@ -23,6 +23,7 @@ to generate this file without the comments in this block.
   , "maybe"
   , "node-fs"
   , "node-process"
+  , "ordered-collections"
   , "prelude"
   , "spec"
   , "spec-node"
