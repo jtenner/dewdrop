@@ -37,12 +37,12 @@ module Parser
   )
   where
 
+import Prelude
+
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
-import Prelude
-
-import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import Lexer (Token(..), TokenKind(..), is_token_kind_else_keyword, is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import RPN (Operator, RPN, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
@@ -107,7 +107,20 @@ equality_precedence = 8
 
 
 data NameIdentifier = NameIdentifier String
+
+instance eq_name_identifier :: Eq NameIdentifier where
+  eq (NameIdentifier name) (NameIdentifier name') = name == name'
+
+instance ord_name_identifier :: Ord NameIdentifier where
+  compare (NameIdentifier name) (NameIdentifier name') = compare name name'
+
 data TypeIdentifier = TypeIdentifier String
+
+instance eq_type_identifier :: Eq TypeIdentifier where
+  eq (TypeIdentifier type_name) (TypeIdentifier type_name') = type_name == type_name'
+
+instance ord_type_identifier :: Ord TypeIdentifier where
+  compare (TypeIdentifier type_name) (TypeIdentifier type_name') = compare type_name type_name'
 
 data Module = Module (Array ModuleDeclaration)
 
@@ -125,7 +138,7 @@ data TypeExprKind = NamedTypeExpr TypeIdentifier
 
 data Expr = Expr ExprKind Int
 
-data ExprKind = WhenExpr Expr (Array WhenArm) (Maybe Expr)
+data ExprKind = WhenExpr (Array WhenArm) (Maybe Expr)
               | EqualsExpr Expr Expr
               | IntExpr Int
               | NameExpr NameIdentifier
@@ -295,7 +308,20 @@ do_parse_expression_unary rpn' tokens index = case tokens !! index of
   Just (Token TokenKindLParen _) -> do
     rpn'' <- rpn' +. group
     do_parse_expression_unary rpn'' tokens (index + 1)
+
+  Just (Token TokenKindWhenKeyword pos) -> do
+    Tuple arms index' <- parse_many parse_arm tokens (index + 1)
+    Tuple else_arm index'' <- parse_optional (expect is_token_kind_else_keyword ++-> parse_expr) tokens index'
+    let rpn'' = rpn' ++ Expr (WhenExpr arms else_arm) pos
+    do_parse_expression_binary rpn'' tokens index''
   _ -> Nothing
+
+parse_arm :: Parser WhenArm
+parse_arm tokens index = do
+  Tuple cond_expr index' <- parse_expr tokens index
+  Tuple _ index'' <- expect is_token_kind_r_arrow tokens index'
+  Tuple expr index''' <- parse_expr tokens index''
+  Just $ Tuple (WhenArm cond_expr expr) index'''
 
 add_op :: Int -> Operator Expr
 add_op pos = binary additive_precedence false \x y -> Expr (AddExpr x y) pos
@@ -374,7 +400,7 @@ instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"
 
 instance show_expr_kind :: Show ExprKind where
-  show (WhenExpr expr arms default_expr) = "(WhenExpr " <> show expr <> " " <> show arms <> " " <> show default_expr <> ")"
+  show (WhenExpr arms default_expr) = "(WhenExpr " <> show arms <> " " <> show default_expr <> ")"
   show (EqualsExpr left right) = show left <> " == " <> show right
   show (IntExpr value) = show value
   show (NameExpr name) = show name
