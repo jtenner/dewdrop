@@ -16,8 +16,8 @@ import Node.Buffer as Buffer
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync as FS
 import Node.Path as Path
-import Parser (Expr(..), ExprKind(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), NameIdentifier(..), TypeIdentifier(..), WhenArm(..), parse)
-import Prelude ((||), class Eq, class Ord, class Show, Ordering(..), Unit, bind, compare, pure, show, ($), (+), (<>), (==), (>))
+import Parser (Expr(..), ExprKind(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn, NameIdentifier(..), TypeIdentifier(..), WhenArm(..), parse)
+import Prelude (class Eq, class Ord, class Show, Ordering(..), Unit, bind, compare, pure, show, ($), (+), (<>), (==))
 import Record (merge)
 
 assert_maybe :: ∀ a. Maybe a -> Effect a
@@ -454,15 +454,20 @@ infer_expr_type context (Expr (CallExpr callee args) pos) = do
 
   Just $ Tuple return_type context''''
 
-infer_expr_type context (Expr (WhenExpr arms else_arm) pos) = do
-  let type_pos = Tuple context.module_id pos
-  Tuple arms_type context' <- do_infer_expr_arms_types context arms
-  -- Tuple else_arm_type context'' <- infer_expr_type context' else_arm
-  -- TODO: Start here  
+infer_expr_type context (Expr (WhenExpr arms else_arm) _) = do
+  let Tuple return_type context' = type_var context
 
+  context'' <- do_infer_expr_arms_types context' arms return_type
+
+  case else_arm of
+    Nothing -> Just $ Tuple return_type context''
+    Just else_expr -> do
+      Tuple else_arm_type context''' <- infer_expr_type context'' else_expr
+      let context'''' = must_match context''' return_type else_arm_type
+      Just $ Tuple return_type context''''
 
 -- Somehow a default
-infer_expr_type _ _ = Nothing
+-- infer_expr_type _ _ = Nothing
 
 infer_expr_when_arm :: TypeContext -> WhenArm -> Maybe (Tuple ProgramType TypeContext)
 infer_expr_when_arm context (WhenArm condition result) = do
@@ -470,6 +475,20 @@ infer_expr_when_arm context (WhenArm condition result) = do
   Tuple result_type context'' <- infer_expr_type context' result
   let context''' = must_equal context'' condition_type builtin_bool_type
   Just $ Tuple result_type context'''
+
+do_infer_expr_arms_types :: TypeContext -> Array WhenArm -> ProgramType -> Maybe TypeContext
+do_infer_expr_arms_types context@{ module_id } arms return_type = case uncons arms of
+  Nothing -> Just context
+  Just { head: (WhenArm cond body@(Expr _ pos)), tail: rest } -> do
+    -- Infer condition type and ensure it’s Bool
+    Tuple cond_type context' <- infer_expr_type context cond
+    let context'' = must_match context' cond_type (bool_type $ Just $Tuple module_id pos)
+
+    -- Infer body type
+    Tuple body_type context''' <- infer_expr_type context'' body
+    let context'''' = must_match context''' return_type body_type
+    do_infer_expr_arms_types context'''' rest return_type
+
 
 do_infer_expr_types :: TypeContext -> Array Expr -> Array ProgramType -> Maybe (Tuple (Array ProgramType) TypeContext)
 do_infer_expr_types context args acc = case uncons args of
