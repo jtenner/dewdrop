@@ -42,8 +42,8 @@ import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
 import Debug (spy)
-import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_else_keyword, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_brace, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
-import RPN (Operator, RPN, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
+import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_else_keyword, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
 --   when n == 0 -> 0
@@ -253,13 +253,13 @@ do_parse_pub_declaration pos tokens index = do
 
 do_parse_fn :: Parser ModuleFn
 do_parse_fn tokens index = do
-  Tuple _ next_index <- spy "fn" $ (expect is_token_kind_fn_keyword) tokens index
-  Tuple maybe_name next_index_2 <- spy "maybe name" $ parse_optional expect_name_identifier tokens next_index
-  Tuple _ next_index_3 <- spy "lparen" $ expect is_token_kind_l_paren tokens next_index_2
-  Tuple args next_index_4 <- spy "args" $ parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_comma)) tokens next_index_3
-  Tuple _ next_index_5 <- spy "rparen" $ expect is_token_kind_r_paren tokens next_index_4
-  Tuple return_type next_index_6 <- spy "return_type" $ parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
-  Tuple expr next_index_7 <- spy "body" $ parse_expr tokens next_index_6
+  Tuple _ next_index <- (expect is_token_kind_fn_keyword) tokens index
+  Tuple maybe_name next_index_2 <- parse_optional expect_name_identifier tokens next_index
+  Tuple _ next_index_3 <- expect is_token_kind_l_paren tokens next_index_2
+  Tuple args next_index_4 <- parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_comma)) tokens next_index_3
+  Tuple _ next_index_5 <- expect is_token_kind_r_paren tokens next_index_4
+  Tuple return_type next_index_6 <- parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
+  Tuple expr next_index_7 <- parse_expr tokens next_index_6
   let args' = fromMaybe [] args
   let name = maybe Nothing (\(Tuple fn_name _) -> Just fn_name) maybe_name
   Just (Tuple (ModuleFn name args' return_type expr) next_index_7)
@@ -307,58 +307,62 @@ do_parse_expression_unary rpn' tokens index = case tokens !! index of
     do_parse_expression_unary rpn'' tokens (index + 1)
 
   Just (Token TokenKindWhenKeyword pos) -> do
-    Tuple arms index' <- spy "arms" $ parse_many parse_arm tokens (index + 1)
-    let else_arm_parser = (expect is_token_kind_else_keyword ++-> parse_expr)
-    _ <- spy "next token is" $ tokens !! index'
+    Tuple arms index' <- (parse_many parse_arm) tokens (index + 1)
+
+    _ <- tokens !! index'
     -- TODO: Investigate why the else arm is failing
-    Tuple else_arm index'' <- spy "else_arm" $ parse_optional else_arm_parser tokens index'
-    let rpn'' = rpn' ++ Expr (WhenExpr arms else_arm) pos
-    do_parse_expression_binary rpn'' tokens index''
+
+    case (tokens !! index') of
+      Just (Token TokenKindElseKeyword _) -> do
+        let index'' = index' + 1
+        Tuple else_expr index''' <- parse_expr tokens index''
+        Just $ Tuple (rpn' ++ Expr (WhenExpr arms (Just else_expr)) pos) index'''
+      _ -> Just $ Tuple (rpn' ++ (Expr (WhenExpr arms Nothing) pos)) index'
 
   Just (Token TokenKindLBrace pos) -> do
-    Tuple exprs index' <- spy "exprs" $ parse_many parse_expr tokens (index + 1)
-    _ <- spy "r_brace is " $ (tokens !! index')
-    Tuple _ index'' <- spy "r_brace" $ expect is_token_kind_r_brace tokens index'
+    Tuple exprs index' <- (parse_many parse_expr) tokens (index + 1)
+    _ <- tokens !! index'
+    Tuple _ index'' <- expect is_token_kind_r_brace tokens index'
     let rpn'' = rpn' ++ Expr (BlockExpr exprs) pos
     do_parse_expression_binary rpn'' tokens index''
   _ -> Nothing
 
 parse_arm :: Parser WhenArm
 parse_arm tokens index = do
-  Tuple cond_expr index' <- spy "condition" $ parse_expr tokens index
-  Tuple _ index'' <- spy "->" $ expect is_token_kind_r_arrow tokens index'
-  Tuple expr index''' <- spy "expr" $ parse_expr tokens index''
+  Tuple cond_expr index' <- parse_expr tokens index
+  Tuple _ index'' <- expect is_token_kind_r_arrow tokens index'
+  Tuple expr index''' <- parse_expr tokens index''
   Just $ Tuple (WhenArm cond_expr expr) index'''
 
 add_op :: Int -> Operator Expr
-add_op pos = binary additive_precedence false \x y -> Expr (AddExpr x y) pos
+add_op pos = binary "+" additive_precedence false \x y -> Expr (AddExpr x y) pos
 
 sub_op :: Int -> Operator Expr
-sub_op pos = binary additive_precedence false \x y -> Expr (SubExpr x y) pos
+sub_op pos = binary "-" additive_precedence false \x y -> Expr (SubExpr x y) pos
 
 mul_op :: Int -> Operator Expr
-mul_op pos = binary multiplicative_precedence false \x y -> Expr (MulExpr x y) pos
+mul_op pos = binary "*" multiplicative_precedence false \x y -> Expr (MulExpr x y) pos
 
 div_op :: Int -> Operator Expr
-div_op pos = binary multiplicative_precedence false \x y -> Expr (DivExpr x y) pos
+div_op pos = binary "/" multiplicative_precedence false \x y -> Expr (DivExpr x y) pos
 
 equals_op :: Int -> Operator Expr
-equals_op pos = binary equality_precedence false \x y -> Expr (EqualsExpr x y) pos
+equals_op pos = binary "==" equality_precedence false \x y -> Expr (EqualsExpr x y) pos
 
 call_op :: Int -> Array Expr -> Operator Expr
-call_op pos args = right_unary \x -> Expr (CallExpr x args) pos
+call_op pos args = right_unary "call" \x -> Expr (CallExpr x args) pos
 
 greater_than_op :: Int -> Operator Expr
-greater_than_op pos = binary relational_precedence false \x y -> Expr (GreaterThanExpr x y) pos
+greater_than_op pos = binary ">" relational_precedence false \x y -> Expr (GreaterThanExpr x y) pos
 
 greater_than_equals_op :: Int -> Operator Expr
-greater_than_equals_op pos = binary relational_precedence false \x y -> Expr (GreaterThanEqualsExpr x y) pos
+greater_than_equals_op pos = binary ">=" relational_precedence false \x y -> Expr (GreaterThanEqualsExpr x y) pos
 
 less_than_op :: Int -> Operator Expr
-less_than_op pos = binary relational_precedence false \x y -> Expr (LessThanExpr x y) pos
+less_than_op pos = binary "<" relational_precedence false \x y -> Expr (LessThanExpr x y) pos
 
 less_than_equals_op :: Int -> Operator Expr
-less_than_equals_op pos = binary relational_precedence false \x y -> Expr (LessThanEqualsExpr x y) pos
+less_than_equals_op pos = binary "<=" relational_precedence false \x y -> Expr (LessThanEqualsExpr x y) pos
 
 -- find the next binary operator
 do_parse_expression_binary :: RPN Expr -> Parser (RPN Expr)
@@ -393,14 +397,16 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
 
   -- LParen in binary position is actually a function call
   Just (Token TokenKindLParen pos) -> do
+    let _ = tokens !! (index + 1)
     Tuple exprs next_index <- parse_many parse_expr tokens (index + 1)
     Tuple _ next_index_1 <- expect is_token_kind_r_paren tokens next_index
     rpn'' <- rpn' +. call_op pos exprs
     do_parse_expression_binary rpn'' tokens next_index_1
 
-  Just (Token TokenKindRParen _) -> do
-    rpn'' <- rpn' +. end_group
-    Just (Tuple rpn'' index)
+  Just (Token TokenKindRParen _) | is_nested rpn' -> do
+      rpn'' <- rpn' +. end_group
+      do_parse_expression_binary rpn'' tokens $ index + 1
+  
   _ -> Just (Tuple rpn' index)
 
 instance show_expr :: Show Expr where

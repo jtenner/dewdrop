@@ -125,13 +125,13 @@ main = runSpecAndExitProcess [consoleReporter] do
       , Token TokenKindEOF 234
       ]
 
-  let add = binary 5 false \x y -> x + y
-  let sub = binary 5 false \x y -> x - y
-  let mul = binary 6 false \x y -> x * y
-  let mul_2 = unary \x -> x * 2
-  let rmul_2 = right_unary \x -> x * 2
-  let add_2 = unary \x -> x + 2
-  let rmul_3 = right_unary \x -> x * 3
+  let add = binary "+" 5 false \x y -> x + y
+  let sub = binary "-" 5 false \x y -> x - y
+  let mul = binary "*" 6 false \x y -> x * y
+  let mul_2 = unary "*2" \x -> x * 2
+  let rmul_2 = right_unary "2*" \x -> x * 2
+  let add_2 = unary "+2" \x -> x + 2
+  let rmul_3 = right_unary "3*" \x -> x * 3
 
   describe "RPN" do
     it "should perform unary operations" do

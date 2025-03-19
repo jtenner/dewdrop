@@ -9,6 +9,8 @@ module RPN
   , end_group
   , finalize
   , group
+  , is_nested
+  , pop_value_maybe
   , push_operator
   , push_operator_maybe
   , push_value
@@ -23,28 +25,35 @@ import Prelude
 
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
+import Debug (spy)
 
-import Debug(spy)
-
-data Operator a = LeftUnary (a -> a)
-                | RightUnary (a -> a)
-                | Binary Int Boolean (a -> a -> a)
+data Operator a = LeftUnary String (a -> a)
+                | RightUnary String (a -> a)
+                | Binary String Int Boolean (a -> a -> a)
                 | Group
                 | EndGroup
 
-data RPN expr = RPN (List expr) (List (Operator expr))
+instance Show (Operator a) where
+  show (LeftUnary name _) = "LeftUnary " <> name
+  show (RightUnary name _) = "RightUnary " <> name
+  show (Binary name _ _ _) = "Binary " <> name
+  show Group = "Group"
+  show EndGroup = "EndGroup"
+
+data RPN expr = RPN Int (List expr) (List (Operator expr))
 
 rpn :: ∀ a. RPN a
-rpn = RPN Nil Nil
+rpn = RPN 0 Nil Nil
 
-unary :: ∀ a. (a -> a) -> Operator a
-unary f = LeftUnary f
+unary :: ∀ a. String -> (a -> a) -> Operator a
+unary name f = LeftUnary name f
 
-right_unary :: ∀ a. (a -> a) -> Operator a
-right_unary f = RightUnary f
+right_unary :: ∀ a. String -> (a -> a) -> Operator a
+right_unary name f = RightUnary name f
 
-binary :: ∀ a. Int -> Boolean -> (a -> a -> a) -> Operator a
-binary p f = Binary p f
+binary :: ∀ a. String -> Int -> Boolean -> (a -> a -> a) -> Operator a
+binary name p f = Binary name p f
 
 group :: ∀ a. Operator a
 group = Group
@@ -54,102 +63,93 @@ end_group = EndGroup
 
 infixl 4 push_value as ++
 push_value :: ∀ a. Show a => RPN a -> a -> RPN a
-push_value (RPN stack ops) v = spy ("pushing value" <> show v) (RPN (v : stack) ops)
+push_value (RPN nested stack ops) v = spy ("pushing value " <> show v) $ RPN nested (v : stack) ops
+
+pop_value_maybe :: ∀ a. Show a => RPN a -> Maybe (Tuple a (RPN a))
+pop_value_maybe (RPN nested (v : stack) ops) = spy ("popping value " <> show v) $ Just $ Tuple v $ RPN nested stack ops
+pop_value_maybe _ = Nothing
 
 infixl 4 push_value_maybe as ++?
 push_value_maybe :: ∀ a. Show a => Maybe (RPN a) -> a -> Maybe (RPN a)
-push_value_maybe (Just rpn') v = Just (push_value rpn' v)
-push_value_maybe _ _ = spy "Cannot push value" Nothing
+push_value_maybe (Just rpn') v = Just $ push_value rpn' v
+push_value_maybe _ _ = Nothing
 
 infixl 4 push_operator_maybe as +.?
-push_operator_maybe :: ∀ a. Maybe (RPN a) -> Operator a -> Maybe (RPN a)
-push_operator_maybe Nothing _ = spy "Cannot push operator" Nothing
+push_operator_maybe :: ∀ a. Show a => Maybe (RPN a) -> Operator a -> Maybe (RPN a)
+push_operator_maybe Nothing _ = Nothing
 push_operator_maybe (Just rpn') op = push_operator rpn' op
 
 infixl 4 push_operator as +.
-push_operator :: ∀ a. RPN a -> Operator a -> Maybe (RPN a)
--- If the operator stack is empty, pushing an operator is always ok
-push_operator (RPN stack Nil) op = spy "Pushing operator, stack empty" (Just (RPN stack (op : Nil)))
-push_operator (RPN _ (EndGroup : _)) _ = spy "Impossible state" Nothing
-
--- pushing an end group requires stack evaluation until the group operator is popped
-push_operator (RPN stack (Group : ops)) EndGroup = spy "Popping group" (Just (RPN stack ops))
-
--- If the top operator is a group operator, pushing an operator is always ok
-push_operator (RPN stack (Group : ops)) op = spy "Pushing operator on top of a group" (Just (RPN stack (op : Group : ops)))
+push_operator :: ∀ a. Show a => RPN a -> Operator a -> Maybe (RPN a)
+-- If the operator is an end group but the op stack is empty, pushing an end group is not ok
+push_operator (RPN _ _ Nil) EndGroup = spy "pushing operator (EndGroup) failed, op stack is empty" Nothing
+push_operator (RPN _ Nil _) EndGroup = spy "pushing operator (EndGroup) failed, stack is empty" Nothing
+push_operator rpn'@(RPN 0 _ _) EndGroup = spy "pushing operator (EndGroup) failed, not in a group" Nothing
 
 -- pushing a group operator is always ok
-push_operator (RPN stack ops) Group = spy "Pushing group" (Just (RPN stack (Group : ops)))
+push_operator (RPN nested stack ops) Group = spy "Pushing group operator" $ Just $ RPN (nested + 1) stack (Group : ops)
 
--- handling operators requires stack evaluation
-push_operator (RPN stack (Binary _ _ g' : ops)) EndGroup = do
-  stack' <- spy "Popping binary" (pop_binary stack g')
-  push_operator (RPN stack' ops) EndGroup
+-- If the operator stack is empty, pushing an operator is always ok
+push_operator (RPN nested stack Nil) op = spy ("pushing operator, stack is empty (" <> show op <> ")") $ Just $ RPN nested stack (op : Nil)
 
-push_operator (RPN stack (LeftUnary f' : ops)) EndGroup = do
-  stack' <- spy "Popping unary" (pop_unary stack f')
-  push_operator (RPN stack' ops) EndGroup
+push_operator (RPN _ _ (EndGroup : _)) _ = spy "Impossible state, stack contains end group" Nothing
+-- pushing an end group requires stack evaluation until the group operator is popped
+push_operator rpn'@(RPN _ _ (Group : _)) EndGroup = spy "EndGroup processing finished, returning rpn state instead of processing end group" $ Just rpn'
 
-push_operator (RPN stack (RightUnary f' : ops)) EndGroup = do
-  stack' <- spy "Popping right unary" (pop_unary stack f')
-  push_operator (RPN stack' ops) EndGroup
+-- If the top operator is a group operator, pushing an operator is always ok
+push_operator (RPN nested stack ops@(Group : _)) op = spy "Top operator is group, pushing operator" $ Just $ RPN nested stack (op : ops)
 
--- if the operator stack is now empty, pushing an end group is not ok
-push_operator (RPN _ _) EndGroup = spy "Pushing end group, stack or ops empty" Nothing
+-- EndGroup requires stack evaluation until the Group operator is popped
+push_operator rpn' EndGroup = do
+  rpn'' <- spy "Processing EndGroup, popping operator" $ pop_operator rpn'
+  push_operator rpn'' EndGroup
 
 -- pushing a binary operator to the stack is ok if ...
-push_operator (RPN stack (Binary p' f' g' : ops)) (Binary p f g) 
+push_operator rpn'@(RPN nested stack ops@(Binary _ p' _ _ : _)) op@(Binary _ p f _) 
   -- the precidence is higher
-  | p > p' = spy "incoming operator is higher precedence" Just (RPN stack (Binary p f g : Binary p' f' g' : ops))
+  | p > p' = spy "Pushing binary operator with higher precidence" $ Just $ RPN nested stack $ op : ops
   -- the precidence is the same and the operator is right associative
-  | p == p' && not f = spy "incoming operator has same precedence with left associativity" Just (RPN stack (Binary p f g : Binary p' f' g' : ops))
+  | p == p' && not f = spy "Right associative, pushing binary operator" $ Just $ RPN nested stack $ op : ops
   -- otherwise, pop the stack once and continue
   | otherwise = do
-    stack' <- spy "popping binary" (pop_binary stack g')
-    push_operator (RPN stack' ops) (Binary p f g) 
+    rpn'' <- spy "Pushing binary operator with lower precidence, popping operator" $ pop_operator rpn'
+    push_operator rpn'' op
 
 -- pushing a right unary operator is always ok
-push_operator (RPN stack ops) (RightUnary f) = spy "pushing right unary" Just (RPN stack (RightUnary f : ops))
+push_operator (RPN nested stack ops) op@(RightUnary _ _) = spy "Pushing right unary operator" Just $ RPN nested stack $ op : ops
 
 -- pushing a left unary operator requires stack evaluation if the stack has a right unary operator
-push_operator (RPN stack (RightUnary g : ops)) (LeftUnary f) = do
-  stack' <- spy "popping unary" pop_unary stack g
-  push_operator (RPN stack' ops) (LeftUnary f)
+push_operator rpn'@(RPN _ _ (RightUnary _ _ : _)) op@(LeftUnary _ _) = do
+  rpn'' <- spy "Pushing left unary operator into right unary operator on stack, popping operator" $ pop_operator rpn'
+  push_operator rpn'' op
 
 -- pushing a left unary operator is otherwise ok
-push_operator (RPN stack ops) (LeftUnary f) = spy "pushing left unary" Just (RPN stack (LeftUnary f : ops))
+push_operator (RPN nested stack ops) op@(LeftUnary _ _) = spy "Pushing left unary operator" $ Just $ RPN nested stack $ op : ops
 
 -- pushing a binary operator requires stack evaluation if the stack has a right unary operator
-push_operator (RPN stack (RightUnary g' : ops)) (Binary p f g) = do
-  stack' <- spy "popping unary" pop_unary stack g'
-  push_operator (RPN stack' ops) (Binary p f g) 
+push_operator rpn' op@(Binary _ _ _ _) = do
+  rpn'' <- spy "Pushing binary operator into unary operator on stack, popping operator becuase it has higher precidence" $ pop_operator rpn'
+  push_operator rpn'' op
 
--- pushing a binary operator requires stack evaluation if the stack has a left unary operator
-push_operator (RPN stack (LeftUnary g' : ops)) (Binary p f g) = do
-  stack' <- spy "popping unary" pop_unary stack g'
-  push_operator (RPN stack' ops) (Binary p f g)
+pop_operator :: ∀ a. Show a => RPN a -> Maybe (RPN a)
+pop_operator (RPN nested (x : stack) (LeftUnary name f : ops)) = spy ("Popping " <> name <> " with " <> show x ) $ Just $ RPN nested (f x : stack) ops
+pop_operator (RPN nested (x : stack) (RightUnary name f : ops)) = spy ("Popping " <> name <> " with " <> show x ) $ Just $ RPN nested (f x : stack) ops
+pop_operator (RPN nested (y : x : stack) (Binary name _ _ f : ops)) = spy ("Popping " <> name <> " with " <> show x <> " and " <> show y) $ Just $ RPN nested (f x y : stack) ops
+pop_operator weird = do
+  let _ = spy "popping operator failed" weird
+  Nothing
 
-pop_unary :: ∀ a. List a -> (a -> a) -> Maybe (List a)
-pop_unary (x : xs) f = Just (f x : xs)
-pop_unary Nil _ = Nothing
-
-pop_binary :: ∀ a. List a -> (a -> a -> a) -> Maybe (List a)
-pop_binary (right : left : xs) f = Just (f left right : xs)
-pop_binary _ _ = Nothing
-
-finalize :: ∀ a. RPN a -> Maybe a
+finalize :: ∀ a. Show a => RPN a -> Maybe a
 -- finalizing an RPN stack with an empty operator stack and a single value is success
-finalize (RPN (x : Nil) Nil) = spy "finalize done" (Just x)
-
--- unary operators can be evaluated with the top item on the stack
-finalize (RPN (v : stack) (LeftUnary f : ops)) = spy "finalize unary" (finalize (RPN (f v : stack) ops))
-finalize (RPN (v : stack) (RightUnary f : ops)) = spy "finalize unary" (finalize (RPN (f v : stack) ops))
-
--- binary operatores require two operands
-finalize (RPN (right : left : stack) (Binary _ _ g : ops)) = spy "finalize binary" (finalize (RPN (g left right : stack) ops))
+finalize (RPN _ (x : Nil) Nil) = spy "finalize success" $ Just x
 
 -- pass groups through
-finalize (RPN stack (Group : ops)) = spy "finalize group" (finalize (RPN stack ops))
+finalize (RPN nested stack (Group : ops)) = spy "popping group" $ finalize $ RPN (nested - 1) stack ops
 
--- anything else is an error
-finalize _ = spy "finalize error" Nothing
+-- anything else requires stack evaluation
+finalize rpn' = do
+  rpn'' <- spy "finalize popping operator" $ pop_operator rpn'
+  finalize rpn''
+
+is_nested :: ∀ a. RPN a -> Boolean
+is_nested (RPN nested _ _) = nested > 0

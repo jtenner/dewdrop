@@ -1,0 +1,542 @@
+Warning 1 of 17:
+
+  in module Test.Main
+  at test/Main.purs:6:1 - 6:18 (line 6, column 1 - line 6, column 18)
+
+    Shadowed definitions are in scope for value group from the following open imports:
+
+      import Data.Array
+
+    These will be ignored and the declaration from RPN will be used.
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/ScopeShadowing.md for more information,
+  or to contribute content related to this warning.
+
+Warning 2 of 17:
+
+  in module Test.Main
+  at test/Main.purs:10:1 - 10:39 (line 10, column 1 - line 10, column 39)
+
+    The import of Control.Monad.Trampoline is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 3 of 17:
+
+  in module Test.Main
+  at test/Main.purs:6:1 - 6:18 (line 6, column 1 - line 6, column 18)
+
+    The import of Data.Array is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 4 of 17:
+
+  in module Test.Main
+  at test/Main.purs:17:1 - 17:33 (line 17, column 1 - line 17, column 33)
+
+    The import of Effect.Class is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 5 of 17:
+
+  in module Test.Main
+  at test/Main.purs:19:1 - 19:26 (line 19, column 1 - line 19, column 26)
+
+    The qualified import of Node.FS.Sync as Fs is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 6 of 17:
+
+  in module Test.Main
+  at test/Main.purs:7:1 - 7:20 (line 7, column 1 - line 7, column 20)
+
+    The import of Node.Process is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 7 of 17:
+
+  in module Test.Main
+  at test/Main.purs:20:1 - 20:51 (line 20, column 1 - line 20, column 51)
+
+    The import of Parser is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 8 of 17:
+
+  in module Test.Main
+  at test/Main.purs:21:1 - 21:69 (line 21, column 1 - line 21, column 69)
+
+    The import of module Prelude contains the following unused references:
+
+      bind
+      (==)
+      ($)
+      pure
+
+    It could be replaced with:
+
+      import Prelude (Unit, discard, (*), (+), (-))
+
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedExplicitImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 9 of 17:
+
+  in module Main
+  at src/Main.purs:6:1 - 6:30 (line 6, column 1 - line 6, column 30)
+
+    The import of Data.Maybe is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 10 of 17:
+
+  in module Main
+  at src/Main.purs:7:1 - 7:30 (line 7, column 1 - line 7, column 30)
+
+    The import of Data.Tuple is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 11 of 17:
+
+  in module Main
+  at src/Main.purs:8:1 - 8:19 (line 8, column 1 - line 8, column 19)
+
+    The import of Debug is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 12 of 17:
+
+  in module Main
+  at src/Main.purs:10:1 - 10:38 (line 10, column 1 - line 10, column 38)
+
+    The import of Effect.Class.Console is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 13 of 17:
+
+  in module Main
+  at src/Main.purs:11:1 - 11:28 (line 11, column 1 - line 11, column 28)
+
+    The import of Effect.Console is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 14 of 17:
+
+  in module Main
+  at src/Main.purs:13:1 - 13:14 (line 13, column 1 - line 13, column 14)
+
+    The import of Parser is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 15 of 17:
+
+  in module Main
+  at src/Main.purs:3:1 - 3:15 (line 3, column 1 - line 3, column 15)
+
+    Module Prelude has unspecified imports, consider using the explicit form:
+
+      import Prelude (Unit)
+
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/ImplicitImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 16 of 17:
+
+  in module Main
+  at src/Main.purs:12:1 - 12:15 (line 12, column 1 - line 12, column 15)
+
+    Module Program has unspecified imports, consider using the explicit form:
+
+      import Program (compile, pkg)
+
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/ImplicitImport.md for more information,
+  or to contribute content related to this warning.
+
+Warning 17 of 17:
+
+  in module Main
+  at src/Main.purs:4:1 - 4:11 (line 4, column 1 - line 4, column 11)
+
+    The import of RPN is redundant
+
+
+  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
+  or to contribute content related to this warning.
+
+
+pushing value (Expr "n"): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [NameExpr], value1: 23 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+pushing operator, stack is empty (Binary ==): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+pushing value (Expr 0): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [IntExpr], value1: 28 },
+    value1: Cons { value0: [Expr], value1: Nil {} }
+  },
+  value2: Cons {
+    value0: Binary {
+      value0: '==',
+      value1: 8,
+      value2: false,
+      value3: [Function (anonymous)]
+    },
+    value1: Nil {}
+  }
+}
+Popping == with (Expr "n") and (Expr 0): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize popping operator: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize success: Just {
+  value0: Expr {
+    value0: EqualsExpr { value0: [Expr], value1: [Expr] },
+    value1: 25
+  }
+}
+pushing value (Expr 0): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [IntExpr], value1: 33 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+finalize success: Just { value0: Expr { value0: IntExpr { value0: 0 }, value1: 33 } }
+pushing value (Expr "n"): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [NameExpr], value1: 39 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+pushing operator, stack is empty (Binary ==): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+pushing value (Expr 1): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [IntExpr], value1: 44 },
+    value1: Cons { value0: [Expr], value1: Nil {} }
+  },
+  value2: Cons {
+    value0: Binary {
+      value0: '==',
+      value1: 8,
+      value2: false,
+      value3: [Function (anonymous)]
+    },
+    value1: Nil {}
+  }
+}
+Popping == with (Expr "n") and (Expr 1): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize popping operator: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize success: Just {
+  value0: Expr {
+    value0: EqualsExpr { value0: [Expr], value1: [Expr] },
+    value1: 41
+  }
+}
+pushing value (Expr 1): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [IntExpr], value1: 49 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+finalize success: Just { value0: Expr { value0: IntExpr { value0: 1 }, value1: 49 } }
+pushing value (Expr "fib"): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [NameExpr], value1: 60 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+pushing value (Expr "n"): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [NameExpr], value1: 64 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+pushing operator, stack is empty (Binary -): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+pushing value (Expr 1): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [IntExpr], value1: 68 },
+    value1: Cons { value0: [Expr], value1: Nil {} }
+  },
+  value2: Cons {
+    value0: Binary {
+      value0: '-',
+      value1: 11,
+      value2: false,
+      value3: [Function (anonymous)]
+    },
+    value1: Nil {}
+  }
+}
+Popping - with (Expr "n") and (Expr 1): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize popping operator: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize success: Just {
+  value0: Expr {
+    value0: SubExpr { value0: [Expr], value1: [Expr] },
+    value1: 66
+  }
+}
+pushing operator, stack is empty (RightUnary call): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Cons { value0: [RightUnary], value1: Nil {} }
+  }
+}
+Popping call with (Expr "fib"): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+Pushing binary operator into unary operator on stack, popping operator becuase it has higher precidence: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+pushing operator, stack is empty (Binary +): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+pushing value (Expr "fib"): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [NameExpr], value1: 73 },
+    value1: Cons { value0: [Expr], value1: Nil {} }
+  },
+  value2: Cons {
+    value0: Binary {
+      value0: '+',
+      value1: 11,
+      value2: false,
+      value3: [Function (anonymous)]
+    },
+    value1: Nil {}
+  }
+}
+pushing value (Expr "n"): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [NameExpr], value1: 77 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+pushing operator, stack is empty (Binary -): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+pushing value (Expr 2): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [IntExpr], value1: 81 },
+    value1: Cons { value0: [Expr], value1: Nil {} }
+  },
+  value2: Cons {
+    value0: Binary {
+      value0: '-',
+      value1: 11,
+      value2: false,
+      value3: [Function (anonymous)]
+    },
+    value1: Nil {}
+  }
+}
+Popping - with (Expr "n") and (Expr 2): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize popping operator: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize success: Just {
+  value0: Expr {
+    value0: SubExpr { value0: [Expr], value1: [Expr] },
+    value1: 79
+  }
+}
+Pushing right unary operator: [Function (anonymous)]
+Popping call with (Expr "fib"): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: [Cons] },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+finalize popping operator: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: [Cons] },
+    value2: Cons { value0: [Binary], value1: Nil {} }
+  }
+}
+Popping + with (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 1))])) and (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 2))])): Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize popping operator: Just {
+  value0: RPN {
+    value0: 0,
+    value1: Cons { value0: [Expr], value1: Nil {} },
+    value2: Nil {}
+  }
+}
+finalize success: Just {
+  value0: Expr {
+    value0: AddExpr { value0: [Expr], value1: [Expr] },
+    value1: 71
+  }
+}
+pushing value (Expr (WhenExpr [(WhenArm (Expr (Expr "n") == (Expr 0)) (Expr 0)),(WhenArm (Expr (Expr "n") == (Expr 1)) (Expr 1))] (Just (Expr (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 1))])) + (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 2))])))))): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [WhenExpr], value1: 18 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+finalize success: Just {
+  value0: Expr {
+    value0: WhenExpr { value0: [Array], value1: [Just] },
+    value1: 18
+  }
+}
+pushing value (Expr (BlockExpr [(Expr (WhenExpr [(WhenArm (Expr (Expr "n") == (Expr 0)) (Expr 0)),(WhenArm (Expr (Expr "n") == (Expr 1)) (Expr 1))] (Just (Expr (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 1))])) + (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 2))]))))))])): RPN {
+  value0: 0,
+  value1: Cons {
+    value0: Expr { value0: [BlockExpr], value1: 14 },
+    value1: Nil {}
+  },
+  value2: Nil {}
+}
+finalize success: Just {
+  value0: Expr { value0: BlockExpr { value0: [Array] }, value1: 14 }
+}
