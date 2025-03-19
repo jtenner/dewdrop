@@ -6,16 +6,15 @@ module Parser
   , Expr(..)
   , ExprKind(..)
   , FnParam(..)
+  , Identifier(..)
   , Module(..)
   , ModuleDeclaration(..)
   , ModuleDeclarationKind(..)
   , ModuleFn(..)
-  , NameIdentifier(..)
   , Parser
   , ParserResult
   , TypeExpr(..)
   , TypeExprKind(..)
-  , TypeIdentifier(..)
   , WhenArm(..)
   , expect
   , expect_colon
@@ -42,7 +41,8 @@ import Prelude
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
-import Lexer (Token(..), TokenKind(..), is_token_kind_else_keyword, is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import Debug (spy)
+import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_else_keyword, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_brace, is_token_kind_r_arrow, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import RPN (Operator, RPN, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
@@ -105,43 +105,41 @@ equality_precedence = 8
 -- Ops: "is"
 -- is_precedence = 2
 
+data Identifier = NameIdentifier String
+                | TypeIdentifier String
 
-data NameIdentifier = NameIdentifier String
-
-instance eq_name_identifier :: Eq NameIdentifier where
+instance eq_identifier :: Eq Identifier where
   eq (NameIdentifier name) (NameIdentifier name') = name == name'
-
-instance ord_name_identifier :: Ord NameIdentifier where
-  compare (NameIdentifier name) (NameIdentifier name') = compare name name'
-
-data TypeIdentifier = TypeIdentifier String
-
-instance eq_type_identifier :: Eq TypeIdentifier where
   eq (TypeIdentifier type_name) (TypeIdentifier type_name') = type_name == type_name'
+  eq _ _ = false
 
-instance ord_type_identifier :: Ord TypeIdentifier where
+instance ord_identifier :: Ord Identifier where
+  compare (NameIdentifier name) (NameIdentifier name') = compare name name'
   compare (TypeIdentifier type_name) (TypeIdentifier type_name') = compare type_name type_name'
+  compare (NameIdentifier _) _ = GT
+  compare _ (NameIdentifier _) = LT
 
 data Module = Module (Array ModuleDeclaration)
 
 data ModuleDeclaration = ModuleDeclaration ModuleDeclarationKind Int
 
-data ModuleDeclarationKind = FnDeclarationKind Boolean NameIdentifier ModuleFn
+data ModuleDeclarationKind = FnDeclarationKind Boolean Identifier ModuleFn
 
-data ModuleFn = ModuleFn (Maybe NameIdentifier) (Array FnParam) (Maybe TypeExpr) Expr
+data ModuleFn = ModuleFn (Maybe String) (Array FnParam) (Maybe TypeExpr) Expr
 
-data FnParam = FnParam NameIdentifier (Maybe TypeExpr)
+data FnParam = FnParam String (Maybe TypeExpr) Int
 
 data TypeExpr = TypeExpr TypeExprKind Int
 
-data TypeExprKind = NamedTypeExpr TypeIdentifier
+data TypeExprKind = NamedTypeExpr String
 
 data Expr = Expr ExprKind Int
 
 data ExprKind = WhenExpr (Array WhenArm) (Maybe Expr)
+              | BlockExpr (Array Expr)
               | EqualsExpr Expr Expr
               | IntExpr Int
-              | NameExpr NameIdentifier
+              | NameExpr String
               | CallExpr Expr (Array Expr)
               | AddExpr Expr Expr
               | SubExpr Expr Expr
@@ -250,30 +248,30 @@ do_parse_pub_declaration pos tokens index = do
   -- TODO: Implement the following: -- Tuple fn next_index <- (do_parse_fn +| do_parse_type_declaration +| do_parse_fn_declaration) tokens index
   Tuple fn next_index <- (do_parse_fn) tokens index
   case fn of
-    ModuleFn (Just name) args return_type body -> Just (Tuple (ModuleDeclaration (FnDeclarationKind true name (ModuleFn (Just name) args return_type body)) pos) next_index)
+    ModuleFn (Just name) args return_type body -> Just (Tuple (ModuleDeclaration (FnDeclarationKind true (NameIdentifier name) (ModuleFn (Just name) args return_type body)) pos) next_index)
     _ -> Nothing
 
 do_parse_fn :: Parser ModuleFn
 do_parse_fn tokens index = do
-  Tuple _ next_index <- (expect is_token_kind_fn_keyword) tokens index
-  Tuple maybe_name next_index_2 <- parse_optional expect_name_identifier tokens next_index
-  Tuple _ next_index_3 <- expect is_token_kind_l_paren tokens next_index_2
-  Tuple args next_index_4 <- parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_comma)) tokens next_index_3
-  Tuple _ next_index_5 <- expect is_token_kind_r_paren tokens next_index_4
-  Tuple return_type next_index_6 <- parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
-  Tuple expr next_index_7 <- parse_expr tokens next_index_6
+  Tuple _ next_index <- spy "fn" $ (expect is_token_kind_fn_keyword) tokens index
+  Tuple maybe_name next_index_2 <- spy "maybe name" $ parse_optional expect_name_identifier tokens next_index
+  Tuple _ next_index_3 <- spy "lparen" $ expect is_token_kind_l_paren tokens next_index_2
+  Tuple args next_index_4 <- spy "args" $ parse_optional (parse_many_seperated parse_fn_param (expect is_token_kind_comma)) tokens next_index_3
+  Tuple _ next_index_5 <- spy "rparen" $ expect is_token_kind_r_paren tokens next_index_4
+  Tuple return_type next_index_6 <- spy "return_type" $ parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
+  Tuple expr next_index_7 <- spy "body" $ parse_expr tokens next_index_6
   let args' = fromMaybe [] args
   let name = maybe Nothing (\(Tuple fn_name _) -> Just fn_name) maybe_name
   Just (Tuple (ModuleFn name args' return_type expr) next_index_7)
 
-expect_name_identifier :: Parser (Tuple NameIdentifier Int)
+expect_name_identifier :: Parser (Tuple String Int)
 expect_name_identifier tokens index = case expect is_token_kind_name_identifier tokens index of
-  Just (Tuple (Token (TokenKindNameIdentifier name) pos) next_index) -> Just (Tuple (Tuple (NameIdentifier name) pos) next_index)
+  Just (Tuple (Token (TokenKindNameIdentifier name) pos) next_index) -> Just (Tuple (Tuple name pos) next_index)
   _ -> Nothing
 
-expect_type_identifier :: Parser (Tuple TypeIdentifier Int)
+expect_type_identifier :: Parser (Tuple String Int)
 expect_type_identifier tokens index = case expect is_token_kind_type_identifier tokens index of
-  Just (Tuple (Token (TokenKindTypeIdentifier name) pos) next_index) -> Just (Tuple (Tuple (TypeIdentifier name) pos) next_index)
+  Just (Tuple (Token (TokenKindTypeIdentifier name) pos) next_index) -> Just (Tuple (Tuple name pos) next_index)
   _ -> Nothing
 
 expect_colon :: Parser Token
@@ -281,9 +279,9 @@ expect_colon tokens index = expect is_token_kind_colon tokens index
 
 parse_fn_param :: Parser FnParam
 parse_fn_param tokens index = do
-  Tuple (Tuple name _) next_index <- expect_name_identifier tokens index
+  Tuple (Tuple name name_pos) next_index <- expect_name_identifier tokens index
   Tuple type_expr next_index_2 <- parse_optional (expect_colon ++-> parse_type_expr) tokens next_index
-  Just (Tuple (FnParam name type_expr) next_index_2)
+  Just (Tuple (FnParam name type_expr name_pos) next_index_2)
 
 parse_type_expr :: Parser TypeExpr
 parse_type_expr tokens index = do
@@ -297,12 +295,11 @@ parse_expr tokens index = do
   Just (Tuple expr next_index)
 
 -- All the different operators in the example for now
-
 do_parse_expression_unary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_unary rpn' tokens index = case tokens !! index of
   Just (Token (TokenKindInt val) pos) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
   Just (Token (TokenKindNameIdentifier name) pos) -> 
-    do_parse_expression_binary (rpn' ++ Expr (NameExpr (NameIdentifier name)) pos) tokens (index + 1)
+    do_parse_expression_binary (rpn' ++ Expr (NameExpr name) pos) tokens (index + 1)
 
   -- LParen in unary position is a group
   Just (Token TokenKindLParen _) -> do
@@ -310,17 +307,27 @@ do_parse_expression_unary rpn' tokens index = case tokens !! index of
     do_parse_expression_unary rpn'' tokens (index + 1)
 
   Just (Token TokenKindWhenKeyword pos) -> do
-    Tuple arms index' <- parse_many parse_arm tokens (index + 1)
-    Tuple else_arm index'' <- parse_optional (expect is_token_kind_else_keyword ++-> parse_expr) tokens index'
+    Tuple arms index' <- spy "arms" $ parse_many parse_arm tokens (index + 1)
+    let else_arm_parser = (expect is_token_kind_else_keyword ++-> parse_expr)
+    _ <- spy "next token is" $ tokens !! index'
+    -- TODO: Investigate why the else arm is failing
+    Tuple else_arm index'' <- spy "else_arm" $ parse_optional else_arm_parser tokens index'
     let rpn'' = rpn' ++ Expr (WhenExpr arms else_arm) pos
+    do_parse_expression_binary rpn'' tokens index''
+
+  Just (Token TokenKindLBrace pos) -> do
+    Tuple exprs index' <- spy "exprs" $ parse_many parse_expr tokens (index + 1)
+    _ <- spy "r_brace is " $ (tokens !! index')
+    Tuple _ index'' <- spy "r_brace" $ expect is_token_kind_r_brace tokens index'
+    let rpn'' = rpn' ++ Expr (BlockExpr exprs) pos
     do_parse_expression_binary rpn'' tokens index''
   _ -> Nothing
 
 parse_arm :: Parser WhenArm
 parse_arm tokens index = do
-  Tuple cond_expr index' <- parse_expr tokens index
-  Tuple _ index'' <- expect is_token_kind_r_arrow tokens index'
-  Tuple expr index''' <- parse_expr tokens index''
+  Tuple cond_expr index' <- spy "condition" $ parse_expr tokens index
+  Tuple _ index'' <- spy "->" $ expect is_token_kind_r_arrow tokens index'
+  Tuple expr index''' <- spy "expr" $ parse_expr tokens index''
   Just $ Tuple (WhenArm cond_expr expr) index'''
 
 add_op :: Int -> Operator Expr
@@ -413,9 +420,32 @@ instance show_expr_kind :: Show ExprKind where
   show (LessThanExpr left right) = show left <> " < " <> show right
   show (GreaterThanEqualsExpr left right) = show left <> " >= " <> show right
   show (LessThanEqualsExpr left right) = show left <> " <= " <> show right
+  show (BlockExpr exprs) = "(BlockExpr " <> show exprs <> ")"
 
 instance show_when_arm :: Show WhenArm where
   show (WhenArm condition expr) = "(WhenArm " <> show condition <> " " <> show expr <> ")"
 
-instance show_name_identifier :: Show NameIdentifier where
-  show (NameIdentifier name) = "(NameIdentifier " <> show name <> ")"
+instance show_module :: Show Module where
+  show (Module declarations) = "(Module " <> show declarations <> ")"
+
+instance show_module_declaration :: Show ModuleDeclaration where
+  show (ModuleDeclaration kind _) = "(ModuleDeclaration " <> show kind <> ")"
+
+instance show_module_declaration_kind :: Show ModuleDeclarationKind where
+  show (FnDeclarationKind exported name fn) = "(FnDeclarationKind " <> show exported <> " " <> show name <> " " <> show fn <> ")"
+
+instance show_identifier :: Show Identifier where
+  show (NameIdentifier name) = "(Name " <> name <> ")"
+  show (TypeIdentifier name) = "(Type " <> name <> ")"
+
+instance show_fn :: Show ModuleFn where
+  show (ModuleFn name args return_type expr) = "(ModuleFn " <> show name <> " " <> show args <> " " <> show return_type <> " " <> show expr <> ")"
+
+instance show_fn_param :: Show FnParam where
+  show (FnParam name type_expr _) = "(FnParam " <> name <> " " <> show type_expr <> ")"
+
+instance show_type_expr :: Show TypeExpr where
+  show (TypeExpr kind _) = "(TypeExpr " <> show kind <> ")"
+
+instance show_type_expr_kind :: Show TypeExprKind where
+  show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
