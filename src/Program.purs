@@ -730,7 +730,9 @@ unify constraints = do
     -- for type variables
     unify_constraint (Equals (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
     unify_constraint (Equals left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
-    
+
+    -- TODO: Equality of function types
+
     -- TODO: Matching and AtLeast
 
     -- for type matching
