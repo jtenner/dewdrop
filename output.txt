@@ -1,106 +1,4 @@
-Warning 1 of 17:
-
-  in module Test.Main
-  at test/Main.purs:6:1 - 6:18 (line 6, column 1 - line 6, column 18)
-
-    Shadowed definitions are in scope for value group from the following open imports:
-
-      import Data.Array
-
-    These will be ignored and the declaration from RPN will be used.
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/ScopeShadowing.md for more information,
-  or to contribute content related to this warning.
-
-Warning 2 of 17:
-
-  in module Test.Main
-  at test/Main.purs:10:1 - 10:39 (line 10, column 1 - line 10, column 39)
-
-    The import of Control.Monad.Trampoline is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 3 of 17:
-
-  in module Test.Main
-  at test/Main.purs:6:1 - 6:18 (line 6, column 1 - line 6, column 18)
-
-    The import of Data.Array is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 4 of 17:
-
-  in module Test.Main
-  at test/Main.purs:17:1 - 17:33 (line 17, column 1 - line 17, column 33)
-
-    The import of Effect.Class is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 5 of 17:
-
-  in module Test.Main
-  at test/Main.purs:19:1 - 19:26 (line 19, column 1 - line 19, column 26)
-
-    The qualified import of Node.FS.Sync as Fs is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 6 of 17:
-
-  in module Test.Main
-  at test/Main.purs:7:1 - 7:20 (line 7, column 1 - line 7, column 20)
-
-    The import of Node.Process is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 7 of 17:
-
-  in module Test.Main
-  at test/Main.purs:20:1 - 20:51 (line 20, column 1 - line 20, column 51)
-
-    The import of Parser is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 8 of 17:
-
-  in module Test.Main
-  at test/Main.purs:21:1 - 21:69 (line 21, column 1 - line 21, column 69)
-
-    The import of module Prelude contains the following unused references:
-
-      bind
-      (==)
-      ($)
-      pure
-
-    It could be replaced with:
-
-      import Prelude (Unit, discard, (*), (+), (-))
-
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedExplicitImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 9 of 17:
+Warning 1 of 9:
 
   in module Main
   at src/Main.purs:6:1 - 6:30 (line 6, column 1 - line 6, column 30)
@@ -111,7 +9,7 @@ Warning 9 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 10 of 17:
+Warning 2 of 9:
 
   in module Main
   at src/Main.purs:7:1 - 7:30 (line 7, column 1 - line 7, column 30)
@@ -122,7 +20,7 @@ Warning 10 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 11 of 17:
+Warning 3 of 9:
 
   in module Main
   at src/Main.purs:8:1 - 8:19 (line 8, column 1 - line 8, column 19)
@@ -133,7 +31,7 @@ Warning 11 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 12 of 17:
+Warning 4 of 9:
 
   in module Main
   at src/Main.purs:10:1 - 10:38 (line 10, column 1 - line 10, column 38)
@@ -144,7 +42,7 @@ Warning 12 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 13 of 17:
+Warning 5 of 9:
 
   in module Main
   at src/Main.purs:11:1 - 11:28 (line 11, column 1 - line 11, column 28)
@@ -155,7 +53,7 @@ Warning 13 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 14 of 17:
+Warning 6 of 9:
 
   in module Main
   at src/Main.purs:13:1 - 13:14 (line 13, column 1 - line 13, column 14)
@@ -166,7 +64,7 @@ Warning 14 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 15 of 17:
+Warning 7 of 9:
 
   in module Main
   at src/Main.purs:3:1 - 3:15 (line 3, column 1 - line 3, column 15)
@@ -180,7 +78,7 @@ Warning 15 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/ImplicitImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 16 of 17:
+Warning 8 of 9:
 
   in module Main
   at src/Main.purs:12:1 - 12:15 (line 12, column 1 - line 12, column 15)
@@ -194,7 +92,7 @@ Warning 16 of 17:
   See https://github.com/purescript/documentation/blob/master/errors/ImplicitImport.md for more information,
   or to contribute content related to this warning.
 
-Warning 17 of 17:
+Warning 9 of 9:
 
   in module Main
   at src/Main.purs:4:1 - 4:11 (line 4, column 1 - line 4, column 11)
@@ -540,3 +438,69 @@ pushing value (Expr (BlockExpr [(Expr (WhenExpr [(WhenArm (Expr (Expr "n") == (E
 finalize success: Just {
   value0: Expr { value0: BlockExpr { value0: [Array] }, value1: 14 }
 }
+program is: {
+  module_queue: [ ModuleID { value0: Nothing {}, value1: [] } ],
+  seen: Leaf {},
+  package_name: 'my-project',
+  modules: Leaf {},
+  fs: {
+    read_file: [Function (anonymous)],
+    exists: [Function (anonymous)],
+    write_file: [Function (anonymous)]
+  }
+}
+ModuleFn args: [(FnParam n Nothing)]
+type_env after inserting: (fromFoldable [(Type Bool),(Type F32),(Type F64),(Type Float),(Type I16),(Type I32),(Type I64),(Type I8),(Type Int),(Type String),(Type U16),(Type U32),(Type U64),(Type U8),(Name n)])
+ctx' is: { constraints: [], module_id: (ModuleID Nothing []), next_id: 1, params: [], return_type: (ProgramType (TypeVar 0)), type_env: (fromFoldable [(Tuple (Type Bool) (ProgramType Bool)),(Tuple (Type F32) (ProgramType F32)),(Tuple (Type F64) (ProgramType F64)),(Tuple (Type Float) (ProgramType Float)),(Tuple (Type I16) (ProgramType I16)),(Tuple (Type I32) (ProgramType I32)),(Tuple (Type I64) (ProgramType I64)),(Tuple (Type I8) (ProgramType I8)),(Tuple (Type Int) (ProgramType Integer)),(Tuple (Type String) (ProgramType String)),(Tuple (Type U16) (ProgramType U16)),(Tuple (Type U32) (ProgramType U32)),(Tuple (Type U64) (ProgramType U64)),(Tuple (Type U8) (ProgramType U8))]), type_index: (fromFoldable [(Tuple 0 (ProgramType (TypeVar 0)))]) }
+type_env after merging: (fromFoldable [(Type Bool),(Type F32),(Type F64),(Type Float),(Type I16),(Type I32),(Type I64),(Type I8),(Type Int),(Type String),(Type U16),(Type U32),(Type U64),(Type U8)])
+param n type is (ProgramType (TypeVar 2)): Tuple {
+  value0: [ ProgramType { value0: [TypeVar], value1: [Just] } ],
+  value1: {
+    type_env: Node {
+      value0: 5,
+      value1: 14,
+      value2: [TypeIdentifier],
+      value3: [ProgramType],
+      value4: [Node],
+      value5: [Node]
+    },
+    next_id: 1,
+    type_index: Node {
+      value0: 1,
+      value1: 1,
+      value2: 0,
+      value3: [ProgramType],
+      value4: Leaf {},
+      value5: Leaf {}
+    },
+    module_id: ModuleID { value0: Nothing {}, value1: [] },
+    params: [],
+    return_type: ProgramType { value0: [TypeVar], value1: Nothing {} },
+    constraints: []
+  }
+}
+getting argument types: Just {
+  value0: Tuple {
+    value0: [ [ProgramType] ],
+    value1: {
+      type_env: [Node],
+      next_id: 1,
+      type_index: [Node],
+      module_id: [ModuleID],
+      params: [],
+      return_type: [ProgramType],
+      constraints: []
+    }
+  }
+}
+Arg types: [(ProgramType (TypeVar 2))]
+Final type_env keys: (fromFoldable [(Type Bool),(Type F32),(Type F64),(Type Float),(Type I16),(Type I32),(Type I64),(Type I8),(Type Int),(Type String),(Type U16),(Type U32),(Type U64),(Type U8)])
+Type context: Nothing
+inferring expr type in array: (Expr (WhenExpr [(WhenArm (Expr (Expr "n") == (Expr 0)) (Expr 0)),(WhenArm (Expr (Expr "n") == (Expr 1)) (Expr 1))] (Just (Expr (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 1))])) + (Expr (CallExpr (Expr "fib") [(Expr (Expr "n") - (Expr 2))]))))))
+looking up n: Nothing {}
+inferring equals expr left: Nothing {}
+condition type of when arm is: Nothing {}
+infering return type in when: Nothing {}
+inferring the expression types: Nothing {}
+inferring expr type: Nothing {}
+processing module function: Nothing {}

@@ -16,23 +16,12 @@ module Parser
   , TypeExpr(..)
   , TypeExprKind(..)
   , WhenArm(..)
-  , expect
-  , expect_colon
-  , expect_name_identifier
-  , expect_type_identifier
-  , parse
-  , parse_declaration
-  , parse_expr
-  , parse_fn_param
-  , parse_many
-  , parse_many_seperated
-  , parse_map
-  , parse_module
-  , parse_optional
-  , parse_otherwise
   , parse_take_left
   , parse_take_right
-  , parse_type_expr
+  , parse_map
+  , parse_otherwise
+  , parse_expr
+  , parse
   )
   where
 
@@ -41,8 +30,7 @@ import Prelude
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
-import Debug (spy)
-import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_else_keyword, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
@@ -222,7 +210,8 @@ parse module_text = do
 parse_module :: (Array Token) -> Int -> ParserResult Module
 parse_module tokens index = do
   Tuple declarations next_index <- parse_many parse_declaration tokens index
-  case (tokens !! next_index) of
+  let _ = tokens !! next_index
+  case tokens !! next_index of
     Just (Token TokenKindEOF _) -> Just (Tuple (Module declarations) next_index)
     _ -> Nothing
 
@@ -246,12 +235,12 @@ do_parse_pub_declaration :: Int -> (Array Token) -> Int -> ParserResult ModuleDe
 
 do_parse_pub_declaration pos tokens index = do
   -- TODO: Implement the following: -- Tuple fn next_index <- (do_parse_fn +| do_parse_type_declaration +| do_parse_fn_declaration) tokens index
-  Tuple fn next_index <- (do_parse_fn) tokens index
+  Tuple fn next_index <- do_parse_fn tokens index
   case fn of
     ModuleFn (Just name) args return_type body -> Just (Tuple (ModuleDeclaration (FnDeclarationKind true (NameIdentifier name) (ModuleFn (Just name) args return_type body)) pos) next_index)
     _ -> Nothing
 
-do_parse_fn :: Parser ModuleFn
+do_parse_fn :: (Array Token) -> Int -> ParserResult ModuleFn
 do_parse_fn tokens index = do
   Tuple _ next_index <- (expect is_token_kind_fn_keyword) tokens index
   Tuple maybe_name next_index_2 <- parse_optional expect_name_identifier tokens next_index
@@ -260,8 +249,10 @@ do_parse_fn tokens index = do
   Tuple _ next_index_5 <- expect is_token_kind_r_paren tokens next_index_4
   Tuple return_type next_index_6 <- parse_optional ((expect is_token_kind_r_arrow) ++-> parse_type_expr) tokens next_index_5
   Tuple expr next_index_7 <- parse_expr tokens next_index_6
+  let _ = expr
   let args' = fromMaybe [] args
   let name = maybe Nothing (\(Tuple fn_name _) -> Just fn_name) maybe_name
+
   Just (Tuple (ModuleFn name args' return_type expr) next_index_7)
 
 expect_name_identifier :: Parser (Tuple String Int)
