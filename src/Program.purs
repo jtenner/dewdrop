@@ -91,13 +91,14 @@ module Program
   )
   where
 
-import Data.Array (any, last, snoc, uncons, partition)
+import Data.Array (any, last, snoc, uncons, partition, length, zip)
 import Data.Foldable (foldl, foldM)
-import Data.Map (Map, empty, fromFoldable, insert, lookup)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Map (Map, empty, fromFoldable, insert, keys, lookup)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Set (Set)
 import Data.Set as Set
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), uncurry)
+import Debug (spy)
 import Effect (Effect)
 import Effect.Console (log)
 import Effect.Exception (throw)
@@ -106,9 +107,8 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Sync as FS
 import Node.Path as Path
 import Parser (Expr(..), ExprKind(..), FnParam(..), Identifier(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), TypeExpr(..), TypeExprKind(..), WhenArm(..), parse)
-import Prelude (map, not, discard, unit, class Eq, class Ord, class Show, Ordering(..), Unit, bind, compare, pure, show, (||), ($), (+), (<>), (==), (&&))
+import Prelude ((/=), otherwise, map, not, discard, unit, class Eq, class Ord, class Show, Ordering(..), Unit, bind, compare, pure, show, (||), ($), (+), (<>), (==), (&&))
 import Record (merge)
-import Util (is_equals)
 
 assert_maybe :: ∀ a. Maybe a -> String -> Effect a
 assert_maybe (Just a) _ = pure a
@@ -137,7 +137,7 @@ instance eq_module_elem_id :: Eq ModuleElemID where
 
 type ModulePositionID = Tuple ModuleID Int
 
-data ProgramTypeKind = FnType (Array ProgramType) (Maybe ProgramType)
+data ProgramTypeKind = FnType (Array ProgramType) ProgramType
                      | I8
                      | U8
                      | I16
@@ -341,7 +341,25 @@ numeric_type :: Maybe ModulePositionID -> ProgramType
 numeric_type pos = (ProgramType Numeric pos)
 
 fn_type :: Array ProgramType -> ProgramType -> Maybe ModulePositionID -> ProgramType
-fn_type args ret pos = (ProgramType (FnType args (Just ret)) pos)
+fn_type args ret pos = (ProgramType (FnType args ret) pos)
+
+is_int_type :: ProgramType -> Boolean
+is_int_type (ProgramType I8 _) = true
+is_int_type (ProgramType U8 _) = true
+is_int_type (ProgramType I16 _) = true
+is_int_type (ProgramType U16 _) = true
+is_int_type (ProgramType I32 _) = true
+is_int_type (ProgramType U32 _) = true
+is_int_type (ProgramType I64 _) = true
+is_int_type (ProgramType U64 _) = true
+is_int_type (ProgramType Integer _) = true
+is_int_type _ = false
+
+is_float_type :: ProgramType -> Boolean
+is_float_type (ProgramType F32 _) = true
+is_float_type (ProgramType F64 _) = true
+is_float_type (ProgramType Float _) = true
+is_float_type _ = false
 
 builtin_types :: Map Identifier ProgramType
 builtin_types = fromFoldable
@@ -599,14 +617,12 @@ process_module_declarations module_id declarations module_context =
       ModuleDeclaration (FnDeclarationKind fn_exported _ fn) pos -> do
         let elem_id = get_declaration_id module_id decl
         type_context <- process_module_fn module_id pos fn
-        case fn_exported of
-          true -> do
-            let ctx' = merge { exported: Set.insert elem_id exported, symbol_table: insert elem_id decl symbol_table, type_contexts: insert elem_id type_context type_contexts } ctx
-            go ctx' $ uncons rest 
-          false -> do
-            let ctx' = merge { symbol_table: insert elem_id decl symbol_table, type_contexts: insert elem_id type_context type_contexts } ctx
-            go ctx' $ uncons rest
+        let ctx' = merge { exported: if fn_exported then Set.insert elem_id exported else exported, symbol_table: insert elem_id decl symbol_table, type_contexts: insert elem_id type_context type_contexts } ctx
+        let _ = spy "sub is: " $ type_context.constraints
+        sub <- unify type_context.constraints
 
+        go ctx' $ uncons rest
+        
 process_module_fn :: ModuleID -> Int -> ModuleFn -> Maybe TypeContext
 process_module_fn module_id pos_index (ModuleFn maybe_name args return_type_guard_expr body) = do
   let type_context = new_type_context module_id
@@ -682,10 +698,10 @@ compile config = do
   log $ "modules: " <> show modules 
   log $ "module_queue: " <> show module_queue
   log $ "seen: " <> show seen
+
   pure unit
 
 -- unification functions
-
 unify :: TypeConstraints -> Maybe Substitution
 unify constraints = do
   let { no: rest_constraints, yes: equality_constraints } = partition (is_equals_constraint) constraints
@@ -698,8 +714,7 @@ unify constraints = do
 
     apply_sub :: Substitution -> ProgramType -> ProgramType
     apply_sub sub kind@(ProgramType (TypeVar id) _) = fromMaybe kind $ lookup id sub
-    apply_sub sub (ProgramType (FnType args (Just ret)) pos) = ProgramType (FnType (map (apply_sub sub) args) (Just $ apply_sub sub ret)) pos
-    apply_sub sub (ProgramType (FnType args Nothing) pos) = ProgramType (FnType (map (apply_sub sub) args) Nothing) pos
+    apply_sub sub (ProgramType (FnType args ret) pos) = ProgramType (FnType (map (apply_sub sub) args) (apply_sub sub ret)) pos
     apply_sub _ t = t
 
     apply_sub_constraint :: Substitution -> TypeConstraint -> TypeConstraint
@@ -709,7 +724,7 @@ unify constraints = do
 
     occurs :: Int -> ProgramType -> Boolean
     occurs id (ProgramType (TypeVar id') _) = id == id'
-    occurs id (ProgramType (FnType args ret) _) = any (occurs id) args || maybe false (occurs id) ret
+    occurs id (ProgramType (FnType args ret) _) = any (occurs id) args || occurs id ret
     occurs _ _ = false
 
     unify' :: TypeConstraints -> Substitution -> Maybe Substitution
@@ -730,11 +745,60 @@ unify constraints = do
     -- for type variables
     unify_constraint (Equals (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
     unify_constraint (Equals left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
+    -- same but for matches
+    unify_constraint (Matches (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
+    unify_constraint (Matches left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
+    
 
-    -- TODO: Equality of function types
 
-    -- TODO: Matching and AtLeast
+
+    unify_constraint (Equals (ProgramType (FnType args ret) _) (ProgramType (FnType args' ret') _)) sub = 
+      if length args /= length args'
+        then Nothing
+        else do
+          let arg_pairs = zip args args' 
+          let arg_constraints = map (uncurry Equals) arg_pairs
+          let all_constraints = snoc arg_constraints $ Equals ret ret'
+          do_unify_constraints_maybe sub all_constraints
+
+    unify_constraint (Matches left right) sub | is_int_type left && is_int_type right = Just sub
+    unify_constraint (Matches left right) sub | is_float_type left && is_float_type right = Just sub
+
+    -- for numeric
+    unify_constraint (Matches left (ProgramType Numeric _)) sub | is_int_type left = Just sub
+                                                                | is_float_type left = Just sub
+                                                                | otherwise = Nothing
+
+    unify_constraint (Matches (ProgramType Numeric _) right) sub | is_int_type right = Just sub
+                                                                 | is_float_type right = Just sub
+                                                                 | otherwise = Nothing
+
+    unify_constraint (Matches (ProgramType (FnType args ret) _) (ProgramType (FnType args' ret') _)) sub = 
+      if length args /= length args'
+        then Nothing
+        else do
+          let arg_pairs = zip args args' 
+          let arg_constraints = map (uncurry Matches) arg_pairs
+          let all_constraints = snoc arg_constraints $ Matches ret ret'
+          do_unify_constraints_maybe sub all_constraints
+
+    unify_constraint (AtLeast left (ProgramType (TypeVar id) _)) sub | is_int_type left = Just $ insert id left sub
+                                                                     | is_float_type left = Just $ insert id left sub
+                                                                     | otherwise = Nothing
+
+    unify_constraint (AtLeast (ProgramType (TypeVar id) _) right) sub | is_int_type right = Just $ insert id right sub
+                                                                     | is_float_type right = Just $ insert id right sub
+                                                                     | otherwise = Nothing
 
     -- for type matching
-    unify_constraint _ _ = Nothing
+    unify_constraint cons sub = do
+      let _ = spy "constraint is:" cons
+      let _ = spy "sub is:" $ keys sub
+      Nothing
 
+    do_unify_constraints_maybe :: Substitution -> Array TypeConstraint -> Maybe Substitution
+    do_unify_constraints_maybe sub arg_constraints = case uncons arg_constraints of
+      Nothing -> Just sub
+      Just { head: c, tail: cs } -> do
+        sub' <- unify_constraint c sub
+        do_unify_constraints_maybe sub' cs
