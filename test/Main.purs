@@ -4,21 +4,16 @@ module Test.Main
   where
 
 import Data.Array
-import Node.Process
-
 import Control.Monad.Error.Class (class MonadThrow)
-import Control.Monad.Trampoline (done)
 import Data.Eq (class Eq)
 import Data.Maybe (Maybe(..))
-import Data.Show (class Show)
+import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Error)
-import Effect.Class (liftEffect)
 import Lexer (Token(..), TokenKind(..), lex_token, tokenize)
-import Node.FS.Sync as Fs
-import Parser (Expr(..), ExprKind(..), parse_expr)
-import Prelude (Unit, bind, discard, (*), (+), (-), (==), ($), pure)
+import Parser (parse_expr)
+import Prelude (Unit, discard, (*), (+), (-))
 import RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -162,9 +157,51 @@ main = runSpecAndExitProcess [consoleReporter] do
       --                      (2 + 3) * 4 = 20
       solve_and_check (rpn +. group ++? 2 +.? add ++? 3 +.? end_group +.? mul ++? 4) 20
 
-  describe "parser" do 
+  describe "parser" do
     it "should parse an integer" do
-      shouldEqual true true
+      let
+        tokens = tokenize "123" true
+        result = parse_expr tokens 0
+      case result of
+        Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (IntExpr 123))"
+        Nothing -> shouldEqual "Nothing" "Just"
 
+    it "should parse a variable" do
+      let
+        tokens = tokenize "abc" true
+        result = parse_expr tokens 0
+      case result of
+        Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (NameExpr abc))"
+        Nothing -> shouldEqual "Nothing" "Just"
 
--- [(Token TokenKindPubKeyword: 9),(Token TokenKindFnKeyword: 21),(Token TokenKindWhenKeyword: 32),(Token TokenKindElseKeyword: 45),(Token (TokenKindNameIdentifier abc): 58),(Token (TokenKindNameIdentifier _): 70),(Token (TokenKindNameIdentifier a_b_c_123): 80),(Token (TokenKindInt 1): 98),(Token (TokenKindInt 12): 108),(Token TokenKindLParen: 119),(Token TokenKindRParen: 129),(Token TokenKindLBrace: 139),(Token TokenKindRBrace: 149),(Token TokenKindEqualsEquals: 159),(Token TokenKindPlus: 170),(Token TokenKindMinus: 180),(Token TokenKindAsterisk: 190),(Token TokenKindFSlash: 200),(Token TokenKindRArrow: 210),(Token (TokenKindInt 123): 222),(Token TokenKindEOF: 234)]
+    it "should parse a binary expression" do
+      let
+        tokens = tokenize "1 + 2" true
+        result = parse_expr tokens 0
+      case result of
+        Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (AddExpr (Expr (IntExpr 1)) (Expr (IntExpr 2))))"
+        Nothing -> shouldEqual "Nothing" "Just"
+
+    it "should parse a grouped expression" do
+      let
+        tokens = tokenize "(1 + 2)" true
+        result = parse_expr tokens 0
+      case result of
+        Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (AddExpr (Expr (IntExpr 1)) (Expr (IntExpr 2))))"
+        Nothing -> shouldEqual "Nothing" "Just"
+
+    it "should parse a more complex expression" do
+      let
+        tokens = tokenize "(1 + 2) * 3 - 4" true
+        result = parse_expr tokens 0
+      case result of
+        Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (SubExpr (Expr (MulExpr (Expr (AddExpr (Expr (IntExpr 1)) (Expr (IntExpr 2)))) (Expr (IntExpr 3)))) (Expr (IntExpr 4))))"
+        Nothing -> shouldEqual "Nothing" "Just"
+
+    it "should parse a call expression" do
+      let
+        tokens = tokenize "f(1, 2)" true
+        result = parse_expr tokens 0
+      case result of
+        Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (CallExpr (Expr (NameExpr f)) [(Expr (IntExpr 1)),(Expr (IntExpr 2))]))"
+        Nothing -> shouldEqual "Nothing" "Just"

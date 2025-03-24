@@ -2,42 +2,42 @@
   [
     "RPN should handle groups",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "RPN should perform binary operations",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "RPN should perform order of operations",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "RPN should perform right_unary operations",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "RPN should perform unary operations",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "RPN should prioritize left_unary operations over binary operations",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
@@ -51,14 +51,14 @@
   [
     "RPN should prioritize right_unary operations over left_unary operations",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "Token Kinds should generate an array of tokens",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
@@ -72,14 +72,49 @@
   [
     "Token Kinds should match tokens",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
+      "success": true
+    }
+  ],
+  [
+    "parser should parse a binary expression",
+    {
+      "timestamp": "1742827009128.0",
+      "success": true
+    }
+  ],
+  [
+    "parser should parse a call expression",
+    {
+      "timestamp": "1742827009128.0",
+      "success": true
+    }
+  ],
+  [
+    "parser should parse a grouped expression",
+    {
+      "timestamp": "1742827009128.0",
+      "success": true
+    }
+  ],
+  [
+    "parser should parse a more complex expression",
+    {
+      "timestamp": "1742827009128.0",
+      "success": true
+    }
+  ],
+  [
+    "parser should parse a variable",
+    {
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],
   [
     "parser should parse an integer",
     {
-      "timestamp": "1741903591207.0",
+      "timestamp": "1742827009128.0",
       "success": true
     }
   ],

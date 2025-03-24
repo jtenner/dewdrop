@@ -30,6 +30,7 @@ import Prelude
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
+import Debug (spy)
 import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
@@ -289,7 +290,8 @@ parse_expr tokens index = do
 do_parse_expression_unary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_unary rpn' tokens index = case tokens !! index of
   Just (Token (TokenKindInt val) pos) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
-  Just (Token (TokenKindNameIdentifier name) pos) -> 
+  Just (Token (TokenKindNameIdentifier name) pos) -> do
+    let _ = spy "found name identifier" name
     do_parse_expression_binary (rpn' ++ Expr (NameExpr name) pos) tokens (index + 1)
 
   -- LParen in unary position is a group
@@ -388,8 +390,10 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
 
   -- LParen in binary position is actually a function call
   Just (Token TokenKindLParen pos) -> do
+    let _ = spy "found function call at" index
     let _ = tokens !! (index + 1)
-    Tuple exprs next_index <- parse_many parse_expr tokens (index + 1)
+    Tuple exprs next_index <- parse_many_seperated parse_expr (expect is_token_kind_comma) tokens (index + 1)
+    let _ = spy "expressions is" exprs
     Tuple _ next_index_1 <- expect is_token_kind_r_paren tokens next_index
     rpn'' <- rpn' +. call_op pos exprs
     do_parse_expression_binary rpn'' tokens next_index_1
@@ -405,18 +409,18 @@ instance show_expr :: Show Expr where
 
 instance show_expr_kind :: Show ExprKind where
   show (WhenExpr arms default_expr) = "(WhenExpr " <> show arms <> " " <> show default_expr <> ")"
-  show (EqualsExpr left right) = show left <> " == " <> show right
-  show (IntExpr value) = show value
-  show (NameExpr name) = show name
+  show (EqualsExpr left right) = "(EqualsExpr " <> show left <> " " <> show right <> ")"
+  show (IntExpr value) = "(IntExpr " <> show value <> ")"
+  show (NameExpr name) = "(NameExpr " <> name <> ")"
   show (CallExpr expr args) = "(CallExpr " <> show expr <> " " <> show args <> ")"
-  show (AddExpr left right) = show left <> " + " <> show right
-  show (SubExpr left right) = show left <> " - " <> show right
-  show (MulExpr left right) = show left <> " * " <> show right
-  show (DivExpr left right) = show left <> " / " <> show right
-  show (GreaterThanExpr left right) = show left <> " > " <> show right
-  show (LessThanExpr left right) = show left <> " < " <> show right
-  show (GreaterThanEqualsExpr left right) = show left <> " >= " <> show right
-  show (LessThanEqualsExpr left right) = show left <> " <= " <> show right
+  show (AddExpr left right) = "(AddExpr " <> show left <> " " <> show right <> ")"
+  show (SubExpr left right) = "(SubExpr " <> show left <> " " <> show right <> ")"
+  show (MulExpr left right) = "(MulExpr " <> show left <> " " <> show right <> ")"
+  show (DivExpr left right) = "(DivExpr " <> show left <> " " <> show right <> ")"
+  show (GreaterThanExpr left right) = "(GreaterThanExpr " <> show left <> " " <> show right <> ")"
+  show (LessThanExpr left right) = "(LessThanExpr " <> show left <> " " <> show right <> ")"
+  show (GreaterThanEqualsExpr left right) = "(GreaterThanEqualsExpr " <> show left <> " " <> show right <> ")"
+  show (LessThanEqualsExpr left right) = "(LessThanEqualsExpr " <> show left <> " " <> show right <> ")"
   show (BlockExpr exprs) = "(BlockExpr " <> show exprs <> ")"
 
 instance show_when_arm :: Show WhenArm where
