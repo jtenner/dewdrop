@@ -1,19 +1,21 @@
 module Test.Main
   ( main
-  )
-  where
+  ) where
 
 import Data.Array
+
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Eq (class Eq)
 import Data.Maybe (Maybe(..))
 import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
+import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Error)
 import Lexer (Token(..), TokenKind(..), lex_token, tokenize)
-import Parser (parse_expr)
+import Parser (parse_expr, parse_fn)
 import Prelude (Unit, discard, (*), (+), (-))
+import Program (main_module_id, process_module_fn)
 import RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -29,7 +31,7 @@ solve_and_check rpn' v' = case rpn' of
   Nothing -> shouldEqual false true
 
 main :: Effect Unit
-main = runSpecAndExitProcess [consoleReporter] do
+main = runSpecAndExitProcess [ consoleReporter ] do
   describe "Token Kinds" do
     it "should match tokens" do
       -- TokenKindPubKeyword
@@ -40,7 +42,7 @@ main = runSpecAndExitProcess [consoleReporter] do
       shouldEqual (lex_token (to_chars "when") 0) (Just (Tuple TokenKindWhenKeyword 4)) -- to_chars "when"
       -- TokenKindElseKeyword
       shouldEqual (lex_token (to_chars "else") 0) (Just (Tuple TokenKindElseKeyword 4)) -- to_chars "else"
-      
+
       -- TokenKindNameIdentifier String
       shouldEqual (lex_token (to_chars "abc") 0) (Just (Tuple (TokenKindNameIdentifier "abc") 3)) -- to_chars "abc"
       shouldEqual (lex_token (to_chars "_") 0) (Just (Tuple (TokenKindNameIdentifier "_") 1)) -- to_chars "_"
@@ -48,7 +50,7 @@ main = runSpecAndExitProcess [consoleReporter] do
       -- TokenKindInt Int
       shouldEqual (lex_token (to_chars "1") 0) (Just (Tuple (TokenKindInt 1) 1)) -- to_chars "1"
       shouldEqual (lex_token (to_chars "12") 0) (Just (Tuple (TokenKindInt 12) 2)) -- to_chars "12"
-      
+
       -- TokenKindLParen
       shouldEqual (lex_token (to_chars "(") 0) (Just (Tuple TokenKindLParen 1)) -- to_chars "("
       -- TokenKindRParen
@@ -74,7 +76,9 @@ main = runSpecAndExitProcess [consoleReporter] do
       shouldEqual (lex_token (to_chars "\n") 0) (Just (Tuple TokenKindNewLine 1)) -- to_chars "\n"
 
     it "should generate an array of tokens" do
-      let text = """
+      let
+        text =
+          """
         pub
         fn
         when
@@ -97,28 +101,29 @@ main = runSpecAndExitProcess [consoleReporter] do
 
         123
         """
-      shouldEqual (tokenize text true) [ Token TokenKindPubKeyword 9
-      , Token TokenKindFnKeyword 21
-      , Token TokenKindWhenKeyword 32
-      , Token TokenKindElseKeyword 45
-      , Token (TokenKindNameIdentifier "abc") 58
-      , Token (TokenKindNameIdentifier "_") 70
-      , Token (TokenKindNameIdentifier "a_b_c_123") 80
-      , Token (TokenKindInt 1) 98
-      , Token (TokenKindInt 12) 108
-      , Token TokenKindLParen 119
-      , Token TokenKindRParen 129
-      , Token TokenKindLBrace 139
-      , Token TokenKindRBrace 149
-      , Token TokenKindEqualsEquals 159
-      , Token TokenKindPlus 170
-      , Token TokenKindMinus 180
-      , Token TokenKindAsterisk 190
-      , Token TokenKindFSlash 200
-      , Token TokenKindRArrow 210
-      , Token (TokenKindInt 123) 222
-      , Token TokenKindEOF 234
-      ]
+      shouldEqual (tokenize text true)
+        [ Token TokenKindPubKeyword 9
+        , Token TokenKindFnKeyword 21
+        , Token TokenKindWhenKeyword 32
+        , Token TokenKindElseKeyword 45
+        , Token (TokenKindNameIdentifier "abc") 58
+        , Token (TokenKindNameIdentifier "_") 70
+        , Token (TokenKindNameIdentifier "a_b_c_123") 80
+        , Token (TokenKindInt 1) 98
+        , Token (TokenKindInt 12) 108
+        , Token TokenKindLParen 119
+        , Token TokenKindRParen 129
+        , Token TokenKindLBrace 139
+        , Token TokenKindRBrace 149
+        , Token TokenKindEqualsEquals 159
+        , Token TokenKindPlus 170
+        , Token TokenKindMinus 180
+        , Token TokenKindAsterisk 190
+        , Token TokenKindFSlash 200
+        , Token TokenKindRArrow 210
+        , Token (TokenKindInt 123) 222
+        , Token TokenKindEOF 234
+        ]
 
   let add = binary "+" 5 false \x y -> x + y
   let sub = binary "-" 5 false \x y -> x - y
@@ -139,11 +144,11 @@ main = runSpecAndExitProcess [consoleReporter] do
 
     it "should prioritize right_unary operations over left_unary operations" do
       --                      (+2) (1 (*3)) = 5
-      solve_and_check (rpn ++ 1 +. rmul_3 +.? add_2) 5 
+      solve_and_check (rpn ++ 1 +. rmul_3 +.? add_2) 5
 
     it "should prioritize left_unary operations over binary operations" do
       --                      (+2) 3 * 3 = 15
-      solve_and_check (rpn +. add_2 ++? 3 +.? mul ++? 3) 15 
+      solve_and_check (rpn +. add_2 ++? 3 +.? mul ++? 3) 15
 
     it "should perform binary operations" do
       --                      1 + 2 = 3
@@ -152,7 +157,7 @@ main = runSpecAndExitProcess [consoleReporter] do
     it "should perform order of operations" do
       --                      1 + 2 * 3 - 4 = 3
       solve_and_check (rpn ++ 1 +. add ++? 2 +.? mul ++? 3 +.? sub ++? 4) 3
-      
+
     it "should handle groups" do
       --                      (2 + 3) * 4 = 20
       solve_and_check (rpn +. group ++? 2 +.? add ++? 3 +.? end_group +.? mul ++? 4) 20
@@ -205,3 +210,18 @@ main = runSpecAndExitProcess [consoleReporter] do
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (CallExpr (Expr (NameExpr f)) [(Expr (IntExpr 1)),(Expr (IntExpr 2))]))"
         Nothing -> shouldEqual "Nothing" "Just"
+
+  describe "Constraint generation" do
+    it "should generate constraints for a function in a single module" do
+      -- ModuleID -> Int -> ModuleFn -> Maybe TypeContext
+      let
+        default_module_id = main_module_id { basedir: ".", name: "constraint_generation" }
+        tokens = tokenize "fn identity(x) x" true
+        module_fn_result = parse_fn tokens 0
+      case module_fn_result of
+        Just (Tuple module_fn _) -> case process_module_fn default_module_id 0 module_fn of
+          Just type_context -> do
+            let _ = spy "tc is" type_context
+            shouldEqual true true
+          _ -> shouldEqual false false
+        _ -> shouldEqual false false

@@ -18,8 +18,7 @@ module RPN
   , right_unary
   , rpn
   , unary
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -27,11 +26,12 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-data Operator a = LeftUnary String (a -> a)
-                | RightUnary String (a -> a)
-                | Binary String Int Boolean (a -> a -> a)
-                | Group
-                | EndGroup
+data Operator a
+  = LeftUnary String (a -> a)
+  | RightUnary String (a -> a)
+  | Binary String Int Boolean (a -> a -> a)
+  | Group
+  | EndGroup
 
 instance Show (Operator a) where
   show (LeftUnary name _) = "LeftUnary " <> name
@@ -61,24 +61,28 @@ end_group :: ∀ a. Operator a
 end_group = EndGroup
 
 infixl 4 push_value as ++
+
 push_value :: ∀ a. Show a => RPN a -> a -> RPN a
-push_value (RPN nested stack ops) v =  RPN nested (v : stack) ops
+push_value (RPN nested stack ops) v = RPN nested (v : stack) ops
 
 pop_value_maybe :: ∀ a. Show a => RPN a -> Maybe (Tuple a (RPN a))
 pop_value_maybe (RPN nested (v : stack) ops) = Just $ Tuple v $ RPN nested stack ops
 pop_value_maybe _ = Nothing
 
 infixl 4 push_value_maybe as ++?
+
 push_value_maybe :: ∀ a. Show a => Maybe (RPN a) -> a -> Maybe (RPN a)
 push_value_maybe (Just rpn') v = Just $ push_value rpn' v
 push_value_maybe _ _ = Nothing
 
 infixl 4 push_operator_maybe as +.?
+
 push_operator_maybe :: ∀ a. Show a => Maybe (RPN a) -> Operator a -> Maybe (RPN a)
 push_operator_maybe Nothing _ = Nothing
 push_operator_maybe (Just rpn') op = push_operator rpn' op
 
 infixl 4 push_operator as +.
+
 push_operator :: ∀ a. Show a => RPN a -> Operator a -> Maybe (RPN a)
 -- If the operator is an end group but the op stack is empty, pushing an end group is not ok
 push_operator (RPN _ _ Nil) EndGroup = Nothing
@@ -104,15 +108,15 @@ push_operator rpn' EndGroup = do
   push_operator rpn'' EndGroup
 
 -- pushing a binary operator to the stack is ok if ...
-push_operator rpn'@(RPN nested stack ops@(Binary _ p' _ _ : _)) op@(Binary _ p f _) 
+push_operator rpn'@(RPN nested stack ops@(Binary _ p' _ _ : _)) op@(Binary _ p f _)
   -- the precidence is higher
   | p > p' = Just $ RPN nested stack $ op : ops
   -- the precidence is the same and the operator is right associative
   | p == p' && not f = Just $ RPN nested stack $ op : ops
   -- otherwise, pop the stack once and continue
   | otherwise = do
-    rpn'' <- pop_operator rpn'
-    push_operator rpn'' op
+      rpn'' <- pop_operator rpn'
+      push_operator rpn'' op
 
 -- pushing a right unary operator is always ok
 push_operator (RPN nested stack ops) op@(RightUnary _ _) = Just $ RPN nested stack $ op : ops

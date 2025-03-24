@@ -9,5 +9,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "scripts": {
+    "format": "bunx purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs' && bunx biome format ."
   }
 }

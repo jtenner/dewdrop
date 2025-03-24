@@ -12,7 +12,6 @@ import Effect.Console (log)
 import Program
 import Parser
 
-
 main :: Effect Unit
 main = do
   let config = pkg "my-project" "example"

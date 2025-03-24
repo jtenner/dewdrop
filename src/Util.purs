@@ -55,6 +55,7 @@ module Util
   , take_then_optional
   , take_type_identifier
   , to_chars
+  , trace
   , union_char_predicate
   )
   where
@@ -68,6 +69,8 @@ import Data.Tuple (Tuple(..))
 foreign import str_char :: String -> Char -> String
 foreign import char_str :: Char -> String -> String
 foreign import to_chars :: String -> Array Char
+foreign import trace :: ∀ a. String -> a -> a
+
 
 is_char :: Char -> Char -> Boolean
 is_char c c' = c == c'
@@ -98,67 +101,93 @@ expect_many p arr i = do_expect_many "" 0 p arr i
 do_expect_many :: String -> Int -> (Char -> Boolean) -> Array Char -> Int -> Maybe (Tuple String Int)
 do_expect_many s len p arr j = do
   c <- arr !! j
-  if p c
-    then do_expect_many (str_char s c) (len + 1) p arr (j + 1)
-    else Just (Tuple s len)
+  if p c then do_expect_many (str_char s c) (len + 1) p arr (j + 1)
+  else Just (Tuple s len)
 
 is_lower :: Char -> Boolean
 is_lower = ('a' .. 'z')
+
 is_upper :: Char -> Boolean
 is_upper = ('A' .. 'Z')
+
 is_alpha :: Char -> Boolean
 is_alpha = is_lower +| is_upper
+
 is_digit :: Char -> Boolean
 is_digit = ('0' .. '9')
+
 is_positive_digit :: Char -> Boolean
 is_positive_digit = ('1' .. '9')
+
 is_alpha_num :: Char -> Boolean
 is_alpha_num = is_alpha +| is_digit
+
 is_plus :: Char -> Boolean
 is_plus = is_char '+'
+
 is_minus :: Char -> Boolean
 is_minus = is_char '-'
+
 is_equals :: Char -> Boolean
 is_equals = is_char '='
+
 is_rcaret :: Char -> Boolean
 is_rcaret = is_char '>'
+
 is_lcaret :: Char -> Boolean
 is_lcaret = is_char '<'
+
 is_space :: Char -> Boolean
 is_space = is_char ' '
+
 is_newline :: Char -> Boolean
 is_newline = is_char '\n'
+
 is_tab :: Char -> Boolean
 is_tab = is_char '\t'
+
 is_return_char :: Char -> Boolean
 is_return_char = is_char '\r'
+
 is_lparen :: Char -> Boolean
 is_lparen = is_char '('
+
 is_rparen :: Char -> Boolean
 is_rparen = is_char ')'
+
 is_underscore :: Char -> Boolean
 is_underscore = is_char '_'
+
 is_whitespace :: Char -> Boolean
 is_whitespace = is_space +| is_return_char +| is_tab
+
 is_lbrace :: Char -> Boolean
 is_lbrace = is_char '{'
+
 is_rbrace :: Char -> Boolean
 is_rbrace = is_char '}'
+
 is_comma :: Char -> Boolean
 is_comma = is_char ','
+
 is_colon :: Char -> Boolean
 is_colon = is_char ':'
+
 is_asterisk :: Char -> Boolean
 is_asterisk = is_char '*'
+
 is_fslash :: Char -> Boolean
 is_fslash = is_char '/'
+
 is_dot :: Char -> Boolean
 is_dot = is_char '.'
+
 is_zero :: Char -> Boolean
 is_zero = is_char '0'
 
 is_name_identifier_start :: Char -> Boolean
 is_name_identifier_start = is_underscore +| is_lower
+
 is_name_identifier_continue :: Char -> Boolean
 is_name_identifier_continue = is_name_identifier_start +| is_digit
 
@@ -173,9 +202,8 @@ type Consumer = Array Char -> Int -> Maybe (Tuple String Int)
 take :: (Char -> Boolean) -> Consumer
 take p arr index = do
   c <- (arr !! index)
-  if (p c)
-    then Just (Tuple (str_char "" c) (index + 1))
-    else Nothing
+  if (p c) then Just (Tuple (str_char "" c) (index + 1))
+  else Nothing
 
 take_many :: (Char -> Boolean) -> Consumer
 take_many p arr index = do_take_many "" p arr index
@@ -187,6 +215,7 @@ do_take_many acc p arr index = case (arr !! index) of
   _ -> Just (Tuple acc index)
 
 infixl 4 take_then as ++
+
 take_then :: Consumer -> Consumer -> Consumer
 take_then a b arr index = do
   Tuple s index2 <- a arr index
@@ -194,6 +223,7 @@ take_then a b arr index = do
   Just (Tuple (s <> s2) index3)
 
 infixl 4 take_then_optional as ++?
+
 take_then_optional :: Consumer -> Consumer -> Consumer
 take_then_optional a b arr index = do
   Tuple s index2 <- a arr index
@@ -202,6 +232,7 @@ take_then_optional a b arr index = do
     Just (Tuple s2 index3) -> Just (Tuple (s <> s2) index3)
 
 infixl 4 take_or as ++|
+
 take_or :: Consumer -> Consumer -> Consumer
 take_or a b arr index = case a arr index of
   Nothing -> b arr index
@@ -221,8 +252,9 @@ take_many_seperated consumer seperator = \arr index -> do_take_many_seperated ""
 
 do_take_many_seperated :: String -> Consumer -> Consumer -> Consumer
 do_take_many_seperated acc consumer seperator arr index = case consumer arr index of
-  Nothing | acc == "" -> Nothing
-          | otherwise -> Just (Tuple acc index)
+  Nothing
+    | acc == "" -> Nothing
+    | otherwise -> Just (Tuple acc index)
   Just (Tuple s index2) -> case seperator arr index2 of
     Nothing -> Just (Tuple (acc <> s) index2)
     Just (Tuple _ index3) -> do_take_many_seperated (acc <> s) consumer seperator arr index3

@@ -16,14 +16,14 @@ module Parser
   , TypeExpr(..)
   , TypeExprKind(..)
   , WhenArm(..)
-  , parse_take_left
-  , parse_take_right
+  , parse
+  , parse_expr
+  , parse_fn
   , parse_map
   , parse_otherwise
-  , parse_expr
-  , parse
-  )
-  where
+  , parse_take_left
+  , parse_take_right
+  ) where
 
 import Prelude
 
@@ -94,8 +94,9 @@ equality_precedence = 8
 -- Ops: "is"
 -- is_precedence = 2
 
-data Identifier = NameIdentifier String
-                | TypeIdentifier String
+data Identifier
+  = NameIdentifier String
+  | TypeIdentifier String
 
 instance eq_identifier :: Eq Identifier where
   eq (NameIdentifier name) (NameIdentifier name') = name == name'
@@ -124,20 +125,21 @@ data TypeExprKind = NamedTypeExpr String
 
 data Expr = Expr ExprKind Int
 
-data ExprKind = WhenExpr (Array WhenArm) (Maybe Expr)
-              | BlockExpr (Array Expr)
-              | EqualsExpr Expr Expr
-              | IntExpr Int
-              | NameExpr String
-              | CallExpr Expr (Array Expr)
-              | AddExpr Expr Expr
-              | SubExpr Expr Expr
-              | MulExpr Expr Expr
-              | DivExpr Expr Expr
-              | GreaterThanExpr Expr Expr
-              | LessThanExpr Expr Expr
-              | GreaterThanEqualsExpr Expr Expr
-              | LessThanEqualsExpr Expr Expr
+data ExprKind
+  = WhenExpr (Array WhenArm) (Maybe Expr)
+  | BlockExpr (Array Expr)
+  | EqualsExpr Expr Expr
+  | IntExpr Int
+  | NameExpr String
+  | CallExpr Expr (Array Expr)
+  | AddExpr Expr Expr
+  | SubExpr Expr Expr
+  | MulExpr Expr Expr
+  | DivExpr Expr Expr
+  | GreaterThanExpr Expr Expr
+  | LessThanExpr Expr Expr
+  | GreaterThanEqualsExpr Expr Expr
+  | LessThanEqualsExpr Expr Expr
 
 data WhenArm = WhenArm Expr Expr
 
@@ -151,20 +153,21 @@ parse_many_seperated parser seperator = \tokens index -> do_parse_many_seperated
 
 do_parse_many_seperated :: ∀ t u. Parser t -> Parser u -> (Array Token) -> Int -> (Array t) -> ParserResult (Array t)
 do_parse_many_seperated parser seperator tokens index acc = case parser tokens index of
-  Nothing | length acc == 0 -> Nothing
-          | otherwise -> Just (Tuple acc index)
+  Nothing
+    | length acc == 0 -> Nothing
+    | otherwise -> Just (Tuple acc index)
   Just (Tuple t next_index) -> case seperator tokens next_index of
     Nothing -> Just (Tuple (snoc acc t) next_index)
     Just (Tuple _ next_index_2) -> do_parse_many_seperated parser seperator tokens next_index_2 (snoc acc t)
-    
 
 parse_many :: ∀ t. Parser t -> Parser (Array t)
 parse_many parser = \chars index -> do_parse_many parser chars index []
 
 do_parse_many :: ∀ t. Parser t -> (Array Token) -> Int -> (Array t) -> ParserResult (Array t)
 do_parse_many parser tokens index acc = case parser tokens index of
-  Nothing | length acc == 0 -> Nothing
-          | otherwise -> Just (Tuple acc index)
+  Nothing
+    | length acc == 0 -> Nothing
+    | otherwise -> Just (Tuple acc index)
   Just (Tuple t next_index) -> do_parse_many parser tokens next_index (snoc acc t)
 
 parse_optional :: ∀ t. Parser t -> Parser (Maybe t)
@@ -173,18 +176,21 @@ parse_optional parser = \chars index -> case parser chars index of
   Just (Tuple t next_index) -> Just (Tuple (Just t) next_index)
 
 infixl 4 parse_otherwise as +|
+
 parse_otherwise :: ∀ t. Parser t -> Parser t -> Parser t
 parse_otherwise p1 p2 tokens index = case p1 tokens index of
   Nothing -> p2 tokens index
   result -> result
 
 infixr 3 parse_map as +=
+
 parse_map :: ∀ t u. Parser t -> (t -> u) -> Parser u
 parse_map parser mapper = \tokens index -> case parser tokens index of
   Just (Tuple t next_index) -> Just (Tuple (mapper t) next_index)
   Nothing -> Nothing
 
 infixl 4 parse_take_left as <-++
+
 parse_take_left :: ∀ t u. Parser t -> Parser u -> Parser t
 parse_take_left p1 p2 tokens index = do
   Tuple t next_index <- p1 tokens index
@@ -192,6 +198,7 @@ parse_take_left p1 p2 tokens index = do
   Just (Tuple t next_index_2)
 
 infixl 4 parse_take_right as ++->
+
 parse_take_right :: ∀ t u. Parser t -> Parser u -> Parser u
 parse_take_right p1 p2 tokens index = do
   Tuple _ next_index <- p1 tokens index
@@ -232,17 +239,17 @@ do_parse_declaration _ _ _ = Nothing
 do_parse_pub_declaration :: Int -> (Array Token) -> Int -> ParserResult ModuleDeclaration
 -- Consts
 -- Fns
--- (do_parse_const_declaration +| do_parse_type_declaration +| do_parse_fn_declaration)
+-- (do_parse_const_declaration +| do_parse_type_declaration +| parse_fn_declaration)
 
 do_parse_pub_declaration pos tokens index = do
-  -- TODO: Implement the following: -- Tuple fn next_index <- (do_parse_fn +| do_parse_type_declaration +| do_parse_fn_declaration) tokens index
-  Tuple fn next_index <- do_parse_fn tokens index
+  -- TODO: Implement the following: -- Tuple fn next_index <- (parse_fn +| do_parse_type_declaration +| parse_fn_declaration) tokens index
+  Tuple fn next_index <- parse_fn tokens index
   case fn of
     ModuleFn (Just name) args return_type body -> Just (Tuple (ModuleDeclaration (FnDeclarationKind true (NameIdentifier name) (ModuleFn (Just name) args return_type body)) pos) next_index)
     _ -> Nothing
 
-do_parse_fn :: (Array Token) -> Int -> ParserResult ModuleFn
-do_parse_fn tokens index = do
+parse_fn :: (Array Token) -> Int -> ParserResult ModuleFn
+parse_fn tokens index = do
   Tuple _ next_index <- (expect is_token_kind_fn_keyword) tokens index
   Tuple maybe_name next_index_2 <- parse_optional expect_name_identifier tokens next_index
   Tuple _ next_index_3 <- expect is_token_kind_l_paren tokens next_index_2
@@ -278,8 +285,8 @@ parse_fn_param tokens index = do
 parse_type_expr :: Parser TypeExpr
 parse_type_expr tokens index = do
   Tuple (Tuple name pos) next_index <- expect_type_identifier tokens index
-  Just (Tuple (TypeExpr (NamedTypeExpr name) pos) next_index) 
-  
+  Just (Tuple (TypeExpr (NamedTypeExpr name) pos) next_index)
+
 parse_expr :: Parser Expr
 parse_expr tokens index = do
   Tuple rpn' next_index <- do_parse_expression_unary rpn tokens index
@@ -399,9 +406,9 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
     do_parse_expression_binary rpn'' tokens next_index_1
 
   Just (Token TokenKindRParen _) | is_nested rpn' -> do
-      rpn'' <- rpn' +. end_group
-      do_parse_expression_binary rpn'' tokens $ index + 1
-  
+    rpn'' <- rpn' +. end_group
+    do_parse_expression_binary rpn'' tokens $ index + 1
+
   _ -> Just (Tuple rpn' index)
 
 instance show_expr :: Show Expr where

@@ -56,7 +56,7 @@ module Program
   , fs
   , get_declaration_id
   , get_exports
-  , get_main_module_id
+  , main_module_id
   , get_module_path
   , i16_type
   , i32_type
@@ -87,9 +87,9 @@ module Program
   , u64_type
   , u8_type
   , unify
+  , apply_substitution
   , write_file
-  )
-  where
+  ) where
 
 import Data.Array (any, last, snoc, uncons, partition, length, zip)
 import Data.Foldable (foldl, foldM)
@@ -109,6 +109,7 @@ import Node.Path as Path
 import Parser (Expr(..), ExprKind(..), FnParam(..), Identifier(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), TypeExpr(..), TypeExprKind(..), WhenArm(..), parse)
 import Prelude ((/=), otherwise, map, not, discard, unit, class Eq, class Ord, class Show, Ordering(..), Unit, bind, compare, pure, show, (||), ($), (+), (<>), (==), (&&))
 import Record (merge)
+import Util (trace)
 
 assert_maybe :: ∀ a. Maybe a -> String -> Effect a
 assert_maybe (Just a) _ = pure a
@@ -137,23 +138,24 @@ instance eq_module_elem_id :: Eq ModuleElemID where
 
 type ModulePositionID = Tuple ModuleID Int
 
-data ProgramTypeKind = FnType (Array ProgramType) ProgramType
-                     | I8
-                     | U8
-                     | I16
-                     | U16
-                     | I32
-                     | U32
-                     | I64
-                     | U64
-                     | F32
-                     | F64
-                     | Integer -- Will be inferred later, otherwise defaults to I32
-                     | Float -- Will be inferred later, otherwise defaults to F64
-                     | String
-                     | Bool
-                     | TypeVar Int
-                     | Numeric -- can be either an Int or a Float
+data ProgramTypeKind
+  = FnType (Array ProgramType) ProgramType
+  | I8
+  | U8
+  | I16
+  | U16
+  | I32
+  | U32
+  | I64
+  | U64
+  | F32
+  | F64
+  | Integer -- Will be inferred later, otherwise defaults to I32
+  | Float -- Will be inferred later, otherwise defaults to F64
+  | String
+  | Bool
+  | TypeVar Int
+  | Numeric -- can be either an Int or a Float
 
 infer_integer_type :: ProgramType -> TypeContext -> Maybe (Tuple Int Boolean)
 infer_integer_type (ProgramType I8 _) _ = Just $ Tuple 8 true
@@ -213,8 +215,9 @@ type Program =
   , fs :: FSModule
   }
 
-data FilePath = RelativePath String
-              | AbsolutePath String
+data FilePath
+  = RelativePath String
+  | AbsolutePath String
 
 type PackageConfig =
   { name :: String
@@ -232,10 +235,12 @@ type NextID = Int
 type TypeConstraints = Array TypeConstraint
 type Substitution = Map Int ProgramType
 
-data TypeConstraint = Matches ProgramType ProgramType
-                | Equals ProgramType ProgramType
-                | AtLeast ProgramType ProgramType
-                -- | IsVariantOf ProgramType ProgramType
+data TypeConstraint
+  = Matches ProgramType ProgramType
+  | Equals ProgramType ProgramType
+  | AtLeast ProgramType ProgramType
+
+-- | IsVariantOf ProgramType ProgramType
 
 instance show_type_constraint :: Show TypeConstraint where
   show (Matches left right) = "(Matches " <> show left <> " " <> show right <> ")"
@@ -269,7 +274,7 @@ new_type_context :: ModuleID -> TypeContext
 new_type_context module_id = do
   let return_type = ProgramType (TypeVar 0) Nothing
 
-  { module_id, next_id: 1, params: [], return_type, type_index: fromFoldable [Tuple 0 return_type], constraints: [], type_env: builtin_types }
+  { module_id, next_id: 1, params: [], return_type, type_index: fromFoldable [ Tuple 0 return_type ], constraints: [], type_env: builtin_types }
 
 pos_in :: TypeContext -> Int -> ModulePositionID
 pos_in context index = Tuple context.module_id index
@@ -280,63 +285,91 @@ build_module_context id mod =
 
 builtin_i8_type :: ProgramType
 builtin_i8_type = (ProgramType I8 Nothing)
+
 builtin_u8_type :: ProgramType
 builtin_u8_type = (ProgramType U8 Nothing)
+
 builtin_i16_type :: ProgramType
 builtin_i16_type = (ProgramType I16 Nothing)
+
 builtin_u16_type :: ProgramType
 builtin_u16_type = (ProgramType U16 Nothing)
+
 builtin_i32_type :: ProgramType
 builtin_i32_type = (ProgramType I32 Nothing)
+
 builtin_u32_type :: ProgramType
 builtin_u32_type = (ProgramType U32 Nothing)
+
 builtin_i64_type :: ProgramType
 builtin_i64_type = (ProgramType I64 Nothing)
+
 builtin_u64_type :: ProgramType
 builtin_u64_type = (ProgramType U64 Nothing)
+
 builtin_f32_type :: ProgramType
 builtin_f32_type = (ProgramType F32 Nothing)
+
 builtin_f64_type :: ProgramType
 builtin_f64_type = (ProgramType F64 Nothing)
+
 builtin_integer_type :: ProgramType
 builtin_integer_type = (ProgramType Integer Nothing)
+
 builtin_float_type :: ProgramType
 builtin_float_type = (ProgramType Float Nothing)
+
 builtin_string_type :: ProgramType
 builtin_string_type = (ProgramType String Nothing)
+
 builtin_bool_type :: ProgramType
 builtin_bool_type = (ProgramType Bool Nothing)
+
 builtin_numeric_type :: ProgramType
 builtin_numeric_type = (ProgramType Numeric Nothing)
 
 i8_type :: Maybe ModulePositionID -> ProgramType
 i8_type pos = (ProgramType I8 pos)
+
 u8_type :: Maybe ModulePositionID -> ProgramType
 u8_type pos = (ProgramType U8 pos)
+
 i16_type :: Maybe ModulePositionID -> ProgramType
 i16_type pos = (ProgramType I16 pos)
+
 u16_type :: Maybe ModulePositionID -> ProgramType
 u16_type pos = (ProgramType U16 pos)
+
 i32_type :: Maybe ModulePositionID -> ProgramType
 i32_type pos = (ProgramType I32 pos)
+
 u32_type :: Maybe ModulePositionID -> ProgramType
 u32_type pos = (ProgramType U32 pos)
+
 i64_type :: Maybe ModulePositionID -> ProgramType
 i64_type pos = (ProgramType I64 pos)
+
 u64_type :: Maybe ModulePositionID -> ProgramType
 u64_type pos = (ProgramType U64 pos)
+
 f32_type :: Maybe ModulePositionID -> ProgramType
 f32_type pos = (ProgramType F32 pos)
+
 f64_type :: Maybe ModulePositionID -> ProgramType
 f64_type pos = (ProgramType F64 pos)
+
 integer_type :: Maybe ModulePositionID -> ProgramType
 integer_type pos = (ProgramType Integer pos)
+
 float_type :: Maybe ModulePositionID -> ProgramType
 float_type pos = (ProgramType Float pos)
+
 string_type :: Maybe ModulePositionID -> ProgramType
 string_type pos = (ProgramType String pos)
+
 bool_type :: Maybe ModulePositionID -> ProgramType
 bool_type pos = (ProgramType Bool pos)
+
 numeric_type :: Maybe ModulePositionID -> ProgramType
 numeric_type pos = (ProgramType Numeric pos)
 
@@ -353,12 +386,14 @@ is_int_type (ProgramType U32 _) = true
 is_int_type (ProgramType I64 _) = true
 is_int_type (ProgramType U64 _) = true
 is_int_type (ProgramType Integer _) = true
+is_int_type (ProgramType Numeric _) = true
 is_int_type _ = false
 
 is_float_type :: ProgramType -> Boolean
 is_float_type (ProgramType F32 _) = true
 is_float_type (ProgramType F64 _) = true
 is_float_type (ProgramType Float _) = true
+is_float_type (ProgramType Numeric _) = true
 is_float_type _ = false
 
 builtin_types :: Map Identifier ProgramType
@@ -378,17 +413,17 @@ builtin_types = fromFoldable
   , Tuple (TypeIdentifier "String") builtin_string_type
   , Tuple (TypeIdentifier "Bool") builtin_bool_type
   ]
-  
+
 new_program :: PackageConfig -> Program
 new_program config =
   { package_name: config.name
   , modules: empty
-  , module_queue: [get_main_module_id config]
+  , module_queue: [ main_module_id config ]
   , seen: Set.empty
   , fs: fs config.basedir
   }
 
-type FSModule = 
+type FSModule =
   { read_file :: FilePath -> Effect String
   , exists :: FilePath -> Effect Boolean
   , write_file :: FilePath -> String -> Effect Unit
@@ -398,7 +433,7 @@ read_file :: String -> FilePath -> Effect String
 read_file base_dir path = do
   case path of
     RelativePath rel_path -> do
-      let file_path = Path.concat [base_dir, rel_path]
+      let file_path = Path.concat [ base_dir, rel_path ]
       contents_buffer <- FS.readFile file_path
       contents <- Buffer.toString UTF8 contents_buffer
       pure contents
@@ -411,33 +446,33 @@ exists :: String -> FilePath -> Effect Boolean
 exists base_dir path = do
   case path of
     RelativePath rel_path -> do
-      let file_path = Path.concat [base_dir, rel_path]
+      let file_path = Path.concat [ base_dir, rel_path ]
       FS.exists file_path
     AbsolutePath abs_path -> do
       FS.exists abs_path
 
 write_file :: String -> FilePath -> String -> Effect Unit
 write_file base_dir path contents = do
-    buffer <- Buffer.fromString contents UTF8
-    case path of
-      RelativePath rel_path -> do
-        let file_path = Path.concat [base_dir, rel_path]
-        FS.writeFile file_path buffer
-      AbsolutePath abs_path -> FS.writeFile abs_path buffer
+  buffer <- Buffer.fromString contents UTF8
+  case path of
+    RelativePath rel_path -> do
+      let file_path = Path.concat [ base_dir, rel_path ]
+      FS.writeFile file_path buffer
+    AbsolutePath abs_path -> FS.writeFile abs_path buffer
 
 fs :: String -> FSModule
 fs basedir = { read_file: read_file basedir, exists: exists basedir, write_file: write_file basedir }
 
-get_module_path :: ModuleID ->  FilePath
+get_module_path :: ModuleID -> FilePath
 get_module_path module_id = do
   case module_id of
-    ModuleID Nothing [] -> RelativePath (Path.concat [".", "src", "main.dew"])
-    ModuleID Nothing path -> RelativePath (Path.concat [".", "src", (Path.concat path) <> ".dew"])
-    ModuleID (Just package_name) [] -> RelativePath (Path.concat [".", "build", "packages", package_name, "src", "main.dew"])
-    ModuleID (Just package_name) path -> RelativePath (Path.concat [".", "build", "packages", package_name, "src", (Path.concat path) <> ".dew"])
+    ModuleID Nothing [] -> RelativePath (Path.concat [ ".", "src", "main.dew" ])
+    ModuleID Nothing path -> RelativePath (Path.concat [ ".", "src", (Path.concat path) <> ".dew" ])
+    ModuleID (Just package_name) [] -> RelativePath (Path.concat [ ".", "build", "packages", package_name, "src", "main.dew" ])
+    ModuleID (Just package_name) path -> RelativePath (Path.concat [ ".", "build", "packages", package_name, "src", (Path.concat path) <> ".dew" ])
 
-get_main_module_id :: PackageConfig -> ModuleID
-get_main_module_id _ = ModuleID Nothing []
+main_module_id :: PackageConfig -> ModuleID
+main_module_id _ = ModuleID Nothing []
 
 get_declaration_id :: ModuleID -> ModuleDeclaration -> ModuleElemID
 get_declaration_id module_id (ModuleDeclaration (FnDeclarationKind _ name _) _) = ModuleElemID module_id name
@@ -448,17 +483,18 @@ type_var context pos = do
   let next_id = context.next_id + 1
   let new_type_var = ProgramType (TypeVar next_id) pos
   let type_index = insert context.next_id new_type_var context.type_index
-  let context' = merge { next_id, type_index } context 
+  let context' = merge { next_id, type_index } context
   Tuple new_type_var context'
 
 type ProgramTypeConstraint = (ProgramType -> ProgramType -> TypeConstraint)
 
 constraint_type :: ProgramTypeConstraint -> TypeContext -> ProgramType -> ProgramType -> TypeContext
 constraint_type constructor context left right =
-  let constraint = constructor left right
-      constraints = snoc context.constraints constraint
-  in merge { constraints } context 
-
+  let
+    constraint = constructor left right
+    constraints = snoc context.constraints constraint
+  in
+    merge { constraints } context
 
 must_match ∷ TypeContext -> ProgramType -> ProgramType -> TypeContext
 must_match = constraint_type Matches
@@ -471,17 +507,27 @@ must_max_of = constraint_type AtLeast
 
 index_declarations :: ModuleID -> Module -> Map ModuleElemID ModuleDeclaration
 index_declarations module_id (Module declarations) =
-  foldl (\acc decl ->
-    let key = get_declaration_id module_id decl
-    in insert key decl acc
-  ) empty declarations
+  foldl
+    ( \acc decl ->
+        let
+          key = get_declaration_id module_id decl
+        in
+          insert key decl acc
+    )
+    empty
+    declarations
 
 get_exports :: ModuleID -> Module -> Set ModuleElemID
 get_exports module_id (Module declarations) =
-  foldl (\acc decl ->
-    let key = get_declaration_id module_id decl
-    in Set.insert key acc
-  ) Set.empty declarations
+  foldl
+    ( \acc decl ->
+        let
+          key = get_declaration_id module_id decl
+        in
+          Set.insert key acc
+    )
+    Set.empty
+    declarations
 
 binary_numeric_infer_expr_type :: TypeContext -> Expr -> Expr -> Int -> Maybe (Tuple ProgramType TypeContext)
 binary_numeric_infer_expr_type context left right pos = do
@@ -534,7 +580,7 @@ infer_expr_type context@{ type_env } (Expr (BlockExpr exprs) pos) = do
   block_type <- last types
   -- The block type must match the block type variable
   let sub_context' = must_match sub_context block_type_var block_type
-  
+
   -- finally any named types in the block must be ignored
   Just $ Tuple block_type_var $ merge { type_env } sub_context'
 
@@ -586,20 +632,20 @@ do_infer_expr_arms_types :: TypeContext -> Array WhenArm -> ProgramType -> Maybe
 do_infer_expr_arms_types context arms return_type =
   foldM (infer_arm return_type) context arms
   where
-    infer_arm ret ctx (WhenArm cond body@(Expr _ pos)) = do
-      Tuple cond_type ctx' <- infer_expr_type ctx cond
-      let ctx'' = must_match ctx' cond_type (bool_type $ Just $ Tuple ctx.module_id pos)
-      Tuple body_type ctx''' <- infer_expr_type ctx'' body
-      Just $ must_match ctx''' ret body_type
+  infer_arm ret ctx (WhenArm cond body@(Expr _ pos)) = do
+    Tuple cond_type ctx' <- infer_expr_type ctx cond
+    let ctx'' = must_match ctx' cond_type (bool_type $ Just $ Tuple ctx.module_id pos)
+    Tuple body_type ctx''' <- infer_expr_type ctx'' body
+    Just $ must_match ctx''' ret body_type
 
 do_infer_expr_types :: TypeContext -> Array Expr -> Maybe (Tuple (Array ProgramType) TypeContext)
 do_infer_expr_types context args = do
   Tuple types ctx <- foldM next (Tuple [] context) args
   Just $ Tuple types ctx
   where
-    next (Tuple acc ctx) expr = do
-      Tuple t ctx' <- infer_expr_type ctx expr
-      Just $ Tuple (snoc acc t) ctx'
+  next (Tuple acc ctx) expr = do
+    Tuple t ctx' <- infer_expr_type ctx expr
+    Just $ Tuple (snoc acc t) ctx'
 
 process_module :: ModuleID -> Module -> Program -> Maybe Program
 process_module module_id mod@(Module declarations) program = do
@@ -612,17 +658,25 @@ process_module_declarations :: ModuleID -> Array ModuleDeclaration -> ModuleCont
 process_module_declarations module_id declarations module_context =
   go module_context $ uncons declarations
   where
-    go ctx Nothing = Just ctx
-    go ctx@{ exported, symbol_table, type_contexts } (Just { head: decl, tail: rest }) = case decl of
-      ModuleDeclaration (FnDeclarationKind fn_exported _ fn) pos -> do
-        let elem_id = get_declaration_id module_id decl
-        type_context <- process_module_fn module_id pos fn
-        let ctx' = merge { exported: if fn_exported then Set.insert elem_id exported else exported, symbol_table: insert elem_id decl symbol_table, type_contexts: insert elem_id type_context type_contexts } ctx
-        let _ = spy "sub is: " $ type_context.constraints
-        sub <- unify type_context.constraints
+  go ctx Nothing = Just ctx
+  go ctx@{ exported, symbol_table, type_contexts } (Just { head: decl, tail: rest }) = case decl of
+    ModuleDeclaration (FnDeclarationKind fn_exported _ fn) pos -> do
+      let elem_id = get_declaration_id module_id decl
+      type_context <- process_module_fn module_id pos fn
+      let
+        new_props =
+          { exported: if fn_exported then Set.insert elem_id exported else exported
+          , symbol_table: insert elem_id decl symbol_table
+          , type_contexts: insert elem_id type_context type_contexts
+          }
+      let ctx' = merge new_props ctx
+      sub <- unify type_context.constraints
+      let _ = spy "substitution is" sub
+      let resolved_type_context = apply_substitution sub type_context
+      let ctx'' = merge { type_contexts: insert elem_id resolved_type_context ctx'.type_contexts } ctx'
 
-        go ctx' $ uncons rest
-        
+      go ctx'' $ uncons rest
+
 process_module_fn :: ModuleID -> Int -> ModuleFn -> Maybe TypeContext
 process_module_fn module_id pos_index (ModuleFn maybe_name args return_type_guard_expr body) = do
   let type_context = new_type_context module_id
@@ -636,27 +690,29 @@ process_module_fn module_id pos_index (ModuleFn maybe_name args return_type_guar
   Just $ must_match type_context'''' fn_type_var f
 
   where
-    maybe_set_name ctx Nothing _ = Just ctx
-    maybe_set_name ctx@{ type_env } (Just name) f = Just $ merge { type_env: insert (NameIdentifier name) f type_env } ctx
+  maybe_set_name ctx Nothing _ = Just ctx
+  maybe_set_name ctx@{ type_env } (Just name) f = Just $ merge { type_env: insert (NameIdentifier name) f type_env } ctx
 
-    maybe_return_type ctx maybe_type_guard_expr = do
-      type_guard_expr <- maybe_type_guard_expr
-      type_guard <- infer_type_expr_type ctx type_guard_expr
-      Just $ must_match ctx ctx.return_type type_guard
+  maybe_return_type ctx maybe_type_guard_expr = do
+    type_guard_expr <- maybe_type_guard_expr
+    type_guard <- infer_type_expr_type ctx type_guard_expr
+    Just $ must_match ctx ctx.return_type type_guard
 
-    next_param_type_var (Tuple acc ctx) (FnParam name Nothing pos) = do
-      let pos_type = pos_in ctx pos
-      let Tuple param_type ctx' = type_var ctx $ Just pos_type
-      let type_env' = insert (NameIdentifier name) param_type ctx'.type_env
-      let ctx'' = merge { type_env: type_env' } ctx'
-      let acc' = snoc acc param_type
-      Just $ Tuple acc' ctx''
+  next_param_type_var (Tuple acc ctx) (FnParam name Nothing pos) = do
+    let pos_type = pos_in ctx pos
+    let Tuple param_type ctx' = type_var ctx $ Just pos_type
+    let type_env' = insert (NameIdentifier name) param_type ctx'.type_env
+    let ctx'' = merge { type_env: type_env' } ctx'
+    let acc' = snoc acc param_type
+    Just $ Tuple acc' ctx''
 
-    next_param_type_var (Tuple acc ctx) (FnParam name (Just type_guard_expr) pos) = do
-      let pos_type = pos_in ctx pos
-      let Tuple param_type ctx' = type_var ctx $ Just pos_type
-      let type_env' = insert (NameIdentifier name) param_type ctx'.type_env
-      let ctx'' = { module_id: ctx'.module_id
+  next_param_type_var (Tuple acc ctx) (FnParam name (Just type_guard_expr) pos) = do
+    let pos_type = pos_in ctx pos
+    let Tuple param_type ctx' = type_var ctx $ Just pos_type
+    let type_env' = insert (NameIdentifier name) param_type ctx'.type_env
+    let
+      ctx'' =
+        { module_id: ctx'.module_id
         , next_id: ctx'.next_id
         , params: ctx'.params
         , type_index: ctx'.type_index
@@ -664,11 +720,10 @@ process_module_fn module_id pos_index (ModuleFn maybe_name args return_type_guar
         , constraints: ctx'.constraints
         , type_env: type_env'
         }
-      let acc' = snoc acc param_type
-      type_guard <- infer_type_expr_type ctx'' type_guard_expr
-      let ctx''' = must_match ctx'' param_type type_guard
-      Just $  Tuple acc' ctx'''
-          
+    let acc' = snoc acc param_type
+    type_guard <- infer_type_expr_type ctx'' type_guard_expr
+    let ctx''' = must_match ctx'' param_type type_guard
+    Just $ Tuple acc' ctx'''
 
 enqueue_module :: ModuleID -> Program -> Program
 enqueue_module module_id program@{ seen, module_queue } = case Set.member module_id seen of
@@ -676,7 +731,7 @@ enqueue_module module_id program@{ seen, module_queue } = case Set.member module
   false -> merge { module_queue: snoc module_queue module_id } program
 
 process_modules :: Program -> Effect Program
-process_modules program@{ module_queue } = 
+process_modules program@{ module_queue } =
   case uncons module_queue of
     Nothing -> pure program
     Just { head: module_id, tail: rest } -> do
@@ -688,117 +743,148 @@ process_modules program@{ module_queue } =
 
 compile :: PackageConfig -> Effect Unit
 compile config = do
-  let program = new_program config
-  {
-    modules,
-    module_queue,
-    seen
+  let
+    program = new_program config
+    package_main_module_id = main_module_id config
+  { modules
+  , module_queue
+  , seen
   } <- process_modules program
 
-  log $ "modules: " <> show modules 
+  log $ "modules: " <> show modules
   log $ "module_queue: " <> show module_queue
   log $ "seen: " <> show seen
 
-  pure unit
-
+  case lookup package_main_module_id modules of
+    Just (Tuple mod _) -> do
+      let exports = get_exports package_main_module_id mod
+      let _ = trace "Exports are" exports
+      pure unit
+    _ -> throw "Failed to find main module"
 -- unification functions
+apply_substitution :: Substitution -> TypeContext -> TypeContext
+apply_substitution sub context =
+  let
+    apply_to_type (ProgramType kind pos) = ProgramType (apply_to_kind kind) pos
+    apply_to_kind (FnType args ret) = FnType (map apply_to_type args) (apply_to_type ret)
+    apply_to_kind (TypeVar id) = case lookup id sub of
+      Just (ProgramType kind _) -> kind
+      Nothing -> TypeVar id
+    apply_to_kind k = k
+
+    type_index' = map apply_to_type context.type_index
+    return_type' = apply_to_type context.return_type
+    params' = map apply_to_type context.params
+    type_env' = map apply_to_type context.type_env
+  in
+    { module_id: context.module_id
+    , next_id: context.next_id
+    , params: params'
+    , type_index: type_index'
+    , return_type: return_type'
+    , constraints: []
+    , type_env: type_env'
+    }
+
 unify :: TypeConstraints -> Maybe Substitution
 unify constraints = do
   let { no: rest_constraints, yes: equality_constraints } = partition (is_equals_constraint) constraints
   sub' <- unify' equality_constraints empty
   unify' rest_constraints sub'
-  
+
   where
-    is_equals_constraint (Equals _ _) = true
-    is_equals_constraint _ = false
+  is_equals_constraint (Equals _ _) = true
+  is_equals_constraint _ = false
 
-    apply_sub :: Substitution -> ProgramType -> ProgramType
-    apply_sub sub kind@(ProgramType (TypeVar id) _) = fromMaybe kind $ lookup id sub
-    apply_sub sub (ProgramType (FnType args ret) pos) = ProgramType (FnType (map (apply_sub sub) args) (apply_sub sub ret)) pos
-    apply_sub _ t = t
+  apply_sub :: Substitution -> ProgramType -> ProgramType
+  apply_sub sub kind@(ProgramType (TypeVar id) _) = fromMaybe kind $ lookup id sub
+  apply_sub sub (ProgramType (FnType args ret) pos) = ProgramType (FnType (map (apply_sub sub) args) (apply_sub sub ret)) pos
+  apply_sub _ t = t
 
-    apply_sub_constraint :: Substitution -> TypeConstraint -> TypeConstraint
-    apply_sub_constraint sub (Equals left right) = Equals (apply_sub sub left) (apply_sub sub right)
-    apply_sub_constraint sub (Matches left right) = Matches (apply_sub sub left) (apply_sub sub right)
-    apply_sub_constraint sub (AtLeast left right) = AtLeast (apply_sub sub left) (apply_sub sub right)
+  apply_sub_constraint :: Substitution -> TypeConstraint -> TypeConstraint
+  apply_sub_constraint sub (Equals left right) = Equals (apply_sub sub left) (apply_sub sub right)
+  apply_sub_constraint sub (Matches left right) = Matches (apply_sub sub left) (apply_sub sub right)
+  apply_sub_constraint sub (AtLeast left right) = AtLeast (apply_sub sub left) (apply_sub sub right)
 
-    occurs :: Int -> ProgramType -> Boolean
-    occurs id (ProgramType (TypeVar id') _) = id == id'
-    occurs id (ProgramType (FnType args ret) _) = any (occurs id) args || occurs id ret
-    occurs _ _ = false
+  occurs :: Int -> ProgramType -> Boolean
+  occurs id (ProgramType (TypeVar id') _) = id == id'
+  occurs id (ProgramType (FnType args ret) _) = any (occurs id) args || occurs id ret
+  occurs _ _ = false
 
-    unify' :: TypeConstraints -> Substitution -> Maybe Substitution
-    unify' constraints' sub = case uncons constraints' of
-      Nothing -> Just sub
-      Just { head: constraint, tail: rest } -> do
-        let constraint' = apply_sub_constraint sub constraint
-        sub' <- unify_constraint constraint' sub
-        let rest' = map (apply_sub_constraint sub') rest
-        unify' rest' sub'
+  unify' :: TypeConstraints -> Substitution -> Maybe Substitution
+  unify' constraints' sub = case uncons constraints' of
+    Nothing -> trace "substitution finished" $ Just sub
+    Just { head: constraint, tail: rest } -> do
+      let constraint' = trace "new constraint" $ apply_sub_constraint sub constraint
+      sub' <- unify_constraint constraint' sub
+      let _ = trace "new substitution" $ keys sub'
+      let rest' = map (apply_sub_constraint sub') rest
+      unify' rest' sub'
 
-    -- equality is equivalent to substitution
-    unify_constraint :: TypeConstraint -> Substitution -> Maybe Substitution
-    unify_constraint (Equals left right) sub | left == right = Just sub
-    unify_constraint (Matches left right) sub | left == right = Just sub
-    unify_constraint (AtLeast left right) sub | left == right = Just sub
+  -- equality is equivalent to substitution
+  unify_constraint :: TypeConstraint -> Substitution -> Maybe Substitution
+  unify_constraint (Equals left right) sub | left == right = Just sub
+  unify_constraint (Matches left right) sub | left == right = Just sub
+  unify_constraint (AtLeast left right) sub | left == right = Just sub
 
-    -- for type variables
-    unify_constraint (Equals (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
-    unify_constraint (Equals left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
-    -- same but for matches
-    unify_constraint (Matches (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
-    unify_constraint (Matches left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
-    
+  -- for type variables
+  unify_constraint (Equals (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
+  unify_constraint (Equals left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
+  -- same but for matches
+  unify_constraint (Matches (ProgramType (TypeVar id) _) right) sub | not $ occurs id right = Just $ insert id right sub
+  unify_constraint (Matches left (ProgramType (TypeVar id) _)) sub | not $ occurs id left = Just $ insert id left sub
 
+  unify_constraint (Equals (ProgramType (FnType args ret) _) (ProgramType (FnType args' ret') _)) sub =
+    if length args /= length args' then Nothing
+    else do
+      let arg_pairs = zip args args'
+      let arg_constraints = map (uncurry Equals) arg_pairs
+      let all_constraints = snoc arg_constraints $ Equals ret ret'
+      do_unify_constraints_maybe sub all_constraints
 
+  unify_constraint (Matches left right) sub | is_int_type left && is_int_type right = Just sub
+  unify_constraint (Matches left right) sub | is_float_type left && is_float_type right = Just sub
 
-    unify_constraint (Equals (ProgramType (FnType args ret) _) (ProgramType (FnType args' ret') _)) sub = 
-      if length args /= length args'
-        then Nothing
-        else do
-          let arg_pairs = zip args args' 
-          let arg_constraints = map (uncurry Equals) arg_pairs
-          let all_constraints = snoc arg_constraints $ Equals ret ret'
-          do_unify_constraints_maybe sub all_constraints
+  -- for numeric
+  unify_constraint (Matches left (ProgramType Numeric _)) sub
+    | is_int_type left = Just sub
+    | is_float_type left = Just sub
+    | otherwise = Nothing
 
-    unify_constraint (Matches left right) sub | is_int_type left && is_int_type right = Just sub
-    unify_constraint (Matches left right) sub | is_float_type left && is_float_type right = Just sub
+  unify_constraint (Matches (ProgramType Numeric _) right) sub
+    | is_int_type right = Just sub
+    | is_float_type right = Just sub
+    | otherwise = Nothing
 
-    -- for numeric
-    unify_constraint (Matches left (ProgramType Numeric _)) sub | is_int_type left = Just sub
-                                                                | is_float_type left = Just sub
-                                                                | otherwise = Nothing
+  unify_constraint (Matches (ProgramType (FnType args ret) _) (ProgramType (FnType args' ret') _)) sub =
+    if length args /= length args' then Nothing
+    else do
+      let arg_pairs = zip args args'
+      let arg_constraints = map (uncurry Matches) arg_pairs
+      let all_constraints = snoc arg_constraints $ Matches ret ret'
+      do_unify_constraints_maybe sub all_constraints
 
-    unify_constraint (Matches (ProgramType Numeric _) right) sub | is_int_type right = Just sub
-                                                                 | is_float_type right = Just sub
-                                                                 | otherwise = Nothing
+  unify_constraint (AtLeast left (ProgramType (TypeVar id) _)) sub
+    | is_int_type left = Just $ insert id left sub
+    | is_float_type left = Just $ insert id left sub
+    | otherwise = Nothing
 
-    unify_constraint (Matches (ProgramType (FnType args ret) _) (ProgramType (FnType args' ret') _)) sub = 
-      if length args /= length args'
-        then Nothing
-        else do
-          let arg_pairs = zip args args' 
-          let arg_constraints = map (uncurry Matches) arg_pairs
-          let all_constraints = snoc arg_constraints $ Matches ret ret'
-          do_unify_constraints_maybe sub all_constraints
+  unify_constraint (AtLeast (ProgramType (TypeVar id) _) right) sub
+    | is_int_type right = Just $ insert id right sub
+    | is_float_type right = Just $ insert id right sub
+    | otherwise = Nothing
 
-    unify_constraint (AtLeast left (ProgramType (TypeVar id) _)) sub | is_int_type left = Just $ insert id left sub
-                                                                     | is_float_type left = Just $ insert id left sub
-                                                                     | otherwise = Nothing
+  -- for type matching
+  unify_constraint cons sub = do
+    let _ = spy "constraint is:" cons
+    let _ = spy "sub is:" $ keys sub
+    Nothing
 
-    unify_constraint (AtLeast (ProgramType (TypeVar id) _) right) sub | is_int_type right = Just $ insert id right sub
-                                                                     | is_float_type right = Just $ insert id right sub
-                                                                     | otherwise = Nothing
+  do_unify_constraints_maybe :: Substitution -> Array TypeConstraint -> Maybe Substitution
+  do_unify_constraints_maybe sub arg_constraints = case uncons arg_constraints of
+    Nothing -> Just sub
+    Just { head: c, tail: cs } -> do
+      sub' <- unify_constraint c sub
+      do_unify_constraints_maybe sub' cs
 
-    -- for type matching
-    unify_constraint cons sub = do
-      let _ = spy "constraint is:" cons
-      let _ = spy "sub is:" $ keys sub
-      Nothing
-
-    do_unify_constraints_maybe :: Substitution -> Array TypeConstraint -> Maybe Substitution
-    do_unify_constraints_maybe sub arg_constraints = case uncons arg_constraints of
-      Nothing -> Just sub
-      Just { head: c, tail: cs } -> do
-        sub' <- unify_constraint c sub
-        do_unify_constraints_maybe sub' cs
+-- deepseek/deepseek-chat-v3-0324:free

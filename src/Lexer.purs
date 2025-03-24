@@ -50,8 +50,7 @@ module Lexer
   , lex_type_identifier
   , lex_whitespace
   , tokenize
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -69,105 +68,124 @@ data Token = Token TokenKind Int
 --     else fib(n - 1) + fib(n - 2)
 -- }
 
-data TokenKind = TokenKindPubKeyword
-               | TokenKindFnKeyword
-               | TokenKindWhenKeyword
-               | TokenKindElseKeyword
-               | TokenKindNameIdentifier String
-               | TokenKindTypeIdentifier String
-               | TokenKindInt Int
-               | TokenKindLParen
-               | TokenKindRParen
-               | TokenKindLBrace
-               | TokenKindRBrace
-               | TokenKindEqualsEquals
-               | TokenKindAsterisk
-               | TokenKindFSlash
-               | TokenKindPlus
-               | TokenKindMinus
-               | TokenKindComma
-               | TokenKindColon
-               | TokenKindRArrow
-               | TokenKindGreaterThan
-               | TokenKindGreaterThanOrEqual
-               | TokenKindLessThan
-               | TokenKindLessThanOrEqual
-               | TokenKindWhiteSpace
-               | TokenKindNewLine
-               | TokenKindEOF
+data TokenKind
+  = TokenKindPubKeyword
+  | TokenKindFnKeyword
+  | TokenKindWhenKeyword
+  | TokenKindElseKeyword
+  | TokenKindNameIdentifier String
+  | TokenKindTypeIdentifier String
+  | TokenKindInt Int
+  | TokenKindLParen
+  | TokenKindRParen
+  | TokenKindLBrace
+  | TokenKindRBrace
+  | TokenKindEqualsEquals
+  | TokenKindAsterisk
+  | TokenKindFSlash
+  | TokenKindPlus
+  | TokenKindMinus
+  | TokenKindComma
+  | TokenKindColon
+  | TokenKindRArrow
+  | TokenKindGreaterThan
+  | TokenKindGreaterThanOrEqual
+  | TokenKindLessThan
+  | TokenKindLessThanOrEqual
+  | TokenKindWhiteSpace
+  | TokenKindNewLine
+  | TokenKindEOF
 
 is_token_kind_pub_keyword :: TokenKind -> Boolean
 is_token_kind_pub_keyword kind = case kind of
   TokenKindPubKeyword -> true
   _ -> false
+
 is_token_kind_fn_keyword :: TokenKind -> Boolean
 is_token_kind_fn_keyword kind = case kind of
   TokenKindFnKeyword -> true
   _ -> false
+
 is_token_kind_when_keyword :: TokenKind -> Boolean
 is_token_kind_when_keyword kind = case kind of
   TokenKindWhenKeyword -> true
   _ -> false
+
 is_token_kind_else_keyword :: TokenKind -> Boolean
 is_token_kind_else_keyword kind = case kind of
   TokenKindElseKeyword -> true
   _ -> false
+
 is_token_kind_name_identifier :: TokenKind -> Boolean
 is_token_kind_name_identifier kind = case kind of
   TokenKindNameIdentifier _ -> true
   _ -> false
+
 is_token_kind_type_identifier :: TokenKind -> Boolean
 is_token_kind_type_identifier kind = case kind of
   TokenKindTypeIdentifier _ -> true
   _ -> false
+
 is_token_kind_int :: TokenKind -> Boolean
 is_token_kind_int kind = case kind of
   TokenKindInt _ -> true
   _ -> false
+
 is_token_kind_l_paren :: TokenKind -> Boolean
 is_token_kind_l_paren kind = case kind of
   TokenKindLParen -> true
   _ -> false
+
 is_token_kind_r_paren :: TokenKind -> Boolean
 is_token_kind_r_paren kind = case kind of
   TokenKindRParen -> true
   _ -> false
+
 is_token_kind_l_brace :: TokenKind -> Boolean
 is_token_kind_l_brace kind = case kind of
   TokenKindLBrace -> true
   _ -> false
+
 is_token_kind_r_brace :: TokenKind -> Boolean
 is_token_kind_r_brace kind = case kind of
   TokenKindRBrace -> true
   _ -> false
+
 is_token_kind_equals_equals :: TokenKind -> Boolean
 is_token_kind_equals_equals kind = case kind of
   TokenKindEqualsEquals -> true
   _ -> false
+
 is_token_kind_plus :: TokenKind -> Boolean
 is_token_kind_plus kind = case kind of
   TokenKindPlus -> true
   _ -> false
+
 is_token_kind_minus :: TokenKind -> Boolean
 is_token_kind_minus kind = case kind of
   TokenKindMinus -> true
   _ -> false
+
 is_token_kind_asterisk :: TokenKind -> Boolean
 is_token_kind_asterisk kind = case kind of
   TokenKindAsterisk -> true
   _ -> false
+
 is_token_kind_fslash :: TokenKind -> Boolean
 is_token_kind_fslash kind = case kind of
   TokenKindFSlash -> true
   _ -> false
+
 is_token_kind_r_arrow :: TokenKind -> Boolean
 is_token_kind_r_arrow kind = case kind of
   TokenKindRArrow -> true
   _ -> false
+
 is_token_kind_comma :: TokenKind -> Boolean
 is_token_kind_comma kind = case kind of
   TokenKindComma -> true
   _ -> false
+
 is_token_kind_colon :: TokenKind -> Boolean
 is_token_kind_colon kind = case kind of
   TokenKindColon -> true
@@ -177,15 +195,16 @@ is_token_kind_white_space :: TokenKind -> Boolean
 is_token_kind_white_space kind = case kind of
   TokenKindWhiteSpace -> true
   _ -> false
+
 is_token_kind_new_line :: TokenKind -> Boolean
 is_token_kind_new_line kind = case kind of
   TokenKindNewLine -> true
   _ -> false
+
 is_token_kind_eof :: TokenKind -> Boolean
 is_token_kind_eof kind = case kind of
   TokenKindEOF -> true
   _ -> false
-
 
 type Lexer = Array Char -> Int -> Maybe (Tuple TokenKind Int)
 type LexerAccumulator = Array Char -> Int -> Maybe (Tuple String Int)
@@ -206,7 +225,7 @@ lex_or lexer1 lexer2 chars index = case lexer1 chars index of
 infixl 4 lex_or as +&
 
 lex_of :: Consumer -> (String -> TokenKind) -> Lexer
-lex_of consumer callback = \chars index -> do 
+lex_of consumer callback = \chars index -> do
   Tuple s next_index <- consumer chars index
   Just (Tuple (callback s) next_index)
 
@@ -289,29 +308,29 @@ lex_eof chars index = case chars !! index of
   _ -> Nothing
 
 lex_token :: Lexer
-lex_token  = lex_whitespace
-          +& lex_name_identifier
-          +& lex_type_identifier
-          +& lex_newline
-          +& lex_int
-          +& lex_greater_than_equals
-          +& lex_greater_than
-          +& lex_less_than_equals
-          +& lex_less_than
-          +& lex_l_paren
-          +& lex_r_paren
-          +& lex_l_brace
-          +& lex_r_brace
-          +& lex_equals_equals
-          +& lex_asterisk_asterisk
-          +& lex_asterisk
-          +& lex_fslash
-          +& lex_plus
-          +& lex_r_arrow
-          +& lex_minus
-          +& lex_comma
-          +& lex_colon
-          +& lex_eof
+lex_token = lex_whitespace
+  +& lex_name_identifier
+  +& lex_type_identifier
+  +& lex_newline
+  +& lex_int
+  +& lex_greater_than_equals
+  +& lex_greater_than
+  +& lex_less_than_equals
+  +& lex_less_than
+  +& lex_l_paren
+  +& lex_r_paren
+  +& lex_l_brace
+  +& lex_r_brace
+  +& lex_equals_equals
+  +& lex_asterisk_asterisk
+  +& lex_asterisk
+  +& lex_fslash
+  +& lex_plus
+  +& lex_r_arrow
+  +& lex_minus
+  +& lex_comma
+  +& lex_colon
+  +& lex_eof
 
 tokenize :: String -> Boolean -> Array Token
 tokenize chars false = do_tokenize (to_chars chars) 0 []
