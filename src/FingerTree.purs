@@ -1,9 +1,21 @@
 module FingerTree
-  ( FingerTree
+  ( (+=)
+  , FingerTree
+  , concat
   , cons
   , empty
+  , fold_map_finger_tree
+  , foldl
+  , foldl_finger_tree
+  , foldr
+  , foldr_finger_tree
+  , from_array
+  , map
+  , map_finger_tree
+  , push
   , single
   , snoc
+  , to_list
   , uncons
   , unsnoc
   )
@@ -11,22 +23,23 @@ module FingerTree
 
 import Prelude
 
-import Data.Array (fold)
-import Data.Foldable (class Foldable, foldMap, foldl, foldr)
-import Data.List (List(..), (:)) as List
-import Data.Map.Internal (Map(..))
+import Data.Array as Array
+import Data.Foldable (class Foldable)
+import Data.List (List(..), (:))
+import Data.List.Lazy as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-data FingerTree u = Empty
-               | Single u
-               | Deep Int (Node u) (FingerTree (Node u)) (Node u)
+data FingerTree u
+  = Empty
+  | Single u
+  | Deep Int (Node u) (FingerTree (Node u)) (Node u)
 
-
-data Node u = One u
-            | Two u u
-            | Three u u u 
-            | Four u u u u
+data Node u
+  = One u
+  | Two u u
+  | Three u u u
+  | Four u u u u
 
 empty :: ∀ (@u :: Type). FingerTree u
 empty = Empty
@@ -59,11 +72,10 @@ uncons (Deep n (Two u v) root r) = Just $ Tuple u $ Deep (n - 1) (One v) root r
 uncons (Deep n (One u) Empty (Four v w x y)) = Just $ Tuple u $ Deep (n - 1) (Two v w) Empty $ Two x y
 uncons (Deep n (One u) Empty (Three v w x)) = Just $ Tuple u $ Deep (n - 1) (Two v w) Empty $ One x
 uncons (Deep n (One u) Empty (Two v w)) = Just $ Tuple u $ Deep (n - 1) (One v) Empty $ One w
-uncons (Deep n (One u) Empty (One v)) = Just $ Tuple u $ Single v
+uncons (Deep _ (One u) Empty (One v)) = Just $ Tuple u $ Single v
 uncons (Deep n (One u) root r) = do
   Tuple l' root' <- uncons root
   Just $ Tuple u $ Deep (n - 1) l' root' r
-
 
 unsnoc :: ∀ (@u :: Type). FingerTree u -> Maybe (Tuple u (FingerTree u))
 unsnoc Empty = Nothing
@@ -78,7 +90,6 @@ unsnoc (Deep n (One v) Empty (One u)) = Just $ Tuple u $ Single v
 unsnoc (Deep n l root (One u)) = do
   Tuple r' root' <- unsnoc root
   Just $ Tuple u $ Deep (n - 1) l root' r'
-
 
 instance fold_node :: Foldable Node where
   foldr = foldr_node
@@ -109,16 +120,100 @@ instance fold_finger_tree :: Foldable FingerTree where
   foldMap = fold_map_finger_tree
 
 foldr_finger_tree :: ∀ (@u :: Type) b. (u -> b -> b) -> b -> FingerTree u -> b
-foldr_finger_tree f acc Empty = acc
+foldr_finger_tree _ acc Empty = acc
 foldr_finger_tree f acc (Single a) = f a acc
--- foldr_finger_tree f acc (Deep _ l root r) = foldr_node f (foldr_finger_tree (foldr_node f) acc root)) l
+foldr_finger_tree f acc (Deep _ l root r) = foldr_node f (foldr_finger_tree (flip $ foldr_node f) (foldr_node f acc r) root) l
 
 foldl_finger_tree :: ∀ (@u :: Type) b. (b -> u -> b) -> b -> FingerTree u -> b
-foldl_finger_tree f acc Empty = acc
+foldl_finger_tree _ acc Empty = acc
 foldl_finger_tree f acc (Single a) = f acc a
--- foldl_finger_tree f acc (Deep _ l root r) = foldl_node f (foldl_finger_tree f acc root) r
+foldl_finger_tree f acc (Deep _ l root r) = foldl_node f (foldl_finger_tree (foldl_node f) (foldl_node f acc l) root) r
 
 fold_map_finger_tree :: ∀ m u. Monoid m => (u -> m) -> FingerTree u -> m
 fold_map_finger_tree f Empty = mempty
 fold_map_finger_tree f (Single a) = f a
--- fold_map_finger_tree f (Deep _ l root r) = fold_map_node f l <> fold_map_finger_tree f root <> fold_map_finger_tree f r
+fold_map_finger_tree f (Deep _ l root r) = fold_map_node f l <> fold_map_finger_tree (fold_map_node f) root <> fold_map_node f r
+
+instance functor_finger_tree :: Functor FingerTree where
+  map = map_finger_tree
+
+map_finger_tree :: ∀ (@u :: Type) (@v :: Type). (u -> v) -> FingerTree u -> FingerTree v
+map_finger_tree _ Empty = Empty
+map_finger_tree f (Single a) = Single $ f a
+map_finger_tree f (Deep n l root r) = Deep n (map_node f l) (map_finger_tree (map_node f) root) (map_node f r)
+
+instance functor_node :: Functor Node where
+  map = map_node
+
+map_node :: ∀ (@u :: Type) (@v :: Type). (u -> v) -> Node u -> Node v
+map_node f (One a) = One $ f a
+map_node f (Two a b) = Two (f a) (f b)
+map_node f (Three a b c) = Three (f a) (f b) (f c)
+map_node f (Four a b c d) = Four (f a) (f b) (f c) (f d)
+
+concat :: ∀ (@u :: Type). FingerTree u -> FingerTree u -> FingerTree u
+concat Empty b = b
+concat a Empty = a
+concat (Single a) b = cons a b
+concat a (Single b) = snoc b a
+concat (Deep n l root r) (Deep n' l' root' r') = Deep (n + n') l (concat (cons r root) (snoc l' root')) r'
+
+
+foldl :: ∀ (@u :: Type) (b :: Type). (b → u → b) → b → FingerTree u → b
+foldl = foldl_finger_tree
+foldr :: ∀ (@u :: Type) (b :: Type). (u → b → b) → b → FingerTree u → b
+foldr = foldr_finger_tree
+map :: ∀ (@u :: Type) (@v :: Type). (u → v) → FingerTree u → FingerTree v
+map = map_finger_tree
+
+infixl 4 push as +=
+
+push :: ∀ (u :: Type). FingerTree u → u → FingerTree u
+push = flip snoc
+
+from_array :: ∀ (u :: Type). Array u -> FingerTree u
+from_array [] = empty
+from_array [a] = single a
+from_array [a, b] = Deep 2 (One a) Empty $ One b
+from_array [a, b, c] = Deep 3 (Two a b) Empty $ One c
+from_array [a, b, c, d] = Deep 4 (Two a b) Empty $ Two c d
+from_array [a, b, c, d, e] = Deep 5 (Three a b c) Empty $ Two d e
+from_array [a, b, c, d, e, f] = Deep 6 (Three a b c) Empty $ Three d e f
+from_array [a, b, c, d, e, f, g] = Deep 7 (Four a b c d) Empty $ Three e f g
+from_array [a, b, c, d, e, f, g, h] = Deep 8 (Four a b c d) Empty $ Four e f g h
+
+from_array values = Array.foldl push empty values
+
+instance show_finger_tree :: Show u => Show (FingerTree u) where
+  show Empty = "[]" 
+  show (Single a) = "[" <> show a <> "]" 
+  show (Deep _ l root r) = "[" <> show l <> ", " <> show root <> ", " <> show r <> "]"
+
+instance show_node :: Show u => Show (Node u) where
+  show (One a) = show a
+  show (Two a b) = show a <> ", " <> show b
+  show (Three a b c) = show a <> ", " <> show b <> ", " <> show c
+  show (Four a b c d) = show a <> ", " <> show b <> ", " <> show c <> ", " <> show d
+
+instance eq_finger_tree :: Eq u => Eq (FingerTree u) where
+  eq :: FingerTree u -> FingerTree u -> Boolean
+  eq Empty Empty = true
+  eq (Single a) (Single b) = a == b
+  eq l@(Deep n _ _ _) r@(Deep n' _ _ _) | n == n' = do
+                                          let
+                                            l_list = to_list l
+                                            r_list = to_list r
+                                          l_list == r_list
+  eq _ _ = false
+
+to_list :: ∀ (@u :: Type). FingerTree u -> List u
+to_list Empty = Nil
+to_list (Single a) = (a : Nil)
+to_list (Deep _ l root r) = to_list_node l <> (List.foldMap to_list_node $ to_list root) <> to_list_node r
+
+to_list_node :: ∀ (@u :: Type). Node u -> List u
+to_list_node (One a) = (a : Nil)
+to_list_node (Two a b) = (a : b : Nil)
+to_list_node (Three a b c) = (a : b : c : Nil)
+to_list_node (Four a b c d) = (a : b : c : d : Nil)
+

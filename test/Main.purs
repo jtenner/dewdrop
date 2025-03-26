@@ -2,7 +2,6 @@ module Test.Main
   ( main
   ) where
 
-import Data.Array
 
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Eq (class Eq)
@@ -12,9 +11,10 @@ import Data.Tuple (Tuple(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Error)
+import FingerTree (concat, empty, foldl, foldr, map, single, (+=))
 import Lexer (Token(..), TokenKind(..), lex_token, tokenize)
 import Parser (parse_expr, parse_fn)
-import Prelude (Unit, discard, (*), (+), (-))
+import Prelude (Unit, discard, ($), (*), (+), (-))
 import Program (main_module_id, process_module_fn)
 import RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Test.Spec (describe, it)
@@ -210,6 +210,46 @@ main = runSpecAndExitProcess [ consoleReporter ] do
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (CallExpr (Expr (NameExpr f)) [(Expr (IntExpr 1)),(Expr (IntExpr 2))]))"
         Nothing -> shouldEqual "Nothing" "Just"
+
+  describe "FingerTree" do
+    it "should handle empty trees" do
+      
+      shouldEqual (map (\x -> x + 1) empty) empty
+      shouldEqual (foldl (\acc x -> acc + x) 0 empty) 0
+      shouldEqual (foldr (\x acc -> acc + x) 0 empty) 0
+
+    it "should handle single element trees" do
+      let singleFT = single 5
+      shouldEqual (map (\x -> x + 1) singleFT) $ single 6
+      shouldEqual (foldl (\acc x -> acc + x) 0 singleFT) 5
+
+    it "should handle multiple element trees" do
+      let ft = empty += 1 += 2 += 3
+      shouldEqual (map (\x -> x + 1) ft) $ single 2 += 3 += 4 
+      shouldEqual (foldl (\acc x -> acc + x) 0 ft) 6
+
+    it "should handle concatenation" do
+      let ft1 = single 1
+      let ft2 = single 2
+      let combined = concat ft1 ft2
+      shouldEqual (map (\x -> x + 1) combined) $ single 2 += 3
+      shouldEqual (foldr (\x acc -> acc + x) 0 combined) 3
+
+    it "should handle complex transformations" do
+      let ft = concat (single 1) (concat (single 2) (single 3))
+      shouldEqual (foldr (\x acc -> acc + x) 0 ft) 6
+
+    it "should handle edge cases with foldr" do
+      let ft = concat (single 1) (concat (single 2) (single 3))
+      shouldEqual (foldr (\x acc -> acc + x) 0 ft) 6
+
+    it "should handle empty foldr" do
+      let emptyFT = empty
+      shouldEqual (foldr (\x acc -> acc + x) 0 emptyFT) 0
+
+    it "should handle single element foldr" do
+      let singleFT = single 5
+      shouldEqual (foldr (\x acc -> acc + x) 0 singleFT) 5
 
   describe "Constraint generation" do
     it "should generate constraints for a function in a single module" do

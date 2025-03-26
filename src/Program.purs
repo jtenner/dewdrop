@@ -761,6 +761,7 @@ compile config = do
       let _ = trace "Exports are" exports
       pure unit
     _ -> throw "Failed to find main module"
+
 -- unification functions
 apply_substitution :: Substitution -> TypeContext -> TypeContext
 apply_substitution sub context =

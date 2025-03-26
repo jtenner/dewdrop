@@ -57,8 +57,7 @@ module Util
   , to_chars
   , trace
   , union_char_predicate
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -70,7 +69,6 @@ foreign import str_char :: String -> Char -> String
 foreign import char_str :: Char -> String -> String
 foreign import to_chars :: String -> Array Char
 foreign import trace :: ∀ a. String -> a -> a
-
 
 is_char :: Char -> Char -> Boolean
 is_char c c' = c == c'
