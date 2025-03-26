@@ -9,6 +9,7 @@ module Util
   , char_str
   , expect_char
   , expect_many
+  , guard
   , intersect_char_predicate
   , is_alpha
   , is_alpha_num
@@ -268,3 +269,7 @@ do_take_many_joined_by acc consumer seperator arr index = case seperator arr ind
   Just (Tuple sep index2) -> case consumer arr index2 of
     Nothing -> Just (Tuple acc index2)
     Just (Tuple s index3) -> do_take_many_joined_by (acc <> sep <> s) consumer seperator arr index3
+
+guard :: forall a. Boolean -> Maybe a -> Maybe a
+guard true x = x
+guard false _ = Nothing

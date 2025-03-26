@@ -402,7 +402,7 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
 
   Just (Token TokenKindRParen _) | is_nested rpn' -> do
     rpn'' <- rpn' +. end_group
-    do_parse_expression_binary rpn'' tokens $ index + 1 
+    do_parse_expression_binary rpn'' tokens $ index + 1
 
   _ -> Just (Tuple rpn' index)
 

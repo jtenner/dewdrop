@@ -18,8 +18,7 @@ module RPN
   , right_unary
   , rpn
   , unary
-  )
-  where
+  ) where
 
 import Prelude
 

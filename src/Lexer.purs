@@ -206,7 +206,6 @@ is_token_kind_eof kind = case kind of
   TokenKindEOF -> true
   _ -> false
 
-
 type Lexer = Array Char -> Int -> Maybe (Tuple TokenKind Int)
 type LexerAccumulator = Array Char -> Int -> Maybe (Tuple String Int)
 
@@ -333,8 +332,9 @@ lex_token = lex_whitespace
   +& lex_colon
   +& lex_eof
 
-data List n = Nil
-          | Cons n (List n)
+data List n
+  = Nil
+  | Cons n (List n)
 
 tokenize :: String -> Boolean -> Array Token
 tokenize chars false = do_tokenize (to_chars chars) 0 []

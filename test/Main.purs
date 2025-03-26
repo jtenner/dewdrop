@@ -2,7 +2,6 @@ module Test.Main
   ( main
   ) where
 
-
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Eq (class Eq)
 import Data.Maybe (Maybe(..))
@@ -213,7 +212,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
   describe "FingerTree" do
     it "should handle empty trees" do
-      
+
       shouldEqual (map (\x -> x + 1) empty) empty
       shouldEqual (foldl (\acc x -> acc + x) 0 empty) 0
       shouldEqual (foldr (\x acc -> acc + x) 0 empty) 0
@@ -225,7 +224,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "should handle multiple element trees" do
       let ft = empty += 1 += 2 += 3
-      shouldEqual (map (\x -> x + 1) ft) $ single 2 += 3 += 4 
+      shouldEqual (map (\x -> x + 1) ft) $ single 2 += 3 += 4
       shouldEqual (foldl (\acc x -> acc + x) 0 ft) 6
 
     it "should handle concatenation" do

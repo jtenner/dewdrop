@@ -10,6 +10,7 @@ module FingerTree
   , foldr
   , foldr_finger_tree
   , from_array
+  , from_list
   , map
   , map_finger_tree
   , push
@@ -18,8 +19,7 @@ module FingerTree
   , to_list
   , uncons
   , unsnoc
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -27,8 +27,9 @@ import Data.Array as Array
 import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.List.Lazy as List
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isJust)
 import Data.Tuple (Tuple(..))
+import Util (guard)
 
 data FingerTree u
   = Empty
@@ -59,7 +60,7 @@ cons :: ∀ (@u :: Type). u -> FingerTree u -> FingerTree u
 cons u Empty = single u
 cons u (Single v) = Deep 2 (One u) Empty $ One v
 cons u (Deep n (One v) root r) = Deep (n + 1) (Two u v) root r
-cons u (Deep n (Two v w) root r) = Deep (n + 1) (Three u v w ) root r
+cons u (Deep n (Two v w) root r) = Deep (n + 1) (Three u v w) root r
 cons u (Deep n (Three v w x) root r) = Deep (n + 1) (Four u v w x) root r
 cons u (Deep n (Four v w x y) root r) = Deep (n + 1) (Two u v) (cons (Three w x y) root) r
 
@@ -124,16 +125,15 @@ foldr_finger_tree _ acc Empty = acc
 foldr_finger_tree f acc (Single a) = f a acc
 foldr_finger_tree f acc (Deep _ l root r) = foldr_node_f (foldr_finger_tree flip_foldr_node_f (foldr_node_f acc r) root) l
   where
-    foldr_node_f = foldr_node f
-    flip_foldr_node_f = flip foldr_node_f
+  foldr_node_f = foldr_node f
+  flip_foldr_node_f = flip foldr_node_f
 
 foldl_finger_tree :: ∀ (@u :: Type) b. (b -> u -> b) -> b -> FingerTree u -> b
 foldl_finger_tree _ acc Empty = acc
 foldl_finger_tree f acc (Single a) = f acc a
 foldl_finger_tree f acc (Deep _ l root r) = foldl_node_f (foldl_finger_tree foldl_node_f (foldl_node_f acc l) root) r
-  where foldl_node_f = foldl_node f
-
--- (foldl_node f) -> (acc, item) => acc
+  where
+  foldl_node_f = foldl_node f
 
 fold_map_finger_tree :: ∀ m u. Monoid m => (u -> m) -> FingerTree u -> m
 fold_map_finger_tree f Empty = mempty
@@ -147,7 +147,8 @@ map_finger_tree :: ∀ (@u :: Type) (@v :: Type). (u -> v) -> FingerTree u -> Fi
 map_finger_tree _ Empty = Empty
 map_finger_tree f (Single a) = Single $ f a
 map_finger_tree f (Deep n l root r) = Deep n (map_node_f l) (map_finger_tree map_node_f root) $ map_node_f r
-  where map_node_f = map_node f
+  where
+  map_node_f = map_node f
 
 instance functor_node :: Functor Node where
   map = map_node
@@ -165,11 +166,12 @@ concat (Single a) right = cons a right
 concat left (Single b) = snoc b left
 concat (Deep n l root r) (Deep n' l' root' r') = Deep (n + n') l (concat (cons r root) (snoc l' root')) r'
 
-
 foldl :: ∀ (@u :: Type) (b :: Type). (b → u → b) → b → FingerTree u → b
 foldl = foldl_finger_tree
+
 foldr :: ∀ (@u :: Type) (b :: Type). (u → b → b) → b → FingerTree u → b
 foldr = foldr_finger_tree
+
 map :: ∀ (@u :: Type) (@v :: Type). (u → v) → FingerTree u → FingerTree v
 map = map_finger_tree
 
@@ -180,20 +182,20 @@ push = flip snoc
 
 from_array :: ∀ (u :: Type). Array u -> FingerTree u
 from_array [] = empty
-from_array [a] = single a
-from_array [a, b] = Deep 2 (One a) Empty $ One b
-from_array [a, b, c] = Deep 3 (Two a b) Empty $ One c
-from_array [a, b, c, d] = Deep 4 (Two a b) Empty $ Two c d
-from_array [a, b, c, d, e] = Deep 5 (Three a b c) Empty $ Two d e
-from_array [a, b, c, d, e, f] = Deep 6 (Three a b c) Empty $ Three d e f
-from_array [a, b, c, d, e, f, g] = Deep 7 (Four a b c d) Empty $ Three e f g
-from_array [a, b, c, d, e, f, g, h] = Deep 8 (Four a b c d) Empty $ Four e f g h
+from_array [ a ] = single a
+from_array [ a, b ] = Deep 2 (One a) Empty $ One b
+from_array [ a, b, c ] = Deep 3 (Two a b) Empty $ One c
+from_array [ a, b, c, d ] = Deep 4 (Two a b) Empty $ Two c d
+from_array [ a, b, c, d, e ] = Deep 5 (Three a b c) Empty $ Two d e
+from_array [ a, b, c, d, e, f ] = Deep 6 (Three a b c) Empty $ Three d e f
+from_array [ a, b, c, d, e, f, g ] = Deep 7 (Four a b c d) Empty $ Three e f g
+from_array [ a, b, c, d, e, f, g, h ] = Deep 8 (Four a b c d) Empty $ Four e f g h
 
 from_array values = Array.foldl push empty values
 
 instance show_finger_tree :: Show u => Show (FingerTree u) where
-  show Empty = "[]" 
-  show (Single a) = "[" <> show a <> "]" 
+  show Empty = "[]"
+  show (Single a) = "[" <> show a <> "]"
   show (Deep _ l root r) = "[" <> show l <> ", " <> show root <> ", " <> show r <> "]"
 
 instance show_node :: Show u => Show (Node u) where
@@ -206,11 +208,54 @@ instance eq_finger_tree :: Eq u => Eq (FingerTree u) where
   eq :: FingerTree u -> FingerTree u -> Boolean
   eq Empty Empty = true
   eq (Single a) (Single b) = a == b
-  eq l@(Deep n _ _ _) r@(Deep n' _ _ _) | n == n' = do
-                                          let
-                                            l_list = to_list l
-                                            r_list = to_list r
-                                          l_list == r_list
+  eq (Deep n pf root sf) (Deep n' pf' root' sf') | n == n' =
+    case go (to_list_node pf) (to_list_node pf') (snoc sf root) (snoc sf' root') of
+      Nothing -> false
+      Just b -> b
+
+    where
+    go :: List u -> List u -> FingerTree (Node u) -> FingerTree (Node u) -> Maybe Boolean
+    go Nil Nil Empty Empty = Just true
+
+    -- Four at a time
+    go (a : b : c : d : Nil) (a' : b' : c' : d' : Nil) left right = do
+      _ <- guard (not $ a == a' && b == b' && c == c' && d == d') Nothing
+      Tuple l' left' <- unsnoc left
+      Tuple r' right' <- unsnoc right
+      go (to_list_node l') (to_list_node r') left' right'
+
+    -- Three at a time
+    go (a : b : c : l') (a' : b' : c' : Nil) left right = do
+      _ <- guard (not $ a == a' && b == b' && c == c') Nothing
+      Tuple r' right' <- unsnoc right
+      go l' (to_list_node r') left right'
+    go (a : b : c : Nil) (a' : b' : c' : r') left right = do
+      _ <- guard (not $ a == a' && b == b' && c == c') Nothing
+      Tuple l' left' <- unsnoc left
+      go (to_list_node l') r' left' right
+
+    -- Two at a time
+    go (a : b : l') (a' : b' : Nil) left right = do
+      _ <- guard (not $ a == a' && b == b') Nothing
+      Tuple r' right' <- unsnoc right
+      go l' (to_list_node r') left right'
+    go (a : b : Nil) (a' : b' : r') left right = do
+      _ <- guard (not $ a == a' && b == b') Nothing
+      Tuple l' left' <- unsnoc left
+      go (to_list_node l') r' left' right
+
+    -- One at a time
+    go (a : l') (a' : Nil) left right = do
+      _ <- guard (not $ a == a') Nothing
+      Tuple r' right' <- unsnoc right
+      go l' (to_list_node r') left right'
+    go (a : Nil) (a' : r') left right = do
+      _ <- guard (not $ a == a') Nothing
+      Tuple l' left' <- unsnoc left
+      go (to_list_node l') r' left' right
+
+    go _ _ _ _ = Nothing
+
   eq _ _ = false
 
 to_list :: ∀ (@u :: Type). FingerTree u -> List u
@@ -223,4 +268,28 @@ to_list_node (One a) = (a : Nil)
 to_list_node (Two a b) = (a : b : Nil)
 to_list_node (Three a b c) = (a : b : c : Nil)
 to_list_node (Four a b c d) = (a : b : c : d : Nil)
+
+from_list :: ∀ (@u :: Type). List u -> FingerTree u
+from_list Nil = Empty
+from_list (a : Nil) = Single a
+from_list (a : b : Nil) = Deep 2 (One a) Empty $ One b
+from_list (a : b : c : Nil) = Deep 3 (Two a b) Empty $ One c
+from_list (a : b : c : d : Nil) = Deep 4 (Two a b) Empty $ Two c d
+from_list (a : b : c : d : e : Nil) = Deep 5 (Three a b c) Empty $ Two d e
+from_list (a : b : c : d : e : f : Nil) = Deep 6 (Three a b c) Empty $ Three d e f
+from_list (a : b : c : d : e : f : g : Nil) = Deep 7 (Four a b c d) Empty $ Three e f g
+from_list (a : b : c : d : e : f : g : h : Nil) = Deep 8 (Four a b c d) Empty $ Four e f g h
+
+from_list (a : b : c : d : e : f : g : h : l) =
+  let
+    sf = Four a b c d
+    next = Four e f g h
+  in
+    go 4 sf next empty l
+  where
+  go n sf next root (e' : f' : g' : h' : l') = go (n + 4) sf (Four e' f' g' h') (snoc next root) l'
+  go n sf next root (e' : f' : g' : Nil) = Deep (n + 3) sf (snoc next root) $ Three e' f' g'
+  go n sf next root (e' : f' : Nil) = Deep (n + 2) sf (snoc next root) $ Two e' f'
+  go n sf next root (e' : Nil) = Deep (n + 1) sf (snoc next root) $ One e'
+  go n sf next root Nil = Deep n sf root next
 
