@@ -53,15 +53,15 @@ snoc u (Single v) = Deep 2 (One v) Empty $ One u
 snoc u (Deep n l root (One v)) = Deep (n + 1) l root $ Two v u
 snoc u (Deep n l root (Two v w)) = Deep (n + 1) l root $ Three v w u
 snoc u (Deep n l root (Three v w x)) = Deep (n + 1) l root $ Four v w x u
-snoc u (Deep n l root r@(Four _ _ _ _)) = Deep (n + 1) l (snoc r root) $ One u
+snoc u (Deep n l root (Four v w x y)) = Deep (n + 1) l (snoc (Three v w x) root) $ Two y u
 
 cons :: ∀ (@u :: Type). u -> FingerTree u -> FingerTree u
 cons u Empty = single u
-cons u (Single v) = Deep 2 (One v) Empty $ One u
-cons u (Deep n (One v) root r) = Deep (n + 1) (Two v u) root r
-cons u (Deep n (Two v w) root r) = Deep (n + 1) (Three v w u) root r
-cons u (Deep n (Three v w x) root r) = Deep (n + 1) (Four v w x u) root r
-cons u (Deep n l@(Four _ _ _ _) root r) = Deep (n + 1) (One u) (cons l root) r
+cons u (Single v) = Deep 2 (One u) Empty $ One v
+cons u (Deep n (One v) root r) = Deep (n + 1) (Two u v) root r
+cons u (Deep n (Two v w) root r) = Deep (n + 1) (Three u v w ) root r
+cons u (Deep n (Three v w x) root r) = Deep (n + 1) (Four u v w x) root r
+cons u (Deep n (Four v w x y) root r) = Deep (n + 1) (Two u v) (cons (Three w x y) root) r
 
 uncons :: ∀ (@u :: Type). FingerTree u -> Maybe (Tuple u (FingerTree u))
 uncons Empty = Nothing
@@ -122,12 +122,18 @@ instance fold_finger_tree :: Foldable FingerTree where
 foldr_finger_tree :: ∀ (@u :: Type) b. (u -> b -> b) -> b -> FingerTree u -> b
 foldr_finger_tree _ acc Empty = acc
 foldr_finger_tree f acc (Single a) = f a acc
-foldr_finger_tree f acc (Deep _ l root r) = foldr_node f (foldr_finger_tree (flip $ foldr_node f) (foldr_node f acc r) root) l
+foldr_finger_tree f acc (Deep _ l root r) = foldr_node_f (foldr_finger_tree flip_foldr_node_f (foldr_node_f acc r) root) l
+  where
+    foldr_node_f = foldr_node f
+    flip_foldr_node_f = flip foldr_node_f
 
 foldl_finger_tree :: ∀ (@u :: Type) b. (b -> u -> b) -> b -> FingerTree u -> b
 foldl_finger_tree _ acc Empty = acc
 foldl_finger_tree f acc (Single a) = f acc a
-foldl_finger_tree f acc (Deep _ l root r) = foldl_node f (foldl_finger_tree (foldl_node f) (foldl_node f acc l) root) r
+foldl_finger_tree f acc (Deep _ l root r) = foldl_node_f (foldl_finger_tree foldl_node_f (foldl_node_f acc l) root) r
+  where foldl_node_f = foldl_node f
+
+-- (foldl_node f) -> (acc, item) => acc
 
 fold_map_finger_tree :: ∀ m u. Monoid m => (u -> m) -> FingerTree u -> m
 fold_map_finger_tree f Empty = mempty
@@ -140,7 +146,8 @@ instance functor_finger_tree :: Functor FingerTree where
 map_finger_tree :: ∀ (@u :: Type) (@v :: Type). (u -> v) -> FingerTree u -> FingerTree v
 map_finger_tree _ Empty = Empty
 map_finger_tree f (Single a) = Single $ f a
-map_finger_tree f (Deep n l root r) = Deep n (map_node f l) (map_finger_tree (map_node f) root) (map_node f r)
+map_finger_tree f (Deep n l root r) = Deep n (map_node_f l) (map_finger_tree map_node_f root) $ map_node_f r
+  where map_node_f = map_node f
 
 instance functor_node :: Functor Node where
   map = map_node
@@ -154,8 +161,8 @@ map_node f (Four a b c d) = Four (f a) (f b) (f c) (f d)
 concat :: ∀ (@u :: Type). FingerTree u -> FingerTree u -> FingerTree u
 concat Empty b = b
 concat a Empty = a
-concat (Single a) b = cons a b
-concat a (Single b) = snoc b a
+concat (Single a) right = cons a right
+concat left (Single b) = snoc b left
 concat (Deep n l root r) (Deep n' l' root' r') = Deep (n + n') l (concat (cons r root) (snoc l' root')) r'
 
 

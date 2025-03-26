@@ -287,6 +287,8 @@ parse_type_expr tokens index = do
   Tuple (Tuple name pos) next_index <- expect_type_identifier tokens index
   Just (Tuple (TypeExpr (NamedTypeExpr name) pos) next_index)
 
+-- Expr -> Unary (BinaryOp Unary)*
+
 parse_expr :: Parser Expr
 parse_expr tokens index = do
   Tuple rpn' next_index <- do_parse_expression_unary rpn tokens index
@@ -308,10 +310,6 @@ do_parse_expression_unary rpn' tokens index = case tokens !! index of
 
   Just (Token TokenKindWhenKeyword pos) -> do
     Tuple arms index' <- (parse_many parse_arm) tokens (index + 1)
-
-    _ <- tokens !! index'
-    -- TODO: Investigate why the else arm is failing
-
     case (tokens !! index') of
       Just (Token TokenKindElseKeyword _) -> do
         let index'' = index' + 1
@@ -369,45 +367,42 @@ do_parse_expression_binary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_binary rpn' tokens index = case tokens !! index of
   Just (Token TokenKindPlus pos) -> do
     rpn'' <- rpn' +. (add_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindMinus pos) -> do
     rpn'' <- rpn' +. (sub_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindAsterisk pos) -> do
     rpn'' <- rpn' +. (mul_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindFSlash pos) -> do
     rpn'' <- rpn' +. (div_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindEqualsEquals pos) -> do
     rpn'' <- rpn' +. (equals_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindGreaterThan pos) -> do
     rpn'' <- rpn' +. (greater_than_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindGreaterThanOrEqual pos) -> do
     rpn'' <- rpn' +. (greater_than_equals_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindLessThan pos) -> do
     rpn'' <- rpn' +. (less_than_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
   Just (Token TokenKindLessThanOrEqual pos) -> do
     rpn'' <- rpn' +. (less_than_equals_op pos)
-    do_parse_expression_unary rpn'' tokens (index + 1)
+    do_parse_expression_unary rpn'' tokens $ index + 1
 
   -- LParen in binary position is actually a function call
   Just (Token TokenKindLParen pos) -> do
-    let _ = spy "found function call at" index
-    let _ = tokens !! (index + 1)
     Tuple exprs next_index <- parse_many_seperated parse_expr (expect is_token_kind_comma) tokens (index + 1)
-    let _ = spy "expressions is" exprs
     Tuple _ next_index_1 <- expect is_token_kind_r_paren tokens next_index
     rpn'' <- rpn' +. call_op pos exprs
     do_parse_expression_binary rpn'' tokens next_index_1
 
   Just (Token TokenKindRParen _) | is_nested rpn' -> do
     rpn'' <- rpn' +. end_group
-    do_parse_expression_binary rpn'' tokens $ index + 1
+    do_parse_expression_binary rpn'' tokens $ index + 1 
 
   _ -> Just (Tuple rpn' index)
 

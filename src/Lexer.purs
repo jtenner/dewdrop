@@ -73,8 +73,8 @@ data TokenKind
   | TokenKindFnKeyword
   | TokenKindWhenKeyword
   | TokenKindElseKeyword
-  | TokenKindNameIdentifier String
-  | TokenKindTypeIdentifier String
+  | TokenKindNameIdentifier String -- names are snake_case
+  | TokenKindTypeIdentifier String -- types are PascalCase
   | TokenKindInt Int
   | TokenKindLParen
   | TokenKindRParen
@@ -206,14 +206,15 @@ is_token_kind_eof kind = case kind of
   TokenKindEOF -> true
   _ -> false
 
+
 type Lexer = Array Char -> Int -> Maybe (Tuple TokenKind Int)
 type LexerAccumulator = Array Char -> Int -> Maybe (Tuple String Int)
 
 combine_accumulator :: LexerAccumulator -> LexerAccumulator -> LexerAccumulator
 combine_accumulator f1 f2 chars index = do
-  Tuple s1 index1 <- f1 chars index -- Maybe (Tuple String Int) Some(Just) t | None(Nothing)
-  Tuple s2 index2 <- f2 chars index1
-  Just (Tuple (s1 <> s2) index2)
+  Tuple s1 index' <- f1 chars index -- Maybe (Tuple String Int) Some(Just) t | None(Nothing)
+  Tuple s2 index'' <- f2 chars index'
+  Just (Tuple (s1 <> s2) index'')
 
 infix 4 combine_accumulator as +>
 
@@ -332,22 +333,25 @@ lex_token = lex_whitespace
   +& lex_colon
   +& lex_eof
 
+data List n = Nil
+          | Cons n (List n)
+
 tokenize :: String -> Boolean -> Array Token
 tokenize chars false = do_tokenize (to_chars chars) 0 []
 tokenize chars true = do_tokenize_filter_whitespace (to_chars chars) 0 []
 
 do_tokenize :: Array Char -> Int -> Array Token -> Array Token
 do_tokenize chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) -> snoc acc (Token TokenKindEOF index)
-  Just (Tuple token next_index) -> do_tokenize chars next_index (snoc acc (Token token index))
+  Just (Tuple TokenKindEOF _) -> snoc acc $ Token TokenKindEOF index
+  Just (Tuple token next_index) -> do_tokenize chars next_index $ snoc acc $ Token token index
   _ -> acc
 
 do_tokenize_filter_whitespace :: Array Char -> Int -> Array Token -> Array Token
 do_tokenize_filter_whitespace chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) -> snoc acc (Token TokenKindEOF index)
+  Just (Tuple TokenKindEOF _) -> snoc acc $ Token TokenKindEOF index
   Just (Tuple TokenKindWhiteSpace next_index) -> do_tokenize_filter_whitespace chars next_index acc
   Just (Tuple TokenKindNewLine next_index) -> do_tokenize_filter_whitespace chars next_index acc
-  Just (Tuple token_kind next_index) -> do_tokenize_filter_whitespace chars next_index (snoc acc (Token token_kind index))
+  Just (Tuple token_kind next_index) -> do_tokenize_filter_whitespace chars next_index $ snoc acc $ Token token_kind index
   _ -> acc
 
 instance show :: Show Token where
@@ -355,7 +359,7 @@ instance show :: Show Token where
 
 derive instance eq :: Eq Token
 
-instance showTokenKind :: Show TokenKind where
+instance show_token_kind :: Show TokenKind where
   show TokenKindPubKeyword = "TokenKindPubKeyword"
   show TokenKindFnKeyword = "TokenKindFnKeyword"
   show TokenKindWhenKeyword = "TokenKindWhenKeyword"

@@ -2,49 +2,105 @@
   [
     "Constraint generation should generate constraints for a function in a single module",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle complex transformations",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle concatenation",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle edge cases with foldr",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle empty foldr",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle empty trees",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle multiple element trees",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle single element foldr",
+    {
+      "timestamp": "1743007233475.0",
+      "success": true
+    }
+  ],
+  [
+    "FingerTree should handle single element trees",
+    {
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "RPN should handle groups",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "RPN should perform binary operations",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "RPN should perform order of operations",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "RPN should perform right_unary operations",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "RPN should perform unary operations",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "RPN should prioritize left_unary operations over binary operations",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
@@ -58,14 +114,14 @@
   [
     "RPN should prioritize right_unary operations over left_unary operations",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "Token Kinds should generate an array of tokens",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
@@ -79,49 +135,49 @@
   [
     "Token Kinds should match tokens",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "parser should parse a binary expression",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "parser should parse a call expression",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "parser should parse a grouped expression",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "parser should parse a more complex expression",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "parser should parse a variable",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],
   [
     "parser should parse an integer",
     {
-      "timestamp": "1742954731527.0",
+      "timestamp": "1743007233475.0",
       "success": true
     }
   ],

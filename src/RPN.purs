@@ -18,7 +18,8 @@ module RPN
   , right_unary
   , rpn
   , unary
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -95,9 +96,11 @@ push_operator (RPN nested stack ops) Group = Just $ RPN (nested + 1) stack (Grou
 -- If the operator stack is empty, pushing an operator is always ok
 push_operator (RPN nested stack Nil) op = Just $ RPN nested stack (op : Nil)
 
+-- The following condition is impossible
 push_operator (RPN _ _ (EndGroup : _)) _ = Nothing
+
 -- pushing an end group requires stack evaluation until the group operator is popped
-push_operator rpn'@(RPN _ _ (Group : _)) EndGroup = Just rpn'
+push_operator (RPN nested stack (Group : ops)) EndGroup = Just $ RPN (nested - 1) stack ops
 
 -- If the top operator is a group operator, pushing an operator is always ok
 push_operator (RPN nested stack ops@(Group : _)) op = Just $ RPN nested stack (op : ops)
@@ -144,7 +147,7 @@ pop_operator weird = do
 
 finalize :: ∀ a. Show a => RPN a -> Maybe a
 -- finalizing an RPN stack with an empty operator stack and a single value is success
-finalize (RPN _ (x : Nil) Nil) = Just x
+finalize (RPN 0 (x : Nil) Nil) = Just x
 
 -- pass groups through
 finalize (RPN nested stack (Group : ops)) = finalize $ RPN (nested - 1) stack ops

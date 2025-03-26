@@ -671,7 +671,6 @@ process_module_declarations module_id declarations module_context =
           }
       let ctx' = merge new_props ctx
       sub <- unify type_context.constraints
-      let _ = spy "substitution is" sub
       let resolved_type_context = apply_substitution sub type_context
       let ctx'' = merge { type_contexts: insert elem_id resolved_type_context ctx'.type_contexts } ctx'
 
@@ -758,7 +757,9 @@ compile config = do
   case lookup package_main_module_id modules of
     Just (Tuple mod _) -> do
       let exports = get_exports package_main_module_id mod
-      let _ = trace "Exports are" exports
+      -- TODO: Write exports
+
+      
       pure unit
     _ -> throw "Failed to find main module"
 

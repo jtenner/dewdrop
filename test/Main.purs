@@ -232,7 +232,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
       let ft1 = single 1
       let ft2 = single 2
       let combined = concat ft1 ft2
-      shouldEqual (map (\x -> x + 1) combined) $ single 2 += 3
+      shouldEqual (map (\x -> x + 1) combined) $ spy "single 2 += 3 is" $ single 2 += 3
       shouldEqual (foldr (\x acc -> acc + x) 0 combined) 3
 
     it "should handle complex transformations" do
