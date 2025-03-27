@@ -15,12 +15,14 @@ module FingerTree
   , map_finger_tree
   , push
   , single
+  , size
   , snoc
   , to_array
   , to_list
   , uncons
   , unsnoc
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -216,6 +218,7 @@ instance eq_finger_tree :: Eq u => Eq (FingerTree u) where
 
     where
     go :: List u -> List u -> FingerTree (Node u) -> FingerTree (Node u) -> Maybe Boolean
+    
     go Nil Nil Empty Empty = Just true
     go Nil r left right = do
       Tuple l' left' <- unsnoc left
@@ -273,3 +276,8 @@ from_list (a : b : c : d : e : f : g : h : l) =
 
 to_array :: ∀ (@u :: Type). FingerTree u -> Array u
 to_array = Array.fromFoldable
+
+size :: ∀ (@u :: Type). FingerTree u -> Int
+size Empty = 0
+size (Single _) = 1
+size (Deep n _ _ _) = n

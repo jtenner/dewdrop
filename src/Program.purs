@@ -672,7 +672,7 @@ process_module_declarations module_id declarations module_context =
       sub <- unify type_context.constraints
       let resolved_type_context = apply_substitution sub type_context
       let ctx'' = merge { type_contexts: insert elem_id resolved_type_context ctx'.type_contexts } ctx'
-
+      let _ = trace "type context" ctx''
       go ctx'' $ uncons rest
 
 process_module_fn :: ModuleID -> Int -> ModuleFn -> Maybe TypeContext
@@ -681,10 +681,10 @@ process_module_fn module_id pos_index (ModuleFn maybe_name args return_type_guar
   let pos = pos_in type_context pos_index
   let Tuple fn_type_var type_context = type_var type_context $ Just pos
   type_context' <- maybe_set_name type_context maybe_name fn_type_var
-  Tuple arg_types type_context'' <- foldM next_param_type_var (Tuple [] type_context') args
+  type_context''@{ params } <- foldM next_param_type_var type_context' args
   Tuple body_type type_context''' <- infer_expr_type type_context'' body
   let type_context'''' = fromMaybe type_context''' $ maybe_return_type type_context''' return_type_guard_expr
-  let f = fn_type arg_types body_type $ Just pos
+  let f = fn_type params body_type $ Just pos
   Just $ must_match type_context'''' fn_type_var f
 
   where
@@ -696,32 +696,22 @@ process_module_fn module_id pos_index (ModuleFn maybe_name args return_type_guar
     type_guard <- infer_type_expr_type ctx type_guard_expr
     Just $ must_match ctx ctx.return_type type_guard
 
-  next_param_type_var (Tuple acc ctx) (FnParam name Nothing pos) = do
-    let pos_type = pos_in ctx pos
-    let Tuple param_type ctx' = type_var ctx $ Just pos_type
-    let type_env' = insert (NameIdentifier name) param_type ctx'.type_env
-    let ctx'' = merge { type_env: type_env' } ctx'
-    let acc' = snoc acc param_type
-    Just $ Tuple acc' ctx''
+  next_param_type_var ctx (FnParam name Nothing pos) = do
+    let Tuple param_type ctx' = type_var ctx $ Just $ pos_in ctx pos
+    let ctx'_d = {
+      type_env: insert (NameIdentifier name) param_type ctx'.type_env,
+      params: snoc ctx'.params param_type
+    }
+    Just $ merge ctx'_d ctx'
 
-  next_param_type_var (Tuple acc ctx) (FnParam name (Just type_guard_expr) pos) = do
-    let pos_type = pos_in ctx pos
-    let Tuple param_type ctx' = type_var ctx $ Just pos_type
-    let type_env' = insert (NameIdentifier name) param_type ctx'.type_env
-    let
-      ctx'' =
-        { module_id: ctx'.module_id
-        , next_id: ctx'.next_id
-        , params: ctx'.params
-        , type_index: ctx'.type_index
-        , return_type: ctx'.return_type
-        , constraints: ctx'.constraints
-        , type_env: type_env'
-        }
-    let acc' = snoc acc param_type
-    type_guard <- infer_type_expr_type ctx'' type_guard_expr
-    let ctx''' = must_match ctx'' param_type type_guard
-    Just $ Tuple acc' ctx'''
+  next_param_type_var ctx (FnParam name (Just type_guard_expr) pos) = do
+    let Tuple param_type ctx' = type_var ctx $ Just $ pos_in ctx pos
+    let ctx'' = { params: snoc ctx'.params param_type
+    , type_env: insert (NameIdentifier name) param_type ctx'.type_env
+    }
+    let ctx''' = merge ctx'' ctx
+    type_guard <- infer_type_expr_type ctx''' type_guard_expr
+    Just $ must_match ctx''' param_type type_guard
 
 enqueue_module :: ModuleID -> Program -> Program
 enqueue_module module_id program@{ seen, module_queue } = case Set.member module_id seen of

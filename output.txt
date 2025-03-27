@@ -1,268 +1,682 @@
-Warning 1 of 18:
-
-  in module Parser
-  at src/Parser.purs:290:1 - 290:26 (line 290, column 1 - line 290, column 26)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in binding group parse_expr, parse_arm, do_parse_expression_unary, do_parse_expression_binary
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 2 of 18:
-
-  in module Parser
-  at src/Parser.purs:290:1 - 290:26 (line 290, column 1 - line 290, column 26)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in binding group parse_expr, parse_arm, do_parse_expression_unary, do_parse_expression_binary
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 3 of 18:
-
-  in module Parser
-  at src/Parser.purs:290:1 - 290:26 (line 290, column 1 - line 290, column 26)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in binding group parse_expr, parse_arm, do_parse_expression_unary, do_parse_expression_binary
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 4 of 18:
-
-  in module Program
-  at src/Program.purs:789:1 - 789:47 (line 789, column 1 - line 789, column 47)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in value declaration unify
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 5 of 18:
-
-  in module Program
-  at src/Program.purs:789:1 - 789:47 (line 789, column 1 - line 789, column 47)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in value declaration unify
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 6 of 18:
-
-  in module Program
-  at src/Program.purs:657:1 - 657:107 (line 657, column 1 - line 657, column 107)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in value declaration process_module_declarations
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 7 of 18:
-
-  in module Main
-  at src/Main.purs:6:1 - 6:30 (line 6, column 1 - line 6, column 30)
-
-    The import of Data.Maybe is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 8 of 18:
-
-  in module Main
-  at src/Main.purs:7:1 - 7:30 (line 7, column 1 - line 7, column 30)
-
-    The import of Data.Tuple is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 9 of 18:
-
-  in module Main
-  at src/Main.purs:8:1 - 8:19 (line 8, column 1 - line 8, column 19)
-
-    The import of Debug is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 10 of 18:
-
-  in module Main
-  at src/Main.purs:10:1 - 10:38 (line 10, column 1 - line 10, column 38)
-
-    The import of Effect.Class.Console is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 11 of 18:
-
-  in module Main
-  at src/Main.purs:11:1 - 11:28 (line 11, column 1 - line 11, column 28)
-
-    The import of Effect.Console is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 12 of 18:
-
-  in module Main
-  at src/Main.purs:13:1 - 13:14 (line 13, column 1 - line 13, column 14)
-
-    The import of Parser is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 13 of 18:
-
-  in module Main
-  at src/Main.purs:3:1 - 3:15 (line 3, column 1 - line 3, column 15)
-
-    Module Prelude has unspecified imports, consider using the explicit form:
-
-      import Prelude (Unit)
-
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/ImplicitImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 14 of 18:
-
-  in module Main
-  at src/Main.purs:12:1 - 12:15 (line 12, column 1 - line 12, column 15)
-
-    Module Program has unspecified imports, consider using the explicit form:
-
-      import Program (compile, pkg)
-
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/ImplicitImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 15 of 18:
-
-  in module Main
-  at src/Main.purs:4:1 - 4:11 (line 4, column 1 - line 4, column 11)
-
-    The import of RPN is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-Warning 16 of 18:
-
-  in module Test.Main
-  at test/Main.purs:5:1 - 5:18 (line 5, column 1 - line 5, column 18)
-
-    Shadowed definitions are in scope for value group from the following open imports:
-
-      import Data.Array
-
-    These will be ignored and the declaration from RPN will be used.
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/ScopeShadowing.md for more information,
-  or to contribute content related to this warning.
-
-Warning 17 of 18:
-
-  in module Test.Main
-  at test/Main.purs:33:1 - 33:20 (line 33, column 1 - line 33, column 20)
-
-    A custom warning occurred while solving type class constraints:
-
-      Debug function usage
-
-
-  in value declaration main
-
-  See https://github.com/purescript/documentation/blob/master/errors/UserDefinedWarning.md for more information,
-  or to contribute content related to this warning.
-
-Warning 18 of 18:
-
-  in module Test.Main
-  at test/Main.purs:5:1 - 5:18 (line 5, column 1 - line 5, column 18)
-
-    The import of Data.Array is redundant
-
-
-  See https://github.com/purescript/documentation/blob/master/errors/UnusedImport.md for more information,
-  or to contribute content related to this warning.
-
-
-found name identifier: n
-found name identifier: n
-found name identifier: fib
-found function call at: 20
-found name identifier: n
-expressions is: [
-  Expr {
-    value0: SubExpr { value0: [Expr], value1: [Expr] },
-    value1: 66
-  }
-]
-found name identifier: fib
-found function call at: 27
-found name identifier: n
-expressions is: [
-  Expr {
-    value0: SubExpr { value0: [Expr], value1: [Expr] },
-    value1: 79
-  }
-]
-substitution finished: Just {
-  value0: Leaf {}
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 3
+type context: {
+  symbol_table: Node {
+    value0: 1,
+    value1: 1,
+    value2: ModuleElemID {
+      value0: ModuleID {
+        value0: Nothing {},
+        value1: []
+      },
+      value1: NameIdentifier {
+        value0: 'fib'
+      }
     },
+    value3: ModuleDeclaration {
+      value0: FnDeclarationKind {
+        value0: true,
+        value1: NameIdentifier {
+          value0: 'fib'
+        },
+        value2: ModuleFn {
+          value0: Just {
+            value0: 'fib'
+          },
+          value1: [
+            FnParam {
+              value0: 'n',
+              value1: Nothing {},
+              value2: 11
+            }
+          ],
+          value2: Nothing {},
+          value3: Expr {
+            value0: BlockExpr {
+              value0: [
+                Expr {
+                  value0: WhenExpr {
+                    value0: [
+                      WhenArm {
+                        value0: Expr {
+                          value0: EqualsExpr {
+                            value0: Expr {
+                              value0: NameExpr {
+                                value0: 'n'
+                              },
+                              value1: 23
+                            },
+                            value1: Expr {
+                              value0: IntExpr {
+                                value0: 0
+                              },
+                              value1: 28
+                            }
+                          },
+                          value1: 25
+                        },
+                        value1: Expr {
+                          value0: IntExpr {
+                            value0: 0
+                          },
+                          value1: 33
+                        }
+                      },
+                      WhenArm {
+                        value0: Expr {
+                          value0: EqualsExpr {
+                            value0: Expr {
+                              value0: NameExpr {
+                                value0: 'n'
+                              },
+                              value1: 39
+                            },
+                            value1: Expr {
+                              value0: IntExpr {
+                                value0: 1
+                              },
+                              value1: 44
+                            }
+                          },
+                          value1: 41
+                        },
+                        value1: Expr {
+                          value0: IntExpr {
+                            value0: 1
+                          },
+                          value1: 49
+                        }
+                      }
+                    ],
+                    value1: Just {
+                      value0: Expr {
+                        value0: AddExpr {
+                          value0: Expr {
+                            value0: CallExpr {
+                              value0: Expr {
+                                value0: NameExpr {
+                                  value0: 'fib'
+                                },
+                                value1: 60
+                              },
+                              value1: [
+                                Expr {
+                                  value0: SubExpr {
+                                    value0: Expr {
+                                      value0: NameExpr {
+                                        value0: 'n'
+                                      },
+                                      value1: 64
+                                    },
+                                    value1: Expr {
+                                      value0: IntExpr {
+                                        value0: 1
+                                      },
+                                      value1: 68
+                                    }
+                                  },
+                                  value1: 66
+                                }
+                              ]
+                            },
+                            value1: 63
+                          },
+                          value1: Expr {
+                            value0: CallExpr {
+                              value0: Expr {
+                                value0: NameExpr {
+                                  value0: 'fib'
+                                },
+                                value1: 73
+                              },
+                              value1: [
+                                Expr {
+                                  value0: SubExpr {
+                                    value0: Expr {
+                                      value0: NameExpr {
+                                        value0: 'n'
+                                      },
+                                      value1: 77
+                                    },
+                                    value1: Expr {
+                                      value0: IntExpr {
+                                        value0: 2
+                                      },
+                                      value1: 81
+                                    }
+                                  },
+                                  value1: 79
+                                }
+                              ]
+                            },
+                            value1: 76
+                          }
+                        },
+                        value1: 71
+                      }
+                    }
+                  },
+                  value1: 18
+                }
+              ]
+            },
+            value1: 14
+          }
+        }
+      },
+      value1: 0
+    },
+    value4: Leaf {},
+    value5: Leaf {}
+  },
+  exported: Node {
+    value0: 1,
+    value1: 1,
+    value2: ModuleElemID {
+      value0: ModuleID {
+        value0: Nothing {},
+        value1: []
+      },
+      value1: NameIdentifier {
+        value0: 'fib'
+      }
+    },
+    value3: undefined,
+    value4: Leaf {},
+    value5: Leaf {}
+  },
+  type_contexts: Node {
+    value0: 1,
+    value1: 1,
+    value2: ModuleElemID {
+      value0: ModuleID {
+        value0: Nothing {},
+        value1: []
+      },
+      value1: NameIdentifier {
+        value0: 'fib'
+      }
+    },
+    value3: {
+      module_id: ModuleID {
+        value0: Nothing {},
+        value1: []
+      },
+      next_id: 10,
+      params: [
+        ProgramType {
+          value0: Integer {},
+          value1: Just {
+            value0: Tuple {
+              value0: ModuleID {
+                value0: Nothing {},
+                value1: []
+              },
+              value1: 11
+            }
+          }
+        }
+      ],
+      type_index: Node {
+        value0: 4,
+        value1: 10,
+        value2: 3,
+        value3: ProgramType {
+          value0: Integer {},
+          value1: Just {
+            value0: Tuple {
+              value0: ModuleID {
+                value0: Nothing {},
+                value1: []
+              },
+              value1: 14
+            }
+          }
+        },
+        value4: Node {
+          value0: 2,
+          value1: 3,
+          value2: 1,
+          value3: ProgramType {
+            value0: FnType {
+              value0: [
+                ProgramType {
+                  value0: Integer {},
+                  value1: Just {
+                    value0: Tuple {
+                      value0: ModuleID {
+                        value0: Nothing {},
+                        value1: []
+                      },
+                      value1: 28
+                    }
+                  }
+                }
+              ],
+              value1: ProgramType {
+                value0: TypeVar {
+                  value0: 8
+                },
+                value1: Just {
+                  value0: Tuple {
+                    value0: ModuleID {
+                      value0: Nothing {},
+                      value1: []
+                    },
+                    value1: 63
+                  }
+                }
+              }
+            },
+            value1: Just {
+              value0: Tuple {
+                value0: ModuleID {
+                  value0: Nothing {},
+                  value1: []
+                },
+                value1: 0
+              }
+            }
+          },
+          value4: Node {
+            value0: 1,
+            value1: 1,
+            value2: 0,
+            value3: ProgramType {
+              value0: TypeVar {
+                value0: 0
+              },
+              value1: Nothing {}
+            },
+            value4: Leaf {},
+            value5: Leaf {}
+          },
+          value5: Node {
+            value0: 1,
+            value1: 1,
+            value2: 2,
+            value3: ProgramType {
+              value0: Integer {},
+              value1: Just {
+                value0: Tuple {
+                  value0: ModuleID {
+                    value0: Nothing {},
+                    value1: []
+                  },
+                  value1: 11
+                }
+              }
+            },
+            value4: Leaf {},
+            value5: Leaf {}
+          }
+        },
+        value5: Node {
+          value0: 3,
+          value1: 6,
+          value2: 7,
+          value3: ProgramType {
+            value0: TypeVar {
+              value0: 10
+            },
+            value1: Just {
+              value0: Tuple {
+                value0: ModuleID {
+                  value0: Nothing {},
+                  value1: []
+                },
+                value1: 63
+              }
+            }
+          },
+          value4: Node {
+            value0: 2,
+            value1: 3,
+            value2: 5,
+            value3: ProgramType {
+              value0: Numeric {},
+              value1: Just {
+                value0: Tuple {
+                  value0: ModuleID {
+                    value0: Nothing {},
+                    value1: []
+                  },
+                  value1: 71
+                }
+              }
+            },
+            value4: Node {
+              value0: 1,
+              value1: 1,
+              value2: 4,
+              value3: ProgramType {
+                value0: Integer {},
+                value1: Just {
+                  value0: Tuple {
+                    value0: ModuleID {
+                      value0: Nothing {},
+                      value1: []
+                    },
+                    value1: 18
+                  }
+                }
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            },
+            value5: Node {
+              value0: 1,
+              value1: 1,
+              value2: 6,
+              value3: ProgramType {
+                value0: Integer {},
+                value1: Just {
+                  value0: Tuple {
+                    value0: ModuleID {
+                      value0: Nothing {},
+                      value1: []
+                    },
+                    value1: 66
+                  }
+                }
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            }
+          },
+          value5: Node {
+            value0: 2,
+            value1: 2,
+            value2: 8,
+            value3: ProgramType {
+              value0: Integer {},
+              value1: Just {
+                value0: Tuple {
+                  value0: ModuleID {
+                    value0: Nothing {},
+                    value1: []
+                  },
+                  value1: 79
+                }
+              }
+            },
+            value4: Leaf {},
+            value5: Node {
+              value0: 1,
+              value1: 1,
+              value2: 9,
+              value3: ProgramType {
+                value0: Numeric {},
+                value1: Just {
+                  value0: Tuple {
+                    value0: ModuleID {
+                      value0: Nothing {},
+                      value1: []
+                    },
+                    value1: 76
+                  }
+                }
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            }
+          }
+        }
+      },
+      return_type: ProgramType {
+        value0: TypeVar {
+          value0: 0
+        },
+        value1: Nothing {}
+      },
+      constraints: [],
+      type_env: Node {
+        value0: 5,
+        value1: 16,
+        value2: TypeIdentifier {
+          value0: 'I8'
+        },
+        value3: ProgramType {
+          value0: I8 {},
+          value1: Nothing {}
+        },
+        value4: Node {
+          value0: 4,
+          value1: 7,
+          value2: TypeIdentifier {
+            value0: 'I16'
+          },
+          value3: ProgramType {
+            value0: I16 {},
+            value1: Nothing {}
+          },
+          value4: Node {
+            value0: 3,
+            value1: 4,
+            value2: TypeIdentifier {
+              value0: 'F64'
+            },
+            value3: ProgramType {
+              value0: F64 {},
+              value1: Nothing {}
+            },
+            value4: Node {
+              value0: 2,
+              value1: 2,
+              value2: TypeIdentifier {
+                value0: 'F32'
+              },
+              value3: ProgramType {
+                value0: F32 {},
+                value1: Nothing {}
+              },
+              value4: Node {
+                value0: 1,
+                value1: 1,
+                value2: TypeIdentifier {
+                  value0: 'Bool'
+                },
+                value3: ProgramType {
+                  value0: Bool {},
+                  value1: Nothing {}
+                },
+                value4: Leaf {},
+                value5: Leaf {}
+              },
+              value5: Leaf {}
+            },
+            value5: Node {
+              value0: 1,
+              value1: 1,
+              value2: TypeIdentifier {
+                value0: 'Float'
+              },
+              value3: ProgramType {
+                value0: Float {},
+                value1: Nothing {}
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            }
+          },
+          value5: Node {
+            value0: 2,
+            value1: 2,
+            value2: TypeIdentifier {
+              value0: 'I32'
+            },
+            value3: ProgramType {
+              value0: I32 {},
+              value1: Nothing {}
+            },
+            value4: Leaf {},
+            value5: Node {
+              value0: 1,
+              value1: 1,
+              value2: TypeIdentifier {
+                value0: 'I64'
+              },
+              value3: ProgramType {
+                value0: I64 {},
+                value1: Nothing {}
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            }
+          }
+        },
+        value5: Node {
+          value0: 4,
+          value1: 8,
+          value2: TypeIdentifier {
+            value0: 'U32'
+          },
+          value3: ProgramType {
+            value0: U32 {},
+            value1: Nothing {}
+          },
+          value4: Node {
+            value0: 2,
+            value1: 3,
+            value2: TypeIdentifier {
+              value0: 'String'
+            },
+            value3: ProgramType {
+              value0: $$String {},
+              value1: Nothing {}
+            },
+            value4: Node {
+              value0: 1,
+              value1: 1,
+              value2: TypeIdentifier {
+                value0: 'Int'
+              },
+              value3: ProgramType {
+                value0: Integer {},
+                value1: Nothing {}
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            },
+            value5: Node {
+              value0: 1,
+              value1: 1,
+              value2: TypeIdentifier {
+                value0: 'U16'
+              },
+              value3: ProgramType {
+                value0: U16 {},
+                value1: Nothing {}
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            }
+          },
+          value5: Node {
+            value0: 3,
+            value1: 4,
+            value2: TypeIdentifier {
+              value0: 'U8'
+            },
+            value3: ProgramType {
+              value0: U8 {},
+              value1: Nothing {}
+            },
+            value4: Node {
+              value0: 1,
+              value1: 1,
+              value2: TypeIdentifier {
+                value0: 'U64'
+              },
+              value3: ProgramType {
+                value0: U64 {},
+                value1: Nothing {}
+              },
+              value4: Leaf {},
+              value5: Leaf {}
+            },
+            value5: Node {
+              value0: 2,
+              value1: 2,
+              value2: NameIdentifier {
+                value0: 'fib'
+              },
+              value3: ProgramType {
+                value0: FnType {
+                  value0: [
+                    ProgramType {
+                      value0: Integer {},
+                      value1: Just {
+                        value0: Tuple {
+                          value0: ModuleID {
+                            value0: Nothing {},
+                            value1: []
+                          },
+                          value1: 28
+                        }
+                      }
+                    }
+                  ],
+                  value1: ProgramType {
+                    value0: TypeVar {
+                      value0: 8
+                    },
+                    value1: Just {
+                      value0: Tuple {
+                        value0: ModuleID {
+                          value0: Nothing {},
+                          value1: []
+                        },
+                        value1: 63
+                      }
+                    }
+                  }
+                },
+                value1: Just {
+                  value0: Tuple {
+                    value0: ModuleID {
+                      value0: Nothing {},
+                      value1: []
+                    },
+                    value1: 0
+                  }
+                }
+              },
+              value4: Leaf {},
+              value5: Node {
+                value0: 1,
+                value1: 1,
+                value2: NameIdentifier {
+                  value0: 'n'
+                },
+                value3: ProgramType {
+                  value0: Integer {},
+                  value1: Just {
+                    value0: Tuple {
+                      value0: ModuleID {
+                        value0: Nothing {},
+                        value1: []
+                      },
+                      value1: 11
+                    }
+                  }
+                },
+                value4: Leaf {},
+                value5: Leaf {}
+              }
+            }
+          }
+        }
+      }
+    },
+    value4: Leaf {},
+    value5: Leaf {}
+  }
+}
+modules: (fromFoldable [(Tuple (ModuleID Nothing []) (Tuple (Module [(ModuleDeclaration (FnDeclarationKind true (Name fib) (ModuleFn (Just "fib") [(FnParam n Nothing)] Nothing (Expr (BlockExpr [(Expr (WhenExpr [(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 0)))) (Expr (IntExpr 0))),(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 1)))) (Expr (IntExpr 1)))] (Just (Expr (AddExpr (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 1))))])) (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 2))))])))))))])))))]) { exported: (fromFoldable [(ModuleElemID (ModuleID Nothing []) (Name fib))]), symbol_table: (fromFoldable [(Tuple (ModuleElemID (ModuleID Nothing []) (Name fib)) (ModuleDeclaration (FnDeclarationKind true (Name fib) (ModuleFn (Just "fib") [(FnParam n Nothing)] Nothing (Expr (BlockExpr [(Expr (WhenExpr [(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 0)))) (Expr (IntExpr 0))),(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 1)))) (Expr (IntExpr 1)))] (Just (Expr (AddExpr (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 1))))])) (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 2))))])))))))]))))))]), type_contexts: (fromFoldable [(Tuple (ModuleElemID (ModuleID Nothing []) (Name fib)) { constraints: [], module_id: (ModuleID Nothing []), next_id: 10, params: [(ProgramType Integer)], return_type: (ProgramType (TypeVar 0)), type_env: (fromFoldable [(Tuple (Type Bool) (ProgramType Bool)),(Tuple (Type F32) (ProgramType F32)),(Tuple (Type F64) (ProgramType F64)),(Tuple (Type Float) (ProgramType Float)),(Tuple (Type I16) (ProgramType I16)),(Tuple (Type I32) (ProgramType I32)),(Tuple (Type I64) (ProgramType I64)),(Tuple (Type I8) (ProgramType I8)),(Tuple (Type Int) (ProgramType Integer)),(Tuple (Type String) (ProgramType String)),(Tuple (Type U16) (ProgramType U16)),(Tuple (Type U32) (ProgramType U32)),(Tuple (Type U64) (ProgramType U64)),(Tuple (Type U8) (ProgramType U8)),(Tuple (Name fib) (ProgramType (FnType [(ProgramType Integer)] (ProgramType (TypeVar 8))))),(Tuple (Name n) (ProgramType Integer))]), type_index: (fromFoldable [(Tuple 0 (ProgramType (TypeVar 0))),(Tuple 1 (ProgramType (FnType [(ProgramType Integer)] (ProgramType (TypeVar 8))))),(Tuple 2 (ProgramType Integer)),(Tuple 3 (ProgramType Integer)),(Tuple 4 (ProgramType Integer)),(Tuple 5 (ProgramType Numeric)),(Tuple 6 (ProgramType Integer)),(Tuple 7 (ProgramType (TypeVar 10))),(Tuple 8 (ProgramType Integer)),(Tuple 9 (ProgramType Numeric))]) })]) }))])
+module_queue: []
+seen: (fromFoldable [(ModuleID Nothing [])])
+params are: [
+  ProgramType {
+    value0: Integer {},
     value1: Just {
       value0: Tuple {
         value0: ModuleID {
@@ -272,1760 +686,11 @@ new constraint: Matches {
         value1: 11
       }
     }
+  }
+]
+return type is: ProgramType {
+  value0: TypeVar {
+    value0: 0
   },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 1,
-  value1: 1,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Leaf {}
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Bool {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 25
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Bool {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 33
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 1,
-  value1: 1,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Leaf {}
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 5
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 18
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 33
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 2,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 5,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 44
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 2,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 5,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Bool {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 41
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Bool {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 49
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 2,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 5,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 33
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 49
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 2,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 5,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 66
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 2,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 5,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 68
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 66
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 2,
-  value2: 3,
-  value3: undefined,
-  value4: Leaf {},
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 5,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: AtLeast {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 7
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 66
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 3,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 1,
-    value1: 1,
-    value2: 3,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: AtLeast {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 68
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 2,
-  value1: 3,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 1,
-    value1: 1,
-    value2: 3,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 2
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 0
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: FnType {
-      value0: [
-        ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        }
-      ],
-      value1: ProgramType {
-        value0: TypeVar {
-          value0: 8
-        },
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 63
-          }
-        }
-      }
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 63
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 3,
-  value1: 4,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 79
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 3,
-  value1: 4,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 81
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 79
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 3,
-  value1: 4,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 1,
-    value1: 1,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Leaf {}
-  }
-}
-new constraint: AtLeast {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 9
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 79
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 3,
-  value1: 5,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 2,
-    value1: 2,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Node {
-      value0: 1,
-      value1: 1,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    }
-  }
-}
-new constraint: AtLeast {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 28
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 81
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 3,
-  value1: 5,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 2,
-    value1: 2,
-    value2: 7,
-    value3: undefined,
-    value4: Leaf {},
-    value5: Node {
-      value0: 1,
-      value1: 1,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    }
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: FnType {
-      value0: [
-        ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        }
-      ],
-      value1: ProgramType {
-        value0: TypeVar {
-          value0: 8
-        },
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 63
-          }
-        }
-      }
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 63
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: FnType {
-      value0: [
-        ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        }
-      ],
-      value1: ProgramType {
-        value0: TypeVar {
-          value0: 10
-        },
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 76
-          }
-        }
-      }
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 76
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 3,
-  value1: 6,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 2,
-    value1: 3,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 7,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 1,
-      value1: 1,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    }
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 10
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 76
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 7,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 3,
-    value1: 4,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 7,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 7,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 3,
-    value1: 4,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 7,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-new constraint: AtLeast {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 6
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 8,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 3,
-    value1: 5,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 2,
-      value1: 2,
-      value2: 7,
-      value3: undefined,
-      value4: Node {
-        value0: 1,
-        value1: 1,
-        value2: 6,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      },
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-new constraint: AtLeast {
-  value0: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 8,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 3,
-    value1: 5,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 2,
-      value1: 2,
-      value2: 7,
-      value3: undefined,
-      value4: Node {
-        value0: 1,
-        value1: 1,
-        value2: 6,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      },
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 33
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Numeric {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 71
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 8,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 2,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Leaf {}
-  },
-  value5: Node {
-    value0: 3,
-    value1: 5,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 2,
-      value1: 2,
-      value2: 7,
-      value3: undefined,
-      value4: Node {
-        value0: 1,
-        value1: 1,
-        value2: 6,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      },
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: TypeVar {
-      value0: 4
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 14
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: Integer {},
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 33
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 9,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 3,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 1,
-      value1: 1,
-      value2: 4,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    }
-  },
-  value5: Node {
-    value0: 3,
-    value1: 5,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 2,
-      value1: 2,
-      value2: 7,
-      value3: undefined,
-      value4: Node {
-        value0: 1,
-        value1: 1,
-        value2: 6,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      },
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-new constraint: Matches {
-  value0: ProgramType {
-    value0: FnType {
-      value0: [
-        ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        }
-      ],
-      value1: ProgramType {
-        value0: Numeric {},
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 71
-          }
-        }
-      }
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 63
-      }
-    }
-  },
-  value1: ProgramType {
-    value0: FnType {
-      value0: [
-        ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        }
-      ],
-      value1: ProgramType {
-        value0: Integer {},
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 33
-          }
-        }
-      }
-    },
-    value1: Just {
-      value0: Tuple {
-        value0: ModuleID {
-          value0: Nothing {},
-          value1: []
-        },
-        value1: 0
-      }
-    }
-  }
-}
-new substitution: Node {
-  value0: 4,
-  value1: 9,
-  value2: 5,
-  value3: undefined,
-  value4: Node {
-    value0: 2,
-    value1: 3,
-    value2: 3,
-    value3: undefined,
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 1,
-      value1: 1,
-      value2: 4,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Leaf {}
-    }
-  },
-  value5: Node {
-    value0: 3,
-    value1: 5,
-    value2: 8,
-    value3: undefined,
-    value4: Node {
-      value0: 2,
-      value1: 2,
-      value2: 7,
-      value3: undefined,
-      value4: Node {
-        value0: 1,
-        value1: 1,
-        value2: 6,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      },
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: undefined,
-      value4: Leaf {},
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 10,
-        value3: undefined,
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    }
-  }
-}
-substitution finished: Just {
-  value0: Node {
-    value0: 4,
-    value1: 9,
-    value2: 5,
-    value3: ProgramType {
-      value0: Integer {},
-      value1: Just {
-        value0: Tuple {
-          value0: ModuleID {
-            value0: Nothing {},
-            value1: []
-          },
-          value1: 33
-        }
-      }
-    },
-    value4: Node {
-      value0: 2,
-      value1: 3,
-      value2: 3,
-      value3: ProgramType {
-        value0: Integer {},
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 28
-          }
-        }
-      },
-      value4: Node {
-        value0: 1,
-        value1: 1,
-        value2: 2,
-        value3: ProgramType {
-          value0: FnType {
-            value0: [
-              ProgramType {
-                value0: Integer {},
-                value1: Just {
-                  value0: Tuple {
-                    value0: ModuleID {
-                      value0: Nothing {},
-                      value1: []
-                    },
-                    value1: 28
-                  }
-                }
-              }
-            ],
-            value1: ProgramType {
-              value0: TypeVar {
-                value0: 8
-              },
-              value1: Just {
-                value0: Tuple {
-                  value0: ModuleID {
-                    value0: Nothing {},
-                    value1: []
-                  },
-                  value1: 63
-                }
-              }
-            }
-          },
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 63
-            }
-          }
-        },
-        value4: Leaf {},
-        value5: Leaf {}
-      },
-      value5: Node {
-        value0: 1,
-        value1: 1,
-        value2: 4,
-        value3: ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 33
-            }
-          }
-        },
-        value4: Leaf {},
-        value5: Leaf {}
-      }
-    },
-    value5: Node {
-      value0: 3,
-      value1: 5,
-      value2: 8,
-      value3: ProgramType {
-        value0: TypeVar {
-          value0: 10
-        },
-        value1: Just {
-          value0: Tuple {
-            value0: ModuleID {
-              value0: Nothing {},
-              value1: []
-            },
-            value1: 76
-          }
-        }
-      },
-      value4: Node {
-        value0: 2,
-        value1: 2,
-        value2: 7,
-        value3: ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        },
-        value4: Node {
-          value0: 1,
-          value1: 1,
-          value2: 6,
-          value3: ProgramType {
-            value0: Numeric {},
-            value1: Just {
-              value0: Tuple {
-                value0: ModuleID {
-                  value0: Nothing {},
-                  value1: []
-                },
-                value1: 71
-              }
-            }
-          },
-          value4: Leaf {},
-          value5: Leaf {}
-        },
-        value5: Leaf {}
-      },
-      value5: Node {
-        value0: 2,
-        value1: 2,
-        value2: 9,
-        value3: ProgramType {
-          value0: Integer {},
-          value1: Just {
-            value0: Tuple {
-              value0: ModuleID {
-                value0: Nothing {},
-                value1: []
-              },
-              value1: 28
-            }
-          }
-        },
-        value4: Leaf {},
-        value5: Node {
-          value0: 1,
-          value1: 1,
-          value2: 10,
-          value3: ProgramType {
-            value0: Numeric {},
-            value1: Just {
-              value0: Tuple {
-                value0: ModuleID {
-                  value0: Nothing {},
-                  value1: []
-                },
-                value1: 71
-              }
-            }
-          },
-          value4: Leaf {},
-          value5: Leaf {}
-        }
-      }
-    }
-  }
-}
-substitution is: Node {
-  value0: 4,
-  value1: 9,
-  value2: 5,
-  value3: ProgramType { value0: Integer {}, value1: Just { value0: [Tuple] } },
-  value4: Node {
-    value0: 2,
-    value1: 3,
-    value2: 3,
-    value3: ProgramType { value0: Integer {}, value1: [Just] },
-    value4: Node {
-      value0: 1,
-      value1: 1,
-      value2: 2,
-      value3: [ProgramType],
-      value4: Leaf {},
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 1,
-      value1: 1,
-      value2: 4,
-      value3: [ProgramType],
-      value4: Leaf {},
-      value5: Leaf {}
-    }
-  },
-  value5: Node {
-    value0: 3,
-    value1: 5,
-    value2: 8,
-    value3: ProgramType { value0: [TypeVar], value1: [Just] },
-    value4: Node {
-      value0: 2,
-      value1: 2,
-      value2: 7,
-      value3: [ProgramType],
-      value4: [Node],
-      value5: Leaf {}
-    },
-    value5: Node {
-      value0: 2,
-      value1: 2,
-      value2: 9,
-      value3: [ProgramType],
-      value4: Leaf {},
-      value5: [Node]
-    }
-  }
-}
-modules: (fromFoldable [(Tuple (ModuleID Nothing []) (Tuple (Module [(ModuleDeclaration (FnDeclarationKind true (Name fib) (ModuleFn (Just "fib") [(FnParam n Nothing)] Nothing (Expr (BlockExpr [(Expr (WhenExpr [(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 0)))) (Expr (IntExpr 0))),(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 1)))) (Expr (IntExpr 1)))] (Just (Expr (AddExpr (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 1))))])) (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 2))))])))))))])))))]) { exported: (fromFoldable [(ModuleElemID (ModuleID Nothing []) (Name fib))]), symbol_table: (fromFoldable [(Tuple (ModuleElemID (ModuleID Nothing []) (Name fib)) (ModuleDeclaration (FnDeclarationKind true (Name fib) (ModuleFn (Just "fib") [(FnParam n Nothing)] Nothing (Expr (BlockExpr [(Expr (WhenExpr [(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 0)))) (Expr (IntExpr 0))),(WhenArm (Expr (EqualsExpr (Expr (NameExpr n)) (Expr (IntExpr 1)))) (Expr (IntExpr 1)))] (Just (Expr (AddExpr (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 1))))])) (Expr (CallExpr (Expr (NameExpr fib)) [(Expr (SubExpr (Expr (NameExpr n)) (Expr (IntExpr 2))))])))))))]))))))]), type_contexts: (fromFoldable [(Tuple (ModuleElemID (ModuleID Nothing []) (Name fib)) { constraints: [], module_id: (ModuleID Nothing []), next_id: 10, params: [], return_type: (ProgramType (TypeVar 0)), type_env: (fromFoldable [(Tuple (Type Bool) (ProgramType Bool)),(Tuple (Type F32) (ProgramType F32)),(Tuple (Type F64) (ProgramType F64)),(Tuple (Type Float) (ProgramType Float)),(Tuple (Type I16) (ProgramType I16)),(Tuple (Type I32) (ProgramType I32)),(Tuple (Type I64) (ProgramType I64)),(Tuple (Type I8) (ProgramType I8)),(Tuple (Type Int) (ProgramType Integer)),(Tuple (Type String) (ProgramType String)),(Tuple (Type U16) (ProgramType U16)),(Tuple (Type U32) (ProgramType U32)),(Tuple (Type U64) (ProgramType U64)),(Tuple (Type U8) (ProgramType U8)),(Tuple (Name fib) (ProgramType (FnType [(ProgramType Integer)] (ProgramType (TypeVar 8))))),(Tuple (Name n) (ProgramType Integer))]), type_index: (fromFoldable [(Tuple 0 (ProgramType (TypeVar 0))),(Tuple 1 (ProgramType (FnType [(ProgramType Integer)] (ProgramType (TypeVar 8))))),(Tuple 2 (ProgramType Integer)),(Tuple 3 (ProgramType Integer)),(Tuple 4 (ProgramType Integer)),(Tuple 5 (ProgramType Numeric)),(Tuple 6 (ProgramType Integer)),(Tuple 7 (ProgramType (TypeVar 10))),(Tuple 8 (ProgramType Integer)),(Tuple 9 (ProgramType Numeric))]) })]) }))])
-module_queue: []
-seen: (fromFoldable [(ModuleID Nothing [])])
-Exports are: Node {
-  value0: 1,
-  value1: 1,
-  value2: ModuleElemID {
-    value0: ModuleID {
-      value0: Nothing {},
-      value1: []
-    },
-    value1: NameIdentifier {
-      value0: 'fib'
-    }
-  },
-  value3: undefined,
-  value4: Leaf {},
-  value5: Leaf {}
+  value1: Nothing {}
 }
