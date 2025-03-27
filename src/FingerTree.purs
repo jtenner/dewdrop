@@ -16,6 +16,7 @@ module FingerTree
   , push
   , single
   , snoc
+  , to_array
   , to_list
   , uncons
   , unsnoc
@@ -27,9 +28,9 @@ import Data.Array as Array
 import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.List.Lazy as List
-import Data.Maybe (Maybe(..), isJust)
+import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Util (guard)
+
 
 data FingerTree u
   = Empty
@@ -87,7 +88,7 @@ unsnoc (Deep n l root (Two v u)) = Just $ Tuple u $ Deep (n - 1) l root $ One v
 unsnoc (Deep n (Four v w x y) Empty (One u)) = Just $ Tuple u $ Deep (n - 1) (Two v w) Empty $ Two x y
 unsnoc (Deep n (Three v w x) Empty (One u)) = Just $ Tuple u $ Deep (n - 1) (Two v w) Empty $ One x
 unsnoc (Deep n (Two v w) Empty (One u)) = Just $ Tuple u $ Deep (n - 1) (One v) Empty $ One w
-unsnoc (Deep n (One v) Empty (One u)) = Just $ Tuple u $ Single v
+unsnoc (Deep _ (One v) Empty (One u)) = Just $ Tuple u $ Single v
 unsnoc (Deep n l root (One u)) = do
   Tuple r' root' <- unsnoc root
   Just $ Tuple u $ Deep (n - 1) l root' r'
@@ -136,7 +137,7 @@ foldl_finger_tree f acc (Deep _ l root r) = foldl_node_f (foldl_finger_tree fold
   foldl_node_f = foldl_node f
 
 fold_map_finger_tree :: ∀ m u. Monoid m => (u -> m) -> FingerTree u -> m
-fold_map_finger_tree f Empty = mempty
+fold_map_finger_tree _ Empty = mempty
 fold_map_finger_tree f (Single a) = f a
 fold_map_finger_tree f (Deep _ l root r) = fold_map_node f l <> fold_map_finger_tree (fold_map_node f) root <> fold_map_node f r
 
@@ -216,46 +217,23 @@ instance eq_finger_tree :: Eq u => Eq (FingerTree u) where
     where
     go :: List u -> List u -> FingerTree (Node u) -> FingerTree (Node u) -> Maybe Boolean
     go Nil Nil Empty Empty = Just true
-
-    -- Four at a time
-    go (a : b : c : d : Nil) (a' : b' : c' : d' : Nil) left right = do
-      _ <- guard (not $ a == a' && b == b' && c == c' && d == d') Nothing
+    go Nil r left right = do
       Tuple l' left' <- unsnoc left
+      go (to_list_node l') r left' right
+    go l Nil left right = do
       Tuple r' right' <- unsnoc right
-      go (to_list_node l') (to_list_node r') left' right'
-
-    -- Three at a time
-    go (a : b : c : l') (a' : b' : c' : Nil) left right = do
-      _ <- guard (not $ a == a' && b == b' && c == c') Nothing
-      Tuple r' right' <- unsnoc right
-      go l' (to_list_node r') left right'
-    go (a : b : c : Nil) (a' : b' : c' : r') left right = do
-      _ <- guard (not $ a == a' && b == b' && c == c') Nothing
-      Tuple l' left' <- unsnoc left
-      go (to_list_node l') r' left' right
-
-    -- Two at a time
-    go (a : b : l') (a' : b' : Nil) left right = do
-      _ <- guard (not $ a == a' && b == b') Nothing
-      Tuple r' right' <- unsnoc right
-      go l' (to_list_node r') left right'
-    go (a : b : Nil) (a' : b' : r') left right = do
-      _ <- guard (not $ a == a' && b == b') Nothing
-      Tuple l' left' <- unsnoc left
-      go (to_list_node l') r' left' right
-
-    -- One at a time
-    go (a : l') (a' : Nil) left right = do
-      _ <- guard (not $ a == a') Nothing
-      Tuple r' right' <- unsnoc right
-      go l' (to_list_node r') left right'
-    go (a : Nil) (a' : r') left right = do
-      _ <- guard (not $ a == a') Nothing
-      Tuple l' left' <- unsnoc left
-      go (to_list_node l') r' left' right
+      go l (to_list_node r') left right'
+    
+    go (a : b : c : d : l') (a' : b' : c' : d' : r') left right | a == a' && b == b' && c == c' && d == d' = go l' r' left right
+    go (a : b : c : l') (a' : b' : c' : r') left right | a == a' && b == b' && c == c' = go l' r' left right
+    go (a : b : l') (a' : b' : r') left right | a == a' && b == b' = go l' r' left right
+    go (a : l') (a' : r') left right | a == a' = go l' r' left right
+    go l' r' left right | l' == r' = do
+      Tuple l'' left' <- unsnoc left
+      Tuple r'' right' <- unsnoc right
+      go (to_list_node l'') (to_list_node r'') left' right'
 
     go _ _ _ _ = Nothing
-
   eq _ _ = false
 
 to_list :: ∀ (@u :: Type). FingerTree u -> List u
@@ -293,3 +271,5 @@ from_list (a : b : c : d : e : f : g : h : l) =
   go n sf next root (e' : Nil) = Deep (n + 1) sf (snoc next root) $ One e'
   go n sf next root Nil = Deep n sf root next
 
+to_array :: ∀ (@u :: Type). FingerTree u -> Array u
+to_array = Array.fromFoldable

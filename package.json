@@ -8,7 +8,7 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.8.2"
   },
   "scripts": {
     "format": "bunx purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs' && bunx biome format --write ."

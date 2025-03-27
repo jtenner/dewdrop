@@ -7,7 +7,6 @@ import Data.Eq (class Eq)
 import Data.Maybe (Maybe(..))
 import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
-import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Error)
 import FingerTree (concat, empty, foldl, foldr, map, single, (+=))
@@ -231,7 +230,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
       let ft1 = single 1
       let ft2 = single 2
       let combined = concat ft1 ft2
-      shouldEqual (map (\x -> x + 1) combined) $ spy "single 2 += 3 is" $ single 2 += 3
+      shouldEqual (map (\x -> x + 1) combined) $ single 2 += 3
       shouldEqual (foldr (\x acc -> acc + x) 0 combined) 3
 
     it "should handle complex transformations" do
@@ -259,8 +258,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
         module_fn_result = parse_fn tokens 0
       case module_fn_result of
         Just (Tuple module_fn _) -> case process_module_fn default_module_id 0 module_fn of
-          Just type_context -> do
-            let _ = spy "tc is" type_context
+          Just _ -> do
             shouldEqual true true
           _ -> shouldEqual false false
         _ -> shouldEqual false false

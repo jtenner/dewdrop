@@ -30,7 +30,6 @@ import Prelude
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
-import Debug (spy)
 import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
@@ -299,10 +298,7 @@ parse_expr tokens index = do
 do_parse_expression_unary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_unary rpn' tokens index = case tokens !! index of
   Just (Token (TokenKindInt val) pos) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
-  Just (Token (TokenKindNameIdentifier name) pos) -> do
-    let _ = spy "found name identifier" name
-    do_parse_expression_binary (rpn' ++ Expr (NameExpr name) pos) tokens (index + 1)
-
+  Just (Token (TokenKindNameIdentifier name) pos) -> do_parse_expression_binary (rpn' ++ Expr (NameExpr name) pos) tokens (index + 1)
   -- LParen in unary position is a group
   Just (Token TokenKindLParen _) -> do
     rpn'' <- rpn' +. group

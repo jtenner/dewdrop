@@ -98,7 +98,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Set (Set)
 import Data.Set as Set
 import Data.Tuple (Tuple(..), uncurry)
-import Debug (spy)
 import Effect (Effect)
 import Effect.Console (log)
 import Effect.Exception (throw)
@@ -755,11 +754,26 @@ compile config = do
   log $ "seen: " <> show seen
 
   case lookup package_main_module_id modules of
-    Just (Tuple mod _) -> do
-      let exports = get_exports package_main_module_id mod
+    Just (Tuple _mod { symbol_table: _, type_contexts, exported }) -> do
       -- TODO: Write exports
+      case foldl go (Just $ pure unit) exported of
+        Just _ -> pure unit
+        Nothing -> throw "Failed to write exports"
+      where
+        go :: Maybe (Effect Unit) -> ModuleElemID -> Maybe (Effect Unit)
+        go _ exported_id = do
+          { constraints: _
+          , module_id: _
+          , next_id: _
+          , params
+          , return_type
+          , type_env: _
+          , type_index: _
+          } <- lookup exported_id type_contexts
+          let _ = trace "params are" params
+          let _ = trace "return type is" return_type
+          Just $ pure unit
 
-      pure unit
     _ -> throw "Failed to find main module"
 
 -- unification functions
@@ -814,11 +828,10 @@ unify constraints = do
 
   unify' :: TypeConstraints -> Substitution -> Maybe Substitution
   unify' constraints' sub = case uncons constraints' of
-    Nothing -> trace "substitution finished" $ Just sub
+    Nothing -> Just sub
     Just { head: constraint, tail: rest } -> do
-      let constraint' = trace "new constraint" $ apply_sub_constraint sub constraint
+      let constraint' = apply_sub_constraint sub constraint
       sub' <- unify_constraint constraint' sub
-      let _ = trace "new substitution" $ keys sub'
       let rest' = map (apply_sub_constraint sub') rest
       unify' rest' sub'
 
@@ -877,8 +890,8 @@ unify constraints = do
 
   -- for type matching
   unify_constraint cons sub = do
-    let _ = spy "constraint is:" cons
-    let _ = spy "sub is:" $ keys sub
+    let _ = trace "constraint is:" cons
+    let _ = trace "sub is:" $ keys sub
     Nothing
 
   do_unify_constraints_maybe :: Substitution -> Array TypeConstraint -> Maybe Substitution
