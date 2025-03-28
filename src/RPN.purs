@@ -158,3 +158,9 @@ finalize rpn' = do
 
 is_nested :: ∀ a. RPN a -> Boolean
 is_nested (RPN nested _ _) = nested > 0
+
+-- Expr: a + b * c - d
+-- scan: ~~~~~~~~~~~~~^
+--  Ops: 
+--  Val: a + ((b * c) - d)
+-- Hold: 

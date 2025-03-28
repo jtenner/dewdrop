@@ -27,14 +27,13 @@ module BitStream
 
 import Prelude
 
-import Control.Monad.List.Trans (foldl)
 import Data.Array as Array
 import Data.Char (fromCharCode, toCharCode)
 import Data.Int.Bits (shl, shr, (.&.), (.|.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import FingerTree (FingerTree, uncons, cons, snoc)
-import Util (to_chars)
+import Util (to_chars, to_unsigned)
 
 type Value = Int
 type Size = Int
@@ -80,37 +79,27 @@ read_u64 :: BitStream -> Maybe (Tuple Value BitStream)
 read_u64 = read_bits 64
 
 read_i8 :: BitStream -> Maybe (Tuple Value BitStream)
-read_i8 s = read_signed 8 i8_negative_mask s
+read_i8 = read_signed 8
 
 read_i16 :: BitStream -> Maybe (Tuple Value BitStream)
-read_i16 s = read_signed 16 i16_negative_mask s
+read_i16 = read_signed 16
 
 read_i32 :: BitStream -> Maybe (Tuple Value BitStream)
-read_i32 s = read_signed 32 i32_negative_mask s
+read_i32 = read_signed 32
 
 read_i64 :: BitStream -> Maybe (Tuple Value BitStream)
-read_i64 s = read_signed 64 i64_negative_mask s
-
-i8_negative_mask :: Mask
-i8_negative_mask = negative_mask 8
-
-i16_negative_mask :: Mask
-i16_negative_mask = negative_mask 16
-
-i32_negative_mask :: Mask
-i32_negative_mask = negative_mask 32
-
-i64_negative_mask :: Mask
-i64_negative_mask = negative_mask 64
+read_i64 = read_signed 64
 
 negative_mask :: Size -> Mask
 negative_mask n = 1 `shl` (n - 1)
 
-read_signed :: Size -> Mask -> BitStream -> Maybe (Tuple Value BitStream)
-read_signed n mask s = do
+read_signed :: Size -> BitStream -> Maybe (Tuple Value BitStream)
+read_signed n s = do
   Tuple v s' <- read_bits n s
-  let is_negative = (v .&. mask) /= 0
-  let v' = if is_negative then v - mask else v
+  let
+    mask = negative_mask n
+    is_negative = (v .&. mask) /= 0
+    v' = if is_negative then v - mask else v
   Just $ Tuple v' s'
 
 write_u8 :: Value -> BitStream -> BitStream
@@ -124,9 +113,6 @@ write_u32 = write_bits 32
 
 write_u64 :: Value -> BitStream -> BitStream
 write_u64 = write_bits 64
-
-to_unsigned :: Size -> Value -> Value
-to_unsigned n v = v .&. ((1 `shl` n) - 1)
 
 match :: Size -> Value -> BitStream -> Maybe (Tuple Value BitStream)
 match n _ _ | n <= 0 = Nothing
@@ -156,20 +142,20 @@ write_utf8_char :: Char -> BitStream -> BitStream
 write_utf8_char c s = go (toCharCode c) s
   where
     go :: Value -> BitStream -> BitStream
-    go value s
-      | value <= 0x7F = write_u8 value s -- 0 .. 0x7F
+    go value s'
+      | value <= 0x7F = write_u8 value s' -- 0 .. 0x7F
       | value <= 0x7FF = do -- 80 .. 7FF
-        let s' = write_u8 ((value `shr` 6) .|. 0xC0) s
-        write_u8 ((value .&. 0x3F) .|. 0x80) s'
-      | value <= 0xFFFF = do -- 800 .. FFFF
-        let s' = write_u8 ((value `shr` 12) .|. 0xE0) s
-        let s'' = write_u8 (((value `shr` 6) .&. 0x3F) .|. 0x80) s'
+        let s'' = write_u8 ((value `shr` 6) .|. 0xC0) s'
         write_u8 ((value .&. 0x3F) .|. 0x80) s''
-      | value <= 0x10FFFF = do -- 10000 .. 10FFFF
-        let s' = write_u8 ((value `shr` 18) .|. 0xF0) s
-        let s'' = write_u8 (((value `shr` 12) .&. 0x3F) .|. 0x80) s'
+      | value <= 0xFFFF = do -- 800 .. FFFF
+        let s'' = write_u8 ((value `shr` 12) .|. 0xE0) s'
         let s''' = write_u8 (((value `shr` 6) .&. 0x3F) .|. 0x80) s''
         write_u8 ((value .&. 0x3F) .|. 0x80) s'''
+      | value <= 0x10FFFF = do -- 10000 .. 10FFFF
+        let s'' = write_u8 ((value `shr` 18) .|. 0xF0) s'
+        let s''' = write_u8 (((value `shr` 12) .&. 0x3F) .|. 0x80) s''
+        let s'''' = write_u8 (((value `shr` 6) .&. 0x3F) .|. 0x80) s'''
+        write_u8 ((value .&. 0x3F) .|. 0x80) s''''
       | otherwise = s
 
 write_string :: String -> BitStream -> BitStream

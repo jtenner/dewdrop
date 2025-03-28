@@ -9,6 +9,13 @@ export const to_chars = Array.from;
 
 /**
  *
+ * @param {string[]} chars
+ * @returns {string}
+ */
+export const from_chars = (chars) => chars.join("");
+
+/**
+ *
  * @type {(a: string) => (b: string) => string}
  */
 export const str_char = (a) => (b) => a + b;

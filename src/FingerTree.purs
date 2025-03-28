@@ -169,6 +169,9 @@ concat (Single a) right = cons a right
 concat left (Single b) = snoc b left
 concat (Deep n l root r) (Deep n' l' root' r') = Deep (n + n') l (concat (cons r root) (snoc l' root')) r'
 
+-- FingerTree TaskGroup
+-- TaskGroup = { }
+
 foldl :: ∀ (@u :: Type) (b :: Type). (b → u → b) → b → FingerTree u → b
 foldl = foldl_finger_tree
 

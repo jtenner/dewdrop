@@ -6,9 +6,11 @@ module Util
   , (+|)
   , (..)
   , Consumer
+  , char_size
   , char_str
   , expect_char
   , expect_many
+  , from_chars
   , guard
   , intersect_char_predicate
   , is_alpha
@@ -56,19 +58,25 @@ module Util
   , take_then_optional
   , take_type_identifier
   , to_chars
+  , to_signed
+  , to_unsigned
   , trace
   , union_char_predicate
-  ) where
+  )
+  where
 
 import Prelude
 
 import Data.Array ((!!))
+import Data.Char (toCharCode)
+import Data.Int.Bits (shl, (.&.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
 foreign import str_char :: String -> Char -> String
 foreign import char_str :: Char -> String -> String
 foreign import to_chars :: String -> Array Char
+foreign import from_chars :: Array Char -> String
 foreign import trace :: ∀ a. String -> a -> a
 
 is_char :: Char -> Char -> Boolean
@@ -273,3 +281,41 @@ do_take_many_joined_by acc consumer seperator arr index = case seperator arr ind
 guard :: forall a. Boolean -> Maybe a -> Maybe a
 guard true x = x
 guard false _ = Nothing
+
+negative_mask :: Int -> Int
+negative_mask n = 1 `shl` (n - 1)
+
+to_signed :: Int -> Int -> Int
+to_signed n i =
+  let
+    sign_bit = negative_mask n
+    max_val = 1 `shl` n
+  in
+    if (i .&. sign_bit) /= 0 then i - max_val
+    else i
+
+to_unsigned :: Int -> Int -> Int
+to_unsigned n i =
+  let
+    mask = (1 `shl` n) - 1
+  in
+    i .&. mask
+
+
+--   0x00000000 - 0x0000007F:
+--       0xxxxxxx
+--
+--   0x00000080 - 0x000007FF:
+--       110xxxxx 10xxxxxx
+--
+--   0x00000800 - 0x0000FFFF:
+--       1110xxxx 10xxxxxx 10xxxxxx
+--
+--   0x00010000 - 0x001FFFFF:
+--       11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+char_size :: Char -> Int
+char_size char = case toCharCode char of
+  n | n < 0x80 -> 1
+  n | n < 0x800 -> 2
+  n | n < 0x10000 -> 3
+  _ -> 4
