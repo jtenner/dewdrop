@@ -1,37 +1,35 @@
-module Program
-  where
-  
+module Program where
 
 import Prelude
 
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 
+type CompilerOptions =
+  { compile_target :: CompileTarget
+  , optimization :: List Pass
+  }
 
-
-type CompilerOptions = { compile_target :: CompileTarget
-                       , optimization :: List Pass
-                       }
-
-data CompileTarget = Wasm32
-                   | Wasm64
-                   | Wasm32Browser
-                   | Wasm64Browser
-                   | Wasm32Node
-                   | Wasm64Node
-                   | Wasm32Bun
-                   | Wasm64Bun
-                   | Wasm32Deno
-                   | Wasm64Deno
-                   | Wasm32NodeWorker
-                   | Wasm64NodeWorker
-                   | Wasm32BunWorker
-                   | Wasm64BunWorker
-                   | Wasm32DenoWorker
-                   | Wasm64DenoWorker
-                   | Lunatic
-                   | Wasm32Wasi
-                   | Wasm64Wasi
+data CompileTarget
+  = Wasm32
+  | Wasm64
+  | Wasm32Browser
+  | Wasm64Browser
+  | Wasm32Node
+  | Wasm64Node
+  | Wasm32Bun
+  | Wasm64Bun
+  | Wasm32Deno
+  | Wasm64Deno
+  | Wasm32NodeWorker
+  | Wasm64NodeWorker
+  | Wasm32BunWorker
+  | Wasm64BunWorker
+  | Wasm32DenoWorker
+  | Wasm64DenoWorker
+  | Lunatic
+  | Wasm32Wasi
+  | Wasm64Wasi
 
 data Pass
   = AbstractTypeRefiningPass
@@ -197,12 +195,13 @@ data Pass
 
 data ModuleID = ModuleID (Maybe String) (List String)
 
-type System = { to_resource_id :: ModuleID -> Maybe Int
-              , get_resource :: Int -> Maybe String
-              , set_resource :: Int -> String -> Maybe Unit
-              , compiler_options :: CompilerOptions
-              }
+type System =
+  { to_resource_id :: ModuleID -> Maybe Int
+  , get_resource :: Int -> Maybe String
+  , set_resource :: Int -> String -> Maybe Unit
+  , compiler_options :: CompilerOptions
+  }
 
-main_module_id :: ModuleID 
+main_module_id :: ModuleID
 main_module_id = ModuleID Nothing Nil
 

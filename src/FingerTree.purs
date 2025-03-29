@@ -33,7 +33,6 @@ import Data.List.Lazy as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-
 data FingerTree u
   = Empty
   | Single u
@@ -153,9 +152,6 @@ map_finger_tree f (Deep n l root r) = Deep n (map_node_f l) (map_finger_tree map
   where
   map_node_f = map_node f
 
-instance functor_node :: Functor Node where
-  map = map_node
-
 map_node :: ∀ (@u :: Type) (@v :: Type). (u -> v) -> Node u -> Node v
 map_node f (One a) = One $ f a
 map_node f (Two a b) = Two (f a) (f b)
@@ -221,7 +217,7 @@ instance eq_finger_tree :: Eq u => Eq (FingerTree u) where
 
     where
     go :: List u -> List u -> FingerTree (Node u) -> FingerTree (Node u) -> Maybe Boolean
-    
+
     go Nil Nil Empty Empty = Just true
     go Nil r left right = do
       Tuple l' left' <- unsnoc left
@@ -229,7 +225,7 @@ instance eq_finger_tree :: Eq u => Eq (FingerTree u) where
     go l Nil left right = do
       Tuple r' right' <- unsnoc right
       go l (to_list_node r') left right'
-    
+
     go (a : b : c : d : l') (a' : b' : c' : d' : r') left right | a == a' && b == b' && c == c' && d == d' = go l' r' left right
     go (a : b : c : l') (a' : b' : c' : r') left right | a == a' && b == b' && c == c' = go l' r' left right
     go (a : b : l') (a' : b' : r') left right | a == a' && b == b' = go l' r' left right
@@ -284,3 +280,28 @@ size :: ∀ (@u :: Type). FingerTree u -> Int
 size Empty = 0
 size (Single _) = 1
 size (Deep n _ _ _) = n
+
+instance semigroup_finger_tree :: Semigroup (FingerTree u) where
+  append = concat
+
+instance monoid_finger_tree :: Monoid (FingerTree u) where
+  mempty = empty
+
+instance apply_finger_tree :: Apply FingerTree where
+  apply Empty _ = Empty
+  apply _ Empty = Empty
+  apply fs xs = go (uncons fs) (uncons xs)
+    where
+    go (Just (Tuple f fs')) (Just (Tuple x xs')) = Single (f x) <> go (uncons fs') (uncons xs')
+    go _ _ = Empty
+
+instance applicative_finger_tree :: Applicative FingerTree where
+  pure = single
+
+instance bind_finger_tree :: Bind FingerTree where
+  bind Empty _ = Empty
+  bind (Single u) f = f u
+  -- bind (x : xs) f = f x <> bind xs f
+  bind n f = case uncons n of
+    Just (Tuple u n') -> f u <> bind n' f
+    Nothing -> Empty

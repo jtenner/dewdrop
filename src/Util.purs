@@ -62,8 +62,7 @@ module Util
   , to_unsigned
   , trace
   , union_char_predicate
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -300,7 +299,6 @@ to_unsigned n i =
     mask = (1 `shl` n) - 1
   in
     i .&. mask
-
 
 --   0x00000000 - 0x0000007F:
 --       0xxxxxxx

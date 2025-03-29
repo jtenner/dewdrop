@@ -1,5 +1,4 @@
-module Types
-  where
+module Types where
 
 import Prelude
 
@@ -13,7 +12,6 @@ import Data.Tuple (Tuple(..))
 import FingerTree (FingerTree)
 import FingerTree as FingerTree
 import Parser (Identifier)
-
 
 type TypeConstraints = FingerTree TypeConstraint
 type Substitution = Map Int ProgramType

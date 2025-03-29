@@ -3,7 +3,6 @@ module Parser
   , (+=)
   , (+|)
   , (<-++)
-  , (|>)
   , Expr(..)
   , ExprKind(..)
   , FnParam(..)
@@ -16,19 +15,7 @@ module Parser
   , ParserResult
   , TypeExpr(..)
   , TypeExprKind(..)
-  , VisitAction(..)
-  , VisitResult
   , WhenArm(..)
-  , continue
-  , exit
-  , on_expr
-  , on_fn_param
-  , on_identifier
-  , on_module
-  , on_module_declaration
-  , on_module_fn
-  , on_type_expr
-  , on_when_arm
   , parse
   , parse_expr
   , parse_fn
@@ -36,11 +23,7 @@ module Parser
   , parse_otherwise
   , parse_take_left
   , parse_take_right
-  , replace
-  , skip
-  , visit_impl
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -51,7 +34,6 @@ import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma
 import Node.EventEmitter (on_)
 import RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 import Record (merge)
-
 
 -- pub fn fib(n) {
 --   when n == 0 -> 0
@@ -468,85 +450,3 @@ instance show_type_expr :: Show TypeExpr where
 
 instance show_type_expr_kind :: Show TypeExprKind where
   show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
-
-
-data VisitAction u = Replace u | Skip | Exit | Continue
-type VisitResult ctx node = Maybe (Tuple (Maybe ctx) (VisitAction node))
-
-replace :: ∀ (@node :: Type) (@ctx :: Type). Maybe ctx -> node -> VisitResult ctx node
-replace ctx node = Just $ Tuple ctx (Replace node)
-
-skip :: ∀ (@node :: Type) (@ctx :: Type). Maybe ctx -> VisitResult ctx node
-skip ctx = Just $ Tuple ctx Skip
-
-exit :: ∀ (@node :: Type) (@ctx :: Type). Maybe ctx -> VisitResult ctx node
-exit ctx = Just $ Tuple ctx Exit  
-
-continue :: ∀ (@node :: Type) (@ctx :: Type). Maybe ctx -> VisitResult ctx node
-continue ctx = Just $ Tuple ctx Continue
-
-type Visitor ctx = { on_module :: Maybe (ctx -> Module -> VisitResult ctx Module)
-                   , on_module_declaration :: Maybe (ctx -> ModuleDeclaration -> VisitResult ctx ModuleDeclaration)
-                   , on_module_fn :: Maybe (ctx -> ModuleFn -> VisitResult ctx ModuleFn)
-                   , on_fn_param :: Maybe (ctx -> FnParam -> VisitResult ctx FnParam)
-                   , on_expr :: Maybe (ctx -> Expr -> VisitResult ctx Expr)
-                   , on_type_expr :: Maybe (ctx -> TypeExpr -> VisitResult ctx TypeExpr)
-                   , on_identifier :: Maybe (ctx -> Identifier -> VisitResult ctx Identifier)
-                   , on_when_arm :: Maybe (ctx -> WhenArm -> VisitResult ctx WhenArm)
-                   }
-
-visitor_new :: ∀ (@ctx :: Type). Visitor ctx
-visitor_new = { on_module: Nothing
-              , on_module_declaration: Nothing
-              , on_module_fn: Nothing
-              , on_fn_param: Nothing
-              , on_expr: Nothing
-              , on_type_expr: Nothing
-              , on_identifier: Nothing
-              , on_when_arm: Nothing
-              }
-
-type VisitorCallback ctx node = ctx -> node -> VisitResult ctx node
-
-on_module :: ∀ (@ctx :: Type). VisitorCallback ctx Module -> Visitor ctx -> Visitor ctx
-on_module fn visitor = merge { on_module: Just fn } visitor
-
-on_module_declaration :: ∀ (@ctx :: Type). VisitorCallback ctx ModuleDeclaration -> Visitor ctx -> Visitor ctx
-on_module_declaration fn visitor = merge { on_module_declaration: Just fn } visitor
-
-on_module_fn :: ∀ (@ctx :: Type). VisitorCallback ctx ModuleFn -> Visitor ctx -> Visitor ctx
-on_module_fn fn visitor = merge { on_module_fn: Just fn } visitor
-
-on_fn_param :: ∀ (@ctx :: Type). VisitorCallback ctx FnParam -> Visitor ctx -> Visitor ctx
-on_fn_param fn visitor = merge { on_fn_param: Just fn } visitor
-
-on_expr :: ∀ (@ctx :: Type). VisitorCallback ctx Expr -> Visitor ctx -> Visitor ctx
-on_expr fn visitor = merge { on_expr: Just fn } visitor
-
-on_type_expr :: ∀ (@ctx :: Type). VisitorCallback ctx TypeExpr -> Visitor ctx -> Visitor ctx
-on_type_expr fn visitor = merge { on_type_expr: Just fn } visitor
-
-on_identifier :: ∀ (@ctx :: Type). VisitorCallback ctx Identifier -> Visitor ctx -> Visitor ctx
-on_identifier fn visitor = merge { on_identifier: Just fn } visitor
-
-on_when_arm :: ∀ (@ctx :: Type). VisitorCallback ctx WhenArm -> Visitor ctx -> Visitor ctx
-on_when_arm fn visitor = merge { on_when_arm: Just fn } visitor
-
-visit_impl :: ∀ (@ctx :: Type). Visitor ctx -> (Visitor ctx -> Visitor ctx) -> Visitor ctx
-visit_impl visitor f = f visitor
-
-infixl 4 visit_impl as |>
-
-test_visit_module :: Int -> Module -> VisitResult Int Module
-test_visit_module ctx mod = replace (Just ctx) mod
-
-test_visit_identifier :: Int -> Identifier -> VisitResult Int Identifier
-test_visit_identifier ctx ident = replace (Just ctx) ident
-
-
-test_visitor = 
-  visitor_new
-  |> on_module test_visit_module
-  |> on_identifier test_visit_identifier
--- TODO: make a event listener pattern:
---     : (ctx -> node -> VisitResult ctx node) -> Visitor ctx -> Visitor ctx
