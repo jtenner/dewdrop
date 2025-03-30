@@ -1,4 +1,4 @@
-module RPN
+module Dewdrop.RPN
   ( (++)
   , (++?)
   , (+.)

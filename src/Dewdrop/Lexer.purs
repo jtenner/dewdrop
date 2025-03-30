@@ -1,4 +1,4 @@
-module Lexer
+module Dewdrop.Lexer
   ( (+&)
   , (+>)
   , Lexer
@@ -58,43 +58,8 @@ import Data.Array ((!!), snoc)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Dewdrop.Types (Token(..), TokenKind(..))
 import Util (Consumer, is_fslash, is_asterisk, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_lcaret, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
-
-data Token = Token TokenKind Int
-
--- pub fn fib(n) {
---   when n == 0 -> 0
---     n == 1 -> 1
---     else fib(n - 1) + fib(n - 2)
--- }
-
-data TokenKind
-  = TokenKindPubKeyword
-  | TokenKindFnKeyword
-  | TokenKindWhenKeyword
-  | TokenKindElseKeyword
-  | TokenKindNameIdentifier String -- names are snake_case
-  | TokenKindTypeIdentifier String -- types are PascalCase
-  | TokenKindInt Int
-  | TokenKindLParen
-  | TokenKindRParen
-  | TokenKindLBrace
-  | TokenKindRBrace
-  | TokenKindEqualsEquals
-  | TokenKindAsterisk
-  | TokenKindFSlash
-  | TokenKindPlus
-  | TokenKindMinus
-  | TokenKindComma
-  | TokenKindColon
-  | TokenKindRArrow
-  | TokenKindGreaterThan
-  | TokenKindGreaterThanOrEqual
-  | TokenKindLessThan
-  | TokenKindLessThanOrEqual
-  | TokenKindWhiteSpace
-  | TokenKindNewLine
-  | TokenKindEOF
 
 is_token_kind_pub_keyword :: TokenKind -> Boolean
 is_token_kind_pub_keyword kind = case kind of
@@ -332,10 +297,6 @@ lex_token = lex_whitespace
   +& lex_colon
   +& lex_eof
 
-data List n
-  = Nil
-  | Cons n (List n)
-
 tokenize :: String -> Boolean -> Array Token
 tokenize chars false = do_tokenize (to_chars chars) 0 []
 tokenize chars true = do_tokenize_filter_whitespace (to_chars chars) 0 []
@@ -353,38 +314,3 @@ do_tokenize_filter_whitespace chars index acc = case lex_token chars index of
   Just (Tuple TokenKindNewLine next_index) -> do_tokenize_filter_whitespace chars next_index acc
   Just (Tuple token_kind next_index) -> do_tokenize_filter_whitespace chars next_index $ snoc acc $ Token token_kind index
   _ -> acc
-
-instance show :: Show Token where
-  show (Token kind pos) = "(Token " <> show kind <> ": " <> show pos <> ")"
-
-derive instance eq :: Eq Token
-
-instance show_token_kind :: Show TokenKind where
-  show TokenKindPubKeyword = "TokenKindPubKeyword"
-  show TokenKindFnKeyword = "TokenKindFnKeyword"
-  show TokenKindWhenKeyword = "TokenKindWhenKeyword"
-  show TokenKindElseKeyword = "TokenKindElseKeyword"
-  show (TokenKindNameIdentifier name) = "(TokenKindNameIdentifier " <> name <> ")"
-  show (TokenKindTypeIdentifier name) = "(TokenKindTypeIdentifier " <> name <> ")"
-  show (TokenKindInt value) = "(TokenKindInt " <> show value <> ")"
-  show TokenKindLParen = "TokenKindLParen"
-  show TokenKindRParen = "TokenKindRParen"
-  show TokenKindLBrace = "TokenKindLBrace"
-  show TokenKindRBrace = "TokenKindRBrace"
-  show TokenKindEqualsEquals = "TokenKindEqualsEquals"
-  show TokenKindPlus = "TokenKindPlus"
-  show TokenKindMinus = "TokenKindMinus"
-  show TokenKindAsterisk = "TokenKindAsterisk"
-  show TokenKindFSlash = "TokenKindFSlash"
-  show TokenKindComma = "TokenKindComma"
-  show TokenKindColon = "TokenKindColon"
-  show TokenKindRArrow = "TokenKindRArrow"
-  show TokenKindGreaterThan = "TokenKindGreaterThan"
-  show TokenKindGreaterThanOrEqual = "TokenKindGreaterThanOrEqual"
-  show TokenKindLessThan = "TokenKindLessThan"
-  show TokenKindLessThanOrEqual = "TokenKindLessThanOrEqual"
-  show TokenKindEOF = "TokenKindEOF"
-  show TokenKindWhiteSpace = "TokenKindWhiteSpace"
-  show TokenKindNewLine = "TokenKindNewLine"
-
-derive instance equals :: Eq TokenKind

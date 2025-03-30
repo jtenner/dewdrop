@@ -1,4 +1,4 @@
-module BitStream
+module Data.BitStream
   ( BitStream
   , BitStreamElement
   , Mask
@@ -31,7 +31,7 @@ import Data.Char (fromCharCode, toCharCode)
 import Data.Int.Bits (shl, shr, (.&.), (.|.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import FingerTree (FingerTree, uncons, cons, snoc)
+import Data.FingerTree (FingerTree, uncons, cons, snoc)
 import Util (to_chars, to_unsigned)
 
 type Value = Int

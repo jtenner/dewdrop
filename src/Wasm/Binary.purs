@@ -2,13 +2,13 @@ module Wasm.Binary where
 
 import Prelude
 
-import BitStream (BitStream, read_u8, read_utf8_char, write_u8, write_utf8_char)
 import Data.Array as Array
+import Data.BitStream (BitStream, read_u8, read_utf8_char, write_u8, write_utf8_char)
 import Data.Int.Bits (shl, shr, (.&.), (.|.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import FingerTree (FingerTree, foldl, size, snoc)
-import FingerTree as FingerTree
+import Data.FingerTree (FingerTree, foldl, size, snoc)
+
 import Node.Encoding (Encoding(..), byteLength)
 import Util (char_size, to_chars, to_signed, from_chars)
 
@@ -644,7 +644,7 @@ encode_vec f n s = foldl f (encode_uleb128 (size n) s) n
 decode_vec :: ∀ (@u :: Type). DecoderFn u -> BitStream -> Maybe (Tuple (FingerTree u) BitStream)
 decode_vec f s = do
   Tuple n s' <- decode_uleb128 s
-  go n FingerTree.empty s'
+  go n mempty s'
   where
   go :: Int -> FingerTree u -> BitStream -> Maybe (Tuple (FingerTree u) BitStream)
   go 0 acc s'' = Just $ Tuple acc s''

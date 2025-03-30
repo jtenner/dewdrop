@@ -1,21 +1,8 @@
-module Parser
+module Dewdrop.Parser
   ( (++->)
   , (+=)
   , (+|)
   , (<-++)
-  , Expr(..)
-  , ExprKind(..)
-  , FnParam(..)
-  , Identifier(..)
-  , Module(..)
-  , ModuleDeclaration(..)
-  , ModuleDeclarationKind(..)
-  , ModuleFn(..)
-  , Parser
-  , ParserResult
-  , TypeExpr(..)
-  , TypeExprKind(..)
-  , WhenArm(..)
   , parse
   , parse_expr
   , parse_fn
@@ -30,10 +17,23 @@ import Prelude
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
-import Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
-import Node.EventEmitter (on_)
-import RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
-import Record (merge)
+import Dewdrop.Types
+  ( Expr(..)
+  , ExprKind(..)
+  , FnParam(..)
+  , Identifier(..)
+  , Module(..)
+  , ModuleDeclaration(..)
+  , ModuleDeclarationKind(..)
+  , ModuleFn(..)
+  , Parser
+  , ParserResult
+  , TypeExpr(..)
+  , TypeExprKind(..)
+  , WhenArm(..)
+  )
+import Dewdrop.Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import Dewdrop.RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
 --   when n == 0 -> 0
@@ -94,60 +94,6 @@ equality_precedence = 8
 
 -- Ops: "is"
 -- is_precedence = 2
-
-data Identifier
-  = NameIdentifier String
-  | TypeIdentifier String
-
-instance eq_identifier :: Eq Identifier where
-  eq (NameIdentifier name) (NameIdentifier name') = name == name'
-  eq (TypeIdentifier type_name) (TypeIdentifier type_name') = type_name == type_name'
-  eq _ _ = false
-
-instance ord_identifier :: Ord Identifier where
-  compare (NameIdentifier name) (NameIdentifier name') = compare name name'
-  compare (TypeIdentifier type_name) (TypeIdentifier type_name') = compare type_name type_name'
-  compare (NameIdentifier _) _ = GT
-  compare _ (NameIdentifier _) = LT
-
-data Module = Module (Array ModuleDeclaration)
-
-data ModuleDeclaration = ModuleDeclaration ModuleDeclarationKind Int
-
-data ModuleDeclarationKind = FnDeclarationKind Boolean Identifier ModuleFn
-
-data ModuleFn = ModuleFn (Maybe String) (Array FnParam) (Maybe TypeExpr) Expr
-
-data FnParam = FnParam String (Maybe TypeExpr) Int
-
-data TypeExpr = TypeExpr TypeExprKind Int
-
-data TypeExprKind = NamedTypeExpr String
-
-data Expr = Expr ExprKind Int
-
-data ExprKind
-  = WhenExpr (Array WhenArm) (Maybe Expr)
-  | BlockExpr (Array Expr)
-  | EqualsExpr Expr Expr
-  | IntExpr Int
-  | NameExpr String
-  | CallExpr Expr (Array Expr)
-  | AddExpr Expr Expr
-  | SubExpr Expr Expr
-  | MulExpr Expr Expr
-  | DivExpr Expr Expr
-  | GreaterThanExpr Expr Expr
-  | LessThanExpr Expr Expr
-  | GreaterThanEqualsExpr Expr Expr
-  | LessThanEqualsExpr Expr Expr
-
-data WhenArm = WhenArm Expr Expr
-
-type ParserResult t = Maybe (Tuple t Int)
-
--- helpers
-type Parser t = Array Token -> Int -> ParserResult t
 
 parse_many_seperated :: ∀ t u. Parser t -> Parser u -> Parser (Array t)
 parse_many_seperated parser seperator = \tokens index -> do_parse_many_seperated parser seperator tokens index []
@@ -288,8 +234,6 @@ parse_type_expr tokens index = do
   Tuple (Tuple name pos) next_index <- expect_type_identifier tokens index
   Just (Tuple (TypeExpr (NamedTypeExpr name) pos) next_index)
 
--- Expr -> Unary (BinaryOp Unary)*
-
 parse_expr :: Parser Expr
 parse_expr tokens index = do
   Tuple rpn' next_index <- do_parse_expression_unary rpn tokens index
@@ -403,50 +347,3 @@ do_parse_expression_binary rpn' tokens index = case tokens !! index of
     do_parse_expression_binary rpn'' tokens $ index + 1
 
   _ -> Just (Tuple rpn' index)
-
-instance show_expr :: Show Expr where
-  show (Expr kind _) = "(Expr " <> show kind <> ")"
-
-instance show_expr_kind :: Show ExprKind where
-  show (WhenExpr arms default_expr) = "(WhenExpr " <> show arms <> " " <> show default_expr <> ")"
-  show (EqualsExpr left right) = "(EqualsExpr " <> show left <> " " <> show right <> ")"
-  show (IntExpr value) = "(IntExpr " <> show value <> ")"
-  show (NameExpr name) = "(NameExpr " <> name <> ")"
-  show (CallExpr expr args) = "(CallExpr " <> show expr <> " " <> show args <> ")"
-  show (AddExpr left right) = "(AddExpr " <> show left <> " " <> show right <> ")"
-  show (SubExpr left right) = "(SubExpr " <> show left <> " " <> show right <> ")"
-  show (MulExpr left right) = "(MulExpr " <> show left <> " " <> show right <> ")"
-  show (DivExpr left right) = "(DivExpr " <> show left <> " " <> show right <> ")"
-  show (GreaterThanExpr left right) = "(GreaterThanExpr " <> show left <> " " <> show right <> ")"
-  show (LessThanExpr left right) = "(LessThanExpr " <> show left <> " " <> show right <> ")"
-  show (GreaterThanEqualsExpr left right) = "(GreaterThanEqualsExpr " <> show left <> " " <> show right <> ")"
-  show (LessThanEqualsExpr left right) = "(LessThanEqualsExpr " <> show left <> " " <> show right <> ")"
-  show (BlockExpr exprs) = "(BlockExpr " <> show exprs <> ")"
-
-instance show_when_arm :: Show WhenArm where
-  show (WhenArm condition expr) = "(WhenArm " <> show condition <> " " <> show expr <> ")"
-
-instance show_module :: Show Module where
-  show (Module declarations) = "(Module " <> show declarations <> ")"
-
-instance show_module_declaration :: Show ModuleDeclaration where
-  show (ModuleDeclaration kind _) = "(ModuleDeclaration " <> show kind <> ")"
-
-instance show_module_declaration_kind :: Show ModuleDeclarationKind where
-  show (FnDeclarationKind exported name fn) = "(FnDeclarationKind " <> show exported <> " " <> show name <> " " <> show fn <> ")"
-
-instance show_identifier :: Show Identifier where
-  show (NameIdentifier name) = "(Name " <> name <> ")"
-  show (TypeIdentifier name) = "(Type " <> name <> ")"
-
-instance show_fn :: Show ModuleFn where
-  show (ModuleFn name args return_type expr) = "(ModuleFn " <> show name <> " " <> show args <> " " <> show return_type <> " " <> show expr <> ")"
-
-instance show_fn_param :: Show FnParam where
-  show (FnParam name type_expr _) = "(FnParam " <> name <> " " <> show type_expr <> ")"
-
-instance show_type_expr :: Show TypeExpr where
-  show (TypeExpr kind _) = "(TypeExpr " <> show kind <> ")"
-
-instance show_type_expr_kind :: Show TypeExprKind where
-  show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"

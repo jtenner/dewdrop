@@ -1,4 +1,4 @@
-module FingerTree
+module Data.FingerTree
   ( (+=)
   , FingerTree
   , concat
@@ -21,8 +21,7 @@ module FingerTree
   , to_list
   , uncons
   , unsnoc
-  )
-  where
+  ) where
 
 import Prelude
 

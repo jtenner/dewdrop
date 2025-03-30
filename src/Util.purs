@@ -273,9 +273,9 @@ take_many_joined_by consumer seperator = \arr index -> case consumer arr index o
 do_take_many_joined_by :: String -> Consumer -> Consumer -> Array Char -> Int -> Maybe (Tuple String Int)
 do_take_many_joined_by acc consumer seperator arr index = case seperator arr index of
   Nothing -> Just (Tuple acc index)
-  Just (Tuple sep index2) -> case consumer arr index2 of
-    Nothing -> Just (Tuple acc index2)
-    Just (Tuple s index3) -> do_take_many_joined_by (acc <> sep <> s) consumer seperator arr index3
+  Just (Tuple sep index') -> case consumer arr index' of
+    Nothing -> Just (Tuple acc index')
+    Just (Tuple s index'') -> do_take_many_joined_by (acc <> sep <> s) consumer seperator arr index''
 
 guard :: forall a. Boolean -> Maybe a -> Maybe a
 guard true x = x

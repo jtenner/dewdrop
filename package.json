@@ -11,6 +11,10 @@
     "typescript": "^5.8.2"
   },
   "scripts": {
+    "test": "bunx spago test",
+    "preinstall": "bunx spago install",
+    "build": "bunx spago build",
+    "clean": "bunx rimraf output node_modules .spago",
     "format": "bunx purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs' && bunx biome format --write ."
   }
 }

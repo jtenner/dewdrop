@@ -3,7 +3,7 @@ module Visitor.Dewdrop where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Parser
+import Dewdrop.Parser
   ( Expr(..)
   , FnParam(..)
   , Identifier(..)
@@ -12,7 +12,6 @@ import Parser
   , ModuleFn(..)
   , TypeExpr(..)
   , TypeExprKind(..)
-  , VisitResult
   , WhenArm(..)
   )
 

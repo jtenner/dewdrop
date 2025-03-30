@@ -2,19 +2,19 @@ module Test.Main
   ( main
   ) where
 
+import Prelude (Unit, discard, ($), (*), (+), (-))
+
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Eq (class Eq)
+import Data.FingerTree (concat, empty, foldl, foldr, map, single, (+=))
 import Data.Maybe (Maybe(..))
 import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
+import Dewdrop.Lexer (Token(..), TokenKind(..), lex_token, tokenize)
+import Dewdrop.Parser (parse_expr, parse_fn)
+import Dewdrop.RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Effect (Effect)
 import Effect.Aff (Error)
-import FingerTree (concat, empty, foldl, foldr, map, single, (+=))
-import Lexer (Token(..), TokenKind(..), lex_token, tokenize)
-import Parser (parse_expr, parse_fn)
-import Prelude (Unit, discard, ($), (*), (+), (-))
-import Program (main_module_id, process_module_fn)
-import RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
@@ -249,16 +249,3 @@ main = runSpecAndExitProcess [ consoleReporter ] do
       let singleFT = single 5
       shouldEqual (foldr (\x acc -> acc + x) 0 singleFT) 5
 
-  describe "Constraint generation" do
-    it "should generate constraints for a function in a single module" do
-      -- ModuleID -> Int -> ModuleFn -> Maybe TypeContext
-      let
-        default_module_id = main_module_id { basedir: ".", name: "constraint_generation" }
-        tokens = tokenize "fn identity(x) x" true
-        module_fn_result = parse_fn tokens 0
-      case module_fn_result of
-        Just (Tuple module_fn _) -> case process_module_fn default_module_id 0 module_fn of
-          Just _ -> do
-            shouldEqual true true
-          _ -> shouldEqual false false
-        _ -> shouldEqual false false

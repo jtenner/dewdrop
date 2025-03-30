@@ -1,4 +1,4 @@
-module Program where
+module Dewdrop.Program where
 
 import Prelude
 
