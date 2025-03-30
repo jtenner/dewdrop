@@ -194,14 +194,22 @@ data Pass
   | VacuumPass
 
 data ModuleID = ModuleID (Maybe String) (List String)
+data ResourceID = ResourceID Int
 
 type System =
-  { to_resource_id :: ModuleID -> Maybe Int
-  , get_resource :: Int -> Maybe String
-  , set_resource :: Int -> String -> Maybe Unit
+  { to_resource_id :: ModuleID -> Maybe ResourceID
+  , get_resource :: ResourceID -> Maybe String
+  , set_resource :: ResourceID -> String -> Maybe Unit
   , compiler_options :: CompilerOptions
   }
 
 main_module_id :: ModuleID
 main_module_id = ModuleID Nothing Nil
+
+-- compile_program
+
+-- compile_main
+-- build_import_tree
+-- compile_files
+-- link
 

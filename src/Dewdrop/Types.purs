@@ -1,13 +1,22 @@
-module Dewdrop.Types where
+module Dewdrop.Types
+  ( Token
+  , visit_items
+  , visit_module
+  )
+  where
 
 import Prelude
+
+import Control.Monad.Trampoline (done)
+import Data.Array (fold, snoc)
+import Data.FingerTree (FingerTree, empty)
 import Data.Graph (Graph)
 import Data.Graph as Graph
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple)
-import Data.FingerTree (FingerTree, empty)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Tuple (Tuple(..))
+import Visitor.Pattern (VisitAction(..), VisitResult, exit, from_action, remove, replace, skip_children)
 
 data Token = Token TokenKind Int
 
@@ -287,3 +296,55 @@ instance show_type_expr :: Show TypeExpr where
 
 instance show_type_expr_kind :: Show TypeExprKind where
   show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
+
+visit_items :: ∀ (@ctx :: Type) (@node :: Type). (node -> ctx -> VisitResult ctx node) -> Array node -> ctx -> VisitResult ctx (Array node)
+visit_items visitor items ctx = do
+  Tuple ctx' items' <- fold go (Tuple ctx []) items
+  replace ctx' items'
+  where
+  go :: Tuple ctx (Array node) -> node -> VisitResult ctx (Array node)
+  go (Tuple ctx' acc) item = do
+    Tuple ctx'' action <- visitor ctx' item
+    case action of
+      Remove -> replace ctx'' acc
+      Exit -> exit ctx'' 
+      Replace item' -> replace ctx'' (snoc acc item')
+      _ -> replace ctx'' (snoc acc item)
+
+visit_module :: Module -> ctx -> VisitResult ctx Module
+visit_module (Module declarations) ctx = do
+  visit_items visit_module_declaration ctx declarations
+
+-- data Module = Module (Array ModuleDeclaration)
+
+-- data ModuleDeclaration = ModuleDeclaration ModuleDeclarationKind Int
+
+-- data ModuleDeclarationKind = FnDeclarationKind Boolean Identifier ModuleFn
+
+-- data ModuleFn = ModuleFn (Maybe String) (Array FnParam) (Maybe TypeExpr) Expr
+
+-- data FnParam = FnParam String (Maybe TypeExpr) Int
+
+-- data TypeExpr = TypeExpr TypeExprKind Int
+
+-- data TypeExprKind = NamedTypeExpr String
+
+-- data Expr = Expr ExprKind Int
+
+-- data ExprKind
+--   = WhenExpr (Array WhenArm) (Maybe Expr)
+--   | BlockExpr (Array Expr)
+--   | EqualsExpr Expr Expr
+--   | IntExpr Int
+--   | NameExpr String
+--   | CallExpr Expr (Array Expr)
+--   | AddExpr Expr Expr
+--   | SubExpr Expr Expr
+--   | MulExpr Expr Expr
+--   | DivExpr Expr Expr
+--   | GreaterThanExpr Expr Expr
+--   | LessThanExpr Expr Expr
+--   | GreaterThanEqualsExpr Expr Expr
+--   | LessThanEqualsExpr Expr Expr
+
+-- data WhenArm = WhenArm Expr Expr
