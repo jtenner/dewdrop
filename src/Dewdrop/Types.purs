@@ -1,22 +1,16 @@
-module Dewdrop.Types
-  ( Token
-  , visit_items
-  , visit_module
-  )
-  where
+module Dewdrop.Types where
 
 import Prelude
 
-import Control.Monad.Trampoline (done)
-import Data.Array (fold, snoc)
+import Data.Array (length, snoc, (!!))
 import Data.FingerTree (FingerTree, empty)
 import Data.Graph (Graph)
 import Data.Graph as Graph
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Visitor.Pattern (VisitAction(..), VisitResult, exit, from_action, remove, replace, skip_children)
+import Visitor.Pattern (VisitAction(..), VisitResult, continue, exit, from_action, replace)
 
 data Token = Token TokenKind Int
 
@@ -297,23 +291,53 @@ instance show_type_expr :: Show TypeExpr where
 instance show_type_expr_kind :: Show TypeExprKind where
   show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
 
-visit_items :: ∀ (@ctx :: Type) (@node :: Type). (node -> ctx -> VisitResult ctx node) -> Array node -> ctx -> VisitResult ctx (Array node)
-visit_items visitor items ctx = do
-  Tuple ctx' items' <- fold go (Tuple ctx []) items
-  replace ctx' items'
-  where
-  go :: Tuple ctx (Array node) -> node -> VisitResult ctx (Array node)
-  go (Tuple ctx' acc) item = do
-    Tuple ctx'' action <- visitor ctx' item
-    case action of
-      Remove -> replace ctx'' acc
-      Exit -> exit ctx'' 
-      Replace item' -> replace ctx'' (snoc acc item')
-      _ -> replace ctx'' (snoc acc item)
+class PurescriptPass ctx where
+  visit_module :: Module -> ctx -> VisitResult ctx Module
+  exit_module :: Module -> ctx -> VisitResult ctx Module
+  visit_module_declaration :: ModuleDeclaration -> ctx -> VisitResult ctx ModuleDeclaration
+  exit_module_declaration :: ModuleDeclaration -> ctx -> VisitResult ctx ModuleDeclaration
+  visit_module_declaration_kind :: ModuleDeclarationKind -> ctx -> VisitResult ctx ModuleDeclarationKind
+  exit_module_declaration_kind :: ModuleDeclarationKind -> ctx -> VisitResult ctx ModuleDeclarationKind
+  visit_module_fn :: ModuleFn -> ctx -> VisitResult ctx ModuleFn
+  exit_module_fn :: ModuleFn -> ctx -> VisitResult ctx ModuleFn
+  visit_fn_param :: FnParam -> ctx -> VisitResult ctx FnParam
+  exit_fn_param :: FnParam -> ctx -> VisitResult ctx FnParam
+  visit_type_expr :: TypeExpr -> ctx -> VisitResult ctx TypeExpr
+  exit_type_expr :: TypeExpr -> ctx -> VisitResult ctx TypeExpr
+  visit_type_expr_kind :: TypeExprKind -> ctx -> VisitResult ctx TypeExprKind
+  exit_type_expr_kind :: TypeExprKind -> ctx -> VisitResult ctx TypeExprKind
+  visit_expr :: Expr -> ctx -> VisitResult ctx Expr
+  exit_expr :: Expr -> ctx -> VisitResult ctx Expr
+  visit_expr_kind :: ExprKind -> ctx -> VisitResult ctx ExprKind
+  exit_expr_kind :: ExprKind -> ctx -> VisitResult ctx ExprKind
+  visit_when_arm :: WhenArm -> ctx -> VisitResult ctx WhenArm
+  exit_when_arm :: WhenArm -> ctx -> VisitResult ctx WhenArm
 
-visit_module :: Module -> ctx -> VisitResult ctx Module
-visit_module (Module declarations) ctx = do
-  visit_items visit_module_declaration ctx declarations
+ignore :: ∀ (@ctx :: Type) (@node :: Type). node -> ctx -> VisitResult ctx node
+ignore _ ctx = continue ctx 
+
+instance default_purescript_pass :: PurescriptPass Int where
+  visit_module = ignore
+  exit_module = ignore
+  visit_module_declaration = ignore
+  exit_module_declaration = ignore
+  visit_module_declaration_kind = ignore
+  exit_module_declaration_kind = ignore
+  visit_module_fn = ignore
+  exit_module_fn = ignore
+  visit_fn_param = ignore
+  exit_fn_param = ignore
+  visit_type_expr = ignore
+  exit_type_expr = ignore
+  visit_type_expr_kind = ignore
+  exit_type_expr_kind = ignore
+  visit_expr = ignore
+  exit_expr = ignore
+  visit_expr_kind = ignore
+  exit_expr_kind = ignore
+  visit_when_arm = ignore
+  exit_when_arm = ignore
+
 
 -- data Module = Module (Array ModuleDeclaration)
 
