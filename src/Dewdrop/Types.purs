@@ -1,16 +1,17 @@
 module Dewdrop.Types where
 
+import Data.Graph
 import Prelude
 
-import Data.Array (length, snoc, (!!))
 import Data.FingerTree (FingerTree, empty)
 import Data.Graph (Graph)
 import Data.Graph as Graph
+import Data.List (List)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Visitor.Pattern (VisitAction(..), VisitResult, continue, exit, from_action, replace)
+import Visitor.Pattern (class Pass, class Visitable, visit, visit_all)
 
 data Token = Token TokenKind Int
 
@@ -162,6 +163,8 @@ data ProgramTypeKind
   | Numeric
   | TypeVar Int
 
+data Export = ExportKindFn ModuleFn
+
 builtin_i8_type :: ProgramType
 builtin_i8_type = (ProgramType I8 Nothing)
 
@@ -223,26 +226,17 @@ type FnTypeContext =
   , type_env :: TypeEnv
   }
 
+empty_fn_type_context :: FnTypeContext
+empty_fn_type_context =
+  { next_id: 1
+  , type_index: Graph.empty
+  , parameters: mempty
+  , return_type: ProgramType (TypeVar 0) Nothing
+  , constraints: mempty
+  , type_env: Map.empty
+  }
+
 data TypeContext = TypeContextFn FnTypeContext
-
-fn_context_new :: Maybe ModuleReference -> TypeContext
-fn_context_new module_ref = do
-  let
-    return_type = type_var 0 module_ref
-    next_id = 1
-    type_index = Graph.insertVertex 0 Graph.empty
-    parameters = empty
-    constraints = empty
-    type_env = Map.empty
-
-  TypeContextFn
-    { return_type
-    , next_id
-    , type_index
-    , parameters
-    , constraints
-    , type_env
-    }
 
 instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"
@@ -290,3 +284,349 @@ instance show_type_expr :: Show TypeExpr where
 
 instance show_type_expr_kind :: Show TypeExprKind where
   show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
+
+-- data Module = Module (Array ModuleDeclaration)
+instance visitable_module ::
+  ( Pass ModuleDeclaration ctx
+  , Pass ModuleDeclarationKind ctx
+  , Pass ModuleFn ctx
+  , Pass Expr ctx
+  , Pass ExprKind ctx
+  , Pass FnParam ctx
+  , Pass TypeExpr ctx
+  , Pass TypeExprKind ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable Module ctx where
+  visit_children (Module declarations) ctx = do
+    Tuple ctx' children <- visit_all declarations ctx
+    Just $ Tuple ctx' (Module children)
+
+instance visitable_module_declaration ::
+  ( Pass ModuleDeclarationKind ctx
+  , Pass ModuleFn ctx
+  , Pass Expr ctx
+  , Pass ExprKind ctx
+  , Pass FnParam ctx
+  , Pass TypeExpr ctx
+  , Pass TypeExprKind ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable ModuleDeclaration ctx where
+  visit_children (ModuleDeclaration kind n) ctx = do
+    Tuple ctx' kind' <- visit kind ctx
+    Just $ Tuple ctx' (ModuleDeclaration kind' n)
+
+instance visitable_module_declaration_kind ::
+  ( Pass ModuleFn ctx
+  , Pass Expr ctx
+  , Pass ExprKind ctx
+  , Pass FnParam ctx
+  , Pass TypeExpr ctx
+  , Pass TypeExprKind ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable ModuleDeclarationKind ctx where
+  visit_children (FnDeclarationKind exported name fn) ctx = do
+    Tuple ctx' fn' <- visit fn ctx
+    Just $ Tuple ctx' (FnDeclarationKind exported name fn')
+
+instance visitable_module_fn ::
+  ( Pass Expr ctx
+  , Pass FnParam ctx
+  , Pass TypeExpr ctx
+  , Pass TypeExprKind ctx
+  , Pass Expr ctx
+  , Pass ExprKind ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable ModuleFn ctx where
+  visit_children (ModuleFn name args return_type expr) ctx = do
+    Tuple ctx' args' <- visit_all args ctx
+    Tuple ctx'' expr' <- visit expr ctx'
+    Just $ Tuple ctx'' (ModuleFn name args' return_type expr')
+
+instance visitable_fn_param ::
+  ( Pass TypeExpr ctx
+  , Pass TypeExprKind ctx
+  ) =>
+  Visitable FnParam ctx where
+  visit_children (FnParam name type_guard n) ctx = do
+    Tuple ctx' type_guard' <- visit type_guard ctx
+    Just $ Tuple ctx' (FnParam name type_guard' n)
+
+skip_children :: ∀ (@over :: Type) (@ctx :: Type). Pass over ctx => over -> ctx -> Maybe (Tuple ctx over)
+skip_children over ctx = Just $ Tuple ctx over
+
+instance visitable_type_expr :: (Pass TypeExprKind ctx) => Visitable TypeExpr ctx where
+  visit_children = skip_children
+
+instance visitable_type_expr_kind :: Visitable TypeExprKind ctx where
+  visit_children = skip_children
+
+instance visitable_expr ::
+  ( Pass Expr ctx
+  , Pass ExprKind ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable Expr ctx where
+  visit_children (Expr kind n) ctx = do
+    Tuple ctx' kind' <- visit kind ctx
+    Just $ Tuple ctx' $ Expr kind' n
+
+instance visitable_expr_kind ::
+  ( Pass ExprKind ctx
+  , Pass Expr ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable ExprKind ctx where
+  visit_children (WhenExpr arms maybe_else) ctx = do
+    Tuple ctx' arms' <- visit_all arms ctx
+    Tuple ctx'' maybe_else' <- visit maybe_else ctx'
+    Just $ Tuple ctx'' $ WhenExpr arms' maybe_else'
+
+  visit_children (BlockExpr body) ctx = do
+    Tuple ctx' body' <- visit_all body ctx
+    Just $ Tuple ctx' (BlockExpr body')
+
+  visit_children (EqualsExpr l r) ctx = visit_binary EqualsExpr l r ctx
+  visit_children (AddExpr l r) ctx = visit_binary AddExpr l r ctx
+  visit_children (SubExpr l r) ctx = visit_binary SubExpr l r ctx
+  visit_children (MulExpr l r) ctx = visit_binary MulExpr l r ctx
+  visit_children (DivExpr l r) ctx = visit_binary DivExpr l r ctx
+  visit_children (GreaterThanExpr l r) ctx = visit_binary GreaterThanExpr l r ctx
+  visit_children (LessThanExpr l r) ctx = visit_binary LessThanExpr l r ctx
+  visit_children (GreaterThanEqualsExpr l r) ctx = visit_binary GreaterThanEqualsExpr l r ctx
+  visit_children (LessThanEqualsExpr l r) ctx = visit_binary LessThanEqualsExpr l r ctx
+  visit_children (CallExpr callee args) ctx = do
+    Tuple ctx' callee' <- visit callee ctx
+    Tuple ctx'' args' <- visit_all args ctx'
+    Just $ Tuple ctx'' $ CallExpr callee' args'
+  visit_children n ctx = Just $ Tuple ctx n
+
+visit_binary
+  :: ∀ (@ctx :: Type)
+   . Pass ExprKind ctx
+  => Pass Expr ctx
+  => Pass WhenArm ctx
+  => (Expr -> Expr -> ExprKind)
+  -> Expr
+  -> Expr
+  -> ctx
+  -> Maybe (Tuple ctx ExprKind)
+visit_binary kind l r ctx = do
+  Tuple inner_ctx l' <- visit l ctx
+  Tuple inner_ctx' r' <- visit r inner_ctx
+  Just $ Tuple inner_ctx' $ kind l' r'
+
+instance visitable_when_arm ::
+  ( Pass Expr ctx
+  , Pass ExprKind ctx
+  , Pass WhenArm ctx
+  ) =>
+  Visitable WhenArm ctx where
+  visit_children (WhenArm condition body) ctx = do
+    Tuple inner_ctx condition' <- visit condition ctx
+    Tuple inner_ctx' body' <- visit body inner_ctx
+    Just $ Tuple inner_ctx' (WhenArm condition' body')
+
+data CompileTarget
+  = Wasm32
+  | Wasm64
+  | Wasm32Browser
+  | Wasm64Browser
+  | Wasm32Node
+  | Wasm64Node
+  | Wasm32Bun
+  | Wasm64Bun
+  | Wasm32Deno
+  | Wasm64Deno
+  | Wasm32NodeWorker
+  | Wasm64NodeWorker
+  | Wasm32BunWorker
+  | Wasm64BunWorker
+  | Wasm32DenoWorker
+  | Wasm64DenoWorker
+  | Lunatic
+  | Wasm32Wasi
+  | Wasm64Wasi
+
+data BinaryenPass
+  = AbstractTypeRefiningPass
+  | AlignmentLoweringPass
+  | AsyncifyPass
+  | AvoidReinterpretsPass
+  | CoalesceLocalsPass
+  | CoalesceLocalsWithLearningPass
+  | CodeFoldingPass
+  | CodePushingPass
+  | ConstHoistingPass
+  | ConstantFieldPropagationPass
+  | ConstantFieldPropagationRefTestPass
+  | DAEPass
+  | DAEOptimizingPass
+  | DataFlowOptsPass
+  | DeadCodeEliminationPass
+  | DeNaNPass
+  | DeAlignPass
+  | DebugLocationPropagationPass
+  | DirectizePass
+  | DiscardGlobalEffectsPass
+  | DWARFDumpPass
+  | DuplicateImportEliminationPass
+  | DuplicateFunctionEliminationPass
+  | EmitTargetFeaturesPass
+  | EncloseWorldPass
+  | ExtractFunctionPass
+  | ExtractFunctionIndexPass
+  | FlattenPass
+  | FuncCastEmulationPass
+  | FullPrinterPass
+  | FunctionMetricsPass
+  | GenerateDynCallsPass
+  | GenerateI64DynCallsPass
+  | GenerateGlobalEffectsPass
+  | GlobalRefiningPass
+  | GlobalStructInferencePass
+  | GlobalTypeOptimizationPass
+  | GUFAPass
+  | GUFACastAllPass
+  | GUFAOptimizingPass
+  | Heap2LocalPass
+  | HeapStoreOptimizationPass
+  | I64ToI32LoweringPass
+  | InlineMainPass
+  | InliningPass
+  | InliningOptimizingPass
+  | J2CLItableMergingPass
+  | JSPIPass
+  | J2CLOptsPass
+  | LegalizeAndPruneJSInterfacePass
+  | LegalizeJSInterfacePass
+  | LimitSegmentsPass
+  | LocalCSEPass
+  | LocalSubtypingPass
+  | LogExecutionPass
+  | IntrinsicLoweringPass
+  | TraceCallsPass
+  | InstrumentLocalsPass
+  | InstrumentMemoryPass
+  | LLVMMemoryCopyFillLoweringPass
+  | LoopInvariantCodeMotionPass
+  | Memory64LoweringPass
+  | MemoryPackingPass
+  | MergeBlocksPass
+  | MergeSimilarFunctionsPass
+  | MergeLocalsPass
+  | MinifiedPrinterPass
+  | MinifyImportsPass
+  | MinifyImportsAndExportsPass
+  | MinifyImportsAndExportsAndModulesPass
+  | MinimizeRecGroupsPass
+  | MetricsPass
+  | MonomorphizePass
+  | MonomorphizeAlwaysPass
+  | MultiMemoryLoweringPass
+  | MultiMemoryLoweringWithBoundsChecksPass
+  | NameListPass
+  | NameTypesPass
+  | NoInlinePass
+  | NoFullInlinePass
+  | NoPartialInlinePass
+  | OnceReductionPass
+  | OptimizeAddedConstantsPass
+  | OptimizeAddedConstantsPropagatePass
+  | OptimizeInstructionsPass
+  | OptimizeCastsPass
+  | OptimizeForJSPass
+  | PickLoadSignsPass
+  | ModAsyncifyAlwaysOnlyUnwindPass
+  | ModAsyncifyNeverUnwindPass
+  | LLVMNonTrappingFPToIntLoweringPass
+  | PoppifyPass
+  | PostEmscriptenPass
+  | PrecomputePass
+  | PrecomputePropagatePass
+  | PrinterPass
+  | PrintCallGraphPass
+  | PrintFeaturesPass
+  | PrintFunctionMapPass
+  | PropagateGlobalsGloballyPass
+  | RemoveNonJSOpsPass
+  | RemoveImportsPass
+  | RemoveMemoryInitPass
+  | RemoveUnusedBrsPass
+  | RemoveUnusedModuleElementsPass
+  | RemoveUnusedNonFunctionModuleElementsPass
+  | RemoveUnusedNamesPass
+  | RemoveUnusedTypesPass
+  | ReorderFunctionsByNamePass
+  | ReorderFunctionsPass
+  | ReorderGlobalsPass
+  | ReorderGlobalsAlwaysPass
+  | ReorderLocalsPass
+  | ReReloopPass
+  | RedundantSetEliminationPass
+  | RoundTripPass
+  | SafeHeapPass
+  | SetGlobalsPass
+  | SeparateDataSegmentsPass
+  | SignaturePruningPass
+  | SignatureRefiningPass
+  | SignExtLoweringPass
+  | SimplifyLocalsPass
+  | SimplifyGlobalsPass
+  | SimplifyGlobalsOptimizingPass
+  | SimplifyLocalsNoNestingPass
+  | SimplifyLocalsNoTeePass
+  | SimplifyLocalsNoStructurePass
+  | SimplifyLocalsNoTeeNoStructurePass
+  | StackCheckPass
+  | StringGatheringPass
+  | StringLiftingPass
+  | StringLoweringPass
+  | StringLoweringMagicImportPass
+  | StringLoweringMagicImportAssertPass
+  | StripDebugPass
+  | StripDWARFPass
+  | StripProducersPass
+  | StripTargetFeaturesPass
+  | SouperifyPass
+  | SouperifySingleUsePass
+  | SpillPointersPass
+  | StripEHPass
+  | StubUnsupportedJSOpsPass
+  | SSAifyPass
+  | SSAifyNoMergePass
+  | Table64LoweringPass
+  | TranslateToExnrefPass
+  | TrapModeClamp
+  | TrapModeJS
+  | TupleOptimizationPass
+  | TypeGeneralizingPass
+  | TypeRefiningPass
+  | TypeFinalizingPass
+  | TypeMergingPass
+  | TypeSSAPass
+  | TypeUnFinalizingPass
+  | UnsubtypingPass
+  | UnteePass
+  | VacuumPass
+
+data ModuleID = ModuleID (Maybe String) (List String)
+data ResourceID = ResourceID Int
+
+type System =
+  { to_resource_id :: ModuleID -> Maybe ResourceID
+  , get_resource :: ResourceID -> Maybe String
+  , set_resource :: ResourceID -> String -> Maybe Unit
+  }
+
+type Program =
+  { modules :: Map ResourceID Module
+  , fns :: Map ModuleReference (Tuple ModuleFn FnTypeContext)
+  , resources :: Map ResourceID String
+  , system :: System
+  , exports :: Map ModuleReference Export
+  }
+

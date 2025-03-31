@@ -17,25 +17,9 @@ import Prelude
 import Data.Array (length, snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types
-  ( Expr(..)
-  , ExprKind(..)
-  , FnParam(..)
-  , Identifier(..)
-  , Module(..)
-  , ModuleDeclaration(..)
-  , ModuleDeclarationKind(..)
-  , ModuleFn(..)
-  , Parser
-  , ParserResult
-  , TypeExpr(..)
-  , TypeExprKind(..)
-  , WhenArm(..)
-  , Token(..)
-  , TokenKind(..) 
-  )
 import Dewdrop.Lexer (is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import Dewdrop.RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
+import Dewdrop.Types (Expr(..), ExprKind(..), FnParam(..), Identifier(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), Parser, ParserResult, TypeExpr(..), TypeExprKind(..), WhenArm(..), Token(..), TokenKind(..))
 
 -- pub fn fib(n) {
 --   when n == 0 -> 0
