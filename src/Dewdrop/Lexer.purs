@@ -1,9 +1,6 @@
 module Dewdrop.Lexer
   ( (+&)
   , (+>)
-  , Lexer
-  , Token(..)
-  , TokenKind(..)
   , combine_accumulator
   , is_token_kind_asterisk
   , is_token_kind_colon

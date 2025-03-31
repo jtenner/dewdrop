@@ -31,8 +31,10 @@ import Dewdrop.Types
   , TypeExpr(..)
   , TypeExprKind(..)
   , WhenArm(..)
+  , Token(..)
+  , TokenKind(..) 
   )
-import Dewdrop.Lexer (Token(..), TokenKind(..), is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
+import Dewdrop.Lexer (is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
 import Dewdrop.RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
