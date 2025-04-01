@@ -1,16 +1,16 @@
 module Dewdrop.Types where
 
-import Data.Graph
+import Data.List
 import Prelude
 
-import Data.FingerTree (FingerTree, empty)
+import Data.FingerTree (FingerTree)
 import Data.Graph (Graph)
 import Data.Graph as Graph
-import Data.List (List)
-import Data.Map (Map)
+import Data.Map (Map, lookup)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Record (merge)
 import Visitor.Pattern (class Pass, class Visitable, visit, visit_all)
 
 data Token = Token TokenKind Int
@@ -134,16 +134,8 @@ type Parser t = Array Token -> Int -> ParserResult t
 
 type TypeConstraints = FingerTree TypeConstraint
 type Substitution = Map Int ProgramType
-type ModuleReference = Tuple Int Identifier
 
-data TypeConstraint
-  = Matches ProgramType ProgramType
-  | Equals ProgramType ProgramType
-  | AtLeast ProgramType ProgramType
-  | References ModuleReference
-
-data ProgramType = ProgramType ProgramTypeKind (Maybe ModuleReference)
-
+data ProgramType = ProgramType ProgramTypeKind (Maybe ModuleElementReference)
 data ProgramTypeKind
   = FnType (Array ProgramType) ProgramType
   | I8
@@ -210,11 +202,11 @@ builtin_bool_type = (ProgramType Bool Nothing)
 builtin_numeric_type :: ProgramType
 builtin_numeric_type = (ProgramType Numeric Nothing)
 
-type_var :: Int -> Maybe ModuleReference -> ProgramType
+type_var :: Int -> Maybe ModuleElementReference -> ProgramType
 type_var i mr = (ProgramType (TypeVar i) mr)
 
 type TypeIndex = Graph Int Int
-type TypeEnv = Map Int ProgramType
+type TypeEnv = Map Identifier ProgramType
 type TypeResolver = Map Identifier ProgramType
 
 type FnTypeContext =
@@ -226,8 +218,8 @@ type FnTypeContext =
   , type_env :: TypeEnv
   }
 
-empty_fn_type_context :: FnTypeContext
-empty_fn_type_context =
+fn_type_context_new :: FnTypeContext
+fn_type_context_new =
   { next_id: 1
   , type_index: Graph.empty
   , parameters: mempty
@@ -613,8 +605,35 @@ data BinaryenPass
   | UnteePass
   | VacuumPass
 
-data ModuleID = ModuleID (Maybe String) (List String)
 data ResourceID = ResourceID Int
+data ModuleID = ModuleID String (List String)
+
+data ModuleElementReference = ModuleElementReference ModuleID Identifier
+
+instance module_element_reference_ord :: Ord ModuleElementReference where
+  compare (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
+    compare module_id module_id' <> compare identifier identifier'
+
+instance module_element_reference_eq :: Eq ModuleElementReference where
+  eq (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
+    module_id == module_id' && identifier == identifier'
+
+instance module_id_ord :: Ord ModuleID where
+  compare (ModuleID package_name path) (ModuleID package_name' path') =
+    compare package_name package_name' <> compare path path'
+
+instance module_id_eq :: Eq ModuleID where
+  eq (ModuleID package_name path) (ModuleID package_name' path') =
+    package_name == package_name' && path == path'
+
+reference :: ModuleID -> Identifier -> ModuleElementReference
+reference module_id identifier = ModuleElementReference module_id identifier
+
+data TypeConstraint
+  = Matches ProgramType ProgramType
+  | Equals ProgramType ProgramType
+  | AtLeast ProgramType ProgramType
+  | References ModuleElementReference
 
 type System =
   { to_resource_id :: ModuleID -> Maybe ResourceID
@@ -623,10 +642,45 @@ type System =
   }
 
 type Program =
-  { modules :: Map ResourceID Module
-  , fns :: Map ModuleReference (Tuple ModuleFn FnTypeContext)
-  , resources :: Map ResourceID String
-  , system :: System
-  , exports :: Map ModuleReference Export
+  { fn_types :: Map ModuleElementReference FnTypeContext
+  , exports :: Map ModuleElementReference Export
   }
 
+program_new :: Program
+program_new = { fn_types: Map.empty, exports: Map.empty }
+
+type ResourceMap = Map ModuleID ResourceID
+type ModuleMap = Map ModuleID Module
+
+type Compiler =
+  { binaryen_passes :: FingerTree BinaryenPass
+  , modules :: Map ModuleID Module
+  , main_module :: ModuleID
+  , program :: Program
+  , resources :: ResourceMap
+  , system :: System
+  , target :: CompileTarget
+  }
+
+compiler_new :: String -> System -> CompileTarget -> Compiler
+compiler_new package_name system target =
+  { binaryen_passes: mempty
+  , modules: Map.empty
+  , main_module: ModuleID package_name Nil
+  , program: program_new
+  , resources: Map.empty
+  , system: system
+  , target: target
+  }
+
+type_var_new :: FnTypeContext -> Maybe ModuleElementReference -> Tuple ProgramType FnTypeContext
+type_var_new ctx@{ next_id, type_index } maybe_ref = do
+  let next_id' = next_id + 1
+  let type_index' = Graph.insertVertex next_id type_index
+  let var = ProgramType (TypeVar next_id) maybe_ref
+  let ctx' = merge { next_id: next_id', type_index: type_index' } ctx
+  Tuple var ctx'
+
+infer :: TypeExpr -> FnTypeContext -> Maybe ProgramType
+infer (TypeExpr (NamedTypeExpr name) _) { type_env } = lookup (TypeIdentifier name) type_env
+  
