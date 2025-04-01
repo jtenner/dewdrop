@@ -36,7 +36,11 @@ exhaust compiler@{ seen } queue = case uncons queue of
         seen' = Set.insert module_id seen
         compiler'' = merge { seen: seen' } compiler'
         collect_exports = CollectExports { module_id }
-        constraint_generation = ConstraintGeneration { fn_type_context: fn_type_context_new, module_id, expression_type_stack: Nil }
+        constraint_generation = ConstraintGeneration { fn_type_context: fn_type_context_new
+                                                     , generated_type_stack: Nil
+                                                     , module_id
+                                                     , expression_type_stack: Nil
+                                                     }
         queue'' = from_array [ collect_exports, constraint_generation ]
       exhaust compiler'' (queue' <> queue'')
     CollectExports ctx -> do
