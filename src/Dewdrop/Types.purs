@@ -1,6 +1,6 @@
 module Dewdrop.Types where
 
-import Data.List
+import Data.List (List(..))
 import Prelude
 
 import Data.FingerTree (FingerTree)
@@ -9,6 +9,8 @@ import Data.Graph as Graph
 import Data.Map (Map, lookup)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
+import Data.Set (Set)
+import Data.Set as Set
 import Data.Tuple (Tuple(..))
 import Record (merge)
 import Visitor.Pattern (class Pass, class Visitable, visit, visit_all)
@@ -129,7 +131,6 @@ data WhenArm = WhenArm Expr Expr
 
 type ParserResult t = Maybe (Tuple t Int)
 
--- helpers
 type Parser t = Array Token -> Int -> ParserResult t
 
 type TypeConstraints = FingerTree TypeConstraint
@@ -652,12 +653,30 @@ program_new = { fn_types: Map.empty, exports: Map.empty }
 type ResourceMap = Map ModuleID ResourceID
 type ModuleMap = Map ModuleID Module
 
+type ModuleContext =
+  { ast :: Module
+  , exports :: Map Identifier ModuleElementReference
+  , imports :: Map Identifier ModuleElementReference
+  , module_id :: ModuleID
+  , resource_id :: ResourceID
+  }
+
+module_context_new :: ModuleID -> ResourceID -> Module -> ModuleContext
+module_context_new module_id resource_id ast =
+  { ast: ast
+  , exports: Map.empty
+  , imports: Map.empty
+  , module_id
+  , resource_id
+  }
+
 type Compiler =
   { binaryen_passes :: FingerTree BinaryenPass
-  , modules :: Map ModuleID Module
+  , modules :: Map ModuleID ModuleContext
   , main_module :: ModuleID
   , program :: Program
   , resources :: ResourceMap
+  , seen :: Set ModuleID
   , system :: System
   , target :: CompileTarget
   }
@@ -669,6 +688,7 @@ compiler_new package_name system target =
   , main_module: ModuleID package_name Nil
   , program: program_new
   , resources: Map.empty
+  , seen: Set.empty
   , system: system
   , target: target
   }
@@ -683,4 +703,7 @@ type_var_new ctx@{ next_id, type_index } maybe_ref = do
 
 infer :: TypeExpr -> FnTypeContext -> Maybe ProgramType
 infer (TypeExpr (NamedTypeExpr name) _) { type_env } = lookup (TypeIdentifier name) type_env
+
+    
   
+

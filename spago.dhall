@@ -23,6 +23,7 @@ to generate this file without the comments in this block.
   , "node-buffer"
   , "ordered-collections"
   , "prelude"
+  , "record"
   , "spec"
   , "spec-node"
   , "strings"
