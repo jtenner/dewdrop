@@ -27,6 +27,7 @@ exhaust :: Compiler -> Queue -> Maybe Compiler
 exhaust compiler@{ seen } queue = case uncons queue of
   Nothing -> Just compiler
   Just (Tuple action queue') -> case action of
+
     BeginProcess module_id
       | Set.member module_id seen -> exhaust compiler queue'
       | otherwise -> do
@@ -43,9 +44,11 @@ exhaust compiler@{ seen } queue = case uncons queue of
                                                      }
         queue'' = from_array [ collect_exports, constraint_generation ]
       exhaust compiler'' (queue' <> queue'')
+    
     CollectExports ctx -> do
       compiler' <- CollectExports.run ctx compiler
       exhaust compiler' queue'
+
     ConstraintGeneration ctx -> do
       compiler' <- ConstraintGeneration.run ctx compiler
       exhaust compiler' queue'
@@ -59,6 +62,7 @@ compile package_name system target = do
 
 get_module :: Compiler -> ModuleID -> Maybe (Tuple ModuleContext Compiler)
 get_module compiler@{ modules, system } module_id = case lookup module_id modules of
+
   Nothing -> do
     resource_id <- system.to_resource_id module_id
     resource <- system.get_resource resource_id
@@ -67,4 +71,6 @@ get_module compiler@{ modules, system } module_id = case lookup module_id module
     let modules' = insert module_id module_ctx modules
     let compiler' = merge { modules: modules' } compiler
     Just $ Tuple module_ctx compiler'
+
   Just module_ctx -> Just $ Tuple module_ctx compiler
+  

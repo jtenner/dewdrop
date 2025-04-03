@@ -8,6 +8,7 @@ module Util
   , Consumer
   , char_size
   , char_str
+  , drop_maybe
   , expect_char
   , expect_many
   , from_chars
@@ -46,6 +47,7 @@ module Util
   , is_upper
   , is_whitespace
   , is_zero
+  , partition_at
   , str_char
   , take
   , take_int
@@ -62,13 +64,15 @@ module Util
   , to_unsigned
   , trace
   , union_char_predicate
-  ) where
+  )
+  where
 
 import Prelude
 
 import Data.Array ((!!))
 import Data.Char (toCharCode)
 import Data.Int.Bits (shl, (.&.))
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
@@ -317,3 +321,16 @@ char_size char = case toCharCode char of
   n | n < 0x800 -> 2
   n | n < 0x10000 -> 3
   _ -> 4
+
+drop_maybe :: ∀ (@n :: Type). Int -> List n -> Maybe (List n)
+drop_maybe 0 list = pure list
+drop_maybe n (_ : list') = drop_maybe (n - 1) list'
+drop_maybe _ Nil = Nothing
+
+partition_at :: ∀ (@a :: Type). Int -> List a -> Maybe (Tuple (List a) (List a))
+partition_at n list = go n Nil list
+  where
+  go :: Int -> List a -> List a -> Maybe (Tuple (List a) (List a))
+  go 0 acc list' = pure $ Tuple acc list'
+  go _ _ Nil = Nothing
+  go n' acc (Cons x list') = go (n' - 1) (x : acc) list'

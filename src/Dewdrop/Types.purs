@@ -1,11 +1,9 @@
 module Dewdrop.Types where
 
-import Data.List (List(..))
 import Prelude
 
-import Data.FingerTree (FingerTree)
-import Data.Graph (Graph)
-import Data.Graph as Graph
+import Data.FingerTree (FingerTree, snoc)
+import Data.List (List(..))
 import Data.Map (Map, lookup)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -206,7 +204,7 @@ builtin_numeric_type = (ProgramType Numeric Nothing)
 type_var :: Int -> Maybe ModuleElementReference -> ProgramType
 type_var i mr = (ProgramType (TypeVar i) mr)
 
-type TypeIndex = Graph Int Int
+type TypeIndex = Map Int ProgramType
 type TypeEnv = Map Identifier ProgramType
 type TypeResolver = Map Identifier ProgramType
 
@@ -219,15 +217,26 @@ type FnTypeContext =
   , type_env :: TypeEnv
   }
 
-fn_type_context_new :: FnTypeContext
-fn_type_context_new =
-  { next_id: 1
-  , type_index: Graph.empty
-  , parameters: mempty
-  , return_type: ProgramType (TypeVar 0) Nothing
-  , constraints: mempty
-  , type_env: Map.empty
-  }
+fn_type_context_new :: Int -> FnTypeContext
+fn_type_context_new count = 
+  let
+    type_id = 0
+    return_type = type_var type_id Nothing
+  in go count { next_id: type_id + 1
+    , type_index: Map.fromFoldable [Tuple type_id return_type]
+    , parameters: mempty
+    , return_type
+    , constraints: mempty
+    , type_env: Map.empty
+    }
+
+  where
+  go 0 ctx = ctx
+  go count' ctx@{ parameters } = do
+    let
+      Tuple param_var ctx' = type_var_new Nothing ctx
+      ctx'' = merge { parameters: snoc param_var parameters } ctx'
+    go (count' - 1) ctx''
 
 data TypeContext = TypeContextFn FnTypeContext
 
@@ -693,17 +702,20 @@ compiler_new package_name system target =
   , target: target
   }
 
-type_var_new :: FnTypeContext -> Maybe ModuleElementReference -> Tuple ProgramType FnTypeContext
-type_var_new ctx@{ next_id, type_index } maybe_ref = do
-  let next_id' = next_id + 1
-  let type_index' = Graph.insertVertex next_id type_index
-  let var = ProgramType (TypeVar next_id) maybe_ref
-  let ctx' = merge { next_id: next_id', type_index: type_index' } ctx
+type_var_new :: Maybe ModuleElementReference -> FnTypeContext -> Tuple ProgramType FnTypeContext
+type_var_new maybe_ref ctx@{ next_id } = do
+  let
+    next_id' = next_id + 1
+    var = ProgramType (TypeVar next_id) maybe_ref
+    ctx' = merge { next_id: next_id' } ctx
+  insert_type ctx' next_id var
+  
+
+insert_type :: FnTypeContext -> Int -> ProgramType -> Tuple ProgramType FnTypeContext
+insert_type ctx@{ type_index } at var = do
+  let type_index' =  Map.insert at var type_index
+  let ctx' = merge { type_index: type_index' } ctx
   Tuple var ctx'
 
 infer :: TypeExpr -> FnTypeContext -> Maybe ProgramType
 infer (TypeExpr (NamedTypeExpr name) _) { type_env } = lookup (TypeIdentifier name) type_env
-
-    
-  
-
