@@ -8,7 +8,7 @@ import Data.FingerTree (from_array, from_list, index, snoc)
 import Data.List (List(..), uncons, (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types (Compiler, Expr(..), ExprKind(..), FnParam(..), FnTypeContext, Identifier(..), Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeConstraint(..), TypeExpr(..), TypeExprKind(..), WhenArm, builtin_integer_type, builtin_numeric_type, fn_type_context_new, get_ctx_fn_type, get_type_env, set_type_env, type_var_new)
+import Dewdrop.Types (Compiler, Expr(..), ExprKind(..), FnParam(..), FnTypeContext, Identifier(..), Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeConstraint(..), TypeExpr(..), TypeExprKind(..), WhenArm(..), builtin_bool_type, builtin_integer_type, builtin_numeric_type, fn_type_context_new, get_ctx_fn_type, get_type_env, set_type_env, type_var_new)
 import Record (merge)
 import Util (partition_at)
 import Visitor.Pattern (class Pass, class Visitable, VisitResult, continue, ignore, skip_all, visit)
@@ -265,7 +265,20 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ConstraintGenerat
 
 instance constraint_generation_when_arm_pass :: Pass WhenArm ConstraintGenerationPassContext where
   enter = ignore
-  exit = ignore
+  -- The two expresssions on the stack are the condition and the arm type, with the arm type on top
+  exit (WhenArm _ _) (Pass (ctx@{ type_context, type_stack: (arm_type : condition : type_stack) } : stack) compiler) = do
+    let
+      { constraints } = type_context
+      -- the condition must be a bool
+      condition_type_equals_bool = Equals condition builtin_bool_type
+      -- update the constraints and push the arm type back on the type stack
+      constraints' = snoc condition_type_equals_bool constraints
+      type_context' = merge { constraints: constraints' } type_context
+      ctx' = merge { type_context: type_context', type_stack: arm_type : type_stack } ctx
+
+    continue $ Pass (ctx' : stack) compiler
+
+  exit _ _ = Nothing
 
 binary_numeric_returns_numeric_expr_kind :: PassContext -> List PassContext -> Compiler -> VisitResult ConstraintGenerationPassContext ExprKind
 binary_numeric_returns_numeric_expr_kind ctx@{ type_context, type_stack: (right_type : left_type : expr_type : type_stack) } stack compiler = do
