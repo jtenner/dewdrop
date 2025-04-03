@@ -19,7 +19,6 @@ type PassContext = { type_context :: FnTypeContext
                    , parameter_index :: Int
                    }
 
-
 run ∷ Pass Module ConstraintGenerationPassContext ⇒ Visitable Module ConstraintGenerationPassContext ⇒ Module → Compiler → Maybe Compiler
 run mod compiler = do
   let ctx = Pass Nil compiler
