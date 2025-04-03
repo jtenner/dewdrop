@@ -1,5 +1,6 @@
 module Data.FingerTree
-  ( (+=)
+  ( (!!)
+  , (+=)
   , FingerTree
   , concat
   , cons
@@ -11,6 +12,7 @@ module Data.FingerTree
   , foldr_finger_tree
   , from_array
   , from_list
+  , index
   , map
   , map_finger_tree
   , push
@@ -21,12 +23,14 @@ module Data.FingerTree
   , to_list
   , uncons
   , unsnoc
-  ) where
+  )
+  where
 
 import Prelude
 
 import Data.Array as Array
-import Data.Foldable (class Foldable)
+import Data.Either (Either(..))
+import Data.Foldable (class Foldable, foldM)
 import Data.List (List(..), (:))
 import Data.List.Lazy as List
 import Data.Maybe (Maybe(..))
@@ -304,3 +308,48 @@ instance bind_finger_tree :: Bind FingerTree where
   bind n f = case uncons n of
     Just (Tuple u n') -> f u <> bind n' f
     Nothing -> Empty
+
+type AdvanceOrStop u = Either u Int
+
+index :: ∀ (@u :: Type). Int -> FingerTree u -> Maybe u
+index _ Empty = Nothing
+index 0 (Single u) = Just u
+index _ (Single _) = Nothing
+index i (Deep n l inner r)
+  | i >= n = Nothing
+  | otherwise = do
+    let
+      tree' = cons l (snoc r inner) 
+    case foldM go i tree' of 
+      Left u -> Just u
+      Right _ -> Nothing
+
+  where
+    go :: Int -> Node u -> AdvanceOrStop u
+    go i' u = case index_node i u of
+      Just u' -> Left u'
+      Nothing -> Right $ i' - (size_node u)     
+       
+
+infixl 4 index as !!
+
+index_node :: ∀ (@u :: Type). Int -> Node u -> Maybe u
+index_node 0 (One u) = Just u
+index_node 0 (Two u _) = Just u
+index_node 0 (Three u _ _) = Just u
+index_node 0 (Four u _ _ _) = Just u
+index_node 1 (Two _ u) = Just u
+index_node 1 (Three _ u _) = Just u
+index_node 1 (Four _ u _ _) = Just u
+index_node 2 (Three _ _ u) = Just u
+index_node 2 (Four _ _ u _) = Just u
+index_node 3 (Four _ _ _ u) = Just u
+index_node _ _ = Nothing
+
+
+
+size_node :: ∀ (@u :: Type). Node u -> Int
+size_node (One _) = 1
+size_node (Two _ _) = 2
+size_node (Three _ _ _) = 3
+size_node (Four _ _ _ _) = 4

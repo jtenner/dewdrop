@@ -2,17 +2,22 @@ module Dewdrop.Passes.ExamplePass where
 
 import Prelude
 
+import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Dewdrop.Types (Compiler, Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn, TypeExpr, TypeExprKind, WhenArm)
 import Visitor.Pattern (class Pass, class Visitable, ignore, visit)
 
-data ExamplePassContext = ExamplePassContext Compiler
+type Props = {}
+data ExamplePassContext = ExamplePassContext (List Props) Compiler
+
+props_new :: Props
+props_new = {}
 
 run ∷ Pass Module ExamplePassContext ⇒ Visitable Module ExamplePassContext ⇒ Module → Compiler → Maybe Compiler
 run mod compiler = do
-  let ctx = ExamplePassContext compiler
-  Tuple (ExamplePassContext compiler') _ <- visit mod ctx
+  let ctx = ExamplePassContext Nil compiler
+  Tuple (ExamplePassContext _ compiler') _ <- visit mod ctx
   Just compiler'
 
 instance constrant_generation_module_pass :: Pass Module ExamplePassContext where

@@ -2,7 +2,7 @@ module Dewdrop.Types where
 
 import Prelude
 
-import Data.FingerTree (FingerTree, snoc)
+import Data.FingerTree (FingerTree, snoc, to_array)
 import Data.List (List(..))
 import Data.Map (Map, lookup)
 import Data.Map as Map
@@ -215,6 +215,7 @@ type FnTypeContext =
   , return_type :: ProgramType
   , constraints :: TypeConstraints
   , type_env :: TypeEnv
+  , parameter_index :: Int
   }
 
 fn_type_context_new :: Int -> FnTypeContext
@@ -228,6 +229,10 @@ fn_type_context_new count =
     , return_type
     , constraints: mempty
     , type_env: Map.empty
+    
+    -- This is a running cursor for a function's parameters while traversing the AST.
+    -- It has no meaning outside of a compiler pass that iterates over a function's parameters.
+    , parameter_index: 0
     }
 
   where
@@ -710,12 +715,21 @@ type_var_new maybe_ref ctx@{ next_id } = do
     ctx' = merge { next_id: next_id' } ctx
   insert_type ctx' next_id var
   
-
 insert_type :: FnTypeContext -> Int -> ProgramType -> Tuple ProgramType FnTypeContext
 insert_type ctx@{ type_index } at var = do
   let type_index' =  Map.insert at var type_index
   let ctx' = merge { type_index: type_index' } ctx
   Tuple var ctx'
 
-infer :: TypeExpr -> FnTypeContext -> Maybe ProgramType
-infer (TypeExpr (NamedTypeExpr name) _) { type_env } = lookup (TypeIdentifier name) type_env
+get_ctx_fn_type :: FnTypeContext -> ProgramType
+get_ctx_fn_type { parameters, return_type } = do
+  ProgramType (FnType (to_array parameters) return_type) Nothing
+
+set_type_env :: Identifier -> ProgramType -> FnTypeContext -> FnTypeContext
+set_type_env name env_type ctx@{ type_env } = do
+  let type_env' = Map.insert name env_type type_env
+  merge { type_env: type_env' } ctx
+
+get_type_env :: Identifier -> FnTypeContext -> Maybe ProgramType
+get_type_env name { type_env } = lookup name type_env
+
