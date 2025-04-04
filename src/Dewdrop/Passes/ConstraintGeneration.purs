@@ -2,13 +2,15 @@ module Dewdrop.Passes.ConstraintGeneration where
 
 import Prelude
 
-import Data.Array (length)
+import Data.Array (cons, length, zip)
 import Data.Array as Array
-import Data.FingerTree (from_array, from_list, index, snoc)
+import Data.FingerTree (FingerTree, from_array, from_list, index, snoc)
+import Data.Foldable (all, any, foldM, foldl)
 import Data.List (List(..), uncons, (:))
+import Data.Map (empty, insert, lookup)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types (Compiler, Expr(..), ExprKind(..), FnParam(..), FnTypeContext, Identifier(..), Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeConstraint(..), TypeExpr(..), TypeExprKind(..), WhenArm(..), builtin_bool_type, builtin_integer_type, builtin_numeric_type, fn_type_context_new, get_ctx_fn_type, get_type_env, set_type_env, type_var_new)
+import Dewdrop.Types (Compiler, Expr(..), ExprKind(..), FnParam(..), FnTypeContext, Identifier(..), Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeConstraint(..), TypeExpr(..), TypeExprKind(..), WhenArm(..), Substitution, builtin_bool_type, builtin_integer_type, builtin_numeric_type, fn_type_context_new, get_ctx_fn_type, get_type_env, set_type_env, type_var_new)
 import Record (merge)
 import Util (partition_at)
 import Visitor.Pattern (class Pass, class Visitable, VisitResult, continue, ignore, skip_all, visit)
@@ -89,7 +91,7 @@ instance constraint_generation_fn_pass :: Pass ModuleFn ConstraintGenerationPass
 -- and add a constraint to the parameter's type.
 instance constraint_generation_fn_param_pass :: Pass FnParam ConstraintGenerationPassContext where
   enter = ignore
-  
+
   -- If there is a type guard, we grab it off the generated type stack
   exit (FnParam name (Just _) _)
        (Pass (ctx@{ type_context, parameter_index, type_stack: (type_guard_type : type_stack) } : stack) compiler) = do
@@ -142,7 +144,7 @@ instance constraint_generation_expr_pass :: Pass Expr ConstraintGenerationPassCo
       type_stack' = type_expr_type : type_stack
       ctx' = merge { type_stack: type_stack' } ctx
     skip_all (Pass (ctx' : stack) compiler)
-  
+
   -- For an IntExpr, we can simply push the Int type onto the generated type stack
   enter (Expr (IntExpr _) _) (Pass (ctx@{ type_stack } : stack) compiler) = do
     let
@@ -160,7 +162,7 @@ instance constraint_generation_expr_pass :: Pass Expr ConstraintGenerationPassCo
       type_stack' = expr_type_var : type_stack
       ctx' = merge { type_context: type_context', type_stack: type_stack' } ctx
     continue (Pass (ctx' : stack) compiler)
-  
+
   enter _ _ = Nothing
 
   exit = ignore
@@ -175,8 +177,8 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ConstraintGenerat
   -- In the case of a binary expression in form (Numeric (op) Numeric) = Numeric, we can defer to
   -- binary_numeric_returns_numeric_expr_kind
   exit (AddExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_numeric_expr_kind ctx stack compiler
-  exit (SubExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_numeric_expr_kind ctx stack compiler 
-  exit (MulExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_numeric_expr_kind ctx stack compiler 
+  exit (SubExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_numeric_expr_kind ctx stack compiler
+  exit (MulExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_numeric_expr_kind ctx stack compiler
   exit (DivExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_numeric_expr_kind ctx stack compiler
 
   -- EqualsExpr is a binary expression, but the return type is Bool. In this case we defer to
@@ -184,7 +186,7 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ConstraintGenerat
   exit (EqualsExpr _ _) (Pass (ctx : stack) compiler) = binary_returns_bool_expr_kind ctx stack compiler
 
   -- GreaterThan, LessThan, GreaterThanEquals, and LessThanEquals are all binary expressions that return a Bool
-  -- where the left and right types must be numeric. We defer to binary_numeric_returns_bool_expr_kind  
+  -- where the left and right types must be numeric. We defer to binary_numeric_returns_bool_expr_kind
   exit (GreaterThanExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_bool_expr_kind ctx stack compiler
   exit (LessThanExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_bool_expr_kind ctx stack compiler
   exit (GreaterThanEqualsExpr _ _) (Pass (ctx : stack) compiler) = binary_numeric_returns_bool_expr_kind ctx stack compiler
@@ -201,7 +203,7 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ConstraintGenerat
           -- Rule: The callee type must be a function type, and matches the following fn type
           callee_fn_type = ProgramType (FnType (Array.fromFoldable param_types) expr_type) Nothing
           callee_type_matches_fn_type = Matches callee_type callee_fn_type
-          
+
           -- update the type context
           constraints' = snoc callee_type_matches_fn_type constraints
           type_context' = merge { constraints: constraints' } type_context
@@ -235,7 +237,7 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ConstraintGenerat
 
         continue $ Pass (ctx' : stack) compiler
       _ -> Nothing
-  
+
   -- Finally, block expressions are wrapped in {}'s, which means a list of expression types exist on the top of the stack.
   exit (BlockExpr body) (Pass (ctx@{ type_context, type_stack } : stack) compiler) = do
     let
@@ -252,7 +254,7 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ConstraintGenerat
           { constraints } = type_context
           -- The expression type must match the return type
           body_type_matches_return_type = Matches expr_type return_type
-          
+
           -- update the type context
           constraints' =  snoc body_type_matches_return_type constraints
           type_context' = merge { constraints: constraints' } type_context
@@ -290,16 +292,11 @@ binary_numeric_returns_numeric_expr_kind ctx@{ type_context, type_stack: (right_
     right_type_matches_numeric = Matches right_type builtin_numeric_type
     -- Rule: The left and right type must match
     left_type_matches_right_type = Matches left_type right_type
-    -- Rule: The expression type must be "AtLeast" the size of the left and right types
-    expr_type_at_least_left_type = AtLeast expr_type left_type
-    expr_type_at_least_right_type = AtLeast expr_type right_type
 
     -- finally, add the constraints to the type context
     constraints' = constraints <> from_array [ left_type_matches_numeric
                                              , right_type_matches_numeric
                                              , left_type_matches_right_type
-                                             , expr_type_at_least_left_type
-                                             , expr_type_at_least_right_type
                                              ]
     -- and update the type context
     type_context' = merge { constraints: constraints' } type_context
@@ -351,3 +348,50 @@ binary_numeric_returns_bool_expr_kind ctx@{ type_context, type_stack: (right_typ
   continue $ Pass (ctx' : stack) compiler
 
 binary_numeric_returns_bool_expr_kind _ _ _ = Nothing
+
+apply_substitution :: Substitution -> ProgramType -> ProgramType
+apply_substitution sub t@(ProgramType (TypeVar i) _) = case lookup i sub of
+  Just t' -> apply_substitution sub t'
+  Nothing -> t
+apply_substitution sub (ProgramType (FnType params return_type) _) = ProgramType (FnType (map (apply_substitution sub) params) (apply_substitution sub return_type)) Nothing
+apply_substitution _ t = t
+
+unify :: ProgramType -> ProgramType -> Substitution -> Maybe Substitution
+unify t1 t2 s = go (apply_substitution s t1) (apply_substitution s t2) s
+
+  where
+    go v1 v2 s' | v1 == v2 = pure s'
+    go (ProgramType (TypeVar i) _) v2 s' | not $ occurs i v2 = pure $ insert i v2 s'
+    go v1 (ProgramType (TypeVar i) _) s' | not $ occurs i v1 = pure $ insert i v1 s'
+    go (ProgramType (FnType params rt) _) (ProgramType (FnType params' rt') _) s' | length params == length params' = do
+      s'' <- unify rt rt' s'
+      foldM go_wrap s'' $ zip params params'
+
+    go _ _ _ = Nothing
+
+    go_wrap s' (Tuple v1 v2) = go v1 v2 s'
+
+occurs :: Int -> ProgramType -> Boolean
+occurs i (ProgramType (TypeVar j) _) = i == j
+occurs i (ProgramType (FnType params rt) _) = any (occurs i) $ cons rt params
+occurs _ _ = false
+
+unify_matches :: FingerTree (Tuple ProgramType ProgramType) -> Maybe Substitution
+unify_matches matches = foldM (\s (Tuple t1 t2) -> unify t1 t2 s) empty matches
+
+check_equals :: Substitution -> FingerTree (Tuple ProgramType ProgramType) -> Boolean
+check_equals sub equals = all (\(Tuple t1 t2) -> apply_substitution sub t1 == apply_substitution sub t2) equals
+
+solve_constraints :: FingerTree TypeConstraint -> Maybe Substitution
+solve_constraints constraints = do
+  let Tuple equals matches = foldl go (Tuple mempty mempty) constraints
+
+  s <- unify_matches matches
+  if check_equals s equals
+    then Just s
+    else Nothing
+  
+  where
+    go (Tuple equals matches) (Matches l r) = Tuple equals $ snoc (Tuple l r) matches
+    go (Tuple equals matches) (Equals l r) = Tuple (snoc (Tuple l r) equals) matches
+    go (Tuple equals matches) _ = Tuple equals matches

@@ -647,7 +647,6 @@ reference module_id identifier = ModuleElementReference module_id identifier
 data TypeConstraint
   = Matches ProgramType ProgramType
   | Equals ProgramType ProgramType
-  | AtLeast ProgramType ProgramType
   | References ModuleElementReference
 
 type System =
@@ -733,3 +732,25 @@ set_type_env name env_type ctx@{ type_env } = do
 get_type_env :: Identifier -> FnTypeContext -> Maybe ProgramType
 get_type_env name { type_env } = lookup name type_env
 
+instance eq_program_type :: Eq ProgramType where
+  eq (ProgramType kind _) (ProgramType kind' _) = kind == kind'
+
+instance eq_program_type_kind :: Eq ProgramTypeKind where
+  eq (FnType params ret) (FnType params' ret') = params == params' && ret == ret'
+  eq (I8) (I8) = true
+  eq (U8) (U8) = true
+  eq (I16) (I16) = true
+  eq (U16) (U16) = true
+  eq (I32) (I32) = true
+  eq (U32) (U32) = true
+  eq (I64) (I64) = true
+  eq (U64) (U64) = true
+  eq (F32) (F32) = true
+  eq (F64) (F64) = true
+  eq (Integer) (Integer) = true
+  eq (Float) (Float) = true
+  eq (String) (String) = true
+  eq (Bool) (Bool) = true
+  eq (Numeric) (Numeric) = true
+  eq (TypeVar i) (TypeVar i') = i == i'
+  eq _ _ = false
