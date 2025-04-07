@@ -26,15 +26,15 @@ run props@{ module_id } compiler@{ modules } = case lookup module_id modules of
     let compiler' = merge { modules: modules' } compiler
     Just compiler'
 
-instance constrant_generation_module_pass :: Pass Module CollectExportsContext where
+instance collect_exports_module_pass :: Pass Module CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_declaration_pass :: Pass ModuleDeclaration CollectExportsContext where
+instance collect_exports_declaration_pass :: Pass ModuleDeclaration CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_declaration_kind_pass :: Pass ModuleDeclarationKind CollectExportsContext where
+instance collect_exports_declaration_kind_pass :: Pass ModuleDeclarationKind CollectExportsContext where
   enter (FnDeclarationKind true name _) (CollectExportsContext props module_context@{ module_id, exports } compiler) = do
     let exports' = insert name (reference module_id name) exports
     let module_context' = merge { exports: exports' } module_context
@@ -42,30 +42,30 @@ instance constraint_generation_declaration_kind_pass :: Pass ModuleDeclarationKi
   enter a b = ignore a b
   exit = ignore
 
-instance constraint_generation_fn_pass :: Pass ModuleFn CollectExportsContext where
+instance collect_exports_fn_pass :: Pass ModuleFn CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_fn_param_pass :: Pass FnParam CollectExportsContext where
+instance collect_exports_fn_param_pass :: Pass FnParam CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_type_expr_pass :: Pass TypeExpr CollectExportsContext where
+instance collect_exports_type_expr_pass :: Pass TypeExpr CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_expr_pass :: Pass Expr CollectExportsContext where
+instance collect_exports_expr_pass :: Pass Expr CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_expr_kind_pass :: Pass ExprKind CollectExportsContext where
+instance collect_exports_expr_kind_pass :: Pass ExprKind CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_when_arm_pass :: Pass WhenArm CollectExportsContext where
+instance collect_exports_when_arm_pass :: Pass WhenArm CollectExportsContext where
   enter = ignore
   exit = ignore
 
-instance constraint_generation_type_expr_kind_pass :: Pass TypeExprKind CollectExportsContext where
+instance collect_exports_type_expr_kind_pass :: Pass TypeExprKind CollectExportsContext where
   enter = ignore
   exit = ignore

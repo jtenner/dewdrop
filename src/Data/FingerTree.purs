@@ -36,6 +36,7 @@ import Data.List.Lazy as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
+
 data FingerTree u
   = Empty
   | Single u
@@ -329,7 +330,6 @@ index i (Deep n l inner r)
     go i' u = case index_node i u of
       Just u' -> Left u'
       Nothing -> Right $ i' - (size_node u)     
-       
 
 infixl 4 index as !!
 
@@ -345,8 +345,6 @@ index_node 2 (Three _ _ u) = Just u
 index_node 2 (Four _ _ u _) = Just u
 index_node 3 (Four _ _ _ u) = Just u
 index_node _ _ = Nothing
-
-
 
 size_node :: ∀ (@u :: Type). Node u -> Int
 size_node (One _) = 1

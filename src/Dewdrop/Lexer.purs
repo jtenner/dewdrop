@@ -51,7 +51,7 @@ module Dewdrop.Lexer
 
 import Prelude
 
-import Data.Array ((!!), snoc)
+import Data.Array ((!!))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
@@ -269,6 +269,16 @@ lex_eof chars index = case chars !! index of
   Nothing -> Just (Tuple TokenKindEOF index)
   _ -> Nothing
 
+lex_unknown :: Lexer
+lex_unknown = lex_of take_not_whitespace go
+  where
+  take_not_whitespace = take_many not_is_whitespace
+
+  not_is_whitespace :: Char -> Boolean
+  not_is_whitespace c = not (is_whitespace c || is_newline c)
+
+  go s = TokenKindUnknown s
+
 lex_token :: Lexer
 lex_token = lex_whitespace
   +& lex_name_identifier
@@ -293,21 +303,22 @@ lex_token = lex_whitespace
   +& lex_comma
   +& lex_colon
   +& lex_eof
+  +& lex_unknown
 
-tokenize :: String -> Boolean -> Array Token
-tokenize chars false = do_tokenize (to_chars chars) 0 []
-tokenize chars true = do_tokenize_filter_whitespace (to_chars chars) 0 []
+tokenize :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => String -> Boolean -> t Token
+tokenize chars false = do_tokenize (to_chars chars) 0 mempty
+tokenize chars true = do_tokenize_filter_whitespace (to_chars chars) 0 mempty
 
-do_tokenize :: Array Char -> Int -> Array Token -> Array Token
+do_tokenize :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => Array Char -> Int -> t Token -> t Token
 do_tokenize chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) -> snoc acc $ Token TokenKindEOF index
-  Just (Tuple token next_index) -> do_tokenize chars next_index $ snoc acc $ Token token index
+  Just (Tuple TokenKindEOF _) ->  acc <> (pure $ Token TokenKindEOF index)
+  Just (Tuple token next_index) -> do_tokenize chars next_index $ acc <> (pure $ Token token index)
   _ -> acc
 
-do_tokenize_filter_whitespace :: Array Char -> Int -> Array Token -> Array Token
+do_tokenize_filter_whitespace :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => Array Char -> Int -> t Token -> t Token
 do_tokenize_filter_whitespace chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) -> snoc acc $ Token TokenKindEOF index
+  Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
   Just (Tuple TokenKindWhiteSpace next_index) -> do_tokenize_filter_whitespace chars next_index acc
   Just (Tuple TokenKindNewLine next_index) -> do_tokenize_filter_whitespace chars next_index acc
-  Just (Tuple token_kind next_index) -> do_tokenize_filter_whitespace chars next_index $ snoc acc $ Token token_kind index
+  Just (Tuple token_kind next_index) -> do_tokenize_filter_whitespace chars next_index $ acc <> (pure $ Token token_kind index)
   _ -> acc

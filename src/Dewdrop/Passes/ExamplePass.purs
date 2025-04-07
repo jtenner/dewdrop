@@ -59,4 +59,3 @@ instance constraint_generation_expr_kind_pass :: Pass ExprKind ExamplePassContex
 instance constraint_generation_when_arm_pass :: Pass WhenArm ExamplePassContext where
   enter = ignore
   exit = ignore
-

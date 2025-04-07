@@ -15,7 +15,8 @@ module Visitor.Pattern
   , visit
   , visit_all
   , visit_children
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -92,7 +93,6 @@ visit_all
    . Pass over ctx
   => Foldable iter
   => Visitable over ctx
-  => Semigroup (iter over)
   => Applicative iter
   => Monoid (iter over)
   => iter over
@@ -172,3 +172,13 @@ instance pass_maybe :: (Pass node ctx, Visitable node ctx) => Pass (Maybe node) 
     case visit_action of
       Remove -> replace ctx' Nothing
       _ -> replace ctx (Just node')
+
+instance visitable_tuple :: (Pass left ctx, Pass right ctx, Visitable left ctx, Visitable right ctx) => Visitable (Tuple left right) ctx where
+  visit_children (Tuple left right) ctx = do
+    Tuple ctx' left' <- visit left ctx
+    Tuple ctx'' right' <- visit right ctx'
+    Just $ Tuple ctx'' (Tuple left' right')
+
+instance pass_tuple :: (Pass left ctx, Pass right ctx, Visitable left ctx, Visitable right ctx) => Pass (Tuple left right) ctx where
+  enter = ignore
+  exit = ignore

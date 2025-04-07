@@ -2,7 +2,7 @@ module Dewdrop.Types where
 
 import Prelude
 
-import Data.FingerTree (FingerTree, snoc, to_array)
+import Data.FingerTree (FingerTree, snoc)
 import Data.List (List(..))
 import Data.Map (Map, lookup)
 import Data.Map as Map
@@ -11,7 +11,7 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Tuple (Tuple(..))
 import Record (merge)
-import Visitor.Pattern (class Pass, class Visitable, visit, visit_all)
+import Visitor.Pattern (class Pass, class Visitable, ignore, visit, visit_all)
 
 data Token = Token TokenKind Int
 
@@ -41,6 +41,7 @@ data TokenKind
   | TokenKindLessThanOrEqual
   | TokenKindWhiteSpace
   | TokenKindNewLine
+  | TokenKindUnknown String
   | TokenKindEOF
 
 instance show_token_kind :: Show TokenKind where
@@ -70,6 +71,7 @@ instance show_token_kind :: Show TokenKind where
   show TokenKindEOF = "TokenKindEOF"
   show TokenKindWhiteSpace = "TokenKindWhiteSpace"
   show TokenKindNewLine = "TokenKindNewLine"
+  show (TokenKindUnknown value) = "(TokenKindUnknown " <> value <> ")"
 
 derive instance equals :: Eq TokenKind
 
@@ -125,18 +127,93 @@ data ExprKind
   | GreaterThanEqualsExpr Expr Expr
   | LessThanEqualsExpr Expr Expr
 
+data Bounds = Bounds (FingerTree ProgramType) (FingerTree ProgramType)
+
+type TypedIRFnContext =
+  { name :: ModuleElementReference
+
+  , env :: FingerTree (Tuple Identifier Int)
+  , parameters :: FingerTree (Tuple Identifier Int)
+  , return_type :: ProgramType
+
+  -- To keep track of type variables
+  , next_type_id :: Int
+  , types :: Map Int Bounds
+
+  -- To keep track of expressions and what types they have
+  , exprs :: Map Int Expr
+  
+  -- to index ir nodes
+  , next_ir_id :: Int
+  , irs :: Map Int TypedIR
+
+  , body :: FingerTree TypedIR
+  }
+
+typed_ir_fn_context_new :: ModuleElementReference -> TypedIRFnContext
+typed_ir_fn_context_new name = do
+  let return_type = ProgramType (TypeVar 0) Nothing
+
+  { name
+  , env: mempty
+  , parameters: mempty
+  , return_type
+  , next_type_id: 1
+  , types: Map.fromFoldable [Tuple 0 $ Bounds mempty mempty]
+  , exprs: Map.empty
+  , next_ir_id: 0
+  , irs: Map.empty
+  , body: mempty
+  }
+
+
+type_var_new :: TypedIRFnContext -> Tuple Int TypedIRFnContext
+type_var_new ctx@{ next_type_id, types } = do
+  let i = next_type_id
+  let next_type_id' = next_type_id + 1
+  let types' = Map.insert i (Bounds mempty mempty) types
+
+  Tuple i $ merge { next_type_id: next_type_id', types: types' } ctx
+
+data TypedIR = TypedIR TypedIRKind Int ProgramType
+
+type IntValue = Int
+
+data TypedIRKind
+  = TypedIRAdd Int Int
+  | TypedIRSub Int Int
+  | TypedIRMul Int Int
+  | TypedIRDiv Int Int
+  | TypedIRGreaterThan Int Int
+  | TypedIRLessThan Int Int
+  | TypedIRGreaterThanEquals Int Int
+  | TypedIRLessThanEquals Int Int
+  | TypedIREquals Int Int
+  | TypedIRInt Int IntValue
+  | TypedIRBindName String Int
+  | TypedIRFn Int
+  | TypedIRCall Int (FingerTree Int)
+  | TypedIRBlock (FingerTree TypedIR)
+  | TypedIRWhen (FingerTree (Tuple Int Int)) (Maybe Int)
+
 data WhenArm = WhenArm Expr Expr
 
 type ParserResult t = Maybe (Tuple t Int)
 
 type Parser t = Array Token -> Int -> ParserResult t
 
-type TypeConstraints = FingerTree TypeConstraint
-type Substitution = Map Int ProgramType
-
 data ProgramType = ProgramType ProgramTypeKind (Maybe ModuleElementReference)
 data ProgramTypeKind
-  = FnType (Array ProgramType) ProgramType
+  -- Functions
+  = FnType (FingerTree ProgramType) ProgramType
+
+  -- Records
+  | RecordType (FingerTree (Tuple Identifier ProgramType))
+
+  -- Nominals
+  | EnumType (ModuleElementReference) (FingerTree (Tuple Identifier ProgramType)) (FingerTree VariantKind)
+
+  -- Numbers
   | I8
   | U8
   | I16
@@ -149,10 +226,27 @@ data ProgramTypeKind
   | F64
   | Integer
   | Float
+  | Numeric
+
+  -- Other Primitives
   | String
   | Bool
-  | Numeric
+
+  -- Type helpers
+  | Top
+  | Bottom
+
+  -- Type variables
   | TypeVar Int
+
+  -- Constraints
+  | Union ProgramType ProgramType
+  | Intersection ProgramType ProgramType
+
+  -- Recursive types
+  | Recursive ProgramType
+
+data VariantKind = VariantKind Identifier (FingerTree ProgramType)
 
 data Export = ExportKindFn ModuleFn
 
@@ -208,42 +302,6 @@ type TypeIndex = Map Int ProgramType
 type TypeEnv = Map Identifier ProgramType
 type TypeResolver = Map Identifier ProgramType
 
-type FnTypeContext =
-  { next_id :: Int
-  , type_index :: TypeIndex
-  , parameters :: FingerTree ProgramType
-  , return_type :: ProgramType
-  , constraints :: TypeConstraints
-  , type_env :: TypeEnv
-  , parameter_index :: Int
-  }
-
-fn_type_context_new :: Int -> FnTypeContext
-fn_type_context_new count = 
-  let
-    type_id = 0
-    return_type = type_var type_id Nothing
-  in go count { next_id: type_id + 1
-    , type_index: Map.fromFoldable [Tuple type_id return_type]
-    , parameters: mempty
-    , return_type
-    , constraints: mempty
-    , type_env: Map.empty
-    
-    -- This is a running cursor for a function's parameters while traversing the AST.
-    -- It has no meaning outside of a compiler pass that iterates over a function's parameters.
-    , parameter_index: 0
-    }
-
-  where
-  go 0 ctx = ctx
-  go count' ctx@{ parameters } = do
-    let
-      Tuple param_var ctx' = type_var_new Nothing ctx
-      ctx'' = merge { parameters: snoc param_var parameters } ctx'
-    go (count' - 1) ctx''
-
-data TypeContext = TypeContextFn FnTypeContext
 
 instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"
@@ -644,11 +702,6 @@ instance module_id_eq :: Eq ModuleID where
 reference :: ModuleID -> Identifier -> ModuleElementReference
 reference module_id identifier = ModuleElementReference module_id identifier
 
-data TypeConstraint
-  = Matches ProgramType ProgramType
-  | Equals ProgramType ProgramType
-  | References ModuleElementReference
-
 type System =
   { to_resource_id :: ModuleID -> Maybe ResourceID
   , get_resource :: ResourceID -> Maybe String
@@ -656,12 +709,11 @@ type System =
   }
 
 type Program =
-  { fn_types :: Map ModuleElementReference FnTypeContext
-  , exports :: Map ModuleElementReference Export
+  { 
   }
 
 program_new :: Program
-program_new = { fn_types: Map.empty, exports: Map.empty }
+program_new = {}
 
 type ResourceMap = Map ModuleID ResourceID
 type ModuleMap = Map ModuleID Module
@@ -706,51 +758,88 @@ compiler_new package_name system target =
   , target: target
   }
 
-type_var_new :: Maybe ModuleElementReference -> FnTypeContext -> Tuple ProgramType FnTypeContext
-type_var_new maybe_ref ctx@{ next_id } = do
-  let
-    next_id' = next_id + 1
-    var = ProgramType (TypeVar next_id) maybe_ref
-    ctx' = merge { next_id: next_id' } ctx
-  insert_type ctx' next_id var
-  
-insert_type :: FnTypeContext -> Int -> ProgramType -> Tuple ProgramType FnTypeContext
-insert_type ctx@{ type_index } at var = do
-  let type_index' =  Map.insert at var type_index
-  let ctx' = merge { type_index: type_index' } ctx
-  Tuple var ctx'
-
-get_ctx_fn_type :: FnTypeContext -> ProgramType
-get_ctx_fn_type { parameters, return_type } = do
-  ProgramType (FnType (to_array parameters) return_type) Nothing
-
-set_type_env :: Identifier -> ProgramType -> FnTypeContext -> FnTypeContext
-set_type_env name env_type ctx@{ type_env } = do
-  let type_env' = Map.insert name env_type type_env
-  merge { type_env: type_env' } ctx
-
-get_type_env :: Identifier -> FnTypeContext -> Maybe ProgramType
-get_type_env name { type_env } = lookup name type_env
-
 instance eq_program_type :: Eq ProgramType where
   eq (ProgramType kind _) (ProgramType kind' _) = kind == kind'
 
 instance eq_program_type_kind :: Eq ProgramTypeKind where
   eq (FnType params ret) (FnType params' ret') = params == params' && ret == ret'
-  eq (I8) (I8) = true
-  eq (U8) (U8) = true
-  eq (I16) (I16) = true
-  eq (U16) (U16) = true
-  eq (I32) (I32) = true
-  eq (U32) (U32) = true
-  eq (I64) (I64) = true
-  eq (U64) (U64) = true
-  eq (F32) (F32) = true
-  eq (F64) (F64) = true
-  eq (Integer) (Integer) = true
-  eq (Float) (Float) = true
-  eq (String) (String) = true
-  eq (Bool) (Bool) = true
-  eq (Numeric) (Numeric) = true
-  eq (TypeVar i) (TypeVar i') = i == i'
+  eq n n' | n == n' = true
   eq _ _ = false
+
+instance visitable_program_type ::
+  ( Pass (Tuple Identifier ProgramType) ctx
+  , Visitable (Tuple Identifier ProgramType) ctx
+  , Pass ProgramTypeKind ctx
+  , Visitable ProgramTypeKind ctx
+  ) => Visitable ProgramType ctx where
+  visit_children (ProgramType kind _) ctx = do
+    Tuple ctx' kind' <- visit kind ctx
+    Just $ Tuple ctx' (ProgramType kind' Nothing)
+
+instance visitable_program_type_kind ::
+  ( Pass ProgramType ctx
+  , Visitable ProgramType ctx
+  , Pass ProgramTypeKind ctx
+  , Pass (Tuple Identifier ProgramType) ctx
+  , Visitable (Tuple Identifier ProgramType) ctx
+  , Pass Identifier ctx
+  , Visitable Identifier ctx
+  , Pass VariantKind ctx
+  , Visitable VariantKind ctx
+  ) => Visitable ProgramTypeKind ctx where
+  visit_children (EnumType name env kinds) ctx = do
+    Tuple ctx' env' <- visit_all env ctx
+    Tuple ctx'' kinds' <- visit_all kinds ctx'
+    Just $ Tuple ctx'' $ EnumType name env' kinds'
+
+  visit_children (FnType parameters return_type) ctx = do
+    Tuple ctx' parameters' <- visit_all parameters ctx
+    Tuple ctx'' return_type' <- visit return_type ctx'
+    Just $ Tuple ctx'' (FnType parameters' return_type')
+  
+  visit_children (RecordType fields) ctx = do
+    Tuple ctx' fields' <- visit_all fields ctx
+    Just $ Tuple ctx' $ RecordType fields' 
+
+  visit_children (Union left right) ctx = do
+    Tuple ctx' left' <- visit left ctx
+    Tuple ctx'' right' <- visit right ctx'
+    Just $ Tuple ctx'' $ Union left' right'
+
+  visit_children (Intersection left right) ctx = do
+    Tuple ctx' left' <- visit left ctx
+    Tuple ctx'' right' <- visit right ctx'
+    Just $ Tuple ctx'' $ Intersection left' right'
+  
+  visit_children (Recursive t) ctx = do
+    Tuple ctx' t' <- visit t ctx
+    Just $ Tuple ctx' $ Recursive t'
+
+  visit_children n ctx = Just $ Tuple ctx n
+
+instance visitable_identifier :: (Pass Identifier ctx) => Visitable Identifier ctx where
+  visit_children n ctx = Just $ Tuple ctx n
+
+instance pass_identifier :: Pass Identifier ctx where
+  enter = ignore
+  exit = ignore
+
+
+instance visitable_variant_type ::
+  ( Pass Identifier ctx
+  , Visitable Identifier ctx
+  , Pass Identifier ctx
+  , Visitable VariantKind ctx
+  , Pass VariantKind ctx
+  , Visitable (Tuple Identifier ProgramType) ctx
+  , Pass (Tuple Identifier ProgramType) ctx
+  , Visitable ProgramType ctx
+  , Pass ProgramType ctx
+  , Visitable ProgramTypeKind ctx
+  , Pass ProgramTypeKind ctx
+  ) => Visitable VariantKind ctx where
+  visit_children (VariantKind name fields) ctx = do
+    Tuple ctx' name' <- visit name ctx
+    Tuple ctx'' fields' <- visit_all fields ctx'
+    Just $ Tuple ctx'' $ VariantKind name' fields'
+
