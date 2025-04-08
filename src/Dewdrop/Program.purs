@@ -11,8 +11,6 @@ import Data.Tuple (Tuple(..))
 import Dewdrop.Parser (parse)
 import Dewdrop.Passes.CollectExports (CollectExportsProps)
 import Dewdrop.Passes.CollectExports as CollectExports
-import Dewdrop.Passes.ConstraintGeneration (ConstraintGenerationProps)
-import Dewdrop.Passes.ConstraintGeneration as ConstraintGeneration
 import Dewdrop.Types (CompileTarget, Compiler, ModuleContext, ModuleID, System, compiler_new, fn_type_context_new, module_context_new)
 import Record (merge)
 

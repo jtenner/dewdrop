@@ -2,9 +2,10 @@ module Dewdrop.Types where
 
 import Prelude
 
-import Data.FingerTree (FingerTree, snoc)
+import Data.Foldable (find)
+import Data.FingerTree (FingerTree)
 import Data.List (List(..))
-import Data.Map (Map, lookup)
+import Data.Map (Map, lookup, insert)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Set (Set)
@@ -127,7 +128,8 @@ data ExprKind
   | GreaterThanEqualsExpr Expr Expr
   | LessThanEqualsExpr Expr Expr
 
-data Bounds = Bounds (FingerTree ProgramType) (FingerTree ProgramType)
+-- | Upper and Lower bounds in *that* order
+data Bounds = Bounds { upper :: FingerTree ProgramType, lower :: FingerTree ProgramType }
 
 type TypedIRFnContext =
   { name :: ModuleElementReference
@@ -150,6 +152,9 @@ type TypedIRFnContext =
   , body :: FingerTree TypedIR
   }
 
+bounds_new :: Bounds
+bounds_new = Bounds { upper: mempty, lower: mempty }
+
 typed_ir_fn_context_new :: ModuleElementReference -> TypedIRFnContext
 typed_ir_fn_context_new name = do
   let return_type = ProgramType (TypeVar 0) Nothing
@@ -159,7 +164,7 @@ typed_ir_fn_context_new name = do
   , parameters: mempty
   , return_type
   , next_type_id: 1
-  , types: Map.fromFoldable [ Tuple 0 $ Bounds mempty mempty ]
+  , types: Map.fromFoldable [ Tuple 0 $ bounds_new ]
   , exprs: Map.empty
   , next_ir_id: 0
   , irs: Map.empty
@@ -168,32 +173,35 @@ typed_ir_fn_context_new name = do
 
 type_var_new :: TypedIRFnContext -> Tuple Int TypedIRFnContext
 type_var_new ctx@{ next_type_id, types } = do
-  let i = next_type_id
-  let next_type_id' = next_type_id + 1
-  let types' = Map.insert i (Bounds mempty mempty) types
+  let
+    i = next_type_id
+    next_type_id' = next_type_id + 1
+    types' = Map.insert i bounds_new types
 
   Tuple i $ merge { next_type_id: next_type_id', types: types' } ctx
 
-data TypedIR = TypedIR TypedIRKind Int ProgramType
-
+type ProgramTypeID = Int
+type TypedIRID = Int
 type IntValue = Int
 
+data TypedIR = TypedIR TypedIRID TypedIRKind ProgramType
+
 data TypedIRKind
-  = TypedIRAdd Int Int
-  | TypedIRSub Int Int
-  | TypedIRMul Int Int
-  | TypedIRDiv Int Int
-  | TypedIRGreaterThan Int Int
-  | TypedIRLessThan Int Int
-  | TypedIRGreaterThanEquals Int Int
-  | TypedIRLessThanEquals Int Int
-  | TypedIREquals Int Int
-  | TypedIRInt Int IntValue
-  | TypedIRBindName String Int
+  = TypedIRAdd TypedIRID TypedIRID
+  | TypedIRSub TypedIRID TypedIRID
+  | TypedIRMul TypedIRID TypedIRID
+  | TypedIRDiv TypedIRID TypedIRID
+  | TypedIRGreaterThan TypedIRID TypedIRID
+  | TypedIRLessThan TypedIRID TypedIRID
+  | TypedIRGreaterThanEquals TypedIRID TypedIRID
+  | TypedIRLessThanEquals TypedIRID TypedIRID
+  | TypedIREquals TypedIRID TypedIRID
+  | TypedIRInt IntValue
   | TypedIRFn Int
-  | TypedIRCall Int (FingerTree Int)
-  | TypedIRBlock (FingerTree TypedIR)
-  | TypedIRWhen (FingerTree (Tuple Int Int)) (Maybe Int)
+  | TypedIRCall TypedIRID (FingerTree TypedIRID)
+  | TypedIRBlock (FingerTree TypedIRID)
+  | TypedIRWhen (FingerTree (Tuple TypedIRID TypedIRID)) (Maybe TypedIRID)
+  | TypedIRCast TypedIRID
 
 data WhenArm = WhenArm Expr Expr
 
@@ -843,3 +851,124 @@ instance visitable_variant_type ::
     Tuple ctx'' fields' <- visit_all fields ctx'
     Just $ Tuple ctx'' $ VariantKind name' fields'
 
+get_bounds_by_id :: Int -> TypedIRFnContext -> Maybe Bounds
+get_bounds_by_id id { types } = lookup id types
+
+get_bounds_by_name :: String -> TypedIRFnContext -> Maybe Bounds
+get_bounds_by_name name { env, types } = do
+  Tuple _ type_id <- find by_name env 
+  lookup type_id types
+
+  where
+    by_name (Tuple (NameIdentifier name') _) = name == name'
+    by_name _ = false
+
+set_bounds_by_id :: Int -> Bounds -> TypedIRFnContext -> TypedIRFnContext
+set_bounds_by_id id bounds ctx@{ types } = merge { types: insert id bounds types } ctx
+
+set_bounds_by_name :: String -> Bounds -> TypedIRFnContext -> Maybe TypedIRFnContext
+set_bounds_by_name name bounds ctx@{ env, types } = do
+  Tuple _ type_id <- find by_name env
+  Just $ merge { types: insert type_id bounds types } ctx
+
+  where
+    by_name (Tuple (NameIdentifier name') _) = name == name'
+    by_name _ = false
+
+constrain :: Bounds -> Bounds -> Bounds
+constrain (Bounds { upper: with_upper, lower: with_lower }) (Bounds { upper, lower }) =
+  Bounds { upper: upper <> with_upper, lower: lower <> with_lower }
+
+lower_bounded :: ProgramType -> Bounds
+lower_bounded t = Bounds { upper: mempty, lower: pure t }
+
+ir_new :: TypedIRKind -> ProgramTypeID -> TypedIRFnContext -> Tuple TypedIRID TypedIRFnContext
+ir_new ir_kind type_id ctx@{ next_ir_id, irs } = do
+  let
+    id = next_ir_id
+    next_ir_id' = next_ir_id + 1
+    ir = TypedIR id ir_kind (ProgramType (TypeVar type_id) Nothing)
+    irs' = Map.insert id ir irs
+
+  Tuple id $ merge { next_ir_id: next_ir_id', irs: irs' } ctx
+
+ir_add :: TypedIRID -> TypedIRID -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_add = ir_binary_math_op TypedIRAdd
+
+ir_sub :: TypedIRID -> TypedIRID -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_sub = ir_binary_math_op TypedIRSub
+
+ir_mul :: TypedIRID -> TypedIRID -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_mul = ir_binary_math_op TypedIRMul
+
+ir_div :: TypedIRID -> TypedIRID -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_div = ir_binary_math_op TypedIRDiv
+
+ir_bind_name :: TypedIRID -> String -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_bind_name ir_id name ctx@{ env, irs } = do
+  case lookup ir_id irs of
+    Nothing -> Nothing
+    Just _ -> pure $ Tuple ir_id $ merge { env: (pure $ Tuple (NameIdentifier name) ir_id) <> env } ctx
+
+
+-- ir_int :: Int IntValue
+-- ir_bind_name :: String Int
+-- ir_fn :: Int
+-- ir_call :: Int (FingerTree Int)
+-- ir_block :: (FingerTree TypedIR)
+-- ir_when :: (FingerTree (Tuple Int Int)) (Maybe Int)
+
+ir_binary_math_op :: (Int -> Int -> TypedIRKind) -> TypedIRID -> TypedIRID -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_binary_math_op ir_kind ir_left ir_right ctx = do
+  -- 1. Create a new type variable for the result of a . b
+  let 
+    Tuple upcast_type_id ctx' = type_var_new ctx
+
+  -- 2. Get the bounds of the two operands
+  x_bounds <- get_bounds_by_id ir_left ctx'
+  y_bounds <- get_bounds_by_id ir_right ctx'
+
+  -- 3. Constrain the bounds of the two type variables so that an upcast can be performed
+  --    for each variable
+  let
+    cast_bounds = constrain x_bounds y_bounds
+    ctx'' = set_bounds_by_id upcast_type_id cast_bounds ctx
+  
+  -- 4. Upcast each side (may be a no-op when optimized)
+    upcast_left = TypedIRCast ir_left
+    upcast_right = TypedIRCast ir_right
+    Tuple x_upcast_id ctx''' = ir_new upcast_left upcast_type_id ctx''
+    Tuple y_upcast_id ctx'''' = ir_new upcast_right upcast_type_id ctx'''
+
+  -- 5. return the result
+  pure $ ir_new (ir_kind x_upcast_id y_upcast_id) upcast_type_id ctx''''
+
+ir_binary_compare_op :: (Int -> Int -> TypedIRKind) -> TypedIRID -> TypedIRID -> TypedIRFnContext -> Maybe (Tuple TypedIRID TypedIRFnContext)
+ir_binary_compare_op ir_kind ir_left ir_right ctx = do
+  -- 1. Create a new type variable for the result of a . b
+  let
+    Tuple upcast_type_id ctx' = type_var_new ctx
+
+  -- 2. Get the bounds of the two operands
+  x_bounds <- get_bounds_by_id ir_left ctx'
+  y_bounds <- get_bounds_by_id ir_right ctx'
+
+  let
+  -- 3. Constrain the bounds of the two type variables so that an upcast can be performed
+  --    for each variable
+    cast_bounds = constrain x_bounds y_bounds  
+    ctx'' = set_bounds_by_id upcast_type_id cast_bounds ctx'
+
+  -- 4. Upcast each side (may be a no-op when optimized)
+    Tuple x_upcast_id ctx''' = ir_new (TypedIRCast ir_left) upcast_type_id ctx''
+    Tuple y_upcast_id ctx'''' = ir_new (TypedIRCast ir_right) upcast_type_id ctx'''
+  
+  -- 5. Constrain the result to be a boolean
+    Tuple bool_type_id ctx''''' = type_var_new ctx''''
+    bool_constraint = constrain bounds_new $ lower_bounded builtin_bool_type
+    ctx'''''' = set_bounds_by_id bool_type_id bool_constraint ctx'''''
+
+  -- 6. return the result
+  pure $ ir_new (ir_kind x_upcast_id y_upcast_id) bool_type_id ctx''''''
+    
+     

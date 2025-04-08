@@ -350,3 +350,4 @@ size_node (One _) = 1
 size_node (Two _ _) = 2
 size_node (Three _ _ _) = 3
 size_node (Four _ _ _ _) = 4
+
