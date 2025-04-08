@@ -142,7 +142,7 @@ type TypedIRFnContext =
 
   -- To keep track of expressions and what types they have
   , exprs :: Map Int Expr
-  
+
   -- to index ir nodes
   , next_ir_id :: Int
   , irs :: Map Int TypedIR
@@ -159,13 +159,12 @@ typed_ir_fn_context_new name = do
   , parameters: mempty
   , return_type
   , next_type_id: 1
-  , types: Map.fromFoldable [Tuple 0 $ Bounds mempty mempty]
+  , types: Map.fromFoldable [ Tuple 0 $ Bounds mempty mempty ]
   , exprs: Map.empty
   , next_ir_id: 0
   , irs: Map.empty
   , body: mempty
   }
-
 
 type_var_new :: TypedIRFnContext -> Tuple Int TypedIRFnContext
 type_var_new ctx@{ next_type_id, types } = do
@@ -301,7 +300,6 @@ type_var i mr = (ProgramType (TypeVar i) mr)
 type TypeIndex = Map Int ProgramType
 type TypeEnv = Map Identifier ProgramType
 type TypeResolver = Map Identifier ProgramType
-
 
 instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"
@@ -709,7 +707,7 @@ type System =
   }
 
 type Program =
-  { 
+  {
   }
 
 program_new :: Program
@@ -771,7 +769,8 @@ instance visitable_program_type ::
   , Visitable (Tuple Identifier ProgramType) ctx
   , Pass ProgramTypeKind ctx
   , Visitable ProgramTypeKind ctx
-  ) => Visitable ProgramType ctx where
+  ) =>
+  Visitable ProgramType ctx where
   visit_children (ProgramType kind _) ctx = do
     Tuple ctx' kind' <- visit kind ctx
     Just $ Tuple ctx' (ProgramType kind' Nothing)
@@ -786,7 +785,8 @@ instance visitable_program_type_kind ::
   , Visitable Identifier ctx
   , Pass VariantKind ctx
   , Visitable VariantKind ctx
-  ) => Visitable ProgramTypeKind ctx where
+  ) =>
+  Visitable ProgramTypeKind ctx where
   visit_children (EnumType name env kinds) ctx = do
     Tuple ctx' env' <- visit_all env ctx
     Tuple ctx'' kinds' <- visit_all kinds ctx'
@@ -796,10 +796,10 @@ instance visitable_program_type_kind ::
     Tuple ctx' parameters' <- visit_all parameters ctx
     Tuple ctx'' return_type' <- visit return_type ctx'
     Just $ Tuple ctx'' (FnType parameters' return_type')
-  
+
   visit_children (RecordType fields) ctx = do
     Tuple ctx' fields' <- visit_all fields ctx
-    Just $ Tuple ctx' $ RecordType fields' 
+    Just $ Tuple ctx' $ RecordType fields'
 
   visit_children (Union left right) ctx = do
     Tuple ctx' left' <- visit left ctx
@@ -810,7 +810,7 @@ instance visitable_program_type_kind ::
     Tuple ctx' left' <- visit left ctx
     Tuple ctx'' right' <- visit right ctx'
     Just $ Tuple ctx'' $ Intersection left' right'
-  
+
   visit_children (Recursive t) ctx = do
     Tuple ctx' t' <- visit t ctx
     Just $ Tuple ctx' $ Recursive t'
@@ -824,7 +824,6 @@ instance pass_identifier :: Pass Identifier ctx where
   enter = ignore
   exit = ignore
 
-
 instance visitable_variant_type ::
   ( Pass Identifier ctx
   , Visitable Identifier ctx
@@ -837,7 +836,8 @@ instance visitable_variant_type ::
   , Pass ProgramType ctx
   , Visitable ProgramTypeKind ctx
   , Pass ProgramTypeKind ctx
-  ) => Visitable VariantKind ctx where
+  ) =>
+  Visitable VariantKind ctx where
   visit_children (VariantKind name fields) ctx = do
     Tuple ctx' name' <- visit name ctx
     Tuple ctx'' fields' <- visit_all fields ctx'

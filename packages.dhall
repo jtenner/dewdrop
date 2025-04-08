@@ -99,32 +99,17 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.15.15-20250327/packages.dhall
-        sha256:1f4d1d6bd5bde77c3b7bc2dfa000b76509c308fbeac9206c77de7107c02ec691
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.15-20250402/packages.dhall
+        sha256:26fe324d4486e5c196a84a409994bebd9ea809ae95529af4d78f48782b748c36
 
 in  upstream
   with digraph =
-      { dependencies =
-          [ "lists"
-          , "ordered-collections"
-          , "newtype"
-          , "pqueue"
-          ]
-      , repo =
-          "https://github.com/nullobject/purescript-digraph.git"
-      , version =
-          "v2.0.0"
-      }
+    { dependencies = [ "lists", "ordered-collections", "newtype", "pqueue" ]
+    , repo = "https://github.com/nullobject/purescript-digraph.git"
+    , version = "v2.0.0"
+    }
   with pqueue =
-      { dependencies =
-          [ "lists"
-          , "newtype"
-          , "ordered-collections"
-          ]
-      , repo =
-          "https://github.com/nullobject/purescript-pqueue.git"
-      , version =
-          "v2.0.0"
-      }
-   
-    
+    { dependencies = [ "lists", "newtype", "ordered-collections" ]
+    , repo = "https://github.com/nullobject/purescript-pqueue.git"
+    , version = "v2.0.0"
+    }

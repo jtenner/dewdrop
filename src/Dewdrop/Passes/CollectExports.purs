@@ -9,7 +9,7 @@ import Dewdrop.Types (Compiler, Expr, ExprKind, FnParam, Module, ModuleContext, 
 import Record (merge)
 import Visitor.Pattern (class Pass, class Visitable, ignore, skip_all, visit)
 
-type CollectExportsProps = 
+type CollectExportsProps =
   { module_id :: ModuleID }
 
 data CollectExportsContext = CollectExportsContext CollectExportsProps ModuleContext Compiler

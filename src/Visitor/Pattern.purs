@@ -15,8 +15,7 @@ module Visitor.Pattern
   , visit
   , visit_all
   , visit_children
-  )
-  where
+  ) where
 
 import Prelude
 

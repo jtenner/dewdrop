@@ -64,8 +64,7 @@ module Util
   , to_unsigned
   , trace
   , union_char_predicate
-  )
-  where
+  ) where
 
 import Prelude
 

@@ -23,8 +23,7 @@ module Data.FingerTree
   , to_list
   , uncons
   , unsnoc
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -35,7 +34,6 @@ import Data.List (List(..), (:))
 import Data.List.Lazy as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-
 
 data FingerTree u
   = Empty
@@ -318,18 +316,19 @@ index 0 (Single u) = Just u
 index _ (Single _) = Nothing
 index i (Deep n l inner r)
   | i >= n = Nothing
-  | otherwise = do
-    let
-      tree' = cons l (snoc r inner) 
-    case foldM go i tree' of 
-      Left u -> Just u
-      Right _ -> Nothing
+  | otherwise =
+      do
+        let
+          tree' = cons l (snoc r inner)
+        case foldM go i tree' of
+          Left u -> Just u
+          Right _ -> Nothing
 
-  where
-    go :: Int -> Node u -> AdvanceOrStop u
-    go i' u = case index_node i u of
-      Just u' -> Left u'
-      Nothing -> Right $ i' - (size_node u)     
+      where
+      go :: Int -> Node u -> AdvanceOrStop u
+      go i' u = case index_node i u of
+        Just u' -> Left u'
+        Nothing -> Right $ i' - (size_node u)
 
 infixl 4 index as !!
 

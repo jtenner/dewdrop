@@ -26,7 +26,7 @@ run props@{ module_ctx: { module_id } } compiler@{ modules } = case lookup modul
     let { ast } = module_ctx
     let ctx = TypeIRLowerContext props { fn_stack: Nil, type_stack: Nil } compiler
     Tuple (TypeIRLowerContext _ state' _) ast' <- visit ast ctx
-    
+
     let compiler' = compiler
     -- do something with state'
     Just compiler'
@@ -73,7 +73,7 @@ instance type_ir_lower_fn_param_pass :: Pass FnParam TypeIRLowerContext where
     continue (TypeIRLowerContext props (merge { fn_stack: fn_stack', type_stack: type_stack' } state) compiler)
   enter _ _ = Nothing
 
-    -- generate a fresh type variable
+  -- generate a fresh type variable
   exit (FnParam _ (Just _) _) (TypeIRLowerContext props state@{ fn_stack: (fn_state : fn_stack), type_stack: (type_guard_id : param_id : type_stack) } compiler) = do
     let { types } = fn_state
     Bounds param_upper param_lower <- lookup param_id types
@@ -90,7 +90,6 @@ instance type_ir_lower_fn_param_pass :: Pass FnParam TypeIRLowerContext where
     let state' = merge { type_stack: type_stack } state
     continue $ TypeIRLowerContext props state' compiler
   exit _ _ = Nothing
-      
 
 instance type_ir_lower_type_expr_pass :: Pass TypeExpr TypeIRLowerContext where
   enter = ignore

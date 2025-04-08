@@ -311,7 +311,7 @@ tokenize chars true = do_tokenize_filter_whitespace (to_chars chars) 0 mempty
 
 do_tokenize :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => Array Char -> Int -> t Token -> t Token
 do_tokenize chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) ->  acc <> (pure $ Token TokenKindEOF index)
+  Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
   Just (Tuple token next_index) -> do_tokenize chars next_index $ acc <> (pure $ Token token index)
   _ -> acc
 

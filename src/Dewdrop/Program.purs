@@ -16,10 +16,10 @@ import Dewdrop.Passes.ConstraintGeneration as ConstraintGeneration
 import Dewdrop.Types (CompileTarget, Compiler, ModuleContext, ModuleID, System, compiler_new, fn_type_context_new, module_context_new)
 import Record (merge)
 
-data CompilerAction = BeginProcess ModuleID
-                    | CollectExports CollectExportsProps
-                    | ConstraintGeneration ConstraintGenerationProps
-
+data CompilerAction
+  = BeginProcess ModuleID
+  | CollectExports CollectExportsProps
+  | ConstraintGeneration ConstraintGenerationProps
 
 type Queue = FingerTree CompilerAction
 
@@ -31,20 +31,21 @@ exhaust compiler@{ seen } queue = case uncons queue of
     BeginProcess module_id
       | Set.member module_id seen -> exhaust compiler queue'
       | otherwise -> do
-      Tuple _module_ctx compiler' <- get_module compiler module_id
-      
-      let
-        seen' = Set.insert module_id seen
-        compiler'' = merge { seen: seen' } compiler'
-        collect_exports = CollectExports { module_id }
-        constraint_generation = ConstraintGeneration { fn_type_context: fn_type_context_new
-                                                     , generated_type_stack: Nil
-                                                     , module_id
-                                                     , expression_type_stack: Nil
-                                                     }
-        queue'' = from_array [ collect_exports, constraint_generation ]
-      exhaust compiler'' (queue' <> queue'')
-    
+          Tuple _module_ctx compiler' <- get_module compiler module_id
+
+          let
+            seen' = Set.insert module_id seen
+            compiler'' = merge { seen: seen' } compiler'
+            collect_exports = CollectExports { module_id }
+            constraint_generation = ConstraintGeneration
+              { fn_type_context: fn_type_context_new
+              , generated_type_stack: Nil
+              , module_id
+              , expression_type_stack: Nil
+              }
+            queue'' = from_array [ collect_exports, constraint_generation ]
+          exhaust compiler'' (queue' <> queue'')
+
     CollectExports ctx -> do
       compiler' <- CollectExports.run ctx compiler
       exhaust compiler' queue'
@@ -52,7 +53,6 @@ exhaust compiler@{ seen } queue = case uncons queue of
     ConstraintGeneration ctx -> do
       compiler' <- ConstraintGeneration.run ctx compiler
       exhaust compiler' queue'
-    
 
 compile :: String -> System -> CompileTarget -> Maybe Compiler
 compile package_name system target = do
@@ -73,4 +73,3 @@ get_module compiler@{ modules, system } module_id = case lookup module_id module
     Just $ Tuple module_ctx compiler'
 
   Just module_ctx -> Just $ Tuple module_ctx compiler
-  
