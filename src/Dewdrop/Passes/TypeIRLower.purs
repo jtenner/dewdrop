@@ -4,17 +4,17 @@ import Prelude
 
 import Data.FingerTree (snoc)
 import Data.List (List(..), (:))
-import Data.Map (insert, lookup)
+import Data.Map (lookup)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types (Bounds(..), Compiler, Expr, ExprKind, FnParam(..), Identifier(..), Module, ModuleContext, ModuleDeclaration, ModuleDeclarationKind, ModuleElementReference(..), ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeExpr(..), TypeExprKind(..), TypedIRFnContext, WhenArm, type_var_new, typed_ir_fn_context_new)
-import Data.Foldable (find)
+import Dewdrop.Types (Compiler, Expr, ExprKind(..), FnParam(..), Identifier(..), Module, ModuleContext, ModuleDeclaration, ModuleDeclarationKind, ModuleElementReference(..), ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeExpr(..), TypeExprKind(..), TypedIRFnContext, TypedIRID, WhenArm, get_bounds_by_id, get_bounds_by_name, ir_const_int, lower_bounded, set_bounds_by_id, type_var_new, typed_ir_fn_context_new)
 import Record (merge)
-import Visitor.Pattern (class Pass, class Visitable, continue, ignore, visit)
+import Visitor.Pattern (class Pass, class Visitable, VisitResult, continue, ignore, skip_all, visit)
 
 type TypeIRLowerContextProps = { module_ctx :: ModuleContext }
 type TypeIRLowerContextState =
   { fn_stack :: List TypedIRFnContext
+  , ir_stack :: List TypedIRID
   , type_stack :: List Int
   }
 
@@ -25,7 +25,7 @@ run props@{ module_ctx: { module_id } } compiler@{ modules } = case lookup modul
   Nothing -> Nothing
   Just module_ctx -> do
     let { ast } = module_ctx
-    let ctx = TypeIRLowerContext props { fn_stack: Nil, type_stack: Nil } compiler
+    let ctx = TypeIRLowerContext props { fn_stack: Nil, ir_stack: Nil, type_stack: Nil } compiler
     Tuple (TypeIRLowerContext _ state' _) ast' <- visit ast ctx
 
     let compiler' = compiler
@@ -85,7 +85,7 @@ instance type_ir_lower_fn_param_pass :: Pass FnParam TypeIRLowerContext where
     param_bounds <- get_bounds_by_id param_id fn_state
 
     let
-      param_bounds' = constrain (Bounds { upper: mempty, lower: pure (ProgramType (TypeVar type_guard_id) Nothing) }) param_bounds
+      param_bounds' = param_bounds <> lower_bounded (ProgramType (TypeVar type_guard_id) Nothing)
       fn_state' = set_bounds_by_id param_id param_bounds' fn_state
       fn_stack' = fn_state' : fn_stack
       -- the type stack was popped, so we need to update it too
@@ -113,26 +113,29 @@ instance type_ir_lower_type_expr_pass :: Pass TypeExpr TypeIRLowerContext where
       type_stack' = type_id : type_stack
 
     let state' = merge { fn_stack: fn_stack', type_stack: type_stack' } state
+
     continue $ TypeIRLowerContext props state' compiler
   enter _ _ = Nothing
 
   exit = ignore
 
+  -- The type var is on the top of the stack
 instance type_ir_lower_type_expr_kind_pass :: Pass TypeExprKind TypeIRLowerContext where
   enter = ignore
-  exit (NamedTypeExpr name) (TypeIRLowerContext props state@{ fn_stack: (fn_state : fn_stack), type_stack: (type_id : type_stack) } compiler) = do
-    
+
+  exit (NamedTypeExpr name) (TypeIRLowerContext props state@{ fn_stack: (fn_state : fn_stack), type_stack: (type_id : _) } compiler) = do
+    -- TODO: Get the current type environment, because it could be a different module via `namespace.Type`
     bounds <- get_bounds_by_name name fn_state
+    current_type_bounds <- get_bounds_by_id type_id fn_state
     let
-      bounds' = constrain (Bounds { upper: pure (ProgramType (TypeVar type_id) Nothing), lower: mempty }) bounds
-    
-    fn_state' <- set_bounds_by_name name bounds' fn_state
+      bounds' = current_type_bounds <> bounds
+      fn_state' = set_bounds_by_id type_id bounds' fn_state
 
     let
-      fn_stack' = fn_state' : fn_stack
-      state' = merge { fn_stack: fn_stack', type_stack } state
+      state' = merge { fn_stack: (fn_state' : fn_stack) } state
+      ctx' = TypeIRLowerContext props state' compiler
+    continue ctx'
 
-    continue $ TypeIRLowerContext props state' compiler
   exit _ _ = Nothing
 
 instance type_ir_lower_expr_pass :: Pass Expr TypeIRLowerContext where
@@ -140,9 +143,57 @@ instance type_ir_lower_expr_pass :: Pass Expr TypeIRLowerContext where
   exit = ignore
 
 instance type_ir_lower_expr_kind_pass :: Pass ExprKind TypeIRLowerContext where
-  enter = ignore
-  exit = ignore
+
+  enter (IntExpr val) (TypeIRLowerContext props state@{ ir_stack, fn_stack: (fn_state : fn_stack) } compiler) = do
+    let
+      -- create a type var and constrain it's lower bounds to be at least an integer
+      Tuple ir fn_state' = ir_const_int val fn_state
+      ir_stack' = ir : ir_stack
+      fn_stack' = fn_state' : fn_stack
+      state' = merge { ir_stack: ir_stack', fn_stack: fn_stack' } state
+
+    skip_all $ TypeIRLowerContext props state' compiler
+
+  -- AddExpr
+  -- SubExpr
+  -- MulExpr
+  -- DivExpr
+  enter (AddExpr _ _) (TypeIRLowerContext props state compiler) = lower_binary_numeric "__builtin_add" props state compiler
+  enter (SubExpr _ _) (TypeIRLowerContext props state compiler) = lower_binary_numeric "__builtin_sub" props state compiler
+  enter (MulExpr _ _) (TypeIRLowerContext props state compiler) = lower_binary_numeric "__builtin_mul" props state compiler
+  enter (DivExpr _ _) (TypeIRLowerContext props state compiler) = lower_binary_numeric "__builtin_div" props state compiler
+
+  -- WhenExpr
+  -- BlockExpr
+  -- EqualsExpr
+  -- NameExpr
+  -- CallExpr
+  -- GreaterThanExpr
+  -- LessThanExpr
+  -- GreaterThanEqualsExpr
+  -- LessThanEqualsExpr
+
+  enter _ _ = Nothing
+
+
+  exit _ _ = Nothing
 
 instance type_ir_lower_when_arm_pass :: Pass WhenArm TypeIRLowerContext where
   enter = ignore
   exit = ignore
+
+lower_binary_numeric :: String -> TypeIRLowerContextProps -> TypeIRLowerContextState -> Compiler -> VisitResult TypeIRLowerContext ExprKind
+lower_binary_numeric builtin_name props state@{ fn_stack: (fn_state : fn_stack), ir_stack: (ir_r : ir_l : ir_stack) } compiler = do
+  let
+    builtin_props = from_array [ ir_l, ir_r ]
+  
+  Tuple ir fn_state' <- ir_builtin builtin_name builtin_props fn_state
+
+  let
+    ir_stack' = ir : ir_stack
+    fn_stack' = fn_state' : fn_stack
+    state' = merge { ir_stack: ir_stack', fn_stack: fn_stack' } state
+
+  continue $ TypeIRLowerContext props state' compiler
+
+  
