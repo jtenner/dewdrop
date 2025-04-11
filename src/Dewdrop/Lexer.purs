@@ -55,7 +55,7 @@ import Data.Array ((!!))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types (Token(..), TokenKind(..))
+import Data.Dewdrop.Token
 import Util (Consumer, is_fslash, is_asterisk, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_lcaret, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
 
 is_token_kind_pub_keyword :: TokenKind -> Boolean

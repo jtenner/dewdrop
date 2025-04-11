@@ -10,7 +10,6 @@ import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-
 type Parser t = Transformer Token t
 
 type ParserResult t = Maybe (Tuple t Int)
@@ -49,7 +48,6 @@ data ExprKind
 
 data WhenArm = WhenArm Expr Expr
 
-
 data ModuleID = ModuleID String (List String)
 data ModuleElementReference = ModuleElementReference ModuleID Identifier
 
@@ -71,7 +69,6 @@ instance module_id_eq :: Eq ModuleID where
 
 reference :: ModuleID -> Identifier -> ModuleElementReference
 reference module_id identifier = ModuleElementReference module_id identifier
-
 
 instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"
@@ -115,7 +112,6 @@ instance show_type_expr :: Show TypeExpr where
 
 instance show_type_expr_kind :: Show TypeExprKind where
   show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
-
 
 -- data Module = Module (Array ModuleDeclaration)
 instance visitable_module ::
@@ -186,9 +182,6 @@ instance visitable_fn_param ::
   visit_children (FnParam name type_guard n) ctx = do
     Tuple ctx' type_guard' <- visit type_guard ctx
     Just $ Tuple ctx' (FnParam name type_guard' n)
-
-
-
 
 instance visitable_type_expr :: (Pass TypeExprKind ctx) => Visitable TypeExpr ctx where
   visit_children (TypeExpr kind _) ctx = do

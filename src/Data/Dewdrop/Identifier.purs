@@ -6,7 +6,6 @@ import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-
 data Identifier
   = NameIdentifier String
   | TypeIdentifier String
@@ -22,11 +21,9 @@ instance ord_identifier :: Ord Identifier where
   compare (NameIdentifier _) _ = GT
   compare _ (NameIdentifier _) = LT
 
-
 instance show_identifier :: Show Identifier where
   show (NameIdentifier name) = "(Name " <> name <> ")"
   show (TypeIdentifier name) = "(Type " <> name <> ")"
-
 
 instance visitable_identifier :: (Pass Identifier ctx) => Visitable Identifier ctx where
   visit_children n ctx = Just $ Tuple ctx n
@@ -34,4 +31,3 @@ instance visitable_identifier :: (Pass Identifier ctx) => Visitable Identifier c
 instance pass_identifier :: Pass Identifier ctx where
   enter = ignore
   exit = ignore
-  

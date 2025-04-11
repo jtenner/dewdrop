@@ -2,22 +2,22 @@ module Data.Dewdrop.Types where
 
 import Prelude
 
-import Data.Dewdrop.AST (Module(..), ModuleElementReference(..), ModuleID(..))
+import Data.Dewdrop.AST (Module, ModuleElementReference, ModuleID)
 import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, visit, visit_all)
 import Data.FingerTree (FingerTree)
 import Data.List (List)
 import Data.Map (Map)
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Pool (Pool, PoolKey, pool_allocate, pool_set)
 import Data.Tuple (Tuple(..))
 import Record (merge)
 
-
 -- | Upper and Lower bounds in *that* order
 data Bounds = Bounds { upper :: FingerTree ProgramType, lower :: FingerTree ProgramType }
 
-type TypedIRFnContext =
+data IRContext = IRContext
   { name :: ModuleElementReference
 
   , env :: FingerTree (Tuple Identifier ProgramTypeID)
@@ -38,12 +38,12 @@ type TypedIRFnContext =
 bounds_new :: Bounds
 bounds_new = Bounds { upper: mempty, lower: mempty }
 
-type_var_new :: TypedIRFnContext -> Tuple ProgramTypeID TypedIRFnContext
-type_var_new ctx@{ types } = do
+type_var_new :: IRContext -> Tuple ProgramTypeID IRContext
+type_var_new (IRContext ctx@{ types }) = do
   let
     Tuple type_id types' = pool_allocate types
     types'' = pool_set type_id (ProgramType (TypeVar type_id) Nothing) types'
-  Tuple type_id $ merge { types: types'' } ctx
+  Tuple type_id $ IRContext $ merge { types: types'' } ctx
 
 type ProgramTypeID = PoolKey ProgramType
 type TypedIRID = PoolKey TypedIR
@@ -51,8 +51,9 @@ type IntValue = Int
 
 data TypedIR = TypedIR TypedIRKind ProgramTypeID
 
-data IRConstKind = IRConstInt Int
-                 | IRConstString String
+data IRConstKind
+  = IRConstInt Int
+  | IRConstString String
 
 data TypedIRKind
   = TypedIRBuiltin String (FingerTree TypedIRID)
@@ -60,8 +61,6 @@ data TypedIRKind
   | TypedIRConst IRConstKind
   | TypedIRCallIndirect TypedIRID (FingerTree TypedIRID)
   | TypedIRCast TypedIRID
-
-
 
 data ProgramType = ProgramType ProgramTypeKind (Maybe ModuleElementReference)
 data ProgramTypeKind
@@ -161,10 +160,18 @@ data FnIRIdentifier = FnIRIdentifier ModuleElementReference (List (Tuple Identif
 
 data ModuleContext = ModuleContext
   { ast :: Module
+  , exports :: Map Identifier ModuleElementReference
+  , fns :: Map FnIRIdentifier IRContext
   , module_id :: ModuleID
-  , fns :: Map FnIRIdentifier TypedIRFnContext
   }
 
+module_context_new :: ModuleID -> Module -> ModuleContext
+module_context_new module_id ast = ModuleContext
+  { ast: ast
+  , exports: Map.empty
+  , fns: Map.empty
+  , module_id: module_id
+  }
 
 instance eq_program_type :: Eq ProgramType where
   eq (ProgramType kind _) (ProgramType kind' _) = kind == kind'
@@ -227,7 +234,6 @@ instance visitable_program_type_kind ::
 
   visit_children n ctx = Just $ Tuple ctx n
 
-
 instance visitable_variant_type ::
   ( Pass Identifier ctx
   , Visitable Identifier ctx
@@ -253,4 +259,3 @@ constrain (Bounds { upper: with_upper, lower: with_lower }) (Bounds { upper, low
 
 instance bounds_semigroup :: Semigroup Bounds where
   append = constrain
-  

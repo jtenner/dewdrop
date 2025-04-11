@@ -2,20 +2,23 @@ module Dewdrop.Passes.TypeIRLower where
 
 import Prelude
 
-import Data.FingerTree (snoc)
+import Data.Dewdrop.AST
+import Data.Dewdrop.Compiler
+import Data.Dewdrop.Identifier
+import Data.Dewdrop.Types
+import Data.Dewdrop.Visitor
+import Data.FingerTree (from_array, snoc)
 import Data.List (List(..), find, (:))
 import Data.Map (lookup)
 import Data.Maybe (Maybe(..))
 import Data.Pool (pool_set)
 import Data.Tuple (Tuple(..))
 import Dewdrop.IR (ir_fn_context_new)
-import Dewdrop.Types (Compiler, Expr, ExprKind(..), FnParam(..), Identifier(..), Module, ModuleContext, ModuleDeclaration, ModuleDeclarationKind, ModuleElementReference(..), ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeExpr(..), TypeExprKind(..), TypedIRFnContext, TypedIRID, WhenArm, ProgramTypeID, lower_bounded, set_bounds_by_id, type_var_new)
 import Record (merge)
-import Data.Dewdrop.Visitor (class Pass, class Visitable, VisitResult, continue, ignore, skip_all, visit)
 
 type TypeIRLowerContextProps = { module_ctx :: ModuleContext }
 type TypeIRLowerContextState =
-  { fn_stack :: List TypedIRFnContext
+  { fn_stack :: List IRContext
   , ir_stack :: List TypedIRID
   , type_stack :: List ProgramTypeID
   , env_stack :: List (List (Tuple Identifier ProgramTypeID))
@@ -85,7 +88,7 @@ instance type_ir_lower_fn_param_pass :: Pass FnParam TypeIRLowerContext where
 
   -- on exit, if there is a type guard, constrain the lower bounds of the parameter to the type guard
   exit (FnParam _ (Just _) _) (TypeIRLowerContext props state@{ fn_stack: (fn_state : fn_stack), type_stack: (type_guard_id : param_id : type_stack) } compiler) = do
-    
+
     let
       { types } = fn_state
       types' = pool_set param_id (ProgramType (TypeVar type_guard_id) Nothing) types
@@ -122,23 +125,9 @@ instance type_ir_lower_type_expr_pass :: Pass TypeExpr TypeIRLowerContext where
 
   exit = ignore
 
-  -- The type var is on the top of the stack
+-- The type var is on the top of the stack
 instance type_ir_lower_type_expr_kind_pass :: Pass TypeExprKind TypeIRLowerContext where
   enter = ignore
-
-  exit (NamedTypeExpr name) (TypeIRLowerContext props state@{ env_stack: (env : _), fn_stack: (fn_state : fn_stack), type_stack: (type_id : _) } compiler) = do
-    -- TODO: Get the current type environment, because it could be a different module via `namespace.Type`
-    
-    current_type_bounds <- get_bounds_by_id type_id fn_state
-    let
-      bounds' = current_type_bounds <> bounds
-      fn_state' = set_bounds_by_id type_id bounds' fn_state
-
-    let
-      state' = merge { fn_stack: (fn_state' : fn_stack) } state
-      ctx' = TypeIRLowerContext props state' compiler
-    continue ctx'
-
   exit _ _ = Nothing
 
 instance type_ir_lower_expr_pass :: Pass Expr TypeIRLowerContext where
@@ -178,7 +167,6 @@ instance type_ir_lower_expr_kind_pass :: Pass ExprKind TypeIRLowerContext where
 
   enter _ _ = Nothing
 
-
   exit _ _ = Nothing
 
 instance type_ir_lower_when_arm_pass :: Pass WhenArm TypeIRLowerContext where
@@ -189,7 +177,7 @@ lower_binary_numeric :: String -> TypeIRLowerContextProps -> TypeIRLowerContextS
 lower_binary_numeric builtin_name props state@{ fn_stack: (fn_state : fn_stack), ir_stack: (ir_r : ir_l : ir_stack) } compiler = do
   let
     builtin_props = from_array [ ir_l, ir_r ]
-  
+
   Tuple ir fn_state' <- ir_builtin builtin_name builtin_props fn_state
 
   let
@@ -199,4 +187,3 @@ lower_binary_numeric builtin_name props state@{ fn_stack: (fn_state : fn_stack),
 
   continue $ TypeIRLowerContext props state' compiler
 
-  

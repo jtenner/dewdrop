@@ -5,8 +5,10 @@ import Prelude
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types (Compiler, Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn, TypeExpr, TypeExprKind, WhenArm)
-import Visitor.Pattern (class Pass, class Visitable, ignore, visit)
+
+import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn, TypeExpr, TypeExprKind, WhenArm)
+import Data.Dewdrop.Compiler (Compiler)
+import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore, visit)
 
 type Props = {}
 data ExamplePassContext = ExamplePassContext (List Props) Compiler

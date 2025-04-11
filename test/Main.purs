@@ -5,6 +5,7 @@ module Test.Main
 import Prelude (Unit, discard, ($), (*), (+), (-))
 
 import Control.Monad.Error.Class (class MonadThrow)
+import Data.Dewdrop.Token
 import Data.Eq (class Eq)
 import Data.FingerTree (concat, empty, foldl, foldr, map, single, (+=))
 import Data.Maybe (Maybe(..))
@@ -13,7 +14,6 @@ import Data.Tuple (Tuple(..))
 import Dewdrop.Lexer (lex_token, tokenize)
 import Dewdrop.Parser (parse_expr)
 import Dewdrop.RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
-import Dewdrop.Types (Token(..), TokenKind(..))
 import Effect (Effect)
 import Effect.Aff (Error)
 import Test.Spec (describe, it)

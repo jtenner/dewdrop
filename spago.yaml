@@ -1,0 +1,23 @@
+package:
+  dependencies:
+    - aff
+    - arrays
+    - effect
+    - foldable-traversable
+    - integers
+    - lists
+    - maybe
+    - node-buffer
+    - ordered-collections
+    - prelude
+    - record
+    - spec
+    - spec-node
+    - strings
+    - transformers
+    - tuples
+  name: my-project
+workspace:
+  extraPackages: {}
+  packageSet:
+    url: https://raw.githubusercontent.com/purescript/package-sets/psc-0.15.15-20250402/packages.json

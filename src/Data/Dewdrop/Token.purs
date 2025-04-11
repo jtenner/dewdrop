@@ -2,7 +2,6 @@ module Data.Dewdrop.Token where
 
 import Prelude
 
-
 data Token = Token TokenKind Int
 
 data TokenKind
