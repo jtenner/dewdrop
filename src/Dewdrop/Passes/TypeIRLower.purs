@@ -3,19 +3,22 @@ module Dewdrop.Passes.TypeIRLower where
 import Prelude
 
 import Data.FingerTree (snoc)
-import Data.List (List(..), (:))
+import Data.List (List(..), find, (:))
 import Data.Map (lookup)
 import Data.Maybe (Maybe(..))
+import Data.Pool (pool_set)
 import Data.Tuple (Tuple(..))
-import Dewdrop.Types (Compiler, Expr, ExprKind(..), FnParam(..), Identifier(..), Module, ModuleContext, ModuleDeclaration, ModuleDeclarationKind, ModuleElementReference(..), ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeExpr(..), TypeExprKind(..), TypedIRFnContext, TypedIRID, WhenArm, get_bounds_by_id, get_bounds_by_name, ir_const_int, lower_bounded, set_bounds_by_id, type_var_new, typed_ir_fn_context_new)
+import Dewdrop.IR (ir_fn_context_new)
+import Dewdrop.Types (Compiler, Expr, ExprKind(..), FnParam(..), Identifier(..), Module, ModuleContext, ModuleDeclaration, ModuleDeclarationKind, ModuleElementReference(..), ModuleFn(..), ProgramType(..), ProgramTypeKind(..), TypeExpr(..), TypeExprKind(..), TypedIRFnContext, TypedIRID, WhenArm, ProgramTypeID, lower_bounded, set_bounds_by_id, type_var_new)
 import Record (merge)
-import Visitor.Pattern (class Pass, class Visitable, VisitResult, continue, ignore, skip_all, visit)
+import Data.Dewdrop.Visitor (class Pass, class Visitable, VisitResult, continue, ignore, skip_all, visit)
 
 type TypeIRLowerContextProps = { module_ctx :: ModuleContext }
 type TypeIRLowerContextState =
   { fn_stack :: List TypedIRFnContext
   , ir_stack :: List TypedIRID
-  , type_stack :: List Int
+  , type_stack :: List ProgramTypeID
+  , env_stack :: List (List (Tuple Identifier ProgramTypeID))
   }
 
 data TypeIRLowerContext = TypeIRLowerContext TypeIRLowerContextProps TypeIRLowerContextState Compiler
@@ -50,7 +53,7 @@ instance type_ir_lower_fn_pass :: Pass ModuleFn TypeIRLowerContext where
     let
       { module_id } = module_ctx
       ref = ModuleElementReference module_id $ NameIdentifier name
-      fn_ctx = typed_ir_fn_context_new ref
+      fn_ctx = ir_fn_context_new ref
       fns' = (fn_ctx : fn_stack)
       state' = merge { fn_stack: fns' } state
     continue (TypeIRLowerContext props state' compiler)
@@ -77,16 +80,16 @@ instance type_ir_lower_fn_param_pass :: Pass FnParam TypeIRLowerContext where
       fn_state'' = merge { env: env', parameters: parameters' } fn_state'
       fn_stack' = (fn_state'' : fn_stack)
 
-    continue (TypeIRLowerContext props (merge { fn_stack: fn_stack', type_stack: type_stack' } state) compiler)
+    continue $ TypeIRLowerContext props (merge { fn_stack: fn_stack', type_stack: type_stack' } state) compiler
   enter _ _ = Nothing
 
   -- on exit, if there is a type guard, constrain the lower bounds of the parameter to the type guard
   exit (FnParam _ (Just _) _) (TypeIRLowerContext props state@{ fn_stack: (fn_state : fn_stack), type_stack: (type_guard_id : param_id : type_stack) } compiler) = do
-    param_bounds <- get_bounds_by_id param_id fn_state
-
+    
     let
-      param_bounds' = param_bounds <> lower_bounded (ProgramType (TypeVar type_guard_id) Nothing)
-      fn_state' = set_bounds_by_id param_id param_bounds' fn_state
+      { types } = fn_state
+      types' = pool_set param_id (ProgramType (TypeVar type_guard_id) Nothing) types
+      fn_state' = merge { types: types' } fn_state
       fn_stack' = fn_state' : fn_stack
       -- the type stack was popped, so we need to update it too
       state' = merge { fn_stack: fn_stack', type_stack } state
@@ -123,9 +126,9 @@ instance type_ir_lower_type_expr_pass :: Pass TypeExpr TypeIRLowerContext where
 instance type_ir_lower_type_expr_kind_pass :: Pass TypeExprKind TypeIRLowerContext where
   enter = ignore
 
-  exit (NamedTypeExpr name) (TypeIRLowerContext props state@{ fn_stack: (fn_state : fn_stack), type_stack: (type_id : _) } compiler) = do
+  exit (NamedTypeExpr name) (TypeIRLowerContext props state@{ env_stack: (env : _), fn_stack: (fn_state : fn_stack), type_stack: (type_id : _) } compiler) = do
     -- TODO: Get the current type environment, because it could be a different module via `namespace.Type`
-    bounds <- get_bounds_by_name name fn_state
+    
     current_type_bounds <- get_bounds_by_id type_id fn_state
     let
       bounds' = current_type_bounds <> bounds

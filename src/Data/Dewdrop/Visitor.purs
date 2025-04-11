@@ -1,4 +1,4 @@
-module Visitor.Pattern
+module Data.Dewdrop.Visitor
   ( VisitAction(..)
   , VisitResult
   , class Pass
