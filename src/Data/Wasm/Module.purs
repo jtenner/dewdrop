@@ -1,6 +1,5 @@
 module Data.Wasm.Module where
 
-
 import Data.ArrayBuffer.Types (Uint8Array)
 import Data.FingerTree (FingerTree)
 import Data.Maybe (Maybe)

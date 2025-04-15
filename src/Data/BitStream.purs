@@ -11,7 +11,7 @@ data BitWriter
 type Size = Int
 type Value = Int
 
-foreign import bit_reader ::  ∀ (@source :: Type). source -> BitReader
+foreign import bit_reader :: ∀ (@source :: Type). source -> BitReader
 foreign import bit_writer :: Int -> BitWriter
 
 foreign import bit_writer_to_bytes :: BitWriter -> Uint8Array

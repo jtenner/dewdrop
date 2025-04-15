@@ -29,9 +29,9 @@ module_extension = ".dew"
 module_resource_id_to_file_path :: NodeSystemContext -> ModuleResourceID -> String
 module_resource_id_to_file_path (NodeSystemContext { package_name }) (ModuleResourceID { path, package }) =
   if package == package_name && path == [] then "./src/main" <> module_extension
-  else if package == package_name then (Path.concat $ ["./src"] <> path) <> module_extension
-  else if path == [] then Path.concat ["./packages", package, "src", "main" <> module_extension]
-  else (Path.concat $ ["./packages", package, "src"] <> path) <> module_extension
+  else if package == package_name then (Path.concat $ [ "./src" ] <> path) <> module_extension
+  else if path == [] then Path.concat [ "./packages", package, "src", "main" <> module_extension ]
+  else (Path.concat $ [ "./packages", package, "src" ] <> path) <> module_extension
 
 instance node_system :: System NodeSystemContext where
   system_dir_stat :: NodeSystemContext -> Array String -> Maybe (Array ResourceStat)
@@ -40,18 +40,19 @@ instance node_system :: System NodeSystemContext where
   system_set_raw :: NodeSystemContext -> RawResourceID -> Uint8Array -> Effect NodeSystemContext
   system_set_raw (NodeSystemContext ctx@{ cwd, cache }) (RawResourceID { path }) buffer = do
     let
-      file_path = Path.concat $ [cwd] <> path
+      file_path = Path.concat $ [ cwd ] <> path
     _ <- write_binary file_path buffer
     pure $ NodeSystemContext $ merge { cache: insert file_path buffer cache } ctx
 
   system_get_raw :: NodeSystemContext -> RawResourceID -> Maybe (Tuple BitReader NodeSystemContext)
   system_get_raw (NodeSystemContext inner_ctx@{ cwd, cache }) (RawResourceID { path }) =
     let
-      file_path = Path.concat $ [cwd] <> path
-    in case lookup file_path cache of
-      Just cache_lookup -> Just $ Tuple (bit_reader cache_lookup) $ NodeSystemContext inner_ctx
-      Nothing -> do
-        let
-          binary_data = read_binary file_path
-          cache' = insert file_path binary_data cache
-        Just $ Tuple (bit_reader binary_data) $ NodeSystemContext $ merge { cache: cache' } inner_ctx
+      file_path = Path.concat $ [ cwd ] <> path
+    in
+      case lookup file_path cache of
+        Just cache_lookup -> Just $ Tuple (bit_reader cache_lookup) $ NodeSystemContext inner_ctx
+        Nothing -> do
+          let
+            binary_data = read_binary file_path
+            cache' = insert file_path binary_data cache
+          Just $ Tuple (bit_reader binary_data) $ NodeSystemContext $ merge { cache: cache' } inner_ctx

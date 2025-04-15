@@ -209,14 +209,13 @@ data Compiler system_ctx = Compiler
 
 module_id_to_resource_ids :: ModuleID -> String -> List RawResourceID
 module_id_to_resource_ids (ModuleID module_name Nil) current_package =
-  ( RawResourceID { path: ["src", module_name <> ".dew"] }
-      : RawResourceID { path: ["packages", module_name, "src", "main.dew"] }
+  ( RawResourceID { path: [ "src", module_name <> ".dew" ] }
+      : RawResourceID { path: [ "packages", module_name, "src", "main.dew" ] }
       : Nil
   )
 module_id_to_resource_ids (ModuleID module_name (package_name : package_path)) current_package = do
-  (
-    RawResourceID { path: ["src", package_name] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
-      : RawResourceID { path: ["packages", package_name, "src"] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
+  ( RawResourceID { path: [ "src", package_name ] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
+      : RawResourceID { path: [ "packages", package_name, "src" ] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
       : Nil
   )
 

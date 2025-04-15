@@ -1,4 +1,33 @@
 [tools]
+node = "latest"
+"npm:purs-tidy" = "latest"
 "npm:bun" = "canary"
 "npm:spago" = "next"
-node = "latest"
+"npm:@biomejs/biome" = "latest"
+"npm:rimraf" = "latest"
+
+[tasks.format]
+run = [
+  "purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs'",
+  "biome format --write .",
+]
+
+[tasks.make]
+depends = ["install"]
+run = "spago build"
+
+[tasks.install]
+run = [
+  "bun install",
+  "spago install",
+]
+
+[tasks.test]
+depends = ["make"]
+run = [
+  "spago test",
+  "bun output/Test.Main/index.js"
+]
+
+[tasks.clean]
+run = "rimraf output node_modules .spago"

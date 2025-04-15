@@ -37,6 +37,7 @@ data IRContext = IRContext
 
 bounds_new :: Bounds
 bounds_new = Bounds { upper: mempty, lower: mempty }
+
 unbounded :: Bounds
 unbounded = bounds_new
 

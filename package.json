@@ -5,17 +5,8 @@
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.8.2"
-  },
-  "scripts": {
-    "test": "bunx spago test",
-    "preinstall": "bunx spago install",
-    "make": "bunx spago build",
-    "clean": "bunx rimraf output node_modules .spago",
-    "format": "bunx purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs' && bunx biome format --write ."
+    "@types/bun": "latest",
+    "typescript": "latest"
   },
   "dependencies": {
     "@thi.ng/bitstream": "^2.4.17"
