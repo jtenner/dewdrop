@@ -3,21 +3,21 @@ module Dewdrop.IR where
 import Prelude
 
 import Data.Dewdrop.AST (ModuleElementReference)
-import Data.Dewdrop.Types (IRBoundsID, IRContext(..), ProgramType(..), ProgramTypeKind(..), TypedIR(..), TypedIRID, TypedIRKind, unbounded)
+import Data.Dewdrop.Types (IRBoundsID, IRContext(..), ProgramType(..), ProgramTypeKind(..), TypedIR(..), TypedIRID, TypedIRKind)
 import Data.Maybe (Maybe(..))
 import Data.Pool (pool_allocate, pool_new, pool_set)
 import Data.Tuple (Tuple(..))
 import Record (merge)
 
 ir_fn_context_new :: ModuleElementReference -> IRContext
-ir_fn_context_new name = do
+ir_fn_context_new ref = do
   let
     irs = pool_new
     Tuple return_type_id types = pool_allocate pool_new
     return_type = ProgramType (TypeVar return_type_id) Nothing
 
   IRContext
-    { name
+    { ref
     , env: mempty
     , parameters: mempty
     , return_type

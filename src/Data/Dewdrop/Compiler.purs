@@ -2,16 +2,16 @@ module Data.Dewdrop.Compiler where
 
 import Prelude
 
-import Data.Array as Array
+import Data.Array (unsnoc)
 import Data.ArrayBuffer.Types (Uint8Array)
-import Data.Dewdrop.AST (ModuleID(..))
+import Data.Dewdrop.AST (Module, ModulePath)
+import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Program (Program, program_new)
 import Data.Dewdrop.System.System (class System, RawResourceID(..))
-import Data.Dewdrop.Types (ModuleContext)
 import Data.FingerTree (FingerTree)
-import Data.List (List(..), (:))
 import Data.Map (Map)
 import Data.Map as Map
+import Data.Maybe (Maybe(..))
 
 data CompileTarget
   = Wasm32
@@ -196,33 +196,70 @@ data BinaryenPass
   | UnteePass
   | VacuumPass
 
+
+data ModuleElementReference = ModuleElementReference ModulePath Identifier
+
+instance module_element_reference_ord :: Ord ModuleElementReference where
+  compare (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
+    compare module_id module_id' <> compare identifier identifier'
+
+instance module_element_reference_eq :: Eq ModuleElementReference where
+  eq (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
+    module_id == module_id' && identifier == identifier'
+
+reference :: ModulePath -> Identifier -> ModuleElementReference
+reference module_id identifier = ModuleElementReference module_id identifier
+
+data ModuleContext = ModuleContext
+  { ast :: Module
+  , exports :: Map Identifier ModuleElementReference
+  }
+
+module_context_new :: Module -> ModuleContext
+module_context_new ast = ModuleContext
+  { ast: ast
+  , exports: Map.empty
+  }
+
+
+data ModuleID = ModuleID
+  { package_name :: String
+  , path :: Array String
+  }
+
+instance ord_module_id :: Ord ModuleID where
+  compare (ModuleID { package_name, path }) (ModuleID { package_name: package_name', path: path' }) =
+    compare package_name package_name' <> compare path path'
+
+derive instance eq_module_id :: Eq ModuleID
+
+type PackageName = String
+
 data Compiler system_ctx = Compiler
   { binary_resources :: Map RawResourceID Uint8Array
   , main_module :: ModuleID
   , modules :: Map ModuleID ModuleContext
-  , package_name :: String
+  , package_name :: PackageName
   , program :: Program
   , system_ctx :: system_ctx
   , target :: CompileTarget
   , binaryen_passes :: FingerTree BinaryenPass
   }
 
-module_id_to_resource_ids :: ModuleID -> String -> List RawResourceID
-module_id_to_resource_ids (ModuleID module_name Nil) current_package =
-  ( RawResourceID { path: [ "src", module_name <> ".dew" ] }
-      : RawResourceID { path: [ "packages", module_name, "src", "main.dew" ] }
-      : Nil
-  )
-module_id_to_resource_ids (ModuleID module_name (package_name : package_path)) current_package = do
-  ( RawResourceID { path: [ "src", package_name ] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
-      : RawResourceID { path: [ "packages", package_name, "src" ] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
-      : Nil
-  )
+to_resource_id :: ModuleID -> PackageName -> RawResourceID
+to_resource_id (ModuleID { package_name, path }) root_package_name = do
+  let
+    root = if root_package_name == package_name then [ "src" ] else [ "packages", root_package_name, "src" ]
+    resource_path = case unsnoc path of
+      Nothing -> [ "main.dew" ]
+      Just { init, last } -> init <> (pure $ last <> ".dew")
+
+  RawResourceID { path: root <> resource_path }
 
 compiler_new :: ∀ (@system_ctx :: Type). System system_ctx => String -> CompileTarget -> system_ctx -> Compiler system_ctx
 compiler_new package_name target system_ctx = Compiler
   { binary_resources: Map.empty
-  , main_module: ModuleID package_name Nil
+  , main_module: ModuleID { package_name, path: [] }
   , modules: Map.empty
   , package_name
   , program: program_new

@@ -2,38 +2,18 @@ module Data.Dewdrop.Types where
 
 import Prelude
 
-import Data.Dewdrop.AST (Module, ModuleElementReference, ModuleID)
 import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, visit, visit_all)
 import Data.FingerTree (FingerTree)
-import Data.List (List)
-import Data.Map (Map)
-import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.Pool (Pool, PoolKey, pool_allocate, pool_set)
+import Data.Pool (PoolKey)
 import Data.Tuple (Tuple(..))
-import Record (merge)
+
 
 -- | Upper and Lower bounds in *that* order
 data Bounds = Bounds { upper :: FingerTree ProgramType, lower :: FingerTree ProgramType }
 
-data IRContext = IRContext
-  { name :: ModuleElementReference
-
-  , env :: FingerTree (Tuple Identifier IRBoundsID)
-
-  -- To keep track of type variables
-  , parameters :: FingerTree (Tuple Identifier TypedIRID)
-  , return_type :: ProgramType
-
-  -- To keep track of type variables
-  , types :: Pool Bounds
-
-  -- to index ir nodes
-  , irs :: Pool TypedIR
-
-  , body :: FingerTree TypedIR
-  }
+type IRBoundsID = PoolKey Bounds
 
 bounds_new :: Bounds
 bounds_new = Bounds { upper: mempty, lower: mempty }
@@ -41,31 +21,7 @@ bounds_new = Bounds { upper: mempty, lower: mempty }
 unbounded :: Bounds
 unbounded = bounds_new
 
-type_var_new :: IRContext -> Tuple IRBoundsID IRContext
-type_var_new (IRContext ctx@{ types }) = do
-  let
-    Tuple type_id types' = pool_allocate types
-    types'' = pool_set type_id unbounded types'
-  Tuple type_id $ IRContext $ merge { types: types'' } ctx
-
-type IRBoundsID = PoolKey Bounds
-type TypedIRID = PoolKey TypedIR
-type IntValue = Int
-
-data TypedIR = TypedIR TypedIRKind IRBoundsID
-
-data IRConstKind
-  = IRConstInt Int
-  | IRConstString String
-
-data TypedIRKind
-  = TypedIRBuiltin String (FingerTree TypedIRID)
-  | TypedIRCall ModuleElementReference (FingerTree TypedIRID)
-  | TypedIRConst IRConstKind
-  | TypedIRCallIndirect TypedIRID (FingerTree TypedIRID)
-  | TypedIRCast TypedIRID
-
-data ProgramType = ProgramType ProgramTypeKind (Maybe ModuleElementReference)
+data ProgramType = ProgramType ProgramTypeKind
 data ProgramTypeKind
   -- Functions
   = FnType (FingerTree ProgramType) ProgramType
@@ -74,7 +30,7 @@ data ProgramTypeKind
   | RecordType (FingerTree (Tuple Identifier ProgramType))
 
   -- Nominals
-  | EnumType (ModuleElementReference) (FingerTree (Tuple Identifier ProgramType)) (FingerTree VariantKind)
+  | EnumType (FingerTree (Tuple Identifier ProgramType)) (FingerTree VariantKind)
 
   -- Numbers
   | I8
@@ -112,69 +68,52 @@ data ProgramTypeKind
 data VariantKind = VariantKind Identifier (FingerTree ProgramType)
 
 builtin_i8_type :: ProgramType
-builtin_i8_type = (ProgramType I8 Nothing)
+builtin_i8_type = ProgramType I8
 
 builtin_u8_type :: ProgramType
-builtin_u8_type = (ProgramType U8 Nothing)
+builtin_u8_type = ProgramType U8
 
 builtin_i16_type :: ProgramType
-builtin_i16_type = (ProgramType I16 Nothing)
+builtin_i16_type = ProgramType I16
 
 builtin_u16_type :: ProgramType
-builtin_u16_type = (ProgramType U16 Nothing)
+builtin_u16_type = ProgramType U16
 
 builtin_i32_type :: ProgramType
-builtin_i32_type = (ProgramType I32 Nothing)
+builtin_i32_type = ProgramType I32
 
 builtin_u32_type :: ProgramType
-builtin_u32_type = (ProgramType U32 Nothing)
+builtin_u32_type = ProgramType U32
 
 builtin_i64_type :: ProgramType
-builtin_i64_type = (ProgramType I64 Nothing)
+builtin_i64_type = ProgramType I64
 
 builtin_u64_type :: ProgramType
-builtin_u64_type = (ProgramType U64 Nothing)
+builtin_u64_type = ProgramType U64
 
 builtin_f32_type :: ProgramType
-builtin_f32_type = (ProgramType F32 Nothing)
+builtin_f32_type = ProgramType F32
 
 builtin_f64_type :: ProgramType
-builtin_f64_type = (ProgramType F64 Nothing)
+builtin_f64_type = ProgramType F64
 
 builtin_integer_type :: ProgramType
-builtin_integer_type = (ProgramType Integer Nothing)
+builtin_integer_type = ProgramType Integer
 
 builtin_float_type :: ProgramType
-builtin_float_type = (ProgramType Float Nothing)
+builtin_float_type = ProgramType Float
 
 builtin_string_type :: ProgramType
-builtin_string_type = (ProgramType String Nothing)
+builtin_string_type = ProgramType String
 
 builtin_bool_type :: ProgramType
-builtin_bool_type = (ProgramType Bool Nothing)
+builtin_bool_type = ProgramType Bool
 
 builtin_numeric_type :: ProgramType
-builtin_numeric_type = (ProgramType Numeric Nothing)
-
-data FnIRIdentifier = FnIRIdentifier ModuleElementReference (List (Tuple Identifier IRBoundsID))
-
-data ModuleContext = ModuleContext
-  { ast :: Module
-  , exports :: Map Identifier ModuleElementReference
-  , fns :: Map FnIRIdentifier IRContext
-  , module_id :: ModuleID
-  }
-
-module_context_new :: ModuleID -> Module -> ModuleContext
-module_context_new module_id ast = ModuleContext
-  { ast: ast
-  , exports: Map.empty
-  , fns: Map.empty
-  , module_id: module_id
-  }
+builtin_numeric_type = ProgramType Numeric
 
 instance eq_program_type :: Eq ProgramType where
-  eq (ProgramType kind _) (ProgramType kind' _) = kind == kind'
+  eq (ProgramType kind) (ProgramType kind') = kind == kind'
 
 instance eq_program_type_kind :: Eq ProgramTypeKind where
   eq (FnType params ret) (FnType params' ret') = params == params' && ret == ret'
@@ -188,9 +127,9 @@ instance visitable_program_type ::
   , Visitable ProgramTypeKind ctx
   ) =>
   Visitable ProgramType ctx where
-  visit_children (ProgramType kind _) ctx = do
+  visit_children (ProgramType kind) ctx = do
     Tuple ctx' kind' <- visit kind ctx
-    Just $ Tuple ctx' (ProgramType kind' Nothing)
+    Just $ Tuple ctx' (ProgramType kind')
 
 instance visitable_program_type_kind ::
   ( Pass ProgramType ctx
@@ -204,10 +143,10 @@ instance visitable_program_type_kind ::
   , Visitable VariantKind ctx
   ) =>
   Visitable ProgramTypeKind ctx where
-  visit_children (EnumType name env kinds) ctx = do
+  visit_children (EnumType env kinds) ctx = do
     Tuple ctx' env' <- visit_all env ctx
     Tuple ctx'' kinds' <- visit_all kinds ctx'
-    Just $ Tuple ctx'' $ EnumType name env' kinds'
+    Just $ Tuple ctx'' $ EnumType env' kinds'
 
   visit_children (FnType parameters return_type) ctx = do
     Tuple ctx' parameters' <- visit_all parameters ctx

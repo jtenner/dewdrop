@@ -2,11 +2,11 @@ module Data.Dewdrop.AST where
 
 import Prelude
 
+import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Parser (Transformer)
 import Data.Dewdrop.Token (Token)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, visit, visit_all)
-import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
@@ -48,27 +48,8 @@ data ExprKind
 
 data WhenArm = WhenArm Expr Expr
 
-data ModuleID = ModuleID String (List String)
-data ModuleElementReference = ModuleElementReference ModuleID Identifier
+type ModulePath = NonEmptyArray String
 
-instance module_element_reference_ord :: Ord ModuleElementReference where
-  compare (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
-    compare module_id module_id' <> compare identifier identifier'
-
-instance module_element_reference_eq :: Eq ModuleElementReference where
-  eq (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
-    module_id == module_id' && identifier == identifier'
-
-instance module_id_ord :: Ord ModuleID where
-  compare (ModuleID package_name path) (ModuleID package_name' path') =
-    compare package_name package_name' <> compare path path'
-
-instance module_id_eq :: Eq ModuleID where
-  eq (ModuleID package_name path) (ModuleID package_name' path') =
-    package_name == package_name' && path == path'
-
-reference :: ModuleID -> Identifier -> ModuleElementReference
-reference module_id identifier = ModuleElementReference module_id identifier
 
 instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"

@@ -2,9 +2,8 @@ module Dewdrop.Passes.CollectExports where
 
 import Prelude
 
-import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, ModuleID, TypeExpr, TypeExprKind, WhenArm, reference)
-import Data.Dewdrop.Compiler (Compiler(..))
-import Data.Dewdrop.Types (ModuleContext(..))
+import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm, ModuleContext(..), reference)
+import Data.Dewdrop.Compiler (Compiler(..), ModuleID)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore, skip_all, visit)
 import Data.Map (insert, lookup)
 import Data.Maybe (Maybe(..))

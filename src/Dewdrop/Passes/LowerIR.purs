@@ -12,59 +12,59 @@ import Data.Map (Map)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-type IRContextProps = { module_ctx :: ModuleContext }
+type LowerIRContextProps = { module_ctx :: ModuleContext }
 type IREnv = Map Identifier TypedIRID
-data IRContext system_ctx = IRContext
+data LowerIRContext system_ctx = LowerIRContext
   { compiler :: Compiler system_ctx
   , env_stack :: List IREnv
-  , fn_stack :: List (IRContext system_ctx)
+  , fn_stack :: List (LowerIRContext system_ctx)
   , ir_stack :: List TypedIRID
   , module_ctx :: ModuleContext
   , type_stack :: List IRBoundsID
   }
 
-run :: ∀ (@u :: Type). Pass Module (IRContext u) => Visitable Module (IRContext u) => IRContextProps -> Compiler u -> Maybe (Compiler u)
+run :: ∀ (@u :: Type). Pass Module (LowerIRContext u) => Visitable Module (LowerIRContext u) => LowerIRContextProps -> Compiler u -> Maybe (Compiler u)
 run { module_ctx } compiler = do
   let
     (ModuleContext { ast }) = module_ctx
-    ctx = IRContext { compiler, env_stack: Nil, ir_stack: Nil, module_ctx, fn_stack: Nil, type_stack: Nil }
-  Tuple (IRContext { compiler: compiler' }) ast' <- visit ast ctx
+    ctx = LowerIRContext { compiler, env_stack: Nil, ir_stack: Nil, module_ctx, fn_stack: Nil, type_stack: Nil }
+  Tuple (LowerIRContext { compiler: compiler' }) _ <- visit ast ctx
   Just compiler'
 
 
-instance type_ir_lower_module_pass :: Pass Module (IRContext u) where
+instance type_ir_lower_module_pass :: Pass Module (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_declaration_pass :: Pass ModuleDeclaration (IRContext u) where
+instance type_ir_lower_declaration_pass :: Pass ModuleDeclaration (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_declaration_kind_pass :: Pass ModuleDeclarationKind (IRContext u) where
+instance type_ir_lower_declaration_kind_pass :: Pass ModuleDeclarationKind (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_fn_pass :: Pass ModuleFn (IRContext u) where
+instance type_ir_lower_fn_pass :: Pass ModuleFn (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_fn_param_pass :: Pass FnParam (IRContext u) where
+instance type_ir_lower_fn_param_pass :: Pass FnParam (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_type_expr_pass :: Pass TypeExpr (IRContext u) where
+instance type_ir_lower_type_expr_pass :: Pass TypeExpr (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_type_expr_kind_pass :: Pass TypeExprKind (IRContext u) where
+instance type_ir_lower_type_expr_kind_pass :: Pass TypeExprKind (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_expr_pass :: Pass Expr (IRContext u) where
+instance type_ir_lower_expr_pass :: Pass Expr (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
-instance type_ir_lower_expr_kind_pass :: Pass ExprKind (IRContext u) where
+instance type_ir_lower_expr_kind_pass :: Pass ExprKind (LowerIRContext u) where
   enter = ignore
   exit = ignore
 
@@ -82,6 +82,6 @@ instance type_ir_lower_expr_kind_pass :: Pass ExprKind (IRContext u) where
 -- GreaterThanEqualsExpr
 -- LessThanEqualsExpr
 
-instance type_ir_lower_when_arm_pass :: Pass WhenArm (IRContext u) where
+instance type_ir_lower_when_arm_pass :: Pass WhenArm (LowerIRContext u) where
   enter = ignore
   exit = ignore

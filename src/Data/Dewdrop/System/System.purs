@@ -6,7 +6,6 @@ import Data.Maybe (Maybe)
 import Data.Tuple (Tuple)
 import Effect (Effect)
 
-data ModuleResourceID = ModuleResourceID { path :: Array String, package :: String }
 data RawResourceID = RawResourceID { path :: Array String }
 
 data ResourceStat = ResourceStat { id :: RawResourceID, size :: Int, mtime :: Int, raw_path :: String }

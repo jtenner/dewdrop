@@ -4,7 +4,7 @@ import Prelude
 
 import Data.ArrayBuffer.Types (Uint8Array)
 import Data.BitStream (BitReader, bit_reader)
-import Data.Dewdrop.System.System (class System, ModuleResourceID(..), RawResourceID(..), ResourceStat)
+import Data.Dewdrop.System.System (class System, RawResourceID(..), ResourceStat)
 import Data.Map (Map, insert, lookup)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
@@ -25,13 +25,6 @@ type Extension = String
 
 module_extension :: Extension
 module_extension = ".dew"
-
-module_resource_id_to_file_path :: NodeSystemContext -> ModuleResourceID -> String
-module_resource_id_to_file_path (NodeSystemContext { package_name }) (ModuleResourceID { path, package }) =
-  if package == package_name && path == [] then "./src/main" <> module_extension
-  else if package == package_name then (Path.concat $ [ "./src" ] <> path) <> module_extension
-  else if path == [] then Path.concat [ "./packages", package, "src", "main" <> module_extension ]
-  else (Path.concat $ [ "./packages", package, "src" ] <> path) <> module_extension
 
 instance node_system :: System NodeSystemContext where
   system_dir_stat :: NodeSystemContext -> Array String -> Maybe (Array ResourceStat)
