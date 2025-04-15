@@ -12,6 +12,9 @@ run = [
   "biome format --write .",
 ]
 
+[tasks.build]
+depends = ["make"]
+
 [tasks.make]
 depends = ["install"]
 run = "spago build"

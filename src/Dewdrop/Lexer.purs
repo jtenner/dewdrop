@@ -49,14 +49,14 @@ module Dewdrop.Lexer
   , tokenize
   ) where
 
+import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Prelude
 
-import Data.Array ((!!))
+import Data.BitStream (BitReader, get_index, read_char)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Data.Dewdrop.Token
-import Util (Consumer, is_fslash, is_asterisk, is_colon, is_comma, is_digit, is_equals, is_lbrace, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_lcaret, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, to_chars, (++))
+import Util (Consumer, is_asterisk, is_colon, is_comma, is_digit, is_equals, is_fslash, is_lbrace, is_lcaret, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, (++))
 
 is_token_kind_pub_keyword :: TokenKind -> Boolean
 is_token_kind_pub_keyword kind = case kind of
@@ -168,28 +168,28 @@ is_token_kind_eof kind = case kind of
   TokenKindEOF -> true
   _ -> false
 
-type Lexer = Array Char -> Int -> Maybe (Tuple TokenKind Int)
-type LexerAccumulator = Array Char -> Int -> Maybe (Tuple String Int)
+type Lexer = BitReader -> Maybe (Tuple TokenKind BitReader)
+type LexerAccumulator = BitReader -> Maybe (Tuple String BitReader)
 
 combine_accumulator :: LexerAccumulator -> LexerAccumulator -> LexerAccumulator
-combine_accumulator f1 f2 chars index = do
-  Tuple s1 index' <- f1 chars index -- Maybe (Tuple String Int) Some(Just) t | None(Nothing)
-  Tuple s2 index'' <- f2 chars index'
-  Just (Tuple (s1 <> s2) index'')
+combine_accumulator f1 f2 r = do
+  Tuple s1 r' <- f1 r -- Maybe (Tuple String Int) Some(Just) t | None(Nothing)
+  Tuple s2 r'' <- f2 r'
+  Just (Tuple (s1 <> s2) r'')
 
 infix 4 combine_accumulator as +>
 
 lex_or :: Lexer -> Lexer -> Lexer
-lex_or lexer1 lexer2 chars index = case lexer1 chars index of
-  Nothing -> lexer2 chars index
+lex_or lexer1 lexer2 r = case lexer1 r of
+  Nothing -> lexer2 r
   token -> token
 
 infixl 4 lex_or as +&
 
 lex_of :: Consumer -> (String -> TokenKind) -> Lexer
-lex_of consumer callback = \chars index -> do
-  Tuple s next_index <- consumer chars index
-  Just (Tuple (callback s) next_index)
+lex_of consumer callback r = do
+  Tuple s r' <- consumer r
+  pure $ Tuple (callback s) r'
 
 lex_whitespace :: Lexer
 lex_whitespace = lex_of (take_many is_whitespace) \_ -> TokenKindWhiteSpace
@@ -265,8 +265,8 @@ lex_less_than :: Lexer
 lex_less_than = lex_of (take is_lcaret) \_ -> TokenKindLessThan
 
 lex_eof :: Lexer
-lex_eof chars index = case chars !! index of
-  Nothing -> Just (Tuple TokenKindEOF index)
+lex_eof r = case read_char r of
+  Nothing -> Just (Tuple TokenKindEOF r)
   _ -> Nothing
 
 lex_unknown :: Lexer
@@ -305,20 +305,24 @@ lex_token = lex_whitespace
   +& lex_eof
   +& lex_unknown
 
-tokenize :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => String -> Boolean -> t Token
-tokenize chars false = do_tokenize (to_chars chars) 0 mempty
-tokenize chars true = do_tokenize_filter_whitespace (to_chars chars) 0 mempty
+tokenize :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => Boolean -> BitReader -> t Token
+tokenize false = go mempty
+  where
+  go :: t Token -> BitReader -> t Token
+  go acc r =
+    let index = get_index r in 
+    case lex_token r of
+      Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
+      Just (Tuple token r') -> go (acc <> (pure $ Token token index)) r' 
+      _ -> acc
 
-do_tokenize :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => Array Char -> Int -> t Token -> t Token
-do_tokenize chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
-  Just (Tuple token next_index) -> do_tokenize chars next_index $ acc <> (pure $ Token token index)
-  _ -> acc
-
-do_tokenize_filter_whitespace :: ∀ (@t :: Type -> Type). Monoid (t Token) => Applicative t => Array Char -> Int -> t Token -> t Token
-do_tokenize_filter_whitespace chars index acc = case lex_token chars index of
-  Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
-  Just (Tuple TokenKindWhiteSpace next_index) -> do_tokenize_filter_whitespace chars next_index acc
-  Just (Tuple TokenKindNewLine next_index) -> do_tokenize_filter_whitespace chars next_index acc
-  Just (Tuple token_kind next_index) -> do_tokenize_filter_whitespace chars next_index $ acc <> (pure $ Token token_kind index)
-  _ -> acc
+tokenize true = go mempty
+  where
+  go acc r = 
+    let index = get_index r in
+    case lex_token r of
+      Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
+      Just (Tuple TokenKindWhiteSpace r') -> go acc r'
+      Just (Tuple TokenKindNewLine r') -> go acc r'
+      Just (Tuple token_kind r') -> go (acc <> (pure $ Token token_kind index)) r'
+      _ -> acc

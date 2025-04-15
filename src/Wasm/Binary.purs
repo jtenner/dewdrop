@@ -3,7 +3,7 @@ module Wasm.Binary where
 import Prelude
 
 import Data.Array as Array
-import Data.BitStream (BitStream, read_u8, read_utf8_char, write_u8, write_utf8_char)
+import Data.BitStream (BitReader, BitWriter, read_u8, read_utf8_char, write_u8, write_utf8_char)
 import Data.Int.Bits (shl, shr, (.&.), (.|.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
@@ -12,24 +12,24 @@ import Data.Wasm.Module (HeapType(..), Lanes(..), Locals(..), RefType(..), TypeI
 import Node.Encoding (Encoding(..), byteLength)
 import Util (char_size, to_chars, to_signed, from_chars)
 
-type EncoderFn a = BitWriter -> a -> Effect BitStream
-type DecoderFn a = BitWriter -> Maybe (Tuple a BitStream)
+type EncoderFn a = BitWriter -> a -> BitWriter
+type DecoderFn a = BitReader -> Maybe (Tuple a BitReader)
 
-encode_vec :: ∀ (@u :: Type). EncoderFn u -> FingerTree u -> BitStream -> BitStream
+encode_vec :: ∀ (@u :: Type). EncoderFn u -> FingerTree u -> BitWriter -> BitWriter
 encode_vec f n s = foldl f (encode_uleb128 (size n) s) n
 
-decode_vec :: ∀ (@u :: Type). DecoderFn u -> BitStream -> Maybe (Tuple (FingerTree u) BitStream)
+decode_vec :: ∀ (@u :: Type). DecoderFn u -> BitReader -> Maybe (Tuple (FingerTree u) BitReader)
 decode_vec f s = do
   Tuple n s' <- decode_uleb128 s
   go n mempty s'
   where
-  go :: Int -> FingerTree u -> BitStream -> Maybe (Tuple (FingerTree u) BitStream)
+  go :: Int -> FingerTree u -> BitReader -> Maybe (Tuple (FingerTree u) BitReader)
   go 0 acc s'' = Just $ Tuple acc s''
   go n acc s'' = do
     Tuple v s''' <- f s''
     go (n - 1) (snoc v acc) s'''
 
-encode_maybe :: ∀ (@u :: Type). EncoderFn u -> Maybe u -> BitStream -> BitStream
+encode_maybe :: ∀ (@u :: Type). EncoderFn u -> Maybe u -> BitWriter -> BitWriter
 encode_maybe _ Nothing s = s
 encode_maybe f (Just v) s = f s v
 
@@ -37,10 +37,10 @@ encode_maybe f (Just v) s = f s v
 leb_bits_mask :: Int
 leb_bits_mask = 0x7F -- 0b0111_1111
 
-decode_uleb128 :: BitStream -> Maybe (Tuple Int BitStream)
+decode_uleb128 :: BitReader -> Maybe (Tuple Int BitReader)
 decode_uleb128 s = go 0 0 s
   where
-  go :: Int -> Int -> BitStream -> Maybe (Tuple Int BitStream)
+  go :: Int -> Int -> BitReader -> Maybe (Tuple Int BitReader)
   go acc count s'
     | count >= 10 = Nothing
     | otherwise = do
@@ -49,10 +49,10 @@ decode_uleb128 s = go 0 0 s
         if v >= 0x80 then go acc' (count + 1) s''
         else Just $ Tuple acc' s''
 
-decode_sleb128 :: BitStream -> Maybe (Tuple Int BitStream)
+decode_sleb128 :: BitReader -> Maybe (Tuple Int BitReader)
 decode_sleb128 s = go 0 0 (read_u8 s)
   where
-  go :: Int -> Int -> Maybe (Tuple Int BitStream) -> Maybe (Tuple Int BitStream)
+  go :: Int -> Int -> Maybe (Tuple Int BitReader) -> Maybe (Tuple Int BitReader)
   go _ _ Nothing = Nothing
   go acc count (Just (Tuple byte s'))
     | count >= 10 = Nothing
@@ -61,10 +61,10 @@ decode_sleb128 s = go 0 0 (read_u8 s)
         let byte' = to_signed 7 $ byte .&. leb_bits_mask
         Just $ Tuple (acc .|. (byte' `shl` (7 * count))) s'
 
-encode_uleb128 :: Int -> BitStream -> BitStream
+encode_uleb128 :: Int -> BitWriter -> BitWriter
 encode_uleb128 v s = go 0 v s
   where
-  go :: Int -> Int -> BitStream -> BitStream
+  go :: Int -> Int -> BitWriter -> BitWriter
   go count v' s'
     | count >= 10 = s'
     | v' <= 0x7F = write_u8 v' s'
@@ -74,22 +74,22 @@ encode_uleb128 v s = go 0 v s
           v'' = v' `shr` 7
         go (count + 1) v'' $ write_u8 byte s'
 
-encode_sleb128 :: Int -> BitStream -> BitStream
+encode_sleb128 :: Int -> BitWriter -> BitWriter
 encode_sleb128 v s = go 0 v s
   where
-  go :: Int -> Int -> BitStream -> BitStream
+  go :: Int -> Int -> BitWriter -> BitWriter
   go count v' s'
     | count >= 10 = s'
     | v' > 63 || v' < -64 = go (count + 1) (v' `shl` 7) $ write_u8 ((v' .&. leb_bits_mask) .|. 0x80) s'
     | otherwise = write_u8 (to_signed 7 v') s'
 
-encode_char :: Char -> BitStream -> BitStream
+encode_char :: Char -> BitWriter -> BitWriter
 encode_char = write_utf8_char
 
-decode_char :: BitStream -> Maybe (Tuple Char BitStream)
+decode_char :: BitReader -> Maybe (Tuple Char BitReader)
 decode_char = read_utf8_char
 
-encode_string :: String -> BitStream -> BitStream
+encode_string :: String -> BitWriter -> BitWriter
 encode_string v s =
   let
     chars = to_chars v
@@ -101,12 +101,12 @@ encode_string v s =
 -- n [...items]
 -- byte_length string
 
-decode_string :: BitStream -> Maybe (Tuple String BitStream)
+decode_string :: BitReader -> Maybe (Tuple String BitReader)
 decode_string s = do
   Tuple byte_length s' <- decode_uleb128 s
   go byte_length [] s'
   where
-  go :: Int -> Array Char -> BitStream -> Maybe (Tuple String BitStream)
+  go :: Int -> Array Char -> BitReader -> Maybe (Tuple String BitReader)
   go 0 acc s'' = Just $ Tuple (from_chars acc) s''
   go n acc s''
     | n <= 0 = Nothing
@@ -114,13 +114,13 @@ decode_string s = do
         Tuple char s''' <- decode_char s''
         go (n - (char_size char)) (Array.snoc acc char) s'''
 
-encode_u8 :: Int -> BitStream -> BitStream
+encode_u8 :: Int -> BitWriter -> BitWriter
 encode_u8 = write_u8
 
-decode_u8 :: BitStream -> Maybe (Tuple Int BitStream)
+decode_u8 :: BitReader -> Maybe (Tuple Int BitReader)
 decode_u8 = read_u8
 
-encode_lanes :: Lanes -> BitStream -> BitStream
+encode_lanes :: Lanes -> BitWriter -> BitWriter
 encode_lanes (Lanes16 a b c d e f g h i j k l m n o p) bs =
   encode_u8 p $ encode_u8 o $ encode_u8 n $ encode_u8 m $ encode_u8 l $ encode_u8 k $ encode_u8 j $ encode_u8 i $ encode_u8 h $ encode_u8 g $ encode_u8 f $ encode_u8 e $ encode_u8 d $ encode_u8 c $ encode_u8 b $ encode_u8 a bs
 encode_lanes (Lanes8 a b c d e f g h) bs =
@@ -130,7 +130,7 @@ encode_lanes (Lanes4 a b c d) bs =
 encode_lanes (Lanes2 a b) bs =
   encode_u8 b $ encode_u8 a bs
 
-decode_lanes :: Int -> BitStream -> Maybe (Tuple Lanes BitStream)
+decode_lanes :: Int -> BitReader -> Maybe (Tuple Lanes BitReader)
 decode_lanes 16 s = do
   Tuple a s' <- decode_u8 s
   Tuple b s'' <- decode_u8 s'
@@ -171,17 +171,17 @@ decode_lanes 2 s = do
   Just (Tuple (Lanes2 a b) s'')
 decode_lanes _ _ = Nothing
 
-encode_locals :: Locals -> BitStream -> Maybe BitStream
+encode_locals :: Locals -> BitWriter -> Maybe BitWriter
 encode_locals (Locals count val_type) s =
   encode_val_type val_type $ encode_uleb128 count s
 
-decode_locals :: BitStream -> Maybe (Tuple Locals BitStream)
+decode_locals :: BitReader -> Maybe (Tuple Locals BitReader)
 decode_locals s = do
   Tuple val_type s' <- decode_val_type s
   Tuple count s'' <- decode_uleb128 s'
   Just (Tuple (Locals count val_type) s'')
 
-encode_heap_type :: HeapType -> BitStream -> Maybe BitStream
+encode_heap_type :: HeapType -> BitWriter -> Maybe BitWriter
 encode_heap_type HeapTypeNoFunc s = Just $ write_u8 0x73 s
 encode_heap_type HeapTypeNoExtern s = Just $ write_u8 0x72 s
 encode_heap_type HeapTypeNone s = Just $ write_u8 0x71 s
@@ -195,7 +195,7 @@ encode_heap_type HeapTypeArray s = Just $ write_u8 0x6A s
 encode_heap_type (HeapTypeIndex (TypeIndex i)) s = Just $ encode_sleb128 i s
 encode_heap_type _ _ = Nothing
 
-decode_heap_type :: BitStream -> Maybe (Tuple HeapType BitStream)
+decode_heap_type :: BitReader -> Maybe (Tuple HeapType BitReader)
 decode_heap_type s = case read_u8 s of
   Just (Tuple 0x73 s') -> Just $ Tuple HeapTypeNoFunc s'
   Just (Tuple 0x72 s') -> Just $ Tuple HeapTypeNoExtern s'
@@ -211,7 +211,7 @@ decode_heap_type s = case read_u8 s of
     Just (Tuple index s') | index >= 0 -> Just $ Tuple (HeapTypeIndex (TypeIndex index)) s'
     _ -> Nothing
 
-encode_ref_type :: RefType -> BitStream -> Maybe BitStream
+encode_ref_type :: RefType -> BitWriter -> Maybe BitWriter
 encode_ref_type RefTypeNoFunc s = Just $ write_u8 0x73 s
 encode_ref_type (RefType HeapTypeNoFunc true) s = Just $ write_u8 0x73 s
 encode_ref_type RefTypeNoExtern s = Just $ write_u8 0x72 s
@@ -236,7 +236,7 @@ encode_ref_type (RefType HeapTypeArray true) s = Just $ write_u8 0x6A s
 encode_ref_type (RefType ht true) s = encode_heap_type ht $ write_u8 0x63 s
 encode_ref_type (RefType ht false) s = encode_heap_type ht $ write_u8 0x64 s
 
-decode_ref_type :: BitStream -> Maybe (Tuple RefType BitStream)
+decode_ref_type :: BitReader -> Maybe (Tuple RefType BitReader)
 decode_ref_type s = case read_u8 s of
   Just (Tuple 0x73 s') -> Just $ Tuple RefTypeNoFunc s'
   Just (Tuple 0x72 s') -> Just $ Tuple RefTypeNoExtern s'
@@ -278,7 +278,7 @@ decode_ref_type s = case read_u8 s of
     Just $ Tuple (RefType ht false) s''
   _ -> Nothing
 
-decode_val_type :: BitStream -> Maybe (Tuple ValType BitStream)
+decode_val_type :: BitReader -> Maybe (Tuple ValType BitReader)
 decode_val_type s = case read_u8 s of
   Just (Tuple 0x7F s') -> Just $ Tuple ValTypeI32 s'
   Just (Tuple 0x7E s') -> Just $ Tuple ValTypeI64 s'
@@ -289,7 +289,7 @@ decode_val_type s = case read_u8 s of
     Tuple rt s' <- decode_ref_type s
     Just $ Tuple (ValTypeRefType rt) s'
 
-encode_val_type :: ValType -> BitStream -> Maybe BitStream
+encode_val_type :: ValType -> BitWriter -> Maybe BitWriter
 encode_val_type ValTypeI32 s = Just $ write_u8 0x7F s
 encode_val_type ValTypeI64 s = Just $ write_u8 0x7E s
 encode_val_type ValTypeF32 s = Just $ write_u8 0x7D s

@@ -1,9 +1,10 @@
 module Dewdrop.Passes.TypeIRLower where
 
 import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn, TypeExpr, TypeExprKind, WhenArm)
-import Data.Dewdrop.Compiler (Compiler)
+import Data.Dewdrop.Compiler (Compiler, ModuleContext(..))
 import Data.Dewdrop.Identifier (Identifier)
-import Data.Dewdrop.Types (IRBoundsID, ModuleContext(..), TypedIRID)
+import Data.Dewdrop.IR (TypedIRID)
+import Data.Dewdrop.Types (IRBoundsID)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore, visit)
 import Prelude
 

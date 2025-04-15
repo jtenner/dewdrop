@@ -15,12 +15,13 @@ module Dewdrop.Parser
 import Prelude
 
 import Data.Array (length, snoc, (!!))
+import Data.BitStream (BitReader)
+import Data.Dewdrop.AST (Expr(..), ExprKind(..), FnParam(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), Parser, ParserResult, TypeExpr(..), TypeExprKind(..), WhenArm(..))
+import Data.Dewdrop.Identifier (Identifier(..))
+import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Tuple (Tuple(..))
 import Dewdrop.Lexer (is_token_kind_colon, is_token_kind_comma, is_token_kind_fn_keyword, is_token_kind_l_paren, is_token_kind_name_identifier, is_token_kind_r_arrow, is_token_kind_r_brace, is_token_kind_r_paren, is_token_kind_type_identifier, tokenize)
-import Data.Dewdrop.AST (Expr(..), ExprKind(..), FnParam(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), Parser, ParserResult, TypeExpr(..), TypeExprKind(..), WhenArm(..))
-import Data.Dewdrop.Token (Token(..), TokenKind(..))
-import Data.Dewdrop.Identifier (Identifier(..))
 import Dewdrop.RPN (Operator, RPN, is_nested, binary, end_group, finalize, group, right_unary, rpn, (++), (+.))
 
 -- pub fn fib(n) {
@@ -145,9 +146,9 @@ expect p = \tokens index -> case (tokens !! index) of
   _ -> Nothing
 
 -- parsers
-parse :: String -> Maybe Module
-parse module_text = do
-  Tuple mod _ <- parse_module (tokenize module_text true) 0
+parse :: BitReader -> Maybe Module
+parse r = do
+  Tuple mod _ <- parse_module (tokenize true r) 0
   Just mod
 
 parse_module :: (Array Token) -> Int -> ParserResult Module

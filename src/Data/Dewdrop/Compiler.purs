@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Array (unsnoc)
 import Data.ArrayBuffer.Types (Uint8Array)
-import Data.Dewdrop.AST (Module, ModulePath)
+import Data.Dewdrop.AST (Module)
 import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Program (Program, program_new)
 import Data.Dewdrop.System.System (class System, RawResourceID(..))
@@ -12,6 +12,8 @@ import Data.FingerTree (FingerTree)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
+import Data.Set (Set)
+import Data.Set as Set
 
 data CompileTarget
   = Wasm32
@@ -197,7 +199,7 @@ data BinaryenPass
   | VacuumPass
 
 
-data ModuleElementReference = ModuleElementReference ModulePath Identifier
+data ModuleElementReference = ModuleElementReference ModuleID Identifier
 
 instance module_element_reference_ord :: Ord ModuleElementReference where
   compare (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
@@ -207,20 +209,21 @@ instance module_element_reference_eq :: Eq ModuleElementReference where
   eq (ModuleElementReference module_id identifier) (ModuleElementReference module_id' identifier') =
     module_id == module_id' && identifier == identifier'
 
-reference :: ModulePath -> Identifier -> ModuleElementReference
+reference :: ModuleID -> Identifier -> ModuleElementReference
 reference module_id identifier = ModuleElementReference module_id identifier
 
 data ModuleContext = ModuleContext
   { ast :: Module
-  , exports :: Map Identifier ModuleElementReference
+  , exports :: Set ModuleElementReference
+  , id :: ModuleID
   }
 
-module_context_new :: Module -> ModuleContext
-module_context_new ast = ModuleContext
+module_context_new :: ModuleID -> Module -> ModuleContext
+module_context_new id ast = ModuleContext
   { ast: ast
-  , exports: Map.empty
+  , exports: Set.empty
+  , id
   }
-
 
 data ModuleID = ModuleID
   { package_name :: String

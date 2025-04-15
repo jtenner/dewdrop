@@ -2,11 +2,12 @@ module Dewdrop.Passes.CollectExports where
 
 import Prelude
 
-import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm, ModuleContext(..), reference)
-import Data.Dewdrop.Compiler (Compiler(..), ModuleID)
+import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm)
+import Data.Dewdrop.Compiler (Compiler(..), ModuleID, ModuleContext(..), reference)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore, skip_all, visit)
 import Data.Map (insert, lookup)
 import Data.Maybe (Maybe(..))
+import Data.Set as Set
 import Data.Tuple (Tuple(..))
 import Record (merge)
 
@@ -35,8 +36,8 @@ instance collect_exports_declaration_pass :: Pass ModuleDeclaration (CollectExpo
   exit = ignore
 
 instance collect_exports_declaration_kind_pass :: Pass ModuleDeclarationKind (CollectExportsContext system_ctx) where
-  enter (FnDeclarationKind true name _) (CollectExportsContext props (ModuleContext module_context@{ module_id, exports }) compiler) = do
-    let exports' = insert name (reference module_id name) exports
+  enter (FnDeclarationKind true name _) (CollectExportsContext props@{ module_id } (ModuleContext module_context@{ exports }) compiler) = do
+    let exports' = Set.insert (reference module_id name) exports
     let module_context' = ModuleContext $ merge { exports: exports' } module_context
     skip_all (CollectExportsContext props module_context' compiler)
   enter a b = ignore a b
