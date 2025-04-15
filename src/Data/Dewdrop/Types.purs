@@ -20,14 +20,14 @@ data Bounds = Bounds { upper :: FingerTree ProgramType, lower :: FingerTree Prog
 data IRContext = IRContext
   { name :: ModuleElementReference
 
-  , env :: FingerTree (Tuple Identifier ProgramTypeID)
+  , env :: FingerTree (Tuple Identifier IRBoundsID)
 
   -- To keep track of type variables
   , parameters :: FingerTree (Tuple Identifier TypedIRID)
   , return_type :: ProgramType
 
   -- To keep track of type variables
-  , types :: Pool ProgramType
+  , types :: Pool Bounds
 
   -- to index ir nodes
   , irs :: Pool TypedIR
@@ -37,19 +37,21 @@ data IRContext = IRContext
 
 bounds_new :: Bounds
 bounds_new = Bounds { upper: mempty, lower: mempty }
+unbounded :: Bounds
+unbounded = bounds_new
 
-type_var_new :: IRContext -> Tuple ProgramTypeID IRContext
+type_var_new :: IRContext -> Tuple IRBoundsID IRContext
 type_var_new (IRContext ctx@{ types }) = do
   let
     Tuple type_id types' = pool_allocate types
-    types'' = pool_set type_id (ProgramType (TypeVar type_id) Nothing) types'
+    types'' = pool_set type_id unbounded types'
   Tuple type_id $ IRContext $ merge { types: types'' } ctx
 
-type ProgramTypeID = PoolKey ProgramType
+type IRBoundsID = PoolKey Bounds
 type TypedIRID = PoolKey TypedIR
 type IntValue = Int
 
-data TypedIR = TypedIR TypedIRKind ProgramTypeID
+data TypedIR = TypedIR TypedIRKind IRBoundsID
 
 data IRConstKind
   = IRConstInt Int
@@ -97,7 +99,7 @@ data ProgramTypeKind
   | Bottom
 
   -- Type variables
-  | TypeVar ProgramTypeID
+  | TypeVar IRBoundsID
 
   -- TODO: Constraints for unions and intersections
   | Union ProgramType ProgramType
@@ -105,9 +107,6 @@ data ProgramTypeKind
 
   -- Recursive types
   | Recursive ProgramType
-
-  -- Bounded types
-  | Bounded Bounds
 
 data VariantKind = VariantKind Identifier (FingerTree ProgramType)
 
@@ -156,7 +155,7 @@ builtin_bool_type = (ProgramType Bool Nothing)
 builtin_numeric_type :: ProgramType
 builtin_numeric_type = (ProgramType Numeric Nothing)
 
-data FnIRIdentifier = FnIRIdentifier ModuleElementReference (List (Tuple Identifier ProgramTypeID))
+data FnIRIdentifier = FnIRIdentifier ModuleElementReference (List (Tuple Identifier IRBoundsID))
 
 data ModuleContext = ModuleContext
   { ast :: Module

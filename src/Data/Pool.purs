@@ -23,4 +23,3 @@ pool_set (PoolKey id) value (Pool { next_id, pool }) = Pool { next_id, pool: ins
 
 pool_get :: ∀ (@a :: Type). PoolKey a -> Pool a -> Maybe a
 pool_get (PoolKey id) (Pool { pool }) = lookup id pool
-

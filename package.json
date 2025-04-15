@@ -16,5 +16,8 @@
     "make": "bunx spago build",
     "clean": "bunx rimraf output node_modules .spago",
     "format": "bunx purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs' && bunx biome format --write ."
+  },
+  "dependencies": {
+    "@thi.ng/bitstream": "^2.4.17"
   }
 }

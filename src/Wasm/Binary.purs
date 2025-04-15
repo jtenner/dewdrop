@@ -12,8 +12,8 @@ import Data.Wasm.Module (HeapType(..), Lanes(..), Locals(..), RefType(..), TypeI
 import Node.Encoding (Encoding(..), byteLength)
 import Util (char_size, to_chars, to_signed, from_chars)
 
-type EncoderFn a = BitStream -> a -> BitStream
-type DecoderFn a = BitStream -> Maybe (Tuple a BitStream)
+type EncoderFn a = BitWriter -> a -> Effect BitStream
+type DecoderFn a = BitWriter -> Maybe (Tuple a BitStream)
 
 encode_vec :: ∀ (@u :: Type). EncoderFn u -> FingerTree u -> BitStream -> BitStream
 encode_vec f n s = foldl f (encode_uleb128 (size n) s) n

@@ -2,9 +2,12 @@ module Data.Dewdrop.Compiler where
 
 import Prelude
 
-import Data.Dewdrop.System.System (class System, SystemResource, SystemResourceID(..))
+import Data.Array as Array
+import Data.ArrayBuffer.Types (Uint8Array)
 import Data.Dewdrop.AST (ModuleID(..))
 import Data.Dewdrop.Program (Program, program_new)
+import Data.Dewdrop.System.System (class System, RawResourceID(..))
+import Data.Dewdrop.Types (ModuleContext)
 import Data.FingerTree (FingerTree)
 import Data.List (List(..), (:))
 import Data.Map (Map)
@@ -194,36 +197,37 @@ data BinaryenPass
   | VacuumPass
 
 data Compiler system_ctx = Compiler
-  { main_module :: ModuleID
-  , modules :: Map ModuleID SystemResourceID
+  { binary_resources :: Map RawResourceID Uint8Array
+  , main_module :: ModuleID
+  , modules :: Map ModuleID ModuleContext
   , package_name :: String
   , program :: Program
-  , resource_cache :: Map SystemResourceID SystemResource
   , system_ctx :: system_ctx
   , target :: CompileTarget
   , binaryen_passes :: FingerTree BinaryenPass
   }
 
-module_id_to_resource_ids :: ModuleID -> String -> List SystemResourceID
+module_id_to_resource_ids :: ModuleID -> String -> List RawResourceID
 module_id_to_resource_ids (ModuleID module_name Nil) current_package =
-  ( ModuleResourceID { path: (module_name : Nil), package: current_package }
-      : ModuleResourceID { path: ("main" : Nil), package: module_name }
+  ( RawResourceID { path: ["src", module_name <> ".dew"] }
+      : RawResourceID { path: ["packages", module_name, "src", "main.dew"] }
       : Nil
   )
-module_id_to_resource_ids (ModuleID module_name module_path@(package_name : package_path)) current_package = do
-  ( ModuleResourceID { path: module_path <> (module_name : Nil), package: current_package }
-      : ModuleResourceID { path: package_path <> (module_name : Nil), package: package_name }
+module_id_to_resource_ids (ModuleID module_name (package_name : package_path)) current_package = do
+  (
+    RawResourceID { path: ["src", package_name] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
+      : RawResourceID { path: ["packages", package_name, "src"] <> (Array.fromFoldable package_path) <> (pure $ module_name <> ".dew") }
       : Nil
   )
 
 compiler_new :: ∀ (@system_ctx :: Type). System system_ctx => String -> CompileTarget -> system_ctx -> Compiler system_ctx
 compiler_new package_name target system_ctx = Compiler
-  { main_module: ModuleID package_name Nil
+  { binary_resources: Map.empty
+  , main_module: ModuleID package_name Nil
   , modules: Map.empty
   , package_name
   , program: program_new
-  , resource_cache: Map.empty
   , system_ctx
-  , target
+  , target: target
   , binaryen_passes: mempty
   }

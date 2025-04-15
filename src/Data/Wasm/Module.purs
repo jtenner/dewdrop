@@ -1,11 +1,10 @@
 module Data.Wasm.Module where
 
-import Prelude
 
-import Data.BitStream (BitStream)
+import Data.ArrayBuffer.Types (Uint8Array)
 import Data.FingerTree (FingerTree)
 import Data.Maybe (Maybe)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple)
 
 data WasmInt
   = I32 Int
@@ -150,7 +149,7 @@ data ElemMode
   | ElemModeActive TableIndex Expr
   | ElemModeDeclarative
 
-data Data = Data (Maybe ActiveData) BitStream
+data Data = Data (Maybe ActiveData) Uint8Array
 data ActiveData = ActiveData MemIndex Expr
 
 data Instruction

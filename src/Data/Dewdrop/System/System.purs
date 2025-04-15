@@ -1,25 +1,17 @@
 module Data.Dewdrop.System.System where
 
-import Prelude
-
-import Data.BitStream (BitStream)
-import Data.Dewdrop.AST (Module(..))
-import Data.List (List)
+import Data.ArrayBuffer.Types (Uint8Array)
+import Data.BitStream (BitReader)
 import Data.Maybe (Maybe)
+import Data.Tuple (Tuple)
+import Effect (Effect)
 
-data SystemResourceID
-  = ModuleResourceID { path :: List String, package :: String }
-  | RawResourceID { path :: String }
+data ModuleResourceID =  ModuleResourceID { path :: Array String, package :: String }
+data RawResourceID = RawResourceID { path :: Array String }
 
-data SystemResource = SystemResource { id :: SystemResourceID, raw_path :: String, data :: BitStream, kind :: SystemResourceKind }
-
-data SystemResourceKind
-  = SystemModule Module
-  | SystemRaw BitStream
-
-data ResourceStat = ResourceStat { id :: SystemResourceID, size :: Int, mtime :: Int, raw_path :: String }
+data ResourceStat = ResourceStat { id :: RawResourceID, size :: Int, mtime :: Int, raw_path :: String }
 
 class System ctx where
-  system_get_resource :: ctx -> SystemResourceID -> Maybe SystemResource
-  system_list_resources :: ctx -> List ResourceStat
-  system_set_resource :: ctx -> SystemResourceID -> SystemResource -> ctx
+  system_get_raw :: ∀ (@source :: Type). ctx -> RawResourceID -> Maybe (Tuple BitReader ctx)
+  system_dir_stat :: ctx -> Array String -> Maybe (Array ResourceStat)
+  system_set_raw :: ctx -> RawResourceID -> Uint8Array -> Effect ctx
