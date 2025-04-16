@@ -46,12 +46,12 @@ to_bytes (BitWriter source index) = do
     target = bit_writer_source cap
 
   bit_writer_to_bytes $ foldl go target source
-  
+
   where
   go :: BitWriterSource -> BitElement -> BitWriterSource
   go target (BitElement size value) = do
     let _ = bit_writer_write size value target
-    target 
+    target
 
 read_from :: ∀ (@source :: Type). source -> BitReader
 read_from source = do
@@ -68,15 +68,15 @@ write size value (BitWriter source index) = do
   BitWriter source' index'
 
 read :: Size -> BitReader -> Maybe (Tuple Value BitReader)
-read size (BitReader source index limit) 
+read size (BitReader source index limit)
   | index + size > limit = Nothing
   | otherwise = do
-    let
-      value = bit_reader_read size source
-      next = index + size
-      reader = BitReader source next limit
-      return_value = Tuple value reader
-    pure return_value
+      let
+        value = bit_reader_read size source
+        next = index + size
+        reader = BitReader source next limit
+        return_value = Tuple value reader
+      pure return_value
 
 read_u8 :: BitReader -> Maybe (Tuple Int BitReader)
 read_u8 = read 8
@@ -121,30 +121,26 @@ read_char reader = go_four reader
   go_four :: BitReader -> Maybe (Tuple Char BitReader)
   go_four reader' = do
     Tuple value reader'' <- read 5 reader'
-    if value == 0x1E
-      then finish_four reader''
-      else go_three reader'
+    if value == 0x1E then finish_four reader''
+    else go_three reader'
 
   go_three :: BitReader -> Maybe (Tuple Char BitReader)
   go_three reader' = do
     Tuple value reader'' <- read 4 reader'
-    if value == 0x0E
-      then finish_three reader''
-      else go_two reader'
+    if value == 0x0E then finish_three reader''
+    else go_two reader'
 
   go_two :: BitReader -> Maybe (Tuple Char BitReader)
   go_two reader' = do
     Tuple value reader'' <- read 3 reader'
-    if value == 0x06
-      then finish_two reader''
-      else go_one reader'
-  
+    if value == 0x06 then finish_two reader''
+    else go_one reader'
+
   go_one :: BitReader -> Maybe (Tuple Char BitReader)
   go_one reader' = do
     Tuple value reader'' <- read 1 reader'
-    if value == 0x00
-      then finish_one reader''
-      else Nothing
+    if value == 0x00 then finish_one reader''
+    else Nothing
 
   finish_one :: BitReader -> Maybe (Tuple Char BitReader)
   finish_one reader' = do
@@ -174,49 +170,47 @@ read_char reader = go_four reader
 
   go_finish acc reader' count | count > 0 = do
     Tuple flag reader'' <- read 1 reader'
-    if flag == 2
-      then do
-        Tuple value reader''' <- read 6 reader''
-        go_finish ((acc `shl` 6) + value) reader''' (count - 1)
-      else Nothing
+    if flag == 2 then do
+      Tuple value reader''' <- read 6 reader''
+      go_finish ((acc `shl` 6) + value) reader''' (count - 1)
+    else Nothing
 
   go_finish _ _ _ = Nothing
-
 
 write_utf8_char :: Char -> BitWriter -> BitWriter
 write_utf8_char char writer = go (Char.toCharCode char) writer
 
   where
-    -- 0x3F = 0b0011_1111
-    six_bit_mask = 0x3F
-    -- 0x1F = 0b0001_1111
-    five_bit_mask = 0x1F
-    -- 0x0F = 0b0000_1111
-    four_bit_mask = 0x0F
-    -- 0x07 = 0b0000_0111
-    three_bit_mask = 0x07
+  -- 0x3F = 0b0011_1111
+  six_bit_mask = 0x3F
+  -- 0x1F = 0b0001_1111
+  five_bit_mask = 0x1F
+  -- 0x0F = 0b0000_1111
+  four_bit_mask = 0x0F
+  -- 0x07 = 0b0000_0111
+  three_bit_mask = 0x07
 
-    go :: Int -> BitWriter -> BitWriter
-    go value writer'
-      -- < 0x80
-      | value <= 0x7F = do
+  go :: Int -> BitWriter -> BitWriter
+  go value writer'
+    -- < 0x80
+    | value <= 0x7F = do
         let b0 = (value .&. 0x7F)
         write_u8 b0 writer'
 
-      -- < 0x800
-      | value <= 0x7FF = do
+    -- < 0x800
+    | value <= 0x7FF = do
         let
           b1 = (value .&. six_bit_mask)
           acc = (value `shr` 6)
           b0 = acc .&. five_bit_mask
 
-          -- write: 0b110: 3
-          --      : b0: 5
-          --      : 0b10: 2
-          --      : b1: 6
+        -- write: 0b110: 3
+        --      : b0: 5
+        --      : 0b10: 2
+        --      : b1: 6
         write 6 b1 $ write 2 2 $ write 5 b0 $ write 3 6 writer'
 
-      | value <= 0xFFFF = do
+    | value <= 0xFFFF = do
         let
           b2 = (value .&. six_bit_mask)
           acc = (value `shr` 6)
@@ -232,7 +226,7 @@ write_utf8_char char writer = go (Char.toCharCode char) writer
         --      : b2: 6
         write 6 b2 $ write 2 2 $ write 6 b1 $ write 2 2 $ write 4 b0 $ write 4 14 writer'
 
-      | otherwise = do
+    | otherwise = do
         let
           b3 = (value .&. six_bit_mask)
           acc = (value `shr` 6)

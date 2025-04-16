@@ -310,19 +310,23 @@ tokenize false = go mempty
   where
   go :: t Token -> BitReader -> t Token
   go acc r =
-    let index = get_index r in 
-    case lex_token r of
-      Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
-      Just (Tuple token r') -> go (acc <> (pure $ Token token index)) r' 
-      _ -> acc
+    let
+      index = get_index r
+    in
+      case lex_token r of
+        Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
+        Just (Tuple token r') -> go (acc <> (pure $ Token token index)) r'
+        _ -> acc
 
 tokenize true = go mempty
   where
-  go acc r = 
-    let index = get_index r in
-    case lex_token r of
-      Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
-      Just (Tuple TokenKindWhiteSpace r') -> go acc r'
-      Just (Tuple TokenKindNewLine r') -> go acc r'
-      Just (Tuple token_kind r') -> go (acc <> (pure $ Token token_kind index)) r'
-      _ -> acc
+  go acc r =
+    let
+      index = get_index r
+    in
+      case lex_token r of
+        Just (Tuple TokenKindEOF _) -> acc <> (pure $ Token TokenKindEOF index)
+        Just (Tuple TokenKindWhiteSpace r') -> go acc r'
+        Just (Tuple TokenKindNewLine r') -> go acc r'
+        Just (Tuple token_kind r') -> go (acc <> (pure $ Token token_kind index)) r'
+        _ -> acc

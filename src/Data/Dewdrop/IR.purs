@@ -10,7 +10,6 @@ import Data.Pool (Pool, PoolKey, pool_allocate, pool_set)
 import Data.Tuple (Tuple(..))
 import Record (merge)
 
-
 data IRContext = IRContext
   { env :: FingerTree (Tuple Identifier IRBoundsID)
 
@@ -26,7 +25,6 @@ data IRContext = IRContext
 
   , body :: FingerTree TypedIR
   }
-
 
 type_var_new :: IRContext -> Tuple IRBoundsID IRContext
 type_var_new (IRContext ctx@{ types }) = do

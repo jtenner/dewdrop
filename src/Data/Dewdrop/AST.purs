@@ -50,7 +50,6 @@ data WhenArm = WhenArm Expr Expr
 
 type ModulePath = NonEmptyArray String
 
-
 instance show_expr :: Show Expr where
   show (Expr kind _) = "(Expr " <> show kind <> ")"
 

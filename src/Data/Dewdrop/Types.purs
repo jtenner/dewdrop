@@ -9,7 +9,6 @@ import Data.Maybe (Maybe(..))
 import Data.Pool (PoolKey)
 import Data.Tuple (Tuple(..))
 
-
 -- | Upper and Lower bounds in *that* order
 data Bounds = Bounds { upper :: FingerTree ProgramType, lower :: FingerTree ProgramType }
 

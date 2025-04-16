@@ -10,10 +10,10 @@ import Prelude
 
 import Data.List (List(..))
 import Data.Map (Map)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
 
-type LowerIRContextProps = { module_ctx :: ModuleContext }
+data LowerIRContextProps = LowerIRContextProps { module_ctx :: ModuleContext }
 type IREnv = Map Identifier TypedIRID
 data LowerIRContext system_ctx = LowerIRContext
   { compiler :: Compiler system_ctx
@@ -25,13 +25,12 @@ data LowerIRContext system_ctx = LowerIRContext
   }
 
 run :: ∀ (@u :: Type). Pass Module (LowerIRContext u) => Visitable Module (LowerIRContext u) => LowerIRContextProps -> Compiler u -> Maybe (Compiler u)
-run { module_ctx } compiler = do
+run (LowerIRContextProps { module_ctx }) compiler = do
   let
     (ModuleContext { ast }) = module_ctx
     ctx = LowerIRContext { compiler, env_stack: Nil, ir_stack: Nil, module_ctx, fn_stack: Nil, type_stack: Nil }
   Tuple (LowerIRContext { compiler: compiler' }) _ <- visit ast ctx
-  Just compiler'
-
+  pure compiler'
 
 instance type_ir_lower_module_pass :: Pass Module (LowerIRContext u) where
   enter = ignore

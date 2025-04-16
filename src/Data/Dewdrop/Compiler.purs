@@ -198,7 +198,6 @@ data BinaryenPass
   | UnteePass
   | VacuumPass
 
-
 data ModuleElementReference = ModuleElementReference ModuleID Identifier
 
 instance module_element_reference_ord :: Ord ModuleElementReference where

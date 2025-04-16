@@ -154,18 +154,17 @@ type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
 take :: (Char -> Boolean) -> Consumer
 take p r = do
   Tuple c r' <- read_char r
-  if (p c)
-    then pure $ Tuple (str_char "" c) r'
-    else Nothing
+  if (p c) then pure $ Tuple (str_char "" c) r'
+  else Nothing
 
 take_many :: (Char -> Boolean) -> Consumer
 take_many p r = go "" r
   where
-    go :: String -> Consumer
-    go acc r' = case read_char r' of
-      Just (Tuple c r'') | p c -> go (str_char acc c) r''
-      _ | acc == "" -> Nothing
-      _ -> Just (Tuple acc r')
+  go :: String -> Consumer
+  go acc r' = case read_char r' of
+    Just (Tuple c r'') | p c -> go (str_char acc c) r''
+    _ | acc == "" -> Nothing
+    _ -> Just (Tuple acc r')
 
 infixl 4 take_then as ++
 
@@ -201,7 +200,7 @@ take_int :: Consumer
 take_int = take is_zero ++| (take is_positive_digit ++ take_many is_digit)
 
 take_many_seperated :: Consumer -> Consumer -> Consumer
-take_many_seperated consumer seperator r =  go "" (consumer r) r
+take_many_seperated consumer seperator r = go "" (consumer r) r
   where
   go "" Nothing _ = Nothing
   go acc Nothing r' = Just (Tuple acc r')
