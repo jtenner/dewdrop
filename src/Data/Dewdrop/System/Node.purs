@@ -3,7 +3,7 @@ module Data.Dewdrop.System.Node where
 import Prelude
 
 import Data.ArrayBuffer.Types (Uint8Array)
-import Data.BitStream (BitReader, bit_reader)
+import Data.BitStream (BitReader, bit_reader, read_from)
 import Data.Dewdrop.System.System (class System, RawResourceID(..), ResourceStat)
 import Data.Map (Map, insert, lookup)
 import Data.Maybe (Maybe(..))
@@ -43,9 +43,9 @@ instance node_system :: System NodeSystemContext where
       file_path = Path.concat $ [ cwd ] <> path
     in
       case lookup file_path cache of
-        Just cache_lookup -> Just $ Tuple (bit_reader cache_lookup) $ NodeSystemContext inner_ctx
+        Just cache_lookup -> pure $ Tuple (read_from cache_lookup) $ NodeSystemContext inner_ctx
         Nothing -> do
           let
             binary_data = read_binary file_path
             cache' = insert file_path binary_data cache
-          Just $ Tuple (bit_reader binary_data) $ NodeSystemContext $ merge { cache: cache' } inner_ctx
+          pure $ Tuple (read_from binary_data) $ NodeSystemContext $ merge { cache: cache' } inner_ctx

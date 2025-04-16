@@ -1,62 +1,92 @@
-module Dewdrop.Lexer
-  ( (+&)
-  , (+>)
-  , combine_accumulator
-  , is_token_kind_asterisk
-  , is_token_kind_colon
-  , is_token_kind_comma
-  , is_token_kind_else_keyword
-  , is_token_kind_eof
-  , is_token_kind_equals_equals
-  , is_token_kind_fn_keyword
-  , is_token_kind_fslash
-  , is_token_kind_int
-  , is_token_kind_l_brace
-  , is_token_kind_l_paren
-  , is_token_kind_minus
-  , is_token_kind_name_identifier
-  , is_token_kind_new_line
-  , is_token_kind_plus
-  , is_token_kind_pub_keyword
-  , is_token_kind_r_arrow
-  , is_token_kind_r_brace
-  , is_token_kind_r_paren
-  , is_token_kind_type_identifier
-  , is_token_kind_when_keyword
-  , is_token_kind_white_space
-  , lex_asterisk
-  , lex_colon
-  , lex_comma
-  , lex_eof
-  , lex_equals_equals
-  , lex_fslash
-  , lex_greater_than_equals
-  , lex_int
-  , lex_l_brace
-  , lex_l_paren
-  , lex_minus
-  , lex_name_identifier
-  , lex_newline
-  , lex_of
-  , lex_or
-  , lex_plus
-  , lex_r_arrow
-  , lex_r_brace
-  , lex_r_paren
-  , lex_token
-  , lex_type_identifier
-  , lex_whitespace
-  , tokenize
-  ) where
+module Dewdrop.Lexer where
 
-import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Prelude
 
 import Data.BitStream (BitReader, get_index, read_char)
+import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Util (Consumer, is_asterisk, is_colon, is_comma, is_digit, is_equals, is_fslash, is_lbrace, is_lcaret, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, take, take_many, take_name_identifier, take_type_identifier, (++))
+import Util (is_asterisk, str_char, is_colon, is_comma, is_digit, is_equals, is_fslash, is_lbrace, is_lcaret, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, is_name_identifier_start, is_name_identifier_continue, is_type_identifier_start, is_type_identifier_continue, is_zero, is_positive_digit)
+
+
+type Consumer = BitReader -> Maybe (Tuple String BitReader)
+type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
+
+take :: (Char -> Boolean) -> Consumer
+take p r = do
+  Tuple c r' <- read_char r
+  if (p c) then pure $ Tuple (str_char "" c) r'
+  else Nothing
+
+take_many :: (Char -> Boolean) -> Consumer
+take_many p r = go "" r
+  where
+  go :: String -> Consumer
+  go acc r' = case read_char r' of
+    Just (Tuple c r'') | p c -> go (str_char acc c) r''
+    _ | acc == "" -> Nothing
+    _ -> Just (Tuple acc r')
+
+infixl 4 take_then as ++
+
+take_then :: Consumer -> Consumer -> Consumer
+take_then a b r = do
+  Tuple s r' <- a r
+  Tuple s2 r'' <- b r'
+  Just (Tuple (s <> s2) r'')
+
+infixl 4 take_then_optional as ++?
+
+take_then_optional :: Consumer -> Consumer -> Consumer
+take_then_optional a b r = do
+  Tuple s r' <- a r
+  case b r' of
+    Nothing -> Just (Tuple s r')
+    Just (Tuple s2 r'') -> Just (Tuple (s <> s2) r'')
+
+infixl 4 take_or as ++|
+
+take_or :: Consumer -> Consumer -> Consumer
+take_or a b r = case a r of
+  Nothing -> b r
+  result -> result
+
+take_name_identifier :: Consumer
+take_name_identifier = take is_name_identifier_start ++? take_many is_name_identifier_continue
+
+take_type_identifier :: Consumer
+take_type_identifier = take is_type_identifier_start ++? take_many is_type_identifier_continue
+
+take_int :: Consumer
+take_int = take is_zero ++| (take is_positive_digit ++ take_many is_digit)
+
+take_many_seperated :: Consumer -> Consumer -> Consumer
+take_many_seperated consumer seperator r = go "" (consumer r) r
+  where
+  go "" Nothing _ = Nothing
+  go acc Nothing r' = Just (Tuple acc r')
+  go acc (Just (Tuple s r')) _ = go_seperator (acc <> s) (seperator r') r'
+
+  go_seperator acc Nothing r' = Just (Tuple acc r')
+  go_seperator acc (Just (Tuple _ r')) _ = go acc (consumer r') r'
+
+take_many_joined_by :: Consumer -> Consumer -> Consumer
+take_many_joined_by c s r = go_c "" $ c r
+  where
+    go_c _ Nothing = Nothing
+    go_c acc (Just (Tuple v r')) = go_s (acc <> v) $ s r'
+
+    go_s acc Nothing = Just (Tuple acc r)
+    go_s acc (Just (Tuple v r')) = go_c (acc <> v) $ c r'
+
+do_take_many_joined_by :: String -> Consumer -> Consumer -> Consumer
+do_take_many_joined_by acc consumer seperator r = case seperator r of
+  Nothing -> Just (Tuple acc r)
+  Just (Tuple sep r') -> case consumer r' of
+    Nothing -> Just (Tuple acc r')
+    Just (Tuple s r'') -> do_take_many_joined_by (acc <> sep <> s) consumer seperator r''
+
 
 is_token_kind_pub_keyword :: TokenKind -> Boolean
 is_token_kind_pub_keyword kind = case kind of

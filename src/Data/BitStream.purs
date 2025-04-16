@@ -10,12 +10,15 @@ import Data.Int (rem)
 import Data.Int.Bits (shl, shr, (.&.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Util (to_uint8array, uint8array_length)
 
 type Index = Int
 type Limit = Int
+type Length = Int
 data BitReaderSource
 data BitWriterSource
 data BitReader = BitReader BitReaderSource Index Limit
+               | BitReaderEmpty
 data BitWriter = BitWriter (FingerTree BitElement) Index
 
 type Size = Int
@@ -23,21 +26,23 @@ type Value = Int
 
 foreign import bit_reader_source :: ∀ (@source :: Type). source -> BitReaderSource
 foreign import bit_reader_limit :: BitReaderSource -> Int
+foreign import bit_reader_read :: Size -> Index -> BitReaderSource -> Value
+foreign import bit_reader_read_buffer :: Length -> Index -> BitReaderSource -> Uint8Array
 
 foreign import bit_writer_source :: Int -> BitWriterSource
-
 foreign import bit_writer_to_bytes :: BitWriterSource -> Uint8Array
-
-foreign import bit_writer_write :: Size -> Value -> BitWriterSource -> Unit
-foreign import bit_reader_read :: Size -> BitReaderSource -> Value
+foreign import bit_writer_write :: Size -> Value -> BitWriterSource -> BitWriterSource
+foreign import bit_writer_write_buffer :: Uint8Array -> BitWriterSource -> BitWriterSource
 
 data BitElement = BitElement Size Value
+                | BitElementBuffer Uint8Array
 
 bit_reader :: Uint8Array -> BitReader
 bit_reader = read_from
 
 get_index :: BitReader -> Index
 get_index (BitReader _ index _) = index
+get_index BitReaderEmpty = 0
 
 to_bytes :: BitWriter -> Uint8Array
 to_bytes (BitWriter source index) = do
@@ -49,16 +54,17 @@ to_bytes (BitWriter source index) = do
 
   where
   go :: BitWriterSource -> BitElement -> BitWriterSource
-  go target (BitElement size value) = do
-    let _ = bit_writer_write size value target
-    target
+  go target (BitElementBuffer bytes) = bit_writer_write_buffer bytes target
+  go target (BitElement size value) = bit_writer_write size value target
 
-read_from :: ∀ (@source :: Type). source -> BitReader
-read_from source = do
-  let
-    reader = bit_reader_source source
-    limit = bit_reader_limit reader
-  BitReader reader 0 limit
+read_from :: Uint8Array -> BitReader
+read_from source
+  | uint8array_length source == 0 = BitReaderEmpty
+  | otherwise = do
+    let
+      reader = bit_reader_source source
+      limit = bit_reader_limit reader
+    BitReader reader 0 limit
 
 write :: Size -> Value -> BitWriter -> BitWriter
 write size value (BitWriter source index) = do
@@ -67,37 +73,71 @@ write size value (BitWriter source index) = do
     source' = snoc (BitElement size value) source
   BitWriter source' index'
 
+write_buffer :: Uint8Array -> BitWriter -> BitWriter
+write_buffer bytes (BitWriter source index) = do
+  let
+    index' = index + uint8array_length bytes
+    source' = snoc (BitElementBuffer bytes) source
+  BitWriter source' index'
+
 read :: Size -> BitReader -> Maybe (Tuple Value BitReader)
+read _ BitReaderEmpty = Nothing
 read size (BitReader source index limit)
   | index + size > limit = Nothing
   | otherwise = do
       let
-        value = bit_reader_read size source
+        value = bit_reader_read size index source
         next = index + size
         reader = BitReader source next limit
         return_value = Tuple value reader
       pure return_value
 
+read_signed :: Size -> BitReader -> Maybe (Tuple Value BitReader)
+read_signed _ BitReaderEmpty = Nothing
+read_signed size (BitReader source index limit)
+  | index + size > limit = Nothing
+  | otherwise = do
+      let
+        value = bit_reader_read size index source
+        next = index + size
+        reader = BitReader source next limit
+        max_limit = 1 `shl` (size - 1)
+      if value >= max_limit
+        then pure $ Tuple (value - max_limit * 2) reader
+        else pure $ Tuple value reader
+
 read_u8 :: BitReader -> Maybe (Tuple Int BitReader)
 read_u8 = read 8
 
-write_u8 :: Int -> BitWriter -> BitWriter
-write_u8 = write 8
+read_s8 :: BitReader -> Maybe (Tuple Int BitReader)
+read_s8 = read_signed 8
 
-read_16 :: BitReader -> Maybe (Tuple Int BitReader)
-read_16 = read 16
+write_8 :: Int -> BitWriter -> BitWriter
+write_8 = write 8
+
+read_u16 :: BitReader -> Maybe (Tuple Int BitReader)
+read_u16 = read 16
+
+read_s16 :: BitReader -> Maybe (Tuple Int BitReader)
+read_s16 = read_signed 16
 
 write_16 :: Int -> BitWriter -> BitWriter
 write_16 = write 16
 
-read_32 :: BitReader -> Maybe (Tuple Int BitReader)
-read_32 = read 32
+read_u32 :: BitReader -> Maybe (Tuple Int BitReader)
+read_u32 = read 32
+
+read_s32 :: BitReader -> Maybe (Tuple Int BitReader)
+read_s32 = read_signed 32
 
 write_32 :: Int -> BitWriter -> BitWriter
 write_32 = write 32
 
-read_64 :: BitReader -> Maybe (Tuple Int BitReader)
-read_64 = read 64
+read_u64 :: BitReader -> Maybe (Tuple Int BitReader)
+read_u64 = read 64
+
+read_s64 :: BitReader -> Maybe (Tuple Int BitReader)
+read_s64 = read_signed 64
 
 write_64 :: Int -> BitWriter -> BitWriter
 write_64 = write 64
@@ -195,7 +235,7 @@ write_utf8_char char writer = go (Char.toCharCode char) writer
     -- < 0x80
     | value <= 0x7F = do
         let b0 = (value .&. 0x7F)
-        write_u8 b0 writer'
+        write_8 b0 writer'
 
     -- < 0x800
     | value <= 0x7FF = do
@@ -251,3 +291,16 @@ write_utf8_char char writer = go (Char.toCharCode char) writer
 -- U+000080 U+0007FF -> 110xxxyy 10yyzzzz 	
 -- U+000800 U+00FFFF -> 1110wwww 10xxxxyy 10yyzzzz 	
 -- U+010000 U+10FFFF -> 11110uvv 10vvwwww 10xxxxyy 10yyzzzz
+
+write_string :: String -> BitWriter -> BitWriter
+write_string str writer = write_buffer (to_uint8array str) writer
+
+read_buffer :: Length -> BitReader -> Maybe (Tuple Uint8Array BitReader)
+read_buffer _ BitReaderEmpty = Nothing
+read_buffer length (BitReader source index limit)
+  | index + (length `shl` 3) > limit = Nothing
+  | otherwise = do
+    let
+      buf = bit_reader_read_buffer length index source
+      reader = BitReader source (index + (length `shl` 3)) limit
+    pure $ Tuple buf reader

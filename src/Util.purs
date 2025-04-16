@@ -2,9 +2,7 @@ module Util where
 
 import Prelude
 
-import Data.Array ((!!))
 import Data.ArrayBuffer.Types (Uint8Array)
-import Data.BitStream (BitReader, read_char)
 import Data.Char (toCharCode)
 import Data.Int.Bits (shl, (.&.))
 import Data.List (List(..), (:))
@@ -13,10 +11,13 @@ import Data.Tuple (Tuple(..))
 
 type CharPredicate = Char -> Boolean
 
-foreign import to_uint8array :: String -> Uint8Array
-foreign import str_char :: String -> Char -> String
 foreign import char_str :: Char -> String -> String
+foreign import from_uint8array :: Uint8Array -> Maybe String -> (String -> Maybe String) -> Maybe String
+foreign import str_char :: String -> Char -> String
+foreign import to_uint8array :: String -> Uint8Array
 foreign import trace :: ∀ a. String -> a -> a
+foreign import uint8array_length :: Uint8Array -> Int
+foreign import array_to_uint8array :: Array Int -> Uint8Array
 
 is_char :: Char -> Char -> Boolean
 is_char c c' = c == c'
@@ -35,25 +36,6 @@ union_char_predicate :: (Char -> Boolean) -> (Char -> Boolean) -> Char -> Boolea
 union_char_predicate p1 p2 c = p1 c || p2 c
 
 infixl 4 union_char_predicate as +|
-
-expect_char :: (Char -> Boolean) -> CharConsumer
-expect_char p r = case read_char r of
-  t@(Just (Tuple c _)) | p c -> t
-  _ -> Nothing
-
-expect_many :: (Char -> Boolean) -> BitReader -> Maybe (Tuple String BitReader)
-expect_many p r = go "" p r
-  where
-  go :: String -> CharPredicate -> BitReader -> Maybe (Tuple String BitReader)
-  go acc p' r' = case read_char r' of
-    Just (Tuple c r'') | p' c -> go (str_char acc c) p' r''
-    _ -> Just (Tuple acc r')
-
-do_expect_many :: String -> Int -> (Char -> Boolean) -> Array Char -> Int -> Maybe (Tuple String Int)
-do_expect_many s len p arr j = do
-  c <- arr !! j
-  if p c then do_expect_many (str_char s c) (len + 1) p arr (j + 1)
-  else Just (Tuple s len)
 
 is_lower :: Char -> Boolean
 is_lower = ('a' .. 'z')
@@ -147,79 +129,6 @@ is_type_identifier_start = is_upper
 
 is_type_identifier_continue :: Char -> Boolean
 is_type_identifier_continue = is_alpha_num
-
-type Consumer = BitReader -> Maybe (Tuple String BitReader)
-type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
-
-take :: (Char -> Boolean) -> Consumer
-take p r = do
-  Tuple c r' <- read_char r
-  if (p c) then pure $ Tuple (str_char "" c) r'
-  else Nothing
-
-take_many :: (Char -> Boolean) -> Consumer
-take_many p r = go "" r
-  where
-  go :: String -> Consumer
-  go acc r' = case read_char r' of
-    Just (Tuple c r'') | p c -> go (str_char acc c) r''
-    _ | acc == "" -> Nothing
-    _ -> Just (Tuple acc r')
-
-infixl 4 take_then as ++
-
-take_then :: Consumer -> Consumer -> Consumer
-take_then a b r = do
-  Tuple s r' <- a r
-  Tuple s2 r'' <- b r'
-  Just (Tuple (s <> s2) r'')
-
-infixl 4 take_then_optional as ++?
-
-take_then_optional :: Consumer -> Consumer -> Consumer
-take_then_optional a b r = do
-  Tuple s r' <- a r
-  case b r' of
-    Nothing -> Just (Tuple s r')
-    Just (Tuple s2 r'') -> Just (Tuple (s <> s2) r'')
-
-infixl 4 take_or as ++|
-
-take_or :: Consumer -> Consumer -> Consumer
-take_or a b r = case a r of
-  Nothing -> b r
-  result -> result
-
-take_name_identifier :: Consumer
-take_name_identifier = take is_name_identifier_start ++? take_many is_name_identifier_continue
-
-take_type_identifier :: Consumer
-take_type_identifier = take is_type_identifier_start ++? take_many is_type_identifier_continue
-
-take_int :: Consumer
-take_int = take is_zero ++| (take is_positive_digit ++ take_many is_digit)
-
-take_many_seperated :: Consumer -> Consumer -> Consumer
-take_many_seperated consumer seperator r = go "" (consumer r) r
-  where
-  go "" Nothing _ = Nothing
-  go acc Nothing r' = Just (Tuple acc r')
-  go acc (Just (Tuple s r')) _ = go_seperator (acc <> s) (seperator r') r'
-
-  go_seperator acc Nothing r' = Just (Tuple acc r')
-  go_seperator acc (Just (Tuple _ r')) _ = go acc (consumer r') r'
-
-take_many_joined_by :: Consumer -> Consumer -> Consumer
-take_many_joined_by consumer seperator = \r -> case consumer r of
-  Nothing -> Nothing
-  Just (Tuple s r') -> do_take_many_joined_by s consumer seperator r'
-
-do_take_many_joined_by :: String -> Consumer -> Consumer -> Consumer
-do_take_many_joined_by acc consumer seperator r = case seperator r of
-  Nothing -> Just (Tuple acc r)
-  Just (Tuple sep r') -> case consumer r' of
-    Nothing -> Just (Tuple acc r')
-    Just (Tuple s r'') -> do_take_many_joined_by (acc <> sep <> s) consumer seperator r''
 
 guard :: forall a. Boolean -> Maybe a -> Maybe a
 guard true x = x

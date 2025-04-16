@@ -2,13 +2,14 @@ module Test.Main where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple(..))
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.BitStream (get_index, read_from)
+import Data.BitStream (BitReader, get_index, read_from, read_8)
 import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Data.FingerTree ((+=), single, empty)
 import Data.Foldable (foldl, foldr)
+import Data.List (List(..), (:))
+import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
 import Dewdrop.Lexer (lex_token, tokenize)
 import Dewdrop.Parser (parse_expr)
 import Dewdrop.RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
@@ -18,7 +19,7 @@ import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess)
-import Util (to_uint8array)
+import Util (array_to_uint8array, to_uint8array, trace)
 
 solve_and_check :: forall m8 t9. MonadThrow Error m8 => Show t9 => Eq t9 => Maybe (RPN t9) -> t9 -> m8 Unit
 solve_and_check rpn' v' = case rpn' of
@@ -37,8 +38,41 @@ match_token str kind size = do
       shouldEqual size $ get_index size'
     Nothing -> shouldEqual false true
 
+expect_words :: ∀ (m ∷ Type -> Type). MonadThrow Error m => List Int -> (BitReader -> Maybe (Tuple Int BitReader)) -> Array Int -> m Unit
+expect_words bytes reader v = do
+  let init = read_from $ array_to_uint8array v
+  go bytes init
+
+  where
+  go Nil _ = shouldEqual true true
+  go (byte : bytes') r = case reader r of
+    Just (Tuple value r') -> do
+      shouldEqual value byte
+      go bytes' r'
+    Nothing -> do
+      let _ = trace "Failed to read word from" r 
+      shouldEqual false true
+
 main ∷ Effect Unit
 main = runSpecAndExitProcess [ consoleReporter ] do
+  describe "Reader" do
+    --bit_reader
+    --get_index
+    --to_bytes
+    --read_from
+    --write
+    --write_buffer
+    --read
+    --read_u8
+    --write_u8
+    --read_char
+    --write_utf8_char
+    --write_string
+    --read_buffer
+    it "should read words from a buffer" do
+      expect_words (1 : Nil) read_8 [1]
+      expect_words (-1 : Nil) read_8 [255]
+
   describe "Token Kinds" do
 
     it "should tokenize pub" do match_token "pub" TokenKindPubKeyword 3

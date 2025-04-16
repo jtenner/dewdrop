@@ -2,15 +2,14 @@ module Wasm.Binary where
 
 import Prelude
 
-import Data.Array as Array
-import Data.BitStream (BitReader, BitWriter, read_u8, read_utf8_char, write_u8, write_utf8_char)
+import Data.BitStream (BitReader, BitWriter, read_buffer, read_8, read_utf8_char, write_string, write_8, write_utf8_char)
+import Data.FingerTree (FingerTree, foldl, size, snoc)
 import Data.Int.Bits (shl, shr, (.&.), (.|.))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Data.FingerTree (FingerTree, foldl, size, snoc)
 import Data.Wasm.Module (HeapType(..), Lanes(..), Locals(..), RefType(..), TypeIndex(..), ValType(..))
 import Node.Encoding (Encoding(..), byteLength)
-import Util (char_size, to_signed)
+import Util (from_uint8array, to_signed)
 
 type EncoderFn a = BitWriter -> a -> BitWriter
 type DecoderFn a = BitReader -> Maybe (Tuple a BitReader)
@@ -44,19 +43,19 @@ decode_uleb128 s = go 0 0 s
   go acc count s'
     | count >= 10 = Nothing
     | otherwise = do
-        Tuple v s'' <- read_u8 s'
+        Tuple v s'' <- read_8 s'
         let acc' = (acc `shl` 7) + (v .&. leb_bits_mask)
         if v >= 0x80 then go acc' (count + 1) s''
         else Just $ Tuple acc' s''
 
 decode_sleb128 :: BitReader -> Maybe (Tuple Int BitReader)
-decode_sleb128 s = go 0 0 (read_u8 s)
+decode_sleb128 s = go 0 0 (read_8 s)
   where
   go :: Int -> Int -> Maybe (Tuple Int BitReader) -> Maybe (Tuple Int BitReader)
   go _ _ Nothing = Nothing
   go acc count (Just (Tuple byte s'))
     | count >= 10 = Nothing
-    | byte >= 0x80 = go (acc .|. ((byte .&. leb_bits_mask) `shl` (7 * count))) (count + 1) (read_u8 s')
+    | byte >= 0x80 = go (acc .|. ((byte .&. leb_bits_mask) `shl` (7 * count))) (count + 1) (read_8 s')
     | otherwise = do
         let byte' = to_signed 7 $ byte .&. leb_bits_mask
         Just $ Tuple (acc .|. (byte' `shl` (7 * count))) s'
@@ -67,12 +66,12 @@ encode_uleb128 v s = go 0 v s
   go :: Int -> Int -> BitWriter -> BitWriter
   go count v' s'
     | count >= 10 = s'
-    | v' <= 0x7F = write_u8 v' s'
+    | v' <= 0x7F = write_8 v' s'
     | otherwise = do
         let
           byte = (v' .&. leb_bits_mask) .|. 0x80
           v'' = v' `shr` 7
-        go (count + 1) v'' $ write_u8 byte s'
+        go (count + 1) v'' $ write_8 byte s'
 
 encode_sleb128 :: Int -> BitWriter -> BitWriter
 encode_sleb128 v s = go 0 v s
@@ -80,8 +79,8 @@ encode_sleb128 v s = go 0 v s
   go :: Int -> Int -> BitWriter -> BitWriter
   go count v' s'
     | count >= 10 = s'
-    | v' > 63 || v' < -64 = go (count + 1) (v' `shl` 7) $ write_u8 ((v' .&. leb_bits_mask) .|. 0x80) s'
-    | otherwise = write_u8 (to_signed 7 v') s'
+    | v' > 63 || v' < -64 = go (count + 1) (v' `shl` 7) $ write_8 ((v' .&. leb_bits_mask) .|. 0x80) s'
+    | otherwise = write_8 (to_signed 7 v') s'
 
 encode_char :: Char -> BitWriter -> BitWriter
 encode_char = write_utf8_char
@@ -92,11 +91,10 @@ decode_char = read_utf8_char
 encode_string :: String -> BitWriter -> BitWriter
 encode_string v s =
   let
-    chars = to_chars v
     byte_length = byteLength v UTF8
     s' = encode_uleb128 byte_length s
   in
-    Array.foldl (flip encode_char) s' chars
+    write_string v s'
 
 -- n [...items]
 -- byte_length string
@@ -104,21 +102,15 @@ encode_string v s =
 decode_string :: BitReader -> Maybe (Tuple String BitReader)
 decode_string s = do
   Tuple byte_length s' <- decode_uleb128 s
-  go byte_length [] s'
-  where
-  go :: Int -> Array Char -> BitReader -> Maybe (Tuple String BitReader)
-  go 0 acc s'' = Just $ Tuple (from_chars acc) s''
-  go n acc s''
-    | n <= 0 = Nothing
-    | otherwise = do
-        Tuple char s''' <- decode_char s''
-        go (n - (char_size char)) (Array.snoc acc char) s'''
+  Tuple bytes s'' <- read_buffer byte_length s'
+  str <- from_uint8array bytes Nothing Just
+  pure $ Tuple str s''
 
 encode_u8 :: Int -> BitWriter -> BitWriter
-encode_u8 = write_u8
+encode_u8 = write_8
 
 decode_u8 :: BitReader -> Maybe (Tuple Int BitReader)
-decode_u8 = read_u8
+decode_u8 = read_8
 
 encode_lanes :: Lanes -> BitWriter -> BitWriter
 encode_lanes (Lanes16 a b c d e f g h i j k l m n o p) bs =
@@ -182,21 +174,21 @@ decode_locals s = do
   Just (Tuple (Locals count val_type) s'')
 
 encode_heap_type :: HeapType -> BitWriter -> Maybe BitWriter
-encode_heap_type HeapTypeNoFunc s = Just $ write_u8 0x73 s
-encode_heap_type HeapTypeNoExtern s = Just $ write_u8 0x72 s
-encode_heap_type HeapTypeNone s = Just $ write_u8 0x71 s
-encode_heap_type HeapTypeFunc s = Just $ write_u8 0x70 s
-encode_heap_type HeapTypeExtern s = Just $ write_u8 0x6F s
-encode_heap_type HeapTypeAny s = Just $ write_u8 0x6E s
-encode_heap_type HeapTypeEq s = Just $ write_u8 0x6D s
-encode_heap_type HeapTypeI31 s = Just $ write_u8 0x6C s
-encode_heap_type HeapTypeStruct s = Just $ write_u8 0x6B s
-encode_heap_type HeapTypeArray s = Just $ write_u8 0x6A s
+encode_heap_type HeapTypeNoFunc s = Just $ write_8 0x73 s
+encode_heap_type HeapTypeNoExtern s = Just $ write_8 0x72 s
+encode_heap_type HeapTypeNone s = Just $ write_8 0x71 s
+encode_heap_type HeapTypeFunc s = Just $ write_8 0x70 s
+encode_heap_type HeapTypeExtern s = Just $ write_8 0x6F s
+encode_heap_type HeapTypeAny s = Just $ write_8 0x6E s
+encode_heap_type HeapTypeEq s = Just $ write_8 0x6D s
+encode_heap_type HeapTypeI31 s = Just $ write_8 0x6C s
+encode_heap_type HeapTypeStruct s = Just $ write_8 0x6B s
+encode_heap_type HeapTypeArray s = Just $ write_8 0x6A s
 encode_heap_type (HeapTypeIndex (TypeIndex i)) s = Just $ encode_sleb128 i s
 encode_heap_type _ _ = Nothing
 
 decode_heap_type :: BitReader -> Maybe (Tuple HeapType BitReader)
-decode_heap_type s = case read_u8 s of
+decode_heap_type s = case read_8 s of
   Just (Tuple 0x73 s') -> Just $ Tuple HeapTypeNoFunc s'
   Just (Tuple 0x72 s') -> Just $ Tuple HeapTypeNoExtern s'
   Just (Tuple 0x71 s') -> Just $ Tuple HeapTypeNone s'
@@ -212,32 +204,32 @@ decode_heap_type s = case read_u8 s of
     _ -> Nothing
 
 encode_ref_type :: RefType -> BitWriter -> Maybe BitWriter
-encode_ref_type RefTypeNoFunc s = Just $ write_u8 0x73 s
-encode_ref_type (RefType HeapTypeNoFunc true) s = Just $ write_u8 0x73 s
-encode_ref_type RefTypeNoExtern s = Just $ write_u8 0x72 s
-encode_ref_type (RefType HeapTypeNoExtern true) s = Just $ write_u8 0x72 s
-encode_ref_type RefTypeNone s = Just $ write_u8 0x71 s
-encode_ref_type (RefType HeapTypeNone true) s = Just $ write_u8 0x71 s
-encode_ref_type RefTypeFunc s = Just $ write_u8 0x70 s
-encode_ref_type (RefType HeapTypeFunc true) s = Just $ write_u8 0x70 s
-encode_ref_type RefTypeExtern s = Just $ write_u8 0x6F s
-encode_ref_type (RefType HeapTypeExtern true) s = Just $ write_u8 0x6F s
-encode_ref_type RefTypeAny s = Just $ write_u8 0x6E s
-encode_ref_type (RefType HeapTypeAny true) s = Just $ write_u8 0x6E s
-encode_ref_type RefTypeEq s = Just $ write_u8 0x6D s
-encode_ref_type (RefType HeapTypeEq true) s = Just $ write_u8 0x6D s
-encode_ref_type RefTypeI31 s = Just $ write_u8 0x6C s
-encode_ref_type (RefType HeapTypeI31 true) s = Just $ write_u8 0x6C s
-encode_ref_type RefTypeStruct s = Just $ write_u8 0x6B s
-encode_ref_type (RefType HeapTypeStruct true) s = Just $ write_u8 0x6B s
-encode_ref_type RefTypeArray s = Just $ write_u8 0x6A s
-encode_ref_type (RefType HeapTypeArray true) s = Just $ write_u8 0x6A s
+encode_ref_type RefTypeNoFunc s = Just $ write_8 0x73 s
+encode_ref_type (RefType HeapTypeNoFunc true) s = Just $ write_8 0x73 s
+encode_ref_type RefTypeNoExtern s = Just $ write_8 0x72 s
+encode_ref_type (RefType HeapTypeNoExtern true) s = Just $ write_8 0x72 s
+encode_ref_type RefTypeNone s = Just $ write_8 0x71 s
+encode_ref_type (RefType HeapTypeNone true) s = Just $ write_8 0x71 s
+encode_ref_type RefTypeFunc s = Just $ write_8 0x70 s
+encode_ref_type (RefType HeapTypeFunc true) s = Just $ write_8 0x70 s
+encode_ref_type RefTypeExtern s = Just $ write_8 0x6F s
+encode_ref_type (RefType HeapTypeExtern true) s = Just $ write_8 0x6F s
+encode_ref_type RefTypeAny s = Just $ write_8 0x6E s
+encode_ref_type (RefType HeapTypeAny true) s = Just $ write_8 0x6E s
+encode_ref_type RefTypeEq s = Just $ write_8 0x6D s
+encode_ref_type (RefType HeapTypeEq true) s = Just $ write_8 0x6D s
+encode_ref_type RefTypeI31 s = Just $ write_8 0x6C s
+encode_ref_type (RefType HeapTypeI31 true) s = Just $ write_8 0x6C s
+encode_ref_type RefTypeStruct s = Just $ write_8 0x6B s
+encode_ref_type (RefType HeapTypeStruct true) s = Just $ write_8 0x6B s
+encode_ref_type RefTypeArray s = Just $ write_8 0x6A s
+encode_ref_type (RefType HeapTypeArray true) s = Just $ write_8 0x6A s
 -- general cases
-encode_ref_type (RefType ht true) s = encode_heap_type ht $ write_u8 0x63 s
-encode_ref_type (RefType ht false) s = encode_heap_type ht $ write_u8 0x64 s
+encode_ref_type (RefType ht true) s = encode_heap_type ht $ write_8 0x63 s
+encode_ref_type (RefType ht false) s = encode_heap_type ht $ write_8 0x64 s
 
 decode_ref_type :: BitReader -> Maybe (Tuple RefType BitReader)
-decode_ref_type s = case read_u8 s of
+decode_ref_type s = case read_8 s of
   Just (Tuple 0x73 s') -> Just $ Tuple RefTypeNoFunc s'
   Just (Tuple 0x72 s') -> Just $ Tuple RefTypeNoExtern s'
   Just (Tuple 0x71 s') -> Just $ Tuple RefTypeNone s'
@@ -248,7 +240,7 @@ decode_ref_type s = case read_u8 s of
   Just (Tuple 0x6C s') -> Just $ Tuple RefTypeI31 s'
   Just (Tuple 0x6B s') -> Just $ Tuple RefTypeStruct s'
   Just (Tuple 0x6A s') -> Just $ Tuple RefTypeArray s'
-  Just (Tuple 0x63 s') -> case read_u8 s' of
+  Just (Tuple 0x63 s') -> case read_8 s' of
     Just (Tuple 0x73 s'') -> Just $ Tuple RefTypeNoFunc s''
     Just (Tuple 0x72 s'') -> Just $ Tuple RefTypeNoExtern s''
     Just (Tuple 0x71 s'') -> Just $ Tuple RefTypeNone s''
@@ -279,7 +271,7 @@ decode_ref_type s = case read_u8 s of
   _ -> Nothing
 
 decode_val_type :: BitReader -> Maybe (Tuple ValType BitReader)
-decode_val_type s = case read_u8 s of
+decode_val_type s = case read_8 s of
   Just (Tuple 0x7F s') -> Just $ Tuple ValTypeI32 s'
   Just (Tuple 0x7E s') -> Just $ Tuple ValTypeI64 s'
   Just (Tuple 0x7D s') -> Just $ Tuple ValTypeF32 s'
@@ -290,10 +282,10 @@ decode_val_type s = case read_u8 s of
     Just $ Tuple (ValTypeRefType rt) s'
 
 encode_val_type :: ValType -> BitWriter -> Maybe BitWriter
-encode_val_type ValTypeI32 s = Just $ write_u8 0x7F s
-encode_val_type ValTypeI64 s = Just $ write_u8 0x7E s
-encode_val_type ValTypeF32 s = Just $ write_u8 0x7D s
-encode_val_type ValTypeF64 s = Just $ write_u8 0x7C s
-encode_val_type ValTypeV128 s = Just $ write_u8 0x7B s
+encode_val_type ValTypeI32 s = Just $ write_8 0x7F s
+encode_val_type ValTypeI64 s = Just $ write_8 0x7E s
+encode_val_type ValTypeF32 s = Just $ write_8 0x7D s
+encode_val_type ValTypeF64 s = Just $ write_8 0x7C s
+encode_val_type ValTypeV128 s = Just $ write_8 0x7B s
 encode_val_type (ValTypeRefType rt) s = encode_ref_type rt s
 encode_val_type _ _ = Nothing
