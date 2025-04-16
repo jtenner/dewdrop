@@ -10,7 +10,7 @@ import Data.Tuple (Tuple(..))
 import Data.FingerTree (FingerTree, foldl, size, snoc)
 import Data.Wasm.Module (HeapType(..), Lanes(..), Locals(..), RefType(..), TypeIndex(..), ValType(..))
 import Node.Encoding (Encoding(..), byteLength)
-import Util (char_size, to_chars, to_signed, from_chars)
+import Util (char_size, to_signed)
 
 type EncoderFn a = BitWriter -> a -> BitWriter
 type DecoderFn a = BitReader -> Maybe (Tuple a BitReader)

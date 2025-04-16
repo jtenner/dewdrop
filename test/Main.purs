@@ -1,16 +1,14 @@
-module Test.Main
-  ( main
-  ) where
+module Test.Main where
 
-import Prelude (Unit, discard, ($), (*), (+), (-))
+import Prelude
 
-import Control.Monad.Error.Class (class MonadThrow)
-import Data.Dewdrop.Token
-import Data.Eq (class Eq)
-import Data.FingerTree (concat, empty, foldl, foldr, map, single, (+=))
 import Data.Maybe (Maybe(..))
-import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
+import Control.Monad.Error.Class (class MonadThrow)
+import Data.BitStream (get_index, read_from)
+import Data.Dewdrop.Token (Token(..), TokenKind(..))
+import Data.FingerTree ((+=), single, empty)
+import Data.Foldable (foldl, foldr)
 import Dewdrop.Lexer (lex_token, tokenize)
 import Dewdrop.Parser (parse_expr)
 import Dewdrop.RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
@@ -20,7 +18,7 @@ import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess)
-import Util (to_chars)
+import Util (to_uint8array)
 
 solve_and_check :: forall m8 t9. MonadThrow Error m8 => Show t9 => Eq t9 => Maybe (RPN t9) -> t9 -> m8 Unit
 solve_and_check rpn' v' = case rpn' of
@@ -29,50 +27,41 @@ solve_and_check rpn' v' = case rpn' of
     Nothing -> shouldEqual false true
   Nothing -> shouldEqual false true
 
-main :: Effect Unit
+match_token :: ∀ (m ∷ Type -> Type). MonadThrow Error m => String -> TokenKind -> Int -> m Unit
+match_token str kind size = do
+  let
+    r = lex_token $ read_from $ to_uint8array str
+  case r of
+    Just (Tuple kind' size') -> do
+      _ <- shouldEqual kind kind'
+      shouldEqual size $ get_index size'
+    Nothing -> shouldEqual false true
+
+main ∷ Effect Unit
 main = runSpecAndExitProcess [ consoleReporter ] do
   describe "Token Kinds" do
-    it "should match tokens" do
-      -- TokenKindPubKeyword
-      shouldEqual (lex_token (to_chars "pub") 0) (Just (Tuple TokenKindPubKeyword 3)) -- to_chars "pub"
-      -- TokenKindFnKeyword
-      shouldEqual (lex_token (to_chars "fn") 0) (Just (Tuple TokenKindFnKeyword 2)) -- to_chars "fn"
-      -- TokenKindWhenKeyword
-      shouldEqual (lex_token (to_chars "when") 0) (Just (Tuple TokenKindWhenKeyword 4)) -- to_chars "when"
-      -- TokenKindElseKeyword
-      shouldEqual (lex_token (to_chars "else") 0) (Just (Tuple TokenKindElseKeyword 4)) -- to_chars "else"
 
-      -- TokenKindNameIdentifier String
-      shouldEqual (lex_token (to_chars "abc") 0) (Just (Tuple (TokenKindNameIdentifier "abc") 3)) -- to_chars "abc"
-      shouldEqual (lex_token (to_chars "_") 0) (Just (Tuple (TokenKindNameIdentifier "_") 1)) -- to_chars "_"
-      shouldEqual (lex_token (to_chars "a_b_c_123") 0) (Just (Tuple (TokenKindNameIdentifier "a_b_c_123") 9)) -- to_chars "a_b_c_123"
-      -- TokenKindInt Int
-      shouldEqual (lex_token (to_chars "1") 0) (Just (Tuple (TokenKindInt 1) 1)) -- to_chars "1"
-      shouldEqual (lex_token (to_chars "12") 0) (Just (Tuple (TokenKindInt 12) 2)) -- to_chars "12"
-
-      -- TokenKindLParen
-      shouldEqual (lex_token (to_chars "(") 0) (Just (Tuple TokenKindLParen 1)) -- to_chars "("
-      -- TokenKindRParen
-      shouldEqual (lex_token (to_chars ")") 0) (Just (Tuple TokenKindRParen 1)) -- to_chars ")"
-      -- TokenKindLBrace
-      shouldEqual (lex_token (to_chars "{") 0) (Just (Tuple TokenKindLBrace 1)) -- to_chars "{"
-      -- TokenKindRBrace
-      shouldEqual (lex_token (to_chars "}") 0) (Just (Tuple TokenKindRBrace 1)) -- to_chars "}"
-      -- TokenKindEqualsEquals
-      shouldEqual (lex_token (to_chars "==") 0) (Just (Tuple TokenKindEqualsEquals 2)) -- to_chars "=="
-      -- TokenKindPlus
-      shouldEqual (lex_token (to_chars "+") 0) (Just (Tuple TokenKindPlus 1)) -- to_chars "+"
-      -- TokenKindMinus
-      shouldEqual (lex_token (to_chars "-") 0) (Just (Tuple TokenKindMinus 1)) -- to_chars "-"
-      -- TokenKindRArrow
-      shouldEqual (lex_token (to_chars "->") 0) (Just (Tuple TokenKindRArrow 2)) -- to_chars "->"
-      -- TokenKindEOF
-      shouldEqual (lex_token (to_chars "") 0) (Just (Tuple TokenKindEOF 0)) -- to_chars ""
-      shouldEqual (lex_token (to_chars "123") 3) (Just (Tuple TokenKindEOF 3)) -- to_chars "123"
-      -- TokenKindWhiteSpace
-      shouldEqual (lex_token (to_chars " \t\r") 0) (Just (Tuple TokenKindWhiteSpace 3)) -- to_chars " \t\r"
-      -- TokenKindNewLine
-      shouldEqual (lex_token (to_chars "\n") 0) (Just (Tuple TokenKindNewLine 1)) -- to_chars "\n"
+    it "should tokenize pub" do match_token "pub" TokenKindPubKeyword 3
+    it "should tokenize fn" do match_token "fn" TokenKindFnKeyword 2
+    it "should tokenize when" do match_token "when" TokenKindWhenKeyword 4
+    it "should tokenize else" do match_token "else" TokenKindElseKeyword 4
+    it "should tokenize abc" do match_token "abc" (TokenKindNameIdentifier "abc") 3
+    it "should tokenize _" do match_token "_" (TokenKindNameIdentifier "_") 1
+    it "should tokenize a_b_c_123" do match_token "a_b_c_123" (TokenKindNameIdentifier "a_b_c_123") 9
+    it "should tokenize 1" do match_token "1" (TokenKindInt 1) 1
+    it "should tokenize 12" do match_token "12" (TokenKindInt 12) 2
+    it "should tokenize (" do match_token "(" TokenKindLParen 1
+    it "should tokenize )" do match_token ")" TokenKindRParen 1
+    it "should tokenize {" do match_token "{" TokenKindLBrace 1
+    it "should tokenize }" do match_token "}" TokenKindRBrace 1
+    it "should tokenize ==" do match_token "==" TokenKindEqualsEquals 2
+    it "should tokenize +" do match_token "+" TokenKindPlus 1
+    it "should tokenize -" do match_token "-" TokenKindMinus 1
+    it "should tokenize ->" do match_token "->" TokenKindRArrow 2
+    it "should tokenize \"\"" do match_token "" TokenKindEOF 0
+    it "should tokenize 123" do match_token "123" TokenKindEOF 3
+    it "should tokenize  \t\r" do match_token " \t\r" TokenKindWhiteSpace 3
+    it "should tokenize \n" do match_token "\n" TokenKindNewLine 1
 
     it "should generate an array of tokens" do
       let
@@ -100,7 +89,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
         123
         """
-      shouldEqual (tokenize text true)
+      shouldEqual (tokenize true $ read_from $ to_uint8array text)
         [ Token TokenKindPubKeyword 9
         , Token TokenKindFnKeyword 21
         , Token TokenKindWhenKeyword 32
@@ -124,13 +113,14 @@ main = runSpecAndExitProcess [ consoleReporter ] do
         , Token TokenKindEOF 234
         ]
 
-  let add = binary "+" 5 false \x y -> x + y
-  let sub = binary "-" 5 false \x y -> x - y
-  let mul = binary "*" 6 false \x y -> x * y
-  let mul_2 = unary "*2" \x -> x * 2
-  let rmul_2 = right_unary "2*" \x -> x * 2
-  let add_2 = unary "+2" \x -> x + 2
-  let rmul_3 = right_unary "3*" \x -> x * 3
+  let
+    add = binary "+" 5 false \x y -> x + y
+    sub = binary "-" 5 false \x y -> x - y
+    mul = binary "*" 6 false \x y -> x * y
+    mul_2 = unary "*2" \x -> x * 2
+    rmul_2 = right_unary "2*" \x -> x * 2
+    add_2 = unary "+2" \x -> x + 2
+    rmul_3 = right_unary "3*" \x -> x * 3
 
   describe "RPN" do
     it "should perform unary operations" do
@@ -164,7 +154,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
   describe "parser" do
     it "should parse an integer" do
       let
-        tokens = tokenize "123" true
+        tokens = tokenize true $ read_from $ to_uint8array "123"
         result = parse_expr tokens 0
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (IntExpr 123))"
@@ -172,7 +162,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "should parse a variable" do
       let
-        tokens = tokenize "abc" true
+        tokens = tokenize true $ read_from $ to_uint8array "abc"
         result = parse_expr tokens 0
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (NameExpr abc))"
@@ -180,7 +170,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "should parse a binary expression" do
       let
-        tokens = tokenize "1 + 2" true
+        tokens = tokenize true $ read_from $ to_uint8array "1 + 2"
         result = parse_expr tokens 0
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (AddExpr (Expr (IntExpr 1)) (Expr (IntExpr 2))))"
@@ -188,7 +178,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "should parse a grouped expression" do
       let
-        tokens = tokenize "(1 + 2)" true
+        tokens = tokenize true $ read_from $ to_uint8array "(1 + 2)"
         result = parse_expr tokens 0
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (AddExpr (Expr (IntExpr 1)) (Expr (IntExpr 2))))"
@@ -196,7 +186,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "should parse a more complex expression" do
       let
-        tokens = tokenize "(1 + 2) * 3 - 4" true
+        tokens = tokenize true $ read_from $ to_uint8array "(1 + 2) * 3 - 4"
         result = parse_expr tokens 0
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (SubExpr (Expr (MulExpr (Expr (AddExpr (Expr (IntExpr 1)) (Expr (IntExpr 2)))) (Expr (IntExpr 3)))) (Expr (IntExpr 4))))"
@@ -204,7 +194,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "should parse a call expression" do
       let
-        tokens = tokenize "f(1, 2)" true
+        tokens = tokenize true $ read_from $ to_uint8array "f(1, 2)"
         result = parse_expr tokens 0
       case result of
         Just (Tuple expr _) -> shouldEqual (show expr) "(Expr (CallExpr (Expr (NameExpr f)) [(Expr (IntExpr 1)),(Expr (IntExpr 2))]))"
@@ -212,34 +202,36 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
   describe "FingerTree" do
     it "should handle empty trees" do
+      let empty_ft = empty
 
-      shouldEqual (map (\x -> x + 1) empty) empty
-      shouldEqual (foldl (\acc x -> acc + x) 0 empty) 0
-      shouldEqual (foldr (\x acc -> acc + x) 0 empty) 0
+      shouldEqual (map (\x -> x + 1) empty_ft) mempty
+      shouldEqual (foldl (\acc x -> acc + x) 0 empty_ft) 0
+      shouldEqual (foldr (\x acc -> acc + x) 0 empty_ft) 0
 
     it "should handle single element trees" do
-      let singleFT = single 5
-      shouldEqual (map (\x -> x + 1) singleFT) $ single 6
-      shouldEqual (foldl (\acc x -> acc + x) 0 singleFT) 5
+      let ft = single 5
+      shouldEqual (map (\x -> x + 1) ft) $ pure 6
+      shouldEqual (foldl (\acc x -> acc + x) 0 ft) 5
 
     it "should handle multiple element trees" do
-      let ft = empty += 1 += 2 += 3
-      shouldEqual (map (\x -> x + 1) ft) $ single 2 += 3 += 4
+      let ft = mempty += 1 += 2 += 3
+      shouldEqual (map (\x -> x + 1) ft) $ pure 2 += 3 += 4
       shouldEqual (foldl (\acc x -> acc + x) 0 ft) 6
 
     it "should handle concatenation" do
-      let ft1 = single 1
-      let ft2 = single 2
-      let combined = concat ft1 ft2
-      shouldEqual (map (\x -> x + 1) combined) $ single 2 += 3
+      let
+        ft1 = pure 1
+        ft2 = pure 2
+        combined = ft1 <> ft2
+      shouldEqual (map (\x -> x + 1) combined) $ pure 2 += 3
       shouldEqual (foldr (\x acc -> acc + x) 0 combined) 3
 
     it "should handle complex transformations" do
-      let ft = concat (single 1) (concat (single 2) (single 3))
+      let ft = (single 1) <> (single 2) <> (single 3)
       shouldEqual (foldr (\x acc -> acc + x) 0 ft) 6
 
     it "should handle edge cases with foldr" do
-      let ft = concat (single 1) (concat (single 2) (single 3))
+      let ft = (single 1) <> (single 2) <> (single 3)
       shouldEqual (foldr (\x acc -> acc + x) 0 ft) 6
 
     it "should handle empty foldr" do

@@ -28,15 +28,15 @@ unique_queue_new :: UniqueQueue
 unique_queue_new = UniqueQueue { actions: mempty, seen: Set.empty }
 
 enqueue :: CompilerAction -> UniqueQueue -> UniqueQueue
-enqueue action (UniqueQueue { actions, seen }) = UniqueQueue { actions: actions <> (pure action), seen }
+enqueue action (UniqueQueue inner@{ actions }) = UniqueQueue $ merge { actions: actions <> (pure action) } inner
 
 dequeue :: UniqueQueue -> Maybe (Tuple CompilerAction UniqueQueue)
-dequeue (UniqueQueue { actions, seen }) = case uncons actions of
+dequeue (UniqueQueue inner@{ actions }) = case uncons actions of
   Nothing -> Nothing
-  Just (Tuple action actions') -> Just (Tuple action $ UniqueQueue { actions: actions', seen })
+  Just (Tuple action actions') -> Just (Tuple action $ UniqueQueue $ merge { actions: actions' } inner)
 
 seen :: ModuleID -> UniqueQueue -> Boolean
-seen module_id (UniqueQueue { seen }) = Set.member module_id seen
+seen module_id (UniqueQueue inner) = Set.member module_id inner.seen
 
 exhaust :: ∀ (@system_ctx :: Type). System system_ctx => Compiler system_ctx -> UniqueQueue -> Maybe (Compiler system_ctx)
 exhaust compiler@(Compiler { system_ctx, package_name }) queue = case dequeue queue of

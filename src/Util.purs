@@ -3,6 +3,7 @@ module Util where
 import Prelude
 
 import Data.Array ((!!))
+import Data.ArrayBuffer.Types (Uint8Array)
 import Data.BitStream (BitReader, read_char)
 import Data.Char (toCharCode)
 import Data.Int.Bits (shl, (.&.))
@@ -12,10 +13,9 @@ import Data.Tuple (Tuple(..))
 
 type CharPredicate = Char -> Boolean
 
+foreign import to_uint8array :: String -> Uint8Array
 foreign import str_char :: String -> Char -> String
 foreign import char_str :: Char -> String -> String
-foreign import to_chars :: String -> Array Char
-foreign import from_chars :: Array Char -> String
 foreign import trace :: ∀ a. String -> a -> a
 
 is_char :: Char -> Char -> Boolean

@@ -1,18 +1,9 @@
 import * as util from "node:util";
 
-/**
- *
- * @param {string} str
- * @returns {string[]}
- */
-export const to_chars = Array.from;
-
-/**
- *
- * @param {string[]} chars
- * @returns {string}
- */
-export const from_chars = (chars) => chars.join("");
+export const to_uint8array = (value) => {
+  const encoder = new TextEncoder();
+  return encoder.encode(value);
+};
 
 /**
  *
