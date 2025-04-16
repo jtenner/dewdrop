@@ -9,7 +9,6 @@ import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Util (is_asterisk, str_char, is_colon, is_comma, is_digit, is_equals, is_fslash, is_lbrace, is_lcaret, is_lparen, is_minus, is_newline, is_plus, is_rbrace, is_rcaret, is_rparen, is_whitespace, is_name_identifier_start, is_name_identifier_continue, is_type_identifier_start, is_type_identifier_continue, is_zero, is_positive_digit)
 
-
 type Consumer = BitReader -> Maybe (Tuple String BitReader)
 type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
 
@@ -74,11 +73,11 @@ take_many_seperated consumer seperator r = go "" (consumer r) r
 take_many_joined_by :: Consumer -> Consumer -> Consumer
 take_many_joined_by c s r = go_c "" $ c r
   where
-    go_c _ Nothing = Nothing
-    go_c acc (Just (Tuple v r')) = go_s (acc <> v) $ s r'
+  go_c _ Nothing = Nothing
+  go_c acc (Just (Tuple v r')) = go_s (acc <> v) $ s r'
 
-    go_s acc Nothing = Just (Tuple acc r)
-    go_s acc (Just (Tuple v r')) = go_c (acc <> v) $ c r'
+  go_s acc Nothing = Just (Tuple acc r)
+  go_s acc (Just (Tuple v r')) = go_c (acc <> v) $ c r'
 
 do_take_many_joined_by :: String -> Consumer -> Consumer -> Consumer
 do_take_many_joined_by acc consumer seperator r = case seperator r of
@@ -86,7 +85,6 @@ do_take_many_joined_by acc consumer seperator r = case seperator r of
   Just (Tuple sep r') -> case consumer r' of
     Nothing -> Just (Tuple acc r')
     Just (Tuple s r'') -> do_take_many_joined_by (acc <> sep <> s) consumer seperator r''
-
 
 is_token_kind_pub_keyword :: TokenKind -> Boolean
 is_token_kind_pub_keyword kind = case kind of

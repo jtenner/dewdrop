@@ -50,7 +50,7 @@ expect_words bytes reader v = do
       shouldEqual value byte
       go bytes' r'
     Nothing -> do
-      let _ = trace "Failed to read word from" r 
+      let _ = trace "Failed to read word from" r
       shouldEqual false true
 
 main ∷ Effect Unit
@@ -70,8 +70,8 @@ main = runSpecAndExitProcess [ consoleReporter ] do
     --write_string
     --read_buffer
     it "should read words from a buffer" do
-      expect_words (1 : Nil) read_8 [1]
-      expect_words (-1 : Nil) read_8 [255]
+      expect_words (1 : Nil) read_8 [ 1 ]
+      expect_words (-1 : Nil) read_8 [ 255 ]
 
   describe "Token Kinds" do
 

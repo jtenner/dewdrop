@@ -17,8 +17,10 @@ type Limit = Int
 type Length = Int
 data BitReaderSource
 data BitWriterSource
-data BitReader = BitReader BitReaderSource Index Limit
-               | BitReaderEmpty
+data BitReader
+  = BitReader BitReaderSource Index Limit
+  | BitReaderEmpty
+
 data BitWriter = BitWriter (FingerTree BitElement) Index
 
 type Size = Int
@@ -34,8 +36,9 @@ foreign import bit_writer_to_bytes :: BitWriterSource -> Uint8Array
 foreign import bit_writer_write :: Size -> Value -> BitWriterSource -> BitWriterSource
 foreign import bit_writer_write_buffer :: Uint8Array -> BitWriterSource -> BitWriterSource
 
-data BitElement = BitElement Size Value
-                | BitElementBuffer Uint8Array
+data BitElement
+  = BitElement Size Value
+  | BitElementBuffer Uint8Array
 
 bit_reader :: Uint8Array -> BitReader
 bit_reader = read_from
@@ -61,10 +64,10 @@ read_from :: Uint8Array -> BitReader
 read_from source
   | uint8array_length source == 0 = BitReaderEmpty
   | otherwise = do
-    let
-      reader = bit_reader_source source
-      limit = bit_reader_limit reader
-    BitReader reader 0 limit
+      let
+        reader = bit_reader_source source
+        limit = bit_reader_limit reader
+      BitReader reader 0 limit
 
 write :: Size -> Value -> BitWriter -> BitWriter
 write size value (BitWriter source index) = do
@@ -102,9 +105,8 @@ read_signed size (BitReader source index limit)
         next = index + size
         reader = BitReader source next limit
         max_limit = 1 `shl` (size - 1)
-      if value >= max_limit
-        then pure $ Tuple (value - max_limit * 2) reader
-        else pure $ Tuple value reader
+      if value >= max_limit then pure $ Tuple (value - max_limit * 2) reader
+      else pure $ Tuple value reader
 
 read_u8 :: BitReader -> Maybe (Tuple Int BitReader)
 read_u8 = read 8
@@ -300,7 +302,7 @@ read_buffer _ BitReaderEmpty = Nothing
 read_buffer length (BitReader source index limit)
   | index + (length `shl` 3) > limit = Nothing
   | otherwise = do
-    let
-      buf = bit_reader_read_buffer length index source
-      reader = BitReader source (index + (length `shl` 3)) limit
-    pure $ Tuple buf reader
+      let
+        buf = bit_reader_read_buffer length index source
+        reader = BitReader source (index + (length `shl` 3)) limit
+      pure $ Tuple buf reader
