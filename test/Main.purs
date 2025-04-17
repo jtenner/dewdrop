@@ -10,7 +10,7 @@ import Data.Foldable (foldl, foldr)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.Lexer (lex_token, tokenize)
+import Dewdrop.Lexer (lex_token, token_len, tokenize)
 import Dewdrop.Parser (parse_expr)
 import Dewdrop.RPN (RPN, unary, binary, right_unary, finalize, rpn, group, end_group, (++?), (+.?), (+.), (++))
 import Effect (Effect)
@@ -33,9 +33,9 @@ match_token str kind size = do
   let
     r = lex_token $ read_from $ to_uint8array str
   case r of
-    Just (Tuple kind' size') -> do
+    Just (Tuple kind' _) -> do
       _ <- shouldEqual kind kind'
-      shouldEqual size $ get_index size'
+      shouldEqual size $ token_len kind'
     Nothing -> shouldEqual false true
 
 expect_words :: ∀ (m ∷ Type -> Type). MonadThrow Error m => List Int -> (BitReader -> Maybe (Tuple Int BitReader)) -> Array Int -> m Unit
@@ -64,6 +64,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
     --write_buffer
     --read
     --read_u8
+    --read_s8
     --write_u8
     --read_char
     --write_utf8_char
@@ -82,8 +83,8 @@ main = runSpecAndExitProcess [ consoleReporter ] do
     it "should tokenize abc" do match_token "abc" (TokenKindNameIdentifier "abc") 3
     it "should tokenize _" do match_token "_" (TokenKindNameIdentifier "_") 1
     it "should tokenize a_b_c_123" do match_token "a_b_c_123" (TokenKindNameIdentifier "a_b_c_123") 9
-    it "should tokenize 1" do match_token "1" (TokenKindInt 1) 1
-    it "should tokenize 12" do match_token "12" (TokenKindInt 12) 2
+    it "should tokenize 1" do match_token "1" (TokenKindInt 1 "1") 1
+    it "should tokenize 12" do match_token "12" (TokenKindInt 12 "12") 2
     it "should tokenize (" do match_token "(" TokenKindLParen 1
     it "should tokenize )" do match_token ")" TokenKindRParen 1
     it "should tokenize {" do match_token "{" TokenKindLBrace 1
@@ -93,9 +94,8 @@ main = runSpecAndExitProcess [ consoleReporter ] do
     it "should tokenize -" do match_token "-" TokenKindMinus 1
     it "should tokenize ->" do match_token "->" TokenKindRArrow 2
     it "should tokenize \"\"" do match_token "" TokenKindEOF 0
-    it "should tokenize 123" do match_token "123" TokenKindEOF 3
-    it "should tokenize  \t\r" do match_token " \t\r" TokenKindWhiteSpace 3
-    it "should tokenize \n" do match_token "\n" TokenKindNewLine 1
+    it "should tokenize  \\t\\r" do match_token " \t\r" (TokenKindWhiteSpace " \t\r") 3
+    it "should tokenize \\n" do match_token "\n" TokenKindNewLine 1
 
     it "should generate an array of tokens" do
       let
@@ -124,27 +124,27 @@ main = runSpecAndExitProcess [ consoleReporter ] do
         123
         """
       shouldEqual (tokenize true $ read_from $ to_uint8array text)
-        [ Token TokenKindPubKeyword 9
-        , Token TokenKindFnKeyword 21
-        , Token TokenKindWhenKeyword 32
-        , Token TokenKindElseKeyword 45
-        , Token (TokenKindNameIdentifier "abc") 58
-        , Token (TokenKindNameIdentifier "_") 70
-        , Token (TokenKindNameIdentifier "a_b_c_123") 80
-        , Token (TokenKindInt 1) 98
-        , Token (TokenKindInt 12) 108
-        , Token TokenKindLParen 119
-        , Token TokenKindRParen 129
-        , Token TokenKindLBrace 139
-        , Token TokenKindRBrace 149
-        , Token TokenKindEqualsEquals 159
-        , Token TokenKindPlus 170
-        , Token TokenKindMinus 180
-        , Token TokenKindAsterisk 190
-        , Token TokenKindFSlash 200
-        , Token TokenKindRArrow 210
-        , Token (TokenKindInt 123) 222
-        , Token TokenKindEOF 234
+        [ Token TokenKindPubKeyword 9 3
+        , Token TokenKindFnKeyword 21 2
+        , Token TokenKindWhenKeyword 32 4
+        , Token TokenKindElseKeyword 45 4
+        , Token (TokenKindNameIdentifier "abc") 58 3
+        , Token (TokenKindNameIdentifier "_") 70 1
+        , Token (TokenKindNameIdentifier "a_b_c_123") 80 9
+        , Token (TokenKindInt 1 "1") 98 1
+        , Token (TokenKindInt 12 "12") 108 2
+        , Token TokenKindLParen 119 1
+        , Token TokenKindRParen 129 1
+        , Token TokenKindLBrace 139 1
+        , Token TokenKindRBrace 149 1
+        , Token TokenKindEqualsEquals 159 2
+        , Token TokenKindPlus 170 1
+        , Token TokenKindMinus 180 1
+        , Token TokenKindAsterisk 190 1
+        , Token TokenKindFSlash 200 1
+        , Token TokenKindRArrow 210 2
+        , Token (TokenKindInt 123 "123") 222 3
+        , Token TokenKindEOF 234 0
         ]
 
   let

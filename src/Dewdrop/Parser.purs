@@ -142,7 +142,7 @@ parse_take_right p1 p2 tokens index = do
 
 expect :: (TokenKind -> Boolean) -> Parser Token
 expect p = \tokens index -> case (tokens !! index) of
-  Just (Token kind pos) | p kind -> Just (Tuple (Token kind pos) (index + 1))
+  Just t@(Token kind _ _) | p kind -> pure $ Tuple t $ index + 1
   _ -> Nothing
 
 -- parsers
@@ -156,13 +156,13 @@ parse_module tokens index = do
   Tuple declarations next_index <- parse_many parse_declaration tokens index
   let _ = tokens !! next_index
   case tokens !! next_index of
-    Just (Token TokenKindEOF _) -> Just (Tuple (Module declarations) next_index)
+    Just (Token TokenKindEOF _ _) -> Just (Tuple (Module declarations) next_index)
     _ -> Nothing
 
 parse_declaration :: (Array Token) -> Int -> ParserResult ModuleDeclaration
 parse_declaration tokens index = case (tokens !! index) of
-  Just (Token TokenKindPubKeyword pos) -> do_parse_pub_declaration pos tokens (index + 1)
-  Just (Token _ pos) -> do_parse_declaration pos tokens index
+  Just (Token TokenKindPubKeyword pos _) -> do_parse_pub_declaration pos tokens (index + 1)
+  Just (Token _ pos _) -> do_parse_declaration pos tokens index
   Nothing -> Nothing
 
 do_parse_declaration :: Int -> (Array Token) -> Int -> ParserResult ModuleDeclaration
@@ -201,12 +201,12 @@ parse_fn tokens index = do
 
 expect_name_identifier :: Parser (Tuple String Int)
 expect_name_identifier tokens index = case expect is_token_kind_name_identifier tokens index of
-  Just (Tuple (Token (TokenKindNameIdentifier name) pos) next_index) -> Just (Tuple (Tuple name pos) next_index)
+  Just (Tuple (Token (TokenKindNameIdentifier name) pos _) next_index) -> Just (Tuple (Tuple name pos) next_index)
   _ -> Nothing
 
 expect_type_identifier :: Parser (Tuple String Int)
 expect_type_identifier tokens index = case expect is_token_kind_type_identifier tokens index of
-  Just (Tuple (Token (TokenKindTypeIdentifier name) pos) next_index) -> Just (Tuple (Tuple name pos) next_index)
+  Just (Tuple (Token (TokenKindTypeIdentifier name) pos _) next_index) -> Just (Tuple (Tuple name pos) next_index)
   _ -> Nothing
 
 expect_colon :: Parser Token
@@ -232,23 +232,23 @@ parse_expr tokens index = do
 -- All the different operators in the example for now
 do_parse_expression_unary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_unary rpn' tokens index = case tokens !! index of
-  Just (Token (TokenKindInt val) pos) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
-  Just (Token (TokenKindNameIdentifier name) pos) -> do_parse_expression_binary (rpn' ++ Expr (NameExpr name) pos) tokens (index + 1)
+  Just (Token (TokenKindInt val _) pos _) -> do_parse_expression_binary (rpn' ++ Expr (IntExpr val) pos) tokens (index + 1)
+  Just (Token (TokenKindNameIdentifier name) pos _) -> do_parse_expression_binary (rpn' ++ Expr (NameExpr name) pos) tokens (index + 1)
   -- LParen in unary position is a group
-  Just (Token TokenKindLParen _) -> do
+  Just (Token TokenKindLParen _ _) -> do
     rpn'' <- rpn' +. group
     do_parse_expression_unary rpn'' tokens (index + 1)
 
-  Just (Token TokenKindWhenKeyword pos) -> do
+  Just (Token TokenKindWhenKeyword pos _) -> do
     Tuple arms index' <- (parse_many parse_arm) tokens (index + 1)
     case (tokens !! index') of
-      Just (Token TokenKindElseKeyword _) -> do
+      Just (Token TokenKindElseKeyword _ _) -> do
         let index'' = index' + 1
         Tuple else_expr index''' <- parse_expr tokens index''
         Just $ Tuple (rpn' ++ Expr (WhenExpr arms (Just else_expr)) pos) index'''
       _ -> Just $ Tuple (rpn' ++ (Expr (WhenExpr arms Nothing) pos)) index'
 
-  Just (Token TokenKindLBrace pos) -> do
+  Just (Token TokenKindLBrace pos _) -> do
     Tuple exprs index' <- (parse_many parse_expr) tokens (index + 1)
     _ <- tokens !! index'
     Tuple _ index'' <- expect is_token_kind_r_brace tokens index'
@@ -296,42 +296,42 @@ less_than_equals_op pos = binary "<=" relational_precedence false \x y -> Expr (
 -- find the next binary operator
 do_parse_expression_binary :: RPN Expr -> Parser (RPN Expr)
 do_parse_expression_binary rpn' tokens index = case tokens !! index of
-  Just (Token TokenKindPlus pos) -> do
+  Just (Token TokenKindPlus pos _) -> do
     rpn'' <- rpn' +. (add_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindMinus pos) -> do
+  Just (Token TokenKindMinus pos _) -> do
     rpn'' <- rpn' +. (sub_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindAsterisk pos) -> do
+  Just (Token TokenKindAsterisk pos _) -> do
     rpn'' <- rpn' +. (mul_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindFSlash pos) -> do
+  Just (Token TokenKindFSlash pos _) -> do
     rpn'' <- rpn' +. (div_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindEqualsEquals pos) -> do
+  Just (Token TokenKindEqualsEquals pos _) -> do
     rpn'' <- rpn' +. (equals_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindGreaterThan pos) -> do
+  Just (Token TokenKindGreaterThan pos _) -> do
     rpn'' <- rpn' +. (greater_than_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindGreaterThanOrEqual pos) -> do
+  Just (Token TokenKindGreaterThanOrEqual pos _) -> do
     rpn'' <- rpn' +. (greater_than_equals_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindLessThan pos) -> do
+  Just (Token TokenKindLessThan pos _) -> do
     rpn'' <- rpn' +. (less_than_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
-  Just (Token TokenKindLessThanOrEqual pos) -> do
+  Just (Token TokenKindLessThanOrEqual pos _) -> do
     rpn'' <- rpn' +. (less_than_equals_op pos)
     do_parse_expression_unary rpn'' tokens $ index + 1
 
   -- LParen in binary position is actually a function call
-  Just (Token TokenKindLParen pos) -> do
+  Just (Token TokenKindLParen pos _) -> do
     Tuple exprs next_index <- parse_many_seperated parse_expr (expect is_token_kind_comma) tokens (index + 1)
     Tuple _ next_index_1 <- expect is_token_kind_r_paren tokens next_index
     rpn'' <- rpn' +. call_op pos exprs
     do_parse_expression_binary rpn'' tokens next_index_1
 
-  Just (Token TokenKindRParen _) | is_nested rpn' -> do
+  Just (Token TokenKindRParen _ _) | is_nested rpn' -> do
     rpn'' <- rpn' +. end_group
     do_parse_expression_binary rpn'' tokens $ index + 1
 

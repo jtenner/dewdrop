@@ -2,7 +2,10 @@ module Data.Dewdrop.Token where
 
 import Prelude
 
-data Token = Token TokenKind Int
+type Index = Int
+type Length = Int
+
+data Token = Token TokenKind Index Length
 
 data TokenKind
   = TokenKindPubKeyword
@@ -11,7 +14,7 @@ data TokenKind
   | TokenKindElseKeyword
   | TokenKindNameIdentifier String
   | TokenKindTypeIdentifier String
-  | TokenKindInt Int
+  | TokenKindInt Int String
   | TokenKindLParen
   | TokenKindRParen
   | TokenKindLBrace
@@ -28,7 +31,7 @@ data TokenKind
   | TokenKindGreaterThanOrEqual
   | TokenKindLessThan
   | TokenKindLessThanOrEqual
-  | TokenKindWhiteSpace
+  | TokenKindWhiteSpace String
   | TokenKindNewLine
   | TokenKindUnknown String
   | TokenKindEOF
@@ -40,7 +43,7 @@ instance show_token_kind :: Show TokenKind where
   show TokenKindElseKeyword = "TokenKindElseKeyword"
   show (TokenKindNameIdentifier name) = "(TokenKindNameIdentifier " <> name <> ")"
   show (TokenKindTypeIdentifier name) = "(TokenKindTypeIdentifier " <> name <> ")"
-  show (TokenKindInt value) = "(TokenKindInt " <> show value <> ")"
+  show (TokenKindInt value _) = "(TokenKindInt " <> show value <> ")"
   show TokenKindLParen = "TokenKindLParen"
   show TokenKindRParen = "TokenKindRParen"
   show TokenKindLBrace = "TokenKindLBrace"
@@ -58,13 +61,13 @@ instance show_token_kind :: Show TokenKind where
   show TokenKindLessThan = "TokenKindLessThan"
   show TokenKindLessThanOrEqual = "TokenKindLessThanOrEqual"
   show TokenKindEOF = "TokenKindEOF"
-  show TokenKindWhiteSpace = "TokenKindWhiteSpace"
+  show (TokenKindWhiteSpace _) = "TokenKindWhiteSpace"
   show TokenKindNewLine = "TokenKindNewLine"
   show (TokenKindUnknown value) = "(TokenKindUnknown " <> value <> ")"
 
 derive instance equals :: Eq TokenKind
 
 instance show :: Show Token where
-  show (Token kind pos) = "(Token " <> show kind <> ": " <> show pos <> ")"
+  show (Token kind pos len) = "(Token " <> show kind <> " " <> show pos <> " " <> show len <> ")"
 
 derive instance eq :: Eq Token
