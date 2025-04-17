@@ -4,11 +4,11 @@ import Prelude
 
 import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind, ModuleFn, TypeExpr, TypeExprKind, WhenArm)
 import Data.Dewdrop.Compiler (Compiler(..), ModuleContext(..))
-import Data.Dewdrop.IR (TypedIRID)
+import Data.Dewdrop.IR (IRContext(..), TypedIRID)
 import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Types (IRBoundsID)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore, visit)
-import Data.List (List(..))
+import Data.List (List(..), uncons)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe)
@@ -20,7 +20,7 @@ type IREnv = Map Identifier TypedIRID
 data LowerIRContext system_ctx = LowerIRContext
   { compiler :: Compiler system_ctx
   , env_stack :: List IREnv
-  , fn_stack :: List (LowerIRContext system_ctx)
+  , fn_stack :: List IRContext
   , ir_stack :: List TypedIRID
   , module_ctx :: ModuleContext
   , type_stack :: List IRBoundsID
@@ -48,6 +48,11 @@ instance type_ir_lower_declaration_pass :: Pass ModuleDeclaration (LowerIRContex
 -- Visitable over ctx => over -> ctx -> VisitResult ctx over
 instance type_ir_lower_declaration_kind_pass :: Pass ModuleDeclarationKind (LowerIRContext u) where
   enter = ignore
+
+  -- When we exit a function declaration, we need to associate the name of the function with it's simplified IR Context
+  exit (FnDeclarationKind exported name fn) (LowerIRContext { compiler, module_ctx, fn_stack }) = do
+    { head: fn_context, tail } <- uncons fn_stack
+
   exit = ignore
 
 instance type_ir_lower_fn_pass :: Pass ModuleFn (LowerIRContext u) where
