@@ -3,7 +3,8 @@ module Dewdrop.Passes.CollectExports where
 import Prelude
 
 import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm)
-import Data.Dewdrop.Compiler (Compiler(..), ModuleID, ModuleContext(..), reference)
+import Data.Dewdrop.Compiler (Compiler(..), ModuleContext(..))
+import Data.Dewdrop.Types (ModuleID)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, ignore, skip_all, visit)
 import Data.Map (insert, lookup)
 import Data.Maybe (Maybe)
@@ -39,10 +40,10 @@ instance collect_exports_declaration_pass :: Pass ModuleDeclaration (CollectExpo
   exit = ignore
 
 instance collect_exports_declaration_kind_pass :: Pass ModuleDeclarationKind (CollectExportsContext system_ctx) where
-  enter (FnDeclarationKind true name _) (CollectExportsContext inner_ctx@{ module_id, module_ctx }) = do
+  enter (FnDeclarationKind true name _) (CollectExportsContext inner_ctx@{ module_ctx }) = do
     let
       ModuleContext inner_module_ctx@{ exports } = module_ctx
-      exports' = Set.insert (reference module_id name) exports
+      exports' = Set.insert name exports
       module_context' = ModuleContext $ merge { exports: exports' } inner_module_ctx
 
     skip_all (CollectExportsContext $ merge { module_ctx: module_context' } inner_ctx)

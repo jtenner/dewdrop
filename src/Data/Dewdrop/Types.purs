@@ -197,3 +197,14 @@ constrain (Bounds { upper: with_upper, lower: with_lower }) (Bounds { upper, low
 
 instance bounds_semigroup :: Semigroup Bounds where
   append = constrain
+
+data ModuleID = ModuleID
+  { package_name :: String
+  , path :: Array String
+  }
+
+instance ord_module_id :: Ord ModuleID where
+  compare (ModuleID { package_name, path }) (ModuleID { package_name: package_name', path: path' }) =
+    compare package_name package_name' <> compare path path'
+
+derive instance eq_module_id :: Eq ModuleID

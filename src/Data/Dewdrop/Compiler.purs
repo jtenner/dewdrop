@@ -5,9 +5,11 @@ import Prelude
 import Data.Array (unsnoc)
 import Data.ArrayBuffer.Types (Uint8Array)
 import Data.Dewdrop.AST (Module)
+import Data.Dewdrop.IR (IRContext)
 import Data.Dewdrop.Identifier (Identifier)
 import Data.Dewdrop.Program (Program, program_new)
 import Data.Dewdrop.System.System (class System, RawResourceID(..))
+import Data.Dewdrop.Types (ModuleID(..))
 import Data.FingerTree (FingerTree)
 import Data.Map (Map)
 import Data.Map as Map
@@ -161,18 +163,7 @@ data BinaryenPass
   | SignExtLoweringPass
   | SimplifyLocalsPass
   | SimplifyGlobalsPass
-  | SimplifyGlobalsOptimizingPass
-  | SimplifyLocalsNoNestingPass
-  | SimplifyLocalsNoTeePass
-  | SimplifyLocalsNoStructurePass
-  | SimplifyLocalsNoTeeNoStructurePass
-  | StackCheckPass
-  | StringGatheringPass
-  | StringLiftingPass
-  | StringLoweringPass
-  | StringLoweringMagicImportPass
-  | StringLoweringMagicImportAssertPass
-  | StripDebugPass
+  | SimplifyGlobalsOptimizingPassIRID
   | StripDWARFPass
   | StripProducersPass
   | StripTargetFeaturesPass
@@ -213,7 +204,8 @@ reference module_id identifier = ModuleElementReference module_id identifier
 
 data ModuleContext = ModuleContext
   { ast :: Module
-  , exports :: Set ModuleElementReference
+  , exports :: Set Identifier
+  , fns :: Map Identifier IRContext
   , id :: ModuleID
   }
 
@@ -221,19 +213,9 @@ module_context_new :: ModuleID -> Module -> ModuleContext
 module_context_new id ast = ModuleContext
   { ast: ast
   , exports: Set.empty
+  , fns: Map.empty
   , id
   }
-
-data ModuleID = ModuleID
-  { package_name :: String
-  , path :: Array String
-  }
-
-instance ord_module_id :: Ord ModuleID where
-  compare (ModuleID { package_name, path }) (ModuleID { package_name: package_name', path: path' }) =
-    compare package_name package_name' <> compare path path'
-
-derive instance eq_module_id :: Eq ModuleID
 
 type PackageName = String
 

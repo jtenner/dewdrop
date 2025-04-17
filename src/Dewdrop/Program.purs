@@ -2,8 +2,9 @@ module Dewdrop.Program where
 
 import Prelude
 
-import Data.Dewdrop.Compiler (Compiler(..), ModuleID, module_context_new, to_resource_id)
+import Data.Dewdrop.Compiler (Compiler(..), module_context_new, to_resource_id)
 import Data.Dewdrop.System.System (class System, system_get_raw)
+import Data.Dewdrop.Types (ModuleID)
 import Data.FingerTree (FingerTree, uncons)
 import Data.Map (insert)
 import Data.Maybe (Maybe(..))
