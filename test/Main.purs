@@ -3,7 +3,7 @@ module Test.Main where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.BitStream (BitReader, get_index, read_from, read_8)
+import Data.BitStream (BitReader, get_index, read_from, read_u8, read_s8)
 import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Data.FingerTree ((+=), single, empty)
 import Data.Foldable (foldl, foldr)
@@ -70,8 +70,8 @@ main = runSpecAndExitProcess [ consoleReporter ] do
     --write_string
     --read_buffer
     it "should read words from a buffer" do
-      expect_words (1 : Nil) read_8 [ 1 ]
-      expect_words (-1 : Nil) read_8 [ 255 ]
+      expect_words (1 : Nil) read_u8 [ 1 ]
+      expect_words (-1 : Nil) read_s8 [ 255 ]
 
   describe "Token Kinds" do
 
