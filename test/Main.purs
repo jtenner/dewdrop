@@ -3,7 +3,7 @@ module Test.Main where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.BitStream (BitReader, get_index, read_from, read_u8, read_s8)
+import Data.BitStream (BitReader, read_from, read_u8, read_s8)
 import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Data.FingerTree ((+=), single, empty)
 import Data.Foldable (foldl, foldr)

@@ -8,7 +8,7 @@ import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.Tuple (Tuple(..))
-import Util (is_asterisk, is_colon, is_comma, is_digit, is_equals, is_fslash, is_lbrace, is_lcaret, is_lparen, is_minus, is_name_identifier_continue, is_name_identifier_start, is_newline, is_plus, is_positive_digit, is_rbrace, is_rcaret, is_rparen, is_type_identifier_continue, is_type_identifier_start, is_whitespace, is_zero, str_char, trace)
+import Util (is_asterisk, is_colon, is_comma, is_digit, is_equals, is_fslash, is_lbrace, is_lcaret, is_lparen, is_minus, is_name_identifier_continue, is_name_identifier_start, is_newline, is_plus, is_positive_digit, is_rbrace, is_rcaret, is_rparen, is_type_identifier_continue, is_type_identifier_start, is_whitespace, is_zero, str_char)
 
 type Consumer = BitReader -> Maybe (Tuple String BitReader)
 type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
