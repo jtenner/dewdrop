@@ -2,6 +2,7 @@ package:
   dependencies:
     - aff
     - arrays
+    - bigints
     - effect
     - foldable-traversable
     - integers

@@ -1,3 +1,8 @@
 {
-  "recommendations": ["nwolverson.language-purescript"]
+  "recommendations": [
+    "nwolverson.language-purescript",
+    "dhall.dhall-lang",
+    "biomejs.biome",
+    "tamasfe.even-better-toml"
+  ]
 }

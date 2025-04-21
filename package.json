@@ -1,14 +1,15 @@
 {
   "name": "dewdrop",
   "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "latest",
     "@types/bun": "latest",
     "typescript": "latest"
   },
   "dependencies": {
-    "@thi.ng/bitstream": "^2.4.17"
-  }
+    "@fry/bits": "latest"
+  },
+  "trustedDependencies": ["@biomejs/biome"]
 }

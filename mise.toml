@@ -7,24 +7,26 @@ node = "latest"
 "npm:rimraf" = "latest"
 "npm:purescript" = "next"
 
+[settings]
+experimental = true
+
+[hooks]
+postinstall = [
+  "bun install",
+  "spago install",
+]
+
 [tasks.format]
 run = [
   "purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs'",
   "biome format --write .",
 ]
 
-[tasks.build]
-depends = ["make"]
-
 [tasks.make]
-depends = ["install"]
 run = "spago build"
 
-[tasks.install]
-run = [
-  "bun install",
-  "spago install",
-]
+[tasks.build]
+depends = ["make"]
 
 [tasks.test]
 depends = ["make"]
@@ -34,4 +36,4 @@ run = [
 ]
 
 [tasks.clean]
-run = "rimraf output node_modules .spago"
+run = "rimraf output node_modules .spago bun.lock"
