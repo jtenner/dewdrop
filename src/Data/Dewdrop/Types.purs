@@ -64,6 +64,9 @@ data ProgramTypeKind
   -- Recursive types
   | Recursive ProgramType
 
+fn_type_new :: FingerTree ProgramType -> ProgramType -> ProgramType
+fn_type_new params ret = ProgramType $ FnType params ret
+
 data VariantKind = VariantKind Identifier (FingerTree ProgramType)
 
 builtin_i8_type :: ProgramType
@@ -208,3 +211,9 @@ instance ord_module_id :: Ord ModuleID where
     compare package_name package_name' <> compare path path'
 
 derive instance eq_module_id :: Eq ModuleID
+
+at_least :: ProgramType -> Bounds
+at_least t = Bounds { upper: mempty, lower: pure t }
+
+at_most :: ProgramType -> Bounds
+at_most t = Bounds { upper: pure t, lower: mempty }

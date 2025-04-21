@@ -5,6 +5,7 @@ node = "latest"
 "npm:spago" = "next"
 "npm:@biomejs/biome" = "latest"
 "npm:rimraf" = "latest"
+"npm:purescript" = "next"
 
 [tasks.format]
 run = [

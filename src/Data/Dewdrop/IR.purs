@@ -27,13 +27,6 @@ data IRContext = IRContext
   , body :: FingerTree TypedIR
   }
 
-type_var_new :: IRContext -> Tuple IRBoundsID IRContext
-type_var_new (IRContext ctx@{ types }) = do
-  let
-    Tuple type_id types' = pool_allocate types
-    types'' = pool_set type_id unbounded types'
-  Tuple type_id $ IRContext $ merge { types: types'' } ctx
-
 type IntValue = Int
 
 data TypedIR = TypedIR TypedIRKind IRBoundsID
