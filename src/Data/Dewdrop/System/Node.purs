@@ -3,7 +3,7 @@ module Data.Dewdrop.System.Node where
 import Prelude
 
 import Data.ArrayBuffer.Types (Uint8Array)
-import Data.BitStream (BitReader, bit_reader, read_from)
+import Data.Bit (BitReader, read_from)
 import Data.Dewdrop.System.System (class System, RawResourceID(..), ResourceStat)
 import Data.Map (Map, insert, lookup)
 import Data.Maybe (Maybe(..))

@@ -1,13 +1,9 @@
 module Data.Bits where
 
-import Control.Monad.ST
 import Data.Array
 import Data.ArrayBuffer.Types
 import Data.BigInt
 import Prelude
-
-import Data.Tuple (Tuple)
-import Data.Unfoldable (class Unfoldable)
 
 data Bits
 
@@ -59,7 +55,7 @@ instance ord_bit_reader :: Ord BitReader where
       _ -> LT
 
 instance semigroup_bits :: Semigroup Bits where
-  append = append_bits
+  append = concat_bits
 
 instance semigroup_bit_reader :: Semigroup BitReader where
   append (BitReader l) (BitReader r) = BitReader $ l <> r
@@ -70,14 +66,8 @@ instance monoid_bits :: Monoid Bits where
 instance monoid_bit_reader :: Monoid BitReader where
   mempty = BitReader mempty
 
+instance monoid_bits_mut :: Monoid BitsMut where
+  mempty = BitsMut new
 
-
-data BitsElement
-  = IntElement Value Size Signed
-  | Float32Element Value
-  | Float64Element Value
-  | StringElement String
-  | BitsElement Bits
-  | BufferElement Uint8Array
-
-newtype BitsWriter = BitsWriter (FingerTree BitsElement)
+read_from :: Uint8Array -> BitReader
+read_from buffer = BitReader $ from_buffer buffer

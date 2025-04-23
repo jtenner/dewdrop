@@ -1,4 +1,5 @@
 [tools]
+watchexec = "latest"
 node = "latest"
 "npm:purs-tidy" = "latest"
 "npm:bun" = "canary"
@@ -22,7 +23,13 @@ run = [
   "biome format --write .",
 ]
 
-[tasks.make]
+[tasks.make-bun]
+sources = ["src/**/*.ts"]
+run = [
+  "bun build-bun.ts $WATCHEXEC_EVENTS_FILE"
+]
+
+[tasks.make-spago]
 run = "spago build"
 
 [tasks.build]

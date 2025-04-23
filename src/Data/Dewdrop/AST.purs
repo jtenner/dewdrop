@@ -93,7 +93,6 @@ instance show_type_expr :: Show TypeExpr where
 instance show_type_expr_kind :: Show TypeExprKind where
   show (NamedTypeExpr name) = "(NamedTypeExpr " <> name <> ")"
 
--- data Module = Module (Array ModuleDeclaration)
 instance visitable_module ::
   ( Pass ModuleDeclaration ctx
   , Pass ModuleDeclarationKind ctx
@@ -108,7 +107,7 @@ instance visitable_module ::
   Visitable Module ctx where
   visit_children (Module declarations) ctx = do
     Tuple ctx' children <- visit_all declarations ctx
-    Just $ Tuple ctx' (Module children)
+    pure $ Tuple ctx' $ Module children
 
 instance visitable_module_declaration ::
   ( Pass ModuleDeclarationKind ctx
@@ -123,7 +122,7 @@ instance visitable_module_declaration ::
   Visitable ModuleDeclaration ctx where
   visit_children (ModuleDeclaration kind n) ctx = do
     Tuple ctx' kind' <- visit kind ctx
-    Just $ Tuple ctx' (ModuleDeclaration kind' n)
+    pure $ Tuple ctx' $ ModuleDeclaration kind' n
 
 instance visitable_module_declaration_kind ::
   ( Pass ModuleFn ctx
@@ -137,7 +136,7 @@ instance visitable_module_declaration_kind ::
   Visitable ModuleDeclarationKind ctx where
   visit_children (FnDeclarationKind exported name fn) ctx = do
     Tuple ctx' fn' <- visit fn ctx
-    Just $ Tuple ctx' (FnDeclarationKind exported name fn')
+    pure $ Tuple ctx' $ FnDeclarationKind exported name fn'
 
 instance visitable_module_fn ::
   ( Pass Expr ctx
@@ -152,7 +151,7 @@ instance visitable_module_fn ::
   visit_children (ModuleFn name args return_type expr) ctx = do
     Tuple ctx' args' <- visit_all args ctx
     Tuple ctx'' expr' <- visit expr ctx'
-    Just $ Tuple ctx'' (ModuleFn name args' return_type expr')
+    pure $ Tuple ctx'' $ ModuleFn name args' return_type expr'
 
 instance visitable_fn_param ::
   ( Pass TypeExpr ctx
@@ -161,12 +160,12 @@ instance visitable_fn_param ::
   Visitable FnParam ctx where
   visit_children (FnParam name type_guard n) ctx = do
     Tuple ctx' type_guard' <- visit type_guard ctx
-    Just $ Tuple ctx' (FnParam name type_guard' n)
+    pure $ Tuple ctx' $ FnParam name type_guard' n
 
 instance visitable_type_expr :: (Pass TypeExprKind ctx) => Visitable TypeExpr ctx where
   visit_children (TypeExpr kind _) ctx = do
     Tuple ctx' kind' <- visit kind ctx
-    Just $ Tuple ctx' (TypeExpr kind' 0)
+    pure $ Tuple ctx' $ TypeExpr kind' 0
 
 instance visitable_type_expr_kind :: Visitable TypeExprKind ctx where
   visit_children kind ctx = Just $ Tuple ctx kind
@@ -179,7 +178,7 @@ instance visitable_expr ::
   Visitable Expr ctx where
   visit_children (Expr kind n) ctx = do
     Tuple ctx' kind' <- visit kind ctx
-    Just $ Tuple ctx' $ Expr kind' n
+    pure $ Tuple ctx' $ Expr kind' n
 
 instance visitable_expr_kind ::
   ( Pass ExprKind ctx
@@ -190,11 +189,11 @@ instance visitable_expr_kind ::
   visit_children (WhenExpr arms maybe_else) ctx = do
     Tuple ctx' arms' <- visit_all arms ctx
     Tuple ctx'' maybe_else' <- visit maybe_else ctx'
-    Just $ Tuple ctx'' $ WhenExpr arms' maybe_else'
+    pure $ Tuple ctx'' $ WhenExpr arms' maybe_else'
 
   visit_children (BlockExpr body) ctx = do
     Tuple ctx' body' <- visit_all body ctx
-    Just $ Tuple ctx' (BlockExpr body')
+    pure $ Tuple ctx' $ BlockExpr body'
 
   visit_children (EqualsExpr l r) ctx = visit_binary EqualsExpr l r ctx
   visit_children (AddExpr l r) ctx = visit_binary AddExpr l r ctx
@@ -209,7 +208,7 @@ instance visitable_expr_kind ::
     Tuple ctx' callee' <- visit callee ctx
     Tuple ctx'' args' <- visit_all args ctx'
     Just $ Tuple ctx'' $ CallExpr callee' args'
-  visit_children n ctx = Just $ Tuple ctx n
+  visit_children n ctx = pure $ Tuple ctx n
 
 visit_binary
   :: ∀ (@ctx :: Type)
@@ -224,7 +223,7 @@ visit_binary
 visit_binary kind l r ctx = do
   Tuple inner_ctx l' <- visit l ctx
   Tuple inner_ctx' r' <- visit r inner_ctx
-  Just $ Tuple inner_ctx' $ kind l' r'
+  pure $ Tuple inner_ctx' $ kind l' r'
 
 instance visitable_when_arm ::
   ( Pass Expr ctx
@@ -235,4 +234,4 @@ instance visitable_when_arm ::
   visit_children (WhenArm condition body) ctx = do
     Tuple inner_ctx condition' <- visit condition ctx
     Tuple inner_ctx' body' <- visit body inner_ctx
-    Just $ Tuple inner_ctx' (WhenArm condition' body')
+    pure $ Tuple inner_ctx' $ WhenArm condition' body'
