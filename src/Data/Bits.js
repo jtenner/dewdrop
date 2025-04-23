@@ -1,4 +1,7 @@
-import { Bits } from "@fry/bits";
+import * as B from "@fry/bits";
+
+// TODO: Implement writer maybe?
+const Bits = B.Bits;
 
 /** @type {(size: number) => Bits} */
 export const zeros = (size) => new Bits(size);
@@ -139,4 +142,17 @@ export const read_f32 = (index) => (bits) => {
 export const read_f64 = (index) => (bits) => {
   temp.writeBigUInt64LE(read_u64(index)(bits), 0);
   return temp.readDoubleLE(0);
+};
+
+/** @type {(bits: Bits) => string} */
+export const bits_to_hex = (bits) => bits.toString("hex");
+
+/** @type {(l: Bits) => (r: Bits) => boolean} */
+export const bits_eq = (l) => (r) =>
+  l.offset === r.offset && Buffer.compare(l.buffer, r.buffer) === 0;
+
+/** @type {(l: Bits) => (r: Bits) => Bits} */
+export const concat_bits = (l) => (r) => {
+  const buffer = Buffer.concat([l.buffer, r.buffer]);
+  return new Bits(buffer);
 };
