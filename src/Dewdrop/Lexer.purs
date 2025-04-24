@@ -2,7 +2,7 @@ module Dewdrop.Lexer where
 
 import Prelude
 
-import Data.BitStream (BitReader, read_char)
+import Data.Bits (BitReader, read_utf8_char)
 import Data.Dewdrop.Token (Token(..), TokenKind(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
@@ -15,7 +15,7 @@ type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
 
 take :: (Char -> Boolean) -> Consumer
 take p r = do
-  Tuple c r' <- read_char r
+  Tuple c r' <- read_utf8_char r
   if (p c) then pure $ Tuple (str_char "" c) r'
   else Nothing
 
@@ -23,7 +23,7 @@ take_many :: (Char -> Boolean) -> Consumer
 take_many p r = go "" r
   where
   go :: String -> Consumer
-  go acc r' = case read_char r' of
+  go acc r' = case read_utf8_char r' of
     Just (Tuple c r'') | p c -> go (str_char acc c) r''
     _ | acc == "" -> Nothing
     _ -> Just (Tuple acc r')
@@ -295,7 +295,7 @@ lex_less_than :: Lexer
 lex_less_than = lex_of (take is_lcaret) \_ -> pure TokenKindLessThan
 
 lex_eof :: Lexer
-lex_eof r = case read_char r of
+lex_eof r = case read_utf8_char r of
   Nothing -> Just (Tuple TokenKindEOF r)
   _ -> Nothing
 

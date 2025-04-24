@@ -1,7 +1,7 @@
 module Data.Dewdrop.System.System where
 
 import Data.ArrayBuffer.Types (Uint8Array)
-import Data.BitStream (BitReader)
+import Data.Bits (BitReader)
 import Data.Maybe (Maybe)
 import Data.Tuple (Tuple)
 import Effect (Effect)

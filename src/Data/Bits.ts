@@ -24,31 +24,32 @@ export const zeros = (size: number) => new Bits(size);
 
 export const empty = new Bits(0);
 
-export const read = (size: number) => (index: number) => (bits: Bits) =>
+export const read_impl = (size: number) => (index: number) => (bits: Bits) =>
   bits.seek(index).read(size);
 
-export const read_signed =
+export const read_signed_impl =
   (size: number) => (index: number) => (bits: Bits) => {
     const shift = 32 - size;
     return (bits.seek(index).read(size) << shift) >> shift;
   };
 
 export const length = (bits: Bits) => bits._length;
-export const read_u8 = read(8);
-export const read_u16 = read(16);
-export const read_u32 = read(32);
-export const read_u64 = (index: number) => (bits: Bits) => {
+
+export const read_u8_impl = read_impl(8);
+export const read_u16_impl = read_impl(16);
+export const read_u32_impl = read_impl(32);
+export const read_u64_impl = (index: number) => (bits: Bits) => {
   const upper = BigInt(bits.seek(index).read(32));
   return (upper << 32n) | BigInt(bits.read(32));
 };
 
-export const read_i8 = read_signed(8);
-export const read_i16 = read_signed(16);
-export const read_i32 = read_signed(32);
-export const read_i64 = (index: number) => (bits: Bits) =>
-  BigInt.asIntN(64, read_u64(index)(bits));
+export const read_i8_impl = read_signed_impl(8);
+export const read_i16_impl = read_signed_impl(16);
+export const read_i32_impl = read_signed_impl(32);
+export const read_i64_impl = (index: number) => (bits: Bits) =>
+  BigInt.asIntN(64, read_u64_impl(index)(bits));
 
-export const write =
+export const write_impl =
   (size: number) => (index: number) => (value: number) => (bits: Bits) =>
     bits.seek(index).write(value, size);
 
@@ -70,7 +71,7 @@ const BOTTOM_SIX = 0b0011_1111;
 // three bytes starts with 1110
 // four bytes starts with 11110
 
-export const read_utf8_char = (index: number) => (bits: Bits) => {
+export const read_utf8_char_impl = (index: number) => (bits: Bits) => {
   if (bits.seek(index).remaining < 8) return -1;
 
   // ascii character short circut
@@ -158,13 +159,13 @@ export const from_words = (word_size: number) => (words: ArrayLike<number>) => {
 // This buffer is literally used just for conversions to floats
 const temp = Buffer.allocUnsafe(8);
 
-export const read_f32 = (index: number) => (bits: Bits) => {
-  temp.writeUint32LE(read_u32(index)(bits), 0);
+export const read_f32_impl = (index: number) => (bits: Bits) => {
+  temp.writeUint32LE(read_u32_impl(index)(bits), 0);
   return temp.readFloatLE(0);
 };
 
-export const read_f64 = (index: number) => (bits: Bits) => {
-  temp.writeBigUInt64LE(read_u64(index)(bits), 0);
+export const read_f64_impl = (index: number) => (bits: Bits) => {
+  temp.writeBigUInt64LE(read_u64_impl(index)(bits), 0);
   return temp.readDoubleLE(0);
 };
 
@@ -180,7 +181,17 @@ export const concat_bits = (l: Bits) => (r: Bits) => {
   return result.seek(0);
 };
 
+const grow = (bits: Bits) => (new_size: number) => {
+  const target = new Bits(new_size);
+  target.buffer.set(bits.buffer);
+  target._offset = bits._offset;
+  return target;
+};
+
 export const append_bits = (l: Bits) => (r: Bits) => {
+  const target_length = l.bitLength + r.bitLength;
+  const target = target_length > l.bitLength ? l : grow(l)(target_length);
+
   // Appending bits assumes
   // - l is mutable, and is being assembled as part of a full concat operation
   // - all the bits from r will be copied into l
@@ -190,7 +201,7 @@ export const append_bits = (l: Bits) => (r: Bits) => {
   let bitsLeft = r.bitLength;
 
   // align l to 8 bits
-  const nextBitAlignment = 8 - (l.bitLength % 8);
+  const nextBitAlignment = 8 - (target.bitLength % 8);
 
   // at most 32 bits to start writing. This will either:
   // - Bring l to the next 32 bit aligned location, or
@@ -201,13 +212,13 @@ export const append_bits = (l: Bits) => (r: Bits) => {
   let value = r.seek(0).read(startBitCount);
 
   // write startBitCount bits into l, and reduce the number of bits left
-  l.write(value, startBitCount);
-  let offset = l.offset;
+  target.write(value, startBitCount);
+  let offset = target.offset;
   bitsLeft -= startBitCount;
   while (bitsLeft >= 64) {
     const currentByte = offset >>> 3;
-    const value = read_u64(currentByte)(r);
-    l.buffer.writeBigUInt64LE(value, currentByte);
+    const value = read_u64_impl(currentByte)(r);
+    target.buffer.writeBigUInt64LE(value, currentByte);
 
     bitsLeft -= 64;
     offset += 64;
@@ -220,17 +231,67 @@ export const append_bits = (l: Bits) => (r: Bits) => {
     // wherever r is in terms of it's offset, we can read 32 bits from r and
     // manually write that value into l using the Buffer api. However, it won't
     // advance l's internal offset.
-    l.buffer.writeUInt32LE(value, currentByte);
+    target.buffer.writeUInt32LE(value, currentByte);
 
     // reduce the number of bits left and advance the counter
     bitsLeft -= 32;
     offset += 32;
   }
 
-  l.offset = offset;
-  if (bitsLeft === 0) return l;
+  target.offset = offset;
+  if (bitsLeft === 0) return target;
 
   value = r.read(bitsLeft);
-  l.write(value, bitsLeft);
-  return l;
+  target.write(value, bitsLeft);
+  return target;
 };
+
+export const read_buffer =
+  (index: number) => (bytes: number) => (bits: Bits) => {
+    let bits_left = Math.min(bytes * 8, bits.remaining);
+    const total_bytes = bits_left / 8 + Math.min(bits_left & 7, 1);
+    const buffer = Buffer.alloc(total_bytes);
+    let offset = index;
+    let cursor = 0;
+
+    while (bits_left >= 64) {
+      buffer.writeBigUInt64LE(read_u64_impl(offset)(bits), cursor);
+
+      cursor += 8;
+      offset += 64;
+      bits_left -= 64;
+    }
+
+    if (bits_left >= 32) {
+      buffer.writeUInt32LE(read_u32_impl(offset)(bits), cursor);
+
+      cursor += 4;
+      offset += 32;
+      bits_left -= 32;
+    }
+
+    if (bits_left >= 16) {
+      buffer.writeUInt16LE(read_u16_impl(offset)(bits), cursor);
+
+      cursor += 2;
+      offset += 16;
+      bits_left -= 16;
+    }
+
+    if (bits_left >= 8) {
+      buffer.writeUInt8(read_u8_impl(offset)(bits), cursor);
+
+      cursor += 1;
+      offset += 8;
+      bits_left -= 8;
+    }
+
+    // the last_value itself must be shifted to align with the buffer
+    // except that there may only be a partial byte left
+    if (bits_left > 0) {
+      const last_value = read_impl(bits_left)(offset)(bits);
+      buffer.writeUInt8(last_value << (8 - bits_left), cursor);
+    }
+
+    return buffer;
+  };

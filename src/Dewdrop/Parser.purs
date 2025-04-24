@@ -15,7 +15,7 @@ module Dewdrop.Parser
 import Prelude
 
 import Data.Array (length, snoc, (!!))
-import Data.BitStream (BitReader)
+import Data.Bits (BitReader)
 import Data.Dewdrop.AST (Expr(..), ExprKind(..), FnParam(..), Module(..), ModuleDeclaration(..), ModuleDeclarationKind(..), ModuleFn(..), Parser, ParserResult, TypeExpr(..), TypeExprKind(..), WhenArm(..))
 import Data.Dewdrop.Identifier (Identifier(..))
 import Data.Dewdrop.Token (Token(..), TokenKind(..))

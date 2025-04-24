@@ -2,7 +2,7 @@ module Wasm.Binary where
 
 import Prelude
 
-import Data.BitStream (BitReader, BitWriter, read_buffer, read_u8, read_utf8_char, write_string, write_8, write_utf8_char)
+import Data.Bits (BitReader, BitsMut, read_buffer, read_u8, read_utf8_char, write_string, write_8, write_utf8_char)
 import Data.FingerTree (FingerTree, foldl, size, snoc)
 import Data.Int.Bits (shl, shr, (.&.), (.|.))
 import Data.Maybe (Maybe(..))
