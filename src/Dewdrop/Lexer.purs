@@ -15,7 +15,7 @@ type CharConsumer = BitReader -> Maybe (Tuple Char BitReader)
 
 take :: (Char -> Boolean) -> Consumer
 take p r = do
-  Tuple c r' <- read_utf8_char r
+  { head: c, tail: r' } <- read_utf8_char r
   if (p c) then pure $ Tuple (str_char "" c) r'
   else Nothing
 
@@ -24,7 +24,7 @@ take_many p r = go "" r
   where
   go :: String -> Consumer
   go acc r' = case read_utf8_char r' of
-    Just (Tuple c r'') | p c -> go (str_char acc c) r''
+    Just { head: c, tail: r'' } | p c -> go (str_char acc c) r''
     _ | acc == "" -> Nothing
     _ -> Just (Tuple acc r')
 

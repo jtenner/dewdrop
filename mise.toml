@@ -22,10 +22,10 @@ wait_for = ["make"]
 depends = ["make", "dev-bun", "dev-spago"]
 
 [tasks.dev-bun]
-run = "watchexec -w src -e ts -- bun build-bun.ts"
+run = "watchexec -w src -w test -e ts -- bun build-bun.ts"
 
 [tasks.dev-spago]
-run = "watchexec -w src -e js,purs -- spago build"
+run = "watchexec -w src -w test -e js,purs -- spago test"
 
 [tasks.format]
 run = [

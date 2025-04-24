@@ -38,7 +38,7 @@ match_token str kind size = do
       shouldEqual size $ token_len kind'
     Nothing -> shouldEqual false true
 
-expect_words :: ∀ (m ∷ Type -> Type). MonadThrow Error m => List Int -> (BitReader -> Maybe (Tuple Int BitReader)) -> Array Int -> m Unit
+expect_words :: ∀ (m ∷ Type -> Type). MonadThrow Error m => List Int -> (BitReader -> Maybe { head :: Int, tail :: BitReader }) -> Array Int -> m Unit
 expect_words bytes reader v = do
   let init = read_from $ array_to_uint8array v
   go bytes init
@@ -46,7 +46,7 @@ expect_words bytes reader v = do
   where
   go Nil _ = shouldEqual true true
   go (byte : bytes') r = case reader r of
-    Just (Tuple value r') -> do
+    Just { head: value, tail: r' } -> do
       shouldEqual value byte
       go bytes' r'
     Nothing -> do

@@ -1,7 +1,17 @@
 import * as lmdb from "lmdb";
 import * as path from "node:path";
 
-const db = lmdb.open<readonly [number, string], string>(".build-cache", {
+const hashFunc = Bun.hash.cityHash32;
+
+type HashResult = ReturnType<typeof hashFunc>;
+type LastModified = number;
+type CachedValueEntry = {
+  lastModified: LastModified;
+  hash: HashResult;
+};
+type CacheKey = HashResult;
+
+const db = lmdb.open<CachedValueEntry, CacheKey>(".build-cache", {
   name: "build-cache",
   strictAsyncOrder: false,
 });
@@ -14,52 +24,69 @@ const transpiler = new Bun.Transpiler({
 });
 
 const build = async (src: string) => {
-  const cacheName = Bun.hash(src).toString(32);
-  console.log(`Found: ${src} -> ${cacheName}`);
+  const cacheKey = hashFunc(src);
 
-  const file = Bun.file(src);
   const { dir, name } = path.parse(src);
   const outputPath = path.join(dir, `${name}.js`);
-  const outfileExists = await Bun.file(outputPath).exists();
-  console.log(
-    `Output file ${outputPath} ${outfileExists ? "exists" : "does not exist"}`,
-  );
-  if (!outfileExists) {
-    console.log(`Removing: ${cacheName} because ${outputPath} does not exist`);
-    await db.remove(cacheName);
-  }
+  const file = Bun.file(src);
+  const outfile = Bun.file(outputPath);
+  const cacheKeyDesc = `${outputPath}#${cacheKey.toString(36)}`;
+
+  console.log(`Found: ${cacheKeyDesc} -> ${outputPath}`);
+
+  // The text contents and hash of that text may or may not be computed, so
+  // instead, assert they are calculated later if needed
+  const outfileExistsPromise = outfile.exists();
   const textPromise = file.text();
   const lastModified = file.lastModified;
-  let text: string | null = null;
-  let hash: string | null = null;
-  if (db.doesExist(cacheName)) {
-    console.log(`Found cached value entry for ${cacheName}`);
 
-    const cachedValue = await db.getAsync(cacheName);
+  let text: string | null = null;
+  let hash = 0;
+
+  // If the result of the operation is cached, we can short circuit to prevent
+  // the file from needing to be regenerated
+  if (db.doesExist(cacheKey) || !(await outfileExistsPromise)) {
+    console.log(`Checking for changes ${cacheKey}`);
+
+    // The async function seems to crash everything, so getting the information
+    // in a synchronous manner is fine for now
+    const cachedValue = db.get(cacheKey);
+    
+    // TODO: Replace the above code with some kind of async get
+    // const cachedValue = (await db.getAsync(cacheKey)) as unknown as
+    //   | CachedValueEntry
+    //   | undefined;
+
     if (cachedValue) {
-      const [cachedLastModified, outputHash] = cachedValue;
+      const { lastModified: cachedLastModified, hash: outputHash } =
+        cachedValue;
+
       if (cachedLastModified === lastModified) {
         console.log(`Unmodified: ${src}`);
         return void 0;
       }
 
       text = await textPromise;
-      hash = Bun.hash(text).toString(32);
+      hash = hashFunc(text);
       if (outputHash === hash) {
         console.log(`Unmodified: ${src}`);
         return void 0;
       }
     }
   }
-  if (!text) text = await textPromise;
-  if (!hash) hash = Bun.hash(text).toString(32);
 
-  console.log(`Transpiling: ${src} with hash ${hash}`);
-  const output = await transpiler.transform(text);
-  console.log(`Writing: ${outputPath}`);
-  await Bun.write(outputPath, output);
-  console.log(`Caching: ${cacheName}`);
-  await db.put(cacheName, [Bun.file(src).lastModified, hash]);
+  // once the text must be read, we should also hash it's contents
+  if (text === null) {
+    text = await textPromise;
+    hash = hashFunc(text);
+  }
+
+  // finally, the cache is invalid, time to update the database and transpile
+  // the output
+  console.log(`Transpiling: ${cacheKeyDesc} -> ${outputPath}`);
+
+  await outfile.write(await transpiler.transform(text));
+  await db.put(cacheKey, { lastModified: outfile.lastModified, hash });
   console.log("Done!");
 };
 

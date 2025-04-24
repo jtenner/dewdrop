@@ -35,23 +35,13 @@ export const read_signed_impl =
 
 export const length = (bits: Bits) => bits._length;
 
-export const read_u8_impl = read_impl(8);
-export const read_u16_impl = read_impl(16);
-export const read_u32_impl = read_impl(32);
 export const read_u64_impl = (index: number) => (bits: Bits) => {
   const upper = BigInt(bits.seek(index).read(32));
   return (upper << 32n) | BigInt(bits.read(32));
 };
 
-export const read_i8_impl = read_signed_impl(8);
-export const read_i16_impl = read_signed_impl(16);
-export const read_i32_impl = read_signed_impl(32);
 export const read_i64_impl = (index: number) => (bits: Bits) =>
   BigInt.asIntN(64, read_u64_impl(index)(bits));
-
-export const write_impl =
-  (size: number) => (index: number) => (value: number) => (bits: Bits) =>
-    bits.seek(index).write(value, size);
 
 const TOP_FIVE = 0b1111_1000;
 const TOP_FOUR = 0b1111_0000;
@@ -159,6 +149,10 @@ export const from_words = (word_size: number) => (words: ArrayLike<number>) => {
 // This buffer is literally used just for conversions to floats
 const temp = Buffer.allocUnsafe(8);
 
+const read_u8_impl = read_impl(8);
+const read_u16_impl = read_impl(16);
+const read_u32_impl = read_impl(32);
+
 export const read_f32_impl = (index: number) => (bits: Bits) => {
   temp.writeUint32LE(read_u32_impl(index)(bits), 0);
   return temp.readFloatLE(0);
@@ -181,16 +175,24 @@ export const concat_bits = (l: Bits) => (r: Bits) => {
   return result.seek(0);
 };
 
-const grow = (bits: Bits) => (new_size: number) => {
-  const target = new Bits(new_size);
-  target.buffer.set(bits.buffer);
-  target._offset = bits._offset;
-  return target;
+const grow = (new_size: number) => (bits: Bits) => {
+  if (new_size > bits.buffer.byteLength << 3) {
+    const new_byte_count = 1 + (new_size >>> 2); // size / 8 * 2
+    const buffer = Buffer.alloc(new_byte_count);
+    buffer.set(bits.buffer, 0);
+    const new_bits = new Bits(buffer);
+    new_bits._offset = bits._offset;
+    new_bits._bitLength = new_size;
+    return new_bits;
+  }
+
+  bits._bitLength = new_size;
+  return bits;
 };
 
 export const append_bits = (l: Bits) => (r: Bits) => {
   const target_length = l.bitLength + r.bitLength;
-  const target = target_length > l.bitLength ? l : grow(l)(target_length);
+  const target = target_length > l.bitLength ? l : grow(target_length)(l);
 
   // Appending bits assumes
   // - l is mutable, and is being assembled as part of a full concat operation
@@ -246,7 +248,7 @@ export const append_bits = (l: Bits) => (r: Bits) => {
   return target;
 };
 
-export const read_buffer =
+export const read_buffer_impl =
   (index: number) => (bytes: number) => (bits: Bits) => {
     let bits_left = Math.min(bytes * 8, bits.remaining);
     const total_bytes = bits_left / 8 + Math.min(bits_left & 7, 1);
@@ -294,4 +296,39 @@ export const read_buffer =
     }
 
     return buffer;
+  };
+
+export const offset_impl = (bits: Bits) => bits.offset;
+
+export const write_string_impl = (str: string) => (bits: Bits) => {
+  const contents = new Bits(Buffer.from(str));
+  return append_bits(bits)(contents);
+};
+
+export const write_impl = (size: number) => (value: number) => (bits: Bits) => {
+  const target = grow(size + bits._bitLength)(bits);
+  return target.write(value, size);
+};
+export const write_64 = (value: bigint) => (bits: Bits) => {
+  const target = grow(64 + bits._bitLength)(bits);
+  const cast = BigInt.asUintN(64, value);
+  return target
+    .write(Number(cast >> 32n), 32)
+    .write(Number(cast & 0xffff_ffffn), 32);
+};
+
+// foreign import read_string_impl :: ByteLength -> Bits -> Maybe String -> (String -> Maybe String) -> Maybe String
+export const read_string_impl =
+  <t>(byte_length: number) =>
+  (offset: number) =>
+  (bits: Bits) =>
+  (nothing: t) =>
+  (just: (value: string) => t) => {
+    if ((byte_length << 3) + offset < bits._bitLength) return nothing;
+    const buffer = read_buffer_impl(offset)(byte_length)(bits);
+    try {
+      return just(buffer.toString("utf8"));
+    } catch (_) {
+      return nothing;
+    }
   };

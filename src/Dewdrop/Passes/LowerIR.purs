@@ -2,18 +2,17 @@ module Dewdrop.Passes.TypeIRLower where
 
 import Prelude
 
-import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn(..), TypeExpr, TypeExprKind, WhenArm)
+import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm)
 import Data.Dewdrop.Compiler (Compiler(..), ModuleContext(..))
 import Data.Dewdrop.IR (IRContext, TypedIRID)
 import Data.Dewdrop.Identifier (Identifier)
-import Data.Dewdrop.Types (IRBoundsID, ProgramType(..), ProgramTypeKind(..), at_least, fn_type_new)
+import Data.Dewdrop.Types (ProgramType)
 import Data.Dewdrop.Visitor (class Pass, class Visitable, continue, ignore, visit)
 import Data.List (List(..), (:))
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.IR (ir_fn_context_new)
 import Record (merge)
 
 data LowerIRContextProps = LowerIRContextProps { module_ctx :: ModuleContext }
