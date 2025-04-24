@@ -17,20 +17,27 @@ postinstall = [
   "spago install",
 ]
 
+[tasks.dev]
+wait_for = ["make"]
+depends = ["make", "dev-bun", "dev-spago"]
+
+[tasks.dev-bun]
+run = "watchexec -w src -e ts -- bun build-bun.ts"
+
+[tasks.dev-spago]
+run = "watchexec -w src -e js,purs -- spago build"
+
 [tasks.format]
 run = [
   "purs-tidy format-in-place 'src/**/*.purs' 'test/**/*.purs'",
   "biome format --write .",
 ]
 
-[tasks.make-bun]
-sources = ["src/**/*.ts"]
+[tasks.make]
 run = [
-  "bun build-bun.ts $WATCHEXEC_EVENTS_FILE"
+  "bun build-bun.ts",
+  "spago build",
 ]
-
-[tasks.make-spago]
-run = "spago build"
 
 [tasks.build]
 depends = ["make"]
@@ -43,4 +50,4 @@ run = [
 ]
 
 [tasks.clean]
-run = "rimraf output node_modules .spago bun.lock"
+run = "rimraf output node_modules .spago bun.lock .build-cache"

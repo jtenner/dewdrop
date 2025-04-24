@@ -9,3 +9,5 @@
 /.psa*
 /.spago
 /.spec-results
+/.build-cache
+/src/**/*.js

@@ -6,10 +6,11 @@
   "devDependencies": {
     "@biomejs/biome": "latest",
     "@types/bun": "latest",
+    "lmdb": "^3.2.6",
     "typescript": "latest"
   },
   "dependencies": {
     "@fry/bits": "latest"
   },
-  "trustedDependencies": ["@biomejs/biome"]
+  "trustedDependencies": ["@biomejs/biome", "lmdb", "msgpackr-extract"]
 }

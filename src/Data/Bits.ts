@@ -204,7 +204,6 @@ export const append_bits = (l: Bits) => (r: Bits) => {
   l.write(value, startBitCount);
   let offset = l.offset;
   bitsLeft -= startBitCount;
-
   while (bitsLeft >= 64) {
     const currentByte = offset >>> 3;
     const value = read_u64(currentByte)(r);
@@ -223,6 +222,7 @@ export const append_bits = (l: Bits) => (r: Bits) => {
     // advance l's internal offset.
     l.buffer.writeUInt32LE(value, currentByte);
 
+    // reduce the number of bits left and advance the counter
     bitsLeft -= 32;
     offset += 32;
   }
