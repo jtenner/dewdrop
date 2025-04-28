@@ -13,11 +13,13 @@ import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Dewdrop.IR (ir_fn_context_new)
 import Record (merge)
 
-data LowerIRContextProps = LowerIRContextProps { module_ctx :: ModuleContext }
+newtype LowerIRContextProps = LowerIRContextProps { module_ctx :: ModuleContext }
+
 type IREnv = Map Identifier TypedIRID
-data LowerIRContext system_ctx = LowerIRContext
+newtype LowerIRContext system_ctx = LowerIRContext
   -- storage for the compiler state
   { compiler :: Compiler system_ctx
 
@@ -36,11 +38,14 @@ data LowerIRContext system_ctx = LowerIRContext
   , type_stack :: List ProgramType
   }
 
+ctx_new :: ∀ (@system_ctx :: Type). Compiler system_ctx -> ModuleContext -> LowerIRContext system_ctx
+ctx_new compiler module_ctx = LowerIRContext { compiler, env_stack: Nil, ir_stack: Nil, module_ctx, fn_stack: Nil, type_stack: Nil }
+
 run :: ∀ (@u :: Type). Pass Module (LowerIRContext u) => Visitable Module (LowerIRContext u) => LowerIRContextProps -> Compiler u -> Maybe (Compiler u)
 run (LowerIRContextProps { module_ctx }) compiler = do
   let
     (ModuleContext { ast, id }) = module_ctx
-    ctx = LowerIRContext { compiler, env_stack: Nil, ir_stack: Nil, module_ctx, fn_stack: Nil, type_stack: Nil }
+    ctx = ctx_new compiler module_ctx
   Tuple (LowerIRContext { compiler: (Compiler inner_compiler'), module_ctx: (ModuleContext inner_module_ctx') }) ast' <- visit ast ctx
   let
     module_ctx' = ModuleContext $ merge { ast: ast' } inner_module_ctx'
@@ -77,7 +82,16 @@ instance type_ir_lower_declaration_kind_pass :: Pass ModuleDeclarationKind (Lowe
   exit _ _ = Nothing
 
 instance type_ir_lower_fn_pass :: Pass ModuleFn (LowerIRContext u) where
-  enter = ignore
+  -- for each module function, something is processing it. Create a fn context
+  -- push it to the stack, later to be processed by the outer consuming node visitor
+  enter _ (LowerIRContext ctx@{ fn_stack }) = do
+    let
+      fn_context = ir_fn_context_new
+      fn_stack' = (fn_context : fn_stack)
+      ctx' = LowerIRContext $ merge { fn_stack: fn_stack' } ctx
+    
+    continue ctx'
+
   exit = ignore
 
 instance type_ir_lower_fn_param_pass :: Pass FnParam (LowerIRContext u) where

@@ -135,7 +135,7 @@ export const read_utf8_char_impl = (index: number) => (bits: Bits) => {
 
 export const from_string = (str: string) => new Bits(Buffer.from(str));
 
-export const from_buffer = (buffer: Uint8Array) =>
+export const from_buffer_impl = (buffer: Uint8Array) =>
   new Bits(Buffer.from(buffer));
 
 export const from_words = (word_size: number) => (words: ArrayLike<number>) => {
@@ -144,6 +144,17 @@ export const from_words = (word_size: number) => (words: ArrayLike<number>) => {
     bits.write(words[i]!, word_size);
   }
   return bits;
+};
+
+export const to_words = (word_size: number) => (bits: Bits) => {
+  const result = [] as number[];
+  bits.seek(0);
+  while (true) {
+    if (bits.remaining) {
+      const word = bits.read(Math.min(word_size, bits.remaining));
+      result.push(word);
+    } else return result;
+  }
 };
 
 // This buffer is literally used just for conversions to floats
@@ -164,9 +175,6 @@ export const read_f64_impl = (index: number) => (bits: Bits) => {
 };
 
 export const bits_to_hex = (bits: Bits) => bits.toString("hex");
-
-export const bits_eq = (l: Bits) => (r: Bits) =>
-  l.offset === r.offset && Buffer.compare(l.buffer, r.buffer) === 0;
 
 export const concat_bits = (l: Bits) => (r: Bits) => {
   const result = new Bits(l._bitLength + r._bitLength);
@@ -332,3 +340,40 @@ export const read_string_impl =
       return nothing;
     }
   };
+
+export const ord_bits_impl = (bits_l: Bits) => (bits_r: Bits) => {
+  if (bits_l._bitLength > bits_r._bitLength) return 1;
+  if (bits_l._bitLength < bits_r._bitLength) return -1;
+
+  let remaining = bits_l._bitLength;
+  let at = 0;
+  while (remaining > 64) {
+    const left = read_u64_impl(at)(bits_l);
+    const right = read_u64_impl(at)(bits_r);
+    if (left > right) return 1;
+    if (left < right) return -1;
+    remaining -= 64;
+    at += 64;
+  }
+
+  if (remaining > 32) {
+    const left = read_u32_impl(at)(bits_l);
+    const right = read_u32_impl(at)(bits_r);
+    if (left > right) return 1;
+    if (left < right) return -1;
+    remaining -= 32;
+    at += 32;
+  }
+
+  if (remaining > 0) {
+    const left = read_impl(remaining)(at)(bits_l);
+    const right = read_impl(remaining)(at)(bits_r);
+    if (left > right) return 1;
+    if (left < right) return -1;
+  }
+
+  return 0;
+};
+
+export const eq_bits = (bits_l: Bits) => (bits_r: Bits) =>
+  ord_bits_impl(bits_l)(bits_r) === 0;

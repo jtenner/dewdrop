@@ -1,17 +1,15 @@
 module Data.Dewdrop.IR where
 
-import Prelude
 
 import Data.Dewdrop.Identifier (Identifier)
-import Data.Dewdrop.Types (ModuleID, Bounds, IRBoundsID, ProgramType, unbounded)
+import Data.Dewdrop.Types (Bounds, IRBoundsID, ModuleID, ProgramType)
 import Data.FingerTree (FingerTree)
-import Data.Pool (Pool, PoolKey, pool_allocate, pool_set)
-import Data.Tuple (Tuple(..))
-import Record (merge)
+import Data.Pool (Pool, PoolKey)
+import Data.Tuple (Tuple)
 
 type TypedIRID = PoolKey TypedIR
 
-data IRContext = IRContext
+newtype IRContext = IRContext
   { env :: FingerTree (Tuple Identifier IRBoundsID)
 
   -- To keep track of type variables
@@ -29,7 +27,7 @@ data IRContext = IRContext
 
 type IntValue = Int
 
-data TypedIR = TypedIR TypedIRKind IRBoundsID
+newtype TypedIR = TypedIR { kind :: TypedIRKind, bounds :: IRBoundsID }
 
 data IRConstKind
   = IRConstInt Int

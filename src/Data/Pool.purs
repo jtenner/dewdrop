@@ -7,10 +7,10 @@ import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
 import Record (merge)
 
-data Pool a = Pool { next_id :: Int, pool :: Map Int a }
+newtype Pool a = Pool { next_id :: Int, pool :: Map Int a }
 
-data PoolKey :: Type -> Type
-data PoolKey a = PoolKey Int
+newtype PoolKey :: ∀ k. k -> Type
+newtype PoolKey _a = PoolKey Int
 
 pool_new :: ∀ (@a :: Type). Pool a
 pool_new = Pool { next_id: 0, pool: empty }

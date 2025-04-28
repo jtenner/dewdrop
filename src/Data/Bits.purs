@@ -36,8 +36,7 @@ foreign import from_buffer_impl :: forall u. u -> Bits
 foreign import from_words :: Array Int -> BitReader
 foreign import to_words :: Bits -> Array Int
 foreign import bits_to_hex :: Bits -> String
-foreign import eq_bits :: Bits -> Bits -> Boolean
-foreign import ord_bits :: Bits -> Bits -> Int
+foreign import ord_bits_impl :: Bits -> Bits -> Int
 foreign import append_bits :: Bits -> Bits -> Bits
 foreign import concat_bits :: Bits -> Bits -> Bits
 foreign import write_string_impl :: forall str. str -> BitsMut -> BitsMut
@@ -57,11 +56,11 @@ instance show_bit_reader :: Show BitReader where
   show (BitReader n) = "(BitReader" <> show n <>")"
 
 instance eq_bit_reader :: Eq BitReader where
-  eq (BitReader { bits: l }) (BitReader { bits: r }) = eq_bits l r
+  eq (BitReader { bits: l }) (BitReader { bits: r }) = (compare l r) == EQ
 
 instance ord_bit_reader :: Ord BitReader where
   compare (BitReader { bits: l }) (BitReader { bits: r }) =
-    case ord_bits l r of
+    case ord_bits_impl l r of
       0 -> EQ
       n | n > 0 -> GT
       _ -> LT
@@ -199,3 +198,12 @@ read_string byte_length (BitReader { bits, offset }) = do
   -- ByteLength -> Index -> Bits -> Maybe String -> (String -> Maybe String) -> Maybe String
   head <- read_string_impl byte_length offset bits Nothing Just
   pure { head, tail: BitReader { bits, offset: offset_impl bits } }
+
+instance ord_bits :: Ord Bits where
+  compare l r = case ord_bits_impl l r of
+    -1 -> LT
+    1 -> GT
+    _ -> EQ
+
+instance eq_bits :: Eq Bits where
+  eq l r = EQ == (compare l r)
