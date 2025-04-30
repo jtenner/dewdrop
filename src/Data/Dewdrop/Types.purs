@@ -10,7 +10,7 @@ import Data.Pool (PoolKey)
 import Data.Tuple (Tuple(..))
 
 -- | Upper and Lower bounds in *that* order
-data Bounds = Bounds { upper :: FingerTree ProgramType, lower :: FingerTree ProgramType }
+newtype Bounds = Bounds { upper :: Maybe ProgramType, lower :: Maybe ProgramType }
 
 type IRBoundsID = PoolKey Bounds
 
@@ -20,8 +20,7 @@ bounds_new = Bounds { upper: mempty, lower: mempty }
 unbounded :: Bounds
 unbounded = bounds_new
 
-data ProgramType = ProgramType ProgramTypeKind
-data ProgramTypeKind
+data ProgramType
   -- Functions
   = FnType (FingerTree ProgramType) ProgramType
 
@@ -65,59 +64,56 @@ data ProgramTypeKind
   | Recursive ProgramType
 
 fn_type_new :: FingerTree ProgramType -> ProgramType -> ProgramType
-fn_type_new params ret = ProgramType $ FnType params ret
+fn_type_new params ret = FnType params ret
 
 data VariantKind = VariantKind Identifier (FingerTree ProgramType)
 
 builtin_i8_type :: ProgramType
-builtin_i8_type = ProgramType I8
+builtin_i8_type = I8
 
 builtin_u8_type :: ProgramType
-builtin_u8_type = ProgramType U8
+builtin_u8_type = U8
 
 builtin_i16_type :: ProgramType
-builtin_i16_type = ProgramType I16
+builtin_i16_type = I16
 
 builtin_u16_type :: ProgramType
-builtin_u16_type = ProgramType U16
+builtin_u16_type = U16
 
 builtin_i32_type :: ProgramType
-builtin_i32_type = ProgramType I32
+builtin_i32_type = I32
 
 builtin_u32_type :: ProgramType
-builtin_u32_type = ProgramType U32
+builtin_u32_type = U32
 
 builtin_i64_type :: ProgramType
-builtin_i64_type = ProgramType I64
+builtin_i64_type = I64
 
 builtin_u64_type :: ProgramType
-builtin_u64_type = ProgramType U64
+builtin_u64_type = U64
 
 builtin_f32_type :: ProgramType
-builtin_f32_type = ProgramType F32
+builtin_f32_type = F32
 
 builtin_f64_type :: ProgramType
-builtin_f64_type = ProgramType F64
+builtin_f64_type = F64
 
 builtin_integer_type :: ProgramType
-builtin_integer_type = ProgramType Integer
+builtin_integer_type = Integer
 
 builtin_float_type :: ProgramType
-builtin_float_type = ProgramType Float
+builtin_float_type = Float
 
 builtin_string_type :: ProgramType
-builtin_string_type = ProgramType String
+builtin_string_type = String
 
 builtin_bool_type :: ProgramType
-builtin_bool_type = ProgramType Bool
+builtin_bool_type = Bool
 
 builtin_numeric_type :: ProgramType
-builtin_numeric_type = ProgramType Numeric
+builtin_numeric_type = Numeric
 
-instance eq_program_type :: Eq ProgramType where
-  eq (ProgramType kind) (ProgramType kind') = kind == kind'
-
-instance eq_program_type_kind :: Eq ProgramTypeKind where
+instance eq_program_type_kind :: Eq ProgramType where
   eq (FnType params ret) (FnType params' ret') = params == params' && ret == ret'
   eq n n' | n == n' = true
   eq _ _ = false
@@ -125,13 +121,11 @@ instance eq_program_type_kind :: Eq ProgramTypeKind where
 instance visitable_program_type ::
   ( Pass (Tuple Identifier ProgramType) ctx
   , Visitable (Tuple Identifier ProgramType) ctx
-  , Pass ProgramTypeKind ctx
-  , Visitable ProgramTypeKind ctx
+  , Pass ProgramType ctx
+  , Visitable ProgramType ctx
   ) =>
   Visitable ProgramType ctx where
-  visit_children (ProgramType kind) ctx = do
-    Tuple ctx' kind' <- visit kind ctx
-    Just $ Tuple ctx' (ProgramType kind')
+  visit_children kind ctx = visit kind ctx
 
 instance visitable_program_type_kind ::
   ( Pass ProgramType ctx
@@ -194,9 +188,69 @@ instance visitable_variant_type ::
     Tuple ctx'' fields' <- visit_all fields ctx'
     Just $ Tuple ctx'' $ VariantKind name' fields'
 
-constrain :: Bounds -> Bounds -> Bounds
-constrain (Bounds { upper: with_upper, lower: with_lower }) (Bounds { upper, lower }) =
-  Bounds { upper: upper <> with_upper, lower: lower <> with_lower }
+is_numeric :: ProgramType -> Boolean
+is_numeric (ProgramType I8) = true
+is_numeric (ProgramType U8) = true
+is_numeric (ProgramType I16) = true
+is_numeric (ProgramType U16) = true
+is_numeric (ProgramType I32) = true
+is_numeric (ProgramType U32) = true
+is_numeric (ProgramType I64) = true
+is_numeric (ProgramType U64) = true
+is_numeric (ProgramType F32) = true
+is_numeric (ProgramType F64) = true
+is_numeric (ProgramType Integer) = true
+is_numeric (ProgramType Float) = true
+is_numeric (ProgramType Numeric) = true
+is_numeric _ = false
+
+is_float :: ProgramType -> Boolean
+is_float (ProgramType Float) = true
+is_float (ProgramType F32) = true
+is_float (ProgramType F64) = true
+is_float _ = false
+
+is_integer :: ProgramType -> Boolean
+is_integer (ProgramType I8) = true
+is_integer (ProgramType U8) = true
+is_integer (ProgramType I16) = true
+is_integer (ProgramType U16) = true
+is_integer (ProgramType I32) = true
+is_integer (ProgramType U32) = true
+is_integer (ProgramType I64) = true
+is_integer (ProgramType U64) = true
+is_integer (ProgramType Integer) = true
+is_integer _ = false
+
+constrain :: Bounds -> Bounds -> Maybe Bounds
+constrain (Bounds { upper: upper_left, lower: lower_left }) (Bounds { upper: upper_right, lower: lower_right }) = do
+  upper <- take_lower_of upper_left upper_right
+  lower <- take_upper_of lower_left lower_right
+  pure $ Bounds { upper, lower }
+
+take_lower_of :: ProgramType -> ProgramType -> Maybe ProgramType
+-- everything is lower than the top type
+take_lower_of left Top = pure left
+take_lower_of Top right = pure right
+
+-- bottom is always the lowest type
+take_lower_of Bottom _ = Bottom
+take_lower_of _ Bottom = Bottom
+
+-- all number types are "Numeric"
+take_lower_of left Numeric | is_numeric left = pure left
+take_lower_of Numeric right | is_numeric right = pure right
+
+-- all integer types are "Integer"
+take_lower_of left Integer | is_integer left = pure left
+take_lower_of Integer right | is_integer right = pure right
+
+-- all float types are "Float"
+take_lower_of left Float | is_float left = pure left
+take_lower_of Float right | is_float right = pure right
+
+-- TODO: Implement more!
+take_lower_of _ _ = Nothing
 
 instance bounds_semigroup :: Semigroup Bounds where
   append = constrain

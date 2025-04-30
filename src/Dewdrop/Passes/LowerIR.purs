@@ -2,18 +2,18 @@ module Dewdrop.Passes.TypeIRLower where
 
 import Prelude
 
-import Data.Dewdrop.AST (Expr, ExprKind, FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm)
+import Data.Dewdrop.AST (Expr, ExprKind(..), FnParam, Module, ModuleDeclaration, ModuleDeclarationKind(..), ModuleFn, TypeExpr, TypeExprKind, WhenArm)
 import Data.Dewdrop.Compiler (Compiler(..), ModuleContext(..))
 import Data.Dewdrop.IR (IRContext, TypedIRID)
 import Data.Dewdrop.Identifier (Identifier)
-import Data.Dewdrop.Types (ProgramType)
-import Data.Dewdrop.Visitor (class Pass, class Visitable, continue, ignore, visit)
+import Data.Dewdrop.Types (ProgramType, builtin_integer_type)
+import Data.Dewdrop.Visitor (class Pass, class Visitable, continue, exit, ignore, skip_all, visit)
 import Data.List (List(..), (:))
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Dewdrop.IR (ir_fn_context_new)
+import Dewdrop.IR (ir_fn_context_new, ir_int_const)
 import Record (merge)
 
 newtype LowerIRContextProps = LowerIRContextProps { module_ctx :: ModuleContext }
@@ -111,7 +111,29 @@ instance type_ir_lower_expr_pass :: Pass Expr (LowerIRContext u) where
   exit = ignore
 
 instance type_ir_lower_expr_kind_pass :: Pass ExprKind (LowerIRContext u) where
-  enter = ignore
+  enter (WhenExpr arms maybe_else) (LowerIRContext ctx@{}) = Nothing
+  enter (BlockExpr body) (LowerIRContext ctx@{}) = Nothing
+  enter (EqualsExpr l r) (LowerIRContext ctx@{}) = Nothing
+
+  enter (IntExpr val) (LowerIRContext ctx@{ fn_stack: (fn_context : fn_stack), ir_stack }) = do
+    let
+      Tuple ir_int_const_id fn_context' = ir_int_const val fn_context
+      ir_stack' = (ir_int_const_id : ir_stack)
+      ctx' = LowerIRContext $ merge { ir_stack: ir_stack', fn_stack: (fn_context' : fn_stack) } ctx
+
+    skip_all ctx'
+
+  enter (NameExpr name) (LowerIRContext ctx@{ fn_stack }) = Nothing
+  enter (CallExpr callee params) (LowerIRContext ctx@{}) = Nothing
+  enter (AddExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (SubExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (MulExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (DivExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (GreaterThanExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (LessThanExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (GreaterThanEqualsExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter (LessThanEqualsExpr l r) (LowerIRContext ctx@{}) = Nothing
+  enter _ _ = Nothing
   exit = ignore
 
 -- AddExpr

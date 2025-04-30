@@ -1,4 +1,12 @@
-module Data.Dewdrop.IR where
+module Data.Dewdrop.IR
+  ( IRConstKind(..)
+  , IRContext(..)
+  , IntValue
+  , TypedIR(..)
+  , TypedIRID
+  , TypedIRKind(..)
+  )
+  where
 
 
 import Data.Dewdrop.Identifier (Identifier)
@@ -27,7 +35,7 @@ newtype IRContext = IRContext
 
 type IntValue = Int
 
-newtype TypedIR = TypedIR { kind :: TypedIRKind, bounds :: IRBoundsID }
+newtype TypedIR = TypedIR { kind :: TypedIRKind, type :: ProgramType }
 
 data IRConstKind
   = IRConstInt Int
