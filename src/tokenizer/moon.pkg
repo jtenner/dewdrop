@@ -1,0 +1,7 @@
+options(
+  targets: {
+    "tokenizer_native.mbt": [ "native", "llvm" ],
+    "tokenizer_stub.mbt": [ "wasm", "wasm-gc", "js" ],
+  },
+  "native-stub": [ "tokenizer_native.c" ],
+)

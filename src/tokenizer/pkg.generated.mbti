@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/tokenizer"
+
+// Values
+pub const INVALID_BYTE_BASE : UInt = 0x110000
+
+pub const IO_ERROR_BASE : UInt = 0x120000
+
+pub const MAX_WTF8_CODEPOINT : UInt = 0x10FFFF
+
+pub fn codepoints(Bytes) -> Iter2[UInt, UInt64]
+
+pub fn invalid_byte(UInt) -> Byte?
+
+pub fn io_error_code(UInt) -> Int?
+
+pub fn is_invalid_byte(UInt) -> Bool
+
+pub fn is_io_error(UInt) -> Bool
+
+pub fn is_surrogate(UInt) -> Bool
+
+pub fn is_unicode_scalar(UInt) -> Bool
+
+pub fn is_wtf8_codepoint(UInt) -> Bool
+
+// Errors
+
+// Types and methods
+pub struct Utf8Cursor {
+  buffer : Bytes
+  fd : Int
+  refillable : Bool
+  mut position : Int
+  mut limit : Int
+  mut base_offset : UInt64
+  mut eof : Bool
+  mut read_error : Int
+  mut read_error_emitted : Bool
+}
+pub fn Utf8Cursor::buffer_capacity(Self) -> Int
+pub fn Utf8Cursor::byte_offset(Self) -> UInt64
+pub fn Utf8Cursor::each(Self, (UInt, UInt64) -> Unit) -> Unit
+pub fn Utf8Cursor::from_fd(Int, buffer_size? : Int) -> Self
+pub fn Utf8Cursor::is_done(Self) -> Bool
+pub fn Utf8Cursor::iter(Self) -> Iter2[UInt, UInt64]
+pub fn Utf8Cursor::new(Bytes) -> Self
+pub fn Utf8Cursor::next(Self) -> (UInt, UInt64)?
+pub fn Utf8Cursor::read_error(Self) -> Int?
+
+// Type aliases
+pub type ByteOffset = UInt64
+
+pub type UtfCodepoint = UInt
+
+// Traits
+
