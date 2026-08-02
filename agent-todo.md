@@ -216,7 +216,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Reuse repeated escaping named references through deterministic body-local closure caches.
 - [x] Reuse every surviving named-function value through a deterministic linked-module singleton global initialized before source module state.
 - [x] Add `let mut` local assignment with unboxed uncaptured locals and carrier-specialized shared WasmGC cells for mutable captures.
-- [ ] Add interprocedural escape summaries, cross-module closure-base unification, and expected-type generic/overloaded references.
+- [x] Select local/imported non-generic overloaded function references from deterministic structural expected types.
+- [ ] Add interprocedural escape summaries, cross-module closure-base unification, and expected-type generic function references.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.

@@ -19,7 +19,7 @@ Dew currently has:
 - compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent cache for diagnostics-free compiler-owned standard frozen interfaces, with versioned deterministic encoding, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 173 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 153 compiled WAT/runtime snapshots plus 20 compiler-error snapshots.
+- 175 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 154 compiled WAT/runtime snapshots plus 21 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -37,7 +37,7 @@ by dependency and expected user value.
 - [x] Preserve stable type, function, import, memory, global, export, and code ordering rather than normalizing away compiler decisions.
 - [x] Add a fail-closed comparison runner that prints a normal unified diff on mismatch.
 - [x] Add an explicit snapshot-update command; ordinary test runs never rewrite expected files.
-- [x] Grow the suite to 173 fixtures: 153 compiled WAT/runtime snapshots and 20 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
+- [x] Grow the suite to 175 fixtures: 154 compiled WAT/runtime snapshots and 21 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
 - [x] Capture successful `main` stdout as an ordered JSON string array; `text/concat` writes and verifies the complete concatenated string.
 - [x] Snapshot deterministic compiler errors with `output: null` and no WAT, preserving multiline `Debug` diagnostics through a framed protocol.
 - [ ] Continue adding successful cases, warnings, compiler failures, boundaries, and reduced stress cases within each feature.
@@ -343,7 +343,7 @@ count = count + 1
 - [x] Direct free, builtin, inherent, trait, and qualified method selection.
 - [x] Parse deterministic `fn(T, ...) -> R` type syntax and preserve it through HIR collection.
 - [x] Structurally intern, alias-normalize, import, cache, compare, and assign opaque reference shapes to first-class function types.
-- [x] Resolve unambiguous non-generic local/imported function references and structurally type-check calls through function-valued locals.
+- [x] Resolve unambiguous and expected-type-selected non-generic local/imported function references and structurally type-check calls through function-valued locals.
 - [x] Emit non-capturing function references and first-class calls with typed `ref.func`/`call_ref`.
 - [x] Closures and captured environments.
   - [x] Parse explicit typed lambda expressions with forward-only cursor movement.

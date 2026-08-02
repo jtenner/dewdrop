@@ -125,7 +125,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 173 fixtures:
+The suite contains 175 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -133,11 +133,11 @@ calls                2          0                 2                0
 collections         14          9                 5                2
 control-flow       18         18                 0                1
 enums               11         11                 0                0
-functions            7          5                 2                0
+functions            8          5                 3                0
 generics             1          1                 0                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             15         13                 2                0
+modules             16         14                 2                0
 names                2          0                 2                0
 numeric             28         26                 2                1
 reachability         1          1                 0                0
@@ -147,15 +147,15 @@ text                 23         23                 0                1
 types                1          0                 1                0
 wasi                 16         16                 0                5
 
-total               173        153                20               12
+total               175        154                21               12
 ```
 
 Ninety-one compiled fixtures assert nonempty stdout, twelve assert normalized
-runtime traps, and fifty intentionally remain WAT/no-trap fixtures. The
+runtime traps, and fifty-one intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 2, 2026, all 153 compiled fixtures pass in Node, including module
+As of August 2, 2026, all 154 compiled fixtures pass in Node, including module
 initialization, imported values, imported method/operator dispatch,
 cross-module recursive types, named function values, and local/imported
 closures. Wago execution is temporarily skipped while its checkout is rebased.
@@ -166,8 +166,9 @@ boundaries and conversions, native SIMD and SWAR lanes, unaligned memory,
 strict-UTF-8 strings and bytes, builders, ranges, search, WASI writes, non-stdout
 writes, partial writes, deterministic input, short reads, errno/zero-progress/
 over-report failures, normalized traps, same-module multi-file compilation,
-static multi-module linking, flattened local/imported closures, unboxed mutable
-locals, shared boxed mutable captures, and explicit test-mode execution.
+static multi-module linking, expected-type imported overload references,
+flattened local/imported closures, unboxed mutable locals, shared boxed mutable
+captures, and explicit test-mode execution.
 
 ## Commands
 

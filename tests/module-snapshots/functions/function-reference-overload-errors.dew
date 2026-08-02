@@ -1,0 +1,16 @@
+builtin choose(value: I32) -> I32 = "fixture_choose_i32"
+builtin choose(value: I64) -> I64 = "fixture_choose_i64"
+builtin duplicate(value: I32) -> I32 = "fixture_duplicate_first"
+builtin duplicate(value: I32) -> I32 = "fixture_duplicate_second"
+
+fn missing_expected_type() -> Unit {
+  let callback = choose
+}
+
+fn no_matching_type() -> fn(Bool) -> Bool {
+  choose
+}
+
+fn ambiguous_type() -> fn(I32) -> I32 {
+  duplicate
+}

@@ -97,6 +97,45 @@ test "basic inference selects unambiguous named function references" {
 }
 
 ///|
+test "basic inference selects overloaded function references from expected types" {
+  let (collected, _, _, inferred) = infer_test_module(
+    98UL, b"builtin choose(value: I32) -> I32 = \"choose_i32\"\nbuiltin choose(value: I64) -> I64 = \"choose_i64\"\nfn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  callback(value)\n}\nfn use_argument() -> I32 {\n  apply(choose, 41)\n}\nfn use_return() -> fn(I64) -> I64 {\n  choose\n}\nfn use_assignment() -> I32 {\n  let mut callback = fn(value: I32) -> I32 {\n    value\n  }\n  callback = choose\n  callback(42)\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let mut i32_selections = 0
+  let mut i64_selections = 0
+  for selection in inferred.expression_selections {
+    match selection {
+      FunctionReferenceSelection(declaration) if declaration ==
+        collected.callables[0].declaration => i32_selections += 1
+      FunctionReferenceSelection(declaration) if declaration ==
+        collected.callables[1].declaration => i64_selections += 1
+      _ => ()
+    }
+  }
+  assert_eq(i32_selections, 2)
+  assert_eq(i64_selections, 1)
+}
+
+///|
+test "basic inference diagnoses overloaded references without a usable expected type" {
+  let (_, _, _, inferred) = infer_test_module(
+    99UL, b"builtin choose(value: I32) -> I32 = \"choose_i32\"\nbuiltin choose(value: I64) -> I64 = \"choose_i64\"\nfn missing() -> Unit {\n  let callback = choose\n}\nfn mismatch() -> fn(Bool) -> Bool {\n  choose\n}\n",
+  )
+  let mut expected_required = 0
+  let mut no_match = 0
+  for diagnostic in inferred.diagnostics {
+    match diagnostic {
+      FunctionReferenceExpectedTypeRequired(_, _, _) => expected_required += 1
+      NoMatchingFunctionReference(_, _, _) => no_match += 1
+      _ => ()
+    }
+  }
+  assert_eq(expected_required, 1)
+  assert_eq(no_match, 1)
+}
+
+///|
 test "basic inference type-checks calls through function-valued locals" {
   let (collected, resolved, _, inferred) = infer_test_module(
     97UL, b"fn apply(callback: fn(I32) -> I64, value: I32) -> I64 {\n  callback(value)\n}\n",

@@ -64,15 +64,15 @@ A future shared-environment optimization may still select a split representation
 
 ## Required next milestones
 
-1. Add expected-type disambiguation for overloaded non-generic function references.
-2. Define executable specialization and ABI identity for generic function references.
+1. Define executable specialization and ABI identity for generic function references.
+2. Unify closure-base identities across linked modules so imported named references can share one program singleton.
 3. Add closure ABI fingerprints to persistent external package interfaces.
 4. Extend the implemented local directization and named-reference reuse passes with interprocedural escape summaries and cross-module closure-base unification.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints
 
-- Function overload sets cannot become values without an expected function type or explicit disambiguation.
+- Non-generic function overload sets become values only with a deterministic structural expected function type. Local/imported candidates are filtered by exact signature; missing, unmatched, and multiply matched expectations have separate diagnostics.
 - Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Mutable captures use shared carrier-specialized cells referenced by flattened closure fields; directization must route the cell reference rather than copy its value.
 - Cross-module concrete function signatures are structurally coalesced during one program link; persistent package interfaces still require stable signature and closure ABI fingerprints.
 - Generic function values remain blocked on executable generic ABI work.

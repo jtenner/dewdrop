@@ -1964,16 +1964,10 @@ fn expose_imported_value_binding(
       if opened.ambiguous {
         return
       }
-      if opened.interface_index == binding.interface_index {
-        opened.tail = binding.tail
-        return
+      if opened.interface_index != binding.interface_index {
+        scope.callable_references[opened.tail].next = binding.head
       }
-      let previous = imported_callable_binding_declaration(scope, opened)
-      let next = imported_callable_binding_declaration(scope, binding)
-      opened.ambiguous = true
-      scope.diagnostics.push(
-        AmbiguousImportedValue(scope.module_id, name, previous, next),
-      )
+      opened.tail = binding.tail
     }
   }
 }

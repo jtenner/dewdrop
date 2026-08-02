@@ -861,6 +861,281 @@ fn BasicBodyInferencer::imported_function_reference(
 }
 
 ///|
+fn BasicBodyInferencer::local_function_reference_candidate_count(
+  self : BasicBodyInferencer,
+  name : NameId,
+) -> Int {
+  let binding = match self.collected.value_bindings.get(name) {
+    Some(binding) => binding
+    None => return 0
+  }
+  let mut count = 0
+  let mut cursor = binding.head
+  while cursor >= 0 {
+    let candidate = self.collected.value_binding_candidates[cursor]
+    if self.declaration_visible(candidate.declaration) {
+      let local_index = semantic_id_local(candidate.declaration)
+      if local_index >= 0 && local_index < self.callable_indices.length() {
+        let callable_index = self.callable_indices[local_index]
+        if callable_index >= 0 &&
+          self.collected.generic_parameters_of(candidate.declaration).length ==
+          0 {
+          count += 1
+        }
+      }
+    }
+    cursor = candidate.next
+  }
+  count
+}
+
+///|
+fn BasicBodyInferencer::imported_function_reference_candidate_count(
+  self : BasicBodyInferencer,
+  head : Int,
+) -> Int {
+  let imports = match self.imports {
+    Some(imports) => imports
+    None => return 0
+  }
+  let mut count = 0
+  let mut cursor = head
+  while cursor >= 0 {
+    let reference = imports.scope.callable_references[cursor]
+    let interface_ = imports.scope.interfaces[reference.interface_index].unwrap()
+    let declaration = interface_.callables[reference.callable_index].declaration
+    match imports.callable(declaration) {
+      Some(callable) if callable.generic_parameters.length == 0 => count += 1
+      _ => ()
+    }
+    cursor = reference.next
+  }
+  count
+}
+
+///|
+fn BasicBodyInferencer::function_reference_candidate_viable(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  candidate_type : ResolvedTypeId,
+  offset : UInt64,
+) -> Bool {
+  let snapshot = self.solver.snapshot()
+  let diagnostic_start = self.solver.diagnostics.length()
+  ignore(
+    self.solver.unify(
+      self.expression_type(expression),
+      self.solver.resolved_type(candidate_type),
+      expression_type_origin(expression, offset),
+    ),
+  )
+  let viable = self.solver.diagnostics.length() == diagnostic_start
+  self.solver.rollback(snapshot)
+  viable
+}
+
+///|
+fn BasicBodyInferencer::commit_function_reference(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  declaration : DeclId,
+  candidate_type : ResolvedTypeId,
+  offset : UInt64,
+) -> Unit {
+  ignore(
+    self.solver.unify(
+      self.expression_type(expression),
+      self.solver.resolved_type(candidate_type),
+      expression_type_origin(expression, offset),
+    ),
+  )
+  self.ensure_member_storage()
+  self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
+    declaration,
+  )
+}
+
+///|
+fn BasicBodyInferencer::select_local_function_reference(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  name : NameId,
+  offset : UInt64,
+) -> Unit {
+  let binding = match self.collected.value_bindings.get(name) {
+    Some(binding) => binding
+    None => return
+  }
+  let mut cursor = binding.head
+  let mut viable_count = 0
+  let mut first_declaration = 0UL
+  let mut second_declaration = 0UL
+  let mut selected_type = -1
+  while cursor >= 0 {
+    let candidate = self.collected.value_binding_candidates[cursor]
+    if self.declaration_visible(candidate.declaration) {
+      let local_index = semantic_id_local(candidate.declaration)
+      if local_index >= 0 && local_index < self.callable_indices.length() {
+        let callable_index = self.callable_indices[local_index]
+        if callable_index >= 0 &&
+          self.collected.generic_parameters_of(candidate.declaration).length ==
+          0 {
+          let candidate_type = self.resolved.callable_function_types[callable_index]
+          if self.function_reference_candidate_viable(
+              expression, candidate_type, offset,
+            ) {
+            viable_count += 1
+            if viable_count == 1 {
+              first_declaration = candidate.declaration
+              selected_type = candidate_type
+            } else if viable_count == 2 {
+              second_declaration = candidate.declaration
+            }
+          }
+        }
+      }
+    }
+    cursor = candidate.next
+  }
+  if viable_count == 1 {
+    self.commit_function_reference(
+      expression, first_declaration, selected_type, offset,
+    )
+  } else if viable_count == 0 {
+    self.diagnose(NoMatchingFunctionReference(name, expression, offset))
+  } else {
+    self.diagnose(
+      AmbiguousFunctionReference(
+        name, expression, first_declaration, second_declaration, viable_count, offset,
+      ),
+    )
+  }
+}
+
+///|
+fn BasicBodyInferencer::select_imported_function_reference(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  name : NameId,
+  head : Int,
+  offset : UInt64,
+) -> Unit {
+  let imports = match self.imports {
+    Some(imports) => imports
+    None => return
+  }
+  let mut cursor = head
+  let mut viable_count = 0
+  let mut first_declaration = 0UL
+  let mut second_declaration = 0UL
+  let mut selected_type = -1
+  while cursor >= 0 {
+    let reference = imports.scope.callable_references[cursor]
+    let interface_ = imports.scope.interfaces[reference.interface_index].unwrap()
+    let declaration = interface_.callables[reference.callable_index].declaration
+    match imports.callable(declaration) {
+      Some(callable) if callable.generic_parameters.length == 0 =>
+        if self.function_reference_candidate_viable(
+            expression,
+            callable.function_type,
+            offset,
+          ) {
+          viable_count += 1
+          if viable_count == 1 {
+            first_declaration = declaration
+            selected_type = callable.function_type
+          } else if viable_count == 2 {
+            second_declaration = declaration
+          }
+        }
+      _ => ()
+    }
+    cursor = reference.next
+  }
+  if viable_count == 1 {
+    self.commit_function_reference(
+      expression, first_declaration, selected_type, offset,
+    )
+  } else if viable_count == 0 {
+    self.diagnose(NoMatchingFunctionReference(name, expression, offset))
+  } else {
+    self.diagnose(
+      AmbiguousFunctionReference(
+        name, expression, first_declaration, second_declaration, viable_count, offset,
+      ),
+    )
+  }
+}
+
+///|
+fn BasicBodyInferencer::is_syntactic_call_target(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+) -> Bool {
+  for call_expression in self.call_expressions {
+    match self.collected.expressions[call_expression] {
+      HirCallExpr(target, _, _) if target == expression => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn BasicBodyInferencer::constrain_function_references(
+  self : BasicBodyInferencer,
+) -> Unit {
+  for
+    expression in self.body.expressions.start..<(self.body.expressions.start +
+    self.body.expressions.length) {
+    if self.is_function_reference(expression) {
+      continue
+    }
+    if self.is_syntactic_call_target(expression) {
+      match self.names.expression_references[expression] {
+        ModuleValueNameReference(name) if self.module_value_type(name) is None =>
+          self.poison_expression(expression)
+        ImportedValueNameReference(_) => self.poison_expression(expression)
+        _ => ()
+      }
+      continue
+    }
+    if self.has_member_expressions &&
+      self.consumed_member_roots[self.expression_index(expression)] {
+      continue
+    }
+    let (name, offset) = match self.collected.expressions[expression] {
+      HirNameExpr(name, offset) => (name, offset)
+      _ => continue
+    }
+    let candidate_count = match self.names.expression_references[expression] {
+      ModuleValueNameReference(_) if self.module_value_type(name) is None =>
+        self.local_function_reference_candidate_count(name)
+      ImportedValueNameReference(head) =>
+        self.imported_function_reference_candidate_count(head)
+      _ => 0
+    }
+    if candidate_count <= 0 {
+      continue
+    }
+    if self.solver.has_unresolved_variable(self.expression_type(expression)) {
+      self.diagnose(
+        FunctionReferenceExpectedTypeRequired(name, expression, offset),
+      )
+      self.poison_expression(expression)
+      continue
+    }
+    match self.names.expression_references[expression] {
+      ModuleValueNameReference(_) =>
+        self.select_local_function_reference(expression, name, offset)
+      ImportedValueNameReference(head) =>
+        self.select_imported_function_reference(expression, name, head, offset)
+      _ => ()
+    }
+  }
+}
+
+///|
 fn BasicBodyInferencer::initialize_control_types(
   self : BasicBodyInferencer,
 ) -> Unit {
@@ -5794,11 +6069,13 @@ fn BasicBodyInferencer::constrain_name_expressions(
           | ErrorNameReference => ()
           ModuleValueNameReference(name) =>
             if self.module_value_type(name) is None &&
-              !self.is_function_reference(expression) {
+              !self.is_function_reference(expression) &&
+              self.local_function_reference_candidate_count(name) == 0 {
               self.mark_unsupported(expression)
             }
-          ImportedValueNameReference(_) =>
-            if !self.is_function_reference(expression) {
+          ImportedValueNameReference(head) =>
+            if !self.is_function_reference(expression) &&
+              self.imported_function_reference_candidate_count(head) == 0 {
               self.mark_unsupported(expression)
             }
           ImportedModuleNameReference(_) => self.mark_unsupported(expression)
@@ -6315,6 +6592,9 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     NumericLiteralOutOfRange(_, _, _) => 38
     InvalidAssignmentTarget(_, _) => 39
     ImmutableAssignmentTarget(_, _) => 40
+    FunctionReferenceExpectedTypeRequired(_, _, _) => 41
+    NoMatchingFunctionReference(_, _, _) => 42
+    AmbiguousFunctionReference(_, _, _, _, _, _) => 43
   }
 }
 
@@ -6818,6 +7098,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.constrain_method_calls()
   self.constrain_operator_calls()
   self.constrain_members(true)
+  self.constrain_function_references()
   self.solver_diagnostic_end = self.solver.diagnostics.length()
 }
 

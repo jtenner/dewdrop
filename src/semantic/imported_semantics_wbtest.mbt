@@ -385,38 +385,49 @@ test "test-only implementation evidence is absent from imported scopes" {
 }
 
 ///|
-test "ambiguous imported values are diagnosed before inference" {
+test "imported callable collisions form expected-type overload sets" {
   let program = collect_program_manifest(
     1850UL,
     ProgramManifest::new([
       ManifestModule::new("app.consumer", [
         ManifestFile::new(
-          "consumer.dew", b"open app.first\nopen app.second\npub fn run() -> I32 {\n  same()\n}\n",
+          "consumer.dew", b"open app.first\nopen app.second\npub fn select() -> fn(I32) -> I32 {\n  same\n}\n",
         ),
       ]),
       ManifestModule::new("app.first", [
-        ManifestFile::new("first.dew", b"pub fn same() -> I32 {\n  1\n}\n"),
+        ManifestFile::new(
+          "first.dew", b"pub fn same(value: I32) -> I32 {\n  value + 1\n}\n",
+        ),
       ]),
       ManifestModule::new("app.second", [
-        ManifestFile::new("second.dew", b"pub fn same() -> I32 {\n  2\n}\n"),
+        ManifestFile::new(
+          "second.dew", b"pub fn same(value: I64) -> I64 {\n  value + 2i64\n}\n",
+        ),
       ]),
     ]),
   )
   let frozen = freeze_program_interfaces(program)
-  assert_eq(frozen.import_diagnostics.length(), 1)
-  match frozen.import_diagnostics[0] {
-    AmbiguousImportedValue(1850UL, "same", _, _) => ()
-    _ => fail("expected ambiguous imported value diagnostic")
-  }
-  let names = resolve_module_names_with_imports(
-    program.modules[0],
-    frozen.import_scopes[0],
+  assert_eq(frozen.import_diagnostics.length(), 0)
+  let collected = program.modules[0]
+  let resolved = frozen.interfaces[0].resolved_types
+  let scope = frozen.import_scopes[0]
+  let imports = resolve_module_imports(resolved, scope)
+  let names = resolve_module_names_with_imports(collected, scope)
+  assert_eq(names.diagnostics.length(), 0)
+  let inferred = infer_module_bodies_with_imports(
+    collected, resolved, imports, names,
   )
-  assert_eq(names.diagnostics.length(), 1)
-  match names.diagnostics[0] {
-    AmbiguousImportedValueName(_, _, _) => ()
-    _ => fail("expected ambiguous imported body name")
+  assert_eq(inferred.diagnostics.length(), 0)
+  let expected = frozen.interfaces[1].callables_named("same")[0].declaration
+  let mut selected = false
+  for selection in inferred.expression_selections {
+    match selection {
+      FunctionReferenceSelection(declaration) if declaration == expected =>
+        selected = true
+      _ => ()
+    }
   }
+  assert_true(selected)
 }
 
 ///|

@@ -1,0 +1,9 @@
+{
+  "errors": [
+    "FunctionReferenceExpectedTypeRequired(0, 0, 300)",
+    "NoMatchingFunctionReference(0, 1, 356)",
+    "AmbiguousFunctionReference(\n  4,\n  2,\n  12884901888002,\n  12884901888003,\n  2,\n  408,\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

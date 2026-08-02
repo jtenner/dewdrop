@@ -1,0 +1,16 @@
+open fixture.overload_left
+open fixture.overload_right
+
+fn apply_i32(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+fn select_i64() -> fn(I64) -> I64 {
+  transform
+}
+
+pub fn main() -> Unit {
+  assert(apply_i32(transform, 41) == 42, "expected type selects imported I32 overload")
+  let callback = select_i64()
+  assert(callback(41i64) == 42i64, "return type selects imported I64 overload")
+}
