@@ -316,6 +316,7 @@ erased fallback.
   - [x] Remove call-only local named-reference allocations and indirect dispatch.
   - [x] Elide unused local closure values, lambda entries, and physical subtypes.
   - [x] Reuse repeated escaping named references through one body-local closure cache.
+  - [x] Promote surviving linked named references to deterministic module-representation singleton globals.
   - [x] Snapshot an allocation-free directization fixture with no closure type or `call_ref`.
   - [x] Conservatively retain the closure ABI for captured, returned, passed, global, and imported values.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.

@@ -85,6 +85,13 @@ pub struct PlannedProgramWasmSignatureType {
 } derive(Eq, Debug)
 
 ///|
+pub struct PlannedProgramFunctionReferenceSingleton {
+  module_index : Int
+  declaration : DeclId
+  global_index : Int
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramWasmGCLink {
   root_module_index : Int
   graph : ModuleDependencyGraph
@@ -99,6 +106,9 @@ pub struct PlannedProgramWasmGCLink {
   function_lookup : Map[DeclId, Int]
   initializers : Array[PlannedProgramModuleInitializer]
   global_lookup : Map[DeclId, Int]
+  function_reference_singletons : Array[
+    PlannedProgramFunctionReferenceSingleton,
+  ]
   initializer_type_index : Int
   startup_function_index : Int
   type_lookup : Map[DeclId, Int]
@@ -107,6 +117,21 @@ pub struct PlannedProgramWasmGCLink {
   imported_function_count : Int
   defined_function_count : Int
   diagnostics : Array[ProgramWasmGCLinkDiagnostic]
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(
+  self : PlannedProgramWasmGCLink,
+  module_index : Int,
+  declaration : DeclId,
+) -> Int {
+  for singleton in self.function_reference_singletons {
+    if singleton.module_index == module_index &&
+      singleton.declaration == declaration {
+      return singleton.global_index
+    }
+  }
+  -1
 }
 
 ///|
@@ -1669,6 +1694,31 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
+  let function_reference_singletons : Array[
+    PlannedProgramFunctionReferenceSingleton,
+  ] = []
+  for module_index, module_ in lowering.modules {
+    let seen : Map[DeclId, Bool] = Map::default()
+    let declarations : Array[DeclId] = []
+    for expression in module_.expressions {
+      match expression.kind {
+        PlannedFunctionReference(declaration) =>
+          if !seen.contains(declaration) {
+            seen[declaration] = true
+            declarations.push(declaration)
+          }
+        _ => ()
+      }
+    }
+    for declaration in declarations {
+      function_reference_singletons.push({
+        module_index,
+        declaration,
+        global_index,
+      })
+      global_index += 1
+    }
+  }
   let scheduled_initializers = program_schedule_initializers(
     lowering, initializer_candidates, diagnostics,
   )
@@ -1686,14 +1736,16 @@ pub fn link_program_wasmgc_fragments(
       runtime_initializer_count += 1
     }
   }
-  let initializer_type_index = if runtime_initializer_count > 0 {
+  let needs_startup = runtime_initializer_count > 0 ||
+    function_reference_singletons.length() > 0
+  let initializer_type_index = if needs_startup {
     let index = type_count
     type_count += 1
     index
   } else {
     -1
   }
-  let startup_function_index = if runtime_initializer_count > 0 {
+  let startup_function_index = if needs_startup {
     let index = imported_function_count + defined_function_count
     defined_function_count += 1
     index
@@ -1715,6 +1767,7 @@ pub fn link_program_wasmgc_fragments(
     function_lookup,
     initializers,
     global_lookup,
+    function_reference_singletons,
     initializer_type_index,
     startup_function_index,
     type_lookup,

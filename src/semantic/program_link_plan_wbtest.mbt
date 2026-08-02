@@ -272,3 +272,30 @@ test "program linker eliminates unused physical aggregate types" {
   let item = program.modules[0].lookup_type("Item").unwrap()
   assert_eq(link.type_lookup.get(item), None)
 }
+
+///|
+test "program link plans deterministic named function singleton globals" {
+  let program = collect_program_manifest(
+    2290UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn identity(value: I32) -> I32 {\n  value\n}\npub fn first() -> fn(I32) -> I32 {\n  identity\n}\npub fn second() -> fn(I32) -> I32 {\n  identity\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.function_reference_singletons.length(), 1)
+  let identity = program.modules[0].lookup_value("identity").unwrap()
+  let singleton = link.function_reference_singletons[0]
+  assert_eq(singleton.module_index, 0)
+  assert_eq(singleton.declaration, identity)
+  assert_eq(singleton.global_index, 0)
+  assert_eq(link.function_reference_singleton_global(0, identity), 0)
+  assert_true(link.initializer_type_index >= 0)
+  assert_true(link.startup_function_index >= 0)
+}

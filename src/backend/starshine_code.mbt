@@ -2626,6 +2626,8 @@ fn starshine_lambda_function_index(
 ///|
 fn starshine_function_reference_cache_indices(
   lowering : @semantic.PlannedModuleLowering,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
   body : @semantic.PlannedBodyLowering,
   first_local : Int,
 ) -> (Array[Int], Int) {
@@ -2635,9 +2637,18 @@ fn starshine_function_reference_cache_indices(
     body.expressions.length) {
     match lowering.expressions[expression].kind {
       @semantic.PlannedFunctionReference(declaration) =>
-        counts[declaration] = match counts.get(declaration) {
-          Some(count) => count + 1
-          None => 1
+        if (match program {
+            Some(link) =>
+              link.function_reference_singleton_global(
+                program_module_index, declaration,
+              ) <
+              0
+            None => true
+          }) {
+          counts[declaration] = match counts.get(declaration) {
+            Some(count) => count + 1
+            None => 1
+          }
         }
       _ => ()
     }
@@ -2815,8 +2826,21 @@ fn starshine_emit_body_instructions(
               ),
             )
           @semantic.PlannedFunctionReference(declaration) => {
+            let singleton_global = match program {
+              Some(link) =>
+                link.function_reference_singleton_global(
+                  program_module_index, declaration,
+                )
+              None => -1
+            }
             let cache_local = function_reference_cache_indices[expression]
-            if cache_local >= 0 {
+            if singleton_global >= 0 {
+              results.push([
+                @lib.Instruction::global_get(
+                  @lib.GlobalIdx::new(singleton_global.reinterpret_as_uint()),
+                ),
+              ])
+            } else if cache_local >= 0 {
               results.push([
                 @lib.Instruction::local_get(
                   @lib.LocalIdx::new(cache_local.reinterpret_as_uint()),
@@ -6012,6 +6036,8 @@ fn emit_starshine_lambda_body(
   let parameter_count = planned.functions[planned.lambda_function_indices[lambda]].parameters.length
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     lowering,
+    program,
+    program_module_index,
     body,
     parameter_count + body_local_types.length(),
   )
@@ -6083,6 +6109,8 @@ fn emit_starshine_function_body(
   }
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     lowering,
+    None,
+    -1,
     body,
     parameter_count + body_local_types.length(),
   )
@@ -7054,6 +7082,8 @@ fn emit_starshine_program_function_body(
   )
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     module_lowering,
+    Some(planned),
+    function_.module_index,
     body,
     function_.parameters.length + body_local_types.length(),
   )
@@ -7349,6 +7379,16 @@ fn emit_starshine_program_global_section(
       ),
     )
   }
+  for _ in planned.function_reference_singletons {
+    globals.push(
+      @lib.Global::new(
+        @lib.GlobalType::new(@lib.ValType::eqref_null(), true),
+        @lib.Expr::new([
+          @lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq())),
+        ]),
+      ),
+    )
+  }
   @lib.GlobalSec::new(globals)
 }
 
@@ -7392,6 +7432,8 @@ fn emit_starshine_program_initializer_body(
   )
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     module_lowering,
+    Some(planned),
+    initializer.module_index,
     body,
     body_local_types.length(),
   )
@@ -7461,6 +7503,34 @@ fn starshine_program_startup_body(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.Func {
   let instructions : Array[@lib.Instruction] = []
+  for singleton in planned.function_reference_singletons {
+    match planned.function_of(singleton.declaration) {
+      Some(function_) if function_.function_index >= 0 => {
+        instructions.push(
+          @lib.Instruction::ref_func(
+            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+          ),
+        )
+        let module_ = planned.modules[singleton.module_index]
+        let closure_type = starshine_local_physical_type_index(
+          Some(planned),
+          singleton.module_index,
+          module_.closure_type_index,
+        )
+        instructions.push(
+          @lib.Instruction::struct_new(
+            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+          ),
+        )
+        instructions.push(
+          @lib.Instruction::global_set(
+            @lib.GlobalIdx::new(singleton.global_index.reinterpret_as_uint()),
+          ),
+        )
+      }
+      _ => ()
+    }
+  }
   for initializer in planned.initializers {
     if initializer.function_index >= 0 {
       instructions.push(
@@ -7628,7 +7698,8 @@ pub fn emit_starshine_program_module(
         Some(elements) => module_ = module_.with_elem_sec(elements)
         None => ()
       }
-      if planned.global_lookup.length() > 0 {
+      if planned.global_lookup.length() > 0 ||
+        planned.function_reference_singletons.length() > 0 {
         module_ = module_.with_global_sec(
           emit_starshine_program_global_section(lowering, planned),
         )

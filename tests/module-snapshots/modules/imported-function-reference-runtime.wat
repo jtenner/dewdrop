@@ -18,6 +18,9 @@
   (type (;16;) (struct (field (mut (ref 12))) (field (mut i32)) (field (mut i32))))
   (type (;17;) (struct (field (mut (ref 12))) (field (mut i32)) (field (mut i32))))
   (global (;0;) (mut eqref) ref.null none)
+  (global (;1;) (mut eqref) ref.null eq)
+  (global (;2;) (mut eqref) ref.null eq)
+  (global (;3;) (mut eqref) ref.null eq)
   (export "main" (func 5))
   (export "__dew_init" (func 7))
   (elem (;0;) declare func 0 1)
@@ -87,8 +90,7 @@
   )
   (func (;5;) (type 10)
     (local eqref)
-    ref.func 0
-    struct.new 7
+    global.get 1
     i32.const 41
     call 3
     i32.const 42
@@ -141,8 +143,7 @@
     if ;; label = @1
       unreachable
     end
-    ref.func 1
-    struct.new 7
+    global.get 2
     call 2
     call 4
     i32.const 42
@@ -161,11 +162,19 @@
     end
   )
   (func (;6;) (type 11)
-    ref.func 0
-    struct.new 1
+    global.get 3
     global.set 0
   )
   (func (;7;) (type 11)
+    ref.func 0
+    struct.new 7
+    global.set 1
+    ref.func 1
+    struct.new 7
+    global.set 2
+    ref.func 0
+    struct.new 1
+    global.set 3
     call 6
   )
 )

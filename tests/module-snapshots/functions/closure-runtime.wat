@@ -12,13 +12,16 @@
   (type (;10;) (func (param i32 i32) (result eqref)))
   (type (;11;) (func (param eqref i32) (result i32)))
   (type (;12;) (func))
-  (type (;13;) (array (mut v128)))
-  (type (;14;) (struct (field (ref 13)) (field i32) (field i32)))
-  (type (;15;) (struct (field (ref 13)) (field i32) (field i32)))
-  (type (;16;) (struct (field (ref 13)) (field i32) (field i32)))
-  (type (;17;) (struct (field (mut (ref 13))) (field (mut i32)) (field (mut i32))))
-  (type (;18;) (struct (field (mut (ref 13))) (field (mut i32)) (field (mut i32))))
+  (type (;13;) (func))
+  (type (;14;) (array (mut v128)))
+  (type (;15;) (struct (field (ref 14)) (field i32) (field i32)))
+  (type (;16;) (struct (field (ref 14)) (field i32) (field i32)))
+  (type (;17;) (struct (field (ref 14)) (field i32) (field i32)))
+  (type (;18;) (struct (field (mut (ref 14))) (field (mut i32)) (field (mut i32))))
+  (type (;19;) (struct (field (mut (ref 14))) (field (mut i32)) (field (mut i32))))
+  (global (;0;) (mut eqref) ref.null eq)
   (export "main" (func 4))
+  (export "__dew_init" (func 12))
   (elem (;0;) declare func 0 5 7)
   (func (;0;) (type 4) (param i32) (result i32)
     local.get 0
@@ -68,10 +71,10 @@
     i32.eq
     v128.const i32x4 0x2d6e6f6e 0x74706163 0x6e697275 0x616c2067
     v128.const i32x4 0x6164626d 0x00000000 0x00000000 0x00000000
-    array.new_fixed 13 2
+    array.new_fixed 14 2
     i32.const 0
     i32.const 20
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
@@ -105,10 +108,10 @@
     i32.const 42
     i32.eq
     v128.const i32x4 0x75746572 0x64656e72 0x6f6c6320 0x65727573
-    array.new_fixed 13 1
+    array.new_fixed 14 1
     i32.const 0
     i32.const 16
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
@@ -121,10 +124,10 @@
     i32.eq
     v128.const i32x4 0x736f6c63 0x20657275 0x61726170 0x6574656d
     v128.const i32x4 0x00000072 0x00000000 0x00000000 0x00000000
-    array.new_fixed 13 2
+    array.new_fixed 14 2
     i32.const 0
     i32.const 17
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
@@ -158,10 +161,10 @@
     i32.const 42
     i32.eq
     v128.const i32x4 0x7473656e 0x63206465 0x75736f6c 0x00006572
-    array.new_fixed 13 1
+    array.new_fixed 14 1
     i32.const 0
     i32.const 14
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
@@ -176,17 +179,16 @@
     i32.eq
     v128.const i32x4 0x65666572 0x636e6572 0x61632065 0x72757470
     v128.const i32x4 0x00000065 0x00000000 0x00000000 0x00000000
-    array.new_fixed 13 2
+    array.new_fixed 14 2
     i32.const 0
     i32.const 17
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
-    ref.func 0
-    struct.new 1
+    global.get 0
     local.set 3
     local.get 3
     i32.const 40
@@ -194,10 +196,10 @@
     i32.const 42
     i32.eq
     v128.const i32x4 0x636e7566 0x6e6f6974 0x70616320 0x65727574
-    array.new_fixed 13 1
+    array.new_fixed 14 1
     i32.const 0
     i32.const 16
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
@@ -209,10 +211,10 @@
     i32.eq
     v128.const i32x4 0x656d6d69 0x74616964 0x616c2065 0x6164626d
     v128.const i32x4 0x6c616320 0x0000006c 0x00000000 0x00000000
-    array.new_fixed 13 2
+    array.new_fixed 14 2
     i32.const 0
     i32.const 21
-    struct.new 14
+    struct.new 15
     drop
     i32.eqz
     if ;; label = @1
@@ -324,5 +326,10 @@
     local.get 0
     i32.const 1
     i32.add
+  )
+  (func (;12;) (type 13)
+    ref.func 0
+    struct.new 1
+    global.set 0
   )
 )
