@@ -125,12 +125,13 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 135 fixtures:
+The suite contains 152 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
 calls                2          0                 2                0
-control-flow       12         12                 0                1
+collections         14          9                 5                2
+control-flow       15         15                 0                1
 enums               11         11                 0                0
 functions            1          0                 1                0
 generics             1          1                 0                0
@@ -146,15 +147,15 @@ text                 23         23                 0                1
 types                1          0                 1                0
 wasi                 16         16                 0                5
 
-total               135        123                12               10
+total               152        135                17               12
 ```
 
-Seventy-eight compiled fixtures assert nonempty stdout, ten assert normalized
-runtime traps, and thirty-five intentionally remain WAT/no-trap fixtures. The
+Eighty-one compiled fixtures assert nonempty stdout, twelve assert normalized
+runtime traps, and forty-two intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 1, 2026, all 123 compiled fixtures produce identical output and
+As of August 2, 2026, all 135 compiled fixtures produce identical output and
 normalized traps in Node and Wago's explicit `CoreFeaturesV3` mode.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,

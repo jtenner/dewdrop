@@ -44,6 +44,8 @@ priv enum StarshineEmitTask {
     Int,
     Int,
     Int,
+    Int,
+    Int,
     Int
   )
   FinishStarshineSet(
@@ -57,12 +59,21 @@ priv enum StarshineEmitTask {
     Int,
     Int,
     Int,
+    Int,
     Int
   )
   FinishStarshineStructNew(Int, Int)
   FinishStarshineEnumSubtype(Int, Int, Int)
   FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType)
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
+  FinishStarshineWhile(
+    @semantic.ExprId,
+    @semantic.ControlId,
+    @semantic.HirSpan,
+    Int,
+    Int
+  )
+  FinishStarshineControlTransfer(@semantic.ControlId, Bool)
   FinishStarshineIf(@semantic.PlannedValueShape)
   FinishStarshinePrefix(
     @semantic.HirPrefixOperator,
@@ -271,6 +282,61 @@ fn append_starshine_instructions(
 ) -> Unit {
   for instruction in source {
     target.push(instruction)
+  }
+}
+
+///|
+fn starshine_control_transfer_label(
+  control : @semantic.ControlId,
+  break_ : Bool,
+) -> @lib.LabelIdx {
+  let kind = if break_ { 0 } else { 1 }
+  @lib.LabelIdx::new((0x70000000 + control * 2 + kind).reinterpret_as_uint())
+}
+
+///|
+fn starshine_resolve_control_transfers(
+  instructions : Array[@lib.Instruction],
+  control : @semantic.ControlId,
+) -> Unit {
+  let break_label = starshine_control_transfer_label(control, true)
+  let continue_label = starshine_control_transfer_label(control, false)
+  let pending : Array[Array[@lib.Instruction]] = [instructions]
+  let depths : Array[Int] = [0]
+  while pending.length() > 0 {
+    let current = pending.pop().unwrap()
+    let depth = depths.pop().unwrap()
+    for index in 0..<current.length() {
+      match current[index] {
+        @lib.Instruction::Br(label) =>
+          if label == break_label {
+            current[index] = @lib.Instruction::br(
+              @lib.LabelIdx::new((depth + 1).reinterpret_as_uint()),
+            )
+          } else if label == continue_label {
+            current[index] = @lib.Instruction::br(
+              @lib.LabelIdx::new(depth.reinterpret_as_uint()),
+            )
+          }
+        @lib.Instruction::Block(_, @lib.Expr(body))
+        | @lib.Instruction::Loop(_, @lib.Expr(body)) => {
+          pending.push(body)
+          depths.push(depth + 1)
+        }
+        @lib.Instruction::If(_, consequent, alternative) => {
+          pending.push(consequent)
+          depths.push(depth + 1)
+          match alternative {
+            Some(value) => {
+              pending.push(value)
+              depths.push(depth + 1)
+            }
+            None => ()
+          }
+        }
+        _ => ()
+      }
+    }
   }
 }
 
@@ -1003,6 +1069,9 @@ fn starshine_body_locals(
   Int,
   Int,
   Int,
+  Int,
+  Array[Int],
+  Array[Int],
 ) {
   let local_indices = Array::make(body.locals.length, -1)
   let body_local_types : Array[@lib.ValType] = []
@@ -1044,10 +1113,44 @@ fn starshine_body_locals(
   let mut map_hash_scratch_index = -1
   let mut map_entry_scratch_index = -1
   let mut map_previous_scratch_index = -1
+  let mut map_growth_index_scratch_index = -1
+  let mut maximum_control = -1
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match lowering.expressions[expression].kind {
+      @semantic.PlannedWhileExpression(control, _, _) =>
+        if control > maximum_control {
+          maximum_control = control
+        }
+      _ => ()
+    }
+  }
+  let control_state_local_indices = Array::make(maximum_control + 1, -1)
+  let control_result_local_indices = Array::make(maximum_control + 1, -1)
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match lowering.expressions[expression].kind {
+      @semantic.PlannedWhileExpression(control, initial, _) => {
+        match starshine_shape_value_type(lowering.expressions[initial].shape) {
+          Some(type_) => {
+            control_state_local_indices[control] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+        match
+          starshine_shape_value_type(lowering.expressions[expression].shape) {
+          Some(type_) => {
+            control_result_local_indices[control] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
       @semantic.PlannedDirectCall(declaration, _, _, _) => {
         let name = match program {
           Some(link) =>
@@ -1129,6 +1232,22 @@ fn starshine_body_locals(
           map_entry_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
+        match lowering.expressions[expression].kind {
+          @semantic.PlannedMapInsert(_, _, _, _, _, _, _)
+          | @semantic.PlannedMapSet(_, _, _, _, _, _, _) => {
+            if map_previous_scratch_index < 0 {
+              map_previous_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::eqref_null())
+            }
+            if map_growth_index_scratch_index < 0 {
+              map_growth_index_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::i32())
+            }
+          }
+          _ => ()
+        }
         match starshine_shape_value_type(key_shape) {
           Some(type_) => {
             map_key_local_indices[expression] = parameter_count +
@@ -1175,7 +1294,8 @@ fn starshine_body_locals(
           None => ()
         }
       }
-      @semantic.PlannedMapContainsKey(_, _, key_shape, _, _) => {
+      @semantic.PlannedMapContainsKey(_, _, key_shape, _, _)
+      | @semantic.PlannedMapRemove(_, _, key_shape, _, _) => {
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
@@ -1186,6 +1306,15 @@ fn starshine_body_locals(
           map_entry_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
+        match lowering.expressions[expression].kind {
+          @semantic.PlannedMapRemove(_, _, _, _, _) =>
+            if map_previous_scratch_index < 0 {
+              map_previous_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::eqref_null())
+            }
+          _ => ()
+        }
         match starshine_shape_value_type(key_shape) {
           Some(type_) => {
             map_key_local_indices[expression] = parameter_count +
@@ -1195,7 +1324,7 @@ fn starshine_body_locals(
           None => ()
         }
       }
-      @semantic.PlannedSetClear(_) =>
+      @semantic.PlannedMapClear(_) | @semantic.PlannedSetClear(_) =>
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
@@ -1215,6 +1344,18 @@ fn starshine_body_locals(
           body_local_types.push(@lib.ValType::eqref_null())
         }
         match lowering.expressions[expression].kind {
+          @semantic.PlannedSetInsert(_, _, _, _, _) => {
+            if map_previous_scratch_index < 0 {
+              map_previous_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::eqref_null())
+            }
+            if map_growth_index_scratch_index < 0 {
+              map_growth_index_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::i32())
+            }
+          }
           @semantic.PlannedSetRemove(_, _, _, _, _) =>
             if map_previous_scratch_index < 0 {
               map_previous_scratch_index = parameter_count +
@@ -1240,6 +1381,7 @@ fn starshine_body_locals(
     conversion_scratch_index, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
     map_key_local_indices, map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index,
     map_hash_scratch_index, map_entry_scratch_index, map_previous_scratch_index,
+    map_growth_index_scratch_index, control_state_local_indices, control_result_local_indices,
   )
 }
 
@@ -1492,6 +1634,258 @@ fn starshine_set_new_entry_instructions(
 }
 
 ///|
+fn starshine_hash_table_growth_instructions(
+  wrapper_type : Int,
+  bucket_type : Int,
+  entry_type : Int,
+  wrapper_local : Int,
+  bucket_local : Int,
+  entry_local : Int,
+  next_local : Int,
+  index_local : Int,
+) -> Array[@lib.Instruction] {
+  let output : Array[@lib.Instruction] = []
+  output.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+    ),
+  )
+  output.push(starshine_match_cast(bucket_type))
+  output.push(@lib.Instruction::array_len())
+  output.push(
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+  )
+  // A missing-key insertion grows only when prospective length exceeds
+  // bucket count. The measured maximum load factor is therefore 1.0.
+  output.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+  )
+  output.push(starshine_match_cast(wrapper_type))
+  output.push(
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(1U),
+    ),
+  )
+  output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+  output.push(@lib.Instruction::i32_add())
+  output.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+  )
+  output.push(@lib.Instruction::i32_gt_u())
+  output.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+  )
+  output.push(@lib.Instruction::i32_const(@lib.I32::new(0x40000000)))
+  output.push(@lib.Instruction::i32_lt_u())
+  output.push(@lib.Instruction::i32_and())
+  let grow : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(wrapper_type),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::i32_const(@lib.I32::new(1)),
+    @lib.Instruction::i32_shl(),
+    @lib.Instruction::array_new_default(
+      @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::struct_set(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+    @lib.Instruction::i32_const(@lib.I32::new(0)),
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+  ]
+  let outer_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(bucket_type),
+    @lib.Instruction::array_len(),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(bucket_type),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::array_get(
+      @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+  ]
+  // Save the old link before relinking the entry into the new table. Bucket
+  // selection reads field 1's stored U64 hash and never dispatches user Hash.
+  let inner_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::ref_is_null(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(entry_type),
+    starshine_map_entry_get(entry_type, 0),
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(next_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(entry_type),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(wrapper_type),
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+    starshine_match_cast(bucket_type),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(entry_type),
+    starshine_map_entry_get(entry_type, 1),
+    @lib.Instruction::i32_wrap_i64(),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(wrapper_type),
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+    starshine_match_cast(bucket_type),
+    @lib.Instruction::array_len(),
+    @lib.Instruction::i32_const(@lib.I32::new(1)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::i32_and(),
+    @lib.Instruction::array_get(
+      @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+    ),
+    starshine_map_entry_set(entry_type, 0),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(wrapper_type),
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+    starshine_match_cast(bucket_type),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(entry_type),
+    starshine_map_entry_get(entry_type, 1),
+    @lib.Instruction::i32_wrap_i64(),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+    starshine_match_cast(wrapper_type),
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+    starshine_match_cast(bucket_type),
+    @lib.Instruction::array_len(),
+    @lib.Instruction::i32_const(@lib.I32::new(1)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::i32_and(),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::array_set(
+      @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(next_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::br(@lib.LabelIdx::new(0U)),
+  ]
+  outer_loop.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(inner_loop),
+        ),
+      ]),
+    ),
+  )
+  outer_loop.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+  )
+  outer_loop.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+  outer_loop.push(@lib.Instruction::i32_add())
+  outer_loop.push(
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(index_local.reinterpret_as_uint()),
+    ),
+  )
+  outer_loop.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+  grow.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(outer_loop),
+        ),
+      ]),
+    ),
+  )
+  grow.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(wrapper_local.reinterpret_as_uint()),
+    ),
+  )
+  grow.push(starshine_match_cast(wrapper_type))
+  grow.push(
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+  )
+  grow.push(starshine_match_cast(bucket_type))
+  grow.push(
+    @lib.Instruction::local_set(
+      @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+    ),
+  )
+  output.push(@lib.Instruction::if_(@lib.BlockType::void_(), grow, None))
+  output
+}
+
+///|
 fn starshine_map_call(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
@@ -1563,6 +1957,9 @@ fn starshine_emit_body_instructions(
   map_hash_scratch_index : Int,
   map_entry_scratch_index : Int,
   map_previous_scratch_index : Int,
+  map_growth_index_scratch_index : Int,
+  control_state_local_indices : Array[Int],
+  control_result_local_indices : Array[Int],
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let tasks : Array[StarshineEmitTask] = []
   let results : Array[Array[@lib.Instruction]] = []
@@ -1752,6 +2149,7 @@ fn starshine_emit_body_instructions(
               FinishStarshineMap(
                 8, key_shape, value_shape, hash, eq, 0, -1, -1, map_ref_scratch_index,
                 map_bucket_scratch_index, map_hash_scratch_index, map_entry_scratch_index,
+                map_previous_scratch_index, map_growth_index_scratch_index,
               ),
             )
           @semantic.PlannedMapSingleton(
@@ -1776,6 +2174,8 @@ fn starshine_emit_body_instructions(
                 map_bucket_scratch_index,
                 map_hash_scratch_index,
                 map_entry_scratch_index,
+                map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(value))
@@ -1796,6 +2196,8 @@ fn starshine_emit_body_instructions(
                 map_bucket_scratch_index,
                 map_hash_scratch_index,
                 map_entry_scratch_index,
+                map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(base))
@@ -1827,15 +2229,22 @@ fn starshine_emit_body_instructions(
                 map_bucket_scratch_index,
                 map_hash_scratch_index,
                 map_entry_scratch_index,
+                map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(key))
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedMapContainsKey(base, key, key_shape, hash, eq) => {
+          @semantic.PlannedMapContainsKey(base, key, key_shape, hash, eq)
+          | @semantic.PlannedMapRemove(base, key, key_shape, hash, eq) => {
+            let operation = match source.kind {
+              @semantic.PlannedMapContainsKey(_, _, _, _, _) => 7
+              _ => 9
+            }
             tasks.push(
               FinishStarshineMap(
-                7,
+                operation,
                 key_shape,
                 key_shape,
                 hash,
@@ -1847,9 +2256,32 @@ fn starshine_emit_body_instructions(
                 map_bucket_scratch_index,
                 map_hash_scratch_index,
                 map_entry_scratch_index,
+                map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(key))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedMapClear(base) => {
+            tasks.push(
+              FinishStarshineMap(
+                10,
+                source.shape,
+                source.shape,
+                0UL,
+                0UL,
+                1,
+                -1,
+                -1,
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+                map_previous_scratch_index,
+                map_growth_index_scratch_index,
+              ),
+            )
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedMapInsert(
@@ -1888,6 +2320,8 @@ fn starshine_emit_body_instructions(
                 map_bucket_scratch_index,
                 map_hash_scratch_index,
                 map_entry_scratch_index,
+                map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(value))
@@ -1899,6 +2333,7 @@ fn starshine_emit_body_instructions(
               FinishStarshineSet(
                 1, key_shape, hash, eq, 0, -1, map_ref_scratch_index, map_bucket_scratch_index,
                 map_hash_scratch_index, map_entry_scratch_index, map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
           @semantic.PlannedSetSingleton(key, key_shape, hash, eq) => {
@@ -1915,6 +2350,7 @@ fn starshine_emit_body_instructions(
                 map_hash_scratch_index,
                 map_entry_scratch_index,
                 map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(key))
@@ -1940,6 +2376,7 @@ fn starshine_emit_body_instructions(
                 map_hash_scratch_index,
                 map_entry_scratch_index,
                 map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(base))
@@ -1965,6 +2402,7 @@ fn starshine_emit_body_instructions(
                 map_hash_scratch_index,
                 map_entry_scratch_index,
                 map_previous_scratch_index,
+                map_growth_index_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(key))
@@ -2155,6 +2593,39 @@ fn starshine_emit_body_instructions(
             }
             tasks.push(EmitStarshineExpression(scrutinee))
           }
+          @semantic.PlannedWhileExpression(control, initial, arms) => {
+            if control < 0 || control >= control_state_local_indices.length() {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(
+              FinishStarshineWhile(
+                expression,
+                control,
+                arms,
+                control_state_local_indices[control],
+                control_result_local_indices[control],
+              ),
+            )
+            let mut arm_index = arms.length
+            while arm_index > 0 {
+              arm_index -= 1
+              let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+                arm_index]]
+              tasks.push(EmitStarshineExpression(arm.body))
+              if arm.guard_condition >= 0 {
+                tasks.push(EmitStarshineExpression(arm.guard_condition))
+              }
+            }
+            tasks.push(EmitStarshineExpression(initial))
+          }
+          @semantic.PlannedBreakExpression(control, value) => {
+            tasks.push(FinishStarshineControlTransfer(control, true))
+            tasks.push(EmitStarshineExpression(value))
+          }
+          @semantic.PlannedContinueExpression(control, value) => {
+            tasks.push(FinishStarshineControlTransfer(control, false))
+            tasks.push(EmitStarshineExpression(value))
+          }
           @semantic.PlannedPrefixExpression(operator, operand) => {
             tasks.push(FinishStarshinePrefix(operator, source.shape))
             tasks.push(EmitStarshineExpression(operand))
@@ -2189,10 +2660,7 @@ fn starshine_emit_body_instructions(
           @semantic.PlannedBinaryExpression(_, _, _)
           | @semantic.PlannedPoisonExpression
           | @semantic.PlannedConsumedExpression
-          | @semantic.PlannedModuleValueGet(_)
-          | @semantic.PlannedWhileExpression(_, _, _)
-          | @semantic.PlannedBreakExpression(_, _)
-          | @semantic.PlannedContinueExpression(_, _) =>
+          | @semantic.PlannedModuleValueGet(_) =>
             return Err(UnsupportedExpression(body.body, expression))
         }
       }
@@ -2441,7 +2909,8 @@ fn starshine_emit_body_instructions(
         bucket_local,
         hash_local,
         entry_local,
-        previous_local
+        previous_local,
+        growth_index_local
       ) => {
         let fragments = pop_starshine_fragments(results, count)
         let wrapper_type = match
@@ -2537,7 +3006,8 @@ fn starshine_emit_body_instructions(
           bucket_local < 0 ||
           hash_local < 0 ||
           entry_local < 0 ||
-          (operation == 7 && previous_local < 0) {
+          ((operation == 6 || operation == 7) && previous_local < 0) ||
+          (operation == 6 && growth_index_local < 0) {
           return Err(UnsupportedExpression(body.body, -303))
         }
         let key_fragment = if operation == 2 {
@@ -2617,7 +3087,15 @@ fn starshine_emit_body_instructions(
             ),
           )
           output.push(@lib.Instruction::i32_wrap_i64())
-          output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(bucket_type))
+          output.push(@lib.Instruction::array_len())
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          output.push(@lib.Instruction::i32_sub())
           output.push(@lib.Instruction::i32_and())
           output.push(
             @lib.Instruction::local_get(
@@ -2679,7 +3157,15 @@ fn starshine_emit_body_instructions(
           ),
         )
         output.push(@lib.Instruction::i32_wrap_i64())
-        output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(bucket_type))
+        output.push(@lib.Instruction::array_len())
+        output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        output.push(@lib.Instruction::i32_sub())
         output.push(@lib.Instruction::i32_and())
         output.push(
           @lib.Instruction::array_get(
@@ -2705,6 +3191,13 @@ fn starshine_emit_body_instructions(
         }
         let on_null : Array[@lib.Instruction] = []
         if operation == 6 {
+          append_starshine_instructions(
+            on_null,
+            starshine_hash_table_growth_instructions(
+              wrapper_type, bucket_type, entry_type, set_local, bucket_local, entry_local,
+              previous_local, growth_index_local,
+            ),
+          )
           let next = [
             @lib.Instruction::local_get(
               @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
@@ -2714,7 +3207,13 @@ fn starshine_emit_body_instructions(
               @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
             ),
             @lib.Instruction::i32_wrap_i64(),
-            @lib.Instruction::i32_const(@lib.I32::new(15)),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::array_len(),
+            @lib.Instruction::i32_const(@lib.I32::new(1)),
+            @lib.Instruction::i32_sub(),
             @lib.Instruction::i32_and(),
             @lib.Instruction::array_get(
               @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
@@ -2743,7 +3242,15 @@ fn starshine_emit_body_instructions(
             ),
           )
           on_null.push(@lib.Instruction::i32_wrap_i64())
-          on_null.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          on_null.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(starshine_match_cast(bucket_type))
+          on_null.push(@lib.Instruction::array_len())
+          on_null.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          on_null.push(@lib.Instruction::i32_sub())
           on_null.push(@lib.Instruction::i32_and())
           on_null.push(
             @lib.Instruction::local_get(
@@ -2853,7 +3360,13 @@ fn starshine_emit_body_instructions(
               @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
             ),
             @lib.Instruction::i32_wrap_i64(),
-            @lib.Instruction::i32_const(@lib.I32::new(15)),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::array_len(),
+            @lib.Instruction::i32_const(@lib.I32::new(1)),
+            @lib.Instruction::i32_sub(),
             @lib.Instruction::i32_and(),
           ]
           append_starshine_instructions(unlink_head, next_entry)
@@ -2969,7 +3482,9 @@ fn starshine_emit_body_instructions(
         map_local,
         bucket_local,
         hash_local,
-        entry_local
+        entry_local,
+        previous_local,
+        growth_index_local
       ) => {
         let fragments = pop_starshine_fragments(results, count)
         let wrapper_type = match
@@ -3013,6 +3528,50 @@ fn starshine_emit_body_instructions(
           results.push(output)
           continue
         }
+        if operation == 10 {
+          if map_local < 0 {
+            return Err(UnsupportedExpression(body.body, -207))
+          }
+          append_starshine_instructions(output, fragments[0])
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(wrapper_type))
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(16)))
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(0U),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(wrapper_type))
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          output.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          results.push(output)
+          continue
+        }
         if key_local < 0 ||
           map_local < 0 ||
           bucket_local < 0 ||
@@ -3021,7 +3580,12 @@ fn starshine_emit_body_instructions(
           (
             (operation == 1 || operation == 5 || operation == 6) &&
             value_local < 0
-          ) {
+          ) ||
+          (
+            (operation == 5 || operation == 6 || operation == 9) &&
+            previous_local < 0
+          ) ||
+          ((operation == 5 || operation == 6) && growth_index_local < 0) {
           return Err(UnsupportedExpression(body.body, -202))
         }
         let key_fragment = if operation == 1 {
@@ -3114,7 +3678,15 @@ fn starshine_emit_body_instructions(
             ),
           )
           output.push(@lib.Instruction::i32_wrap_i64())
-          output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(bucket_type))
+          output.push(@lib.Instruction::array_len())
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          output.push(@lib.Instruction::i32_sub())
           output.push(@lib.Instruction::i32_and())
           output.push(
             @lib.Instruction::local_get(
@@ -3175,7 +3747,15 @@ fn starshine_emit_body_instructions(
           ),
         )
         output.push(@lib.Instruction::i32_wrap_i64())
-        output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(bucket_type))
+        output.push(@lib.Instruction::array_len())
+        output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        output.push(@lib.Instruction::i32_sub())
         output.push(@lib.Instruction::i32_and())
         output.push(
           @lib.Instruction::array_get(
@@ -3187,6 +3767,18 @@ fn starshine_emit_body_instructions(
             @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
           ),
         )
+        if operation == 9 {
+          output.push(
+            @lib.Instruction::ref_null(
+              @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+          )
+        }
         let option_plan = match program {
           Some(link) => {
             let option_module = @semantic.semantic_id_module(
@@ -3208,7 +3800,7 @@ fn starshine_emit_body_instructions(
             Some(type_) => @lib.BlockType::val_type(type_)
             None => return Err(UnsupportedExpression(body.body, -203))
           }
-        } else if operation == 7 {
+        } else if operation == 7 || operation == 9 {
           @lib.BlockType::val_type(@lib.ValType::i32())
         } else {
           @lib.BlockType::void_()
@@ -3242,9 +3834,16 @@ fn starshine_emit_body_instructions(
           )
         } else if operation == 4 {
           missing.push(@lib.Instruction::unreachable_())
-        } else if operation == 7 {
+        } else if operation == 7 || operation == 9 {
           missing.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
         } else {
+          append_starshine_instructions(
+            missing,
+            starshine_hash_table_growth_instructions(
+              wrapper_type, bucket_type, entry_type, map_local, bucket_local, entry_local,
+              previous_local, growth_index_local,
+            ),
+          )
           let next = [
             @lib.Instruction::local_get(
               @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
@@ -3254,7 +3853,13 @@ fn starshine_emit_body_instructions(
               @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
             ),
             @lib.Instruction::i32_wrap_i64(),
-            @lib.Instruction::i32_const(@lib.I32::new(15)),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::array_len(),
+            @lib.Instruction::i32_const(@lib.I32::new(1)),
+            @lib.Instruction::i32_sub(),
             @lib.Instruction::i32_and(),
             @lib.Instruction::array_get(
               @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
@@ -3283,7 +3888,15 @@ fn starshine_emit_body_instructions(
             ),
           )
           missing.push(@lib.Instruction::i32_wrap_i64())
-          missing.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          missing.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(starshine_match_cast(bucket_type))
+          missing.push(@lib.Instruction::array_len())
+          missing.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          missing.push(@lib.Instruction::i32_sub())
           missing.push(@lib.Instruction::i32_and())
           missing.push(
             @lib.Instruction::local_get(
@@ -3324,12 +3937,6 @@ fn starshine_emit_body_instructions(
         }
         append_starshine_instructions(loop_body, missing)
         loop_body.push(@lib.Instruction::br(@lib.LabelIdx::new(2U)))
-        loop_body.push(
-          @lib.Instruction::local_get(
-            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
-          ),
-        )
-        loop_body.push(@lib.Instruction::ref_is_null())
         let on_null = loop_body.copy()
         loop_body.clear()
         loop_body.push(
@@ -3433,6 +4040,86 @@ fn starshine_emit_body_instructions(
           )
         } else if operation == 7 {
           found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        } else if operation == 9 {
+          let next_entry = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(entry_type),
+            starshine_map_entry_get(entry_type, 0),
+          ]
+          let unlink_head : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+            @lib.Instruction::i32_wrap_i64(),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::array_len(),
+            @lib.Instruction::i32_const(@lib.I32::new(1)),
+            @lib.Instruction::i32_sub(),
+            @lib.Instruction::i32_and(),
+          ]
+          append_starshine_instructions(unlink_head, next_entry)
+          unlink_head.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          let unlink_tail : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(entry_type),
+          ]
+          append_starshine_instructions(unlink_tail, next_entry)
+          unlink_tail.push(starshine_map_entry_set(entry_type, 0))
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(@lib.Instruction::ref_is_null())
+          found.push(
+            @lib.Instruction::if_(
+              @lib.BlockType::void_(),
+              unlink_head,
+              Some(unlink_tail),
+            ),
+          )
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(starshine_match_cast(wrapper_type))
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(starshine_match_cast(wrapper_type))
+          found.push(
+            @lib.Instruction::struct_get(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          found.push(@lib.Instruction::i32_sub())
+          found.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
         } else {
           found.push(
             @lib.Instruction::local_get(
@@ -3459,6 +4146,18 @@ fn starshine_emit_body_instructions(
         loop_body.push(
           @lib.Instruction::if_(@lib.BlockType::void_(), on_hash, None),
         )
+        if operation == 9 {
+          loop_body.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          loop_body.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+          )
+        }
         loop_body.push(
           @lib.Instruction::local_get(
             @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
@@ -3762,6 +4461,139 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
+      FinishStarshineWhile(expression, control, arms, state_local, result_local) => {
+        let mut guard_count = 0
+        for arm_offset in 0..<arms.length {
+          let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+            arm_offset]]
+          if arm.guard_condition >= 0 {
+            guard_count += 1
+          }
+        }
+        let fragments = pop_starshine_fragments(
+          results,
+          arms.length + guard_count + 1,
+        )
+        let output = fragments[0]
+        if state_local >= 0 {
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(state_local.reinterpret_as_uint()),
+            ),
+          )
+        }
+        let arm_bodies : Array[Array[@lib.Instruction]] = []
+        let arm_guards : Array[Array[@lib.Instruction]?] = []
+        let mut fragment_index = 1
+        for arm_offset in 0..<arms.length {
+          let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+            arm_offset]]
+          if arm.guard_condition >= 0 {
+            arm_guards.push(Some(fragments[fragment_index]))
+            fragment_index += 1
+          } else {
+            arm_guards.push(None)
+          }
+          arm_bodies.push(fragments[fragment_index])
+          fragment_index += 1
+        }
+        let dispatch : Array[@lib.Instruction] = []
+        for arm_index in 0..<arms.length {
+          let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+            arm_index]]
+          let (condition, bindings) = match
+            starshine_match_pattern_instructions(
+              lowering,
+              planned,
+              program,
+              program_module_index,
+              body,
+              arm.pattern,
+              state_local,
+              local_indices,
+            ) {
+            Ok(value) => value
+            Err(error) => return Err(error)
+          }
+          let success = arm_bodies[arm_index]
+          match arm_guards[arm_index] {
+            Some(guard_instructions) => {
+              append_starshine_instructions(bindings, guard_instructions)
+              success.push(@lib.Instruction::br(@lib.LabelIdx::new(2U)))
+              bindings.push(
+                @lib.Instruction::if_(@lib.BlockType::void_(), success, None),
+              )
+            }
+            None => {
+              append_starshine_instructions(bindings, success)
+              bindings.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
+            }
+          }
+          condition.push(
+            @lib.Instruction::if_(@lib.BlockType::void_(), bindings, None),
+          )
+          append_starshine_instructions(dispatch, condition)
+        }
+        dispatch.push(@lib.Instruction::unreachable_())
+        let loop_body : Array[@lib.Instruction] = [
+          @lib.Instruction::block(
+            @lib.BlockType::void_(),
+            @lib.Expr::new(dispatch),
+          ),
+          @lib.Instruction::unreachable_(),
+        ]
+        starshine_resolve_control_transfers(loop_body, control)
+        output.push(
+          @lib.Instruction::block(
+            @lib.BlockType::void_(),
+            @lib.Expr::new([
+              @lib.Instruction::loop_(
+                @lib.BlockType::void_(),
+                @lib.Expr::new(loop_body),
+              ),
+              @lib.Instruction::unreachable_(),
+            ]),
+          ),
+        )
+        if result_local >= 0 {
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
+            ),
+          )
+        } else {
+          match lowering.expressions[expression].shape {
+            @semantic.NeverPlannedValueShape =>
+              output.push(@lib.Instruction::unreachable_())
+            _ => ()
+          }
+        }
+        results.push(output)
+      }
+      FinishStarshineControlTransfer(control, break_) => {
+        if control < 0 || control >= control_state_local_indices.length() {
+          return Err(UnsupportedExpression(body.body, body.expressions.start))
+        }
+        let output = results.pop().unwrap()
+        let target_local = if break_ {
+          control_result_local_indices[control]
+        } else {
+          control_state_local_indices[control]
+        }
+        if target_local >= 0 {
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(target_local.reinterpret_as_uint()),
+            ),
+          )
+        }
+        output.push(
+          @lib.Instruction::br(
+            starshine_control_transfer_label(control, break_),
+          ),
+        )
+        results.push(output)
+      }
       FinishStarshineIf(shape) => {
         let alternative = results.pop().unwrap()
         let consequent = results.pop().unwrap()
@@ -3939,6 +4771,9 @@ fn emit_starshine_function_body(
     map_hash_scratch_index,
     map_entry_scratch_index,
     map_previous_scratch_index,
+    map_growth_index_scratch_index,
+    control_state_local_indices,
+    control_result_local_indices,
   ) = starshine_body_locals(lowering, planned, None, body)
   match
     starshine_emit_body_instructions(
@@ -3960,6 +4795,9 @@ fn emit_starshine_function_body(
       map_hash_scratch_index,
       map_entry_scratch_index,
       map_previous_scratch_index,
+      map_growth_index_scratch_index,
+      control_state_local_indices,
+      control_result_local_indices,
     ) {
     Ok(instructions) => {
       starshine_append_module_result_cast(
@@ -4578,6 +5416,9 @@ fn emit_starshine_program_function_body(
     map_hash_scratch_index,
     map_entry_scratch_index,
     map_previous_scratch_index,
+    map_growth_index_scratch_index,
+    control_state_local_indices,
+    control_result_local_indices,
   ) = starshine_body_locals(
     module_lowering,
     module_fragments,
@@ -4604,6 +5445,9 @@ fn emit_starshine_program_function_body(
       map_hash_scratch_index,
       map_entry_scratch_index,
       map_previous_scratch_index,
+      map_growth_index_scratch_index,
+      control_state_local_indices,
+      control_result_local_indices,
     ) {
     Ok(instructions) => {
       starshine_append_program_result_cast(planned, function_, instructions)

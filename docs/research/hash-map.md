@@ -27,6 +27,8 @@ map.get(key)          // Option<value>
 map.get_unchecked(key)
 map.insert(key, value)
 map.set(key, value)
+map.remove(key)       // true only when a key was removed
+map.clear()
 map[key]
 map[key] = value
 ```
@@ -39,7 +41,7 @@ fn new_counts() -> Map<I32, I32> {
 }
 ```
 
-`get` returns `None` for a missing key. `get_unchecked` and index syntax trap with `unreachable` for a missing key. `insert`, `set`, and indexed setting insert a new key or replace the existing value and return `Unit`. Replacement does not change `length`.
+`get` returns `None` for a missing key. `get_unchecked` and index syntax trap with `unreachable` for a missing key. `insert`, `set`, and indexed setting insert a new key or replace the existing value and return `Unit`. Replacement does not change `length`. `remove` returns `true` only when it unlinks a present key and decrements logical length. `clear` replaces the bucket array and resets logical length, preserving mutable wrapper identity so aliases observe the empty map.
 
 ```dew
 open dew.std.set
@@ -62,7 +64,7 @@ A map is a mutable reference-identity WasmGC struct containing:
 1. a private mutable bucket-array reference;
 2. a mutable logical entry count.
 
-The initial implementation uses sixteen deterministic buckets and separate collision chains. Each private entry contains:
+Each table starts with sixteen deterministic buckets and grows geometrically through power-of-two capacities. A new distinct insertion grows the table when the prospective logical length would exceed the current bucket count, giving a measured maximum load factor of 1.0. Each private entry contains:
 
 1. nullable next-entry reference;
 2. stored U64 hash;
@@ -84,12 +86,27 @@ Only the statically selected key and value slots are read or written. Scalar and
 
 Set reuses the same wrapper, bucket array, and canonical entry type. Only the key carrier is populated; the six value carriers remain deterministic defaults. Sharing the representation avoids a second hash-table runtime and keeps collision behavior identical between Map and Set. Reachable Set code triggers the shared private bucket/entry types even when no Map operation is reachable.
 
-A Map or Set operation evaluates its collection, key, and Map value expressions once. It invokes the exact frozen `Hash::hash` implementation once, selects the bucket from the low four hash bits, compares stored hashes before invoking the exact frozen `Hash::hash_eq` implementation, and traverses the collision chain iteratively. Set removal retains the previous entry in a scratch local so head, middle, and tail unlinking remain iterative and stack-safe. No semantic trait selection is repeated during lowering or emission.
+A Map or Set operation evaluates its collection, key, and Map value expressions once. It invokes the exact frozen `Hash::hash` implementation once, selects the bucket with `low_i32(hash) & (bucket_count - 1)`, compares stored hashes before invoking the exact frozen `Hash::hash_eq` implementation, and traverses the collision chain iteratively. Map and Set removal retain the previous entry in a scratch local so head, middle, and tail unlinking remain iterative and stack-safe. No semantic trait selection is repeated during lowering or emission.
+
+Growth allocates a bucket array with twice the previous power-of-two length. It walks old buckets and collision chains iteratively, saves each entry's old `next` reference before relinking, and computes the new bucket from the already stored U64 hash. Rehashing therefore does not call user `hash` or `hash_eq`, does not allocate replacement entries, and preserves the wrapper's mutable reference identity and logical length. The old bucket array becomes unreachable after the insertion operation returns.
+
+## Measured growth threshold
+
+`tools/wago-map-bench` generates 512 deterministic LCG-distributed U32 keys and runs Map and Set insertion plus successful lookup in one exported workload. Candidate maximum load factors were compared with 20 calls per round and seven measured rounds on an AMD Ryzen 7 8845HS using Node 26.3.0 and the local Wago Core 3 runtime:
+
+| Maximum load | Node median per workload | Wago Core 3 median per workload | Wago host allocation per workload |
+| ---: | ---: | ---: | ---: |
+| 0.50 | 175,550 ns | 5,715,100 ns | 98,496 B |
+| 0.75 | 142,796 ns | 6,587,371 ns | 98,496 B |
+| 0.875 | 138,771 ns | 6,569,150 ns | 98,563 B |
+| 1.00 | **132,271 ns** | **5,282,518 ns** | 98,563 B |
+
+A maximum load of 1.0 was fastest in both engines and retains the smallest bucket array of the measured candidates. The Wago values were rerun after the local GC-helper improvements documented in `docs/research/wago-map-set-performance.md`; the threshold ordering remained unchanged. Wago host allocation per invocation was effectively unchanged across candidates; these host measurements include invocation overhead and do not expose the engine's internal WasmGC heap bytes directly. The 1.0 policy nevertheless minimizes internal bucket-reference capacity. The threshold remains an implementation choice rather than a source-level guarantee and should be remeasured before changing the entry layout, GC engine, or hash workloads.
 
 ## Determinism
 
 - There is no randomized process seed.
-- Bucket count and bucket selection are deterministic.
+- Bucket count, growth thresholds, rehash order, and bucket selection are deterministic.
 - Hash and equality implementation declarations are frozen semantic identities.
 - Hash/equality call targets participate in whole-program reachability.
 - Shared hash-table runtime types are emitted only when reachable code uses a Map or Set operation.
@@ -110,8 +127,12 @@ Coverage includes:
 - a 65-entry Set single-bucket collision chain with head/middle/tail removal;
 - stored-hash prefilter tests in which unequal hashes select the same bucket and `hash_eq` traps if called incorrectly;
 - side-effect counters proving one hash invocation and the expected equality count per singleton operation;
+- deterministic WAT snapshots showing rehash bucket selection reads the stored entry hash and emits no Hash dispatch inside the rehash loops;
+- correctness immediately before, at, and after the 16/32/64-bucket growth thresholds;
+- 66 keys whose low seven hash bits are zero, keeping one collision chain intact through all three growth steps;
+- alias-visible growth across Map and Set wrappers;
 - Map and Set empty/singleton construction, aliases, and mutation visibility;
-- Map insertion, replacement, length, contains, safe get, index get, and indexed setting;
+- Map insertion, replacement, Boolean head/middle/tail removal, alias-visible clear, length, contains, safe get, index get, and indexed setting;
 - Set idempotent insertion, repeated/missing removal, clear, insert-after-clear, length, emptiness, and membership;
 - `i32`, `i64`, `f32`, `f64`, `v128`, and reference carrier combinations;
 - all eight integer Hash implementations with equal and unequal keys;
@@ -121,10 +142,8 @@ Coverage includes:
 
 ## Deferred work
 
-- Geometric Map/Set bucket-table growth based on measured load factors.
-- Map removal with deterministic chain unlinking and reference-slot clearing.
 - String, StringView, Bytes, floating-point, vector, and collection Hash implementations after their equality/hash contracts are finalized.
 - Iterators over Map keys/values/entries and Set keys.
-- `Map::reserve`, `Map::clear`, Set/Map capacity introspection, and optional Set reserve support.
+- `Map::reserve`, Set/Map capacity introspection, and optional Set reserve support.
 - Specialized compact entry layouts if profiling shows the canonical twelve-carrier entry is too costly.
 - Enforce or diagnose asymmetric `hash_eq` behavior where possible.

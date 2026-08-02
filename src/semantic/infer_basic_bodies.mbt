@@ -4530,8 +4530,8 @@ fn BasicBodyInferencer::try_map_method_call(
     return false
   }
   let expected_arguments = match method_name {
-    "length" => 0
-    "get" | "get_unchecked" | "contains_key" => 1
+    "length" | "clear" => 0
+    "get" | "get_unchecked" | "contains_key" | "remove" => 1
     "insert" | "set" => 2
     _ => return false
   }
@@ -4557,9 +4557,9 @@ fn BasicBodyInferencer::try_map_method_call(
   }
   let result = match method_name {
     "length" => self.primitive(U32Type)
-    "contains_key" => self.primitive(BoolType)
+    "contains_key" | "remove" => self.primitive(BoolType)
     "get_unchecked" => value_type
-    "set" | "insert" => self.primitive(UnitType)
+    "set" | "insert" | "clear" => self.primitive(UnitType)
     "get" => {
       let option_base = match
         self.body_nominal_type(standard_option_type_declaration()) {
@@ -4575,7 +4575,9 @@ fn BasicBodyInferencer::try_map_method_call(
     _ => self.solver.error_type()
   }
   self.constrain_assignable(result, self.expression_type(expression), origin)
-  self.select_map_evidence(expression, key_type, offset)
+  if method_name != "clear" {
+    self.select_map_evidence(expression, key_type, offset)
+  }
   let start = self.call_type_arguments.length()
   self.call_type_arguments.push(key_type)
   self.call_type_arguments.push(value_type)

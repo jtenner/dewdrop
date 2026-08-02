@@ -191,6 +191,8 @@ fn standard_map_method_declaration(name : String) -> DeclId {
     "set" => 14
     "contains_key" => 15
     "empty" => 16
+    "remove" => 17
+    "clear" => 18
     _ => -1
   }
   if local_id < 0 {
@@ -202,12 +204,12 @@ fn standard_map_method_declaration(name : String) -> DeclId {
 
 ///|
 fn standard_map_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 18)
+  make_semantic_id(standard_library_module_id(11), 20)
 }
 
 ///|
 fn standard_map_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 20)
+  make_semantic_id(standard_library_module_id(11), 22)
 }
 
 ///|
@@ -225,11 +227,13 @@ fn standard_map_operation(declaration : DeclId) -> Int {
     1 | 9 => 1
     2 | 10 => 2
     3 | 11 => 3
-    4 | 12 | 18 => 4
+    4 | 12 | 20 => 4
     5 | 13 => 5
-    6 | 14 | 20 => 6
+    6 | 14 | 22 => 6
     7 | 15 => 7
-    16 | 21 => 8
+    16 | 23 => 8
+    17 | 24 => 9
+    18 | 25 => 10
     _ => 0
   }
 }

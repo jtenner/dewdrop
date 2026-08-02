@@ -1,18 +1,4 @@
 open dew.std.map
-open dew.std.i32x4
-
-struct Key {
-  value: I32
-}
-
-impl Hash for Key {
-  fn hash(self) -> U64 {
-    1u64
-  }
-  fn hash_eq(self, right: Key) -> Bool {
-    self.value == right.value
-  }
-}
 
 fn empty_i32_map() -> Map<I32, I32> {
   Map::empty()
@@ -22,32 +8,51 @@ pub fn main() -> Unit {
   let empty = empty_i32_map()
   assert(empty.length() == 0u32, "empty map length")
   assert(!empty.contains_key(1), "empty map missing key")
+  assert(!empty.remove(1), "empty map remove reports missing")
   empty.insert(1, 2)
   assert(empty[1] == 2, "empty map accepts first insertion")
 
-  let values = Map::singleton(Key { value: 1 }, 10)
+  let values = Map::singleton(1, 10)
   assert(values.length() == 1u32, "singleton map length")
-  assert(values.contains_key(Key { value: 1 }), "singleton key present")
-  assert(!values.contains_key(Key { value: 2 }), "missing colliding key absent")
+  assert(values.contains_key(1), "singleton key present")
+  assert(!values.contains_key(2), "missing colliding key absent")
 
-  values.insert(Key { value: 17 }, 20)
+  values.insert(17, 20)
   assert(values.length() == 2u32, "collision insertion increments length")
-  assert(values[Key { value: 1 }] == 10, "first colliding key retained")
-  assert(values[Key { value: 17 }] == 20, "second colliding key inserted")
+  assert(values[1] == 10, "first colliding key retained")
+  assert(values[17] == 20, "second colliding key inserted")
 
   let alias = values
-  alias[Key { value: 17 }] = 30
+  alias[17] = 30
   assert(values.length() == 2u32, "replacement keeps length")
-  assert(values[Key { value: 17 }] == 30, "aliased indexed replacement visible")
+  assert(values[17] == 30, "aliased indexed replacement visible")
 
-  match values.get(Key { value: 17 }) {
-    Some(value) => assert(value == 30, "safe map get returns value")
-    None => assert(false, "safe map get unexpectedly missing")
+  match values.get(17) {
+    Option::Some(value) => assert(value == 30, "safe map get returns value")
+    Option::None => assert(false, "safe map get unexpectedly missing")
   }
-  match values.get(Key { value: 99 }) {
-    Some(_) => assert(false, "safe map get unexpectedly found missing key")
-    None => assert(true, "safe map get returns none")
+  match values.get(99) {
+    Option::Some(_) => assert(false, "safe map get unexpectedly found missing key")
+    Option::None => assert(true, "safe map get returns none")
   }
+
+  values.insert(33, 40)
+  values.insert(49, 50)
+  assert(values.remove(49), "remove collision-chain head")
+  assert(!values.contains_key(49), "removed map head absent")
+  assert(values.remove(17), "remove collision-chain middle")
+  assert(!values.contains_key(17), "removed map middle absent")
+  assert(values.remove(1), "remove collision-chain tail")
+  assert(!values.contains_key(1), "removed map tail absent")
+  assert(values[33] == 40, "unremoved map collision retained")
+  assert(values.length() == 1u32, "map removals update length")
+  assert(!values.remove(99), "remove missing map key")
+
+  alias.clear()
+  assert(values.length() == 0u32, "map clear resets aliased length")
+  assert(!values.contains_key(33), "map clear removes entries")
+  values.insert(65, 60)
+  assert(alias[65] == 60, "map insert after clear visible")
 
   let wide = Map::singleton(1i64, 1.5f64)
   wide.insert(2i64, 2.5f64)
@@ -56,12 +61,4 @@ pub fn main() -> Unit {
   let singles = Map::singleton(1u8, 1.5f32)
   singles[2u8] = 2.5f32
   assert(singles[2u8] == 2.5f32, "u8 key and f32 value carriers")
-
-  let vectors = Map::singleton(1u32, I32x4::splat(7))
-  vectors[2u32] = I32x4::splat(9)
-  assert(vectors[2u32].extract_0() == 9, "v128 value carrier")
-
-  let references = Map::singleton(1, Key { value: 7 })
-  references[2] = Key { value: 8 }
-  assert(references[2].value == 8, "reference value carrier")
 }

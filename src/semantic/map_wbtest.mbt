@@ -17,11 +17,15 @@ test "map standard source has stable compiler-owned identities" {
     semantic_id_local(collected.lookup_value("map_singleton").unwrap()),
     1,
   )
-  assert_eq(collected.callables.length(), 18)
+  assert_eq(collected.callables.length(), 22)
   assert_eq(semantic_id_local(collected.callables[7].declaration), 9)
-  assert_eq(semantic_id_local(collected.callables[15].declaration), 18)
-  assert_eq(semantic_id_local(collected.callables[16].declaration), 20)
-  assert_eq(semantic_id_local(collected.callables[17].declaration), 21)
+  assert_eq(semantic_id_local(collected.callables[15].declaration), 17)
+  assert_eq(semantic_id_local(collected.callables[16].declaration), 18)
+  assert_eq(semantic_id_local(collected.callables[17].declaration), 20)
+  assert_eq(semantic_id_local(collected.callables[18].declaration), 22)
+  assert_eq(semantic_id_local(collected.callables[19].declaration), 23)
+  assert_eq(semantic_id_local(collected.callables[20].declaration), 24)
+  assert_eq(semantic_id_local(collected.callables[21].declaration), 25)
 }
 
 ///|
@@ -54,6 +58,24 @@ test "compiler-owned Map selects Hash and Eq evidence" {
   }
   assert_true(selected_hash)
   assert_true(selected_eq)
+}
+
+///|
+test "Map remove and clear infer and lower without diagnostics" {
+  let program = collect_program_manifest(
+    2621UL,
+    ProgramManifest::new([
+      ManifestModule::new("fixture.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.map\npub fn run() -> Bool {\n  let values = Map::singleton(1, 10)\n  let removed = values.remove(1)\n  values.clear()\n  removed && values.length() == 0u32\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  assert_eq(lowering.modules[0].diagnostics.length(), 0)
 }
 
 ///|

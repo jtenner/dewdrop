@@ -105,6 +105,8 @@ pub enum PlannedExpressionKind {
     DeclId
   )
   PlannedMapContainsKey(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
+  PlannedMapRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
+  PlannedMapClear(ExprId)
   PlannedSetEmpty(PlannedValueShape, DeclId, DeclId)
   PlannedSetSingleton(ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetLength(ExprId)
@@ -624,6 +626,11 @@ fn plan_expression_kind(
                   PlannedMapEmpty(
                     key_shape, map_value_shape, hash_declaration, eq_declaration,
                   )
+                9 =>
+                  PlannedMapRemove(
+                    base, key, key_shape, hash_declaration, eq_declaration,
+                  )
+                10 => PlannedMapClear(base)
                 _ =>
                   match standard_set_operation(declaration) {
                     1 =>

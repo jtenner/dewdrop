@@ -2064,6 +2064,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedMapInsert(_, _, _, _, _, _, _)
         | PlannedMapSet(_, _, _, _, _, _, _)
         | PlannedMapContainsKey(_, _, _, _, _)
+        | PlannedMapRemove(_, _, _, _, _)
+        | PlannedMapClear(_)
         | PlannedSetEmpty(_, _, _)
         | PlannedSetSingleton(_, _, _, _)
         | PlannedSetLength(_)

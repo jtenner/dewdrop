@@ -67,12 +67,12 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Commit readable `.wat` expectations while keeping generated `.wasm` temporary.
 - [x] Compare snapshots byte-for-byte and print unified diffs.
 - [x] Provide an explicit update command that ordinary test runs never invoke automatically.
-- [x] Cover 123 compiled fixtures across control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
+- [x] Cover 135 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
 - [x] Keep each JSON oracle to exactly ordered compiler `errors`, ordered compiler `warnings`, and ordered stdout-string `output`; `null` means no module or WAT was produced.
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 135 fixtures with compiler failures kept beside their language features: 123 compiled WAT/runtime snapshots, 12 compiler-error snapshots, 78 nonempty stdout oracles, and 10 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 152 fixtures with compiler failures kept beside their language features: 135 compiled WAT/runtime snapshots, 17 compiler-error snapshots, 81 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -100,9 +100,9 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Emit numeric conversions and reinterpretations through registered builtins.
 - [ ] Finish structural logical binary emission; scalar prefix operators are emitted.
 - [ ] Validate `Never`, unreachable, drop, local-let, and return stack behavior across all value shapes.
-- [ ] Emit functional `while` using state/result locals and structured Wasm blocks/loops.
-- [ ] Emit `continue Expr` state updates and `break Expr` results.
-- [ ] Handle return and divergence inside functional-loop arms.
+- [x] Emit functional `while` using state/result locals and structured Wasm blocks/loops.
+- [x] Emit `continue Expr` state updates and `break Expr` results.
+- [x] Handle return and divergence inside functional-loop arms.
 - [ ] Add deep and wide functional-loop execution tests.
 
 ## Pattern matching and flow
@@ -214,8 +214,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.
 - [x] Implement mutable deterministic `Set<key>` over the shared collision-safe Hash table with empty/singleton construction, idempotent insertion, linked-chain removal, clear, membership, emptiness, and length.
-- [ ] Add shared geometric Map/Set bucket growth with measured load-factor thresholds and deterministic iterative rehashing that reuses stored hashes.
-- [ ] Add Map removal and clear using the proven Set chain-unlinking machinery, with logical-length updates and reference-slot clearing where retained storage requires it.
+- [x] Add shared geometric Map/Set bucket growth with a measured maximum load factor of 1.0 and deterministic iterative rehashing that reuses stored hashes.
+- [x] Add Boolean Map removal and alias-visible O(1) clear using the proven Set chain-unlinking machinery and logical-length updates.
 - [ ] Add deterministic allocation-free `Hash` implementations for `String`, `StringView`, and `Bytes` after finalizing their cross-type equality contract.
 - [ ] Implement growable `Array<t>` over the six existing physical carriers with separate logical length/capacity and cleared removed reference slots.
 - [ ] Implement mutable ring-buffer `Queue<t>`, then explicit iterator types and Map key/value/entry plus Set key iterators; keep hash traversal order unspecified.

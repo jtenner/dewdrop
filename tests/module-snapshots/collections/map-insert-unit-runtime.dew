@@ -1,0 +1,6 @@
+open dew.std.map
+
+pub fn main() -> Unit {
+  let values = Map::singleton(1, 1)
+  values.insert(2, 2)
+}

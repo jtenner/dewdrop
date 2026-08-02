@@ -1,0 +1,22 @@
+open dew.std.wasi
+
+enum Step {
+  Next(I32)
+  Done(I32)
+}
+
+fn finish(initial: Step) -> I32 {
+  while initial {
+    Step::Next(value) if value > 0 => continue Step::Next(value - 1)
+    Step::Next(value) => break value + 17
+    Step::Done(value) => break value
+  }
+}
+
+pub fn main() -> U32 {
+  if finish(Step::Next(4)) + finish(Step::Done(23)) == 40 {
+    wasi_fd_write(1u32, b"control:while-enum-17-23")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

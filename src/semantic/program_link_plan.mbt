@@ -323,7 +323,8 @@ fn program_reachable_callable_roots(
         | PlannedMapGetUnchecked(_, _, _, _, hash, eq) => (hash, eq)
         PlannedMapInsert(_, _, _, _, _, hash, eq)
         | PlannedMapSet(_, _, _, _, _, hash, eq) => (hash, eq)
-        PlannedMapContainsKey(_, _, _, hash, eq) => (hash, eq)
+        PlannedMapContainsKey(_, _, _, hash, eq)
+        | PlannedMapRemove(_, _, _, hash, eq) => (hash, eq)
         PlannedSetEmpty(_, hash, eq)
         | PlannedSetSingleton(_, _, hash, eq)
         | PlannedSetContains(_, _, _, hash, eq)
@@ -446,7 +447,9 @@ fn program_reachable_callable_roots(
           | PlannedMapGetUnchecked(_, _, _, _, _, _)
           | PlannedMapInsert(_, _, _, _, _, _, _)
           | PlannedMapSet(_, _, _, _, _, _, _)
-          | PlannedMapContainsKey(_, _, _, _, _) =>
+          | PlannedMapContainsKey(_, _, _, _, _)
+          | PlannedMapRemove(_, _, _, _, _)
+          | PlannedMapClear(_) =>
             reachable[standard_map_type_declaration()] = true
           PlannedSetEmpty(_, _, _)
           | PlannedSetSingleton(_, _, _, _)

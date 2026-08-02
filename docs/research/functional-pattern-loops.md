@@ -1,6 +1,6 @@
-# Functional pattern-loop parsing
+# Functional pattern loops
 
-Date: 2026-07-29
+Date: 2026-08-02
 
 ## Decision
 
@@ -195,6 +195,16 @@ The benchmark source is `src/parser/functional_while_bench_test.mbt`.
 | short state loop, end-to-end | 2.69–2.78 us | 2.73 us | 2.30 us | 8.73 us |
 
 Backend timings should only be compared within one runner. The implementation adds no fields to persistent parser state.
+
+## Executable WasmGC lowering
+
+Functional loops lower through one carrier-typed state local and, when the loop produces a runtime value, one result local per body-local `ControlId`. Unit and `Never` state/results consume no Wasm local. The initial expression executes once before an outer exit block and inner restart loop. Ordered pattern conditions and bindings reuse match lowering against the state local. A selected guard executes after bindings and falls through to the next arm when false.
+
+`continue value` evaluates the value once, stores it into the target control's state local, and branches to that loop header. `break value` evaluates once, stores into the target result local when present, and branches out of the target exit block. Returns and diverging expressions remain valid arm exits. Nested loops use the resolved `ControlId`, not emitter nesting assumptions.
+
+Expression fragments are assembled before final Wasm label depths are known. Break and continue initially carry deterministic private branch sentinels. When one loop is assembled, an iterative traversal of nested Wasm blocks, loops, and ifs resolves only that loop's sentinels to exact relative depths. Transfers targeting an outer loop remain unresolved until the outer loop is assembled. This preserves nearest-control semantics through nested matches, guards, if expressions, and loops without making expression emission recursive.
+
+Backend unit tests validate scalar, enum-reference, Unit, nested-loop, nested-if, return, and continue-only/`Never` shapes. Deterministic Node/Wago snapshots execute scalar countdown, guarded enum-state, Unit, nested-loop, nested-if, and return workloads.
 
 ## Deferred loop features
 

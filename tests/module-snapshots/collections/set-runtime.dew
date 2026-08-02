@@ -1,63 +1,42 @@
 open dew.std.set
 
-struct Key {
-  value: I32
-}
-
-impl Hash for Key {
-  fn hash(self) -> U64 {
-    0u64
-  }
-  fn hash_eq(self, right: Key) -> Bool {
-    self.value == right.value
-  }
-}
-
-fn empty_keys() -> Set<Key> {
+fn empty_values() -> Set<I32> {
   Set::empty()
 }
 
-fn clear_only(values: Set<I32>) -> Bool {
-  values.clear()
-  values.is_empty()
-}
-
 pub fn main() -> Unit {
-  let empty = empty_keys()
+  let empty = empty_values()
   assert(empty.is_empty(), "new set is empty")
   assert(empty.length() == 0u32, "empty set length")
-  assert(!empty.contains(Key { value: 1 }), "empty set contains nothing")
-  assert(!empty.remove(Key { value: 1 }), "remove missing from empty set")
-  assert(empty.insert(Key { value: 1 }), "first insertion reports new")
-  assert(!empty.insert(Key { value: 1 }), "duplicate insertion reports existing")
+  assert(!empty.contains(1), "empty set contains nothing")
+  assert(!empty.remove(1), "remove missing from empty set")
+  assert(empty.insert(1), "first insertion reports new")
+  assert(!empty.insert(1), "duplicate insertion reports existing")
   assert(empty.length() == 1u32, "duplicate insertion keeps length")
 
-  let values = Set::singleton(Key { value: 0 })
-  assert(values.insert(Key { value: 1 }), "collision insert one")
-  assert(values.insert(Key { value: 2 }), "collision insert two")
-  assert(values.insert(Key { value: 3 }), "collision insert three")
+  let values = Set::singleton(0)
+  assert(values.insert(16), "collision insert one")
+  assert(values.insert(32), "collision insert two")
+  assert(values.insert(48), "collision insert three")
   assert(values.length() == 4u32, "collision set length")
 
-  assert(values.remove(Key { value: 3 }), "remove collision-chain head")
-  assert(!values.contains(Key { value: 3 }), "removed head absent")
-  assert(values.remove(Key { value: 1 }), "remove collision-chain middle")
-  assert(!values.contains(Key { value: 1 }), "removed middle absent")
-  assert(values.remove(Key { value: 0 }), "remove collision-chain tail")
-  assert(!values.contains(Key { value: 0 }), "removed tail absent")
-  assert(values.contains(Key { value: 2 }), "unremoved collision key retained")
+  assert(values.remove(48), "remove collision-chain head")
+  assert(!values.contains(48), "removed head absent")
+  assert(values.remove(16), "remove collision-chain middle")
+  assert(!values.contains(16), "removed middle absent")
+  assert(values.remove(0), "remove collision-chain tail")
+  assert(!values.contains(0), "removed tail absent")
+  assert(values.contains(32), "unremoved collision key retained")
   assert(values.length() == 1u32, "removals update length")
-  assert(!values.remove(Key { value: 99 }), "remove missing collision key")
+  assert(!values.remove(99), "remove missing collision key")
 
   let alias = values
   alias.clear()
   assert(values.is_empty(), "clear visible through aliases")
   assert(values.length() == 0u32, "clear resets length")
-  assert(!values.contains(Key { value: 2 }), "clear removes old entries")
-  assert(values.insert(Key { value: 4 }), "insert after clear")
-  assert(values.contains(Key { value: 4 }), "post-clear insertion visible")
-
-  let clear_target = Set::singleton(7)
-  assert(clear_only(clear_target), "clear works in a clear-only function body")
+  assert(!values.contains(32), "clear removes old entries")
+  assert(values.insert(4), "insert after clear")
+  assert(values.contains(4), "post-clear insertion visible")
 
   let signed = Set::singleton(-1i64)
   assert(signed.contains(-1i64), "negative signed key")

@@ -33,6 +33,12 @@ impl<key, value> Map<key, value> {
   fn empty() -> Map<key, value> {
     map_empty()
   }
+  fn remove(self, key: key) -> Bool {
+    map_remove(self, key)
+  }
+  fn clear(self) -> Unit {
+    map_clear(self)
+  }
 }
 
 impl<key, value> Index<key, value> for Map<key, value> {
@@ -48,3 +54,5 @@ impl<key, value> IndexSet<key, value> for Map<key, value> {
 }
 
 builtin map_empty<key, value>() -> Map<key, value> = "dew_map_empty"
+builtin map_remove<key, value>(map: Map<key, value>, key: key) -> Bool = "dew_map_remove"
+builtin map_clear<key, value>(map: Map<key, value>) -> Unit = "dew_map_clear"
