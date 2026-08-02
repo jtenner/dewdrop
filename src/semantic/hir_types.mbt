@@ -17,6 +17,7 @@ fn empty_hir_span(at : Int) -> HirSpan {
 pub enum HirTypeSyntax {
   NamedTypeSyntax(NameId, UInt64)
   AppliedTypeSyntax(HirTypeId, HirSpan, UInt64)
+  FunctionTypeSyntax(HirSpan, HirTypeId, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -63,6 +64,21 @@ fn CollectionBuilder::lower_type(
           states.push(0)
           result_starts.push(0)
         }
+        @parser.FunctionType(parameters, result, _) => {
+          sources.push(source)
+          states.push(1)
+          result_starts.push(results.length())
+          sources.push(result)
+          states.push(0)
+          result_starts.push(0)
+          let mut index = parameters.length()
+          while index > 0 {
+            index -= 1
+            sources.push(parameters[index])
+            states.push(0)
+            result_starts.push(0)
+          }
+        }
       }
     } else {
       match source {
@@ -77,6 +93,23 @@ fn CollectionBuilder::lower_type(
             AppliedTypeSyntax(
               base,
               { start: argument_start, length: arguments.length() },
+              offset,
+            ),
+          )
+          results.truncate(result_start)
+          results.push(id)
+        }
+        @parser.FunctionType(parameters, _, offset) => {
+          let parameter_start = self.type_arguments.length()
+          for index in 0..<parameters.length() {
+            self.type_arguments.push(results[result_start + index])
+          }
+          let result = results[result_start + parameters.length()]
+          let id = self.type_syntax.length()
+          self.type_syntax.push(
+            FunctionTypeSyntax(
+              { start: parameter_start, length: parameters.length() },
+              result,
               offset,
             ),
           )

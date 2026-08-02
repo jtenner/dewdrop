@@ -162,6 +162,7 @@ pub enum TypeDiagnostic {
   ExpectedTraitType(NameId, DeclId, UInt64)
   TypeArityMismatch(ResolvedTypeId, Int, Int, DeclId, UInt64)
   TypeNotApplicable(ResolvedTypeId, DeclId, UInt64)
+  UnsupportedFunctionType(DeclId, UInt64)
   SelfOutsideContext(DeclId, UInt64)
   AliasCycle(HirSpan, UInt64)
   AliasExpansionLimit(DeclId, Int, UInt64)
@@ -178,6 +179,7 @@ pub fn TypeDiagnostic::offset(self : TypeDiagnostic) -> UInt64 {
     | ExpectedTraitType(_, _, offset)
     | TypeArityMismatch(_, _, _, _, offset)
     | TypeNotApplicable(_, _, offset)
+    | UnsupportedFunctionType(_, offset)
     | SelfOutsideContext(_, offset)
     | AliasCycle(_, offset)
     | AliasExpansionLimit(_, _, offset) => offset

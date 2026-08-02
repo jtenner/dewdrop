@@ -12,12 +12,15 @@ pub enum DeclarationVisibility {
 pub enum TypeExpr {
   NamedType(String, UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
+  FunctionType(Array[TypeExpr], TypeExpr, UInt64)
 } derive(Eq, Debug)
 
 ///|
 pub fn TypeExpr::offset(self : TypeExpr) -> UInt64 {
   match self {
-    NamedType(_, offset) | AppliedType(_, _, offset) => offset
+    NamedType(_, offset)
+    | AppliedType(_, _, offset)
+    | FunctionType(_, _, offset) => offset
   }
 }
 
@@ -302,10 +305,66 @@ fn Parser::parse_type_arguments(
 }
 
 ///|
+fn Parser::parse_function_type(
+  self : Parser,
+  state : TypeCloserState,
+  offset : UInt64,
+) -> Result[TypeExpr, RecoveryFailure] {
+  guard self.consume_left_paren() else {
+    return Err(self.declaration_error(LeftParen))
+  }
+  let parameters : Array[TypeExpr] = []
+  self.skip_newlines()
+  if !self.consume_right_paren_for_declaration() {
+    while true {
+      let parameter = match self.parse_type_inner(state) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      parameters.push(parameter)
+      self.skip_newlines()
+      if self.consume_right_paren_for_declaration() {
+        break
+      }
+      guard self.consume_comma() else {
+        return Err(self.declaration_error(ParameterSeparatorOrClose))
+      }
+      self.skip_newlines()
+    }
+  }
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Arrow) => self.consume_lookahead()
+        _ => return Err(self.declaration_error(Arrow))
+      }
+    None => return Err(self.declaration_error(Arrow))
+  }
+  self.skip_newlines()
+  let result = match self.parse_type_inner(state) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  Ok(FunctionType(parameters, result, offset))
+}
+
+///|
 fn Parser::parse_type_inner(
   self : Parser,
   state : TypeCloserState,
 ) -> Result[TypeExpr, RecoveryFailure] {
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Keyword(@tokenizer.Fn) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return self.parse_function_type(state, offset)
+        }
+        _ => ()
+      }
+    None => ()
+  }
   let (name, offset) = match self.parse_identifier(Type) {
     Ok(value) => value
     Err(error) => return Err(error)
@@ -330,32 +389,15 @@ fn Parser::parse_type_inner(
 
 ///|
 fn Parser::parse_type(self : Parser) -> Result[TypeExpr, RecoveryFailure] {
-  let (name, offset) = match self.parse_identifier(Type) {
+  let state : TypeCloserState = { pending: 0, offset: 0UL }
+  let type_ = match self.parse_type_inner(state) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  let base = NamedType(name, offset)
-  let open_offset = match self.peek_token() {
-    Some(token) =>
-      match token.kind() {
-        @tokenizer.Symbol(@tokenizer.Less) => {
-          let offset = token.offset()
-          self.consume_lookahead()
-          offset
-        }
-        _ => return Ok(base)
-      }
-    None => return Ok(base)
-  }
-  let state : TypeCloserState = { pending: 0, offset: 0UL }
-  match self.parse_type_arguments(state, base, open_offset) {
-    Err(error) => Err(error.inside_angle())
-    Ok(type_) =>
-      if state.pending > 0 {
-        Err(declaration_failure(UnexpectedTypeCloser(state.offset)))
-      } else {
-        Ok(type_)
-      }
+  if state.pending > 0 {
+    Err(declaration_failure(UnexpectedTypeCloser(state.offset)))
+  } else {
+    Ok(type_)
   }
 }
 

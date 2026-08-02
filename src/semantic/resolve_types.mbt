@@ -696,6 +696,26 @@ fn TypeResolver::resolve_syntax(
         } else {
           self.finish_applied_type(owner, current, base, arguments, offset)
         }
+      FunctionTypeSyntax(parameters, result, offset) =>
+        if state == 0 {
+          self.push_type_task(
+            current, 1, current_expectation, constructor_position,
+          )
+          self.push_type_task(result, 0, any_type_name, false)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push_type_task(
+              self.collected.type_arguments[parameters.start + index],
+              0,
+              any_type_name,
+              false,
+            )
+          }
+        } else {
+          self.diagnose(UnsupportedFunctionType(owner, offset))
+          self.syntax_types[current] = self.interner.error_type
+        }
     }
   }
   self.syntax_types[syntax]
@@ -881,9 +901,10 @@ fn TypeDiagnostic::rank(self : TypeDiagnostic) -> Int {
     ExpectedTraitType(_, _, _) => 5
     TypeArityMismatch(_, _, _, _, _) => 6
     TypeNotApplicable(_, _, _) => 7
-    SelfOutsideContext(_, _) => 8
-    AliasCycle(_, _) => 9
-    AliasExpansionLimit(_, _, _) => 10
+    UnsupportedFunctionType(_, _) => 8
+    SelfOutsideContext(_, _) => 9
+    AliasCycle(_, _) => 10
+    AliasExpansionLimit(_, _, _) => 11
   }
 }
 

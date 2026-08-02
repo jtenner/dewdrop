@@ -71,7 +71,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 165 fixtures with compiler failures kept beside their language features: 146 compiled WAT/runtime snapshots, 19 compiler-error snapshots, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 166 fixtures with compiler failures kept beside their language features: 146 compiled WAT/runtime snapshots, 20 compiler-error snapshots, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -209,7 +209,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [ ] Decide aggregate field mutation and compound assignment policy.
 - [x] Define trait-extensible `Index`/`IndexSet`, exact inference evidence, block-item-only indexed setting, and FixedArray optional/trapping bounds behavior.
 - [ ] Enforce `(Self, key) -> value` coherence; FixedArray and Map already use the implemented indexing and indexed-setting lowering.
-- [ ] Define first-class function types, references, closures, captures, and indirect calls.
+- [x] Parse `fn(T, ...) -> R` types, preserve their flat HIR structure, and diagnose the current semantic boundary explicitly.
+- [ ] Resolve and execute first-class function types, references, closures, captures, and indirect calls.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.

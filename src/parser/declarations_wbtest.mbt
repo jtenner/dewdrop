@@ -30,6 +30,34 @@ test "public builtin declaration preserves complete signature" {
 }
 
 ///|
+test "function types preserve parameter and result structure" {
+  match
+    parse_test_declaration(
+      b"builtin apply(callback: fn(I32, Bool) -> I64) -> fn(I32) -> I64 = \"apply\"",
+    ) {
+    Ok(Builtin(declaration)) => {
+      assert_eq(declaration.parameters.length(), 1)
+      match declaration.parameters[0].type_ {
+        FunctionType(parameters, NamedType("I64", _), _) => {
+          assert_eq(parameters.length(), 2)
+          assert_eq(parameters[0], NamedType("I32", 27UL))
+          assert_eq(parameters[1], NamedType("Bool", 32UL))
+        }
+        _ => fail("expected callback function type")
+      }
+      match declaration.return_type {
+        FunctionType(parameters, NamedType("I64", _), _) => {
+          assert_eq(parameters.length(), 1)
+          assert_eq(parameters[0], NamedType("I32", 52UL))
+        }
+        _ => fail("expected returned function type")
+      }
+    }
+    _ => fail("expected builtin with function types")
+  }
+}
+
+///|
 test "non-public builtins remain module visible" {
   assert_eq(
     parse_test_declaration(b"builtin clock() -> I64 = \"clock\""),
