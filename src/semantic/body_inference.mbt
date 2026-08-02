@@ -38,6 +38,7 @@ pub enum BodyInferenceDiagnostic {
   ReturnOutsideCallable(UInt64)
   UnresolvedExpressionType(ExprId, UInt64)
   UnresolvedLocalType(BodyId, LocalId, UInt64)
+  UnresolvedLambdaLocalType(LambdaId, LocalId, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -82,7 +83,8 @@ pub fn BodyInferenceDiagnostic::offset(
     | UnresolvedExpressionTypeArgument(_, _, offset)
     | ReturnOutsideCallable(offset)
     | UnresolvedExpressionType(_, offset)
-    | UnresolvedLocalType(_, _, offset) => offset
+    | UnresolvedLocalType(_, _, offset)
+    | UnresolvedLambdaLocalType(_, _, offset) => offset
   }
 }
 
@@ -168,15 +170,26 @@ pub struct InferredBody {
 } derive(Eq, Debug)
 
 ///|
+pub struct InferredLambda {
+  lambda : LambdaId
+  root_type : BodyTypeId
+  types : HirSpan
+  type_arguments : HirSpan
+  diagnostics : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct InferredModuleBodies {
   module_id : ModuleId
   module_values : InferredModuleValues
   impl_index : ModuleImplIndex
   bodies : Array[InferredBody]
+  lambdas : Array[InferredLambda]
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   expression_types : Array[BodyTypeId]
   local_types : Array[BodyTypeId]
+  capture_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
   pattern_types : Array[BodyTypeId]
   pattern_constructors : Array[InferredPatternConstructor]
@@ -205,6 +218,18 @@ pub fn InferredModuleBodies::body(
     None
   } else {
     Some(self.bodies[index])
+  }
+}
+
+///|
+pub fn InferredModuleBodies::lambda(
+  self : InferredModuleBodies,
+  lambda : LambdaId,
+) -> InferredLambda? {
+  if lambda < 0 || lambda >= self.lambdas.length() {
+    None
+  } else {
+    Some(self.lambdas[lambda])
   }
 }
 

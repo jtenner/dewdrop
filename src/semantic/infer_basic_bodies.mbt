@@ -32,6 +32,7 @@ priv struct BodyInferenceJobResult {
   type_arguments : Array[BodyTypeId]
   expression_types : Array[BodyTypeId]
   local_types : Array[BodyTypeId]
+  capture_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
   pattern_types : Array[BodyTypeId]
   pattern_constructors : Array[InferredPatternConstructor]
@@ -48,6 +49,99 @@ priv struct BodyInferenceJobResult {
   map_eq_targets : Array[InferredCallTarget]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
+}
+
+///|
+priv struct BodyJobTypeImporter {
+  solver : LocalTypeSolver
+  task_types : Array[BodyTypeId]
+  task_states : Array[Int]
+  result_starts : Array[Int]
+  results : Array[BodyTypeId]
+  arguments : Array[BodyTypeId]
+}
+
+///|
+fn BodyJobTypeImporter::new(solver : LocalTypeSolver) -> BodyJobTypeImporter {
+  {
+    solver,
+    task_types: [],
+    task_states: [],
+    result_starts: [],
+    results: [],
+    arguments: [],
+  }
+}
+
+///|
+fn BodyJobTypeImporter::push(
+  self : BodyJobTypeImporter,
+  type_ : BodyTypeId,
+  state : Int,
+  result_start : Int,
+) -> Unit {
+  self.task_types.push(type_)
+  self.task_states.push(state)
+  self.result_starts.push(result_start)
+}
+
+///|
+fn BodyJobTypeImporter::import_type(
+  self : BodyJobTypeImporter,
+  job : BodyInferenceJobResult,
+  root : BodyTypeId,
+) -> BodyTypeId {
+  if root <= 0 {
+    return root
+  }
+  self.task_types.clear()
+  self.task_states.clear()
+  self.result_starts.clear()
+  self.results.clear()
+  self.push(root, 0, 0)
+  while self.task_types.length() > 0 {
+    let source = self.task_types.pop().unwrap()
+    let state = self.task_states.pop().unwrap()
+    let result_start = self.result_starts.pop().unwrap()
+    if source <= 0 {
+      self.results.push(source)
+      continue
+    }
+    if state == 0 {
+      match job.types[source] {
+        BodyAppliedType(base, arguments) => {
+          self.push(source, 1, self.results.length())
+          let mut index = arguments.length
+          while index > 0 {
+            index -= 1
+            self.push(job.type_arguments[arguments.start + index], 0, 0)
+          }
+          self.push(base, 0, 0)
+        }
+        BodyVariableType(_) | BodyErrorType =>
+          self.results.push(self.solver.error_type())
+        BodyResolvedType(type_) =>
+          self.results.push(self.solver.resolved_type(type_))
+      }
+    } else {
+      let arguments = match job.types[source] {
+        BodyAppliedType(_, arguments) => arguments
+        _ => abort("body-job import expected an applied type")
+      }
+      let base = self.results[result_start]
+      self.arguments.clear()
+      for index in 0..<arguments.length {
+        self.arguments.push(self.results[result_start + index + 1])
+      }
+      let result = self.solver.applied_type(base, self.arguments)
+      self.results.truncate(result_start)
+      self.results.push(result)
+    }
+  }
+  guard self.results.length() == 1 else {
+    abort("invalid imported body-job type")
+  }
+  self.results[0]
 }
 
 ///|
@@ -360,20 +454,23 @@ priv struct BasicBodyInferencer {
   impl_index : ModuleImplIndex
   names : ResolvedModuleNames
   body : HirBody
-  name_info : ResolvedBodyNames
+  mut lambda : LambdaId
+  mut local_span : HirSpan
+  mut control_span : HirSpan
+  mut capture_types : Array[BodyTypeId]
   callable_index : Int
   callable_indices : Array[Int]
   variant_spans : Array[HirSpan]
   field_spans : Array[HirSpan]
   solver : LocalTypeSolver
   expression_types : Array[BodyTypeId]
-  local_types : Array[BodyTypeId]
+  mut local_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
   pattern_types : Array[BodyTypeId]
   pattern_constructors : Array[InferredPatternConstructor]
   pattern_type_arguments : Array[BodyTypeId]
-  control_state_types : Array[BodyTypeId]
-  control_result_types : Array[BodyTypeId]
+  mut control_state_types : Array[BodyTypeId]
+  mut control_result_types : Array[BodyTypeId]
   mut expression_selections : Array[InferredExpressionSelection]
   expression_type_arguments : Array[BodyTypeId]
   object_field_targets : Array[InferredObjectFieldTarget]
@@ -443,7 +540,10 @@ fn BasicBodyInferencer::new(
     impl_index,
     names,
     body,
-    name_info,
+    lambda: -1,
+    local_span: name_info.locals,
+    control_span: name_info.controls,
+    capture_types: [],
     callable_index,
     callable_indices,
     variant_spans,
@@ -506,6 +606,74 @@ fn BasicBodyInferencer::new(
     compact_types: [],
     compact_arguments: [],
   }
+}
+
+///|
+fn BasicBodyInferencer::new_lambda(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  imports : ResolvedModuleImports?,
+  impl_index : ModuleImplIndex,
+  names : ResolvedModuleNames,
+  lambda : HirLambda,
+  capture_types : Array[BodyTypeId],
+  callable_indices : Array[Int],
+  variant_spans : Array[HirSpan],
+  field_spans : Array[HirSpan],
+  solver : LocalTypeSolver,
+  call_scratch : CallInferenceScratch,
+  module_values : ModuleValueInferenceContext?,
+) -> BasicBodyInferencer {
+  let root_body = collected.bodies[semantic_id_local(lambda.root_body)]
+  let body : HirBody = {
+    id: lambda.root_body,
+    declaration: root_body.declaration,
+    kind: root_body.kind,
+    root: BlockBodyRoot(lambda.body.root),
+    expressions: lambda.body.expressions,
+    expression_children: lambda.body.expression_children,
+    blocks: lambda.body.blocks,
+    block_items: lambda.body.block_items,
+    patterns: lambda.body.patterns,
+    pattern_children: lambda.body.pattern_children,
+    pattern_arms: lambda.body.pattern_arms,
+    arm_children: lambda.body.arm_children,
+    object_fields: lambda.body.object_fields,
+    pattern_fields: lambda.body.pattern_fields,
+    offset: lambda.offset,
+  }
+  let name_info = names.lambda(lambda.id).unwrap()
+  let inferencer = BasicBodyInferencer::new(
+    collected,
+    resolved,
+    imports,
+    impl_index,
+    names,
+    body,
+    callable_indices[semantic_id_local(root_body.declaration)],
+    callable_indices,
+    variant_spans,
+    field_spans,
+    solver,
+    call_scratch,
+    module_values,
+  )
+  inferencer.lambda = lambda.id
+  inferencer.local_span = name_info.locals
+  inferencer.control_span = name_info.controls
+  inferencer.capture_types = capture_types
+  inferencer.local_types = Array::make(name_info.locals.length, 0)
+  inferencer.control_state_types = if name_info.controls.length == 0 {
+    empty_body_type_array
+  } else {
+    Array::make(name_info.controls.length, 0)
+  }
+  inferencer.control_result_types = if name_info.controls.length == 0 {
+    empty_body_type_array
+  } else {
+    Array::make(name_info.controls.length, 0)
+  }
+  inferencer
 }
 
 ///|
@@ -690,7 +858,7 @@ fn BasicBodyInferencer::imported_function_reference(
 fn BasicBodyInferencer::initialize_control_types(
   self : BasicBodyInferencer,
 ) -> Unit {
-  for control in 0..<self.name_info.controls.length {
+  for control in 0..<self.control_span.length {
     self.control_state_types[control] = self.solver.fresh_variable()
     self.control_result_types[control] = self.solver.fresh_variable()
   }
@@ -779,6 +947,7 @@ fn BasicBodyInferencer::initialize_expression_types(
       HirNameExpr(name, _) =>
         match self.names.expression_references[expression] {
           LocalNameReference(local_id) => self.local_types[local_id]
+          LambdaCaptureNameReference(capture) => self.capture_types[capture]
           ModuleValueNameReference(_) =>
             match self.module_value_type(name) {
               Some(type_) => type_
@@ -821,6 +990,8 @@ fn BasicBodyInferencer::initialize_expression_types(
           }
           _ => self.solver.fresh_variable()
         }
+      HirLambdaExpr(lambda, _) =>
+        self.solver.resolved_type(self.resolved.lambda_function_types[lambda])
       HirIfExpr(_, _, alternative, _) if alternative < 0 =>
         self.primitive(UnitType)
       HirPrefixExpr(HirLogicalNot, _, _) => self.primitive(BoolType)
@@ -900,12 +1071,16 @@ fn BasicBodyInferencer::body_signature_type(
 fn BasicBodyInferencer::initialize_local_types(
   self : BasicBodyInferencer,
 ) -> Unit {
-  for local_id in 0..<self.name_info.locals.length {
-    let local_info = self.names.locals[self.name_info.locals.start + local_id]
+  for local_id in 0..<self.local_span.length {
+    let local_info = self.names.locals[self.local_span.start + local_id]
     self.local_types[local_id] = match local_info.kind {
       ParameterLocal =>
         self.body_signature_type(
-          self.resolved.parameter_types[local_info.source],
+          if self.lambda >= 0 {
+            self.resolved.lambda_parameter_types[local_info.source]
+          } else {
+            self.resolved.parameter_types[local_info.source]
+          },
         )
       LetLocal | PatternLocal => self.solver.fresh_variable()
     }
@@ -959,7 +1134,9 @@ fn BasicBodyInferencer::reuse_block_expression_types(
 fn BasicBodyInferencer::initialize_return_type(
   self : BasicBodyInferencer,
 ) -> Unit {
-  self.declared_return_type = if self.callable_index >= 0 {
+  self.declared_return_type = if self.lambda >= 0 {
+    self.body_signature_type(self.resolved.lambda_return_types[self.lambda])
+  } else if self.callable_index >= 0 {
     self.body_signature_type(
       self.resolved.callable_return_types[self.callable_index],
     )
@@ -5890,7 +6067,7 @@ fn BasicBodyInferencer::constrain_transfer_expression(
 fn BasicBodyInferencer::constrain_control_results(
   self : BasicBodyInferencer,
 ) -> Unit {
-  let has_break = Array::make(self.name_info.controls.length, false)
+  let has_break = Array::make(self.control_span.length, false)
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
@@ -5938,7 +6115,7 @@ fn BasicBodyInferencer::constrain_expressions(
       | HirBytesExpr(_, _)
       | HirNameExpr(_, _)
       | HirImportAliasExpr(_, _) => ()
-      HirLambdaExpr(_, _) => self.mark_unsupported(expression)
+      HirLambdaExpr(_, _) => ()
       HirBreakExpr(value, offset) =>
         self.constrain_transfer_expression(expression, value, true, offset)
       HirContinueExpr(value, offset) =>
@@ -6050,7 +6227,8 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     UnsupportedExpressionInference(_, _) => 34
     UnresolvedExpressionType(_, _) => 35
     UnresolvedLocalType(_, _, _) => 36
-    NumericLiteralOutOfRange(_, _, _) => 37
+    UnresolvedLambdaLocalType(_, _, _) => 37
+    NumericLiteralOutOfRange(_, _, _) => 38
   }
 }
 
@@ -6228,11 +6406,18 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
     let frozen = self.solver.zonk_type(self.local_types[local_id])
     self.local_types[local_id] = frozen
     if self.solver.has_unresolved_variable(frozen) {
-      let local_info = self.names.locals[self.name_info.locals.start + local_id]
+      let local_info = self.names.locals[self.local_span.start + local_id]
       self.diagnose(
-        UnresolvedLocalType(self.body.id, local_id, local_info.offset),
+        if self.lambda >= 0 {
+          UnresolvedLambdaLocalType(self.lambda, local_id, local_info.offset)
+        } else {
+          UnresolvedLocalType(self.body.id, local_id, local_info.offset)
+        },
       )
     }
+  }
+  for index in 0..<self.capture_types.length() {
+    self.capture_types[index] = self.solver.zonk_type(self.capture_types[index])
   }
   for index in 0..<self.block_types.length() {
     self.block_types[index] = self.solver.zonk_type(self.block_types[index])
@@ -6287,6 +6472,9 @@ fn BasicBodyInferencer::mark_compact_roots(self : BasicBodyInferencer) -> Unit {
     self.mark_compact_type(type_)
   }
   for type_ in self.local_types {
+    self.mark_compact_type(type_)
+  }
+  for type_ in self.capture_types {
     self.mark_compact_type(type_)
   }
   for type_ in self.block_types {
@@ -6348,6 +6536,11 @@ fn BasicBodyInferencer::has_positive_compact_root(
     }
   }
   for type_ in self.local_types {
+    if type_ > 0 {
+      return true
+    }
+  }
+  for type_ in self.capture_types {
     if type_ > 0 {
       return true
     }
@@ -6481,6 +6674,9 @@ fn BasicBodyInferencer::compact_results(self : BasicBodyInferencer) -> Unit {
   for index in 0..<self.local_types.length() {
     self.local_types[index] = self.compact_type_id(self.local_types[index])
   }
+  for index in 0..<self.capture_types.length() {
+    self.capture_types[index] = self.compact_type_id(self.capture_types[index])
+  }
   for index in 0..<self.block_types.length() {
     self.block_types[index] = self.compact_type_id(self.block_types[index])
   }
@@ -6517,7 +6713,7 @@ fn BasicBodyInferencer::compact_results(self : BasicBodyInferencer) -> Unit {
 fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.solver_diagnostic_start = self.solver.diagnostics.length()
   self.initialize_local_types()
-  if self.name_info.controls.length > 0 {
+  if self.control_span.length > 0 {
     self.initialize_control_types()
   }
   self.initialize_expression_types()
@@ -6527,7 +6723,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.constrain_name_expressions()
   self.constrain_block_items()
   self.constrain_expressions()
-  if self.name_info.controls.length > 0 {
+  if self.control_span.length > 0 {
     self.constrain_control_results()
   }
   self.constrain_root()
@@ -6551,6 +6747,7 @@ fn BasicBodyInferencer::finish(
     type_arguments: self.compact_arguments,
     expression_types: self.expression_types,
     local_types: self.local_types,
+    capture_types: self.capture_types,
     block_types: self.block_types,
     pattern_types: self.pattern_types,
     pattern_constructors: self.pattern_constructors,
@@ -6931,12 +7128,15 @@ fn merge_body_inference_jobs(
   module_values : InferredModuleValues,
   impl_index : ModuleImplIndex,
   jobs : Array[BodyInferenceJobResult?],
+  lambda_jobs : Array[BodyInferenceJobResult?],
 ) -> InferredModuleBodies {
   let bodies : Array[InferredBody] = []
+  let lambdas : Array[InferredLambda] = []
   let types : Array[BodyTypeTerm] = [BodyErrorType]
   let type_arguments : Array[BodyTypeId] = []
   let expression_types = Array::make(collected.expressions.length(), 0)
   let local_types = Array::make(names.locals.length(), 0)
+  let capture_types = Array::make(names.captures.length(), 0)
   let block_types = Array::make(collected.blocks.length(), 0)
   let pattern_types = Array::make(collected.patterns.length(), 0)
   let pattern_constructors = Array::make(
@@ -7165,15 +7365,215 @@ fn merge_body_inference_jobs(
       },
     })
   }
+  for lambda_index, lambda in collected.lambdas {
+    let job = lambda_jobs[lambda_index].unwrap()
+    let type_start = types.length()
+    let argument_start = type_arguments.length()
+    for local_type_id in 1..<job.types.length() {
+      match job.types[local_type_id] {
+        BodyVariableType(variable) => types.push(BodyVariableType(variable))
+        BodyAppliedType(base, arguments) => {
+          let start = type_arguments.length()
+          for index in 0..<arguments.length {
+            type_arguments.push(
+              remap_job_type(
+                job.type_arguments[arguments.start + index],
+                type_start,
+              ),
+            )
+          }
+          types.push(
+            BodyAppliedType(remap_job_type(base, type_start), {
+              start,
+              length: arguments.length,
+            }),
+          )
+        }
+        BodyErrorType | BodyResolvedType(_) =>
+          abort("unexpected compact lambda type during merge")
+      }
+    }
+    let pattern_argument_start = pattern_type_arguments.length()
+    for type_ in job.pattern_type_arguments {
+      pattern_type_arguments.push(remap_job_type(type_, type_start))
+    }
+    let expression_argument_start = expression_type_arguments.length()
+    for type_ in job.expression_type_arguments {
+      expression_type_arguments.push(remap_job_type(type_, type_start))
+    }
+    let call_argument_start = call_type_arguments.length()
+    for type_ in job.call_type_arguments {
+      call_type_arguments.push(remap_job_type(type_, type_start))
+    }
+    for index in 0..<lambda.body.expressions.length {
+      let expression = lambda.body.expressions.start + index
+      expression_types[expression] = remap_job_type(
+        job.expression_types[index],
+        type_start,
+      )
+    }
+    if job.expression_selections.length() > 0 {
+      for index in 0..<lambda.body.expressions.length {
+        let expression = lambda.body.expressions.start + index
+        expression_selections[expression] = match
+          job.expression_selections[index] {
+          StructConstructionSelection(declaration, arguments) =>
+            StructConstructionSelection(declaration, {
+              start: expression_argument_start + arguments.start,
+              length: arguments.length,
+            })
+          VariantConstructionSelection(variant, arguments) =>
+            VariantConstructionSelection(variant, {
+              start: expression_argument_start + arguments.start,
+              length: arguments.length,
+            })
+          UnitVariantValueSelection(variant, arguments) =>
+            UnitVariantValueSelection(variant, {
+              start: expression_argument_start + arguments.start,
+              length: arguments.length,
+            })
+          FieldAccessSelection(field) => FieldAccessSelection(field)
+          ImportedModuleValueSelection(declaration) =>
+            ImportedModuleValueSelection(declaration)
+          FunctionReferenceSelection(declaration) =>
+            FunctionReferenceSelection(declaration)
+          NoExpressionSelection => NoExpressionSelection
+          ErrorExpressionSelection => ErrorExpressionSelection
+        }
+      }
+    }
+    for index in 0..<lambda.body.object_fields.length {
+      object_field_targets[lambda.body.object_fields.start + index] = job.object_field_targets[index]
+    }
+    for call_slot in 0..<job.call_expressions.length() {
+      let expression = job.call_expressions[call_slot]
+      call_targets[expression] = match job.call_targets[call_slot] {
+        SelectedInferredCallTarget(declaration, arguments) =>
+          SelectedInferredCallTarget(declaration, {
+            start: call_argument_start + arguments.start,
+            length: arguments.length,
+          })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
+        NoInferredCallTarget => NoInferredCallTarget
+        ErrorInferredCallTarget => ErrorInferredCallTarget
+      }
+    }
+    for index in 0..<lambda.body.expressions.length {
+      let expression = lambda.body.expressions.start + index
+      operator_targets[expression] = match job.operator_targets[index] {
+        SelectedInferredCallTarget(declaration, arguments) =>
+          SelectedInferredCallTarget(declaration, {
+            start: call_argument_start + arguments.start,
+            length: arguments.length,
+          })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
+        NoInferredCallTarget => NoInferredCallTarget
+        ErrorInferredCallTarget => ErrorInferredCallTarget
+      }
+      map_hash_targets[expression] = match job.map_hash_targets[index] {
+        SelectedInferredCallTarget(declaration, arguments) =>
+          SelectedInferredCallTarget(declaration, {
+            start: call_argument_start + arguments.start,
+            length: arguments.length,
+          })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
+        NoInferredCallTarget => NoInferredCallTarget
+        ErrorInferredCallTarget => ErrorInferredCallTarget
+      }
+      map_eq_targets[expression] = match job.map_eq_targets[index] {
+        SelectedInferredCallTarget(declaration, arguments) =>
+          SelectedInferredCallTarget(declaration, {
+            start: call_argument_start + arguments.start,
+            length: arguments.length,
+          })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
+        NoInferredCallTarget => NoInferredCallTarget
+        ErrorInferredCallTarget => ErrorInferredCallTarget
+      }
+    }
+    let name_info = names.lambda(lambda.id).unwrap()
+    for index in 0..<name_info.locals.length {
+      local_types[name_info.locals.start + index] = remap_job_type(
+        job.local_types[index],
+        type_start,
+      )
+    }
+    for index in 0..<name_info.captures.length {
+      capture_types[name_info.captures.start + index] = remap_job_type(
+        job.capture_types[index],
+        type_start,
+      )
+    }
+    for index in 0..<lambda.body.blocks.length {
+      block_types[lambda.body.blocks.start + index] = remap_job_type(
+        job.block_types[index],
+        type_start,
+      )
+    }
+    for index in 0..<lambda.body.patterns.length {
+      let pattern = lambda.body.patterns.start + index
+      pattern_types[pattern] = remap_job_type(
+        job.pattern_types[index],
+        type_start,
+      )
+      pattern_constructors[pattern] = match job.pattern_constructors[index] {
+        StructInferredPatternConstructor(declaration, arguments) =>
+          StructInferredPatternConstructor(declaration, {
+            start: pattern_argument_start + arguments.start,
+            length: arguments.length,
+          })
+        VariantInferredPatternConstructor(variant, arguments) =>
+          VariantInferredPatternConstructor(variant, {
+            start: pattern_argument_start + arguments.start,
+            length: arguments.length,
+          })
+        NoInferredPatternConstructor => NoInferredPatternConstructor
+        ErrorInferredPatternConstructor => ErrorInferredPatternConstructor
+      }
+    }
+    for index in 0..<name_info.controls.length {
+      control_state_types[name_info.controls.start + index] = remap_job_type(
+        job.control_state_types[index],
+        type_start,
+      )
+      control_result_types[name_info.controls.start + index] = remap_job_type(
+        job.control_result_types[index],
+        type_start,
+      )
+    }
+    let diagnostic_start = diagnostics.length()
+    for diagnostic in job.diagnostics {
+      diagnostics.push(remap_job_diagnostic(diagnostic, type_start))
+    }
+    lambdas.push({
+      lambda: lambda.id,
+      root_type: remap_job_type(job.result_type, type_start),
+      types: { start: type_start, length: job.types.length() - 1 },
+      type_arguments: {
+        start: argument_start,
+        length: type_arguments.length() - argument_start,
+      },
+      diagnostics: {
+        start: diagnostic_start,
+        length: diagnostics.length() - diagnostic_start,
+      },
+    })
+  }
   {
     module_id: collected.module_id,
     module_values,
     impl_index,
     bodies,
+    lambdas,
     types,
     type_arguments,
     expression_types,
     local_types,
+    capture_types,
     block_types,
     pattern_types,
     pattern_constructors,
@@ -7275,12 +7675,52 @@ fn infer_module_bodies_with_imports_in_order(
       ).run(),
     )
   }
+  let lambda_jobs : Array[BodyInferenceJobResult?] = Array::make(
+    collected.lambdas.length(),
+    None,
+  )
+  let job_importer = BodyJobTypeImporter::new(solver)
+  for lambda_index, lambda in collected.lambdas {
+    if first_job {
+      first_job = false
+    } else {
+      solver.reset()
+    }
+    match module_values {
+      Some(context) => context.begin_solver()
+      None => ()
+    }
+    call_scratch.begin_body()
+    let capture_types : Array[BodyTypeId] = []
+    let lambda_names = names.lambda(lambda.id).unwrap()
+    for capture_index in 0..<lambda_names.captures.length {
+      let capture = names.captures[lambda_names.captures.start + capture_index]
+      let (source_job, source_type) = match capture.source {
+        BodyLocalCapture(body, local_id) => {
+          let job = jobs[semantic_id_local(body)].unwrap()
+          (job, job.local_types[local_id])
+        }
+        LambdaLocalCapture(owner, local_id) => {
+          let job = lambda_jobs[owner].unwrap()
+          (job, job.local_types[local_id])
+        }
+      }
+      capture_types.push(job_importer.import_type(source_job, source_type))
+    }
+    lambda_jobs[lambda_index] = Some(
+      BasicBodyInferencer::new_lambda(
+        collected, resolved, imports, impl_index, names, lambda, capture_types, callable_indices,
+        variant_spans, field_spans, solver, call_scratch, module_values,
+      ).run(),
+    )
+  }
   merge_body_inference_jobs(
     collected,
     names,
     module_result.values,
     impl_index,
     jobs,
+    lambda_jobs,
   )
 }
 

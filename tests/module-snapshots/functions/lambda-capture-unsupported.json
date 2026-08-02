@@ -1,7 +1,6 @@
 {
   "errors": [
-    "UnsupportedExpressionInference(1, 53)",
-    "InvalidCallTarget(5, 112)"
+    "StarshineProgramCodeError(UnsupportedExpression(12884901888000, 1))"
   ],
   "warnings": [],
   "output": null

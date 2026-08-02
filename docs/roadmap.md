@@ -306,7 +306,8 @@ erased fallback.
   - [x] Collect nested lambda bodies into isolated source-ordered HIR fragments.
   - [x] Resolve deterministic direct and transitive lexical capture sets.
   - [x] Resolve lambda signatures into canonical structural function types.
-  - [ ] Infer isolated lambda bodies and emit closure environments.
+  - [x] Infer isolated lambda bodies, captures, calls, and declared results.
+  - [ ] Lower and emit closure environments.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.

@@ -30,7 +30,11 @@ Collection lowers each lambda header immediately and defers its block into an is
 
 Lexical name resolution now processes those isolated bodies after their enclosing root-body jobs. Each lambda receives its own parameter, local, control, and diagnostic spans. A lambda expression freezes the active binding stack at its exact source position, so later declarations are not accidentally visible and shadowed bindings retain the correct identity. Direct captures are ordered by first use. Each capture records an exact `BodyLocalCapture` or `LambdaLocalCapture` source plus mutability. Free variables used only by nested lambdas are routed through every intermediate lambda in deterministic nested-lambda/source order, preparing those environments to construct descendant closures. Module/import names remain ordinary non-captured references.
 
-Lambda parameter and result syntax now resolves in the enclosing root declaration's generic/type scope. Each lambda receives one canonical structural `FunctionType`, with alias-normalized parameter and result types, and the frozen-interface cache is versioned to V4 for the added resolved signature tables. Body inference still reports the explicit unsupported lambda-expression boundary; isolated-body inference, closure allocation, and generic or overloaded function-value disambiguation remain pending.
+Lambda parameter and result syntax resolves in the enclosing root declaration's generic/type scope. Each lambda receives one canonical structural `FunctionType`, with alias-normalized parameter and result types, and the frozen-interface cache is versioned to V4 for the added resolved signature tables.
+
+Isolated lambda bodies now run through the ordinary local inference pipeline after root bodies and earlier parent lambdas. Declared parameters and results enter the solver as canonical signature types. Capture types are imported from the exact root-body or parent-lambda local job, preserving applied generic shapes without sharing solver-local variables. Expressions, locals, blocks, patterns, controls, calls, member selections, capture types, and diagnostics merge back into the module-wide HIR-aligned tables. Nested lambda values receive their canonical function types, calls through lambda-valued locals are selected as function-value calls, and return mismatches are diagnosed within the owning lambda span.
+
+The remaining unsupported boundary has moved from semantic inference to executable closure lowering: lowering still emits poison for lambda construction, so no closure allocation or invocation is claimed yet.
 
 ## Proposed representation
 
@@ -43,9 +47,9 @@ The lowered callable signature should receive the environment explicitly before 
 
 ## Required next milestones
 
-1. Infer isolated lambda bodies against parameters, captures, and declared results.
-2. Add expected-type disambiguation for overloaded and generic function references.
-3. Define canonical immutable and mutable environment field representations.
+1. Define canonical immutable and mutable environment field representations.
+2. Add explicit closure construction and captured-load lowering operations.
+3. Add expected-type disambiguation for overloaded and generic function references.
 4. Emit environment structs and captured loads.
 5. Introduce the closure-object ABI for captured and uniformly escaping values.
 6. Add escape analysis and directization before allocation optimization.
