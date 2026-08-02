@@ -17,6 +17,7 @@ pub enum PlannedWasmStorageType {
   WasmV128Storage
   WasmStringRefStorage
   WasmNullableEqRefStorage
+  WasmNullableFunctionRefStorage
   WasmNominalRefStorage(PlannedWasmTypeReference)
   WasmExternalNominalRefStorage(DeclId)
 } derive(Eq, Debug)
@@ -27,6 +28,9 @@ pub enum PlannedWasmFieldRole {
   WasmEnumTagField
   WasmTuplePayloadField(VariantId, Int)
   WasmStructPayloadField(FieldId)
+  WasmClosureEntryField
+  WasmClosureEnvironmentField
+  WasmLambdaCaptureField(LambdaId, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -87,6 +91,8 @@ pub enum PlannedWasmPhysicalTypeKind {
   PlannedWasmStructType(DeclId)
   PlannedWasmEnumBaseType(DeclId)
   PlannedWasmEnumSubtypeType(DeclId, VariantId, Int)
+  PlannedWasmClosureType
+  PlannedWasmLambdaEnvironmentType(LambdaId)
 } derive(Eq, Debug)
 
 ///|
@@ -175,6 +181,9 @@ pub struct PlannedModuleWasmGCFragments {
   variant_field_spans : Array[HirSpan]
   variant_fields : Array[PlannedWasmVariantField]
   field_names : Array[String]
+  closure_type_index : Int
+  lambda_environment_type_indices : Array[Int]
+  lambda_capture_field_indices : Array[Int]
   function_types : Array[PlannedWasmFunctionTypeFragment]
   function_type_by_resolved : Array[Int]
   functions : Array[PlannedWasmFunctionFragment]
@@ -959,6 +968,8 @@ fn wasmgc_plan_physical_type_job(
         _ => abort("struct physical source has an enum layout")
       }
     PlannedWasmEnumBaseType(_) => ()
+    PlannedWasmClosureType | PlannedWasmLambdaEnvironmentType(_) =>
+      abort("synthetic closure type entered nominal dependency planning")
     PlannedWasmEnumSubtypeType(declaration, variant, _) => {
       let dependency = entity_by_declaration[semantic_id_local(declaration)]
       if dependency >= 0 && marks[dependency] != generation {
@@ -1259,6 +1270,8 @@ fn wasmgc_append_physical_type_fields(
         WasmI32Storage,
         source.offset,
       )
+    PlannedWasmClosureType | PlannedWasmLambdaEnvironmentType(_) =>
+      abort("synthetic closure type entered nominal field planning")
     PlannedWasmEnumSubtypeType(_, variant, _) => {
       wasmgc_append_field(
         target,
@@ -1327,6 +1340,26 @@ fn wasmgc_append_physical_type_fields(
     target[start + index] = { ..field, physical_index: index }
   }
   { start, length }
+}
+
+///|
+fn wasmgc_capture_storage(shape : PlannedValueShape) -> PlannedWasmStorageType? {
+  match shape {
+    UnitPlannedValueShape | NeverPlannedValueShape => None
+    I8PlannedValueShape => Some(WasmI8SignedStorage)
+    U8PlannedValueShape => Some(WasmI8UnsignedStorage)
+    I16PlannedValueShape => Some(WasmI16SignedStorage)
+    U16PlannedValueShape => Some(WasmI16UnsignedStorage)
+    I32PlannedValueShape | U32PlannedValueShape | Swar32PlannedValueShape =>
+      Some(WasmI32Storage)
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape =>
+      Some(WasmI64Storage)
+    F32PlannedValueShape => Some(WasmF32Storage)
+    F64PlannedValueShape => Some(WasmF64Storage)
+    V128PlannedValueShape => Some(WasmV128Storage)
+    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
+      Some(WasmNullableEqRefStorage)
+  }
 }
 
 ///|
@@ -1794,6 +1827,8 @@ fn plan_module_wasmgc_fragments_in_orders(
           type_index_by_declaration[semantic_id_local(declaration)] = next_type_index
         PlannedWasmEnumSubtypeType(_, variant, _) =>
           payload_type_index_by_variant[semantic_id_local(variant)] = next_type_index
+        PlannedWasmClosureType | PlannedWasmLambdaEnvironmentType(_) =>
+          abort("synthetic closure type entered nominal index planning")
       }
       next_type_index += 1
     }
@@ -1838,6 +1873,84 @@ fn plan_module_wasmgc_fragments_in_orders(
       types: { start, length: physical_types.length() - start },
       first_type_index,
     })
+  }
+  let mut closure_type_index = -1
+  let lambda_environment_type_indices = Array::make(
+    lowering.lambdas.length(),
+    -1,
+  )
+  let lambda_capture_field_indices = Array::make(lowering.captures.length(), -1)
+  if lowering.lambdas.length() > 0 {
+    closure_type_index = next_type_index
+    next_type_index += 1
+    let closure_field_start = fields.length()
+    fields.push({
+      role: WasmClosureEntryField,
+      physical_index: 0,
+      storage: WasmNullableFunctionRefStorage,
+      mutable_: false,
+      offset: 0UL,
+    })
+    fields.push({
+      role: WasmClosureEnvironmentField,
+      physical_index: 1,
+      storage: WasmNullableEqRefStorage,
+      mutable_: false,
+      offset: 0UL,
+    })
+    let closure_physical_start = physical_types.length()
+    physical_types.push({
+      kind: PlannedWasmClosureType,
+      type_index: closure_type_index,
+      group_index: type_groups.length(),
+      fields: { start: closure_field_start, length: 2 },
+      offset: 0UL,
+    })
+    type_groups.push({
+      types: { start: closure_physical_start, length: 1 },
+      first_type_index: closure_type_index,
+    })
+    for lambda_index, lambda in lowering.lambdas {
+      let type_index = next_type_index
+      next_type_index += 1
+      lambda_environment_type_indices[lambda_index] = type_index
+      let field_start = fields.length()
+      let mut physical_index = 0
+      for capture_index in 0..<lambda.captures.length {
+        let global_capture = lambda.captures.start + capture_index
+        let capture = lowering.captures[global_capture]
+        match wasmgc_capture_storage(capture.shape) {
+          Some(storage) => {
+            lambda_capture_field_indices[global_capture] = physical_index
+            fields.push({
+              role: WasmLambdaCaptureField(lambda_index, capture_index),
+              physical_index,
+              storage,
+              mutable_: capture.mutable_,
+              offset: capture.offset,
+            })
+            physical_index += 1
+          }
+          None => ()
+        }
+      }
+      let physical_start = physical_types.length()
+      physical_types.push({
+        kind: PlannedWasmLambdaEnvironmentType(lambda_index),
+        type_index,
+        group_index: type_groups.length(),
+        fields: { start: field_start, length: fields.length() - field_start },
+        offset: match lowering.lambdas[lambda_index].root {
+          BlockBodyRoot(block) => lowering.blocks[block].offset
+          ExpressionBodyRoot(expression) =>
+            lowering.expressions[expression].offset
+        },
+      })
+      type_groups.push({
+        types: { start: physical_start, length: 1 },
+        first_type_index: type_index,
+      })
+    }
   }
   let function_type_by_resolved = Array::make(resolved.types.length(), -1)
   let required_function_types = Array::make(resolved.types.length(), false)
@@ -2342,6 +2455,9 @@ fn plan_module_wasmgc_fragments_in_orders(
     variant_field_spans,
     variant_fields,
     field_names,
+    closure_type_index,
+    lambda_environment_type_indices,
+    lambda_capture_field_indices,
     function_types,
     function_type_by_resolved,
     functions: planned_functions,

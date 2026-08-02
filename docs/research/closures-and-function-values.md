@@ -38,7 +38,11 @@ Lambda bodies also receive independent structured-flow analysis. Exhaustiveness,
 
 Semantic lowering now retains explicit `PlannedLambdaClosure` and `PlannedCaptureGet` operations instead of poisoning lambda expressions. Each `PlannedLambdaLowering` freezes the inferred root shape, structured flow, local/capture spans, and complete expression/block/pattern/arm ranges. Planned captures preserve exact source identity, mutability, body type, and storage shape. Nested lambda construction therefore has all environment operands available before physical ABI planning.
 
-The remaining unsupported boundary is executable closure emission: Starshine deliberately rejects these explicit operations until closure/environment physical types and lambda entry functions are planned, so no closure allocation or invocation is claimed yet.
+WasmGC physical planning now reserves one module closure struct when lambdas are reachable in the lowering plan. Its immutable fields are an abstract nullable function reference and nullable `eqref` environment. Every lambda receives a deterministic environment struct, including empty environments, and every runtime-stored capture maps to a stable physical field. Scalar and SIMD captures retain compact storage; reference, generic, nominal, text, and function captures use GC-safe `eqref` storage. Unit/Never captures consume no field. The plan records closure/environment type indices and capture-to-field relocation explicitly. Modules without lambdas emit no extra closure types.
+
+This representation intentionally keeps the externally stored closure value independent of one concrete entry signature. Entry references will be cast to the signature-specific `(environment, parameters...) -> result` type at invocation. That permits one closure object shape while retaining typed `call_ref` at the actual call boundary.
+
+The remaining unsupported boundary is executable closure emission: lambda entry signatures/functions, allocation instructions, captured loads, and closure calls still need to consume this physical plan.
 
 ## Proposed representation
 

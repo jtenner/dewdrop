@@ -182,6 +182,8 @@ fn starshine_default_storage_instructions(
     | @semantic.WasmNominalRefStorage(_)
     | @semantic.WasmExternalNominalRefStorage(_) =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq()))]
+    @semantic.WasmNullableFunctionRefStorage =>
+      [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::func()))]
   }
 }
 
@@ -5717,6 +5719,8 @@ fn starshine_program_storage_type(
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
     @semantic.WasmNullableEqRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
+    @semantic.WasmNullableFunctionRefStorage =>
+      @lib.StorageType::val_type(@lib.ValType::funcref())
     @semantic.WasmNominalRefStorage(reference) =>
       @lib.StorageType::val_type(
         match reference {
@@ -5825,6 +5829,8 @@ fn starshine_program_group_storage_type(
       @lib.StorageType::val_type(@lib.ValType::v128())
     @semantic.WasmStringRefStorage | @semantic.WasmNullableEqRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
+    @semantic.WasmNullableFunctionRefStorage =>
+      @lib.StorageType::val_type(@lib.ValType::funcref())
     @semantic.WasmNominalRefStorage(reference) => {
       let module_ = planned.modules[node.module_index]
       let physical = module_.physical_types[node.fragment_index]
@@ -5883,7 +5889,10 @@ fn starshine_program_group_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmClosureType
+    | @semantic.PlannedWasmLambdaEnvironmentType(_) =>
+      @lib.SubType::comp_type(composite)
   }
 }
 
@@ -5928,7 +5937,10 @@ fn starshine_program_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmClosureType
+    | @semantic.PlannedWasmLambdaEnvironmentType(_) =>
+      @lib.SubType::comp_type(composite)
   }
   (subtype, has_recursive_reference)
 }

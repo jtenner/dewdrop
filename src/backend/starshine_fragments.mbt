@@ -44,6 +44,8 @@ fn starshine_storage_type(
     @semantic.WasmNullableEqRefStorage
     | @semantic.WasmExternalNominalRefStorage(_) =>
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
+    @semantic.WasmNullableFunctionRefStorage =>
+      @lib.StorageType::val_type(@lib.ValType::funcref())
     @semantic.WasmNominalRefStorage(reference) =>
       @lib.StorageType::val_type(
         starshine_nominal_ref(starshine_type_index(reference)),
@@ -108,7 +110,10 @@ fn starshine_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmClosureType
+    | @semantic.PlannedWasmLambdaEnvironmentType(_) =>
+      @lib.SubType::comp_type(composite)
   }
   (subtype, has_recursive_reference)
 }

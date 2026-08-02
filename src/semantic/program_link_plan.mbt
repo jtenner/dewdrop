@@ -1150,7 +1150,9 @@ fn program_cross_module_type_groups(
         PlannedWasmStructType(declaration)
         | PlannedWasmEnumBaseType(declaration) =>
           type_lookup[declaration] = final_type_index
-        PlannedWasmEnumSubtypeType(_, _, _) => ()
+        PlannedWasmEnumSubtypeType(_, _, _)
+        | PlannedWasmClosureType
+        | PlannedWasmLambdaEnvironmentType(_) => ()
       }
       physical_types.push(node)
     }
@@ -1197,7 +1199,9 @@ fn planned_program_local_nominal_declaration(
   match modules[module_index].physical_types[type_index].kind {
     PlannedWasmStructType(declaration) | PlannedWasmEnumBaseType(declaration) =>
       Some(declaration)
-    PlannedWasmEnumSubtypeType(_, _, _) => None
+    PlannedWasmEnumSubtypeType(_, _, _)
+    | PlannedWasmClosureType
+    | PlannedWasmLambdaEnvironmentType(_) => None
   }
 }
 
@@ -1387,7 +1391,9 @@ pub fn link_program_wasmgc_fragments(
           PlannedWasmStructType(declaration)
           | PlannedWasmEnumBaseType(declaration) =>
             type_lookup[declaration] = type_count + physical.type_index
-          PlannedWasmEnumSubtypeType(_, _, _) => ()
+          PlannedWasmEnumSubtypeType(_, _, _)
+          | PlannedWasmClosureType
+          | PlannedWasmLambdaEnvironmentType(_) => ()
         }
       }
       type_count += module_fragments.physical_types.length()
@@ -1444,7 +1450,9 @@ pub fn link_program_wasmgc_fragments(
             PlannedWasmStructType(declaration)
             | PlannedWasmEnumBaseType(declaration) =>
               type_lookup[declaration] = type_count + physical.type_index
-            PlannedWasmEnumSubtypeType(_, _, _) => ()
+            PlannedWasmEnumSubtypeType(_, _, _)
+            | PlannedWasmClosureType
+            | PlannedWasmLambdaEnvironmentType(_) => ()
           }
         }
         type_count += module_.physical_types.length()
@@ -1527,7 +1535,9 @@ pub fn link_program_wasmgc_fragments(
                 }
               _ => ()
             }
-          PlannedWasmEnumSubtypeType(_, _, _) => ()
+          PlannedWasmEnumSubtypeType(_, _, _)
+          | PlannedWasmClosureType
+          | PlannedWasmLambdaEnvironmentType(_) => ()
         }
       }
       for fragment_index, function_ in module_fragments.functions {
