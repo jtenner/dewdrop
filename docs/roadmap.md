@@ -314,6 +314,7 @@ erased fallback.
   - [x] Flatten each lambda environment into one closure subtype allocation.
   - [x] Directize immediate and call-only local lambdas with lifted capture parameters.
   - [x] Remove call-only local named-reference allocations and indirect dispatch.
+  - [x] Elide unused local closure values, lambda entries, and physical subtypes.
   - [x] Conservatively retain the closure ABI for captured, returned, passed, global, and imported values.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
   - [ ] Add shared cells when mutable scalar assignment is introduced.

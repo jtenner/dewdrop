@@ -1970,6 +1970,9 @@ fn plan_module_wasmgc_fragments_in_orders(
       first_type_index: closure_type_index,
     })
     for lambda_index, lambda in lowering.lambdas {
+      if lambda.directized || lambda.elided {
+        continue
+      }
       let type_index = next_type_index
       next_type_index += 1
       lambda_closure_type_indices[lambda_index] = type_index
@@ -2191,6 +2194,9 @@ fn plan_module_wasmgc_fragments_in_orders(
     -1,
   )
   for lambda_index, lambda in lowering.lambdas {
+    if lambda.elided {
+      continue
+    }
     if !lambda.directized {
       lambda_entry_signature_indices[lambda_index] = closure_entry_type_by_resolved[resolved.lambda_function_types[lambda_index]]
       continue
@@ -2286,7 +2292,12 @@ fn plan_module_wasmgc_fragments_in_orders(
       })
   }
   let mut imported_function_count = 0
-  let mut defined_function_count = lowering.lambdas.length()
+  let mut defined_function_count = 0
+  for lambda in lowering.lambdas {
+    if !lambda.elided {
+      defined_function_count += 1
+    }
+  }
   for callable_index, job in function_jobs {
     match job.unwrap().kind {
       PlannedWasmImportedFunction(_) =>
@@ -2389,6 +2400,9 @@ fn plan_module_wasmgc_fragments_in_orders(
   }
   let lambda_function_indices = Array::make(lowering.lambdas.length(), -1)
   for lambda_index, lambda in lowering.lambdas {
+    if lambda.elided {
+      continue
+    }
     let signature_type_index = lambda_entry_signature_indices[lambda_index]
     let mut function_type_index = -1
     for index, fragment in function_types {

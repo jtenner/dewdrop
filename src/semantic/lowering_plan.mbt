@@ -228,6 +228,7 @@ pub struct PlannedLambdaLowering {
   lambda : LambdaId
   root_body : BodyId
   directized : Bool
+  elided : Bool
   root : HirBodyRoot
   root_type : BodyTypeId
   root_shape : PlannedValueShape
@@ -1149,6 +1150,7 @@ fn copy_body_lowering_job(
       lambda: job.lambda,
       root_body: target.lambdas[job.lambda].root_body,
       directized: target.lambdas[job.lambda].directized,
+      elided: target.lambdas[job.lambda].elided,
       root: job.body.root,
       root_type: job.body.root_type,
       root_shape: job.body.root_shape,
@@ -1277,10 +1279,31 @@ fn directize_body_function_values(
         _ => ()
       }
     }
-    if use_count == 0 || !all_uses_are_calls {
+    let initializer_kind = target.expressions[initializer].kind
+    if use_count == 0 {
+      match initializer_kind {
+        PlannedLambdaClosure(lambda, _) => {
+          let lambda_source = target.lambdas[lambda]
+          target.lambdas[lambda] = { ..lambda_source, elided: true }
+        }
+        PlannedFunctionReference(_) => ()
+        _ => continue
+      }
+      let initializer_source = target.expressions[initializer]
+      target.expressions[initializer] = {
+        ..initializer_source,
+        kind: PlannedConsumedExpression,
+      }
+      let item_source = target.block_items[let_item]
+      target.block_items[let_item] = {
+        ..item_source,
+        kind: PlannedElidedLetItem(local_id),
+      }
       continue
     }
-    let initializer_kind = target.expressions[initializer].kind
+    if !all_uses_are_calls {
+      continue
+    }
     match initializer_kind {
       PlannedLambdaClosure(lambda, captures) => {
         for
@@ -1520,6 +1543,7 @@ fn plan_module_lowering_in_order(
         lambda: info.lambda,
         root_body: collected.lambdas[info.lambda].root_body,
         directized: false,
+        elided: false,
         root: BlockBodyRoot(collected.lambdas[info.lambda].body.root),
         root_type: 0,
         root_shape: ErrorPlannedValueShape,

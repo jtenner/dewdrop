@@ -1,7 +1,7 @@
 ///|
 test "WasmGC planning flattens lambda captures into closure subtypes" {
   let (resolved, lowering) = wasmgc_test_inputs(
-    980UL, b"fn main(seed: I32) -> Unit {\n  let callback = fn(value: I32) -> I32 {\n    value + seed\n  }\n}\n",
+    980UL, b"fn make(seed: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value + seed\n  }\n}\n",
   )
   let planned = plan_module_wasmgc_fragments(resolved, lowering)
   assert_true(planned.closure_type_index >= 0)
@@ -35,6 +35,7 @@ test "WasmGC planning gives directized lambdas lifted capture parameters" {
   let planned = plan_module_wasmgc_fragments(resolved, lowering)
   assert_eq(planned.lambda_capture_parameter_indices.length(), 1)
   assert_eq(planned.lambda_capture_parameter_indices[0], 0)
+  assert_eq(planned.lambda_closure_type_indices[0], -1)
   let lambda_function = planned.functions[planned.lambda_function_indices[0]]
   assert_eq(lambda_function.parameters.length, 2)
 }

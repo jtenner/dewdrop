@@ -43,10 +43,11 @@ test "lowering freezes lambda construction bodies locals and captures" {
     }
   }
   assert_true(outer_expression >= 0)
-  match planned.expressions[outer_expression].kind {
-    PlannedLambdaClosure(0, captures) => assert_eq(captures.length, 1)
-    _ => fail("expected outer closure construction")
-  }
+  assert_true(planned.lambdas[0].elided)
+  assert_eq(
+    planned.expressions[outer_expression].kind,
+    PlannedConsumedExpression,
+  )
   let outer = collected.lambdas[0]
   let mut inner_expression = -1
   for

@@ -212,7 +212,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Parse, resolve, structurally intern, alias-normalize, import, cache, and plan opaque-reference ABI shapes for `fn(T, ...) -> R` types.
 - [x] Resolve unambiguous non-generic local/imported function names as values and type-check calls through function-typed locals.
 - [x] Emit first-class named references, typed lambda entries, flattened WasmGC closure subtypes, lexical captures, returned/imported closures, and indirect calls.
-- [x] Directize immediate and call-only local lambdas/named references, lift immutable captures into direct signatures, and remove their allocations.
+- [x] Directize immediate and call-only local lambdas/named references, lift immutable captures into direct signatures, remove their allocations, and elide unused closure values.
 - [ ] Add interprocedural escape summaries, named-reference singleton reuse, expected-type generic/overloaded references, and mutable scalar capture cells.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
