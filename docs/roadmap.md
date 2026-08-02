@@ -307,6 +307,7 @@ erased fallback.
   - [x] Resolve deterministic direct and transitive lexical capture sets.
   - [x] Resolve lambda signatures into canonical structural function types.
   - [x] Infer isolated lambda bodies, captures, calls, and declared results.
+  - [x] Analyze isolated lambda control flow and exhaustiveness.
   - [ ] Lower and emit closure environments.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.

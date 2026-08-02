@@ -34,7 +34,9 @@ Lambda parameter and result syntax resolves in the enclosing root declaration's 
 
 Isolated lambda bodies now run through the ordinary local inference pipeline after root bodies and earlier parent lambdas. Declared parameters and results enter the solver as canonical signature types. Capture types are imported from the exact root-body or parent-lambda local job, preserving applied generic shapes without sharing solver-local variables. Expressions, locals, blocks, patterns, controls, calls, member selections, capture types, and diagnostics merge back into the module-wide HIR-aligned tables. Nested lambda values receive their canonical function types, calls through lambda-valued locals are selected as function-value calls, and return mismatches are diagnosed within the owning lambda span.
 
-The remaining unsupported boundary has moved from semantic inference to executable closure lowering: lowering still emits poison for lambda construction, so no closure allocation or invocation is claimed yet.
+Lambda bodies also receive independent structured-flow analysis. Exhaustiveness, unreachable block items, loop fallthrough, and per-expression/block/arm outcomes are merged into the same global HIR-aligned flow tables while diagnostics remain owned by the lambda that produced them.
+
+The remaining unsupported boundary has moved from semantic lowering to executable closure emission: lowering still emits poison for lambda construction, so no closure allocation or invocation is claimed yet.
 
 ## Proposed representation
 

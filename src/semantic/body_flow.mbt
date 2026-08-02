@@ -87,9 +87,17 @@ pub struct AnalyzedBodyFlow {
 } derive(Eq, Debug)
 
 ///|
+pub struct AnalyzedLambdaFlow {
+  lambda : LambdaId
+  flow : BodyFlowSummary
+  diagnostics : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct AnalyzedModuleFlows {
   module_id : ModuleId
   bodies : Array[AnalyzedBodyFlow]
+  lambdas : Array[AnalyzedLambdaFlow]
   expression_flows : Array[BodyFlowSummary]
   block_flows : Array[BodyFlowSummary]
   arm_flows : Array[BodyFlowSummary]
@@ -110,6 +118,18 @@ pub fn AnalyzedModuleFlows::body(
     None
   } else {
     Some(self.bodies[index])
+  }
+}
+
+///|
+pub fn AnalyzedModuleFlows::lambda(
+  self : AnalyzedModuleFlows,
+  lambda : LambdaId,
+) -> AnalyzedLambdaFlow? {
+  if lambda < 0 || lambda >= self.lambdas.length() {
+    None
+  } else {
+    Some(self.lambdas[lambda])
   }
 }
 
@@ -1095,6 +1115,28 @@ fn flow_variant_spans(collected : CollectedModule) -> Array[HirSpan] {
 }
 
 ///|
+fn lambda_flow_body(collected : CollectedModule, lambda : HirLambda) -> HirBody {
+  let root = collected.bodies[semantic_id_local(lambda.root_body)]
+  {
+    id: lambda.root_body,
+    declaration: root.declaration,
+    kind: root.kind,
+    root: BlockBodyRoot(lambda.body.root),
+    expressions: lambda.body.expressions,
+    expression_children: lambda.body.expression_children,
+    blocks: lambda.body.blocks,
+    block_items: lambda.body.block_items,
+    patterns: lambda.body.patterns,
+    pattern_children: lambda.body.pattern_children,
+    pattern_arms: lambda.body.pattern_arms,
+    arm_children: lambda.body.arm_children,
+    object_fields: lambda.body.object_fields,
+    pattern_fields: lambda.body.pattern_fields,
+    offset: lambda.offset,
+  }
+}
+
+///|
 fn analyze_module_flows_internal(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
@@ -1131,7 +1173,25 @@ fn analyze_module_flows_internal(
       ).finish(),
     )
   }
+  let lambda_jobs : Array[BodyFlowJobResult?] = Array::make(
+    collected.lambdas.length(),
+    None,
+  )
+  for index, lambda in collected.lambdas {
+    lambda_jobs[index] = Some(
+      BodyFlowAnalyzer::new(
+        collected,
+        resolved,
+        inferred,
+        imports,
+        lambda_flow_body(collected, lambda),
+        variant_spans,
+        pattern_tasks,
+      ).finish(),
+    )
+  }
   let bodies : Array[AnalyzedBodyFlow] = []
+  let lambdas : Array[AnalyzedLambdaFlow] = []
   let expression_flows = Array::make(collected.expressions.length(), flow(0))
   let block_flows = Array::make(collected.blocks.length(), flow(0))
   let arm_flows = Array::make(collected.pattern_arms.length(), flow(0))
@@ -1186,9 +1246,58 @@ fn analyze_module_flows_internal(
       },
     })
   }
+  for lambda_index, lambda in collected.lambdas {
+    let result = lambda_jobs[lambda_index].unwrap()
+    let diagnostic_start = diagnostics.length()
+    let missing_start = missing_cases.length()
+    for missing in result.missing_cases {
+      missing_cases.push(missing)
+    }
+    for diagnostic in result.diagnostics {
+      diagnostics.push(
+        match diagnostic {
+          NonExhaustiveMatch(expression, missing, offset) =>
+            NonExhaustiveMatch(
+              expression,
+              { start: missing_start + missing.start, length: missing.length },
+              offset,
+            )
+          NonExhaustiveFunctionalLoop(expression, missing, offset) =>
+            NonExhaustiveFunctionalLoop(
+              expression,
+              { start: missing_start + missing.start, length: missing.length },
+              offset,
+            )
+          RedundantPatternArm(arm, offset) => RedundantPatternArm(arm, offset)
+          FunctionalLoopArmFallsThrough(arm, offset) =>
+            FunctionalLoopArmFallsThrough(arm, offset)
+          UnreachableBlockItem(block, index, offset) =>
+            UnreachableBlockItem(block, index, offset)
+        },
+      )
+    }
+    for index in 0..<lambda.body.expressions.length {
+      expression_flows[lambda.body.expressions.start + index] = result.expression_flows[index]
+    }
+    for index in 0..<lambda.body.blocks.length {
+      block_flows[lambda.body.blocks.start + index] = result.block_flows[index]
+    }
+    for index in 0..<lambda.body.pattern_arms.length {
+      arm_flows[lambda.body.pattern_arms.start + index] = result.arm_flows[index]
+    }
+    lambdas.push({
+      lambda: lambda.id,
+      flow: result.flow,
+      diagnostics: {
+        start: diagnostic_start,
+        length: diagnostics.length() - diagnostic_start,
+      },
+    })
+  }
   {
     module_id: collected.module_id,
     bodies,
+    lambdas,
     expression_flows,
     block_flows,
     arm_flows,
