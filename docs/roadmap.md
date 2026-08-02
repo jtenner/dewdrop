@@ -301,7 +301,7 @@ erased fallback.
 - [x] Structurally intern, alias-normalize, import, cache, compare, and assign opaque reference shapes to first-class function types.
 - [x] Resolve unambiguous non-generic local/imported function references and structurally type-check calls through function-valued locals.
 - [x] Emit non-capturing function references and first-class calls with typed `ref.func`/`call_ref`.
-- [ ] Closures and captured environments.
+- [x] Closures and captured environments.
   - [x] Parse explicit typed lambda expressions with forward-only cursor movement.
   - [x] Collect nested lambda bodies into isolated source-ordered HIR fragments.
   - [x] Resolve deterministic direct and transitive lexical capture sets.
@@ -309,8 +309,9 @@ erased fallback.
   - [x] Infer isolated lambda bodies, captures, calls, and declared results.
   - [x] Analyze isolated lambda control flow and exhaustiveness.
   - [x] Lower explicit closure construction, capture reads, and lambda bodies.
-  - [x] Plan deterministic closure and per-lambda environment structs.
+  - [x] Plan deterministic closure layouts and per-lambda capture fields.
   - [x] Emit environment-first entries, allocation, captured loads, and typed calls.
+  - [x] Flatten each lambda environment into one closure subtype allocation.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
   - [ ] Add shared cells when mutable scalar assignment is introduced.
 - [x] Emit typed indirect calls for non-capturing function values.

@@ -1,12 +1,12 @@
 (module
   (type (;0;) (struct (field i32)))
-  (type (;1;) (struct (field funcref) (field eqref)))
+  (type (;1;) (sub (struct (field funcref))))
   (type (;2;) (func (param i32) (result i32)))
   (type (;3;) (func (param (ref 0)) (result i32)))
   (type (;4;) (func (param eqref i32) (result i32)))
   (type (;5;) (func (param eqref (ref 0)) (result i32)))
   (type (;6;) (func (result (ref 0))))
-  (type (;7;) (struct (field funcref) (field eqref)))
+  (type (;7;) (sub (struct (field funcref))))
   (type (;8;) (func (param eqref i32) (result i32)))
   (type (;9;) (func (param eqref (ref 0)) (result i32)))
   (type (;10;) (func))
@@ -41,8 +41,8 @@
     local.set 2
     local.get 2
     ref.cast (ref 7)
-    struct.get 7 1
-    ref.is_null
+    struct.get 7 0
+    ref.test (ref 2)
     if (result i32) ;; label = @1
       local.get 1
       local.get 2
@@ -52,8 +52,6 @@
       call_ref 2
     else
       local.get 2
-      ref.cast (ref 7)
-      struct.get 7 1
       local.get 1
       local.get 2
       ref.cast (ref 7)
@@ -68,8 +66,8 @@
     local.set 2
     local.get 2
     ref.cast (ref 7)
-    struct.get 7 1
-    ref.is_null
+    struct.get 7 0
+    ref.test (ref 3)
     if (result i32) ;; label = @1
       local.get 1
       local.get 2
@@ -79,8 +77,6 @@
       call_ref 3
     else
       local.get 2
-      ref.cast (ref 7)
-      struct.get 7 1
       local.get 1
       local.get 2
       ref.cast (ref 7)
@@ -92,7 +88,6 @@
   (func (;5;) (type 10)
     (local eqref)
     ref.func 0
-    ref.null eq
     struct.new 7
     i32.const 41
     call 3
@@ -114,8 +109,8 @@
     local.set 0
     local.get 0
     ref.cast (ref 7)
-    struct.get 7 1
-    ref.is_null
+    struct.get 7 0
+    ref.test (ref 2)
     if (result i32) ;; label = @1
       i32.const 41
       local.get 0
@@ -125,8 +120,6 @@
       call_ref 2
     else
       local.get 0
-      ref.cast (ref 7)
-      struct.get 7 1
       i32.const 41
       local.get 0
       ref.cast (ref 7)
@@ -149,7 +142,6 @@
       unreachable
     end
     ref.func 1
-    ref.null eq
     struct.new 7
     call 2
     call 4
@@ -170,7 +162,6 @@
   )
   (func (;6;) (type 11)
     ref.func 0
-    ref.null eq
     struct.new 1
     global.set 0
   )

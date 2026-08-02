@@ -72,7 +72,7 @@ Release-mode measurements:
 
 ## Closure ABI extension
 
-Concrete closure entries use canonical environment-first signatures `(eqref, parameters...) -> result`. Program linking coalesces these independently from direct signatures. First-class values use a WasmGC closure object with an abstract function reference and nullable environment: named direct references use a null environment, while lambdas use exact per-lambda environment structs. Calls select a typed direct or environment-first `call_ref` branch after evaluating the closure target once.
+Concrete closure entries use canonical environment-first signatures `(eqref, parameters...) -> result`. Program linking coalesces these independently from direct signatures. First-class values use an open WasmGC closure base containing one abstract function reference. Named references instantiate that base directly; each lambda instantiates a final subtype that stores its captures after the inherited entry field. Calls evaluate the target once, test whether the entry has the source direct signature, and select a typed direct or environment-first `call_ref` branch. The environment-first branch passes the flattened closure object itself.
 
 ## Remaining work
 

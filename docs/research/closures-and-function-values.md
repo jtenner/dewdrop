@@ -38,33 +38,34 @@ Lambda bodies also receive independent structured-flow analysis. Exhaustiveness,
 
 Semantic lowering now retains explicit `PlannedLambdaClosure` and `PlannedCaptureGet` operations instead of poisoning lambda expressions. Each `PlannedLambdaLowering` freezes the inferred root shape, structured flow, local/capture spans, and complete expression/block/pattern/arm ranges. Planned captures preserve exact source identity, mutability, body type, and storage shape. Nested lambda construction therefore has all environment operands available before physical ABI planning.
 
-WasmGC physical planning reserves one module closure struct whenever first-class function values are used. Its immutable fields are an abstract nullable function reference and nullable `eqref` environment. Every lambda receives a deterministic environment struct, including empty environments, and every runtime-stored capture maps to a stable physical field. Scalar and SIMD captures retain compact storage; reference, nominal, text, and function captures use GC-safe `eqref` storage with exact casts restored at use sites. Unit/Never captures consume no field. The plan records closure/environment type indices and capture-to-field relocation explicitly. Modules without first-class function use add no closure types.
+WasmGC physical planning reserves one open closure base type whenever first-class function values are used. The base contains one immutable abstract nullable function reference. Every lambda receives a deterministic final subtype whose inherited prefix is that entry field and whose remaining fields are its runtime-stored captures in first-use order. Scalar and SIMD captures retain compact storage; reference, nominal, text, and function captures use GC-safe `eqref` storage with exact casts restored at use sites. Unit/Never captures consume no field. Modules without first-class function use add no closure types.
 
 ## Implemented closure ABI
 
-A closure object contains:
+A named function value is one base closure object containing its original `ref.func`. A lambda value is one lambda-specific closure subtype containing its environment-first `ref.func` followed directly by its captures. Lambda construction therefore performs one `struct.new`; it does not allocate a separate environment object. The hidden lambda parameter remains `eqref` but now points to the flattened closure itself. Captured reads cast that parameter to the exact lambda closure subtype and use packed signed/unsigned field loads where required.
 
-1. an abstract function reference;
-2. a nullable environment reference.
-
-Lambda entry functions use a signature-specific `(environment, parameters...) -> result` type. Lambda construction allocates its environment, stores captures in deterministic order, then allocates the closure object. Captured reads cast the environment to the exact lambda environment type and use packed signed/unsigned loads where required.
-
-Named non-capturing references share the same value representation without adapter functions: they store the original `ref.func` and a null environment. Invocation stores the target exactly once, tests its environment, and emits one typed branch. A null environment casts the entry to the original direct signature; a non-null environment passes it first and casts to the environment-first entry signature. Both branches use typed `call_ref`, and declarative element segments authorize all referenced named and lambda functions.
+Invocation evaluates the closure target once and tests the concrete function type of its entry. An entry matching the source direct signature is called with the source arguments. Otherwise the closure object itself is passed before the source arguments and the entry is cast to the environment-first signature. Both branches use typed `call_ref`; no named-function adapter is required, and declarative element segments authorize all referenced named and lambda functions.
 
 The runtime snapshots cover non-capturing lambdas, scalar captures, reference captures, function-valued captures, nested/transitive captures, immediate invocation, returned closures, closure parameters, module-level closures, and imported closures.
+
+## Flattening result
+
+The comprehensive `functions/closure-runtime` snapshot fell from 23 to 16 static `struct.new` instructions after flattening, exactly removing the seven separate lambda-environment allocations in that fixture. Its deterministic WAT fell from 10,393 to 10,025 bytes. The focused capture fixture fell from three allocations to two, and the imported-closure fixture fell from six to five. These are generated-code improvements owned by Dewdrop; no Wago runtime change is required.
+
+A future shared-environment optimization may still select a split representation for a proven group of sibling escaping closures. The default remains flat because the current compiler does not share environments, and mutable captures can share explicit cell references without restoring the wrapper/environment pair.
 
 ## Required next milestones
 
 1. Add expected-type disambiguation for overloaded and generic function references.
 2. Define shared mutable-capture cells when scalar local assignment becomes part of the language.
 3. Add closure ABI fingerprints to persistent external package interfaces.
-4. Add escape analysis, directization, empty-environment singleton reuse, and allocation elimination.
+4. Add escape analysis, directization, named-closure singleton reuse, and allocation elimination.
 5. Measure closure allocation, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints
 
 - Function overload sets cannot become values without an expected function type or explicit disambiguation.
-- Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Scalar reassignment is not yet a language operation; when it is added, mutable captures must use shared cells rather than copied environment fields.
+- Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Scalar reassignment is not yet a language operation; when it is added, mutable captures must use shared cells referenced by flattened closure fields.
 - Cross-module concrete function signatures are structurally coalesced during one program link; persistent package interfaces still require stable signature and closure ABI fingerprints.
 - Generic function values remain blocked on executable generic ABI work.
 - Runtime performance favors directization and allocation elimination, but these optimizations must not define source semantics.

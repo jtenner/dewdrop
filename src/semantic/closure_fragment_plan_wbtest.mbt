@@ -1,27 +1,27 @@
 ///|
-test "WasmGC planning assigns deterministic closure and environment structs" {
+test "WasmGC planning flattens lambda captures into closure subtypes" {
   let (resolved, lowering) = wasmgc_test_inputs(
     980UL, b"fn main(seed: I32) -> Unit {\n  let callback = fn(value: I32) -> I32 {\n    value + seed\n  }\n}\n",
   )
   let planned = plan_module_wasmgc_fragments(resolved, lowering)
   assert_true(planned.closure_type_index >= 0)
-  assert_eq(planned.lambda_environment_type_indices.length(), 1)
+  assert_eq(planned.lambda_closure_type_indices.length(), 1)
   assert_eq(planned.lambda_capture_field_indices.length(), 1)
-  assert_eq(planned.lambda_capture_field_indices[0], 0)
+  assert_eq(planned.lambda_capture_field_indices[0], 1)
   let closure = planned.physical_types[planned.closure_type_index]
   assert_eq(closure.kind, PlannedWasmClosureType)
-  assert_eq(closure.fields.length, 2)
+  assert_eq(closure.fields.length, 1)
   let entry = planned.fields[closure.fields.start]
-  let environment = planned.fields[closure.fields.start + 1]
   assert_eq(entry.role, WasmClosureEntryField)
   assert_eq(entry.storage, WasmNullableFunctionRefStorage)
-  assert_eq(environment.role, WasmClosureEnvironmentField)
-  assert_eq(environment.storage, WasmNullableEqRefStorage)
-  let environment_index = planned.lambda_environment_type_indices[0]
-  let lambda_environment = planned.physical_types[environment_index]
-  assert_eq(lambda_environment.kind, PlannedWasmLambdaEnvironmentType(0))
-  assert_eq(lambda_environment.fields.length, 1)
-  let capture = planned.fields[lambda_environment.fields.start]
+  let lambda_closure_index = planned.lambda_closure_type_indices[0]
+  let lambda_closure = planned.physical_types[lambda_closure_index]
+  assert_eq(lambda_closure.kind, PlannedWasmLambdaClosureType(0))
+  assert_eq(lambda_closure.fields.length, 2)
+  let inherited_entry = planned.fields[lambda_closure.fields.start]
+  assert_eq(inherited_entry.role, WasmClosureEntryField)
+  assert_eq(inherited_entry.storage, WasmNullableFunctionRefStorage)
+  let capture = planned.fields[lambda_closure.fields.start + 1]
   assert_eq(capture.role, WasmLambdaCaptureField(0, 0))
   assert_eq(capture.storage, WasmI32Storage)
 }
@@ -33,6 +33,6 @@ test "WasmGC planning omits closure physical types when no lambdas exist" {
   )
   let planned = plan_module_wasmgc_fragments(resolved, lowering)
   assert_eq(planned.closure_type_index, -1)
-  assert_eq(planned.lambda_environment_type_indices.length(), 0)
+  assert_eq(planned.lambda_closure_type_indices.length(), 0)
   assert_eq(planned.lambda_capture_field_indices.length(), 0)
 }

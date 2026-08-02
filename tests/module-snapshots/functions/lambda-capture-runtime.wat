@@ -1,6 +1,6 @@
 (module
-  (type (;0;) (struct (field funcref) (field eqref)))
-  (type (;1;) (struct (field i32)))
+  (type (;0;) (sub (struct (field funcref))))
+  (type (;1;) (sub final 0 (struct (field funcref) (field i32))))
   (type (;2;) (func (param i32) (result i32)))
   (type (;3;) (func (param eqref i32) (result i32)))
   (type (;4;) (func))
@@ -19,14 +19,13 @@
     ref.func 1
     local.get 0
     struct.new 1
-    struct.new 0
     local.set 1
     local.get 1
     local.set 2
     local.get 2
     ref.cast (ref 0)
-    struct.get 0 1
-    ref.is_null
+    struct.get 0 0
+    ref.test (ref 2)
     if (result i32) ;; label = @1
       i32.const 41
       local.get 2
@@ -36,8 +35,6 @@
       call_ref 2
     else
       local.get 2
-      ref.cast (ref 0)
-      struct.get 0 1
       i32.const 41
       local.get 2
       ref.cast (ref 0)
@@ -62,7 +59,7 @@
     local.get 1
     local.get 0
     ref.cast (ref 1)
-    struct.get 1 0
+    struct.get 1 1
     i32.add
   )
 )

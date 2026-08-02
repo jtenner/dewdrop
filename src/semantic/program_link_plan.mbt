@@ -1112,6 +1112,7 @@ fn program_cross_module_type_groups(
     }
     match physical.kind {
       PlannedWasmEnumSubtypeType(declaration, _, _) => add_external(declaration)
+      PlannedWasmLambdaClosureType(_) => add_local(module_.closure_type_index)
       _ => ()
     }
     for index in 0..<physical.fields.length {
@@ -1153,7 +1154,7 @@ fn program_cross_module_type_groups(
           type_lookup[declaration] = final_type_index
         PlannedWasmEnumSubtypeType(_, _, _)
         | PlannedWasmClosureType
-        | PlannedWasmLambdaEnvironmentType(_) => ()
+        | PlannedWasmLambdaClosureType(_) => ()
       }
       physical_types.push(node)
     }
@@ -1202,7 +1203,7 @@ fn planned_program_local_nominal_declaration(
       Some(declaration)
     PlannedWasmEnumSubtypeType(_, _, _)
     | PlannedWasmClosureType
-    | PlannedWasmLambdaEnvironmentType(_) => None
+    | PlannedWasmLambdaClosureType(_) => None
   }
 }
 
@@ -1394,7 +1395,7 @@ pub fn link_program_wasmgc_fragments(
             type_lookup[declaration] = type_count + physical.type_index
           PlannedWasmEnumSubtypeType(_, _, _)
           | PlannedWasmClosureType
-          | PlannedWasmLambdaEnvironmentType(_) => ()
+          | PlannedWasmLambdaClosureType(_) => ()
         }
       }
       type_count += module_fragments.physical_types.length()
@@ -1453,7 +1454,7 @@ pub fn link_program_wasmgc_fragments(
               type_lookup[declaration] = type_count + physical.type_index
             PlannedWasmEnumSubtypeType(_, _, _)
             | PlannedWasmClosureType
-            | PlannedWasmLambdaEnvironmentType(_) => ()
+            | PlannedWasmLambdaClosureType(_) => ()
           }
         }
         type_count += module_.physical_types.length()
@@ -1538,7 +1539,7 @@ pub fn link_program_wasmgc_fragments(
             }
           PlannedWasmEnumSubtypeType(_, _, _)
           | PlannedWasmClosureType
-          | PlannedWasmLambdaEnvironmentType(_) => ()
+          | PlannedWasmLambdaClosureType(_) => ()
         }
       }
       for fragment_index, function_ in module_fragments.functions {

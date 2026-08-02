@@ -1,13 +1,13 @@
 (module
   (type (;0;) (struct (field i32)))
-  (type (;1;) (struct (field funcref) (field eqref)))
-  (type (;2;) (struct (field i32)))
-  (type (;3;) (struct (field i32)))
-  (type (;4;) (struct (field i32) (field i32)))
-  (type (;5;) (struct))
-  (type (;6;) (struct (field eqref)))
-  (type (;7;) (struct (field eqref)))
-  (type (;8;) (struct))
+  (type (;1;) (sub (struct (field funcref))))
+  (type (;2;) (sub final 1 (struct (field funcref) (field i32))))
+  (type (;3;) (sub final 1 (struct (field funcref) (field i32))))
+  (type (;4;) (sub final 1 (struct (field funcref) (field i32) (field i32))))
+  (type (;5;) (sub final 1 (struct (field funcref))))
+  (type (;6;) (sub final 1 (struct (field funcref) (field eqref))))
+  (type (;7;) (sub final 1 (struct (field funcref) (field eqref))))
+  (type (;8;) (sub final 1 (struct (field funcref))))
   (type (;9;) (func (param i32) (result i32)))
   (type (;10;) (func (param i32) (result eqref)))
   (type (;11;) (func (result i32)))
@@ -35,8 +35,8 @@
     local.set 2
     local.get 2
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       local.get 1
       local.get 2
@@ -46,8 +46,6 @@
       call_ref 9
     else
       local.get 2
-      ref.cast (ref 1)
-      struct.get 1 1
       local.get 1
       local.get 2
       ref.cast (ref 1)
@@ -60,21 +58,19 @@
     ref.func 5
     local.get 0
     struct.new 2
-    struct.new 1
   )
   (func (;3;) (type 10) (param i32) (result eqref)
     (local eqref eqref)
     ref.func 6
     local.get 0
     struct.new 3
-    struct.new 1
     local.set 1
     local.get 1
     local.set 2
     local.get 2
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 10)
     if (result eqref) ;; label = @1
       i32.const 2
       local.get 2
@@ -84,8 +80,6 @@
       call_ref 10
     else
       local.get 2
-      ref.cast (ref 1)
-      struct.get 1 1
       i32.const 2
       local.get 2
       ref.cast (ref 1)
@@ -98,14 +92,13 @@
     (local eqref eqref eqref eqref eqref eqref eqref eqref eqref eqref eqref eqref eqref)
     ref.func 8
     struct.new 5
-    struct.new 1
     local.set 0
     local.get 0
     local.set 7
     local.get 7
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       i32.const 42
       local.get 7
@@ -115,8 +108,6 @@
       call_ref 9
     else
       local.get 7
-      ref.cast (ref 1)
-      struct.get 1 1
       i32.const 42
       local.get 7
       ref.cast (ref 1)
@@ -144,8 +135,8 @@
     local.set 8
     local.get 8
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       i32.const 41
       local.get 8
@@ -155,8 +146,6 @@
       call_ref 9
     else
       local.get 8
-      ref.cast (ref 1)
-      struct.get 1 1
       i32.const 41
       local.get 8
       ref.cast (ref 1)
@@ -199,8 +188,8 @@
     local.set 9
     local.get 9
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       i32.const 1
       local.get 9
@@ -210,8 +199,6 @@
       call_ref 9
     else
       local.get 9
-      ref.cast (ref 1)
-      struct.get 1 1
       i32.const 1
       local.get 9
       ref.cast (ref 1)
@@ -237,14 +224,13 @@
     ref.func 9
     local.get 3
     struct.new 6
-    struct.new 1
     local.set 4
     local.get 4
     local.set 10
     local.get 10
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 11)
     if (result i32) ;; label = @1
       local.get 10
       ref.cast (ref 1)
@@ -253,8 +239,6 @@
       call_ref 11
     else
       local.get 10
-      ref.cast (ref 1)
-      struct.get 1 1
       local.get 10
       ref.cast (ref 1)
       struct.get 1 0
@@ -275,20 +259,18 @@
       unreachable
     end
     ref.func 0
-    ref.null eq
     struct.new 1
     local.set 5
     ref.func 10
     local.get 5
     struct.new 7
-    struct.new 1
     local.set 6
     local.get 6
     local.set 11
     local.get 11
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       i32.const 40
       local.get 11
@@ -298,8 +280,6 @@
       call_ref 9
     else
       local.get 11
-      ref.cast (ref 1)
-      struct.get 1 1
       i32.const 40
       local.get 11
       ref.cast (ref 1)
@@ -321,12 +301,11 @@
     end
     ref.func 11
     struct.new 8
-    struct.new 1
     local.set 12
     local.get 12
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       i32.const 41
       local.get 12
@@ -336,8 +315,6 @@
       call_ref 9
     else
       local.get 12
-      ref.cast (ref 1)
-      struct.get 1 1
       i32.const 41
       local.get 12
       ref.cast (ref 1)
@@ -363,25 +340,24 @@
     local.get 1
     local.get 0
     ref.cast (ref 2)
-    struct.get 2 0
+    struct.get 2 1
     i32.add
   )
   (func (;6;) (type 13) (param eqref i32) (result eqref)
     ref.func 7
     local.get 0
     ref.cast (ref 3)
-    struct.get 3 0
+    struct.get 3 1
     local.get 1
     struct.new 4
-    struct.new 1
   )
   (func (;7;) (type 12) (param eqref i32) (result i32)
     local.get 0
     ref.cast (ref 4)
-    struct.get 4 0
+    struct.get 4 1
     local.get 0
     ref.cast (ref 4)
-    struct.get 4 1
+    struct.get 4 2
     i32.add
     local.get 1
     i32.add
@@ -392,7 +368,7 @@
   (func (;9;) (type 14) (param eqref) (result i32)
     local.get 0
     ref.cast (ref 6)
-    struct.get 6 0
+    struct.get 6 1
     ref.cast (ref 0)
     struct.get 0 0
     i32.const 1
@@ -402,21 +378,21 @@
     (local eqref eqref)
     local.get 0
     ref.cast (ref 7)
-    struct.get 7 0
+    struct.get 7 1
     local.set 3
     local.get 3
     ref.cast (ref 1)
-    struct.get 1 1
-    ref.is_null
+    struct.get 1 0
+    ref.test (ref 9)
     if (result i32) ;; label = @1
       local.get 0
       ref.cast (ref 7)
-      struct.get 7 0
+      struct.get 7 1
       local.set 2
       local.get 2
       ref.cast (ref 1)
-      struct.get 1 1
-      ref.is_null
+      struct.get 1 0
+      ref.test (ref 9)
       if (result i32) ;; label = @2
         local.get 1
         local.get 2
@@ -426,8 +402,6 @@
         call_ref 9
       else
         local.get 2
-        ref.cast (ref 1)
-        struct.get 1 1
         local.get 1
         local.get 2
         ref.cast (ref 1)
@@ -442,16 +416,14 @@
       call_ref 9
     else
       local.get 3
-      ref.cast (ref 1)
-      struct.get 1 1
       local.get 0
       ref.cast (ref 7)
-      struct.get 7 0
+      struct.get 7 1
       local.set 2
       local.get 2
       ref.cast (ref 1)
-      struct.get 1 1
-      ref.is_null
+      struct.get 1 0
+      ref.test (ref 9)
       if (result i32) ;; label = @2
         local.get 1
         local.get 2
@@ -461,8 +433,6 @@
         call_ref 9
       else
         local.get 2
-        ref.cast (ref 1)
-        struct.get 1 1
         local.get 1
         local.get 2
         ref.cast (ref 1)

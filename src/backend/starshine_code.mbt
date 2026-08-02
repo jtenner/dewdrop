@@ -2500,18 +2500,18 @@ fn starshine_capture_get_instructions(
   if field_index < 0 {
     return []
   }
-  let environment_type = starshine_local_physical_type_index(
+  let lambda_closure_type = starshine_local_physical_type_index(
     program,
     module_index,
-    planned.lambda_environment_type_indices[lambda],
+    planned.lambda_closure_type_indices[lambda],
   )
-  let field = planned.fields[planned.physical_types[planned.lambda_environment_type_indices[lambda]].fields.start +
+  let field = planned.fields[planned.physical_types[planned.lambda_closure_type_indices[lambda]].fields.start +
     field_index]
   let output = [
     @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
-    starshine_match_cast(environment_type),
+    starshine_match_cast(lambda_closure_type),
     starshine_struct_get_instruction(
-      environment_type,
+      lambda_closure_type,
       field_index,
       field.storage,
     ),
@@ -2691,11 +2691,6 @@ fn starshine_emit_body_instructions(
               ),
             ]
             if planned.closure_type_index >= 0 {
-              output.push(
-                @lib.Instruction::ref_null(
-                  @lib.HeapType::abs(@lib.AbsHeapType::eq()),
-                ),
-              )
               let closure_type = starshine_local_physical_type_index(
                 program,
                 program_module_index,
@@ -2797,15 +2792,10 @@ fn starshine_emit_body_instructions(
             if function_index < 0 {
               return Err(UnsupportedExpression(body.body, expression))
             }
-            let environment_type = starshine_local_physical_type_index(
+            let lambda_closure_type = starshine_local_physical_type_index(
               program,
               program_module_index,
-              planned.lambda_environment_type_indices[lambda],
-            )
-            let closure_type = starshine_local_physical_type_index(
-              program,
-              program_module_index,
-              planned.closure_type_index,
+              planned.lambda_closure_type_indices[lambda],
             )
             let output : Array[@lib.Instruction] = [
               @lib.Instruction::ref_func(
@@ -2835,12 +2825,7 @@ fn starshine_emit_body_instructions(
             }
             output.push(
               @lib.Instruction::struct_new(
-                @lib.TypeIdx::new(environment_type.reinterpret_as_uint()),
-              ),
-            )
-            output.push(
-              @lib.Instruction::struct_new(
-                @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+                @lib.TypeIdx::new(lambda_closure_type.reinterpret_as_uint()),
               ),
             )
             results.push(output)
@@ -5134,11 +5119,6 @@ fn starshine_emit_body_instructions(
           @lib.Instruction::local_get(
             @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
           ),
-          starshine_match_cast(closure_type),
-          @lib.Instruction::struct_get(
-            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
-            @lib.U32::new(1U),
-          ),
         ]
         for index in 0..<(count - 1) {
           append_starshine_instructions(captured, fragments[index])
@@ -5177,10 +5157,17 @@ fn starshine_emit_body_instructions(
         output.push(
           @lib.Instruction::struct_get(
             @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
-            @lib.U32::new(1U),
+            @lib.U32::new(0U),
           ),
         )
-        output.push(@lib.Instruction::ref_is_null())
+        output.push(
+          @lib.Instruction::ref_test(
+            false,
+            @lib.HeapType::new(
+              @lib.TypeIdx::new(direct_type.reinterpret_as_uint()),
+            ),
+          ),
+        )
         output.push(
           @lib.Instruction::if_(
             starshine_block_type(result_shape),
@@ -6309,7 +6296,7 @@ fn starshine_program_group_physical_subtype(
   }
   let composite = @lib.CompType::struct_(fields)
   match type_.kind {
-    @semantic.PlannedWasmEnumBaseType(_) =>
+    @semantic.PlannedWasmEnumBaseType(_) | @semantic.PlannedWasmClosureType =>
       @lib.SubType::new(false, [], composite)
     @semantic.PlannedWasmEnumSubtypeType(declaration, _, _) =>
       @lib.SubType::new(
@@ -6323,10 +6310,22 @@ fn starshine_program_group_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_)
-    | @semantic.PlannedWasmClosureType
-    | @semantic.PlannedWasmLambdaEnvironmentType(_) =>
-      @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmLambdaClosureType(_) =>
+      @lib.SubType::new(
+        true,
+        [
+          starshine_program_group_type_index(
+            planned.physical_type_index(
+              node.module_index,
+              module_.closure_type_index,
+            ),
+            group.first_type_index,
+            group.types.length,
+          ),
+        ],
+        composite,
+      )
+    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
   }
 }
 
@@ -6359,7 +6358,7 @@ fn starshine_program_physical_subtype(
   }
   let composite = @lib.CompType::struct_(fields)
   let subtype = match type_.kind {
-    @semantic.PlannedWasmEnumBaseType(_) =>
+    @semantic.PlannedWasmEnumBaseType(_) | @semantic.PlannedWasmClosureType =>
       @lib.SubType::new(false, [], composite)
     @semantic.PlannedWasmEnumSubtypeType(declaration, _, _) =>
       @lib.SubType::new(
@@ -6371,10 +6370,19 @@ fn starshine_program_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_)
-    | @semantic.PlannedWasmClosureType
-    | @semantic.PlannedWasmLambdaEnvironmentType(_) =>
-      @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmLambdaClosureType(_) =>
+      @lib.SubType::new(
+        true,
+        [
+          @lib.TypeIdx::new(
+            planned
+            .physical_type_index(module_index, module_.closure_type_index)
+            .reinterpret_as_uint(),
+          ),
+        ],
+        composite,
+      )
+    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
   }
   (subtype, has_recursive_reference)
 }

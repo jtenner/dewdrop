@@ -98,7 +98,7 @@ fn starshine_physical_subtype(
   }
   let composite = @lib.CompType::struct_(fields)
   let subtype = match type_.kind {
-    @semantic.PlannedWasmEnumBaseType(_) =>
+    @semantic.PlannedWasmEnumBaseType(_) | @semantic.PlannedWasmClosureType =>
       @lib.SubType::new(false, [], composite)
     @semantic.PlannedWasmEnumSubtypeType(declaration, _, _) =>
       @lib.SubType::new(
@@ -110,10 +110,13 @@ fn starshine_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_)
-    | @semantic.PlannedWasmClosureType
-    | @semantic.PlannedWasmLambdaEnvironmentType(_) =>
-      @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmLambdaClosureType(_) =>
+      @lib.SubType::new(
+        true,
+        [@lib.TypeIdx::new(planned.closure_type_index.reinterpret_as_uint())],
+        composite,
+      )
+    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
   }
   (subtype, has_recursive_reference)
 }
