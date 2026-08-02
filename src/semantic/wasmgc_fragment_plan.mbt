@@ -189,6 +189,7 @@ pub struct PlannedModuleWasmGCFragments {
   function_type_by_resolved : Array[Int]
   closure_entry_type_by_resolved : Array[Int]
   lambda_entry_signature_indices : Array[Int]
+  lambda_capture_parameter_indices : Array[Int]
   functions : Array[PlannedWasmFunctionFragment]
   function_by_declaration : Array[Int]
   lambda_function_indices : Array[Int]
@@ -1347,6 +1348,28 @@ fn wasmgc_append_physical_type_fields(
 }
 
 ///|
+fn wasmgc_capture_value_type(
+  storage : PlannedWasmStorageType,
+) -> PlannedWasmValueType {
+  match storage {
+    WasmI8SignedStorage
+    | WasmI8UnsignedStorage
+    | WasmI16SignedStorage
+    | WasmI16UnsignedStorage
+    | WasmI32Storage => WasmI32Value
+    WasmI64Storage => WasmI64Value
+    WasmF32Storage => WasmF32Value
+    WasmF64Storage => WasmF64Value
+    WasmV128Storage => WasmV128Value
+    WasmStringRefStorage
+    | WasmNullableEqRefStorage
+    | WasmNullableFunctionRefStorage
+    | WasmNominalRefStorage(_)
+    | WasmExternalNominalRefStorage(_) => WasmNullableEqRefValue
+  }
+}
+
+///|
 fn wasmgc_capture_storage(shape : PlannedValueShape) -> PlannedWasmStorageType? {
   match shape {
     UnitPlannedValueShape | NeverPlannedValueShape => None
@@ -1704,7 +1727,8 @@ fn wasmgc_direct_builtin_of(
   }
   let expression = match lowering.block_items[block.items.start].kind {
     PlannedExpressionItem(expression) => expression
-    PlannedLetItem(_, _, _) | PlannedReturnItem(_) => return b""
+    PlannedLetItem(_, _, _) | PlannedElidedLetItem(_) | PlannedReturnItem(_) =>
+      return b""
   }
   let (target, arguments) = match lowering.expressions[expression].kind {
     PlannedDirectCall(target, receiver, arguments, type_arguments) => {
@@ -2162,8 +2186,72 @@ fn plan_module_wasmgc_fragments_in_orders(
     lowering.lambdas.length(),
     -1,
   )
-  for lambda_index, _ in lowering.lambdas {
-    lambda_entry_signature_indices[lambda_index] = closure_entry_type_by_resolved[resolved.lambda_function_types[lambda_index]]
+  let lambda_capture_parameter_indices = Array::make(
+    lowering.captures.length(),
+    -1,
+  )
+  for lambda_index, lambda in lowering.lambdas {
+    if !lambda.directized {
+      lambda_entry_signature_indices[lambda_index] = closure_entry_type_by_resolved[resolved.lambda_function_types[lambda_index]]
+      continue
+    }
+    let signature_type_index = next_signature_type
+    next_signature_type += 1
+    lambda_entry_signature_indices[lambda_index] = signature_type_index
+    let parameter_start = function_value_types.length()
+    let mut capture_parameter = 0
+    for capture_index in 0..<lambda.captures.length {
+      let global_capture = lambda.captures.start + capture_index
+      match wasmgc_capture_storage(lowering.captures[global_capture].shape) {
+        Some(storage) => {
+          lambda_capture_parameter_indices[global_capture] = capture_parameter
+          capture_parameter += 1
+          function_value_types.push(wasmgc_capture_value_type(storage))
+        }
+        None => ()
+      }
+    }
+    let lambda_type = resolved.lambda_function_types[lambda_index]
+    let (parameters, result) = match resolved.types[lambda_type] {
+      FunctionType(parameters, result) => (parameters, result)
+      _ => abort("lambda function type is not structural")
+    }
+    for parameter_index in 0..<parameters.length {
+      match
+        wasmgc_value_type(
+          resolved,
+          resolved.type_arguments[parameters.start + parameter_index],
+          -1,
+          type_index_by_declaration,
+          function_type_by_resolved,
+          closure_abi,
+        ) {
+        Some(value) => function_value_types.push(value)
+        None => ()
+      }
+    }
+    let parameter_span = {
+      start: parameter_start,
+      length: function_value_types.length() - parameter_start,
+    }
+    let result_start = function_value_types.length()
+    match
+      wasmgc_value_type(
+        resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
+        closure_abi,
+      ) {
+      Some(value) => function_value_types.push(value)
+      None => ()
+    }
+    function_types.push({
+      resolved_type: -1,
+      signature_type_index,
+      parameters: parameter_span,
+      results: {
+        start: result_start,
+        length: function_value_types.length() - result_start,
+      },
+    })
   }
   let function_jobs : Array[WasmFunctionFragmentJob?] = Array::make(
     functions.callables.length(),
@@ -2614,6 +2702,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     function_type_by_resolved,
     closure_entry_type_by_resolved,
     lambda_entry_signature_indices,
+    lambda_capture_parameter_indices,
     functions: planned_functions,
     function_by_declaration,
     lambda_function_indices,

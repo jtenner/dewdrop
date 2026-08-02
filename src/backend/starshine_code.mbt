@@ -28,9 +28,11 @@ pub enum StarshineCodeEmissionError {
 priv enum StarshineEmitTask {
   EmitStarshineExpression(@semantic.ExprId)
   EmitStarshineBlock(@semantic.BlockId)
+  EmitStarshineEmpty
   EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineCall(@semantic.DeclId, Int, Int)
+  FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
   FinishStarshineClosureCall(
     Int,
@@ -2496,6 +2498,26 @@ fn starshine_capture_get_instructions(
 ) -> Array[@lib.Instruction] {
   let lambda_info = lowering.lambdas[lambda]
   let global_capture = lambda_info.captures.start + capture
+  if lowering.lambdas[lambda].directized {
+    let parameter = planned.lambda_capture_parameter_indices[global_capture]
+    if parameter < 0 {
+      return []
+    }
+    let output = [
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+      ),
+    ]
+    let capture_plan = lowering.captures[global_capture]
+    if capture_plan.nominal != 0UL {
+      match
+        starshine_emitted_type_index(planned, program, capture_plan.nominal) {
+        Some(type_index) => output.push(starshine_match_cast(type_index))
+        None => ()
+      }
+    }
+    return output
+  }
   let field_index = planned.lambda_capture_field_indices[global_capture]
   if field_index < 0 {
     return []
@@ -2703,6 +2725,30 @@ fn starshine_emit_body_instructions(
               )
             }
             results.push(output)
+          }
+          @semantic.PlannedDirectLambdaCall(lambda, captures, arguments) => {
+            let function_index = starshine_lambda_function_index(
+              planned, program, lambda,
+            )
+            if function_index < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(
+              FinishStarshineDirectLambdaCall(
+                function_index,
+                captures,
+                arguments.length,
+              ),
+            )
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
           }
           @semantic.PlannedFunctionValueCall(target, arguments, function_type) => {
             if function_type < 0 ||
@@ -3503,6 +3549,7 @@ fn starshine_emit_body_instructions(
             return Err(UnsupportedExpression(body.body, expression))
         }
       }
+      EmitStarshineEmpty => results.push([])
       EmitStarshineDefaultStorage(storage) =>
         results.push(starshine_default_storage_instructions(storage))
       EmitStarshineBlock(block) => {
@@ -3512,12 +3559,13 @@ fn starshine_emit_body_instructions(
         while index > 0 {
           index -= 1
           let item = lowering.block_items[source.items.start + index]
-          let expression = match item.kind {
+          match item.kind {
             @semantic.PlannedLetItem(_, _, expression)
             | @semantic.PlannedReturnItem(expression)
-            | @semantic.PlannedExpressionItem(expression) => expression
+            | @semantic.PlannedExpressionItem(expression) =>
+              tasks.push(EmitStarshineExpression(expression))
+            @semantic.PlannedElidedLetItem(_) => tasks.push(EmitStarshineEmpty)
           }
-          tasks.push(EmitStarshineExpression(expression))
         }
       }
       FinishStarshineBlock(block) => {
@@ -3542,6 +3590,7 @@ fn starshine_emit_body_instructions(
                 ),
               )
             }
+            @semantic.PlannedElidedLetItem(_) => ()
             @semantic.PlannedReturnItem(_) =>
               output.push(@lib.Instruction::return_())
             @semantic.PlannedExpressionItem(expression) =>
@@ -5057,6 +5106,40 @@ fn starshine_emit_body_instructions(
           Err(error) => return Err(error)
         }
       }
+      FinishStarshineDirectLambdaCall(function_index, captures, argument_count) => {
+        let arguments = pop_starshine_fragments(results, argument_count)
+        let output : Array[@lib.Instruction] = []
+        for capture in 0..<captures.length {
+          let global_capture = captures.start + capture
+          if planned.lambda_capture_parameter_indices[global_capture] < 0 {
+            continue
+          }
+          match
+            starshine_capture_source_instructions(
+              lowering,
+              planned,
+              program,
+              program_module_index,
+              current_lambda,
+              lowering.captures[global_capture].source,
+              local_indices,
+              body,
+            ) {
+            Ok(instructions) =>
+              append_starshine_instructions(output, instructions)
+            Err(error) => return Err(error)
+          }
+        }
+        for argument in arguments {
+          append_starshine_instructions(output, argument)
+        }
+        output.push(
+          @lib.Instruction::call(
+            @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
       FinishStarshineFunctionValueCall(type_index, count) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = []
@@ -5750,6 +5833,25 @@ fn starshine_lambda_body(
 }
 
 ///|
+fn starshine_lambda_leading_parameter_count(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  lambda : @semantic.LambdaId,
+) -> Int {
+  if !lowering.lambdas[lambda].directized {
+    return 1
+  }
+  let mut count = 0
+  let captures = lowering.lambdas[lambda].captures
+  for capture in 0..<captures.length {
+    if planned.lambda_capture_parameter_indices[captures.start + capture] >= 0 {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
 fn emit_starshine_lambda_body(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -5776,7 +5878,13 @@ fn emit_starshine_lambda_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
-  ) = starshine_body_locals(lowering, planned, program, body, 1)
+  ) = starshine_body_locals(
+    lowering,
+    planned,
+    program,
+    body,
+    starshine_lambda_leading_parameter_count(lowering, planned, lambda),
+  )
   match
     starshine_emit_body_instructions(
       lowering, planned, program, program_module_index, body, lambda, local_indices,

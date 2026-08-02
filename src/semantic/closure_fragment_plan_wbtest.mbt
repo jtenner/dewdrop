@@ -27,6 +27,31 @@ test "WasmGC planning flattens lambda captures into closure subtypes" {
 }
 
 ///|
+test "WasmGC planning gives directized lambdas lifted capture parameters" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    982UL, b"fn main(seed: I32) -> I32 {\n  let callback = fn(value: I32) -> I32 {\n    value + seed\n  }\n  callback(41)\n}\n",
+  )
+  assert_true(lowering.lambdas[0].directized)
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  assert_eq(planned.lambda_capture_parameter_indices.length(), 1)
+  assert_eq(planned.lambda_capture_parameter_indices[0], 0)
+  let lambda_function = planned.functions[planned.lambda_function_indices[0]]
+  assert_eq(lambda_function.parameters.length, 2)
+}
+
+///|
+test "WasmGC planning keeps escaping lambda environment parameters" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    983UL, b"fn make(seed: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value + seed\n  }\n}\n",
+  )
+  assert_false(lowering.lambdas[0].directized)
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  assert_eq(planned.lambda_capture_parameter_indices[0], -1)
+  let lambda_function = planned.functions[planned.lambda_function_indices[0]]
+  assert_eq(lambda_function.parameters.length, 2)
+}
+
+///|
 test "WasmGC planning omits closure physical types when no lambdas exist" {
   let (resolved, lowering) = wasmgc_test_inputs(
     981UL, b"fn main() -> I32 {\n  1\n}\n",

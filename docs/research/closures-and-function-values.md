@@ -50,7 +50,11 @@ The runtime snapshots cover non-capturing lambdas, scalar captures, reference ca
 
 ## Flattening result
 
-The comprehensive `functions/closure-runtime` snapshot fell from 23 to 16 static `struct.new` instructions after flattening, exactly removing the seven separate lambda-environment allocations in that fixture. Its deterministic WAT fell from 10,393 to 10,025 bytes. The focused capture fixture fell from three allocations to two, and the imported-closure fixture fell from six to five. These are generated-code improvements owned by Dewdrop; no Wago runtime change is required.
+The comprehensive `functions/closure-runtime` snapshot first fell from 23 to 16 static `struct.new` instructions after flattening, exactly removing the seven separate lambda-environment allocations in that fixture. Its deterministic WAT fell from 10,393 to 10,025 bytes. The focused capture fixture fell from three allocations to two, and the imported-closure fixture fell from six to five. These are generated-code improvements owned by Dewdrop; no Wago runtime change is required.
+
+A deterministic post-lowering use pass now directizes immediate lambdas and immutable local function values whose every use is a call and which are not captured. Named references become ordinary direct calls. Non-escaping lambdas receive lifted signatures containing their captures before source parameters, and call sites pass capture sources directly. Their closure construction, local initialization, entry load, function-type test, casts, and `call_ref` are omitted. Escaping returns, arguments, captures, module values, and imports conservatively retain the flattened closure ABI.
+
+After directization, `functions/closure-runtime` contains 11 static `struct.new` instructions and 12 `call_ref` instructions, down from 16 and 22 after flattening. Its WAT is 7,634 bytes and its Wasm binary is 1,065 bytes, down from 10,025 WAT bytes and 1,378 Wasm bytes. The remaining closure allocations correspond to values that escape through returns, parameters, captures, or module state.
 
 A future shared-environment optimization may still select a split representation for a proven group of sibling escaping closures. The default remains flat because the current compiler does not share environments, and mutable captures can share explicit cell references without restoring the wrapper/environment pair.
 
@@ -59,7 +63,7 @@ A future shared-environment optimization may still select a split representation
 1. Add expected-type disambiguation for overloaded and generic function references.
 2. Define shared mutable-capture cells when scalar local assignment becomes part of the language.
 3. Add closure ABI fingerprints to persistent external package interfaces.
-4. Add escape analysis, directization, named-closure singleton reuse, and allocation elimination.
+4. Extend the implemented local directization pass with interprocedural escape summaries and named-closure singleton reuse.
 5. Measure closure allocation, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints

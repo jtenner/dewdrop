@@ -312,6 +312,9 @@ erased fallback.
   - [x] Plan deterministic closure layouts and per-lambda capture fields.
   - [x] Emit environment-first entries, allocation, captured loads, and typed calls.
   - [x] Flatten each lambda environment into one closure subtype allocation.
+  - [x] Directize immediate and call-only local lambdas with lifted capture parameters.
+  - [x] Remove call-only local named-reference allocations and indirect dispatch.
+  - [x] Conservatively retain the closure ABI for captured, returned, passed, global, and imported values.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
   - [ ] Add shared cells when mutable scalar assignment is introduced.
 - [x] Emit typed indirect calls for non-capturing function values.

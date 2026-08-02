@@ -42,6 +42,7 @@ pub enum PlannedExpressionKind {
   PlannedModuleValueGet(DeclId, DeclId)
   PlannedFunctionReference(DeclId)
   PlannedLambdaClosure(LambdaId, HirSpan)
+  PlannedDirectLambdaCall(LambdaId, HirSpan, HirSpan)
   PlannedStructNew(DeclId, HirSpan, HirSpan)
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
   PlannedVariantStructNew(VariantId, HirSpan, HirSpan)
@@ -135,6 +136,7 @@ pub struct PlannedExpression {
 ///|
 pub enum PlannedBlockItemKind {
   PlannedLetItem(LocalId, Bool, ExprId)
+  PlannedElidedLetItem(LocalId)
   PlannedReturnItem(ExprId)
   PlannedExpressionItem(ExprId)
 } derive(Eq, Debug)
@@ -225,6 +227,7 @@ pub struct PlannedCapture {
 pub struct PlannedLambdaLowering {
   lambda : LambdaId
   root_body : BodyId
+  directized : Bool
   root : HirBodyRoot
   root_type : BodyTypeId
   root_shape : PlannedValueShape
@@ -1145,6 +1148,7 @@ fn copy_body_lowering_job(
     target.lambdas[job.lambda] = {
       lambda: job.lambda,
       root_body: target.lambdas[job.lambda].root_body,
+      directized: target.lambdas[job.lambda].directized,
       root: job.body.root,
       root_type: job.body.root_type,
       root_shape: job.body.root_shape,
@@ -1176,6 +1180,191 @@ fn copy_body_lowering_job(
   }
   for diagnostic in job.diagnostics {
     target.diagnostics.push(diagnostic)
+  }
+}
+
+///|
+fn directize_body_function_values(
+  target : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  owner_lambda : LambdaId,
+) -> Unit {
+  let local_initializers = Array::make(body.locals.length, -1)
+  let local_let_items = Array::make(body.locals.length, -1)
+  for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+    let items = target.blocks[block].items
+    for item in items.start..<(items.start + items.length) {
+      match target.block_items[item].kind {
+        PlannedLetItem(local_id, _, initializer) =>
+          if local_id >= 0 && local_id < body.locals.length {
+            local_initializers[local_id] = initializer
+            local_let_items[local_id] = item
+          }
+        _ => ()
+      }
+    }
+  }
+  let captured_locals = Array::make(body.locals.length, false)
+  for capture in target.captures {
+    let captured_local = match capture.source {
+      BodyLocalCapture(source_body, local_id) if owner_lambda < 0 &&
+        source_body == body.body => local_id
+      LambdaLocalCapture(source_lambda, local_id) if source_lambda ==
+        owner_lambda => local_id
+      _ => -1
+    }
+    if captured_local >= 0 && captured_local < captured_locals.length() {
+      captured_locals[captured_local] = true
+    }
+  }
+  let call_by_target = Array::make(target.expressions.length(), -1)
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match target.expressions[expression].kind {
+      PlannedFunctionValueCall(call_target, _, _) =>
+        if call_target >= 0 && call_target < call_by_target.length() {
+          call_by_target[call_target] = expression
+        }
+      _ => ()
+    }
+  }
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match target.expressions[expression].kind {
+      PlannedFunctionValueCall(call_target, arguments, _) if call_target >= 0 &&
+        call_target < target.expressions.length() =>
+        match target.expressions[call_target].kind {
+          PlannedLambdaClosure(lambda, captures) => {
+            let source = target.expressions[expression]
+            target.expressions[expression] = {
+              ..source,
+              kind: PlannedDirectLambdaCall(lambda, captures, arguments),
+            }
+            let target_source = target.expressions[call_target]
+            target.expressions[call_target] = {
+              ..target_source,
+              kind: PlannedConsumedExpression,
+            }
+            let lambda_source = target.lambdas[lambda]
+            target.lambdas[lambda] = { ..lambda_source, directized: true }
+          }
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  for local_id in 0..<body.locals.length {
+    let initializer = local_initializers[local_id]
+    let let_item = local_let_items[local_id]
+    if initializer < 0 || let_item < 0 || captured_locals[local_id] {
+      continue
+    }
+    let mut use_count = 0
+    let mut all_uses_are_calls = true
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      match target.expressions[expression].kind {
+        PlannedLocalGet(source_local) if source_local == local_id => {
+          use_count += 1
+          let call = call_by_target[expression]
+          if call < 0 {
+            all_uses_are_calls = false
+          }
+        }
+        _ => ()
+      }
+    }
+    if use_count == 0 || !all_uses_are_calls {
+      continue
+    }
+    let initializer_kind = target.expressions[initializer].kind
+    match initializer_kind {
+      PlannedLambdaClosure(lambda, captures) => {
+        for
+          expression in body.expressions.start..<(body.expressions.start +
+          body.expressions.length) {
+          match target.expressions[expression].kind {
+            PlannedLocalGet(source_local) if source_local == local_id => {
+              let call = call_by_target[expression]
+              match target.expressions[call].kind {
+                PlannedFunctionValueCall(_, arguments, _) => {
+                  let call_source = target.expressions[call]
+                  target.expressions[call] = {
+                    ..call_source,
+                    kind: PlannedDirectLambdaCall(lambda, captures, arguments),
+                  }
+                  let get_source = target.expressions[expression]
+                  target.expressions[expression] = {
+                    ..get_source,
+                    kind: PlannedConsumedExpression,
+                  }
+                }
+                _ => ()
+              }
+            }
+            _ => ()
+          }
+        }
+        let lambda_source = target.lambdas[lambda]
+        target.lambdas[lambda] = { ..lambda_source, directized: true }
+      }
+      PlannedFunctionReference(declaration) =>
+        for
+          expression in body.expressions.start..<(body.expressions.start +
+          body.expressions.length) {
+          match target.expressions[expression].kind {
+            PlannedLocalGet(source_local) if source_local == local_id => {
+              let call = call_by_target[expression]
+              match target.expressions[call].kind {
+                PlannedFunctionValueCall(_, arguments, _) => {
+                  let call_source = target.expressions[call]
+                  target.expressions[call] = {
+                    ..call_source,
+                    kind: PlannedDirectCall(declaration, -1, arguments, {
+                      start: 0,
+                      length: 0,
+                    }),
+                  }
+                  let get_source = target.expressions[expression]
+                  target.expressions[expression] = {
+                    ..get_source,
+                    kind: PlannedConsumedExpression,
+                  }
+                }
+                _ => ()
+              }
+            }
+            _ => ()
+          }
+        }
+      _ => continue
+    }
+    let initializer_source = target.expressions[initializer]
+    target.expressions[initializer] = {
+      ..initializer_source,
+      kind: PlannedConsumedExpression,
+    }
+    let item_source = target.block_items[let_item]
+    target.block_items[let_item] = {
+      ..item_source,
+      kind: PlannedElidedLetItem(local_id),
+    }
+  }
+}
+
+///|
+fn directize_module_function_values(target : PlannedModuleLowering) -> Unit {
+  for body in target.bodies {
+    directize_body_function_values(target, body, -1)
+  }
+  for lambda in target.lambdas {
+    match target.lambda_body(lambda.lambda) {
+      Some(body) => directize_body_function_values(target, body, lambda.lambda)
+      None => ()
+    }
   }
 }
 
@@ -1330,6 +1519,7 @@ fn plan_module_lowering_in_order(
       {
         lambda: info.lambda,
         root_body: collected.lambdas[info.lambda].root_body,
+        directized: false,
         root: BlockBodyRoot(collected.lambdas[info.lambda].body.root),
         root_type: 0,
         root_shape: ErrorPlannedValueShape,
@@ -1410,6 +1600,7 @@ fn plan_module_lowering_in_order(
       target.diagnostics.length(),
     )
   }
+  directize_module_function_values(target)
   target
 }
 

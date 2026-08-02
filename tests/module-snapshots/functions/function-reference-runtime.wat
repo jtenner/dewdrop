@@ -46,32 +46,9 @@
     end
   )
   (func (;2;) (type 4)
-    (local eqref i32 i32 eqref eqref)
-    ref.func 0
-    struct.new 0
-    local.set 0
-    local.get 0
-    local.set 3
-    local.get 3
-    ref.cast (ref 0)
-    struct.get 0 0
-    ref.test (ref 1)
-    if (result i32) ;; label = @1
-      i32.const 20
-      local.get 3
-      ref.cast (ref 0)
-      struct.get 0 0
-      ref.cast (ref 1)
-      call_ref 1
-    else
-      local.get 3
-      i32.const 20
-      local.get 3
-      ref.cast (ref 0)
-      struct.get 0 0
-      ref.cast (ref 2)
-      call_ref 2
-    end
+    (local eqref i32 i32 eqref)
+    i32.const 20
+    call 0
     local.set 1
     ref.func 0
     struct.new 0
@@ -109,22 +86,22 @@
       unreachable
     end
     global.get 0
-    local.set 4
-    local.get 4
+    local.set 3
+    local.get 3
     ref.cast (ref 0)
     struct.get 0 0
     ref.test (ref 1)
     if (result i32) ;; label = @1
       i32.const 41
-      local.get 4
+      local.get 3
       ref.cast (ref 0)
       struct.get 0 0
       ref.cast (ref 1)
       call_ref 1
     else
-      local.get 4
+      local.get 3
       i32.const 41
-      local.get 4
+      local.get 3
       ref.cast (ref 0)
       struct.get 0 0
       ref.cast (ref 2)
