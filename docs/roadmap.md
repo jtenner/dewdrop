@@ -19,7 +19,7 @@ Dew currently has:
 - compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent cache for diagnostics-free compiler-owned standard frozen interfaces, with versioned deterministic encoding, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 166 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 146 compiled WAT/runtime snapshots plus 20 compiler-error snapshots.
+- 171 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 152 compiled WAT/runtime snapshots plus 19 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -37,7 +37,7 @@ by dependency and expected user value.
 - [x] Preserve stable type, function, import, memory, global, export, and code ordering rather than normalizing away compiler decisions.
 - [x] Add a fail-closed comparison runner that prints a normal unified diff on mismatch.
 - [x] Add an explicit snapshot-update command; ordinary test runs never rewrite expected files.
-- [x] Grow the suite to 166 fixtures: 146 compiled WAT/runtime snapshots and 20 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
+- [x] Grow the suite to 171 fixtures: 152 compiled WAT/runtime snapshots and 19 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
 - [x] Capture successful `main` stdout as an ordered JSON string array; `text/concat` writes and verifies the complete concatenated string.
 - [x] Snapshot deterministic compiler errors with `output: null` and no WAT, preserving multiline `Debug` diagnostics through a framed protocol.
 - [ ] Continue adding successful cases, warnings, compiler failures, boundaries, and reduced stress cases within each feature.
@@ -287,12 +287,56 @@ erased fallback.
 
 ### Mutation
 
-- [x] Parse and resolve `let mut`.
-- [ ] Decide assignment syntax and semantics.
-- [ ] Emit mutable local updates.
-- [ ] Define compound assignment, or explicitly omit it.
-- [ ] Define aggregate field mutation, or explicitly omit it.
-- [ ] Preserve pattern bindings as immutable unless explicitly rebound.
+The first mutation tranche is deliberately limited to lexical locals declared
+with `let mut`. Mutation belongs to the binding, not to its value type or to a
+general mutable-reference qualifier.
+
+```dew
+let mut count = 0
+count = count + 1
+```
+
+#### Source semantics and diagnostics
+
+- [x] Parse and resolve `let mut` declarations while preserving binding mutability in exact local and capture identities.
+- [ ] Parse simple-name assignment as a block item: `name = expression`. Assignment is not a general expression and produces `Unit` for block sequencing and flow analysis.
+- [ ] Evaluate the right-hand side exactly once, after resolving the target, then replace the current value of the existing binding without introducing or shadowing a name.
+- [ ] Permit assignment only when the exact resolved target is a `let mut` local or a lambda capture whose ultimate source is a `let mut` local.
+- [ ] Diagnose assignment to immutable `let`, parameters, pattern bindings, module values, declarations, unknown names, and non-name targets at the assignment site.
+- [ ] Constrain the right-hand side to the binding's inferred/declared type and retain ordinary numeric, nominal, function, generic-shape, and `Never` checking.
+- [ ] Keep parameters and pattern bindings immutable in this tranche. A programmer must explicitly write `let mut copy = parameter` or rebind a pattern result before assignment.
+- [ ] Explicitly omit compound assignment (`+=`, `-=`, and related forms), increment/decrement syntax, destructuring assignment, aggregate field writes, and module-global mutation until each receives separate syntax, effect, and ABI decisions.
+
+#### Runtime representation
+
+- [ ] Keep a mutable local that is never captured as an ordinary carrier-typed Wasm local; reads use `local.get` and assignments use `local.set`, with no GC allocation.
+- [ ] Promote a mutable local captured by any lambda to one shared WasmGC cell allocated when that `let mut` binding executes. The cell, not a copied scalar/reference value, is the capture payload.
+- [ ] Use carrier-specialized final cell structs with one mutable field for `i32`, `i64`, `f32`, `f64`, `v128`, and `eqref` storage. Preserve exact nominal/function casts at cell-read boundaries rather than proliferating nominal cell types.
+- [ ] Allocate exactly one cell per dynamic execution of the captured binding. Re-entering a block or function creates a fresh cell; constructing multiple sibling, nested, returned, or repeated closures over the same execution reuses the same cell reference.
+- [ ] Make reads and writes in the declaring body and every direct/transitive capturing lambda dereference that shared cell, so mutations are immediately visible in both directions and after the creator returns.
+- [ ] Route mutable captures through intermediate lambdas as the unchanged cell reference. Transitive capture planning must never load and recopy the current field value.
+- [ ] Keep immutable captures in flattened closure fields exactly as today. A closure may therefore contain a deterministic mixture of copied immutable values and shared mutable-cell references.
+- [ ] Pass the shared cell reference, rather than its current value, as a lifted parameter when a lambda with a mutable capture is directized. Allocation elimination may remove the closure object but must not remove or duplicate an observably shared cell.
+- [ ] Treat captured function values and nominal/reference values through the same `eqref` cell carrier. Preserve typed closure-entry and nominal casts after loading the cell field.
+- [ ] Omit physical storage for captured `Unit`; assignment still evaluates its right-hand side and yields `Unit`. `Never` cannot produce an initialized mutable binding.
+
+#### Deterministic planning and optimization
+
+- [ ] Compute captured-mutable-local promotion from frozen exact capture provenance (`BodyLocalCapture`/`LambdaLocalCapture`) before Wasm local and closure-field planning.
+- [ ] Add explicit lowering operations for local assignment, capture assignment, cell construction, cell read, and cell write rather than inferring mutation from generic expression shapes in the backend.
+- [ ] Preserve source/first-use ordering for cell types, closure fields, lifted parameters, locals, and emitted instructions; snapshots must not depend on map iteration order.
+- [ ] Mark cell reads/writes and cell allocation as effects in closure-use, dead-value, future CSE, and interprocedural summaries. An unused assignment may not be removed unless the right-hand side and shared state are both proven unobservable.
+- [ ] Keep conservative closure escape rules: returning, globally storing, capturing, importing/exporting, or passing a closure remains escaping even when its only mutable state is a cell.
+- [ ] Add allocation budgets proving uncaptured mutation allocates nothing, one captured binding allocates one cell regardless of closure count, and directized mutable captures allocate a cell but no closure.
+
+#### Validation sequence
+
+- [ ] Land parser/HIR/name-resolution tests for valid `let mut` assignment, shadowing, exact target identity, and immutable/invalid-target diagnostics.
+- [ ] Land inference/flow/lowering tests for scalar, SIMD, nominal, reference, and function-valued mutable locals, including assignment inside nested control flow.
+- [ ] Add runtime fixtures for uncaptured updates; declaring-body/closure bidirectional visibility; sibling closures; nested/transitive captures; returned closures; repeated closure construction; and directized mutable captures.
+- [ ] Add WAT assertions for carrier-typed `local.set`, one cell `struct.new`, shared cell capture fields, `struct.get`/`struct.set`, and the absence of redundant closure allocations.
+- [ ] Re-run all native/WasmGC/JavaScript/classic-Wasm tests and Node snapshots; re-enable Wago Core 3 validation only after its sibling checkout is healthy.
+- [ ] Document final assignment and shared-cell semantics in `docs/spec.md` and `docs/research/closures-and-function-values.md` in the same implementation commit that makes them executable.
 
 ### Calls and values
 
@@ -320,7 +364,7 @@ erased fallback.
   - [x] Snapshot an allocation-free directization fixture with no closure type or `call_ref`.
   - [x] Conservatively retain the closure ABI for captured, returned, passed, global, and imported values.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
-  - [ ] Add shared cells when mutable scalar assignment is introduced.
+  - [ ] Box captured `let mut` bindings in the shared carrier-specialized cells specified by the Mutation plan above; closures capture and route the cell reference, while uncaptured mutation remains an unboxed Wasm local.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.
