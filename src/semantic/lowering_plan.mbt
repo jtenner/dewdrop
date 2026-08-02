@@ -38,7 +38,9 @@ pub enum PlannedExpressionKind {
   PlannedStringConst(Bytes)
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
+  PlannedLocalSet(LocalId, ExprId)
   PlannedCaptureGet(Int)
+  PlannedCaptureSet(Int, ExprId)
   PlannedModuleValueGet(DeclId, DeclId)
   PlannedFunctionReference(DeclId)
   PlannedLambdaClosure(LambdaId, HirSpan)
@@ -208,6 +210,7 @@ pub struct PlannedLocal {
   mutable_ : Bool
   type_ : BodyTypeId
   shape : PlannedValueShape
+  nominal : DeclId
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -561,6 +564,12 @@ fn plan_expression_kind(
     HirBoolExpr(value, _) => PlannedBoolConst(value)
     HirStringExpr(value, _) => PlannedStringConst(value)
     HirBytesExpr(value, _) => PlannedBytesConst(value)
+    HirAssignmentExpr(target, value, _) =>
+      match names.expression_references[target] {
+        LocalNameReference(local_id) => PlannedLocalSet(local_id, value)
+        LambdaCaptureNameReference(capture) => PlannedCaptureSet(capture, value)
+        _ => PlannedPoisonExpression
+      }
     HirNameExpr(_, _) =>
       match names.expression_references[expression] {
         LocalNameReference(local_id) => PlannedLocalGet(local_id)
@@ -1464,6 +1473,7 @@ fn plan_module_lowering_in_order(
     mutable_: false,
     type_: 0,
     shape: ErrorPlannedValueShape,
+    nominal: 0UL,
     offset: 0UL,
   })
   for body_info in names.bodies {
@@ -1479,6 +1489,7 @@ fn plan_module_lowering_in_order(
         mutable_: source.mutable_,
         type_,
         shape: planned_value_shape(resolved, inferred, type_),
+        nominal: planned_nominal_declaration(resolved, inferred, type_),
         offset: source.offset,
       }
     }
@@ -1496,6 +1507,7 @@ fn plan_module_lowering_in_order(
         mutable_: source.mutable_,
         type_,
         shape: planned_value_shape(resolved, inferred, type_),
+        nominal: planned_nominal_declaration(resolved, inferred, type_),
         offset: source.offset,
       }
     }

@@ -1179,6 +1179,7 @@ fn program_cross_module_type_groups(
           type_lookup[declaration] = final_type_index
         PlannedWasmEnumSubtypeType(_, _, _)
         | PlannedWasmClosureType
+        | PlannedWasmCaptureCellType(_)
         | PlannedWasmLambdaClosureType(_) => ()
       }
       physical_types.push(node)
@@ -1228,6 +1229,7 @@ fn planned_program_local_nominal_declaration(
       Some(declaration)
     PlannedWasmEnumSubtypeType(_, _, _)
     | PlannedWasmClosureType
+    | PlannedWasmCaptureCellType(_)
     | PlannedWasmLambdaClosureType(_) => None
   }
 }
@@ -1420,6 +1422,7 @@ pub fn link_program_wasmgc_fragments(
             type_lookup[declaration] = type_count + physical.type_index
           PlannedWasmEnumSubtypeType(_, _, _)
           | PlannedWasmClosureType
+          | PlannedWasmCaptureCellType(_)
           | PlannedWasmLambdaClosureType(_) => ()
         }
       }
@@ -1479,6 +1482,7 @@ pub fn link_program_wasmgc_fragments(
               type_lookup[declaration] = type_count + physical.type_index
             PlannedWasmEnumSubtypeType(_, _, _)
             | PlannedWasmClosureType
+            | PlannedWasmCaptureCellType(_)
             | PlannedWasmLambdaClosureType(_) => ()
           }
         }
@@ -1564,6 +1568,7 @@ pub fn link_program_wasmgc_fragments(
             }
           PlannedWasmEnumSubtypeType(_, _, _)
           | PlannedWasmClosureType
+          | PlannedWasmCaptureCellType(_)
           | PlannedWasmLambdaClosureType(_) => ()
         }
       }

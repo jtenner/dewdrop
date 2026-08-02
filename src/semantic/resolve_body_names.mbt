@@ -1151,6 +1151,10 @@ fn BodyNameResolver::schedule_expression_children(
       self.push_task(name_task_visit_expression, right, name_expect_value)
       self.push_task(name_task_visit_expression, left, name_expect_value)
     }
+    HirAssignmentExpr(target, value, _) => {
+      self.push_task(name_task_visit_expression, value, name_expect_value)
+      self.push_task(name_task_visit_expression, target, name_expect_value)
+    }
     HirIndexSetExpr(base, index, value, _) => {
       self.push_task(name_task_visit_expression, value, name_expect_value)
       self.push_task(name_task_visit_expression, index, name_expect_value)

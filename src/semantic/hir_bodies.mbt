@@ -230,6 +230,7 @@ pub enum HirExpr {
   HirFieldExpr(ExprId, NameId, UInt64)
   HirQualifiedExpr(ExprId, NameId, UInt64)
   HirIndexExpr(ExprId, ExprId, UInt64)
+  HirAssignmentExpr(ExprId, ExprId, UInt64)
   HirIndexSetExpr(ExprId, ExprId, ExprId, UInt64)
 } derive(Eq, Debug)
 
@@ -265,6 +266,7 @@ pub fn HirExpr::offset(self : HirExpr) -> UInt64 {
     | HirFieldExpr(_, _, offset)
     | HirQualifiedExpr(_, _, offset)
     | HirIndexExpr(_, _, offset)
+    | HirAssignmentExpr(_, _, offset)
     | HirIndexSetExpr(_, _, _, offset)
     | HirBlockExpr(_, offset) => offset
   }

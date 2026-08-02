@@ -123,7 +123,7 @@ pub enum ExpressionError {
   ExpectedObjectFieldNewline(@tokenizer.Token?, UInt64)
   ExpectedBlockNewline(@tokenizer.Token?, UInt64)
   ExpectedBlockItemNewline(@tokenizer.Token?, UInt64)
-  ExpectedIndexSetTarget(@tokenizer.Token, UInt64)
+  ExpectedAssignmentTarget(@tokenizer.Token, UInt64)
   ExpectedBlockBindingName(@tokenizer.Token?)
   ExpectedBlockEqual(@tokenizer.Token?)
   ExpectedIfBody(@tokenizer.Token?, UInt64)

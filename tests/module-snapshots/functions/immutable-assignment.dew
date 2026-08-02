@@ -1,0 +1,8 @@
+fn assign_parameter(value: I32) -> Unit {
+  value = 2
+}
+
+pub fn main() -> Unit {
+  let value = 1
+  value = 2
+}

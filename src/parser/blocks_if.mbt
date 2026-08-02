@@ -2,6 +2,7 @@
 pub enum BlockItem {
   LetItem(Bool, String, UInt64, Expr, UInt64)
   ReturnItem(Expr?, UInt64)
+  AssignmentItem(Expr, Expr, UInt64)
   IndexSetItem(Expr, Expr, UInt64)
   ExpressionItem(Expr, UInt64)
 } derive(Eq, Debug)
@@ -11,6 +12,7 @@ pub fn BlockItem::offset(self : BlockItem) -> UInt64 {
   match self {
     LetItem(_, _, _, _, offset)
     | ReturnItem(_, offset)
+    | AssignmentItem(_, _, offset)
     | IndexSetItem(_, _, offset)
     | ExpressionItem(_, offset) => offset
   }
@@ -188,12 +190,14 @@ fn Parser::parse_block_after_left_brace(
           Some(equal) =>
             match equal.kind() {
               @tokenizer.Symbol(@tokenizer.Equal) => {
-                match expression {
-                  IndexExpr(_, _, _) => ()
-                  _ =>
-                    return Err(
-                      expression_failure(ExpectedIndexSetTarget(equal, offset)),
-                    )
+                let assignable = match expression {
+                  NameExpr(_, _) | IndexExpr(_, _, _) => true
+                  _ => false
+                }
+                if !assignable {
+                  return Err(
+                    expression_failure(ExpectedAssignmentTarget(equal, offset)),
+                  )
                 }
                 let equal_offset = equal.offset()
                 self.consume_lookahead()
@@ -201,7 +205,13 @@ fn Parser::parse_block_after_left_brace(
                   Ok(value) => value
                   Err(error) => return Err(error)
                 }
-                IndexSetItem(expression, value, equal_offset)
+                match expression {
+                  NameExpr(_, _) =>
+                    AssignmentItem(expression, value, equal_offset)
+                  IndexExpr(_, _, _) =>
+                    IndexSetItem(expression, value, equal_offset)
+                  _ => abort("validated assignment target changed shape")
+                }
               }
               _ => ExpressionItem(expression, offset)
             }

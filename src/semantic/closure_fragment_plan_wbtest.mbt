@@ -41,6 +41,43 @@ test "WasmGC planning gives directized lambdas lifted capture parameters" {
 }
 
 ///|
+test "WasmGC planning boxes mutable captures in shared carrier cells" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    984UL, b"fn main() -> I32 {\n  let mut seed = 1\n  let callback = fn(value: I32) -> I32 {\n    seed = seed + value\n    seed\n  }\n  callback(41)\n}\n",
+  )
+  assert_true(lowering.lambdas[0].directized)
+  assert_true(lowering.captures[0].mutable_)
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  let cell_index = planned.capture_cell_type_indices[0]
+  assert_true(cell_index >= 0)
+  let cell = planned.physical_types[cell_index]
+  assert_eq(cell.kind, PlannedWasmCaptureCellType(0))
+  assert_eq(cell.fields.length, 1)
+  let value = planned.fields[cell.fields.start]
+  assert_eq(value.role, WasmCaptureCellValueField(0))
+  assert_eq(value.storage, WasmI32Storage)
+  assert_true(value.mutable_)
+  assert_eq(planned.lambda_capture_parameter_indices[0], 0)
+  let lambda_function = planned.functions[planned.lambda_function_indices[0]]
+  assert_eq(
+    planned.function_value_types[lambda_function.parameters.start],
+    WasmNullableEqRefValue,
+  )
+  assert_eq(planned.lambda_closure_type_indices[0], -1)
+}
+
+///|
+test "WasmGC planning does not box captures used only by elided lambdas" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    985UL, b"fn main() -> I32 {\n  let mut seed = 1\n  let unused = fn() -> I32 {\n    seed\n  }\n  seed = 42\n  seed\n}\n",
+  )
+  assert_true(lowering.lambdas[0].elided)
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  assert_eq(planned.capture_cell_type_indices[0], -1)
+  assert_eq(planned.lambda_closure_type_indices[0], -1)
+}
+
+///|
 test "WasmGC planning keeps escaping lambda environment parameters" {
   let (resolved, lowering) = wasmgc_test_inputs(
     983UL, b"fn make(seed: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value + seed\n  }\n}\n",

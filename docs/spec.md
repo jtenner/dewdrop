@@ -322,11 +322,14 @@ function-parameter   = "self"
 block                = "{" "}"
                      | "{" newline newline* block-item* "}"
 block-item           = "let" "mut"? identifier "=" expression newline
+                     | identifier "=" expression newline
                      | "return" expression? newline
                      | expression newline
 ```
 
-Return types are mandatory. Function bodies and control-flow branches share the `Block` and `BlockItem` AST representation. A compact empty block is valid; a non-empty block requires a newline after `{`, and every let, return, or expression item requires its own newline. Function-local lets cannot be `pub`. `Block::tail_expression` exposes a final expression item without synthesizing an AST node for implicit Unit.
+Return types are mandatory. Function bodies and control-flow branches share the `Block` and `BlockItem` AST representation. A compact empty block is valid; a non-empty block requires a newline after `{`, and every let, assignment, return, or expression item requires its own newline. Function-local lets cannot be `pub`. `Block::tail_expression` exposes a final expression item without synthesizing an AST node for implicit Unit.
+
+A local assignment is legal only when its simple-name target resolves to the exact `let mut` binding visible at that source position, including a lambda capture sourced from such a binding. The right-hand side is evaluated once and constrained to the binding type; assignment yields `Unit`. Immutable lets, parameters, pattern bindings, module values, fields, and arbitrary expressions are not assignment targets.
 
 A first `self` parameter turns an ordinary function into a method. `self: Type` retains an explicit receiver type; shorthand `self` relies on a containing `Self` context such as an impl and is diagnosed during semantic analysis if no such context exists. `self` is illegal in any later parameter position. A function without a first receiver is static/free depending on its declaration context.
 
@@ -496,6 +499,7 @@ Reusable blocks and if expressions use:
 block         = "{" "}"
               | "{" newline newline* block-item* "}"
 block-item    = "let" "mut"? identifier "=" expression newline
+              | identifier "=" expression newline
               | "return" expression? newline
               | expression newline
 if-expression = "if" expression-before-block block
@@ -631,7 +635,7 @@ Else-if parsing is iterative for actual chains: the common no-else and direct-el
 
 Relational and equality operators are non-associative, so chains such as `a < b < c` and `a == b != c` are rejected. Explicit grouping may separate comparisons.
 
-`=` is not an expression operator. Binding and mutation, if mutation is retained, must use keyword-led `let` statements rather than assignment expressions.
+`=` is not an expression operator. Binding uses `let`/`let mut`; mutation uses the dedicated newline-delimited block item `identifier = expression`. The assignment target must resolve to the exact mutable let binding or a capture sourced from it, and the block item yields `Unit`.
 
 The prefix operators bind more tightly than exponentiation, so `-2 ** 2` means `(-2) ** 2`.
 
@@ -709,11 +713,13 @@ Lexical resolution freezes the active binding stack at each lambda expression. L
 
 Isolated lambda bodies are inferred after root bodies and earlier parent lambdas. Capture types are imported from the exact source body/lambda job into a fresh solver, including canonical applied generic shapes. Lambda expressions have their structural function type; calls through lambda-valued locals use ordinary function-value call selection. Expression, local, capture, block, pattern, control, call-target, and diagnostic tables remain HIR-aligned when merged. Lambda bodies then receive the ordinary structured-flow and exhaustiveness analysis in isolated jobs; expression/block/arm outcomes merge globally while diagnostics retain lambda ownership.
 
-Lowering records lambda construction as `PlannedLambdaClosure` and captured reads as `PlannedCaptureGet`. Each planned lambda freezes its root type/shape, flow, local/capture spans, and isolated body ranges. Planned capture records retain exact lexical source identity, mutability, inferred type, and storage shape.
+Lowering records lambda construction as `PlannedLambdaClosure`, captured reads as `PlannedCaptureGet`, and mutation as explicit `PlannedLocalSet`/`PlannedCaptureSet` operations. Each planned lambda freezes its root type/shape, flow, local/capture spans, and isolated body ranges. Planned capture records retain exact lexical source identity, mutability, inferred type, and storage shape.
 
 WasmGC planning emits one open closure base for modules that produce, accept, return, or call first-class function values. The base contains one immutable nullable abstract function reference. Every lambda receives a deterministic final subtype containing the inherited entry prefix followed by capture fields. Scalar/SIMD captures use compact storage, references use GC-safe `eqref` with exact casts restored at use sites, and Unit/Never consume no field. Modules without first-class function use add no closure types.
 
-Lambda construction allocates one flattened closure subtype, and generated environment-first entry functions receive `(closure, source parameters...)`. Named non-capturing references instantiate the one-field base with their original `ref.func`. Invocation evaluates the target once, tests whether the entry has the direct source signature, then uses typed `call_ref` with either source arguments or the closure object plus source arguments. Declarative element segments authorize named and lambda entries. Returned, nested, immediate, passed, module-level, and imported closures execute in Node. Scalar reassignment is not currently a language expression; future mutable capture writes require shared cells referenced by closure fields.
+Lambda construction allocates one flattened closure subtype, and generated environment-first entry functions receive `(closure, source parameters...)`. Named non-capturing references instantiate the one-field base with their original `ref.func`. Invocation evaluates the target once, tests whether the entry has the direct source signature, then uses typed `call_ref` with either source arguments or the closure object plus source arguments. Declarative element segments authorize named and lambda entries. Returned, nested, immediate, passed, module-level, and imported closures execute in Node.
+
+Uncaptured mutable lets remain ordinary carrier-typed Wasm locals. If any lambda captures a mutable let, WasmGC planning emits one shared final cell at the binding execution, using a mutable `i32`, `i64`, `f32`, `f64`, `v128`, or `eqref` field. Closure fields and directized lifted parameters carry the cell reference rather than a copied value. Reads and writes in the declaring body and every direct/transitive capture dereference that same cell, preserving sibling and returned-closure aliasing without reintroducing a split closure environment.
 
 Each selected declaration generic receives one fresh body-local variable at each call site. Signature substitution is iterative through canonical applied types, caches repeated subgraphs within one candidate, and never inserts local variables into `ResolvedModuleTypes`. Arguments constrain instantiated parameters, while the call expression constrains the instantiated return type. Selected calls retain their exact `DeclId` and zonked generic arguments in HIR-aligned `call_targets` plus flat `call_type_arguments`.
 
@@ -1145,7 +1151,7 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-070 | Implemented | The shunting-yard engine reduces directly into AST nodes using value and operator stacks rather than allocating a separate RPN output sequence. |
 | D-071 | Implemented | Exponentiation is right-associative; ordinary arithmetic, bitwise, and logical operators are left-associative. Prefix operators bind above exponentiation. |
 | D-072 | Answered and implemented | Relational and equality operators are non-associative; ungrouped chains such as `a < b < c` and `a == b != c` are rejected. |
-| D-073 | Answered and implemented | `=` is not an expression operator. Binding is represented by keyword-led immutable `let` or mutable `let mut` declarations. |
+| D-073 | Answered and implemented | `=` is not an expression operator. Binding is represented by keyword-led immutable `let` or mutable `let mut` declarations; mutation is a separate simple-name block item restricted to an existing `let mut` binding or its capture. |
 | D-074 | Answered and implemented | Function calls accept one trailing comma, while a second trailing comma is an error. |
 | D-075 | Answered and implemented | In binary-operator-seeking mode, `.` parses field access and `[` parses array/index access; call, field, and index postfix forms may chain. |
 | D-076 | Answered | Dew's operator spelling and precedence table is closed; user code cannot declare custom operators. |
@@ -1563,6 +1569,8 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-490 | Implemented | Unused immutable local lambda and named-reference initializers are elided because construction has no source-visible effect. Elided lambdas retain semantic diagnostics but receive no runtime closure subtype, entry signature, function index, body emission, or declarative element. Directized lambdas likewise omit their unused physical closure subtype. |
 | D-491 | Implemented | Two or more remaining references to the same named function within one body share one activation-local closure cache. The immutable base closure is constructed in the body prelude and repeated expressions emit `local.get`; one-off references remain inline, call-only references are directized, and module values retain once-per-module initialization. Cache locals follow deterministic first-reference order. |
 | D-492 | Implemented | Every remaining named-function value in a linked module uses one module-representation singleton global, ordered by module and first surviving reference. `__dew_init` constructs each singleton before source module initializers, and all bodies load it with `global.get`. Separate consumer modules retain separate singleton objects until closure-base physical identities are unified program-wide. Standalone fragment emission retains activation-local caching. |
+| D-493 | Implemented | Mutable lexical state is introduced only by `let mut name = value`. Simple-name assignment is a newline-delimited block item spelled `name = expression`, evaluates its right-hand side once, yields `Unit`, and may target only the exact mutable let binding or a capture sourced from it. Parameters, pattern bindings, immutable lets, module values, declarations, field targets, and other expression forms are not assignable. Compound and destructuring assignment remain omitted. |
+| D-494 | Implemented | Uncaptured mutable lets remain carrier-typed Wasm locals. A mutable let captured by any lambda is promoted at binding execution to one shared final WasmGC cell with a mutable `i32`, `i64`, `f32`, `f64`, `v128`, or `eqref` field. Declaring bodies and all direct, sibling, nested, transitive, returned, and directized closures route and dereference the same cell reference. Immutable captures remain copied closure fields; directization may remove a closure but never copy or remove observably shared mutable state. |
 | D-477 | Implemented | Consumer coherence compares every newly imported trait implementation against local and earlier imported evidence in the shared resolved-type arena. Exact, generic, strictly specialized, and incomparable patterns use the same unification rules as local coherence; incoherent entries are removed from method and qualified-trait dispatch. `check`, test generation, snapshot generation, and benchmark generation report implementation-index diagnostics directly. |
 | D-476 | Implemented | Reachable nominal roots close transitively through local and imported struct/enum payload types before fragment planning. When an external physical reference would otherwise point forward, the linker computes deterministic program-wide physical SCCs, assigns a final index to every module-local physical type, emits each SCC as one Wasm recursive group, and places callable signatures afterward. References inside shared groups use their final type-section indices because Starshine's relative recursive-index form is intentionally not binary-encodable. Acyclic links retain the existing module-local type order and snapshots. |
 

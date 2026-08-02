@@ -403,6 +403,10 @@ fn CollectionBuilder::visit_block_source(
       @parser.LetItem(_, _, _, value, _) => self.schedule_expr(value)
       @parser.ReturnItem(Some(value), _) => self.schedule_expr(value)
       @parser.ReturnItem(None, _) => ()
+      @parser.AssignmentItem(target, value, _) => {
+        self.schedule_expr(value)
+        self.schedule_expr(target)
+      }
       @parser.IndexSetItem(target, value, _) =>
         match target {
           @parser.IndexExpr(base, index, _) => {
@@ -450,6 +454,18 @@ fn CollectionBuilder::finish_block_source(
           None => -1
         }
         self.block_items.push(HirReturnItem(value, offset))
+      }
+      @parser.AssignmentItem(_, _, offset) => {
+        let expression = self.expressions.length()
+        self.expressions.push(
+          HirAssignmentExpr(
+            self.body_expr_results[result_index],
+            self.body_expr_results[result_index + 1],
+            offset,
+          ),
+        )
+        self.block_items.push(HirExpressionItem(expression, offset))
+        result_index += 2
       }
       @parser.IndexSetItem(_, _, offset) => {
         let expression = self.expressions.length()

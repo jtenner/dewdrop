@@ -31,6 +31,8 @@ priv enum StarshineEmitTask {
   EmitStarshineEmpty
   EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
   FinishStarshineBlock(@semantic.BlockId)
+  FinishStarshineLocalSet(Int, Int)
+  FinishStarshineCaptureSet(Int, Int)
   FinishStarshineCall(@semantic.DeclId, Int, Int)
   FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
@@ -1566,6 +1568,55 @@ fn starshine_body_value_type(
 }
 
 ///|
+fn starshine_local_capture_cell_slot(
+  lowering : @semantic.PlannedModuleLowering,
+  body : @semantic.PlannedBodyLowering,
+  local_id : Int,
+) -> Int {
+  if local_id < 0 || local_id >= body.locals.length {
+    return -1
+  }
+  let local_info = lowering.locals[body.locals.start + local_id]
+  if !local_info.mutable_ {
+    return -1
+  }
+  for capture in lowering.captures {
+    if !capture.mutable_ || lowering.lambdas[capture.lambda].elided {
+      continue
+    }
+    let matches = match capture.source {
+      @semantic.BodyLocalCapture(owner, source_local) =>
+        local_info.lambda < 0 &&
+        owner == local_info.body &&
+        source_local == local_id
+      @semantic.LambdaLocalCapture(owner, source_local) =>
+        local_info.lambda == owner && source_local == local_id
+    }
+    if matches {
+      return @semantic.wasmgc_capture_cell_slot(local_info.shape)
+    }
+  }
+  -1
+}
+
+///|
+fn starshine_capture_cell_type_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  module_index : Int,
+  slot : Int,
+) -> Int {
+  if slot < 0 || slot >= planned.capture_cell_type_indices.length() {
+    return -1
+  }
+  starshine_local_physical_type_index(
+    program,
+    module_index,
+    planned.capture_cell_type_indices[slot],
+  )
+}
+
+///|
 fn starshine_body_locals(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -1627,14 +1678,21 @@ fn starshine_body_locals(
         if elided_locals[local_id] {
           continue
         }
-        match
+        let cell_slot = starshine_local_capture_cell_slot(
+          lowering, body, local_id,
+        )
+        let local_type = if cell_slot >= 0 {
+          Some(@lib.ValType::eqref_null())
+        } else {
           starshine_body_value_type(
             lowering,
             planned,
             program,
             planned_local.type_,
             planned_local.shape,
-          ) {
+          )
+        }
+        match local_type {
           Some(type_) => {
             local_indices[local_id] = parameter_count +
               body_local_types.length()
@@ -2524,6 +2582,20 @@ fn starshine_capture_get_instructions(
       ),
     ]
     let capture_plan = lowering.captures[global_capture]
+    if capture_plan.mutable_ {
+      let slot = @semantic.wasmgc_capture_cell_slot(capture_plan.shape)
+      let cell_type = starshine_capture_cell_type_index(
+        planned, program, module_index, slot,
+      )
+      output.push(starshine_match_cast(cell_type))
+      output.push(
+        starshine_struct_get_instruction(
+          cell_type,
+          0,
+          @semantic.wasmgc_capture_cell_storage(slot),
+        ),
+      )
+    }
     if capture_plan.nominal != 0UL {
       match
         starshine_emitted_type_index(planned, program, capture_plan.nominal) {
@@ -2554,6 +2626,20 @@ fn starshine_capture_get_instructions(
     ),
   ]
   let capture_plan = lowering.captures[global_capture]
+  if capture_plan.mutable_ {
+    let slot = @semantic.wasmgc_capture_cell_slot(capture_plan.shape)
+    let cell_type = starshine_capture_cell_type_index(
+      planned, program, module_index, slot,
+    )
+    output.push(starshine_match_cast(cell_type))
+    output.push(
+      starshine_struct_get_instruction(
+        cell_type,
+        0,
+        @semantic.wasmgc_capture_cell_storage(slot),
+      ),
+    )
+  }
   if capture_plan.nominal != 0UL {
     match starshine_emitted_type_index(planned, program, capture_plan.nominal) {
       Some(type_index) => output.push(starshine_match_cast(type_index))
@@ -2561,6 +2647,44 @@ fn starshine_capture_get_instructions(
     }
   }
   output
+}
+
+///|
+fn starshine_capture_cell_reference_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  module_index : Int,
+  lambda : @semantic.LambdaId,
+  capture : Int,
+) -> Array[@lib.Instruction] {
+  let global_capture = lowering.lambdas[lambda].captures.start + capture
+  if lowering.lambdas[lambda].directized {
+    let parameter = planned.lambda_capture_parameter_indices[global_capture]
+    if parameter < 0 {
+      return []
+    }
+    return [
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+      ),
+    ]
+  }
+  let field_index = planned.lambda_capture_field_indices[global_capture]
+  if field_index < 0 {
+    return []
+  }
+  let local_type = planned.lambda_closure_type_indices[lambda]
+  let closure_type = starshine_local_physical_type_index(
+    program, module_index, local_type,
+  )
+  let field = planned.fields[planned.physical_types[local_type].fields.start +
+    field_index]
+  [
+    @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+    starshine_match_cast(closure_type),
+    starshine_struct_get_instruction(closure_type, field_index, field.storage),
+  ]
 }
 
 ///|
@@ -2593,11 +2717,18 @@ fn starshine_capture_source_instructions(
   if current_lambda >= 0 {
     let current = lowering.lambdas[current_lambda]
     for capture in 0..<current.captures.length {
-      if lowering.captures[current.captures.start + capture].source == source {
+      let capture_plan = lowering.captures[current.captures.start + capture]
+      if capture_plan.source == source {
         return Ok(
-          starshine_capture_get_instructions(
-            lowering, planned, program, module_index, current_lambda, capture,
-          ),
+          if capture_plan.mutable_ {
+            starshine_capture_cell_reference_instructions(
+              lowering, planned, program, module_index, current_lambda, capture,
+            )
+          } else {
+            starshine_capture_get_instructions(
+              lowering, planned, program, module_index, current_lambda, capture,
+            )
+          },
         )
       }
     }
@@ -3024,19 +3155,71 @@ fn starshine_emit_body_instructions(
             )
             results.push(output)
           }
+          @semantic.PlannedLocalSet(local_id, value) => {
+            if local_id < 0 || local_id >= local_indices.length() {
+              return Err(InvalidLocal(body.body, local_id))
+            }
+            if local_indices[local_id] < 0 {
+              let local_info = lowering.locals[body.locals.start + local_id]
+              match local_info.shape {
+                @semantic.UnitPlannedValueShape =>
+                  tasks.push(EmitStarshineExpression(value))
+                _ => return Err(InvalidLocal(body.body, local_id))
+              }
+            } else {
+              tasks.push(
+                FinishStarshineLocalSet(local_id, local_indices[local_id]),
+              )
+              tasks.push(EmitStarshineExpression(value))
+            }
+          }
+          @semantic.PlannedCaptureSet(capture, value) => {
+            tasks.push(FinishStarshineCaptureSet(current_lambda, capture))
+            tasks.push(EmitStarshineExpression(value))
+          }
           @semantic.PlannedLocalGet(local_id) => {
             if local_id < 0 ||
               local_id >= local_indices.length() ||
               local_indices[local_id] < 0 {
               return Err(InvalidLocal(body.body, local_id))
             }
-            results.push([
+            let output = [
               @lib.Instruction::local_get(
                 @lib.LocalIdx::new(
                   local_indices[local_id].reinterpret_as_uint(),
                 ),
               ),
-            ])
+            ]
+            let cell_slot = starshine_local_capture_cell_slot(
+              lowering, body, local_id,
+            )
+            if cell_slot >= 0 {
+              let cell_type = starshine_capture_cell_type_index(
+                planned, program, program_module_index, cell_slot,
+              )
+              output.push(starshine_match_cast(cell_type))
+              output.push(
+                starshine_struct_get_instruction(
+                  cell_type,
+                  0,
+                  @semantic.wasmgc_capture_cell_storage(cell_slot),
+                ),
+              )
+              let local_info = lowering.locals[body.locals.start + local_id]
+              if local_info.nominal != 0UL {
+                match
+                  starshine_emitted_type_index(
+                    planned,
+                    program,
+                    local_info.nominal,
+                  ) {
+                  Some(type_index) =>
+                    output.push(starshine_match_cast(type_index))
+                  None => ()
+                }
+              }
+            }
+            results.push(output)
           }
           @semantic.PlannedBlockExpression(block) =>
             tasks.push(EmitStarshineBlock(block))
@@ -3716,6 +3899,70 @@ fn starshine_emit_body_instructions(
           }
         }
       }
+      FinishStarshineLocalSet(local_id, local_index) => {
+        let value = results.pop().unwrap()
+        let output : Array[@lib.Instruction] = []
+        let cell_slot = starshine_local_capture_cell_slot(
+          lowering, body, local_id,
+        )
+        if cell_slot >= 0 {
+          let cell_type = starshine_capture_cell_type_index(
+            planned, program, program_module_index, cell_slot,
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(cell_type))
+          append_starshine_instructions(output, value)
+          output.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(cell_type.reinterpret_as_uint()),
+              @lib.U32::new(0U),
+            ),
+          )
+        } else {
+          append_starshine_instructions(output, value)
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
+            ),
+          )
+        }
+        results.push(output)
+      }
+      FinishStarshineCaptureSet(lambda, capture) => {
+        let value = results.pop().unwrap()
+        if lambda < 0 || lambda >= lowering.lambdas.length() {
+          return Err(UnsupportedExpression(body.body, -201))
+        }
+        let global_capture = lowering.lambdas[lambda].captures.start + capture
+        if global_capture < 0 || global_capture >= lowering.captures.length() {
+          return Err(UnsupportedExpression(body.body, -202))
+        }
+        let capture_plan = lowering.captures[global_capture]
+        let slot = @semantic.wasmgc_capture_cell_slot(capture_plan.shape)
+        if slot < 0 {
+          results.push(value)
+          continue
+        }
+        let cell_type = starshine_capture_cell_type_index(
+          planned, program, program_module_index, slot,
+        )
+        let output = starshine_capture_cell_reference_instructions(
+          lowering, planned, program, program_module_index, lambda, capture,
+        )
+        output.push(starshine_match_cast(cell_type))
+        append_starshine_instructions(output, value)
+        output.push(
+          @lib.Instruction::struct_set(
+            @lib.TypeIdx::new(cell_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+        )
+        results.push(output)
+      }
       FinishStarshineBlock(block) => {
         let source = lowering.blocks[block]
         let fragments = pop_starshine_fragments(results, source.items.length)
@@ -3729,6 +3976,19 @@ fn starshine_emit_body_instructions(
                 local_id >= local_indices.length() ||
                 local_indices[local_id] < 0 {
                 return Err(InvalidLocal(body.body, local_id))
+              }
+              let cell_slot = starshine_local_capture_cell_slot(
+                lowering, body, local_id,
+              )
+              if cell_slot >= 0 {
+                let cell_type = starshine_capture_cell_type_index(
+                  planned, program, program_module_index, cell_slot,
+                )
+                output.push(
+                  @lib.Instruction::struct_new(
+                    @lib.TypeIdx::new(cell_type.reinterpret_as_uint()),
+                  ),
+                )
               }
               output.push(
                 @lib.Instruction::local_set(
@@ -6614,6 +6874,8 @@ fn starshine_program_group_physical_subtype(
         ],
         composite,
       )
+    @semantic.PlannedWasmCaptureCellType(_) =>
+      @lib.SubType::new(true, [], composite)
     @semantic.PlannedWasmLambdaClosureType(_) =>
       @lib.SubType::new(
         true,
@@ -6674,6 +6936,8 @@ fn starshine_program_physical_subtype(
         ],
         composite,
       )
+    @semantic.PlannedWasmCaptureCellType(_) =>
+      @lib.SubType::new(true, [], composite)
     @semantic.PlannedWasmLambdaClosureType(_) =>
       @lib.SubType::new(
         true,

@@ -29,6 +29,7 @@ pub enum PlannedWasmFieldRole {
   WasmTuplePayloadField(VariantId, Int)
   WasmStructPayloadField(FieldId)
   WasmClosureEntryField
+  WasmCaptureCellValueField(Int)
   WasmLambdaCaptureField(LambdaId, Int)
 } derive(Eq, Debug)
 
@@ -91,6 +92,7 @@ pub enum PlannedWasmPhysicalTypeKind {
   PlannedWasmEnumBaseType(DeclId)
   PlannedWasmEnumSubtypeType(DeclId, VariantId, Int)
   PlannedWasmClosureType
+  PlannedWasmCaptureCellType(Int)
   PlannedWasmLambdaClosureType(LambdaId)
 } derive(Eq, Debug)
 
@@ -183,6 +185,7 @@ pub struct PlannedModuleWasmGCFragments {
   variant_fields : Array[PlannedWasmVariantField]
   field_names : Array[String]
   closure_type_index : Int
+  capture_cell_type_indices : Array[Int]
   lambda_closure_type_indices : Array[Int]
   lambda_capture_field_indices : Array[Int]
   function_types : Array[PlannedWasmFunctionTypeFragment]
@@ -973,7 +976,9 @@ fn wasmgc_plan_physical_type_job(
         _ => abort("struct physical source has an enum layout")
       }
     PlannedWasmEnumBaseType(_) => ()
-    PlannedWasmClosureType | PlannedWasmLambdaClosureType(_) =>
+    PlannedWasmClosureType
+    | PlannedWasmCaptureCellType(_)
+    | PlannedWasmLambdaClosureType(_) =>
       abort("synthetic closure type entered nominal dependency planning")
     PlannedWasmEnumSubtypeType(declaration, variant, _) => {
       let dependency = entity_by_declaration[semantic_id_local(declaration)]
@@ -1275,7 +1280,9 @@ fn wasmgc_append_physical_type_fields(
         WasmI32Storage,
         source.offset,
       )
-    PlannedWasmClosureType | PlannedWasmLambdaClosureType(_) =>
+    PlannedWasmClosureType
+    | PlannedWasmCaptureCellType(_)
+    | PlannedWasmLambdaClosureType(_) =>
       abort("synthetic closure type entered nominal field planning")
     PlannedWasmEnumSubtypeType(_, variant, _) => {
       wasmgc_append_field(
@@ -1370,7 +1377,45 @@ fn wasmgc_capture_value_type(
 }
 
 ///|
-fn wasmgc_capture_storage(shape : PlannedValueShape) -> PlannedWasmStorageType? {
+pub fn wasmgc_capture_cell_slot(shape : PlannedValueShape) -> Int {
+  match shape {
+    UnitPlannedValueShape | NeverPlannedValueShape => -1
+    I8PlannedValueShape
+    | U8PlannedValueShape
+    | I16PlannedValueShape
+    | U16PlannedValueShape
+    | I32PlannedValueShape
+    | U32PlannedValueShape
+    | Swar32PlannedValueShape => 0
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape => 1
+    F32PlannedValueShape => 2
+    F64PlannedValueShape => 3
+    V128PlannedValueShape => 4
+    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
+      5
+  }
+}
+
+///|
+pub fn wasmgc_capture_cell_storage(slot : Int) -> PlannedWasmStorageType {
+  match slot {
+    0 => WasmI32Storage
+    1 => WasmI64Storage
+    2 => WasmF32Storage
+    3 => WasmF64Storage
+    4 => WasmV128Storage
+    _ => WasmNullableEqRefStorage
+  }
+}
+
+///|
+fn wasmgc_capture_storage(
+  shape : PlannedValueShape,
+  mutable_ : Bool,
+) -> PlannedWasmStorageType? {
+  if mutable_ && wasmgc_capture_cell_slot(shape) >= 0 {
+    return Some(WasmNullableEqRefStorage)
+  }
   match shape {
     UnitPlannedValueShape | NeverPlannedValueShape => None
     I8PlannedValueShape => Some(WasmI8SignedStorage)
@@ -1896,7 +1941,9 @@ fn plan_module_wasmgc_fragments_in_orders(
           type_index_by_declaration[semantic_id_local(declaration)] = next_type_index
         PlannedWasmEnumSubtypeType(_, variant, _) =>
           payload_type_index_by_variant[semantic_id_local(variant)] = next_type_index
-        PlannedWasmClosureType | PlannedWasmLambdaClosureType(_) =>
+        PlannedWasmClosureType
+        | PlannedWasmCaptureCellType(_)
+        | PlannedWasmLambdaClosureType(_) =>
           abort("synthetic closure type entered nominal index planning")
       }
       next_type_index += 1
@@ -1941,6 +1988,46 @@ fn plan_module_wasmgc_fragments_in_orders(
     type_groups.push({
       types: { start, length: physical_types.length() - start },
       first_type_index,
+    })
+  }
+  let capture_cell_type_indices = Array::make(6, -1)
+  let capture_cell_offsets = Array::make(6, 0UL)
+  let capture_cell_used = Array::make(6, false)
+  for capture in lowering.captures {
+    if capture.mutable_ && !lowering.lambdas[capture.lambda].elided {
+      let slot = wasmgc_capture_cell_slot(capture.shape)
+      if slot >= 0 && !capture_cell_used[slot] {
+        capture_cell_used[slot] = true
+        capture_cell_offsets[slot] = capture.offset
+      }
+    }
+  }
+  for slot in 0..<capture_cell_used.length() {
+    if !capture_cell_used[slot] {
+      continue
+    }
+    let type_index = next_type_index
+    next_type_index += 1
+    capture_cell_type_indices[slot] = type_index
+    let field_start = fields.length()
+    fields.push({
+      role: WasmCaptureCellValueField(slot),
+      physical_index: 0,
+      storage: wasmgc_capture_cell_storage(slot),
+      mutable_: true,
+      offset: capture_cell_offsets[slot],
+    })
+    let physical_start = physical_types.length()
+    physical_types.push({
+      kind: PlannedWasmCaptureCellType(slot),
+      type_index,
+      group_index: type_groups.length(),
+      fields: { start: field_start, length: 1 },
+      offset: capture_cell_offsets[slot],
+    })
+    type_groups.push({
+      types: { start: physical_start, length: 1 },
+      first_type_index: type_index,
     })
   }
   let mut closure_type_index = -1
@@ -1988,14 +2075,14 @@ fn plan_module_wasmgc_fragments_in_orders(
       for capture_index in 0..<lambda.captures.length {
         let global_capture = lambda.captures.start + capture_index
         let capture = lowering.captures[global_capture]
-        match wasmgc_capture_storage(capture.shape) {
+        match wasmgc_capture_storage(capture.shape, capture.mutable_) {
           Some(storage) => {
             lambda_capture_field_indices[global_capture] = physical_index
             fields.push({
               role: WasmLambdaCaptureField(lambda_index, capture_index),
               physical_index,
               storage,
-              mutable_: capture.mutable_,
+              mutable_: false,
               offset: capture.offset,
             })
             physical_index += 1
@@ -2208,7 +2295,8 @@ fn plan_module_wasmgc_fragments_in_orders(
     let mut capture_parameter = 0
     for capture_index in 0..<lambda.captures.length {
       let global_capture = lambda.captures.start + capture_index
-      match wasmgc_capture_storage(lowering.captures[global_capture].shape) {
+      let capture = lowering.captures[global_capture]
+      match wasmgc_capture_storage(capture.shape, capture.mutable_) {
         Some(storage) => {
           lambda_capture_parameter_indices[global_capture] = capture_parameter
           capture_parameter += 1
@@ -2710,6 +2798,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     variant_fields,
     field_names,
     closure_type_index,
+    capture_cell_type_indices,
     lambda_closure_type_indices,
     lambda_capture_field_indices,
     function_types,

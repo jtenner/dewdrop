@@ -1042,6 +1042,11 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
         )
         flow_sequence(prefix, self.terminal_flow(expression))
       }
+      HirAssignmentExpr(_, value, _) =>
+        flow_sequence(
+          self.expression_flow(value),
+          self.terminal_flow(expression),
+        )
       HirIndexSetExpr(base, index, value, _) => {
         let prefix = flow_sequence(
           flow_sequence(self.expression_flow(base), self.expression_flow(index)),

@@ -1000,6 +1000,7 @@ fn BasicBodyInferencer::initialize_expression_types(
         self.solver.resolved_type(self.resolved.lambda_function_types[lambda])
       HirIfExpr(_, _, alternative, _) if alternative < 0 =>
         self.primitive(UnitType)
+      HirAssignmentExpr(_, _, _) => self.primitive(UnitType)
       HirPrefixExpr(HirLogicalNot, _, _) => self.primitive(BoolType)
       HirBinaryExpr(operator, _, _, _) =>
         match operator {
@@ -6186,6 +6187,43 @@ fn BasicBodyInferencer::constrain_expressions(
       HirWhileExpr(initial, arms, offset) =>
         self.constrain_while_expression(expression, initial, arms, offset)
       HirObjectExpr(_, _) => ()
+      HirAssignmentExpr(target, value, offset) => {
+        let mutable_ = match self.names.expression_references[target] {
+          LocalNameReference(local_id) =>
+            local_id >= 0 &&
+            local_id < self.local_span.length &&
+            self.names.locals[self.local_span.start + local_id].mutable_
+          LambdaCaptureNameReference(capture) =>
+            if self.lambda >= 0 {
+              match self.names.lambda(self.lambda) {
+                Some(lambda_names) =>
+                  capture >= 0 &&
+                  capture < lambda_names.captures.length &&
+                  self.names.captures[lambda_names.captures.start + capture].mutable_
+                None => false
+              }
+            } else {
+              false
+            }
+          ErrorNameReference => false
+          _ => {
+            self.diagnose(InvalidAssignmentTarget(expression, offset))
+            false
+          }
+        }
+        if !mutable_ {
+          match self.names.expression_references[target] {
+            LocalNameReference(_) | LambdaCaptureNameReference(_) =>
+              self.diagnose(ImmutableAssignmentTarget(expression, offset))
+            _ => ()
+          }
+        }
+        self.constrain_assignable(
+          self.expression_type(value),
+          self.expression_type(target),
+          expression_type_origin(expression, offset),
+        )
+      }
       HirIndexExpr(_, _, _) | HirIndexSetExpr(_, _, _, _) =>
         match index_trait(self.collected.expressions[expression]) {
           Some((trait_name, method_name)) =>
@@ -6275,6 +6313,8 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     UnresolvedLocalType(_, _, _) => 36
     UnresolvedLambdaLocalType(_, _, _) => 37
     NumericLiteralOutOfRange(_, _, _) => 38
+    InvalidAssignmentTarget(_, _) => 39
+    ImmutableAssignmentTarget(_, _) => 40
   }
 }
 

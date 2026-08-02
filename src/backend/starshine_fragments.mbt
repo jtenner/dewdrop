@@ -110,6 +110,8 @@ fn starshine_physical_subtype(
         ],
         composite,
       )
+    @semantic.PlannedWasmCaptureCellType(_) =>
+      @lib.SubType::new(true, [], composite)
     @semantic.PlannedWasmLambdaClosureType(_) =>
       @lib.SubType::new(
         true,

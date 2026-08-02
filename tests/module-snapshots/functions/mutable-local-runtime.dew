@@ -1,0 +1,123 @@
+open dew.std.f32x4
+
+struct Item {
+  value: I32
+}
+
+fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+fn decrement(value: I32) -> I32 {
+  value - 1
+}
+
+fn make_counter(start: I32) -> fn() -> I32 {
+  let mut current = start
+  fn() -> I32 {
+    current = current + 1
+    current
+  }
+}
+
+pub fn main() -> Unit {
+  let mut value = 40
+  value = value + 2
+  assert(value == 42, "uncaptured mutable local")
+  if value == 42 {
+    value = 43
+  } else {
+    value = 0
+  }
+  value = value - 1
+  assert(value == 42, "mutable local in nested control flow")
+
+  let mut shadow = 1
+  if true {
+    let mut shadow = 2
+    shadow = 3
+    assert(shadow == 3, "inner mutable shadow")
+  } else {}
+  assert(shadow == 1, "outer mutable shadow")
+
+  let mut evaluations = 0
+  let next = fn() -> I32 {
+    evaluations = evaluations + 1
+    42
+  }
+  let mut assigned_once = 0
+  assigned_once = next()
+  assert(assigned_once == 42, "assignment stores right-hand side")
+  assert(evaluations == 1, "assignment evaluates right-hand side once")
+
+  let mut shared = 10
+  let read = fn() -> I32 {
+    shared
+  }
+  let write = fn(value: I32) -> Unit {
+    shared = value
+  }
+  assert(read() == 10, "captured mutable initial value")
+  write(41)
+  assert(read() == 41, "sibling closures share mutable cell")
+  shared = 42
+  assert(read() == 42, "declaring body shares mutable cell")
+
+  let counter = make_counter(40)
+  assert(counter() == 41, "returned closure first mutation")
+  assert(counter() == 42, "returned closure retains mutation")
+
+  let mut operation = increment
+  let apply = fn(value: I32) -> I32 {
+    operation(value)
+  }
+  operation = decrement
+  assert(apply(43) == 42, "function-valued mutable capture")
+
+  let mut item = Item {
+    value: 40
+  }
+  let read_item = fn() -> I32 {
+    item.value
+  }
+  item = Item {
+    value: 42
+  }
+  assert(read_item() == 42, "nominal mutable capture")
+
+  let mut nested = 40
+  let make_nested = fn() -> fn() -> I32 {
+    fn() -> I32 {
+      nested = nested + 1
+      nested
+    }
+  }
+  let nested_counter = make_nested()
+  assert(nested_counter() == 41, "transitive mutable capture first write")
+  assert(nested_counter() == 42, "transitive mutable capture retained write")
+
+  let mut wide = 40i64
+  wide = wide + 2i64
+  assert(wide == 42i64, "unboxed i64 mutable local")
+
+  let mut narrow_float = 40.0f32
+  let read_narrow_float = fn() -> F32 {
+    narrow_float
+  }
+  narrow_float = 42.0f32
+  assert(read_narrow_float() == 42.0f32, "captured f32 mutable local")
+
+  let mut wide_float = 40.0f64
+  let read_wide_float = fn() -> F64 {
+    wide_float
+  }
+  wide_float = 42.0f64
+  assert(read_wide_float() == 42.0f64, "captured f64 mutable local")
+
+  let mut vector = f32x4_splat(40.0f32)
+  let read_vector = fn() -> F32 {
+    vector.extract_0()
+  }
+  vector = f32x4_splat(42.0f32)
+  assert(read_vector() == 42.0f32, "captured v128 mutable local")
+}

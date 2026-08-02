@@ -162,7 +162,7 @@ test "reusable blocks preserve lets returns expressions and tail lookup" {
 }
 
 ///|
-test "index setting is a block item rather than an expression" {
+test "local and index setting are block items rather than expressions" {
   match
     Parser::from_bytes(
       b"fn update(array: Values, index: U32, value: I32) -> Unit {\n  array[index] = value\n}\n",
@@ -179,9 +179,22 @@ test "index setting is a block item rather than an expression" {
     _ => fail("expected function containing indexed mutation")
   }
   match
-    Parser::from_bytes(b"fn invalid(value: I32) -> Unit {\n  value = 1\n}\n").parse_declaration() {
-    Err(DeclarationExpressionError(ExpectedIndexSetTarget(_, _))) => ()
-    _ => fail("expected a non-index mutation target diagnostic")
+    Parser::from_bytes(
+      b"fn update() -> Unit {\n  let mut value = 0\n  value = 1\n}\n",
+    ).parse_declaration() {
+    Ok(Function(declaration)) =>
+      match declaration.body.items[1] {
+        AssignmentItem(NameExpr("value", _), I32Expr(1UL, _), _) => ()
+        _ => fail("expected local assignment block item")
+      }
+    _ => fail("expected function containing local assignment")
+  }
+  match
+    Parser::from_bytes(
+      b"fn invalid(value: Item) -> Unit {\n  value.field = 1\n}\n",
+    ).parse_declaration() {
+    Err(DeclarationExpressionError(ExpectedAssignmentTarget(_, _))) => ()
+    _ => fail("expected an invalid assignment target diagnostic")
   }
 }
 
