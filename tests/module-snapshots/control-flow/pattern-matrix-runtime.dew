@@ -1,0 +1,76 @@
+open dew.std.wasi
+
+enum Wide {
+  V0(I32)
+  V1(I32)
+  V2(I32)
+  V3(I32)
+  V4(I32)
+  V5(I32)
+  V6(I32)
+  V7(I32)
+  V8(I32)
+  V9(I32)
+  V10(I32)
+  V11(I32)
+  V12(I32)
+  V13(I32)
+  V14(I32)
+  V15(I32)
+}
+
+fn read_wide(value: Wide) -> I32 {
+  match value {
+    Wide::V0(item), Wide::V1(item), Wide::V2(item), Wide::V3(item), Wide::V4(item), Wide::V5(item), Wide::V6(item), Wide::V7(item), Wide::V8(item), Wide::V9(item), Wide::V10(item), Wide::V11(item), Wide::V12(item), Wide::V13(item), Wide::V14(item), Wide::V15(item) => item
+  }
+}
+
+enum Leaf {
+  Value(I32)
+}
+
+enum Level1 {
+  Wrap(Leaf)
+}
+
+enum Level2 {
+  Wrap(Level1)
+}
+
+enum Level3 {
+  Wrap(Level2)
+}
+
+enum Level4 {
+  Wrap(Level3)
+}
+
+enum Level5 {
+  Wrap(Level4)
+}
+
+enum Level6 {
+  Wrap(Level5)
+}
+
+enum Level7 {
+  Wrap(Level6)
+}
+
+enum Level8 {
+  Wrap(Level7)
+}
+
+fn read_deep(value: Level8) -> I32 {
+  match value {
+    Level8::Wrap(Level7::Wrap(Level6::Wrap(Level5::Wrap(Level4::Wrap(Level3::Wrap(Level2::Wrap(Level1::Wrap(Leaf::Value(item))))))))) => item
+  }
+}
+
+pub fn main() -> U32 {
+  if read_wide(Wide::V15(19)) + read_deep(Level8::Wrap(Level7::Wrap(Level6::Wrap(Level5::Wrap(Level4::Wrap(Level3::Wrap(Level2::Wrap(Level1::Wrap(Leaf::Value(23)))))))))) == 42 {
+    wasi_fd_write(1u32, b"control:pattern-matrix")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

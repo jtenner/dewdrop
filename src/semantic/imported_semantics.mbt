@@ -130,6 +130,19 @@ pub fn ResolvedModuleImports::is_struct(
 }
 
 ///|
+pub fn ResolvedModuleImports::is_enum(
+  self : ResolvedModuleImports,
+  declaration : DeclId,
+) -> Bool {
+  for imported in self.scope.declarations {
+    if imported.declaration == declaration {
+      return imported.source_kind == EnumDecl
+    }
+  }
+  false
+}
+
+///|
 pub fn ResolvedModuleImports::generic_parameters_of(
   self : ResolvedModuleImports,
   declaration : DeclId,

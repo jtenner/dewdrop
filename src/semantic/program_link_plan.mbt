@@ -99,7 +99,12 @@ pub fn plan_program_lowering(
         semantic.inferred.module_values,
       )
       let functions = plan_module_functions(collected, resolved)
-      let flows = analyze_module_flows(collected, resolved, semantic.inferred)
+      let flows = analyze_module_flows_with_imports(
+        collected,
+        resolved,
+        semantic.inferred,
+        semantic.imports,
+      )
       slots[module_index] = Some(
         plan_module_lowering(
           collected,

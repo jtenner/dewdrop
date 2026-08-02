@@ -70,13 +70,72 @@ fn report_compilation_diagnostics(
 }
 
 ///|
+fn render_program_hir(program : @semantic.CollectedProgram) -> Bytes {
+  let output = Buffer(size_hint=4096)
+  for index, module_ in program.modules {
+    output.write_string_utf8("module ")
+    output.write_string_utf8(program.module_paths[index])
+    output.write_byte(b'\n')
+    output.write_string_utf8("declarations ")
+    output.write_string_utf8(@debug.to_string(module_.declarations))
+    output.write_byte(b'\n')
+    output.write_string_utf8("types ")
+    output.write_string_utf8(@debug.to_string(module_.type_syntax))
+    output.write_byte(b'\n')
+    output.write_string_utf8("bodies ")
+    output.write_string_utf8(@debug.to_string(module_.bodies))
+    output.write_byte(b'\n')
+    output.write_string_utf8("expressions ")
+    output.write_string_utf8(@debug.to_string(module_.expressions))
+    output.write_byte(b'\n')
+    output.write_string_utf8("blocks ")
+    output.write_string_utf8(@debug.to_string(module_.blocks))
+    output.write_byte(b'\n')
+    output.write_string_utf8("block-items ")
+    output.write_string_utf8(@debug.to_string(module_.block_items))
+    output.write_byte(b'\n')
+    output.write_string_utf8("patterns ")
+    output.write_string_utf8(@debug.to_string(module_.patterns))
+    output.write_byte(b'\n')
+    output.write_string_utf8("pattern-arms ")
+    output.write_string_utf8(@debug.to_string(module_.pattern_arms))
+    output.write_byte(b'\n')
+  }
+  output.to_bytes()
+}
+
+///|
+fn render_program_lowering(
+  program : @semantic.CollectedProgram,
+  lowering : @semantic.PlannedProgramLowering,
+) -> Bytes {
+  let output = Buffer(size_hint=4096)
+  for index, module_ in lowering.modules {
+    output.write_string_utf8("module ")
+    output.write_string_utf8(program.module_paths[index])
+    output.write_byte(b'\n')
+    output.write_string_utf8(@debug.to_string(module_))
+    output.write_byte(b'\n')
+  }
+  output.to_bytes()
+}
+
+///|
+fn write_cli_output(path : String, bytes : Bytes) -> Unit {
+  @fs.write_bytes_to_file(path, bytes) catch {
+    error => cli_fail("cannot write \{path}: \{error}")
+  }
+  println("wrote \{path} (\{bytes.length()} bytes)")
+}
+
+///|
 fn print_usage() -> Unit {
   println("usage:")
   println(
     "  dew check [--root NAME] [--module NAME] [--no-default-preamble] FILE ...",
   )
   println(
-    "  dew build [--root NAME] [--module NAME] [--no-default-preamble] -o OUTPUT FILE ...",
+    "  dew build [--root NAME] [--module NAME] [--no-default-preamble] [--emit hir|lowering|wasm] -o OUTPUT FILE ...",
   )
   println("  repeat --module NAME to begin another statically linked module")
   println(
@@ -99,6 +158,7 @@ fn main {
   let mut module_name = "main"
   let mut root_name = ""
   let mut output = ""
+  let mut emit = "wasm"
   let mut standard_root = @sys.get_env_var("DEW_STD_ROOT").unwrap_or(".")
   let mut bootstrap_standard_library = @sys.get_env_var("DEW_BOOTSTRAP_STD") ==
     Some("1")
@@ -127,6 +187,15 @@ fn main {
         cli_fail("missing value for --root")
       }
       root_name = args[index + 1]
+      index += 2
+    } else if argument == "--emit" {
+      if index + 1 >= args.length() {
+        cli_fail("missing value for --emit")
+      }
+      emit = args[index + 1]
+      if emit != "hir" && emit != "lowering" && emit != "wasm" {
+        cli_fail("--emit must be hir, lowering, or wasm")
+      }
       index += 2
     } else if argument == "--std-root" {
       if index + 1 >= args.length() {
@@ -167,6 +236,9 @@ fn main {
   }
   if command == "check" && output != "" {
     cli_fail("check does not accept an output path")
+  }
+  if command == "check" && emit != "wasm" {
+    cli_fail("check does not accept --emit")
   }
   if command == "build" && output == "" {
     cli_fail("build requires -o OUTPUT")
@@ -231,6 +303,14 @@ fn main {
     )
     return
   }
+  if emit == "hir" {
+    write_cli_output(output, render_program_hir(program))
+    return
+  }
+  if emit == "lowering" {
+    write_cli_output(output, render_program_lowering(program, lowering))
+    return
+  }
   let binary = match @backend.emit_starshine_program_binary(lowering, link) {
     Ok(binary) => binary
     Err(error) => {
@@ -239,8 +319,5 @@ fn main {
       b""
     }
   }
-  @fs.write_bytes_to_file(output, binary) catch {
-    error => cli_fail("cannot write \{output}: \{error}")
-  }
-  println("wrote \{output} (\{binary.length()} bytes)")
+  write_cli_output(output, binary)
 }

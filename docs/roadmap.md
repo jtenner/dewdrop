@@ -19,7 +19,7 @@ Dew currently has:
 - compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent cache for diagnostics-free compiler-owned standard frozen interfaces, with versioned deterministic encoding, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 152 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 135 compiled WAT/runtime snapshots plus 17 compiler-error snapshots.
+- 156 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 139 compiled WAT/runtime snapshots plus 17 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -37,7 +37,7 @@ by dependency and expected user value.
 - [x] Preserve stable type, function, import, memory, global, export, and code ordering rather than normalizing away compiler decisions.
 - [x] Add a fail-closed comparison runner that prints a normal unified diff on mismatch.
 - [x] Add an explicit snapshot-update command; ordinary test runs never rewrite expected files.
-- [x] Grow the suite to 152 fixtures: 135 compiled WAT/runtime snapshots and 17 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
+- [x] Grow the suite to 156 fixtures: 139 compiled WAT/runtime snapshots and 17 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
 - [x] Capture successful `main` stdout as an ordered JSON string array; `text/concat` writes and verifies the complete concatenated string.
 - [x] Snapshot deterministic compiler errors with `output: null` and no WAT, preserving multiline `Debug` diagnostics through a framed protocol.
 - [ ] Continue adding successful cases, warnings, compiler failures, boundaries, and reduced stress cases within each feature.
@@ -101,9 +101,9 @@ mode remains available for compiler tests.
 - [x] Implement `dew check` over explicitly ordered multi-file/multi-module inputs and strict minimal package manifests.
 - [x] Implement `dew build` with manifest/root-module selection and deterministic Starshine-validated statically linked `.wasm` output.
 - [x] Implement explicit-file and strict-manifest `dew test` with self-describing V3 metadata, globally unique manifest-order multi-module exports, stable filtering, expected traps, and listing.
-- [ ] Implement `dew run` after executable entry-point and WASI host behavior are fixed.
+- [x] Implement `dew run` with deterministic zero-argument `main` execution and bounded Preview 1 stdin/stdout hosting.
 - [x] Execute the complete immutable collection/interface/analysis/lowering/link DAG outside MoonBit test harnesses through `tools/dew`.
-- [ ] Add deterministic `--emit hir`, `--emit lowering`, `--emit wat`, and `--emit wasm` outputs.
+- [x] Add deterministic `--emit hir`, `--emit lowering`, `--emit wat`, and `--emit wasm` outputs.
 - [x] Return deterministic nonzero status for CLI usage, I/O, compilation, linking, validation, emission, empty test filters, and test failures.
 - [ ] Print stable file-aware diagnostics with line/column, excerpts, and secondary labels.
 - [ ] Add initial `compile-pass`, `compile-fail`, and `run-pass` fixture directories.
@@ -113,13 +113,13 @@ and executed from a Dew CLI with deterministic output and diagnostics.
 
 ### 5. Complete executable structured control flow
 
-- [ ] Finish structural short-circuit logical lowering in every value context.
+- [x] Finish structural short-circuit logical lowering in every value context.
 - [x] Lower functional `while` through frozen state/result-local plans.
 - [x] Emit `continue Expr`, `break Expr`, return, divergence, and `Never` joins correctly.
-- [ ] Emit nested tuple, struct, and enum patterns.
-- [ ] Emit alternative patterns with shared binding and extraction plans.
-- [ ] Consume complete imported enum domains during exhaustiveness analysis.
-- [ ] Add deep, wide, nested, and cross-module execution matrices.
+- [x] Emit nested tuple, struct, and enum patterns.
+- [x] Emit alternative patterns with shared binding identities and conditional extraction.
+- [x] Consume complete imported enum domains during exhaustiveness analysis.
+- [x] Add deep, wide, nested, and cross-module execution matrices.
 
 **Done when:** loops and nested matches execute without recursive compiler passes,
 and imported closed enums receive the same exhaustiveness guarantees as local
@@ -395,7 +395,7 @@ erased fallback.
 
 - [ ] Decide whether reserved `loop` becomes a second loop form.
 - [ ] Decide whether ordinary Boolean `while` is ever added.
-- [ ] Add short-circuit logical emission for all value contexts.
+- [x] Add short-circuit logical emission for all value contexts.
 - [ ] Add tail-position branch optimization.
 
 ## Module values and initialization
@@ -621,7 +621,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
-- [x] Establish broad feature-oriented coverage with 135 compiled fixtures, 17 compiler-error fixtures, 81 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture now requires identical Node/Wago Core 3 output and traps, and frozen standard interfaces plus dead-artifact elimination keeps checked-in WAT at 90,278 lines while adding collection and functional-loop coverage.
+- [x] Establish broad feature-oriented coverage with 139 compiled fixtures, 17 compiler-error fixtures, 85 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture now requires identical Node/Wago Core 3 output and traps, and frozen standard interfaces plus dead-artifact elimination keeps checked-in WAT at 92,544 lines while adding collection, functional-loop, short-circuit, nested-pattern, and imported-enum coverage.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.

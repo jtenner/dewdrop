@@ -1,0 +1,45 @@
+open dew.std.wasi
+
+fn mark() -> Bool {
+  wasi_fd_write(1u32, b"BAD")
+  true
+}
+
+fn return_through_and(value: I32) -> I32 {
+  true && if true {
+    return value
+  } else {
+    false
+  }
+  0
+}
+
+fn return_through_or(value: I32) -> I32 {
+  false || if true {
+    return value
+  } else {
+    false
+  }
+  0
+}
+
+fn loop_transfer(initial: I32) -> I32 {
+  while initial {
+    value => {
+      value > 0 && continue value - 1
+      false || break 9
+      break 0
+    }
+  }
+}
+
+pub fn main() -> U32 {
+  assert(!(false && mark()), "false and skips rhs")
+  assert(true || mark(), "true or skips rhs")
+  assert(true && true, "and value")
+  assert(!(false || false), "or value")
+  assert(return_through_and(4) == 4, "return through and")
+  assert(return_through_or(5) == 5, "return through or")
+  assert(loop_transfer(3) == 9, "loop transfers through logical operators")
+  wasi_fd_write(1u32, b"control:short-circuit")
+}

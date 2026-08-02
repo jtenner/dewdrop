@@ -224,6 +224,108 @@ def run_manifest_tests(
         wasm.unlink(missing_ok=True)
 
 
+def moon_cli(arguments: list[str], *, check: bool = False) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        [
+            "moon",
+            "run",
+            "--target",
+            "native",
+            "--release",
+            "src/dew_cli",
+            "--",
+            *arguments,
+        ],
+        cwd=ROOT,
+        check=check,
+    )
+
+
+def take_emit(arguments: list[str]) -> tuple[str, list[str]]:
+    emit = "wasm"
+    remaining: list[str] = []
+    index = 0
+    seen = False
+    while index < len(arguments):
+        if arguments[index] == "--emit":
+            if seen:
+                raise ManifestError("--emit may be supplied only once")
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing value for --emit")
+            emit = arguments[index + 1]
+            if emit not in {"hir", "lowering", "wat", "wasm"}:
+                raise ManifestError("--emit must be hir, lowering, wat, or wasm")
+            seen = True
+            index += 2
+        else:
+            remaining.append(arguments[index])
+            index += 1
+    return emit, remaining
+
+
+def take_output(arguments: list[str]) -> tuple[Path, list[str]]:
+    output: Path | None = None
+    remaining: list[str] = []
+    index = 0
+    while index < len(arguments):
+        if arguments[index] in {"-o", "--output"}:
+            if output is not None:
+                raise ManifestError("output path may be supplied only once")
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing output path")
+            output = Path(arguments[index + 1])
+            index += 2
+        else:
+            remaining.append(arguments[index])
+            index += 1
+    if output is None:
+        raise ManifestError("build requires -o OUTPUT")
+    return output, remaining
+
+
+def run_compiled(arguments: list[str]) -> None:
+    emit, compile_arguments = take_emit(arguments)
+    if emit != "wasm":
+        raise ManifestError("dew run does not accept --emit")
+    if "-o" in compile_arguments or "--output" in compile_arguments:
+        raise ManifestError("dew run does not accept an output path")
+    temp = ROOT / ".tmp"
+    temp.mkdir(exist_ok=True)
+    wasm = temp / f"dew-run-{os.getpid()}.wasm"
+    try:
+        compiled = moon_cli(["build", *compile_arguments, "-o", str(wasm)])
+        if compiled.returncode != 0:
+            raise SystemExit(compiled.returncode)
+        executed = subprocess.run(
+            ["node", "tools/dew-run.mjs", str(wasm)], cwd=ROOT, check=False
+        )
+        if executed.returncode != 0:
+            raise SystemExit(executed.returncode)
+    finally:
+        wasm.unlink(missing_ok=True)
+
+
+def emit_wat(arguments: list[str]) -> None:
+    output, compile_arguments = take_output(arguments)
+    temp = ROOT / ".tmp"
+    temp.mkdir(exist_ok=True)
+    wasm = temp / f"dew-emit-wat-{os.getpid()}.wasm"
+    try:
+        compiled = moon_cli(["build", *compile_arguments, "-o", str(wasm)])
+        if compiled.returncode != 0:
+            raise SystemExit(compiled.returncode)
+        rendered = subprocess.run(
+            ["wasm-tools", "print", str(wasm), "-o", str(output)],
+            cwd=ROOT,
+            check=False,
+        )
+        if rendered.returncode != 0:
+            raise SystemExit(rendered.returncode)
+        print(f"wrote {output} ({output.stat().st_size} bytes)")
+    finally:
+        wasm.unlink(missing_ok=True)
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         os.execvp(
@@ -236,39 +338,38 @@ def main() -> None:
         manifest, remaining = manifest_argument(configured)
         if command == "test" and "--no-default-preamble" in remaining:
             raise ManifestError("--no-default-preamble is not supported by dew test")
-        if manifest is None:
-            if command == "test":
-                os.execvp("python3", ["python3", "tools/dew-test-cli.py", *remaining])
-            os.execvp(
-                "moon",
-                [
-                    "moon",
-                    "run",
-                    "--target",
-                    "native",
-                    "--release",
-                    "src/dew_cli",
-                    "--",
-                    command,
-                    *remaining,
-                ],
-            )
-        if command not in {"check", "build", "test"}:
-            raise ManifestError("--manifest is supported only by check, build, and test")
-        for argument in remaining:
-            if argument == "--root" or (
-                command != "test" and argument == "--module"
-            ):
+        if manifest is not None:
+            if command not in {"check", "build", "test", "run"}:
                 raise ManifestError(
-                    "explicit module/root selection cannot be combined with this manifest command"
+                    "--manifest is supported only by check, build, test, and run"
                 )
-        root, modules = load_manifest(manifest)
-        if command == "test":
-            run_manifest_tests(root, modules, remaining)
+            for argument in remaining:
+                if argument == "--root" or (
+                    command != "test" and argument == "--module"
+                ):
+                    raise ManifestError(
+                        "explicit module/root selection cannot be combined with this manifest command"
+                    )
+            root, modules = load_manifest(manifest)
+            if command == "test":
+                run_manifest_tests(root, modules, remaining)
+                return
+            remaining = [*remaining, "--root", root]
+            for name, files in modules:
+                remaining.extend(("--module", name, *files))
+        elif command == "test":
+            os.execvp("python3", ["python3", "tools/dew-test-cli.py", *remaining])
+
+        if command == "run":
+            run_compiled(remaining)
             return
-        expanded = [command, *remaining, "--root", root]
-        for name, files in modules:
-            expanded.extend(("--module", name, *files))
+        emit, without_emit = take_emit(remaining)
+        if command == "build" and emit == "wat":
+            emit_wat(without_emit)
+            return
+        forwarded = [command, *without_emit]
+        if emit != "wasm":
+            forwarded.extend(("--emit", emit))
         os.execvp(
             "moon",
             [
@@ -279,7 +380,7 @@ def main() -> None:
                 "--release",
                 "src/dew_cli",
                 "--",
-                *expanded,
+                *forwarded,
             ],
         )
     except ManifestError as error:

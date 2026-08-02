@@ -38,6 +38,10 @@ Required development tools include MoonBit, Python 3, Node.js, and Go. Node and 
 ```sh
 tools/dew check path/to/main.dew
 tools/dew build path/to/main.dew -o program.wasm
+tools/dew build --emit wat path/to/main.dew -o program.wat
+tools/dew build --emit hir path/to/main.dew -o program.hir
+tools/dew build --emit lowering path/to/main.dew -o program.lowering
+tools/dew run path/to/main.dew
 ```
 
 Multi-module programs use repeated `--module NAME` arguments or strict `dew.json` manifests. Compiler-owned standard sources are loaded from deterministic registered paths; `--bootstrap-std` selects generated fallback sources.

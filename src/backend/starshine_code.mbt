@@ -79,6 +79,15 @@ priv enum StarshineEmitTask {
     @semantic.HirPrefixOperator,
     @semantic.PlannedValueShape
   )
+  FinishStarshineLogical(@semantic.HirBinaryOperator)
+}
+
+///|
+priv enum StarshinePatternEmitTask {
+  EmitStarshinePattern(@semantic.PatternId, Array[@lib.Instruction])
+  FinishStarshinePatternAll(Int)
+  FinishStarshinePatternAny(Int)
+  FinishStarshineVariantPattern(Array[@lib.Instruction], Int, Int, Int)
 }
 
 ///|
@@ -778,14 +787,12 @@ fn starshine_match_literal_condition(
   lowering : @semantic.PlannedModuleLowering,
   body : @semantic.PlannedBodyLowering,
   expression : @semantic.ExprId,
-  scratch_local : Int,
+  value : Array[@lib.Instruction],
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   if expression < 0 || expression >= lowering.expressions.length() {
     return Err(UnsupportedExpression(body.body, expression))
   }
-  let condition : Array[@lib.Instruction] = [
-    starshine_match_local_get(scratch_local),
-  ]
+  let condition = value.copy()
   match lowering.expressions[expression].kind {
     @semantic.PlannedI8Const(value) => {
       condition.push(
@@ -845,7 +852,408 @@ fn starshine_match_literal_condition(
 }
 
 ///|
-fn starshine_match_pattern_instructions(
+fn starshine_pattern_uses_general_emission(
+  lowering : @semantic.PlannedModuleLowering,
+  root : @semantic.PatternId,
+) -> Bool {
+  let pending : Array[@semantic.PatternId] = [root]
+  while pending.length() > 0 {
+    let pattern = pending.pop().unwrap()
+    let planned = lowering.patterns[pattern]
+    match planned.selected_constructor {
+      @semantic.StructInferredPatternConstructor(_, _) => return true
+      _ => ()
+    }
+    match planned.source {
+      @semantic.HirAlternativePattern(_, _, _) => return true
+      @semantic.HirTuplePattern(_, arguments, _) =>
+        for index in 0..<arguments.length {
+          let child = lowering.pattern_children[arguments.start + index]
+          match lowering.patterns[child].source {
+            @semantic.HirWildcardPattern(_)
+            | @semantic.HirBindingPattern(_, _)
+            | @semantic.HirRestPattern(_) => ()
+            _ => return true
+          }
+        }
+      @semantic.HirStructPattern(_, fields, _, _, _) =>
+        for index in 0..<fields.length {
+          let child = lowering.pattern_fields[fields.start + index].pattern
+          match lowering.patterns[child].source {
+            @semantic.HirWildcardPattern(_)
+            | @semantic.HirBindingPattern(_, _)
+            | @semantic.HirRestPattern(_) => ()
+            _ => return true
+          }
+        }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn starshine_pattern_all(
+  fragments : Array[Array[@lib.Instruction]],
+) -> Array[@lib.Instruction] {
+  if fragments.length() == 0 {
+    return [@lib.Instruction::i32_const(@lib.I32::new(1))]
+  }
+  let mut index = fragments.length() - 1
+  let mut combined = fragments[index]
+  while index > 0 {
+    index -= 1
+    let output = fragments[index]
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::i32()),
+        combined,
+        Some([@lib.Instruction::i32_const(@lib.I32::new(0))]),
+      ),
+    )
+    combined = output
+  }
+  combined
+}
+
+///|
+fn starshine_pattern_any(
+  fragments : Array[Array[@lib.Instruction]],
+) -> Array[@lib.Instruction] {
+  if fragments.length() == 0 {
+    return [@lib.Instruction::i32_const(@lib.I32::new(0))]
+  }
+  let mut index = fragments.length() - 1
+  let mut combined = fragments[index]
+  while index > 0 {
+    index -= 1
+    let output = fragments[index]
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::i32()),
+        [@lib.Instruction::i32_const(@lib.I32::new(1))],
+        Some(combined),
+      ),
+    )
+    combined = output
+  }
+  combined
+}
+
+///|
+fn starshine_general_match_pattern_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  body : @semantic.PlannedBodyLowering,
+  root : @semantic.PatternId,
+  scratch_local : Int,
+  local_indices : Array[Int],
+) -> Result[
+  (Array[@lib.Instruction], Array[@lib.Instruction]),
+  StarshineCodeEmissionError,
+] {
+  let tasks : Array[StarshinePatternEmitTask] = [
+    EmitStarshinePattern(root, [starshine_match_local_get(scratch_local)]),
+  ]
+  let results : Array[Array[@lib.Instruction]] = []
+  while tasks.length() > 0 {
+    match tasks.pop().unwrap() {
+      EmitStarshinePattern(pattern, value) => {
+        let source = lowering.patterns[pattern]
+        match source.source {
+          @semantic.HirAlternativePattern(first, remaining, _) => {
+            tasks.push(FinishStarshinePatternAny(remaining.length + 1))
+            let mut index = remaining.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshinePattern(
+                  lowering.pattern_children[remaining.start + index],
+                  value.copy(),
+                ),
+              )
+            }
+            tasks.push(EmitStarshinePattern(first, value))
+            continue
+          }
+          @semantic.HirLiteralPattern(expression, _) => {
+            match
+              starshine_match_literal_condition(
+                lowering, body, expression, value,
+              ) {
+              Ok(condition) => results.push(condition)
+              Err(error) => return Err(error)
+            }
+            continue
+          }
+          _ => ()
+        }
+        match source.selected_constructor {
+          @semantic.NoInferredPatternConstructor => {
+            let output : Array[@lib.Instruction] = []
+            match source.reference {
+              @semantic.PatternBindingReference(local_id) => {
+                if local_id < 0 ||
+                  local_id >= local_indices.length() ||
+                  local_indices[local_id] < 0 {
+                  return Err(InvalidLocal(body.body, local_id))
+                }
+                append_starshine_instructions(output, value)
+                output.push(
+                  @lib.Instruction::local_set(
+                    @lib.LocalIdx::new(
+                      local_indices[local_id].reinterpret_as_uint(),
+                    ),
+                  ),
+                )
+              }
+              _ => ()
+            }
+            output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+            results.push(output)
+          }
+          @semantic.StructInferredPatternConstructor(declaration, _) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(declaration))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let owner_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let physical = match
+              starshine_struct_physical_type(owner_plan, declaration) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let type_index = match program {
+              Some(link) =>
+                link.module_type_bases[owner_module] + physical.type_index
+              None => physical.type_index
+            }
+            let pattern_fields = match source.source {
+              @semantic.HirStructPattern(_, fields, _, _, _) => fields
+              _ => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let child_patterns : Array[@semantic.PatternId] = []
+            let child_values : Array[Array[@lib.Instruction]] = []
+            for field_offset in 0..<pattern_fields.length {
+              let pattern_field = lowering.pattern_fields[pattern_fields.start +
+                field_offset]
+              let mut selected : @semantic.PlannedWasmField? = None
+              for physical_offset in 0..<physical.fields.length {
+                let candidate = owner_plan.fields[physical.fields.start +
+                  physical_offset]
+                match candidate.role {
+                  @semantic.WasmStructField(field) =>
+                    match owner_plan.field_name_of(field) {
+                      Some(name) if name == pattern_field.name &&
+                        starshine_shape_matches_storage(
+                          lowering.patterns[pattern_field.pattern].shape,
+                          candidate.storage,
+                        ) => selected = Some(candidate)
+                      _ => ()
+                    }
+                  _ => ()
+                }
+              }
+              let field = match selected {
+                Some(value) => value
+                None => return Err(UnsupportedExpression(body.body, pattern))
+              }
+              let loader = value.copy()
+              loader.push(starshine_match_cast(type_index))
+              loader.push(
+                starshine_struct_get_instruction(
+                  type_index,
+                  field.physical_index,
+                  field.storage,
+                ),
+              )
+              child_patterns.push(pattern_field.pattern)
+              child_values.push(loader)
+            }
+            tasks.push(FinishStarshinePatternAll(child_patterns.length()))
+            let mut child = child_patterns.length()
+            while child > 0 {
+              child -= 1
+              tasks.push(
+                EmitStarshinePattern(child_patterns[child], child_values[child]),
+              )
+            }
+          }
+          @semantic.VariantInferredPatternConstructor(variant, _) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(variant))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let variant_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let declaration = match
+              variant_plan.variant_declaration_of(variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let tag = match variant_plan.variant_tag_of(variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let base_type = match
+              starshine_emitted_type_index(planned, program, declaration) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let physical = match
+              starshine_variant_payload_physical_type(variant_plan, variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let physical_type = match program {
+              Some(link) =>
+                link.module_type_bases[owner_module] + physical.type_index
+              None => physical.type_index
+            }
+            let child_patterns : Array[@semantic.PatternId] = []
+            let child_values : Array[Array[@lib.Instruction]] = []
+            match source.source {
+              @semantic.HirQualifiedPattern(_, _, _)
+              | @semantic.HirBindingPattern(_, _) => ()
+              @semantic.HirTuplePattern(_, arguments, _) =>
+                for field in variant_plan.variant_fields_of(variant) {
+                  let source_index = match field.role {
+                    @semantic.WasmTuplePayloadField(_, source_index) =>
+                      source_index
+                    _ => return Err(UnsupportedExpression(body.body, pattern))
+                  }
+                  let child = lowering.pattern_children[arguments.start +
+                    source_index]
+                  if starshine_shape_matches_storage(
+                      lowering.patterns[child].shape,
+                      field.storage,
+                    ) {
+                    let loader = value.copy()
+                    loader.push(starshine_match_cast(physical_type))
+                    loader.push(
+                      starshine_struct_get_instruction(
+                        physical_type,
+                        field.physical_index,
+                        field.storage,
+                      ),
+                    )
+                    child_patterns.push(child)
+                    child_values.push(loader)
+                  }
+                }
+              @semantic.HirStructPattern(_, pattern_fields, _, _, _) =>
+                for field_offset in 0..<pattern_fields.length {
+                  let pattern_field = lowering.pattern_fields[pattern_fields.start +
+                    field_offset]
+                  let mut selected : @semantic.PlannedWasmVariantField? = None
+                  for candidate in variant_plan.variant_fields_of(variant) {
+                    match candidate.role {
+                      @semantic.WasmStructPayloadField(field) =>
+                        match variant_plan.field_name_of(field) {
+                          Some(name) if name == pattern_field.name &&
+                            starshine_shape_matches_storage(
+                              lowering.patterns[pattern_field.pattern].shape,
+                              candidate.storage,
+                            ) => selected = Some(candidate)
+                          _ => ()
+                        }
+                      _ => ()
+                    }
+                  }
+                  let field = match selected {
+                    Some(value) => value
+                    None =>
+                      return Err(UnsupportedExpression(body.body, pattern))
+                  }
+                  let loader = value.copy()
+                  loader.push(starshine_match_cast(physical_type))
+                  loader.push(
+                    starshine_struct_get_instruction(
+                      physical_type,
+                      field.physical_index,
+                      field.storage,
+                    ),
+                  )
+                  child_patterns.push(pattern_field.pattern)
+                  child_values.push(loader)
+                }
+              _ => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            tasks.push(
+              FinishStarshineVariantPattern(
+                value,
+                base_type,
+                tag,
+                child_patterns.length(),
+              ),
+            )
+            let mut child = child_patterns.length()
+            while child > 0 {
+              child -= 1
+              tasks.push(
+                EmitStarshinePattern(child_patterns[child], child_values[child]),
+              )
+            }
+          }
+          @semantic.ErrorInferredPatternConstructor =>
+            return Err(UnsupportedExpression(body.body, pattern))
+        }
+      }
+      FinishStarshinePatternAll(count) =>
+        results.push(
+          starshine_pattern_all(pop_starshine_fragments(results, count)),
+        )
+      FinishStarshinePatternAny(count) =>
+        results.push(
+          starshine_pattern_any(pop_starshine_fragments(results, count)),
+        )
+      FinishStarshineVariantPattern(value, base_type, tag, child_count) => {
+        let children = starshine_pattern_all(
+          pop_starshine_fragments(results, child_count),
+        )
+        let condition = value
+        condition.push(starshine_match_cast(base_type))
+        condition.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(base_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+        )
+        condition.push(@lib.Instruction::i32_const(@lib.I32::new(tag)))
+        condition.push(@lib.Instruction::i32_eq())
+        condition.push(
+          @lib.Instruction::if_(
+            @lib.BlockType::val_type(@lib.ValType::i32()),
+            children,
+            Some([@lib.Instruction::i32_const(@lib.I32::new(0))]),
+          ),
+        )
+        results.push(condition)
+      }
+    }
+  }
+  if results.length() != 1 {
+    Err(UnsupportedExpression(body.body, root))
+  } else {
+    Ok((results[0], []))
+  }
+}
+
+///|
+fn starshine_simple_match_pattern_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
@@ -864,9 +1272,9 @@ fn starshine_match_pattern_instructions(
   match source.source {
     @semantic.HirLiteralPattern(expression, _) =>
       return match
-        starshine_match_literal_condition(
-          lowering, body, expression, scratch_local,
-        ) {
+        starshine_match_literal_condition(lowering, body, expression, [
+          starshine_match_local_get(scratch_local),
+        ]) {
         Ok(condition) => Ok((condition, bindings))
         Err(error) => Err(error)
       }
@@ -1046,6 +1454,33 @@ fn starshine_match_pattern_instructions(
     _ => return Err(UnsupportedExpression(body.body, pattern))
   }
   Ok((condition, bindings))
+}
+
+///|
+fn starshine_match_pattern_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  body : @semantic.PlannedBodyLowering,
+  pattern : @semantic.PatternId,
+  scratch_local : Int,
+  local_indices : Array[Int],
+) -> Result[
+  (Array[@lib.Instruction], Array[@lib.Instruction]),
+  StarshineCodeEmissionError,
+] {
+  if starshine_pattern_uses_general_emission(lowering, pattern) {
+    starshine_general_match_pattern_instructions(
+      lowering, planned, program, program_module_index, body, pattern, scratch_local,
+      local_indices,
+    )
+  } else {
+    starshine_simple_match_pattern_instructions(
+      lowering, planned, program, program_module_index, body, pattern, scratch_local,
+      local_indices,
+    )
+  }
 }
 
 ///|
@@ -2630,6 +3065,15 @@ fn starshine_emit_body_instructions(
             tasks.push(FinishStarshinePrefix(operator, source.shape))
             tasks.push(EmitStarshineExpression(operand))
           }
+          @semantic.PlannedBinaryExpression(operator, left, right) =>
+            match operator {
+              @semantic.HirLogicalAnd | @semantic.HirLogicalOr => {
+                tasks.push(FinishStarshineLogical(operator))
+                tasks.push(EmitStarshineExpression(right))
+                tasks.push(EmitStarshineExpression(left))
+              }
+              _ => return Err(UnsupportedExpression(body.body, expression))
+            }
           @semantic.PlannedFieldGet(field, base) => {
             let owner_module = match program {
               Some(link) =>
@@ -2657,8 +3101,7 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedBinaryExpression(_, _, _)
-          | @semantic.PlannedPoisonExpression
+          @semantic.PlannedPoisonExpression
           | @semantic.PlannedConsumedExpression
           | @semantic.PlannedModuleValueGet(_) =>
             return Err(UnsupportedExpression(body.body, expression))
@@ -4288,6 +4731,10 @@ fn starshine_emit_body_instructions(
           for arm_index in 0..<arms.length {
             let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
               arm_index]]
+            if starshine_pattern_uses_general_emission(lowering, arm.pattern) {
+              dense_dispatch = false
+              break
+            }
             let variant = match
               lowering.patterns[arm.pattern].selected_constructor {
               @semantic.VariantInferredPatternConstructor(variant, _) => variant
@@ -4674,6 +5121,31 @@ fn starshine_emit_body_instructions(
                   UnsupportedExpression(body.body, body.expressions.start),
                 )
             }
+        }
+        results.push(output)
+      }
+      FinishStarshineLogical(operator) => {
+        let fragments = pop_starshine_fragments(results, 2)
+        let output = fragments[0]
+        let right = fragments[1]
+        match operator {
+          @semantic.HirLogicalAnd =>
+            output.push(
+              @lib.Instruction::if_(
+                @lib.BlockType::val_type(@lib.ValType::i32()),
+                right,
+                Some([@lib.Instruction::i32_const(@lib.I32::new(0))]),
+              ),
+            )
+          @semantic.HirLogicalOr =>
+            output.push(
+              @lib.Instruction::if_(
+                @lib.BlockType::val_type(@lib.ValType::i32()),
+                [@lib.Instruction::i32_const(@lib.I32::new(1))],
+                Some(right),
+              ),
+            )
+          _ => return Err(UnsupportedExpression(body.body, -301))
         }
         results.push(output)
       }

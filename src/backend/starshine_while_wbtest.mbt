@@ -48,3 +48,11 @@ test "functional while emits unit nested if return and nested controls" {
   )
   assert_eq(@validate.validate_module(module_), Ok(()))
 }
+
+///|
+test "logical operators short circuit values and loop transfers" {
+  let module_ = starshine_while_test_module(
+    b"fn and_value(left: Bool, right: Bool) -> Bool {\n  left && right\n}\nfn or_value(left: Bool, right: Bool) -> Bool {\n  left || right\n}\nfn transfer(initial: I32) -> I32 {\n  while initial {\n    value => {\n      value > 0 && continue value - 1\n      break 9\n    }\n  }\n}\npub fn main() -> I32 {\n  if and_value(true, true) && or_value(false, true) {\n    transfer(3)\n  } else {\n    0\n  }\n}\n",
+  )
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}

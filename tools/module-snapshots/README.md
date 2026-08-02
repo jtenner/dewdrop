@@ -125,19 +125,19 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 152 fixtures:
+The suite contains 156 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
 calls                2          0                 2                0
 collections         14          9                 5                2
-control-flow       15         15                 0                1
+control-flow       18         18                 0                1
 enums               11         11                 0                0
 functions            1          0                 1                0
 generics             1          1                 0                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules              3          3                 0                0
+modules              4          4                 0                0
 names                2          0                 2                0
 numeric             28         26                 2                1
 reachability         1          1                 0                0
@@ -147,15 +147,15 @@ text                 23         23                 0                1
 types                1          0                 1                0
 wasi                 16         16                 0                5
 
-total               152        135                17               12
+total               156        139                17               12
 ```
 
-Eighty-one compiled fixtures assert nonempty stdout, twelve assert normalized
+Eighty-five compiled fixtures assert nonempty stdout, twelve assert normalized
 runtime traps, and forty-two intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 2, 2026, all 135 compiled fixtures produce identical output and
+As of August 2, 2026, all 139 compiled fixtures produce identical output and
 normalized traps in Node and Wago's explicit `CoreFeaturesV3` mode.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,

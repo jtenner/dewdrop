@@ -158,6 +158,7 @@ pub struct PlannedObjectField {
 ///|
 pub struct PlannedPattern {
   type_ : BodyTypeId
+  shape : PlannedValueShape
   source : HirPattern
   reference : BodyPatternReference
   selected_constructor : InferredPatternConstructor
@@ -863,6 +864,11 @@ fn plan_body_lowering_job(
     pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
     patterns.push({
       type_: inferred.pattern_types[pattern],
+      shape: planned_value_shape(
+        resolved,
+        inferred,
+        inferred.pattern_types[pattern],
+      ),
       source: collected.patterns[pattern],
       reference: names.pattern_references[pattern],
       selected_constructor: inferred.pattern_constructors[pattern],
@@ -1072,6 +1078,7 @@ fn plan_module_lowering_in_order(
     }),
     patterns: Array::make(collected.patterns.length(), {
       type_: 0,
+      shape: ErrorPlannedValueShape,
       source: HirWildcardPattern(0UL),
       reference: NoPatternReference,
       selected_constructor: NoInferredPatternConstructor,

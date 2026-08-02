@@ -6,10 +6,10 @@ This file tracks designed or partially designed features that remain unimplement
 
 1. Extend the on-disk package-root and persistent standard-interface cache model to versioned external dependencies with integrity and dependency-interface fingerprints.
 2. Complete imported trait requirement validation, merge imported impl evidence into coherence/dispatch indexes, and define visibility/orphan rules.
-3. Build `dew run`, stable file-aware diagnostics, and deterministic `--emit` outputs on the existing check/build/test driver.
-4. Complete structural logical lowering, functional loops, nested/alternative patterns, and imported enum exhaustiveness.
-5. Emit module globals/startup, diagnose cross-module eager cycles, and support cross-module recursive WasmGC groups.
-6. Define and implement generic obligations, specialization, erased fallback ABIs, and executable cross-module generic aggregates.
+3. Add stable file-aware diagnostics to the completed check/build/test/run and deterministic emit driver.
+4. Emit module globals/startup, diagnose cross-module eager cycles, and support cross-module recursive WasmGC groups.
+5. Define and implement generic obligations, specialization, erased fallback ABIs, and executable cross-module generic aggregates.
+6. Add the deterministic optimization pipeline and optimized snapshots.
 7. Continue deterministic snapshots, generated lane coverage, resource-budget definition, and phase/runtime/allocation measurement.
 
 Performance and correctness work remains continuous: expand generated lane-family tests, measure retained text ranges and scalar iteration, define explicit resource budgets, and keep phase/runtime benchmarks current. Broad fuzzing begins later, after snapshots, the initial CLI/fixture framework, and the principal executable control-flow surface are stable.
@@ -67,12 +67,12 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Commit readable `.wat` expectations while keeping generated `.wasm` temporary.
 - [x] Compare snapshots byte-for-byte and print unified diffs.
 - [x] Provide an explicit update command that ordinary test runs never invoke automatically.
-- [x] Cover 135 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
+- [x] Cover 139 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
 - [x] Keep each JSON oracle to exactly ordered compiler `errors`, ordered compiler `warnings`, and ordered stdout-string `output`; `null` means no module or WAT was produced.
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 152 fixtures with compiler failures kept beside their language features: 135 compiled WAT/runtime snapshots, 17 compiler-error snapshots, 81 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 156 fixtures with compiler failures kept beside their language features: 139 compiled WAT/runtime snapshots, 17 compiler-error snapshots, 85 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -98,7 +98,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Complete scalar integer arithmetic, comparison, unsigned division/remainder, bitwise, and shift emission.
 - [x] Emit `i64`, `f32`, and `f64` constants and operations.
 - [x] Emit numeric conversions and reinterpretations through registered builtins.
-- [ ] Finish structural logical binary emission; scalar prefix operators are emitted.
+- [x] Finish structural short-circuit logical binary emission; scalar prefix operators are emitted.
 - [ ] Validate `Never`, unreachable, drop, local-let, and return stack behavior across all value shapes.
 - [x] Emit functional `while` using state/result locals and structured Wasm blocks/loops.
 - [x] Emit `continue Expr` state updates and `break Expr` results.
@@ -107,12 +107,12 @@ Performance and correctness work remains continuous: expand generated lane-famil
 
 ## Pattern matching and flow
 
-- [ ] Emit nested tuple, struct, and enum destructuring.
-- [ ] Emit comma-separated alternative patterns.
-- [ ] Share extraction work and bindings across alternatives.
-- [ ] Complete literal, rest, and catch-all execution in nested patterns.
-- [ ] Consume frozen imported enum domains during exhaustiveness analysis.
-- [ ] Remove conservative open-domain behavior for complete imported enums.
+- [x] Emit nested tuple, struct, and enum destructuring.
+- [x] Emit comma-separated alternative patterns with shared binding identities.
+- [ ] Share extraction work across alternatives where paths overlap.
+- [x] Complete literal, rest, and catch-all execution in nested patterns.
+- [x] Consume frozen imported enum domains during exhaustiveness analysis.
+- [x] Remove conservative open-domain behavior for complete imported enums.
 - [ ] Add full nested pattern-matrix usefulness when justified.
 - [ ] Add typed payload-local reuse, cast elimination, and extraction CSE.
 
@@ -174,13 +174,13 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Implement initial `dew check` and `dew build` over explicitly ordered multi-file/multi-module inputs with root selection and deterministic exit status.
 - [x] Implement initial explicit-file `dew test` with V3 metadata, filters, and expected traps.
 - [x] Extend `dew test` to strict package manifests and multi-module test programs with manifest-order global test ordinals.
-- [ ] Implement `dew run`.
+- [x] Implement `dew run` for zero-argument `main` with Preview 1 stdin/stdout hosting.
 - [x] Execute the complete immutable collection/interface/analysis/lowering/link DAG through the CLI.
 - [x] Accept strict minimal package manifests for check and build.
 - [x] Add manifest-driven multi-module tests without filesystem discovery.
 - [ ] Replace ordinary package file lists with strict TOML manifests and deterministic sorted `src/**/*.dew` discovery under the root package and `.dew/packages/<name>/` dependencies.
 - [ ] Add deterministic discovered source roots.
-- [x] Write deterministic Starshine-validated `.wasm` output; Starshine-derived WAT remains pending.
+- [x] Write deterministic Starshine-validated `.wasm` output plus explicit HIR, lowering, pinned-printer WAT, and Wasm emit modes.
 - [x] Split String, StringBuilder, Bytes, and BytesBuilder into separate standard source modules while retaining one private bootstrap text-runtime declaration file.
 - [x] Add a deterministic import prepass that selects explicitly imported lane, split text/bytes, and WASI standard modules plus private dependency closure.
 - [x] Use the scalar WAT snapshot to prove unrelated standard families are omitted: the two-function scalar module fell from more than 3,100 types to 951 type entries before the frozen-module migration.

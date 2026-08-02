@@ -5520,8 +5520,8 @@ fn BasicBodyInferencer::constrain_binary_expression(
   match operator {
     HirLogicalOr | HirLogicalAnd => {
       let bool_type = self.primitive(BoolType)
-      self.constrain(left_type, bool_type, origin)
-      self.constrain(right_type, bool_type, origin)
+      self.constrain_assignable(left_type, bool_type, origin)
+      self.constrain_assignable(right_type, bool_type, origin)
       self.constrain(result, bool_type, origin)
     }
     HirEqual

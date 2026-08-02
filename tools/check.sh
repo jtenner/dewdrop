@@ -121,6 +121,18 @@ tools/dew check --manifest tests/cli/multi-module/dew.json
 tools/dew build \
   --manifest tests/cli/multi-module/dew.json \
   -o .tmp/dew-cli-smoke.wasm
+tools/dew build --emit hir -o .tmp/dew-cli-smoke.hir \
+  tests/module-snapshots/numeric/scalar.dew
+tools/dew build --emit lowering -o .tmp/dew-cli-smoke.lowering \
+  tests/module-snapshots/numeric/scalar.dew
+tools/dew build --emit wat -o .tmp/dew-cli-smoke.wat \
+  tests/module-snapshots/numeric/scalar.dew
+test -s .tmp/dew-cli-smoke.hir
+test -s .tmp/dew-cli-smoke.lowering
+test -s .tmp/dew-cli-smoke.wat
+tools/dew run tests/module-snapshots/control-flow/short-circuit-runtime.dew \
+  > .tmp/dew-cli-run.txt
+grep -q '^control:short-circuit$' .tmp/dew-cli-run.txt
 node --input-type=module -e '
   import { readFile } from "node:fs/promises";
   const bytes = await readFile(".tmp/dew-cli-smoke.wasm");

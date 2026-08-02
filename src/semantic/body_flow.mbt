@@ -171,6 +171,7 @@ priv struct BodyFlowAnalyzer {
   collected : CollectedModule
   resolved : ResolvedModuleTypes
   inferred : InferredModuleBodies
+  imports : ResolvedModuleImports?
   body : HirBody
   expression_flows : Array[BodyFlowSummary]
   block_flows : Array[BodyFlowSummary]
@@ -190,6 +191,7 @@ fn BodyFlowAnalyzer::new(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
+  imports : ResolvedModuleImports?,
   body : HirBody,
   variant_spans : Array[HirSpan],
   pattern_tasks : Array[PatternId],
@@ -199,6 +201,7 @@ fn BodyFlowAnalyzer::new(
     collected,
     resolved,
     inferred,
+    imports,
     body,
     expression_flows: if body.expressions.length == 0 {
       empty_flow_summaries
@@ -335,6 +338,20 @@ fn BodyFlowAnalyzer::field_count(
   declaration : DeclId,
   variant : VariantId?,
 ) -> Int {
+  if semantic_id_module(declaration) != self.collected.module_id {
+    return match self.imports {
+      Some(imports) => {
+        let mut count = 0
+        for field in imports.fields_of(declaration) {
+          if field.variant == variant {
+            count += 1
+          }
+        }
+        count
+      }
+      None => 0
+    }
+  }
   let mut count = 0
   for field in self.collected.fields {
     if field.declaration == declaration && field.variant == variant {
@@ -407,16 +424,28 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
           match selected {
             StructInferredPatternConstructor(declaration, _) =>
               result = fields.length == self.field_count(declaration, None)
-            VariantInferredPatternConstructor(variant, _) =>
-              if semantic_id_module(variant) == self.collected.module_id {
-                let declaration = self.collected.variants[semantic_id_local(
-                    variant,
-                  )].declaration
-                result = fields.length ==
-                  self.field_count(declaration, Some(variant))
+            VariantInferredPatternConstructor(variant, _) => {
+              let declaration = if semantic_id_module(variant) ==
+                self.collected.module_id {
+                Some(
+                  self.collected.variants[semantic_id_local(variant)].declaration,
+                )
               } else {
-                result = false
+                match self.imports {
+                  Some(imports) =>
+                    match imports.variant(variant) {
+                      Some(imported) => Some(imported.declaration)
+                      None => None
+                    }
+                  None => None
+                }
               }
+              result = match declaration {
+                Some(owner) =>
+                  fields.length == self.field_count(owner, Some(variant))
+                None => false
+              }
+            }
             _ => result = false
           }
         }
@@ -475,7 +504,12 @@ fn BodyFlowAnalyzer::coverage_domain(
                 Some(TopLevelReference({ kind: EnumDecl, .. })) =>
                   return EnumCoverageDomain(declaration)
                 Some(_) => return OpenCoverageDomain
-                None => return OpenCoverageDomain
+                None =>
+                  match self.imports {
+                    Some(imports) if imports.is_enum(declaration) =>
+                      return EnumCoverageDomain(declaration)
+                    _ => return OpenCoverageDomain
+                  }
               }
             AppliedType(base, _) => resolved_current = base
           }
@@ -584,6 +618,29 @@ fn BodyFlowAnalyzer::variant_span(
 }
 
 ///|
+fn BodyFlowAnalyzer::enum_variants(
+  self : BodyFlowAnalyzer,
+  declaration : DeclId,
+) -> Array[VariantId] {
+  let variants : Array[VariantId] = []
+  if semantic_id_module(declaration) == self.collected.module_id {
+    let span = self.variant_span(declaration)
+    for index in 0..<span.length {
+      variants.push(self.collected.variants[span.start + index].id)
+    }
+  } else {
+    match self.imports {
+      Some(imports) =>
+        for imported in imports.variants_of(declaration) {
+          variants.push(imported.variant)
+        }
+      None => ()
+    }
+  }
+  variants
+}
+
+///|
 fn BodyFlowAnalyzer::analyze_coverage(
   self : BodyFlowAnalyzer,
   expression : ExprId,
@@ -596,11 +653,11 @@ fn BodyFlowAnalyzer::analyze_coverage(
   if domain == ErrorCoverageDomain {
     return true
   }
-  let span = match domain {
-    EnumCoverageDomain(declaration) => self.variant_span(declaration)
-    _ => { start: 0, length: 0 }
+  let domain_variants = match domain {
+    EnumCoverageDomain(declaration) => self.enum_variants(declaration)
+    _ => []
   }
-  let covered_variants = Array::make(span.length, false)
+  let covered_variants = Array::make(domain_variants.length(), false)
   let mut covered_true = false
   let mut covered_false = false
   let mut covered_variant_count = 0
@@ -618,7 +675,8 @@ fn BodyFlowAnalyzer::analyze_coverage(
           let complete = catch_all ||
             (match domain {
               BoolCoverageDomain => covered_true && covered_false
-              EnumCoverageDomain(_) => covered_variant_count == span.length
+              EnumCoverageDomain(_) =>
+                covered_variant_count == domain_variants.length()
               OpenCoverageDomain | ErrorCoverageDomain => false
             })
           if complete {
@@ -654,7 +712,13 @@ fn BodyFlowAnalyzer::analyze_coverage(
                 }
               }
             VariantCoverageAtom(variant) => {
-              let variant_slot = semantic_id_local(variant) - span.start
+              let mut variant_slot = -1
+              for index, candidate in domain_variants {
+                if candidate == variant {
+                  variant_slot = index
+                  break
+                }
+              }
               if variant_slot < 0 || variant_slot >= covered_variants.length() {
                 useful = true
                 coverage_error = true
@@ -689,11 +753,9 @@ fn BodyFlowAnalyzer::analyze_coverage(
         }
       }
       EnumCoverageDomain(_) =>
-        for index in 0..<span.length {
+        for index in 0..<domain_variants.length() {
           if !covered_variants[index] {
-            self.missing_cases.push(
-              MissingVariantCase(self.collected.variants[span.start + index].id),
-            )
+            self.missing_cases.push(MissingVariantCase(domain_variants[index]))
           }
         }
       OpenCoverageDomain => self.missing_cases.push(MissingCatchAllCase)
@@ -1031,10 +1093,11 @@ fn flow_variant_spans(collected : CollectedModule) -> Array[HirSpan] {
 }
 
 ///|
-fn analyze_module_flows_in_order(
+fn analyze_module_flows_internal(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
+  imports : ResolvedModuleImports?,
   order : Array[Int],
 ) -> AnalyzedModuleFlows {
   if collected.module_id != resolved.module_id ||
@@ -1062,7 +1125,7 @@ fn analyze_module_flows_in_order(
     let body = collected.bodies[body_index]
     jobs[body_index] = Some(
       BodyFlowAnalyzer::new(
-        collected, resolved, inferred, body, variant_spans, pattern_tasks,
+        collected, resolved, inferred, imports, body, variant_spans, pattern_tasks,
       ).finish(),
     )
   }
@@ -1133,6 +1196,16 @@ fn analyze_module_flows_in_order(
 }
 
 ///|
+fn analyze_module_flows_in_order(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  order : Array[Int],
+) -> AnalyzedModuleFlows {
+  analyze_module_flows_internal(collected, resolved, inferred, None, order)
+}
+
+///|
 pub fn analyze_module_flows(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
@@ -1143,4 +1216,27 @@ pub fn analyze_module_flows(
     order.push(index)
   }
   analyze_module_flows_in_order(collected, resolved, inferred, order)
+}
+
+///|
+pub fn analyze_module_flows_with_imports(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  imports : ResolvedModuleImports,
+) -> AnalyzedModuleFlows {
+  guard imports.module_id == collected.module_id else {
+    abort("flow import scope belongs to another module")
+  }
+  let order : Array[Int] = []
+  for index in 0..<collected.bodies.length() {
+    order.push(index)
+  }
+  analyze_module_flows_internal(
+    collected,
+    resolved,
+    inferred,
+    Some(imports),
+    order,
+  )
 }

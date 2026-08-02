@@ -1,0 +1,65 @@
+open dew.std.wasi
+
+enum Inner {
+  A(I32)
+  B(I32)
+}
+
+enum Outer {
+  Wrap(Inner)
+  Named {
+    inner: Inner
+    flag: Bool
+  }
+}
+
+struct Box {
+  inner: Inner
+}
+
+fn read_outer(value: Outer) -> I32 {
+  match value {
+    Outer::Wrap(Inner::A(7)) => 70
+    Outer::Wrap(Inner::A(item)), Outer::Wrap(Inner::B(item)) => item
+    Outer::Named {
+      inner: Inner::A(item)
+      flag: true
+    } => item + 100
+    Outer::Named {
+      inner: Inner::A(item)
+      flag: false
+    } => item + 200
+    Outer::Named {
+      inner: Inner::B(item)
+      ...
+    } => item + 300
+  }
+}
+
+fn read_box(value: Box) -> I32 {
+  match value {
+    Box {
+      inner: Inner::A(item)
+    } => item
+    Box {
+      inner: Inner::B(item)
+    } => item + 10
+  }
+}
+
+pub fn main() -> U32 {
+  let result = read_outer(Outer::Wrap(Inner::A(7))) +
+    read_outer(Outer::Wrap(Inner::B(5))) +
+    read_outer(Outer::Named {
+      inner: Inner::A(3)
+      flag: true
+    }) +
+    read_box(Box {
+      inner: Inner::B(4)
+    })
+  if result == 192 {
+    wasi_fd_write(1u32, b"control:nested-patterns")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}
