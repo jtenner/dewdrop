@@ -1,0 +1,11 @@
+fn fib(value: I32) -> I32 {
+  if value <= 1 {
+    value
+  } else {
+    fib(value - 1) + fib(value - 2)
+  }
+}
+
+pub fn main() -> I32 {
+  fib(8)
+}

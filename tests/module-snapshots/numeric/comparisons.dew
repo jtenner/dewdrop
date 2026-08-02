@@ -1,0 +1,14 @@
+pub fn main() -> Bool {
+  let signed = -4i32 < 2i32
+  let unsigned = 4294967295u32 > 1u32
+  let floating = 4.5f64 >= 4.5f64
+  if signed {
+    if unsigned {
+      floating
+    } else {
+      false
+    }
+  } else {
+    false
+  }
+}

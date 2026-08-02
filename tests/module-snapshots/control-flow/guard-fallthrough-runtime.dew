@@ -1,0 +1,16 @@
+open dew.std.wasi
+fn classify(value: Bool) -> I32 {
+  match value {
+    true if false => 99
+    true => 7
+    false => 0
+  }
+}
+
+pub fn main() -> U32 {
+  if classify(true) == 7 {
+    wasi_fd_write(1u32, b"control:guard-fallthrough")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

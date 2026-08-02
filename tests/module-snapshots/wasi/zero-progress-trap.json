@@ -1,0 +1,11 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": {
+    "trap": "unreachable",
+    "stdout": []
+  },
+  "host": {
+    "write_zero": true
+  }
+}

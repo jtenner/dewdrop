@@ -1,0 +1,21 @@
+open dew.std.wasi
+fn to_number(value: Bool) -> I32 {
+  match value {
+    true => 1
+    false => 0
+  }
+}
+
+pub fn main() -> U32 {
+  let first = to_number(true)
+  let second = to_number(false)
+  if first == 1 {
+    if second == 0 {
+      wasi_fd_write(1u32, b"10")
+    } else {
+      wasi_fd_write(1u32, b"bad")
+    }
+  } else {
+    wasi_fd_write(1u32, b"bad")
+  }
+}

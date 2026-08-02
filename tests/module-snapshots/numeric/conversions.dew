@@ -1,0 +1,19 @@
+fn narrow(value: U64) -> I16 {
+  value.into()
+}
+
+fn widen(value: I16) -> I32 {
+  value.into()
+}
+
+fn to_float(value: I64) -> F64 {
+  value.into()
+}
+
+fn truncate(value: F64) -> I32 {
+  value.into()
+}
+
+pub fn main() -> I32 {
+  widen(narrow(65535u64)) + truncate(to_float(43i64) + 0.75f64)
+}

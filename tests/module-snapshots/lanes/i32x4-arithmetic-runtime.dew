@@ -1,0 +1,10 @@
+open dew.std.i32x4
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  if i32x4_splat(7).add(i32x4_splat(5)).mul(i32x4_splat(3)).extract_2() == 36 {
+    wasi_fd_write(1u32, b"lanes:i32x4-arithmetic")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

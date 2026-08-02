@@ -1,0 +1,4787 @@
+///|
+pub enum StarshineProgramBinaryEmissionError {
+  StarshineProgramCodeError(StarshineCodeEmissionError)
+  StarshineProgramValidationError(@validate.ValidationError)
+  StarshineProgramEncodingError(@binary.EncodeError)
+} derive(Debug)
+
+///|
+pub enum StarshineBinaryEmissionError {
+  StarshineCodeError(StarshineCodeEmissionError)
+  StarshineValidationError(@validate.ValidationError)
+  StarshineEncodingError(@binary.EncodeError)
+} derive(Debug)
+
+///|
+pub enum StarshineCodeEmissionError {
+  MissingBody(@semantic.BodyId)
+  MissingFunction(@semantic.DeclId)
+  SignatureOnlyCall(@semantic.DeclId)
+  InvalidLocal(@semantic.BodyId, @semantic.LocalId)
+  UnsupportedExpression(@semantic.BodyId, @semantic.ExprId)
+  UnsupportedBuiltin(Bytes)
+  InvalidFunctionBody(@semantic.BodyId)
+  ProgramLinkDiagnostics(Int)
+} derive(Eq, Debug)
+
+///|
+priv enum StarshineEmitTask {
+  EmitStarshineExpression(@semantic.ExprId)
+  EmitStarshineBlock(@semantic.BlockId)
+  EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
+  FinishStarshineBlock(@semantic.BlockId)
+  FinishStarshineCall(@semantic.DeclId, Int, Int)
+  FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
+  FinishStarshineMap(
+    Int,
+    @semantic.PlannedValueShape,
+    @semantic.PlannedValueShape,
+    @semantic.DeclId,
+    @semantic.DeclId,
+    Int,
+    Int,
+    Int,
+    Int,
+    Int,
+    Int,
+    Int
+  )
+  FinishStarshineSet(
+    Int,
+    @semantic.PlannedValueShape,
+    @semantic.DeclId,
+    @semantic.DeclId,
+    Int,
+    Int,
+    Int,
+    Int,
+    Int,
+    Int,
+    Int
+  )
+  FinishStarshineStructNew(Int, Int)
+  FinishStarshineEnumSubtype(Int, Int, Int)
+  FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType)
+  FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
+  FinishStarshineIf(@semantic.PlannedValueShape)
+  FinishStarshinePrefix(
+    @semantic.HirPrefixOperator,
+    @semantic.PlannedValueShape
+  )
+}
+
+///|
+fn starshine_shape_matches_storage(
+  shape : @semantic.PlannedValueShape,
+  storage : @semantic.PlannedWasmStorageType,
+) -> Bool {
+  match shape {
+    @semantic.I8PlannedValueShape | @semantic.U8PlannedValueShape =>
+      match storage {
+        @semantic.WasmI8SignedStorage
+        | @semantic.WasmI8UnsignedStorage
+        | @semantic.WasmI32Storage => true
+        _ => false
+      }
+    @semantic.I16PlannedValueShape | @semantic.U16PlannedValueShape =>
+      match storage {
+        @semantic.WasmI16SignedStorage
+        | @semantic.WasmI16UnsignedStorage
+        | @semantic.WasmI32Storage => true
+        _ => false
+      }
+    @semantic.I32PlannedValueShape
+    | @semantic.U32PlannedValueShape
+    | @semantic.Swar32PlannedValueShape =>
+      match storage {
+        @semantic.WasmI32Storage => true
+        _ => false
+      }
+    @semantic.I64PlannedValueShape
+    | @semantic.U64PlannedValueShape
+    | @semantic.Swar64PlannedValueShape =>
+      match storage {
+        @semantic.WasmI64Storage => true
+        _ => false
+      }
+    @semantic.F32PlannedValueShape =>
+      match storage {
+        @semantic.WasmF32Storage => true
+        _ => false
+      }
+    @semantic.F64PlannedValueShape =>
+      match storage {
+        @semantic.WasmF64Storage => true
+        _ => false
+      }
+    @semantic.V128PlannedValueShape =>
+      match storage {
+        @semantic.WasmV128Storage => true
+        _ => false
+      }
+    @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape =>
+      match storage {
+        @semantic.WasmStringRefStorage
+        | @semantic.WasmNullableEqRefStorage
+        | @semantic.WasmNominalRefStorage(_)
+        | @semantic.WasmExternalNominalRefStorage(_) => true
+        _ => false
+      }
+    @semantic.ErrorPlannedValueShape
+    | @semantic.UnitPlannedValueShape
+    | @semantic.NeverPlannedValueShape => false
+  }
+}
+
+///|
+fn starshine_default_storage_instructions(
+  storage : @semantic.PlannedWasmStorageType,
+) -> Array[@lib.Instruction] {
+  match storage {
+    @semantic.WasmI8SignedStorage
+    | @semantic.WasmI8UnsignedStorage
+    | @semantic.WasmI16SignedStorage
+    | @semantic.WasmI16UnsignedStorage
+    | @semantic.WasmI32Storage =>
+      [@lib.Instruction::i32_const(@lib.I32::new(0))]
+    @semantic.WasmI64Storage => [@lib.Instruction::i64_const(@lib.I64::new(0L))]
+    @semantic.WasmF32Storage =>
+      [@lib.Instruction::f32_const(@lib.F32::new(0.0))]
+    @semantic.WasmF64Storage =>
+      [@lib.Instruction::f64_const(@lib.F64::new(0.0))]
+    @semantic.WasmV128Storage =>
+      [
+        @lib.Instruction::v128_const(
+          b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
+          b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
+        ),
+      ]
+    @semantic.WasmStringRefStorage
+    | @semantic.WasmNullableEqRefStorage
+    | @semantic.WasmNominalRefStorage(_)
+    | @semantic.WasmExternalNominalRefStorage(_) =>
+      [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq()))]
+  }
+}
+
+///|
+fn starshine_text_runtime_base_for_body(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+) -> Int {
+  match program {
+    Some(link) => link.type_count
+    None => starshine_text_runtime_base(planned)
+  }
+}
+
+///|
+fn starshine_text_constant_instructions(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  value : Bytes,
+  string_ : Bool,
+) -> Array[@lib.Instruction] {
+  let base = starshine_text_runtime_base_for_body(planned, program)
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let text_offset = if string_ { 1 } else { 2 }
+  let text_type = @lib.TypeIdx::new((base + text_offset).reinterpret_as_uint())
+  let instructions : Array[@lib.Instruction] = []
+  let chunk_count = (value.length() + 15) / 16
+  for chunk in 0..<chunk_count {
+    let start = chunk * 16
+    let lanes = Array::make(16, b'\x00')
+    for lane in 0..<16 {
+      let index = start + lane
+      if index < value.length() {
+        lanes[lane] = value[index]
+      }
+    }
+    instructions.push(
+      @lib.Instruction::v128_const(
+        lanes[0],
+        lanes[1],
+        lanes[2],
+        lanes[3],
+        lanes[4],
+        lanes[5],
+        lanes[6],
+        lanes[7],
+        lanes[8],
+        lanes[9],
+        lanes[10],
+        lanes[11],
+        lanes[12],
+        lanes[13],
+        lanes[14],
+        lanes[15],
+      ),
+    )
+  }
+  instructions.push(
+    @lib.Instruction::array_new_fixed(
+      array_type,
+      @lib.U32::new(chunk_count.reinterpret_as_uint()),
+    ),
+  )
+  instructions.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+  instructions.push(@lib.Instruction::i32_const(@lib.I32::new(value.length())))
+  instructions.push(@lib.Instruction::struct_new(text_type))
+  instructions
+}
+
+///|
+fn starshine_shape_value_type(
+  shape : @semantic.PlannedValueShape,
+) -> @lib.ValType? {
+  match shape {
+    @semantic.I8PlannedValueShape
+    | @semantic.I16PlannedValueShape
+    | @semantic.I32PlannedValueShape
+    | @semantic.U8PlannedValueShape
+    | @semantic.U16PlannedValueShape
+    | @semantic.U32PlannedValueShape
+    | @semantic.Swar32PlannedValueShape => Some(@lib.ValType::i32())
+    @semantic.I64PlannedValueShape
+    | @semantic.U64PlannedValueShape
+    | @semantic.Swar64PlannedValueShape => Some(@lib.ValType::i64())
+    @semantic.F32PlannedValueShape => Some(@lib.ValType::f32())
+    @semantic.F64PlannedValueShape => Some(@lib.ValType::f64())
+    @semantic.V128PlannedValueShape => Some(@lib.ValType::v128())
+    @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape =>
+      Some(@lib.ValType::eqref_null())
+    @semantic.ErrorPlannedValueShape
+    | @semantic.UnitPlannedValueShape
+    | @semantic.NeverPlannedValueShape => None
+  }
+}
+
+///|
+fn starshine_block_type(shape : @semantic.PlannedValueShape) -> @lib.BlockType {
+  match starshine_shape_value_type(shape) {
+    Some(value) => @lib.BlockType::val_type(value)
+    None => @lib.BlockType::void_()
+  }
+}
+
+///|
+fn append_starshine_instructions(
+  target : Array[@lib.Instruction],
+  source : Array[@lib.Instruction],
+) -> Unit {
+  for instruction in source {
+    target.push(instruction)
+  }
+}
+
+///|
+fn pop_starshine_fragments(
+  results : Array[Array[@lib.Instruction]],
+  count : Int,
+) -> Array[Array[@lib.Instruction]] {
+  let fragments = Array::make(count, [])
+  let mut index = count
+  while index > 0 {
+    index -= 1
+    fragments[index] = results.pop().unwrap()
+  }
+  fragments
+}
+
+///|
+fn starshine_signed_i8_constant(value : UInt64) -> Int {
+  let raw = (value & 0xFFUL).to_int()
+  if raw >= 0x80 {
+    raw - 0x100
+  } else {
+    raw
+  }
+}
+
+///|
+fn starshine_signed_i16_constant(value : UInt64) -> Int {
+  let raw = (value & 0xFFFFUL).to_int()
+  if raw >= 0x8000 {
+    raw - 0x10000
+  } else {
+    raw
+  }
+}
+
+///|
+fn starshine_inline_builtin_instructions(
+  name : Bytes,
+  scratch_index : Int,
+  test_assert_function_index : Int,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  match starshine_conversion_builtin_instructions(name, scratch_index) {
+    Some(instructions) => return Ok(instructions)
+    None => ()
+  }
+  match starshine_memory_builtin_instructions(name) {
+    Some(instructions) => return Ok(instructions)
+    None => ()
+  }
+  match starshine_v128_builtin_instructions(name) {
+    Some(instructions) => return Ok(instructions)
+    None => ()
+  }
+  match starshine_numeric_builtin_instructions(name) {
+    Some(instructions) => return Ok(instructions)
+    None => ()
+  }
+  if name == b"dew_assert" {
+    if test_assert_function_index >= 0 {
+      Ok([
+        @lib.Instruction::call(
+          @lib.FuncIdx::new(test_assert_function_index.reinterpret_as_uint()),
+        ),
+      ])
+    } else {
+      Ok([
+        @lib.Instruction::drop(),
+        @lib.Instruction::i32_eqz(),
+        @lib.Instruction::if_(
+          @lib.BlockType::void_(),
+          [@lib.Instruction::unreachable_()],
+          None,
+        ),
+      ])
+    }
+  } else if name == b"dew_unreachable" {
+    Ok([@lib.Instruction::unreachable_()])
+  } else if name == b"dew_reinterpret" {
+    Ok([])
+  } else if name == b"i32_add" {
+    Ok([@lib.Instruction::i32_add()])
+  } else if name == b"i32_sub" {
+    Ok([@lib.Instruction::i32_sub()])
+  } else if name == b"i32_lt" {
+    Ok([@lib.Instruction::i32_lt_s()])
+  } else if name == b"i32_lte" {
+    Ok([@lib.Instruction::i32_le_s()])
+  } else if name == b"swar32_from_bits" ||
+    name == b"swar32_to_bits" ||
+    name == b"swar64_from_bits" ||
+    name == b"swar64_to_bits" {
+    Ok([])
+  } else if name == b"swar32_and" {
+    Ok([@lib.Instruction::i32_and()])
+  } else if name == b"swar32_or" {
+    Ok([@lib.Instruction::i32_or()])
+  } else if name == b"swar32_xor" {
+    Ok([@lib.Instruction::i32_xor()])
+  } else if name == b"swar64_and" {
+    Ok([@lib.Instruction::i64_and()])
+  } else if name == b"swar64_or" {
+    Ok([@lib.Instruction::i64_or()])
+  } else if name == b"swar64_xor" {
+    Ok([@lib.Instruction::i64_xor()])
+  } else if name == b"v128_and" {
+    Ok([@lib.Instruction::v128_and()])
+  } else if name == b"v128_or" {
+    Ok([@lib.Instruction::v128_or()])
+  } else if name == b"v128_xor" {
+    Ok([@lib.Instruction::v128_xor()])
+  } else {
+    Err(UnsupportedBuiltin(name))
+  }
+}
+
+///|
+fn starshine_finish_call(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  declaration : @semantic.DeclId,
+  fragments : Array[Array[@lib.Instruction]],
+  scratch_index : Int,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let output : Array[@lib.Instruction] = []
+  for fragment in fragments {
+    append_starshine_instructions(output, fragment)
+  }
+  let test_assert_function_index = starshine_module_runtime_function_index(
+    planned, b"dew_test_assert",
+  )
+  let function_ = match planned.function_of(declaration) {
+    Some(function_) => function_
+    None => return Err(MissingFunction(declaration))
+  }
+  if function_.direct_builtin.length() > 0 {
+    match
+      starshine_inline_builtin_instructions(
+        function_.direct_builtin,
+        scratch_index,
+        test_assert_function_index,
+      ) {
+      Ok(instructions) => append_starshine_instructions(output, instructions)
+      Err(error) => return Err(error)
+    }
+  } else {
+    match function_.kind {
+      @semantic.PlannedWasmInlineBuiltinFunction(name) =>
+        match
+          starshine_inline_builtin_instructions(
+            name, scratch_index, test_assert_function_index,
+          ) {
+          Ok(instructions) =>
+            append_starshine_instructions(output, instructions)
+          Err(error) => return Err(error)
+        }
+      @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmDefinedFunction(_) => {
+        if function_.function_index < 0 {
+          return Err(MissingFunction(declaration))
+        }
+        output.push(
+          @lib.Instruction::call(
+            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+          ),
+        )
+      }
+      @semantic.PlannedWasmSignatureOnlyFunction =>
+        return Err(SignatureOnlyCall(declaration))
+    }
+  }
+  Ok(output)
+}
+
+///|
+fn starshine_finish_program_call(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  caller : @semantic.PlannedModuleWasmGCFragments,
+  declaration : @semantic.DeclId,
+  fragments : Array[Array[@lib.Instruction]],
+  scratch_index : Int,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let output : Array[@lib.Instruction] = []
+  for fragment in fragments {
+    append_starshine_instructions(output, fragment)
+  }
+  let caller_module_index = match planned.module_lookup.get(caller.module_id) {
+    Some(index) => index
+    None => abort("caller's module is not linked")
+  }
+  let test_assert_function_index = starshine_program_module_runtime_function_index(
+    planned, caller_module_index, b"dew_test_assert",
+  )
+  let function_ = match planned.function_of(declaration) {
+    Some(function_) => function_
+    None => return Err(MissingFunction(declaration))
+  }
+  if function_.direct_builtin.length() > 0 {
+    match
+      starshine_inline_builtin_instructions(
+        function_.direct_builtin,
+        scratch_index,
+        test_assert_function_index,
+      ) {
+      Ok(instructions) => append_starshine_instructions(output, instructions)
+      Err(error) => return Err(error)
+    }
+  } else {
+    match function_.kind {
+      @semantic.PlannedWasmInlineBuiltinFunction(name) =>
+        match
+          starshine_inline_builtin_instructions(
+            name, scratch_index, test_assert_function_index,
+          ) {
+          Ok(instructions) =>
+            append_starshine_instructions(output, instructions)
+          Err(error) => return Err(error)
+        }
+      @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmDefinedFunction(_) => {
+        if function_.function_index < 0 {
+          return Err(MissingFunction(declaration))
+        }
+        output.push(
+          @lib.Instruction::call(
+            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+          ),
+        )
+      }
+      @semantic.PlannedWasmSignatureOnlyFunction =>
+        return Err(SignatureOnlyCall(declaration))
+    }
+  }
+  Ok(output)
+}
+
+///|
+fn starshine_emitted_type_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  declaration : @semantic.DeclId,
+) -> Int? {
+  match program {
+    Some(link) => link.type_lookup.get(declaration)
+    None => planned.type_index_of(declaration)
+  }
+}
+
+///|
+fn starshine_struct_physical_type(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  declaration : @semantic.DeclId,
+) -> @semantic.PlannedWasmPhysicalType? {
+  for type_ in planned.physical_types {
+    match type_.kind {
+      @semantic.PlannedWasmStructType(owner) if owner == declaration =>
+        return Some(type_)
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn starshine_variant_payload_physical_type(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  variant : @semantic.VariantId,
+) -> @semantic.PlannedWasmPhysicalType? {
+  let type_index = match planned.payload_type_index_of(variant) {
+    Some(index) => index
+    None => return None
+  }
+  for type_ in planned.physical_types {
+    if type_.type_index == type_index {
+      return Some(type_)
+    }
+  }
+  None
+}
+
+///|
+fn starshine_field_location(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  field : @semantic.FieldId,
+) -> (Int, Int, @semantic.PlannedWasmStorageType)? {
+  for type_ in planned.physical_types {
+    for index in 0..<type_.fields.length {
+      let planned_field = planned.fields[type_.fields.start + index]
+      match planned_field.role {
+        @semantic.WasmStructField(candidate)
+        | @semantic.WasmStructPayloadField(candidate) if candidate == field =>
+          return Some(
+            (
+              type_.type_index,
+              planned_field.physical_index,
+              planned_field.storage,
+            ),
+          )
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
+fn starshine_struct_get_instruction(
+  type_index : Int,
+  field_index : Int,
+  storage : @semantic.PlannedWasmStorageType,
+) -> @lib.Instruction {
+  let type_ = @lib.TypeIdx::new(type_index.reinterpret_as_uint())
+  let field = @lib.U32::new(field_index.reinterpret_as_uint())
+  match storage {
+    @semantic.WasmI8SignedStorage | @semantic.WasmI16SignedStorage =>
+      @lib.Instruction::struct_get_s(type_, field)
+    @semantic.WasmI8UnsignedStorage | @semantic.WasmI16UnsignedStorage =>
+      @lib.Instruction::struct_get_u(type_, field)
+    _ => @lib.Instruction::struct_get(type_, field)
+  }
+}
+
+///|
+fn starshine_ordered_object_values(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  physical : @semantic.PlannedWasmPhysicalType,
+  fields : @semantic.HirSpan,
+) -> Array[@semantic.ExprId]? {
+  let values : Array[@semantic.ExprId] = []
+  if physical.fields.length <= 8 {
+    for physical_index in 0..<physical.fields.length {
+      let planned_field = planned.fields[physical.fields.start + physical_index]
+      let field = match planned_field.role {
+        @semantic.WasmStructField(field) => field
+        _ => return None
+      }
+      let mut value = -1
+      for source_index in 0..<fields.length {
+        let object_field = lowering.object_fields[fields.start + source_index]
+        if object_field.field == field {
+          value = object_field.value
+          break
+        }
+      }
+      if value < 0 {
+        return None
+      }
+      values.push(value)
+    }
+    return Some(values)
+  }
+  let lookup : Map[@semantic.FieldId, @semantic.ExprId] = Map::default()
+  for source_index in 0..<fields.length {
+    let object_field = lowering.object_fields[fields.start + source_index]
+    lookup[object_field.field] = object_field.value
+  }
+  for physical_index in 0..<physical.fields.length {
+    let planned_field = planned.fields[physical.fields.start + physical_index]
+    let field = match planned_field.role {
+      @semantic.WasmStructField(field) => field
+      _ => return None
+    }
+    match lookup.get(field) {
+      Some(value) => values.push(value)
+      None => return None
+    }
+  }
+  Some(values)
+}
+
+///|
+fn starshine_ordered_variant_object_values(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  variant : @semantic.VariantId,
+  fields : @semantic.HirSpan,
+) -> Array[@semantic.ExprId]? {
+  let values : Array[@semantic.ExprId] = []
+  let variant_fields = planned.variant_fields_of(variant)
+  if variant_fields.length() <= 8 {
+    for planned_field in variant_fields {
+      let field = match planned_field.role {
+        @semantic.WasmStructPayloadField(field) => field
+        _ => return None
+      }
+      let mut value = -1
+      for source_index in 0..<fields.length {
+        let object_field = lowering.object_fields[fields.start + source_index]
+        if object_field.field == field {
+          value = object_field.value
+          break
+        }
+      }
+      if value < 0 {
+        return None
+      }
+      values.push(value)
+    }
+    return Some(values)
+  }
+  let lookup : Map[@semantic.FieldId, @semantic.ExprId] = Map::default()
+  for source_index in 0..<fields.length {
+    let object_field = lowering.object_fields[fields.start + source_index]
+    lookup[object_field.field] = object_field.value
+  }
+  for planned_field in variant_fields {
+    let field = match planned_field.role {
+      @semantic.WasmStructPayloadField(field) => field
+      _ => return None
+    }
+    match lookup.get(field) {
+      Some(value) => values.push(value)
+      None => return None
+    }
+  }
+  Some(values)
+}
+
+///|
+fn starshine_match_cast(type_index : Int) -> @lib.Instruction {
+  @lib.Instruction::ref_cast(
+    false,
+    @lib.HeapType::new(@lib.TypeIdx::new(type_index.reinterpret_as_uint())),
+  )
+}
+
+///|
+fn starshine_match_local_get(local_index : Int) -> @lib.Instruction {
+  @lib.Instruction::local_get(
+    @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
+  )
+}
+
+///|
+fn starshine_match_literal_condition(
+  lowering : @semantic.PlannedModuleLowering,
+  body : @semantic.PlannedBodyLowering,
+  expression : @semantic.ExprId,
+  scratch_local : Int,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  if expression < 0 || expression >= lowering.expressions.length() {
+    return Err(UnsupportedExpression(body.body, expression))
+  }
+  let condition : Array[@lib.Instruction] = [
+    starshine_match_local_get(scratch_local),
+  ]
+  match lowering.expressions[expression].kind {
+    @semantic.PlannedI8Const(value) => {
+      condition.push(
+        @lib.Instruction::i32_const(
+          @lib.I32::new(starshine_signed_i8_constant(value)),
+        ),
+      )
+      condition.push(@lib.Instruction::i32_eq())
+    }
+    @semantic.PlannedI16Const(value) => {
+      condition.push(
+        @lib.Instruction::i32_const(
+          @lib.I32::new(starshine_signed_i16_constant(value)),
+        ),
+      )
+      condition.push(@lib.Instruction::i32_eq())
+    }
+    @semantic.PlannedU8Const(value) => {
+      condition.push(
+        @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFUL).to_int())),
+      )
+      condition.push(@lib.Instruction::i32_eq())
+    }
+    @semantic.PlannedU16Const(value) => {
+      condition.push(
+        @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFFFUL).to_int())),
+      )
+      condition.push(@lib.Instruction::i32_eq())
+    }
+    @semantic.PlannedI32Const(value) | @semantic.PlannedU32Const(value) => {
+      condition.push(@lib.Instruction::i32_const(@lib.I32::new(value.to_int())))
+      condition.push(@lib.Instruction::i32_eq())
+    }
+    @semantic.PlannedI64Const(value) | @semantic.PlannedU64Const(value) => {
+      condition.push(
+        @lib.Instruction::i64_const(@lib.I64::new(value.reinterpret_as_int64())),
+      )
+      condition.push(@lib.Instruction::i64_eq())
+    }
+    @semantic.PlannedF32Const(value) => {
+      condition.push(@lib.Instruction::f32_const(@lib.F32::new(value)))
+      condition.push(@lib.Instruction::f32_eq())
+    }
+    @semantic.PlannedF64Const(value) => {
+      condition.push(@lib.Instruction::f64_const(@lib.F64::new(value)))
+      condition.push(@lib.Instruction::f64_eq())
+    }
+    @semantic.PlannedBoolConst(value) => {
+      condition.push(
+        @lib.Instruction::i32_const(@lib.I32::new(if value { 1 } else { 0 })),
+      )
+      condition.push(@lib.Instruction::i32_eq())
+    }
+    _ => return Err(UnsupportedExpression(body.body, expression))
+  }
+  Ok(condition)
+}
+
+///|
+fn starshine_match_pattern_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  body : @semantic.PlannedBodyLowering,
+  pattern : @semantic.PatternId,
+  scratch_local : Int,
+  local_indices : Array[Int],
+) -> Result[
+  (Array[@lib.Instruction], Array[@lib.Instruction]),
+  StarshineCodeEmissionError,
+] {
+  let source = lowering.patterns[pattern]
+  let condition : Array[@lib.Instruction] = []
+  let bindings : Array[@lib.Instruction] = []
+  match source.source {
+    @semantic.HirLiteralPattern(expression, _) =>
+      return match
+        starshine_match_literal_condition(
+          lowering, body, expression, scratch_local,
+        ) {
+        Ok(condition) => Ok((condition, bindings))
+        Err(error) => Err(error)
+      }
+    _ => ()
+  }
+  let variant = match source.selected_constructor {
+    @semantic.VariantInferredPatternConstructor(variant, _) => variant
+    @semantic.NoInferredPatternConstructor => {
+      condition.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+      match source.reference {
+        @semantic.PatternBindingReference(local_id) => {
+          if local_id < 0 ||
+            local_id >= local_indices.length() ||
+            local_indices[local_id] < 0 {
+            return Err(InvalidLocal(body.body, local_id))
+          }
+          bindings.push(starshine_match_local_get(scratch_local))
+          bindings.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(local_indices[local_id].reinterpret_as_uint()),
+            ),
+          )
+        }
+        _ => ()
+      }
+      return Ok((condition, bindings))
+    }
+    _ => return Err(UnsupportedExpression(body.body, pattern))
+  }
+  let owner_module = match program {
+    Some(link) =>
+      link.module_lookup
+      .get(@semantic.semantic_id_module(variant))
+      .unwrap_or(program_module_index)
+    None => program_module_index
+  }
+  let variant_plan = match program {
+    Some(link) => link.modules[owner_module]
+    None => planned
+  }
+  let declaration = match variant_plan.variant_declaration_of(variant) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(body.body, pattern))
+  }
+  let tag = match variant_plan.variant_tag_of(variant) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(body.body, pattern))
+  }
+  let base_type = match
+    starshine_emitted_type_index(planned, program, declaration) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(body.body, pattern))
+  }
+  condition.push(starshine_match_local_get(scratch_local))
+  condition.push(starshine_match_cast(base_type))
+  condition.push(
+    @lib.Instruction::struct_get(
+      @lib.TypeIdx::new(base_type.reinterpret_as_uint()),
+      @lib.U32::new(0U),
+    ),
+  )
+  condition.push(@lib.Instruction::i32_const(@lib.I32::new(tag)))
+  condition.push(@lib.Instruction::i32_eq())
+  match source.source {
+    @semantic.HirQualifiedPattern(_, _, _)
+    | @semantic.HirBindingPattern(_, _) => ()
+    @semantic.HirTuplePattern(_, arguments, _) => {
+      let physical = match
+        starshine_variant_payload_physical_type(variant_plan, variant) {
+        Some(value) => value
+        None => return Err(UnsupportedExpression(body.body, pattern))
+      }
+      let physical_type = match program {
+        Some(link) => link.module_type_bases[owner_module] + physical.type_index
+        None => physical.type_index
+      }
+      for field in variant_plan.variant_fields_of(variant) {
+        let source_index = match field.role {
+          @semantic.WasmTuplePayloadField(_, source_index) => source_index
+          _ => return Err(UnsupportedExpression(body.body, pattern))
+        }
+        let child = lowering.pattern_children[arguments.start + source_index]
+        let child_plan = lowering.patterns[child]
+        let local_id = match child_plan.reference {
+          @semantic.PatternBindingReference(local_id) => local_id
+          _ => continue
+        }
+        if !starshine_shape_matches_storage(
+            lowering.locals[body.locals.start + local_id].shape,
+            field.storage,
+          ) {
+          continue
+        }
+        if local_id < 0 ||
+          local_id >= local_indices.length() ||
+          local_indices[local_id] < 0 {
+          return Err(InvalidLocal(body.body, local_id))
+        }
+        bindings.push(starshine_match_local_get(scratch_local))
+        bindings.push(starshine_match_cast(physical_type))
+        bindings.push(
+          starshine_struct_get_instruction(
+            physical_type,
+            field.physical_index,
+            field.storage,
+          ),
+        )
+        bindings.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(local_indices[local_id].reinterpret_as_uint()),
+          ),
+        )
+      }
+    }
+    @semantic.HirStructPattern(_, pattern_fields, _, _, _) => {
+      let physical = match
+        starshine_variant_payload_physical_type(variant_plan, variant) {
+        Some(value) => value
+        None => return Err(UnsupportedExpression(body.body, pattern))
+      }
+      let physical_type = match program {
+        Some(link) => link.module_type_bases[owner_module] + physical.type_index
+        None => physical.type_index
+      }
+      for pattern_offset in 0..<pattern_fields.length {
+        let pattern_field = lowering.pattern_fields[pattern_fields.start +
+          pattern_offset]
+        let child_plan = lowering.patterns[pattern_field.pattern]
+        let local_id = match child_plan.reference {
+          @semantic.PatternBindingReference(local_id) => local_id
+          _ => continue
+        }
+        let child_shape = lowering.locals[body.locals.start + local_id].shape
+        let mut selected_field : @semantic.PlannedWasmVariantField? = None
+        for candidate in variant_plan.variant_fields_of(variant) {
+          match candidate.role {
+            @semantic.WasmStructPayloadField(field) =>
+              match variant_plan.field_name_of(field) {
+                Some(name) =>
+                  if name == pattern_field.name &&
+                    starshine_shape_matches_storage(
+                      child_shape,
+                      candidate.storage,
+                    ) {
+                    selected_field = Some(candidate)
+                  }
+                None => ()
+              }
+            _ => ()
+          }
+        }
+        let field = match selected_field {
+          Some(field) => field
+          None => return Err(UnsupportedExpression(body.body, pattern))
+        }
+        if local_id < 0 ||
+          local_id >= local_indices.length() ||
+          local_indices[local_id] < 0 {
+          return Err(InvalidLocal(body.body, local_id))
+        }
+        bindings.push(starshine_match_local_get(scratch_local))
+        bindings.push(starshine_match_cast(physical_type))
+        bindings.push(
+          starshine_struct_get_instruction(
+            physical_type,
+            field.physical_index,
+            field.storage,
+          ),
+        )
+        bindings.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(local_indices[local_id].reinterpret_as_uint()),
+          ),
+        )
+      }
+    }
+    _ => return Err(UnsupportedExpression(body.body, pattern))
+  }
+  Ok((condition, bindings))
+}
+
+///|
+fn starshine_body_locals(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  body : @semantic.PlannedBodyLowering,
+) -> (
+  Array[Int],
+  Array[@lib.ValType],
+  Array[Int],
+  Array[Int],
+  Int,
+  Int,
+  Int,
+  Array[Int],
+  Array[Int],
+  Int,
+  Int,
+  Int,
+  Int,
+  Int,
+) {
+  let local_indices = Array::make(body.locals.length, -1)
+  let body_local_types : Array[@lib.ValType] = []
+  let mut parameter_count = 0
+  for local_id in 0..<body.locals.length {
+    let planned_local = lowering.locals[body.locals.start + local_id]
+    match planned_local.kind {
+      @semantic.ParameterLocal =>
+        match starshine_shape_value_type(planned_local.shape) {
+          Some(_) => {
+            local_indices[local_id] = parameter_count
+            parameter_count += 1
+          }
+          None => ()
+        }
+      @semantic.LetLocal | @semantic.PatternLocal =>
+        match starshine_shape_value_type(planned_local.shape) {
+          Some(type_) => {
+            local_indices[local_id] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+    }
+  }
+  let match_local_indices = Array::make(lowering.expressions.length(), -1)
+  let match_result_local_indices = Array::make(
+    lowering.expressions.length(),
+    -1,
+  )
+  let mut conversion_scratch_index = -1
+  let mut fixed_array_ref_scratch_index = -1
+  let mut fixed_array_i32_scratch_index = -1
+  let map_key_local_indices = Array::make(lowering.expressions.length(), -1)
+  let map_value_local_indices = Array::make(lowering.expressions.length(), -1)
+  let mut map_ref_scratch_index = -1
+  let mut map_bucket_scratch_index = -1
+  let mut map_hash_scratch_index = -1
+  let mut map_entry_scratch_index = -1
+  let mut map_previous_scratch_index = -1
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match lowering.expressions[expression].kind {
+      @semantic.PlannedDirectCall(declaration, _, _, _) => {
+        let name = match program {
+          Some(link) =>
+            match link.function_of(declaration) {
+              Some(function_) =>
+                if function_.direct_builtin.length() > 0 {
+                  function_.direct_builtin
+                } else {
+                  match function_.kind {
+                    @semantic.PlannedWasmInlineBuiltinFunction(name) => name
+                    _ => b""
+                  }
+                }
+              None => b""
+            }
+          None =>
+            match planned.function_of(declaration) {
+              Some(function_) =>
+                if function_.direct_builtin.length() > 0 {
+                  function_.direct_builtin
+                } else {
+                  match function_.kind {
+                    @semantic.PlannedWasmInlineBuiltinFunction(name) => name
+                    _ => b""
+                  }
+                }
+              None => b""
+            }
+        }
+        if conversion_scratch_index < 0 &&
+          starshine_conversion_builtin_needs_scratch(name) {
+          conversion_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::i32())
+        }
+      }
+      @semantic.PlannedMatchExpression(scrutinee, _) => {
+        let scratch_type = match lowering.expressions[scrutinee].shape {
+          @semantic.ErrorPlannedValueShape => Some(@lib.ValType::eqref_null())
+          shape => starshine_shape_value_type(shape)
+        }
+        match scratch_type {
+          Some(type_) => {
+            match_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+        match
+          starshine_shape_value_type(lowering.expressions[expression].shape) {
+          Some(type_) => {
+            match_result_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
+      @semantic.PlannedFixedArrayMake(_, _, _)
+      | @semantic.PlannedFixedArrayGet(_, _, _) =>
+        if fixed_array_ref_scratch_index < 0 {
+          fixed_array_ref_scratch_index = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          fixed_array_i32_scratch_index = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::i32())
+        }
+      @semantic.PlannedMapSingleton(_, _, key_shape, value_shape, _, _)
+      | @semantic.PlannedMapInsert(_, _, _, key_shape, value_shape, _, _)
+      | @semantic.PlannedMapSet(_, _, _, key_shape, value_shape, _, _) => {
+        if map_ref_scratch_index < 0 {
+          map_ref_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_bucket_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_hash_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::i64())
+          map_entry_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+        match starshine_shape_value_type(key_shape) {
+          Some(type_) => {
+            map_key_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+        match starshine_shape_value_type(value_shape) {
+          Some(type_) => {
+            map_value_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
+      @semantic.PlannedMapGet(_, _, key_shape, value_shape, _, _)
+      | @semantic.PlannedMapGetUnchecked(_, _, key_shape, value_shape, _, _) => {
+        if map_ref_scratch_index < 0 {
+          map_ref_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_bucket_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_hash_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::i64())
+          map_entry_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+        match starshine_shape_value_type(key_shape) {
+          Some(type_) => {
+            map_key_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+        match starshine_shape_value_type(value_shape) {
+          Some(type_) => {
+            map_value_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
+      @semantic.PlannedMapContainsKey(_, _, key_shape, _, _) => {
+        if map_ref_scratch_index < 0 {
+          map_ref_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_bucket_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_hash_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::i64())
+          map_entry_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+        match starshine_shape_value_type(key_shape) {
+          Some(type_) => {
+            map_key_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
+      @semantic.PlannedSetClear(_) =>
+        if map_ref_scratch_index < 0 {
+          map_ref_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+      @semantic.PlannedSetSingleton(_, key_shape, _, _)
+      | @semantic.PlannedSetContains(_, _, key_shape, _, _)
+      | @semantic.PlannedSetInsert(_, _, key_shape, _, _)
+      | @semantic.PlannedSetRemove(_, _, key_shape, _, _) => {
+        if map_ref_scratch_index < 0 {
+          map_ref_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_bucket_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_hash_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::i64())
+          map_entry_scratch_index = parameter_count + body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+        match lowering.expressions[expression].kind {
+          @semantic.PlannedSetRemove(_, _, _, _, _) =>
+            if map_previous_scratch_index < 0 {
+              map_previous_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::eqref_null())
+            }
+          _ => ()
+        }
+        match starshine_shape_value_type(key_shape) {
+          Some(type_) => {
+            map_key_local_indices[expression] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
+      _ => ()
+    }
+  }
+  (
+    local_indices, body_local_types, match_local_indices, match_result_local_indices,
+    conversion_scratch_index, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+    map_key_local_indices, map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index,
+    map_hash_scratch_index, map_entry_scratch_index, map_previous_scratch_index,
+  )
+}
+
+///|
+fn starshine_fixed_array_carrier(shape : @semantic.PlannedValueShape) -> Int {
+  match shape {
+    @semantic.I8PlannedValueShape
+    | @semantic.I16PlannedValueShape
+    | @semantic.I32PlannedValueShape
+    | @semantic.U8PlannedValueShape
+    | @semantic.U16PlannedValueShape
+    | @semantic.U32PlannedValueShape
+    | @semantic.Swar32PlannedValueShape => 0
+    @semantic.I64PlannedValueShape
+    | @semantic.U64PlannedValueShape
+    | @semantic.Swar64PlannedValueShape => 1
+    @semantic.F32PlannedValueShape => 2
+    @semantic.F64PlannedValueShape => 3
+    @semantic.V128PlannedValueShape => 4
+    @semantic.RefPlannedValueShape => 5
+    _ => -1
+  }
+}
+
+///|
+fn starshine_program_uses_text_runtime(
+  program : @semantic.PlannedProgramWasmGCLink,
+) -> Bool {
+  for module_ in program.modules {
+    if module_.uses_text_runtime {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn starshine_fixed_array_base_for_body(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+) -> Int {
+  match program {
+    Some(link) =>
+      link.type_count +
+      (if starshine_program_uses_text_runtime(link) { 6 } else { 0 })
+    None => starshine_fixed_array_runtime_base(planned)
+  }
+}
+
+///|
+fn starshine_program_uses_fixed_array_runtime(
+  program : @semantic.PlannedProgramWasmGCLink,
+) -> Bool {
+  for module_ in program.modules {
+    if module_.uses_fixed_array_runtime {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn starshine_map_base_for_body(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+) -> Int {
+  match program {
+    Some(link) =>
+      link.type_count +
+      (if starshine_program_uses_text_runtime(link) { 6 } else { 0 }) +
+      (if starshine_program_uses_fixed_array_runtime(link) { 6 } else { 0 })
+    None => starshine_map_runtime_base(planned)
+  }
+}
+
+///|
+fn starshine_map_entry_field(
+  shape : @semantic.PlannedValueShape,
+  value : Bool,
+) -> Int {
+  let carrier = starshine_fixed_array_carrier(shape)
+  if carrier < 0 {
+    -1
+  } else if value {
+    8 + carrier
+  } else {
+    2 + carrier
+  }
+}
+
+///|
+fn starshine_map_entry_get(entry_type : Int, field : Int) -> @lib.Instruction {
+  @lib.Instruction::struct_get(
+    @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
+    @lib.U32::new(field.reinterpret_as_uint()),
+  )
+}
+
+///|
+fn starshine_map_entry_set(entry_type : Int, field : Int) -> @lib.Instruction {
+  @lib.Instruction::struct_set(
+    @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
+    @lib.U32::new(field.reinterpret_as_uint()),
+  )
+}
+
+///|
+fn starshine_map_new_entry_instructions(
+  entry_type : Int,
+  next : Array[@lib.Instruction],
+  key_shape : @semantic.PlannedValueShape,
+  value_shape : @semantic.PlannedValueShape,
+  key_local : Int,
+  value_local : Int,
+  hash_local : Int,
+) -> Array[@lib.Instruction] {
+  let output : Array[@lib.Instruction] = []
+  append_starshine_instructions(output, next)
+  output.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+    ),
+  )
+  let key_carrier = starshine_fixed_array_carrier(key_shape)
+  let value_carrier = starshine_fixed_array_carrier(value_shape)
+  for carrier in 0..<6 {
+    if carrier == key_carrier {
+      output.push(
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+        ),
+      )
+    } else {
+      match carrier {
+        0 => output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+        1 => output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+        2 => output.push(@lib.Instruction::f32_const(@lib.F32::new(0.0)))
+        3 => output.push(@lib.Instruction::f64_const(@lib.F64::new(0.0)))
+        4 =>
+          output.push(
+            @lib.Instruction::v128_const(
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ),
+          )
+        _ =>
+          output.push(
+            @lib.Instruction::ref_null(
+              @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+            ),
+          )
+      }
+    }
+  }
+  for carrier in 0..<6 {
+    if carrier == value_carrier {
+      output.push(
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(value_local.reinterpret_as_uint()),
+        ),
+      )
+    } else {
+      match carrier {
+        0 => output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+        1 => output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+        2 => output.push(@lib.Instruction::f32_const(@lib.F32::new(0.0)))
+        3 => output.push(@lib.Instruction::f64_const(@lib.F64::new(0.0)))
+        4 =>
+          output.push(
+            @lib.Instruction::v128_const(
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ),
+          )
+        _ =>
+          output.push(
+            @lib.Instruction::ref_null(
+              @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+            ),
+          )
+      }
+    }
+  }
+  output.push(
+    @lib.Instruction::struct_new(
+      @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
+    ),
+  )
+  output
+}
+
+///|
+fn starshine_set_new_entry_instructions(
+  entry_type : Int,
+  next : Array[@lib.Instruction],
+  key_shape : @semantic.PlannedValueShape,
+  key_local : Int,
+  hash_local : Int,
+) -> Array[@lib.Instruction] {
+  let output : Array[@lib.Instruction] = []
+  append_starshine_instructions(output, next)
+  output.push(
+    @lib.Instruction::local_get(
+      @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+    ),
+  )
+  let key_carrier = starshine_fixed_array_carrier(key_shape)
+  for carrier in 0..<6 {
+    if carrier == key_carrier {
+      output.push(
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+        ),
+      )
+    } else {
+      match carrier {
+        0 => output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+        1 => output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+        2 => output.push(@lib.Instruction::f32_const(@lib.F32::new(0.0)))
+        3 => output.push(@lib.Instruction::f64_const(@lib.F64::new(0.0)))
+        4 =>
+          output.push(
+            @lib.Instruction::v128_const(
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ),
+          )
+        _ =>
+          output.push(
+            @lib.Instruction::ref_null(
+              @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+            ),
+          )
+      }
+    }
+  }
+  output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+  output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+  output.push(@lib.Instruction::f32_const(@lib.F32::new(0.0)))
+  output.push(@lib.Instruction::f64_const(@lib.F64::new(0.0)))
+  output.push(
+    @lib.Instruction::v128_const(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+  )
+  output.push(
+    @lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq())),
+  )
+  output.push(
+    @lib.Instruction::struct_new(
+      @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
+    ),
+  )
+  output
+}
+
+///|
+fn starshine_map_call(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  declaration : @semantic.DeclId,
+  arguments : Array[Array[@lib.Instruction]],
+  scratch_index : Int,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  match program {
+    Some(link) =>
+      starshine_finish_program_call(
+        link, planned, declaration, arguments, scratch_index,
+      )
+    None =>
+      starshine_finish_call(planned, declaration, arguments, scratch_index)
+  }
+}
+
+///|
+fn starshine_fixed_array_backing_prefix(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  shape : @semantic.PlannedValueShape,
+) -> (Array[@lib.Instruction], Int)? {
+  let carrier = starshine_fixed_array_carrier(shape)
+  guard carrier >= 0 else { return None }
+  let wrapper = match
+    starshine_emitted_type_index(
+      planned,
+      program,
+      @semantic.standard_fixed_array_type_declaration(),
+    ) {
+    Some(value) => value
+    None => return None
+  }
+  let array_type = starshine_fixed_array_base_for_body(planned, program) +
+    carrier
+  Some(
+    (
+      [
+        starshine_match_cast(wrapper),
+        @lib.Instruction::struct_get(
+          @lib.TypeIdx::new(wrapper.reinterpret_as_uint()),
+          @lib.U32::new(0U),
+        ),
+        starshine_match_cast(array_type),
+      ],
+      array_type,
+    ),
+  )
+}
+
+///|
+fn starshine_emit_body_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  body : @semantic.PlannedBodyLowering,
+  local_indices : Array[Int],
+  match_local_indices : Array[Int],
+  match_result_local_indices : Array[Int],
+  conversion_scratch_index : Int,
+  fixed_array_ref_scratch_index : Int,
+  fixed_array_i32_scratch_index : Int,
+  map_key_local_indices : Array[Int],
+  map_value_local_indices : Array[Int],
+  map_ref_scratch_index : Int,
+  map_bucket_scratch_index : Int,
+  map_hash_scratch_index : Int,
+  map_entry_scratch_index : Int,
+  map_previous_scratch_index : Int,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let tasks : Array[StarshineEmitTask] = []
+  let results : Array[Array[@lib.Instruction]] = []
+  match body.root {
+    @semantic.ExpressionBodyRoot(expression) =>
+      tasks.push(EmitStarshineExpression(expression))
+    @semantic.BlockBodyRoot(block) => tasks.push(EmitStarshineBlock(block))
+  }
+  while tasks.length() > 0 {
+    match tasks.pop().unwrap() {
+      EmitStarshineExpression(expression) => {
+        let source = lowering.expressions[expression]
+        match source.kind {
+          @semantic.PlannedI8Const(value) =>
+            results.push([
+              @lib.Instruction::i32_const(
+                @lib.I32::new(starshine_signed_i8_constant(value)),
+              ),
+            ])
+          @semantic.PlannedI16Const(value) =>
+            results.push([
+              @lib.Instruction::i32_const(
+                @lib.I32::new(starshine_signed_i16_constant(value)),
+              ),
+            ])
+          @semantic.PlannedU8Const(value) =>
+            results.push([
+              @lib.Instruction::i32_const(
+                @lib.I32::new((value & 0xFFUL).to_int()),
+              ),
+            ])
+          @semantic.PlannedU16Const(value) =>
+            results.push([
+              @lib.Instruction::i32_const(
+                @lib.I32::new((value & 0xFFFFUL).to_int()),
+              ),
+            ])
+          @semantic.PlannedI32Const(value) | @semantic.PlannedU32Const(value) =>
+            results.push([
+              @lib.Instruction::i32_const(@lib.I32::new(value.to_int())),
+            ])
+          @semantic.PlannedI64Const(value) | @semantic.PlannedU64Const(value) =>
+            results.push([
+              @lib.Instruction::i64_const(
+                @lib.I64::new(value.reinterpret_as_int64()),
+              ),
+            ])
+          @semantic.PlannedF32Const(value) =>
+            results.push([@lib.Instruction::f32_const(@lib.F32::new(value))])
+          @semantic.PlannedF64Const(value) =>
+            results.push([@lib.Instruction::f64_const(@lib.F64::new(value))])
+          @semantic.PlannedBoolConst(value) =>
+            results.push([
+              @lib.Instruction::i32_const(
+                @lib.I32::new(if value { 1 } else { 0 }),
+              ),
+            ])
+          @semantic.PlannedStringConst(value) =>
+            results.push(
+              starshine_text_constant_instructions(
+                planned, program, value, true,
+              ),
+            )
+          @semantic.PlannedBytesConst(value) =>
+            results.push(
+              starshine_text_constant_instructions(
+                planned, program, value, false,
+              ),
+            )
+          @semantic.PlannedLocalGet(local_id) => {
+            if local_id < 0 ||
+              local_id >= local_indices.length() ||
+              local_indices[local_id] < 0 {
+              return Err(InvalidLocal(body.body, local_id))
+            }
+            results.push([
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(
+                  local_indices[local_id].reinterpret_as_uint(),
+                ),
+              ),
+            ])
+          }
+          @semantic.PlannedBlockExpression(block) =>
+            tasks.push(EmitStarshineBlock(block))
+          @semantic.PlannedIfExpression(condition, then_block, alternative) => {
+            if alternative < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(FinishStarshineIf(source.shape))
+            tasks.push(EmitStarshineExpression(alternative))
+            tasks.push(EmitStarshineBlock(then_block))
+            tasks.push(EmitStarshineExpression(condition))
+          }
+          @semantic.PlannedDirectCall(declaration, receiver, arguments, _) => {
+            let receiver_count = if receiver >= 0 { 1 } else { 0 }
+            tasks.push(
+              FinishStarshineCall(
+                declaration,
+                arguments.length + receiver_count,
+                conversion_scratch_index,
+              ),
+            )
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
+            if receiver >= 0 {
+              tasks.push(EmitStarshineExpression(receiver))
+            }
+          }
+          @semantic.PlannedOperatorCall(declaration, _, left, right, _) => {
+            tasks.push(
+              FinishStarshineCall(declaration, 2, conversion_scratch_index),
+            )
+            tasks.push(EmitStarshineExpression(right))
+            tasks.push(EmitStarshineExpression(left))
+          }
+          @semantic.PlannedIndexCall(declaration, base, index, _) => {
+            tasks.push(
+              FinishStarshineCall(declaration, 2, conversion_scratch_index),
+            )
+            tasks.push(EmitStarshineExpression(index))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedIndexSetCall(declaration, base, index, value, _) => {
+            tasks.push(
+              FinishStarshineCall(declaration, 3, conversion_scratch_index),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(index))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedFixedArrayMake(length, value, shape) => {
+            tasks.push(
+              FinishStarshineFixedArray(
+                1, shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(length))
+          }
+          @semantic.PlannedFixedArrayLength(base, shape) => {
+            tasks.push(
+              FinishStarshineFixedArray(
+                2, shape, 1, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedFixedArrayGet(base, index, shape) => {
+            tasks.push(
+              FinishStarshineFixedArray(
+                3, shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(index))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedFixedArrayGetUnchecked(base, index, shape) => {
+            tasks.push(
+              FinishStarshineFixedArray(
+                4, shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(index))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedFixedArraySet(base, index, value, shape)
+          | @semantic.PlannedFixedArraySetUnchecked(base, index, value, shape) => {
+            tasks.push(
+              FinishStarshineFixedArray(
+                5, shape, 3, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(index))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedMapEmpty(key_shape, value_shape, hash, eq) =>
+            tasks.push(
+              FinishStarshineMap(
+                8, key_shape, value_shape, hash, eq, 0, -1, -1, map_ref_scratch_index,
+                map_bucket_scratch_index, map_hash_scratch_index, map_entry_scratch_index,
+              ),
+            )
+          @semantic.PlannedMapSingleton(
+            key,
+            value,
+            key_shape,
+            value_shape,
+            hash,
+            eq
+          ) => {
+            tasks.push(
+              FinishStarshineMap(
+                1,
+                key_shape,
+                value_shape,
+                hash,
+                eq,
+                2,
+                map_key_local_indices[expression],
+                map_value_local_indices[expression],
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(key))
+          }
+          @semantic.PlannedMapLength(base) => {
+            tasks.push(
+              FinishStarshineMap(
+                2,
+                source.shape,
+                source.shape,
+                0UL,
+                0UL,
+                1,
+                -1,
+                -1,
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedMapGet(base, key, key_shape, value_shape, hash, eq)
+          | @semantic.PlannedMapGetUnchecked(
+            base,
+            key,
+            key_shape,
+            value_shape,
+            hash,
+            eq
+          ) => {
+            let operation = match source.kind {
+              @semantic.PlannedMapGet(_, _, _, _, _, _) => 3
+              _ => 4
+            }
+            tasks.push(
+              FinishStarshineMap(
+                operation,
+                key_shape,
+                value_shape,
+                hash,
+                eq,
+                2,
+                map_key_local_indices[expression],
+                map_value_local_indices[expression],
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(key))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedMapContainsKey(base, key, key_shape, hash, eq) => {
+            tasks.push(
+              FinishStarshineMap(
+                7,
+                key_shape,
+                key_shape,
+                hash,
+                eq,
+                2,
+                map_key_local_indices[expression],
+                -1,
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(key))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedMapInsert(
+            base,
+            key,
+            value,
+            key_shape,
+            value_shape,
+            hash,
+            eq
+          )
+          | @semantic.PlannedMapSet(
+            base,
+            key,
+            value,
+            key_shape,
+            value_shape,
+            hash,
+            eq
+          ) => {
+            let operation = match source.kind {
+              @semantic.PlannedMapInsert(_, _, _, _, _, _, _) => 5
+              _ => 6
+            }
+            tasks.push(
+              FinishStarshineMap(
+                operation,
+                key_shape,
+                value_shape,
+                hash,
+                eq,
+                3,
+                map_key_local_indices[expression],
+                map_value_local_indices[expression],
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(key))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedSetEmpty(key_shape, hash, eq) =>
+            tasks.push(
+              FinishStarshineSet(
+                1, key_shape, hash, eq, 0, -1, map_ref_scratch_index, map_bucket_scratch_index,
+                map_hash_scratch_index, map_entry_scratch_index, map_previous_scratch_index,
+              ),
+            )
+          @semantic.PlannedSetSingleton(key, key_shape, hash, eq) => {
+            tasks.push(
+              FinishStarshineSet(
+                2,
+                key_shape,
+                hash,
+                eq,
+                1,
+                map_key_local_indices[expression],
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+                map_previous_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(key))
+          }
+          @semantic.PlannedSetLength(base)
+          | @semantic.PlannedSetIsEmpty(base)
+          | @semantic.PlannedSetClear(base) => {
+            let operation = match source.kind {
+              @semantic.PlannedSetLength(_) => 3
+              @semantic.PlannedSetIsEmpty(_) => 4
+              _ => 8
+            }
+            tasks.push(
+              FinishStarshineSet(
+                operation,
+                source.shape,
+                0UL,
+                0UL,
+                1,
+                -1,
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+                map_previous_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedSetContains(base, key, key_shape, hash, eq)
+          | @semantic.PlannedSetInsert(base, key, key_shape, hash, eq)
+          | @semantic.PlannedSetRemove(base, key, key_shape, hash, eq) => {
+            let operation = match source.kind {
+              @semantic.PlannedSetContains(_, _, _, _, _) => 5
+              @semantic.PlannedSetInsert(_, _, _, _, _) => 6
+              _ => 7
+            }
+            tasks.push(
+              FinishStarshineSet(
+                operation,
+                key_shape,
+                hash,
+                eq,
+                2,
+                map_key_local_indices[expression],
+                map_ref_scratch_index,
+                map_bucket_scratch_index,
+                map_hash_scratch_index,
+                map_entry_scratch_index,
+                map_previous_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(key))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedStructNew(declaration, _, fields) => {
+            let physical_plan = match program {
+              Some(link) =>
+                match
+                  link.module_lookup.get(
+                    @semantic.semantic_id_module(declaration),
+                  ) {
+                  Some(owner_module) => link.modules[owner_module]
+                  None => planned
+                }
+              None => planned
+            }
+            let physical = match
+              starshine_struct_physical_type(physical_plan, declaration) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let type_index = match
+              starshine_emitted_type_index(planned, program, declaration) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let values = match
+              starshine_ordered_object_values(
+                lowering, physical_plan, physical, fields,
+              ) {
+              Some(values) => values
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(FinishStarshineStructNew(type_index, values.length()))
+            let mut field_index = values.length()
+            while field_index > 0 {
+              field_index -= 1
+              tasks.push(EmitStarshineExpression(values[field_index]))
+            }
+          }
+          @semantic.PlannedUnitVariant(variant, _) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(variant))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let variant_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let tag = match variant_plan.variant_tag_of(variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let physical = match
+              starshine_variant_payload_physical_type(variant_plan, variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let subtype = match program {
+              Some(link) =>
+                link.module_type_bases[owner_module] + physical.type_index
+              None => physical.type_index
+            }
+            tasks.push(FinishStarshineEnumSubtype(subtype, tag, 0))
+          }
+          @semantic.PlannedVariantTupleNew(variant, _, arguments) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(variant))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let variant_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let tag = match variant_plan.variant_tag_of(variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let physical = match
+              starshine_variant_payload_physical_type(variant_plan, variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let subtype = match program {
+              Some(link) =>
+                link.module_type_bases[owner_module] + physical.type_index
+              None => physical.type_index
+            }
+            let values : Array[StarshineEmitTask] = []
+            for field in variant_plan.variant_fields_of(variant) {
+              let value = match field.role {
+                @semantic.WasmTuplePayloadField(_, source_index) =>
+                  lowering.expression_children[arguments.start + source_index]
+                _ => return Err(UnsupportedExpression(body.body, expression))
+              }
+              if starshine_shape_matches_storage(
+                  lowering.expressions[value].shape,
+                  field.storage,
+                ) {
+                values.push(EmitStarshineExpression(value))
+              } else {
+                values.push(EmitStarshineDefaultStorage(field.storage))
+              }
+            }
+            tasks.push(
+              FinishStarshineEnumSubtype(subtype, tag, values.length()),
+            )
+            let mut value_index = values.length()
+            while value_index > 0 {
+              value_index -= 1
+              tasks.push(values[value_index])
+            }
+          }
+          @semantic.PlannedVariantStructNew(variant, _, fields) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(variant))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let variant_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let tag = match variant_plan.variant_tag_of(variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let physical = match
+              starshine_variant_payload_physical_type(variant_plan, variant) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let subtype = match program {
+              Some(link) =>
+                link.module_type_bases[owner_module] + physical.type_index
+              None => physical.type_index
+            }
+            let values = match
+              starshine_ordered_variant_object_values(
+                lowering, variant_plan, variant, fields,
+              ) {
+              Some(values) => values
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(
+              FinishStarshineEnumSubtype(subtype, tag, values.length()),
+            )
+            let variant_fields = variant_plan.variant_fields_of(variant)
+            let mut value_index = values.length()
+            while value_index > 0 {
+              value_index -= 1
+              let field = variant_fields[value_index]
+              let value = values[value_index]
+              if starshine_shape_matches_storage(
+                  lowering.expressions[value].shape,
+                  field.storage,
+                ) {
+                tasks.push(EmitStarshineExpression(value))
+              } else {
+                tasks.push(EmitStarshineDefaultStorage(field.storage))
+              }
+            }
+          }
+          @semantic.PlannedMatchExpression(scrutinee, arms) => {
+            let scratch_local = match_local_indices[expression]
+            if scratch_local < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(FinishStarshineMatch(expression, arms, scratch_local))
+            let mut arm_index = arms.length
+            while arm_index > 0 {
+              arm_index -= 1
+              let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+                arm_index]]
+              tasks.push(EmitStarshineExpression(arm.body))
+              if arm.guard_condition >= 0 {
+                tasks.push(EmitStarshineExpression(arm.guard_condition))
+              }
+            }
+            tasks.push(EmitStarshineExpression(scrutinee))
+          }
+          @semantic.PlannedPrefixExpression(operator, operand) => {
+            tasks.push(FinishStarshinePrefix(operator, source.shape))
+            tasks.push(EmitStarshineExpression(operand))
+          }
+          @semantic.PlannedFieldGet(field, base) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(field))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let field_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let (local_type_index, physical_index, storage) = match
+              starshine_field_location(field_plan, field) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let type_index = match program {
+              Some(link) =>
+                link.module_type_bases[owner_module] + local_type_index
+              None => local_type_index
+            }
+            tasks.push(
+              FinishStarshineFieldGet(type_index, physical_index, storage),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedBinaryExpression(_, _, _)
+          | @semantic.PlannedPoisonExpression
+          | @semantic.PlannedConsumedExpression
+          | @semantic.PlannedModuleValueGet(_)
+          | @semantic.PlannedWhileExpression(_, _, _)
+          | @semantic.PlannedBreakExpression(_, _)
+          | @semantic.PlannedContinueExpression(_, _) =>
+            return Err(UnsupportedExpression(body.body, expression))
+        }
+      }
+      EmitStarshineDefaultStorage(storage) =>
+        results.push(starshine_default_storage_instructions(storage))
+      EmitStarshineBlock(block) => {
+        let source = lowering.blocks[block]
+        tasks.push(FinishStarshineBlock(block))
+        let mut index = source.items.length
+        while index > 0 {
+          index -= 1
+          let item = lowering.block_items[source.items.start + index]
+          let expression = match item.kind {
+            @semantic.PlannedLetItem(_, _, expression)
+            | @semantic.PlannedReturnItem(expression)
+            | @semantic.PlannedExpressionItem(expression) => expression
+          }
+          tasks.push(EmitStarshineExpression(expression))
+        }
+      }
+      FinishStarshineBlock(block) => {
+        let source = lowering.blocks[block]
+        let fragments = pop_starshine_fragments(results, source.items.length)
+        let output : Array[@lib.Instruction] = []
+        for index in 0..<source.items.length {
+          let item = lowering.block_items[source.items.start + index]
+          append_starshine_instructions(output, fragments[index])
+          match item.kind {
+            @semantic.PlannedLetItem(local_id, _, _) => {
+              if local_id < 0 ||
+                local_id >= local_indices.length() ||
+                local_indices[local_id] < 0 {
+                return Err(InvalidLocal(body.body, local_id))
+              }
+              output.push(
+                @lib.Instruction::local_set(
+                  @lib.LocalIdx::new(
+                    local_indices[local_id].reinterpret_as_uint(),
+                  ),
+                ),
+              )
+            }
+            @semantic.PlannedReturnItem(_) =>
+              output.push(@lib.Instruction::return_())
+            @semantic.PlannedExpressionItem(expression) =>
+              if index + 1 < source.items.length &&
+                starshine_shape_value_type(
+                  lowering.expressions[expression].shape,
+                )
+                is Some(_) {
+                output.push(@lib.Instruction::drop())
+              }
+          }
+        }
+        results.push(output)
+      }
+      FinishStarshineFixedArray(
+        operation,
+        shape,
+        count,
+        ref_scratch,
+        i32_scratch
+      ) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let backing = match
+          starshine_fixed_array_backing_prefix(planned, program, shape) {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -101))
+        }
+        let backing_prefix = backing.0
+        let array_type = backing.1
+        let wrapper_type = match
+          starshine_emitted_type_index(
+            planned,
+            program,
+            @semantic.standard_fixed_array_type_declaration(),
+          ) {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -102))
+        }
+        let output : Array[@lib.Instruction] = []
+        if operation == 1 {
+          if i32_scratch < 0 {
+            return Err(UnsupportedExpression(body.body, -1))
+          }
+          append_starshine_instructions(output, fragments[0])
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
+            ),
+          )
+          append_starshine_instructions(output, fragments[1])
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::array_new(
+              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 2 {
+          append_starshine_instructions(output, fragments[0])
+          append_starshine_instructions(output, backing_prefix)
+          output.push(@lib.Instruction::array_len())
+        } else if operation == 4 {
+          append_starshine_instructions(output, fragments[0])
+          append_starshine_instructions(output, backing_prefix)
+          append_starshine_instructions(output, fragments[1])
+          output.push(
+            @lib.Instruction::array_get(
+              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 5 {
+          append_starshine_instructions(output, fragments[0])
+          append_starshine_instructions(output, backing_prefix)
+          append_starshine_instructions(output, fragments[1])
+          append_starshine_instructions(output, fragments[2])
+          output.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 3 {
+          if ref_scratch < 0 || i32_scratch < 0 {
+            return Err(UnsupportedExpression(body.body, -1))
+          }
+          let link = match program {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -1))
+          }
+          let option_module = @semantic.semantic_id_module(
+            @semantic.standard_option_some_variant(),
+          )
+          let option_module_index = match
+            link.module_lookup.get(option_module) {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -1))
+          }
+          let option_plan = link.modules[option_module_index]
+          let some_variant = @semantic.standard_option_some_variant()
+          let none_variant = @semantic.standard_option_none_variant()
+          let some_physical = match
+            starshine_variant_payload_physical_type(option_plan, some_variant) {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -1))
+          }
+          let none_physical = match
+            starshine_variant_payload_physical_type(option_plan, none_variant) {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -1))
+          }
+          let some_type = link.module_type_bases[option_module_index] +
+            some_physical.type_index
+          let none_type = link.module_type_bases[option_module_index] +
+            none_physical.type_index
+          let some_tag = option_plan.variant_tag_of(some_variant).unwrap()
+          let none_tag = option_plan.variant_tag_of(none_variant).unwrap()
+          append_starshine_instructions(output, fragments[0])
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(ref_scratch.reinterpret_as_uint()),
+            ),
+          )
+          append_starshine_instructions(output, fragments[1])
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
+            ),
+          )
+          let load_backing : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(ref_scratch.reinterpret_as_uint()),
+            ),
+          ]
+          append_starshine_instructions(load_backing, backing_prefix)
+          let success : Array[@lib.Instruction] = [
+            @lib.Instruction::i32_const(@lib.I32::new(some_tag)),
+          ]
+          for field in option_plan.variant_fields_of(some_variant) {
+            if starshine_shape_matches_storage(shape, field.storage) {
+              append_starshine_instructions(success, load_backing)
+              success.push(
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
+                ),
+              )
+              success.push(
+                @lib.Instruction::array_get(
+                  @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+                ),
+              )
+            } else {
+              append_starshine_instructions(
+                success,
+                starshine_default_storage_instructions(field.storage),
+              )
+            }
+          }
+          success.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(some_type.reinterpret_as_uint()),
+            ),
+          )
+          let failure = [
+            @lib.Instruction::i32_const(@lib.I32::new(none_tag)),
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(none_type.reinterpret_as_uint()),
+            ),
+          ]
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
+            ),
+          )
+          append_starshine_instructions(output, load_backing)
+          output.push(@lib.Instruction::array_len())
+          output.push(@lib.Instruction::i32_lt_u())
+          output.push(
+            @lib.Instruction::if_(
+              @lib.BlockType::val_type(@lib.ValType::eqref_null()),
+              success,
+              Some(failure),
+            ),
+          )
+        } else {
+          return Err(UnsupportedExpression(body.body, -1))
+        }
+        results.push(output)
+      }
+      FinishStarshineSet(
+        operation,
+        key_shape,
+        hash_declaration,
+        eq_declaration,
+        count,
+        key_local,
+        set_local,
+        bucket_local,
+        hash_local,
+        entry_local,
+        previous_local
+      ) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let wrapper_type = match
+          starshine_emitted_type_index(
+            planned,
+            program,
+            @semantic.standard_set_type_declaration(),
+          ) {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -301))
+        }
+        let map_base = starshine_map_base_for_body(planned, program)
+        let bucket_type = map_base
+        let entry_type = map_base + 1
+        let output : Array[@lib.Instruction] = []
+        if operation == 1 {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(16)))
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            ),
+          )
+          results.push(output)
+          continue
+        }
+        if operation == 3 || operation == 4 {
+          append_starshine_instructions(output, fragments[0])
+          output.push(starshine_match_cast(wrapper_type))
+          output.push(
+            @lib.Instruction::struct_get(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          if operation == 4 {
+            output.push(@lib.Instruction::i32_eqz())
+          }
+          results.push(output)
+          continue
+        }
+        if operation == 8 {
+          if set_local < 0 {
+            return Err(UnsupportedExpression(body.body, -302))
+          }
+          append_starshine_instructions(output, fragments[0])
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(wrapper_type))
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(16)))
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(0U),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(wrapper_type))
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          output.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          results.push(output)
+          continue
+        }
+        if key_local < 0 ||
+          set_local < 0 ||
+          bucket_local < 0 ||
+          hash_local < 0 ||
+          entry_local < 0 ||
+          (operation == 7 && previous_local < 0) {
+          return Err(UnsupportedExpression(body.body, -303))
+        }
+        let key_fragment = if operation == 2 {
+          fragments[0]
+        } else {
+          fragments[1]
+        }
+        append_starshine_instructions(output, key_fragment)
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+          ),
+        )
+        let hash_call = match
+          starshine_map_call(
+            planned,
+            program,
+            hash_declaration,
+            [
+              [
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+                ),
+              ],
+            ],
+            conversion_scratch_index,
+          ) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        append_starshine_instructions(output, hash_call)
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+          ),
+        )
+        if operation == 2 {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(16)))
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          append_starshine_instructions(
+            output,
+            starshine_set_new_entry_instructions(
+              entry_type,
+              [
+                @lib.Instruction::ref_null(
+                  @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+                ),
+              ],
+              key_shape,
+              key_local,
+              hash_local,
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(bucket_type))
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(@lib.Instruction::i32_wrap_i64())
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          output.push(@lib.Instruction::i32_and())
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            ),
+          )
+          results.push(output)
+          continue
+        }
+        append_starshine_instructions(output, fragments[0])
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(wrapper_type))
+        output.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+        )
+        output.push(starshine_match_cast(bucket_type))
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(bucket_type))
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(@lib.Instruction::i32_wrap_i64())
+        output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+        output.push(@lib.Instruction::i32_and())
+        output.push(
+          @lib.Instruction::array_get(
+            @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+          ),
+        )
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        if operation == 7 {
+          output.push(
+            @lib.Instruction::ref_null(
+              @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+          )
+        }
+        let on_null : Array[@lib.Instruction] = []
+        if operation == 6 {
+          let next = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+            @lib.Instruction::i32_wrap_i64(),
+            @lib.Instruction::i32_const(@lib.I32::new(15)),
+            @lib.Instruction::i32_and(),
+            @lib.Instruction::array_get(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          ]
+          append_starshine_instructions(
+            on_null,
+            starshine_set_new_entry_instructions(
+              entry_type, next, key_shape, key_local, hash_local,
+            ),
+          )
+          on_null.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(starshine_match_cast(bucket_type))
+          on_null.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(@lib.Instruction::i32_wrap_i64())
+          on_null.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          on_null.push(@lib.Instruction::i32_and())
+          on_null.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(starshine_match_cast(wrapper_type))
+          on_null.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          on_null.push(starshine_match_cast(wrapper_type))
+          on_null.push(
+            @lib.Instruction::struct_get(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          on_null.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          on_null.push(@lib.Instruction::i32_add())
+          on_null.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          on_null.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        } else {
+          on_null.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+        }
+        on_null.push(@lib.Instruction::br(@lib.LabelIdx::new(2U)))
+        let loop_body : Array[@lib.Instruction] = [
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+          @lib.Instruction::ref_is_null(),
+          @lib.Instruction::if_(@lib.BlockType::void_(), on_null, None),
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+          starshine_match_cast(entry_type),
+          starshine_map_entry_get(entry_type, 1),
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+          ),
+          @lib.Instruction::i64_eq(),
+        ]
+        let on_hash : Array[@lib.Instruction] = []
+        let eq_call = match
+          starshine_map_call(
+            planned,
+            program,
+            eq_declaration,
+            [
+              [
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+                ),
+                starshine_match_cast(entry_type),
+                starshine_map_entry_get(
+                  entry_type,
+                  starshine_map_entry_field(key_shape, false),
+                ),
+              ],
+              [
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+                ),
+              ],
+            ],
+            conversion_scratch_index,
+          ) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        append_starshine_instructions(on_hash, eq_call)
+        let found : Array[@lib.Instruction] = []
+        if operation == 5 {
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        } else if operation == 6 {
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+        } else {
+          let next_entry = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(entry_type),
+            starshine_map_entry_get(entry_type, 0),
+          ]
+          let unlink_head : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+            @lib.Instruction::i32_wrap_i64(),
+            @lib.Instruction::i32_const(@lib.I32::new(15)),
+            @lib.Instruction::i32_and(),
+          ]
+          append_starshine_instructions(unlink_head, next_entry)
+          unlink_head.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          let unlink_tail : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(entry_type),
+          ]
+          append_starshine_instructions(unlink_tail, next_entry)
+          unlink_tail.push(starshine_map_entry_set(entry_type, 0))
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(@lib.Instruction::ref_is_null())
+          found.push(
+            @lib.Instruction::if_(
+              @lib.BlockType::void_(),
+              unlink_head,
+              Some(unlink_tail),
+            ),
+          )
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(starshine_match_cast(wrapper_type))
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(set_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(starshine_match_cast(wrapper_type))
+          found.push(
+            @lib.Instruction::struct_get(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          found.push(@lib.Instruction::i32_sub())
+          found.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        }
+        found.push(@lib.Instruction::br(@lib.LabelIdx::new(3U)))
+        on_hash.push(
+          @lib.Instruction::if_(@lib.BlockType::void_(), found, None),
+        )
+        loop_body.push(
+          @lib.Instruction::if_(@lib.BlockType::void_(), on_hash, None),
+        )
+        if operation == 7 {
+          loop_body.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          loop_body.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(previous_local.reinterpret_as_uint()),
+            ),
+          )
+        }
+        loop_body.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(starshine_match_cast(entry_type))
+        loop_body.push(starshine_map_entry_get(entry_type, 0))
+        loop_body.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+        output.push(
+          @lib.Instruction::block(
+            @lib.BlockType::val_type(@lib.ValType::i32()),
+            @lib.Expr::new([
+              @lib.Instruction::loop_(
+                @lib.BlockType::void_(),
+                @lib.Expr::new(loop_body),
+              ),
+              @lib.Instruction::unreachable_(),
+            ]),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshineMap(
+        operation,
+        key_shape,
+        value_shape,
+        hash_declaration,
+        eq_declaration,
+        count,
+        key_local,
+        value_local,
+        map_local,
+        bucket_local,
+        hash_local,
+        entry_local
+      ) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let wrapper_type = match
+          starshine_emitted_type_index(
+            planned,
+            program,
+            @semantic.standard_map_type_declaration(),
+          ) {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -201))
+        }
+        let map_base = starshine_map_base_for_body(planned, program)
+        let bucket_type = map_base
+        let entry_type = map_base + 1
+        let output : Array[@lib.Instruction] = []
+        if operation == 2 {
+          append_starshine_instructions(output, fragments[0])
+          output.push(starshine_match_cast(wrapper_type))
+          output.push(
+            @lib.Instruction::struct_get(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          results.push(output)
+          continue
+        }
+        if operation == 8 {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(16)))
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            ),
+          )
+          results.push(output)
+          continue
+        }
+        if key_local < 0 ||
+          map_local < 0 ||
+          bucket_local < 0 ||
+          hash_local < 0 ||
+          entry_local < 0 ||
+          (
+            (operation == 1 || operation == 5 || operation == 6) &&
+            value_local < 0
+          ) {
+          return Err(UnsupportedExpression(body.body, -202))
+        }
+        let key_fragment = if operation == 1 {
+          fragments[0]
+        } else {
+          fragments[1]
+        }
+        append_starshine_instructions(output, key_fragment)
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+          ),
+        )
+        if operation == 1 || operation == 5 || operation == 6 {
+          let value_fragment = if operation == 1 {
+            fragments[1]
+          } else {
+            fragments[2]
+          }
+          append_starshine_instructions(output, value_fragment)
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(value_local.reinterpret_as_uint()),
+            ),
+          )
+        }
+        let hash_call = match
+          starshine_map_call(
+            planned,
+            program,
+            hash_declaration,
+            [
+              [
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+                ),
+              ],
+            ],
+            conversion_scratch_index,
+          ) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        append_starshine_instructions(output, hash_call)
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+          ),
+        )
+        if operation == 1 {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(16)))
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          let entry = starshine_map_new_entry_instructions(
+            entry_type,
+            [
+              @lib.Instruction::ref_null(
+                @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+              ),
+            ],
+            key_shape,
+            value_shape,
+            key_local,
+            value_local,
+            hash_local,
+          )
+          append_starshine_instructions(output, entry)
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(bucket_type))
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(@lib.Instruction::i32_wrap_i64())
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          output.push(@lib.Instruction::i32_and())
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          output.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            ),
+          )
+          results.push(output)
+          continue
+        }
+        append_starshine_instructions(output, fragments[0])
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+          ),
+        )
+        let load_bucket : Array[@lib.Instruction] = [
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+          ),
+          starshine_match_cast(wrapper_type),
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+          starshine_match_cast(bucket_type),
+        ]
+        append_starshine_instructions(output, load_bucket)
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(bucket_type))
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+          ),
+        )
+        output.push(@lib.Instruction::i32_wrap_i64())
+        output.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+        output.push(@lib.Instruction::i32_and())
+        output.push(
+          @lib.Instruction::array_get(
+            @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+          ),
+        )
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        let option_plan = match program {
+          Some(link) => {
+            let option_module = @semantic.semantic_id_module(
+              @semantic.standard_option_some_variant(),
+            )
+            match link.module_lookup.get(option_module) {
+              Some(index) => Some((link, index, link.modules[index]))
+              None => None
+            }
+          }
+          None => None
+        }
+        let loop_body : Array[@lib.Instruction] = []
+        let missing : Array[@lib.Instruction] = []
+        let result_type = if operation == 3 {
+          @lib.BlockType::val_type(@lib.ValType::eqref_null())
+        } else if operation == 4 {
+          match starshine_shape_value_type(value_shape) {
+            Some(type_) => @lib.BlockType::val_type(type_)
+            None => return Err(UnsupportedExpression(body.body, -203))
+          }
+        } else if operation == 7 {
+          @lib.BlockType::val_type(@lib.ValType::i32())
+        } else {
+          @lib.BlockType::void_()
+        }
+        if operation == 3 {
+          let (_, option_module_index, option_module_plan) = match option_plan {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -204))
+          }
+          let none_variant = @semantic.standard_option_none_variant()
+          let none_physical = match
+            starshine_variant_payload_physical_type(
+              option_module_plan, none_variant,
+            ) {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -205))
+          }
+          let none_type = option_plan.unwrap().0.module_type_bases[option_module_index] +
+            none_physical.type_index
+          missing.push(
+            @lib.Instruction::i32_const(
+              @lib.I32::new(
+                option_module_plan.variant_tag_of(none_variant).unwrap(),
+              ),
+            ),
+          )
+          missing.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(none_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 4 {
+          missing.push(@lib.Instruction::unreachable_())
+        } else if operation == 7 {
+          missing.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+        } else {
+          let next = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(bucket_type),
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+            @lib.Instruction::i32_wrap_i64(),
+            @lib.Instruction::i32_const(@lib.I32::new(15)),
+            @lib.Instruction::i32_and(),
+            @lib.Instruction::array_get(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          ]
+          append_starshine_instructions(
+            missing,
+            starshine_map_new_entry_instructions(
+              entry_type, next, key_shape, value_shape, key_local, value_local, hash_local,
+            ),
+          )
+          missing.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(bucket_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(starshine_match_cast(bucket_type))
+          missing.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(@lib.Instruction::i32_wrap_i64())
+          missing.push(@lib.Instruction::i32_const(@lib.I32::new(15)))
+          missing.push(@lib.Instruction::i32_and())
+          missing.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(
+            @lib.Instruction::array_set(
+              @lib.TypeIdx::new(bucket_type.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(starshine_match_cast(wrapper_type))
+          missing.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(map_local.reinterpret_as_uint()),
+            ),
+          )
+          missing.push(starshine_match_cast(wrapper_type))
+          missing.push(
+            @lib.Instruction::struct_get(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+          missing.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+          missing.push(@lib.Instruction::i32_add())
+          missing.push(
+            @lib.Instruction::struct_set(
+              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+              @lib.U32::new(1U),
+            ),
+          )
+        }
+        append_starshine_instructions(loop_body, missing)
+        loop_body.push(@lib.Instruction::br(@lib.LabelIdx::new(2U)))
+        loop_body.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(@lib.Instruction::ref_is_null())
+        let on_null = loop_body.copy()
+        loop_body.clear()
+        loop_body.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(starshine_match_cast(entry_type))
+        loop_body.push(starshine_map_entry_get(entry_type, 1))
+        loop_body.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(@lib.Instruction::i64_eq())
+        let on_hash : Array[@lib.Instruction] = []
+        let key_field = starshine_map_entry_field(key_shape, false)
+        let eq_call = match
+          starshine_map_call(
+            planned,
+            program,
+            eq_declaration,
+            [
+              [
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+                ),
+                starshine_match_cast(entry_type),
+                starshine_map_entry_get(entry_type, key_field),
+              ],
+              [
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+                ),
+              ],
+            ],
+            conversion_scratch_index,
+          ) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        append_starshine_instructions(on_hash, eq_call)
+        let found : Array[@lib.Instruction] = []
+        if operation == 3 {
+          let (link, option_module_index, option_module_plan) = option_plan.unwrap()
+          let some_variant = @semantic.standard_option_some_variant()
+          let some_physical = match
+            starshine_variant_payload_physical_type(
+              option_module_plan, some_variant,
+            ) {
+            Some(value) => value
+            None => return Err(UnsupportedExpression(body.body, -206))
+          }
+          let some_type = link.module_type_bases[option_module_index] +
+            some_physical.type_index
+          found.push(
+            @lib.Instruction::i32_const(
+              @lib.I32::new(
+                option_module_plan.variant_tag_of(some_variant).unwrap(),
+              ),
+            ),
+          )
+          for field in option_module_plan.variant_fields_of(some_variant) {
+            if starshine_shape_matches_storage(value_shape, field.storage) {
+              found.push(
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+                ),
+              )
+              found.push(starshine_match_cast(entry_type))
+              found.push(
+                starshine_map_entry_get(
+                  entry_type,
+                  starshine_map_entry_field(value_shape, true),
+                ),
+              )
+            } else {
+              append_starshine_instructions(
+                found,
+                starshine_default_storage_instructions(field.storage),
+              )
+            }
+          }
+          found.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(some_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 4 {
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(starshine_match_cast(entry_type))
+          found.push(
+            starshine_map_entry_get(
+              entry_type,
+              starshine_map_entry_field(value_shape, true),
+            ),
+          )
+        } else if operation == 7 {
+          found.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+        } else {
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(starshine_match_cast(entry_type))
+          found.push(
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(value_local.reinterpret_as_uint()),
+            ),
+          )
+          found.push(
+            starshine_map_entry_set(
+              entry_type,
+              starshine_map_entry_field(value_shape, true),
+            ),
+          )
+        }
+        found.push(@lib.Instruction::br(@lib.LabelIdx::new(3U)))
+        on_hash.push(
+          @lib.Instruction::if_(@lib.BlockType::void_(), found, None),
+        )
+        loop_body.push(
+          @lib.Instruction::if_(@lib.BlockType::void_(), on_hash, None),
+        )
+        loop_body.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(starshine_match_cast(entry_type))
+        loop_body.push(starshine_map_entry_get(entry_type, 0))
+        loop_body.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+        )
+        loop_body.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+        let actual_loop : Array[@lib.Instruction] = [
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+          ),
+          @lib.Instruction::ref_is_null(),
+          @lib.Instruction::if_(@lib.BlockType::void_(), on_null, None),
+        ]
+        append_starshine_instructions(actual_loop, loop_body)
+        output.push(
+          @lib.Instruction::block(
+            result_type,
+            @lib.Expr::new([
+              @lib.Instruction::loop_(
+                @lib.BlockType::void_(),
+                @lib.Expr::new(actual_loop),
+              ),
+              @lib.Instruction::unreachable_(),
+            ]),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshineCall(declaration, count, scratch_index) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let emitted = match program {
+          Some(link) =>
+            starshine_finish_program_call(
+              link, planned, declaration, fragments, scratch_index,
+            )
+          None =>
+            starshine_finish_call(
+              planned, declaration, fragments, scratch_index,
+            )
+        }
+        match emitted {
+          Ok(output) => results.push(output)
+          Err(error) => return Err(error)
+        }
+      }
+      FinishStarshineStructNew(type_index, count) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let output : Array[@lib.Instruction] = []
+        for fragment in fragments {
+          append_starshine_instructions(output, fragment)
+        }
+        output.push(
+          @lib.Instruction::struct_new(
+            @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshineEnumSubtype(type_index, tag, count) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let output : Array[@lib.Instruction] = [
+          @lib.Instruction::i32_const(@lib.I32::new(tag)),
+        ]
+        for fragment in fragments {
+          append_starshine_instructions(output, fragment)
+        }
+        output.push(
+          @lib.Instruction::struct_new(
+            @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshineFieldGet(type_index, field_index, storage) => {
+        let output = results.pop().unwrap()
+        output.push(
+          starshine_struct_get_instruction(type_index, field_index, storage),
+        )
+        results.push(output)
+      }
+      FinishStarshineMatch(expression, arms, scratch_local) => {
+        let mut guard_count = 0
+        for arm_offset in 0..<arms.length {
+          let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+            arm_offset]]
+          if arm.guard_condition >= 0 {
+            guard_count += 1
+          }
+        }
+        let fragments = pop_starshine_fragments(
+          results,
+          arms.length + guard_count + 1,
+        )
+        let output = fragments[0]
+        let arm_bodies : Array[Array[@lib.Instruction]] = []
+        let arm_guards : Array[Array[@lib.Instruction]?] = []
+        let mut fragment_index = 1
+        for arm_offset in 0..<arms.length {
+          let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+            arm_offset]]
+          if arm.guard_condition >= 0 {
+            arm_guards.push(Some(fragments[fragment_index]))
+            fragment_index += 1
+          } else {
+            arm_guards.push(None)
+          }
+          arm_bodies.push(fragments[fragment_index])
+          fragment_index += 1
+        }
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(scratch_local.reinterpret_as_uint()),
+          ),
+        )
+        let result_local = match_result_local_indices[expression]
+        let dense_arm_by_tag = Array::make(arms.length, -1)
+        let mut dense_dispatch = planned.dense_enum_dispatch &&
+          guard_count == 0 &&
+          arms.length > 1
+        if dense_dispatch {
+          for arm_index in 0..<arms.length {
+            let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+              arm_index]]
+            let variant = match
+              lowering.patterns[arm.pattern].selected_constructor {
+              @semantic.VariantInferredPatternConstructor(variant, _) => variant
+              _ => {
+                dense_dispatch = false
+                0UL
+              }
+            }
+            if !dense_dispatch {
+              break
+            }
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(variant))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let variant_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let tag = variant_plan.variant_tag_of(variant).unwrap_or(-1)
+            if tag < 0 || tag >= arms.length || dense_arm_by_tag[tag] >= 0 {
+              dense_dispatch = false
+              break
+            }
+            dense_arm_by_tag[tag] = arm_index
+          }
+        }
+        if dense_dispatch {
+          let case_instructions : Array[Array[@lib.Instruction]] = []
+          for _ in 0..<arms.length {
+            case_instructions.push([])
+          }
+          let tag_dispatch : Array[@lib.Instruction] = []
+          for tag in 0..<arms.length {
+            let arm_index = dense_arm_by_tag[tag]
+            if arm_index < 0 {
+              dense_dispatch = false
+              break
+            }
+            let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+              arm_index]]
+            let (condition, bindings) = match
+              starshine_match_pattern_instructions(
+                lowering,
+                planned,
+                program,
+                program_module_index,
+                body,
+                arm.pattern,
+                scratch_local,
+                local_indices,
+              ) {
+              Ok(value) => value
+              Err(error) => return Err(error)
+            }
+            if tag_dispatch.length() == 0 {
+              for index in 0..<3 {
+                tag_dispatch.push(condition[index])
+              }
+            }
+            append_starshine_instructions(bindings, arm_bodies[arm_index])
+            if result_local >= 0 {
+              bindings.push(
+                @lib.Instruction::local_set(
+                  @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
+                ),
+              )
+            }
+            case_instructions[tag] = bindings
+          }
+          if dense_dispatch {
+            let labels : Array[@lib.LabelIdx] = []
+            for tag in 0..<arms.length {
+              labels.push(@lib.LabelIdx::new(tag.reinterpret_as_uint()))
+            }
+            tag_dispatch.push(
+              @lib.Instruction::br_table(
+                labels,
+                @lib.LabelIdx::new(arms.length.reinterpret_as_uint()),
+              ),
+            )
+            let mut nested = tag_dispatch
+            for tag in 0..<arms.length {
+              let level : Array[@lib.Instruction] = [
+                @lib.Instruction::block(
+                  @lib.BlockType::void_(),
+                  @lib.Expr::new(nested),
+                ),
+              ]
+              append_starshine_instructions(level, case_instructions[tag])
+              level.push(
+                @lib.Instruction::br(
+                  @lib.LabelIdx::new((arms.length - tag).reinterpret_as_uint()),
+                ),
+              )
+              nested = level
+            }
+            let dispatch : Array[@lib.Instruction] = [
+              @lib.Instruction::block(
+                @lib.BlockType::void_(),
+                @lib.Expr::new(nested),
+              ),
+              @lib.Instruction::unreachable_(),
+            ]
+            output.push(
+              @lib.Instruction::block(
+                @lib.BlockType::void_(),
+                @lib.Expr::new(dispatch),
+              ),
+            )
+          }
+        }
+        if !dense_dispatch {
+          let dispatch : Array[@lib.Instruction] = []
+          for arm_index in 0..<arms.length {
+            let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
+              arm_index]]
+            let (condition, bindings) = match
+              starshine_match_pattern_instructions(
+                lowering,
+                planned,
+                program,
+                program_module_index,
+                body,
+                arm.pattern,
+                scratch_local,
+                local_indices,
+              ) {
+              Ok(value) => value
+              Err(error) => return Err(error)
+            }
+            let success = arm_bodies[arm_index]
+            if result_local >= 0 {
+              success.push(
+                @lib.Instruction::local_set(
+                  @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
+                ),
+              )
+            }
+            match arm_guards[arm_index] {
+              Some(guard_instructions) => {
+                append_starshine_instructions(bindings, guard_instructions)
+                success.push(@lib.Instruction::br(@lib.LabelIdx::new(2U)))
+                bindings.push(
+                  @lib.Instruction::if_(@lib.BlockType::void_(), success, None),
+                )
+              }
+              None => {
+                append_starshine_instructions(bindings, success)
+                bindings.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
+              }
+            }
+            condition.push(
+              @lib.Instruction::if_(@lib.BlockType::void_(), bindings, None),
+            )
+            append_starshine_instructions(dispatch, condition)
+          }
+          dispatch.push(@lib.Instruction::unreachable_())
+          output.push(
+            @lib.Instruction::block(
+              @lib.BlockType::void_(),
+              @lib.Expr::new(dispatch),
+            ),
+          )
+        }
+        if result_local >= 0 {
+          output.push(starshine_match_local_get(result_local))
+        }
+        results.push(output)
+      }
+      FinishStarshineIf(shape) => {
+        let alternative = results.pop().unwrap()
+        let consequent = results.pop().unwrap()
+        let condition = results.pop().unwrap()
+        let output : Array[@lib.Instruction] = []
+        append_starshine_instructions(output, condition)
+        output.push(
+          @lib.Instruction::if_(
+            starshine_block_type(shape),
+            consequent,
+            Some(alternative),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshinePrefix(operator, shape) => {
+        let operand = results.pop().unwrap()
+        let output : Array[@lib.Instruction] = []
+        match operator {
+          @semantic.HirPositive =>
+            append_starshine_instructions(output, operand)
+          @semantic.HirLogicalNot => {
+            append_starshine_instructions(output, operand)
+            output.push(@lib.Instruction::i32_eqz())
+          }
+          @semantic.HirNegative =>
+            match shape {
+              @semantic.I8PlannedValueShape => {
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::i32_sub())
+                output.push(@lib.Instruction::i32_extend8s())
+              }
+              @semantic.I16PlannedValueShape => {
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::i32_sub())
+                output.push(@lib.Instruction::i32_extend16s())
+              }
+              @semantic.U8PlannedValueShape => {
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::i32_sub())
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0xFF)))
+                output.push(@lib.Instruction::i32_and())
+              }
+              @semantic.U16PlannedValueShape => {
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::i32_sub())
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0xFFFF)))
+                output.push(@lib.Instruction::i32_and())
+              }
+              @semantic.I32PlannedValueShape
+              | @semantic.U32PlannedValueShape
+              | @semantic.Swar32PlannedValueShape => {
+                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::i32_sub())
+              }
+              @semantic.I64PlannedValueShape
+              | @semantic.U64PlannedValueShape
+              | @semantic.Swar64PlannedValueShape => {
+                output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::i64_sub())
+              }
+              @semantic.F32PlannedValueShape => {
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::f32_neg())
+              }
+              @semantic.F64PlannedValueShape => {
+                append_starshine_instructions(output, operand)
+                output.push(@lib.Instruction::f64_neg())
+              }
+              _ =>
+                return Err(
+                  UnsupportedExpression(body.body, body.expressions.start),
+                )
+            }
+        }
+        results.push(output)
+      }
+    }
+  }
+  if results.length() != 1 {
+    Err(InvalidFunctionBody(body.body))
+  } else {
+    Ok(results[0])
+  }
+}
+
+///| Narrow a body-level eqref result back to its frozen nominal function ABI.
+
+///| Control-flow joins intentionally use the common eqref carrier, while
+
+///|
+/// exported and directly called aggregate functions retain exact typed refs.
+fn starshine_append_module_result_cast(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  declaration : @semantic.DeclId,
+  instructions : Array[@lib.Instruction],
+) -> Unit {
+  match planned.function_of(declaration) {
+    Some(function_) =>
+      if function_.results.length == 1 {
+        match planned.function_value_types[function_.results.start] {
+          @semantic.WasmNominalRefValue(index) =>
+            instructions.push(
+              @lib.Instruction::ref_cast(
+                false,
+                @lib.HeapType::new(
+                  @lib.TypeIdx::new(index.reinterpret_as_uint()),
+                ),
+              ),
+            )
+          _ => ()
+        }
+      }
+    None => ()
+  }
+}
+
+///|
+fn starshine_append_program_result_cast(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  instructions : Array[@lib.Instruction],
+) -> Unit {
+  if function_.results.length != 1 {
+    return
+  }
+  let fragments = planned.modules[function_.module_index]
+  let final_index = match
+    fragments.function_value_types[function_.results.start] {
+    @semantic.WasmNominalRefValue(index) =>
+      planned.module_type_bases[function_.module_index] + index
+    @semantic.WasmExternalNominalRefValue(declaration) =>
+      planned.type_lookup.get(declaration).unwrap()
+    _ => -1
+  }
+  if final_index >= 0 {
+    instructions.push(
+      @lib.Instruction::ref_cast(
+        false,
+        @lib.HeapType::new(@lib.TypeIdx::new(final_index.reinterpret_as_uint())),
+      ),
+    )
+  }
+}
+
+///|
+fn emit_starshine_function_body(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  body_id : @semantic.BodyId,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let body_index = @semantic.semantic_id_local(body_id)
+  if body_index < 0 || body_index >= lowering.bodies.length() {
+    return Err(MissingBody(body_id))
+  }
+  let body = lowering.bodies[body_index]
+  let (
+    local_indices,
+    body_local_types,
+    match_local_indices,
+    match_result_local_indices,
+    conversion_scratch_index,
+    fixed_array_ref_scratch_index,
+    fixed_array_i32_scratch_index,
+    map_key_local_indices,
+    map_value_local_indices,
+    map_ref_scratch_index,
+    map_bucket_scratch_index,
+    map_hash_scratch_index,
+    map_entry_scratch_index,
+    map_previous_scratch_index,
+  ) = starshine_body_locals(lowering, planned, None, body)
+  match
+    starshine_emit_body_instructions(
+      lowering,
+      planned,
+      None,
+      -1,
+      body,
+      local_indices,
+      match_local_indices,
+      match_result_local_indices,
+      conversion_scratch_index,
+      fixed_array_ref_scratch_index,
+      fixed_array_i32_scratch_index,
+      map_key_local_indices,
+      map_value_local_indices,
+      map_ref_scratch_index,
+      map_bucket_scratch_index,
+      map_hash_scratch_index,
+      map_entry_scratch_index,
+      map_previous_scratch_index,
+    ) {
+    Ok(instructions) => {
+      starshine_append_module_result_cast(
+        planned,
+        body.declaration,
+        instructions,
+      )
+      Ok(
+        @lib.Func::new(
+          @lib.Locals::from_types(body_local_types),
+          @lib.Expr::new(instructions),
+        ),
+      )
+    }
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn starshine_module_imported_function_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  name : Bytes,
+) -> Int {
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmImportedFunction(candidate) =>
+        if candidate == name && !function_.elided {
+          return function_.function_index
+        }
+      _ => ()
+    }
+  }
+  -1
+}
+
+///|
+fn starshine_module_runtime_function_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  name : Bytes,
+) -> Int {
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmRuntimeFunction(candidate) =>
+        if candidate == name && !function_.elided {
+          return function_.function_index
+        }
+      _ => ()
+    }
+  }
+  -1
+}
+
+///|
+pub fn emit_starshine_code_section(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+) -> Result[@lib.CodeSec, StarshineCodeEmissionError] {
+  let functions : Array[@lib.Func] = []
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmDefinedFunction(body) =>
+        if !function_.elided {
+          match emit_starshine_function_body(lowering, planned, body) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmRuntimeFunction(name) =>
+        if !function_.elided {
+          if name == b"dew_test_assert" {
+            functions.push(
+              starshine_test_assert_body(
+                starshine_module_runtime_function_index(
+                  planned, b"dew_string_as_bytes",
+                ),
+                starshine_module_runtime_function_index(
+                  planned, b"dew_wasi_fd_write",
+                ),
+              ),
+            )
+          } else {
+            match
+              emit_starshine_text_runtime_function(
+                name,
+                starshine_text_runtime_base(planned),
+                starshine_module_runtime_function_index(
+                  planned, b"dew_bytes_is_valid_utf8",
+                ),
+                starshine_module_imported_function_index(
+                  planned, b"wasi_snapshot_preview1.fd_write",
+                ),
+                starshine_module_imported_function_index(
+                  planned, b"wasi_snapshot_preview1.fd_read",
+                ),
+              ) {
+              Some(function_body) => functions.push(function_body)
+              None => return Err(UnsupportedBuiltin(name))
+            }
+          }
+        }
+      @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmSignatureOnlyFunction => ()
+    }
+  }
+  Ok(@lib.CodeSec::new(functions))
+}
+
+///|
+fn starshine_module_uses_wasi(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+) -> Bool {
+  for function_ in planned.functions {
+    if function_.elided {
+      continue
+    }
+    match function_.kind {
+      @semantic.PlannedWasmRuntimeFunction(name) =>
+        if name == b"dew_wasi_fd_write" ||
+          name == b"dew_wasi_fd_read" ||
+          name == b"dew_test_assert" {
+          return true
+        }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+pub fn emit_starshine_export_section(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+) -> @lib.ExportSec {
+  let exports : Array[@lib.Export] = []
+  for function_ in planned.functions {
+    let is_public = match function_.visibility {
+      @semantic.Public => true
+      @semantic.ModuleVisible => false
+    }
+    if (is_public || function_.is_test_entry) && function_.function_index >= 0 {
+      exports.push(
+        @lib.Export::new(
+          @lib.Name::from_string(@utf8.decode_lossy(function_.name)),
+          @lib.ExternIdx::func(
+            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+          ),
+        ),
+      )
+    }
+  }
+  if starshine_module_uses_wasi(planned) {
+    exports.push(
+      @lib.Export::new(
+        @lib.Name::from_string("memory"),
+        @lib.ExternIdx::mem(@lib.MemIdx::new(0U)),
+      ),
+    )
+  }
+  @lib.ExportSec::new(exports)
+}
+
+///|
+fn starshine_default_memory_section() -> @lib.MemSec {
+  @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, None))])
+}
+
+///|
+pub fn emit_starshine_module(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+) -> Result[@lib.Module, StarshineCodeEmissionError] {
+  match emit_starshine_code_section(lowering, planned) {
+    Ok(code) => {
+      let module_ = @lib.Module::new()
+        .with_type_sec(emit_starshine_type_section(planned))
+        .with_import_sec(emit_starshine_import_section(planned))
+        .with_func_sec(emit_starshine_function_section(planned))
+        .with_export_sec(emit_starshine_export_section(planned))
+        .with_code_sec(code)
+      Ok(
+        if planned.uses_linear_memory {
+          module_.with_mem_sec(starshine_default_memory_section())
+        } else {
+          module_
+        },
+      )
+    }
+    Err(error) => Err(error)
+  }
+}
+
+///|
+/// Constructs, validates, and encodes one complete Starshine module from
+/// frozen lowering and fragment plans. No semantic selection is repeated.
+pub fn emit_starshine_binary(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+) -> Result[Bytes, StarshineBinaryEmissionError] {
+  let module_ = match emit_starshine_module(lowering, planned) {
+    Ok(module_) => module_
+    Err(error) => return Err(StarshineCodeError(error))
+  }
+  match @validate.validate_module(module_) {
+    Ok(_) => ()
+    Err(error) => return Err(StarshineValidationError(error))
+  }
+  match @binary.encode_module(module_) {
+    Ok(bytes) => Ok(bytes)
+    Err(error) => Err(StarshineEncodingError(error))
+  }
+}
+
+///|
+fn starshine_program_storage_type(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  storage : @semantic.PlannedWasmStorageType,
+) -> @lib.StorageType {
+  match storage {
+    @semantic.WasmI8SignedStorage | @semantic.WasmI8UnsignedStorage =>
+      @lib.StorageType::pack_type(@lib.PackType::i8())
+    @semantic.WasmI16SignedStorage | @semantic.WasmI16UnsignedStorage =>
+      @lib.StorageType::pack_type(@lib.PackType::i16())
+    @semantic.WasmI32Storage => @lib.StorageType::val_type(@lib.ValType::i32())
+    @semantic.WasmI64Storage => @lib.StorageType::val_type(@lib.ValType::i64())
+    @semantic.WasmF32Storage => @lib.StorageType::val_type(@lib.ValType::f32())
+    @semantic.WasmF64Storage => @lib.StorageType::val_type(@lib.ValType::f64())
+    @semantic.WasmV128Storage =>
+      @lib.StorageType::val_type(@lib.ValType::v128())
+    @semantic.WasmStringRefStorage =>
+      @lib.StorageType::val_type(@lib.ValType::eqref_null())
+    @semantic.WasmNullableEqRefStorage =>
+      @lib.StorageType::val_type(@lib.ValType::eqref_null())
+    @semantic.WasmNominalRefStorage(reference) =>
+      @lib.StorageType::val_type(
+        match reference {
+          @semantic.WasmModuleTypeReference(index) =>
+            starshine_nominal_ref(
+              @lib.TypeIdx::new(
+                (planned.module_type_bases[module_index] + index).reinterpret_as_uint(),
+              ),
+            )
+          @semantic.WasmRecursiveTypeReference(index) =>
+            starshine_nominal_ref(
+              @lib.TypeIdx::rec(index.reinterpret_as_uint()),
+            )
+        },
+      )
+    @semantic.WasmExternalNominalRefStorage(declaration) =>
+      @lib.StorageType::val_type(
+        starshine_nominal_ref(
+          @lib.TypeIdx::new(
+            planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
+          ),
+        ),
+      )
+  }
+}
+
+///|
+fn starshine_program_value_type(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  value : @semantic.PlannedWasmValueType,
+) -> @lib.ValType {
+  match value {
+    @semantic.WasmI32Value => @lib.ValType::i32()
+    @semantic.WasmI64Value => @lib.ValType::i64()
+    @semantic.WasmF32Value => @lib.ValType::f32()
+    @semantic.WasmF64Value => @lib.ValType::f64()
+    @semantic.WasmV128Value => @lib.ValType::v128()
+    @semantic.WasmStringRefValue => @lib.ValType::eqref_null()
+    @semantic.WasmNullableEqRefValue => @lib.ValType::eqref_null()
+    @semantic.WasmNominalRefValue(index) =>
+      starshine_nominal_ref(
+        @lib.TypeIdx::new(
+          (planned.module_type_bases[module_index] + index).reinterpret_as_uint(),
+        ),
+      )
+    @semantic.WasmExternalNominalRefValue(declaration) =>
+      starshine_nominal_ref(
+        @lib.TypeIdx::new(
+          planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
+        ),
+      )
+  }
+}
+
+///|
+fn starshine_program_physical_subtype(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  type_ : @semantic.PlannedWasmPhysicalType,
+) -> (@lib.SubType, Bool) {
+  let module_ = planned.modules[module_index]
+  let fields : Array[@lib.FieldType] = []
+  let mut has_recursive_reference = false
+  for index in 0..<type_.fields.length {
+    let field = module_.fields[type_.fields.start + index]
+    match field.storage {
+      @semantic.WasmNominalRefStorage(@semantic.WasmRecursiveTypeReference(_)) =>
+        has_recursive_reference = true
+      _ => ()
+    }
+    fields.push(
+      @lib.FieldType::new(
+        starshine_program_storage_type(planned, module_index, field.storage),
+        if field.mutable_ {
+          @lib.Mut::var_()
+        } else {
+          @lib.Mut::const_()
+        },
+      ),
+    )
+  }
+  let composite = @lib.CompType::struct_(fields)
+  let subtype = match type_.kind {
+    @semantic.PlannedWasmEnumBaseType(_) =>
+      @lib.SubType::new(false, [], composite)
+    @semantic.PlannedWasmEnumSubtypeType(declaration, _, _) =>
+      @lib.SubType::new(
+        true,
+        [
+          @lib.TypeIdx::new(
+            planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
+          ),
+        ],
+        composite,
+      )
+    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+  }
+  (subtype, has_recursive_reference)
+}
+
+///|
+fn starshine_program_function_subtype(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  function_ : @semantic.PlannedWasmFunctionFragment,
+) -> @lib.SubType {
+  let module_ = planned.modules[module_index]
+  let parameters : Array[@lib.ValType] = []
+  for index in 0..<function_.parameters.length {
+    parameters.push(
+      starshine_program_value_type(
+        planned,
+        module_index,
+        module_.function_value_types[function_.parameters.start + index],
+      ),
+    )
+  }
+  let results : Array[@lib.ValType] = []
+  for index in 0..<function_.results.length {
+    results.push(
+      starshine_program_value_type(
+        planned,
+        module_index,
+        module_.function_value_types[function_.results.start + index],
+      ),
+    )
+  }
+  @lib.SubType::comp_type(@lib.CompType::func(parameters, results))
+}
+
+///|
+fn emit_starshine_program_type_section(
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.TypeSec {
+  let rec_types : Array[@lib.RecType] = []
+  for scc in planned.graph.sccs {
+    for member_index in 0..<scc.length {
+      let module_index = planned.graph.scc_modules[scc.start + member_index]
+      let module_ = planned.modules[module_index]
+      for group in module_.type_groups {
+        let subtypes : Array[@lib.SubType] = []
+        let mut has_recursive_reference = false
+        for index in 0..<group.types.length {
+          let (subtype, recursive) = starshine_program_physical_subtype(
+            planned,
+            module_index,
+            module_.physical_types[group.types.start + index],
+          )
+          subtypes.push(subtype)
+          has_recursive_reference = has_recursive_reference || recursive
+        }
+        if subtypes.length() == 1 && !has_recursive_reference {
+          rec_types.push(@lib.RecType::new(subtypes[0]))
+        } else {
+          rec_types.push(@lib.RecType::group(subtypes))
+        }
+      }
+      for function_ in module_.functions {
+        if function_.signature_type_index >= 0 {
+          rec_types.push(
+            @lib.RecType::new(
+              starshine_program_function_subtype(
+                planned, module_index, function_,
+              ),
+            ),
+          )
+        }
+      }
+    }
+  }
+  let mut uses_text = false
+  for function_ in planned.functions {
+    if function_.elided {
+      continue
+    }
+    match function_.kind {
+      @semantic.PlannedWasmRuntimeFunction(_) => {
+        uses_text = true
+        break
+      }
+      _ => ()
+    }
+  }
+  if !uses_text {
+    for module_ in planned.modules {
+      if starshine_plan_uses_text(module_) {
+        uses_text = true
+        break
+      }
+    }
+  }
+  if uses_text {
+    for runtime_type in starshine_text_runtime_types(planned.type_count) {
+      rec_types.push(runtime_type)
+    }
+  }
+  let mut uses_fixed_array = false
+  for module_ in planned.modules {
+    if module_.uses_fixed_array_runtime {
+      uses_fixed_array = true
+      break
+    }
+  }
+  if uses_fixed_array {
+    for runtime_type in starshine_fixed_array_runtime_types() {
+      rec_types.push(runtime_type)
+    }
+  }
+  let mut uses_map = false
+  for module_ in planned.modules {
+    if module_.uses_map_runtime {
+      uses_map = true
+      break
+    }
+  }
+  if uses_map {
+    for runtime_type in starshine_map_runtime_types() {
+      rec_types.push(runtime_type)
+    }
+  }
+  @lib.TypeSec::new(rec_types)
+}
+
+///|
+fn starshine_import_module(name : Bytes) -> String {
+  if name == b"wasi_snapshot_preview1.fd_write" ||
+    name == b"wasi_snapshot_preview1.fd_read" {
+    "wasi_snapshot_preview1"
+  } else {
+    "dew"
+  }
+}
+
+///|
+fn starshine_import_field(name : Bytes) -> String {
+  if name == b"wasi_snapshot_preview1.fd_write" {
+    "fd_write"
+  } else if name == b"wasi_snapshot_preview1.fd_read" {
+    "fd_read"
+  } else {
+    @utf8.decode_lossy(name)
+  }
+}
+
+///|
+fn emit_starshine_program_import_section(
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.ImportSec {
+  let imports : Array[@lib.Import] = []
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmImportedFunction(name) =>
+        if !function_.elided {
+          imports.push(
+            @lib.Import::new(
+              @lib.Name::from_string(starshine_import_module(name)),
+              @lib.Name::from_string(starshine_import_field(name)),
+              @lib.ExternType::func(
+                @lib.TypeIdx::new(
+                  function_.signature_type_index.reinterpret_as_uint(),
+                ),
+              ),
+            ),
+          )
+        }
+      @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmSignatureOnlyFunction => ()
+    }
+  }
+  @lib.ImportSec::new(imports)
+}
+
+///|
+fn emit_starshine_program_function_section(
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.FuncSec {
+  let signatures : Array[@lib.TypeIdx] = []
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmRuntimeFunction(_) =>
+        if !function_.elided {
+          signatures.push(
+            @lib.TypeIdx::new(
+              function_.signature_type_index.reinterpret_as_uint(),
+            ),
+          )
+        }
+      @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmSignatureOnlyFunction => ()
+    }
+  }
+  @lib.FuncSec::new(signatures)
+}
+
+///|
+fn starshine_program_uses_wasi(
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> Bool {
+  for function_ in planned.functions {
+    if function_.elided {
+      continue
+    }
+    match function_.kind {
+      @semantic.PlannedWasmRuntimeFunction(name) =>
+        if name == b"dew_wasi_fd_write" ||
+          name == b"dew_wasi_fd_read" ||
+          name == b"dew_test_assert" {
+          return true
+        }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn emit_starshine_program_export_section(
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.ExportSec {
+  let exports : Array[@lib.Export] = []
+  for function_ in planned.functions {
+    let is_public = match function_.visibility {
+      @semantic.Public => true
+      @semantic.ModuleVisible => false
+    }
+    if (
+        (function_.module_index == planned.root_module_index && is_public) ||
+        function_.is_test_entry
+      ) &&
+      function_.function_index >= 0 {
+      exports.push(
+        @lib.Export::new(
+          @lib.Name::from_string(@utf8.decode_lossy(function_.name)),
+          @lib.ExternIdx::func(
+            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+          ),
+        ),
+      )
+    }
+  }
+  if starshine_program_uses_wasi(planned) {
+    exports.push(
+      @lib.Export::new(
+        @lib.Name::from_string("memory"),
+        @lib.ExternIdx::mem(@lib.MemIdx::new(0U)),
+      ),
+    )
+  }
+  @lib.ExportSec::new(exports)
+}
+
+///|
+fn emit_starshine_program_function_body(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  body_id : @semantic.BodyId,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let module_lowering = lowering.modules[function_.module_index]
+  let module_fragments = planned.modules[function_.module_index]
+  let body_index = @semantic.semantic_id_local(body_id)
+  if body_index < 0 || body_index >= module_lowering.bodies.length() {
+    return Err(MissingBody(body_id))
+  }
+  let body = module_lowering.bodies[body_index]
+  let (
+    local_indices,
+    body_local_types,
+    match_local_indices,
+    match_result_local_indices,
+    conversion_scratch_index,
+    fixed_array_ref_scratch_index,
+    fixed_array_i32_scratch_index,
+    map_key_local_indices,
+    map_value_local_indices,
+    map_ref_scratch_index,
+    map_bucket_scratch_index,
+    map_hash_scratch_index,
+    map_entry_scratch_index,
+    map_previous_scratch_index,
+  ) = starshine_body_locals(
+    module_lowering,
+    module_fragments,
+    Some(planned),
+    body,
+  )
+  match
+    starshine_emit_body_instructions(
+      module_lowering,
+      module_fragments,
+      Some(planned),
+      function_.module_index,
+      body,
+      local_indices,
+      match_local_indices,
+      match_result_local_indices,
+      conversion_scratch_index,
+      fixed_array_ref_scratch_index,
+      fixed_array_i32_scratch_index,
+      map_key_local_indices,
+      map_value_local_indices,
+      map_ref_scratch_index,
+      map_bucket_scratch_index,
+      map_hash_scratch_index,
+      map_entry_scratch_index,
+      map_previous_scratch_index,
+    ) {
+    Ok(instructions) => {
+      starshine_append_program_result_cast(planned, function_, instructions)
+      Ok(
+        @lib.Func::new(
+          @lib.Locals::from_types(body_local_types),
+          @lib.Expr::new(instructions),
+        ),
+      )
+    }
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn starshine_program_imported_function_index(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  name : Bytes,
+) -> Int {
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmImportedFunction(candidate) =>
+        if candidate == name && !function_.elided {
+          return function_.function_index
+        }
+      _ => ()
+    }
+  }
+  -1
+}
+
+///|
+fn starshine_program_runtime_function_index(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  name : Bytes,
+) -> Int {
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmRuntimeFunction(candidate) =>
+        if candidate == name && !function_.elided {
+          return function_.function_index
+        }
+      _ => ()
+    }
+  }
+  -1
+}
+
+///|
+fn starshine_program_module_runtime_function_index(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  name : Bytes,
+) -> Int {
+  for function_ in planned.functions {
+    if function_.module_index != module_index {
+      continue
+    }
+    match function_.kind {
+      @semantic.PlannedWasmRuntimeFunction(candidate) =>
+        if candidate == name && !function_.elided {
+          return function_.function_index
+        }
+      _ => ()
+    }
+  }
+  -1
+}
+
+///|
+fn emit_starshine_program_code_section(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> Result[@lib.CodeSec, StarshineCodeEmissionError] {
+  let functions : Array[@lib.Func] = []
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmDefinedFunction(body) =>
+        if !function_.elided {
+          match
+            emit_starshine_program_function_body(
+              lowering, planned, function_, body,
+            ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmRuntimeFunction(name) =>
+        if !function_.elided {
+          if name == b"dew_test_assert" {
+            functions.push(
+              starshine_test_assert_body(
+                starshine_program_runtime_function_index(
+                  planned, b"dew_string_as_bytes",
+                ),
+                starshine_program_runtime_function_index(
+                  planned, b"dew_wasi_fd_write",
+                ),
+              ),
+            )
+          } else {
+            match
+              emit_starshine_text_runtime_function(
+                name,
+                planned.type_count,
+                starshine_program_runtime_function_index(
+                  planned, b"dew_bytes_is_valid_utf8",
+                ),
+                starshine_program_imported_function_index(
+                  planned, b"wasi_snapshot_preview1.fd_write",
+                ),
+                starshine_program_imported_function_index(
+                  planned, b"wasi_snapshot_preview1.fd_read",
+                ),
+              ) {
+              Some(function_body) => functions.push(function_body)
+              None => return Err(UnsupportedBuiltin(name))
+            }
+          }
+        }
+      @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmSignatureOnlyFunction => ()
+    }
+  }
+  Ok(@lib.CodeSec::new(functions))
+}
+
+///|
+pub fn emit_starshine_program_module(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> Result[@lib.Module, StarshineCodeEmissionError] {
+  if planned.diagnostics.length() > 0 {
+    return Err(ProgramLinkDiagnostics(planned.diagnostics.length()))
+  }
+  match emit_starshine_program_code_section(lowering, planned) {
+    Ok(code) => {
+      let module_ = @lib.Module::new()
+        .with_type_sec(emit_starshine_program_type_section(planned))
+        .with_import_sec(emit_starshine_program_import_section(planned))
+        .with_func_sec(emit_starshine_program_function_section(planned))
+        .with_export_sec(emit_starshine_program_export_section(planned))
+        .with_code_sec(code)
+      let mut uses_linear_memory = false
+      for module_plan in planned.modules {
+        if module_plan.uses_linear_memory {
+          uses_linear_memory = true
+          break
+        }
+      }
+      Ok(
+        if uses_linear_memory {
+          module_.with_mem_sec(starshine_default_memory_section())
+        } else {
+          module_
+        },
+      )
+    }
+    Err(error) => Err(error)
+  }
+}
+
+///|
+pub fn emit_starshine_program_binary(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> Result[Bytes, StarshineProgramBinaryEmissionError] {
+  let module_ = match emit_starshine_program_module(lowering, planned) {
+    Ok(module_) => module_
+    Err(error) => return Err(StarshineProgramCodeError(error))
+  }
+  match @validate.validate_module(module_) {
+    Ok(_) => ()
+    Err(error) => return Err(StarshineProgramValidationError(error))
+  }
+  match @binary.encode_module(module_) {
+    Ok(bytes) => Ok(bytes)
+    Err(error) => Err(StarshineProgramEncodingError(error))
+  }
+}

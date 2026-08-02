@@ -1,0 +1,1793 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/semantic"
+
+import {
+  "jtenner/dewdrop/parser",
+  "jtenner/dewdrop/tokenizer",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn analyze_module_flows(CollectedModule, ResolvedModuleTypes, InferredModuleBodies) -> AnalyzedModuleFlows
+
+pub fn analyze_module_value_dependencies(CollectedModule, ResolvedModuleNames) -> ModuleValueDependencies
+
+pub fn analyze_program_semantics(CollectedProgram) -> AnalyzedProgramSemantics
+
+pub fn build_module_dependency_graph(CollectedProgram) -> ModuleDependencyGraph
+
+pub fn build_module_impl_index(CollectedModule, ResolvedModuleTypes) -> ModuleImplIndex
+
+pub fn build_module_import_scope(CollectedProgram, Array[FrozenModuleInterface?], Int) -> ModuleImportScope
+
+pub fn call_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn collect_bytes(UInt64, Bytes) -> CollectedModule
+
+pub fn collect_bytes_with_standard_preamble(UInt64, Bytes) -> CollectedModule
+
+pub fn collect_module(UInt64, Iter[@parser.ParseEvent]) -> CollectedModule
+
+pub fn collect_program_bytes(UInt64, Bytes) -> CollectedModule
+
+pub fn collect_program_files(UInt64, Array[ProgramFile]) -> CollectedModule
+
+pub fn collect_program_manifest(UInt64, ProgramManifest) -> CollectedProgram
+
+pub fn collect_program_test_bytes(UInt64, Bytes) -> CollectedModule
+
+pub fn collect_tokens(UInt64, Iter[@tokenizer.Token]) -> CollectedModule
+
+pub fn expression_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn file_id_local(UInt64) -> Int
+
+pub fn file_id_module(UInt64) -> UInt64
+
+pub fn freeze_module_interface(String, CollectedModule, ResolvedModuleTypes, PlannedModuleFunctions) -> FrozenModuleInterface
+
+pub fn freeze_program_interfaces(CollectedProgram) -> FrozenProgramInterfaces
+
+pub fn infer_module_bodies(CollectedModule, ResolvedModuleTypes, ResolvedModuleNames) -> InferredModuleBodies
+
+pub fn infer_module_bodies_with_imports(CollectedModule, ResolvedModuleTypes, ResolvedModuleImports, ResolvedModuleNames) -> InferredModuleBodies
+
+pub fn infer_module_values(CollectedModule, ResolvedModuleTypes, ResolvedModuleNames) -> InferredModuleValues
+
+pub fn link_program_wasmgc_fragments(PlannedProgramWasmGCFragments, PlannedProgramLowering, Int) -> PlannedProgramWasmGCLink
+
+pub fn local_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn make_file_id(UInt64, Int) -> UInt64
+
+pub fn make_program_file_id(UInt64, Int) -> UInt64
+
+pub fn operator_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn pattern_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn plan_module_functions(CollectedModule, ResolvedModuleTypes) -> PlannedModuleFunctions
+
+pub fn plan_module_initialization(CollectedModule, InferredModuleValues) -> PlannedModuleInitialization
+
+pub fn plan_module_lowering(CollectedModule, ResolvedModuleTypes, PlannedModuleTypeLayouts, PlannedModuleInitialization, PlannedModuleFunctions, ResolvedModuleNames, InferredModuleBodies, AnalyzedModuleFlows) -> PlannedModuleLowering
+
+pub fn plan_module_type_layouts(CollectedModule, ResolvedModuleTypes) -> PlannedModuleTypeLayouts
+
+pub fn plan_module_wasmgc_fragments(ResolvedModuleTypes, PlannedModuleLowering) -> PlannedModuleWasmGCFragments
+
+pub fn plan_module_wasmgc_fragments_with_options(ResolvedModuleTypes, PlannedModuleLowering, WasmGCPlanningOptions) -> PlannedModuleWasmGCFragments
+
+pub fn plan_program_lowering(CollectedProgram, AnalyzedProgramSemantics) -> PlannedProgramLowering
+
+pub fn plan_program_wasmgc_fragments(AnalyzedProgramSemantics, PlannedProgramLowering) -> PlannedProgramWasmGCFragments
+
+pub fn plan_program_wasmgc_fragments_with_options(AnalyzedProgramSemantics, PlannedProgramLowering, WasmGCPlanningOptions) -> PlannedProgramWasmGCFragments
+
+pub fn plan_program_wasmgc_link(AnalyzedProgramSemantics, PlannedProgramLowering, Int) -> PlannedProgramWasmGCLink
+
+pub fn plan_program_wasmgc_link_with_options(AnalyzedProgramSemantics, PlannedProgramLowering, Int, WasmGCPlanningOptions) -> PlannedProgramWasmGCLink
+
+pub fn resolve_module_imports(ResolvedModuleTypes, ModuleImportScope) -> ResolvedModuleImports
+
+pub fn resolve_module_names(CollectedModule) -> ResolvedModuleNames
+
+pub fn resolve_module_names_with_imports(CollectedModule, ModuleImportScope) -> ResolvedModuleNames
+
+pub fn resolve_module_types(CollectedModule) -> ResolvedModuleTypes
+
+pub fn resolve_module_types_with_imports(CollectedModule, ModuleImportScope) -> ResolvedModuleTypes
+
+pub fn return_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn semantic_id_local(UInt64) -> Int
+
+pub fn semantic_id_module(UInt64) -> UInt64
+
+pub fn synthetic_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn wasmgc_physical_type_count(PlannedModuleTypeLayouts) -> Int
+
+pub fn wasmgc_physical_type_count_with_options(PlannedModuleTypeLayouts, WasmGCPlanningOptions) -> Int
+
+// Errors
+
+// Types and methods
+pub struct AnalyzedBodyFlow {
+  body : UInt64
+  flow : BodyFlowSummary
+  diagnostics : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub struct AnalyzedModuleFlows {
+  module_id : UInt64
+  bodies : Array[AnalyzedBodyFlow]
+  expression_flows : Array[BodyFlowSummary]
+  block_flows : Array[BodyFlowSummary]
+  arm_flows : Array[BodyFlowSummary]
+  missing_cases : Array[MissingPatternCase]
+  diagnostics : Array[BodyFlowDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn AnalyzedModuleFlows::body(Self, UInt64) -> AnalyzedBodyFlow?
+
+pub struct AnalyzedProgramModule {
+  module_id : UInt64
+  imports : ResolvedModuleImports
+  names : ResolvedModuleNames
+  inferred : InferredModuleBodies
+}
+
+pub struct AnalyzedProgramSemantics {
+  frozen : FrozenProgramInterfaces
+  modules : Array[AnalyzedProgramModule]
+}
+
+pub enum BindingSpace {
+  ModuleType
+  ModuleTrait
+  ModuleValue
+  TraitMethod
+  ImplMethod
+  StructField
+  EnumVariant
+  VariantField
+  GenericParameter
+  Parameter
+} derive(Eq, @debug.Debug)
+
+pub struct BodyControl {
+  id : Int
+  kind : BodyControlKind
+  expression : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum BodyControlKind {
+  FunctionalWhileControl
+} derive(Eq, @debug.Debug)
+
+pub enum BodyFlowDiagnostic {
+  NonExhaustiveMatch(Int, HirSpan, UInt64)
+  NonExhaustiveFunctionalLoop(Int, HirSpan, UInt64)
+  RedundantPatternArm(Int, UInt64)
+  FunctionalLoopArmFallsThrough(Int, UInt64)
+  UnreachableBlockItem(Int, Int, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn BodyFlowDiagnostic::offset(Self) -> UInt64
+
+pub struct BodyFlowSummary {
+  outcomes : Int
+} derive(Eq, @debug.Debug)
+pub fn BodyFlowSummary::may_break(Self) -> Bool
+pub fn BodyFlowSummary::may_continue(Self) -> Bool
+pub fn BodyFlowSummary::may_diverge(Self) -> Bool
+pub fn BodyFlowSummary::may_fall_through(Self) -> Bool
+pub fn BodyFlowSummary::may_return(Self) -> Bool
+
+pub enum BodyInferenceDiagnostic {
+  BodyConstraintDiagnostic(LocalInferenceDiagnostic)
+  NumericLiteralOutOfRange(Int, PrimitiveType, UInt64)
+  UnsupportedExpressionInference(Int, UInt64)
+  InvalidCallTarget(Int, UInt64)
+  CallArgumentCountMismatch(Int, UInt64, Int, Int, UInt64)
+  NoMatchingCallOverload(Int, Int, UInt64)
+  AmbiguousCallOverload(Int, Int, UInt64, UInt64, Int, UInt64)
+  UnresolvedCallTypeArgument(Int, Int, UInt64)
+  UnresolvedModuleValue(UInt64, UInt64)
+  InvalidPatternConstructor(Int, UInt64)
+  UnknownVariantForType(Int, UInt64, Int, UInt64)
+  AmbiguousPatternVariant(Int, Int, UInt64, UInt64, Int, UInt64)
+  PatternPayloadKindMismatch(Int, UInt64, UInt64)
+  PatternPayloadArityMismatch(Int, Int, Int, UInt64)
+  UnknownPatternField(Int, Int, UInt64)
+  MissingPatternField(Int, Int, UInt64)
+  MissingImportedPatternField(String, Int, UInt64)
+  UnresolvedPatternTypeArgument(Int, Int, UInt64)
+  InvalidConstructionTarget(Int, UInt64)
+  ObjectTypeRequired(Int, UInt64)
+  ConstructionPayloadKindMismatch(Int, UInt64, UInt64)
+  ConstructionPayloadArityMismatch(Int, UInt64, Int, Int, UInt64)
+  UnknownVariantValue(Int, Int, UInt64)
+  AmbiguousVariantValue(Int, Int, UInt64, UInt64, Int, UInt64)
+  DuplicateConstructionField(Int, UInt64, UInt64)
+  UnknownConstructionField(Int, Int, UInt64)
+  MissingConstructionField(Int, Int, UInt64)
+  FieldAccessRequiresNominal(Int, UInt64)
+  UnknownFieldForType(Int, UInt64, Int, UInt64)
+  UnknownQualifiedMember(Int, UInt64, Int, UInt64)
+  NoMatchingMethod(Int, Int, UInt64)
+  AmbiguousMethod(Int, Int, UInt64, UInt64, Int, UInt64)
+  UnresolvedExpressionTypeArgument(Int, Int, UInt64)
+  ReturnOutsideCallable(UInt64)
+  UnresolvedExpressionType(Int, UInt64)
+  UnresolvedLocalType(UInt64, Int, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn BodyInferenceDiagnostic::offset(Self) -> UInt64
+
+pub struct BodyLocal {
+  id : Int
+  name : Int
+  kind : BodyLocalKind
+  mutable_ : Bool
+  source : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum BodyLocalKind {
+  ParameterLocal
+  LetLocal
+  PatternLocal
+} derive(Eq, @debug.Debug)
+
+pub enum BodyNameReference {
+  NoNameReference
+  ErrorNameReference
+  LocalNameReference(Int)
+  ModuleValueNameReference(Int)
+  ImportedValueNameReference(Int)
+  ModuleTypeNameReference(UInt64)
+  ModuleTraitNameReference(UInt64)
+  VariantNameReference(Int)
+  IntrinsicNameReference(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum BodyPatternReference {
+  NoPatternReference
+  ErrorPatternReference
+  PatternBindingReference(Int)
+  PatternTypeReference(UInt64)
+  PatternTraitReference(UInt64)
+  PatternVariantReference(Int)
+  PatternQualifiedReference(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum BodyResolutionDiagnostic {
+  UnknownValueName(Int, Int, UInt64)
+  AmbiguousImportedValueName(Int, Int, UInt64)
+  AmbiguousImportedQualifiedRoot(Int, Int, UInt64)
+  UnknownQualifiedRoot(Int, Int, UInt64)
+  UnknownPatternConstructor(Int, Int, UInt64)
+  DuplicatePatternBinding(Int, UInt64, UInt64)
+  AlternativeMissingBinding(Int, Int, UInt64)
+  AlternativeExtraBinding(Int, Int, UInt64)
+  BreakOutsideLoop(Int, UInt64)
+  ContinueOutsideLoop(Int, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn BodyResolutionDiagnostic::offset(Self) -> UInt64
+
+pub enum BodyTypeTerm {
+  BodyErrorType
+  BodyResolvedType(Int)
+  BodyVariableType(Int)
+  BodyAppliedType(Int, HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedAlias {
+  declaration : UInt64
+  target : Int
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedBuiltin {
+  declaration : UInt64
+  builtin_name : Bytes
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedCallable {
+  declaration : UInt64
+  return_type : Int
+} derive(Eq, @debug.Debug)
+
+pub enum CollectedDeclKind {
+  BuiltinDecl
+  LetDecl
+  TraitDecl
+  FunctionDecl
+  TestDecl
+  ImplDecl
+  StructDecl
+  EnumDecl
+  TypeAliasDecl
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedDeclaration {
+  id : UInt64
+  kind : CollectedDeclKind
+  name : Int
+  visibility : SemanticVisibility
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+pub fn CollectedDeclaration::has_name(Self) -> Bool
+
+pub enum CollectedDeclarationReference {
+  TopLevelReference(CollectedDeclaration)
+  MethodReference(CollectedMethod)
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedField {
+  id : UInt64
+  declaration : UInt64
+  variant : UInt64?
+  name : Int
+  type_ : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedGenericParameter {
+  id : UInt64
+  declaration : UInt64
+  index : Int
+  name : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedImpl {
+  declaration : UInt64
+  foreign_ : Bool
+  trait_type : Int?
+  target_type : Int
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedImport {
+  path : String
+  global_ : Bool
+  file : UInt64
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedLet {
+  declaration : UInt64
+  mutable_ : Bool
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedMethod {
+  id : UInt64
+  parent : UInt64
+  kind : CollectedMethodKind
+  name : Int
+  visibility : SemanticVisibility
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum CollectedMethodKind {
+  TraitMethodDecl
+  ImplMethodDecl
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedModule {
+  module_id : UInt64
+  preamble_declaration_count : Int
+  files : Array[UInt64]
+  test_files : Array[UInt64]
+  declaration_files : Array[UInt64]
+  body_files : Array[UInt64]
+  names : Array[String]
+  declarations : Array[CollectedDeclaration]
+  methods : Array[CollectedMethod]
+  declaration_locations : Array[Int]
+  fields : Array[CollectedField]
+  variants : Array[CollectedVariant]
+  generic_parameters : Array[CollectedGenericParameter]
+  parameters : Array[CollectedParameter]
+  generic_parameter_spans : Array[HirSpan]
+  parameter_spans : Array[HirSpan]
+  callables : Array[CollectedCallable]
+  tests : Array[CollectedTest]
+  imports : Array[CollectedImport]
+  builtins : Array[CollectedBuiltin]
+  lets : Array[CollectedLet]
+  aliases : Array[CollectedAlias]
+  impls : Array[CollectedImpl]
+  type_syntax : Array[HirTypeSyntax]
+  type_arguments : Array[Int]
+  bodies : Array[HirBody]
+  body_by_declaration : Array[Int]
+  expressions : Array[HirExpr]
+  expression_children : Array[Int]
+  blocks : Array[HirBlock]
+  block_items : Array[HirBlockItem]
+  object_fields : Array[HirObjectField]
+  patterns : Array[HirPattern]
+  pattern_children : Array[Int]
+  pattern_fields : Array[HirPatternField]
+  pattern_arms : Array[HirPatternArm]
+  arm_children : Array[Int]
+  diagnostics : Array[CollectionDiagnostic]
+  name_lookup : Map[String, Int]
+  type_bindings : Map[Int, UInt64]
+  trait_bindings : Map[Int, UInt64]
+  value_bindings : Map[Int, ValueBinding]
+  value_binding_candidates : Array[ValueBindingCandidate]
+}
+pub fn CollectedModule::body_location(Self, UInt64) -> SourceLocation?
+pub fn CollectedModule::body_of(Self, UInt64) -> HirBody?
+pub fn CollectedModule::declaration(Self, UInt64) -> CollectedDeclarationReference?
+pub fn CollectedModule::declaration_is_test_only(Self, UInt64) -> Bool
+pub fn CollectedModule::declaration_location(Self, UInt64) -> SourceLocation?
+pub fn CollectedModule::file_is_test(Self, UInt64) -> Bool
+pub fn CollectedModule::find_name(Self, String) -> Int?
+pub fn CollectedModule::generic_parameters_of(Self, UInt64) -> HirSpan
+pub fn CollectedModule::lookup_trait(Self, String) -> UInt64?
+pub fn CollectedModule::lookup_type(Self, String) -> UInt64?
+pub fn CollectedModule::lookup_value(Self, String) -> UInt64?
+pub fn CollectedModule::name(Self, Int) -> String
+pub fn CollectedModule::parameters_of(Self, UInt64) -> HirSpan
+pub fn CollectedModule::value_declarations(Self, String) -> Iter[UInt64]
+
+pub struct CollectedParameter {
+  id : UInt64
+  declaration : UInt64
+  index : Int
+  kind : CollectedParameterKind
+  name : Int
+  type_ : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum CollectedParameterKind {
+  ReceiverParameterDecl
+  ValueParameterDecl
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedProgram {
+  module_id_base : UInt64
+  module_paths : Array[String]
+  module_lookup : Map[String, Int]
+  modules : Array[CollectedModule]
+  diagnostics : Array[ManifestDiagnostic]
+}
+pub fn CollectedProgram::module_index(Self, String) -> Int?
+
+pub struct CollectedTest {
+  declaration : UInt64
+  display_name : Bytes
+  file : UInt64
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedVariant {
+  id : UInt64
+  declaration : UInt64
+  kind : CollectedVariantKind
+  name : Int
+  payload_types : HirSpan
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum CollectedVariantKind {
+  UnitVariantDecl
+  TupleVariantDecl
+  StructVariantDecl
+} derive(Eq, @debug.Debug)
+
+pub enum CollectionDiagnostic {
+  ParseDiagnostic(UInt64, @parser.ParseDiagnostic)
+  DuplicateName(DuplicateNameDiagnostic)
+  InvalidUtf8StringLiteral(UInt64, UInt64)
+  TestDeclarationOutsideTestFile(UInt64, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct DuplicateNameDiagnostic {
+  space : BindingSpace
+  name : Int
+  first : UInt64
+  duplicate : UInt64
+  first_file : UInt64
+  duplicate_file : UInt64
+  first_offset : UInt64
+  duplicate_offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenInterfaceCallable {
+  declaration : UInt64
+  name : String
+  kind : FrozenInterfaceCallableKind
+  generic_parameters : HirSpan
+  parameters : HirSpan
+  result_type : Int
+  result_shape : PlannedValueShape
+  location : SourceLocation
+} derive(Eq, @debug.Debug)
+
+pub enum FrozenInterfaceCallableKind {
+  FrozenBuiltinCallable(Bytes)
+  FrozenFunctionCallable
+  FrozenTraitCallable(UInt64)
+  FrozenImplCallable(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenInterfaceDeclaration {
+  declaration : UInt64
+  name : String
+  kind : FrozenInterfaceDeclarationKind
+  source_kind : CollectedDeclKind
+  generic_parameter_count : Int
+  generic_parameters : HirSpan
+  semantic_type : Int
+  location : SourceLocation
+} derive(Eq, @debug.Debug)
+
+pub enum FrozenInterfaceDeclarationKind {
+  FrozenTypeDeclaration
+  FrozenTraitDeclaration
+  FrozenValueDeclaration
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenInterfaceField {
+  field : UInt64
+  declaration : UInt64
+  variant : UInt64?
+  name : String
+  type_ : Int
+  location : SourceLocation
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenInterfaceImplementation {
+  declaration : UInt64
+  trait_type : Int
+  target_type : Int
+  location : SourceLocation
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenInterfaceParameter {
+  parameter : UInt64
+  name : String
+  type_ : Int
+  shape : PlannedValueShape
+  receiver : Bool
+  location : SourceLocation
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenInterfaceVariant {
+  variant : UInt64
+  declaration : UInt64
+  kind : CollectedVariantKind
+  name : String
+  payload_types : HirSpan
+  location : SourceLocation
+} derive(Eq, @debug.Debug)
+
+pub struct FrozenModuleInterface {
+  module_id : UInt64
+  path : String
+  resolved_types : ResolvedModuleTypes
+  declarations : Array[FrozenInterfaceDeclaration]
+  fields : Array[FrozenInterfaceField]
+  variants : Array[FrozenInterfaceVariant]
+  variant_payload_types : Array[Int]
+  callables : Array[FrozenInterfaceCallable]
+  parameters : Array[FrozenInterfaceParameter]
+  implementations : Array[FrozenInterfaceImplementation]
+}
+pub fn FrozenModuleInterface::callables_named(Self, String) -> Array[FrozenInterfaceCallable]
+pub fn FrozenModuleInterface::declaration_named(Self, String, FrozenInterfaceDeclarationKind) -> UInt64?
+
+pub struct FrozenProgramInterfaces {
+  graph : ModuleDependencyGraph
+  interfaces : Array[FrozenModuleInterface]
+  import_scopes : Array[ModuleImportScope]
+  import_diagnostics : Array[ImportScopeDiagnostic]
+}
+
+pub enum HirBinaryOperator {
+  HirLogicalOr
+  HirLogicalAnd
+  HirBitOr
+  HirBitXor
+  HirBitAnd
+  HirEqual
+  HirNotEqual
+  HirLess
+  HirLessEqual
+  HirGreater
+  HirGreaterEqual
+  HirShiftLeft
+  HirShiftRight
+  HirAdd
+  HirSubtract
+  HirMultiply
+  HirDivide
+  HirRemainder
+  HirExponentiate
+} derive(Eq, @debug.Debug)
+
+pub struct HirBlock {
+  items : HirSpan
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum HirBlockItem {
+  HirLetItem(Bool, Int, UInt64, Int, UInt64)
+  HirReturnItem(Int, UInt64)
+  HirExpressionItem(Int, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct HirBody {
+  id : UInt64
+  declaration : UInt64
+  kind : HirBodyKind
+  root : HirBodyRoot
+  expressions : HirSpan
+  expression_children : HirSpan
+  blocks : HirSpan
+  block_items : HirSpan
+  patterns : HirSpan
+  pattern_children : HirSpan
+  pattern_arms : HirSpan
+  arm_children : HirSpan
+  object_fields : HirSpan
+  pattern_fields : HirSpan
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum HirBodyKind {
+  ModuleLetBody
+  FunctionBody
+  ImplMethodBody
+} derive(Eq, @debug.Debug)
+
+pub enum HirBodyRoot {
+  ExpressionBodyRoot(Int)
+  BlockBodyRoot(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum HirExpr {
+  HirI8Expr(UInt64, UInt64)
+  HirI16Expr(UInt64, UInt64)
+  HirI32Expr(UInt64, UInt64)
+  HirI64Expr(UInt64, UInt64)
+  HirU8Expr(UInt64, UInt64)
+  HirU16Expr(UInt64, UInt64)
+  HirU32Expr(UInt64, UInt64)
+  HirU64Expr(UInt64, UInt64)
+  HirF32Expr(Float, UInt64)
+  HirF64Expr(Double, UInt64)
+  HirBoolExpr(Bool, UInt64)
+  HirStringExpr(Bytes, UInt64)
+  HirBytesExpr(Bytes, UInt64)
+  HirNameExpr(Int, UInt64)
+  HirIntrinsicExpr(Int, UInt64)
+  HirObjectExpr(HirSpan, UInt64)
+  HirConstructExpr(Int, HirSpan, UInt64)
+  HirBlockExpr(Int, UInt64)
+  HirIfExpr(Int, Int, Int, UInt64)
+  HirMatchExpr(Int, HirSpan, UInt64)
+  HirWhileExpr(Int, HirSpan, UInt64)
+  HirBreakExpr(Int, UInt64)
+  HirContinueExpr(Int, UInt64)
+  HirPrefixExpr(HirPrefixOperator, Int, UInt64)
+  HirBinaryExpr(HirBinaryOperator, Int, Int, UInt64)
+  HirCallExpr(Int, HirSpan, UInt64)
+  HirFieldExpr(Int, Int, UInt64)
+  HirQualifiedExpr(Int, Int, UInt64)
+  HirIndexExpr(Int, Int, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn HirExpr::offset(Self) -> UInt64
+
+pub struct HirObjectField {
+  name : Int
+  value : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum HirPattern {
+  HirWildcardPattern(UInt64)
+  HirBindingPattern(Int, UInt64)
+  HirRestPattern(UInt64)
+  HirLiteralPattern(Int, UInt64)
+  HirQualifiedPattern(Int, Int, UInt64)
+  HirTuplePattern(Int, HirSpan, UInt64)
+  HirStructPattern(Int, HirSpan, Bool, UInt64, UInt64)
+  HirAlternativePattern(Int, HirSpan, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn HirPattern::offset(Self) -> UInt64
+
+pub struct HirPatternArm {
+  pattern : Int
+  guard_condition : Int
+  body : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct HirPatternField {
+  name : Int
+  pattern : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum HirPrefixOperator {
+  HirPositive
+  HirNegative
+  HirLogicalNot
+} derive(Eq, @debug.Debug)
+
+pub struct HirSpan {
+  start : Int
+  length : Int
+} derive(Eq, @debug.Debug)
+
+pub enum HirTypeSyntax {
+  NamedTypeSyntax(Int, UInt64)
+  AppliedTypeSyntax(Int, HirSpan, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct ImplBucket {
+  kind : ImplBucketKind
+  target_head : ImplTargetHead
+  implementations : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub enum ImplBucketKind {
+  InherentImplBucket
+  TraitImplBucket(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub enum ImplIndexDiagnostic {
+  InvalidImplTraitHead(UInt64, UInt64)
+  InvalidImplTargetHead(UInt64, UInt64)
+  OverlappingTraitImpl(UInt64, UInt64, UInt64, ImplTargetHead, UInt64)
+  UnknownTraitImplMethod(UInt64, UInt64, UInt64)
+  MissingTraitMethod(UInt64, UInt64, UInt64)
+  DuplicateTraitImplMethod(UInt64, UInt64, UInt64, UInt64)
+  TraitMethodReceiverMismatch(UInt64, UInt64, UInt64)
+  TraitMethodParameterCountMismatch(UInt64, UInt64, Int, Int, UInt64)
+  TraitMethodGenericParameterCountMismatch(UInt64, UInt64, Int, Int, UInt64)
+  TraitMethodParameterTypeMismatch(UInt64, UInt64, Int, UInt64)
+  TraitMethodReturnTypeMismatch(UInt64, UInt64, UInt64)
+  DuplicateInherentMethod(Int, UInt64, UInt64, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn ImplIndexDiagnostic::offset(Self) -> UInt64
+
+pub enum ImplTargetHead {
+  ErrorImplTargetHead
+  PrimitiveImplTargetHead(PrimitiveType)
+  NominalImplTargetHead(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub enum ImportScopeDiagnostic {
+  UnavailableImportedInterface(UInt64, String, UInt64, UInt64)
+  AmbiguousImportedType(UInt64, String, UInt64, UInt64)
+  AmbiguousImportedTrait(UInt64, String, UInt64, UInt64)
+  AmbiguousImportedValue(UInt64, String, UInt64, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct ImportedCallableReference {
+  interface_index : Int
+  callable_index : Int
+  mut next : Int
+} derive(Eq, @debug.Debug)
+
+pub struct ImportedDeclarationBinding {
+  declaration : UInt64
+  source_kind : CollectedDeclKind
+  generic_parameter_count : Int
+  generic_parameters : HirSpan
+  interface_index : Int
+  semantic_type : Int
+} derive(Eq, @debug.Debug)
+
+pub struct ImportedValueBinding {
+  interface_index : Int
+  head : Int
+  mut tail : Int
+  mut ambiguous : Bool
+} derive(Eq, @debug.Debug)
+
+pub struct IndexedImpl {
+  declaration : UInt64
+  kind : IndexedImplKind
+  target_head : ImplTargetHead
+  trait_type : Int
+  target_type : Int
+  methods : HirSpan
+  bucket : Int
+  valid : Bool
+  coherent : Bool
+  specificity : Int
+} derive(Eq, @debug.Debug)
+
+pub enum IndexedImplKind {
+  InherentIndexedImpl
+  TraitIndexedImpl(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct IndexedImplMethod {
+  declaration : UInt64
+  requirement : UInt64?
+  instance : Bool
+} derive(Eq, @debug.Debug)
+
+pub struct IndexedMethodDispatch {
+  target_head : ImplTargetHead
+  name : Int
+  inherent : Bool
+  instance : Bool
+  implementation : Int
+  method_index : Int
+} derive(Eq, @debug.Debug)
+
+pub struct IndexedTraitMethodDispatch {
+  trait_declaration : UInt64
+  name : Int
+  instance : Bool
+  implementation : Int
+  method_index : Int
+} derive(Eq, @debug.Debug)
+
+pub struct InferenceSnapshot {
+  undo_start : Int
+  variable_count : Int
+  type_count : Int
+  argument_count : Int
+  diagnostic_count : Int
+} derive(Eq, @debug.Debug)
+
+pub struct InferredBody {
+  body : UInt64
+  root_type : Int
+  types : HirSpan
+  type_arguments : HirSpan
+  diagnostics : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub enum InferredCallTarget {
+  NoInferredCallTarget
+  ErrorInferredCallTarget
+  SelectedInferredCallTarget(UInt64, HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub enum InferredExpressionSelection {
+  NoExpressionSelection
+  ErrorExpressionSelection
+  StructConstructionSelection(UInt64, HirSpan)
+  VariantConstructionSelection(UInt64, HirSpan)
+  UnitVariantValueSelection(UInt64, HirSpan)
+  FieldAccessSelection(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct InferredModuleBodies {
+  module_id : UInt64
+  module_values : InferredModuleValues
+  impl_index : ModuleImplIndex
+  bodies : Array[InferredBody]
+  types : Array[BodyTypeTerm]
+  type_arguments : Array[Int]
+  expression_types : Array[Int]
+  local_types : Array[Int]
+  block_types : Array[Int]
+  pattern_types : Array[Int]
+  pattern_constructors : Array[InferredPatternConstructor]
+  pattern_type_arguments : Array[Int]
+  control_state_types : Array[Int]
+  control_result_types : Array[Int]
+  expression_selections : Array[InferredExpressionSelection]
+  expression_type_arguments : Array[Int]
+  object_field_targets : Array[InferredObjectFieldTarget]
+  call_targets : Array[InferredCallTarget]
+  operator_targets : Array[InferredCallTarget]
+  call_type_arguments : Array[Int]
+  diagnostics : Array[BodyInferenceDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn InferredModuleBodies::arguments(Self, Int) -> ArrayView[Int]
+pub fn InferredModuleBodies::body(Self, UInt64) -> InferredBody?
+pub fn InferredModuleBodies::type_term(Self, Int) -> BodyTypeTerm
+
+pub struct InferredModuleValues {
+  module_id : UInt64
+  dependencies : ModuleValueDependencies
+  let_declarations : Array[UInt64]
+  let_types : Array[Int]
+  types : Array[BodyTypeTerm]
+  type_arguments : Array[Int]
+  diagnostics : Array[BodyInferenceDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn InferredModuleValues::arguments(Self, Int) -> ArrayView[Int]
+pub fn InferredModuleValues::type_term(Self, Int) -> BodyTypeTerm
+
+pub enum InferredObjectFieldTarget {
+  NoObjectFieldTarget
+  ErrorObjectFieldTarget
+  SelectedObjectFieldTarget(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub enum InferredPatternConstructor {
+  NoInferredPatternConstructor
+  ErrorInferredPatternConstructor
+  StructInferredPatternConstructor(UInt64, HirSpan)
+  VariantInferredPatternConstructor(UInt64, HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub enum LocalInferenceDiagnostic {
+  LocalTypeMismatch(Int, Int, TypeConstraintOrigin)
+  InfiniteLocalType(Int, Int, TypeConstraintOrigin)
+} derive(Eq, @debug.Debug)
+pub fn LocalInferenceDiagnostic::offset(Self) -> UInt64
+
+pub struct LocalTypeSolver {
+  resolved : ResolvedModuleTypes
+  types : Array[BodyTypeTerm]
+  type_arguments : Array[Int]
+  variable_parents : Array[Int]
+  variable_sizes : Array[Int]
+  variable_bindings : Array[Int]
+  variable_types : Array[Int]
+  diagnostics : Array[LocalInferenceDiagnostic]
+  snapshots : Array[InferenceSnapshot]
+  undo_kinds : Array[Int]
+  undo_indices : Array[Int]
+  undo_values : Array[Int]
+  unify_left : Array[Int]
+  unify_right : Array[Int]
+  occurs_stack : Array[Int]
+  occurs_local_marks : Array[Int]
+  occurs_resolved_marks : Array[Int]
+  mut occurs_generation : Int
+  zonk_task_types : Array[Int]
+  zonk_task_states : Array[Int]
+  zonk_result_starts : Array[Int]
+  zonk_results : Array[Int]
+  zonk_application_scratch : Array[Int]
+  zonk_marks : Array[Int]
+  zonk_values : Array[Int]
+  mut zonk_generation : Int
+}
+pub fn LocalTypeSolver::applied_type(Self, Int, Array[Int]) -> Int
+pub fn LocalTypeSolver::commit(Self, InferenceSnapshot) -> Unit
+pub fn LocalTypeSolver::error_type(Self) -> Int
+pub fn LocalTypeSolver::fresh_variable(Self) -> Int
+pub fn LocalTypeSolver::has_unresolved_variable(Self, Int) -> Bool
+pub fn LocalTypeSolver::new(ResolvedModuleTypes) -> Self
+pub fn LocalTypeSolver::poison_type(Self, Int) -> Unit
+pub fn LocalTypeSolver::representative_type(Self, Int) -> Int
+pub fn LocalTypeSolver::reset(Self) -> Unit
+pub fn LocalTypeSolver::resolved_type(Self, Int) -> Int
+pub fn LocalTypeSolver::rollback(Self, InferenceSnapshot) -> Unit
+pub fn LocalTypeSolver::snapshot(Self) -> InferenceSnapshot
+pub fn LocalTypeSolver::type_term(Self, Int) -> BodyTypeTerm
+pub fn LocalTypeSolver::unify(Self, Int, Int, TypeConstraintOrigin) -> Bool
+pub fn LocalTypeSolver::zonk_type(Self, Int) -> Int
+
+pub enum LoweringPlanDiagnostic {
+  UnsupportedIndexLowering(Int, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn LoweringPlanDiagnostic::offset(Self) -> UInt64
+
+pub enum ManifestDiagnostic {
+  EmptyModulePath(Int)
+  DuplicateModulePath(String, Int, Int)
+  EmptyFilePath(Int, Int)
+  DuplicateFilePath(String, Int, Int, Int)
+} derive(Eq, @debug.Debug)
+
+pub struct ManifestFile {
+  path : String
+  source : Bytes
+} derive(Eq, @debug.Debug)
+pub fn ManifestFile::new(String, Bytes) -> Self
+
+pub struct ManifestModule {
+  path : String
+  files : Array[ManifestFile]
+} derive(Eq, @debug.Debug)
+pub fn ManifestModule::new(String, Array[ManifestFile]) -> Self
+
+pub enum MissingPatternCase {
+  MissingCatchAllCase
+  MissingBoolCase(Bool)
+  MissingVariantCase(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct ModuleDependencyGraph {
+  module_ids : Array[UInt64]
+  dependencies : Array[HirSpan]
+  dependency_modules : Array[Int]
+  sccs : Array[HirSpan]
+  scc_modules : Array[Int]
+  diagnostics : Array[ModuleGraphDiagnostic]
+} derive(Eq, @debug.Debug)
+
+pub enum ModuleGraphDiagnostic {
+  MissingImportedModule(UInt64, String, UInt64, UInt64)
+  DuplicateImportedModule(UInt64, String, UInt64, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct ModuleImplIndex {
+  module_id : UInt64
+  implementations : Array[IndexedImpl]
+  methods : Array[IndexedImplMethod]
+  buckets : Array[ImplBucket]
+  bucket_implementations : Array[Int]
+  method_dispatch : Array[IndexedMethodDispatch]
+  trait_method_dispatch : Array[IndexedTraitMethodDispatch]
+  diagnostics : Array[ImplIndexDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn ModuleImplIndex::bucket_implementations_of(Self, ImplBucket) -> ArrayView[Int]
+pub fn ModuleImplIndex::implementation(Self, UInt64) -> IndexedImpl?
+pub fn ModuleImplIndex::method_dispatch_span(Self, ImplTargetHead, Int, Bool, Bool) -> HirSpan
+pub fn ModuleImplIndex::trait_method_dispatch_span(Self, UInt64, Int, Bool) -> HirSpan
+
+pub struct ModuleImportScope {
+  module_id : UInt64
+  declarations : Array[ImportedDeclarationBinding]
+  imported_interfaces : Array[Int]
+  type_bindings : Map[String, Int]
+  trait_bindings : Map[String, Int]
+  value_bindings : Map[String, ImportedValueBinding]
+  callable_references : Array[ImportedCallableReference]
+  interfaces : Array[FrozenModuleInterface?]
+  diagnostics : Array[ImportScopeDiagnostic]
+}
+pub fn ModuleImportScope::lookup_trait(Self, String) -> ImportedDeclarationBinding?
+pub fn ModuleImportScope::lookup_type(Self, String) -> ImportedDeclarationBinding?
+pub fn ModuleImportScope::trait_is_ambiguous(Self, String) -> Bool
+pub fn ModuleImportScope::type_is_ambiguous(Self, String) -> Bool
+
+pub enum ModuleInitializationDiagnostic {
+  EagerModuleInitializationCycle(HirSpan, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn ModuleInitializationDiagnostic::offset(Self) -> UInt64
+
+pub struct ModuleValueDependencies {
+  module_id : UInt64
+  let_dependencies : Array[HirSpan]
+  dependency_declarations : Array[UInt64]
+  sccs : Array[HirSpan]
+  scc_declarations : Array[UInt64]
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedBlock {
+  items : HirSpan
+  flow : BodyFlowSummary
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedBlockItem {
+  kind : PlannedBlockItemKind
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedBlockItemKind {
+  PlannedLetItem(Int, Bool, Int)
+  PlannedReturnItem(Int)
+  PlannedExpressionItem(Int)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedBodyLowering {
+  body : UInt64
+  declaration : UInt64
+  kind : HirBodyKind
+  root : HirBodyRoot
+  root_type : Int
+  root_shape : PlannedValueShape
+  flow : BodyFlowSummary
+  locals : HirSpan
+  expressions : HirSpan
+  blocks : HirSpan
+  patterns : HirSpan
+  pattern_arms : HirSpan
+  diagnostics : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedCallable {
+  declaration : UInt64
+  name : Bytes
+  visibility : SemanticVisibility
+  compiler_owned : Bool
+  is_test : Bool
+  test_name : Bytes
+  kind : PlannedCallableKind
+  owner_generic_parameters : HirSpan
+  generic_parameters : HirSpan
+  parameters : HirSpan
+  has_receiver : Bool
+  self_type : Int
+  self_shape : PlannedValueShape
+  result_type : Int
+  result_shape : PlannedValueShape
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedCallableKind {
+  PlannedBuiltinCallable(Bytes)
+  PlannedFunctionCallable(UInt64)
+  PlannedTraitMethodCallable(UInt64)
+  PlannedImplMethodCallable(UInt64, UInt64?)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedExpression {
+  type_ : Int
+  shape : PlannedValueShape
+  flow : BodyFlowSummary
+  kind : PlannedExpressionKind
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedExpressionKind {
+  PlannedPoisonExpression
+  PlannedConsumedExpression
+  PlannedI8Const(UInt64)
+  PlannedI16Const(UInt64)
+  PlannedI32Const(UInt64)
+  PlannedI64Const(UInt64)
+  PlannedU8Const(UInt64)
+  PlannedU16Const(UInt64)
+  PlannedU32Const(UInt64)
+  PlannedU64Const(UInt64)
+  PlannedF32Const(Float)
+  PlannedF64Const(Double)
+  PlannedBoolConst(Bool)
+  PlannedStringConst(Bytes)
+  PlannedBytesConst(Bytes)
+  PlannedLocalGet(Int)
+  PlannedModuleValueGet(UInt64)
+  PlannedIntrinsic(Int)
+  PlannedStructNew(UInt64, HirSpan, HirSpan)
+  PlannedVariantTupleNew(UInt64, HirSpan, HirSpan)
+  PlannedVariantStructNew(UInt64, HirSpan, HirSpan)
+  PlannedUnitVariant(UInt64, HirSpan)
+  PlannedBlockExpression(Int)
+  PlannedIfExpression(Int, Int, Int)
+  PlannedMatchExpression(Int, HirSpan)
+  PlannedWhileExpression(Int, Int, HirSpan)
+  PlannedBreakExpression(Int, Int)
+  PlannedContinueExpression(Int, Int)
+  PlannedPrefixExpression(HirPrefixOperator, Int)
+  PlannedBinaryExpression(HirBinaryOperator, Int, Int)
+  PlannedOperatorCall(UInt64, HirBinaryOperator, Int, Int, HirSpan)
+  PlannedDirectCall(UInt64, Int, HirSpan, HirSpan)
+  PlannedFieldGet(UInt64, Int)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedFieldLayout {
+  field : UInt64
+  declaration : UInt64
+  variant : UInt64?
+  name : String
+  index : Int
+  type_ : Int
+  shape : PlannedValueShape
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedLocal {
+  body : UInt64
+  local_id : Int
+  kind : BodyLocalKind
+  mutable_ : Bool
+  type_ : Int
+  shape : PlannedValueShape
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedModuleFunctions {
+  module_id : UInt64
+  callables : Array[PlannedCallable]
+  callable_by_declaration : Array[Int]
+  parameters : Array[PlannedParameter]
+} derive(Eq, @debug.Debug)
+pub fn PlannedModuleFunctions::callable_of(Self, UInt64) -> PlannedCallable?
+
+pub struct PlannedModuleInitialization {
+  module_id : UInt64
+  dependencies : ModuleValueDependencies
+  steps : Array[PlannedModuleInitializationStep]
+  declaration_steps : Array[Int]
+  cycle_declarations : Array[UInt64]
+  diagnostics : Array[ModuleInitializationDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn PlannedModuleInitialization::step_of(Self, UInt64) -> Int?
+
+pub struct PlannedModuleInitializationStep {
+  kind : PlannedModuleInitializationStepKind
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedModuleInitializationStepKind {
+  PlannedInitializeModuleValue(UInt64, UInt64, Int)
+  PlannedCyclicModuleValues(HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedModuleLowering {
+  module_id : UInt64
+  type_layouts : PlannedModuleTypeLayouts
+  initialization : PlannedModuleInitialization
+  functions : PlannedModuleFunctions
+  bodies : Array[PlannedBodyLowering]
+  locals : Array[PlannedLocal]
+  expressions : Array[PlannedExpression]
+  blocks : Array[PlannedBlock]
+  block_items : Array[PlannedBlockItem]
+  object_fields : Array[PlannedObjectField]
+  patterns : Array[PlannedPattern]
+  pattern_fields : Array[PlannedPatternField]
+  pattern_arms : Array[PlannedPatternArm]
+  expression_children : Array[Int]
+  pattern_children : Array[Int]
+  arm_children : Array[Int]
+  expression_type_arguments : Array[Int]
+  call_type_arguments : Array[Int]
+  pattern_type_arguments : Array[Int]
+  diagnostics : Array[LoweringPlanDiagnostic]
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedModuleTypeLayouts {
+  module_id : UInt64
+  layouts : Array[PlannedNominalLayout]
+  layout_by_declaration : Array[Int]
+  fields : Array[PlannedFieldLayout]
+  variants : Array[PlannedVariantLayout]
+  payload_types : Array[Int]
+  payload_shapes : Array[PlannedValueShape]
+} derive(Eq, @debug.Debug)
+pub fn PlannedModuleTypeLayouts::layout_of(Self, UInt64) -> PlannedNominalLayout?
+
+pub struct PlannedModuleWasmGCFragments {
+  module_id : UInt64
+  dense_enum_dispatch : Bool
+  type_groups : Array[PlannedWasmRecursiveGroup]
+  physical_types : Array[PlannedWasmPhysicalType]
+  fields : Array[PlannedWasmField]
+  type_index_by_declaration : Array[Int]
+  payload_type_index_by_variant : Array[Int]
+  variant_declarations : Array[UInt64]
+  variant_tags : Array[Int]
+  variant_field_spans : Array[HirSpan]
+  variant_fields : Array[PlannedWasmVariantField]
+  field_names : Array[String]
+  functions : Array[PlannedWasmFunctionFragment]
+  function_by_declaration : Array[Int]
+  function_value_types : Array[PlannedWasmValueType]
+  imported_function_count : Int
+  defined_function_count : Int
+  uses_linear_memory : Bool
+} derive(Eq, @debug.Debug)
+pub fn PlannedModuleWasmGCFragments::field_name_of(Self, UInt64) -> String?
+pub fn PlannedModuleWasmGCFragments::function_of(Self, UInt64) -> PlannedWasmFunctionFragment?
+pub fn PlannedModuleWasmGCFragments::payload_type_index_of(Self, UInt64) -> Int?
+pub fn PlannedModuleWasmGCFragments::type_index_of(Self, UInt64) -> Int?
+pub fn PlannedModuleWasmGCFragments::variant_declaration_of(Self, UInt64) -> UInt64?
+pub fn PlannedModuleWasmGCFragments::variant_fields_of(Self, UInt64) -> ArrayView[PlannedWasmVariantField]
+pub fn PlannedModuleWasmGCFragments::variant_tag_of(Self, UInt64) -> Int?
+
+pub struct PlannedNominalLayout {
+  declaration : UInt64
+  generic_parameters : HirSpan
+  kind : PlannedNominalLayoutKind
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedNominalLayoutKind {
+  PlannedStructLayout(HirSpan)
+  PlannedEnumLayout(HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedObjectField {
+  field : UInt64
+  value : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedParameter {
+  parameter : UInt64
+  declaration : UInt64
+  index : Int
+  receiver : Bool
+  type_ : Int
+  shape : PlannedValueShape
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedPattern {
+  type_ : Int
+  source : HirPattern
+  reference : BodyPatternReference
+  selected_constructor : InferredPatternConstructor
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedPatternArm {
+  pattern : Int
+  guard_condition : Int
+  body : Int
+  flow : BodyFlowSummary
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedPatternField {
+  name : String
+  pattern : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedProgramExternalTypeReference {
+  module_index : Int
+  declaration : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedProgramLowering {
+  graph : ModuleDependencyGraph
+  modules : Array[PlannedModuleLowering]
+}
+
+pub struct PlannedProgramWasmFunction {
+  declaration : UInt64
+  module_index : Int
+  fragment_index : Int
+  name : Bytes
+  visibility : SemanticVisibility
+  is_test : Bool
+  test_name : Bytes
+  kind : PlannedWasmFunctionKind
+  direct_builtin : Bytes
+  elided : Bool
+  signature_type_index : Int
+  mut function_index : Int
+  parameters : HirSpan
+  results : HirSpan
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedProgramWasmGCFragments {
+  graph : ModuleDependencyGraph
+  modules : Array[PlannedModuleWasmGCFragments]
+  external_type_references : Array[PlannedProgramExternalTypeReference]
+}
+
+pub struct PlannedProgramWasmGCLink {
+  root_module_index : Int
+  graph : ModuleDependencyGraph
+  modules : Array[PlannedModuleWasmGCFragments]
+  module_type_bases : Array[Int]
+  functions : Array[PlannedProgramWasmFunction]
+  function_lookup : Map[UInt64, Int]
+  type_lookup : Map[UInt64, Int]
+  module_lookup : Map[UInt64, Int]
+  type_count : Int
+  imported_function_count : Int
+  defined_function_count : Int
+  diagnostics : Array[ProgramWasmGCLinkDiagnostic]
+}
+pub fn PlannedProgramWasmGCLink::function_of(Self, UInt64) -> PlannedProgramWasmFunction?
+
+pub enum PlannedValueShape {
+  ErrorPlannedValueShape
+  UnitPlannedValueShape
+  I8PlannedValueShape
+  I16PlannedValueShape
+  I32PlannedValueShape
+  I64PlannedValueShape
+  U8PlannedValueShape
+  U16PlannedValueShape
+  U32PlannedValueShape
+  U64PlannedValueShape
+  F32PlannedValueShape
+  F64PlannedValueShape
+  Swar32PlannedValueShape
+  Swar64PlannedValueShape
+  V128PlannedValueShape
+  RefPlannedValueShape
+  GenericPlannedValueShape
+  NeverPlannedValueShape
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedVariantLayout {
+  variant : UInt64
+  declaration : UInt64
+  tag : Int
+  payload : PlannedVariantPayloadLayout
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedVariantPayloadLayout {
+  PlannedUnitVariantLayout
+  PlannedTupleVariantLayout(HirSpan)
+  PlannedStructVariantLayout(HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedWasmField {
+  role : PlannedWasmFieldRole
+  physical_index : Int
+  storage : PlannedWasmStorageType
+  mutable_ : Bool
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedWasmFieldRole {
+  WasmStructField(UInt64)
+  WasmEnumTagField
+  WasmTuplePayloadField(UInt64, Int)
+  WasmStructPayloadField(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedWasmFunctionFragment {
+  declaration : UInt64
+  name : Bytes
+  visibility : SemanticVisibility
+  is_test : Bool
+  test_name : Bytes
+  kind : PlannedWasmFunctionKind
+  direct_builtin : Bytes
+  elided : Bool
+  signature_type_index : Int
+  function_index : Int
+  parameters : HirSpan
+  results : HirSpan
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedWasmFunctionKind {
+  PlannedWasmImportedFunction(Bytes)
+  PlannedWasmInlineBuiltinFunction(Bytes)
+  PlannedWasmRuntimeFunction(Bytes)
+  PlannedWasmDefinedFunction(UInt64)
+  PlannedWasmSignatureOnlyFunction
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedWasmPhysicalType {
+  kind : PlannedWasmPhysicalTypeKind
+  type_index : Int
+  group_index : Int
+  fields : HirSpan
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedWasmPhysicalTypeKind {
+  PlannedWasmStructType(UInt64)
+  PlannedWasmEnumBaseType(UInt64)
+  PlannedWasmEnumSubtypeType(UInt64, UInt64, Int)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedWasmRecursiveGroup {
+  types : HirSpan
+  first_type_index : Int
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedWasmStorageType {
+  WasmI8SignedStorage
+  WasmI8UnsignedStorage
+  WasmI16SignedStorage
+  WasmI16UnsignedStorage
+  WasmI32Storage
+  WasmI64Storage
+  WasmF32Storage
+  WasmF64Storage
+  WasmV128Storage
+  WasmStringRefStorage
+  WasmNullableEqRefStorage
+  WasmNominalRefStorage(PlannedWasmTypeReference)
+  WasmExternalNominalRefStorage(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedWasmTypeReference {
+  WasmModuleTypeReference(Int)
+  WasmRecursiveTypeReference(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum PlannedWasmValueType {
+  WasmI32Value
+  WasmI64Value
+  WasmF32Value
+  WasmF64Value
+  WasmV128Value
+  WasmStringRefValue
+  WasmNullableEqRefValue
+  WasmNominalRefValue(Int)
+  WasmExternalNominalRefValue(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct PlannedWasmVariantField {
+  role : PlannedWasmFieldRole
+  physical_index : Int
+  storage : PlannedWasmStorageType
+} derive(Eq, @debug.Debug)
+
+pub enum PrimitiveType {
+  UnitType
+  BoolType
+  I32Type
+  U32Type
+  I64Type
+  U64Type
+  F32Type
+  F64Type
+  StringType
+  NeverType
+  I8Type
+  I16Type
+  U8Type
+  U16Type
+  BytesType
+  V128Type
+  Swar32Type
+  Swar64Type
+  I8x4Type
+  U8x4Type
+  I16x2Type
+  U16x2Type
+  I8x8Type
+  U8x8Type
+  I16x4Type
+  U16x4Type
+  I32x2Type
+  U32x2Type
+  I8x16Type
+  U8x16Type
+  I16x8Type
+  U16x8Type
+  I32x4Type
+  U32x4Type
+  I64x2Type
+  U64x2Type
+  F32x4Type
+  F64x2Type
+  StringViewType
+  StringBuilderType
+  BytesBuilderType
+} derive(Eq, @debug.Debug)
+
+pub struct ProgramFile {
+  id : UInt64
+  path : String
+  source : Bytes
+  test_only : Bool
+} derive(Eq, @debug.Debug)
+pub fn ProgramFile::named(UInt64, String, Bytes) -> Self
+pub fn ProgramFile::new(UInt64, Bytes) -> Self
+
+pub struct ProgramManifest {
+  modules : Array[ManifestModule]
+} derive(Eq, @debug.Debug)
+pub fn ProgramManifest::new(Array[ManifestModule]) -> Self
+
+pub enum ProgramWasmGCLinkDiagnostic {
+  MissingProgramType(UInt64, UInt64)
+  UnsupportedProgramForwardTypeReference(UInt64, UInt64)
+  UnsupportedProgramGenericType(UInt64, UInt64)
+  UnsupportedProgramGenericCall(UInt64, UInt64, UInt64)
+  MissingProgramFunction(UInt64, UInt64, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct ResolvedBodyNames {
+  body : UInt64
+  locals : HirSpan
+  controls : HirSpan
+  diagnostics : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub struct ResolvedImportedCallable {
+  declaration : UInt64
+  generic_parameters : HirSpan
+  parameters : HirSpan
+  result_type : Int
+} derive(Eq, @debug.Debug)
+
+pub struct ResolvedImportedField {
+  field : UInt64
+  declaration : UInt64
+  variant : UInt64?
+  name : String
+  type_ : Int
+} derive(Eq, @debug.Debug)
+
+pub struct ResolvedImportedImplementation {
+  declaration : UInt64
+  trait_type : Int
+  target_type : Int
+} derive(Eq, @debug.Debug)
+
+pub struct ResolvedImportedVariant {
+  variant : UInt64
+  declaration : UInt64
+  kind : CollectedVariantKind
+  name : String
+  payload_types : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub struct ResolvedModuleImports {
+  module_id : UInt64
+  scope : ModuleImportScope
+  callables : Array[ResolvedImportedCallable]
+  parameter_types : Array[Int]
+  implementations : Array[ResolvedImportedImplementation]
+  fields : Array[ResolvedImportedField]
+  field_spans : Map[UInt64, HirSpan]
+  variants : Array[ResolvedImportedVariant]
+  variant_payload_types : Array[Int]
+  variant_spans : Map[UInt64, HirSpan]
+  callable_by_declaration : Map[UInt64, Int]
+}
+pub fn ResolvedModuleImports::callable(Self, UInt64) -> ResolvedImportedCallable?
+pub fn ResolvedModuleImports::fields_of(Self, UInt64) -> ArrayView[ResolvedImportedField]
+pub fn ResolvedModuleImports::generic_parameters_of(Self, UInt64) -> HirSpan
+pub fn ResolvedModuleImports::is_struct(Self, UInt64) -> Bool
+pub fn ResolvedModuleImports::value_binding(Self, String) -> ImportedValueBinding?
+pub fn ResolvedModuleImports::variant(Self, UInt64) -> ResolvedImportedVariant?
+pub fn ResolvedModuleImports::variant_named(Self, UInt64, String) -> ResolvedImportedVariant?
+pub fn ResolvedModuleImports::variant_payload(Self, ResolvedImportedVariant) -> ArrayView[Int]
+pub fn ResolvedModuleImports::variants_of(Self, UInt64) -> ArrayView[ResolvedImportedVariant]
+
+pub struct ResolvedModuleNames {
+  module_id : UInt64
+  bodies : Array[ResolvedBodyNames]
+  locals : Array[BodyLocal]
+  controls : Array[BodyControl]
+  expression_references : Array[BodyNameReference]
+  pattern_references : Array[BodyPatternReference]
+  parameter_locals : Array[Int]
+  block_item_locals : Array[Int]
+  transfer_targets : Array[Int]
+  expression_controls : Array[Int]
+  diagnostics : Array[BodyResolutionDiagnostic]
+} derive(Eq, @debug.Debug)
+pub fn ResolvedModuleNames::body(Self, UInt64) -> ResolvedBodyNames?
+pub fn ResolvedModuleNames::control(Self, UInt64, Int) -> BodyControl?
+pub fn ResolvedModuleNames::local_info(Self, UInt64, Int) -> BodyLocal?
+
+pub struct ResolvedModuleTypes {
+  module_id : UInt64
+  types : Array[ResolvedType]
+  type_arguments : Array[Int]
+  syntax_types : Array[Int]
+  declaration_types : Array[Int]
+  generic_parameter_types : Array[Int]
+  parameter_types : Array[Int]
+  callable_return_types : Array[Int]
+  field_types : Array[Int]
+  variant_payloads : Array[HirSpan]
+  signature_type_lists : Array[Int]
+  alias_target_types : Array[Int]
+  impl_trait_types : Array[Int]
+  impl_target_types : Array[Int]
+  alias_dependencies : Array[HirSpan]
+  alias_dependency_declarations : Array[UInt64]
+  alias_is_cyclic : Array[Bool]
+  alias_cycles : Array[HirSpan]
+  alias_cycle_declarations : Array[UInt64]
+  alias_expansion_work : Int
+  alias_expansion_limit : Int
+  diagnostics : Array[TypeDiagnostic]
+  error_type : Int
+  primitive_types : Array[Int]
+}
+pub fn ResolvedModuleTypes::arguments(Self, Int) -> ArrayView[Int]
+pub fn ResolvedModuleTypes::declaration_type(Self, UInt64) -> Int
+pub fn ResolvedModuleTypes::primitive(Self, PrimitiveType) -> Int
+pub fn ResolvedModuleTypes::syntax_type(Self, Int) -> Int
+
+pub enum ResolvedType {
+  ErrorType
+  PrimitiveType(PrimitiveType)
+  GenericParameterType(UInt64)
+  NominalType(UInt64)
+  TraitType(UInt64)
+  SelfType(UInt64)
+  AppliedType(Int, HirSpan)
+} derive(Eq, @debug.Debug)
+
+pub enum SemanticVisibility {
+  ModuleVisible
+  Public
+} derive(Eq, @debug.Debug)
+
+pub struct SourceLocation {
+  file : UInt64
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct TypeConstraintOrigin {
+  kind : TypeConstraintOriginKind
+  source : Int
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum TypeConstraintOriginKind {
+  ExpressionTypeConstraint
+  PatternTypeConstraint
+  LocalTypeConstraint
+  ReturnTypeConstraint
+  CallTypeConstraint
+  OperatorTypeConstraint
+  SyntheticTypeConstraint
+} derive(Eq, @debug.Debug)
+
+pub enum TypeDiagnostic {
+  ReservedTypeName(UInt64, Int, UInt64)
+  UnknownType(Int, UInt64, UInt64)
+  UnknownTrait(Int, UInt64, UInt64)
+  AmbiguousImportedType(Int, UInt64, UInt64)
+  AmbiguousImportedTrait(Int, UInt64, UInt64)
+  ExpectedTraitType(Int, UInt64, UInt64)
+  TypeArityMismatch(Int, Int, Int, UInt64, UInt64)
+  TypeNotApplicable(Int, UInt64, UInt64)
+  SelfOutsideContext(UInt64, UInt64)
+  AliasCycle(HirSpan, UInt64)
+  AliasExpansionLimit(UInt64, Int, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn TypeDiagnostic::offset(Self) -> UInt64
+
+pub struct ValueBinding {
+  head : Int
+  mut tail : Int
+  kind : CollectedDeclKind
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct ValueBindingCandidate {
+  declaration : UInt64
+  mut next : Int
+} derive(Eq, @debug.Debug)
+
+pub enum WasmEnumShapeSharing {
+  DistinctEnumShapes
+  ShareExactEnumShapes
+} derive(Eq, @debug.Debug)
+
+pub struct WasmGCPlanningOptions {
+  enum_shape_sharing : WasmEnumShapeSharing
+  reuse_unit_subtype_base : Bool
+  dense_enum_dispatch : Bool
+  emit_tests : Bool
+} derive(Eq, @debug.Debug)
+pub fn WasmGCPlanningOptions::optimized_subtype_families() -> Self
+pub fn WasmGCPlanningOptions::subtype_families() -> Self
+pub fn WasmGCPlanningOptions::test_mode() -> Self
+
+// Type aliases
+pub type BlockId = Int
+
+pub type BodyId = UInt64
+
+pub type BodyTypeId = Int
+
+pub type ControlId = Int
+
+pub type DeclId = UInt64
+
+pub type ExprId = Int
+
+pub type FieldId = UInt64
+
+pub type FileId = UInt64
+
+pub type GenericParameterId = UInt64
+
+pub type HirTypeId = Int
+
+pub type LocalId = Int
+
+pub type ModuleId = UInt64
+
+pub type NameId = Int
+
+pub type ParameterId = UInt64
+
+pub type PatternArmId = Int
+
+pub type PatternId = Int
+
+pub type ResolvedTypeId = Int
+
+pub type TypeVariableId = Int
+
+pub type VariantId = UInt64
+
+// Traits

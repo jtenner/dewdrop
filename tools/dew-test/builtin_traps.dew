@@ -1,0 +1,154 @@
+open dew.std.string
+open dew.std.string_builder
+open dew.std.bytes
+open dew.std.bytes_builder
+test "assert false traps" {
+  assert(false, "intentional assertion failure")
+}
+
+pub fn builtin_unreachable() -> Never {
+  unreachable()
+}
+
+pub fn memory_out_of_bounds() -> I32 {
+  i32_load(4294967295u32)
+}
+
+pub fn string_view_out_of_bounds() -> U32 {
+  "abc".view(2u32, 2u32).byte_length()
+}
+
+pub fn string_view_invalid_utf8_boundary() -> U32 {
+  "λ".view(1u32, 1u32).byte_length()
+}
+
+pub fn string_builder_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  builder.append("done")
+  let result = builder.finish()
+  builder.byte_length()
+}
+
+pub fn string_builder_append_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  let result = builder.finish()
+  builder.append("late")
+  result.byte_length()
+}
+
+pub fn string_builder_append_view_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  let result = builder.finish()
+  builder.append_view("view".view(0u32, 4u32))
+  result.byte_length()
+}
+
+pub fn string_builder_append_ascii_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  let result = builder.finish()
+  builder.append_ascii(65u8)
+  result.byte_length()
+}
+
+pub fn string_builder_append_scalar_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  let result = builder.finish()
+  builder.append_scalar(127757u32)
+  result.byte_length()
+}
+
+pub fn string_builder_append_checked_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  let result = builder.finish()
+  builder.append_checked(b"late")
+  result.byte_length()
+}
+
+pub fn string_builder_finish_twice() -> U32 {
+  let builder = StringBuilder::new()
+  let result = builder.finish()
+  builder.finish().byte_length() + result.byte_length()
+}
+
+pub fn string_builder_alias_after_finish() -> U32 {
+  let builder = StringBuilder::new()
+  let alias = builder
+  let result = builder.finish()
+  alias.append_ascii(65u8)
+  result.byte_length()
+}
+
+pub fn bytes_builder_after_finish() -> U32 {
+  let builder = BytesBuilder::new()
+  builder.append(b"done")
+  let result = builder.finish()
+  builder.append_byte(0u8)
+  result.byte_length()
+}
+
+pub fn bytes_builder_length_after_finish() -> U32 {
+  let builder = BytesBuilder::new()
+  let result = builder.finish()
+  builder.byte_length() + result.byte_length()
+}
+
+pub fn bytes_builder_append_after_finish() -> U32 {
+  let builder = BytesBuilder::new()
+  let result = builder.finish()
+  builder.append(b"late")
+  result.byte_length()
+}
+
+pub fn bytes_builder_finish_twice() -> U32 {
+  let builder = BytesBuilder::new()
+  let result = builder.finish()
+  builder.finish().byte_length() + result.byte_length()
+}
+
+pub fn bytes_builder_alias_after_finish() -> U32 {
+  let builder = BytesBuilder::new()
+  let alias = builder
+  let result = builder.finish()
+  alias.append_byte(0u8)
+  result.byte_length()
+}
+
+pub fn bytes_view_out_of_bounds() -> U32 {
+  b"abc".view(2u32, 2u32).byte_length()
+}
+
+pub fn bytes_subarray_reversed() -> U32 {
+  b"abc".subarray(2u32, 1u32).byte_length()
+}
+
+pub fn string_subarray_invalid_utf8_boundary() -> U32 {
+  "λ".subarray(1u32, 2u32).byte_length()
+}
+
+pub fn string_slice_reversed() -> U32 {
+  "abc".slice(2u32, 1u32).byte_length()
+}
+
+pub fn string_builder_non_ascii_byte() -> U32 {
+  let builder = StringBuilder::new()
+  builder.append_ascii(128u8)
+  builder.byte_length()
+}
+
+pub fn string_builder_surrogate_scalar() -> U32 {
+  let builder = StringBuilder::new()
+  builder.append_scalar(55296u32)
+  builder.byte_length()
+}
+
+pub fn string_builder_out_of_range_scalar() -> U32 {
+  let builder = StringBuilder::new()
+  builder.append_scalar(1114112u32)
+  builder.byte_length()
+}
+
+pub fn string_builder_checked_invalid_utf8() -> U32 {
+  let builder = StringBuilder::new()
+  builder.append_checked(b"\xED\xA0\x80")
+  builder.byte_length()
+}

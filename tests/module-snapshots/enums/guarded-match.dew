@@ -1,0 +1,16 @@
+pub enum OptionI32 {
+  None
+  Some(I32)
+}
+
+fn read(value: OptionI32) -> I32 {
+  match value {
+    OptionI32::Some(item) if false => 0
+    OptionI32::None => 0
+    OptionI32::Some(item) => item
+  }
+}
+
+pub fn main() -> I32 {
+  read(OptionI32::Some(42))
+}

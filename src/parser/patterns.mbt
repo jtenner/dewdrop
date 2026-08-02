@@ -1,0 +1,408 @@
+///|
+pub struct PatternField {
+  name : String
+  pattern : Pattern
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub enum Pattern {
+  WildcardPattern(UInt64)
+  BindingPattern(String, UInt64)
+  RestPattern(UInt64)
+  LiteralPattern(Expr, UInt64)
+  QualifiedPattern(Pattern, String, UInt64)
+  TuplePattern(Pattern, Array[Pattern], UInt64)
+  StructPattern(Pattern, Array[PatternField], UInt64?, UInt64)
+  AlternativePattern(Pattern, Array[Pattern], UInt64)
+} derive(Eq, Debug)
+
+///|
+pub fn Pattern::offset(self : Pattern) -> UInt64 {
+  match self {
+    WildcardPattern(offset)
+    | BindingPattern(_, offset)
+    | RestPattern(offset)
+    | LiteralPattern(_, offset)
+    | QualifiedPattern(_, _, offset)
+    | TuplePattern(_, _, offset)
+    | StructPattern(_, _, _, offset)
+    | AlternativePattern(_, _, offset) => offset
+  }
+}
+
+///|
+fn binding_pattern(name : String, offset : UInt64) -> Pattern {
+  if name.has_prefix("_") {
+    WildcardPattern(offset)
+  } else {
+    BindingPattern(name, offset)
+  }
+}
+
+///|
+pub enum PatternError {
+  ExpectedPattern(@tokenizer.Token?)
+  ExpectedPatternProperty(@tokenizer.Token?)
+  ExpectedPatternDelimiter(@tokenizer.Token?, UInt64)
+  ExpectedPatternBodyNewline(@tokenizer.Token?, UInt64)
+  ExpectedPatternField(@tokenizer.Token?, UInt64)
+  ExpectedPatternFieldNewline(@tokenizer.Token?, UInt64)
+  RestPatternNotAllowed(UInt64)
+  DuplicateRestPattern(UInt64)
+  UnclosedTuplePattern(UInt64)
+  UnclosedStructPattern(UInt64)
+  EmptyTuplePattern(UInt64)
+  PatternLexicalError(@tokenizer.LexError, UInt64)
+} derive(Eq, Debug)
+
+///|
+fn Parser::consume_pattern_right_paren(self : Parser) -> Bool {
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.RightParen) => {
+          self.consume_lookahead()
+          true
+        }
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
+fn Parser::parse_tuple_pattern_arguments(
+  self : Parser,
+  open_offset : UInt64,
+) -> Result[Array[Pattern], RecoveryFailure] {
+  let arguments : Array[Pattern] = []
+  let mut has_rest = false
+  self.skip_newlines()
+  if self.consume_pattern_right_paren() {
+    return Err(pattern_failure(EmptyTuplePattern(open_offset)))
+  }
+  while true {
+    let pattern = match self.parse_pattern_context(true) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    match pattern {
+      RestPattern(offset) => {
+        if has_rest {
+          return Err(pattern_failure(DuplicateRestPattern(offset)))
+        }
+        has_rest = true
+      }
+      _ => ()
+    }
+    arguments.push(pattern)
+    self.skip_newlines()
+    match self.peek_token() {
+      None => return Err(pattern_failure(UnclosedTuplePattern(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.RightParen) => {
+            self.consume_lookahead()
+            return Ok(arguments)
+          }
+          @tokenizer.Symbol(@tokenizer.Comma) => {
+            self.consume_lookahead()
+            self.skip_newlines()
+            if self.consume_pattern_right_paren() {
+              return Ok(arguments)
+            }
+          }
+          @tokenizer.Symbol(@tokenizer.RightBrace) =>
+            return Err(pattern_failure(UnclosedTuplePattern(open_offset)))
+          @tokenizer.Error(error) => {
+            let offset = token.offset()
+            self.consume_lookahead()
+            return Err(pattern_failure(PatternLexicalError(error, offset)))
+          }
+          _ =>
+            return Err(
+              pattern_failure(
+                ExpectedPatternDelimiter(Some(token), open_offset),
+              ),
+            )
+        }
+    }
+  } nobreak {
+    abort("unreachable tuple pattern parser termination")
+  }
+}
+
+///|
+fn Parser::finish_pattern_field_line(
+  self : Parser,
+  open_offset : UInt64,
+) -> Result[Unit, RecoveryFailure] {
+  match self.peek_token() {
+    None => Err(pattern_failure(UnclosedStructPattern(open_offset)))
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Newline => {
+          self.consume_lookahead()
+          Ok(())
+        }
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          Err(pattern_failure(PatternLexicalError(error, offset)))
+        }
+        _ =>
+          Err(
+            pattern_failure(
+              ExpectedPatternFieldNewline(Some(token), open_offset),
+            ),
+          )
+      }
+  }
+}
+
+///|
+fn Parser::parse_struct_pattern(
+  self : Parser,
+  target : Pattern,
+  open_offset : UInt64,
+) -> Result[Pattern, RecoveryFailure] {
+  let fields : Array[PatternField] = []
+  let mut rest_offset : UInt64? = None
+  if self.consume_right_brace() {
+    return Ok(StructPattern(target, fields, rest_offset, open_offset))
+  }
+  guard self.consume_newline_token() else {
+    return Err(
+      pattern_failure(
+        ExpectedPatternBodyNewline(self.peek_token(), open_offset),
+      ),
+    )
+  }
+  self.skip_newlines()
+  while true {
+    if self.consume_right_brace() {
+      return Ok(StructPattern(target, fields, rest_offset, open_offset))
+    }
+    match self.peek_token() {
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Ellipsis) => {
+            let offset = token.offset()
+            self.consume_lookahead()
+            if rest_offset is Some(_) {
+              return Err(pattern_failure(DuplicateRestPattern(offset)))
+            }
+            rest_offset = Some(offset)
+            match self.finish_pattern_field_line(open_offset) {
+              Ok(_) => ()
+              Err(error) => return Err(error)
+            }
+            self.skip_newlines()
+            continue
+          }
+          _ => ()
+        }
+      None => return Err(pattern_failure(UnclosedStructPattern(open_offset)))
+    }
+    let (name, field_offset) = match self.peek_token() {
+      None => return Err(pattern_failure(UnclosedStructPattern(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Identifier(name) => {
+            let offset = token.offset()
+            self.consume_lookahead()
+            (name, offset)
+          }
+          @tokenizer.Error(error) => {
+            let offset = token.offset()
+            self.consume_lookahead()
+            return Err(pattern_failure(PatternLexicalError(error, offset)))
+          }
+          _ =>
+            return Err(
+              pattern_failure(ExpectedPatternField(Some(token), open_offset)),
+            )
+        }
+    }
+    let pattern = match self.peek_token() {
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Colon) => {
+            self.consume_lookahead()
+            match self.parse_pattern_context(false) {
+              Ok(value) => value
+              Err(error) => return Err(error)
+            }
+          }
+          _ => binding_pattern(name, field_offset)
+        }
+      None => return Err(pattern_failure(UnclosedStructPattern(open_offset)))
+    }
+    match self.finish_pattern_field_line(open_offset) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    fields.push({ name, pattern, offset: field_offset })
+    self.skip_newlines()
+  } nobreak {
+    abort("unreachable struct pattern parser termination")
+  }
+}
+
+///|
+fn Parser::parse_pattern_base(
+  self : Parser,
+  allow_rest : Bool,
+) -> Result[Pattern, RecoveryFailure] {
+  match self.peek_token() {
+    None => Err(pattern_failure(ExpectedPattern(None)))
+    Some(token) => {
+      let offset = token.offset()
+      match token.kind() {
+        @tokenizer.Identifier(name) => {
+          self.consume_lookahead()
+          Ok(binding_pattern(name, offset))
+        }
+        @tokenizer.Symbol(@tokenizer.Ellipsis) => {
+          self.consume_lookahead()
+          if allow_rest {
+            Ok(RestPattern(offset))
+          } else {
+            Err(pattern_failure(RestPatternNotAllowed(offset)))
+          }
+        }
+        @tokenizer.Error(error) => {
+          self.consume_lookahead()
+          Err(pattern_failure(PatternLexicalError(error, offset)))
+        }
+        @tokenizer.Symbol(@tokenizer.Plus)
+        | @tokenizer.Symbol(@tokenizer.Minus) => {
+          let operator = match token.kind() {
+            @tokenizer.Symbol(@tokenizer.Minus) => Negative
+            _ => Positive
+          }
+          self.consume_lookahead()
+          match self.peek_token() {
+            Some(value_token) =>
+              match value_token.kind() {
+                @tokenizer.I32(_)
+                | @tokenizer.U32(_)
+                | @tokenizer.I64(_)
+                | @tokenizer.U64(_)
+                | @tokenizer.F32(_)
+                | @tokenizer.F64(_) => {
+                  let value = token_expression(value_token).unwrap()
+                  self.consume_lookahead()
+                  Ok(
+                    LiteralPattern(PrefixExpr(operator, value, offset), offset),
+                  )
+                }
+                @tokenizer.Error(error) => {
+                  let error_offset = value_token.offset()
+                  self.consume_lookahead()
+                  Err(pattern_failure(PatternLexicalError(error, error_offset)))
+                }
+                _ => Err(pattern_failure(ExpectedPattern(Some(value_token))))
+              }
+            None => Err(pattern_failure(ExpectedPattern(None)))
+          }
+        }
+        @tokenizer.I32(_)
+        | @tokenizer.U32(_)
+        | @tokenizer.I64(_)
+        | @tokenizer.U64(_)
+        | @tokenizer.F32(_)
+        | @tokenizer.F64(_)
+        | @tokenizer.StringLiteral(_)
+        | @tokenizer.MultilineString(_)
+        | @tokenizer.Keyword(@tokenizer.True)
+        | @tokenizer.Keyword(@tokenizer.False) => {
+          let expression = token_expression(token).unwrap()
+          self.consume_lookahead()
+          Ok(LiteralPattern(expression, offset))
+        }
+        _ => Err(pattern_failure(ExpectedPattern(Some(token))))
+      }
+    }
+  }
+}
+
+///|
+fn Parser::parse_pattern_context(
+  self : Parser,
+  allow_rest : Bool,
+) -> Result[Pattern, RecoveryFailure] {
+  let mut pattern = match self.parse_pattern_base(allow_rest) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  if pattern is RestPattern(_) {
+    return Ok(pattern)
+  }
+  while true {
+    match self.peek_token() {
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.DoubleColon) => {
+            let separator_offset = token.offset()
+            self.consume_lookahead()
+            self.skip_newlines()
+            let property = match self.peek_token() {
+              Some(next) =>
+                match next.kind() {
+                  @tokenizer.Identifier(name) => {
+                    self.consume_lookahead()
+                    name
+                  }
+                  @tokenizer.Error(error) => {
+                    let offset = next.offset()
+                    self.consume_lookahead()
+                    return Err(
+                      pattern_failure(PatternLexicalError(error, offset)),
+                    )
+                  }
+                  _ =>
+                    return Err(
+                      pattern_failure(ExpectedPatternProperty(Some(next))),
+                    )
+                }
+              None => return Err(pattern_failure(ExpectedPatternProperty(None)))
+            }
+            pattern = QualifiedPattern(pattern, property, separator_offset)
+          }
+          @tokenizer.Symbol(@tokenizer.LeftParen) => {
+            let open_offset = token.offset()
+            self.consume_lookahead()
+            let arguments = match
+              self.parse_tuple_pattern_arguments(open_offset) {
+              Ok(value) => value
+              Err(error) => return Err(error.inside_parenthesis())
+            }
+            pattern = TuplePattern(pattern, arguments, open_offset)
+          }
+          @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+            let open_offset = token.offset()
+            self.consume_lookahead()
+            pattern = match self.parse_struct_pattern(pattern, open_offset) {
+              Ok(value) => value
+              Err(error) => return Err(error.inside_brace())
+            }
+          }
+          _ => return Ok(pattern)
+        }
+      None => return Ok(pattern)
+    }
+  } nobreak {
+    abort("unreachable pattern parser termination")
+  }
+}
+
+///|
+/// Parses one pattern without invoking the expression parser.
+pub fn Parser::parse_pattern(self : Parser) -> Result[Pattern, PatternError] {
+  match self.parse_pattern_context(false) {
+    Ok(value) => Ok(value)
+    Err(failure) => Err(failure.pattern_error())
+  }
+}

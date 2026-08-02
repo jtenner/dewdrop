@@ -1,0 +1,430 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/parser"
+
+import {
+  "jtenner/dewdrop/tokenizer",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn parse(Iter[@tokenizer.Token]) -> Iter[ParseEvent]
+
+pub fn parse_bytes(Bytes) -> Iter[ParseEvent]
+
+// Errors
+
+// Types and methods
+pub enum BinaryOperator {
+  LogicalOr
+  LogicalAnd
+  BitOr
+  BitXor
+  BitAnd
+  Equal
+  NotEqual
+  Less
+  LessEqual
+  Greater
+  GreaterEqual
+  ShiftLeft
+  ShiftRight
+  Add
+  Subtract
+  Multiply
+  Divide
+  Remainder
+  Exponentiate
+} derive(Eq, @debug.Debug)
+
+pub struct Block {
+  items : Array[BlockItem]
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+pub fn Block::tail_expression(Self) -> Expr?
+
+pub enum BlockItem {
+  LetItem(Bool, String, UInt64, Expr, UInt64)
+  ReturnItem(Expr?, UInt64)
+  ExpressionItem(Expr, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn BlockItem::offset(Self) -> UInt64
+
+pub struct BuiltinDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  type_parameters : Array[TypeParameter]
+  parameters : Array[FnParameter]
+  return_type : TypeExpr
+  builtin_name : Bytes
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum Declaration {
+  Import(ImportDeclaration)
+  Builtin(BuiltinDeclaration)
+  Let(LetDeclaration)
+  Trait(TraitDeclaration)
+  Function(FunctionDeclaration)
+  Test(TestDeclaration)
+  Impl(ImplDeclaration)
+  Struct(StructDeclaration)
+  Enum(EnumDeclaration)
+  TypeAlias(TypeAliasDeclaration)
+} derive(Eq, @debug.Debug)
+pub fn Declaration::offset(Self) -> UInt64
+
+pub enum DeclarationError {
+  ExpectedDeclarationSyntax(DeclarationExpectation, @tokenizer.Token?)
+  DeclarationLexicalError(@tokenizer.LexError, UInt64)
+  DeclarationExpressionError(ExpressionError)
+  ImportAfterDeclaration(UInt64)
+  ReceiverMustBeFirst(UInt64)
+  InvalidReceiverType(TypeExpr, UInt64)
+  UnexpectedTypeCloser(UInt64)
+  UnclosedTrait(UInt64)
+  UnclosedFunction(UInt64)
+  UnclosedImpl(UInt64)
+  UnclosedStruct(UInt64)
+  UnclosedEnum(UInt64)
+  UnclosedTupleVariant(UInt64)
+  UnclosedStructVariant(UInt64)
+  EmptyTupleVariant(UInt64)
+  PublicImplNotAllowed(UInt64)
+  ForeignImplRequiresTrait(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub enum DeclarationExpectation {
+  DeclarationKeyword
+  ImportKeyword
+  ImportPathSegment
+  BuiltinName
+  BindingName
+  TraitName
+  StructName
+  StructFieldName
+  StructBodyNewline
+  EnumName
+  TypeAliasName
+  EnumBodyNewline
+  EnumVariantName
+  EnumVariantPayloadOrLineEnd
+  EnumVariantBodyNewline
+  EnumVariantFieldName
+  VariantTypeSeparatorOrClose
+  FunctionName
+  TestName
+  FunctionBodyNewline
+  ImplMemberKeyword
+  ForOrLeftBrace
+  TraitMethodKeyword
+  TraitMethodName
+  TraitBodyNewline
+  TypeParameter
+  TypeParameterSeparatorOrClose
+  TypeArgumentSeparatorOrClose
+  LeftParen
+  LeftBrace
+  ParameterName
+  Colon
+  ParameterSeparatorOrClose
+  Type
+  Arrow
+  Equal
+  BuiltinString
+  LineEnd
+} derive(Eq, @debug.Debug)
+
+pub enum DeclarationVisibility {
+  ModuleVisible
+  Public
+} derive(Eq, @debug.Debug)
+
+pub enum DiagnosticSeverity {
+  Error
+  Warning
+  Info
+  Hint
+} derive(Eq, @debug.Debug)
+pub fn DiagnosticSeverity::from_rank(Int) -> Self
+pub fn DiagnosticSeverity::rank(Self) -> Int
+
+pub struct EnumDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  type_parameters : Array[TypeParameter]
+  variants : Array[EnumVariant]
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum EnumVariant {
+  UnitVariant(String, UInt64)
+  TupleVariant(String, Array[TypeExpr], UInt64)
+  StructVariant(String, Array[StructField], UInt64)
+} derive(Eq, @debug.Debug)
+pub fn EnumVariant::name(Self) -> String
+pub fn EnumVariant::offset(Self) -> UInt64
+
+pub enum Expr {
+  I8Expr(UInt64, UInt64)
+  I16Expr(UInt64, UInt64)
+  I32Expr(UInt64, UInt64)
+  I64Expr(UInt64, UInt64)
+  U8Expr(UInt64, UInt64)
+  U16Expr(UInt64, UInt64)
+  U32Expr(UInt64, UInt64)
+  U64Expr(UInt64, UInt64)
+  F32Expr(Float, UInt64)
+  F64Expr(Double, UInt64)
+  BoolExpr(Bool, UInt64)
+  StringExpr(Bytes, UInt64)
+  BytesExpr(Bytes, UInt64)
+  NameExpr(String, UInt64)
+  IntrinsicExpr(String, UInt64)
+  ObjectExpr(Array[ObjectField], UInt64)
+  ConstructExpr(Expr, Array[ObjectField], UInt64)
+  BlockExpr(Block)
+  IfExpr(Expr, Block, Expr?, UInt64)
+  MatchExpr(Expr, Array[PatternArm], UInt64)
+  WhileExpr(Expr, Array[PatternArm], UInt64)
+  BreakExpr(Expr, UInt64)
+  ContinueExpr(Expr, UInt64)
+  PrefixExpr(PrefixOperator, Expr, UInt64)
+  BinaryExpr(BinaryOperator, Expr, Expr, UInt64)
+  CallExpr(Expr, Array[Expr], UInt64)
+  FieldExpr(Expr, String, UInt64)
+  QualifiedExpr(Expr, String, UInt64)
+  IndexExpr(Expr, Expr, UInt64)
+} derive(Eq, @debug.Debug)
+pub fn Expr::offset(Self) -> UInt64
+
+pub enum ExpressionError {
+  ExpectedValue(@tokenizer.Token?)
+  ExpectedCallDelimiter(@tokenizer.Token?)
+  ExpectedFieldName(@tokenizer.Token?)
+  ExpectedQualifiedName(@tokenizer.Token?)
+  ExpectedRightBracket(@tokenizer.Token?, UInt64)
+  ExpectedObjectField(@tokenizer.Token?, UInt64)
+  ExpectedObjectColon(@tokenizer.Token?, UInt64)
+  ExpectedObjectFieldNewline(@tokenizer.Token?, UInt64)
+  ExpectedBlockNewline(@tokenizer.Token?, UInt64)
+  ExpectedBlockItemNewline(@tokenizer.Token?, UInt64)
+  ExpectedBlockBindingName(@tokenizer.Token?)
+  ExpectedBlockEqual(@tokenizer.Token?)
+  ExpectedIfBody(@tokenizer.Token?, UInt64)
+  ExpectedElseBranch(@tokenizer.Token?, UInt64)
+  ExpectedMatchBody(@tokenizer.Token?, UInt64)
+  ExpectedMatchBodyNewline(@tokenizer.Token?, UInt64)
+  ExpectedMatchArmArrow(@tokenizer.Token?, UInt64)
+  ExpectedMatchArmNewline(@tokenizer.Token?, UInt64)
+  ExpectedWhileBody(@tokenizer.Token?, UInt64)
+  ExpectedWhileBodyNewline(@tokenizer.Token?, UInt64)
+  ExpectedWhileArmArrow(@tokenizer.Token?, UInt64)
+  ExpectedWhileArmNewline(@tokenizer.Token?, UInt64)
+  ExpectedBreakValue(@tokenizer.Token?, UInt64)
+  ExpectedContinueValue(@tokenizer.Token?, UInt64)
+  MatchPatternError(PatternError)
+  UnclosedObject(UInt64)
+  UnclosedBlock(UInt64)
+  UnclosedMatch(UInt64)
+  UnclosedWhile(UInt64)
+  ChainedComparison(UInt64)
+  UnclosedGroup(UInt64)
+  UnclosedCall(UInt64)
+  UnclosedIndex(UInt64)
+  MissingOperand(UInt64)
+  LexicalError(@tokenizer.LexError, UInt64)
+  InvalidOperatorState(UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct FnParameter {
+  name : String
+  type_ : TypeExpr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct FunctionDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  type_parameters : Array[TypeParameter]
+  receiver : ReceiverParameter?
+  parameters : Array[FnParameter]
+  return_type : TypeExpr
+  body : Block
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+pub fn FunctionDeclaration::has_receiver(Self) -> Bool
+
+pub struct ImplDeclaration {
+  foreign_ : Bool
+  type_parameters : Array[TypeParameter]
+  trait_type : TypeExpr?
+  target_type : TypeExpr
+  methods : Array[FunctionDeclaration]
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct ImportDeclaration {
+  global_ : Bool
+  path : Array[String]
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct LetDeclaration {
+  visibility : DeclarationVisibility
+  mutable_ : Bool
+  name : String
+  name_offset : UInt64
+  value : Expr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct ObjectField {
+  name : String
+  value : Expr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct ParseDiagnostic {
+  severity : DiagnosticSeverity
+  error : DeclarationError
+} derive(Eq, @debug.Debug)
+
+pub enum ParseEvent {
+  Declaration(Declaration)
+  Diagnostic(ParseDiagnostic)
+} derive(Eq, @debug.Debug)
+
+pub struct Parser {
+  tokens : Iter[@tokenizer.Token]
+  mut lookahead_loaded : Bool
+  mut lookahead : @tokenizer.Token?
+}
+pub fn Parser::from_bytes(Bytes) -> Self
+pub fn Parser::from_tokenizer(@tokenizer.Tokenizer) -> Self
+pub fn Parser::new(Iter[@tokenizer.Token]) -> Self
+pub fn Parser::parse_declaration(Self) -> Result[Declaration, DeclarationError]
+pub fn Parser::parse_events(Self) -> Iter[ParseEvent]
+pub fn Parser::parse_expression(Self) -> Result[Expr, ExpressionError]
+pub fn Parser::parse_pattern(Self) -> Result[Pattern, PatternError]
+pub fn Parser::peek_token(Self) -> @tokenizer.Token?
+pub fn Parser::take_token(Self) -> @tokenizer.Token?
+
+pub enum Pattern {
+  WildcardPattern(UInt64)
+  BindingPattern(String, UInt64)
+  RestPattern(UInt64)
+  LiteralPattern(Expr, UInt64)
+  QualifiedPattern(Pattern, String, UInt64)
+  TuplePattern(Pattern, Array[Pattern], UInt64)
+  StructPattern(Pattern, Array[PatternField], UInt64?, UInt64)
+  AlternativePattern(Pattern, Array[Pattern], UInt64)
+} derive(Eq, @debug.Debug)
+pub fn Pattern::offset(Self) -> UInt64
+
+pub struct PatternArm {
+  pattern : Pattern
+  guard_condition : Expr?
+  body : Expr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PatternError {
+  ExpectedPattern(@tokenizer.Token?)
+  ExpectedPatternProperty(@tokenizer.Token?)
+  ExpectedPatternDelimiter(@tokenizer.Token?, UInt64)
+  ExpectedPatternBodyNewline(@tokenizer.Token?, UInt64)
+  ExpectedPatternField(@tokenizer.Token?, UInt64)
+  ExpectedPatternFieldNewline(@tokenizer.Token?, UInt64)
+  RestPatternNotAllowed(UInt64)
+  DuplicateRestPattern(UInt64)
+  UnclosedTuplePattern(UInt64)
+  UnclosedStructPattern(UInt64)
+  EmptyTuplePattern(UInt64)
+  PatternLexicalError(@tokenizer.LexError, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct PatternField {
+  name : String
+  pattern : Pattern
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum PrefixOperator {
+  Positive
+  Negative
+  LogicalNot
+} derive(Eq, @debug.Debug)
+
+pub struct ReceiverParameter {
+  explicit_type : TypeExpr?
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct StructDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  type_parameters : Array[TypeParameter]
+  fields : Array[StructField]
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct StructField {
+  name : String
+  type_ : TypeExpr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct TestDeclaration {
+  name : Bytes
+  name_offset : UInt64
+  return_type : TypeExpr
+  body : Block
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct TraitDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  type_parameters : Array[TypeParameter]
+  methods : Array[TraitMethod]
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct TraitMethod {
+  name : String
+  name_offset : UInt64
+  receiver : ReceiverParameter?
+  parameters : Array[FnParameter]
+  return_type : TypeExpr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+pub fn TraitMethod::has_receiver(Self) -> Bool
+
+pub struct TypeAliasDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  type_parameters : Array[TypeParameter]
+  target : TypeExpr
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub enum TypeExpr {
+  NamedType(String, UInt64)
+  AppliedType(TypeExpr, Array[TypeExpr], UInt64)
+} derive(Eq, @debug.Debug)
+pub fn TypeExpr::offset(Self) -> UInt64
+
+pub struct TypeParameter {
+  name : String
+  offset : UInt64
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

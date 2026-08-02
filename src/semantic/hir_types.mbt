@@ -1,0 +1,109 @@
+///|
+/// Module-local index into `CollectedModule.type_syntax`.
+pub type HirTypeId = Int
+
+///|
+pub struct HirSpan {
+  start : Int
+  length : Int
+} derive(Eq, Debug)
+
+///|
+fn empty_hir_span(at : Int) -> HirSpan {
+  { start: at, length: 0 }
+}
+
+///|
+pub enum HirTypeSyntax {
+  NamedTypeSyntax(NameId, UInt64)
+  AppliedTypeSyntax(HirTypeId, HirSpan, UInt64)
+} derive(Eq, Debug)
+
+///|
+/// Lowers one recursive parser type into flat module-local arenas without
+/// recursive host-language calls. Child types are emitted before their parent.
+fn CollectionBuilder::lower_type(
+  self : CollectionBuilder,
+  root : @parser.TypeExpr,
+) -> HirTypeId {
+  let sources = self.type_source_scratch
+  let states = self.type_state_scratch
+  let result_starts = self.type_result_start_scratch
+  let results = self.type_result_scratch
+  sources.clear()
+  states.clear()
+  result_starts.clear()
+  results.clear()
+  sources.push(root)
+  states.push(0)
+  result_starts.push(0)
+  while sources.length() > 0 {
+    let source = sources.pop().unwrap()
+    let state = states.pop().unwrap()
+    let result_start = result_starts.pop().unwrap()
+    if state == 0 {
+      match source {
+        @parser.NamedType(name, offset) => {
+          let id = self.type_syntax.length()
+          self.type_syntax.push(NamedTypeSyntax(self.intern(name), offset))
+          results.push(id)
+        }
+        @parser.AppliedType(base, arguments, _) => {
+          sources.push(source)
+          states.push(1)
+          result_starts.push(results.length())
+          let mut index = arguments.length()
+          while index > 0 {
+            index -= 1
+            sources.push(arguments[index])
+            states.push(0)
+            result_starts.push(0)
+          }
+          sources.push(base)
+          states.push(0)
+          result_starts.push(0)
+        }
+      }
+    } else {
+      match source {
+        @parser.AppliedType(_, arguments, offset) => {
+          let base = results[result_start]
+          let argument_start = self.type_arguments.length()
+          for index in 0..<arguments.length() {
+            self.type_arguments.push(results[result_start + index + 1])
+          }
+          let id = self.type_syntax.length()
+          self.type_syntax.push(
+            AppliedTypeSyntax(
+              base,
+              { start: argument_start, length: arguments.length() },
+              offset,
+            ),
+          )
+          results.truncate(result_start)
+          results.push(id)
+        }
+        @parser.NamedType(_, _) => abort("invalid named-type lowering state")
+      }
+    }
+  }
+  guard results.length() == 1 else { abort("invalid type lowering result") }
+  results[0]
+}
+
+///|
+fn CollectionBuilder::lower_type_list(
+  self : CollectionBuilder,
+  source : Array[@parser.TypeExpr],
+) -> HirSpan {
+  let lowered = self.type_list_scratch
+  lowered.clear()
+  for type_ in source {
+    lowered.push(self.lower_type(type_))
+  }
+  let start = self.type_arguments.length()
+  for type_ in lowered {
+    self.type_arguments.push(type_)
+  }
+  { start, length: lowered.length() }
+}

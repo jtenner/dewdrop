@@ -1,0 +1,22 @@
+open dew.std.wasi
+enum Value {
+  Left(I32)
+  Right(I32)
+  Other(I64)
+}
+
+fn read(value: Value) -> I32 {
+  match value {
+    Value::Left(item) => item
+    Value::Right(item) => item
+    Value::Other(_) => 0
+  }
+}
+
+pub fn main() -> U32 {
+  if read(Value::Right(31)) == 31 {
+    wasi_fd_write(1u32, b"enum:same-shape")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

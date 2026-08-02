@@ -1,0 +1,37 @@
+pub struct Set<key> {}
+
+builtin set_empty<key>() -> Set<key> = "dew_set_empty"
+builtin set_singleton<key>(key: key) -> Set<key> = "dew_set_singleton"
+builtin set_length<key>(set: Set<key>) -> U32 = "dew_set_length"
+builtin set_is_empty<key>(set: Set<key>) -> Bool = "dew_set_is_empty"
+builtin set_contains<key>(set: Set<key>, key: key) -> Bool = "dew_set_contains"
+builtin set_insert<key>(set: Set<key>, key: key) -> Bool = "dew_set_insert"
+builtin set_remove<key>(set: Set<key>, key: key) -> Bool = "dew_set_remove"
+builtin set_clear<key>(set: Set<key>) -> Unit = "dew_set_clear"
+
+impl<key> Set<key> {
+  fn empty() -> Set<key> {
+    set_empty()
+  }
+  fn singleton(key: key) -> Set<key> {
+    set_singleton(key)
+  }
+  fn length(self) -> U32 {
+    set_length(self)
+  }
+  fn is_empty(self) -> Bool {
+    set_is_empty(self)
+  }
+  fn contains(self, key: key) -> Bool {
+    set_contains(self, key)
+  }
+  fn insert(self, key: key) -> Bool {
+    set_insert(self, key)
+  }
+  fn remove(self, key: key) -> Bool {
+    set_remove(self, key)
+  }
+  fn clear(self) -> Unit {
+    set_clear(self)
+  }
+}

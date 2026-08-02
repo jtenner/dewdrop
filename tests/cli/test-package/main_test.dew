@@ -1,0 +1,3 @@
+test "linked answer" {
+  assert(run() == 42, "wrong linked answer")
+}

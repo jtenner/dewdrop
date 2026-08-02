@@ -1,0 +1,3 @@
+test "fails deterministically" {
+  assert(false, "expected failure")
+}

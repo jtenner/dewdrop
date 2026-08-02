@@ -1,0 +1,29 @@
+open dew.std.wasi
+enum Message {
+  Idle
+  Move {
+    x: I32
+    y: I32
+  }
+}
+
+fn read(value: Message) -> I32 {
+  match value {
+    Message::Idle => 0
+    Message::Move {
+      x
+      ...
+    } => x
+  }
+}
+
+pub fn main() -> U32 {
+  if read(Message::Move {
+    y: 3
+    x: 17
+  }) == 17 {
+    wasi_fd_write(1u32, b"enum:struct-17")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

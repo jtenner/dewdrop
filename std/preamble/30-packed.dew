@@ -1,0 +1,61 @@
+impl Swar32 {
+  fn from_bits(value: U32) -> Swar32 {
+    swar32_from_bits(value)
+  }
+  fn to_bits(self) -> U32 {
+    swar32_to_bits(self)
+  }
+}
+impl BitAnd for Swar32 {
+  fn bit_and(self, right: Swar32) -> Swar32 {
+    swar32_and(self, right)
+  }
+}
+impl BitOr for Swar32 {
+  fn bit_or(self, right: Swar32) -> Swar32 {
+    swar32_or(self, right)
+  }
+}
+impl BitXor for Swar32 {
+  fn bit_xor(self, right: Swar32) -> Swar32 {
+    swar32_xor(self, right)
+  }
+}
+impl Swar64 {
+  fn from_bits(value: U64) -> Swar64 {
+    swar64_from_bits(value)
+  }
+  fn to_bits(self) -> U64 {
+    swar64_to_bits(self)
+  }
+}
+impl BitAnd for Swar64 {
+  fn bit_and(self, right: Swar64) -> Swar64 {
+    swar64_and(self, right)
+  }
+}
+impl BitOr for Swar64 {
+  fn bit_or(self, right: Swar64) -> Swar64 {
+    swar64_or(self, right)
+  }
+}
+impl BitXor for Swar64 {
+  fn bit_xor(self, right: Swar64) -> Swar64 {
+    swar64_xor(self, right)
+  }
+}
+impl BitAnd for V128 {
+  fn bit_and(self, right: V128) -> V128 {
+    v128_and(self, right)
+  }
+}
+impl BitOr for V128 {
+  fn bit_or(self, right: V128) -> V128 {
+    v128_or(self, right)
+  }
+}
+impl BitXor for V128 {
+  fn bit_xor(self, right: V128) -> V128 {
+    v128_xor(self, right)
+  }
+}

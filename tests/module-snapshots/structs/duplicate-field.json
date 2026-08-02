@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "DuplicateConstructionField(1, 70, 83)"
+  ],
+  "warnings": [],
+  "output": null
+}

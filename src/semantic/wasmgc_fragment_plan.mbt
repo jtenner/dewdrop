@@ -1,0 +1,2223 @@
+///|
+pub enum PlannedWasmTypeReference {
+  WasmModuleTypeReference(Int)
+  WasmRecursiveTypeReference(Int)
+} derive(Eq, Debug)
+
+///|
+pub enum PlannedWasmStorageType {
+  WasmI8SignedStorage
+  WasmI8UnsignedStorage
+  WasmI16SignedStorage
+  WasmI16UnsignedStorage
+  WasmI32Storage
+  WasmI64Storage
+  WasmF32Storage
+  WasmF64Storage
+  WasmV128Storage
+  WasmStringRefStorage
+  WasmNullableEqRefStorage
+  WasmNominalRefStorage(PlannedWasmTypeReference)
+  WasmExternalNominalRefStorage(DeclId)
+} derive(Eq, Debug)
+
+///|
+pub enum PlannedWasmFieldRole {
+  WasmStructField(FieldId)
+  WasmEnumTagField
+  WasmTuplePayloadField(VariantId, Int)
+  WasmStructPayloadField(FieldId)
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmField {
+  role : PlannedWasmFieldRole
+  physical_index : Int
+  storage : PlannedWasmStorageType
+  mutable_ : Bool
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub enum WasmEnumShapeSharing {
+  DistinctEnumShapes
+  ShareExactEnumShapes
+} derive(Eq, Debug)
+
+///|
+pub struct WasmGCPlanningOptions {
+  enum_shape_sharing : WasmEnumShapeSharing
+  reuse_unit_subtype_base : Bool
+  dense_enum_dispatch : Bool
+  emit_tests : Bool
+} derive(Eq, Debug)
+
+///|
+pub fn WasmGCPlanningOptions::subtype_families() -> WasmGCPlanningOptions {
+  {
+    enum_shape_sharing: DistinctEnumShapes,
+    reuse_unit_subtype_base: false,
+    dense_enum_dispatch: false,
+    emit_tests: false,
+  }
+}
+
+///|
+pub fn WasmGCPlanningOptions::optimized_subtype_families() -> WasmGCPlanningOptions {
+  {
+    enum_shape_sharing: ShareExactEnumShapes,
+    reuse_unit_subtype_base: true,
+    dense_enum_dispatch: true,
+    emit_tests: false,
+  }
+}
+
+///|
+pub fn WasmGCPlanningOptions::test_mode() -> WasmGCPlanningOptions {
+  {
+    enum_shape_sharing: ShareExactEnumShapes,
+    reuse_unit_subtype_base: true,
+    dense_enum_dispatch: true,
+    emit_tests: true,
+  }
+}
+
+///|
+pub enum PlannedWasmPhysicalTypeKind {
+  PlannedWasmStructType(DeclId)
+  PlannedWasmEnumBaseType(DeclId)
+  PlannedWasmEnumSubtypeType(DeclId, VariantId, Int)
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmPhysicalType {
+  kind : PlannedWasmPhysicalTypeKind
+  type_index : Int
+  group_index : Int
+  fields : HirSpan
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmRecursiveGroup {
+  types : HirSpan
+  first_type_index : Int
+} derive(Eq, Debug)
+
+///|
+pub enum PlannedWasmValueType {
+  WasmI32Value
+  WasmI64Value
+  WasmF32Value
+  WasmF64Value
+  WasmV128Value
+  WasmStringRefValue
+  WasmNullableEqRefValue
+  WasmNominalRefValue(Int)
+  WasmExternalNominalRefValue(DeclId)
+} derive(Eq, Debug)
+
+///|
+pub enum PlannedWasmFunctionKind {
+  PlannedWasmImportedFunction(Bytes)
+  PlannedWasmInlineBuiltinFunction(Bytes)
+  PlannedWasmRuntimeFunction(Bytes)
+  PlannedWasmDefinedFunction(BodyId)
+  PlannedWasmSignatureOnlyFunction
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmFunctionFragment {
+  declaration : DeclId
+  name : Bytes
+  visibility : SemanticVisibility
+  is_test : Bool
+  is_test_entry : Bool
+  test_name : Bytes
+  kind : PlannedWasmFunctionKind
+  direct_builtin : Bytes
+  elided : Bool
+  signature_type_index : Int
+  function_index : Int
+  parameters : HirSpan
+  results : HirSpan
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmVariantField {
+  role : PlannedWasmFieldRole
+  physical_index : Int
+  storage : PlannedWasmStorageType
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedModuleWasmGCFragments {
+  module_id : ModuleId
+  dense_enum_dispatch : Bool
+  emit_tests : Bool
+  type_groups : Array[PlannedWasmRecursiveGroup]
+  physical_types : Array[PlannedWasmPhysicalType]
+  fields : Array[PlannedWasmField]
+  type_index_by_declaration : Array[Int]
+  payload_type_index_by_variant : Array[Int]
+  variant_declarations : Array[DeclId]
+  variant_tags : Array[Int]
+  variant_field_spans : Array[HirSpan]
+  variant_fields : Array[PlannedWasmVariantField]
+  field_names : Array[String]
+  functions : Array[PlannedWasmFunctionFragment]
+  function_by_declaration : Array[Int]
+  function_value_types : Array[PlannedWasmValueType]
+  signature_type_count : Int
+  imported_function_count : Int
+  defined_function_count : Int
+  uses_text_runtime : Bool
+  uses_fixed_array_runtime : Bool
+  uses_map_runtime : Bool
+  uses_linear_memory : Bool
+} derive(Eq, Debug)
+
+///|
+pub fn PlannedModuleWasmGCFragments::type_index_of(
+  self : PlannedModuleWasmGCFragments,
+  declaration : DeclId,
+) -> Int? {
+  if semantic_id_module(declaration) != self.module_id {
+    return None
+  }
+  let local_index = semantic_id_local(declaration)
+  if local_index < 0 || local_index >= self.type_index_by_declaration.length() {
+    return None
+  }
+  let index = self.type_index_by_declaration[local_index]
+  if index < 0 {
+    None
+  } else {
+    Some(index)
+  }
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::payload_type_index_of(
+  self : PlannedModuleWasmGCFragments,
+  variant : VariantId,
+) -> Int? {
+  if semantic_id_module(variant) != self.module_id {
+    return None
+  }
+  let local_index = semantic_id_local(variant)
+  if local_index < 0 ||
+    local_index >= self.payload_type_index_by_variant.length() {
+    return None
+  }
+  let index = self.payload_type_index_by_variant[local_index]
+  if index < 0 {
+    None
+  } else {
+    Some(index)
+  }
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::variant_declaration_of(
+  self : PlannedModuleWasmGCFragments,
+  variant : VariantId,
+) -> DeclId? {
+  if semantic_id_module(variant) != self.module_id {
+    return None
+  }
+  let local_index = semantic_id_local(variant)
+  if local_index < 0 ||
+    local_index >= self.variant_declarations.length() ||
+    self.variant_tags[local_index] < 0 {
+    return None
+  }
+  Some(self.variant_declarations[local_index])
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::variant_tag_of(
+  self : PlannedModuleWasmGCFragments,
+  variant : VariantId,
+) -> Int? {
+  if semantic_id_module(variant) != self.module_id {
+    return None
+  }
+  let local_index = semantic_id_local(variant)
+  if local_index < 0 ||
+    local_index >= self.variant_tags.length() ||
+    self.variant_tags[local_index] < 0 {
+    return None
+  }
+  Some(self.variant_tags[local_index])
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::variant_fields_of(
+  self : PlannedModuleWasmGCFragments,
+  variant : VariantId,
+) -> ArrayView[PlannedWasmVariantField] {
+  if semantic_id_module(variant) != self.module_id {
+    return self.variant_fields[0:0]
+  }
+  let local_index = semantic_id_local(variant)
+  if local_index < 0 || local_index >= self.variant_field_spans.length() {
+    return self.variant_fields[0:0]
+  }
+  let span = self.variant_field_spans[local_index]
+  self.variant_fields[span.start:span.start + span.length]
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::field_name_of(
+  self : PlannedModuleWasmGCFragments,
+  field : FieldId,
+) -> String? {
+  if semantic_id_module(field) != self.module_id {
+    return None
+  }
+  let local_index = semantic_id_local(field)
+  if local_index < 0 || local_index >= self.field_names.length() {
+    return None
+  }
+  Some(self.field_names[local_index])
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::function_of(
+  self : PlannedModuleWasmGCFragments,
+  declaration : DeclId,
+) -> PlannedWasmFunctionFragment? {
+  if semantic_id_module(declaration) != self.module_id {
+    return None
+  }
+  let local_index = semantic_id_local(declaration)
+  if local_index < 0 || local_index >= self.function_by_declaration.length() {
+    return None
+  }
+  let index = self.function_by_declaration[local_index]
+  if index < 0 {
+    None
+  } else {
+    Some(self.functions[index])
+  }
+}
+
+///|
+priv struct WasmPhysicalTypeSource {
+  kind : PlannedWasmPhysicalTypeKind
+  offset : UInt64
+}
+
+///|
+priv struct WasmPhysicalTypeJob {
+  dependencies : Array[Int]
+}
+
+///|
+priv struct WasmFunctionFragmentJob {
+  kind : PlannedWasmFunctionKind
+  parameters : Array[PlannedWasmValueType]
+  results : Array[PlannedWasmValueType]
+}
+
+///|
+fn wasmgc_reachable_defined_functions(
+  lowering : PlannedModuleLowering,
+  functions : PlannedModuleFunctions,
+  emit_tests : Bool,
+  program_roots : Map[DeclId, Bool],
+) -> Array[Bool] {
+  let reachable = Array::make(functions.callables.length(), false)
+  let work : Array[Int] = []
+  for callable_index, callable in functions.callables {
+    if (
+        program_roots.contains(callable.declaration) ||
+        callable.visibility == Public ||
+        !callable.compiler_owned
+      ) &&
+      (!callable.is_test || emit_tests) {
+      reachable[callable_index] = true
+      work.push(callable_index)
+    }
+  }
+  while work.length() > 0 {
+    let callable_index = work.pop().unwrap()
+    let body_id = match functions.callables[callable_index].kind {
+      PlannedFunctionCallable(body)
+      | PlannedImplMethodCallable(_, Some(body)) => body
+      _ => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      let target = match lowering.expressions[expression].kind {
+        PlannedDirectCall(declaration, _, _, _)
+        | PlannedOperatorCall(declaration, _, _, _, _)
+        | PlannedIndexCall(declaration, _, _, _)
+        | PlannedIndexSetCall(declaration, _, _, _, _) => declaration
+        _ => continue
+      }
+      if semantic_id_module(target) != lowering.module_id {
+        continue
+      }
+      let local_index = semantic_id_local(target)
+      if local_index < 0 ||
+        local_index >= functions.callable_by_declaration.length() {
+        continue
+      }
+      let target_callable = functions.callable_by_declaration[local_index]
+      if target_callable >= 0 &&
+        functions.callables[target_callable].is_test &&
+        !emit_tests {
+        continue
+      }
+      if target_callable >= 0 && !reachable[target_callable] {
+        reachable[target_callable] = true
+        work.push(target_callable)
+      }
+    }
+  }
+  reachable
+}
+
+///| Runtime functions remain ordinary planned callables, but some contain
+
+///| private calls that are not represented in Dew HIR. Freeze those exact
+
+///|
+/// dependencies before function-index assignment.
+fn wasmgc_add_runtime_dependencies(
+  jobs : Array[WasmFunctionFragmentJob?],
+  reachable : Array[Bool],
+) -> Unit {
+  let mut validator = -1
+  let mut conversion = -1
+  let mut string_as_bytes = -1
+  let mut wasi_write = -1
+  let mut wasi_read = -1
+  let mut test_assert = -1
+  let mut wasi_write_import = -1
+  let mut wasi_read_import = -1
+  for index, job in jobs {
+    match job.unwrap().kind {
+      PlannedWasmRuntimeFunction(name) =>
+        if name == b"dew_bytes_is_valid_utf8" {
+          validator = index
+        } else if name == b"dew_bytes_to_string" {
+          conversion = index
+        } else if name == b"dew_string_as_bytes" {
+          string_as_bytes = index
+        } else if name == b"dew_wasi_fd_write" {
+          wasi_write = index
+        } else if name == b"dew_wasi_fd_read" {
+          wasi_read = index
+        } else if name == b"dew_test_assert" {
+          test_assert = index
+        }
+      PlannedWasmImportedFunction(name) =>
+        if name == b"wasi_snapshot_preview1.fd_write" {
+          wasi_write_import = index
+        } else if name == b"wasi_snapshot_preview1.fd_read" {
+          wasi_read_import = index
+        }
+      _ => ()
+    }
+  }
+  if conversion >= 0 && reachable[conversion] && validator >= 0 {
+    reachable[validator] = true
+  }
+  if test_assert >= 0 && reachable[test_assert] {
+    if string_as_bytes >= 0 {
+      reachable[string_as_bytes] = true
+    }
+    if wasi_write >= 0 {
+      reachable[wasi_write] = true
+    }
+  }
+  if wasi_write >= 0 && reachable[wasi_write] && wasi_write_import >= 0 {
+    reachable[wasi_write_import] = true
+  }
+  if wasi_read >= 0 && reachable[wasi_read] && wasi_read_import >= 0 {
+    reachable[wasi_read_import] = true
+  }
+}
+
+///|
+fn wasmgc_variant_has_payload(variant : PlannedVariantLayout) -> Bool {
+  match variant.payload {
+    PlannedUnitVariantLayout => false
+    PlannedTupleVariantLayout(payload) => payload.length > 0
+    PlannedStructVariantLayout(fields) => fields.length > 0
+  }
+}
+
+///|
+fn wasmgc_variant_shapes_equal(
+  layouts : PlannedModuleTypeLayouts,
+  left : VariantId,
+  right : VariantId,
+) -> Bool {
+  let left_variant = layouts.variants[semantic_id_local(left)]
+  let right_variant = layouts.variants[semantic_id_local(right)]
+  match (left_variant.payload, right_variant.payload) {
+    (PlannedUnitVariantLayout, PlannedUnitVariantLayout) => true
+    (
+      PlannedTupleVariantLayout(left_types),
+      PlannedTupleVariantLayout(right_types),
+    ) => {
+      if left_types.length != right_types.length {
+        return false
+      }
+      for index in 0..<left_types.length {
+        if layouts.payload_types[left_types.start + index] !=
+          layouts.payload_types[right_types.start + index] {
+          return false
+        }
+      }
+      true
+    }
+    (
+      PlannedStructVariantLayout(left_fields),
+      PlannedStructVariantLayout(right_fields),
+    ) => {
+      if left_fields.length != right_fields.length {
+        return false
+      }
+      for index in 0..<left_fields.length {
+        let left_field = layouts.fields[left_fields.start + index]
+        let right_field = layouts.fields[right_fields.start + index]
+        if left_field.type_ != right_field.type_ ||
+          left_field.shape != right_field.shape {
+          return false
+        }
+      }
+      true
+    }
+    _ => false
+  }
+}
+
+///|
+pub fn wasmgc_physical_type_count_with_options(
+  layouts : PlannedModuleTypeLayouts,
+  options : WasmGCPlanningOptions,
+) -> Int {
+  let (sources, _, _) = wasmgc_build_physical_sources(
+    layouts,
+    options,
+    Map::default(),
+    false,
+  )
+  sources.length()
+}
+
+///|
+pub fn wasmgc_physical_type_count(layouts : PlannedModuleTypeLayouts) -> Int {
+  wasmgc_physical_type_count_with_options(
+    layouts,
+    WasmGCPlanningOptions::optimized_subtype_families(),
+  )
+}
+
+///|
+fn wasmgc_build_physical_sources(
+  layouts : PlannedModuleTypeLayouts,
+  options : WasmGCPlanningOptions,
+  required_declarations : Map[DeclId, Bool],
+  prune_unrequired : Bool,
+) -> (Array[WasmPhysicalTypeSource], Array[Int], Array[Int]) {
+  let sources : Array[WasmPhysicalTypeSource] = []
+  let entity_by_declaration = Array::make(
+    layouts.layout_by_declaration.length(),
+    -1,
+  )
+  let source_by_variant = Array::make(layouts.variants.length(), -1)
+  for layout in layouts.layouts {
+    if (layout.test_only && !options.emit_tests) ||
+      (prune_unrequired && !required_declarations.contains(layout.declaration)) {
+      continue
+    }
+    let root = sources.length()
+    entity_by_declaration[semantic_id_local(layout.declaration)] = root
+    match layout.kind {
+      PlannedStructLayout(_) =>
+        sources.push({
+          kind: PlannedWasmStructType(layout.declaration),
+          offset: layout.offset,
+        })
+      PlannedEnumLayout(variants) => {
+        sources.push({
+          kind: PlannedWasmEnumBaseType(layout.declaration),
+          offset: layout.offset,
+        })
+        for index in 0..<variants.length {
+          let variant = layouts.variants[variants.start + index]
+          if options.reuse_unit_subtype_base &&
+            !wasmgc_variant_has_payload(variant) {
+            source_by_variant[semantic_id_local(variant.variant)] = root
+            continue
+          }
+          let mut shared = -1
+          if options.enum_shape_sharing == ShareExactEnumShapes {
+            for source_index, source in sources {
+              match source.kind {
+                PlannedWasmEnumSubtypeType(owner, candidate, _) =>
+                  if owner == layout.declaration &&
+                    wasmgc_variant_shapes_equal(
+                      layouts,
+                      candidate,
+                      variant.variant,
+                    ) {
+                    shared = source_index
+                    break
+                  }
+                _ => ()
+              }
+            }
+          }
+          if shared < 0 {
+            shared = sources.length()
+            sources.push({
+              kind: PlannedWasmEnumSubtypeType(
+                layout.declaration,
+                variant.variant,
+                variant.tag,
+              ),
+              offset: variant.offset,
+            })
+          }
+          source_by_variant[semantic_id_local(variant.variant)] = shared
+        }
+      }
+    }
+  }
+  (sources, entity_by_declaration, source_by_variant)
+}
+
+///|
+fn wasmgc_nominal_declaration(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> DeclId? {
+  let mut current = root
+  while true {
+    match resolved.types[current] {
+      NominalType(declaration) => return Some(declaration)
+      AppliedType(base, _) => current = base
+      _ => return None
+    }
+  }
+  None
+}
+
+///|
+fn wasmgc_mark_nominal_type(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+  required : Map[DeclId, Bool],
+) -> Bool {
+  match wasmgc_nominal_declaration(resolved, type_) {
+    Some(declaration) if semantic_id_module(declaration) == resolved.module_id =>
+      if required.contains(declaration) {
+        false
+      } else {
+        required[declaration] = true
+        true
+      }
+    _ => false
+  }
+}
+
+///|
+fn wasmgc_required_nominal_declarations(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+  functions : PlannedModuleFunctions,
+  reachable : Array[Bool],
+  program_roots : Map[DeclId, Bool],
+) -> Map[DeclId, Bool] {
+  let required : Map[DeclId, Bool] = Map::default()
+  if program_roots.length() == 0 {
+    return required
+  }
+  let layouts = lowering.type_layouts
+  for layout in layouts.layouts {
+    if program_roots.contains(layout.declaration) {
+      required[layout.declaration] = true
+    }
+  }
+  for callable_index, callable in functions.callables {
+    if !reachable[callable_index] {
+      continue
+    }
+    for index in 0..<callable.parameters.length {
+      wasmgc_mark_nominal_type(
+        resolved,
+        functions.parameters[callable.parameters.start + index].type_,
+        required,
+      )
+      |> ignore
+    }
+    wasmgc_mark_nominal_type(resolved, callable.result_type, required) |> ignore
+    if callable.has_receiver {
+      wasmgc_mark_nominal_type(resolved, callable.self_type, required) |> ignore
+    }
+    let body_id = match callable.kind {
+      PlannedFunctionCallable(body)
+      | PlannedImplMethodCallable(_, Some(body)) => body
+      _ => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      match lowering.expressions[expression].kind {
+        PlannedStructNew(declaration, _, _) => required[declaration] = true
+        PlannedUnitVariant(variant, _)
+        | PlannedVariantTupleNew(variant, _, _)
+        | PlannedVariantStructNew(variant, _, _) =>
+          for candidate in layouts.variants {
+            if candidate.variant == variant {
+              required[candidate.declaration] = true
+              break
+            }
+          }
+        PlannedFieldGet(field, _) =>
+          for candidate in layouts.fields {
+            if candidate.field == field {
+              required[candidate.declaration] = true
+              break
+            }
+          }
+        _ => ()
+      }
+    }
+    for
+      pattern in body.patterns.start..<(body.patterns.start +
+      body.patterns.length) {
+      match lowering.patterns[pattern].selected_constructor {
+        StructInferredPatternConstructor(declaration, _) =>
+          required[declaration] = true
+        VariantInferredPatternConstructor(variant, _) =>
+          for candidate in layouts.variants {
+            if candidate.variant == variant {
+              required[candidate.declaration] = true
+              break
+            }
+          }
+        _ => ()
+      }
+    }
+  }
+  let mut changed = true
+  while changed {
+    changed = false
+    for layout in layouts.layouts {
+      if !required.contains(layout.declaration) {
+        continue
+      }
+      for field in layouts.fields {
+        if field.declaration == layout.declaration &&
+          wasmgc_mark_nominal_type(resolved, field.type_, required) {
+          changed = true
+        }
+      }
+      match layout.kind {
+        PlannedEnumLayout(variants) =>
+          for index in 0..<variants.length {
+            let variant = layouts.variants[variants.start + index]
+            match variant.payload {
+              PlannedTupleVariantLayout(types) =>
+                for type_index in 0..<types.length {
+                  if wasmgc_mark_nominal_type(
+                      resolved,
+                      layouts.payload_types[types.start + type_index],
+                      required,
+                    ) {
+                    changed = true
+                  }
+                }
+              _ => ()
+            }
+          }
+        PlannedStructLayout(_) => ()
+      }
+    }
+  }
+  required
+}
+
+///|
+fn wasmgc_storage_type(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+  type_index_by_declaration : Array[Int],
+  current_group : Int,
+  group_index_by_type : Array[Int],
+  group_first_type_indices : Array[Int],
+) -> PlannedWasmStorageType? {
+  let mut current = root
+  while true {
+    match resolved.types[current] {
+      ErrorType => return Some(WasmNullableEqRefStorage)
+      PrimitiveType(UnitType | NeverType) => return None
+      PrimitiveType(I8Type) => return Some(WasmI8SignedStorage)
+      PrimitiveType(U8Type) => return Some(WasmI8UnsignedStorage)
+      PrimitiveType(I16Type) => return Some(WasmI16SignedStorage)
+      PrimitiveType(U16Type) => return Some(WasmI16UnsignedStorage)
+      PrimitiveType(
+        BoolType
+        | I32Type
+        | U32Type
+        | Swar32Type
+        | I8x4Type
+        | U8x4Type
+        | I16x2Type
+        | U16x2Type
+      ) => return Some(WasmI32Storage)
+      PrimitiveType(
+        I64Type
+        | U64Type
+        | Swar64Type
+        | I8x8Type
+        | U8x8Type
+        | I16x4Type
+        | U16x4Type
+        | I32x2Type
+        | U32x2Type
+      ) => return Some(WasmI64Storage)
+      PrimitiveType(F32Type) => return Some(WasmF32Storage)
+      PrimitiveType(F64Type) => return Some(WasmF64Storage)
+      PrimitiveType(
+        V128Type
+        | I8x16Type
+        | U8x16Type
+        | I16x8Type
+        | U16x8Type
+        | I32x4Type
+        | U32x4Type
+        | I64x2Type
+        | U64x2Type
+        | F32x4Type
+        | F64x2Type
+      ) => return Some(WasmV128Storage)
+      PrimitiveType(
+        StringType
+        | BytesType
+        | StringViewType
+        | StringBuilderType
+        | BytesBuilderType
+      ) => return Some(WasmStringRefStorage)
+      GenericParameterType(_) | TraitType(_) | SelfType(_) =>
+        return Some(WasmNullableEqRefStorage)
+      NominalType(declaration) => {
+        if semantic_id_module(declaration) != resolved.module_id {
+          return Some(WasmExternalNominalRefStorage(declaration))
+        }
+        let local_index = semantic_id_local(declaration)
+        if local_index >= 0 && local_index < type_index_by_declaration.length() {
+          let index = type_index_by_declaration[local_index]
+          if index >= 0 {
+            let reference = if group_index_by_type[index] == current_group {
+              WasmRecursiveTypeReference(
+                index - group_first_type_indices[current_group],
+              )
+            } else {
+              WasmModuleTypeReference(index)
+            }
+            return Some(WasmNominalRefStorage(reference))
+          }
+        }
+        return Some(WasmNullableEqRefStorage)
+      }
+      AppliedType(base, _) => current = base
+    }
+  }
+  Some(WasmNullableEqRefStorage)
+}
+
+///|
+fn wasmgc_add_type_dependency(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+  entity_by_declaration : Array[Int],
+  marks : Array[Int],
+  generation : Int,
+  dependencies : Array[Int],
+) -> Unit {
+  match wasmgc_nominal_declaration(resolved, type_) {
+    Some(declaration) => {
+      if semantic_id_module(declaration) != resolved.module_id {
+        return
+      }
+      let local_index = semantic_id_local(declaration)
+      if local_index >= 0 && local_index < entity_by_declaration.length() {
+        let dependency = entity_by_declaration[local_index]
+        if dependency >= 0 && marks[dependency] != generation {
+          marks[dependency] = generation
+          dependencies.push(dependency)
+        }
+      }
+    }
+    None => ()
+  }
+}
+
+///|
+fn wasmgc_plan_physical_type_job(
+  resolved : ResolvedModuleTypes,
+  layouts : PlannedModuleTypeLayouts,
+  source : WasmPhysicalTypeSource,
+  entity_by_declaration : Array[Int],
+  marks : Array[Int],
+  generation : Int,
+) -> WasmPhysicalTypeJob {
+  let dependencies : Array[Int] = []
+  match source.kind {
+    PlannedWasmStructType(declaration) =>
+      match layouts.layout_of(declaration).unwrap().kind {
+        PlannedStructLayout(fields) =>
+          for index in 0..<fields.length {
+            wasmgc_add_type_dependency(
+              resolved,
+              layouts.fields[fields.start + index].type_,
+              entity_by_declaration,
+              marks,
+              generation,
+              dependencies,
+            )
+          }
+        _ => abort("struct physical source has an enum layout")
+      }
+    PlannedWasmEnumBaseType(_) => ()
+    PlannedWasmEnumSubtypeType(declaration, variant, _) => {
+      let dependency = entity_by_declaration[semantic_id_local(declaration)]
+      if dependency >= 0 && marks[dependency] != generation {
+        marks[dependency] = generation
+        dependencies.push(dependency)
+      }
+      let payload = layouts.variants[semantic_id_local(variant)].payload
+      match payload {
+        PlannedUnitVariantLayout => ()
+        PlannedTupleVariantLayout(types) =>
+          for index in 0..<types.length {
+            wasmgc_add_type_dependency(
+              resolved,
+              layouts.payload_types[types.start + index],
+              entity_by_declaration,
+              marks,
+              generation,
+              dependencies,
+            )
+          }
+        PlannedStructVariantLayout(fields) =>
+          for index in 0..<fields.length {
+            wasmgc_add_type_dependency(
+              resolved,
+              layouts.fields[fields.start + index].type_,
+              entity_by_declaration,
+              marks,
+              generation,
+              dependencies,
+            )
+          }
+      }
+    }
+  }
+  dependencies.sort()
+  { dependencies, }
+}
+
+///|
+fn wasmgc_type_sccs(
+  jobs : Array[WasmPhysicalTypeJob],
+) -> (Array[HirSpan], Array[Int]) {
+  let count = jobs.length()
+  if count == 0 {
+    return ([], [])
+  }
+  let visited = Array::make(count, false)
+  let work : Array[Int] = []
+  let finish_order : Array[Int] = []
+  for start in 0..<count {
+    if visited[start] {
+      continue
+    }
+    work.push(start)
+    while work.length() > 0 {
+      let item = work.pop().unwrap()
+      if item < 0 {
+        finish_order.push(-item - 1)
+        continue
+      }
+      if visited[item] {
+        continue
+      }
+      visited[item] = true
+      work.push(-item - 1)
+      let edges = jobs[item].dependencies
+      let mut edge = edges.length()
+      while edge > 0 {
+        edge -= 1
+        let dependency = edges[edge]
+        if !visited[dependency] {
+          work.push(dependency)
+        }
+      }
+    }
+  }
+  let reverse_counts = Array::make(count, 0)
+  for source in 0..<count {
+    for dependency in jobs[source].dependencies {
+      reverse_counts[dependency] += 1
+    }
+  }
+  let reverse_offsets = Array::make(count + 1, 0)
+  for index in 0..<count {
+    reverse_offsets[index + 1] = reverse_offsets[index] + reverse_counts[index]
+  }
+  let reverse_cursor = Array::make(count, 0)
+  for index in 0..<count {
+    reverse_cursor[index] = reverse_offsets[index]
+  }
+  let reverse_edges = Array::make(reverse_offsets[count], 0)
+  for source in 0..<count {
+    for dependency in jobs[source].dependencies {
+      let destination = reverse_cursor[dependency]
+      reverse_edges[destination] = source
+      reverse_cursor[dependency] += 1
+    }
+  }
+  let finish_rank = Array::make(count, 0)
+  for rank, entity in finish_order {
+    finish_rank[entity] = rank
+  }
+  let assigned = Array::make(count, false)
+  let component : Array[Int] = []
+  let raw_spans : Array[HirSpan] = []
+  let raw_members : Array[Int] = []
+  let raw_ranks : Array[Int] = []
+  let mut order_index = finish_order.length()
+  while order_index > 0 {
+    order_index -= 1
+    let start = finish_order[order_index]
+    if assigned[start] {
+      continue
+    }
+    component.clear()
+    work.clear()
+    work.push(start)
+    assigned[start] = true
+    let mut rank = finish_rank[start]
+    while work.length() > 0 {
+      let entity = work.pop().unwrap()
+      component.push(entity)
+      if finish_rank[entity] < rank {
+        rank = finish_rank[entity]
+      }
+      for edge in reverse_offsets[entity]..<reverse_offsets[entity + 1] {
+        let dependent = reverse_edges[edge]
+        if !assigned[dependent] {
+          assigned[dependent] = true
+          work.push(dependent)
+        }
+      }
+    }
+    component.sort()
+    let start = raw_members.length()
+    for entity in component {
+      raw_members.push(entity)
+    }
+    raw_spans.push({ start, length: raw_members.length() - start })
+    raw_ranks.push(rank)
+  }
+  let order : Array[Int] = []
+  for index in 0..<raw_spans.length() {
+    order.push(index)
+  }
+  order.sort_by(fn(left, right) {
+    let rank = raw_ranks[left] - raw_ranks[right]
+    if rank != 0 {
+      rank
+    } else {
+      raw_members[raw_spans[left].start] - raw_members[raw_spans[right].start]
+    }
+  })
+  let spans : Array[HirSpan] = []
+  let members : Array[Int] = []
+  for component_index in order {
+    let source = raw_spans[component_index]
+    let start = members.length()
+    for index in 0..<source.length {
+      members.push(raw_members[source.start + index])
+    }
+    spans.push({ start, length: members.length() - start })
+  }
+  (spans, members)
+}
+
+///|
+fn wasmgc_append_field(
+  fields : Array[PlannedWasmField],
+  role : PlannedWasmFieldRole,
+  storage : PlannedWasmStorageType,
+  offset : UInt64,
+) -> Unit {
+  fields.push({
+    role,
+    physical_index: fields.length(),
+    storage,
+    mutable_: false,
+    offset,
+  })
+}
+
+///|
+fn wasmgc_append_mutable_field(
+  fields : Array[PlannedWasmField],
+  role : PlannedWasmFieldRole,
+  storage : PlannedWasmStorageType,
+  offset : UInt64,
+) -> Unit {
+  fields.push({
+    role,
+    physical_index: fields.length(),
+    storage,
+    mutable_: true,
+    offset,
+  })
+}
+
+///|
+fn wasmgc_is_erased_generic_storage(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+) -> Bool {
+  match resolved.types[type_] {
+    GenericParameterType(_) | SelfType(_) => true
+    _ => false
+  }
+}
+
+///|
+fn wasmgc_append_erased_generic_fields(
+  fields : Array[PlannedWasmField],
+  role : PlannedWasmFieldRole,
+  offset : UInt64,
+) -> Unit {
+  wasmgc_append_field(fields, role, WasmI32Storage, offset)
+  wasmgc_append_field(fields, role, WasmI64Storage, offset)
+  wasmgc_append_field(fields, role, WasmF32Storage, offset)
+  wasmgc_append_field(fields, role, WasmF64Storage, offset)
+  wasmgc_append_field(fields, role, WasmV128Storage, offset)
+  wasmgc_append_field(fields, role, WasmNullableEqRefStorage, offset)
+}
+
+///|
+fn wasmgc_append_physical_type_fields(
+  resolved : ResolvedModuleTypes,
+  layouts : PlannedModuleTypeLayouts,
+  source : WasmPhysicalTypeSource,
+  type_index_by_declaration : Array[Int],
+  current_group : Int,
+  group_index_by_type : Array[Int],
+  group_first_type_indices : Array[Int],
+  target : Array[PlannedWasmField],
+) -> HirSpan {
+  let start = target.length()
+  match source.kind {
+    PlannedWasmStructType(declaration) =>
+      if declaration == standard_fixed_array_type_declaration() {
+        wasmgc_append_field(
+          target,
+          WasmStructField(declaration),
+          WasmNullableEqRefStorage,
+          source.offset,
+        )
+      } else if declaration == standard_map_type_declaration() ||
+        declaration == standard_set_type_declaration() {
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmNullableEqRefStorage,
+          source.offset,
+        )
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmI32Storage,
+          source.offset,
+        )
+      } else {
+        match layouts.layout_of(declaration).unwrap().kind {
+          PlannedStructLayout(fields) =>
+            for index in 0..<fields.length {
+              let field = layouts.fields[fields.start + index]
+              if wasmgc_is_erased_generic_storage(resolved, field.type_) {
+                wasmgc_append_erased_generic_fields(
+                  target,
+                  WasmStructField(field.field),
+                  field.offset,
+                )
+              } else {
+                match
+                  wasmgc_storage_type(
+                    resolved,
+                    field.type_,
+                    type_index_by_declaration,
+                    current_group,
+                    group_index_by_type,
+                    group_first_type_indices,
+                  ) {
+                  Some(storage) =>
+                    wasmgc_append_field(
+                      target,
+                      WasmStructField(field.field),
+                      storage,
+                      field.offset,
+                    )
+                  None => ()
+                }
+              }
+            }
+          _ => abort("struct physical source has an enum layout")
+        }
+      }
+    PlannedWasmEnumBaseType(_) =>
+      wasmgc_append_field(
+        target,
+        WasmEnumTagField,
+        WasmI32Storage,
+        source.offset,
+      )
+    PlannedWasmEnumSubtypeType(_, variant, _) => {
+      wasmgc_append_field(
+        target,
+        WasmEnumTagField,
+        WasmI32Storage,
+        source.offset,
+      )
+      let source_variant = layouts.variants[semantic_id_local(variant)]
+      match source_variant.payload {
+        PlannedUnitVariantLayout => ()
+        PlannedTupleVariantLayout(types) =>
+          for index in 0..<types.length {
+            let payload_type = layouts.payload_types[types.start + index]
+            let role = WasmTuplePayloadField(variant, index)
+            if wasmgc_is_erased_generic_storage(resolved, payload_type) {
+              wasmgc_append_erased_generic_fields(
+                target,
+                role,
+                source_variant.offset,
+              )
+            } else {
+              match
+                wasmgc_storage_type(
+                  resolved, payload_type, type_index_by_declaration, current_group,
+                  group_index_by_type, group_first_type_indices,
+                ) {
+                Some(storage) =>
+                  wasmgc_append_field(
+                    target,
+                    role,
+                    storage,
+                    source_variant.offset,
+                  )
+                None => ()
+              }
+            }
+          }
+        PlannedStructVariantLayout(fields) =>
+          for index in 0..<fields.length {
+            let field = layouts.fields[fields.start + index]
+            let role = WasmStructPayloadField(field.field)
+            if wasmgc_is_erased_generic_storage(resolved, field.type_) {
+              wasmgc_append_erased_generic_fields(target, role, field.offset)
+            } else {
+              match
+                wasmgc_storage_type(
+                  resolved,
+                  field.type_,
+                  type_index_by_declaration,
+                  current_group,
+                  group_index_by_type,
+                  group_first_type_indices,
+                ) {
+                Some(storage) =>
+                  wasmgc_append_field(target, role, storage, field.offset)
+                None => ()
+              }
+            }
+          }
+      }
+    }
+  }
+  let length = target.length() - start
+  for index in 0..<length {
+    let field = target[start + index]
+    target[start + index] = { ..field, physical_index: index }
+  }
+  { start, length }
+}
+
+///|
+fn wasmgc_value_type(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+  self_type : ResolvedTypeId,
+  type_index_by_declaration : Array[Int],
+) -> PlannedWasmValueType? {
+  let mut current = root
+  while true {
+    match resolved.types[current] {
+      ErrorType => return Some(WasmNullableEqRefValue)
+      PrimitiveType(UnitType | NeverType) => return None
+      PrimitiveType(
+        BoolType
+        | I8Type
+        | I16Type
+        | I32Type
+        | U8Type
+        | U16Type
+        | U32Type
+        | Swar32Type
+        | I8x4Type
+        | U8x4Type
+        | I16x2Type
+        | U16x2Type
+      ) => return Some(WasmI32Value)
+      PrimitiveType(
+        I64Type
+        | U64Type
+        | Swar64Type
+        | I8x8Type
+        | U8x8Type
+        | I16x4Type
+        | U16x4Type
+        | I32x2Type
+        | U32x2Type
+      ) => return Some(WasmI64Value)
+      PrimitiveType(F32Type) => return Some(WasmF32Value)
+      PrimitiveType(F64Type) => return Some(WasmF64Value)
+      PrimitiveType(
+        V128Type
+        | I8x16Type
+        | U8x16Type
+        | I16x8Type
+        | U16x8Type
+        | I32x4Type
+        | U32x4Type
+        | I64x2Type
+        | U64x2Type
+        | F32x4Type
+        | F64x2Type
+      ) => return Some(WasmV128Value)
+      PrimitiveType(
+        StringType
+        | BytesType
+        | StringViewType
+        | StringBuilderType
+        | BytesBuilderType
+      ) => return Some(WasmStringRefValue)
+      GenericParameterType(_) | TraitType(_) =>
+        return Some(WasmNullableEqRefValue)
+      SelfType(_) =>
+        if self_type >= 0 {
+          current = self_type
+        } else {
+          return Some(WasmNullableEqRefValue)
+        }
+      NominalType(declaration) => {
+        if semantic_id_module(declaration) != resolved.module_id {
+          return Some(WasmExternalNominalRefValue(declaration))
+        }
+        let local_index = semantic_id_local(declaration)
+        if local_index >= 0 && local_index < type_index_by_declaration.length() {
+          let index = type_index_by_declaration[local_index]
+          if index >= 0 {
+            return Some(WasmNominalRefValue(index))
+          }
+        }
+        return Some(WasmNullableEqRefValue)
+      }
+      AppliedType(base, _) => current = base
+    }
+  }
+  Some(WasmNullableEqRefValue)
+}
+
+///|
+fn wasmgc_builtin_has_v128_memory_marker(name : Bytes) -> Bool {
+  if name.length() < 10 ||
+    name[0] != b'd' ||
+    name[1] != b'e' ||
+    name[2] != b'w' ||
+    name[3] != b'_' {
+    return false
+  }
+  for index in 4..<(name.length() - 5) {
+    if name[index] == b'_' &&
+      (
+        (
+          name[index + 1] == b'l' &&
+          name[index + 2] == b'o' &&
+          name[index + 3] == b'a' &&
+          name[index + 4] == b'd' &&
+          name[index + 5] == b'_'
+        ) ||
+        (
+          name[index + 1] == b's' &&
+          name[index + 2] == b't' &&
+          name[index + 3] == b'o' &&
+          name[index + 4] == b'r' &&
+          name[index + 5] == b'e'
+        )
+      ) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
+  wasmgc_builtin_has_v128_memory_marker(name) ||
+  name == b"dew_i8_load" ||
+  name == b"dew_i8_store" ||
+  name == b"dew_i16_load" ||
+  name == b"dew_i16_store" ||
+  name == b"dew_i32_load" ||
+  name == b"dew_i32_store" ||
+  name == b"dew_i64_load" ||
+  name == b"dew_i64_store" ||
+  name == b"dew_u8_load" ||
+  name == b"dew_u8_store" ||
+  name == b"dew_u16_load" ||
+  name == b"dew_u16_store" ||
+  name == b"dew_u32_load" ||
+  name == b"dew_u32_store" ||
+  name == b"dew_u64_load" ||
+  name == b"dew_u64_store" ||
+  name == b"dew_f32_load" ||
+  name == b"dew_f32_store" ||
+  name == b"dew_f64_load" ||
+  name == b"dew_f64_store" ||
+  name == b"dew_swar32_load" ||
+  name == b"dew_swar32_store" ||
+  name == b"dew_swar64_load" ||
+  name == b"dew_swar64_store" ||
+  name == b"dew_v128_load" ||
+  name == b"dew_v128_store" ||
+  name == b"dew_wasi_fd_write" ||
+  name == b"dew_wasi_fd_read" ||
+  name == b"dew_test_assert" ||
+  name == b"dew_bench_wasi_stage_write" ||
+  name == b"dew_bench_wasi_stage_read"
+}
+
+///|
+fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
+  name == b"dew_string_byte_length" ||
+  name == b"dew_string_as_bytes" ||
+  name == b"dew_string_utf16_length" ||
+  name == b"dew_string_equals" ||
+  name == b"dew_string_byte_at" ||
+  name == b"dew_string_view" ||
+  name == b"dew_string_concat" ||
+  name == b"dew_string_concat_view" ||
+  name == b"dew_string_find" ||
+  name == b"dew_string_find_view" ||
+  name == b"dew_string_starts_with" ||
+  name == b"dew_string_starts_with_view" ||
+  name == b"dew_string_ends_with" ||
+  name == b"dew_string_ends_with_view" ||
+  name == b"dew_string_view_byte_length" ||
+  name == b"dew_string_view_byte_at" ||
+  name == b"dew_string_view_to_string" ||
+  name == b"dew_string_view_as_bytes" ||
+  name == b"dew_string_view_utf16_length" ||
+  name == b"dew_string_view_equals" ||
+  name == b"dew_string_view_view" ||
+  name == b"dew_string_view_find" ||
+  name == b"dew_string_view_find_string" ||
+  name == b"dew_string_view_starts_with" ||
+  name == b"dew_string_view_starts_with_string" ||
+  name == b"dew_string_view_ends_with" ||
+  name == b"dew_string_view_ends_with_string" ||
+  name == b"dew_string_builder_new" ||
+  name == b"dew_string_builder_with_capacity" ||
+  name == b"dew_string_builder_byte_length" ||
+  name == b"dew_string_builder_append" ||
+  name == b"dew_string_builder_append_view" ||
+  name == b"dew_string_builder_append_ascii" ||
+  name == b"dew_string_builder_append_scalar" ||
+  name == b"dew_string_builder_finish" ||
+  name == b"dew_bytes_builder_new" ||
+  name == b"dew_bytes_builder_with_capacity" ||
+  name == b"dew_bytes_builder_byte_length" ||
+  name == b"dew_bytes_builder_append" ||
+  name == b"dew_bytes_builder_append_byte" ||
+  name == b"dew_bytes_builder_finish" ||
+  name == b"dew_bytes_byte_length" ||
+  name == b"dew_bytes_is_valid_utf8" ||
+  name == b"dew_bytes_to_string" ||
+  name == b"dew_bytes_equals" ||
+  name == b"dew_bytes_byte_at" ||
+  name == b"dew_bytes_view" ||
+  name == b"dew_bytes_concat" ||
+  name == b"dew_bytes_find_byte" ||
+  name == b"dew_bytes_find" ||
+  name == b"dew_bytes_starts_with" ||
+  name == b"dew_bytes_ends_with" ||
+  name == b"dew_wasi_fd_write" ||
+  name == b"dew_wasi_fd_read" ||
+  name == b"dew_test_assert" ||
+  name == b"dew_bench_wasi_stage_write" ||
+  name == b"dew_bench_wasi_stage_read"
+}
+
+///|
+fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
+  (
+    name.length() >= 4 &&
+    name[0] == b'd' &&
+    name[1] == b'e' &&
+    name[2] == b'w' &&
+    name[3] == b'_'
+  ) ||
+  name == b"i32_add" ||
+  name == b"i32_sub" ||
+  name == b"i32_lt" ||
+  name == b"i32_lte" ||
+  name == b"swar32_from_bits" ||
+  name == b"swar32_to_bits" ||
+  name == b"swar32_and" ||
+  name == b"swar32_or" ||
+  name == b"swar32_xor" ||
+  name == b"swar64_from_bits" ||
+  name == b"swar64_to_bits" ||
+  name == b"swar64_and" ||
+  name == b"swar64_or" ||
+  name == b"swar64_xor" ||
+  name == b"v128_and" ||
+  name == b"v128_or" ||
+  name == b"v128_xor"
+}
+
+///|
+fn wasmgc_plan_function_job(
+  resolved : ResolvedModuleTypes,
+  functions : PlannedModuleFunctions,
+  callable : PlannedCallable,
+  type_index_by_declaration : Array[Int],
+) -> WasmFunctionFragmentJob {
+  let parameters : Array[PlannedWasmValueType] = []
+  for index in 0..<callable.parameters.length {
+    let parameter = functions.parameters[callable.parameters.start + index]
+    match
+      wasmgc_value_type(
+        resolved,
+        parameter.type_,
+        callable.self_type,
+        type_index_by_declaration,
+      ) {
+      Some(value) => parameters.push(value)
+      None => ()
+    }
+  }
+  let results : Array[PlannedWasmValueType] = []
+  match
+    wasmgc_value_type(
+      resolved,
+      callable.result_type,
+      callable.self_type,
+      type_index_by_declaration,
+    ) {
+    Some(value) => results.push(value)
+    None => ()
+  }
+  let kind = match callable.kind {
+    PlannedBuiltinCallable(name) =>
+      if wasmgc_builtin_is_runtime(name) {
+        PlannedWasmRuntimeFunction(name)
+      } else if wasmgc_builtin_is_inline(name) {
+        PlannedWasmInlineBuiltinFunction(name)
+      } else {
+        PlannedWasmImportedFunction(name)
+      }
+    PlannedFunctionCallable(body) => PlannedWasmDefinedFunction(body)
+    PlannedTraitMethodCallable(_) => PlannedWasmSignatureOnlyFunction
+    PlannedImplMethodCallable(_, Some(body)) => PlannedWasmDefinedFunction(body)
+    PlannedImplMethodCallable(_, None) => PlannedWasmSignatureOnlyFunction
+  }
+  { kind, parameters, results }
+}
+
+///|
+fn wasmgc_direct_builtin_of(
+  lowering : PlannedModuleLowering,
+  callable : PlannedCallable,
+) -> Bytes {
+  let body_id = match callable.kind {
+    PlannedFunctionCallable(body) => body
+    PlannedImplMethodCallable(_, Some(body)) => body
+    PlannedBuiltinCallable(_)
+    | PlannedTraitMethodCallable(_)
+    | PlannedImplMethodCallable(_, None) => return b""
+  }
+  let body_index = semantic_id_local(body_id)
+  if body_index < 0 || body_index >= lowering.bodies.length() {
+    return b""
+  }
+  let body = lowering.bodies[body_index]
+  let block_id = match body.root {
+    BlockBodyRoot(block) => block
+    ExpressionBodyRoot(_) => return b""
+  }
+  let block = lowering.blocks[block_id]
+  if block.items.length != 1 {
+    return b""
+  }
+  let expression = match lowering.block_items[block.items.start].kind {
+    PlannedExpressionItem(expression) => expression
+    PlannedLetItem(_, _, _) | PlannedReturnItem(_) => return b""
+  }
+  let (target, arguments) = match lowering.expressions[expression].kind {
+    PlannedDirectCall(target, receiver, arguments, type_arguments) => {
+      if receiver >= 0 || type_arguments.length != 0 {
+        return b""
+      }
+      (target, arguments)
+    }
+    _ => return b""
+  }
+  if arguments.length != callable.parameters.length {
+    return b""
+  }
+  for index in 0..<arguments.length {
+    let argument = lowering.expression_children[arguments.start + index]
+    match lowering.expressions[argument].kind {
+      PlannedLocalGet(local_id) => {
+        if local_id != index || local_id >= body.locals.length {
+          return b""
+        }
+        match lowering.locals[body.locals.start + local_id].kind {
+          ParameterLocal => ()
+          LetLocal | PatternLocal => return b""
+        }
+      }
+      _ => return b""
+    }
+  }
+  match lowering.functions.callable_of(target) {
+    Some({ kind: PlannedBuiltinCallable(name), .. }) =>
+      if !wasmgc_builtin_is_runtime(name) && wasmgc_builtin_is_inline(name) {
+        name
+      } else {
+        b""
+      }
+    _ => b""
+  }
+}
+
+///|
+fn wasmgc_validate_order(order : Array[Int], count : Int) -> Unit {
+  if order.length() != count {
+    abort("WasmGC fragment job order has the wrong length")
+  }
+  let seen = Array::make(count, false)
+  for index in order {
+    if index < 0 || index >= count || seen[index] {
+      abort("WasmGC fragment job order is invalid")
+    }
+    seen[index] = true
+  }
+}
+
+///|
+fn plan_module_wasmgc_fragments_in_orders(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+  options : WasmGCPlanningOptions,
+  type_order : Array[Int],
+  function_order : Array[Int],
+  program_roots : Map[DeclId, Bool],
+) -> PlannedModuleWasmGCFragments {
+  if resolved.module_id != lowering.module_id {
+    abort("WasmGC fragment inputs belong to different modules")
+  }
+  let layouts = lowering.type_layouts
+  let functions = lowering.functions
+  let reachable_functions = wasmgc_reachable_defined_functions(
+    lowering,
+    functions,
+    options.emit_tests,
+    program_roots,
+  )
+  let required_declarations = wasmgc_required_nominal_declarations(
+    resolved, lowering, functions, reachable_functions, program_roots,
+  )
+  let (sources, entity_by_declaration, source_by_variant) = wasmgc_build_physical_sources(
+    layouts,
+    options,
+    required_declarations,
+    program_roots.length() > 0,
+  )
+  let effective_type_order = if program_roots.length() > 0 {
+    let order : Array[Int] = []
+    for index in 0..<sources.length() {
+      order.push(index)
+    }
+    order
+  } else {
+    type_order
+  }
+  wasmgc_validate_order(effective_type_order, sources.length())
+  wasmgc_validate_order(function_order, functions.callables.length())
+  let type_jobs : Array[WasmPhysicalTypeJob?] = Array::make(
+    sources.length(),
+    None,
+  )
+  let marks = Array::make(sources.length(), 0)
+  for entity in effective_type_order {
+    type_jobs[entity] = Some(
+      wasmgc_plan_physical_type_job(
+        resolved,
+        layouts,
+        sources[entity],
+        entity_by_declaration,
+        marks,
+        entity + 1,
+      ),
+    )
+  }
+  let frozen_type_jobs : Array[WasmPhysicalTypeJob] = []
+  for job in type_jobs {
+    frozen_type_jobs.push(job.unwrap())
+  }
+  let (component_spans, component_members) = wasmgc_type_sccs(frozen_type_jobs)
+  let entity_type_indices = Array::make(sources.length(), -1)
+  let type_index_by_declaration = Array::make(
+    layouts.layout_by_declaration.length(),
+    -1,
+  )
+  let payload_type_index_by_variant = Array::make(layouts.variants.length(), -1)
+  let mut next_type_index = 0
+  for component in component_spans {
+    for index in 0..<component.length {
+      let entity = component_members[component.start + index]
+      entity_type_indices[entity] = next_type_index
+      match sources[entity].kind {
+        PlannedWasmStructType(declaration)
+        | PlannedWasmEnumBaseType(declaration) =>
+          type_index_by_declaration[semantic_id_local(declaration)] = next_type_index
+        PlannedWasmEnumSubtypeType(_, variant, _) =>
+          payload_type_index_by_variant[semantic_id_local(variant)] = next_type_index
+      }
+      next_type_index += 1
+    }
+  }
+  for variant_index in 0..<source_by_variant.length() {
+    let source = source_by_variant[variant_index]
+    if source >= 0 {
+      payload_type_index_by_variant[variant_index] = entity_type_indices[source]
+    }
+  }
+  let group_index_by_type = Array::make(sources.length(), -1)
+  let group_first_type_indices : Array[Int] = []
+  for group_index, component in component_spans {
+    let first_entity = component_members[component.start]
+    group_first_type_indices.push(entity_type_indices[first_entity])
+    for index in 0..<component.length {
+      let entity = component_members[component.start + index]
+      group_index_by_type[entity_type_indices[entity]] = group_index
+    }
+  }
+  let type_groups : Array[PlannedWasmRecursiveGroup] = []
+  let physical_types : Array[PlannedWasmPhysicalType] = []
+  let fields : Array[PlannedWasmField] = []
+  for group_index, component in component_spans {
+    let start = physical_types.length()
+    let first_type_index = group_first_type_indices[group_index]
+    for index in 0..<component.length {
+      let entity = component_members[component.start + index]
+      let source = sources[entity]
+      physical_types.push({
+        kind: source.kind,
+        type_index: entity_type_indices[entity],
+        group_index,
+        fields: wasmgc_append_physical_type_fields(
+          resolved, layouts, source, type_index_by_declaration, group_index, group_index_by_type,
+          group_first_type_indices, fields,
+        ),
+        offset: source.offset,
+      })
+    }
+    type_groups.push({
+      types: { start, length: physical_types.length() - start },
+      first_type_index,
+    })
+  }
+  let function_jobs : Array[WasmFunctionFragmentJob?] = Array::make(
+    functions.callables.length(),
+    None,
+  )
+  for callable_index in function_order {
+    function_jobs[callable_index] = Some(
+      wasmgc_plan_function_job(
+        resolved,
+        functions,
+        functions.callables[callable_index],
+        type_index_by_declaration,
+      ),
+    )
+  }
+  wasmgc_add_runtime_dependencies(function_jobs, reachable_functions)
+  let direct_builtins : Array[Bytes] = []
+  let elided_functions = Array::make(functions.callables.length(), false)
+  for callable_index, callable in functions.callables {
+    let direct_builtin = wasmgc_direct_builtin_of(lowering, callable)
+    direct_builtins.push(direct_builtin)
+    elided_functions[callable_index] = (
+        direct_builtin.length() > 0 && callable.visibility == ModuleVisible
+      ) ||
+      (match function_jobs[callable_index].unwrap().kind {
+        PlannedWasmImportedFunction(_)
+        | PlannedWasmDefinedFunction(_)
+        | PlannedWasmRuntimeFunction(_) => !reachable_functions[callable_index]
+        _ => false
+      })
+  }
+  let mut imported_function_count = 0
+  let mut defined_function_count = 0
+  for callable_index, job in function_jobs {
+    match job.unwrap().kind {
+      PlannedWasmImportedFunction(_) =>
+        if !elided_functions[callable_index] {
+          imported_function_count += 1
+        }
+      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_) =>
+        if !elided_functions[callable_index] {
+          defined_function_count += 1
+        }
+      PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
+        ()
+    }
+  }
+  let planned_functions : Array[PlannedWasmFunctionFragment] = []
+  let function_by_declaration = Array::make(
+    functions.callable_by_declaration.length(),
+    -1,
+  )
+  let function_value_types : Array[PlannedWasmValueType] = []
+  let mut import_index = 0
+  let mut defined_index = imported_function_count
+  let mut next_signature_type = physical_types.length()
+  for callable_index, callable in functions.callables {
+    let job = function_jobs[callable_index].unwrap()
+    let parameter_start = function_value_types.length()
+    for parameter in job.parameters {
+      function_value_types.push(parameter)
+    }
+    let parameters = {
+      start: parameter_start,
+      length: function_value_types.length() - parameter_start,
+    }
+    let result_start = function_value_types.length()
+    for result in job.results {
+      function_value_types.push(result)
+    }
+    let results = {
+      start: result_start,
+      length: function_value_types.length() - result_start,
+    }
+    let function_index = match job.kind {
+      PlannedWasmImportedFunction(_) =>
+        if elided_functions[callable_index] {
+          -1
+        } else {
+          let index = import_index
+          import_index += 1
+          index
+        }
+      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_) =>
+        if elided_functions[callable_index] {
+          -1
+        } else {
+          let index = defined_index
+          defined_index += 1
+          index
+        }
+      PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
+        -1
+    }
+    let emits_signature = match job.kind {
+      PlannedWasmImportedFunction(_)
+      | PlannedWasmDefinedFunction(_)
+      | PlannedWasmRuntimeFunction(_) => !elided_functions[callable_index]
+      _ => false
+    }
+    let signature_type_index = if emits_signature {
+      let index = next_signature_type
+      next_signature_type += 1
+      index
+    } else {
+      -1
+    }
+    function_by_declaration[semantic_id_local(callable.declaration)] = callable_index
+    planned_functions.push({
+      declaration: callable.declaration,
+      name: callable.name,
+      visibility: callable.visibility,
+      is_test: callable.is_test,
+      is_test_entry: callable.is_test_entry,
+      test_name: callable.test_name,
+      kind: job.kind,
+      direct_builtin: direct_builtins[callable_index],
+      elided: elided_functions[callable_index],
+      signature_type_index,
+      function_index,
+      parameters,
+      results,
+      offset: callable.offset,
+    })
+  }
+  let variant_declarations = Array::make(layouts.variants.length(), 0UL)
+  let variant_tags = Array::make(layouts.variants.length(), -1)
+  let variant_field_spans = Array::make(layouts.variants.length(), {
+    start: 0,
+    length: 0,
+  })
+  let variant_fields : Array[PlannedWasmVariantField] = []
+  for variant_index, _ in layouts.variants {
+    let start = variant_fields.length()
+    let payload_type = payload_type_index_by_variant[variant_index]
+    if payload_type < 0 {
+      continue
+    }
+    let physical = physical_types[payload_type]
+    for physical_index in 1..<physical.fields.length {
+      let field = fields[physical.fields.start + physical_index]
+      variant_fields.push({
+        role: field.role,
+        physical_index,
+        storage: field.storage,
+      })
+    }
+    variant_field_spans[variant_index] = {
+      start,
+      length: variant_fields.length() - start,
+    }
+  }
+  let field_names = Array::make(layouts.fields.length(), "")
+  for index, field in layouts.fields {
+    field_names[index] = field.name
+  }
+  for index, variant in layouts.variants {
+    if variant.tag >= 0 {
+      variant_declarations[index] = variant.declaration
+      variant_tags[index] = variant.tag
+    }
+  }
+  let mut uses_text_runtime = false
+  for field in fields {
+    match field.storage {
+      WasmStringRefStorage => {
+        uses_text_runtime = true
+        break
+      }
+      _ => ()
+    }
+  }
+  if !uses_text_runtime {
+    for callable_index, reachable in reachable_functions {
+      if !reachable || elided_functions[callable_index] {
+        continue
+      }
+      let function_ = planned_functions[callable_index]
+      match function_.kind {
+        PlannedWasmRuntimeFunction(_) => {
+          uses_text_runtime = true
+          break
+        }
+        _ => ()
+      }
+      if function_.signature_type_index >= 0 {
+        for index in 0..<function_.parameters.length {
+          match function_value_types[function_.parameters.start + index] {
+            WasmStringRefValue => {
+              uses_text_runtime = true
+              break
+            }
+            _ => ()
+          }
+        }
+        if uses_text_runtime {
+          break
+        }
+        for index in 0..<function_.results.length {
+          match function_value_types[function_.results.start + index] {
+            WasmStringRefValue => {
+              uses_text_runtime = true
+              break
+            }
+            _ => ()
+          }
+        }
+        if uses_text_runtime {
+          break
+        }
+      }
+      let body_id = match function_.kind {
+        PlannedWasmDefinedFunction(body) => body
+        _ => continue
+      }
+      let body_index = semantic_id_local(body_id)
+      if body_index < 0 || body_index >= lowering.bodies.length() {
+        continue
+      }
+      let body = lowering.bodies[body_index]
+      for
+        expression_index in body.expressions.start..<(body.expressions.start +
+        body.expressions.length) {
+        match lowering.expressions[expression_index].kind {
+          PlannedStringConst(_) | PlannedBytesConst(_) => {
+            uses_text_runtime = true
+            break
+          }
+          _ => ()
+        }
+      }
+      if uses_text_runtime {
+        break
+      }
+    }
+  }
+  let mut uses_fixed_array_runtime = false
+  for callable_index, reachable in reachable_functions {
+    if !reachable || elided_functions[callable_index] {
+      continue
+    }
+    let body_id = match planned_functions[callable_index].kind {
+      PlannedWasmDefinedFunction(body) => body
+      _ => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      match lowering.expressions[expression].kind {
+        PlannedFixedArrayMake(_, _, _)
+        | PlannedFixedArrayLength(_, _)
+        | PlannedFixedArrayGet(_, _, _)
+        | PlannedFixedArrayGetUnchecked(_, _, _)
+        | PlannedFixedArraySet(_, _, _, _)
+        | PlannedFixedArraySetUnchecked(_, _, _, _) => {
+          uses_fixed_array_runtime = true
+          break
+        }
+        _ => ()
+      }
+    }
+    if uses_fixed_array_runtime {
+      break
+    }
+  }
+  let mut uses_map_runtime = false
+  for callable_index, reachable in reachable_functions {
+    if !reachable || elided_functions[callable_index] {
+      continue
+    }
+    let body_id = match planned_functions[callable_index].kind {
+      PlannedWasmDefinedFunction(body) => body
+      _ => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      match lowering.expressions[expression].kind {
+        PlannedMapSingleton(_, _, _, _, _, _)
+        | PlannedMapEmpty(_, _, _, _)
+        | PlannedMapLength(_)
+        | PlannedMapGet(_, _, _, _, _, _)
+        | PlannedMapGetUnchecked(_, _, _, _, _, _)
+        | PlannedMapInsert(_, _, _, _, _, _, _)
+        | PlannedMapSet(_, _, _, _, _, _, _)
+        | PlannedMapContainsKey(_, _, _, _, _)
+        | PlannedSetEmpty(_, _, _)
+        | PlannedSetSingleton(_, _, _, _)
+        | PlannedSetLength(_)
+        | PlannedSetIsEmpty(_)
+        | PlannedSetContains(_, _, _, _, _)
+        | PlannedSetInsert(_, _, _, _, _)
+        | PlannedSetRemove(_, _, _, _, _)
+        | PlannedSetClear(_) => {
+          uses_map_runtime = true
+          break
+        }
+        _ => ()
+      }
+    }
+    if uses_map_runtime {
+      break
+    }
+  }
+  let mut uses_linear_memory = false
+  for callable_index, reachable in reachable_functions {
+    if !reachable {
+      continue
+    }
+    match function_jobs[callable_index].unwrap().kind {
+      PlannedWasmInlineBuiltinFunction(name)
+      | PlannedWasmRuntimeFunction(name) =>
+        if wasmgc_builtin_uses_linear_memory(name) {
+          uses_linear_memory = true
+          break
+        }
+      _ => ()
+    }
+    let body_id = match function_jobs[callable_index].unwrap().kind {
+      PlannedWasmDefinedFunction(body) => body
+      _ => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    for
+      expression_index in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      let declaration = match lowering.expressions[expression_index].kind {
+        PlannedDirectCall(target, _, _, _)
+        | PlannedOperatorCall(target, _, _, _, _)
+        | PlannedIndexCall(target, _, _, _)
+        | PlannedIndexSetCall(target, _, _, _, _) => target
+        _ => continue
+      }
+      if semantic_id_module(declaration) != lowering.module_id {
+        continue
+      }
+      let local_index = semantic_id_local(declaration)
+      if local_index < 0 || local_index >= function_by_declaration.length() {
+        continue
+      }
+      let function_index = function_by_declaration[local_index]
+      if function_index < 0 {
+        continue
+      }
+      let function_ = planned_functions[function_index]
+      let name = if function_.direct_builtin.length() > 0 {
+        function_.direct_builtin
+      } else {
+        match function_.kind {
+          PlannedWasmInlineBuiltinFunction(name)
+          | PlannedWasmRuntimeFunction(name) => name
+          _ => b""
+        }
+      }
+      if wasmgc_builtin_uses_linear_memory(name) {
+        uses_linear_memory = true
+        break
+      }
+    }
+    if uses_linear_memory {
+      break
+    }
+  }
+  {
+    module_id: lowering.module_id,
+    dense_enum_dispatch: options.dense_enum_dispatch,
+    emit_tests: options.emit_tests,
+    type_groups,
+    physical_types,
+    fields,
+    type_index_by_declaration,
+    payload_type_index_by_variant,
+    variant_declarations,
+    variant_tags,
+    variant_field_spans,
+    variant_fields,
+    field_names,
+    functions: planned_functions,
+    function_by_declaration,
+    function_value_types,
+    signature_type_count: next_signature_type - physical_types.length(),
+    imported_function_count,
+    defined_function_count,
+    uses_text_runtime,
+    uses_fixed_array_runtime,
+    uses_map_runtime,
+    uses_linear_memory,
+  }
+}
+
+///|
+fn plan_module_wasmgc_fragments_with_options_and_roots(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+  options : WasmGCPlanningOptions,
+  program_roots : Map[DeclId, Bool],
+) -> PlannedModuleWasmGCFragments {
+  let type_order : Array[Int] = []
+  for
+    index in 0..<wasmgc_physical_type_count_with_options(
+      lowering.type_layouts,
+      options,
+    ) {
+    type_order.push(index)
+  }
+  let function_order : Array[Int] = []
+  for index in 0..<lowering.functions.callables.length() {
+    function_order.push(index)
+  }
+  plan_module_wasmgc_fragments_in_orders(
+    resolved, lowering, options, type_order, function_order, program_roots,
+  )
+}
+
+///|
+pub fn plan_module_wasmgc_fragments_with_options(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+  options : WasmGCPlanningOptions,
+) -> PlannedModuleWasmGCFragments {
+  plan_module_wasmgc_fragments_with_options_and_roots(
+    resolved,
+    lowering,
+    options,
+    Map::default(),
+  )
+}
+
+///|
+pub fn plan_module_wasmgc_fragments(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+) -> PlannedModuleWasmGCFragments {
+  plan_module_wasmgc_fragments_with_options(
+    resolved,
+    lowering,
+    WasmGCPlanningOptions::optimized_subtype_families(),
+  )
+}

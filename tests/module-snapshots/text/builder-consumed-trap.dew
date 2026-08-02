@@ -1,0 +1,10 @@
+open dew.std.string
+open dew.std.string_builder
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  let builder = StringBuilder::new()
+  builder.finish()
+  builder.append("after finish")
+  0u32
+}

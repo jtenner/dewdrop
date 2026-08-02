@@ -1,0 +1,20 @@
+impl BytesBuilder {
+  fn new() -> BytesBuilder {
+    bytes_builder_new()
+  }
+  fn with_capacity(capacity: U32) -> BytesBuilder {
+    bytes_builder_with_capacity_raw(capacity)
+  }
+  fn byte_length(self) -> U32 {
+    bytes_builder_byte_length(self)
+  }
+  fn append(self, value: Bytes) -> Unit {
+    bytes_builder_append(self, value)
+  }
+  fn append_byte(self, byte: U8) -> Unit {
+    bytes_builder_append_byte(self, byte)
+  }
+  fn finish(self) -> Bytes {
+    bytes_builder_finish(self)
+  }
+}

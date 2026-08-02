@@ -1,0 +1,11 @@
+fn add(left: I32, right: I32) -> I32 {
+  left + right
+}
+
+fn mixed(value: I32) -> I32 {
+  (value * 3) - 7
+}
+
+pub fn main() -> I32 {
+  add(20, 22) + mixed(5)
+}

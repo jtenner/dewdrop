@@ -1,0 +1,11 @@
+open dew.std.string
+open dew.std.string_builder
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append("prefix ")
+  builder.append_view("xλy".view(1u32, 2u32))
+  builder.append_scalar(127757u32)
+  builder.finish().byte_length()
+}

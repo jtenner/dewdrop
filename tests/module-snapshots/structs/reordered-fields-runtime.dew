@@ -1,0 +1,20 @@
+open dew.std.wasi
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn sum(pair: Pair) -> I32 {
+  pair.left + pair.right
+}
+
+pub fn main() -> U32 {
+  if sum(Pair {
+    right: 29
+    left: 13
+  }) == 42 {
+    wasi_fd_write(1u32, b"struct:reordered")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

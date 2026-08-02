@@ -1,0 +1,208 @@
+builtin i16x2_from_swar32(value: Swar32) -> I16x2 = "dew_reinterpret"
+builtin i16x2_to_swar32(value: I16x2) -> Swar32 = "dew_reinterpret"
+builtin i16x2_reinterpret_as_i8x4(value: I16x2) -> I8x4 = "dew_reinterpret"
+builtin i16x2_reinterpret_as_u8x4(value: I16x2) -> U8x4 = "dew_reinterpret"
+builtin i16x2_reinterpret_as_u16x2(value: I16x2) -> U16x2 = "dew_reinterpret"
+builtin i16x2_load(address: U32) -> I16x2 = "dew_swar32_load"
+builtin i16x2_store(address: U32, value: I16x2) -> Unit = "dew_swar32_store"
+builtin i16x2_and(left: I16x2, right: I16x2) -> I16x2 = "swar32_and"
+builtin i16x2_or(left: I16x2, right: I16x2) -> I16x2 = "swar32_or"
+builtin i16x2_xor(left: I16x2, right: I16x2) -> I16x2 = "swar32_xor"
+fn i16x2_splat(value: I16) -> I16x2 {
+  i16x2_from_swar32(swar32_splat_i16(value))
+}
+fn i16x2_extract(value: I16x2, index: U8) -> I16 {
+  swar32_extract_i16_s(i16x2_to_swar32(value), index)
+}
+fn i16x2_replace(value: I16x2, index: U8, lane: I16) -> I16x2 {
+  i16x2_from_swar32(swar32_replace_i16(i16x2_to_swar32(value), index, lane))
+}
+fn i16x2_add(left: I16x2, right: I16x2) -> I16x2 {
+  i16x2_from_swar32(swar32_add_i16(i16x2_to_swar32(left), i16x2_to_swar32(right)))
+}
+fn i16x2_sub(left: I16x2, right: I16x2) -> I16x2 {
+  i16x2_from_swar32(swar32_sub_i16(i16x2_to_swar32(left), i16x2_to_swar32(right)))
+}
+fn i16x2_shl(value: I16x2, count: U8) -> I16x2 {
+  i16x2_from_swar32(swar32_shl_i16(i16x2_to_swar32(value), count))
+}
+fn i16x2_shr(value: I16x2, count: U8) -> I16x2 {
+  i16x2_from_swar32(swar32_shr_i16_s(i16x2_to_swar32(value), count))
+}
+fn i16x2_mul(left: I16x2, right: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(left))
+  let b = swar32_to_bits(i16x2_to_swar32(right))
+  i16x2_from_swar32(swar32_from_bits((((a & 65535u32) * (b & 65535u32)) & 65535u32) | (((((a >> 16u32) & 65535u32) * ((b >> 16u32) & 65535u32)) & 65535u32) << 16u32)))
+}
+fn i16x2_eq(left: I16x2, right: I16x2) -> I16x2 {
+  let x = swar32_to_bits(i16x2_to_swar32(left)) ^ swar32_to_bits(i16x2_to_swar32(right))
+  let nonzero = ((((x & 2147450879u32) + 2147450879u32) | x) & 2147516416u32)
+  i16x2_from_swar32(swar32_from_bits((((nonzero >> 15u32) * 65535u32) ^ 4294967295u32)))
+}
+fn i16x2_ne(left: I16x2, right: I16x2) -> I16x2 {
+  let equal = swar32_to_bits(i16x2_to_swar32(i16x2_eq(left, right)))
+  i16x2_from_swar32(swar32_from_bits(equal ^ 4294967295u32))
+}
+fn i16x2_lt(left: I16x2, right: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(left))
+  let b = swar32_to_bits(i16x2_to_swar32(right))
+  i16x2_from_swar32(swar32_from_bits((((((((a ^ 2147516416u32) ^ 4294967295u32) & (b ^ 2147516416u32)) | ((((a ^ 2147516416u32) ^ (b ^ 2147516416u32)) ^ 4294967295u32) & ((((a ^ 2147516416u32) | 2147516416u32) - ((b ^ 2147516416u32) & 2147450879u32)) ^ (((a ^ 2147516416u32) ^ ((b ^ 2147516416u32) ^ 4294967295u32)) & 2147516416u32)))) & 2147516416u32) >> 15u32) * 65535u32)))
+}
+fn i16x2_le(left: I16x2, right: I16x2) -> I16x2 {
+  let greater = swar32_to_bits(i16x2_to_swar32(i16x2_lt(right, left)))
+  i16x2_from_swar32(swar32_from_bits(greater ^ 4294967295u32))
+}
+fn i16x2_gt(left: I16x2, right: I16x2) -> I16x2 {
+  i16x2_lt(right, left)
+}
+fn i16x2_ge(left: I16x2, right: I16x2) -> I16x2 {
+  let less = swar32_to_bits(i16x2_to_swar32(i16x2_lt(left, right)))
+  i16x2_from_swar32(swar32_from_bits(less ^ 4294967295u32))
+}
+fn i16x2_min(left: I16x2, right: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(left))
+  let b = swar32_to_bits(i16x2_to_swar32(right))
+  let mask = swar32_to_bits(i16x2_to_swar32(i16x2_lt(left, right)))
+  i16x2_from_swar32(swar32_from_bits(b ^ ((a ^ b) & mask)))
+}
+fn i16x2_max(left: I16x2, right: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(left))
+  let b = swar32_to_bits(i16x2_to_swar32(right))
+  let mask = swar32_to_bits(i16x2_to_swar32(i16x2_lt(left, right)))
+  i16x2_from_swar32(swar32_from_bits(a ^ ((a ^ b) & mask)))
+}
+fn i16x2_neg(value: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(value))
+  i16x2_from_swar32(swar32_from_bits((2147516416u32 - (a & 2147450879u32)) ^ ((a ^ 4294967295u32) & 2147516416u32)))
+}
+fn i16x2_abs(value: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(value))
+  let mask = ((a & 2147516416u32) >> 15u32) * 65535u32
+  let x = a ^ mask
+  let carry = mask & 65537u32
+  i16x2_from_swar32(swar32_from_bits((((x & 2147450879u32) + (carry & 2147450879u32)) ^ ((x ^ carry) & 2147516416u32))))
+}
+fn i16x2_add_sat(left: I16x2, right: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(left))
+  let b = swar32_to_bits(i16x2_to_swar32(right))
+  let sum = (((a & 2147450879u32) + (b & 2147450879u32)) ^ ((a ^ b) & 2147516416u32))
+  let overflow = ((((a ^ b) ^ 4294967295u32) & (a ^ sum) & 2147516416u32) >> 15u32) * 65535u32
+  let limit = (((a & 2147516416u32) >> 15u32) * 65535u32) ^ 2147450879u32
+  i16x2_from_swar32(swar32_from_bits((sum & (overflow ^ 4294967295u32)) | (limit & overflow)))
+}
+fn i16x2_sub_sat(left: I16x2, right: I16x2) -> I16x2 {
+  let a = swar32_to_bits(i16x2_to_swar32(left))
+  let b = swar32_to_bits(i16x2_to_swar32(right))
+  let diff = (((a | 2147516416u32) - (b & 2147450879u32)) ^ ((a ^ (b ^ 4294967295u32)) & 2147516416u32))
+  let overflow = (((a ^ b) & (a ^ diff) & 2147516416u32) >> 15u32) * 65535u32
+  let limit = (((a & 2147516416u32) >> 15u32) * 65535u32) ^ 2147450879u32
+  i16x2_from_swar32(swar32_from_bits((diff & (overflow ^ 4294967295u32)) | (limit & overflow)))
+}
+fn i16x2_bitmask(value: I16x2) -> U32 {
+  let a = swar32_to_bits(i16x2_to_swar32(value))
+  u32_into_u32(((a >> 15u32) & 1u32) | (((a >> 31u32) & 1u32) << 1u32))
+}
+fn i16x2_all_true(value: I16x2) -> Bool {
+  swar32_to_bits(i16x2_to_swar32(i16x2_eq(value, i16x2_from_swar32(swar32_from_bits(0u32))))) == 0u32
+}
+impl I16x2 {
+  fn to_swar32(self) -> Swar32 {
+    i16x2_to_swar32(self)
+  }
+  fn reinterpret_as_i8x4(self) -> I8x4 {
+    i16x2_reinterpret_as_i8x4(self)
+  }
+  fn reinterpret_as_u8x4(self) -> U8x4 {
+    i16x2_reinterpret_as_u8x4(self)
+  }
+  fn reinterpret_as_u16x2(self) -> U16x2 {
+    i16x2_reinterpret_as_u16x2(self)
+  }
+  fn extract(self, index: U8) -> I16 {
+    i16x2_extract(self, index)
+  }
+  fn replace(self, index: U8, lane: I16) -> I16x2 {
+    i16x2_replace(self, index, lane)
+  }
+  fn shl(self, count: U8) -> I16x2 {
+    i16x2_shl(self, count)
+  }
+  fn shr(self, count: U8) -> I16x2 {
+    i16x2_shr(self, count)
+  }
+  fn bitmask(self) -> U32 {
+    i16x2_bitmask(self)
+  }
+  fn all_true(self) -> Bool {
+    i16x2_all_true(self)
+  }
+  fn eq_mask(self, right: I16x2) -> I16x2 {
+    i16x2_eq(self, right)
+  }
+  fn mul(self, right: I16x2) -> I16x2 {
+    i16x2_mul(self, right)
+  }
+  fn ne_mask(self, right: I16x2) -> I16x2 {
+    i16x2_ne(self, right)
+  }
+  fn lt_mask(self, right: I16x2) -> I16x2 {
+    i16x2_lt(self, right)
+  }
+  fn le_mask(self, right: I16x2) -> I16x2 {
+    i16x2_le(self, right)
+  }
+  fn gt_mask(self, right: I16x2) -> I16x2 {
+    i16x2_gt(self, right)
+  }
+  fn ge_mask(self, right: I16x2) -> I16x2 {
+    i16x2_ge(self, right)
+  }
+  fn min(self, right: I16x2) -> I16x2 {
+    i16x2_min(self, right)
+  }
+  fn max(self, right: I16x2) -> I16x2 {
+    i16x2_max(self, right)
+  }
+  fn add_sat(self, right: I16x2) -> I16x2 {
+    i16x2_add_sat(self, right)
+  }
+  fn sub_sat(self, right: I16x2) -> I16x2 {
+    i16x2_sub_sat(self, right)
+  }
+  fn abs(self) -> I16x2 {
+    i16x2_abs(self)
+  }
+  fn neg(self) -> I16x2 {
+    i16x2_neg(self)
+  }
+}
+impl BitAnd for I16x2 {
+  fn bit_and(self, right: I16x2) -> I16x2 {
+    i16x2_and(self, right)
+  }
+}
+impl BitOr for I16x2 {
+  fn bit_or(self, right: I16x2) -> I16x2 {
+    i16x2_or(self, right)
+  }
+}
+impl BitXor for I16x2 {
+  fn bit_xor(self, right: I16x2) -> I16x2 {
+    i16x2_xor(self, right)
+  }
+}
+impl Add for I16x2 {
+  fn add(self, right: I16x2) -> I16x2 {
+    i16x2_add(self, right)
+  }
+}
+impl Sub for I16x2 {
+  fn sub(self, right: I16x2) -> I16x2 {
+    i16x2_sub(self, right)
+  }
+}
+impl Mul for I16x2 {
+  fn mul(self, right: I16x2) -> I16x2 {
+    i16x2_mul(self, right)
+  }
+}

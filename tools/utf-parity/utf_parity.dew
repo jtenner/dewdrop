@@ -1,0 +1,147 @@
+open dew.std.string
+open dew.std.string_builder
+open dew.std.bytes
+open dew.std.bytes_builder
+
+pub fn valid_empty() -> Bool {
+  b"".is_valid_utf8()
+}
+pub fn valid_ascii() -> Bool {
+  b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-".is_valid_utf8()
+}
+pub fn valid_two() -> Bool {
+  b"λéÖЖ".is_valid_utf8()
+}
+pub fn valid_three() -> Bool {
+  b"世界हिन्दी".is_valid_utf8()
+}
+pub fn valid_four() -> Bool {
+  b"🌍😀🧪".is_valid_utf8()
+}
+pub fn valid_cross_two() -> Bool {
+  b"123456789012345λ".is_valid_utf8()
+}
+pub fn valid_cross_three() -> Bool {
+  b"123456789012345世".is_valid_utf8()
+}
+pub fn valid_cross_four() -> Bool {
+  b"123456789012345🌍".is_valid_utf8()
+}
+
+pub fn invalid_stray() -> Bool {
+  b"\x80".is_valid_utf8()
+}
+pub fn invalid_c0() -> Bool {
+  b"\xC0\x80".is_valid_utf8()
+}
+pub fn invalid_c1() -> Bool {
+  b"\xC1\xBF".is_valid_utf8()
+}
+pub fn invalid_two_truncated() -> Bool {
+  b"\xC2".is_valid_utf8()
+}
+pub fn invalid_two_continuation() -> Bool {
+  b"\xC2A".is_valid_utf8()
+}
+pub fn invalid_three_overlong() -> Bool {
+  b"\xE0\x9F\x80".is_valid_utf8()
+}
+pub fn invalid_surrogate() -> Bool {
+  b"\xED\xA0\x80".is_valid_utf8()
+}
+pub fn invalid_three_truncated() -> Bool {
+  b"\xE2\x82".is_valid_utf8()
+}
+pub fn invalid_four_overlong() -> Bool {
+  b"\xF0\x8F\xBF\xBF".is_valid_utf8()
+}
+pub fn invalid_too_large() -> Bool {
+  b"\xF4\x90\x80\x80".is_valid_utf8()
+}
+pub fn invalid_f5() -> Bool {
+  b"\xF5\x80\x80\x80".is_valid_utf8()
+}
+pub fn invalid_four_truncated() -> Bool {
+  b"\xF0\x9F\x8C".is_valid_utf8()
+}
+pub fn invalid_cross() -> Bool {
+  b"123456789012345\xE2\x28\xA1".is_valid_utf8()
+}
+
+pub fn length_empty() -> U32 {
+  "".utf16_length()
+}
+pub fn length_ascii() -> U32 {
+  "abc".utf16_length()
+}
+pub fn length_two() -> U32 {
+  "λ".utf16_length()
+}
+pub fn length_three() -> U32 {
+  "世".utf16_length()
+}
+pub fn length_four() -> U32 {
+  "🌍".utf16_length()
+}
+pub fn length_mixed() -> U32 {
+  "aλ🌍".utf16_length()
+}
+pub fn byte_length_string() -> U32 {
+  "aλ🌍".byte_length()
+}
+pub fn byte_length_bytes() -> U32 {
+  b"a\x00\xFF".byte_length()
+}
+pub fn string_bytes_shared() -> U32 {
+  "shared 🌍".as_bytes().byte_length()
+}
+pub fn string_utf16_units() -> U32 {
+  "aλ🌍".utf16_length()
+}
+
+pub fn bytes_equal_empty() -> Bool {
+  b"".equals(b"")
+}
+pub fn bytes_equal_multichunk() -> Bool {
+  b"0123456789abcdef-second-chunk".equals(b"0123456789abcdef-second-chunk")
+}
+pub fn bytes_unequal_length() -> Bool {
+  b"same-prefix".equals(b"same-prefix-longer")
+}
+pub fn bytes_unequal_first_chunk() -> Bool {
+  b"A123456789abcdef-second".equals(b"B123456789abcdef-second")
+}
+pub fn bytes_unequal_second_chunk() -> Bool {
+  b"0123456789abcdef-A".equals(b"0123456789abcdef-B")
+}
+pub fn bytes_unequal_tail() -> Bool {
+  b"tail-a".equals(b"tail-b")
+}
+pub fn string_equal_unicode() -> Bool {
+  "λ 世界 🌍".equals("λ 世界 🌍")
+}
+pub fn string_unequal_unicode() -> Bool {
+  "λ 世界 🌍".equals("λ 世界 🧪")
+}
+
+pub fn bytes_at_zero() -> U8 {
+  b"\x00\xFFabc".byte_at(0u32)
+}
+pub fn bytes_at_ff() -> U8 {
+  b"\x00\xFFabc".byte_at(1u32)
+}
+pub fn bytes_at_15() -> U8 {
+  b"0123456789abcdeF-second".byte_at(15u32)
+}
+pub fn bytes_at_16() -> U8 {
+  b"0123456789abcdeF-second".byte_at(16u32)
+}
+pub fn string_utf8_byte() -> U8 {
+  "λ".byte_at(1u32)
+}
+pub fn bytes_at_oob() -> U8 {
+  b"abc".byte_at(3u32)
+}
+pub fn empty_at_oob() -> U8 {
+  b"".byte_at(0u32)
+}

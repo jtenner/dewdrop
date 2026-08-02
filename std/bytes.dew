@@ -1,0 +1,68 @@
+impl Bytes {
+  fn byte_length(self) -> U32 {
+    bytes_byte_length(self)
+  }
+  fn is_valid_utf8(self) -> Bool {
+    bytes_is_valid_utf8(self)
+  }
+  fn to_string(self) -> String {
+    bytes_to_string(self)
+  }
+  fn equals(self, other: Bytes) -> Bool {
+    bytes_equals(self, other)
+  }
+  fn byte_at(self, index: U32) -> U8 {
+    bytes_byte_at(self, index)
+  }
+  fn view(self, start: U32, length: U32) -> Bytes {
+    bytes_view(self, start, length)
+  }
+  fn subarray(self, start: U32, end: U32) -> Bytes {
+    bytes_view(self, start, end - start)
+  }
+  fn slice(self, start: U32, end: U32) -> Bytes {
+    let view = bytes_view(self, start, end - start)
+    let builder = bytes_builder_with_capacity_raw(view.byte_length())
+    bytes_builder_append(builder, view)
+    bytes_builder_finish(builder)
+  }
+  fn compact(self) -> Bytes {
+    let builder = bytes_builder_with_capacity_raw(self.byte_length())
+    bytes_builder_append(builder, self)
+    bytes_builder_finish(builder)
+  }
+  fn concat(self, other: Bytes) -> Bytes {
+    bytes_concat(self, other)
+  }
+  fn find_byte(self, byte: U8) -> Option<U32> {
+    let index = bytes_find_byte_raw(self, byte)
+    if index == 4294967295u32 {
+      Option::None
+    } else {
+      Option::Some(index)
+    }
+  }
+  fn contains_byte(self, byte: U8) -> Bool {
+    bytes_find_byte_raw(self, byte) != 4294967295u32
+  }
+  fn find(self, needle: Bytes) -> Option<U32> {
+    if needle.byte_length() == 1u32 {
+      self.find_byte(needle.byte_at(0u32))
+    } else {
+      dew_option_u32_from_raw(bytes_find_raw(self, needle))
+    }
+  }
+  fn contains(self, needle: Bytes) -> Bool {
+    if needle.byte_length() == 1u32 {
+      self.contains_byte(needle.byte_at(0u32))
+    } else {
+      bytes_find_raw(self, needle) != 4294967295u32
+    }
+  }
+  fn starts_with(self, prefix: Bytes) -> Bool {
+    bytes_starts_with(self, prefix)
+  }
+  fn ends_with(self, suffix: Bytes) -> Bool {
+    bytes_ends_with(self, suffix)
+  }
+}

@@ -1,0 +1,10 @@
+open dew.std.f32x4
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  if f32x4_splat(7.75f32).floor().extract_0() == 7.0f32 {
+    wasi_fd_write(1u32, b"lanes:f32x4-rounding")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

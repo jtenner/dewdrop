@@ -1,0 +1,15 @@
+pub enum Choice {
+  First(I32)
+  Second(I32)
+}
+
+fn read(value: Choice) -> I32 {
+  match value {
+    Choice::First(item) => item
+    Choice::Second(item) => item
+  }
+}
+
+pub fn main() -> I32 {
+  read(Choice::Second(42))
+}

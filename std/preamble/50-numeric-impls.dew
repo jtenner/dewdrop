@@ -1,0 +1,791 @@
+impl BitOr for I8 {
+  fn bit_or(self, right: I8) -> I8 {
+    i8_or(self, right)
+  }
+}
+impl BitXor for I8 {
+  fn bit_xor(self, right: I8) -> I8 {
+    i8_xor(self, right)
+  }
+}
+impl BitAnd for I8 {
+  fn bit_and(self, right: I8) -> I8 {
+    i8_and(self, right)
+  }
+}
+impl Eq for I8 {
+  fn eq(self, right: I8) -> Bool {
+    i8_eq(self, right)
+  }
+}
+impl Ne for I8 {
+  fn ne(self, right: I8) -> Bool {
+    i8_ne(self, right)
+  }
+}
+impl Lt for I8 {
+  fn lt(self, right: I8) -> Bool {
+    i8_lt(self, right)
+  }
+}
+impl Lte for I8 {
+  fn lte(self, right: I8) -> Bool {
+    i8_lte(self, right)
+  }
+}
+impl Gt for I8 {
+  fn gt(self, right: I8) -> Bool {
+    i8_gt(self, right)
+  }
+}
+impl Gte for I8 {
+  fn gte(self, right: I8) -> Bool {
+    i8_gte(self, right)
+  }
+}
+impl Shl for I8 {
+  fn shl(self, right: I8) -> I8 {
+    i8_shl(self, right)
+  }
+}
+impl Shr for I8 {
+  fn shr(self, right: I8) -> I8 {
+    i8_shr(self, right)
+  }
+}
+impl Add for I8 {
+  fn add(self, right: I8) -> I8 {
+    i8_add(self, right)
+  }
+}
+impl Sub for I8 {
+  fn sub(self, right: I8) -> I8 {
+    i8_sub(self, right)
+  }
+}
+impl Mul for I8 {
+  fn mul(self, right: I8) -> I8 {
+    i8_mul(self, right)
+  }
+}
+impl Div for I8 {
+  fn div(self, right: I8) -> I8 {
+    i8_div(self, right)
+  }
+}
+impl Rem for I8 {
+  fn rem(self, right: I8) -> I8 {
+    i8_rem(self, right)
+  }
+}
+impl BitOr for I16 {
+  fn bit_or(self, right: I16) -> I16 {
+    i16_or(self, right)
+  }
+}
+impl BitXor for I16 {
+  fn bit_xor(self, right: I16) -> I16 {
+    i16_xor(self, right)
+  }
+}
+impl BitAnd for I16 {
+  fn bit_and(self, right: I16) -> I16 {
+    i16_and(self, right)
+  }
+}
+impl Eq for I16 {
+  fn eq(self, right: I16) -> Bool {
+    i16_eq(self, right)
+  }
+}
+impl Ne for I16 {
+  fn ne(self, right: I16) -> Bool {
+    i16_ne(self, right)
+  }
+}
+impl Lt for I16 {
+  fn lt(self, right: I16) -> Bool {
+    i16_lt(self, right)
+  }
+}
+impl Lte for I16 {
+  fn lte(self, right: I16) -> Bool {
+    i16_lte(self, right)
+  }
+}
+impl Gt for I16 {
+  fn gt(self, right: I16) -> Bool {
+    i16_gt(self, right)
+  }
+}
+impl Gte for I16 {
+  fn gte(self, right: I16) -> Bool {
+    i16_gte(self, right)
+  }
+}
+impl Shl for I16 {
+  fn shl(self, right: I16) -> I16 {
+    i16_shl(self, right)
+  }
+}
+impl Shr for I16 {
+  fn shr(self, right: I16) -> I16 {
+    i16_shr(self, right)
+  }
+}
+impl Add for I16 {
+  fn add(self, right: I16) -> I16 {
+    i16_add(self, right)
+  }
+}
+impl Sub for I16 {
+  fn sub(self, right: I16) -> I16 {
+    i16_sub(self, right)
+  }
+}
+impl Mul for I16 {
+  fn mul(self, right: I16) -> I16 {
+    i16_mul(self, right)
+  }
+}
+impl Div for I16 {
+  fn div(self, right: I16) -> I16 {
+    i16_div(self, right)
+  }
+}
+impl Rem for I16 {
+  fn rem(self, right: I16) -> I16 {
+    i16_rem(self, right)
+  }
+}
+impl BitOr for I32 {
+  fn bit_or(self, right: I32) -> I32 {
+    i32_or(self, right)
+  }
+}
+impl BitXor for I32 {
+  fn bit_xor(self, right: I32) -> I32 {
+    i32_xor(self, right)
+  }
+}
+impl BitAnd for I32 {
+  fn bit_and(self, right: I32) -> I32 {
+    i32_and(self, right)
+  }
+}
+impl Eq for I32 {
+  fn eq(self, right: I32) -> Bool {
+    i32_eq(self, right)
+  }
+}
+impl Ne for I32 {
+  fn ne(self, right: I32) -> Bool {
+    i32_ne(self, right)
+  }
+}
+impl Lt for I32 {
+  fn lt(self, right: I32) -> Bool {
+    i32_lt(self, right)
+  }
+}
+impl Gt for I32 {
+  fn gt(self, right: I32) -> Bool {
+    i32_gt(self, right)
+  }
+}
+impl Gte for I32 {
+  fn gte(self, right: I32) -> Bool {
+    i32_gte(self, right)
+  }
+}
+impl Shl for I32 {
+  fn shl(self, right: I32) -> I32 {
+    i32_shl(self, right)
+  }
+}
+impl Shr for I32 {
+  fn shr(self, right: I32) -> I32 {
+    i32_shr(self, right)
+  }
+}
+impl Mul for I32 {
+  fn mul(self, right: I32) -> I32 {
+    i32_mul(self, right)
+  }
+}
+impl Div for I32 {
+  fn div(self, right: I32) -> I32 {
+    i32_div(self, right)
+  }
+}
+impl Rem for I32 {
+  fn rem(self, right: I32) -> I32 {
+    i32_rem(self, right)
+  }
+}
+impl BitOr for I64 {
+  fn bit_or(self, right: I64) -> I64 {
+    i64_or(self, right)
+  }
+}
+impl BitXor for I64 {
+  fn bit_xor(self, right: I64) -> I64 {
+    i64_xor(self, right)
+  }
+}
+impl BitAnd for I64 {
+  fn bit_and(self, right: I64) -> I64 {
+    i64_and(self, right)
+  }
+}
+impl Eq for I64 {
+  fn eq(self, right: I64) -> Bool {
+    i64_eq(self, right)
+  }
+}
+impl Ne for I64 {
+  fn ne(self, right: I64) -> Bool {
+    i64_ne(self, right)
+  }
+}
+impl Lt for I64 {
+  fn lt(self, right: I64) -> Bool {
+    i64_lt(self, right)
+  }
+}
+impl Lte for I64 {
+  fn lte(self, right: I64) -> Bool {
+    i64_lte(self, right)
+  }
+}
+impl Gt for I64 {
+  fn gt(self, right: I64) -> Bool {
+    i64_gt(self, right)
+  }
+}
+impl Gte for I64 {
+  fn gte(self, right: I64) -> Bool {
+    i64_gte(self, right)
+  }
+}
+impl Shl for I64 {
+  fn shl(self, right: I64) -> I64 {
+    i64_shl(self, right)
+  }
+}
+impl Shr for I64 {
+  fn shr(self, right: I64) -> I64 {
+    i64_shr(self, right)
+  }
+}
+impl Add for I64 {
+  fn add(self, right: I64) -> I64 {
+    i64_add(self, right)
+  }
+}
+impl Sub for I64 {
+  fn sub(self, right: I64) -> I64 {
+    i64_sub(self, right)
+  }
+}
+impl Mul for I64 {
+  fn mul(self, right: I64) -> I64 {
+    i64_mul(self, right)
+  }
+}
+impl Div for I64 {
+  fn div(self, right: I64) -> I64 {
+    i64_div(self, right)
+  }
+}
+impl Rem for I64 {
+  fn rem(self, right: I64) -> I64 {
+    i64_rem(self, right)
+  }
+}
+impl BitOr for U8 {
+  fn bit_or(self, right: U8) -> U8 {
+    u8_or(self, right)
+  }
+}
+impl BitXor for U8 {
+  fn bit_xor(self, right: U8) -> U8 {
+    u8_xor(self, right)
+  }
+}
+impl BitAnd for U8 {
+  fn bit_and(self, right: U8) -> U8 {
+    u8_and(self, right)
+  }
+}
+impl Eq for U8 {
+  fn eq(self, right: U8) -> Bool {
+    u8_eq(self, right)
+  }
+}
+impl Ne for U8 {
+  fn ne(self, right: U8) -> Bool {
+    u8_ne(self, right)
+  }
+}
+impl Lt for U8 {
+  fn lt(self, right: U8) -> Bool {
+    u8_lt(self, right)
+  }
+}
+impl Lte for U8 {
+  fn lte(self, right: U8) -> Bool {
+    u8_lte(self, right)
+  }
+}
+impl Gt for U8 {
+  fn gt(self, right: U8) -> Bool {
+    u8_gt(self, right)
+  }
+}
+impl Gte for U8 {
+  fn gte(self, right: U8) -> Bool {
+    u8_gte(self, right)
+  }
+}
+impl Shl for U8 {
+  fn shl(self, right: U8) -> U8 {
+    u8_shl(self, right)
+  }
+}
+impl Shr for U8 {
+  fn shr(self, right: U8) -> U8 {
+    u8_shr(self, right)
+  }
+}
+impl Add for U8 {
+  fn add(self, right: U8) -> U8 {
+    u8_add(self, right)
+  }
+}
+impl Sub for U8 {
+  fn sub(self, right: U8) -> U8 {
+    u8_sub(self, right)
+  }
+}
+impl Mul for U8 {
+  fn mul(self, right: U8) -> U8 {
+    u8_mul(self, right)
+  }
+}
+impl Div for U8 {
+  fn div(self, right: U8) -> U8 {
+    u8_div(self, right)
+  }
+}
+impl Rem for U8 {
+  fn rem(self, right: U8) -> U8 {
+    u8_rem(self, right)
+  }
+}
+impl BitOr for U16 {
+  fn bit_or(self, right: U16) -> U16 {
+    u16_or(self, right)
+  }
+}
+impl BitXor for U16 {
+  fn bit_xor(self, right: U16) -> U16 {
+    u16_xor(self, right)
+  }
+}
+impl BitAnd for U16 {
+  fn bit_and(self, right: U16) -> U16 {
+    u16_and(self, right)
+  }
+}
+impl Eq for U16 {
+  fn eq(self, right: U16) -> Bool {
+    u16_eq(self, right)
+  }
+}
+impl Ne for U16 {
+  fn ne(self, right: U16) -> Bool {
+    u16_ne(self, right)
+  }
+}
+impl Lt for U16 {
+  fn lt(self, right: U16) -> Bool {
+    u16_lt(self, right)
+  }
+}
+impl Lte for U16 {
+  fn lte(self, right: U16) -> Bool {
+    u16_lte(self, right)
+  }
+}
+impl Gt for U16 {
+  fn gt(self, right: U16) -> Bool {
+    u16_gt(self, right)
+  }
+}
+impl Gte for U16 {
+  fn gte(self, right: U16) -> Bool {
+    u16_gte(self, right)
+  }
+}
+impl Shl for U16 {
+  fn shl(self, right: U16) -> U16 {
+    u16_shl(self, right)
+  }
+}
+impl Shr for U16 {
+  fn shr(self, right: U16) -> U16 {
+    u16_shr(self, right)
+  }
+}
+impl Add for U16 {
+  fn add(self, right: U16) -> U16 {
+    u16_add(self, right)
+  }
+}
+impl Sub for U16 {
+  fn sub(self, right: U16) -> U16 {
+    u16_sub(self, right)
+  }
+}
+impl Mul for U16 {
+  fn mul(self, right: U16) -> U16 {
+    u16_mul(self, right)
+  }
+}
+impl Div for U16 {
+  fn div(self, right: U16) -> U16 {
+    u16_div(self, right)
+  }
+}
+impl Rem for U16 {
+  fn rem(self, right: U16) -> U16 {
+    u16_rem(self, right)
+  }
+}
+impl BitOr for U32 {
+  fn bit_or(self, right: U32) -> U32 {
+    u32_or(self, right)
+  }
+}
+impl BitXor for U32 {
+  fn bit_xor(self, right: U32) -> U32 {
+    u32_xor(self, right)
+  }
+}
+impl BitAnd for U32 {
+  fn bit_and(self, right: U32) -> U32 {
+    u32_and(self, right)
+  }
+}
+impl Eq for U32 {
+  fn eq(self, right: U32) -> Bool {
+    u32_eq(self, right)
+  }
+}
+impl Ne for U32 {
+  fn ne(self, right: U32) -> Bool {
+    u32_ne(self, right)
+  }
+}
+impl Lt for U32 {
+  fn lt(self, right: U32) -> Bool {
+    u32_lt(self, right)
+  }
+}
+impl Lte for U32 {
+  fn lte(self, right: U32) -> Bool {
+    u32_lte(self, right)
+  }
+}
+impl Gt for U32 {
+  fn gt(self, right: U32) -> Bool {
+    u32_gt(self, right)
+  }
+}
+impl Gte for U32 {
+  fn gte(self, right: U32) -> Bool {
+    u32_gte(self, right)
+  }
+}
+impl Shl for U32 {
+  fn shl(self, right: U32) -> U32 {
+    u32_shl(self, right)
+  }
+}
+impl Shr for U32 {
+  fn shr(self, right: U32) -> U32 {
+    u32_shr(self, right)
+  }
+}
+impl Add for U32 {
+  fn add(self, right: U32) -> U32 {
+    u32_add(self, right)
+  }
+}
+impl Sub for U32 {
+  fn sub(self, right: U32) -> U32 {
+    u32_sub(self, right)
+  }
+}
+impl Mul for U32 {
+  fn mul(self, right: U32) -> U32 {
+    u32_mul(self, right)
+  }
+}
+impl Div for U32 {
+  fn div(self, right: U32) -> U32 {
+    u32_div(self, right)
+  }
+}
+impl Rem for U32 {
+  fn rem(self, right: U32) -> U32 {
+    u32_rem(self, right)
+  }
+}
+impl BitOr for U64 {
+  fn bit_or(self, right: U64) -> U64 {
+    u64_or(self, right)
+  }
+}
+impl BitXor for U64 {
+  fn bit_xor(self, right: U64) -> U64 {
+    u64_xor(self, right)
+  }
+}
+impl BitAnd for U64 {
+  fn bit_and(self, right: U64) -> U64 {
+    u64_and(self, right)
+  }
+}
+impl Eq for U64 {
+  fn eq(self, right: U64) -> Bool {
+    u64_eq(self, right)
+  }
+}
+impl Ne for U64 {
+  fn ne(self, right: U64) -> Bool {
+    u64_ne(self, right)
+  }
+}
+impl Lt for U64 {
+  fn lt(self, right: U64) -> Bool {
+    u64_lt(self, right)
+  }
+}
+impl Lte for U64 {
+  fn lte(self, right: U64) -> Bool {
+    u64_lte(self, right)
+  }
+}
+impl Gt for U64 {
+  fn gt(self, right: U64) -> Bool {
+    u64_gt(self, right)
+  }
+}
+impl Gte for U64 {
+  fn gte(self, right: U64) -> Bool {
+    u64_gte(self, right)
+  }
+}
+impl Shl for U64 {
+  fn shl(self, right: U64) -> U64 {
+    u64_shl(self, right)
+  }
+}
+impl Shr for U64 {
+  fn shr(self, right: U64) -> U64 {
+    u64_shr(self, right)
+  }
+}
+impl Add for U64 {
+  fn add(self, right: U64) -> U64 {
+    u64_add(self, right)
+  }
+}
+impl Sub for U64 {
+  fn sub(self, right: U64) -> U64 {
+    u64_sub(self, right)
+  }
+}
+impl Mul for U64 {
+  fn mul(self, right: U64) -> U64 {
+    u64_mul(self, right)
+  }
+}
+impl Div for U64 {
+  fn div(self, right: U64) -> U64 {
+    u64_div(self, right)
+  }
+}
+impl Rem for U64 {
+  fn rem(self, right: U64) -> U64 {
+    u64_rem(self, right)
+  }
+}
+impl Eq for F32 {
+  fn eq(self, right: F32) -> Bool {
+    f32_eq(self, right)
+  }
+}
+impl Ne for F32 {
+  fn ne(self, right: F32) -> Bool {
+    f32_ne(self, right)
+  }
+}
+impl Lt for F32 {
+  fn lt(self, right: F32) -> Bool {
+    f32_lt(self, right)
+  }
+}
+impl Lte for F32 {
+  fn lte(self, right: F32) -> Bool {
+    f32_lte(self, right)
+  }
+}
+impl Gt for F32 {
+  fn gt(self, right: F32) -> Bool {
+    f32_gt(self, right)
+  }
+}
+impl Gte for F32 {
+  fn gte(self, right: F32) -> Bool {
+    f32_gte(self, right)
+  }
+}
+impl Add for F32 {
+  fn add(self, right: F32) -> F32 {
+    f32_add(self, right)
+  }
+}
+impl Sub for F32 {
+  fn sub(self, right: F32) -> F32 {
+    f32_sub(self, right)
+  }
+}
+impl Mul for F32 {
+  fn mul(self, right: F32) -> F32 {
+    f32_mul(self, right)
+  }
+}
+impl Div for F32 {
+  fn div(self, right: F32) -> F32 {
+    f32_div(self, right)
+  }
+}
+impl Eq for F64 {
+  fn eq(self, right: F64) -> Bool {
+    f64_eq(self, right)
+  }
+}
+impl Ne for F64 {
+  fn ne(self, right: F64) -> Bool {
+    f64_ne(self, right)
+  }
+}
+impl Lt for F64 {
+  fn lt(self, right: F64) -> Bool {
+    f64_lt(self, right)
+  }
+}
+impl Lte for F64 {
+  fn lte(self, right: F64) -> Bool {
+    f64_lte(self, right)
+  }
+}
+impl Gt for F64 {
+  fn gt(self, right: F64) -> Bool {
+    f64_gt(self, right)
+  }
+}
+impl Gte for F64 {
+  fn gte(self, right: F64) -> Bool {
+    f64_gte(self, right)
+  }
+}
+impl Add for F64 {
+  fn add(self, right: F64) -> F64 {
+    f64_add(self, right)
+  }
+}
+impl Sub for F64 {
+  fn sub(self, right: F64) -> F64 {
+    f64_sub(self, right)
+  }
+}
+impl Mul for F64 {
+  fn mul(self, right: F64) -> F64 {
+    f64_mul(self, right)
+  }
+}
+impl Div for F64 {
+  fn div(self, right: F64) -> F64 {
+    f64_div(self, right)
+  }
+}
+
+
+impl Hash for I8 {
+  fn hash(self) -> U64 {
+    i8_into_u64(self)
+  }
+  fn hash_eq(self, right: I8) -> Bool {
+    i8_eq(self, right)
+  }
+}
+impl Hash for I16 {
+  fn hash(self) -> U64 {
+    i16_into_u64(self)
+  }
+  fn hash_eq(self, right: I16) -> Bool {
+    i16_eq(self, right)
+  }
+}
+impl Hash for I32 {
+  fn hash(self) -> U64 {
+    i32_into_u64(self)
+  }
+  fn hash_eq(self, right: I32) -> Bool {
+    i32_eq(self, right)
+  }
+}
+impl Hash for I64 {
+  fn hash(self) -> U64 {
+    i64_into_u64(self)
+  }
+  fn hash_eq(self, right: I64) -> Bool {
+    i64_eq(self, right)
+  }
+}
+impl Hash for U8 {
+  fn hash(self) -> U64 {
+    u8_into_u64(self)
+  }
+  fn hash_eq(self, right: U8) -> Bool {
+    u8_eq(self, right)
+  }
+}
+impl Hash for U16 {
+  fn hash(self) -> U64 {
+    u16_into_u64(self)
+  }
+  fn hash_eq(self, right: U16) -> Bool {
+    u16_eq(self, right)
+  }
+}
+impl Hash for U32 {
+  fn hash(self) -> U64 {
+    u32_into_u64(self)
+  }
+  fn hash_eq(self, right: U32) -> Bool {
+    u32_eq(self, right)
+  }
+}
+impl Hash for U64 {
+  fn hash(self) -> U64 {
+    self
+  }
+  fn hash_eq(self, right: U64) -> Bool {
+    u64_eq(self, right)
+  }
+}

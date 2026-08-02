@@ -1,0 +1,5 @@
+open fixture.library
+
+pub fn run() -> I32 {
+  answer()
+}

@@ -1,0 +1,8 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": {
+    "trap": "integer-divide-by-zero",
+    "stdout": []
+  }
+}

@@ -1,0 +1,6 @@
+open dew.std.f32x4
+
+pub fn main() -> F32 {
+  let value = f32x4_splat(7.0f32)
+  value.replace_0(9.0f32).add(value).extract_0()
+}

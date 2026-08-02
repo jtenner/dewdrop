@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "BodyConstraintDiagnostic(\n  LocalTypeMismatch(\n    -5,\n    -3,\n    { kind: OperatorTypeConstraint, source: 7, offset: 129 },\n  ),\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

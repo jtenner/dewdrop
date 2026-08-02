@@ -1,0 +1,10 @@
+open dew.std.i8x8
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  if i8x8_splat(120i8).add_sat(i8x8_splat(20i8)).extract(0u8) == 127i8 {
+    wasi_fd_write(1u32, b"lanes:i8x8-saturation")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

@@ -1,0 +1,6 @@
+open dew.std.string
+
+test "reports failed assertion text" {
+  let prefix = "visible assertion "
+  assert(false, prefix.concat("λ"))
+}

@@ -1,0 +1,3 @@
+pub fn main() -> Unit {
+  assert(true, "implicit preamble must be disabled")
+}

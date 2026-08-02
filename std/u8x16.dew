@@ -1,0 +1,504 @@
+builtin u8x16_from_v128(value: V128) -> U8x16 = "dew_reinterpret"
+builtin u8x16_to_v128(value: U8x16) -> V128 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_i8x16(value: U8x16) -> I8x16 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_i16x8(value: U8x16) -> I16x8 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_u16x8(value: U8x16) -> U16x8 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_i32x4(value: U8x16) -> I32x4 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_u32x4(value: U8x16) -> U32x4 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_i64x2(value: U8x16) -> I64x2 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_u64x2(value: U8x16) -> U64x2 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_f32x4(value: U8x16) -> F32x4 = "dew_reinterpret"
+builtin u8x16_reinterpret_as_f64x2(value: U8x16) -> F64x2 = "dew_reinterpret"
+builtin u8x16_load(address: U32) -> U8x16 = "dew_v128_load"
+builtin u8x16_store(address: U32, value: U8x16) -> Unit = "dew_v128_store"
+builtin u8x16_and(left: U8x16, right: U8x16) -> U8x16 = "v128_and"
+builtin u8x16_or(left: U8x16, right: U8x16) -> U8x16 = "v128_or"
+builtin u8x16_xor(left: U8x16, right: U8x16) -> U8x16 = "v128_xor"
+builtin u8x16_not(value: U8x16) -> U8x16 = "dew_v128_not"
+builtin u8x16_andnot(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_andnot"
+builtin u8x16_bitselect(yes: U8x16, no: U8x16, mask: U8x16) -> U8x16 = "dew_v128_bitselect"
+builtin u8x16_any_true(value: U8x16) -> Bool = "dew_v128_any_true"
+builtin u8x16_splat(value: U8) -> U8x16 = "dew_v128_splat_i8"
+builtin u8x16_load_splat(address: U32) -> U8x16 = "dew_u8x16_load_splat"
+builtin u8x16_extract_0(value: U8x16) -> U8 = "dew_u8x16_extract_0"
+builtin u8x16_replace_0(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_0"
+builtin u8x16_load_lane_0(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_0"
+builtin u8x16_store_lane_0(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_0"
+builtin u8x16_extract_1(value: U8x16) -> U8 = "dew_u8x16_extract_1"
+builtin u8x16_replace_1(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_1"
+builtin u8x16_load_lane_1(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_1"
+builtin u8x16_store_lane_1(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_1"
+builtin u8x16_extract_2(value: U8x16) -> U8 = "dew_u8x16_extract_2"
+builtin u8x16_replace_2(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_2"
+builtin u8x16_load_lane_2(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_2"
+builtin u8x16_store_lane_2(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_2"
+builtin u8x16_extract_3(value: U8x16) -> U8 = "dew_u8x16_extract_3"
+builtin u8x16_replace_3(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_3"
+builtin u8x16_load_lane_3(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_3"
+builtin u8x16_store_lane_3(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_3"
+builtin u8x16_extract_4(value: U8x16) -> U8 = "dew_u8x16_extract_4"
+builtin u8x16_replace_4(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_4"
+builtin u8x16_load_lane_4(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_4"
+builtin u8x16_store_lane_4(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_4"
+builtin u8x16_extract_5(value: U8x16) -> U8 = "dew_u8x16_extract_5"
+builtin u8x16_replace_5(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_5"
+builtin u8x16_load_lane_5(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_5"
+builtin u8x16_store_lane_5(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_5"
+builtin u8x16_extract_6(value: U8x16) -> U8 = "dew_u8x16_extract_6"
+builtin u8x16_replace_6(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_6"
+builtin u8x16_load_lane_6(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_6"
+builtin u8x16_store_lane_6(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_6"
+builtin u8x16_extract_7(value: U8x16) -> U8 = "dew_u8x16_extract_7"
+builtin u8x16_replace_7(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_7"
+builtin u8x16_load_lane_7(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_7"
+builtin u8x16_store_lane_7(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_7"
+builtin u8x16_extract_8(value: U8x16) -> U8 = "dew_u8x16_extract_8"
+builtin u8x16_replace_8(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_8"
+builtin u8x16_load_lane_8(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_8"
+builtin u8x16_store_lane_8(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_8"
+builtin u8x16_extract_9(value: U8x16) -> U8 = "dew_u8x16_extract_9"
+builtin u8x16_replace_9(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_9"
+builtin u8x16_load_lane_9(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_9"
+builtin u8x16_store_lane_9(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_9"
+builtin u8x16_extract_10(value: U8x16) -> U8 = "dew_u8x16_extract_10"
+builtin u8x16_replace_10(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_10"
+builtin u8x16_load_lane_10(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_10"
+builtin u8x16_store_lane_10(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_10"
+builtin u8x16_extract_11(value: U8x16) -> U8 = "dew_u8x16_extract_11"
+builtin u8x16_replace_11(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_11"
+builtin u8x16_load_lane_11(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_11"
+builtin u8x16_store_lane_11(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_11"
+builtin u8x16_extract_12(value: U8x16) -> U8 = "dew_u8x16_extract_12"
+builtin u8x16_replace_12(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_12"
+builtin u8x16_load_lane_12(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_12"
+builtin u8x16_store_lane_12(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_12"
+builtin u8x16_extract_13(value: U8x16) -> U8 = "dew_u8x16_extract_13"
+builtin u8x16_replace_13(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_13"
+builtin u8x16_load_lane_13(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_13"
+builtin u8x16_store_lane_13(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_13"
+builtin u8x16_extract_14(value: U8x16) -> U8 = "dew_u8x16_extract_14"
+builtin u8x16_replace_14(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_14"
+builtin u8x16_load_lane_14(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_14"
+builtin u8x16_store_lane_14(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_14"
+builtin u8x16_extract_15(value: U8x16) -> U8 = "dew_u8x16_extract_15"
+builtin u8x16_replace_15(value: U8x16, lane: U8) -> U8x16 = "dew_u8x16_replace_15"
+builtin u8x16_load_lane_15(address: U32, value: U8x16) -> U8x16 = "dew_u8x16_load_lane_15"
+builtin u8x16_store_lane_15(address: U32, value: U8x16) -> Unit = "dew_u8x16_store_lane_15"
+builtin u8x16_reverse_raw(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_reverse"
+fn u8x16_reverse(value: U8x16) -> U8x16 {
+  u8x16_reverse_raw(value, value)
+}
+builtin u8x16_zip_low(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_zip_low"
+builtin u8x16_zip_high(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_zip_high"
+builtin u8x16_unzip_even(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_unzip_even"
+builtin u8x16_unzip_odd(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_unzip_odd"
+builtin u8x16_concat_shift_1(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_1"
+builtin u8x16_concat_shift_2(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_2"
+builtin u8x16_concat_shift_3(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_3"
+builtin u8x16_concat_shift_4(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_4"
+builtin u8x16_concat_shift_5(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_5"
+builtin u8x16_concat_shift_6(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_6"
+builtin u8x16_concat_shift_7(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_7"
+builtin u8x16_concat_shift_8(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_8"
+builtin u8x16_concat_shift_9(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_9"
+builtin u8x16_concat_shift_10(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_10"
+builtin u8x16_concat_shift_11(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_11"
+builtin u8x16_concat_shift_12(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_12"
+builtin u8x16_concat_shift_13(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_13"
+builtin u8x16_concat_shift_14(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_14"
+builtin u8x16_concat_shift_15(left: U8x16, right: U8x16) -> U8x16 = "dew_u8x16_concat_shift_15"
+builtin u8x16_narrow_i16x8_u(low: U16x8, high: U16x8) -> U8x16 = "dew_u8x16_narrow_i16x8_u"
+builtin u8x16_swizzle(value: U8x16, indices: U8x16) -> U8x16 = "dew_u8x16_swizzle"
+builtin u8x16_add(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_add_i8"
+builtin u8x16_sub(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_sub_i8"
+builtin u8x16_min_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_min_u_i8"
+builtin u8x16_max_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_max_u_i8"
+builtin u8x16_avgr_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_avgr_u_i8"
+builtin u8x16_add_sat_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_add_sat_u_i8"
+builtin u8x16_sub_sat_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_sub_sat_u_i8"
+builtin u8x16_eq(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_eq_i8"
+builtin u8x16_ne(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_ne_i8"
+builtin u8x16_lt_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_lt_u_i8"
+builtin u8x16_le_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_le_u_i8"
+builtin u8x16_gt_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_gt_u_i8"
+builtin u8x16_ge_u(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_ge_u_i8"
+builtin u8x16_popcnt(value: U8x16) -> U8x16 = "dew_v128_popcnt_i8"
+builtin u8x16_all_true(value: U8x16) -> Bool = "dew_v128_all_true_i8"
+builtin u8x16_bitmask(value: U8x16) -> U32 = "dew_v128_bitmask_i8"
+builtin u8x16_shl(value: U8x16, count: U32) -> U8x16 = "dew_v128_shl_i8"
+builtin u8x16_shr_u(value: U8x16, count: U32) -> U8x16 = "dew_v128_shr_u_i8"
+impl U8x16 {
+  fn to_v128(self) -> V128 {
+    u8x16_to_v128(self)
+  }
+  fn reinterpret_as_i8x16(self) -> I8x16 {
+    u8x16_reinterpret_as_i8x16(self)
+  }
+  fn reinterpret_as_i16x8(self) -> I16x8 {
+    u8x16_reinterpret_as_i16x8(self)
+  }
+  fn reinterpret_as_u16x8(self) -> U16x8 {
+    u8x16_reinterpret_as_u16x8(self)
+  }
+  fn reinterpret_as_i32x4(self) -> I32x4 {
+    u8x16_reinterpret_as_i32x4(self)
+  }
+  fn reinterpret_as_u32x4(self) -> U32x4 {
+    u8x16_reinterpret_as_u32x4(self)
+  }
+  fn reinterpret_as_i64x2(self) -> I64x2 {
+    u8x16_reinterpret_as_i64x2(self)
+  }
+  fn reinterpret_as_u64x2(self) -> U64x2 {
+    u8x16_reinterpret_as_u64x2(self)
+  }
+  fn reinterpret_as_f32x4(self) -> F32x4 {
+    u8x16_reinterpret_as_f32x4(self)
+  }
+  fn reinterpret_as_f64x2(self) -> F64x2 {
+    u8x16_reinterpret_as_f64x2(self)
+  }
+  fn not(self) -> U8x16 {
+    u8x16_not(self)
+  }
+  fn andnot(self, right: U8x16) -> U8x16 {
+    u8x16_andnot(self, right)
+  }
+  fn bitselect(self, no: U8x16, mask: U8x16) -> U8x16 {
+    u8x16_bitselect(self, no, mask)
+  }
+  fn any_true(self) -> Bool {
+    u8x16_any_true(self)
+  }
+  fn extract_0(self) -> U8 {
+    u8x16_extract_0(self)
+  }
+  fn replace_0(self, lane: U8) -> U8x16 {
+    u8x16_replace_0(self, lane)
+  }
+  fn load_lane_0(self, address: U32) -> U8x16 {
+    u8x16_load_lane_0(address, self)
+  }
+  fn store_lane_0(self, address: U32) -> Unit {
+    u8x16_store_lane_0(address, self)
+  }
+  fn extract_1(self) -> U8 {
+    u8x16_extract_1(self)
+  }
+  fn replace_1(self, lane: U8) -> U8x16 {
+    u8x16_replace_1(self, lane)
+  }
+  fn load_lane_1(self, address: U32) -> U8x16 {
+    u8x16_load_lane_1(address, self)
+  }
+  fn store_lane_1(self, address: U32) -> Unit {
+    u8x16_store_lane_1(address, self)
+  }
+  fn extract_2(self) -> U8 {
+    u8x16_extract_2(self)
+  }
+  fn replace_2(self, lane: U8) -> U8x16 {
+    u8x16_replace_2(self, lane)
+  }
+  fn load_lane_2(self, address: U32) -> U8x16 {
+    u8x16_load_lane_2(address, self)
+  }
+  fn store_lane_2(self, address: U32) -> Unit {
+    u8x16_store_lane_2(address, self)
+  }
+  fn extract_3(self) -> U8 {
+    u8x16_extract_3(self)
+  }
+  fn replace_3(self, lane: U8) -> U8x16 {
+    u8x16_replace_3(self, lane)
+  }
+  fn load_lane_3(self, address: U32) -> U8x16 {
+    u8x16_load_lane_3(address, self)
+  }
+  fn store_lane_3(self, address: U32) -> Unit {
+    u8x16_store_lane_3(address, self)
+  }
+  fn extract_4(self) -> U8 {
+    u8x16_extract_4(self)
+  }
+  fn replace_4(self, lane: U8) -> U8x16 {
+    u8x16_replace_4(self, lane)
+  }
+  fn load_lane_4(self, address: U32) -> U8x16 {
+    u8x16_load_lane_4(address, self)
+  }
+  fn store_lane_4(self, address: U32) -> Unit {
+    u8x16_store_lane_4(address, self)
+  }
+  fn extract_5(self) -> U8 {
+    u8x16_extract_5(self)
+  }
+  fn replace_5(self, lane: U8) -> U8x16 {
+    u8x16_replace_5(self, lane)
+  }
+  fn load_lane_5(self, address: U32) -> U8x16 {
+    u8x16_load_lane_5(address, self)
+  }
+  fn store_lane_5(self, address: U32) -> Unit {
+    u8x16_store_lane_5(address, self)
+  }
+  fn extract_6(self) -> U8 {
+    u8x16_extract_6(self)
+  }
+  fn replace_6(self, lane: U8) -> U8x16 {
+    u8x16_replace_6(self, lane)
+  }
+  fn load_lane_6(self, address: U32) -> U8x16 {
+    u8x16_load_lane_6(address, self)
+  }
+  fn store_lane_6(self, address: U32) -> Unit {
+    u8x16_store_lane_6(address, self)
+  }
+  fn extract_7(self) -> U8 {
+    u8x16_extract_7(self)
+  }
+  fn replace_7(self, lane: U8) -> U8x16 {
+    u8x16_replace_7(self, lane)
+  }
+  fn load_lane_7(self, address: U32) -> U8x16 {
+    u8x16_load_lane_7(address, self)
+  }
+  fn store_lane_7(self, address: U32) -> Unit {
+    u8x16_store_lane_7(address, self)
+  }
+  fn extract_8(self) -> U8 {
+    u8x16_extract_8(self)
+  }
+  fn replace_8(self, lane: U8) -> U8x16 {
+    u8x16_replace_8(self, lane)
+  }
+  fn load_lane_8(self, address: U32) -> U8x16 {
+    u8x16_load_lane_8(address, self)
+  }
+  fn store_lane_8(self, address: U32) -> Unit {
+    u8x16_store_lane_8(address, self)
+  }
+  fn extract_9(self) -> U8 {
+    u8x16_extract_9(self)
+  }
+  fn replace_9(self, lane: U8) -> U8x16 {
+    u8x16_replace_9(self, lane)
+  }
+  fn load_lane_9(self, address: U32) -> U8x16 {
+    u8x16_load_lane_9(address, self)
+  }
+  fn store_lane_9(self, address: U32) -> Unit {
+    u8x16_store_lane_9(address, self)
+  }
+  fn extract_10(self) -> U8 {
+    u8x16_extract_10(self)
+  }
+  fn replace_10(self, lane: U8) -> U8x16 {
+    u8x16_replace_10(self, lane)
+  }
+  fn load_lane_10(self, address: U32) -> U8x16 {
+    u8x16_load_lane_10(address, self)
+  }
+  fn store_lane_10(self, address: U32) -> Unit {
+    u8x16_store_lane_10(address, self)
+  }
+  fn extract_11(self) -> U8 {
+    u8x16_extract_11(self)
+  }
+  fn replace_11(self, lane: U8) -> U8x16 {
+    u8x16_replace_11(self, lane)
+  }
+  fn load_lane_11(self, address: U32) -> U8x16 {
+    u8x16_load_lane_11(address, self)
+  }
+  fn store_lane_11(self, address: U32) -> Unit {
+    u8x16_store_lane_11(address, self)
+  }
+  fn extract_12(self) -> U8 {
+    u8x16_extract_12(self)
+  }
+  fn replace_12(self, lane: U8) -> U8x16 {
+    u8x16_replace_12(self, lane)
+  }
+  fn load_lane_12(self, address: U32) -> U8x16 {
+    u8x16_load_lane_12(address, self)
+  }
+  fn store_lane_12(self, address: U32) -> Unit {
+    u8x16_store_lane_12(address, self)
+  }
+  fn extract_13(self) -> U8 {
+    u8x16_extract_13(self)
+  }
+  fn replace_13(self, lane: U8) -> U8x16 {
+    u8x16_replace_13(self, lane)
+  }
+  fn load_lane_13(self, address: U32) -> U8x16 {
+    u8x16_load_lane_13(address, self)
+  }
+  fn store_lane_13(self, address: U32) -> Unit {
+    u8x16_store_lane_13(address, self)
+  }
+  fn extract_14(self) -> U8 {
+    u8x16_extract_14(self)
+  }
+  fn replace_14(self, lane: U8) -> U8x16 {
+    u8x16_replace_14(self, lane)
+  }
+  fn load_lane_14(self, address: U32) -> U8x16 {
+    u8x16_load_lane_14(address, self)
+  }
+  fn store_lane_14(self, address: U32) -> Unit {
+    u8x16_store_lane_14(address, self)
+  }
+  fn extract_15(self) -> U8 {
+    u8x16_extract_15(self)
+  }
+  fn replace_15(self, lane: U8) -> U8x16 {
+    u8x16_replace_15(self, lane)
+  }
+  fn load_lane_15(self, address: U32) -> U8x16 {
+    u8x16_load_lane_15(address, self)
+  }
+  fn store_lane_15(self, address: U32) -> Unit {
+    u8x16_store_lane_15(address, self)
+  }
+  fn reverse(self) -> U8x16 {
+    u8x16_reverse(self)
+  }
+  fn zip_low(self, right: U8x16) -> U8x16 {
+    u8x16_zip_low(self, right)
+  }
+  fn zip_high(self, right: U8x16) -> U8x16 {
+    u8x16_zip_high(self, right)
+  }
+  fn unzip_even(self, right: U8x16) -> U8x16 {
+    u8x16_unzip_even(self, right)
+  }
+  fn unzip_odd(self, right: U8x16) -> U8x16 {
+    u8x16_unzip_odd(self, right)
+  }
+  fn concat_shift_1(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_1(self, right)
+  }
+  fn concat_shift_2(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_2(self, right)
+  }
+  fn concat_shift_3(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_3(self, right)
+  }
+  fn concat_shift_4(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_4(self, right)
+  }
+  fn concat_shift_5(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_5(self, right)
+  }
+  fn concat_shift_6(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_6(self, right)
+  }
+  fn concat_shift_7(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_7(self, right)
+  }
+  fn concat_shift_8(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_8(self, right)
+  }
+  fn concat_shift_9(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_9(self, right)
+  }
+  fn concat_shift_10(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_10(self, right)
+  }
+  fn concat_shift_11(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_11(self, right)
+  }
+  fn concat_shift_12(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_12(self, right)
+  }
+  fn concat_shift_13(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_13(self, right)
+  }
+  fn concat_shift_14(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_14(self, right)
+  }
+  fn concat_shift_15(self, right: U8x16) -> U8x16 {
+    u8x16_concat_shift_15(self, right)
+  }
+  fn add(self, right: U8x16) -> U8x16 {
+    u8x16_add(self, right)
+  }
+  fn sub(self, right: U8x16) -> U8x16 {
+    u8x16_sub(self, right)
+  }
+  fn min(self, right: U8x16) -> U8x16 {
+    u8x16_min_u(self, right)
+  }
+  fn max(self, right: U8x16) -> U8x16 {
+    u8x16_max_u(self, right)
+  }
+  fn avgr(self, right: U8x16) -> U8x16 {
+    u8x16_avgr_u(self, right)
+  }
+  fn add_sat(self, right: U8x16) -> U8x16 {
+    u8x16_add_sat_u(self, right)
+  }
+  fn sub_sat(self, right: U8x16) -> U8x16 {
+    u8x16_sub_sat_u(self, right)
+  }
+  fn eq(self, right: U8x16) -> U8x16 {
+    u8x16_eq(self, right)
+  }
+  fn ne(self, right: U8x16) -> U8x16 {
+    u8x16_ne(self, right)
+  }
+  fn lt(self, right: U8x16) -> U8x16 {
+    u8x16_lt_u(self, right)
+  }
+  fn le(self, right: U8x16) -> U8x16 {
+    u8x16_le_u(self, right)
+  }
+  fn gt(self, right: U8x16) -> U8x16 {
+    u8x16_gt_u(self, right)
+  }
+  fn ge(self, right: U8x16) -> U8x16 {
+    u8x16_ge_u(self, right)
+  }
+  fn popcnt(self) -> U8x16 {
+    u8x16_popcnt(self)
+  }
+  fn all_true(self) -> Bool {
+    u8x16_all_true(self)
+  }
+  fn bitmask(self) -> U32 {
+    u8x16_bitmask(self)
+  }
+  fn shl(self, count: U32) -> U8x16 {
+    u8x16_shl(self, count)
+  }
+  fn shr(self, count: U32) -> U8x16 {
+    u8x16_shr_u(self, count)
+  }
+}
+impl BitAnd for U8x16 {
+  fn bit_and(self, right: U8x16) -> U8x16 {
+    u8x16_and(self, right)
+  }
+}
+impl BitOr for U8x16 {
+  fn bit_or(self, right: U8x16) -> U8x16 {
+    u8x16_or(self, right)
+  }
+}
+impl BitXor for U8x16 {
+  fn bit_xor(self, right: U8x16) -> U8x16 {
+    u8x16_xor(self, right)
+  }
+}
+impl Add for U8x16 {
+  fn add(self, right: U8x16) -> U8x16 {
+    u8x16_add(self, right)
+  }
+}
+impl Sub for U8x16 {
+  fn sub(self, right: U8x16) -> U8x16 {
+    u8x16_sub(self, right)
+  }
+}

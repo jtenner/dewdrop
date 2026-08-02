@@ -1,0 +1,6 @@
+open dew.std.i32x4
+
+pub fn main() -> I32 {
+  let value = i32x4_splat(7i32)
+  value.replace_0(9i32).add(value).extract_0()
+}

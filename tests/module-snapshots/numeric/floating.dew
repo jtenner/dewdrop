@@ -1,0 +1,7 @@
+fn widen(value: F32) -> F64 {
+  value.into()
+}
+
+pub fn main() -> F64 {
+  widen(1.5f32 + 2.5f32) + (9.0f64 / 2.0f64)
+}

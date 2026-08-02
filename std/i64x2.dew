@@ -1,0 +1,194 @@
+builtin i64x2_from_v128(value: V128) -> I64x2 = "dew_reinterpret"
+builtin i64x2_to_v128(value: I64x2) -> V128 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_i8x16(value: I64x2) -> I8x16 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_u8x16(value: I64x2) -> U8x16 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_i16x8(value: I64x2) -> I16x8 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_u16x8(value: I64x2) -> U16x8 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_i32x4(value: I64x2) -> I32x4 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_u32x4(value: I64x2) -> U32x4 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_u64x2(value: I64x2) -> U64x2 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_f32x4(value: I64x2) -> F32x4 = "dew_reinterpret"
+builtin i64x2_reinterpret_as_f64x2(value: I64x2) -> F64x2 = "dew_reinterpret"
+builtin i64x2_load(address: U32) -> I64x2 = "dew_v128_load"
+builtin i64x2_store(address: U32, value: I64x2) -> Unit = "dew_v128_store"
+builtin i64x2_and(left: I64x2, right: I64x2) -> I64x2 = "v128_and"
+builtin i64x2_or(left: I64x2, right: I64x2) -> I64x2 = "v128_or"
+builtin i64x2_xor(left: I64x2, right: I64x2) -> I64x2 = "v128_xor"
+builtin i64x2_not(value: I64x2) -> I64x2 = "dew_v128_not"
+builtin i64x2_andnot(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_andnot"
+builtin i64x2_bitselect(yes: I64x2, no: I64x2, mask: I64x2) -> I64x2 = "dew_v128_bitselect"
+builtin i64x2_any_true(value: I64x2) -> Bool = "dew_v128_any_true"
+builtin i64x2_splat(value: I64) -> I64x2 = "dew_v128_splat_i64"
+builtin i64x2_load_splat(address: U32) -> I64x2 = "dew_i64x2_load_splat"
+builtin i64x2_load_extend_i32x2_s(address: U32) -> I64x2 = "dew_i64x2_load_extend_i32x2_s"
+builtin i64x2_load_zero(address: U32) -> I64x2 = "dew_i64x2_load_zero"
+builtin i64x2_extract_0(value: I64x2) -> I64 = "dew_i64x2_extract_0"
+builtin i64x2_replace_0(value: I64x2, lane: I64) -> I64x2 = "dew_i64x2_replace_0"
+builtin i64x2_load_lane_0(address: U32, value: I64x2) -> I64x2 = "dew_i64x2_load_lane_0"
+builtin i64x2_store_lane_0(address: U32, value: I64x2) -> Unit = "dew_i64x2_store_lane_0"
+builtin i64x2_extract_1(value: I64x2) -> I64 = "dew_i64x2_extract_1"
+builtin i64x2_replace_1(value: I64x2, lane: I64) -> I64x2 = "dew_i64x2_replace_1"
+builtin i64x2_load_lane_1(address: U32, value: I64x2) -> I64x2 = "dew_i64x2_load_lane_1"
+builtin i64x2_store_lane_1(address: U32, value: I64x2) -> Unit = "dew_i64x2_store_lane_1"
+builtin i64x2_extend_low_i32x4_s(value: I32x4) -> I64x2 = "dew_i64x2_extend_low_i32x4_s"
+builtin i64x2_extend_high_i32x4_s(value: I32x4) -> I64x2 = "dew_i64x2_extend_high_i32x4_s"
+builtin i64x2_extmul_low_i32x4_s(left: I32x4, right: I32x4) -> I64x2 = "dew_i64x2_extmul_low_i32x4_s"
+builtin i64x2_extmul_high_i32x4_s(left: I32x4, right: I32x4) -> I64x2 = "dew_i64x2_extmul_high_i32x4_s"
+builtin i64x2_add(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_add_i64"
+builtin i64x2_sub(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_sub_i64"
+builtin i64x2_mul(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_mul_i64"
+builtin i64x2_eq(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_eq_i64"
+builtin i64x2_ne(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_ne_i64"
+builtin i64x2_lt_s(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_lt_s_i64"
+builtin i64x2_le_s(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_le_s_i64"
+builtin i64x2_gt_s(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_gt_s_i64"
+builtin i64x2_ge_s(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_ge_s_i64"
+builtin i64x2_abs(value: I64x2) -> I64x2 = "dew_v128_abs_i64"
+builtin i64x2_neg(value: I64x2) -> I64x2 = "dew_v128_neg_i64"
+builtin i64x2_all_true(value: I64x2) -> Bool = "dew_v128_all_true_i64"
+builtin i64x2_bitmask(value: I64x2) -> U32 = "dew_v128_bitmask_i64"
+builtin i64x2_shl(value: I64x2, count: U32) -> I64x2 = "dew_v128_shl_i64"
+builtin i64x2_shr_s(value: I64x2, count: U32) -> I64x2 = "dew_v128_shr_s_i64"
+impl I64x2 {
+  fn to_v128(self) -> V128 {
+    i64x2_to_v128(self)
+  }
+  fn reinterpret_as_i8x16(self) -> I8x16 {
+    i64x2_reinterpret_as_i8x16(self)
+  }
+  fn reinterpret_as_u8x16(self) -> U8x16 {
+    i64x2_reinterpret_as_u8x16(self)
+  }
+  fn reinterpret_as_i16x8(self) -> I16x8 {
+    i64x2_reinterpret_as_i16x8(self)
+  }
+  fn reinterpret_as_u16x8(self) -> U16x8 {
+    i64x2_reinterpret_as_u16x8(self)
+  }
+  fn reinterpret_as_i32x4(self) -> I32x4 {
+    i64x2_reinterpret_as_i32x4(self)
+  }
+  fn reinterpret_as_u32x4(self) -> U32x4 {
+    i64x2_reinterpret_as_u32x4(self)
+  }
+  fn reinterpret_as_u64x2(self) -> U64x2 {
+    i64x2_reinterpret_as_u64x2(self)
+  }
+  fn reinterpret_as_f32x4(self) -> F32x4 {
+    i64x2_reinterpret_as_f32x4(self)
+  }
+  fn reinterpret_as_f64x2(self) -> F64x2 {
+    i64x2_reinterpret_as_f64x2(self)
+  }
+  fn not(self) -> I64x2 {
+    i64x2_not(self)
+  }
+  fn andnot(self, right: I64x2) -> I64x2 {
+    i64x2_andnot(self, right)
+  }
+  fn bitselect(self, no: I64x2, mask: I64x2) -> I64x2 {
+    i64x2_bitselect(self, no, mask)
+  }
+  fn any_true(self) -> Bool {
+    i64x2_any_true(self)
+  }
+  fn extract_0(self) -> I64 {
+    i64x2_extract_0(self)
+  }
+  fn replace_0(self, lane: I64) -> I64x2 {
+    i64x2_replace_0(self, lane)
+  }
+  fn load_lane_0(self, address: U32) -> I64x2 {
+    i64x2_load_lane_0(address, self)
+  }
+  fn store_lane_0(self, address: U32) -> Unit {
+    i64x2_store_lane_0(address, self)
+  }
+  fn extract_1(self) -> I64 {
+    i64x2_extract_1(self)
+  }
+  fn replace_1(self, lane: I64) -> I64x2 {
+    i64x2_replace_1(self, lane)
+  }
+  fn load_lane_1(self, address: U32) -> I64x2 {
+    i64x2_load_lane_1(address, self)
+  }
+  fn store_lane_1(self, address: U32) -> Unit {
+    i64x2_store_lane_1(address, self)
+  }
+  fn add(self, right: I64x2) -> I64x2 {
+    i64x2_add(self, right)
+  }
+  fn sub(self, right: I64x2) -> I64x2 {
+    i64x2_sub(self, right)
+  }
+  fn mul(self, right: I64x2) -> I64x2 {
+    i64x2_mul(self, right)
+  }
+  fn eq(self, right: I64x2) -> I64x2 {
+    i64x2_eq(self, right)
+  }
+  fn ne(self, right: I64x2) -> I64x2 {
+    i64x2_ne(self, right)
+  }
+  fn lt(self, right: I64x2) -> I64x2 {
+    i64x2_lt_s(self, right)
+  }
+  fn le(self, right: I64x2) -> I64x2 {
+    i64x2_le_s(self, right)
+  }
+  fn gt(self, right: I64x2) -> I64x2 {
+    i64x2_gt_s(self, right)
+  }
+  fn ge(self, right: I64x2) -> I64x2 {
+    i64x2_ge_s(self, right)
+  }
+  fn abs(self) -> I64x2 {
+    i64x2_abs(self)
+  }
+  fn neg(self) -> I64x2 {
+    i64x2_neg(self)
+  }
+  fn all_true(self) -> Bool {
+    i64x2_all_true(self)
+  }
+  fn bitmask(self) -> U32 {
+    i64x2_bitmask(self)
+  }
+  fn shl(self, count: U32) -> I64x2 {
+    i64x2_shl(self, count)
+  }
+  fn shr(self, count: U32) -> I64x2 {
+    i64x2_shr_s(self, count)
+  }
+}
+impl BitAnd for I64x2 {
+  fn bit_and(self, right: I64x2) -> I64x2 {
+    i64x2_and(self, right)
+  }
+}
+impl BitOr for I64x2 {
+  fn bit_or(self, right: I64x2) -> I64x2 {
+    i64x2_or(self, right)
+  }
+}
+impl BitXor for I64x2 {
+  fn bit_xor(self, right: I64x2) -> I64x2 {
+    i64x2_xor(self, right)
+  }
+}
+impl Add for I64x2 {
+  fn add(self, right: I64x2) -> I64x2 {
+    i64x2_add(self, right)
+  }
+}
+impl Sub for I64x2 {
+  fn sub(self, right: I64x2) -> I64x2 {
+    i64x2_sub(self, right)
+  }
+}
+impl Mul for I64x2 {
+  fn mul(self, right: I64x2) -> I64x2 {
+    i64x2_mul(self, right)
+  }
+}

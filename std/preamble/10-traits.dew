@@ -1,0 +1,64 @@
+pub trait Add {
+  fn add(self, right: Self) -> Self
+}
+pub trait Sub {
+  fn sub(self, right: Self) -> Self
+}
+pub trait Lte {
+  fn lte(self, right: Self) -> Bool
+}
+pub trait BitAnd {
+  fn bit_and(self, right: Self) -> Self
+}
+pub trait BitOr {
+  fn bit_or(self, right: Self) -> Self
+}
+pub trait BitXor {
+  fn bit_xor(self, right: Self) -> Self
+}
+pub trait Eq {
+  fn eq(self, right: Self) -> Bool
+}
+pub trait Ne {
+  fn ne(self, right: Self) -> Bool
+}
+pub trait Lt {
+  fn lt(self, right: Self) -> Bool
+}
+pub trait Gt {
+  fn gt(self, right: Self) -> Bool
+}
+pub trait Gte {
+  fn gte(self, right: Self) -> Bool
+}
+pub trait Shl {
+  fn shl(self, right: Self) -> Self
+}
+pub trait Shr {
+  fn shr(self, right: Self) -> Self
+}
+pub trait Mul {
+  fn mul(self, right: Self) -> Self
+}
+pub trait Div {
+  fn div(self, right: Self) -> Self
+}
+pub trait Rem {
+  fn rem(self, right: Self) -> Self
+}
+pub trait Into<t> {
+  fn into(self) -> t
+}
+
+pub trait Index<key, value> {
+  fn index(self, key: key) -> value
+}
+
+pub trait IndexSet<key, value> {
+  fn index_set(self, key: key, value: value) -> Unit
+}
+
+pub trait Hash {
+  fn hash(self) -> U64
+  fn hash_eq(self, right: Self) -> Bool
+}

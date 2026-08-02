@@ -1,0 +1,16 @@
+open dew.std.i32x4
+open dew.std.wasi
+
+fn prepare() -> I32 {
+  i32x4_store(5u32, i32x4_splat(33))
+  0
+}
+
+pub fn main() -> U32 {
+  prepare()
+  if i32x4_load(5u32).extract_2() == 33 {
+    wasi_fd_write(1u32, b"memory:i32x4")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

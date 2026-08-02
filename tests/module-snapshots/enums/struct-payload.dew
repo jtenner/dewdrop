@@ -1,0 +1,24 @@
+pub enum Message {
+  Idle
+  Move {
+    x: I32
+    y: I32
+  }
+}
+
+fn read(value: Message) -> I32 {
+  match value {
+    Message::Idle => 0
+    Message::Move {
+      x
+      y
+    } => x + y
+  }
+}
+
+pub fn main() -> I32 {
+  read(Message::Move {
+    y: 22
+    x: 20
+  })
+}

@@ -1,0 +1,5 @@
+open dew.std.wasi
+test "writes before main" {
+  wasi_fd_write(1u32, b"test\n")
+  assert(true, "test should pass")
+}

@@ -1,0 +1,24 @@
+open dew.std.wasi
+enum Code {
+  A
+  B
+  C
+  D
+}
+
+fn read(value: Code) -> I32 {
+  match value {
+    Code::A => 0
+    Code::B => 1
+    Code::C => 2
+    Code::D => 3
+  }
+}
+
+pub fn main() -> U32 {
+  if read(Code::D) == 3 {
+    wasi_fd_write(1u32, b"enum:dense-d")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

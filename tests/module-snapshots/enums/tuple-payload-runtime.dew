@@ -1,0 +1,20 @@
+open dew.std.wasi
+enum Choice {
+  First(I32)
+  Second(I32)
+}
+
+fn read(value: Choice) -> I32 {
+  match value {
+    Choice::First(item) => item
+    Choice::Second(item) => item
+  }
+}
+
+pub fn main() -> U32 {
+  if read(Choice::Second(42)) == 42 {
+    wasi_fd_write(1u32, b"enum:tuple-42")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

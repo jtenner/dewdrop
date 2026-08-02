@@ -1,0 +1,20 @@
+open dew.std.wasi
+fn choose(first: Bool, second: Bool) -> I32 {
+  if first {
+    if second {
+      1
+    } else {
+      2
+    }
+  } else {
+    3
+  }
+}
+
+pub fn main() -> U32 {
+  if choose(true, false) == 2 {
+    wasi_fd_write(1u32, b"control:nested-if")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

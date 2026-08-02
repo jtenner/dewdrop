@@ -1,0 +1,15 @@
+pub struct Pair {
+  left: I32
+  right: I32
+}
+
+fn sum(value: Pair) -> I32 {
+  value.left + value.right
+}
+
+pub fn main() -> I32 {
+  sum(Pair {
+    right: 22
+    left: 20
+  })
+}

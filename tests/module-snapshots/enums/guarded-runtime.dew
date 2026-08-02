@@ -1,0 +1,21 @@
+open dew.std.wasi
+enum OptionI32 {
+  None
+  Some(I32)
+}
+
+fn read(value: OptionI32) -> I32 {
+  match value {
+    OptionI32::Some(item) if false => 99
+    OptionI32::None => 0
+    OptionI32::Some(item) => item
+  }
+}
+
+pub fn main() -> U32 {
+  if read(OptionI32::Some(23)) == 23 {
+    wasi_fd_write(1u32, b"enum:guarded-23")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

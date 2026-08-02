@@ -1,0 +1,221 @@
+builtin f64x2_from_v128(value: V128) -> F64x2 = "dew_reinterpret"
+builtin f64x2_to_v128(value: F64x2) -> V128 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_i8x16(value: F64x2) -> I8x16 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_u8x16(value: F64x2) -> U8x16 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_i16x8(value: F64x2) -> I16x8 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_u16x8(value: F64x2) -> U16x8 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_i32x4(value: F64x2) -> I32x4 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_u32x4(value: F64x2) -> U32x4 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_i64x2(value: F64x2) -> I64x2 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_u64x2(value: F64x2) -> U64x2 = "dew_reinterpret"
+builtin f64x2_reinterpret_as_f32x4(value: F64x2) -> F32x4 = "dew_reinterpret"
+builtin f64x2_load(address: U32) -> F64x2 = "dew_v128_load"
+builtin f64x2_store(address: U32, value: F64x2) -> Unit = "dew_v128_store"
+builtin f64x2_and(left: F64x2, right: F64x2) -> F64x2 = "v128_and"
+builtin f64x2_or(left: F64x2, right: F64x2) -> F64x2 = "v128_or"
+builtin f64x2_xor(left: F64x2, right: F64x2) -> F64x2 = "v128_xor"
+builtin f64x2_not(value: F64x2) -> F64x2 = "dew_v128_not"
+builtin f64x2_andnot(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_andnot"
+builtin f64x2_bitselect(yes: F64x2, no: F64x2, mask: F64x2) -> F64x2 = "dew_v128_bitselect"
+builtin f64x2_any_true(value: F64x2) -> Bool = "dew_v128_any_true"
+builtin f64x2_splat(value: F64) -> F64x2 = "dew_v128_splat_f64"
+builtin f64x2_load_splat(address: U32) -> F64x2 = "dew_f64x2_load_splat"
+builtin f64x2_load_zero(address: U32) -> F64x2 = "dew_f64x2_load_zero"
+builtin f64x2_extract_0(value: F64x2) -> F64 = "dew_f64x2_extract_0"
+builtin f64x2_replace_0(value: F64x2, lane: F64) -> F64x2 = "dew_f64x2_replace_0"
+builtin f64x2_load_lane_0(address: U32, value: F64x2) -> F64x2 = "dew_f64x2_load_lane_0"
+builtin f64x2_store_lane_0(address: U32, value: F64x2) -> Unit = "dew_f64x2_store_lane_0"
+builtin f64x2_extract_1(value: F64x2) -> F64 = "dew_f64x2_extract_1"
+builtin f64x2_replace_1(value: F64x2, lane: F64) -> F64x2 = "dew_f64x2_replace_1"
+builtin f64x2_load_lane_1(address: U32, value: F64x2) -> F64x2 = "dew_f64x2_load_lane_1"
+builtin f64x2_store_lane_1(address: U32, value: F64x2) -> Unit = "dew_f64x2_store_lane_1"
+builtin f64x2_convert_low_i32x4_s(value: I32x4) -> F64x2 = "dew_f64x2_convert_low_i32x4_s"
+builtin f64x2_convert_low_i32x4_u(value: U32x4) -> F64x2 = "dew_f64x2_convert_low_i32x4_u"
+builtin f64x2_promote_low_f32x4(value: F32x4) -> F64x2 = "dew_f64x2_promote_low_f32x4"
+builtin f64x2_add(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_add_f64"
+builtin f64x2_sub(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_sub_f64"
+builtin f64x2_mul(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_mul_f64"
+builtin f64x2_div(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_div_f64"
+builtin f64x2_min(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_min_f64"
+builtin f64x2_max(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_max_f64"
+builtin f64x2_pmin(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_pmin_f64"
+builtin f64x2_pmax(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_pmax_f64"
+builtin f64x2_eq(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_eq_f64"
+builtin f64x2_ne(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_ne_f64"
+builtin f64x2_lt(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_lt_f64"
+builtin f64x2_le(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_le_f64"
+builtin f64x2_gt(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_gt_f64"
+builtin f64x2_ge(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_ge_f64"
+builtin f64x2_abs(value: F64x2) -> F64x2 = "dew_v128_abs_f64"
+builtin f64x2_neg(value: F64x2) -> F64x2 = "dew_v128_neg_f64"
+builtin f64x2_sqrt(value: F64x2) -> F64x2 = "dew_v128_sqrt_f64"
+builtin f64x2_ceil(value: F64x2) -> F64x2 = "dew_v128_ceil_f64"
+builtin f64x2_floor(value: F64x2) -> F64x2 = "dew_v128_floor_f64"
+builtin f64x2_trunc(value: F64x2) -> F64x2 = "dew_v128_trunc_f64"
+builtin f64x2_nearest(value: F64x2) -> F64x2 = "dew_v128_nearest_f64"
+impl F64x2 {
+  fn to_v128(self) -> V128 {
+    f64x2_to_v128(self)
+  }
+  fn reinterpret_as_i8x16(self) -> I8x16 {
+    f64x2_reinterpret_as_i8x16(self)
+  }
+  fn reinterpret_as_u8x16(self) -> U8x16 {
+    f64x2_reinterpret_as_u8x16(self)
+  }
+  fn reinterpret_as_i16x8(self) -> I16x8 {
+    f64x2_reinterpret_as_i16x8(self)
+  }
+  fn reinterpret_as_u16x8(self) -> U16x8 {
+    f64x2_reinterpret_as_u16x8(self)
+  }
+  fn reinterpret_as_i32x4(self) -> I32x4 {
+    f64x2_reinterpret_as_i32x4(self)
+  }
+  fn reinterpret_as_u32x4(self) -> U32x4 {
+    f64x2_reinterpret_as_u32x4(self)
+  }
+  fn reinterpret_as_i64x2(self) -> I64x2 {
+    f64x2_reinterpret_as_i64x2(self)
+  }
+  fn reinterpret_as_u64x2(self) -> U64x2 {
+    f64x2_reinterpret_as_u64x2(self)
+  }
+  fn reinterpret_as_f32x4(self) -> F32x4 {
+    f64x2_reinterpret_as_f32x4(self)
+  }
+  fn not(self) -> F64x2 {
+    f64x2_not(self)
+  }
+  fn andnot(self, right: F64x2) -> F64x2 {
+    f64x2_andnot(self, right)
+  }
+  fn bitselect(self, no: F64x2, mask: F64x2) -> F64x2 {
+    f64x2_bitselect(self, no, mask)
+  }
+  fn any_true(self) -> Bool {
+    f64x2_any_true(self)
+  }
+  fn extract_0(self) -> F64 {
+    f64x2_extract_0(self)
+  }
+  fn replace_0(self, lane: F64) -> F64x2 {
+    f64x2_replace_0(self, lane)
+  }
+  fn load_lane_0(self, address: U32) -> F64x2 {
+    f64x2_load_lane_0(address, self)
+  }
+  fn store_lane_0(self, address: U32) -> Unit {
+    f64x2_store_lane_0(address, self)
+  }
+  fn extract_1(self) -> F64 {
+    f64x2_extract_1(self)
+  }
+  fn replace_1(self, lane: F64) -> F64x2 {
+    f64x2_replace_1(self, lane)
+  }
+  fn load_lane_1(self, address: U32) -> F64x2 {
+    f64x2_load_lane_1(address, self)
+  }
+  fn store_lane_1(self, address: U32) -> Unit {
+    f64x2_store_lane_1(address, self)
+  }
+  fn add(self, right: F64x2) -> F64x2 {
+    f64x2_add(self, right)
+  }
+  fn sub(self, right: F64x2) -> F64x2 {
+    f64x2_sub(self, right)
+  }
+  fn mul(self, right: F64x2) -> F64x2 {
+    f64x2_mul(self, right)
+  }
+  fn div(self, right: F64x2) -> F64x2 {
+    f64x2_div(self, right)
+  }
+  fn min(self, right: F64x2) -> F64x2 {
+    f64x2_min(self, right)
+  }
+  fn max(self, right: F64x2) -> F64x2 {
+    f64x2_max(self, right)
+  }
+  fn pmin(self, right: F64x2) -> F64x2 {
+    f64x2_pmin(self, right)
+  }
+  fn pmax(self, right: F64x2) -> F64x2 {
+    f64x2_pmax(self, right)
+  }
+  fn eq(self, right: F64x2) -> F64x2 {
+    f64x2_eq(self, right)
+  }
+  fn ne(self, right: F64x2) -> F64x2 {
+    f64x2_ne(self, right)
+  }
+  fn lt(self, right: F64x2) -> F64x2 {
+    f64x2_lt(self, right)
+  }
+  fn le(self, right: F64x2) -> F64x2 {
+    f64x2_le(self, right)
+  }
+  fn gt(self, right: F64x2) -> F64x2 {
+    f64x2_gt(self, right)
+  }
+  fn ge(self, right: F64x2) -> F64x2 {
+    f64x2_ge(self, right)
+  }
+  fn abs(self) -> F64x2 {
+    f64x2_abs(self)
+  }
+  fn neg(self) -> F64x2 {
+    f64x2_neg(self)
+  }
+  fn sqrt(self) -> F64x2 {
+    f64x2_sqrt(self)
+  }
+  fn ceil(self) -> F64x2 {
+    f64x2_ceil(self)
+  }
+  fn floor(self) -> F64x2 {
+    f64x2_floor(self)
+  }
+  fn trunc(self) -> F64x2 {
+    f64x2_trunc(self)
+  }
+  fn nearest(self) -> F64x2 {
+    f64x2_nearest(self)
+  }
+}
+impl BitAnd for F64x2 {
+  fn bit_and(self, right: F64x2) -> F64x2 {
+    f64x2_and(self, right)
+  }
+}
+impl BitOr for F64x2 {
+  fn bit_or(self, right: F64x2) -> F64x2 {
+    f64x2_or(self, right)
+  }
+}
+impl BitXor for F64x2 {
+  fn bit_xor(self, right: F64x2) -> F64x2 {
+    f64x2_xor(self, right)
+  }
+}
+impl Add for F64x2 {
+  fn add(self, right: F64x2) -> F64x2 {
+    f64x2_add(self, right)
+  }
+}
+impl Sub for F64x2 {
+  fn sub(self, right: F64x2) -> F64x2 {
+    f64x2_sub(self, right)
+  }
+}
+impl Mul for F64x2 {
+  fn mul(self, right: F64x2) -> F64x2 {
+    f64x2_mul(self, right)
+  }
+}
+impl Div for F64x2 {
+  fn div(self, right: F64x2) -> F64x2 {
+    f64x2_div(self, right)
+  }
+}

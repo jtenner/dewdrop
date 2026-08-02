@@ -1,0 +1,5 @@
+open dew.std.string
+
+pub fn message() -> String {
+  "modules:multi-module"
+}

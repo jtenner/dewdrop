@@ -1,0 +1,16 @@
+open dew.std.string
+open dew.std.wasi
+
+struct Message {
+  text: String
+}
+
+fn read(message: Message) -> String {
+  message.text
+}
+
+pub fn main() -> U32 {
+  wasi_fd_write(1u32, read(Message {
+    text: "struct:string"
+  }).as_bytes())
+}

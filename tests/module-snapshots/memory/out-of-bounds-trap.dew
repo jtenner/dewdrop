@@ -1,0 +1,3 @@
+pub fn main() -> I32 {
+  i32_load(65535u32)
+}

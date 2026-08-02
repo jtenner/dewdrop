@@ -1,0 +1,12 @@
+open dew.std.wasi
+fn widen(value: U16) -> I32 {
+  value.into()
+}
+
+pub fn main() -> U32 {
+  if widen(65535u16 + 1u16) == 0 {
+    wasi_fd_write(1u32, b"numeric:u16-wrap")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

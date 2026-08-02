@@ -1,0 +1,29 @@
+impl StringBuilder {
+  fn new() -> StringBuilder {
+    string_builder_new()
+  }
+  fn with_capacity(capacity: U32) -> StringBuilder {
+    string_builder_with_capacity_raw(capacity)
+  }
+  fn byte_length(self) -> U32 {
+    string_builder_byte_length(self)
+  }
+  fn append(self, value: String) -> Unit {
+    string_builder_append(self, value)
+  }
+  fn append_view(self, value: StringView) -> Unit {
+    string_builder_append_view(self, value)
+  }
+  fn append_ascii(self, byte: U8) -> Unit {
+    string_builder_append_ascii(self, byte)
+  }
+  fn append_scalar(self, scalar: U32) -> Unit {
+    string_builder_append_scalar(self, scalar)
+  }
+  fn append_checked(self, bytes: Bytes) -> Unit {
+    string_builder_append(self, bytes_to_string(bytes))
+  }
+  fn finish(self) -> String {
+    string_builder_finish(self)
+  }
+}

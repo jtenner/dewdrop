@@ -1,0 +1,388 @@
+///|
+pub enum BlockItem {
+  LetItem(Bool, String, UInt64, Expr, UInt64)
+  ReturnItem(Expr?, UInt64)
+  IndexSetItem(Expr, Expr, UInt64)
+  ExpressionItem(Expr, UInt64)
+} derive(Eq, Debug)
+
+///|
+pub fn BlockItem::offset(self : BlockItem) -> UInt64 {
+  match self {
+    LetItem(_, _, _, _, offset)
+    | ReturnItem(_, offset)
+    | IndexSetItem(_, _, offset)
+    | ExpressionItem(_, offset) => offset
+  }
+}
+
+///|
+pub struct Block {
+  items : Array[BlockItem]
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub fn Block::tail_expression(self : Block) -> Expr? {
+  guard self.items.length() > 0 else { return None }
+  match self.items[self.items.length() - 1] {
+    ExpressionItem(expression, _) => Some(expression)
+    _ => None
+  }
+}
+
+///|
+fn Parser::finish_block_item_line(
+  self : Parser,
+  open_offset : UInt64,
+) -> Result[Unit, RecoveryFailure] {
+  match self.peek_token() {
+    None => Err(expression_failure(UnclosedBlock(open_offset)))
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Newline => {
+          self.consume_lookahead()
+          Ok(())
+        }
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ =>
+          Err(
+            expression_failure(
+              ExpectedBlockItemNewline(Some(token), open_offset),
+            ),
+          )
+      }
+  }
+}
+
+///|
+fn Parser::parse_block_let_item(
+  self : Parser,
+  open_offset : UInt64,
+  let_offset : UInt64,
+) -> Result[BlockItem, RecoveryFailure] {
+  let mutable_ = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Keyword(@tokenizer.Mut) => {
+          self.consume_lookahead()
+          true
+        }
+        _ => false
+      }
+    None => false
+  }
+  let (name, name_offset) = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Identifier(name) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          (name, offset)
+        }
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ =>
+          return Err(expression_failure(ExpectedBlockBindingName(Some(token))))
+      }
+    None => return Err(expression_failure(ExpectedBlockBindingName(None)))
+  }
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Equal) => self.consume_lookahead()
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ => return Err(expression_failure(ExpectedBlockEqual(Some(token))))
+      }
+    None => return Err(expression_failure(ExpectedBlockEqual(None)))
+  }
+  let value = match self.parse_expression_recoverable() {
+    Ok(expression) => expression
+    Err(error) => return Err(error)
+  }
+  match self.finish_block_item_line(open_offset) {
+    Ok(_) => Ok(LetItem(mutable_, name, name_offset, value, let_offset))
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn Parser::parse_block_return_item(
+  self : Parser,
+  open_offset : UInt64,
+  return_offset : UInt64,
+) -> Result[BlockItem, RecoveryFailure] {
+  if self.consume_newline_token() {
+    return Ok(ReturnItem(None, return_offset))
+  }
+  let value = match self.parse_expression_recoverable() {
+    Ok(expression) => expression
+    Err(error) => return Err(error)
+  }
+  match self.finish_block_item_line(open_offset) {
+    Ok(_) => Ok(ReturnItem(Some(value), return_offset))
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn Parser::parse_block_after_left_brace(
+  self : Parser,
+  open_offset : UInt64,
+) -> Result[Block, RecoveryFailure] {
+  let items : Array[BlockItem] = []
+  if self.consume_right_brace() {
+    return Ok({ items, offset: open_offset })
+  }
+  guard self.consume_newline_token() else {
+    return Err(
+      expression_failure(ExpectedBlockNewline(self.peek_token(), open_offset)),
+    )
+  }
+  self.skip_newlines()
+  while true {
+    if self.consume_right_brace() {
+      return Ok({ items, offset: open_offset })
+    }
+    let token = match self.peek_token() {
+      Some(value) => value
+      None => return Err(expression_failure(UnclosedBlock(open_offset)))
+    }
+    let offset = token.offset()
+    let item = match token.kind() {
+      @tokenizer.Error(error) => {
+        self.consume_lookahead()
+        return Err(expression_failure(LexicalError(error, offset)))
+      }
+      @tokenizer.Keyword(@tokenizer.Let) => {
+        self.consume_lookahead()
+        match self.parse_block_let_item(open_offset, offset) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+      }
+      @tokenizer.Keyword(@tokenizer.Return) => {
+        self.consume_lookahead()
+        match self.parse_block_return_item(open_offset, offset) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+      }
+      _ => {
+        let expression = match self.parse_expression_recoverable() {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        let item = match self.peek_token() {
+          Some(equal) =>
+            match equal.kind() {
+              @tokenizer.Symbol(@tokenizer.Equal) => {
+                match expression {
+                  IndexExpr(_, _, _) => ()
+                  _ =>
+                    return Err(
+                      expression_failure(ExpectedIndexSetTarget(equal, offset)),
+                    )
+                }
+                let equal_offset = equal.offset()
+                self.consume_lookahead()
+                let value = match self.parse_expression_recoverable() {
+                  Ok(value) => value
+                  Err(error) => return Err(error)
+                }
+                IndexSetItem(expression, value, equal_offset)
+              }
+              _ => ExpressionItem(expression, offset)
+            }
+          None => ExpressionItem(expression, offset)
+        }
+        match self.finish_block_item_line(open_offset) {
+          Ok(_) => item
+          Err(error) => return Err(error)
+        }
+      }
+    }
+    items.push(item)
+    self.skip_newlines()
+  } nobreak {
+    abort("unreachable block parser termination")
+  }
+}
+
+///|
+fn Parser::consume_expression_left_brace(
+  self : Parser,
+  if_offset : UInt64,
+) -> Result[UInt64, RecoveryFailure] {
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          Ok(offset)
+        }
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ => Err(expression_failure(ExpectedIfBody(Some(token), if_offset)))
+      }
+    None => Err(expression_failure(ExpectedIfBody(None, if_offset)))
+  }
+}
+
+///|
+fn Parser::parse_if_expression(
+  self : Parser,
+  if_offset : UInt64,
+) -> Result[Expr, RecoveryFailure] {
+  let condition = match self.parse_expression_before_block() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let then_open = match self.consume_expression_left_brace(if_offset) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let then_block = match self.parse_block_after_left_brace(then_open) {
+    Ok(value) => value
+    Err(error) => return Err(error.inside_brace())
+  }
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Keyword(@tokenizer.Else) => self.consume_lookahead()
+        _ => return Ok(IfExpr(condition, then_block, None, if_offset))
+      }
+    None => return Ok(IfExpr(condition, then_block, None, if_offset))
+  }
+  let next_if_offset = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+          let open_offset = token.offset()
+          self.consume_lookahead()
+          let else_block = match
+            self.parse_block_after_left_brace(open_offset) {
+            Ok(value) => value
+            Err(error) => return Err(error.inside_brace())
+          }
+          return Ok(
+            IfExpr(
+              condition,
+              then_block,
+              Some(BlockExpr(else_block)),
+              if_offset,
+            ),
+          )
+        }
+        @tokenizer.Keyword(@tokenizer.If) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          offset
+        }
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ =>
+          return Err(
+            expression_failure(ExpectedElseBranch(Some(token), if_offset)),
+          )
+      }
+    None => return Err(expression_failure(ExpectedElseBranch(None, if_offset)))
+  }
+  let conditions : Array[Expr] = [condition]
+  let blocks : Array[Block] = [then_block]
+  let offsets : Array[UInt64] = [if_offset]
+  let mut current_if_offset = next_if_offset
+  let mut final_else : Expr? = None
+  while true {
+    let current_condition = match self.parse_expression_before_block() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let current_open = match
+      self.consume_expression_left_brace(current_if_offset) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let current_block = match self.parse_block_after_left_brace(current_open) {
+      Ok(value) => value
+      Err(error) => return Err(error.inside_brace())
+    }
+    conditions.push(current_condition)
+    blocks.push(current_block)
+    offsets.push(current_if_offset)
+    match self.peek_token() {
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Keyword(@tokenizer.Else) => {
+            self.consume_lookahead()
+            match self.peek_token() {
+              Some(next) =>
+                match next.kind() {
+                  @tokenizer.Keyword(@tokenizer.If) => {
+                    current_if_offset = next.offset()
+                    self.consume_lookahead()
+                  }
+                  @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+                    let open_offset = next.offset()
+                    self.consume_lookahead()
+                    let else_block = match
+                      self.parse_block_after_left_brace(open_offset) {
+                      Ok(value) => value
+                      Err(error) => return Err(error.inside_brace())
+                    }
+                    final_else = Some(BlockExpr(else_block))
+                    break
+                  }
+                  @tokenizer.Error(error) => {
+                    let offset = next.offset()
+                    self.consume_lookahead()
+                    return Err(expression_failure(LexicalError(error, offset)))
+                  }
+                  _ =>
+                    return Err(
+                      expression_failure(
+                        ExpectedElseBranch(Some(next), current_if_offset),
+                      ),
+                    )
+                }
+              None =>
+                return Err(
+                  expression_failure(
+                    ExpectedElseBranch(None, current_if_offset),
+                  ),
+                )
+            }
+          }
+          _ => break
+        }
+      None => break
+    }
+  }
+  let mut branch = final_else
+  let mut index = conditions.length()
+  while index > 0 {
+    index -= 1
+    branch = Some(
+      IfExpr(conditions[index], blocks[index], branch, offsets[index]),
+    )
+  }
+  Ok(branch.unwrap())
+}

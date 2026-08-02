@@ -1,0 +1,19 @@
+{
+  "errors": [
+    "UnknownPatternConstructor(25, 0, 1374)",
+    "NoMatchingMethod(199, 10, 227)",
+    "NoMatchingMethod(198, 6, 244)",
+    "NoMatchingMethod(199, 25, 339)",
+    "NoMatchingMethod(198, 17, 360)",
+    "AmbiguousMethod(7, 45, 12884901888002, 18446462598732841485, 9, 659)",
+    "AmbiguousMethod(10, 45, 12884901888003, 18446462598732841486, 9, 659)",
+    "InvalidPatternConstructor(2, 1378)",
+    "UnresolvedLocalType(12884901888002, 4, 1379)",
+    "UnresolvedExpressionType(137, 1396)",
+    "NoMatchingMethod(39, 139, 1402)",
+    "AmbiguousMethod(7, 172, 12884901888002, 18446462598732841485, 9, 1678)",
+    "AmbiguousMethod(\n  10,\n  172,\n  12884901888003,\n  18446462598732841486,\n  9,\n  1678,\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -1,0 +1,544 @@
+open dew.std.string
+open dew.std.string_builder
+open dew.std.bytes
+open dew.std.bytes_builder
+
+test "String byte_length counts UTF8 bytes" {
+  assert("aλ🌍".byte_length() == 7u32, "unexpected String byte length")
+}
+
+test "String utf16_length counts UTF16 code units" {
+  assert("aλ🌍".utf16_length() == 4u32, "unexpected UTF16 length")
+}
+
+test "String equality handles equal multichunk values" {
+  assert(
+    "0123456789abcdef-second 🌍".equals("0123456789abcdef-second 🌍"),
+    "equal Strings must compare equal",
+  )
+}
+
+test "String equality rejects different tails" {
+  assert(
+    !"0123456789abcdef-tail-a".equals("0123456789abcdef-tail-b"),
+    "different Strings must not compare equal",
+  )
+}
+
+test "String byte_at returns raw UTF8 bytes" {
+  assert("λ".byte_at(0u32) == 206u8, "wrong UTF8 lead byte")
+  assert("λ".byte_at(1u32) == 187u8, "wrong UTF8 continuation byte")
+}
+
+test "String as_bytes preserves exact content" {
+  assert(
+    "shared 🌍".as_bytes().equals(b"shared 🌍"),
+    "String.as_bytes must preserve content",
+  )
+}
+
+test "StringView shares an unaligned UTF8 range" {
+  let source = "x0123456789abcdefλ-tail"
+  let view = source.view(17u32, 2u32)
+  assert(view.byte_length() == 2u32, "wrong StringView byte length")
+  assert(view.byte_at(0u32) == 206u8, "wrong StringView lead byte")
+  assert(view.byte_at(1u32) == 187u8, "wrong StringView continuation byte")
+  assert(view.utf16_length() == 1u32, "wrong StringView UTF16 length")
+  assert(view.to_string().equals("λ"), "StringView changed text")
+  assert(view.as_bytes().equals(b"λ"), "StringView changed bytes")
+}
+
+test "StringView equality handles different backing offsets" {
+  let left = "prefix-shared-suffix".view(7u32, 6u32)
+  let right = "xsharedy".view(1u32, 6u32)
+  assert(left.equals(right), "equal StringViews must compare equal")
+}
+
+test "StringView slicing remains a shared normalized range" {
+  let nested = "xxsharedyy".view(2u32, 6u32).view(1u32, 4u32)
+  assert(nested.to_string().equals("hare"), "nested StringView changed text")
+}
+
+test "String subarray uses checked end-exclusive UTF8 boundaries" {
+  let view = "xxλ世界yy".subarray(2u32, 10u32)
+  assert(view.to_string().equals("λ世界"), "wrong String subarray")
+}
+
+test "String slice returns an exact copied String" {
+  let sliced = "prefix-λ世界-suffix".slice(7u32, 15u32)
+  assert(sliced.equals("λ世界"), "wrong String slice")
+}
+
+test "String and StringView compact preserve logical ranges" {
+  let ranged = "prefix-shared-suffix".view(7u32, 6u32)
+  assert(ranged.compact().equals("shared"), "wrong compacted StringView")
+  assert(
+    ranged.to_string().compact().equals("shared"),
+    "wrong compacted nonzero-start String",
+  )
+}
+
+test "String concat copies exact logical ranges" {
+  let left = "xxabcdefghijklmnopqrstu".view(2u32, 17u32).to_string()
+  let right = "YYrstuvwxyzZZ".view(2u32, 9u32).to_string()
+  assert(left.concat(right).equals("abcdefghijklmnopqrstuvwxyz"), "wrong concat")
+}
+
+test "String concat_view accepts an unaligned shared view" {
+  let right = "padding-λ世界🌍-tail".view(8u32, 12u32)
+  assert("prefix ".concat_view(right).equals("prefix λ世界🌍"), "wrong view concat")
+}
+
+test "String concat handles empty operands" {
+  assert("".concat("").equals(""), "wrong empty concat")
+  assert("abc".concat("").equals("abc"), "wrong empty right concat")
+  assert("".concat("abc").equals("abc"), "wrong empty left concat")
+}
+
+test "String find and contains return UTF8 byte offsets" {
+  let value = "xxprefix λ世界🌍 suffix λ世界yy".view(2u32, 35u32).to_string()
+  let short_index = match value.find("λ世界") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  let long_index = match value.find("λ世界🌍 suffix") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(short_index == 7u32, "wrong String short-search byte offset")
+  assert(long_index == 7u32, "wrong String long-search byte offset")
+  assert(value.contains("🌍 suffix"), "String contains missed Unicode")
+  assert(!value.contains("🌎 suffix"), "String contains reported absent Unicode")
+}
+
+test "String find_view and contains_view accept unaligned needles" {
+  let value = "prefix λ世界🌍 suffix"
+  let needle = "xxλ世界🌍yy".view(2u32, 12u32)
+  let index = match value.find_view(needle) {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(index == 7u32, "wrong String plus StringView byte offset")
+  assert(value.contains_view(needle), "String contains_view missed needle")
+  let empty_at_zero = match value.find_view("".view(0u32, 0u32)) {
+    Option::Some(0u32) => true
+    _ => false
+  }
+  assert(empty_at_zero, "empty view needle did not match")
+}
+
+test "String starts_with and ends_with cover String and StringView" {
+  let value = "λ世界 body 🌍"
+  let prefix = "xxλ世界yy".view(2u32, 8u32)
+  let suffix = "xx🌍yy".view(2u32, 4u32)
+  assert(value.starts_with("λ世界"), "String prefix did not match")
+  assert(value.starts_with_view(prefix), "StringView prefix did not match")
+  assert(value.ends_with("🌍"), "String suffix did not match")
+  assert(value.ends_with_view(suffix), "StringView suffix did not match")
+  assert(!value.starts_with("世界"), "incorrect String prefix matched")
+  assert(!value.ends_with("body"), "incorrect String suffix matched")
+}
+
+test "StringView matching covers StringView and String operands" {
+  let value = "xxprefix λ世界🌍 suffixyy".view(2u32, 26u32)
+  let view_needle = "zzλ世界🌍qq".view(2u32, 12u32)
+  let index_view = match value.find(view_needle) {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  let index_string = match value.find_string("🌍 suffix") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(index_view == 7u32, "wrong StringView plus view byte offset")
+  assert(index_string == 15u32, "wrong StringView plus String byte offset")
+  assert(value.contains(view_needle), "StringView contains missed view")
+  assert(value.contains_string("λ世界"), "StringView contains_string missed String")
+  assert(value.starts_with("xxprefixyy".view(2u32, 6u32)), "StringView prefix missed view")
+  assert(value.starts_with_string("prefix"), "StringView prefix missed String")
+  assert(value.ends_with("xxsuffixyy".view(2u32, 6u32)), "StringView suffix missed view")
+  assert(value.ends_with_string("suffix"), "StringView suffix missed String")
+}
+
+test "String and StringView matching handle empty needles" {
+  let string = "xxλ世界yy".view(2u32, 8u32).to_string()
+  let view = "xxλ世界yy".view(2u32, 8u32)
+  let empty_string = ""
+  let empty_view = "".view(0u32, 0u32)
+  let a = match string.find(empty_string) {
+    Option::Some(0u32) => true
+    _ => false
+  }
+  let b = match string.find_view(empty_view) {
+    Option::Some(0u32) => true
+    _ => false
+  }
+  let c = match view.find(empty_view) {
+    Option::Some(0u32) => true
+    _ => false
+  }
+  let d = match view.find_string(empty_string) {
+    Option::Some(0u32) => true
+    _ => false
+  }
+  assert(a, "String empty String needle did not match at zero")
+  assert(b, "String empty view needle did not match at zero")
+  assert(c, "view empty view needle did not match at zero")
+  assert(d, "view empty String needle did not match at zero")
+  assert(string.contains(empty_string), "String did not contain empty String")
+  assert(string.contains_view(empty_view), "String did not contain empty view")
+  assert(view.contains(empty_view), "view did not contain empty view")
+  assert(view.contains_string(empty_string), "view did not contain empty String")
+  assert(string.starts_with(empty_string), "String empty prefix failed")
+  assert(string.starts_with_view(empty_view), "String empty view prefix failed")
+  assert(view.starts_with(empty_view), "view empty prefix failed")
+  assert(view.starts_with_string(empty_string), "view empty String prefix failed")
+  assert(string.ends_with(empty_string), "String empty suffix failed")
+  assert(string.ends_with_view(empty_view), "String empty view suffix failed")
+  assert(view.ends_with(empty_view), "view empty suffix failed")
+  assert(view.ends_with_string(empty_string), "view empty String suffix failed")
+}
+
+test "String and StringView matching reject overlong needles" {
+  let string = "xxλyy".view(2u32, 2u32).to_string()
+  let view = "xxλyy".view(2u32, 2u32)
+  let long_string = "λ世界"
+  let long_view = "zzλ世界qq".view(2u32, 8u32)
+  let a = match string.find(long_string) {
+    Option::None => true
+    _ => false
+  }
+  let b = match string.find_view(long_view) {
+    Option::None => true
+    _ => false
+  }
+  let c = match view.find(long_view) {
+    Option::None => true
+    _ => false
+  }
+  let d = match view.find_string(long_string) {
+    Option::None => true
+    _ => false
+  }
+  assert(a, "String overlong String needle matched")
+  assert(b, "String overlong view needle matched")
+  assert(c, "view overlong view needle matched")
+  assert(d, "view overlong String needle matched")
+  assert(!string.contains(long_string), "String contained overlong String")
+  assert(!string.contains_view(long_view), "String contained overlong view")
+  assert(!view.contains(long_view), "view contained overlong view")
+  assert(!view.contains_string(long_string), "view contained overlong String")
+  assert(!string.starts_with(long_string), "String accepted overlong prefix")
+  assert(!string.ends_with_view(long_view), "String accepted overlong suffix")
+  assert(!view.starts_with_string(long_string), "view accepted overlong prefix")
+  assert(!view.ends_with(long_view), "view accepted overlong suffix")
+}
+
+test "String search never begins inside UTF8 continuation bytes" {
+  let value = "éλ世界🌍"
+  assert(!value.contains("©"), "String search matched inside a scalar")
+  assert(!value.contains("¢"), "String search matched continuation bytes")
+  let view = "xxéλ世界🌍yy".view(2u32, 14u32)
+  assert(!view.contains_string("©"), "StringView search matched inside a scalar")
+}
+
+test "StringView subarray and slice use end-exclusive ranges" {
+  let outer = "xxabcdefghyy".view(2u32, 8u32)
+  assert(
+    outer.subarray(2u32, 6u32).to_string().equals("cdef"),
+    "wrong StringView subarray",
+  )
+  assert(outer.slice(2u32, 6u32).equals("cdef"), "wrong StringView slice")
+}
+
+test "StringBuilder appends Strings and views" {
+  let builder = StringBuilder::new()
+  builder.append("hello ")
+  builder.append_view("xλy".view(1u32, 2u32))
+  builder.append(" world")
+  assert(builder.byte_length() == 14u32, "wrong builder byte length")
+  assert(builder.finish().equals("hello λ world"), "wrong builder result")
+}
+
+test "StringBuilder appends ASCII bytes without breaking UTF8" {
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append_ascii(0u8)
+  builder.append_ascii(65u8)
+  builder.append_ascii(127u8)
+  assert(
+    builder.finish().equals("\x00A\x7F"),
+    "StringBuilder ASCII append changed content",
+  )
+}
+
+test "StringBuilder encodes Unicode scalar boundaries" {
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append_scalar(0u32)
+  builder.append_scalar(127u32)
+  builder.append_scalar(128u32)
+  builder.append_scalar(2047u32)
+  builder.append_scalar(2048u32)
+  builder.append_scalar(55295u32)
+  builder.append_scalar(57344u32)
+  builder.append_scalar(65535u32)
+  builder.append_scalar(65536u32)
+  builder.append_scalar(1114111u32)
+  assert(
+    builder.finish().equals(
+      "\x00\x7F\xC2\x80\xDF\xBF\xE0\xA0\x80\xED\x9F\xBF\xEE\x80\x80\xEF\xBF\xBF\xF0\x90\x80\x80\xF4\x8F\xBF\xBF",
+    ),
+    "StringBuilder scalar encoding changed content",
+  )
+}
+
+test "StringBuilder checked Bytes append validates once" {
+  let builder = StringBuilder::new()
+  builder.append("prefix ")
+  builder.append_checked(b"λ 世界 🌍")
+  assert(
+    builder.finish().equals("prefix λ 世界 🌍"),
+    "StringBuilder checked append changed content",
+  )
+}
+
+test "StringBuilder grows beyond its initial capacity" {
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append("0123456789abcdef")
+  builder.append("-second-0123456789abcdef")
+  builder.append("-third-0123456789abcdef")
+  assert(
+    builder.finish().equals(
+      "0123456789abcdef-second-0123456789abcdef-third-0123456789abcdef",
+    ),
+    "StringBuilder growth changed content",
+  )
+}
+
+test "BytesBuilder appends arbitrary bytes and individual bytes" {
+  let builder = BytesBuilder::with_capacity(0u32)
+  builder.append(b"\x00\xFFprefix")
+  builder.append_byte(128u8)
+  builder.append(b"-tail\x00")
+  assert(builder.byte_length() == 15u32, "wrong BytesBuilder byte length")
+  assert(
+    builder.finish().equals(b"\x00\xFFprefix\x80-tail\x00"),
+    "BytesBuilder changed arbitrary bytes",
+  )
+}
+
+test "BytesBuilder grows across many V128 chunks" {
+  let builder = BytesBuilder::with_capacity(1u32)
+  builder.append(b"0123456789abcdef")
+  builder.append(b"-second-0123456789abcdef")
+  builder.append_byte(255u8)
+  builder.append(b"-third-0123456789abcdef")
+  assert(
+    builder.finish().equals(
+      b"0123456789abcdef-second-0123456789abcdef\xFF-third-0123456789abcdef",
+    ),
+    "BytesBuilder growth changed content",
+  )
+}
+
+test "BytesBuilder appends nonzero-start Bytes ranges" {
+  let builder = BytesBuilder::new()
+  builder.append("xλy".view(1u32, 2u32).as_bytes())
+  builder.append_byte(33u8)
+  assert(builder.finish().equals(b"λ!"), "BytesBuilder changed shared range")
+}
+
+test "BytesBuilder result supports checked UTF8 conversion" {
+  let builder = BytesBuilder::new()
+  builder.append("prefix ".as_bytes())
+  builder.append("λ 世界 🌍".as_bytes())
+  assert(
+    builder.finish().to_string().equals("prefix λ 世界 🌍"),
+    "BytesBuilder valid UTF8 conversion changed content",
+  )
+}
+
+test "Bytes view and subarray share arbitrary logical ranges" {
+  let bytes = b"\xFFprefix\x00tail"
+  assert(
+    bytes.view(1u32, 7u32).equals(b"prefix\x00"),
+    "wrong Bytes view",
+  )
+  assert(
+    bytes.subarray(7u32, 12u32).equals(b"\x00tail"),
+    "wrong Bytes subarray",
+  )
+}
+
+test "Bytes find_byte reports the first logical index" {
+  let value = b"xxx0123456789abcdef-target-tail".view(3u32, 28u32)
+  let index = match value.find_byte(116u8) {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(index == 17u32, "find_byte returned the wrong logical index")
+}
+
+test "Bytes find_byte reports absence without a public sentinel" {
+  let absent = match b"arbitrary \x00\xFF bytes".find_byte(126u8) {
+    Option::Some(_) => false
+    Option::None => true
+  }
+  assert(absent, "find_byte reported a missing byte")
+}
+
+test "Bytes contains_byte handles binary values and empty input" {
+  let value = b"padding-\x00\xFF-tail".view(8u32, 7u32)
+  assert(value.contains_byte(0u8), "missing zero byte")
+  assert(value.contains_byte(255u8), "missing high byte")
+  assert(!value.contains_byte(1u8), "reported absent byte")
+  assert(!b"".contains_byte(0u8), "empty Bytes contained a byte")
+}
+
+test "Bytes find reports start middle and end substring indices" {
+  let value = b"xxx0123456789abcdef-target-tailzzz".view(3u32, 28u32)
+  let middle = match value.find(b"cdef-target") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  let ending = match value.find(b"tail") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(middle == 12u32, "wrong middle substring index")
+  assert(ending == 24u32, "wrong ending substring index")
+  let empty_at_zero = match value.find(b"") {
+    Option::Some(0u32) => true
+    _ => false
+  }
+  assert(empty_at_zero, "empty needle was not zero")
+}
+
+test "Bytes find returns the first overlapping substring" {
+  let index = match b"ababababac".find(b"ababac") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(index == 4u32, "find skipped the first overlapping match")
+}
+
+test "Bytes find handles arbitrary binary substrings" {
+  let value = b"padding-\x00\xFFbinary\x00\xFF-tail".view(8u32, 15u32)
+  assert(value.contains(b"\x00\xFFbinary"), "missing binary substring")
+  assert(value.contains(b"\xFF-tail"), "missing binary suffix substring")
+  assert(!value.contains(b"\x00\xFE"), "reported absent binary substring")
+}
+
+test "Bytes find handles empty one-byte absent and overlong needles" {
+  assert(b"abc".contains(b""), "empty needle did not match")
+  assert(b"abc".contains(b"b"), "one-byte needle did not match")
+  assert(!b"abc".contains(b"z"), "absent one-byte needle matched")
+  assert(!b"abc".contains(b"abcd"), "overlong needle matched")
+  let overlong_absent = match b"abc".find(b"abcd") {
+    Option::None => true
+    _ => false
+  }
+  assert(overlong_absent, "overlong find matched")
+}
+
+test "Bytes find rejects an intentional rolling hash collision" {
+  let needle = b"collision\xF9\x1B\xC9\x45\xC9\x1B\xF9\x01"
+  let haystack = b"collision\x00\x00\x00\x00\x00\x00\x00\x00~collision\xF9\x1B\xC9\x45\xC9\x1B\xF9\x01"
+  let index = match haystack.find(needle) {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(index == 18u32, "rolling hash collision bypassed exact verification")
+}
+
+test "Bytes search does not inspect zero-padded storage tails" {
+  assert(!b"\x01".contains_byte(0u8), "byte search observed zero padding")
+  assert(!b"\x01".contains(b"\x00"), "substring search observed zero padding")
+  assert(!b"\x01\x02".contains(b"\x02\x00"), "substring crossed logical end")
+  assert(!b"\x01".ends_with(b"\x00"), "suffix match observed zero padding")
+}
+
+test "Bytes short search crosses SIMD candidate batch boundaries" {
+  let at_fifteen = match b"000000000000000needle".find(b"needle") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  let at_sixteen = match b"0000000000000000needle".find(b"needle") {
+    Option::Some(found) => found
+    Option::None => 4294967295u32
+  }
+  assert(at_fifteen == 15u32, "lane-fifteen candidate was missed")
+  assert(at_sixteen == 16u32, "second-batch candidate was missed")
+}
+
+test "Bytes find remains exact on repetitive input" {
+  let value = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-tail"
+  assert(value.contains(b"aaaaaaaaaaaaaaa-tail"), "repetitive match was missed")
+  assert(!value.contains(b"aaaaaaaaaaaaaaa-fail"), "repetitive mismatch matched")
+}
+
+test "Bytes starts_with compares exact logical prefixes" {
+  let value = b"xxx0123456789abcdef-tail".view(3u32, 21u32)
+  assert(value.starts_with(b"0123456789abcdef"), "prefix did not match")
+  assert(value.starts_with(b""), "empty prefix did not match")
+  assert(!value.starts_with(b"1234"), "incorrect prefix matched")
+  assert(!b"abc".starts_with(b"abcd"), "long prefix matched")
+}
+
+test "Bytes ends_with compares exact logical suffixes" {
+  let value = b"xxx0123456789abcdef-tailzzz".view(3u32, 21u32)
+  assert(value.ends_with(b"tail"), "suffix did not match")
+  assert(value.ends_with(b""), "empty suffix did not match")
+  assert(!value.ends_with(b"tai"), "incorrect suffix matched")
+  assert(!b"abc".ends_with(b"zabc"), "long suffix matched")
+}
+
+test "Bytes concat preserves arbitrary unaligned ranges" {
+  let left = b"padding-0123456789abcdef-tail".view(8u32, 16u32)
+  let right = b"xx\x00\xFF-tail".view(2u32, 7u32)
+  assert(
+    left.concat(right).equals(b"0123456789abcdef\x00\xFF-tail"),
+    "wrong Bytes concat",
+  )
+}
+
+test "Bytes concat handles empty operands" {
+  assert(b"".concat(b"").equals(b""), "wrong empty Bytes concat")
+  assert(b"abc".concat(b"").equals(b"abc"), "wrong empty right Bytes concat")
+  assert(b"".concat(b"abc").equals(b"abc"), "wrong empty left Bytes concat")
+}
+
+test "Bytes slice and compact copy exact logical ranges" {
+  let shared = b"prefix-\x00\xFF-tail".view(7u32, 2u32)
+  assert(shared.slice(0u32, 2u32).equals(b"\x00\xFF"), "wrong Bytes slice")
+  assert(shared.compact().equals(b"\x00\xFF"), "wrong compacted Bytes")
+}
+
+test "Empty end-exclusive ranges are valid" {
+  assert("abc".subarray(3u32, 3u32).byte_length() == 0u32, "wrong empty String range")
+  assert(b"abc".subarray(3u32, 3u32).byte_length() == 0u32, "wrong empty Bytes range")
+}
+
+test "Bytes byte_length counts arbitrary bytes" {
+  assert(b"a\x00\xFF".byte_length() == 3u32, "wrong Bytes length")
+}
+
+test "Bytes validates strict UTF8" {
+  assert(b"λ 世界 🌍".is_valid_utf8(), "valid UTF8 was rejected")
+  assert(!b"\xED\xA0\x80".is_valid_utf8(), "surrogate UTF8 was accepted")
+}
+
+test "Bytes to_string validates and shares content" {
+  let bytes = b"checked λ 🌍"
+  let text = bytes.to_string()
+  assert(text.as_bytes().equals(bytes), "checked conversion changed content")
+}
+
+test "Bytes equality handles embedded zeros and high bytes" {
+  assert(b"\x00\xFFsame".equals(b"\x00\xFFsame"), "equal Bytes differ")
+  assert(!b"\x00\xFFa".equals(b"\x00\xFFb"), "different Bytes compare equal")
+}
+
+test "Bytes byte_at reads arbitrary bytes" {
+  assert(b"\x00\xFF".byte_at(0u32) == 0u8, "wrong zero byte")
+  assert(b"\x00\xFF".byte_at(1u32) == 255u8, "wrong high byte")
+}

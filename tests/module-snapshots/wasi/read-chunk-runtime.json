@@ -1,0 +1,11 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": [
+    "ab"
+  ],
+  "host": {
+    "stdin_hex": "616263646566",
+    "read_limit": 2
+  }
+}

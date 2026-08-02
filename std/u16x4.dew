@@ -1,0 +1,205 @@
+builtin u16x4_from_swar64(value: Swar64) -> U16x4 = "dew_reinterpret"
+builtin u16x4_to_swar64(value: U16x4) -> Swar64 = "dew_reinterpret"
+builtin u16x4_reinterpret_as_i8x8(value: U16x4) -> I8x8 = "dew_reinterpret"
+builtin u16x4_reinterpret_as_u8x8(value: U16x4) -> U8x8 = "dew_reinterpret"
+builtin u16x4_reinterpret_as_i16x4(value: U16x4) -> I16x4 = "dew_reinterpret"
+builtin u16x4_reinterpret_as_i32x2(value: U16x4) -> I32x2 = "dew_reinterpret"
+builtin u16x4_reinterpret_as_u32x2(value: U16x4) -> U32x2 = "dew_reinterpret"
+builtin u16x4_load(address: U32) -> U16x4 = "dew_swar64_load"
+builtin u16x4_store(address: U32, value: U16x4) -> Unit = "dew_swar64_store"
+builtin u16x4_and(left: U16x4, right: U16x4) -> U16x4 = "swar64_and"
+builtin u16x4_or(left: U16x4, right: U16x4) -> U16x4 = "swar64_or"
+builtin u16x4_xor(left: U16x4, right: U16x4) -> U16x4 = "swar64_xor"
+fn u16x4_splat(value: U16) -> U16x4 {
+  u16x4_from_swar64(swar64_splat_i16(u16_into_i16(value)))
+}
+fn u16x4_extract(value: U16x4, index: U8) -> U16 {
+  swar64_extract_i16_u(u16x4_to_swar64(value), index)
+}
+fn u16x4_replace(value: U16x4, index: U8, lane: U16) -> U16x4 {
+  u16x4_from_swar64(swar64_replace_i16(u16x4_to_swar64(value), index, u16_into_i16(lane)))
+}
+fn u16x4_add(left: U16x4, right: U16x4) -> U16x4 {
+  u16x4_from_swar64(swar64_add_i16(u16x4_to_swar64(left), u16x4_to_swar64(right)))
+}
+fn u16x4_sub(left: U16x4, right: U16x4) -> U16x4 {
+  u16x4_from_swar64(swar64_sub_i16(u16x4_to_swar64(left), u16x4_to_swar64(right)))
+}
+fn u16x4_shl(value: U16x4, count: U8) -> U16x4 {
+  u16x4_from_swar64(swar64_shl_i16(u16x4_to_swar64(value), count))
+}
+fn u16x4_shr(value: U16x4, count: U8) -> U16x4 {
+  u16x4_from_swar64(swar64_shr_i16_u(u16x4_to_swar64(value), count))
+}
+fn u16x4_mul(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  u16x4_from_swar64(swar64_from_bits((((a & 65535u64) * (b & 65535u64)) & 65535u64) | (((((a >> 16u64) & 65535u64) * ((b >> 16u64) & 65535u64)) & 65535u64) << 16u64) | (((((a >> 32u64) & 65535u64) * ((b >> 32u64) & 65535u64)) & 65535u64) << 32u64) | (((((a >> 48u64) & 65535u64) * ((b >> 48u64) & 65535u64)) & 65535u64) << 48u64)))
+}
+fn u16x4_eq(left: U16x4, right: U16x4) -> U16x4 {
+  let x = swar64_to_bits(u16x4_to_swar64(left)) ^ swar64_to_bits(u16x4_to_swar64(right))
+  let nonzero = ((((x & 9223231297218904063u64) + 9223231297218904063u64) | x) & 9223512776490647552u64)
+  u16x4_from_swar64(swar64_from_bits((((nonzero >> 15u64) * 65535u64) ^ 18446744073709551615u64)))
+}
+fn u16x4_ne(left: U16x4, right: U16x4) -> U16x4 {
+  let equal = swar64_to_bits(u16x4_to_swar64(u16x4_eq(left, right)))
+  u16x4_from_swar64(swar64_from_bits(equal ^ 18446744073709551615u64))
+}
+fn u16x4_lt(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  u16x4_from_swar64(swar64_from_bits(((((((a ^ 18446744073709551615u64) & b) | (((a ^ b) ^ 18446744073709551615u64) & (((a | 9223512776490647552u64) - (b & 9223231297218904063u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9223512776490647552u64)))) & 9223512776490647552u64) >> 15u64) * 65535u64)))
+}
+fn u16x4_le(left: U16x4, right: U16x4) -> U16x4 {
+  let greater = swar64_to_bits(u16x4_to_swar64(u16x4_lt(right, left)))
+  u16x4_from_swar64(swar64_from_bits(greater ^ 18446744073709551615u64))
+}
+fn u16x4_gt(left: U16x4, right: U16x4) -> U16x4 {
+  u16x4_lt(right, left)
+}
+fn u16x4_ge(left: U16x4, right: U16x4) -> U16x4 {
+  let less = swar64_to_bits(u16x4_to_swar64(u16x4_lt(left, right)))
+  u16x4_from_swar64(swar64_from_bits(less ^ 18446744073709551615u64))
+}
+fn u16x4_min(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  let mask = swar64_to_bits(u16x4_to_swar64(u16x4_lt(left, right)))
+  u16x4_from_swar64(swar64_from_bits(b ^ ((a ^ b) & mask)))
+}
+fn u16x4_max(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  let mask = swar64_to_bits(u16x4_to_swar64(u16x4_lt(left, right)))
+  u16x4_from_swar64(swar64_from_bits(a ^ ((a ^ b) & mask)))
+}
+fn u16x4_avgr(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  u16x4_from_swar64(swar64_from_bits((a | b) - (((a ^ b) & 18446462594437808126u64) >> 1u64)))
+}
+fn u16x4_add_sat(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  let sum = (((a & 9223231297218904063u64) + (b & 9223231297218904063u64)) ^ ((a ^ b) & 9223512776490647552u64))
+  let overflow = ((((((sum ^ 18446744073709551615u64) & a) | (((sum ^ a) ^ 18446744073709551615u64) & (((sum | 9223512776490647552u64) - (a & 9223231297218904063u64)) ^ ((sum ^ (a ^ 18446744073709551615u64)) & 9223512776490647552u64)))) & 9223512776490647552u64) >> 15u64) * 65535u64)
+  u16x4_from_swar64(swar64_from_bits(sum | overflow))
+}
+fn u16x4_sub_sat(left: U16x4, right: U16x4) -> U16x4 {
+  let a = swar64_to_bits(u16x4_to_swar64(left))
+  let b = swar64_to_bits(u16x4_to_swar64(right))
+  let diff = (((a | 9223512776490647552u64) - (b & 9223231297218904063u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9223512776490647552u64))
+  let underflow = ((((((a ^ 18446744073709551615u64) & b) | (((a ^ b) ^ 18446744073709551615u64) & (((a | 9223512776490647552u64) - (b & 9223231297218904063u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9223512776490647552u64)))) & 9223512776490647552u64) >> 15u64) * 65535u64)
+  u16x4_from_swar64(swar64_from_bits(diff & (underflow ^ 18446744073709551615u64)))
+}
+fn u16x4_bitmask(value: U16x4) -> U32 {
+  let a = swar64_to_bits(u16x4_to_swar64(value))
+  u64_into_u32(((a >> 15u64) & 1u64) | (((a >> 31u64) & 1u64) << 1u64) | (((a >> 47u64) & 1u64) << 2u64) | (((a >> 63u64) & 1u64) << 3u64))
+}
+fn u16x4_all_true(value: U16x4) -> Bool {
+  swar64_to_bits(u16x4_to_swar64(u16x4_eq(value, u16x4_from_swar64(swar64_from_bits(0u64))))) == 0u64
+}
+impl U16x4 {
+  fn to_swar64(self) -> Swar64 {
+    u16x4_to_swar64(self)
+  }
+  fn reinterpret_as_i8x8(self) -> I8x8 {
+    u16x4_reinterpret_as_i8x8(self)
+  }
+  fn reinterpret_as_u8x8(self) -> U8x8 {
+    u16x4_reinterpret_as_u8x8(self)
+  }
+  fn reinterpret_as_i16x4(self) -> I16x4 {
+    u16x4_reinterpret_as_i16x4(self)
+  }
+  fn reinterpret_as_i32x2(self) -> I32x2 {
+    u16x4_reinterpret_as_i32x2(self)
+  }
+  fn reinterpret_as_u32x2(self) -> U32x2 {
+    u16x4_reinterpret_as_u32x2(self)
+  }
+  fn extract(self, index: U8) -> U16 {
+    u16x4_extract(self, index)
+  }
+  fn replace(self, index: U8, lane: U16) -> U16x4 {
+    u16x4_replace(self, index, lane)
+  }
+  fn shl(self, count: U8) -> U16x4 {
+    u16x4_shl(self, count)
+  }
+  fn shr(self, count: U8) -> U16x4 {
+    u16x4_shr(self, count)
+  }
+  fn bitmask(self) -> U32 {
+    u16x4_bitmask(self)
+  }
+  fn all_true(self) -> Bool {
+    u16x4_all_true(self)
+  }
+  fn eq_mask(self, right: U16x4) -> U16x4 {
+    u16x4_eq(self, right)
+  }
+  fn mul(self, right: U16x4) -> U16x4 {
+    u16x4_mul(self, right)
+  }
+  fn ne_mask(self, right: U16x4) -> U16x4 {
+    u16x4_ne(self, right)
+  }
+  fn lt_mask(self, right: U16x4) -> U16x4 {
+    u16x4_lt(self, right)
+  }
+  fn le_mask(self, right: U16x4) -> U16x4 {
+    u16x4_le(self, right)
+  }
+  fn gt_mask(self, right: U16x4) -> U16x4 {
+    u16x4_gt(self, right)
+  }
+  fn ge_mask(self, right: U16x4) -> U16x4 {
+    u16x4_ge(self, right)
+  }
+  fn min(self, right: U16x4) -> U16x4 {
+    u16x4_min(self, right)
+  }
+  fn max(self, right: U16x4) -> U16x4 {
+    u16x4_max(self, right)
+  }
+  fn avgr(self, right: U16x4) -> U16x4 {
+    u16x4_avgr(self, right)
+  }
+  fn add_sat(self, right: U16x4) -> U16x4 {
+    u16x4_add_sat(self, right)
+  }
+  fn sub_sat(self, right: U16x4) -> U16x4 {
+    u16x4_sub_sat(self, right)
+  }
+}
+impl BitAnd for U16x4 {
+  fn bit_and(self, right: U16x4) -> U16x4 {
+    u16x4_and(self, right)
+  }
+}
+impl BitOr for U16x4 {
+  fn bit_or(self, right: U16x4) -> U16x4 {
+    u16x4_or(self, right)
+  }
+}
+impl BitXor for U16x4 {
+  fn bit_xor(self, right: U16x4) -> U16x4 {
+    u16x4_xor(self, right)
+  }
+}
+impl Add for U16x4 {
+  fn add(self, right: U16x4) -> U16x4 {
+    u16x4_add(self, right)
+  }
+}
+impl Sub for U16x4 {
+  fn sub(self, right: U16x4) -> U16x4 {
+    u16x4_sub(self, right)
+  }
+}
+impl Mul for U16x4 {
+  fn mul(self, right: U16x4) -> U16x4 {
+    u16x4_mul(self, right)
+  }
+}

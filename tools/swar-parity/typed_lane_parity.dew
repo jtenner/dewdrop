@@ -1,0 +1,446 @@
+open dew.std.i8x4
+open dew.std.u8x4
+open dew.std.i16x2
+open dew.std.u16x2
+open dew.std.i8x8
+open dew.std.u8x8
+open dew.std.i16x4
+open dew.std.u16x4
+open dew.std.i32x2
+open dew.std.u32x2
+
+pub fn t_i8x4_eq(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_eq(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_mul(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_mul(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_ne(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_ne(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_lt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_lt(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_le(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_le(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_gt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_gt(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_ge(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_ge(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_min(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_min(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_max(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_max(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_add_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_add_sat(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_sub_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_sub_sat(i8x4_from_swar32(swar32_from_bits(left)), i8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i8x4_abs(value: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_abs(i8x4_from_swar32(swar32_from_bits(value)))))
+}
+pub fn t_i8x4_neg(value: U32) -> U32 {
+  swar32_to_bits(i8x4_to_swar32(i8x4_neg(i8x4_from_swar32(swar32_from_bits(value)))))
+}
+pub fn t_i8x4_bitmask(value: U32) -> U32 {
+  i8x4_bitmask(i8x4_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_i8x4_all_true(value: U32) -> Bool {
+  i8x4_all_true(i8x4_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_u8x4_eq(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_eq(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_mul(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_mul(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_ne(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_ne(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_lt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_lt(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_le(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_le(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_gt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_gt(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_ge(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_ge(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_min(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_min(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_max(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_max(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_add_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_add_sat(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_sub_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_sub_sat(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_avgr(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u8x4_to_swar32(u8x4_avgr(u8x4_from_swar32(swar32_from_bits(left)), u8x4_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u8x4_bitmask(value: U32) -> U32 {
+  u8x4_bitmask(u8x4_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_u8x4_all_true(value: U32) -> Bool {
+  u8x4_all_true(u8x4_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_i16x2_eq(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_eq(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_mul(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_mul(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_ne(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_ne(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_lt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_lt(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_le(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_le(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_gt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_gt(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_ge(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_ge(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_min(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_min(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_max(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_max(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_add_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_add_sat(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_sub_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_sub_sat(i16x2_from_swar32(swar32_from_bits(left)), i16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_i16x2_abs(value: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_abs(i16x2_from_swar32(swar32_from_bits(value)))))
+}
+pub fn t_i16x2_neg(value: U32) -> U32 {
+  swar32_to_bits(i16x2_to_swar32(i16x2_neg(i16x2_from_swar32(swar32_from_bits(value)))))
+}
+pub fn t_i16x2_bitmask(value: U32) -> U32 {
+  i16x2_bitmask(i16x2_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_i16x2_all_true(value: U32) -> Bool {
+  i16x2_all_true(i16x2_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_u16x2_eq(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_eq(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_mul(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_mul(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_ne(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_ne(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_lt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_lt(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_le(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_le(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_gt(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_gt(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_ge(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_ge(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_min(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_min(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_max(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_max(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_add_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_add_sat(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_sub_sat(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_sub_sat(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_avgr(left: U32, right: U32) -> U32 {
+  swar32_to_bits(u16x2_to_swar32(u16x2_avgr(u16x2_from_swar32(swar32_from_bits(left)), u16x2_from_swar32(swar32_from_bits(right)))))
+}
+pub fn t_u16x2_bitmask(value: U32) -> U32 {
+  u16x2_bitmask(u16x2_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_u16x2_all_true(value: U32) -> Bool {
+  u16x2_all_true(u16x2_from_swar32(swar32_from_bits(value)))
+}
+pub fn t_i8x8_eq(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_eq(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_mul(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_mul(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_ne(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_ne(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_lt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_lt(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_le(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_le(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_gt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_gt(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_ge(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_ge(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_min(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_min(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_max(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_max(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_add_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_add_sat(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_sub_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_sub_sat(i8x8_from_swar64(swar64_from_bits(left)), i8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i8x8_abs(value: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_abs(i8x8_from_swar64(swar64_from_bits(value)))))
+}
+pub fn t_i8x8_neg(value: U64) -> U64 {
+  swar64_to_bits(i8x8_to_swar64(i8x8_neg(i8x8_from_swar64(swar64_from_bits(value)))))
+}
+pub fn t_i8x8_bitmask(value: U64) -> U32 {
+  i8x8_bitmask(i8x8_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_i8x8_all_true(value: U64) -> Bool {
+  i8x8_all_true(i8x8_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_u8x8_eq(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_eq(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_mul(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_mul(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_ne(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_ne(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_lt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_lt(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_le(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_le(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_gt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_gt(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_ge(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_ge(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_min(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_min(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_max(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_max(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_add_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_add_sat(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_sub_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_sub_sat(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_avgr(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u8x8_to_swar64(u8x8_avgr(u8x8_from_swar64(swar64_from_bits(left)), u8x8_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u8x8_bitmask(value: U64) -> U32 {
+  u8x8_bitmask(u8x8_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_u8x8_all_true(value: U64) -> Bool {
+  u8x8_all_true(u8x8_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_i16x4_eq(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_eq(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_mul(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_mul(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_ne(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_ne(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_lt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_lt(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_le(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_le(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_gt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_gt(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_ge(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_ge(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_min(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_min(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_max(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_max(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_add_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_add_sat(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_sub_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_sub_sat(i16x4_from_swar64(swar64_from_bits(left)), i16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i16x4_abs(value: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_abs(i16x4_from_swar64(swar64_from_bits(value)))))
+}
+pub fn t_i16x4_neg(value: U64) -> U64 {
+  swar64_to_bits(i16x4_to_swar64(i16x4_neg(i16x4_from_swar64(swar64_from_bits(value)))))
+}
+pub fn t_i16x4_bitmask(value: U64) -> U32 {
+  i16x4_bitmask(i16x4_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_i16x4_all_true(value: U64) -> Bool {
+  i16x4_all_true(i16x4_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_u16x4_eq(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_eq(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_mul(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_mul(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_ne(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_ne(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_lt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_lt(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_le(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_le(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_gt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_gt(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_ge(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_ge(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_min(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_min(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_max(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_max(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_add_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_add_sat(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_sub_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_sub_sat(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_avgr(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u16x4_to_swar64(u16x4_avgr(u16x4_from_swar64(swar64_from_bits(left)), u16x4_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u16x4_bitmask(value: U64) -> U32 {
+  u16x4_bitmask(u16x4_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_u16x4_all_true(value: U64) -> Bool {
+  u16x4_all_true(u16x4_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_i32x2_eq(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_eq(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_mul(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_mul(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_ne(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_ne(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_lt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_lt(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_le(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_le(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_gt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_gt(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_ge(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_ge(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_min(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_min(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_max(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_max(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_add_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_add_sat(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_sub_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_sub_sat(i32x2_from_swar64(swar64_from_bits(left)), i32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_i32x2_abs(value: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_abs(i32x2_from_swar64(swar64_from_bits(value)))))
+}
+pub fn t_i32x2_neg(value: U64) -> U64 {
+  swar64_to_bits(i32x2_to_swar64(i32x2_neg(i32x2_from_swar64(swar64_from_bits(value)))))
+}
+pub fn t_i32x2_bitmask(value: U64) -> U32 {
+  i32x2_bitmask(i32x2_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_i32x2_all_true(value: U64) -> Bool {
+  i32x2_all_true(i32x2_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_u32x2_eq(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_eq(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_mul(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_mul(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_ne(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_ne(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_lt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_lt(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_le(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_le(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_gt(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_gt(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_ge(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_ge(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_min(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_min(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_max(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_max(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_add_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_add_sat(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_sub_sat(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_sub_sat(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_avgr(left: U64, right: U64) -> U64 {
+  swar64_to_bits(u32x2_to_swar64(u32x2_avgr(u32x2_from_swar64(swar64_from_bits(left)), u32x2_from_swar64(swar64_from_bits(right)))))
+}
+pub fn t_u32x2_bitmask(value: U64) -> U32 {
+  u32x2_bitmask(u32x2_from_swar64(swar64_from_bits(value)))
+}
+pub fn t_u32x2_all_true(value: U64) -> Bool {
+  u32x2_all_true(u32x2_from_swar64(swar64_from_bits(value)))
+}

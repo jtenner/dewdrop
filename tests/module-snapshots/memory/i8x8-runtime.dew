@@ -1,0 +1,16 @@
+open dew.std.i8x8
+open dew.std.wasi
+
+fn prepare() -> I32 {
+  i8x8_store(9u32, i8x8_splat(27i8))
+  0
+}
+
+pub fn main() -> U32 {
+  prepare()
+  if i8x8_load(9u32).extract(4u8) == 27i8 {
+    wasi_fd_write(1u32, b"memory:i8x8")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

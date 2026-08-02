@@ -1,0 +1,15 @@
+impl Add for I32 {
+  fn add(self, right: I32) -> I32 {
+    i32_add(self, right)
+  }
+}
+impl Sub for I32 {
+  fn sub(self, right: I32) -> I32 {
+    i32_sub(self, right)
+  }
+}
+impl Lte for I32 {
+  fn lte(self, right: I32) -> Bool {
+    i32_lte(self, right)
+  }
+}

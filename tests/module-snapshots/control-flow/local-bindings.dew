@@ -1,0 +1,6 @@
+pub fn main() -> I32 {
+  let first = 10
+  let second = first + 20
+  let third = second * 2
+  third - first
+}

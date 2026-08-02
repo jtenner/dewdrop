@@ -1,0 +1,5 @@
+pub fn main() -> Bool {
+  let value = v128_splat_i32(42i32)
+  v128_store(1u32, value)
+  !v128_any_true(v128_xor(v128_load(1u32), value))
+}

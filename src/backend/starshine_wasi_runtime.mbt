@@ -1,0 +1,819 @@
+///| WASI Preview 1 scratch layout. One fixed page is sufficient for the
+
+///|
+/// iovec, host result, and the bounded data window.
+fn wasi_iovec_address() -> Int {
+  0
+}
+
+///|
+fn wasi_result_address() -> Int {
+  8
+}
+
+///|
+fn wasi_scratch_address() -> Int {
+  16
+}
+
+///|
+fn wasi_scratch_capacity() -> Int {
+  65520
+}
+
+///|
+fn wasi_store_i32(
+  output : Array[@lib.Instruction],
+  address : Int,
+  value : Int,
+) -> Unit {
+  output.push(text_i32(address))
+  output.push(text_i32(value))
+  output.push(@lib.Instruction::i32_store(starshine_memory_argument(2U)))
+}
+
+///|
+fn wasi_store_i32_local(
+  output : Array[@lib.Instruction],
+  address : Int,
+  local_index : Int,
+) -> Unit {
+  output.push(text_i32(address))
+  output.push(@lib.Instruction::local_get(text_local(local_index)))
+  output.push(@lib.Instruction::i32_store(starshine_memory_argument(2U)))
+}
+
+///|
+/// Copy a bounded logical Bytes range into the reusable linear-memory window.
+fn wasi_copy_bytes_to_scratch(
+  output : Array[@lib.Instruction],
+  array_type : @lib.TypeIdx,
+  chunks : Int,
+  start : Int,
+  range_base : Int,
+  range_length : Int,
+  copy_index : Int,
+  source_index : Int,
+  byte : Int,
+  vector : Int,
+) -> Unit {
+  output.push(text_i32(0))
+  output.push(@lib.Instruction::local_set(text_local(copy_index)))
+  let copy_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(copy_index)),
+    @lib.Instruction::local_get(text_local(range_length)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(text_local(start)),
+    @lib.Instruction::local_get(text_local(range_base)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_get(text_local(copy_index)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_set(text_local(source_index)),
+    @lib.Instruction::local_get(text_local(source_index)),
+    text_i32(15),
+    @lib.Instruction::i32_and(),
+    @lib.Instruction::i32_eqz(),
+    @lib.Instruction::local_get(text_local(copy_index)),
+    text_i32(64),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_get(text_local(range_length)),
+    @lib.Instruction::i32_le_u(),
+    @lib.Instruction::i32_and(),
+  ]
+  let copy_64 : Array[@lib.Instruction] = []
+  for offset in [0, 16, 32, 48] {
+    copy_64.push(text_i32(wasi_scratch_address()))
+    copy_64.push(@lib.Instruction::local_get(text_local(copy_index)))
+    if offset != 0 {
+      copy_64.push(text_i32(offset))
+      copy_64.push(@lib.Instruction::i32_add())
+    }
+    copy_64.push(@lib.Instruction::i32_add())
+    copy_64.push(@lib.Instruction::local_get(text_local(chunks)))
+    copy_64.push(@lib.Instruction::local_get(text_local(source_index)))
+    if offset != 0 {
+      copy_64.push(text_i32(offset))
+      copy_64.push(@lib.Instruction::i32_add())
+    }
+    copy_64.push(text_i32(4))
+    copy_64.push(@lib.Instruction::i32_shr_u())
+    copy_64.push(@lib.Instruction::array_get(array_type))
+    copy_64.push(@lib.Instruction::v128_store(starshine_memory_argument(4U)))
+  }
+  copy_64.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_64.push(text_i32(64))
+  copy_64.push(@lib.Instruction::i32_add())
+  copy_64.push(@lib.Instruction::local_set(text_local(copy_index)))
+  copy_64.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
+  copy_loop.push(@lib.Instruction::if_(@lib.BlockType::void_(), copy_64, None))
+  copy_loop.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_loop.push(text_i32(16))
+  copy_loop.push(@lib.Instruction::i32_add())
+  copy_loop.push(@lib.Instruction::local_get(text_local(range_length)))
+  copy_loop.push(@lib.Instruction::i32_le_u())
+  let copy_full : Array[@lib.Instruction] = []
+  text_load_logical_v128(copy_full, array_type, chunks, source_index, vector)
+  copy_full.push(text_i32(wasi_scratch_address()))
+  copy_full.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_full.push(@lib.Instruction::i32_add())
+  copy_full.push(@lib.Instruction::local_get(text_local(vector)))
+  copy_full.push(@lib.Instruction::v128_store(starshine_memory_argument(4U)))
+  copy_full.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_full.push(text_i32(16))
+  copy_full.push(@lib.Instruction::i32_add())
+  copy_full.push(@lib.Instruction::local_set(text_local(copy_index)))
+  copy_full.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
+  copy_loop.push(
+    @lib.Instruction::if_(@lib.BlockType::void_(), copy_full, None),
+  )
+  for instruction in text_byte_at(array_type, chunks, source_index, 0) {
+    copy_loop.push(instruction)
+  }
+  copy_loop.push(@lib.Instruction::local_set(text_local(byte)))
+  copy_loop.push(text_i32(wasi_scratch_address()))
+  copy_loop.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_loop.push(@lib.Instruction::i32_add())
+  copy_loop.push(@lib.Instruction::local_get(text_local(byte)))
+  copy_loop.push(@lib.Instruction::i32_store8(starshine_memory_argument(0U)))
+  copy_loop.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_loop.push(text_i32(1))
+  copy_loop.push(@lib.Instruction::i32_add())
+  copy_loop.push(@lib.Instruction::local_set(text_local(copy_index)))
+  copy_loop.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+  output.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(copy_loop),
+        ),
+      ]),
+    ),
+  )
+}
+
+///| Benchmark-only GC-to-linear phase used to separate copy cost from the
+
+///| Preview 1 host callback. It is reachable only from an explicit builtin
+
+///|
+/// declaration in the benchmark source.
+fn starshine_wasi_stage_write_body(base : Int) -> @lib.Func {
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let bytes_type = @lib.TypeIdx::new((base + 2).reinterpret_as_uint())
+  let bytes_ref = 1
+  let chunks = 2
+  let start = 3
+  let length = 4
+  let range_base = 5
+  let copy_index = 6
+  let source_index = 7
+  let byte = 8
+  let vector = 9
+  let body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(0)),
+    @lib.Instruction::ref_cast(false, @lib.HeapType::new(bytes_type)),
+    @lib.Instruction::local_set(text_local(bytes_ref)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 0U),
+    @lib.Instruction::local_set(text_local(chunks)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 1U),
+    @lib.Instruction::local_set(text_local(start)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 2U),
+    @lib.Instruction::local_tee(text_local(length)),
+    text_i32(wasi_scratch_capacity()),
+    @lib.Instruction::i32_gt_u(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    text_i32(0),
+    @lib.Instruction::local_set(text_local(range_base)),
+  ]
+  wasi_copy_bytes_to_scratch(
+    body, array_type, chunks, start, range_base, length, copy_index, source_index,
+    byte, vector,
+  )
+  body.push(@lib.Instruction::local_get(text_local(length)))
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      text_runtime_ref(base + 2),
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::v128(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
+fn starshine_test_assert_body(
+  string_as_bytes_function_index : Int,
+  wasi_write_function_index : Int,
+) -> @lib.Func {
+  let failure : Array[@lib.Instruction] = [
+    text_i32(1),
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(string_as_bytes_function_index.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(wasi_write_function_index.reinterpret_as_uint()),
+    ),
+    @lib.Instruction::drop(),
+    @lib.Instruction::unreachable_(),
+  ]
+  @lib.Func::new(
+    @lib.Locals::empty(),
+    @lib.Expr::new([
+      @lib.Instruction::local_get(text_local(0)),
+      @lib.Instruction::i32_eqz(),
+      @lib.Instruction::if_(@lib.BlockType::void_(), failure, None),
+    ]),
+  )
+}
+
+///|
+fn starshine_wasi_fd_write_body(
+  base : Int,
+  fd_write_function_index : Int,
+) -> @lib.Func {
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let bytes_type = @lib.TypeIdx::new((base + 2).reinterpret_as_uint())
+  let bytes_ref = 2
+  let chunks = 3
+  let start = 4
+  let length = 5
+  let written_total = 6
+  let chunk_length = 7
+  let copy_index = 8
+  let source_index = 9
+  let byte = 10
+  let vector = 11
+  let host_written = 12
+  let chunk_written = 13
+  let body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::ref_cast(false, @lib.HeapType::new(bytes_type)),
+    @lib.Instruction::local_set(text_local(bytes_ref)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 0U),
+    @lib.Instruction::local_set(text_local(chunks)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 1U),
+    @lib.Instruction::local_set(text_local(start)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 2U),
+    @lib.Instruction::local_set(text_local(length)),
+    text_i32(0),
+    @lib.Instruction::local_set(text_local(written_total)),
+  ]
+  let write_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(written_total)),
+    @lib.Instruction::local_get(text_local(length)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(text_local(length)),
+    @lib.Instruction::local_get(text_local(written_total)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::local_tee(text_local(chunk_length)),
+    text_i32(wasi_scratch_capacity()),
+    @lib.Instruction::i32_gt_u(),
+  ]
+  write_loop.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [
+        text_i32(wasi_scratch_capacity()),
+        @lib.Instruction::local_set(text_local(chunk_length)),
+      ],
+      None,
+    ),
+  )
+  wasi_copy_bytes_to_scratch(
+    write_loop, array_type, chunks, start, written_total, chunk_length, copy_index,
+    source_index, byte, vector,
+  )
+  write_loop.push(text_i32(0))
+  write_loop.push(@lib.Instruction::local_set(text_local(chunk_written)))
+  let partial_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(chunk_written)),
+    @lib.Instruction::local_get(text_local(chunk_length)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    text_i32(wasi_iovec_address()),
+    text_i32(wasi_scratch_address()),
+    @lib.Instruction::local_get(text_local(chunk_written)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::i32_store(starshine_memory_argument(2U)),
+    text_i32(wasi_iovec_address() + 4),
+    @lib.Instruction::local_get(text_local(chunk_length)),
+    @lib.Instruction::local_get(text_local(chunk_written)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::i32_store(starshine_memory_argument(2U)),
+    @lib.Instruction::local_get(text_local(0)),
+    text_i32(wasi_iovec_address()),
+    text_i32(1),
+    text_i32(wasi_result_address()),
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(fd_write_function_index.reinterpret_as_uint()),
+    ),
+    text_i32(0),
+    @lib.Instruction::i32_ne(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    text_i32(wasi_result_address()),
+    @lib.Instruction::i32_load(starshine_memory_argument(2U)),
+    @lib.Instruction::local_tee(text_local(host_written)),
+    @lib.Instruction::i32_eqz(),
+    @lib.Instruction::local_get(text_local(host_written)),
+    @lib.Instruction::local_get(text_local(chunk_length)),
+    @lib.Instruction::local_get(text_local(chunk_written)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::i32_gt_u(),
+    @lib.Instruction::i32_or(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    @lib.Instruction::local_get(text_local(chunk_written)),
+    @lib.Instruction::local_get(text_local(host_written)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_set(text_local(chunk_written)),
+    @lib.Instruction::br(@lib.LabelIdx::new(0U)),
+  ]
+  write_loop.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(partial_loop),
+        ),
+      ]),
+    ),
+  )
+  write_loop.push(@lib.Instruction::local_get(text_local(written_total)))
+  write_loop.push(@lib.Instruction::local_get(text_local(chunk_length)))
+  write_loop.push(@lib.Instruction::i32_add())
+  write_loop.push(@lib.Instruction::local_set(text_local(written_total)))
+  write_loop.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+  body.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(write_loop),
+        ),
+      ]),
+    ),
+  )
+  body.push(@lib.Instruction::local_get(text_local(written_total)))
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      text_runtime_ref(base + 2),
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::v128(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
+/// Copy one host-filled scratch range into a start-zero mutable GC backing.
+fn wasi_copy_scratch_to_bytes(
+  output : Array[@lib.Instruction],
+  array_type : @lib.TypeIdx,
+  chunks : Int,
+  destination_base : Int,
+  range_length : Int,
+  copy_index : Int,
+  destination_index : Int,
+  byte : Int,
+  vector : Int,
+  mask : Int,
+) -> Unit {
+  output.push(text_i32(0))
+  output.push(@lib.Instruction::local_set(text_local(copy_index)))
+  let copy_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(copy_index)),
+    @lib.Instruction::local_get(text_local(range_length)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(text_local(destination_base)),
+    @lib.Instruction::local_get(text_local(copy_index)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_set(text_local(destination_index)),
+    @lib.Instruction::local_get(text_local(destination_index)),
+    text_i32(15),
+    @lib.Instruction::i32_and(),
+    @lib.Instruction::i32_eqz(),
+    @lib.Instruction::local_get(text_local(copy_index)),
+    text_i32(64),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_get(text_local(range_length)),
+    @lib.Instruction::i32_le_u(),
+    @lib.Instruction::i32_and(),
+  ]
+  let copy_64 : Array[@lib.Instruction] = []
+  for offset in [0, 16, 32, 48] {
+    copy_64.push(@lib.Instruction::local_get(text_local(chunks)))
+    copy_64.push(@lib.Instruction::local_get(text_local(destination_index)))
+    if offset != 0 {
+      copy_64.push(text_i32(offset))
+      copy_64.push(@lib.Instruction::i32_add())
+    }
+    copy_64.push(text_i32(4))
+    copy_64.push(@lib.Instruction::i32_shr_u())
+    copy_64.push(text_i32(wasi_scratch_address()))
+    copy_64.push(@lib.Instruction::local_get(text_local(copy_index)))
+    if offset != 0 {
+      copy_64.push(text_i32(offset))
+      copy_64.push(@lib.Instruction::i32_add())
+    }
+    copy_64.push(@lib.Instruction::i32_add())
+    copy_64.push(@lib.Instruction::v128_load(starshine_memory_argument(4U)))
+    copy_64.push(@lib.Instruction::array_set(array_type))
+  }
+  copy_64.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_64.push(text_i32(64))
+  copy_64.push(@lib.Instruction::i32_add())
+  copy_64.push(@lib.Instruction::local_set(text_local(copy_index)))
+  copy_64.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
+  copy_loop.push(@lib.Instruction::if_(@lib.BlockType::void_(), copy_64, None))
+  copy_loop.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_loop.push(text_i32(16))
+  copy_loop.push(@lib.Instruction::i32_add())
+  copy_loop.push(@lib.Instruction::local_get(text_local(range_length)))
+  copy_loop.push(@lib.Instruction::i32_le_u())
+  let copy_full : Array[@lib.Instruction] = [
+    text_i32(wasi_scratch_address()),
+    @lib.Instruction::local_get(text_local(copy_index)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::v128_load(starshine_memory_argument(4U)),
+    @lib.Instruction::local_set(text_local(vector)),
+  ]
+  text_write_logical_v128(
+    copy_full, array_type, chunks, destination_index, vector, mask,
+  )
+  copy_full.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_full.push(text_i32(16))
+  copy_full.push(@lib.Instruction::i32_add())
+  copy_full.push(@lib.Instruction::local_set(text_local(copy_index)))
+  copy_full.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
+  copy_loop.push(
+    @lib.Instruction::if_(@lib.BlockType::void_(), copy_full, None),
+  )
+  copy_loop.push(text_i32(wasi_scratch_address()))
+  copy_loop.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_loop.push(@lib.Instruction::i32_add())
+  copy_loop.push(@lib.Instruction::i32_load8u(starshine_memory_argument(0U)))
+  copy_loop.push(@lib.Instruction::local_set(text_local(byte)))
+  text_write_byte(copy_loop, array_type, chunks, destination_index, byte)
+  copy_loop.push(@lib.Instruction::local_get(text_local(copy_index)))
+  copy_loop.push(text_i32(1))
+  copy_loop.push(@lib.Instruction::i32_add())
+  copy_loop.push(@lib.Instruction::local_set(text_local(copy_index)))
+  copy_loop.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+  output.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(copy_loop),
+        ),
+      ]),
+    ),
+  )
+}
+
+///| Benchmark-only linear-to-GC phase used to isolate immutable Bytes
+
+///|
+/// construction from the Preview 1 host callback.
+fn starshine_wasi_stage_read_body(base : Int) -> @lib.Func {
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let bytes_type = @lib.TypeIdx::new((base + 2).reinterpret_as_uint())
+  let chunks = 1
+  let required_chunks = 2
+  let destination_base = 3
+  let copy_index = 4
+  let destination_index = 5
+  let byte = 6
+  let vector = 7
+  let mask = 8
+  let body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(0)),
+    text_i32(wasi_scratch_capacity()),
+    @lib.Instruction::i32_gt_u(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    @lib.Instruction::local_get(text_local(0)),
+    text_i32(4),
+    @lib.Instruction::i32_shr_u(),
+    @lib.Instruction::local_get(text_local(0)),
+    text_i32(15),
+    @lib.Instruction::i32_and(),
+    text_i32(0),
+    @lib.Instruction::i32_ne(),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_tee(text_local(required_chunks)),
+    @lib.Instruction::array_new_default(array_type),
+    @lib.Instruction::local_set(text_local(chunks)),
+    text_i32(0),
+    @lib.Instruction::local_set(text_local(destination_base)),
+  ]
+  wasi_copy_scratch_to_bytes(
+    body, array_type, chunks, destination_base, 0, copy_index, destination_index,
+    byte, vector, mask,
+  )
+  body.push(@lib.Instruction::local_get(text_local(chunks)))
+  body.push(text_i32(0))
+  body.push(@lib.Instruction::local_get(text_local(0)))
+  body.push(@lib.Instruction::struct_new(bytes_type))
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::v128(),
+      @lib.ValType::v128(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
+fn starshine_wasi_fd_read_body(
+  base : Int,
+  fd_read_function_index : Int,
+) -> @lib.Func {
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let bytes_type = @lib.TypeIdx::new((base + 2).reinterpret_as_uint())
+  let chunks = 2
+  let total = 3
+  let capacity_chunks = 4
+  let request = 5
+  let read_count = 6
+  let required_length = 7
+  let required_chunks = 8
+  let new_capacity = 9
+  let new_chunks = 10
+  let old_copy_index = 11
+  let copy_index = 12
+  let destination_index = 13
+  let byte = 14
+  let vector = 15
+  let mask = 16
+  let body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(1)),
+    text_i32(wasi_scratch_capacity()),
+    @lib.Instruction::i32_gt_u(),
+  ]
+  body.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::val_type(@lib.ValType::i32()),
+      [text_i32(wasi_scratch_capacity())],
+      Some([@lib.Instruction::local_get(text_local(1))]),
+    ),
+  )
+  body.push(text_i32(4))
+  body.push(@lib.Instruction::i32_shr_u())
+  body.push(@lib.Instruction::local_get(text_local(1)))
+  body.push(text_i32(wasi_scratch_capacity()))
+  body.push(@lib.Instruction::i32_gt_u())
+  body.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::val_type(@lib.ValType::i32()),
+      [text_i32(wasi_scratch_capacity())],
+      Some([@lib.Instruction::local_get(text_local(1))]),
+    ),
+  )
+  body.push(text_i32(15))
+  body.push(@lib.Instruction::i32_and())
+  body.push(text_i32(0))
+  body.push(@lib.Instruction::i32_ne())
+  body.push(@lib.Instruction::i32_add())
+  body.push(@lib.Instruction::local_tee(text_local(capacity_chunks)))
+  body.push(@lib.Instruction::array_new_default(array_type))
+  body.push(@lib.Instruction::local_set(text_local(chunks)))
+  body.push(text_i32(0))
+  body.push(@lib.Instruction::local_set(text_local(total)))
+  wasi_store_i32(body, wasi_iovec_address(), wasi_scratch_address())
+  let read_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(total)),
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::local_get(text_local(total)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::local_tee(text_local(request)),
+    text_i32(wasi_scratch_capacity()),
+    @lib.Instruction::i32_gt_u(),
+  ]
+  read_loop.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [
+        text_i32(wasi_scratch_capacity()),
+        @lib.Instruction::local_set(text_local(request)),
+      ],
+      None,
+    ),
+  )
+  wasi_store_i32_local(read_loop, wasi_iovec_address() + 4, request)
+  read_loop.push(@lib.Instruction::local_get(text_local(0)))
+  read_loop.push(text_i32(wasi_iovec_address()))
+  read_loop.push(text_i32(1))
+  read_loop.push(text_i32(wasi_result_address()))
+  read_loop.push(
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(fd_read_function_index.reinterpret_as_uint()),
+    ),
+  )
+  read_loop.push(text_i32(0))
+  read_loop.push(@lib.Instruction::i32_ne())
+  read_loop.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+  )
+  read_loop.push(text_i32(wasi_result_address()))
+  read_loop.push(@lib.Instruction::i32_load(starshine_memory_argument(2U)))
+  read_loop.push(@lib.Instruction::local_tee(text_local(read_count)))
+  read_loop.push(@lib.Instruction::local_get(text_local(request)))
+  read_loop.push(@lib.Instruction::i32_gt_u())
+  read_loop.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+  )
+  read_loop.push(@lib.Instruction::local_get(text_local(read_count)))
+  read_loop.push(@lib.Instruction::i32_eqz())
+  read_loop.push(@lib.Instruction::br_if(@lib.LabelIdx::new(1U)))
+  read_loop.push(@lib.Instruction::local_get(text_local(total)))
+  read_loop.push(@lib.Instruction::local_get(text_local(read_count)))
+  read_loop.push(@lib.Instruction::i32_add())
+  read_loop.push(@lib.Instruction::local_tee(text_local(required_length)))
+  read_loop.push(text_i32(4))
+  read_loop.push(@lib.Instruction::i32_shr_u())
+  read_loop.push(@lib.Instruction::local_get(text_local(required_length)))
+  read_loop.push(text_i32(15))
+  read_loop.push(@lib.Instruction::i32_and())
+  read_loop.push(text_i32(0))
+  read_loop.push(@lib.Instruction::i32_ne())
+  read_loop.push(@lib.Instruction::i32_add())
+  read_loop.push(@lib.Instruction::local_tee(text_local(required_chunks)))
+  read_loop.push(@lib.Instruction::local_get(text_local(capacity_chunks)))
+  read_loop.push(@lib.Instruction::i32_gt_u())
+  let grow : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(capacity_chunks)),
+    text_i32(1),
+    @lib.Instruction::i32_shl(),
+    @lib.Instruction::local_tee(text_local(new_capacity)),
+    @lib.Instruction::local_get(text_local(capacity_chunks)),
+    @lib.Instruction::i32_lt_u(),
+    @lib.Instruction::local_get(text_local(new_capacity)),
+    @lib.Instruction::local_get(text_local(required_chunks)),
+    @lib.Instruction::i32_lt_u(),
+    @lib.Instruction::i32_or(),
+  ]
+  grow.push(
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [
+        @lib.Instruction::local_get(text_local(required_chunks)),
+        @lib.Instruction::local_set(text_local(new_capacity)),
+      ],
+      None,
+    ),
+  )
+  grow.push(@lib.Instruction::local_get(text_local(new_capacity)))
+  grow.push(@lib.Instruction::array_new_default(array_type))
+  grow.push(@lib.Instruction::local_set(text_local(new_chunks)))
+  grow.push(text_i32(0))
+  grow.push(@lib.Instruction::local_set(text_local(old_copy_index)))
+  let old_copy_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(old_copy_index)),
+    @lib.Instruction::local_get(text_local(total)),
+    text_i32(4),
+    @lib.Instruction::i32_shr_u(),
+    @lib.Instruction::local_get(text_local(total)),
+    text_i32(15),
+    @lib.Instruction::i32_and(),
+    text_i32(0),
+    @lib.Instruction::i32_ne(),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    @lib.Instruction::local_get(text_local(new_chunks)),
+    @lib.Instruction::local_get(text_local(old_copy_index)),
+    @lib.Instruction::local_get(text_local(chunks)),
+    @lib.Instruction::local_get(text_local(old_copy_index)),
+    @lib.Instruction::array_get(array_type),
+    @lib.Instruction::array_set(array_type),
+    @lib.Instruction::local_get(text_local(old_copy_index)),
+    text_i32(1),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_set(text_local(old_copy_index)),
+    @lib.Instruction::br(@lib.LabelIdx::new(0U)),
+  ]
+  grow.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(old_copy_loop),
+        ),
+      ]),
+    ),
+  )
+  grow.push(@lib.Instruction::local_get(text_local(new_chunks)))
+  grow.push(@lib.Instruction::local_set(text_local(chunks)))
+  grow.push(@lib.Instruction::local_get(text_local(new_capacity)))
+  grow.push(@lib.Instruction::local_set(text_local(capacity_chunks)))
+  read_loop.push(@lib.Instruction::if_(@lib.BlockType::void_(), grow, None))
+  wasi_copy_scratch_to_bytes(
+    read_loop, array_type, chunks, total, read_count, copy_index, destination_index,
+    byte, vector, mask,
+  )
+  read_loop.push(@lib.Instruction::local_get(text_local(required_length)))
+  read_loop.push(@lib.Instruction::local_set(text_local(total)))
+  read_loop.push(@lib.Instruction::local_get(text_local(read_count)))
+  read_loop.push(@lib.Instruction::local_get(text_local(request)))
+  read_loop.push(@lib.Instruction::i32_lt_u())
+  read_loop.push(@lib.Instruction::br_if(@lib.LabelIdx::new(1U)))
+  read_loop.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+  body.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(read_loop),
+        ),
+      ]),
+    ),
+  )
+  body.push(@lib.Instruction::local_get(text_local(chunks)))
+  body.push(text_i32(0))
+  body.push(@lib.Instruction::local_get(text_local(total)))
+  body.push(@lib.Instruction::struct_new(bytes_type))
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::v128(),
+      @lib.ValType::v128(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}

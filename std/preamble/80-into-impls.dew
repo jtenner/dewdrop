@@ -1,0 +1,500 @@
+impl Into<I8> for I8 {
+  fn into(self) -> I8 {
+    i8_into_i8(self)
+  }
+}
+impl Into<I16> for I8 {
+  fn into(self) -> I16 {
+    i8_into_i16(self)
+  }
+}
+impl Into<I32> for I8 {
+  fn into(self) -> I32 {
+    i8_into_i32(self)
+  }
+}
+impl Into<I64> for I8 {
+  fn into(self) -> I64 {
+    i8_into_i64(self)
+  }
+}
+impl Into<U8> for I8 {
+  fn into(self) -> U8 {
+    i8_into_u8(self)
+  }
+}
+impl Into<U16> for I8 {
+  fn into(self) -> U16 {
+    i8_into_u16(self)
+  }
+}
+impl Into<U32> for I8 {
+  fn into(self) -> U32 {
+    i8_into_u32(self)
+  }
+}
+impl Into<U64> for I8 {
+  fn into(self) -> U64 {
+    i8_into_u64(self)
+  }
+}
+impl Into<F32> for I8 {
+  fn into(self) -> F32 {
+    i8_into_f32(self)
+  }
+}
+impl Into<F64> for I8 {
+  fn into(self) -> F64 {
+    i8_into_f64(self)
+  }
+}
+impl Into<I8> for I16 {
+  fn into(self) -> I8 {
+    i16_into_i8(self)
+  }
+}
+impl Into<I16> for I16 {
+  fn into(self) -> I16 {
+    i16_into_i16(self)
+  }
+}
+impl Into<I32> for I16 {
+  fn into(self) -> I32 {
+    i16_into_i32(self)
+  }
+}
+impl Into<I64> for I16 {
+  fn into(self) -> I64 {
+    i16_into_i64(self)
+  }
+}
+impl Into<U8> for I16 {
+  fn into(self) -> U8 {
+    i16_into_u8(self)
+  }
+}
+impl Into<U16> for I16 {
+  fn into(self) -> U16 {
+    i16_into_u16(self)
+  }
+}
+impl Into<U32> for I16 {
+  fn into(self) -> U32 {
+    i16_into_u32(self)
+  }
+}
+impl Into<U64> for I16 {
+  fn into(self) -> U64 {
+    i16_into_u64(self)
+  }
+}
+impl Into<F32> for I16 {
+  fn into(self) -> F32 {
+    i16_into_f32(self)
+  }
+}
+impl Into<F64> for I16 {
+  fn into(self) -> F64 {
+    i16_into_f64(self)
+  }
+}
+impl Into<I8> for I32 {
+  fn into(self) -> I8 {
+    i32_into_i8(self)
+  }
+}
+impl Into<I16> for I32 {
+  fn into(self) -> I16 {
+    i32_into_i16(self)
+  }
+}
+impl Into<I32> for I32 {
+  fn into(self) -> I32 {
+    i32_into_i32(self)
+  }
+}
+impl Into<I64> for I32 {
+  fn into(self) -> I64 {
+    i32_into_i64(self)
+  }
+}
+impl Into<U8> for I32 {
+  fn into(self) -> U8 {
+    i32_into_u8(self)
+  }
+}
+impl Into<U16> for I32 {
+  fn into(self) -> U16 {
+    i32_into_u16(self)
+  }
+}
+impl Into<U32> for I32 {
+  fn into(self) -> U32 {
+    i32_into_u32(self)
+  }
+}
+impl Into<U64> for I32 {
+  fn into(self) -> U64 {
+    i32_into_u64(self)
+  }
+}
+impl Into<F32> for I32 {
+  fn into(self) -> F32 {
+    i32_into_f32(self)
+  }
+}
+impl Into<F64> for I32 {
+  fn into(self) -> F64 {
+    i32_into_f64(self)
+  }
+}
+impl Into<I8> for I64 {
+  fn into(self) -> I8 {
+    i64_into_i8(self)
+  }
+}
+impl Into<I16> for I64 {
+  fn into(self) -> I16 {
+    i64_into_i16(self)
+  }
+}
+impl Into<I32> for I64 {
+  fn into(self) -> I32 {
+    i64_into_i32(self)
+  }
+}
+impl Into<I64> for I64 {
+  fn into(self) -> I64 {
+    i64_into_i64(self)
+  }
+}
+impl Into<U8> for I64 {
+  fn into(self) -> U8 {
+    i64_into_u8(self)
+  }
+}
+impl Into<U16> for I64 {
+  fn into(self) -> U16 {
+    i64_into_u16(self)
+  }
+}
+impl Into<U32> for I64 {
+  fn into(self) -> U32 {
+    i64_into_u32(self)
+  }
+}
+impl Into<U64> for I64 {
+  fn into(self) -> U64 {
+    i64_into_u64(self)
+  }
+}
+impl Into<F32> for I64 {
+  fn into(self) -> F32 {
+    i64_into_f32(self)
+  }
+}
+impl Into<F64> for I64 {
+  fn into(self) -> F64 {
+    i64_into_f64(self)
+  }
+}
+impl Into<I8> for U8 {
+  fn into(self) -> I8 {
+    u8_into_i8(self)
+  }
+}
+impl Into<I16> for U8 {
+  fn into(self) -> I16 {
+    u8_into_i16(self)
+  }
+}
+impl Into<I32> for U8 {
+  fn into(self) -> I32 {
+    u8_into_i32(self)
+  }
+}
+impl Into<I64> for U8 {
+  fn into(self) -> I64 {
+    u8_into_i64(self)
+  }
+}
+impl Into<U8> for U8 {
+  fn into(self) -> U8 {
+    u8_into_u8(self)
+  }
+}
+impl Into<U16> for U8 {
+  fn into(self) -> U16 {
+    u8_into_u16(self)
+  }
+}
+impl Into<U32> for U8 {
+  fn into(self) -> U32 {
+    u8_into_u32(self)
+  }
+}
+impl Into<U64> for U8 {
+  fn into(self) -> U64 {
+    u8_into_u64(self)
+  }
+}
+impl Into<F32> for U8 {
+  fn into(self) -> F32 {
+    u8_into_f32(self)
+  }
+}
+impl Into<F64> for U8 {
+  fn into(self) -> F64 {
+    u8_into_f64(self)
+  }
+}
+impl Into<I8> for U16 {
+  fn into(self) -> I8 {
+    u16_into_i8(self)
+  }
+}
+impl Into<I16> for U16 {
+  fn into(self) -> I16 {
+    u16_into_i16(self)
+  }
+}
+impl Into<I32> for U16 {
+  fn into(self) -> I32 {
+    u16_into_i32(self)
+  }
+}
+impl Into<I64> for U16 {
+  fn into(self) -> I64 {
+    u16_into_i64(self)
+  }
+}
+impl Into<U8> for U16 {
+  fn into(self) -> U8 {
+    u16_into_u8(self)
+  }
+}
+impl Into<U16> for U16 {
+  fn into(self) -> U16 {
+    u16_into_u16(self)
+  }
+}
+impl Into<U32> for U16 {
+  fn into(self) -> U32 {
+    u16_into_u32(self)
+  }
+}
+impl Into<U64> for U16 {
+  fn into(self) -> U64 {
+    u16_into_u64(self)
+  }
+}
+impl Into<F32> for U16 {
+  fn into(self) -> F32 {
+    u16_into_f32(self)
+  }
+}
+impl Into<F64> for U16 {
+  fn into(self) -> F64 {
+    u16_into_f64(self)
+  }
+}
+impl Into<I8> for U32 {
+  fn into(self) -> I8 {
+    u32_into_i8(self)
+  }
+}
+impl Into<I16> for U32 {
+  fn into(self) -> I16 {
+    u32_into_i16(self)
+  }
+}
+impl Into<I32> for U32 {
+  fn into(self) -> I32 {
+    u32_into_i32(self)
+  }
+}
+impl Into<I64> for U32 {
+  fn into(self) -> I64 {
+    u32_into_i64(self)
+  }
+}
+impl Into<U8> for U32 {
+  fn into(self) -> U8 {
+    u32_into_u8(self)
+  }
+}
+impl Into<U16> for U32 {
+  fn into(self) -> U16 {
+    u32_into_u16(self)
+  }
+}
+impl Into<U32> for U32 {
+  fn into(self) -> U32 {
+    u32_into_u32(self)
+  }
+}
+impl Into<U64> for U32 {
+  fn into(self) -> U64 {
+    u32_into_u64(self)
+  }
+}
+impl Into<F32> for U32 {
+  fn into(self) -> F32 {
+    u32_into_f32(self)
+  }
+}
+impl Into<F64> for U32 {
+  fn into(self) -> F64 {
+    u32_into_f64(self)
+  }
+}
+impl Into<I8> for U64 {
+  fn into(self) -> I8 {
+    u64_into_i8(self)
+  }
+}
+impl Into<I16> for U64 {
+  fn into(self) -> I16 {
+    u64_into_i16(self)
+  }
+}
+impl Into<I32> for U64 {
+  fn into(self) -> I32 {
+    u64_into_i32(self)
+  }
+}
+impl Into<I64> for U64 {
+  fn into(self) -> I64 {
+    u64_into_i64(self)
+  }
+}
+impl Into<U8> for U64 {
+  fn into(self) -> U8 {
+    u64_into_u8(self)
+  }
+}
+impl Into<U16> for U64 {
+  fn into(self) -> U16 {
+    u64_into_u16(self)
+  }
+}
+impl Into<U32> for U64 {
+  fn into(self) -> U32 {
+    u64_into_u32(self)
+  }
+}
+impl Into<U64> for U64 {
+  fn into(self) -> U64 {
+    u64_into_u64(self)
+  }
+}
+impl Into<F32> for U64 {
+  fn into(self) -> F32 {
+    u64_into_f32(self)
+  }
+}
+impl Into<F64> for U64 {
+  fn into(self) -> F64 {
+    u64_into_f64(self)
+  }
+}
+impl Into<I8> for F32 {
+  fn into(self) -> I8 {
+    f32_into_i8(self)
+  }
+}
+impl Into<I16> for F32 {
+  fn into(self) -> I16 {
+    f32_into_i16(self)
+  }
+}
+impl Into<I32> for F32 {
+  fn into(self) -> I32 {
+    f32_into_i32(self)
+  }
+}
+impl Into<I64> for F32 {
+  fn into(self) -> I64 {
+    f32_into_i64(self)
+  }
+}
+impl Into<U8> for F32 {
+  fn into(self) -> U8 {
+    f32_into_u8(self)
+  }
+}
+impl Into<U16> for F32 {
+  fn into(self) -> U16 {
+    f32_into_u16(self)
+  }
+}
+impl Into<U32> for F32 {
+  fn into(self) -> U32 {
+    f32_into_u32(self)
+  }
+}
+impl Into<U64> for F32 {
+  fn into(self) -> U64 {
+    f32_into_u64(self)
+  }
+}
+impl Into<F32> for F32 {
+  fn into(self) -> F32 {
+    f32_into_f32(self)
+  }
+}
+impl Into<F64> for F32 {
+  fn into(self) -> F64 {
+    f32_into_f64(self)
+  }
+}
+impl Into<I8> for F64 {
+  fn into(self) -> I8 {
+    f64_into_i8(self)
+  }
+}
+impl Into<I16> for F64 {
+  fn into(self) -> I16 {
+    f64_into_i16(self)
+  }
+}
+impl Into<I32> for F64 {
+  fn into(self) -> I32 {
+    f64_into_i32(self)
+  }
+}
+impl Into<I64> for F64 {
+  fn into(self) -> I64 {
+    f64_into_i64(self)
+  }
+}
+impl Into<U8> for F64 {
+  fn into(self) -> U8 {
+    f64_into_u8(self)
+  }
+}
+impl Into<U16> for F64 {
+  fn into(self) -> U16 {
+    f64_into_u16(self)
+  }
+}
+impl Into<U32> for F64 {
+  fn into(self) -> U32 {
+    f64_into_u32(self)
+  }
+}
+impl Into<U64> for F64 {
+  fn into(self) -> U64 {
+    f64_into_u64(self)
+  }
+}
+impl Into<F32> for F64 {
+  fn into(self) -> F32 {
+    f64_into_f32(self)
+  }
+}
+impl Into<F64> for F64 {
+  fn into(self) -> F64 {
+    f64_into_f64(self)
+  }
+}

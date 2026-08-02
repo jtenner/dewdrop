@@ -1,0 +1,22 @@
+open dew.std.wasi
+fn first() -> Bool {
+  wasi_fd_write(1u32, b"first\n")
+  true
+}
+
+fn second() -> Bool {
+  wasi_fd_write(1u32, b"second\n")
+  true
+}
+
+pub fn main() -> U32 {
+  if first() {
+    if second() {
+      wasi_fd_write(1u32, b"done")
+    } else {
+      wasi_fd_write(1u32, b"FAIL")
+    }
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

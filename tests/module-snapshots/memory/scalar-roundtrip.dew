@@ -1,0 +1,4 @@
+pub fn main() -> I32 {
+  i32_store(33u32, -424242i32)
+  i32_load(33u32)
+}

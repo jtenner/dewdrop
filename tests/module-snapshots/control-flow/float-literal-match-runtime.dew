@@ -1,0 +1,22 @@
+open dew.std.wasi
+fn classify32(value: F32) -> I32 {
+  match value {
+    7.5f32 => 1
+    _ => 0
+  }
+}
+
+fn classify64(value: F64) -> I32 {
+  match value {
+    9.25f64 => 2
+    _ => 0
+  }
+}
+
+pub fn main() -> U32 {
+  if classify32(7.5f32) + classify64(9.25f64) == 3 {
+    wasi_fd_write(1u32, b"control:float-literal")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

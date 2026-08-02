@@ -1,0 +1,11 @@
+fn value() -> I32 {
+  1
+}
+
+fn value() -> I32 {
+  2
+}
+
+pub fn main() -> I32 {
+  value()
+}

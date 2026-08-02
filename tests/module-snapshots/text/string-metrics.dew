@@ -1,0 +1,6 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  "aλ🌍".byte_length() + "aλ🌍".utf16_length()
+}

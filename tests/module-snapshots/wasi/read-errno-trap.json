@@ -1,0 +1,11 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": {
+    "trap": "unreachable",
+    "stdout": []
+  },
+  "host": {
+    "read_errno": 5
+  }
+}

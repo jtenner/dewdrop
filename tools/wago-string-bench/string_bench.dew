@@ -1,0 +1,249 @@
+open dew.std.string
+open dew.std.bytes
+open dew.std.string_builder
+open dew.std.bytes_builder
+
+pub fn identity(seed: U32) -> U32 {
+  seed
+}
+
+pub fn flat_scan(seed: U32) -> U32 {
+  seed + "0123456789abcdef-λ-世界-🌍-tail".utf16_length()
+}
+
+pub fn view_create(seed: U32) -> U32 {
+  seed + "prefix-0123456789abcdef-λ-世界-🌍-tail-suffix".view(7u32, 36u32).byte_length()
+}
+
+pub fn view_scan(seed: U32) -> U32 {
+  seed + "prefix-0123456789abcdef-λ-世界-🌍-tail-suffix".view(7u32, 36u32).utf16_length()
+}
+
+pub fn string_slice_scan(seed: U32) -> U32 {
+  seed + "prefix-0123456789abcdef-λ-世界-🌍-tail-suffix".slice(7u32, 43u32).utf16_length()
+}
+
+pub fn bytes_subarray_create(seed: U32) -> U32 {
+  seed + b"prefix-0123456789abcdef-\x00\xFF-binary-tail-suffix".subarray(7u32, 43u32).byte_length()
+}
+
+pub fn bytes_slice_copy(seed: U32) -> U32 {
+  seed + b"prefix-0123456789abcdef-\x00\xFF-binary-tail-suffix".slice(7u32, 43u32).byte_length()
+}
+
+pub fn string_concat_create(seed: U32) -> U32 {
+  let source = "prefix-0123456789abcdef-λ-世界-🌍-tail-suffix"
+  let left = source.view(7u32, 17u32).to_string()
+  let right = source.view(24u32, 19u32).to_string()
+  seed + left.concat(right).byte_length()
+}
+
+pub fn string_concat_view_create(seed: U32) -> U32 {
+  let source = "prefix-0123456789abcdef-λ-世界-🌍-tail-suffix"
+  let left = source.view(7u32, 17u32).to_string()
+  seed + left.concat_view(source.view(24u32, 19u32)).byte_length()
+}
+
+pub fn bytes_find_byte_present(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeZ-suffix".view(8u32, 64u32)
+  let index = match value.find_byte(90u8) {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn bytes_find_byte_absent(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeZ-suffix".view(8u32, 64u32)
+  let found = match value.find_byte(126u8) {
+    Option::Some(_) => 0u32
+    Option::None => 1u32
+  }
+  seed + found
+}
+
+pub fn bytes_find_substring_present(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef-needle-tail-suffix".view(8u32, 124u32)
+  let index = match value.find(b"needle") {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn bytes_find_substring_absent(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef-needle-tail-suffix".view(8u32, 124u32)
+  let absent = match value.find(b"0123456789abcdeg") {
+    Option::Some(_) => 0u32
+    Option::None => 1u32
+  }
+  seed + absent
+}
+
+pub fn bytes_find_long_substring_present(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef-needle-tail-suffix".view(8u32, 124u32)
+  let index = match value.find(b"0123456789abcdef-needle-tail") {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn bytes_find_long_substring_absent(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef-needle-tail-suffix".view(8u32, 124u32)
+  let absent = match value.find(b"0123456789abcdef-needle-fail") {
+    Option::Some(_) => 0u32
+    Option::None => 1u32
+  }
+  seed + absent
+}
+
+pub fn string_find_string(seed: U32) -> U32 {
+  let value = "xxprefix λ世界🌍 suffixyy".view(2u32, 26u32).to_string()
+  let index = match value.find("🌍 suffix") {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn string_find_view(seed: U32) -> U32 {
+  let value = "xxprefix λ世界🌍 suffixyy".view(2u32, 26u32).to_string()
+  let index = match value.find_view("zz🌍 suffixqq".view(2u32, 11u32)) {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn string_view_find_view(seed: U32) -> U32 {
+  let value = "xxprefix λ世界🌍 suffixyy".view(2u32, 26u32)
+  let index = match value.find("zz🌍 suffixqq".view(2u32, 11u32)) {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn string_view_find_string(seed: U32) -> U32 {
+  let value = "xxprefix λ世界🌍 suffixyy".view(2u32, 26u32)
+  let index = match value.find_string("🌍 suffix") {
+    Option::Some(found) => found
+    Option::None => 0u32
+  }
+  seed + index
+}
+
+pub fn string_prefix_view(seed: U32) -> U32 {
+  let matched = "λ世界 body 🌍".starts_with_view("xxλ世界yy".view(2u32, 8u32))
+  if matched {
+    seed + 1u32
+  } else {
+    seed
+  }
+}
+
+pub fn string_view_suffix_string(seed: U32) -> U32 {
+  let matched = "xxλ世界 body 🌍yy".view(2u32, 18u32).ends_with_string("🌍")
+  if matched {
+    seed + 1u32
+  } else {
+    seed
+  }
+}
+
+pub fn bytes_prefix_match(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeZ-suffix".view(8u32, 64u32)
+  if value.starts_with(b"0123456789abcdef") {
+    seed + 1u32
+  } else {
+    seed
+  }
+}
+
+pub fn bytes_suffix_match(seed: U32) -> U32 {
+  let value = b"padding-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeZ-suffix".view(8u32, 64u32)
+  if value.ends_with(b"0123456789abcdeZ") {
+    seed + 1u32
+  } else {
+    seed
+  }
+}
+
+pub fn bytes_concat_create(seed: U32) -> U32 {
+  let source = b"prefix-0123456789abcdef-\x00\xFF-binary-tail-suffix"
+  let left = source.view(7u32, 18u32)
+  let right = source.view(25u32, 18u32)
+  seed + left.concat(right).byte_length()
+}
+
+pub fn repeated_string_concat(seed: U32) -> U32 {
+  let a = "0123".concat("4567")
+  let b = a.concat("89ab")
+  let c = b.concat("cdef")
+  let d = c.concat("0123")
+  let e = d.concat("4567")
+  let f = e.concat("89ab")
+  seed + f.concat("cdef").byte_length()
+}
+
+pub fn exact_builder_concat(seed: U32) -> U32 {
+  let builder = StringBuilder::with_capacity(32u32)
+  builder.append("0123")
+  builder.append("4567")
+  builder.append("89ab")
+  builder.append("cdef")
+  builder.append("0123")
+  builder.append("4567")
+  builder.append("89ab")
+  builder.append("cdef")
+  seed + builder.finish().byte_length()
+}
+
+pub fn view_copy_scan(seed: U32) -> U32 {
+  let view = "prefix-0123456789abcdef-λ-世界-🌍-tail-suffix".view(7u32, 36u32)
+  let builder = StringBuilder::with_capacity(36u32)
+  builder.append_view(view)
+  seed + builder.finish().utf16_length()
+}
+
+pub fn bytes_builder_fragments(seed: U32) -> U32 {
+  let builder = BytesBuilder::with_capacity(1u32)
+  builder.append(b"content-type: application/octet-stream\r\n")
+  builder.append(b"content-length: 40\r\n\r\n")
+  builder.append_byte(0u8)
+  builder.append(b"0123456789abcdef")
+  builder.append_byte(255u8)
+  builder.append(b"0123456789abcdef")
+  seed + builder.finish().byte_length()
+}
+
+pub fn builder_scalars(seed: U32) -> U32 {
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append_ascii(91u8)
+  builder.append_scalar(955u32)
+  builder.append_ascii(32u8)
+  builder.append_scalar(19990u32)
+  builder.append_scalar(30028u32)
+  builder.append_ascii(32u8)
+  builder.append_scalar(127757u32)
+  builder.append_ascii(93u8)
+  seed + builder.finish().byte_length()
+}
+
+pub fn builder_checked_bytes(seed: U32) -> U32 {
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append_checked(b"checked λ 世界 🌍")
+  seed + builder.finish().byte_length()
+}
+
+pub fn builder_fragments(seed: U32) -> U32 {
+  let builder = StringBuilder::with_capacity(16u32)
+  builder.append("HTTP/1.1 200 OK\r\n")
+  builder.append("content-type: text/plain; charset=utf-8\r\n")
+  builder.append("content-length: 31\r\n")
+  builder.append("x-request-id: 0123456789abcdef\r\n")
+  builder.append("\r\n")
+  builder.append("hello λ 世界 🌍 from Dew")
+  seed + builder.finish().byte_length()
+}

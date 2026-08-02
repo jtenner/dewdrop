@@ -1,0 +1,10 @@
+import {
+  "jtenner/dewdrop/semantic",
+  "jtenner/dewdrop/backend",
+  "jtenner/dewdrop/standard_loader",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+  "moonbitlang/core/debug",
+}
+
+pkgtype(kind: "executable")

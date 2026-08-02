@@ -1,0 +1,4 @@
+import {
+  "jtenner/dewdrop/tokenizer",
+  "moonbitlang/core/bench",
+}

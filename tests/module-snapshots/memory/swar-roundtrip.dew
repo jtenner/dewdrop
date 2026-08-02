@@ -1,0 +1,5 @@
+pub fn main() -> U32 {
+  let value = swar32_from_bits(305419896u32)
+  swar32_store(17u32, value)
+  swar32_to_bits(swar32_load(17u32))
+}

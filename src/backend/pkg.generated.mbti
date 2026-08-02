@@ -1,0 +1,61 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/backend"
+
+import {
+  "jtenner/dewdrop/semantic",
+  "jtenner/starshine/binary",
+  "jtenner/starshine/lib",
+  "jtenner/starshine/validate",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn emit_starshine_binary(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[Bytes, StarshineBinaryEmissionError]
+
+pub fn emit_starshine_code_section(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[@lib.CodeSec, StarshineCodeEmissionError]
+
+pub fn emit_starshine_export_section(@semantic.PlannedModuleWasmGCFragments) -> @lib.ExportSec
+
+pub fn emit_starshine_function_section(@semantic.PlannedModuleWasmGCFragments) -> @lib.FuncSec
+
+pub fn emit_starshine_import_section(@semantic.PlannedModuleWasmGCFragments) -> @lib.ImportSec
+
+pub fn emit_starshine_module(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[@lib.Module, StarshineCodeEmissionError]
+
+pub fn emit_starshine_program_binary(@semantic.PlannedProgramLowering, @semantic.PlannedProgramWasmGCLink) -> Result[Bytes, StarshineProgramBinaryEmissionError]
+
+pub fn emit_starshine_program_module(@semantic.PlannedProgramLowering, @semantic.PlannedProgramWasmGCLink) -> Result[@lib.Module, StarshineCodeEmissionError]
+
+pub fn emit_starshine_type_section(@semantic.PlannedModuleWasmGCFragments) -> @lib.TypeSec
+
+pub fn validate_starshine_type_fragments(@semantic.PlannedModuleWasmGCFragments) -> Result[Unit, @validate.ValidationError]
+
+// Errors
+
+// Types and methods
+pub enum StarshineBinaryEmissionError {
+  StarshineCodeError(StarshineCodeEmissionError)
+  StarshineValidationError(@validate.ValidationError)
+  StarshineEncodingError(@binary.EncodeError)
+} derive(@debug.Debug)
+
+pub enum StarshineCodeEmissionError {
+  MissingBody(UInt64)
+  MissingFunction(UInt64)
+  SignatureOnlyCall(UInt64)
+  InvalidLocal(UInt64, Int)
+  UnsupportedExpression(UInt64, Int)
+  UnsupportedBuiltin(Bytes)
+  InvalidFunctionBody(UInt64)
+  ProgramLinkDiagnostics(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum StarshineProgramBinaryEmissionError {
+  StarshineProgramCodeError(StarshineCodeEmissionError)
+  StarshineProgramValidationError(@validate.ValidationError)
+  StarshineProgramEncodingError(@binary.EncodeError)
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits

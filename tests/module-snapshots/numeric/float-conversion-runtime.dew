@@ -1,0 +1,16 @@
+open dew.std.wasi
+fn promote(value: I32) -> F64 {
+  value.into()
+}
+
+fn truncate(value: F64) -> I32 {
+  value.into()
+}
+
+pub fn main() -> U32 {
+  if truncate(promote(41i32) + 1.75f64) == 42 {
+    wasi_fd_write(1u32, b"numeric:float-conversion")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

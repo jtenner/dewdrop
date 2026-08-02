@@ -1,0 +1,267 @@
+///|
+test "inherent instance methods select exact implementation declarations" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    701UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn get(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  item.get()\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, arguments) => {
+      assert_eq(declaration, collected.methods[0].id)
+      assert_eq(arguments.length, 0)
+    }
+    _ => fail("expected inherent method target")
+  }
+  assert_call_primitive(
+    inferred,
+    resolved,
+    inferred.expression_types[calls[0]],
+    I32Type,
+  )
+}
+
+///|
+test "generic inherent methods substitute impl arguments and Self" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    702UL, b"struct Box<t> {\n  item: t\n}\nimpl<t> Box<t> {\n  fn get(self) -> t {\n    self.item\n  }\n}\nfn use(boxed: Box<I32>) -> I32 {\n  boxed.get()\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, arguments) => {
+      assert_eq(declaration, collected.methods[0].id)
+      assert_eq(arguments.length, 1)
+      assert_call_primitive(
+        inferred,
+        resolved,
+        inferred.call_type_arguments[arguments.start],
+        I32Type,
+      )
+    }
+    _ => fail("expected generic method target")
+  }
+}
+
+///|
+test "method-local generics instantiate freshly after impl generics" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    708UL, b"struct Box<a> {}\nimpl<a> Box<a> {\n  fn choose<t>(self, value: t) -> t {\n    value\n  }\n}\nfn use(boxed: Box<Bool>) -> I32 {\n  boxed.choose(1)\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, arguments) => {
+      assert_eq(declaration, collected.methods[0].id)
+      assert_eq(arguments.length, 2)
+      assert_call_primitive(
+        inferred,
+        resolved,
+        inferred.call_type_arguments[arguments.start],
+        BoolType,
+      )
+      assert_call_primitive(
+        inferred,
+        resolved,
+        inferred.call_type_arguments[arguments.start + 1],
+        I32Type,
+      )
+    }
+    _ => fail("expected generic method target")
+  }
+}
+
+///|
+test "trait methods dispatch statically through coherent impl evidence" {
+  let (collected, _, _, inferred) = call_test_module(
+    703UL, b"trait Show {\n  fn show(self) -> String\n}\nstruct Item {}\nimpl Show for Item {\n  fn show(self) -> String {\n    \"item\"\n  }\n}\nfn use(item: Item) -> String {\n  item.show()\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[1].id)
+    _ => fail("expected trait implementation method")
+  }
+}
+
+///|
+test "inherent methods outrank trait methods with the same name" {
+  let (collected, _, _, inferred) = call_test_module(
+    704UL, b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Item {\n  fn value(self) -> I32 {\n    2\n  }\n}\nfn use(item: Item) -> I32 {\n  item.value()\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[2].id)
+    _ => fail("expected inherent method precedence")
+  }
+}
+
+///|
+test "strictly specialized trait impl methods outrank generic fallbacks" {
+  let (collected, _, _, inferred) = call_test_module(
+    710UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {}\nimpl<t> Read for Box<t> {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Read for Box<I32> {\n  fn read(self) -> I32 {\n    2\n  }\n}\nfn use(value: Box<I32>) -> I32 {\n  value.read()\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[2].id)
+    _ => fail("expected specialized trait method")
+  }
+}
+
+///|
+test "same-name methods from separate traits are ambiguous" {
+  let (_, _, _, inferred) = call_test_module(
+    705UL, b"trait First {\n  fn read(self) -> I32\n}\ntrait Second {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl First for Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Second for Item {\n  fn read(self) -> I32 {\n    2\n  }\n}\nfn use(item: Item) -> I32 {\n  item.read()\n}\n",
+  )
+  let mut ambiguous = 0
+  for diagnostic in inferred.diagnostics {
+    match diagnostic {
+      AmbiguousMethod(_, _, _, _, count, _) => {
+        ambiguous += 1
+        assert_eq(count, 2)
+      }
+      _ => ()
+    }
+  }
+  assert_eq(ambiguous, 1)
+}
+
+///|
+test "method parameters constrain nested object arguments" {
+  let (collected, _, _, inferred) = call_test_module(
+    706UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn combine(self, other: Item) -> I32 {\n    other.value\n  }\n}\nfn use(item: Item) -> I32 {\n  item.combine({\n    value: 2\n  })\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[0].id)
+    _ => fail("expected object-argument method")
+  }
+  let (_, selection) = selected_expression_of_kind(collected, inferred, false)
+  match selection {
+    StructConstructionSelection(declaration, _) =>
+      assert_eq(declaration, collected.declarations[0].id)
+    _ => fail("expected method object argument selection")
+  }
+}
+
+///|
+test "type-qualified static and instance methods select impl declarations" {
+  let (collected, _, _, inferred) = call_test_module(
+    711UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn make(value: I32) -> Item {\n    Item {\n      value: value\n    }\n  }\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  let made = Item::make(1)\n  Item::read(made)\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  assert_eq(calls.length(), 2)
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[0].id)
+    _ => fail("expected qualified static method")
+  }
+  match inferred.call_targets[calls[1]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[1].id)
+    _ => fail("expected qualified instance method")
+  }
+}
+
+///|
+test "primitive-qualified static methods select impl declarations" {
+  let (collected, _, names, inferred) = call_test_module(
+    714UL, b"impl I32 {\n  fn answer() -> I32 {\n    42\n  }\n}\nfn use() -> I32 {\n  I32::answer()\n}\n",
+  )
+  assert_eq(names.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  assert_eq(calls.length(), 1)
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[0].id)
+    _ => fail("expected primitive-qualified static method")
+  }
+  assert_eq(inferred.diagnostics.length(), 0)
+}
+
+///|
+test "trait-qualified instance and static methods select coherent evidence" {
+  let (collected, _, _, inferred) = call_test_module(
+    713UL, b"trait Build {\n  fn make(value: I32) -> Self\n  fn read(self) -> I32\n}\nstruct Item {\n  value: I32\n}\nimpl Build for Item {\n  fn make(value: I32) -> Self {\n    Item {\n      value: value\n    }\n  }\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  let made = Build::make(1)\n  Build::read(made)\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  assert_eq(calls.length(), 2)
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[2].id)
+    _ => fail("expected trait-qualified static method")
+  }
+  match inferred.call_targets[calls[1]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[3].id)
+    _ => fail("expected trait-qualified instance method")
+  }
+}
+
+///|
+test "generic static methods infer impl arguments through Self" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    712UL, b"struct Box<a> {\n  value: a\n}\nimpl<a> Box<a> {\n  fn make(value: a) -> Self {\n    Box {\n      value: value\n    }\n  }\n}\nfn use() -> Box<I32> {\n  Box::make(1)\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, arguments) => {
+      assert_eq(declaration, collected.methods[0].id)
+      assert_eq(arguments.length, 1)
+      assert_call_primitive(
+        inferred,
+        resolved,
+        inferred.call_type_arguments[arguments.start],
+        I32Type,
+      )
+    }
+    _ => fail("expected generic static method")
+  }
+}
+
+///|
+test "method inference is deterministic across body schedules" {
+  let collected = collect_bytes(
+    709UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn first(item: Item) -> I32 {\n  item.read()\n}\nfn second(item: Item) -> I32 {\n  item.read()\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let forward = infer_module_bodies_in_order(collected, resolved, names, [
+    0, 1, 2,
+  ])
+  let reverse = infer_module_bodies_in_order(collected, resolved, names, [
+    2, 1, 0,
+  ])
+  assert_eq(forward, reverse)
+}
+
+///|
+test "unknown methods produce one method diagnostic without field cascades" {
+  let (_, _, _, inferred) = call_test_module(
+    707UL, b"struct Item {}\nfn use(item: Item) -> I32 {\n  item.missing()\n}\n",
+  )
+  let mut method_errors = 0
+  let mut field_errors = 0
+  for diagnostic in inferred.diagnostics {
+    match diagnostic {
+      NoMatchingMethod(_, _, _) => method_errors += 1
+      UnknownFieldForType(_, _, _, _) | FieldAccessRequiresNominal(_, _) =>
+        field_errors += 1
+      _ => ()
+    }
+  }
+  assert_eq(method_errors, 1)
+  assert_eq(field_errors, 0)
+}

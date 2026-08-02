@@ -1,0 +1,11 @@
+open dew.std.string
+open dew.std.bytes_builder
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  let builder = BytesBuilder::with_capacity(1u32)
+  builder.append(b"bytes")
+  builder.append_byte(45u8)
+  builder.append(b"builder")
+  wasi_fd_write(1u32, builder.finish())
+}

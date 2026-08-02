@@ -1,0 +1,10 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": [
+    "wasi:partial-write"
+  ],
+  "host": {
+    "write_limit": 3
+  }
+}

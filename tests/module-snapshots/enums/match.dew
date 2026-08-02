@@ -1,0 +1,34 @@
+pub enum Choice {
+  None
+  Number(I32)
+  Pair {
+    left: I32
+    right: I32
+  }
+}
+
+fn number(value: I32) -> Choice {
+  Choice::Number(value)
+}
+
+fn pair(left: I32, right: I32) -> Choice {
+  Choice::Pair {
+    left: left
+    right: right
+  }
+}
+
+fn read(value: Choice) -> I32 {
+  match value {
+    Choice::None => 0
+    Choice::Number(number) => number
+    Choice::Pair {
+      left
+      right
+    } => left + right
+  }
+}
+
+pub fn main() -> I32 {
+  read(pair(20, 22)) + read(number(8))
+}

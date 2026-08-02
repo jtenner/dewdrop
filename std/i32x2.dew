@@ -1,0 +1,216 @@
+builtin i32x2_from_swar64(value: Swar64) -> I32x2 = "dew_reinterpret"
+builtin i32x2_to_swar64(value: I32x2) -> Swar64 = "dew_reinterpret"
+builtin i32x2_reinterpret_as_i8x8(value: I32x2) -> I8x8 = "dew_reinterpret"
+builtin i32x2_reinterpret_as_u8x8(value: I32x2) -> U8x8 = "dew_reinterpret"
+builtin i32x2_reinterpret_as_i16x4(value: I32x2) -> I16x4 = "dew_reinterpret"
+builtin i32x2_reinterpret_as_u16x4(value: I32x2) -> U16x4 = "dew_reinterpret"
+builtin i32x2_reinterpret_as_u32x2(value: I32x2) -> U32x2 = "dew_reinterpret"
+builtin i32x2_load(address: U32) -> I32x2 = "dew_swar64_load"
+builtin i32x2_store(address: U32, value: I32x2) -> Unit = "dew_swar64_store"
+builtin i32x2_and(left: I32x2, right: I32x2) -> I32x2 = "swar64_and"
+builtin i32x2_or(left: I32x2, right: I32x2) -> I32x2 = "swar64_or"
+builtin i32x2_xor(left: I32x2, right: I32x2) -> I32x2 = "swar64_xor"
+fn i32x2_splat(value: I32) -> I32x2 {
+  i32x2_from_swar64(swar64_splat_i32(value))
+}
+fn i32x2_extract(value: I32x2, index: U8) -> I32 {
+  swar64_extract_i32_s(i32x2_to_swar64(value), index)
+}
+fn i32x2_replace(value: I32x2, index: U8, lane: I32) -> I32x2 {
+  i32x2_from_swar64(swar64_replace_i32(i32x2_to_swar64(value), index, lane))
+}
+fn i32x2_add(left: I32x2, right: I32x2) -> I32x2 {
+  i32x2_from_swar64(swar64_add_i32(i32x2_to_swar64(left), i32x2_to_swar64(right)))
+}
+fn i32x2_sub(left: I32x2, right: I32x2) -> I32x2 {
+  i32x2_from_swar64(swar64_sub_i32(i32x2_to_swar64(left), i32x2_to_swar64(right)))
+}
+fn i32x2_shl(value: I32x2, count: U8) -> I32x2 {
+  i32x2_from_swar64(swar64_shl_i32(i32x2_to_swar64(value), count))
+}
+fn i32x2_shr(value: I32x2, count: U8) -> I32x2 {
+  i32x2_from_swar64(swar64_shr_i32_s(i32x2_to_swar64(value), count))
+}
+fn i32x2_mul(left: I32x2, right: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(left))
+  let b = swar64_to_bits(i32x2_to_swar64(right))
+  i32x2_from_swar64(swar64_from_bits((((a & 4294967295u64) * (b & 4294967295u64)) & 4294967295u64) | (((((a >> 32u64) & 4294967295u64) * ((b >> 32u64) & 4294967295u64)) & 4294967295u64) << 32u64)))
+}
+fn i32x2_eq(left: I32x2, right: I32x2) -> I32x2 {
+  let x = swar64_to_bits(i32x2_to_swar64(left)) ^ swar64_to_bits(i32x2_to_swar64(right))
+  let nonzero = ((((x & 9223372034707292159u64) + 9223372034707292159u64) | x) & 9223372039002259456u64)
+  i32x2_from_swar64(swar64_from_bits((((nonzero >> 31u64) * 4294967295u64) ^ 18446744073709551615u64)))
+}
+fn i32x2_ne(left: I32x2, right: I32x2) -> I32x2 {
+  let equal = swar64_to_bits(i32x2_to_swar64(i32x2_eq(left, right)))
+  i32x2_from_swar64(swar64_from_bits(equal ^ 18446744073709551615u64))
+}
+fn i32x2_lt(left: I32x2, right: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(left))
+  let b = swar64_to_bits(i32x2_to_swar64(right))
+  i32x2_from_swar64(swar64_from_bits((((((((a ^ 9223372039002259456u64) ^ 18446744073709551615u64) & (b ^ 9223372039002259456u64)) | ((((a ^ 9223372039002259456u64) ^ (b ^ 9223372039002259456u64)) ^ 18446744073709551615u64) & ((((a ^ 9223372039002259456u64) | 9223372039002259456u64) - ((b ^ 9223372039002259456u64) & 9223372034707292159u64)) ^ (((a ^ 9223372039002259456u64) ^ ((b ^ 9223372039002259456u64) ^ 18446744073709551615u64)) & 9223372039002259456u64)))) & 9223372039002259456u64) >> 31u64) * 4294967295u64)))
+}
+fn i32x2_le(left: I32x2, right: I32x2) -> I32x2 {
+  let greater = swar64_to_bits(i32x2_to_swar64(i32x2_lt(right, left)))
+  i32x2_from_swar64(swar64_from_bits(greater ^ 18446744073709551615u64))
+}
+fn i32x2_gt(left: I32x2, right: I32x2) -> I32x2 {
+  i32x2_lt(right, left)
+}
+fn i32x2_ge(left: I32x2, right: I32x2) -> I32x2 {
+  let less = swar64_to_bits(i32x2_to_swar64(i32x2_lt(left, right)))
+  i32x2_from_swar64(swar64_from_bits(less ^ 18446744073709551615u64))
+}
+fn i32x2_min(left: I32x2, right: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(left))
+  let b = swar64_to_bits(i32x2_to_swar64(right))
+  let mask = swar64_to_bits(i32x2_to_swar64(i32x2_lt(left, right)))
+  i32x2_from_swar64(swar64_from_bits(b ^ ((a ^ b) & mask)))
+}
+fn i32x2_max(left: I32x2, right: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(left))
+  let b = swar64_to_bits(i32x2_to_swar64(right))
+  let mask = swar64_to_bits(i32x2_to_swar64(i32x2_lt(left, right)))
+  i32x2_from_swar64(swar64_from_bits(a ^ ((a ^ b) & mask)))
+}
+fn i32x2_neg(value: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(value))
+  i32x2_from_swar64(swar64_from_bits((9223372039002259456u64 - (a & 9223372034707292159u64)) ^ ((a ^ 18446744073709551615u64) & 9223372039002259456u64)))
+}
+fn i32x2_abs(value: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(value))
+  let mask = ((a & 9223372039002259456u64) >> 31u64) * 4294967295u64
+  let x = a ^ mask
+  let carry = mask & 4294967297u64
+  i32x2_from_swar64(swar64_from_bits((((x & 9223372034707292159u64) + (carry & 9223372034707292159u64)) ^ ((x ^ carry) & 9223372039002259456u64))))
+}
+fn i32x2_add_sat(left: I32x2, right: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(left))
+  let b = swar64_to_bits(i32x2_to_swar64(right))
+  let sum = (((a & 9223372034707292159u64) + (b & 9223372034707292159u64)) ^ ((a ^ b) & 9223372039002259456u64))
+  let overflow = ((((a ^ b) ^ 18446744073709551615u64) & (a ^ sum) & 9223372039002259456u64) >> 31u64) * 4294967295u64
+  let limit = (((a & 9223372039002259456u64) >> 31u64) * 4294967295u64) ^ 9223372034707292159u64
+  i32x2_from_swar64(swar64_from_bits((sum & (overflow ^ 18446744073709551615u64)) | (limit & overflow)))
+}
+fn i32x2_sub_sat(left: I32x2, right: I32x2) -> I32x2 {
+  let a = swar64_to_bits(i32x2_to_swar64(left))
+  let b = swar64_to_bits(i32x2_to_swar64(right))
+  let diff = (((a | 9223372039002259456u64) - (b & 9223372034707292159u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9223372039002259456u64))
+  let overflow = (((a ^ b) & (a ^ diff) & 9223372039002259456u64) >> 31u64) * 4294967295u64
+  let limit = (((a & 9223372039002259456u64) >> 31u64) * 4294967295u64) ^ 9223372034707292159u64
+  i32x2_from_swar64(swar64_from_bits((diff & (overflow ^ 18446744073709551615u64)) | (limit & overflow)))
+}
+fn i32x2_bitmask(value: I32x2) -> U32 {
+  let a = swar64_to_bits(i32x2_to_swar64(value))
+  u64_into_u32(((a >> 31u64) & 1u64) | (((a >> 63u64) & 1u64) << 1u64))
+}
+fn i32x2_all_true(value: I32x2) -> Bool {
+  swar64_to_bits(i32x2_to_swar64(i32x2_eq(value, i32x2_from_swar64(swar64_from_bits(0u64))))) == 0u64
+}
+impl I32x2 {
+  fn to_swar64(self) -> Swar64 {
+    i32x2_to_swar64(self)
+  }
+  fn reinterpret_as_i8x8(self) -> I8x8 {
+    i32x2_reinterpret_as_i8x8(self)
+  }
+  fn reinterpret_as_u8x8(self) -> U8x8 {
+    i32x2_reinterpret_as_u8x8(self)
+  }
+  fn reinterpret_as_i16x4(self) -> I16x4 {
+    i32x2_reinterpret_as_i16x4(self)
+  }
+  fn reinterpret_as_u16x4(self) -> U16x4 {
+    i32x2_reinterpret_as_u16x4(self)
+  }
+  fn reinterpret_as_u32x2(self) -> U32x2 {
+    i32x2_reinterpret_as_u32x2(self)
+  }
+  fn extract(self, index: U8) -> I32 {
+    i32x2_extract(self, index)
+  }
+  fn replace(self, index: U8, lane: I32) -> I32x2 {
+    i32x2_replace(self, index, lane)
+  }
+  fn shl(self, count: U8) -> I32x2 {
+    i32x2_shl(self, count)
+  }
+  fn shr(self, count: U8) -> I32x2 {
+    i32x2_shr(self, count)
+  }
+  fn bitmask(self) -> U32 {
+    i32x2_bitmask(self)
+  }
+  fn all_true(self) -> Bool {
+    i32x2_all_true(self)
+  }
+  fn eq_mask(self, right: I32x2) -> I32x2 {
+    i32x2_eq(self, right)
+  }
+  fn mul(self, right: I32x2) -> I32x2 {
+    i32x2_mul(self, right)
+  }
+  fn ne_mask(self, right: I32x2) -> I32x2 {
+    i32x2_ne(self, right)
+  }
+  fn lt_mask(self, right: I32x2) -> I32x2 {
+    i32x2_lt(self, right)
+  }
+  fn le_mask(self, right: I32x2) -> I32x2 {
+    i32x2_le(self, right)
+  }
+  fn gt_mask(self, right: I32x2) -> I32x2 {
+    i32x2_gt(self, right)
+  }
+  fn ge_mask(self, right: I32x2) -> I32x2 {
+    i32x2_ge(self, right)
+  }
+  fn min(self, right: I32x2) -> I32x2 {
+    i32x2_min(self, right)
+  }
+  fn max(self, right: I32x2) -> I32x2 {
+    i32x2_max(self, right)
+  }
+  fn add_sat(self, right: I32x2) -> I32x2 {
+    i32x2_add_sat(self, right)
+  }
+  fn sub_sat(self, right: I32x2) -> I32x2 {
+    i32x2_sub_sat(self, right)
+  }
+  fn abs(self) -> I32x2 {
+    i32x2_abs(self)
+  }
+  fn neg(self) -> I32x2 {
+    i32x2_neg(self)
+  }
+}
+impl BitAnd for I32x2 {
+  fn bit_and(self, right: I32x2) -> I32x2 {
+    i32x2_and(self, right)
+  }
+}
+impl BitOr for I32x2 {
+  fn bit_or(self, right: I32x2) -> I32x2 {
+    i32x2_or(self, right)
+  }
+}
+impl BitXor for I32x2 {
+  fn bit_xor(self, right: I32x2) -> I32x2 {
+    i32x2_xor(self, right)
+  }
+}
+impl Add for I32x2 {
+  fn add(self, right: I32x2) -> I32x2 {
+    i32x2_add(self, right)
+  }
+}
+impl Sub for I32x2 {
+  fn sub(self, right: I32x2) -> I32x2 {
+    i32x2_sub(self, right)
+  }
+}
+impl Mul for I32x2 {
+  fn mul(self, right: I32x2) -> I32x2 {
+    i32x2_mul(self, right)
+  }
+}

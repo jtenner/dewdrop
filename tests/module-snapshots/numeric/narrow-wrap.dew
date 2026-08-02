@@ -1,0 +1,11 @@
+fn widen_signed(value: I8) -> I32 {
+  value.into()
+}
+
+fn widen_unsigned(value: U8) -> I32 {
+  value.into()
+}
+
+pub fn main() -> I32 {
+  widen_signed(127i8 + 1i8) + widen_unsigned(255u8 + 1u8)
+}

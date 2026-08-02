@@ -1,0 +1,16 @@
+open dew.std.string
+open dew.std.wasi
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  let value = "aλ🌍"
+  if value.byte_length() == 7u32 {
+    if value.utf16_length() == 4u32 {
+      wasi_fd_write(1u32, b"text:unicode-metrics")
+    } else {
+      wasi_fd_write(1u32, b"FAIL")
+    }
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

@@ -1,0 +1,24 @@
+open dew.std.wasi
+struct Box {
+  value: I32
+}
+
+fn choose(flag: Bool) -> Box {
+  if flag {
+    Box {
+      value: 11
+    }
+  } else {
+    Box {
+      value: 22
+    }
+  }
+}
+
+pub fn main() -> U32 {
+  if choose(false).value == 22 {
+    wasi_fd_write(1u32, b"struct:aggregate-if")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

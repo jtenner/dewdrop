@@ -1,0 +1,27 @@
+///|
+test "sets emit collision-safe insert remove and clear" {
+  let program = @semantic.collect_program_manifest(
+    2615UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open dew.std.set\npub fn run() -> Bool {\n  let values = Set::singleton(1)\n  values.insert(17)\n  values.remove(1)\n  values.contains(17)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.frozen.import_diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  assert_eq(lowering.modules[0].diagnostics.length(), 0)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_true(
+    link.type_lookup.get(@semantic.standard_set_type_declaration()) is Some(_),
+  )
+  match emit_starshine_program_module(lowering, link) {
+    Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
+    Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))
+  }
+}

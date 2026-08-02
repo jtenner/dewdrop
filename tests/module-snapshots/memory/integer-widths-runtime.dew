@@ -1,0 +1,34 @@
+open dew.std.wasi
+pub fn main() -> U32 {
+  i8_store(1u32, -7i8)
+  u8_store(3u32, 250u8)
+  i16_store(5u32, -1234i16)
+  u16_store(9u32, 65000u16)
+  i32_store(13u32, -424242)
+  u32_store(19u32, 4000000000u32)
+  if i8_load(1u32) == -7i8 {
+    if u8_load(3u32) == 250u8 {
+      if i16_load(5u32) == -1234i16 {
+        if u16_load(9u32) == 65000u16 {
+          if i32_load(13u32) == -424242 {
+            if u32_load(19u32) == 4000000000u32 {
+              wasi_fd_write(1u32, b"memory:integer-widths")
+            } else {
+              wasi_fd_write(1u32, b"FAIL")
+            }
+          } else {
+            wasi_fd_write(1u32, b"FAIL")
+          }
+        } else {
+          wasi_fd_write(1u32, b"FAIL")
+        }
+      } else {
+        wasi_fd_write(1u32, b"FAIL")
+      }
+    } else {
+      wasi_fd_write(1u32, b"FAIL")
+    }
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

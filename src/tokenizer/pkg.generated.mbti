@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "jtenner/dewdrop/tokenizer"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub const INVALID_BYTE_BASE : UInt = 0x110000
 
@@ -24,9 +28,139 @@ pub fn is_unicode_scalar(UInt) -> Bool
 
 pub fn is_wtf8_codepoint(UInt) -> Bool
 
+pub fn tokens(Bytes) -> Iter[Token]
+
 // Errors
 
 // Types and methods
+pub enum Keyword {
+  Fn
+  Test
+  Pub
+  Builtin
+  Foreign
+  Impl
+  Trait
+  For
+  Enum
+  Struct
+  Type
+  Let
+  Mut
+  If
+  Else
+  Match
+  While
+  Loop
+  Return
+  Break
+  Continue
+  True
+  False
+  As
+  In
+  Where
+  Global
+  Import
+  Export
+  Package
+} derive(Eq, @debug.Debug)
+
+pub enum LexError {
+  UnexpectedUnit(UInt)
+  InvalidAtIdentifier
+  InvalidInteger(String)
+  InvalidFloat(String)
+  InvalidEscape(UInt)
+  UnterminatedString
+  SourceIo(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum Symbol {
+  LeftParen
+  RightParen
+  LeftBrace
+  RightBrace
+  LeftBracket
+  RightBracket
+  Caret
+  Plus
+  Minus
+  Star
+  Slash
+  Exponent
+  Percent
+  Colon
+  DoubleColon
+  Equal
+  EqualEqual
+  FatArrow
+  BangEqual
+  LessEqual
+  GreaterEqual
+  ShiftLeft
+  ShiftRight
+  LogicalAnd
+  LogicalOr
+  Comma
+  Semicolon
+  Dot
+  Ellipsis
+  Less
+  Greater
+  Arrow
+  Bang
+  Ampersand
+  Pipe
+} derive(Eq, @debug.Debug)
+
+pub struct Token(TokenKind, UInt64, Int) derive(Eq, @debug.Debug)
+pub fn Token::index(Self) -> Int
+pub fn Token::kind(Self) -> TokenKind
+pub fn Token::new(TokenKind, UInt64, Int) -> Self
+pub fn Token::offset(Self) -> UInt64
+
+pub enum TokenKind {
+  Newline
+  Symbol(Symbol)
+  Keyword(Keyword)
+  Identifier(String)
+  AtIdentifier(String)
+  I8(UInt64)
+  I16(UInt64)
+  I32(UInt64)
+  I64(UInt64)
+  U8(UInt64)
+  U16(UInt64)
+  U32(UInt64)
+  U64(UInt64)
+  F32(Float)
+  F64(Double)
+  StringLiteral(Bytes)
+  BytesLiteral(Bytes)
+  MultilineString(Bytes)
+  Error(LexError)
+} derive(Eq, @debug.Debug)
+
+pub struct Tokenizer {
+  source : Utf8Cursor
+  mut has_first : Bool
+  mut first : UInt
+  mut first_offset : UInt64
+  mut has_second : Bool
+  mut second : UInt
+  mut second_offset : UInt64
+  mut next_index : Int
+  mut has_pending_newline : Bool
+  mut pending_newline_offset : UInt64
+  scratch : StringBuilder
+}
+pub fn Tokenizer::from_bytes(Bytes) -> Self
+pub fn Tokenizer::from_fd(Int, buffer_size? : Int) -> Self
+pub fn Tokenizer::iter(Self) -> Iter[Token]
+pub fn Tokenizer::new(Utf8Cursor) -> Self
+pub fn Tokenizer::next(Self) -> Token?
+
 pub struct Utf8Cursor {
   buffer : Bytes
   fd : Int

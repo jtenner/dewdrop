@@ -1,0 +1,50 @@
+pub struct Map<key, value> {}
+
+builtin map_singleton<key, value>(key: key, value: value) -> Map<key, value> = "dew_map_singleton"
+builtin map_length<key, value>(map: Map<key, value>) -> U32 = "dew_map_length"
+builtin map_get<key, value>(map: Map<key, value>, key: key) -> Option<value> = "dew_map_get"
+builtin map_get_unchecked<key, value>(map: Map<key, value>, key: key) -> value = "dew_map_get_unchecked"
+builtin map_insert<key, value>(map: Map<key, value>, key: key, value: value) -> Unit = "dew_map_insert"
+builtin map_set<key, value>(map: Map<key, value>, key: key, value: value) -> Unit = "dew_map_set"
+builtin map_contains_key<key, value>(map: Map<key, value>, key: key) -> Bool = "dew_map_contains_key"
+
+impl<key, value> Map<key, value> {
+  fn singleton(key: key, value: value) -> Map<key, value> {
+    map_singleton(key, value)
+  }
+  fn length(self) -> U32 {
+    map_length(self)
+  }
+  fn get(self, key: key) -> Option<value> {
+    map_get(self, key)
+  }
+  fn get_unchecked(self, key: key) -> value {
+    map_get_unchecked(self, key)
+  }
+  fn insert(self, key: key, value: value) -> Unit {
+    map_insert(self, key, value)
+  }
+  fn set(self, key: key, value: value) -> Unit {
+    map_set(self, key, value)
+  }
+  fn contains_key(self, key: key) -> Bool {
+    map_contains_key(self, key)
+  }
+  fn empty() -> Map<key, value> {
+    map_empty()
+  }
+}
+
+impl<key, value> Index<key, value> for Map<key, value> {
+  fn index(self, key: key) -> value {
+    map_get_unchecked(self, key)
+  }
+}
+
+impl<key, value> IndexSet<key, value> for Map<key, value> {
+  fn index_set(self, key: key, value: value) -> Unit {
+    map_set(self, key, value)
+  }
+}
+
+builtin map_empty<key, value>() -> Map<key, value> = "dew_map_empty"

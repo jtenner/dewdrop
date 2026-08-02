@@ -1,0 +1,7 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  let view = "xxλ世界yy".view(2u32, 8u32)
+  view.subarray(2u32, 8u32).to_string().byte_length()
+}

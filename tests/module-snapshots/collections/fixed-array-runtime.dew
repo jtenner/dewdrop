@@ -1,0 +1,52 @@
+open dew.std.fixed_array
+open dew.std.string
+
+pub fn main() -> Unit {
+  let values = fixed_array_make(3u32, 7)
+  assert(values.length() == 3u32, "fixed array length")
+  assert(values[0u32] == 7, "fixed array first initial value")
+  assert(values[2u32] == 7, "fixed array final initial value")
+
+  values[1u32] = 9
+  assert(values[1u32] == 9, "fixed array indexed set")
+  values.set(0u32, 11)
+  assert(values.get_unchecked(0u32) == 11, "fixed array method set")
+
+  let alias = values
+  alias[2u32] = 13
+  assert(values[2u32] == 13, "fixed array aliases share mutation")
+
+  match values.get(1u32) {
+    Option::Some(value) => assert(value == 9, "fixed array safe get value")
+    Option::None => assert(false, "fixed array safe get unexpectedly empty")
+  }
+  match values.get(3u32) {
+    Option::Some(_) => assert(false, "fixed array out of bounds unexpectedly present")
+    Option::None => {}
+  }
+
+  let empty = fixed_array_make(0u32, 0)
+  assert(empty.length() == 0u32, "empty fixed array length")
+  match empty.get(0u32) {
+    Option::Some(_) => assert(false, "empty fixed array unexpectedly present")
+    Option::None => {}
+  }
+
+  let wide = fixed_array_make(2u32, 1i64)
+  wide[1u32] = 9223372036854775807i64
+  assert(wide[1u32] == 9223372036854775807i64, "fixed array i64 carrier")
+
+  let singles = fixed_array_make(2u32, 1.5f32)
+  singles[1u32] = 2.5f32
+  assert(singles[1u32] == 2.5f32, "fixed array f32 carrier")
+
+  let doubles = fixed_array_make(2u32, 1.5f64)
+  doubles[1u32] = 2.5f64
+  assert(doubles[1u32] == 2.5f64, "fixed array f64 carrier")
+
+  let strings = fixed_array_make(2u32, "initial")
+  strings[1u32] = "changed"
+  strings[0u32]
+  strings[1u32]
+  values[0u32] = 11
+}

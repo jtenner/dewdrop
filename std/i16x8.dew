@@ -1,0 +1,307 @@
+builtin i16x8_from_v128(value: V128) -> I16x8 = "dew_reinterpret"
+builtin i16x8_to_v128(value: I16x8) -> V128 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_i8x16(value: I16x8) -> I8x16 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_u8x16(value: I16x8) -> U8x16 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_u16x8(value: I16x8) -> U16x8 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_i32x4(value: I16x8) -> I32x4 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_u32x4(value: I16x8) -> U32x4 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_i64x2(value: I16x8) -> I64x2 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_u64x2(value: I16x8) -> U64x2 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_f32x4(value: I16x8) -> F32x4 = "dew_reinterpret"
+builtin i16x8_reinterpret_as_f64x2(value: I16x8) -> F64x2 = "dew_reinterpret"
+builtin i16x8_load(address: U32) -> I16x8 = "dew_v128_load"
+builtin i16x8_store(address: U32, value: I16x8) -> Unit = "dew_v128_store"
+builtin i16x8_and(left: I16x8, right: I16x8) -> I16x8 = "v128_and"
+builtin i16x8_or(left: I16x8, right: I16x8) -> I16x8 = "v128_or"
+builtin i16x8_xor(left: I16x8, right: I16x8) -> I16x8 = "v128_xor"
+builtin i16x8_not(value: I16x8) -> I16x8 = "dew_v128_not"
+builtin i16x8_andnot(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_andnot"
+builtin i16x8_bitselect(yes: I16x8, no: I16x8, mask: I16x8) -> I16x8 = "dew_v128_bitselect"
+builtin i16x8_any_true(value: I16x8) -> Bool = "dew_v128_any_true"
+builtin i16x8_splat(value: I16) -> I16x8 = "dew_v128_splat_i16"
+builtin i16x8_load_splat(address: U32) -> I16x8 = "dew_i16x8_load_splat"
+builtin i16x8_load_extend_i8x8_s(address: U32) -> I16x8 = "dew_i16x8_load_extend_i8x8_s"
+builtin i16x8_extract_0(value: I16x8) -> I16 = "dew_i16x8_extract_0"
+builtin i16x8_replace_0(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_0"
+builtin i16x8_load_lane_0(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_0"
+builtin i16x8_store_lane_0(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_0"
+builtin i16x8_extract_1(value: I16x8) -> I16 = "dew_i16x8_extract_1"
+builtin i16x8_replace_1(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_1"
+builtin i16x8_load_lane_1(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_1"
+builtin i16x8_store_lane_1(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_1"
+builtin i16x8_extract_2(value: I16x8) -> I16 = "dew_i16x8_extract_2"
+builtin i16x8_replace_2(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_2"
+builtin i16x8_load_lane_2(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_2"
+builtin i16x8_store_lane_2(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_2"
+builtin i16x8_extract_3(value: I16x8) -> I16 = "dew_i16x8_extract_3"
+builtin i16x8_replace_3(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_3"
+builtin i16x8_load_lane_3(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_3"
+builtin i16x8_store_lane_3(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_3"
+builtin i16x8_extract_4(value: I16x8) -> I16 = "dew_i16x8_extract_4"
+builtin i16x8_replace_4(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_4"
+builtin i16x8_load_lane_4(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_4"
+builtin i16x8_store_lane_4(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_4"
+builtin i16x8_extract_5(value: I16x8) -> I16 = "dew_i16x8_extract_5"
+builtin i16x8_replace_5(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_5"
+builtin i16x8_load_lane_5(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_5"
+builtin i16x8_store_lane_5(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_5"
+builtin i16x8_extract_6(value: I16x8) -> I16 = "dew_i16x8_extract_6"
+builtin i16x8_replace_6(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_6"
+builtin i16x8_load_lane_6(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_6"
+builtin i16x8_store_lane_6(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_6"
+builtin i16x8_extract_7(value: I16x8) -> I16 = "dew_i16x8_extract_7"
+builtin i16x8_replace_7(value: I16x8, lane: I16) -> I16x8 = "dew_i16x8_replace_7"
+builtin i16x8_load_lane_7(address: U32, value: I16x8) -> I16x8 = "dew_i16x8_load_lane_7"
+builtin i16x8_store_lane_7(address: U32, value: I16x8) -> Unit = "dew_i16x8_store_lane_7"
+builtin i16x8_narrow_i32x4_s(low: I32x4, high: I32x4) -> I16x8 = "dew_i16x8_narrow_i32x4_s"
+builtin i16x8_extend_low_i8x16_s(value: I8x16) -> I16x8 = "dew_i16x8_extend_low_i8x16_s"
+builtin i16x8_extend_high_i8x16_s(value: I8x16) -> I16x8 = "dew_i16x8_extend_high_i8x16_s"
+builtin i16x8_extadd_pairwise_i8x16_s(value: I8x16) -> I16x8 = "dew_i16x8_extadd_pairwise_i8x16_s"
+builtin i16x8_extmul_low_i8x16_s(left: I8x16, right: I8x16) -> I16x8 = "dew_i16x8_extmul_low_i8x16_s"
+builtin i16x8_extmul_high_i8x16_s(left: I8x16, right: I8x16) -> I16x8 = "dew_i16x8_extmul_high_i8x16_s"
+builtin i16x8_add(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_add_i16"
+builtin i16x8_sub(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_sub_i16"
+builtin i16x8_mul(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_mul_i16"
+builtin i16x8_min_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_min_s_i16"
+builtin i16x8_max_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_max_s_i16"
+builtin i16x8_add_sat_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_add_sat_s_i16"
+builtin i16x8_sub_sat_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_sub_sat_s_i16"
+builtin i16x8_eq(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_eq_i16"
+builtin i16x8_ne(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_ne_i16"
+builtin i16x8_lt_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_lt_s_i16"
+builtin i16x8_le_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_le_s_i16"
+builtin i16x8_gt_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_gt_s_i16"
+builtin i16x8_ge_s(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_ge_s_i16"
+builtin i16x8_abs(value: I16x8) -> I16x8 = "dew_v128_abs_i16"
+builtin i16x8_neg(value: I16x8) -> I16x8 = "dew_v128_neg_i16"
+builtin i16x8_all_true(value: I16x8) -> Bool = "dew_v128_all_true_i16"
+builtin i16x8_bitmask(value: I16x8) -> U32 = "dew_v128_bitmask_i16"
+builtin i16x8_shl(value: I16x8, count: U32) -> I16x8 = "dew_v128_shl_i16"
+builtin i16x8_shr_s(value: I16x8, count: U32) -> I16x8 = "dew_v128_shr_s_i16"
+impl I16x8 {
+  fn to_v128(self) -> V128 {
+    i16x8_to_v128(self)
+  }
+  fn reinterpret_as_i8x16(self) -> I8x16 {
+    i16x8_reinterpret_as_i8x16(self)
+  }
+  fn reinterpret_as_u8x16(self) -> U8x16 {
+    i16x8_reinterpret_as_u8x16(self)
+  }
+  fn reinterpret_as_u16x8(self) -> U16x8 {
+    i16x8_reinterpret_as_u16x8(self)
+  }
+  fn reinterpret_as_i32x4(self) -> I32x4 {
+    i16x8_reinterpret_as_i32x4(self)
+  }
+  fn reinterpret_as_u32x4(self) -> U32x4 {
+    i16x8_reinterpret_as_u32x4(self)
+  }
+  fn reinterpret_as_i64x2(self) -> I64x2 {
+    i16x8_reinterpret_as_i64x2(self)
+  }
+  fn reinterpret_as_u64x2(self) -> U64x2 {
+    i16x8_reinterpret_as_u64x2(self)
+  }
+  fn reinterpret_as_f32x4(self) -> F32x4 {
+    i16x8_reinterpret_as_f32x4(self)
+  }
+  fn reinterpret_as_f64x2(self) -> F64x2 {
+    i16x8_reinterpret_as_f64x2(self)
+  }
+  fn not(self) -> I16x8 {
+    i16x8_not(self)
+  }
+  fn andnot(self, right: I16x8) -> I16x8 {
+    i16x8_andnot(self, right)
+  }
+  fn bitselect(self, no: I16x8, mask: I16x8) -> I16x8 {
+    i16x8_bitselect(self, no, mask)
+  }
+  fn any_true(self) -> Bool {
+    i16x8_any_true(self)
+  }
+  fn extract_0(self) -> I16 {
+    i16x8_extract_0(self)
+  }
+  fn replace_0(self, lane: I16) -> I16x8 {
+    i16x8_replace_0(self, lane)
+  }
+  fn load_lane_0(self, address: U32) -> I16x8 {
+    i16x8_load_lane_0(address, self)
+  }
+  fn store_lane_0(self, address: U32) -> Unit {
+    i16x8_store_lane_0(address, self)
+  }
+  fn extract_1(self) -> I16 {
+    i16x8_extract_1(self)
+  }
+  fn replace_1(self, lane: I16) -> I16x8 {
+    i16x8_replace_1(self, lane)
+  }
+  fn load_lane_1(self, address: U32) -> I16x8 {
+    i16x8_load_lane_1(address, self)
+  }
+  fn store_lane_1(self, address: U32) -> Unit {
+    i16x8_store_lane_1(address, self)
+  }
+  fn extract_2(self) -> I16 {
+    i16x8_extract_2(self)
+  }
+  fn replace_2(self, lane: I16) -> I16x8 {
+    i16x8_replace_2(self, lane)
+  }
+  fn load_lane_2(self, address: U32) -> I16x8 {
+    i16x8_load_lane_2(address, self)
+  }
+  fn store_lane_2(self, address: U32) -> Unit {
+    i16x8_store_lane_2(address, self)
+  }
+  fn extract_3(self) -> I16 {
+    i16x8_extract_3(self)
+  }
+  fn replace_3(self, lane: I16) -> I16x8 {
+    i16x8_replace_3(self, lane)
+  }
+  fn load_lane_3(self, address: U32) -> I16x8 {
+    i16x8_load_lane_3(address, self)
+  }
+  fn store_lane_3(self, address: U32) -> Unit {
+    i16x8_store_lane_3(address, self)
+  }
+  fn extract_4(self) -> I16 {
+    i16x8_extract_4(self)
+  }
+  fn replace_4(self, lane: I16) -> I16x8 {
+    i16x8_replace_4(self, lane)
+  }
+  fn load_lane_4(self, address: U32) -> I16x8 {
+    i16x8_load_lane_4(address, self)
+  }
+  fn store_lane_4(self, address: U32) -> Unit {
+    i16x8_store_lane_4(address, self)
+  }
+  fn extract_5(self) -> I16 {
+    i16x8_extract_5(self)
+  }
+  fn replace_5(self, lane: I16) -> I16x8 {
+    i16x8_replace_5(self, lane)
+  }
+  fn load_lane_5(self, address: U32) -> I16x8 {
+    i16x8_load_lane_5(address, self)
+  }
+  fn store_lane_5(self, address: U32) -> Unit {
+    i16x8_store_lane_5(address, self)
+  }
+  fn extract_6(self) -> I16 {
+    i16x8_extract_6(self)
+  }
+  fn replace_6(self, lane: I16) -> I16x8 {
+    i16x8_replace_6(self, lane)
+  }
+  fn load_lane_6(self, address: U32) -> I16x8 {
+    i16x8_load_lane_6(address, self)
+  }
+  fn store_lane_6(self, address: U32) -> Unit {
+    i16x8_store_lane_6(address, self)
+  }
+  fn extract_7(self) -> I16 {
+    i16x8_extract_7(self)
+  }
+  fn replace_7(self, lane: I16) -> I16x8 {
+    i16x8_replace_7(self, lane)
+  }
+  fn load_lane_7(self, address: U32) -> I16x8 {
+    i16x8_load_lane_7(address, self)
+  }
+  fn store_lane_7(self, address: U32) -> Unit {
+    i16x8_store_lane_7(address, self)
+  }
+  fn add(self, right: I16x8) -> I16x8 {
+    i16x8_add(self, right)
+  }
+  fn sub(self, right: I16x8) -> I16x8 {
+    i16x8_sub(self, right)
+  }
+  fn mul(self, right: I16x8) -> I16x8 {
+    i16x8_mul(self, right)
+  }
+  fn min(self, right: I16x8) -> I16x8 {
+    i16x8_min_s(self, right)
+  }
+  fn max(self, right: I16x8) -> I16x8 {
+    i16x8_max_s(self, right)
+  }
+  fn add_sat(self, right: I16x8) -> I16x8 {
+    i16x8_add_sat_s(self, right)
+  }
+  fn sub_sat(self, right: I16x8) -> I16x8 {
+    i16x8_sub_sat_s(self, right)
+  }
+  fn eq(self, right: I16x8) -> I16x8 {
+    i16x8_eq(self, right)
+  }
+  fn ne(self, right: I16x8) -> I16x8 {
+    i16x8_ne(self, right)
+  }
+  fn lt(self, right: I16x8) -> I16x8 {
+    i16x8_lt_s(self, right)
+  }
+  fn le(self, right: I16x8) -> I16x8 {
+    i16x8_le_s(self, right)
+  }
+  fn gt(self, right: I16x8) -> I16x8 {
+    i16x8_gt_s(self, right)
+  }
+  fn ge(self, right: I16x8) -> I16x8 {
+    i16x8_ge_s(self, right)
+  }
+  fn abs(self) -> I16x8 {
+    i16x8_abs(self)
+  }
+  fn neg(self) -> I16x8 {
+    i16x8_neg(self)
+  }
+  fn all_true(self) -> Bool {
+    i16x8_all_true(self)
+  }
+  fn bitmask(self) -> U32 {
+    i16x8_bitmask(self)
+  }
+  fn shl(self, count: U32) -> I16x8 {
+    i16x8_shl(self, count)
+  }
+  fn shr(self, count: U32) -> I16x8 {
+    i16x8_shr_s(self, count)
+  }
+}
+impl BitAnd for I16x8 {
+  fn bit_and(self, right: I16x8) -> I16x8 {
+    i16x8_and(self, right)
+  }
+}
+impl BitOr for I16x8 {
+  fn bit_or(self, right: I16x8) -> I16x8 {
+    i16x8_or(self, right)
+  }
+}
+impl BitXor for I16x8 {
+  fn bit_xor(self, right: I16x8) -> I16x8 {
+    i16x8_xor(self, right)
+  }
+}
+impl Add for I16x8 {
+  fn add(self, right: I16x8) -> I16x8 {
+    i16x8_add(self, right)
+  }
+}
+impl Sub for I16x8 {
+  fn sub(self, right: I16x8) -> I16x8 {
+    i16x8_sub(self, right)
+  }
+}
+impl Mul for I16x8 {
+  fn mul(self, right: I16x8) -> I16x8 {
+    i16x8_mul(self, right)
+  }
+}

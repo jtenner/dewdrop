@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "NumericLiteralOutOfRange(0, I8Type, 24)"
+  ],
+  "warnings": [],
+  "output": null
+}

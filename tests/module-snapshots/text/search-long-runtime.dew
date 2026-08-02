@@ -1,0 +1,18 @@
+open dew.std.string
+open dew.std.wasi
+open dew.std.bytes
+
+fn found_at() -> U32 {
+  match "--------0123456789abcdef-tail--------".find("0123456789abcdef-tail") {
+    Option::Some(index) => index
+    Option::None => 4294967295u32
+  }
+}
+
+pub fn main() -> U32 {
+  if found_at() == 8u32 {
+    wasi_fd_write(1u32, b"text:long-found")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

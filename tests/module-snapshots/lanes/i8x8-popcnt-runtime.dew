@@ -1,0 +1,10 @@
+open dew.std.i8x8
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  if i8x8_splat(15i8).popcnt().extract(7u8) == 4i8 {
+    wasi_fd_write(1u32, b"lanes:i8x8-popcnt")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

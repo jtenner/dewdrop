@@ -1,0 +1,3 @@
+test "library answer" {
+  assert(answer() == 42, "wrong library answer")
+}

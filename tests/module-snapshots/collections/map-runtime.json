@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(\n      ExpectedObjectFieldNewline(\n        Some(Token(Symbol(RightBrace), 551, 169)),\n        542,\n      ),\n    ),\n  },\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -1,0 +1,9 @@
+open dew.std.string
+open dew.std.wasi
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  let first = "xxabcdefghyy".view(2u32, 8u32)
+  let second = first.view(2u32, 4u32)
+  wasi_fd_write(1u32, second.as_bytes())
+}

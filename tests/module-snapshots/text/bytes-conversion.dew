@@ -1,0 +1,6 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  b"prefix λ 世界 🌍".to_string().as_bytes().byte_length()
+}

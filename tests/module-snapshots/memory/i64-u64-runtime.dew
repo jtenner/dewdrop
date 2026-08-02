@@ -1,0 +1,14 @@
+open dew.std.wasi
+pub fn main() -> U32 {
+  i64_store(7u32, -9000000000000i64)
+  u64_store(23u32, 18000000000000000000u64)
+  if i64_load(7u32) == -9000000000000i64 {
+    if u64_load(23u32) == 18000000000000000000u64 {
+      wasi_fd_write(1u32, b"memory:i64-u64")
+    } else {
+      wasi_fd_write(1u32, b"FAIL")
+    }
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

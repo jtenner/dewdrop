@@ -1,0 +1,74 @@
+open dew.std.fixed_array
+open dew.std.map
+open dew.std.set
+
+struct Key {
+  identity: I32
+  hash_calls: FixedArray<I32>
+  equality_calls: FixedArray<I32>
+}
+
+impl Hash for Key {
+  fn hash(self) -> U64 {
+    self.hash_calls[0u32] = self.hash_calls[0u32] + 1
+    0u64
+  }
+  fn hash_eq(self, right: Key) -> Bool {
+    self.equality_calls[0u32] = self.equality_calls[0u32] + 1
+    self.identity == right.identity
+  }
+}
+
+pub fn main() -> Unit {
+  let hash_calls = FixedArray::make(1u32, 0)
+  let equality_calls = FixedArray::make(1u32, 0)
+  let key = Key {
+    identity: 7
+    hash_calls: hash_calls
+    equality_calls: equality_calls
+  }
+
+  let map = Map::singleton(key, 10)
+  assert(hash_calls[0u32] == 1, "singleton hashes once")
+  assert(equality_calls[0u32] == 0, "singleton performs no equality")
+
+  hash_calls[0u32] = 0
+  equality_calls[0u32] = 0
+  assert(map.contains_key(key), "map contains existing key")
+  assert(hash_calls[0u32] == 1, "map contains hashes once")
+  assert(equality_calls[0u32] == 1, "map contains compares once")
+
+  hash_calls[0u32] = 0
+  equality_calls[0u32] = 0
+  map.insert(key, 11)
+  assert(hash_calls[0u32] == 1, "map replacement hashes once")
+  assert(equality_calls[0u32] == 1, "map replacement compares once")
+  assert(map.length() == 1u32, "map replacement length")
+
+  hash_calls[0u32] = 0
+  equality_calls[0u32] = 0
+  match map.get(key) {
+    Some(value) => assert(value == 11, "map safe get value")
+    None => assert(false, "map safe get missing")
+  }
+  assert(hash_calls[0u32] == 1, "map get hashes once")
+  assert(equality_calls[0u32] == 1, "map get compares once")
+
+  hash_calls[0u32] = 0
+  equality_calls[0u32] = 0
+  let set = Set::singleton(key)
+  assert(hash_calls[0u32] == 1, "set singleton hashes once")
+  assert(equality_calls[0u32] == 0, "set singleton performs no equality")
+
+  hash_calls[0u32] = 0
+  equality_calls[0u32] = 0
+  assert(!set.insert(key), "set duplicate insertion")
+  assert(hash_calls[0u32] == 1, "set duplicate hashes once")
+  assert(equality_calls[0u32] == 1, "set duplicate compares once")
+
+  hash_calls[0u32] = 0
+  equality_calls[0u32] = 0
+  assert(set.remove(key), "set removes existing key")
+  assert(hash_calls[0u32] == 1, "set remove hashes once")
+  assert(equality_calls[0u32] == 1, "set remove compares once")
+}

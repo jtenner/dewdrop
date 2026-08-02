@@ -1,0 +1,19 @@
+{
+  "root": "fixture.main",
+  "modules": [
+    {
+      "name": "fixture.library",
+      "files": [
+        "library.dew",
+        "library_test.dew"
+      ]
+    },
+    {
+      "name": "fixture.main",
+      "files": [
+        "main.dew",
+        "main_test.dew"
+      ]
+    }
+  ]
+}

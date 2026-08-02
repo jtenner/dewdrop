@@ -1,0 +1,166 @@
+pub fn s32_splat_i8(value: I8) -> U32 {
+  swar32_to_bits(swar32_splat_i8(value))
+}
+pub fn s32_splat_i16(value: I16) -> U32 {
+  swar32_to_bits(swar32_splat_i16(value))
+}
+pub fn s32_extract_i8_s(bits: U32, index: U8) -> I8 {
+  swar32_from_bits(bits).extract_i8_s(index)
+}
+pub fn s32_extract_i8_u(bits: U32, index: U8) -> U8 {
+  swar32_from_bits(bits).extract_i8_u(index)
+}
+pub fn s32_extract_i16_s(bits: U32, index: U8) -> I16 {
+  swar32_from_bits(bits).extract_i16_s(index)
+}
+pub fn s32_extract_i16_u(bits: U32, index: U8) -> U16 {
+  swar32_from_bits(bits).extract_i16_u(index)
+}
+pub fn s32_replace_i8(bits: U32, index: U8, lane: I8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).replace_i8(index, lane))
+}
+pub fn s32_replace_i16(bits: U32, index: U8, lane: I16) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).replace_i16(index, lane))
+}
+pub fn s32_add_i8(left: U32, right: U32) -> U32 {
+  swar32_to_bits(swar32_from_bits(left).add_i8(swar32_from_bits(right)))
+}
+pub fn s32_sub_i8(left: U32, right: U32) -> U32 {
+  swar32_to_bits(swar32_from_bits(left).sub_i8(swar32_from_bits(right)))
+}
+pub fn s32_add_i16(left: U32, right: U32) -> U32 {
+  swar32_to_bits(swar32_from_bits(left).add_i16(swar32_from_bits(right)))
+}
+pub fn s32_sub_i16(left: U32, right: U32) -> U32 {
+  swar32_to_bits(swar32_from_bits(left).sub_i16(swar32_from_bits(right)))
+}
+pub fn s32_shl_i8(bits: U32, count: U8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).shl_i8(count))
+}
+pub fn s32_shr_i8_s(bits: U32, count: U8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).shr_i8_s(count))
+}
+pub fn s32_shr_i8_u(bits: U32, count: U8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).shr_i8_u(count))
+}
+pub fn s32_shl_i16(bits: U32, count: U8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).shl_i16(count))
+}
+pub fn s32_shr_i16_s(bits: U32, count: U8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).shr_i16_s(count))
+}
+pub fn s32_shr_i16_u(bits: U32, count: U8) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).shr_i16_u(count))
+}
+pub fn s32_any_true(bits: U32) -> Bool {
+  swar32_from_bits(bits).any_true()
+}
+pub fn s32_all_true_i8(bits: U32) -> Bool {
+  swar32_from_bits(bits).all_true_i8()
+}
+pub fn s32_bitmask_i8(bits: U32) -> U32 {
+  swar32_from_bits(bits).bitmask_i8()
+}
+pub fn s32_popcnt_i8(bits: U32) -> U32 {
+  swar32_to_bits(swar32_from_bits(bits).popcnt_i8())
+}
+pub fn s32_eq_i8(left: U32, right: U32) -> U32 {
+  swar32_to_bits(swar32_from_bits(left).eq_i8(swar32_from_bits(right)))
+}
+
+pub fn s64_splat_i8(value: I8) -> U64 {
+  swar64_to_bits(swar64_splat_i8(value))
+}
+pub fn s64_splat_i16(value: I16) -> U64 {
+  swar64_to_bits(swar64_splat_i16(value))
+}
+pub fn s64_splat_i32(value: I32) -> U64 {
+  swar64_to_bits(swar64_splat_i32(value))
+}
+pub fn s64_extract_i8_s(bits: U64, index: U8) -> I8 {
+  swar64_from_bits(bits).extract_i8_s(index)
+}
+pub fn s64_extract_i8_u(bits: U64, index: U8) -> U8 {
+  swar64_from_bits(bits).extract_i8_u(index)
+}
+pub fn s64_extract_i16_s(bits: U64, index: U8) -> I16 {
+  swar64_from_bits(bits).extract_i16_s(index)
+}
+pub fn s64_extract_i16_u(bits: U64, index: U8) -> U16 {
+  swar64_from_bits(bits).extract_i16_u(index)
+}
+pub fn s64_extract_i32_s(bits: U64, index: U8) -> I32 {
+  swar64_from_bits(bits).extract_i32_s(index)
+}
+pub fn s64_extract_i32_u(bits: U64, index: U8) -> U32 {
+  swar64_from_bits(bits).extract_i32_u(index)
+}
+pub fn s64_replace_i8(bits: U64, index: U8, lane: I8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).replace_i8(index, lane))
+}
+pub fn s64_replace_i16(bits: U64, index: U8, lane: I16) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).replace_i16(index, lane))
+}
+pub fn s64_replace_i32(bits: U64, index: U8, lane: I32) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).replace_i32(index, lane))
+}
+pub fn s64_add_i8(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).add_i8(swar64_from_bits(right)))
+}
+pub fn s64_sub_i8(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).sub_i8(swar64_from_bits(right)))
+}
+pub fn s64_add_i16(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).add_i16(swar64_from_bits(right)))
+}
+pub fn s64_sub_i16(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).sub_i16(swar64_from_bits(right)))
+}
+pub fn s64_add_i32(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).add_i32(swar64_from_bits(right)))
+}
+pub fn s64_sub_i32(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).sub_i32(swar64_from_bits(right)))
+}
+pub fn s64_shl_i8(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shl_i8(count))
+}
+pub fn s64_shr_i8_s(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shr_i8_s(count))
+}
+pub fn s64_shr_i8_u(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shr_i8_u(count))
+}
+pub fn s64_shl_i16(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shl_i16(count))
+}
+pub fn s64_shr_i16_s(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shr_i16_s(count))
+}
+pub fn s64_shr_i16_u(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shr_i16_u(count))
+}
+pub fn s64_shl_i32(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shl_i32(count))
+}
+pub fn s64_shr_i32_s(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shr_i32_s(count))
+}
+pub fn s64_shr_i32_u(bits: U64, count: U8) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).shr_i32_u(count))
+}
+pub fn s64_any_true(bits: U64) -> Bool {
+  swar64_from_bits(bits).any_true()
+}
+pub fn s64_all_true_i8(bits: U64) -> Bool {
+  swar64_from_bits(bits).all_true_i8()
+}
+pub fn s64_bitmask_i8(bits: U64) -> U32 {
+  swar64_from_bits(bits).bitmask_i8()
+}
+pub fn s64_popcnt_i8(bits: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(bits).popcnt_i8())
+}
+pub fn s64_eq_i8(left: U64, right: U64) -> U64 {
+  swar64_to_bits(swar64_from_bits(left).eq_i8(swar64_from_bits(right)))
+}

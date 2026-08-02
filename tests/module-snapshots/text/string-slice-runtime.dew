@@ -1,0 +1,7 @@
+open dew.std.string
+open dew.std.wasi
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  wasi_fd_write(1u32, "xxabcdefyy".slice(2u32, 8u32).as_bytes())
+}

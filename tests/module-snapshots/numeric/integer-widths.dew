@@ -1,0 +1,9 @@
+fn reinterpret_width(value: U64) -> I64 {
+  value.into()
+}
+
+pub fn main() -> I64 {
+  let signed = 9223372036854775807i64 - 41i64
+  let unsigned = 84u64 / 2u64
+  signed + reinterpret_width(unsigned)
+}

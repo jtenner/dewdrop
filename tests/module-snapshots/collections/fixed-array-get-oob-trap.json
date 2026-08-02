@@ -1,0 +1,8 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": {
+    "trap": "array-out-of-bounds",
+    "stdout": []
+  }
+}

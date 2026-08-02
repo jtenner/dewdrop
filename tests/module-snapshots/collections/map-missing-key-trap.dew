@@ -1,0 +1,10 @@
+open dew.std.map
+
+fn empty_map() -> Map<I32, I32> {
+  Map::empty()
+}
+
+pub fn main() -> Unit {
+  let values = empty_map()
+  values[1]
+}

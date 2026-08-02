@@ -1,0 +1,7 @@
+test "assert accepts true" {
+  assert(true, "true assertions must return Unit")
+}
+
+test "assertion trap can be expected" expect_trap "unreachable" {
+  assert(false, "expected assertion trap")
+}

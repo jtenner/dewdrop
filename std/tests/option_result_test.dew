@@ -1,0 +1,51 @@
+open dew.std.string
+
+fn option_u32_value() -> Option<U32> {
+  Option::Some(42u32)
+}
+
+fn option_string_value() -> Option<String> {
+  Option::Some("hello")
+}
+
+fn result_ok_value() -> Result<U32, String> {
+  Result::Ok(7u32)
+}
+
+fn result_error_value() -> Result<U32, String> {
+  Result::Err("bad")
+}
+
+test "Option carries scalar and reference values" {
+  assert(
+    match option_u32_value() {
+      Option::Some(value) => value == 42u32
+      Option::None => false
+    },
+    "Option<U32> payload",
+  )
+  assert(
+    match option_string_value() {
+      Option::Some(value) => value.byte_length() == 5u32
+      Option::None => false
+    },
+    "Option<String> payload",
+  )
+}
+
+test "Result carries success and error values" {
+  assert(
+    match result_ok_value() {
+      Result::Ok(value) => value == 7u32
+      Result::Err(_) => false
+    },
+    "Result success payload",
+  )
+  assert(
+    match result_error_value() {
+      Result::Ok(_) => false
+      Result::Err(message) => message.byte_length() == 3u32
+    },
+    "Result error payload",
+  )
+}

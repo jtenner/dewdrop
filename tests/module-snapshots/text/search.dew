@@ -1,0 +1,10 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> U32 {
+  let value = "prefix λ世界🌍 suffix"
+  match value.find("λ世界🌍") {
+    Option::Some(index) => index
+    Option::None => 4294967295u32
+  }
+}

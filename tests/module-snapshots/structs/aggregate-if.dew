@@ -1,0 +1,19 @@
+pub struct Box {
+  value: I32
+}
+
+fn choose(flag: Bool) -> Box {
+  if flag {
+    Box {
+      value: 11
+    }
+  } else {
+    Box {
+      value: 22
+    }
+  }
+}
+
+pub fn main() -> I32 {
+  choose(true).value
+}

@@ -1,0 +1,8 @@
+open dew.std.wasi
+pub fn main() -> U32 {
+  if -9i32 < -2i32 {
+    wasi_fd_write(1u32, b"numeric:signed-comparison")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

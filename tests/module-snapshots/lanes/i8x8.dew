@@ -1,0 +1,6 @@
+open dew.std.i8x8
+
+pub fn main() -> I8 {
+  let value = i8x8_splat(7i8)
+  value.replace(0u8, 9i8).add(value).extract(0u8)
+}

@@ -1,0 +1,8 @@
+open dew.std.wasi
+pub fn main() -> U32 {
+  if (9.0f64 / 4.0f64) + 0.75f64 == 3.0f64 {
+    wasi_fd_write(1u32, b"numeric:f64-arithmetic")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

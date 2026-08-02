@@ -1,0 +1,8 @@
+import {
+  "jtenner/dewdrop/semantic",
+  "moonbitlang/core/bench",
+  "moonbitlang/core/encoding/utf8",
+  "jtenner/starshine/lib",
+  "jtenner/starshine/validate",
+  "jtenner/starshine/binary",
+}

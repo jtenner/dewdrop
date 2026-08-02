@@ -1,0 +1,19 @@
+pub enum Code {
+  A
+  B
+  C
+  D
+}
+
+fn read(value: Code) -> I32 {
+  match value {
+    Code::A => 1
+    Code::B => 2
+    Code::C => 3
+    Code::D => 4
+  }
+}
+
+pub fn main() -> I32 {
+  read(Code::C)
+}

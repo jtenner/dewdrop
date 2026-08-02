@@ -1,0 +1,5 @@
+open dew.std.preamble
+
+pub fn main() -> Unit {
+  assert(true, "explicit preamble remains available")
+}

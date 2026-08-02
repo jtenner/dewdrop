@@ -1,0 +1,24 @@
+open dew.std.wasi
+struct Inner {
+  value: I32
+}
+
+struct Outer {
+  inner: Inner
+}
+
+fn read(outer: Outer) -> I32 {
+  outer.inner.value
+}
+
+pub fn main() -> U32 {
+  if read(Outer {
+    inner: Inner {
+      value: 9
+    }
+  }) == 9 {
+    wasi_fd_write(1u32, b"struct:nested-9")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

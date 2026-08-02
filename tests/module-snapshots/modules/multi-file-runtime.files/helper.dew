@@ -1,0 +1,3 @@
+fn fixture_message() -> Bytes {
+  b"modules:multi-file"
+}
