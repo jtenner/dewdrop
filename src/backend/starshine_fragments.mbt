@@ -18,6 +18,13 @@ fn starshine_nominal_ref(type_index : @lib.TypeIdx) -> @lib.ValType {
 }
 
 ///|
+fn starshine_function_ref(type_index : @lib.TypeIdx) -> @lib.ValType {
+  @lib.ValType::ref_type(
+    @lib.RefType::new(true, @lib.HeapType::new(type_index)),
+  )
+}
+
+///|
 fn starshine_storage_type(
   storage : @semantic.PlannedWasmStorageType,
 ) -> @lib.StorageType {
@@ -55,6 +62,8 @@ fn starshine_value_type(value : @semantic.PlannedWasmValueType) -> @lib.ValType 
     @semantic.WasmStringRefValue => @lib.ValType::eqref_null()
     @semantic.WasmNullableEqRefValue
     | @semantic.WasmExternalNominalRefValue(_) => @lib.ValType::eqref_null()
+    @semantic.WasmFunctionRefValue(index) =>
+      starshine_function_ref(@lib.TypeIdx::new(index.reinterpret_as_uint()))
     @semantic.WasmNominalRefValue(index) =>
       starshine_nominal_ref(@lib.TypeIdx::new(index.reinterpret_as_uint()))
   }
@@ -122,6 +131,30 @@ fn starshine_function_subtype(
     results.push(
       starshine_value_type(
         planned.function_value_types[function_.results.start + index],
+      ),
+    )
+  }
+  @lib.SubType::comp_type(@lib.CompType::func(parameters, results))
+}
+
+///|
+fn starshine_function_type_subtype(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  function_type : @semantic.PlannedWasmFunctionTypeFragment,
+) -> @lib.SubType {
+  let parameters : Array[@lib.ValType] = []
+  for index in 0..<function_type.parameters.length {
+    parameters.push(
+      starshine_value_type(
+        planned.function_value_types[function_type.parameters.start + index],
+      ),
+    )
+  }
+  let results : Array[@lib.ValType] = []
+  for index in 0..<function_type.results.length {
+    results.push(
+      starshine_value_type(
+        planned.function_value_types[function_type.results.start + index],
       ),
     )
   }
@@ -310,8 +343,20 @@ pub fn emit_starshine_type_section(
       rec_types.push(@lib.RecType::group(subtypes))
     }
   }
+  for function_type in planned.function_types {
+    rec_types.push(
+      @lib.RecType::new(starshine_function_type_subtype(planned, function_type)),
+    )
+  }
   for function_ in planned.functions {
-    if function_.signature_type_index >= 0 {
+    let mut canonical = false
+    for function_type in planned.function_types {
+      if function_type.signature_type_index == function_.signature_type_index {
+        canonical = true
+        break
+      }
+    }
+    if function_.signature_type_index >= 0 && !canonical {
       rec_types.push(
         @lib.RecType::new(starshine_function_subtype(planned, function_)),
       )

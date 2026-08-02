@@ -117,7 +117,7 @@ pub enum PlannedExpressionKind {
   PlannedSetRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetClear(ExprId)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
-  PlannedFunctionValueCall(ExprId, HirSpan)
+  PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
   PlannedFieldGet(FieldId, ExprId)
 } derive(Eq, Debug)
 
@@ -353,6 +353,22 @@ fn planned_value_shape(
     }
   }
   ErrorPlannedValueShape
+}
+
+///|
+fn planned_function_type(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  type_ : BodyTypeId,
+) -> ResolvedTypeId {
+  match inferred.type_term(type_) {
+    BodyResolvedType(resolved_type) =>
+      match resolved.types[resolved_type] {
+        FunctionType(_, _) => resolved_type
+        _ => -1
+      }
+    _ => -1
+  }
 }
 
 ///|
@@ -726,7 +742,15 @@ fn plan_expression_kind(
           }
         }
         SelectedFunctionValueCallTarget(target) =>
-          PlannedFunctionValueCall(target, arguments)
+          PlannedFunctionValueCall(
+            target,
+            arguments,
+            planned_function_type(
+              resolved,
+              inferred,
+              inferred.expression_types[target],
+            ),
+          )
         NoInferredCallTarget | ErrorInferredCallTarget =>
           PlannedPoisonExpression
       }
@@ -872,7 +896,12 @@ fn plan_body_lowering_job(
       offset: collected.expressions[expression].offset(),
     }
     match collected.expressions[expression] {
-      HirCallExpr(target, _, _) | HirConstructExpr(target, _, _) =>
+      HirCallExpr(target, _, _) =>
+        match inferred.call_targets[expression] {
+          SelectedFunctionValueCallTarget(_) => ()
+          _ => consumed[target - body.expressions.start] = true
+        }
+      HirConstructExpr(target, _, _) =>
         consumed[target - body.expressions.start] = true
       HirQualifiedExpr(base, _, _) =>
         consumed[base - body.expressions.start] = true

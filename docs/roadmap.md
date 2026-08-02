@@ -300,9 +300,9 @@ erased fallback.
 - [x] Parse deterministic `fn(T, ...) -> R` type syntax and preserve it through HIR collection.
 - [x] Structurally intern, alias-normalize, import, cache, compare, and assign opaque reference shapes to first-class function types.
 - [x] Resolve unambiguous non-generic local/imported function references and structurally type-check calls through function-valued locals.
-- [ ] Emit function references and first-class calls.
+- [x] Emit non-capturing function references and first-class calls with typed `ref.func`/`call_ref`.
 - [ ] Closures and captured environments.
-- [ ] Indirect calls.
+- [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.
 

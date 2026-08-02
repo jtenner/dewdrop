@@ -1,0 +1,18 @@
+fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+let module_callback = increment
+
+pub fn main() -> Unit {
+  let callback = increment
+  let first = callback(20)
+  let second = apply(increment, 21)
+  assert(first == 21, "function reference stored in a local")
+  assert(second == 22, "function reference passed as an argument")
+  assert(module_callback(41) == 42, "function reference stored in a module value")
+}

@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented as deterministic backend-neutral callable signatures for builtins, top-level functions, trait requirements, and impl methods. The artifact is embedded in `PlannedModuleLowering` and precedes Starshine function/type index assignment.
+Implemented as deterministic backend-neutral callable signatures for builtins, top-level functions, trait requirements, and impl methods. The artifact is embedded in `PlannedModuleLowering` and precedes Starshine function/type index assignment. Reachable concrete first-class signatures are now refined to typed Wasm references, and equivalent signatures are structurally coalesced across modules during program linking.
 
 ## API
 
@@ -72,9 +72,9 @@ Release-mode measurements:
 
 ## Remaining work
 
-1. Group equivalent ABI signatures for typed function references.
-2. Define generic shape-specialized and erased fallback ABIs.
-3. Build trait dictionary method slots from trait requirement plans.
-4. Emit adapters only where static and erased ABI shapes differ.
-5. Extend callable reachability so unused signature types can be removed after directization.
-6. Define cross-module export/import naming and ABI compatibility rules.
+1. Define generic shape-specialized and erased fallback ABIs.
+2. Build trait dictionary method slots from trait requirement plans.
+3. Emit adapters only where static and erased ABI shapes differ.
+4. Extend callable reachability so unused signature types can be removed after directization.
+5. Define persistent cross-package export/import naming, signature fingerprints, and ABI compatibility rules.
+6. Extend concrete signature coalescing to the captured-closure ABI once environment parameters are defined.

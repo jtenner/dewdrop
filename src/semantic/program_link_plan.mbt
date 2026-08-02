@@ -71,13 +71,28 @@ pub struct PlannedProgramWasmRecursiveGroup {
 } derive(Eq, Debug)
 
 ///|
+pub enum PlannedProgramWasmSignatureTypeKind {
+  PlannedProgramFunctionType(Int)
+  PlannedProgramFunctionSignature(Int)
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedProgramWasmSignatureType {
+  module_index : Int
+  type_index : Int
+  kind : PlannedProgramWasmSignatureTypeKind
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramWasmGCLink {
   root_module_index : Int
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
   module_type_bases : Array[Int]
+  module_signature_indices : Array[Array[Int]]
   module_type_indices : Array[Array[Int]]
   program_type_groups : Array[PlannedProgramWasmRecursiveGroup]
+  program_signature_types : Array[PlannedProgramWasmSignatureType]
   program_physical_types : Array[PlannedProgramWasmPhysicalType]
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
@@ -102,6 +117,27 @@ pub fn PlannedProgramWasmGCLink::function_of(
     Some(index) => Some(self.functions[index])
     None => None
   }
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::signature_type_index(
+  self : PlannedProgramWasmGCLink,
+  module_index : Int,
+  local_type_index : Int,
+) -> Int {
+  if module_index < 0 || module_index >= self.module_signature_indices.length() {
+    return -1
+  }
+  let physical_count = self.modules[module_index].physical_types.length()
+  if local_type_index < physical_count {
+    return self.physical_type_index(module_index, local_type_index)
+  }
+  let signature_index = local_type_index - physical_count
+  if signature_index < 0 ||
+    signature_index >= self.module_signature_indices[module_index].length() {
+    return -1
+  }
+  self.module_signature_indices[module_index][signature_index]
 }
 
 ///|
@@ -655,6 +691,16 @@ pub fn plan_program_wasmgc_fragments_with_options(
     lowering,
     options.emit_tests,
   )
+  let program_function_value_roots : Map[DeclId, Bool] = Map::default()
+  for module_ in lowering.modules {
+    for expression in module_.expressions {
+      match expression.kind {
+        PlannedFunctionReference(declaration) =>
+          program_function_value_roots[declaration] = true
+        _ => ()
+      }
+    }
+  }
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
       let module_index = lowering.graph.scc_modules[scc.start + index]
@@ -664,6 +710,7 @@ pub fn plan_program_wasmgc_fragments_with_options(
           lowering.modules[module_index],
           options,
           program_roots,
+          program_function_value_roots,
         ),
       )
     }
@@ -1116,6 +1163,182 @@ fn program_cross_module_type_groups(
 }
 
 ///|
+priv struct PlannedProgramValueTypePair {
+  left_module : Int
+  left : PlannedWasmValueType
+  right_module : Int
+  right : PlannedWasmValueType
+}
+
+///|
+fn planned_program_function_type_fragment(
+  modules : Array[PlannedModuleWasmGCFragments],
+  module_index : Int,
+  signature_type_index : Int,
+) -> PlannedWasmFunctionTypeFragment? {
+  for function_type in modules[module_index].function_types {
+    if function_type.signature_type_index == signature_type_index {
+      return Some(function_type)
+    }
+  }
+  None
+}
+
+///|
+fn planned_program_local_nominal_declaration(
+  modules : Array[PlannedModuleWasmGCFragments],
+  module_index : Int,
+  type_index : Int,
+) -> DeclId? {
+  if type_index < 0 ||
+    type_index >= modules[module_index].physical_types.length() {
+    return None
+  }
+  match modules[module_index].physical_types[type_index].kind {
+    PlannedWasmStructType(declaration) | PlannedWasmEnumBaseType(declaration) =>
+      Some(declaration)
+    PlannedWasmEnumSubtypeType(_, _, _) => None
+  }
+}
+
+///|
+fn planned_program_function_types_equal(
+  modules : Array[PlannedModuleWasmGCFragments],
+  left_module : Int,
+  left : PlannedWasmFunctionTypeFragment,
+  right_module : Int,
+  right : PlannedWasmFunctionTypeFragment,
+) -> Bool {
+  if left.parameters.length != right.parameters.length ||
+    left.results.length != right.results.length {
+    return false
+  }
+  let work : Array[PlannedProgramValueTypePair] = []
+  for index in 0..<left.parameters.length {
+    work.push({
+      left_module,
+      left: modules[left_module].function_value_types[left.parameters.start +
+      index],
+      right_module,
+      right: modules[right_module].function_value_types[right.parameters.start +
+      index],
+    })
+  }
+  for index in 0..<left.results.length {
+    work.push({
+      left_module,
+      left: modules[left_module].function_value_types[left.results.start + index],
+      right_module,
+      right: modules[right_module].function_value_types[right.results.start +
+      index],
+    })
+  }
+  while work.length() > 0 {
+    let pair = work.pop().unwrap()
+    match (pair.left, pair.right) {
+      (WasmI32Value, WasmI32Value)
+      | (WasmI64Value, WasmI64Value)
+      | (WasmF32Value, WasmF32Value)
+      | (WasmF64Value, WasmF64Value)
+      | (WasmV128Value, WasmV128Value)
+      | (WasmStringRefValue, WasmStringRefValue)
+      | (WasmNullableEqRefValue, WasmNullableEqRefValue) => ()
+      (WasmExternalNominalRefValue(left), WasmExternalNominalRefValue(right)) =>
+        if left != right {
+          return false
+        }
+      (WasmNominalRefValue(left), WasmNominalRefValue(right)) => {
+        let left_declaration = match
+          planned_program_local_nominal_declaration(
+            modules,
+            pair.left_module,
+            left,
+          ) {
+          Some(value) => value
+          None => return false
+        }
+        let right_declaration = match
+          planned_program_local_nominal_declaration(
+            modules,
+            pair.right_module,
+            right,
+          ) {
+          Some(value) => value
+          None => return false
+        }
+        if left_declaration != right_declaration {
+          return false
+        }
+      }
+      (WasmNominalRefValue(left), WasmExternalNominalRefValue(right)) =>
+        if planned_program_local_nominal_declaration(
+            modules,
+            pair.left_module,
+            left,
+          ) !=
+          Some(right) {
+          return false
+        }
+      (WasmExternalNominalRefValue(left), WasmNominalRefValue(right)) =>
+        if Some(left) !=
+          planned_program_local_nominal_declaration(
+            modules,
+            pair.right_module,
+            right,
+          ) {
+          return false
+        }
+      (WasmFunctionRefValue(left), WasmFunctionRefValue(right)) => {
+        let left_type = match
+          planned_program_function_type_fragment(
+            modules,
+            pair.left_module,
+            left,
+          ) {
+          Some(value) => value
+          None => return false
+        }
+        let right_type = match
+          planned_program_function_type_fragment(
+            modules,
+            pair.right_module,
+            right,
+          ) {
+          Some(value) => value
+          None => return false
+        }
+        if left_type.parameters.length != right_type.parameters.length ||
+          left_type.results.length != right_type.results.length {
+          return false
+        }
+        for index in 0..<left_type.parameters.length {
+          work.push({
+            left_module: pair.left_module,
+            left: modules[pair.left_module].function_value_types[left_type.parameters.start +
+            index],
+            right_module: pair.right_module,
+            right: modules[pair.right_module].function_value_types[right_type.parameters.start +
+            index],
+          })
+        }
+        for index in 0..<left_type.results.length {
+          work.push({
+            left_module: pair.left_module,
+            left: modules[pair.left_module].function_value_types[left_type.results.start +
+            index],
+            right_module: pair.right_module,
+            right: modules[pair.right_module].function_value_types[right_type.results.start +
+            index],
+          })
+        }
+      }
+      _ => return false
+    }
+  }
+  true
+}
+
+///|
 /// Assigns final program-wide type and function indices without mutating any
 /// module-local fragment plan. Module-local recursive groups remain intact
 /// unless physical dependencies form an SCC across module boundaries.
@@ -1151,15 +1374,12 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
-  let module_signature_bases = Array::make(lowering.modules.length(), -1)
   let mut type_count = 0
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
       let module_index = lowering.graph.scc_modules[scc.start + index]
       let module_fragments = fragments.modules[module_index]
       module_type_bases[module_index] = type_count
-      module_signature_bases[module_index] = type_count +
-        module_fragments.physical_types.length()
       for physical in module_fragments.physical_types {
         module_type_indices[module_index][physical.type_index] = type_count +
           physical.type_index
@@ -1170,8 +1390,7 @@ pub fn link_program_wasmgc_fragments(
           PlannedWasmEnumSubtypeType(_, _, _) => ()
         }
       }
-      type_count += module_fragments.physical_types.length() +
-        module_fragments.signature_type_count
+      type_count += module_fragments.physical_types.length()
     }
   }
   let mut cross_module_type_scc = false
@@ -1203,15 +1422,83 @@ pub fn link_program_wasmgc_fragments(
       type_lookup[declaration] = index
     }
     type_count = program_physical_types.length()
-    for scc in lowering.graph.sccs {
-      for index in 0..<scc.length {
-        let module_index = lowering.graph.scc_modules[scc.start + index]
-        module_signature_bases[module_index] = type_count
-        type_count += fragments.modules[module_index].signature_type_count
-      }
-    }
   } else {
     program_link_validate_types(fragments, type_lookup, diagnostics)
+    type_count = 0
+  }
+  let module_signature_indices : Array[Array[Int]] = []
+  for module_ in fragments.modules {
+    module_signature_indices.push(Array::make(module_.signature_type_count, -1))
+  }
+  let program_signature_types : Array[PlannedProgramWasmSignatureType] = []
+  for scc in lowering.graph.sccs {
+    for index in 0..<scc.length {
+      let module_index = lowering.graph.scc_modules[scc.start + index]
+      let module_ = fragments.modules[module_index]
+      if !cross_module_type_scc {
+        module_type_bases[module_index] = type_count
+        for physical in module_.physical_types {
+          module_type_indices[module_index][physical.type_index] = type_count +
+            physical.type_index
+          match physical.kind {
+            PlannedWasmStructType(declaration)
+            | PlannedWasmEnumBaseType(declaration) =>
+              type_lookup[declaration] = type_count + physical.type_index
+            PlannedWasmEnumSubtypeType(_, _, _) => ()
+          }
+        }
+        type_count += module_.physical_types.length()
+      }
+      for function_type_index, function_type in module_.function_types {
+        let local_signature = function_type.signature_type_index -
+          module_.physical_types.length()
+        let mut representative_type_index = -1
+        for candidate in program_signature_types {
+          match candidate.kind {
+            PlannedProgramFunctionType(candidate_function_type_index) => {
+              let candidate_type = fragments.modules[candidate.module_index].function_types[candidate_function_type_index]
+              if planned_program_function_types_equal(
+                  fragments.modules,
+                  module_index,
+                  function_type,
+                  candidate.module_index,
+                  candidate_type,
+                ) {
+                representative_type_index = candidate.type_index
+                break
+              }
+            }
+            PlannedProgramFunctionSignature(_) => ()
+          }
+        }
+        if representative_type_index < 0 {
+          representative_type_index = type_count
+          program_signature_types.push({
+            module_index,
+            type_index: representative_type_index,
+            kind: PlannedProgramFunctionType(function_type_index),
+          })
+          type_count += 1
+        }
+        module_signature_indices[module_index][local_signature] = representative_type_index
+      }
+      for function_index, function_ in module_.functions {
+        if function_.signature_type_index < 0 {
+          continue
+        }
+        let local_signature = function_.signature_type_index -
+          module_.physical_types.length()
+        if module_signature_indices[module_index][local_signature] < 0 {
+          module_signature_indices[module_index][local_signature] = type_count
+          program_signature_types.push({
+            module_index,
+            type_index: type_count,
+            kind: PlannedProgramFunctionSignature(function_index),
+          })
+          type_count += 1
+        }
+      }
+    }
   }
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
@@ -1262,9 +1549,8 @@ pub fn link_program_wasmgc_fragments(
           direct_builtin: function_.direct_builtin,
           elided: function_.elided,
           signature_type_index: if function_.signature_type_index >= 0 {
-            module_signature_bases[module_index] +
-            function_.signature_type_index -
-            module_fragments.physical_types.length()
+            module_signature_indices[module_index][function_.signature_type_index -
+            module_fragments.physical_types.length()]
           } else {
             -1
           },
@@ -1404,8 +1690,10 @@ pub fn link_program_wasmgc_fragments(
     graph: lowering.graph,
     modules: fragments.modules,
     module_type_bases,
+    module_signature_indices,
     module_type_indices,
     program_type_groups,
+    program_signature_types,
     program_physical_types,
     functions,
     function_lookup,

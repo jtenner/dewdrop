@@ -113,8 +113,17 @@ pub enum PlannedWasmValueType {
   WasmV128Value
   WasmStringRefValue
   WasmNullableEqRefValue
+  WasmFunctionRefValue(Int)
   WasmNominalRefValue(Int)
   WasmExternalNominalRefValue(DeclId)
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmFunctionTypeFragment {
+  resolved_type : ResolvedTypeId
+  signature_type_index : Int
+  parameters : HirSpan
+  results : HirSpan
 } derive(Eq, Debug)
 
 ///|
@@ -166,6 +175,8 @@ pub struct PlannedModuleWasmGCFragments {
   variant_field_spans : Array[HirSpan]
   variant_fields : Array[PlannedWasmVariantField]
   field_names : Array[String]
+  function_types : Array[PlannedWasmFunctionTypeFragment]
+  function_type_by_resolved : Array[Int]
   functions : Array[PlannedWasmFunctionFragment]
   function_by_declaration : Array[Int]
   function_value_types : Array[PlannedWasmValueType]
@@ -362,7 +373,8 @@ fn wasmgc_reachable_defined_functions(
         PlannedDirectCall(declaration, _, _, _)
         | PlannedOperatorCall(declaration, _, _, _, _)
         | PlannedIndexCall(declaration, _, _, _)
-        | PlannedIndexSetCall(declaration, _, _, _, _) => declaration
+        | PlannedIndexSetCall(declaration, _, _, _, _)
+        | PlannedFunctionReference(declaration) => declaration
         _ => continue
       }
       if semantic_id_module(target) != lowering.module_id {
@@ -401,7 +413,8 @@ fn wasmgc_reachable_defined_functions(
         PlannedDirectCall(declaration, _, _, _)
         | PlannedOperatorCall(declaration, _, _, _, _)
         | PlannedIndexCall(declaration, _, _, _)
-        | PlannedIndexSetCall(declaration, _, _, _, _) => declaration
+        | PlannedIndexSetCall(declaration, _, _, _, _)
+        | PlannedFunctionReference(declaration) => declaration
         _ => continue
       }
       if semantic_id_module(target) != lowering.module_id {
@@ -1322,6 +1335,7 @@ fn wasmgc_value_type(
   root : ResolvedTypeId,
   self_type : ResolvedTypeId,
   type_index_by_declaration : Array[Int],
+  function_type_by_resolved : Array[Int],
 ) -> PlannedWasmValueType? {
   let mut current = root
   while true {
@@ -1375,7 +1389,14 @@ fn wasmgc_value_type(
         | StringBuilderType
         | BytesBuilderType
       ) => return Some(WasmStringRefValue)
-      GenericParameterType(_) | TraitType(_) | FunctionType(_, _) =>
+      FunctionType(_, _) => {
+        let index = function_type_by_resolved[current]
+        if index >= 0 {
+          return Some(WasmFunctionRefValue(index))
+        }
+        return Some(WasmNullableEqRefValue)
+      }
+      GenericParameterType(_) | TraitType(_) =>
         return Some(WasmNullableEqRefValue)
       SelfType(_) =>
         if self_type >= 0 {
@@ -1566,6 +1587,7 @@ fn wasmgc_plan_function_job(
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
   type_index_by_declaration : Array[Int],
+  function_type_by_resolved : Array[Int],
 ) -> WasmFunctionFragmentJob {
   let parameters : Array[PlannedWasmValueType] = []
   for index in 0..<callable.parameters.length {
@@ -1576,6 +1598,7 @@ fn wasmgc_plan_function_job(
         parameter.type_,
         callable.self_type,
         type_index_by_declaration,
+        function_type_by_resolved,
       ) {
       Some(value) => parameters.push(value)
       None => ()
@@ -1588,6 +1611,7 @@ fn wasmgc_plan_function_job(
       callable.result_type,
       callable.self_type,
       type_index_by_declaration,
+      function_type_by_resolved,
     ) {
     Some(value) => results.push(value)
     None => ()
@@ -1698,6 +1722,7 @@ fn plan_module_wasmgc_fragments_in_orders(
   type_order : Array[Int],
   function_order : Array[Int],
   program_roots : Map[DeclId, Bool],
+  program_function_value_roots : Map[DeclId, Bool],
 ) -> PlannedModuleWasmGCFragments {
   if resolved.module_id != lowering.module_id {
     abort("WasmGC fragment inputs belong to different modules")
@@ -1814,6 +1839,112 @@ fn plan_module_wasmgc_fragments_in_orders(
       first_type_index,
     })
   }
+  let function_type_by_resolved = Array::make(resolved.types.length(), -1)
+  let required_function_types = Array::make(resolved.types.length(), false)
+  let function_type_work : Array[ResolvedTypeId] = []
+  let local_function_value_roots : Map[DeclId, Bool] = Map::default()
+  for expression in lowering.expressions {
+    match expression.kind {
+      PlannedFunctionReference(declaration) =>
+        local_function_value_roots[declaration] = true
+      _ => ()
+    }
+  }
+  for callable_index, callable in functions.callables {
+    if local_function_value_roots.contains(callable.declaration) ||
+      program_function_value_roots.contains(callable.declaration) {
+      function_type_work.push(resolved.callable_function_types[callable_index])
+    }
+  }
+  for type_ in resolved.parameter_types {
+    match resolved.types[type_] {
+      FunctionType(_, _) => function_type_work.push(type_)
+      _ => ()
+    }
+  }
+  for type_ in resolved.callable_return_types {
+    match resolved.types[type_] {
+      FunctionType(_, _) => function_type_work.push(type_)
+      _ => ()
+    }
+  }
+  while function_type_work.length() > 0 {
+    let type_ = function_type_work.pop().unwrap()
+    if required_function_types[type_] {
+      continue
+    }
+    required_function_types[type_] = true
+    match resolved.types[type_] {
+      FunctionType(parameters, result) => {
+        match resolved.types[result] {
+          FunctionType(_, _) => function_type_work.push(result)
+          _ => ()
+        }
+        for index in 0..<parameters.length {
+          let parameter = resolved.type_arguments[parameters.start + index]
+          match resolved.types[parameter] {
+            FunctionType(_, _) => function_type_work.push(parameter)
+            _ => ()
+          }
+        }
+      }
+      _ => ()
+    }
+  }
+  let function_types : Array[PlannedWasmFunctionTypeFragment] = []
+  let function_value_types : Array[PlannedWasmValueType] = []
+  let mut next_signature_type = physical_types.length()
+  for type_id in 0..<resolved.types.length() {
+    if required_function_types[type_id] {
+      function_type_by_resolved[type_id] = next_signature_type
+      next_signature_type += 1
+    }
+  }
+  for type_id, type_ in resolved.types {
+    if !required_function_types[type_id] {
+      continue
+    }
+    match type_ {
+      FunctionType(parameters, result) => {
+        let parameter_start = function_value_types.length()
+        for index in 0..<parameters.length {
+          match
+            wasmgc_value_type(
+              resolved,
+              resolved.type_arguments[parameters.start + index],
+              -1,
+              type_index_by_declaration,
+              function_type_by_resolved,
+            ) {
+            Some(value) => function_value_types.push(value)
+            None => ()
+          }
+        }
+        let parameter_span = {
+          start: parameter_start,
+          length: function_value_types.length() - parameter_start,
+        }
+        let result_start = function_value_types.length()
+        match
+          wasmgc_value_type(
+            resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
+          ) {
+          Some(value) => function_value_types.push(value)
+          None => ()
+        }
+        function_types.push({
+          resolved_type: type_id,
+          signature_type_index: function_type_by_resolved[type_id],
+          parameters: parameter_span,
+          results: {
+            start: result_start,
+            length: function_value_types.length() - result_start,
+          },
+        })
+      }
+      _ => ()
+    }
+  }
   let function_jobs : Array[WasmFunctionFragmentJob?] = Array::make(
     functions.callables.length(),
     None,
@@ -1825,6 +1956,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         functions,
         functions.callables[callable_index],
         type_index_by_declaration,
+        function_type_by_resolved,
       ),
     )
   }
@@ -1865,10 +1997,8 @@ fn plan_module_wasmgc_fragments_in_orders(
     functions.callable_by_declaration.length(),
     -1,
   )
-  let function_value_types : Array[PlannedWasmValueType] = []
   let mut import_index = 0
   let mut defined_index = imported_function_count
-  let mut next_signature_type = physical_types.length()
   for callable_index, callable in functions.callables {
     let job = function_jobs[callable_index].unwrap()
     let parameter_start = function_value_types.length()
@@ -1914,9 +2044,14 @@ fn plan_module_wasmgc_fragments_in_orders(
       _ => false
     }
     let signature_type_index = if emits_signature {
-      let index = next_signature_type
-      next_signature_type += 1
-      index
+      let canonical = function_type_by_resolved[resolved.callable_function_types[callable_index]]
+      if canonical >= 0 {
+        canonical
+      } else {
+        let index = next_signature_type
+        next_signature_type += 1
+        index
+      }
     } else {
       -1
     }
@@ -2159,7 +2294,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         PlannedDirectCall(target, _, _, _)
         | PlannedOperatorCall(target, _, _, _, _)
         | PlannedIndexCall(target, _, _, _)
-        | PlannedIndexSetCall(target, _, _, _, _) => target
+        | PlannedIndexSetCall(target, _, _, _, _)
+        | PlannedFunctionReference(target) => target
         _ => continue
       }
       if semantic_id_module(declaration) != lowering.module_id {
@@ -2206,6 +2342,8 @@ fn plan_module_wasmgc_fragments_in_orders(
     variant_field_spans,
     variant_fields,
     field_names,
+    function_types,
+    function_type_by_resolved,
     functions: planned_functions,
     function_by_declaration,
     function_value_types,
@@ -2225,6 +2363,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   lowering : PlannedModuleLowering,
   options : WasmGCPlanningOptions,
   program_roots : Map[DeclId, Bool],
+  program_function_value_roots : Map[DeclId, Bool],
 ) -> PlannedModuleWasmGCFragments {
   let type_order : Array[Int] = []
   for
@@ -2239,7 +2378,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
     function_order.push(index)
   }
   plan_module_wasmgc_fragments_in_orders(
-    resolved, lowering, options, type_order, function_order, program_roots,
+    resolved, lowering, options, type_order, function_order, program_roots, program_function_value_roots,
   )
 }
 
@@ -2253,6 +2392,7 @@ pub fn plan_module_wasmgc_fragments_with_options(
     resolved,
     lowering,
     options,
+    Map::default(),
     Map::default(),
   )
 }

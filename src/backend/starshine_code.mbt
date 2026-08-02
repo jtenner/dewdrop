@@ -31,6 +31,7 @@ priv enum StarshineEmitTask {
   EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineCall(@semantic.DeclId, Int, Int)
+  FinishStarshineFunctionValueCall(Int, Int)
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineMap(
     Int,
@@ -460,6 +461,31 @@ fn starshine_inline_builtin_instructions(
     Ok([@lib.Instruction::v128_xor()])
   } else {
     Err(UnsupportedBuiltin(name))
+  }
+}
+
+///|
+fn starshine_function_reference_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  declaration : @semantic.DeclId,
+) -> Result[Int, StarshineCodeEmissionError] {
+  let function_index = match program {
+    Some(link) =>
+      match link.function_of(declaration) {
+        Some(function_) => function_.function_index
+        None => return Err(MissingFunction(declaration))
+      }
+    None =>
+      match planned.function_of(declaration) {
+        Some(function_) => function_.function_index
+        None => return Err(MissingFunction(declaration))
+      }
+  }
+  if function_index < 0 {
+    Err(MissingFunction(declaration))
+  } else {
+    Ok(function_index)
   }
 }
 
@@ -1486,6 +1512,40 @@ fn starshine_match_pattern_instructions(
 }
 
 ///|
+fn starshine_body_value_type(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  body_type : @semantic.BodyTypeId,
+  shape : @semantic.PlannedValueShape,
+) -> @lib.ValType? {
+  if body_type < -1 {
+    let resolved_type = -body_type - 2
+    if resolved_type >= 0 &&
+      resolved_type < planned.function_type_by_resolved.length() {
+      let local_type = planned.function_type_by_resolved[resolved_type]
+      if local_type >= 0 {
+        let emitted_type = match program {
+          Some(link) => {
+            let module_index = link.module_lookup
+              .get(lowering.module_id)
+              .unwrap()
+            link.signature_type_index(module_index, local_type)
+          }
+          None => local_type
+        }
+        return Some(
+          starshine_function_ref(
+            @lib.TypeIdx::new(emitted_type.reinterpret_as_uint()),
+          ),
+        )
+      }
+    }
+  }
+  starshine_shape_value_type(shape)
+}
+
+///|
 fn starshine_body_locals(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -1517,7 +1577,14 @@ fn starshine_body_locals(
     let planned_local = lowering.locals[body.locals.start + local_id]
     match planned_local.kind {
       @semantic.ParameterLocal =>
-        match starshine_shape_value_type(planned_local.shape) {
+        match
+          starshine_body_value_type(
+            lowering,
+            planned,
+            program,
+            planned_local.type_,
+            planned_local.shape,
+          ) {
           Some(_) => {
             local_indices[local_id] = parameter_count
             parameter_count += 1
@@ -1525,7 +1592,14 @@ fn starshine_body_locals(
           None => ()
         }
       @semantic.LetLocal | @semantic.PatternLocal =>
-        match starshine_shape_value_type(planned_local.shape) {
+        match
+          starshine_body_value_type(
+            lowering,
+            planned,
+            program,
+            planned_local.type_,
+            planned_local.shape,
+          ) {
           Some(type_) => {
             local_indices[local_id] = parameter_count +
               body_local_types.length()
@@ -2466,9 +2540,49 @@ fn starshine_emit_body_instructions(
                 planned, program, value, false,
               ),
             )
-          @semantic.PlannedFunctionReference(_)
-          | @semantic.PlannedFunctionValueCall(_, _) =>
-            return Err(UnsupportedExpression(body.body, expression))
+          @semantic.PlannedFunctionReference(declaration) => {
+            let function_index = match
+              starshine_function_reference_index(planned, program, declaration) {
+              Ok(index) => index
+              Err(error) => return Err(error)
+            }
+            results.push([
+              @lib.Instruction::ref_func(
+                @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+              ),
+            ])
+          }
+          @semantic.PlannedFunctionValueCall(target, arguments, function_type) => {
+            if function_type < 0 ||
+              function_type >= planned.function_type_by_resolved.length() {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            let local_type = planned.function_type_by_resolved[function_type]
+            if local_type < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            let emitted_type = match program {
+              Some(link) =>
+                link.signature_type_index(program_module_index, local_type)
+              None => local_type
+            }
+            tasks.push(
+              FinishStarshineFunctionValueCall(
+                emitted_type,
+                arguments.length + 1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(target))
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
+          }
           @semantic.PlannedLocalGet(local_id) => {
             if local_id < 0 ||
               local_id >= local_indices.length() ||
@@ -4696,6 +4810,19 @@ fn starshine_emit_body_instructions(
           Err(error) => return Err(error)
         }
       }
+      FinishStarshineFunctionValueCall(type_index, count) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let output : Array[@lib.Instruction] = []
+        for fragment in fragments {
+          append_starshine_instructions(output, fragment)
+        }
+        output.push(
+          @lib.Instruction::call_ref(
+            @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
       FinishStarshineStructNew(type_index, count) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = []
@@ -5475,6 +5602,44 @@ pub fn emit_starshine_export_section(
 }
 
 ///|
+fn starshine_function_reference_element_section(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+) -> @lib.ElemSec? {
+  let referenced : Map[Int, Bool] = Map::default()
+  for expression in lowering.expressions {
+    match expression.kind {
+      @semantic.PlannedFunctionReference(declaration) =>
+        match planned.function_of(declaration) {
+          Some(function_) if function_.function_index >= 0 =>
+            referenced[function_.function_index] = true
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  if referenced.length() == 0 {
+    return None
+  }
+  let functions : Array[@lib.FuncIdx] = []
+  for function_ in planned.functions {
+    if referenced.contains(function_.function_index) {
+      functions.push(
+        @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+      )
+    }
+  }
+  Some(
+    @lib.ElemSec::new([
+      @lib.Elem::new(
+        @lib.ElemMode::declarative(),
+        @lib.ElemKind::funcs(functions),
+      ),
+    ]),
+  )
+}
+
+///|
 fn starshine_default_memory_section() -> @lib.MemSec {
   @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, None))])
 }
@@ -5486,12 +5651,16 @@ pub fn emit_starshine_module(
 ) -> Result[@lib.Module, StarshineCodeEmissionError] {
   match emit_starshine_code_section(lowering, planned) {
     Ok(code) => {
-      let module_ = @lib.Module::new()
+      let mut module_ = @lib.Module::new()
         .with_type_sec(emit_starshine_type_section(planned))
         .with_import_sec(emit_starshine_import_section(planned))
         .with_func_sec(emit_starshine_function_section(planned))
         .with_export_sec(emit_starshine_export_section(planned))
         .with_code_sec(code)
+      match starshine_function_reference_element_section(lowering, planned) {
+        Some(elements) => module_ = module_.with_elem_sec(elements)
+        None => ()
+      }
       Ok(
         if planned.uses_linear_memory {
           module_.with_mem_sec(starshine_default_memory_section())
@@ -5588,6 +5757,14 @@ fn starshine_program_value_type(
     @semantic.WasmV128Value => @lib.ValType::v128()
     @semantic.WasmStringRefValue => @lib.ValType::eqref_null()
     @semantic.WasmNullableEqRefValue => @lib.ValType::eqref_null()
+    @semantic.WasmFunctionRefValue(index) =>
+      starshine_function_ref(
+        @lib.TypeIdx::new(
+          planned
+          .signature_type_index(module_index, index)
+          .reinterpret_as_uint(),
+        ),
+      )
     @semantic.WasmNominalRefValue(index) =>
       starshine_nominal_ref(
         @lib.TypeIdx::new(
@@ -5755,6 +5932,36 @@ fn starshine_program_physical_subtype(
 }
 
 ///|
+fn starshine_program_function_type_subtype(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  function_type : @semantic.PlannedWasmFunctionTypeFragment,
+) -> @lib.SubType {
+  let module_ = planned.modules[module_index]
+  let parameters : Array[@lib.ValType] = []
+  for index in 0..<function_type.parameters.length {
+    parameters.push(
+      starshine_program_value_type(
+        planned,
+        module_index,
+        module_.function_value_types[function_type.parameters.start + index],
+      ),
+    )
+  }
+  let results : Array[@lib.ValType] = []
+  for index in 0..<function_type.results.length {
+    results.push(
+      starshine_program_value_type(
+        planned,
+        module_index,
+        module_.function_value_types[function_type.results.start + index],
+      ),
+    )
+  }
+  @lib.SubType::comp_type(@lib.CompType::func(parameters, results))
+}
+
+///|
 fn starshine_program_function_subtype(
   planned : @semantic.PlannedProgramWasmGCLink,
   module_index : Int,
@@ -5785,6 +5992,29 @@ fn starshine_program_function_subtype(
 }
 
 ///|
+fn starshine_program_signature_rec_type(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  signature : @semantic.PlannedProgramWasmSignatureType,
+) -> @lib.RecType {
+  let module_ = planned.modules[signature.module_index]
+  let subtype = match signature.kind {
+    @semantic.PlannedProgramFunctionType(function_type_index) =>
+      starshine_program_function_type_subtype(
+        planned,
+        signature.module_index,
+        module_.function_types[function_type_index],
+      )
+    @semantic.PlannedProgramFunctionSignature(function_index) =>
+      starshine_program_function_subtype(
+        planned,
+        signature.module_index,
+        module_.functions[function_index],
+      )
+  }
+  @lib.RecType::new(subtype)
+}
+
+///|
 fn emit_starshine_program_type_section(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.TypeSec {
@@ -5800,22 +6030,8 @@ fn emit_starshine_program_type_section(
       }
       rec_types.push(@lib.RecType::group(subtypes))
     }
-    for scc in planned.graph.sccs {
-      for member_index in 0..<scc.length {
-        let module_index = planned.graph.scc_modules[scc.start + member_index]
-        let module_ = planned.modules[module_index]
-        for function_ in module_.functions {
-          if function_.signature_type_index >= 0 {
-            rec_types.push(
-              @lib.RecType::new(
-                starshine_program_function_subtype(
-                  planned, module_index, function_,
-                ),
-              ),
-            )
-          }
-        }
-      }
+    for signature in planned.program_signature_types {
+      rec_types.push(starshine_program_signature_rec_type(planned, signature))
     }
   } else {
     for scc in planned.graph.sccs {
@@ -5840,14 +6056,10 @@ fn emit_starshine_program_type_section(
             rec_types.push(@lib.RecType::group(subtypes))
           }
         }
-        for function_ in module_.functions {
-          if function_.signature_type_index >= 0 {
+        for signature in planned.program_signature_types {
+          if signature.module_index == module_index {
             rec_types.push(
-              @lib.RecType::new(
-                starshine_program_function_subtype(
-                  planned, module_index, function_,
-                ),
-              ),
+              starshine_program_signature_rec_type(planned, signature),
             )
           }
         }
@@ -6198,10 +6410,44 @@ fn starshine_program_module_runtime_function_index(
 }
 
 ///|
+fn starshine_program_global_function_type_index(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  initializer : @semantic.PlannedProgramModuleInitializer,
+) -> Int {
+  let module_ = lowering.modules[initializer.module_index]
+  let body = module_.bodies[@semantic.semantic_id_local(initializer.body)]
+  if body.root_type >= -1 {
+    return -1
+  }
+  let resolved_type = -body.root_type - 2
+  let fragments = planned.modules[initializer.module_index]
+  if resolved_type < 0 ||
+    resolved_type >= fragments.function_type_by_resolved.length() {
+    return -1
+  }
+  let local_type = fragments.function_type_by_resolved[resolved_type]
+  if local_type < 0 {
+    return -1
+  }
+  planned.signature_type_index(initializer.module_index, local_type)
+}
+
+///|
 fn starshine_program_global_value_type(
-  shape : @semantic.PlannedValueShape,
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  initializer : @semantic.PlannedProgramModuleInitializer,
 ) -> @lib.ValType {
-  match shape {
+  let function_type = starshine_program_global_function_type_index(
+    lowering, planned, initializer,
+  )
+  if function_type >= 0 {
+    return starshine_function_ref(
+      @lib.TypeIdx::new(function_type.reinterpret_as_uint()),
+    )
+  }
+  match initializer.shape {
     @semantic.I8PlannedValueShape
     | @semantic.I16PlannedValueShape
     | @semantic.I32PlannedValueShape
@@ -6225,9 +6471,23 @@ fn starshine_program_global_value_type(
 
 ///|
 fn starshine_program_global_default(
-  shape : @semantic.PlannedValueShape,
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  initializer : @semantic.PlannedProgramModuleInitializer,
 ) -> @lib.Expr {
-  let instructions = match shape {
+  let function_type = starshine_program_global_function_type_index(
+    lowering, planned, initializer,
+  )
+  if function_type >= 0 {
+    return @lib.Expr::new([
+      @lib.Instruction::ref_null(
+        @lib.HeapType::new(
+          @lib.TypeIdx::new(function_type.reinterpret_as_uint()),
+        ),
+      ),
+    ])
+  }
+  let instructions = match initializer.shape {
     @semantic.I8PlannedValueShape
     | @semantic.I16PlannedValueShape
     | @semantic.I32PlannedValueShape
@@ -6316,13 +6576,14 @@ fn emit_starshine_program_global_section(
     globals.push(
       @lib.Global::new(
         @lib.GlobalType::new(
-          starshine_program_global_value_type(initializer.shape),
+          starshine_program_global_value_type(lowering, planned, initializer),
           !initializer.constant,
         ),
         match
           starshine_program_constant_global_initializer(lowering, initializer) {
           Some(value) => value
-          None => starshine_program_global_default(initializer.shape)
+          None =>
+            starshine_program_global_default(lowering, planned, initializer)
         },
       ),
     )
@@ -6499,6 +6760,46 @@ fn emit_starshine_program_code_section(
 }
 
 ///|
+fn starshine_program_function_reference_element_section(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.ElemSec? {
+  let referenced : Map[Int, Bool] = Map::default()
+  for module_ in lowering.modules {
+    for expression in module_.expressions {
+      match expression.kind {
+        @semantic.PlannedFunctionReference(declaration) =>
+          match planned.function_of(declaration) {
+            Some(function_) if function_.function_index >= 0 =>
+              referenced[function_.function_index] = true
+            _ => ()
+          }
+        _ => ()
+      }
+    }
+  }
+  if referenced.length() == 0 {
+    return None
+  }
+  let functions : Array[@lib.FuncIdx] = []
+  for function_ in planned.functions {
+    if referenced.contains(function_.function_index) {
+      functions.push(
+        @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+      )
+    }
+  }
+  Some(
+    @lib.ElemSec::new([
+      @lib.Elem::new(
+        @lib.ElemMode::declarative(),
+        @lib.ElemKind::funcs(functions),
+      ),
+    ]),
+  )
+}
+
+///|
 pub fn emit_starshine_program_module(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -6514,6 +6815,11 @@ pub fn emit_starshine_program_module(
         .with_func_sec(emit_starshine_program_function_section(planned))
         .with_export_sec(emit_starshine_program_export_section(planned))
         .with_code_sec(code)
+      match
+        starshine_program_function_reference_element_section(lowering, planned) {
+        Some(elements) => module_ = module_.with_elem_sec(elements)
+        None => ()
+      }
       if planned.global_lookup.length() > 0 {
         module_ = module_.with_global_sec(
           emit_starshine_program_global_section(lowering, planned),

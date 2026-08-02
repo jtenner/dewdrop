@@ -1,0 +1,19 @@
+pub struct Item {
+  value: I32
+}
+
+pub fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+pub let stored_increment = increment
+
+pub fn read(item: Item) -> I32 {
+  item.value
+}
+
+pub fn item() -> Item {
+  Item {
+    value: 42
+  }
+}

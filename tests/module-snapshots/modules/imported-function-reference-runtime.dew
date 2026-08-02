@@ -1,0 +1,15 @@
+open fixture.callback
+
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+fn apply_item(callback: fn(Item) -> I32, value: Item) -> I32 {
+  callback(value)
+}
+
+pub fn main() -> Unit {
+  assert(apply(increment, 41) == 42, "imported scalar function reference")
+  assert(stored_increment(41) == 42, "imported function-valued module binding")
+  assert(apply_item(read, item()) == 42, "imported nominal function reference")
+}

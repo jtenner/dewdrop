@@ -1,3 +1,0 @@
-pub fn apply(callback: fn(I32) -> I64) -> I64 {
-  callback(1)
-}
