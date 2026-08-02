@@ -332,8 +332,8 @@ test "frozen interfaces retain only public user declarations and signatures" {
   let names = interface.declarations.map(value => value.name)
   assert_eq(names, ["Item", "Read", "expose"])
   let callable_names = interface.callables.map(value => value.name)
-  assert_eq(callable_names, ["read", "expose"])
-  assert_eq(interface.parameters.length(), 2)
+  assert_eq(callable_names, ["read", "expose", "add"])
+  assert_eq(interface.parameters.length(), 4)
   assert_eq(interface.implementations.length(), 1)
   assert_eq(interface.path, "app.api")
   assert_eq(

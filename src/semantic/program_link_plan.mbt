@@ -232,6 +232,9 @@ fn program_mark_resolved_nominal_roots(
   let work : Array[ResolvedTypeId] = [root]
   while work.length() > 0 {
     let type_ = work.pop().unwrap()
+    if type_ < 0 || type_ >= resolved.types.length() {
+      continue
+    }
     match resolved.types[type_] {
       NominalType(declaration) => reachable[declaration] = true
       AppliedType(base, arguments) => {

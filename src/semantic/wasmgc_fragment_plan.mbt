@@ -648,6 +648,9 @@ fn wasmgc_nominal_declaration(
 ) -> DeclId? {
   let mut current = root
   while true {
+    if current < 0 || current >= resolved.types.length() {
+      return None
+    }
     match resolved.types[current] {
       NominalType(declaration) => return Some(declaration)
       AppliedType(base, _) => current = base

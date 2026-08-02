@@ -1,0 +1,5 @@
+open fixture.library
+
+pub fn main() -> I32 {
+  (item(20) + item(22)).value
+}

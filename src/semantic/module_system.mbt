@@ -1330,6 +1330,40 @@ fn frozen_declaration_kind(
 }
 
 ///|
+fn frozen_impl_type_is_visible(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+  exported : Map[DeclId, Bool],
+) -> Bool {
+  let mut current = root
+  while true {
+    if current < 0 || current >= resolved.types.length() {
+      return false
+    }
+    match resolved.types[current] {
+      NominalType(declaration) | TraitType(declaration) =>
+        return semantic_id_module(declaration) != resolved.module_id ||
+          exported.contains(declaration)
+      AppliedType(base, arguments) => {
+        for index in 0..<arguments.length {
+          if !frozen_impl_type_is_visible(
+              resolved,
+              resolved.type_arguments[arguments.start + index],
+              exported,
+            ) {
+            return false
+          }
+        }
+        current = base
+      }
+      ErrorType => return false
+      PrimitiveType(_) | GenericParameterType(_) | SelfType(_) => return true
+    }
+  }
+  false
+}
+
+///|
 /// Freezes one public module interface without retaining parser ASTs or
 /// executable body HIR. Resolved type IDs remain scoped by `module_id` and the
 /// included immutable resolved-type arena.
@@ -1418,6 +1452,37 @@ pub fn freeze_module_interface(
       },
     })
   }
+  let evidence_visible_declarations : Map[DeclId, Bool] = Map::default()
+  for declaration, _ in exported_declarations {
+    evidence_visible_declarations[declaration] = true
+  }
+  for declaration in collected.declarations {
+    if semantic_id_local(declaration.id) < collected.preamble_declaration_count {
+      evidence_visible_declarations[declaration.id] = true
+    }
+  }
+  let exported_implementations : Map[DeclId, Bool] = Map::default()
+  for implementation_index, implementation in collected.impls {
+    if implementation.foreign_ ||
+      collected.declaration_is_test_only(implementation.declaration) ||
+      semantic_id_local(implementation.declaration) <
+      collected.preamble_declaration_count {
+      continue
+    }
+    let target_visible = frozen_impl_type_is_visible(
+      resolved,
+      resolved.impl_target_types[implementation_index],
+      evidence_visible_declarations,
+    )
+    let trait_type = resolved.impl_trait_types[implementation_index]
+    let trait_visible = trait_type < 0 ||
+      frozen_impl_type_is_visible(
+        resolved, trait_type, evidence_visible_declarations,
+      )
+    if target_visible && trait_visible {
+      exported_implementations[implementation.declaration] = true
+    }
+  }
   let parameters : Array[FrozenInterfaceParameter] = []
   let callables : Array[FrozenInterfaceCallable] = []
   for callable in functions.callables {
@@ -1428,16 +1493,13 @@ pub fn freeze_module_interface(
     if collected.declaration_is_test_only(callable.declaration) {
       continue
     }
-    let standard_impl_method = if standard_module {
-      match callable.kind {
-        PlannedImplMethodCallable(_, _) => true
-        _ => false
-      }
-    } else {
-      false
+    let exported_impl_method = match callable.kind {
+      PlannedImplMethodCallable(implementation, _) =>
+        exported_implementations.contains(implementation)
+      _ => false
     }
     let exported = if publish_standard_top_level ||
-      standard_impl_method ||
+      exported_impl_method ||
       callable.visibility == Public {
       true
     } else {
@@ -1499,10 +1561,7 @@ pub fn freeze_module_interface(
   }
   let implementations : Array[FrozenInterfaceImplementation] = []
   for implementation_index, implementation in collected.impls {
-    if implementation.foreign_ ||
-      collected.declaration_is_test_only(implementation.declaration) ||
-      semantic_id_local(implementation.declaration) <
-      collected.preamble_declaration_count {
+    if !exported_implementations.contains(implementation.declaration) {
       continue
     }
     implementations.push({

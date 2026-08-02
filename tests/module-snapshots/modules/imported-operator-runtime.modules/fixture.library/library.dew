@@ -1,0 +1,17 @@
+pub struct Item {
+  value: I32
+}
+
+impl Add for Item {
+  fn add(self, right: Item) -> Item {
+    Item {
+      value: self.value + right.value
+    }
+  }
+}
+
+pub fn item(value: I32) -> Item {
+  Item {
+    value: value
+  }
+}

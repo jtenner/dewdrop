@@ -1,0 +1,19 @@
+pub struct Item {
+  value: I32
+}
+
+pub trait Mark {
+  fn mark(self) -> I32
+}
+
+impl Mark for Item {
+  fn mark(self) -> I32 {
+    self.value + 1
+  }
+}
+
+pub fn item() -> Item {
+  Item {
+    value: 41
+  }
+}

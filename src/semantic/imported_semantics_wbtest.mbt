@@ -266,6 +266,42 @@ test "imported implementation evidence is translated into consumer types" {
     frozen.interfaces[0].resolved_types.types[evidence.trait_type],
     TraitType(mark),
   )
+  let mut method_found = false
+  for callable in frozen.interfaces[1].callables {
+    match callable.kind {
+      FrozenImplCallable(implementation) if implementation ==
+        evidence.declaration => method_found = true
+      _ => ()
+    }
+  }
+  assert_true(method_found)
+}
+
+///|
+test "implementation evidence over private local heads is not exported" {
+  let program = collect_program_manifest(
+    1842UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.consumer", [
+        ManifestFile::new(
+          "consumer.dew", b"open app.library\npub fn run() -> I32 {\n  1\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.library", [
+        ManifestFile::new(
+          "library.dew", b"struct Hidden {}\npub trait Mark {\n  fn mark(self) -> I32\n}\nimpl Mark for Hidden {\n  fn mark(self) -> I32 {\n    7\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  assert_eq(frozen.interfaces[1].implementations.length(), 0)
+  for callable in frozen.interfaces[1].callables {
+    match callable.kind {
+      FrozenImplCallable(_) => fail("private-head impl method leaked")
+      _ => ()
+    }
+  }
 }
 
 ///|

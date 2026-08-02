@@ -67,12 +67,12 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Commit readable `.wat` expectations while keeping generated `.wasm` temporary.
 - [x] Compare snapshots byte-for-byte and print unified diffs.
 - [x] Provide an explicit update command that ordinary test runs never invoke automatically.
-- [x] Cover 143 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
+- [x] Cover 145 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
 - [x] Keep each JSON oracle to exactly ordered compiler `errors`, ordered compiler `warnings`, and ordered stdout-string `output`; `null` means no module or WAT was produced.
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 161 fixtures with compiler failures kept beside their language features: 143 compiled WAT/runtime snapshots, 18 compiler-error snapshots, 89 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 163 fixtures with compiler failures kept beside their language features: 145 compiled WAT/runtime snapshots, 18 compiler-error snapshots, 90 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -129,9 +129,10 @@ Performance and correctness work remains continuous: expand generated lane-famil
 
 ## Cross-module semantics and linking
 
-- [ ] Merge imported implementation evidence into coherence and method/operator dispatch indexes.
-- [ ] Enforce imported evidence visibility and foreign-impl privacy.
-- [ ] Preserve exact external implementation and method identities through lowering.
+- [x] Merge owner-coherent imported implementation evidence into method/operator dispatch indexes.
+- [x] Enforce imported evidence visibility and foreign-impl privacy.
+- [x] Preserve exact external implementation and method identities through lowering.
+- [ ] Diagnose structural overlap between independently imported or local/imported implementation sets.
 - [ ] Merge physical WasmGC SCCs spanning multiple Dew modules.
 - [ ] Replace supported `UnsupportedProgramForwardTypeReference` cases with global recursive groups.
 - [x] Distinguish qualified imports from module-scoped opens: `import` binds only `@alias`, while `open` contributes unqualified names only to the owning module and never re-exports them.
