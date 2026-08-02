@@ -494,6 +494,7 @@ fn plan_expression_kind(
     HirNameExpr(_, _) =>
       match names.expression_references[expression] {
         LocalNameReference(local_id) => PlannedLocalGet(local_id)
+        LambdaCaptureNameReference(_) => PlannedPoisonExpression
         ImportedValueNameReference(_) => PlannedPoisonExpression
         ImportedModuleValueNameReference(declaration) =>
           PlannedModuleValueGet(

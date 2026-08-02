@@ -26,6 +26,7 @@ pub enum BodyNameReference {
   NoNameReference
   ErrorNameReference
   LocalNameReference(LocalId)
+  LambdaCaptureNameReference(Int)
   ModuleValueNameReference(NameId)
   ImportedValueNameReference(Int)
   ImportedModuleValueNameReference(DeclId)
@@ -103,14 +104,42 @@ pub struct ResolvedBodyNames {
 } derive(Eq, Debug)
 
 ///|
+pub enum LambdaCaptureSource {
+  BodyLocalCapture(BodyId, LocalId)
+  LambdaLocalCapture(LambdaId, LocalId)
+} derive(Eq, Debug)
+
+///|
+pub struct LambdaCapture {
+  id : Int
+  lambda : LambdaId
+  name : NameId
+  source : LambdaCaptureSource
+  mutable_ : Bool
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub struct ResolvedLambdaNames {
+  lambda : LambdaId
+  locals : HirSpan
+  controls : HirSpan
+  captures : HirSpan
+  diagnostics : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct ResolvedModuleNames {
   module_id : ModuleId
   bodies : Array[ResolvedBodyNames]
+  lambdas : Array[ResolvedLambdaNames]
   locals : Array[BodyLocal]
   controls : Array[BodyControl]
+  captures : Array[LambdaCapture]
   expression_references : Array[BodyNameReference]
   pattern_references : Array[BodyPatternReference]
   parameter_locals : Array[LocalId]
+  lambda_parameter_locals : Array[LocalId]
   block_item_locals : Array[LocalId]
   transfer_targets : Array[ControlId]
   expression_controls : Array[ControlId]
@@ -132,6 +161,18 @@ pub fn ResolvedModuleNames::body(
 }
 
 ///|
+pub fn ResolvedModuleNames::lambda(
+  self : ResolvedModuleNames,
+  lambda : LambdaId,
+) -> ResolvedLambdaNames? {
+  if lambda < 0 || lambda >= self.lambdas.length() {
+    None
+  } else {
+    Some(self.lambdas[lambda])
+  }
+}
+
+///|
 pub fn ResolvedModuleNames::local_info(
   self : ResolvedModuleNames,
   body : BodyId,
@@ -143,6 +184,40 @@ pub fn ResolvedModuleNames::local_info(
         None
       } else {
         Some(self.locals[info.locals.start + local_id])
+      }
+    None => None
+  }
+}
+
+///|
+pub fn ResolvedModuleNames::lambda_local_info(
+  self : ResolvedModuleNames,
+  lambda : LambdaId,
+  local_id : LocalId,
+) -> BodyLocal? {
+  match self.lambda(lambda) {
+    Some(info) =>
+      if local_id < 0 || local_id >= info.locals.length {
+        None
+      } else {
+        Some(self.locals[info.locals.start + local_id])
+      }
+    None => None
+  }
+}
+
+///|
+pub fn ResolvedModuleNames::lambda_capture(
+  self : ResolvedModuleNames,
+  lambda : LambdaId,
+  capture : Int,
+) -> LambdaCapture? {
+  match self.lambda(lambda) {
+    Some(info) =>
+      if capture < 0 || capture >= info.captures.length {
+        None
+      } else {
+        Some(self.captures[info.captures.start + capture])
       }
     None => None
   }

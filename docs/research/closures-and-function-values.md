@@ -26,7 +26,11 @@ fn(value: I32) -> I32 {
 
 The `fn` token is decisive in expression value-seeking mode: the parser consumes it once, requires `(`, parses the existing typed-parameter and type grammars, and then consumes the existing newline-delimited block grammar. No token rewind, speculative branch, or multi-token lookahead is introduced. Pipe syntax such as `|value|` is intentionally avoided because `|` is already an infix token and would make the cursor state context-sensitive. Expression lambdas enter normal postfix mode after their block, so immediate calls and field/index continuations remain mechanical.
 
-Collection lowers each lambda header immediately and defers its block into an isolated, source-ordered `HirLambdaBody`. Nested lambdas retain deterministic parent and root-body identities, and their expression/block arenas do not leak into the enclosing `HirBody` span. Semantic inference currently reports the explicit unsupported boundary; capture resolution, closure allocation, and generic or overloaded function-value disambiguation remain pending.
+Collection lowers each lambda header immediately and defers its block into an isolated, source-ordered `HirLambdaBody`. Nested lambdas retain deterministic parent and root-body identities, and their expression/block arenas do not leak into the enclosing `HirBody` span.
+
+Lexical name resolution now processes those isolated bodies after their enclosing root-body jobs. Each lambda receives its own parameter, local, control, and diagnostic spans. A lambda expression freezes the active binding stack at its exact source position, so later declarations are not accidentally visible and shadowed bindings retain the correct identity. Direct captures are ordered by first use. Each capture records an exact `BodyLocalCapture` or `LambdaLocalCapture` source plus mutability. Free variables used only by nested lambdas are routed through every intermediate lambda in deterministic nested-lambda/source order, preparing those environments to construct descendant closures. Module/import names remain ordinary non-captured references.
+
+Semantic type inference still reports the explicit unsupported lambda-expression boundary; lambda signature resolution, closure allocation, and generic or overloaded function-value disambiguation remain pending.
 
 ## Proposed representation
 
@@ -39,8 +43,8 @@ The lowered callable signature should receive the environment explicitly before 
 
 ## Required next milestones
 
-1. Resolve lambda signatures and nested lexical names.
-2. Compute deterministic free-variable/capture sets.
+1. Resolve lambda signatures into canonical structural function types.
+2. Infer isolated lambda bodies against parameters, captures, and declared results.
 3. Add expected-type disambiguation for overloaded and generic function references.
 4. Emit environment structs and captured loads.
 5. Introduce the closure-object ABI for captured and uniformly escaping values.

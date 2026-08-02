@@ -5565,7 +5565,9 @@ fn BasicBodyInferencer::constrain_name_expressions(
     match self.collected.expressions[expression] {
       HirNameExpr(_, _) =>
         match self.names.expression_references[expression] {
-          LocalNameReference(_) | ErrorNameReference => ()
+          LocalNameReference(_)
+          | LambdaCaptureNameReference(_)
+          | ErrorNameReference => ()
           ModuleValueNameReference(name) =>
             if self.module_value_type(name) is None &&
               !self.is_function_reference(expression) {
