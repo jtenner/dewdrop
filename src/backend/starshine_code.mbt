@@ -1033,7 +1033,7 @@ fn starshine_general_match_pattern_instructions(
             }
             let type_index = match program {
               Some(link) =>
-                link.module_type_bases[owner_module] + physical.type_index
+                link.physical_type_index(owner_module, physical.type_index)
               None => physical.type_index
             }
             let pattern_fields = match source.source {
@@ -1120,7 +1120,7 @@ fn starshine_general_match_pattern_instructions(
             }
             let physical_type = match program {
               Some(link) =>
-                link.module_type_bases[owner_module] + physical.type_index
+                link.physical_type_index(owner_module, physical.type_index)
               None => physical.type_index
             }
             let child_patterns : Array[@semantic.PatternId] = []
@@ -1348,7 +1348,8 @@ fn starshine_simple_match_pattern_instructions(
         None => return Err(UnsupportedExpression(body.body, pattern))
       }
       let physical_type = match program {
-        Some(link) => link.module_type_bases[owner_module] + physical.type_index
+        Some(link) =>
+          link.physical_type_index(owner_module, physical.type_index)
         None => physical.type_index
       }
       for field in variant_plan.variant_fields_of(variant) {
@@ -1396,7 +1397,8 @@ fn starshine_simple_match_pattern_instructions(
         None => return Err(UnsupportedExpression(body.body, pattern))
       }
       let physical_type = match program {
-        Some(link) => link.module_type_bases[owner_module] + physical.type_index
+        Some(link) =>
+          link.physical_type_index(owner_module, physical.type_index)
         None => physical.type_index
       }
       for pattern_offset in 0..<pattern_fields.length {
@@ -2902,7 +2904,7 @@ fn starshine_emit_body_instructions(
             }
             let subtype = match program {
               Some(link) =>
-                link.module_type_bases[owner_module] + physical.type_index
+                link.physical_type_index(owner_module, physical.type_index)
               None => physical.type_index
             }
             tasks.push(FinishStarshineEnumSubtype(subtype, tag, 0))
@@ -2930,7 +2932,7 @@ fn starshine_emit_body_instructions(
             }
             let subtype = match program {
               Some(link) =>
-                link.module_type_bases[owner_module] + physical.type_index
+                link.physical_type_index(owner_module, physical.type_index)
               None => physical.type_index
             }
             let values : Array[StarshineEmitTask] = []
@@ -2981,7 +2983,7 @@ fn starshine_emit_body_instructions(
             }
             let subtype = match program {
               Some(link) =>
-                link.module_type_bases[owner_module] + physical.type_index
+                link.physical_type_index(owner_module, physical.type_index)
               None => physical.type_index
             }
             let values = match
@@ -3093,7 +3095,7 @@ fn starshine_emit_body_instructions(
             }
             let type_index = match program {
               Some(link) =>
-                link.module_type_bases[owner_module] + local_type_index
+                link.physical_type_index(owner_module, local_type_index)
               None => local_type_index
             }
             tasks.push(
@@ -3293,10 +3295,14 @@ fn starshine_emit_body_instructions(
             Some(value) => value
             None => return Err(UnsupportedExpression(body.body, -1))
           }
-          let some_type = link.module_type_bases[option_module_index] +
-            some_physical.type_index
-          let none_type = link.module_type_bases[option_module_index] +
-            none_physical.type_index
+          let some_type = link.physical_type_index(
+            option_module_index,
+            some_physical.type_index,
+          )
+          let none_type = link.physical_type_index(
+            option_module_index,
+            none_physical.type_index,
+          )
           let some_tag = option_plan.variant_tag_of(some_variant).unwrap()
           let none_tag = option_plan.variant_tag_of(none_variant).unwrap()
           append_starshine_instructions(output, fragments[0])
@@ -4291,8 +4297,10 @@ fn starshine_emit_body_instructions(
             Some(value) => value
             None => return Err(UnsupportedExpression(body.body, -205))
           }
-          let none_type = option_plan.unwrap().0.module_type_bases[option_module_index] +
-            none_physical.type_index
+          let none_type = option_plan.unwrap().0.physical_type_index(
+            option_module_index,
+            none_physical.type_index,
+          )
           missing.push(
             @lib.Instruction::i32_const(
               @lib.I32::new(
@@ -4463,8 +4471,10 @@ fn starshine_emit_body_instructions(
             Some(value) => value
             None => return Err(UnsupportedExpression(body.body, -206))
           }
-          let some_type = link.module_type_bases[option_module_index] +
-            some_physical.type_index
+          let some_type = link.physical_type_index(
+            option_module_index,
+            some_physical.type_index,
+          )
           found.push(
             @lib.Instruction::i32_const(
               @lib.I32::new(
@@ -5232,7 +5242,7 @@ fn starshine_append_program_result_cast(
   let final_index = match
     fragments.function_value_types[function_.results.start] {
     @semantic.WasmNominalRefValue(index) =>
-      planned.module_type_bases[function_.module_index] + index
+      planned.physical_type_index(function_.module_index, index)
     @semantic.WasmExternalNominalRefValue(declaration) =>
       planned.type_lookup.get(declaration).unwrap()
     _ => -1
@@ -5539,7 +5549,9 @@ fn starshine_program_storage_type(
           @semantic.WasmModuleTypeReference(index) =>
             starshine_nominal_ref(
               @lib.TypeIdx::new(
-                (planned.module_type_bases[module_index] + index).reinterpret_as_uint(),
+                planned
+                .physical_type_index(module_index, index)
+                .reinterpret_as_uint(),
               ),
             )
           @semantic.WasmRecursiveTypeReference(index) =>
@@ -5576,7 +5588,7 @@ fn starshine_program_value_type(
     @semantic.WasmNominalRefValue(index) =>
       starshine_nominal_ref(
         @lib.TypeIdx::new(
-          (planned.module_type_bases[module_index] + index).reinterpret_as_uint(),
+          planned.physical_type_index(module_index, index).reinterpret_as_uint(),
         ),
       )
     @semantic.WasmExternalNominalRefValue(declaration) =>
@@ -5585,6 +5597,111 @@ fn starshine_program_value_type(
           planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
         ),
       )
+  }
+}
+
+///|
+fn starshine_program_group_type_index(
+  final_type_index : Int,
+  _group_first_type_index : Int,
+  _group_length : Int,
+) -> @lib.TypeIdx {
+  // The binary format encodes recursive-group references through their final
+  // type-section indices. Starshine's relative recursive index is useful to
+  // its validator and WAT model but is intentionally not binary-encodable.
+  @lib.TypeIdx::new(final_type_index.reinterpret_as_uint())
+}
+
+///|
+fn starshine_program_group_storage_type(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  node : @semantic.PlannedProgramWasmPhysicalType,
+  group : @semantic.PlannedProgramWasmRecursiveGroup,
+  storage : @semantic.PlannedWasmStorageType,
+) -> @lib.StorageType {
+  let nominal = fn(final_type_index : Int) {
+    @lib.StorageType::val_type(
+      starshine_nominal_ref(
+        starshine_program_group_type_index(
+          final_type_index,
+          group.first_type_index,
+          group.types.length,
+        ),
+      ),
+    )
+  }
+  match storage {
+    @semantic.WasmI8SignedStorage | @semantic.WasmI8UnsignedStorage =>
+      @lib.StorageType::pack_type(@lib.PackType::i8())
+    @semantic.WasmI16SignedStorage | @semantic.WasmI16UnsignedStorage =>
+      @lib.StorageType::pack_type(@lib.PackType::i16())
+    @semantic.WasmI32Storage => @lib.StorageType::val_type(@lib.ValType::i32())
+    @semantic.WasmI64Storage => @lib.StorageType::val_type(@lib.ValType::i64())
+    @semantic.WasmF32Storage => @lib.StorageType::val_type(@lib.ValType::f32())
+    @semantic.WasmF64Storage => @lib.StorageType::val_type(@lib.ValType::f64())
+    @semantic.WasmV128Storage =>
+      @lib.StorageType::val_type(@lib.ValType::v128())
+    @semantic.WasmStringRefStorage | @semantic.WasmNullableEqRefStorage =>
+      @lib.StorageType::val_type(@lib.ValType::eqref_null())
+    @semantic.WasmNominalRefStorage(reference) => {
+      let module_ = planned.modules[node.module_index]
+      let physical = module_.physical_types[node.fragment_index]
+      let local_type_index = match reference {
+        @semantic.WasmModuleTypeReference(index) => index
+        @semantic.WasmRecursiveTypeReference(index) =>
+          module_.type_groups[physical.group_index].first_type_index + index
+      }
+      nominal(planned.physical_type_index(node.module_index, local_type_index))
+    }
+    @semantic.WasmExternalNominalRefStorage(declaration) =>
+      nominal(planned.type_lookup.get(declaration).unwrap())
+  }
+}
+
+///|
+fn starshine_program_group_physical_subtype(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  node : @semantic.PlannedProgramWasmPhysicalType,
+  group : @semantic.PlannedProgramWasmRecursiveGroup,
+) -> @lib.SubType {
+  let module_ = planned.modules[node.module_index]
+  let type_ = module_.physical_types[node.fragment_index]
+  let fields : Array[@lib.FieldType] = []
+  for index in 0..<type_.fields.length {
+    let field = module_.fields[type_.fields.start + index]
+    fields.push(
+      @lib.FieldType::new(
+        starshine_program_group_storage_type(
+          planned,
+          node,
+          group,
+          field.storage,
+        ),
+        if field.mutable_ {
+          @lib.Mut::var_()
+        } else {
+          @lib.Mut::const_()
+        },
+      ),
+    )
+  }
+  let composite = @lib.CompType::struct_(fields)
+  match type_.kind {
+    @semantic.PlannedWasmEnumBaseType(_) =>
+      @lib.SubType::new(false, [], composite)
+    @semantic.PlannedWasmEnumSubtypeType(declaration, _, _) =>
+      @lib.SubType::new(
+        true,
+        [
+          starshine_program_group_type_index(
+            planned.type_lookup.get(declaration).unwrap(),
+            group.first_type_index,
+            group.types.length,
+          ),
+        ],
+        composite,
+      )
+    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
   }
 }
 
@@ -5669,37 +5786,67 @@ fn emit_starshine_program_type_section(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.TypeSec {
   let rec_types : Array[@lib.RecType] = []
-  for scc in planned.graph.sccs {
-    for member_index in 0..<scc.length {
-      let module_index = planned.graph.scc_modules[scc.start + member_index]
-      let module_ = planned.modules[module_index]
-      for group in module_.type_groups {
-        let subtypes : Array[@lib.SubType] = []
-        let mut has_recursive_reference = false
-        for index in 0..<group.types.length {
-          let (subtype, recursive) = starshine_program_physical_subtype(
-            planned,
-            module_index,
-            module_.physical_types[group.types.start + index],
-          )
-          subtypes.push(subtype)
-          has_recursive_reference = has_recursive_reference || recursive
-        }
-        if subtypes.length() == 1 && !has_recursive_reference {
-          rec_types.push(@lib.RecType::new(subtypes[0]))
-        } else {
-          rec_types.push(@lib.RecType::group(subtypes))
+  if planned.program_type_groups.length() > 0 {
+    for group in planned.program_type_groups {
+      let subtypes : Array[@lib.SubType] = []
+      for index in 0..<group.types.length {
+        let node = planned.program_physical_types[group.types.start + index]
+        subtypes.push(
+          starshine_program_group_physical_subtype(planned, node, group),
+        )
+      }
+      rec_types.push(@lib.RecType::group(subtypes))
+    }
+    for scc in planned.graph.sccs {
+      for member_index in 0..<scc.length {
+        let module_index = planned.graph.scc_modules[scc.start + member_index]
+        let module_ = planned.modules[module_index]
+        for function_ in module_.functions {
+          if function_.signature_type_index >= 0 {
+            rec_types.push(
+              @lib.RecType::new(
+                starshine_program_function_subtype(
+                  planned, module_index, function_,
+                ),
+              ),
+            )
+          }
         }
       }
-      for function_ in module_.functions {
-        if function_.signature_type_index >= 0 {
-          rec_types.push(
-            @lib.RecType::new(
-              starshine_program_function_subtype(
-                planned, module_index, function_,
+    }
+  } else {
+    for scc in planned.graph.sccs {
+      for member_index in 0..<scc.length {
+        let module_index = planned.graph.scc_modules[scc.start + member_index]
+        let module_ = planned.modules[module_index]
+        for group in module_.type_groups {
+          let subtypes : Array[@lib.SubType] = []
+          let mut has_recursive_reference = false
+          for index in 0..<group.types.length {
+            let (subtype, recursive) = starshine_program_physical_subtype(
+              planned,
+              module_index,
+              module_.physical_types[group.types.start + index],
+            )
+            subtypes.push(subtype)
+            has_recursive_reference = has_recursive_reference || recursive
+          }
+          if subtypes.length() == 1 && !has_recursive_reference {
+            rec_types.push(@lib.RecType::new(subtypes[0]))
+          } else {
+            rec_types.push(@lib.RecType::group(subtypes))
+          }
+        }
+        for function_ in module_.functions {
+          if function_.signature_type_index >= 0 {
+            rec_types.push(
+              @lib.RecType::new(
+                starshine_program_function_subtype(
+                  planned, module_index, function_,
+                ),
               ),
-            ),
-          )
+            )
+          }
         }
       }
     }

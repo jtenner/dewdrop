@@ -7,10 +7,9 @@ This file tracks designed or partially designed features that remain unimplement
 1. Extend the on-disk package-root and persistent standard-interface cache model to versioned external dependencies with integrity and dependency-interface fingerprints.
 2. Complete imported trait requirement validation, merge imported impl evidence into coherence/dispatch indexes, and define visibility/orphan rules.
 3. Add stable file-aware diagnostics to the completed check/build/test/run and deterministic emit driver.
-4. Extend the completed imported module-value and eager-cycle path with cross-module recursive WasmGC groups.
-5. Define and implement generic obligations, specialization, erased fallback ABIs, and executable cross-module generic aggregates.
-6. Add the deterministic optimization pipeline and optimized snapshots.
-7. Continue deterministic snapshots, generated lane coverage, resource-budget definition, and phase/runtime/allocation measurement.
+4. Define and implement generic obligations, specialization, erased fallback ABIs, and executable cross-module generic aggregates.
+5. Add the deterministic optimization pipeline and optimized snapshots.
+6. Continue deterministic snapshots, generated lane coverage, resource-budget definition, and phase/runtime/allocation measurement.
 
 Performance and correctness work remains continuous: expand generated lane-family tests, measure retained text ranges and scalar iteration, define explicit resource budgets, and keep phase/runtime benchmarks current. Broad fuzzing begins later, after snapshots, the initial CLI/fixture framework, and the principal executable control-flow surface are stable.
 
@@ -67,12 +66,12 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Commit readable `.wat` expectations while keeping generated `.wasm` temporary.
 - [x] Compare snapshots byte-for-byte and print unified diffs.
 - [x] Provide an explicit update command that ordinary test runs never invoke automatically.
-- [x] Cover 145 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
+- [x] Cover 146 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
 - [x] Keep each JSON oracle to exactly ordered compiler `errors`, ordered compiler `warnings`, and ordered stdout-string `output`; `null` means no module or WAT was produced.
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 163 fixtures with compiler failures kept beside their language features: 145 compiled WAT/runtime snapshots, 18 compiler-error snapshots, 90 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 164 fixtures with compiler failures kept beside their language features: 146 compiled WAT/runtime snapshots, 18 compiler-error snapshots, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -133,8 +132,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Enforce imported evidence visibility and foreign-impl privacy.
 - [x] Preserve exact external implementation and method identities through lowering.
 - [ ] Diagnose structural overlap between independently imported or local/imported implementation sets.
-- [ ] Merge physical WasmGC SCCs spanning multiple Dew modules.
-- [ ] Replace supported `UnsupportedProgramForwardTypeReference` cases with global recursive groups.
+- [x] Merge reachable physical WasmGC SCCs spanning multiple Dew modules.
+- [x] Replace supported `UnsupportedProgramForwardTypeReference` cases with deterministic global recursive groups.
 - [x] Distinguish qualified imports from module-scoped opens: `import` binds only `@alias`, while `open` contributes unqualified names only to the owning module and never re-exports them.
 - [x] Remove `global` as a keyword, reserve `@identifier` for imported module aliases, support explicit `import path as @alias`, derive default final-segment aliases, and select aliased imported function calls.
 - [ ] Extend `@alias` to types, traits, variants, patterns, static impls, and duplicate-alias source labels; non-callable values are implemented.

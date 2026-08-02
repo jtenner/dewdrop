@@ -62,6 +62,5 @@ Release-mode measurements:
 
 1. Benchmark flat scalar-enum specialization against the optimized subtype baseline.
 2. Define generic ABI-shape specialization and erased fallback layouts.
-3. Add scalar boxes, trait-object dictionaries, closures, and module-value global layouts.
-4. Merge cross-module recursive physical type SCCs while preserving stable identities.
-5. Extend construction and matching to nested and alternative patterns.
+3. Add scalar boxes, trait-object dictionaries, and closures.
+4. Benchmark program-wide recursive physical SCC planning and define resource budgets.

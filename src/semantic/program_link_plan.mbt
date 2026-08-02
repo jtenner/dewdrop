@@ -7,7 +7,6 @@ pub struct PlannedProgramLowering {
 ///|
 pub enum ProgramWasmGCLinkDiagnostic {
   MissingProgramType(ModuleId, DeclId)
-  UnsupportedProgramForwardTypeReference(ModuleId, DeclId)
   UnsupportedProgramGenericType(ModuleId, DeclId)
   UnsupportedProgramGenericCall(ModuleId, DeclId, UInt64)
   MissingProgramFunction(ModuleId, DeclId, UInt64)
@@ -60,11 +59,26 @@ pub struct PlannedProgramModuleInitializer {
 } derive(Eq, Debug)
 
 ///|
+pub struct PlannedProgramWasmPhysicalType {
+  module_index : Int
+  fragment_index : Int
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedProgramWasmRecursiveGroup {
+  types : HirSpan
+  first_type_index : Int
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramWasmGCLink {
   root_module_index : Int
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
   module_type_bases : Array[Int]
+  module_type_indices : Array[Array[Int]]
+  program_type_groups : Array[PlannedProgramWasmRecursiveGroup]
+  program_physical_types : Array[PlannedProgramWasmPhysicalType]
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
   initializers : Array[PlannedProgramModuleInitializer]
@@ -88,6 +102,22 @@ pub fn PlannedProgramWasmGCLink::function_of(
     Some(index) => Some(self.functions[index])
     None => None
   }
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::physical_type_index(
+  self : PlannedProgramWasmGCLink,
+  module_index : Int,
+  local_type_index : Int,
+) -> Int {
+  if module_index < 0 || module_index >= self.module_type_indices.length() {
+    return -1
+  }
+  let indices = self.module_type_indices[module_index]
+  if local_type_index < 0 || local_type_index >= indices.length() {
+    return -1
+  }
+  indices[local_type_index]
 }
 
 ///|
@@ -186,26 +216,18 @@ fn program_link_validate_calls(
 ///|
 fn program_link_validate_external_type(
   module_id : ModuleId,
-  module_type_base : Int,
   declaration : DeclId,
   type_lookup : Map[DeclId, Int],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
-  match type_lookup.get(declaration) {
-    Some(index) =>
-      if index >= module_type_base {
-        diagnostics.push(
-          UnsupportedProgramForwardTypeReference(module_id, declaration),
-        )
-      }
-    None => diagnostics.push(MissingProgramType(module_id, declaration))
+  if !type_lookup.contains(declaration) {
+    diagnostics.push(MissingProgramType(module_id, declaration))
   }
 }
 
 ///|
 fn program_link_validate_types(
   fragments : PlannedProgramWasmGCFragments,
-  module_type_bases : Array[Int],
   type_lookup : Map[DeclId, Int],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
@@ -213,7 +235,6 @@ fn program_link_validate_types(
     let module_ = fragments.modules[reference.module_index]
     program_link_validate_external_type(
       module_.module_id,
-      module_type_bases[reference.module_index],
       reference.declaration,
       type_lookup,
       diagnostics,
@@ -228,7 +249,8 @@ fn program_mark_resolved_nominal_roots(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
   reachable : Map[DeclId, Bool],
-) -> Unit {
+) -> Bool {
+  let mut changed = false
   let work : Array[ResolvedTypeId] = [root]
   while work.length() > 0 {
     let type_ = work.pop().unwrap()
@@ -236,7 +258,11 @@ fn program_mark_resolved_nominal_roots(
       continue
     }
     match resolved.types[type_] {
-      NominalType(declaration) => reachable[declaration] = true
+      NominalType(declaration) =>
+        if !reachable.contains(declaration) {
+          reachable[declaration] = true
+          changed = true
+        }
       AppliedType(base, arguments) => {
         work.push(base)
         for index in 0..<arguments.length {
@@ -246,6 +272,7 @@ fn program_mark_resolved_nominal_roots(
       _ => ()
     }
   }
+  changed
 }
 
 ///|
@@ -456,22 +483,28 @@ fn program_reachable_callable_roots(
         continue
       }
       for index in 0..<callable.parameters.length {
-        program_mark_resolved_nominal_roots(
-          resolved,
-          module_.functions.parameters[callable.parameters.start + index].type_,
-          reachable,
+        ignore(
+          program_mark_resolved_nominal_roots(
+            resolved,
+            module_.functions.parameters[callable.parameters.start + index].type_,
+            reachable,
+          ),
         )
       }
-      program_mark_resolved_nominal_roots(
-        resolved,
-        callable.result_type,
-        reachable,
-      )
-      if callable.has_receiver {
+      ignore(
         program_mark_resolved_nominal_roots(
           resolved,
-          callable.self_type,
+          callable.result_type,
           reachable,
+        ),
+      )
+      if callable.has_receiver {
+        ignore(
+          program_mark_resolved_nominal_roots(
+            resolved,
+            callable.self_type,
+            reachable,
+          ),
         )
       }
       let body_id = match callable.kind {
@@ -540,6 +573,55 @@ fn program_reachable_callable_roots(
               None => ()
             }
           _ => ()
+        }
+      }
+    }
+  }
+  let mut type_changed = true
+  while type_changed {
+    type_changed = false
+    for module_index, module_ in lowering.modules {
+      let resolved = analyzed.frozen.interfaces[module_index].resolved_types
+      for layout in module_.type_layouts.layouts {
+        if !reachable.contains(layout.declaration) {
+          continue
+        }
+        match layout.kind {
+          PlannedStructLayout(fields) =>
+            for index in 0..<fields.length {
+              type_changed = program_mark_resolved_nominal_roots(
+                  resolved,
+                  module_.type_layouts.fields[fields.start + index].type_,
+                  reachable,
+                ) ||
+                type_changed
+            }
+          PlannedEnumLayout(variants) =>
+            for index in 0..<variants.length {
+              match
+                module_.type_layouts.variants[variants.start + index].payload {
+                PlannedUnitVariantLayout => ()
+                PlannedTupleVariantLayout(types) =>
+                  for payload_index in 0..<types.length {
+                    type_changed = program_mark_resolved_nominal_roots(
+                        resolved,
+                        module_.type_layouts.payload_types[types.start +
+                        payload_index],
+                        reachable,
+                      ) ||
+                      type_changed
+                  }
+                PlannedStructVariantLayout(fields) =>
+                  for field_index in 0..<fields.length {
+                    type_changed = program_mark_resolved_nominal_roots(
+                        resolved,
+                        module_.type_layouts.fields[fields.start + field_index].type_,
+                        reachable,
+                      ) ||
+                      type_changed
+                  }
+              }
+            }
         }
       }
     }
@@ -782,9 +864,255 @@ fn program_schedule_initializers(
 }
 
 ///|
+fn program_physical_type_sccs(
+  dependencies : Array[Array[Int]],
+) -> (Array[HirSpan], Array[Int]) {
+  let count = dependencies.length()
+  if count == 0 {
+    return ([], [])
+  }
+  let visited = Array::make(count, false)
+  let work : Array[Int] = []
+  let finish_order : Array[Int] = []
+  for start in 0..<count {
+    if visited[start] {
+      continue
+    }
+    work.push(start)
+    while work.length() > 0 {
+      let item = work.pop().unwrap()
+      if item < 0 {
+        finish_order.push(-item - 1)
+        continue
+      }
+      if visited[item] {
+        continue
+      }
+      visited[item] = true
+      work.push(-item - 1)
+      let edges = dependencies[item]
+      let mut edge = edges.length()
+      while edge > 0 {
+        edge -= 1
+        let dependency = edges[edge]
+        if !visited[dependency] {
+          work.push(dependency)
+        }
+      }
+    }
+  }
+  let reverse_counts = Array::make(count, 0)
+  for source in 0..<count {
+    for dependency in dependencies[source] {
+      reverse_counts[dependency] += 1
+    }
+  }
+  let reverse_offsets = Array::make(count + 1, 0)
+  for index in 0..<count {
+    reverse_offsets[index + 1] = reverse_offsets[index] + reverse_counts[index]
+  }
+  let reverse_cursor = Array::make(count, 0)
+  for index in 0..<count {
+    reverse_cursor[index] = reverse_offsets[index]
+  }
+  let reverse_edges = Array::make(reverse_offsets[count], 0)
+  for source in 0..<count {
+    for dependency in dependencies[source] {
+      let destination = reverse_cursor[dependency]
+      reverse_edges[destination] = source
+      reverse_cursor[dependency] += 1
+    }
+  }
+  let finish_rank = Array::make(count, 0)
+  for rank, entity in finish_order {
+    finish_rank[entity] = rank
+  }
+  let assigned = Array::make(count, false)
+  let component : Array[Int] = []
+  let raw_spans : Array[HirSpan] = []
+  let raw_members : Array[Int] = []
+  let raw_ranks : Array[Int] = []
+  let mut order_index = finish_order.length()
+  while order_index > 0 {
+    order_index -= 1
+    let start = finish_order[order_index]
+    if assigned[start] {
+      continue
+    }
+    component.clear()
+    work.clear()
+    work.push(start)
+    assigned[start] = true
+    let mut rank = finish_rank[start]
+    while work.length() > 0 {
+      let entity = work.pop().unwrap()
+      component.push(entity)
+      if finish_rank[entity] < rank {
+        rank = finish_rank[entity]
+      }
+      for edge in reverse_offsets[entity]..<reverse_offsets[entity + 1] {
+        let dependent = reverse_edges[edge]
+        if !assigned[dependent] {
+          assigned[dependent] = true
+          work.push(dependent)
+        }
+      }
+    }
+    component.sort()
+    let start = raw_members.length()
+    for entity in component {
+      raw_members.push(entity)
+    }
+    raw_spans.push({ start, length: raw_members.length() - start })
+    raw_ranks.push(rank)
+  }
+  let order : Array[Int] = []
+  for index in 0..<raw_spans.length() {
+    order.push(index)
+  }
+  order.sort_by(fn(left, right) {
+    let rank = raw_ranks[left] - raw_ranks[right]
+    if rank != 0 {
+      rank
+    } else {
+      raw_members[raw_spans[left].start] - raw_members[raw_spans[right].start]
+    }
+  })
+  let spans : Array[HirSpan] = []
+  let members : Array[Int] = []
+  for component_index in order {
+    let source = raw_spans[component_index]
+    let start = members.length()
+    for index in 0..<source.length {
+      members.push(raw_members[source.start + index])
+    }
+    spans.push({ start, length: members.length() - start })
+  }
+  (spans, members)
+}
+
+///|
+fn program_cross_module_type_groups(
+  fragments : PlannedProgramWasmGCFragments,
+  module_lookup : Map[ModuleId, Int],
+  diagnostics : Array[ProgramWasmGCLinkDiagnostic],
+) -> (
+  Array[Array[Int]],
+  Array[PlannedProgramWasmRecursiveGroup],
+  Array[PlannedProgramWasmPhysicalType],
+  Map[DeclId, Int],
+) {
+  let node_by_module_type : Array[Array[Int]] = []
+  for module_ in fragments.modules {
+    node_by_module_type.push(Array::make(module_.physical_types.length(), -1))
+  }
+  let nodes : Array[PlannedProgramWasmPhysicalType] = []
+  for scc in fragments.graph.sccs {
+    for member_index in 0..<scc.length {
+      let module_index = fragments.graph.scc_modules[scc.start + member_index]
+      let module_ = fragments.modules[module_index]
+      for fragment_index, _ in module_.physical_types {
+        node_by_module_type[module_index][fragment_index] = nodes.length()
+        nodes.push({ module_index, fragment_index })
+      }
+    }
+  }
+  let dependencies : Array[Array[Int]] = []
+  for node in nodes {
+    let module_ = fragments.modules[node.module_index]
+    let physical = module_.physical_types[node.fragment_index]
+    let values : Array[Int] = []
+    let marks : Map[Int, Bool] = Map::default()
+    let add_local = fn(local_type_index : Int) {
+      if local_type_index < 0 ||
+        local_type_index >= node_by_module_type[node.module_index].length() {
+        return
+      }
+      let dependency = node_by_module_type[node.module_index][local_type_index]
+      if dependency >= 0 && !marks.contains(dependency) {
+        marks[dependency] = true
+        values.push(dependency)
+      }
+    }
+    let add_external = fn(declaration : DeclId) {
+      let owner = match module_lookup.get(semantic_id_module(declaration)) {
+        Some(value) => value
+        None => {
+          diagnostics.push(MissingProgramType(module_.module_id, declaration))
+          return
+        }
+      }
+      let local_type_index = match
+        fragments.modules[owner].type_index_of(declaration) {
+        Some(value) => value
+        None => {
+          diagnostics.push(MissingProgramType(module_.module_id, declaration))
+          return
+        }
+      }
+      let dependency = node_by_module_type[owner][local_type_index]
+      if dependency >= 0 && !marks.contains(dependency) {
+        marks[dependency] = true
+        values.push(dependency)
+      }
+    }
+    match physical.kind {
+      PlannedWasmEnumSubtypeType(declaration, _, _) => add_external(declaration)
+      _ => ()
+    }
+    for index in 0..<physical.fields.length {
+      match module_.fields[physical.fields.start + index].storage {
+        WasmNominalRefStorage(WasmModuleTypeReference(local_type_index)) =>
+          add_local(local_type_index)
+        WasmNominalRefStorage(WasmRecursiveTypeReference(group_member)) => {
+          let group = module_.type_groups[physical.group_index]
+          add_local(group.first_type_index + group_member)
+        }
+        WasmExternalNominalRefStorage(declaration) => add_external(declaration)
+        _ => ()
+      }
+    }
+    values.sort()
+    dependencies.push(values)
+  }
+  let (component_spans, component_members) = program_physical_type_sccs(
+    dependencies,
+  )
+  let module_type_indices : Array[Array[Int]] = []
+  for module_ in fragments.modules {
+    module_type_indices.push(Array::make(module_.physical_types.length(), -1))
+  }
+  let groups : Array[PlannedProgramWasmRecursiveGroup] = []
+  let physical_types : Array[PlannedProgramWasmPhysicalType] = []
+  let type_lookup : Map[DeclId, Int] = Map::default()
+  for component in component_spans {
+    let first_type_index = physical_types.length()
+    let start = physical_types.length()
+    for index in 0..<component.length {
+      let node = nodes[component_members[component.start + index]]
+      let final_type_index = physical_types.length()
+      module_type_indices[node.module_index][node.fragment_index] = final_type_index
+      let physical = fragments.modules[node.module_index].physical_types[node.fragment_index]
+      match physical.kind {
+        PlannedWasmStructType(declaration)
+        | PlannedWasmEnumBaseType(declaration) =>
+          type_lookup[declaration] = final_type_index
+        PlannedWasmEnumSubtypeType(_, _, _) => ()
+      }
+      physical_types.push(node)
+    }
+    groups.push({
+      types: { start, length: physical_types.length() - start },
+      first_type_index,
+    })
+  }
+  (module_type_indices, groups, physical_types, type_lookup)
+}
+
+///|
 /// Assigns final program-wide type and function indices without mutating any
-/// module-local fragment plan. Module-local recursive groups remain intact;
-/// module and imported nominal references are rebased during emission.
+/// module-local fragment plan. Module-local recursive groups remain intact
+/// unless physical dependencies form an SCC across module boundaries.
 pub fn link_program_wasmgc_fragments(
   fragments : PlannedProgramWasmGCFragments,
   lowering : PlannedProgramLowering,
@@ -797,6 +1125,10 @@ pub fn link_program_wasmgc_fragments(
     abort("program link inputs have different module counts")
   }
   let module_type_bases = Array::make(lowering.modules.length(), -1)
+  let module_type_indices : Array[Array[Int]] = []
+  for module_ in fragments.modules {
+    module_type_indices.push(Array::make(module_.physical_types.length(), -1))
+  }
   let functions : Array[PlannedProgramWasmFunction] = []
   let function_lookup : Map[DeclId, Int] = Map::default()
   let type_lookup : Map[DeclId, Int] = Map::default()
@@ -804,7 +1136,8 @@ pub fn link_program_wasmgc_fragments(
   let diagnostics : Array[ProgramWasmGCLinkDiagnostic] = []
   let test_ordinals : Map[DeclId, Int] = Map::default()
   let mut next_test_ordinal = 0
-  for module_ in fragments.modules {
+  for module_index, module_ in fragments.modules {
+    module_lookup[module_.module_id] = module_index
     for function_ in module_.functions {
       if function_.is_test_entry {
         test_ordinals[function_.declaration] = next_test_ordinal
@@ -812,18 +1145,76 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
+  let module_signature_bases = Array::make(lowering.modules.length(), -1)
   let mut type_count = 0
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
       let module_index = lowering.graph.scc_modules[scc.start + index]
       let module_fragments = fragments.modules[module_index]
-      module_lookup[module_fragments.module_id] = module_index
       module_type_bases[module_index] = type_count
+      module_signature_bases[module_index] = type_count +
+        module_fragments.physical_types.length()
+      for physical in module_fragments.physical_types {
+        module_type_indices[module_index][physical.type_index] = type_count +
+          physical.type_index
+        match physical.kind {
+          PlannedWasmStructType(declaration)
+          | PlannedWasmEnumBaseType(declaration) =>
+            type_lookup[declaration] = type_count + physical.type_index
+          PlannedWasmEnumSubtypeType(_, _, _) => ()
+        }
+      }
+      type_count += module_fragments.physical_types.length() +
+        module_fragments.signature_type_count
+    }
+  }
+  let mut cross_module_type_scc = false
+  for reference in fragments.external_type_references {
+    match type_lookup.get(reference.declaration) {
+      Some(index) =>
+        if index >= module_type_bases[reference.module_index] {
+          cross_module_type_scc = true
+        }
+      None => ()
+    }
+  }
+  let program_type_groups : Array[PlannedProgramWasmRecursiveGroup] = []
+  let program_physical_types : Array[PlannedProgramWasmPhysicalType] = []
+  if cross_module_type_scc {
+    let (cross_indices, cross_groups, cross_types, cross_lookup) = program_cross_module_type_groups(
+      fragments, module_lookup, diagnostics,
+    )
+    for module_index in 0..<module_type_indices.length() {
+      module_type_indices[module_index] = cross_indices[module_index]
+    }
+    for group in cross_groups {
+      program_type_groups.push(group)
+    }
+    for physical in cross_types {
+      program_physical_types.push(physical)
+    }
+    for declaration, index in cross_lookup {
+      type_lookup[declaration] = index
+    }
+    type_count = program_physical_types.length()
+    for scc in lowering.graph.sccs {
+      for index in 0..<scc.length {
+        let module_index = lowering.graph.scc_modules[scc.start + index]
+        module_signature_bases[module_index] = type_count
+        type_count += fragments.modules[module_index].signature_type_count
+      }
+    }
+  } else {
+    program_link_validate_types(fragments, type_lookup, diagnostics)
+  }
+  for scc in lowering.graph.sccs {
+    for index in 0..<scc.length {
+      let module_index = lowering.graph.scc_modules[scc.start + index]
+      let module_fragments = fragments.modules[module_index]
       for physical in module_fragments.physical_types {
         match physical.kind {
           PlannedWasmStructType(declaration)
-          | PlannedWasmEnumBaseType(declaration) => {
-            type_lookup[declaration] = type_count + physical.type_index
+          | PlannedWasmEnumBaseType(declaration) =>
             match
               lowering.modules[module_index].type_layouts.layout_of(declaration) {
               Some(layout) if layout.generic_parameters.length > 0 =>
@@ -843,7 +1234,6 @@ pub fn link_program_wasmgc_fragments(
                 }
               _ => ()
             }
-          }
           PlannedWasmEnumSubtypeType(_, _, _) => ()
         }
       }
@@ -866,7 +1256,9 @@ pub fn link_program_wasmgc_fragments(
           direct_builtin: function_.direct_builtin,
           elided: function_.elided,
           signature_type_index: if function_.signature_type_index >= 0 {
-            type_count + function_.signature_type_index
+            module_signature_bases[module_index] +
+            function_.signature_type_index -
+            module_fragments.physical_types.length()
           } else {
             -1
           },
@@ -876,8 +1268,6 @@ pub fn link_program_wasmgc_fragments(
           offset: function_.offset,
         })
       }
-      type_count += module_fragments.physical_types.length() +
-        module_fragments.signature_type_count
     }
   }
   let mut imported_function_count = 0
@@ -1002,15 +1392,15 @@ pub fn link_program_wasmgc_fragments(
   } else {
     -1
   }
-  program_link_validate_types(
-    fragments, module_type_bases, type_lookup, diagnostics,
-  )
   program_link_validate_calls(lowering, functions, function_lookup, diagnostics)
   {
     root_module_index,
     graph: lowering.graph,
     modules: fragments.modules,
     module_type_bases,
+    module_type_indices,
+    program_type_groups,
+    program_physical_types,
     functions,
     function_lookup,
     initializers,

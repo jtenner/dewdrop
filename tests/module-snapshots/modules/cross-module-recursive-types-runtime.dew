@@ -1,0 +1,14 @@
+open fixture.types
+open dew.std.wasi
+
+pub struct Left {
+  right: Right
+}
+
+pub fn keep(value: Left) -> Left {
+  value
+}
+
+pub fn main() -> U32 {
+  wasi_fd_write(1u32, b"modules:recursive-types-42")
+}

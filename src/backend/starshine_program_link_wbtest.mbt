@@ -624,6 +624,42 @@ test "aggregate fields may reference earlier dependency types" {
 }
 
 ///|
+test "cross module recursive aggregate SCC emits one valid recursive group" {
+  let program = @semantic.collect_program_manifest(
+    2445UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("cycle.a", [
+        @semantic.ManifestFile::new(
+          "a.dew", b"open cycle.b\npub struct A {\n  b: B\n}\npub fn keep(value: A) -> A {\n  value\n}\npub fn main() -> I32 {\n  42\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("cycle.b", [
+        @semantic.ManifestFile::new(
+          "b.dew", b"open cycle.a\npub struct B {\n  a: A\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let mut found_pair = false
+  for group in link.program_type_groups {
+    if group.types.length == 2 {
+      found_pair = true
+    }
+  }
+  assert_true(found_pair)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  match emit_starshine_program_binary(lowering, link) {
+    Ok(bytes) => assert_true(bytes.length() > 8)
+    Err(_) => fail("failed to encode recursive cross-module aggregates")
+  }
+}
+
+///|
 test "cross module recursive SCC emits valid forward calls" {
   let program = @semantic.collect_program_manifest(
     2450UL,

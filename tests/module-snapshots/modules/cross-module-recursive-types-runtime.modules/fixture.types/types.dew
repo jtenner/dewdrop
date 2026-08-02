@@ -1,0 +1,5 @@
+open snapshot.main
+
+pub struct Right {
+  left: Left
+}

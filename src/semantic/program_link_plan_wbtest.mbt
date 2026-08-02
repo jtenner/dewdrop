@@ -140,7 +140,7 @@ test "program linker rebases imported aggregate signatures" {
 }
 
 ///|
-test "program linker diagnoses cross module recursive type groups" {
+test "program linker merges cross module recursive type groups" {
   let program = collect_program_manifest(
     2240UL,
     ProgramManifest::new([
@@ -155,12 +155,21 @@ test "program linker diagnoses cross module recursive type groups" {
   let analyzed = analyze_program_semantics(program)
   let lowering = plan_program_lowering(program, analyzed)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(link.diagnostics.length(), 1)
-  match link.diagnostics[0] {
-    UnsupportedProgramForwardTypeReference(2240UL, declaration) =>
-      assert_eq(declaration, program.modules[1].lookup_type("B").unwrap())
-    _ => fail("expected cross-module recursive type diagnostic")
+  assert_eq(link.diagnostics.length(), 0)
+  let mut found_pair = false
+  for group in link.program_type_groups {
+    if group.types.length == 2 {
+      found_pair = true
+    }
   }
+  assert_true(found_pair)
+  let a = program.modules[0].lookup_type("A").unwrap()
+  let b = program.modules[1].lookup_type("B").unwrap()
+  let a_index = link.type_lookup.get(a).unwrap()
+  let b_index = link.type_lookup.get(b).unwrap()
+  assert_eq(link.physical_type_index(0, 0), a_index)
+  assert_eq(link.physical_type_index(1, 0), b_index)
+  assert_true(a_index != b_index)
 }
 
 ///|

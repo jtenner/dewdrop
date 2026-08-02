@@ -4,7 +4,7 @@
 
 Dew can now compile scalar functions from multiple Dew modules into one validated and executable Wasm module. Imported direct calls retain their external `DeclId` through inference, lowering, program-wide index assignment, and Starshine instruction emission.
 
-The linker now supports non-generic structs plus the sole optimized subtype-family enum ABI, including dependency-owned construction and matching. It still rejects cross-module recursive type groups and unspecialized generic calls rather than prematurely fixing those ABIs.
+The linker now supports non-generic structs plus the sole optimized subtype-family enum ABI, including dependency-owned construction and matching. Reachable physical type SCCs may span modules and emit as shared recursive groups. Unspecialized generic calls remain rejected rather than prematurely fixing their ABI.
 
 ## Why one static Wasm module
 
@@ -134,13 +134,12 @@ The link plan publishes deterministic diagnostics for unsupported boundaries and
 
 ```moonbit
 MissingProgramType(ModuleId, DeclId)
-UnsupportedProgramForwardTypeReference(ModuleId, DeclId)
 UnsupportedProgramGenericType(ModuleId, DeclId)
 UnsupportedProgramGenericCall(ModuleId, DeclId, UInt64)
 MissingProgramFunction(ModuleId, DeclId, UInt64)
 ```
 
-Local and dependency-directed aggregate types are rebased into the program type section. Cross-module recursive type SCCs remain rejected until physical types from multiple modules can be merged into one recursive group.
+Local and dependency-directed aggregate types are rebased into the program type section. If a dependency would otherwise point forward, reachable physical types from every module are merged into deterministic dependency-first SCCs and each SCC is emitted as one recursive group.
 
 Generic calls are rejected because the current callable ABI uses an erased `eqref` generic boundary and no scalar specialization plan has been frozen. Emitting an `I32` instantiation against that erased signature would be invalid Wasm.
 
@@ -194,9 +193,8 @@ The split also clarifies future parallelism: module-local fragment jobs can run 
 
 The next executable linker milestones are:
 
-1. extend matching to nested and alternative patterns;
-2. merge cross-module physical type SCCs into recursive groups;
-3. merge imported impl evidence into coherence and dispatch;
-4. define generic scalar/aggregate specialization and erased fallback ABIs;
+1. diagnose structural overlap between independently imported or local/imported impl evidence;
+2. define generic scalar/aggregate specialization and erased fallback ABIs;
+3. add deterministic post-lowering optimization and optimized snapshots;
 5. emit imported module values and a cross-module initialization schedule;
 6. expose the program pipeline through the compiler driver.

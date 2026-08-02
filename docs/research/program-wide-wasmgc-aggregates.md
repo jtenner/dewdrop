@@ -13,9 +13,12 @@ Implemented paths include:
 - imported field access;
 - program-wide type-index rebasing;
 - `struct.new` and `struct.get` emission;
-- external validation and execution in Node.
+- external validation and execution in Node;
+- transitive reachability through imported aggregate fields and enum payloads;
+- deterministic physical SCC merging across module boundaries;
+- binary-encodable shared Wasm recursive groups.
 
-Cross-module recursive type groups, generic aggregate ABIs, enum construction, pattern matching, and mutable fields remain later phases.
+Generic aggregate specialization and erased fallback ABIs remain later phases. Enum construction, imported exhaustiveness, nested pattern matching, and mutable collection storage are now implemented elsewhere in the compiler.
 
 ## Preserving external nominal identity
 
@@ -50,19 +53,17 @@ DeclId   -> final Wasm type index
 DeclId   -> final Wasm function index
 ```
 
-Each module receives a stable type base in dependency-SCC order. A local module reference is rebased mechanically:
+For acyclic links, each module receives a stable type base in dependency-SCC order and a local reference is rebased mechanically:
 
 ```text
 global_type_index = module_type_base + local_type_index
 ```
 
-An external reference uses the exact imported `DeclId` to look up the dependency's final type index.
+An external reference uses the exact imported `DeclId` to look up the dependency's final type index. This fast path preserves all established acyclic snapshots.
 
-Module-local recursive groups are retained unchanged. References within one local recursive group continue to use `TypeIdx::rec`; references to earlier groups or dependency modules use final module type indices.
+If an external physical reference would point forward, the linker instead builds one deterministic graph over every reachable physical type. Local module references, local recursive references, imported nominal fields, and enum subtype bases become dependency edges. Iterative Kosaraju SCC discovery produces dependency-first components with stable member order. Every module-local physical index then maps through a frozen `module_type_indices` table rather than assuming module contiguity.
 
-## Dependency-directed type references
-
-The initial aggregate linker permits external type references only to types assigned earlier in the program type section. Normal import DAGs naturally satisfy this because dependency modules are emitted before consumers.
+## Program-wide recursive groups
 
 Cross-module type SCCs such as:
 
@@ -71,15 +72,11 @@ module a: struct A { b: B }
 module b: struct B { a: A }
 ```
 
-produce:
+now emit one shared Wasm recursive group. The linker first closes reachable nominal roots transitively through struct fields and enum tuple/struct payloads, ensuring that a signature-reachable `A` also retains dependency-owned `B`.
 
-```moonbit
-UnsupportedProgramForwardTypeReference(ModuleId, DeclId)
-```
+Physical SCCs are emitted before callable signatures only on this cross-module path. This permits every type in a shared group to occupy a contiguous final type-index range while leaving the established acyclic layout unchanged.
 
-Supporting this case requires computing recursive type groups over physical types from every module, not merely rebasing existing local groups.
-
-Missing imported physical types produce `MissingProgramType`.
+Starshine's relative `TypeIdx::rec` representation validates WAT-level recursive references but its binary encoder intentionally rejects that internal form. Shared program groups therefore encode field and subtype references with their final type-section indices, which WebAssembly permits inside the surrounding recursive group. Missing imported physical types still produce `MissingProgramType`; `UnsupportedProgramForwardTypeReference` has been removed.
 
 ## Imported aggregate semantic evidence
 
@@ -241,7 +238,7 @@ Tests cover:
 - program-wide physical type indices;
 - dependency-owned aggregate function signatures;
 - external aggregate fields;
-- cross-module recursive-type diagnostics;
+- cross-module recursive physical SCC assignment and binary emission;
 - imported struct construction selection;
 - imported field selection;
 - source fields emitted in physical declaration order;
@@ -258,9 +255,7 @@ The temporary dump harness and binary were removed after the integration test.
 
 ## Next dependencies
 
-1. Extend executable matching to nested and alternative patterns.
-2. Make imported enum exhaustiveness consume frozen interfaces.
-3. Merge physical type dependency SCCs across module boundaries.
-4. Revisit enum type flattening and control-flow optimization after the complete pipeline is assembled.
-5. Define generic aggregate specialization, boxing, and adapters.
-6. Merge imported implementation evidence into dispatch.
+1. Define generic aggregate specialization, boxing, erased fallbacks, and adapters.
+2. Diagnose structural overlap between independently imported and local/imported implementation evidence.
+3. Revisit enum type flattening and control-flow optimization in the deterministic optimization pipeline.
+4. Add resource budgets and retained-allocation measurements for program-wide physical SCC planning.
