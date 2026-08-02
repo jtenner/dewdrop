@@ -308,7 +308,8 @@ erased fallback.
   - [x] Resolve lambda signatures into canonical structural function types.
   - [x] Infer isolated lambda bodies, captures, calls, and declared results.
   - [x] Analyze isolated lambda control flow and exhaustiveness.
-  - [ ] Lower and emit closure environments.
+  - [x] Lower explicit closure construction, capture reads, and lambda bodies.
+  - [ ] Plan and emit physical closure environments and entry functions.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.

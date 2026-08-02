@@ -38,8 +38,10 @@ pub enum PlannedExpressionKind {
   PlannedStringConst(Bytes)
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
+  PlannedCaptureGet(Int)
   PlannedModuleValueGet(DeclId, DeclId)
   PlannedFunctionReference(DeclId)
+  PlannedLambdaClosure(LambdaId, HirSpan)
   PlannedStructNew(DeclId, HirSpan, HirSpan)
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
   PlannedVariantStructNew(VariantId, HirSpan, HirSpan)
@@ -198,12 +200,40 @@ pub fn LoweringPlanDiagnostic::offset(self : LoweringPlanDiagnostic) -> UInt64 {
 ///|
 pub struct PlannedLocal {
   body : BodyId
+  lambda : LambdaId
   local_id : LocalId
   kind : BodyLocalKind
   mutable_ : Bool
   type_ : BodyTypeId
   shape : PlannedValueShape
   offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedCapture {
+  lambda : LambdaId
+  capture : Int
+  source : LambdaCaptureSource
+  mutable_ : Bool
+  type_ : BodyTypeId
+  shape : PlannedValueShape
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedLambdaLowering {
+  lambda : LambdaId
+  root : HirBodyRoot
+  root_type : BodyTypeId
+  root_shape : PlannedValueShape
+  flow : BodyFlowSummary
+  locals : HirSpan
+  captures : HirSpan
+  expressions : HirSpan
+  blocks : HirSpan
+  patterns : HirSpan
+  pattern_arms : HirSpan
+  diagnostics : HirSpan
 } derive(Eq, Debug)
 
 ///|
@@ -230,7 +260,9 @@ pub struct PlannedModuleLowering {
   initialization : PlannedModuleInitialization
   functions : PlannedModuleFunctions
   bodies : Array[PlannedBodyLowering]
+  lambdas : Array[PlannedLambdaLowering]
   locals : Array[PlannedLocal]
+  captures : Array[PlannedCapture]
   expressions : Array[PlannedExpression]
   blocks : Array[PlannedBlock]
   block_items : Array[PlannedBlockItem]
@@ -249,6 +281,7 @@ pub struct PlannedModuleLowering {
 
 ///|
 priv struct BodyLoweringPlanJob {
+  lambda : LambdaId
   body : PlannedBodyLowering
   expressions : Array[PlannedExpression]
   blocks : Array[PlannedBlock]
@@ -494,7 +527,7 @@ fn plan_expression_kind(
     HirNameExpr(_, _) =>
       match names.expression_references[expression] {
         LocalNameReference(local_id) => PlannedLocalGet(local_id)
-        LambdaCaptureNameReference(_) => PlannedPoisonExpression
+        LambdaCaptureNameReference(capture) => PlannedCaptureGet(capture)
         ImportedValueNameReference(_) => PlannedPoisonExpression
         ImportedModuleValueNameReference(declaration) =>
           PlannedModuleValueGet(
@@ -531,7 +564,8 @@ fn plan_expression_kind(
         | NoNameReference => PlannedConsumedExpression
       }
     HirImportAliasExpr(_, _) => PlannedConsumedExpression
-    HirLambdaExpr(_, _) => PlannedPoisonExpression
+    HirLambdaExpr(lambda, _) =>
+      PlannedLambdaClosure(lambda, names.lambda(lambda).unwrap().captures)
     HirObjectExpr(_, _) | HirConstructExpr(_, _, _) => PlannedPoisonExpression
     HirBlockExpr(block, _) => PlannedBlockExpression(block)
     HirIfExpr(condition, then_block, else_expression, _) =>
@@ -867,6 +901,7 @@ fn plan_body_lowering_job(
   inferred : InferredModuleBodies,
   flows : AnalyzedModuleFlows,
   body : HirBody,
+  lambda : LambdaId,
 ) -> BodyLoweringPlanJob {
   let diagnostics : Array[LoweringPlanDiagnostic] = []
   let consumed = Array::make(body.expressions.length, false)
@@ -982,22 +1017,30 @@ fn plan_body_lowering_job(
       offset: source.offset,
     })
   }
-  let inferred_body = inferred.bodies[semantic_id_local(body.id)]
-  let analyzed_body = flows.bodies[semantic_id_local(body.id)]
+  let (root_type, root_flow, local_span) = if lambda >= 0 {
+    (
+      inferred.lambda(lambda).unwrap().root_type,
+      flows.lambda(lambda).unwrap().flow,
+      names.lambda(lambda).unwrap().locals,
+    )
+  } else {
+    (
+      inferred.bodies[semantic_id_local(body.id)].root_type,
+      flows.bodies[semantic_id_local(body.id)].flow,
+      names.body(body.id).unwrap().locals,
+    )
+  }
   {
+    lambda,
     body: {
       body: body.id,
       declaration: body.declaration,
       kind: body.kind,
       root: body.root,
-      root_type: inferred_body.root_type,
-      root_shape: planned_value_shape(
-        resolved,
-        inferred,
-        inferred_body.root_type,
-      ),
-      flow: analyzed_body.flow,
-      locals: names.body(body.id).unwrap().locals,
+      root_type,
+      root_shape: planned_value_shape(resolved, inferred, root_type),
+      flow: root_flow,
+      locals: local_span,
       expressions: body.expressions,
       blocks: body.blocks,
       patterns: body.patterns,
@@ -1011,6 +1054,31 @@ fn plan_body_lowering_job(
     patterns,
     pattern_arms,
     diagnostics,
+  }
+}
+
+///|
+fn lowering_lambda_body(
+  collected : CollectedModule,
+  lambda : HirLambda,
+) -> HirBody {
+  let root = collected.bodies[semantic_id_local(lambda.root_body)]
+  {
+    id: lambda.root_body,
+    declaration: root.declaration,
+    kind: root.kind,
+    root: BlockBodyRoot(lambda.body.root),
+    expressions: lambda.body.expressions,
+    expression_children: lambda.body.expression_children,
+    blocks: lambda.body.blocks,
+    block_items: lambda.body.block_items,
+    patterns: lambda.body.patterns,
+    pattern_children: lambda.body.pattern_children,
+    pattern_arms: lambda.body.pattern_arms,
+    arm_children: lambda.body.arm_children,
+    object_fields: lambda.body.object_fields,
+    pattern_fields: lambda.body.pattern_fields,
+    offset: lambda.offset,
   }
 }
 
@@ -1039,20 +1107,38 @@ fn copy_body_lowering_job(
   for index, arm in job.pattern_arms {
     target.pattern_arms[body.pattern_arms.start + index] = arm
   }
-  target.bodies[semantic_id_local(body.id)] = {
-    body: job.body.body,
-    declaration: job.body.declaration,
-    kind: job.body.kind,
-    root: job.body.root,
-    root_type: job.body.root_type,
-    root_shape: job.body.root_shape,
-    flow: job.body.flow,
-    locals: job.body.locals,
-    expressions: job.body.expressions,
-    blocks: job.body.blocks,
-    patterns: job.body.patterns,
-    pattern_arms: job.body.pattern_arms,
-    diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+  if job.lambda >= 0 {
+    let capture_span = target.lambdas[job.lambda].captures
+    target.lambdas[job.lambda] = {
+      lambda: job.lambda,
+      root: job.body.root,
+      root_type: job.body.root_type,
+      root_shape: job.body.root_shape,
+      flow: job.body.flow,
+      locals: job.body.locals,
+      captures: capture_span,
+      expressions: job.body.expressions,
+      blocks: job.body.blocks,
+      patterns: job.body.patterns,
+      pattern_arms: job.body.pattern_arms,
+      diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+    }
+  } else {
+    target.bodies[semantic_id_local(body.id)] = {
+      body: job.body.body,
+      declaration: job.body.declaration,
+      kind: job.body.kind,
+      root: job.body.root,
+      root_type: job.body.root_type,
+      root_shape: job.body.root_shape,
+      flow: job.body.flow,
+      locals: job.body.locals,
+      expressions: job.body.expressions,
+      blocks: job.body.blocks,
+      patterns: job.body.patterns,
+      pattern_arms: job.body.pattern_arms,
+      diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+    }
   }
   for diagnostic in job.diagnostics {
     target.diagnostics.push(diagnostic)
@@ -1103,11 +1189,30 @@ fn plan_module_lowering_in_order(
         inferred,
         flows,
         collected.bodies[body_index],
+        -1,
+      ),
+    )
+  }
+  let lambda_jobs : Array[BodyLoweringPlanJob?] = Array::make(
+    collected.lambdas.length(),
+    None,
+  )
+  for index, lambda in collected.lambdas {
+    lambda_jobs[index] = Some(
+      plan_body_lowering_job(
+        collected,
+        resolved,
+        names,
+        inferred,
+        flows,
+        lowering_lambda_body(collected, lambda),
+        lambda.id,
       ),
     )
   }
   let planned_locals = Array::make(names.locals.length(), {
     body: 0UL,
+    lambda: -1,
     local_id: -1,
     kind: ParameterLocal,
     mutable_: false,
@@ -1122,6 +1227,7 @@ fn plan_module_lowering_in_order(
       let type_ = inferred.local_types[index]
       planned_locals[index] = {
         body: body_info.body,
+        lambda: -1,
         local_id: source.id,
         kind: source.kind,
         mutable_: source.mutable_,
@@ -1129,6 +1235,40 @@ fn plan_module_lowering_in_order(
         shape: planned_value_shape(resolved, inferred, type_),
         offset: source.offset,
       }
+    }
+  }
+  for lambda_info in names.lambdas {
+    for local_id in 0..<lambda_info.locals.length {
+      let index = lambda_info.locals.start + local_id
+      let source = names.locals[index]
+      let type_ = inferred.local_types[index]
+      planned_locals[index] = {
+        body: collected.lambdas[lambda_info.lambda].root_body,
+        lambda: lambda_info.lambda,
+        local_id: source.id,
+        kind: source.kind,
+        mutable_: source.mutable_,
+        type_,
+        shape: planned_value_shape(resolved, inferred, type_),
+        offset: source.offset,
+      }
+    }
+  }
+  let planned_captures : Array[PlannedCapture] = []
+  for lambda_info in names.lambdas {
+    for capture in 0..<lambda_info.captures.length {
+      let index = lambda_info.captures.start + capture
+      let source = names.captures[index]
+      let type_ = inferred.capture_types[index]
+      planned_captures.push({
+        lambda: lambda_info.lambda,
+        capture,
+        source: source.source,
+        mutable_: source.mutable_,
+        type_,
+        shape: planned_value_shape(resolved, inferred, type_),
+        offset: source.offset,
+      })
     }
   }
   let target : PlannedModuleLowering = {
@@ -1151,7 +1291,24 @@ fn plan_module_lowering_in_order(
       pattern_arms: { start: 0, length: 0 },
       diagnostics: { start: 0, length: 0 },
     }),
+    lambdas: names.lambdas.map(fn(info) {
+      {
+        lambda: info.lambda,
+        root: BlockBodyRoot(collected.lambdas[info.lambda].body.root),
+        root_type: 0,
+        root_shape: ErrorPlannedValueShape,
+        flow: { outcomes: 0 },
+        locals: info.locals,
+        captures: info.captures,
+        expressions: collected.lambdas[info.lambda].body.expressions,
+        blocks: collected.lambdas[info.lambda].body.blocks,
+        patterns: collected.lambdas[info.lambda].body.patterns,
+        pattern_arms: collected.lambdas[info.lambda].body.pattern_arms,
+        diagnostics: { start: 0, length: 0 },
+      }
+    }),
     locals: planned_locals,
+    captures: planned_captures,
     expressions: Array::make(
       collected.expressions.length(),
       planned_error_expression(),
@@ -1206,6 +1363,14 @@ fn plan_module_lowering_in_order(
       target,
       collected.bodies[body_index],
       job,
+      target.diagnostics.length(),
+    )
+  }
+  for lambda_index, lambda in collected.lambdas {
+    copy_body_lowering_job(
+      target,
+      lowering_lambda_body(collected, lambda),
+      lambda_jobs[lambda_index].unwrap(),
       target.diagnostics.length(),
     )
   }

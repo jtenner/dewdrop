@@ -36,7 +36,9 @@ Isolated lambda bodies now run through the ordinary local inference pipeline aft
 
 Lambda bodies also receive independent structured-flow analysis. Exhaustiveness, unreachable block items, loop fallthrough, and per-expression/block/arm outcomes are merged into the same global HIR-aligned flow tables while diagnostics remain owned by the lambda that produced them.
 
-The remaining unsupported boundary has moved from semantic lowering to executable closure emission: lowering still emits poison for lambda construction, so no closure allocation or invocation is claimed yet.
+Semantic lowering now retains explicit `PlannedLambdaClosure` and `PlannedCaptureGet` operations instead of poisoning lambda expressions. Each `PlannedLambdaLowering` freezes the inferred root shape, structured flow, local/capture spans, and complete expression/block/pattern/arm ranges. Planned captures preserve exact source identity, mutability, body type, and storage shape. Nested lambda construction therefore has all environment operands available before physical ABI planning.
+
+The remaining unsupported boundary is executable closure emission: Starshine deliberately rejects these explicit operations until closure/environment physical types and lambda entry functions are planned, so no closure allocation or invocation is claimed yet.
 
 ## Proposed representation
 
