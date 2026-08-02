@@ -47,6 +47,18 @@ pub struct PlannedProgramWasmGCFragments {
 }
 
 ///|
+pub struct PlannedProgramModuleInitializer {
+  declaration : DeclId
+  module_index : Int
+  body : BodyId
+  shape : PlannedValueShape
+  test_only : Bool
+  constant : Bool
+  global_index : Int
+  function_index : Int
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramWasmGCLink {
   root_module_index : Int
   graph : ModuleDependencyGraph
@@ -54,6 +66,10 @@ pub struct PlannedProgramWasmGCLink {
   module_type_bases : Array[Int]
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
+  initializers : Array[PlannedProgramModuleInitializer]
+  global_lookup : Map[DeclId, Int]
+  initializer_type_index : Int
+  startup_function_index : Int
   type_lookup : Map[DeclId, Int]
   module_lookup : Map[ModuleId, Int]
   type_count : Int
@@ -288,6 +304,37 @@ fn program_reachable_callable_roots(
         (!callable.is_test || emit_tests) {
         reachable[callable.declaration] = true
         work.push(callable.declaration)
+      }
+    }
+  }
+  for module_ in lowering.modules {
+    for step in module_.initialization.steps {
+      if step.test_only && !emit_tests {
+        continue
+      }
+      let body_id = match step.kind {
+        PlannedInitializeModuleValue(_, body, _) => body
+        PlannedCyclicModuleValues(_) => continue
+      }
+      let body_index = semantic_id_local(body_id)
+      if body_index < 0 || body_index >= module_.bodies.length() {
+        continue
+      }
+      let body = module_.bodies[body_index]
+      for
+        expression in body.expressions.start..<(body.expressions.start +
+        body.expressions.length) {
+        let target = match module_.expressions[expression].kind {
+          PlannedDirectCall(target, _, _, _)
+          | PlannedOperatorCall(target, _, _, _, _)
+          | PlannedIndexCall(target, _, _, _)
+          | PlannedIndexSetCall(target, _, _, _, _) => target
+          _ => continue
+        }
+        if target != 0UL && !reachable.contains(target) {
+          reachable[target] = true
+          work.push(target)
+        }
       }
     }
   }
@@ -714,6 +761,94 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmSignatureOnlyFunction => ()
     }
   }
+  let initializers : Array[PlannedProgramModuleInitializer] = []
+  let global_lookup : Map[DeclId, Int] = Map::default()
+  let mut global_index = 0
+  for scc in lowering.graph.sccs {
+    for member_index in 0..<scc.length {
+      let module_index = lowering.graph.scc_modules[scc.start + member_index]
+      let module_ = lowering.modules[module_index]
+      for step in module_.initialization.steps {
+        match step.kind {
+          PlannedInitializeModuleValue(declaration, body, _) => {
+            if step.test_only && !fragments.modules[module_index].emit_tests {
+              continue
+            }
+            let body_index = semantic_id_local(body)
+            if body_index < 0 || body_index >= module_.bodies.length() {
+              continue
+            }
+            let shape = module_.bodies[body_index].root_shape
+            let value_global = match shape {
+              UnitPlannedValueShape | NeverPlannedValueShape => -1
+              _ => {
+                let index = global_index
+                global_lookup[declaration] = index
+                global_index += 1
+                index
+              }
+            }
+            let constant = match module_.bodies[body_index].root {
+              ExpressionBodyRoot(expression) =>
+                match module_.expressions[expression].kind {
+                  PlannedI8Const(_)
+                  | PlannedI16Const(_)
+                  | PlannedI32Const(_)
+                  | PlannedI64Const(_)
+                  | PlannedU8Const(_)
+                  | PlannedU16Const(_)
+                  | PlannedU32Const(_)
+                  | PlannedU64Const(_)
+                  | PlannedF32Const(_)
+                  | PlannedF64Const(_)
+                  | PlannedBoolConst(_) => true
+                  _ => false
+                }
+              BlockBodyRoot(_) => false
+            }
+            let initializer_function = if constant {
+              -1
+            } else {
+              let index = imported_function_count + defined_function_count
+              defined_function_count += 1
+              index
+            }
+            initializers.push({
+              declaration,
+              module_index,
+              body,
+              shape,
+              test_only: step.test_only,
+              constant,
+              global_index: value_global,
+              function_index: initializer_function,
+            })
+          }
+          PlannedCyclicModuleValues(_) => ()
+        }
+      }
+    }
+  }
+  let mut runtime_initializer_count = 0
+  for initializer in initializers {
+    if initializer.function_index >= 0 {
+      runtime_initializer_count += 1
+    }
+  }
+  let initializer_type_index = if runtime_initializer_count > 0 {
+    let index = type_count
+    type_count += 1
+    index
+  } else {
+    -1
+  }
+  let startup_function_index = if runtime_initializer_count > 0 {
+    let index = imported_function_count + defined_function_count
+    defined_function_count += 1
+    index
+  } else {
+    -1
+  }
   program_link_validate_types(
     fragments, module_type_bases, type_lookup, diagnostics,
   )
@@ -725,6 +860,10 @@ pub fn link_program_wasmgc_fragments(
     module_type_bases,
     functions,
     function_lookup,
+    initializers,
+    global_lookup,
+    initializer_type_index,
+    startup_function_index,
     type_lookup,
     module_lookup,
     type_count,

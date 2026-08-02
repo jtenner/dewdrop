@@ -1,0 +1,7 @@
+open dew.std.wasi
+
+let state_initialized = wasi_fd_write(1u32, b"state-init|")
+
+pub fn state_value() -> I32 {
+  42
+}

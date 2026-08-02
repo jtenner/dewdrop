@@ -146,6 +146,9 @@ async function instantiateWithWasi(module) {
     },
   };
   instance = await WebAssembly.instantiate(module, imports);
+  if (typeof instance.exports.__dew_init === "function") {
+    instance.exports.__dew_init();
+  }
   return {
     instance,
     resetStdout() {

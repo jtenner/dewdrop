@@ -116,7 +116,7 @@ test "lowering plans distinguish module lets from callable names" {
     _ => abort("expected block body")
   }
   match planned.expressions[root].kind {
-    PlannedModuleValueGet(declaration) =>
+    PlannedModuleValueGet(declaration, _) =>
       assert_eq(declaration, collected.declarations[0].id)
     _ => fail("expected planned module value read")
   }

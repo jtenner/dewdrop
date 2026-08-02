@@ -1,0 +1,23 @@
+open dew.std.wasi
+
+struct Box {
+  value: I32
+}
+
+fn make(value: I32) -> Box {
+  Box {
+    value: value
+  }
+}
+
+let base = 40
+let answer = base + 2
+let box = make(answer - 1)
+
+pub fn main() -> U32 {
+  if answer == 42 && box.value == 41 {
+    wasi_fd_write(1u32, b"module-values:42")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

@@ -46,6 +46,8 @@ tools/dew run path/to/main.dew
 
 Multi-module programs use repeated `--module NAME` arguments or strict `dew.json` manifests. Compiler-owned standard sources are loaded from deterministic registered paths; `--bootstrap-std` selects generated fallback sources.
 
+Programs with non-constant module-level values export `__dew_init`. Dew-owned hosts call it exactly once after instantiation and before `main` or test entry points, allowing initialization to use host imports without relying on a WebAssembly start section.
+
 ## Tests
 
 Run the fast native validation loop:

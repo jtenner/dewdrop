@@ -19,7 +19,7 @@ Dew currently has:
 - compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent cache for diagnostics-free compiler-owned standard frozen interfaces, with versioned deterministic encoding, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 156 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 139 compiled WAT/runtime snapshots plus 17 compiler-error snapshots.
+- 158 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 141 compiled WAT/runtime snapshots plus 17 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -37,7 +37,7 @@ by dependency and expected user value.
 - [x] Preserve stable type, function, import, memory, global, export, and code ordering rather than normalizing away compiler decisions.
 - [x] Add a fail-closed comparison runner that prints a normal unified diff on mismatch.
 - [x] Add an explicit snapshot-update command; ordinary test runs never rewrite expected files.
-- [x] Grow the suite to 156 fixtures: 139 compiled WAT/runtime snapshots and 17 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
+- [x] Grow the suite to 158 fixtures: 141 compiled WAT/runtime snapshots and 17 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
 - [x] Capture successful `main` stdout as an ordered JSON string array; `text/concat` writes and verifies the complete concatenated string.
 - [x] Snapshot deterministic compiler errors with `output: null` and no WAT, preserving multiline `Debug` diagnostics through a framed protocol.
 - [ ] Continue adding successful cases, warnings, compiler failures, boundaries, and reduced stress cases within each feature.
@@ -127,8 +127,8 @@ enums.
 
 ### 6. Finish linked module state and implementation evidence
 
-- [ ] Emit module globals and constant global initializers.
-- [ ] Emit deterministic initialization functions and start/exported-init scheduling.
+- [x] Emit module globals and direct scalar constant global initializers.
+- [x] Emit deterministic initialization functions and an explicit `__dew_init` export invoked by Dew hosts before entry points.
 - [ ] Diagnose cross-module eager initialization cycles.
 - [ ] Merge imported impl evidence into coherence and method/operator dispatch indexes.
 - [ ] Enforce imported evidence visibility and foreign-impl privacy.
@@ -403,11 +403,11 @@ erased fallback.
 - [x] Infer module-value dependency SCCs.
 - [x] Separate type-solvable recursion from runtime eager-cycle legality.
 - [x] Freeze deterministic eager initialization schedules.
-- [ ] Emit module globals.
-- [ ] Emit constant global initializers when legal.
-- [ ] Emit startup/init functions for non-constant values.
-- [ ] Emit a deterministic start section or exported initializer.
-- [ ] Order cross-module initialization by module dependency SCCs.
+- [x] Emit module globals.
+- [x] Emit direct scalar constant global initializers when legal.
+- [x] Emit per-value initialization functions for non-constant values.
+- [x] Emit a deterministic `__dew_init` initializer export.
+- [x] Order cross-module initialization by module dependency SCCs.
 - [ ] Diagnose cross-module eager cycles.
 - [ ] Define lazy module values only if required.
 
@@ -621,7 +621,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
-- [x] Establish broad feature-oriented coverage with 139 compiled fixtures, 17 compiler-error fixtures, 85 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture now requires identical Node/Wago Core 3 output and traps, and frozen standard interfaces plus dead-artifact elimination keeps checked-in WAT at 92,544 lines while adding collection, functional-loop, short-circuit, nested-pattern, and imported-enum coverage.
+- [x] Establish broad feature-oriented coverage with 141 compiled fixtures, 17 compiler-error fixtures, 87 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture requires identical Node/Wago Core 3 output and traps, and checked-in WAT is 93,194 lines after adding module-global and cross-module initialization coverage.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.

@@ -342,6 +342,46 @@ fn wasmgc_reachable_defined_functions(
       work.push(callable_index)
     }
   }
+  for step in lowering.initialization.steps {
+    if step.test_only && !emit_tests {
+      continue
+    }
+    let body_id = match step.kind {
+      PlannedInitializeModuleValue(_, body, _) => body
+      PlannedCyclicModuleValues(_) => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      let target = match lowering.expressions[expression].kind {
+        PlannedDirectCall(declaration, _, _, _)
+        | PlannedOperatorCall(declaration, _, _, _, _)
+        | PlannedIndexCall(declaration, _, _, _)
+        | PlannedIndexSetCall(declaration, _, _, _, _) => declaration
+        _ => continue
+      }
+      if semantic_id_module(target) != lowering.module_id {
+        continue
+      }
+      let local_index = semantic_id_local(target)
+      if local_index < 0 ||
+        local_index >= functions.callable_by_declaration.length() {
+        continue
+      }
+      let target_callable = functions.callable_by_declaration[local_index]
+      if target_callable >= 0 &&
+        (!functions.callables[target_callable].is_test || emit_tests) &&
+        !reachable[target_callable] {
+        reachable[target_callable] = true
+        work.push(target_callable)
+      }
+    }
+  }
   while work.length() > 0 {
     let callable_index = work.pop().unwrap()
     let body_id = match functions.callables[callable_index].kind {

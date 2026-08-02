@@ -317,7 +317,13 @@ func main() {
 		return invokeErr
 	}
 	var invokeErr error
-	if mode == "test" {
+	for _, name := range compiled.ExportedFunctions() {
+		if name == "__dew_init" {
+			invokeErr = invoke(name)
+			break
+		}
+	}
+	if invokeErr == nil && mode == "test" {
 		for _, name := range compiled.ExportedFunctions() {
 			if strings.HasPrefix(name, "__dew_test_") {
 				if invokeErr = invoke(name); invokeErr != nil {

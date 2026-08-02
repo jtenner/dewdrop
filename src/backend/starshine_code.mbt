@@ -3101,9 +3101,39 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
+          @semantic.PlannedModuleValueGet(declaration, nominal) =>
+            match program {
+              Some(link) =>
+                match link.global_lookup.get(declaration) {
+                  Some(index) => {
+                    let output = [
+                      @lib.Instruction::global_get(
+                        @lib.GlobalIdx::new(index.reinterpret_as_uint()),
+                      ),
+                    ]
+                    if nominal != 0UL {
+                      match link.type_lookup.get(nominal) {
+                        Some(type_index) =>
+                          output.push(starshine_match_cast(type_index))
+                        None =>
+                          return Err(
+                            UnsupportedExpression(body.body, expression),
+                          )
+                      }
+                    }
+                    results.push(output)
+                  }
+                  None =>
+                    match source.shape {
+                      @semantic.UnitPlannedValueShape => results.push([])
+                      _ =>
+                        return Err(UnsupportedExpression(body.body, expression))
+                    }
+                }
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
           @semantic.PlannedPoisonExpression
-          | @semantic.PlannedConsumedExpression
-          | @semantic.PlannedModuleValueGet(_) =>
+          | @semantic.PlannedConsumedExpression =>
             return Err(UnsupportedExpression(body.body, expression))
         }
       }
@@ -5674,6 +5704,11 @@ fn emit_starshine_program_type_section(
       }
     }
   }
+  if planned.initializer_type_index >= 0 {
+    rec_types.push(
+      @lib.RecType::new(@lib.SubType::comp_type(@lib.CompType::func([], []))),
+    )
+  }
   let mut uses_text = false
   for function_ in planned.functions {
     if function_.elided {
@@ -5799,6 +5834,17 @@ fn emit_starshine_program_function_section(
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
+  if planned.initializer_type_index >= 0 {
+    let signature = @lib.TypeIdx::new(
+      planned.initializer_type_index.reinterpret_as_uint(),
+    )
+    for initializer in planned.initializers {
+      if initializer.function_index >= 0 {
+        signatures.push(signature)
+      }
+    }
+    signatures.push(signature)
+  }
   @lib.FuncSec::new(signatures)
 }
 
@@ -5847,6 +5893,18 @@ fn emit_starshine_program_export_section(
         ),
       )
     }
+  }
+  if planned.startup_function_index >= 0 {
+    exports.push(
+      @lib.Export::new(
+        @lib.Name::from_string("__dew_init"),
+        @lib.ExternIdx::func(
+          @lib.FuncIdx::new(
+            planned.startup_function_index.reinterpret_as_uint(),
+          ),
+        ),
+      ),
+    )
   }
   if starshine_program_uses_wasi(planned) {
     exports.push(
@@ -5990,6 +6048,236 @@ fn starshine_program_module_runtime_function_index(
 }
 
 ///|
+fn starshine_program_global_value_type(
+  shape : @semantic.PlannedValueShape,
+) -> @lib.ValType {
+  match shape {
+    @semantic.I8PlannedValueShape
+    | @semantic.I16PlannedValueShape
+    | @semantic.I32PlannedValueShape
+    | @semantic.U8PlannedValueShape
+    | @semantic.U16PlannedValueShape
+    | @semantic.U32PlannedValueShape
+    | @semantic.Swar32PlannedValueShape => @lib.ValType::i32()
+    @semantic.I64PlannedValueShape
+    | @semantic.U64PlannedValueShape
+    | @semantic.Swar64PlannedValueShape => @lib.ValType::i64()
+    @semantic.F32PlannedValueShape => @lib.ValType::f32()
+    @semantic.F64PlannedValueShape => @lib.ValType::f64()
+    @semantic.V128PlannedValueShape => @lib.ValType::v128()
+    @semantic.RefPlannedValueShape
+    | @semantic.GenericPlannedValueShape
+    | @semantic.ErrorPlannedValueShape => @lib.ValType::eqref_null()
+    @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape =>
+      @lib.ValType::bottom()
+  }
+}
+
+///|
+fn starshine_program_global_default(
+  shape : @semantic.PlannedValueShape,
+) -> @lib.Expr {
+  let instructions = match shape {
+    @semantic.I8PlannedValueShape
+    | @semantic.I16PlannedValueShape
+    | @semantic.I32PlannedValueShape
+    | @semantic.U8PlannedValueShape
+    | @semantic.U16PlannedValueShape
+    | @semantic.U32PlannedValueShape
+    | @semantic.Swar32PlannedValueShape =>
+      [@lib.Instruction::i32_const(@lib.I32::new(0))]
+    @semantic.I64PlannedValueShape
+    | @semantic.U64PlannedValueShape
+    | @semantic.Swar64PlannedValueShape =>
+      [@lib.Instruction::i64_const(@lib.I64::new(0L))]
+    @semantic.F32PlannedValueShape =>
+      [@lib.Instruction::f32_const(@lib.F32::new(0.0))]
+    @semantic.F64PlannedValueShape =>
+      [@lib.Instruction::f64_const(@lib.F64::new(0.0))]
+    @semantic.V128PlannedValueShape =>
+      [
+        @lib.Instruction::v128_const(
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ),
+      ]
+    @semantic.RefPlannedValueShape
+    | @semantic.GenericPlannedValueShape
+    | @semantic.ErrorPlannedValueShape =>
+      [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::none()))]
+    @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape => []
+  }
+  @lib.Expr::new(instructions)
+}
+
+///|
+fn starshine_program_constant_global_initializer(
+  lowering : @semantic.PlannedProgramLowering,
+  initializer : @semantic.PlannedProgramModuleInitializer,
+) -> @lib.Expr? {
+  if !initializer.constant {
+    return None
+  }
+  let body = lowering.modules[initializer.module_index].bodies[@semantic.semantic_id_local(
+      initializer.body,
+    )]
+  let expression = match body.root {
+    @semantic.ExpressionBodyRoot(expression) => expression
+    @semantic.BlockBodyRoot(_) => return None
+  }
+  let kind = lowering.modules[initializer.module_index].expressions[expression].kind
+  let instruction = match kind {
+    @semantic.PlannedI8Const(value) =>
+      @lib.Instruction::i32_const(
+        @lib.I32::new(starshine_signed_i8_constant(value)),
+      )
+    @semantic.PlannedI16Const(value) =>
+      @lib.Instruction::i32_const(
+        @lib.I32::new(starshine_signed_i16_constant(value)),
+      )
+    @semantic.PlannedU8Const(value) =>
+      @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFUL).to_int()))
+    @semantic.PlannedU16Const(value) =>
+      @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFFFUL).to_int()))
+    @semantic.PlannedI32Const(value) | @semantic.PlannedU32Const(value) =>
+      @lib.Instruction::i32_const(@lib.I32::new(value.to_int()))
+    @semantic.PlannedI64Const(value) | @semantic.PlannedU64Const(value) =>
+      @lib.Instruction::i64_const(@lib.I64::new(value.reinterpret_as_int64()))
+    @semantic.PlannedF32Const(value) =>
+      @lib.Instruction::f32_const(@lib.F32::new(value))
+    @semantic.PlannedF64Const(value) =>
+      @lib.Instruction::f64_const(@lib.F64::new(value))
+    @semantic.PlannedBoolConst(value) =>
+      @lib.Instruction::i32_const(@lib.I32::new(if value { 1 } else { 0 }))
+    _ => return None
+  }
+  Some(@lib.Expr::new([instruction]))
+}
+
+///|
+fn emit_starshine_program_global_section(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.GlobalSec {
+  let globals : Array[@lib.Global] = []
+  for initializer in planned.initializers {
+    if initializer.global_index < 0 {
+      continue
+    }
+    globals.push(
+      @lib.Global::new(
+        @lib.GlobalType::new(
+          starshine_program_global_value_type(initializer.shape),
+          !initializer.constant,
+        ),
+        match
+          starshine_program_constant_global_initializer(lowering, initializer) {
+          Some(value) => value
+          None => starshine_program_global_default(initializer.shape)
+        },
+      ),
+    )
+  }
+  @lib.GlobalSec::new(globals)
+}
+
+///|
+fn emit_starshine_program_initializer_body(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  initializer : @semantic.PlannedProgramModuleInitializer,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let module_lowering = lowering.modules[initializer.module_index]
+  let module_fragments = planned.modules[initializer.module_index]
+  let body_index = @semantic.semantic_id_local(initializer.body)
+  if body_index < 0 || body_index >= module_lowering.bodies.length() {
+    return Err(MissingBody(initializer.body))
+  }
+  let body = module_lowering.bodies[body_index]
+  let (
+    local_indices,
+    body_local_types,
+    match_local_indices,
+    match_result_local_indices,
+    conversion_scratch_index,
+    fixed_array_ref_scratch_index,
+    fixed_array_i32_scratch_index,
+    map_key_local_indices,
+    map_value_local_indices,
+    map_ref_scratch_index,
+    map_bucket_scratch_index,
+    map_hash_scratch_index,
+    map_entry_scratch_index,
+    map_previous_scratch_index,
+    map_growth_index_scratch_index,
+    control_state_local_indices,
+    control_result_local_indices,
+  ) = starshine_body_locals(
+    module_lowering,
+    module_fragments,
+    Some(planned),
+    body,
+  )
+  match
+    starshine_emit_body_instructions(
+      module_lowering,
+      module_fragments,
+      Some(planned),
+      initializer.module_index,
+      body,
+      local_indices,
+      match_local_indices,
+      match_result_local_indices,
+      conversion_scratch_index,
+      fixed_array_ref_scratch_index,
+      fixed_array_i32_scratch_index,
+      map_key_local_indices,
+      map_value_local_indices,
+      map_ref_scratch_index,
+      map_bucket_scratch_index,
+      map_hash_scratch_index,
+      map_entry_scratch_index,
+      map_previous_scratch_index,
+      map_growth_index_scratch_index,
+      control_state_local_indices,
+      control_result_local_indices,
+    ) {
+    Ok(instructions) => {
+      if initializer.global_index >= 0 {
+        instructions.push(
+          @lib.Instruction::global_set(
+            @lib.GlobalIdx::new(initializer.global_index.reinterpret_as_uint()),
+          ),
+        )
+      }
+      Ok(
+        @lib.Func::new(
+          @lib.Locals::from_types(body_local_types),
+          @lib.Expr::new(instructions),
+        ),
+      )
+    }
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn starshine_program_startup_body(
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> @lib.Func {
+  let instructions : Array[@lib.Instruction] = []
+  for initializer in planned.initializers {
+    if initializer.function_index >= 0 {
+      instructions.push(
+        @lib.Instruction::call(
+          @lib.FuncIdx::new(initializer.function_index.reinterpret_as_uint()),
+        ),
+      )
+    }
+  }
+  @lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions))
+}
+
+///|
 fn emit_starshine_program_code_section(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -6045,6 +6333,18 @@ fn emit_starshine_program_code_section(
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
+  for initializer in planned.initializers {
+    if initializer.function_index >= 0 {
+      match
+        emit_starshine_program_initializer_body(lowering, planned, initializer) {
+        Ok(function_body) => functions.push(function_body)
+        Err(error) => return Err(error)
+      }
+    }
+  }
+  if planned.startup_function_index >= 0 {
+    functions.push(starshine_program_startup_body(planned))
+  }
   Ok(@lib.CodeSec::new(functions))
 }
 
@@ -6058,12 +6358,17 @@ pub fn emit_starshine_program_module(
   }
   match emit_starshine_program_code_section(lowering, planned) {
     Ok(code) => {
-      let module_ = @lib.Module::new()
+      let mut module_ = @lib.Module::new()
         .with_type_sec(emit_starshine_program_type_section(planned))
         .with_import_sec(emit_starshine_program_import_section(planned))
         .with_func_sec(emit_starshine_program_function_section(planned))
         .with_export_sec(emit_starshine_program_export_section(planned))
         .with_code_sec(code)
+      if planned.global_lookup.length() > 0 {
+        module_ = module_.with_global_sec(
+          emit_starshine_program_global_section(lowering, planned),
+        )
+      }
       let mut uses_linear_memory = false
       for module_plan in planned.modules {
         if module_plan.uses_linear_memory {

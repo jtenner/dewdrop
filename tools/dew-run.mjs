@@ -62,6 +62,9 @@ try {
   const binary = await readFile(binaryPath);
   const module = await WebAssembly.compile(binary);
   instance = await WebAssembly.instantiate(module, imports);
+  if (typeof instance.exports.__dew_init === "function") {
+    instance.exports.__dew_init();
+  }
   if (typeof instance.exports.main !== "function") {
     throw new Error("module does not export main");
   }

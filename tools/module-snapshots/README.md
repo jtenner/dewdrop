@@ -125,7 +125,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 156 fixtures:
+The suite contains 158 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -137,7 +137,7 @@ functions            1          0                 1                0
 generics             1          1                 0                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules              4          4                 0                0
+modules              6          6                 0                0
 names                2          0                 2                0
 numeric             28         26                 2                1
 reachability         1          1                 0                0
@@ -147,16 +147,18 @@ text                 23         23                 0                1
 types                1          0                 1                0
 wasi                 16         16                 0                5
 
-total               156        139                17               12
+total               158        141                17               12
 ```
 
-Eighty-five compiled fixtures assert nonempty stdout, twelve assert normalized
+Eighty-seven compiled fixtures assert nonempty stdout, twelve assert normalized
 runtime traps, and forty-two intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 2, 2026, all 139 compiled fixtures produce identical output and
-normalized traps in Node and Wago's explicit `CoreFeaturesV3` mode.
+As of August 2, 2026, all 141 compiled fixtures pass in Node, and the two new
+module-initialization fixtures also pass in Wago's explicit `CoreFeaturesV3`
+mode. Four pre-existing collection fixtures currently expose regressions in the
+sibling Wago checkout; the harness continues to report those mismatches.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,
 literal and enum matching, aggregate construction and extraction, scalar numeric

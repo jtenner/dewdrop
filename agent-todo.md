@@ -7,7 +7,7 @@ This file tracks designed or partially designed features that remain unimplement
 1. Extend the on-disk package-root and persistent standard-interface cache model to versioned external dependencies with integrity and dependency-interface fingerprints.
 2. Complete imported trait requirement validation, merge imported impl evidence into coherence/dispatch indexes, and define visibility/orphan rules.
 3. Add stable file-aware diagnostics to the completed check/build/test/run and deterministic emit driver.
-4. Emit module globals/startup, diagnose cross-module eager cycles, and support cross-module recursive WasmGC groups.
+4. Extend the completed module-global and exported-initializer path with imported module-value access, cross-module eager-cycle diagnostics, and cross-module recursive WasmGC groups.
 5. Define and implement generic obligations, specialization, erased fallback ABIs, and executable cross-module generic aggregates.
 6. Add the deterministic optimization pipeline and optimized snapshots.
 7. Continue deterministic snapshots, generated lane coverage, resource-budget definition, and phase/runtime/allocation measurement.
@@ -67,12 +67,12 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Commit readable `.wat` expectations while keeping generated `.wasm` temporary.
 - [x] Compare snapshots byte-for-byte and print unified diffs.
 - [x] Provide an explicit update command that ordinary test runs never invoke automatically.
-- [x] Cover 139 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
+- [x] Cover 141 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
 - [x] Keep each JSON oracle to exactly ordered compiler `errors`, ordered compiler `warnings`, and ordered stdout-string `output`; `null` means no module or WAT was produced.
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 156 fixtures with compiler failures kept beside their language features: 139 compiled WAT/runtime snapshots, 17 compiler-error snapshots, 85 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 158 fixtures with compiler failures kept beside their language features: 141 compiled WAT/runtime snapshots, 17 compiler-error snapshots, 87 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -91,7 +91,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Hide test-only values, nominal types, traits, and impl evidence from ordinary-file resolution.
 - [x] Exclude test-only nominal layouts and test-callable reachability edges from production fragments.
 - [x] Exclude test-only impl evidence from frozen/imported interfaces and mark test-only initialization steps explicitly.
-- [ ] Require future module-global/startup emission to omit marked test-only initialization steps in production.
+- [x] Omit marked test-only initialization steps from production module-global/startup emission.
 
 ## Executable core
 
@@ -119,11 +119,11 @@ Performance and correctness work remains continuous: expand generated lane-famil
 ## Module values and initialization
 
 - [ ] Export public module-level `let` types after the module-value inference barrier.
-- [ ] Emit Wasm globals and `PlannedModuleValueGet`.
-- [ ] Emit constant global initializers when legal.
-- [ ] Emit deterministic initialization functions for non-constant values.
-- [ ] Emit a start section or explicit exported initializer.
-- [ ] Order cross-module initialization by dependency SCCs.
+- [x] Emit Wasm globals and `PlannedModuleValueGet` for local module values.
+- [x] Emit direct scalar constant global initializers when legal.
+- [x] Emit deterministic per-value initialization functions for non-constant values.
+- [x] Emit an explicit `__dew_init` initializer called by Dew hosts before entry points.
+- [x] Order cross-module initialization by dependency SCCs.
 - [ ] Diagnose cross-module eager initialization cycles.
 - [ ] Integrate host-provided initialization and startup entry points.
 

@@ -38,7 +38,7 @@ pub enum PlannedExpressionKind {
   PlannedStringConst(Bytes)
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
-  PlannedModuleValueGet(DeclId)
+  PlannedModuleValueGet(DeclId, DeclId)
   PlannedStructNew(DeclId, HirSpan, HirSpan)
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
   PlannedVariantStructNew(VariantId, HirSpan, HirSpan)
@@ -353,6 +353,32 @@ fn planned_value_shape(
 }
 
 ///|
+fn planned_nominal_declaration(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  root : BodyTypeId,
+) -> DeclId {
+  let mut body_type = root
+  while true {
+    match inferred.type_term(body_type) {
+      BodyAppliedType(base, _) => body_type = base
+      BodyResolvedType(root) => {
+        let mut resolved_type = root
+        while true {
+          match resolved.types[resolved_type] {
+            NominalType(declaration) => return declaration
+            AppliedType(base, _) => resolved_type = base
+            _ => return 0UL
+          }
+        }
+      }
+      BodyErrorType | BodyVariableType(_) => return 0UL
+    }
+  }
+  0UL
+}
+
+///|
 fn planned_module_value_declaration(
   collected : CollectedModule,
   name : NameId,
@@ -446,7 +472,14 @@ fn plan_expression_kind(
           if declaration == 0UL {
             PlannedPoisonExpression
           } else {
-            PlannedModuleValueGet(declaration)
+            PlannedModuleValueGet(
+              declaration,
+              planned_nominal_declaration(
+                resolved,
+                inferred,
+                inferred.expression_types[expression],
+              ),
+            )
           }
         }
         ErrorNameReference => PlannedPoisonExpression

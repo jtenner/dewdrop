@@ -1,0 +1,12 @@
+open fixture.state
+open dew.std.wasi
+
+let root_initialized = wasi_fd_write(1u32, b"root-init|")
+
+pub fn main() -> U32 {
+  if state_value() == 42 {
+    wasi_fd_write(1u32, b"main")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

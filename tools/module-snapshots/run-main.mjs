@@ -164,6 +164,9 @@ function normalizedTrap(error) {
 const binary = await readFile(binaryPath);
 const module = await WebAssembly.compile(binary);
 instance = await WebAssembly.instantiate(module, imports);
+if (typeof instance.exports.__dew_init === "function") {
+  instance.exports.__dew_init();
+}
 const main = instance.exports.main;
 if (typeof main !== "function") {
   console.error("fixture must export a main function");
