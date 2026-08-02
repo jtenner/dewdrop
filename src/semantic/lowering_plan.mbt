@@ -445,6 +445,15 @@ fn plan_expression_kind(
         HirFieldExpr(base, _, _) => return PlannedFieldGet(field, base)
         _ => return PlannedPoisonExpression
       }
+    ImportedModuleValueSelection(declaration) =>
+      return PlannedModuleValueGet(
+        declaration,
+        planned_nominal_declaration(
+          resolved,
+          inferred,
+          inferred.expression_types[expression],
+        ),
+      )
     NoExpressionSelection => ()
   }
   match collected.expressions[expression] {
@@ -465,6 +474,15 @@ fn plan_expression_kind(
       match names.expression_references[expression] {
         LocalNameReference(local_id) => PlannedLocalGet(local_id)
         ImportedValueNameReference(_) => PlannedPoisonExpression
+        ImportedModuleValueNameReference(declaration) =>
+          PlannedModuleValueGet(
+            declaration,
+            planned_nominal_declaration(
+              resolved,
+              inferred,
+              inferred.expression_types[expression],
+            ),
+          )
         ModuleValueNameReference(value_name) => {
           let declaration = planned_module_value_declaration(
             collected, value_name,

@@ -1,0 +1,18 @@
+open fixture.values
+open dew.std.wasi
+
+fn read(value: Box) -> I32 {
+  value.value
+}
+
+pub fn main() -> U32 {
+  let optional = match maybe {
+    Option::Some(value) => value
+    Option::None => 0
+  }
+  if read(box) + answer + optional == 125 {
+    wasi_fd_write(1u32, b"modules:imported-values-125")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

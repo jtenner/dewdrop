@@ -1226,11 +1226,85 @@ pub struct FrozenModuleInterface {
 } derive(Eq, Debug)
 
 ///|
+fn frozen_body_type_to_resolved(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleValues,
+  root : BodyTypeId,
+) -> ResolvedTypeId {
+  match inferred.type_term(root) {
+    BodyErrorType | BodyVariableType(_) => resolved.error_type
+    BodyResolvedType(type_) => type_
+    BodyAppliedType(base, arguments) => {
+      let resolved_base = frozen_body_type_to_resolved(resolved, inferred, base)
+      let resolved_arguments : Array[ResolvedTypeId] = []
+      for index in 0..<arguments.length {
+        resolved_arguments.push(
+          frozen_body_type_to_resolved(
+            resolved,
+            inferred,
+            inferred.type_arguments[arguments.start + index],
+          ),
+        )
+      }
+      for index, existing in resolved.types {
+        match existing {
+          AppliedType(candidate_base, candidate_arguments) if candidate_base ==
+            resolved_base &&
+            candidate_arguments.length == resolved_arguments.length() => {
+            let mut same = true
+            for argument_index in 0..<candidate_arguments.length {
+              if resolved.type_arguments[candidate_arguments.start +
+                argument_index] !=
+                resolved_arguments[argument_index] {
+                same = false
+                break
+              }
+            }
+            if same {
+              return index
+            }
+          }
+          _ => ()
+        }
+      }
+      let start = resolved.type_arguments.length()
+      for argument in resolved_arguments {
+        resolved.type_arguments.push(argument)
+      }
+      let result = resolved.types.length()
+      resolved.types.push(
+        AppliedType(resolved_base, {
+          start,
+          length: resolved_arguments.length(),
+        }),
+      )
+      result
+    }
+  }
+}
+
+///|
 fn frozen_declaration_semantic_type(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   declaration : CollectedDeclaration,
+  module_values : InferredModuleValues?,
 ) -> ResolvedTypeId {
+  if declaration.kind == LetDecl {
+    match module_values {
+      Some(values) =>
+        for let_index, candidate in values.let_declarations {
+          if candidate == declaration.id {
+            return frozen_body_type_to_resolved(
+              resolved,
+              values,
+              values.let_types[let_index],
+            )
+          }
+        }
+      None => ()
+    }
+  }
   if declaration.kind == TypeAliasDecl {
     for index, alias_info in collected.aliases {
       if alias_info.declaration == declaration.id {
@@ -1264,6 +1338,7 @@ pub fn freeze_module_interface(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
+  module_values? : InferredModuleValues? = None,
 ) -> FrozenModuleInterface {
   guard collected.module_id == resolved.module_id &&
     collected.module_id == functions.module_id else {
@@ -1292,7 +1367,7 @@ pub fn freeze_module_interface(
         generic_parameter_count: collected.generic_parameters_of(declaration.id).length,
         generic_parameters: collected.generic_parameters_of(declaration.id),
         semantic_type: frozen_declaration_semantic_type(
-          collected, resolved, declaration,
+          collected, resolved, declaration, module_values,
         ),
         location: collected.declaration_location(declaration.id).unwrap(),
       })
@@ -1517,6 +1592,13 @@ pub struct ImportedValueBinding {
 } derive(Eq, Debug)
 
 ///|
+pub struct ImportedModuleValueBinding {
+  interface_index : Int
+  declaration_index : Int
+  mut ambiguous : Bool
+} derive(Eq, Debug)
+
+///|
 pub struct ModuleImportScope {
   module_id : ModuleId
   declarations : Array[ImportedDeclarationBinding]
@@ -1525,6 +1607,8 @@ pub struct ModuleImportScope {
   trait_bindings : Map[String, Int]
   value_bindings : Map[String, ImportedValueBinding]
   module_value_bindings : Array[Map[String, ImportedValueBinding]]
+  module_let_bindings : Array[Map[String, ImportedModuleValueBinding]]
+  let_bindings : Map[String, ImportedModuleValueBinding]
   callable_references : Array[ImportedCallableReference]
   alias_bindings : Map[String, Int]
   interfaces : Array[FrozenModuleInterface?]
@@ -1566,6 +1650,50 @@ pub fn ModuleImportScope::lookup_module_callable(
   match self.module_value_bindings[interface_index].get(name) {
     Some(binding) if !binding.ambiguous => Some(binding.head)
     _ => None
+  }
+}
+
+///|
+pub fn ModuleImportScope::lookup_module_value(
+  self : ModuleImportScope,
+  interface_index : Int,
+  name : String,
+) -> DeclId? {
+  guard interface_index >= 0 &&
+    interface_index < self.module_let_bindings.length() else {
+    return None
+  }
+  match self.module_let_bindings[interface_index].get(name) {
+    Some(binding) if !binding.ambiguous => {
+      let interface_ = self.interfaces[binding.interface_index].unwrap()
+      Some(interface_.declarations[binding.declaration_index].declaration)
+    }
+    _ => None
+  }
+}
+
+///|
+pub fn ModuleImportScope::lookup_opened_value(
+  self : ModuleImportScope,
+  name : String,
+) -> DeclId? {
+  match self.let_bindings.get(name) {
+    Some(binding) if !binding.ambiguous => {
+      let interface_ = self.interfaces[binding.interface_index].unwrap()
+      Some(interface_.declarations[binding.declaration_index].declaration)
+    }
+    _ => None
+  }
+}
+
+///|
+pub fn ModuleImportScope::opened_value_is_ambiguous(
+  self : ModuleImportScope,
+  name : String,
+) -> Bool {
+  match self.let_bindings.get(name) {
+    Some(binding) => binding.ambiguous
+    None => false
   }
 }
 
@@ -1653,11 +1781,106 @@ fn insert_imported_declaration(
 }
 
 ///|
+fn imported_callable_binding_declaration(
+  scope : ModuleImportScope,
+  binding : ImportedValueBinding,
+) -> DeclId {
+  let reference = scope.callable_references[binding.head]
+  scope.interfaces[reference.interface_index].unwrap().callables[reference.callable_index].declaration
+}
+
+///|
+fn imported_module_value_binding_declaration(
+  scope : ModuleImportScope,
+  binding : ImportedModuleValueBinding,
+) -> DeclId {
+  scope.interfaces[binding.interface_index].unwrap().declarations[binding.declaration_index].declaration
+}
+
+///|
+fn expose_imported_module_value_binding(
+  scope : ModuleImportScope,
+  name : String,
+  binding : ImportedModuleValueBinding,
+) -> Unit {
+  match scope.value_bindings.get(name) {
+    Some(callables) if !callables.ambiguous => {
+      callables.ambiguous = true
+      let opened : ImportedModuleValueBinding = { ..binding, ambiguous: true }
+      scope.let_bindings[name] = opened
+      scope.diagnostics.push(
+        AmbiguousImportedValue(
+          scope.module_id,
+          name,
+          imported_callable_binding_declaration(scope, callables),
+          imported_module_value_binding_declaration(scope, binding),
+        ),
+      )
+      return
+    }
+    _ => ()
+  }
+  match scope.let_bindings.get(name) {
+    None => scope.let_bindings[name] = { ..binding, ambiguous: false }
+    Some(opened) => {
+      if opened.ambiguous || opened.interface_index == binding.interface_index {
+        return
+      }
+      let previous = imported_module_value_binding_declaration(scope, opened)
+      let next = imported_module_value_binding_declaration(scope, binding)
+      opened.ambiguous = true
+      scope.diagnostics.push(
+        AmbiguousImportedValue(scope.module_id, name, previous, next),
+      )
+    }
+  }
+}
+
+///|
+fn insert_imported_module_value(
+  scope : ModuleImportScope,
+  interface_index : Int,
+  declaration_index : Int,
+  declaration : FrozenInterfaceDeclaration,
+  open_names : Bool,
+) -> Unit {
+  if declaration.source_kind != LetDecl {
+    return
+  }
+  let binding : ImportedModuleValueBinding = {
+    interface_index,
+    declaration_index,
+    ambiguous: false,
+  }
+  scope.module_let_bindings[interface_index][declaration.name] = binding
+  if open_names {
+    expose_imported_module_value_binding(scope, declaration.name, binding)
+  }
+}
+
+///|
 fn expose_imported_value_binding(
   scope : ModuleImportScope,
   name : String,
   binding : ImportedValueBinding,
 ) -> Unit {
+  match scope.let_bindings.get(name) {
+    Some(value) if !value.ambiguous => {
+      let opened : ImportedValueBinding = { ..binding, ambiguous: true }
+      scope.value_bindings[name] = opened
+      value.ambiguous = true
+      scope.diagnostics.push(
+        AmbiguousImportedValue(
+          scope.module_id,
+          name,
+          imported_module_value_binding_declaration(scope, value),
+          imported_callable_binding_declaration(scope, binding),
+        ),
+      )
+      return
+    }
+    _ => ()
+  }
   match scope.value_bindings.get(name) {
     None =>
       scope.value_bindings[name] = {
@@ -1674,18 +1897,11 @@ fn expose_imported_value_binding(
         opened.tail = binding.tail
         return
       }
-      let previous_reference = scope.callable_references[opened.head]
-      let next_reference = scope.callable_references[binding.head]
-      let previous = scope.interfaces[previous_reference.interface_index].unwrap().callables[previous_reference.callable_index]
-      let next = scope.interfaces[next_reference.interface_index].unwrap().callables[next_reference.callable_index]
+      let previous = imported_callable_binding_declaration(scope, opened)
+      let next = imported_callable_binding_declaration(scope, binding)
       opened.ambiguous = true
       scope.diagnostics.push(
-        AmbiguousImportedValue(
-          scope.module_id,
-          name,
-          previous.declaration,
-          next.declaration,
-        ),
+        AmbiguousImportedValue(scope.module_id, name, previous, next),
       )
     }
   }
@@ -1759,6 +1975,10 @@ fn open_frozen_interface_in_scope(
       for name, binding in table {
         expose_imported_value_binding(scope, name, binding)
       }
+      let values = scope.module_let_bindings[dependency]
+      for name, binding in values {
+        expose_imported_module_value_binding(scope, name, binding)
+      }
     }
     None => ()
   }
@@ -1774,8 +1994,11 @@ fn import_frozen_interface_into_scope(
   scope.imported_interfaces.push(dependency)
   match interfaces[dependency] {
     Some(interface_) => {
-      if open_names {
-        for declaration in interface_.declarations {
+      for declaration_index, declaration in interface_.declarations {
+        insert_imported_module_value(
+          scope, dependency, declaration_index, declaration, open_names,
+        )
+        if open_names {
           insert_imported_declaration(
             scope,
             dependency,
@@ -1808,8 +2031,10 @@ pub fn build_module_import_scope(
   }
   let module_ = program.modules[module_index]
   let module_value_bindings : Array[Map[String, ImportedValueBinding]] = []
+  let module_let_bindings : Array[Map[String, ImportedModuleValueBinding]] = []
   for _ in program.modules {
     module_value_bindings.push(Map::default())
+    module_let_bindings.push(Map::default())
   }
   let scope : ModuleImportScope = {
     module_id: module_.module_id,
@@ -1819,6 +2044,8 @@ pub fn build_module_import_scope(
     trait_bindings: Map::default(),
     value_bindings: Map::default(),
     module_value_bindings,
+    module_let_bindings,
+    let_bindings: Map::default(),
     callable_references: [],
     alias_bindings: Map::default(),
     interfaces,
@@ -1956,6 +2183,26 @@ pub struct FrozenProgramInterfaces {
 }
 
 ///|
+fn infer_frozen_module_values(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  imports : ModuleImportScope,
+) -> InferredModuleValues {
+  let names = resolve_module_names_with_imports(collected, imports)
+  for interface_index in imports.imported_interfaces {
+    if imports.interfaces[interface_index] is None {
+      return infer_module_values(collected, resolved, names)
+    }
+  }
+  infer_module_values_with_imports(
+    collected,
+    resolved,
+    resolve_module_imports(resolved, imports),
+    names,
+  )
+}
+
+///|
 /// Resolves and freezes every manifest module in dependency-SCC order. The
 /// returned interface array remains in manifest order for constant identity;
 /// SCC order controls only job execution.
@@ -1999,12 +2246,16 @@ pub fn freeze_program_interfaces_with_cached(
       if !cached_slots[module_index] {
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
+        let module_values = infer_frozen_module_values(
+          collected, resolved, imports,
+        )
         slots[module_index] = Some(
           freeze_module_interface(
             program.module_paths[module_index],
             collected,
             resolved,
             functions,
+            module_values=Some(module_values),
           ),
         )
       }
@@ -2031,12 +2282,16 @@ pub fn freeze_program_interfaces_with_cached(
       if repeat && !cached_slots[module_index] {
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
+        let module_values = infer_frozen_module_values(
+          collected, resolved, imports,
+        )
         slots[module_index] = Some(
           freeze_module_interface(
             program.module_paths[module_index],
             collected,
             resolved,
             functions,
+            module_values=Some(module_values),
           ),
         )
       }

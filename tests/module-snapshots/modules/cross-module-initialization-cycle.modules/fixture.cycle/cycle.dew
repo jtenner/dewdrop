@@ -1,0 +1,3 @@
+open snapshot.main
+
+pub let second = first

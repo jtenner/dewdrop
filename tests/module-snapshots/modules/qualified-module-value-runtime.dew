@@ -1,0 +1,10 @@
+import fixture.values as @values
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  if @values.answer == 42 {
+    wasi_fd_write(1u32, b"modules:qualified-value-42")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

@@ -28,6 +28,7 @@ pub enum BodyNameReference {
   LocalNameReference(LocalId)
   ModuleValueNameReference(NameId)
   ImportedValueNameReference(Int)
+  ImportedModuleValueNameReference(DeclId)
   ImportedModuleNameReference(Int)
   PrimitiveTypeNameReference(PrimitiveType)
   ModuleTypeNameReference(DeclId)

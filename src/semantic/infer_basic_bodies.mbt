@@ -710,6 +710,15 @@ fn BasicBodyInferencer::initialize_expression_types(
             self
             .module_value_type(name)
             .unwrap_or_else(fn() { self.solver.fresh_variable() })
+          ImportedModuleValueNameReference(declaration) =>
+            match self.imports {
+              Some(imports) =>
+                match imports.module_value_type(declaration) {
+                  Some(type_) => self.solver.resolved_type(type_)
+                  None => self.solver.error_type()
+                }
+              None => self.solver.error_type()
+            }
           ErrorNameReference => self.solver.error_type()
           VariantNameReference(_) => {
             self.ensure_member_storage()
@@ -2599,6 +2608,38 @@ fn BasicBodyInferencer::infer_qualified_value(
     return
   }
   match self.collected.expressions[base] {
+    HirImportAliasExpr(_, _) =>
+      match self.names.expression_references[base] {
+        ImportedModuleNameReference(interface_index) => {
+          self.consume_member_root(base)
+          let declaration = match self.imports {
+            Some(imports) =>
+              imports.scope.lookup_module_value(
+                interface_index,
+                self.collected.name(property),
+              )
+            None => None
+          }
+          match declaration {
+            Some(value) =>
+              match self.imports.unwrap().module_value_type(value) {
+                Some(type_) => {
+                  self.constrain(
+                    self.expression_type(expression),
+                    self.solver.resolved_type(type_),
+                    expression_type_origin(expression, offset),
+                  )
+                  self.expression_selections[self.expression_index(expression)] = ImportedModuleValueSelection(
+                    value,
+                  )
+                }
+                None => self.mark_unsupported(expression)
+              }
+            None => self.mark_unsupported(expression)
+          }
+        }
+        _ => self.mark_unsupported(expression)
+      }
     HirNameExpr(_, _) =>
       match self.names.expression_references[base] {
         ModuleTypeNameReference(declaration) => {
@@ -5341,6 +5382,7 @@ fn BasicBodyInferencer::constrain_name_expressions(
             }
           ImportedValueNameReference(_) | ImportedModuleNameReference(_) =>
             self.mark_unsupported(expression)
+          ImportedModuleValueNameReference(_) => ()
           VariantNameReference(_) => ()
           PrimitiveTypeNameReference(_)
           | ModuleTypeNameReference(_)
@@ -5933,7 +5975,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
         }
       NoExpressionSelection
       | ErrorExpressionSelection
-      | FieldAccessSelection(_) => ()
+      | FieldAccessSelection(_)
+      | ImportedModuleValueSelection(_) => ()
     }
   }
   for pattern_index in 0..<self.pattern_constructors.length() {
@@ -6648,6 +6691,35 @@ pub fn infer_module_values(
 }
 
 ///|
+pub fn infer_module_values_with_imports(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  imports : ResolvedModuleImports,
+  names : ResolvedModuleNames,
+) -> InferredModuleValues {
+  guard collected.module_id == resolved.module_id &&
+    collected.module_id == imports.module_id &&
+    collected.module_id == names.module_id else {
+    abort("imported module value inference inputs belong to different modules")
+  }
+  let variant_spans = variant_spans_by_declaration(collected)
+  let field_spans = field_spans_by_declaration(collected)
+  let impl_index = build_module_impl_index_with_imports(
+    collected, resolved, imports,
+  )
+  infer_module_values_internal(
+    collected,
+    resolved,
+    Some(imports),
+    impl_index,
+    names,
+    callable_indices_by_declaration(collected),
+    variant_spans,
+    field_spans,
+  ).values
+}
+
+///|
 fn merge_body_inference_jobs(
   collected : CollectedModule,
   names : ResolvedModuleNames,
@@ -6764,6 +6836,8 @@ fn merge_body_inference_jobs(
               length: arguments.length,
             })
           FieldAccessSelection(field) => FieldAccessSelection(field)
+          ImportedModuleValueSelection(declaration) =>
+            ImportedModuleValueSelection(declaration)
           NoExpressionSelection => NoExpressionSelection
           ErrorExpressionSelection => ErrorExpressionSelection
         }

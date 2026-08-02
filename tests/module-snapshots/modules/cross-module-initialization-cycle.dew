@@ -1,0 +1,7 @@
+open fixture.cycle
+
+pub let first = second
+
+pub fn main() -> I32 {
+  0
+}

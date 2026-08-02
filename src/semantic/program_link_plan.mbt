@@ -11,6 +11,7 @@ pub enum ProgramWasmGCLinkDiagnostic {
   UnsupportedProgramGenericType(ModuleId, DeclId)
   UnsupportedProgramGenericCall(ModuleId, DeclId, UInt64)
   MissingProgramFunction(ModuleId, DeclId, UInt64)
+  EagerProgramInitializationCycle(DeclId, DeclId)
 } derive(Eq, Debug)
 
 ///|
@@ -633,6 +634,151 @@ fn program_test_export_name(ordinal : Int) -> Bytes {
 }
 
 ///|
+fn program_initializer_dependencies(
+  lowering : PlannedProgramLowering,
+  initializer : PlannedProgramModuleInitializer,
+  initializer_lookup : Map[DeclId, Int],
+) -> Array[Int] {
+  let module_lookup : Map[ModuleId, Int] = Map::default()
+  for module_index, module_ in lowering.modules {
+    module_lookup[module_.module_id] = module_index
+  }
+  let dependencies : Array[Int] = []
+  let seen_dependencies : Map[Int, Bool] = Map::default()
+  let seen_bodies : Map[BodyId, Bool] = Map::default()
+  let body_modules : Array[Int] = [initializer.module_index]
+  let body_tasks : Array[BodyId] = [initializer.body]
+  while body_tasks.length() > 0 {
+    let body_id = body_tasks.pop().unwrap()
+    let module_index = body_modules.pop().unwrap()
+    if seen_bodies.contains(body_id) {
+      continue
+    }
+    seen_bodies[body_id] = true
+    let module_ = lowering.modules[module_index]
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= module_.bodies.length() {
+      continue
+    }
+    let body = module_.bodies[body_index]
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      match module_.expressions[expression].kind {
+        PlannedModuleValueGet(declaration, _) =>
+          match initializer_lookup.get(declaration) {
+            Some(dependency) if !seen_dependencies.contains(dependency) => {
+              seen_dependencies[dependency] = true
+              dependencies.push(dependency)
+            }
+            _ => ()
+          }
+        PlannedDirectCall(target, _, _, _)
+        | PlannedOperatorCall(target, _, _, _, _)
+        | PlannedIndexCall(target, _, _, _)
+        | PlannedIndexSetCall(target, _, _, _, _) => {
+          let owner = match module_lookup.get(semantic_id_module(target)) {
+            Some(value) => value
+            None => continue
+          }
+          let callable = match
+            lowering.modules[owner].functions.callable_of(target) {
+            Some(value) => value
+            None => continue
+          }
+          let target_body = match callable.kind {
+            PlannedFunctionCallable(body)
+            | PlannedImplMethodCallable(_, Some(body)) => body
+            _ => continue
+          }
+          if !seen_bodies.contains(target_body) {
+            body_modules.push(owner)
+            body_tasks.push(target_body)
+          }
+        }
+        _ => ()
+      }
+    }
+  }
+  dependencies
+}
+
+///|
+fn program_schedule_initializers(
+  lowering : PlannedProgramLowering,
+  candidates : Array[PlannedProgramModuleInitializer],
+  diagnostics : Array[ProgramWasmGCLinkDiagnostic],
+) -> Array[PlannedProgramModuleInitializer] {
+  let lookup : Map[DeclId, Int] = Map::default()
+  for index, initializer in candidates {
+    lookup[initializer.declaration] = index
+  }
+  let dependencies : Array[Array[Int]] = []
+  let remaining_dependencies = Array::make(candidates.length(), 0)
+  for index, initializer in candidates {
+    let values = program_initializer_dependencies(lowering, initializer, lookup)
+    dependencies.push(values)
+    remaining_dependencies[index] = values.length()
+  }
+  let scheduled = Array::make(candidates.length(), false)
+  let output : Array[PlannedProgramModuleInitializer] = []
+  while output.length() < candidates.length() {
+    let mut selected = -1
+    for index in 0..<candidates.length() {
+      if !scheduled[index] && remaining_dependencies[index] == 0 {
+        selected = index
+        break
+      }
+    }
+    if selected < 0 {
+      let mut first = -1
+      for index in 0..<candidates.length() {
+        if !scheduled[index] {
+          first = index
+          break
+        }
+      }
+      if first >= 0 {
+        let mut second = first
+        for dependency in dependencies[first] {
+          if !scheduled[dependency] {
+            second = dependency
+            break
+          }
+        }
+        diagnostics.push(
+          EagerProgramInitializationCycle(
+            candidates[first].declaration,
+            candidates[second].declaration,
+          ),
+        )
+      }
+      for index in 0..<candidates.length() {
+        if !scheduled[index] {
+          scheduled[index] = true
+          output.push(candidates[index])
+        }
+      }
+      break
+    }
+    scheduled[selected] = true
+    output.push(candidates[selected])
+    for dependent in 0..<candidates.length() {
+      if scheduled[dependent] {
+        continue
+      }
+      for dependency in dependencies[dependent] {
+        if dependency == selected {
+          remaining_dependencies[dependent] -= 1
+          break
+        }
+      }
+    }
+  }
+  output
+}
+
+///|
 /// Assigns final program-wide type and function indices without mutating any
 /// module-local fragment plan. Module-local recursive groups remain intact;
 /// module and imported nominal references are rebased during emission.
@@ -761,7 +907,7 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmSignatureOnlyFunction => ()
     }
   }
-  let initializers : Array[PlannedProgramModuleInitializer] = []
+  let initializer_candidates : Array[PlannedProgramModuleInitializer] = []
   let global_lookup : Map[DeclId, Int] = Map::default()
   let mut global_index = 0
   for scc in lowering.graph.sccs {
@@ -806,14 +952,7 @@ pub fn link_program_wasmgc_fragments(
                 }
               BlockBodyRoot(_) => false
             }
-            let initializer_function = if constant {
-              -1
-            } else {
-              let index = imported_function_count + defined_function_count
-              defined_function_count += 1
-              index
-            }
-            initializers.push({
+            initializer_candidates.push({
               declaration,
               module_index,
               body,
@@ -821,7 +960,7 @@ pub fn link_program_wasmgc_fragments(
               test_only: step.test_only,
               constant,
               global_index: value_global,
-              function_index: initializer_function,
+              function_index: -1,
             })
           }
           PlannedCyclicModuleValues(_) => ()
@@ -829,9 +968,20 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
+  let scheduled_initializers = program_schedule_initializers(
+    lowering, initializer_candidates, diagnostics,
+  )
+  let initializers : Array[PlannedProgramModuleInitializer] = []
   let mut runtime_initializer_count = 0
-  for initializer in initializers {
-    if initializer.function_index >= 0 {
+  for initializer in scheduled_initializers {
+    if initializer.constant {
+      initializers.push(initializer)
+    } else {
+      initializers.push({
+        ..initializer,
+        function_index: imported_function_count + defined_function_count,
+      })
+      defined_function_count += 1
       runtime_initializer_count += 1
     }
   }

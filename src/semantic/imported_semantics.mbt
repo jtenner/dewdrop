@@ -44,7 +44,16 @@ pub struct ResolvedModuleImports {
   variants : Array[ResolvedImportedVariant]
   variant_payload_types : Array[ResolvedTypeId]
   variant_spans : Map[DeclId, HirSpan]
+  module_value_types : Map[DeclId, ResolvedTypeId]
   callable_by_declaration : Map[DeclId, Int]
+}
+
+///|
+pub fn ResolvedModuleImports::module_value_type(
+  self : ResolvedModuleImports,
+  declaration : DeclId,
+) -> ResolvedTypeId? {
+  self.module_value_types.get(declaration)
 }
 
 ///|
@@ -387,6 +396,7 @@ pub fn resolve_module_imports(
   let variants : Array[ResolvedImportedVariant] = []
   let variant_payload_types : Array[ResolvedTypeId] = []
   let variant_spans : Map[DeclId, HirSpan] = Map::default()
+  let module_value_types : Map[DeclId, ResolvedTypeId] = Map::default()
   let callable_by_declaration : Map[DeclId, Int] = Map::default()
   for reference in scope.callable_references {
     let interface_ = scope.interfaces[reference.interface_index].unwrap()
@@ -443,6 +453,14 @@ pub fn resolve_module_imports(
   }
   for interface_index in scope.imported_interfaces {
     let interface_ = scope.interfaces[interface_index].unwrap()
+    for declaration in interface_.declarations {
+      if declaration.source_kind == LetDecl {
+        module_value_types[declaration.declaration] = importer.import_type(
+          interface_index,
+          declaration.semantic_type,
+        )
+      }
+    }
     let mut variant_cursor = 0
     for declaration in interface_.declarations {
       if declaration.source_kind != StructDecl &&
@@ -526,6 +544,7 @@ pub fn resolve_module_imports(
     variants,
     variant_payload_types,
     variant_spans,
+    module_value_types,
     callable_by_declaration,
   }
 }

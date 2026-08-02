@@ -350,6 +350,23 @@ fn BodyNameResolver::resolve_expression_name(
           }
           None => ()
         }
+        match imports.lookup_opened_value(spelling) {
+          Some(declaration) => {
+            self.set_expression_reference(
+              expression,
+              ImportedModuleValueNameReference(declaration),
+            )
+            return
+          }
+          None => ()
+        }
+        if imports.opened_value_is_ambiguous(spelling) {
+          self.diagnose(
+            AmbiguousImportedQualifiedRoot(name, expression, offset),
+          )
+          self.set_expression_reference(expression, ErrorNameReference)
+          return
+        }
         match imports.value_bindings.get(spelling) {
           Some(binding) if !binding.ambiguous => {
             self.set_expression_reference(
@@ -387,7 +404,22 @@ fn BodyNameResolver::resolve_expression_name(
     return
   }
   match self.imports {
-    Some(imports) =>
+    Some(imports) => {
+      match imports.lookup_opened_value(spelling) {
+        Some(declaration) => {
+          self.set_expression_reference(
+            expression,
+            ImportedModuleValueNameReference(declaration),
+          )
+          return
+        }
+        None => ()
+      }
+      if imports.opened_value_is_ambiguous(spelling) {
+        self.diagnose(AmbiguousImportedValueName(name, expression, offset))
+        self.set_expression_reference(expression, ErrorNameReference)
+        return
+      }
       match imports.value_bindings.get(spelling) {
         Some(binding) if !binding.ambiguous => {
           self.set_expression_reference(
@@ -403,6 +435,7 @@ fn BodyNameResolver::resolve_expression_name(
         }
         None => ()
       }
+    }
     None => ()
   }
   if expectation == name_expect_call_target {

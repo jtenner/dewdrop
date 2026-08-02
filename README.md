@@ -46,7 +46,7 @@ tools/dew run path/to/main.dew
 
 Multi-module programs use repeated `--module NAME` arguments or strict `dew.json` manifests. Compiler-owned standard sources are loaded from deterministic registered paths; `--bootstrap-std` selects generated fallback sources.
 
-Programs with non-constant module-level values export `__dew_init`. Dew-owned hosts call it exactly once after instantiation and before `main` or test entry points, allowing initialization to use host imports without relying on a WebAssembly start section.
+Programs with non-constant module-level values export `__dew_init`. Dew-owned hosts call it exactly once after instantiation and before `main` or test entry points, allowing initialization to use host imports without relying on a WebAssembly start section. Public module-level `let` values are available through `open` and `@alias.value`; their inferred scalar, nominal, and applied generic types are frozen into module interfaces.
 
 ## Tests
 
