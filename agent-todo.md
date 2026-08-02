@@ -71,7 +71,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
 - [ ] Connect ordered compiler warnings to stable diagnostic rendering.
 - [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 164 fixtures with compiler failures kept beside their language features: 146 compiled WAT/runtime snapshots, 18 compiler-error snapshots, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
+- [x] Establish 165 fixtures with compiler failures kept beside their language features: 146 compiled WAT/runtime snapshots, 19 compiler-error snapshots, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
 - [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
 - [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
 - [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
@@ -131,7 +131,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Merge owner-coherent imported implementation evidence into method/operator dispatch indexes.
 - [x] Enforce imported evidence visibility and foreign-impl privacy.
 - [x] Preserve exact external implementation and method identities through lowering.
-- [ ] Diagnose structural overlap between independently imported or local/imported implementation sets.
+- [x] Diagnose structural overlap between independently imported or local/imported implementation sets.
 - [x] Merge reachable physical WasmGC SCCs spanning multiple Dew modules.
 - [x] Replace supported `UnsupportedProgramForwardTypeReference` cases with deterministic global recursive groups.
 - [x] Distinguish qualified imports from module-scoped opens: `import` binds only `@alias`, while `open` contributes unqualified names only to the owning module and never re-exports them.

@@ -19,7 +19,7 @@ Dew currently has:
 - compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent cache for diagnostics-free compiler-owned standard frozen interfaces, with versioned deterministic encoding, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 164 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 146 compiled WAT/runtime snapshots plus 18 compiler-error snapshots.
+- 165 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 146 compiled WAT/runtime snapshots plus 19 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -37,7 +37,7 @@ by dependency and expected user value.
 - [x] Preserve stable type, function, import, memory, global, export, and code ordering rather than normalizing away compiler decisions.
 - [x] Add a fail-closed comparison runner that prints a normal unified diff on mismatch.
 - [x] Add an explicit snapshot-update command; ordinary test runs never rewrite expected files.
-- [x] Grow the suite to 164 fixtures: 146 compiled WAT/runtime snapshots and 18 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
+- [x] Grow the suite to 165 fixtures: 146 compiled WAT/runtime snapshots and 19 compiler-error snapshots kept beside their features across `calls/`, `collections/`, `control-flow/`, `enums/`, `functions/`, `generics/`, `lanes/`, `memory/`, `modules/`, `names/`, `numeric/`, `reachability/`, `structs/`, `tests/`, `text/`, `types/`, and `wasi/`.
 - [x] Capture successful `main` stdout as an ordered JSON string array; `text/concat` writes and verifies the complete concatenated string.
 - [x] Snapshot deterministic compiler errors with `output: null` and no WAT, preserving multiline `Debug` diagnostics through a framed protocol.
 - [ ] Continue adding successful cases, warnings, compiler failures, boundaries, and reduced stress cases within each feature.
@@ -132,7 +132,7 @@ enums.
 - [x] Diagnose direct and callable-transitive cross-module eager initialization cycles.
 - [x] Merge owner-coherent imported impl evidence and exact method identities into method/operator dispatch indexes.
 - [x] Enforce imported evidence visibility and foreign-impl privacy.
-- [ ] Diagnose structural overlap between independently imported or local/imported implementation sets.
+- [x] Diagnose structural overlap between independently imported or local/imported implementation sets.
 - [x] Merge reachable physical WasmGC recursive SCCs spanning modules.
 - [x] Replace supported `UnsupportedProgramForwardTypeReference` cases with deterministic program-wide recursive groups.
 
@@ -623,7 +623,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
-- [x] Establish broad feature-oriented coverage with 146 compiled fixtures, 18 compiler-error fixtures, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture requires identical Node/Wago Core 3 output and traps, and checked-in WAT is 94,494 lines after adding cross-module recursive WasmGC groups.
+- [x] Establish broad feature-oriented coverage with 146 compiled fixtures, 19 compiler-error fixtures, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture requires identical Node/Wago Core 3 output and traps, and checked-in WAT is 94,494 lines after adding cross-module recursive WasmGC groups.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.

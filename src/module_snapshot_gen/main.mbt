@@ -130,6 +130,10 @@ fn main {
       snapshot_error(@debug.to_string(diagnostic))
       has_errors = true
     }
+    for diagnostic in module_.inferred.impl_index.diagnostics {
+      snapshot_error(@debug.to_string(diagnostic))
+      has_errors = true
+    }
     for diagnostic in module_.inferred.diagnostics {
       snapshot_error(@debug.to_string(diagnostic))
       has_errors = true

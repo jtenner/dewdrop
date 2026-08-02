@@ -45,6 +45,10 @@ fn report_dew_test_diagnostics(
       println(@debug.to_string(diagnostic))
       has_errors = true
     }
+    for diagnostic in module_.inferred.impl_index.diagnostics {
+      println(@debug.to_string(diagnostic))
+      has_errors = true
+    }
     for diagnostic in module_.inferred.diagnostics {
       println(@debug.to_string(diagnostic))
       has_errors = true

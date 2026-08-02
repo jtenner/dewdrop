@@ -1,0 +1,7 @@
+open fixture.types
+open fixture.left
+open fixture.right
+
+pub fn main() -> I32 {
+  1
+}

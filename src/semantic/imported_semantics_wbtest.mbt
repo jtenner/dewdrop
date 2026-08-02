@@ -528,3 +528,50 @@ test "program semantic analysis retains manifest order and external calls" {
     _ => fail("expected program-level imported call selection")
   }
 }
+
+///|
+test "independently imported implementation overlaps are incoherent" {
+  let program = collect_program_manifest(
+    1850UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.consumer", [
+        ManifestFile::new(
+          "consumer.dew", b"open app.types\nopen app.left\nopen app.right\npub fn run() -> I32 {\n  1\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.types", [
+        ManifestFile::new(
+          "types.dew", b"pub struct Pair<a, b> {}\npub trait Read {\n  fn read(self) -> I32\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.left", [
+        ManifestFile::new(
+          "left.dew", b"open app.types\nimpl<a> Read for Pair<a, I32> {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.right", [
+        ManifestFile::new(
+          "right.dew", b"open app.types\nimpl<b> Read for Pair<Bool, b> {\n  fn read(self) -> I32 {\n    2\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let index = analyzed.modules[0].inferred.impl_index
+  let mut overlaps = 0
+  for diagnostic in index.diagnostics {
+    match diagnostic {
+      OverlappingTraitImpl(_, _, _, _, _) => overlaps += 1
+      _ => ()
+    }
+  }
+  assert_eq(overlaps, 1)
+  let mut coherent_imports = 0
+  for implementation in index.implementations {
+    let owner = semantic_id_module(implementation.declaration)
+    if (owner == 1852UL || owner == 1853UL) && implementation.coherent {
+      coherent_imports += 1
+    }
+  }
+  assert_eq(coherent_imports, 0)
+}

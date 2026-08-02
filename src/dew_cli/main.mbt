@@ -57,6 +57,10 @@ fn report_compilation_diagnostics(
       cli_error(@debug.to_string(diagnostic))
       has_errors = true
     }
+    for diagnostic in module_.inferred.impl_index.diagnostics {
+      cli_error(@debug.to_string(diagnostic))
+      has_errors = true
+    }
     for diagnostic in module_.inferred.diagnostics {
       cli_error(@debug.to_string(diagnostic))
       has_errors = true

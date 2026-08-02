@@ -1,0 +1,5 @@
+pub struct Item {}
+
+pub trait Mark {
+  fn mark(self) -> I32
+}

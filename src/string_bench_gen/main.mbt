@@ -83,6 +83,9 @@ fn compile_string_benchmark(source : Bytes) -> Bytes {
       for diagnostic in module_.names.diagnostics {
         string_benchmark_error(@debug.to_string(diagnostic))
       }
+      for diagnostic in module_.inferred.impl_index.diagnostics {
+        string_benchmark_error(@debug.to_string(diagnostic))
+      }
       for diagnostic in module_.inferred.diagnostics {
         string_benchmark_error(@debug.to_string(diagnostic))
       }

@@ -1,0 +1,7 @@
+open fixture.types
+
+impl Mark for Item {
+  fn mark(self) -> I32 {
+    1
+  }
+}

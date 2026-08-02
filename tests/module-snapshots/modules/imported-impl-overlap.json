@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "OverlappingTraitImpl(\n  12897786789889,\n  12889196855296,\n  12893491822592,\n  NominalImplTargetHead(12897786789888),\n  0,\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

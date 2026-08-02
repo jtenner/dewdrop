@@ -872,6 +872,7 @@ priv struct ImplPatternScratch {
   values : Array[BodyTypeId]
   mut generation : Int
   mut generic_parameters : HirSpan
+  mut any_generic_parameter : Bool
 }
 
 ///|
@@ -889,6 +890,7 @@ fn ImplPatternScratch::new(
     values: Array::make(resolved.types.length(), 0),
     generation: 0,
     generic_parameters: { start: 0, length: 0 },
+    any_generic_parameter: false,
   }
 }
 
@@ -921,12 +923,15 @@ fn ImplPatternScratch::import_pattern(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
   generic_parameters : HirSpan,
+  any_generic_parameter : Bool,
   begin_group : Bool,
 ) -> BodyTypeId {
   if begin_group {
     self.next_generation()
     self.generic_parameters = generic_parameters
-  } else if self.generic_parameters != generic_parameters {
+    self.any_generic_parameter = any_generic_parameter
+  } else if self.generic_parameters != generic_parameters ||
+    self.any_generic_parameter != any_generic_parameter {
     abort("impl pattern import group changed generic ownership")
   }
   self.task_types.clear()
@@ -946,9 +951,12 @@ fn ImplPatternScratch::import_pattern(
       match resolved.types[source] {
         GenericParameterType(parameter) => {
           let parameter_index = semantic_id_local(parameter)
-          let result = if parameter_index >= self.generic_parameters.start &&
-            parameter_index <
-            self.generic_parameters.start + self.generic_parameters.length {
+          let result = if self.any_generic_parameter ||
+            (
+              parameter_index >= self.generic_parameters.start &&
+              parameter_index <
+              self.generic_parameters.start + self.generic_parameters.length
+            ) {
             self.solver.fresh_variable()
           } else {
             self.solver.resolved_type(source)
@@ -1009,6 +1017,37 @@ fn ImplPatternScratch::import_pattern(
 }
 
 ///|
+fn impl_type_contains_generic(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> Bool {
+  let work : Array[ResolvedTypeId] = [root]
+  let visited = Array::make(resolved.types.length(), false)
+  while work.length() > 0 {
+    let type_ = work.pop().unwrap()
+    if type_ < 0 || type_ >= resolved.types.length() || visited[type_] {
+      continue
+    }
+    visited[type_] = true
+    match resolved.types[type_] {
+      GenericParameterType(_) => return true
+      AppliedType(base, arguments) => {
+        work.push(base)
+        for index in 0..<arguments.length {
+          work.push(resolved.type_arguments[arguments.start + index])
+        }
+      }
+      ErrorType
+      | PrimitiveType(_)
+      | NominalType(_)
+      | TraitType(_)
+      | SelfType(_) => ()
+    }
+  }
+  false
+}
+
+///|
 fn impl_patterns_overlap(
   scratch : ImplPatternScratch,
   collected : CollectedModule,
@@ -1017,30 +1056,46 @@ fn impl_patterns_overlap(
   right : IndexedImpl,
 ) -> Bool {
   scratch.solver.reset()
-  let left_generics = collected.generic_parameters_of(left.declaration)
-  let right_generics = collected.generic_parameters_of(right.declaration)
+  let left_external = semantic_id_module(left.declaration) !=
+    collected.module_id
+  let right_external = semantic_id_module(right.declaration) !=
+    collected.module_id
+  let left_generics = if left_external {
+    { start: 0, length: 0 }
+  } else {
+    collected.generic_parameters_of(left.declaration)
+  }
+  let right_generics = if right_external {
+    { start: 0, length: 0 }
+  } else {
+    collected.generic_parameters_of(right.declaration)
+  }
   let left_trait = scratch.import_pattern(
     resolved,
     left.trait_type,
     left_generics,
+    left_external,
     true,
   )
   let left_target = scratch.import_pattern(
     resolved,
     left.target_type,
     left_generics,
+    left_external,
     false,
   )
   let right_trait = scratch.import_pattern(
     resolved,
     right.trait_type,
     right_generics,
+    right_external,
     true,
   )
   let right_target = scratch.import_pattern(
     resolved,
     right.target_type,
     right_generics,
+    right_external,
     false,
   )
   scratch.solver.unify(left_trait, right_trait, synthetic_type_origin(-1, 0UL)) &&
@@ -1060,17 +1115,25 @@ fn impl_pattern_matches(
   specific : IndexedImpl,
 ) -> Bool {
   scratch.solver.reset()
-  let general_generics = collected.generic_parameters_of(general.declaration)
+  let general_external = semantic_id_module(general.declaration) !=
+    collected.module_id
+  let general_generics = if general_external {
+    { start: 0, length: 0 }
+  } else {
+    collected.generic_parameters_of(general.declaration)
+  }
   let general_trait = scratch.import_pattern(
     resolved,
     general.trait_type,
     general_generics,
+    general_external,
     true,
   )
   let general_target = scratch.import_pattern(
     resolved,
     general.target_type,
     general_generics,
+    general_external,
     false,
   )
   scratch.solver.unify(
@@ -1480,6 +1543,7 @@ pub fn build_module_impl_index_with_imports(
     resolved,
     Some(imports),
   )
+  let local_implementation_count = index.implementations.length()
   for imported in imports.implementations {
     let (target_head, poisoned) = resolved_impl_target_head(
       resolved,
@@ -1573,6 +1637,102 @@ pub fn build_module_impl_index_with_imports(
       specificity: 0,
     })
   }
+  let coherence : Array[Bool] = []
+  let specificity : Array[Int] = []
+  for implementation in index.implementations {
+    coherence.push(implementation.coherent)
+    specificity.push(implementation.specificity)
+  }
+  let pattern_scratch = ImplPatternScratch::new(resolved)
+  for right_index in local_implementation_count..<index.implementations.length() {
+    let right = index.implementations[right_index]
+    let right_trait = match right.kind {
+      TraitIndexedImpl(declaration) => declaration
+      InherentIndexedImpl => continue
+    }
+    for left_index in 0..<right_index {
+      let left = index.implementations[left_index]
+      let left_trait = match left.kind {
+        TraitIndexedImpl(declaration) => declaration
+        InherentIndexedImpl => continue
+      }
+      if left_trait != right_trait || left.target_head != right.target_head {
+        continue
+      }
+      let identical = left.trait_type == right.trait_type &&
+        left.target_type == right.target_type
+      if !identical &&
+        !impl_type_contains_generic(resolved, left.trait_type) &&
+        !impl_type_contains_generic(resolved, left.target_type) &&
+        !impl_type_contains_generic(resolved, right.trait_type) &&
+        !impl_type_contains_generic(resolved, right.target_type) {
+        continue
+      }
+      if !identical &&
+        !impl_patterns_overlap(
+          pattern_scratch, collected, resolved, left, right,
+        ) {
+        continue
+      }
+      let left_matches_right = identical ||
+        impl_pattern_matches(pattern_scratch, collected, resolved, left, right)
+      let right_matches_left = identical ||
+        impl_pattern_matches(pattern_scratch, collected, resolved, right, left)
+      if left_matches_right && !right_matches_left {
+        specificity[right_index] += 1
+      } else if right_matches_left && !left_matches_right {
+        specificity[left_index] += 1
+      } else {
+        coherence[left_index] = false
+        coherence[right_index] = false
+        index.diagnostics.push(
+          OverlappingTraitImpl(
+            right_trait,
+            left.declaration,
+            right.declaration,
+            right.target_head,
+            0UL,
+          ),
+        )
+        break
+      }
+    }
+  }
+  for implementation_index, implementation in index.implementations {
+    index.implementations[implementation_index] = {
+      ..implementation,
+      coherent: implementation.valid && coherence[implementation_index],
+      specificity: specificity[implementation_index],
+    }
+  }
+  let retained_methods : Array[IndexedMethodDispatch] = []
+  for dispatch in index.method_dispatch {
+    if index.implementations[dispatch.implementation].coherent {
+      retained_methods.push(dispatch)
+    }
+  }
+  index.method_dispatch.clear()
+  for dispatch in retained_methods {
+    index.method_dispatch.push(dispatch)
+  }
+  let retained_trait_methods : Array[IndexedTraitMethodDispatch] = []
+  for dispatch in index.trait_method_dispatch {
+    if index.implementations[dispatch.implementation].coherent {
+      retained_trait_methods.push(dispatch)
+    }
+  }
+  index.trait_method_dispatch.clear()
+  for dispatch in retained_trait_methods {
+    index.trait_method_dispatch.push(dispatch)
+  }
+  index.diagnostics.sort_by(fn(left, right) {
+    let offset_order = left.offset().compare(right.offset())
+    if offset_order != 0 {
+      offset_order
+    } else {
+      impl_diagnostic_rank(left) - impl_diagnostic_rank(right)
+    }
+  })
   index.method_dispatch.sort_by(fn(left, right) {
     let key_order = method_dispatch_key_compare(
       left,
