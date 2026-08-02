@@ -70,11 +70,15 @@ Release-mode measurements:
 | 512 impl methods | 48.55 µs | 31.32 µs | 94.54 µs | 171.03 µs |
 | Collect, resolve, and plan 256 functions | 749.80 µs | 693.63 µs | 1.29 ms | 2.30 ms |
 
+## Closure ABI extension
+
+Concrete closure entries use canonical environment-first signatures `(eqref, parameters...) -> result`. Program linking coalesces these independently from direct signatures. First-class values use a WasmGC closure object with an abstract function reference and nullable environment: named direct references use a null environment, while lambdas use exact per-lambda environment structs. Calls select a typed direct or environment-first `call_ref` branch after evaluating the closure target once.
+
 ## Remaining work
 
 1. Define generic shape-specialized and erased fallback ABIs.
 2. Build trait dictionary method slots from trait requirement plans.
 3. Emit adapters only where static and erased ABI shapes differ.
-4. Extend callable reachability so unused signature types can be removed after directization.
+4. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
 5. Define persistent cross-package export/import naming, signature fingerprints, and ABI compatibility rules.
-6. Extend concrete signature coalescing to the captured-closure ABI once environment parameters are defined.
+6. Add shared mutable-capture cells and closure escape/directization optimization.

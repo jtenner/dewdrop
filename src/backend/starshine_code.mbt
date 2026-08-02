@@ -32,6 +32,14 @@ priv enum StarshineEmitTask {
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineCall(@semantic.DeclId, Int, Int)
   FinishStarshineFunctionValueCall(Int, Int)
+  FinishStarshineClosureCall(
+    Int,
+    Int,
+    Int,
+    Int,
+    Int,
+    @semantic.PlannedValueShape
+  )
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineMap(
     Int,
@@ -532,7 +540,8 @@ fn starshine_finish_call(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
-      | @semantic.PlannedWasmDefinedFunction(_) => {
+      | @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_) => {
         if function_.function_index < 0 {
           return Err(MissingFunction(declaration))
         }
@@ -595,7 +604,8 @@ fn starshine_finish_program_call(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
-      | @semantic.PlannedWasmDefinedFunction(_) => {
+      | @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_) => {
         if function_.function_index < 0 {
           return Err(MissingFunction(declaration))
         }
@@ -1523,6 +1533,12 @@ fn starshine_body_value_type(
 ) -> @lib.ValType? {
   if body_type < -1 {
     let resolved_type = -body_type - 2
+    if planned.closure_type_index >= 0 &&
+      resolved_type >= 0 &&
+      resolved_type < planned.closure_entry_type_by_resolved.length() &&
+      planned.closure_entry_type_by_resolved[resolved_type] >= 0 {
+      return Some(@lib.ValType::eqref_null())
+    }
     if resolved_type >= 0 &&
       resolved_type < planned.function_type_by_resolved.length() {
       let local_type = planned.function_type_by_resolved[resolved_type]
@@ -1553,6 +1569,7 @@ fn starshine_body_locals(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   body : @semantic.PlannedBodyLowering,
+  leading_parameter_count : Int,
 ) -> (
   Array[Int],
   Array[@lib.ValType],
@@ -1574,7 +1591,7 @@ fn starshine_body_locals(
 ) {
   let local_indices = Array::make(body.locals.length, -1)
   let body_local_types : Array[@lib.ValType] = []
-  let mut parameter_count = 0
+  let mut parameter_count = leading_parameter_count
   for local_id in 0..<body.locals.length {
     let planned_local = lowering.locals[body.locals.start + local_id]
     match planned_local.kind {
@@ -1699,6 +1716,12 @@ fn starshine_body_locals(
           body_local_types.push(@lib.ValType::i32())
         }
       }
+      @semantic.PlannedFunctionValueCall(_, _, _) =>
+        if planned.closure_type_index >= 0 {
+          match_local_indices[expression] = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
       @semantic.PlannedMatchExpression(scrutinee, _) => {
         let scratch_type = match lowering.expressions[scrutinee].shape {
           @semantic.ErrorPlannedValueShape => Some(@lib.ValType::eqref_null())
@@ -2451,12 +2474,126 @@ fn starshine_fixed_array_backing_prefix(
 }
 
 ///|
+fn starshine_local_physical_type_index(
+  program : @semantic.PlannedProgramWasmGCLink?,
+  module_index : Int,
+  local_type_index : Int,
+) -> Int {
+  match program {
+    Some(link) => link.physical_type_index(module_index, local_type_index)
+    None => local_type_index
+  }
+}
+
+///|
+fn starshine_capture_get_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  module_index : Int,
+  lambda : @semantic.LambdaId,
+  capture : Int,
+) -> Array[@lib.Instruction] {
+  let lambda_info = lowering.lambdas[lambda]
+  let global_capture = lambda_info.captures.start + capture
+  let field_index = planned.lambda_capture_field_indices[global_capture]
+  if field_index < 0 {
+    return []
+  }
+  let environment_type = starshine_local_physical_type_index(
+    program,
+    module_index,
+    planned.lambda_environment_type_indices[lambda],
+  )
+  let field = planned.fields[planned.physical_types[planned.lambda_environment_type_indices[lambda]].fields.start +
+    field_index]
+  let output = [
+    @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+    starshine_match_cast(environment_type),
+    starshine_struct_get_instruction(
+      environment_type,
+      field_index,
+      field.storage,
+    ),
+  ]
+  let capture_plan = lowering.captures[global_capture]
+  if capture_plan.nominal != 0UL {
+    match starshine_emitted_type_index(planned, program, capture_plan.nominal) {
+      Some(type_index) => output.push(starshine_match_cast(type_index))
+      None => ()
+    }
+  }
+  output
+}
+
+///|
+fn starshine_capture_source_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  module_index : Int,
+  current_lambda : @semantic.LambdaId,
+  source : @semantic.LambdaCaptureSource,
+  local_indices : Array[Int],
+  body : @semantic.PlannedBodyLowering,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let direct_local = match source {
+    @semantic.BodyLocalCapture(_, local_id) if current_lambda < 0 => local_id
+    @semantic.LambdaLocalCapture(owner, local_id) if owner == current_lambda =>
+      local_id
+    _ => -1
+  }
+  if direct_local >= 0 {
+    if direct_local >= local_indices.length() || local_indices[direct_local] < 0 {
+      return Err(InvalidLocal(body.body, direct_local))
+    }
+    return Ok([
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(local_indices[direct_local].reinterpret_as_uint()),
+      ),
+    ])
+  }
+  if current_lambda >= 0 {
+    let current = lowering.lambdas[current_lambda]
+    for capture in 0..<current.captures.length {
+      if lowering.captures[current.captures.start + capture].source == source {
+        return Ok(
+          starshine_capture_get_instructions(
+            lowering, planned, program, module_index, current_lambda, capture,
+          ),
+        )
+      }
+    }
+  }
+  Err(UnsupportedExpression(body.body, body.expressions.start))
+}
+
+///|
+fn starshine_lambda_function_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  lambda : @semantic.LambdaId,
+) -> Int {
+  let fragment_index = planned.lambda_function_indices[lambda]
+  let fragment = planned.functions[fragment_index]
+  match program {
+    Some(link) =>
+      match link.function_of(fragment.declaration) {
+        Some(function_) => function_.function_index
+        None => -1
+      }
+    None => fragment.function_index
+  }
+}
+
+///|
 fn starshine_emit_body_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   program_module_index : Int,
   body : @semantic.PlannedBodyLowering,
+  current_lambda : @semantic.LambdaId,
   local_indices : Array[Int],
   match_local_indices : Array[Int],
   match_result_local_indices : Array[Int],
@@ -2548,32 +2685,89 @@ fn starshine_emit_body_instructions(
               Ok(index) => index
               Err(error) => return Err(error)
             }
-            results.push([
+            let output : Array[@lib.Instruction] = [
               @lib.Instruction::ref_func(
                 @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
               ),
-            ])
+            ]
+            if planned.closure_type_index >= 0 {
+              output.push(
+                @lib.Instruction::ref_null(
+                  @lib.HeapType::abs(@lib.AbsHeapType::eq()),
+                ),
+              )
+              let closure_type = starshine_local_physical_type_index(
+                program,
+                program_module_index,
+                planned.closure_type_index,
+              )
+              output.push(
+                @lib.Instruction::struct_new(
+                  @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+                ),
+              )
+            }
+            results.push(output)
           }
           @semantic.PlannedFunctionValueCall(target, arguments, function_type) => {
             if function_type < 0 ||
               function_type >= planned.function_type_by_resolved.length() {
               return Err(UnsupportedExpression(body.body, expression))
             }
-            let local_type = planned.function_type_by_resolved[function_type]
-            if local_type < 0 {
-              return Err(UnsupportedExpression(body.body, expression))
+            if planned.closure_type_index >= 0 {
+              let local_type = planned.closure_entry_type_by_resolved[function_type]
+              let direct_local_type = planned.function_type_by_resolved[function_type]
+              let scratch = match_local_indices[expression]
+              if local_type < 0 || direct_local_type < 0 || scratch < 0 {
+                return Err(UnsupportedExpression(body.body, expression))
+              }
+              let emitted_type = match program {
+                Some(link) =>
+                  link.signature_type_index(program_module_index, local_type)
+                None => local_type
+              }
+              let emitted_direct_type = match program {
+                Some(link) =>
+                  link.signature_type_index(
+                    program_module_index, direct_local_type,
+                  )
+                None => direct_local_type
+              }
+              let closure_type = match program {
+                Some(link) =>
+                  link.physical_type_index(
+                    program_module_index,
+                    planned.closure_type_index,
+                  )
+                None => planned.closure_type_index
+              }
+              tasks.push(
+                FinishStarshineClosureCall(
+                  emitted_type,
+                  emitted_direct_type,
+                  closure_type,
+                  scratch,
+                  arguments.length + 1,
+                  source.shape,
+                ),
+              )
+            } else {
+              let local_type = planned.function_type_by_resolved[function_type]
+              if local_type < 0 {
+                return Err(UnsupportedExpression(body.body, expression))
+              }
+              let emitted_type = match program {
+                Some(link) =>
+                  link.signature_type_index(program_module_index, local_type)
+                None => local_type
+              }
+              tasks.push(
+                FinishStarshineFunctionValueCall(
+                  emitted_type,
+                  arguments.length + 1,
+                ),
+              )
             }
-            let emitted_type = match program {
-              Some(link) =>
-                link.signature_type_index(program_module_index, local_type)
-              None => local_type
-            }
-            tasks.push(
-              FinishStarshineFunctionValueCall(
-                emitted_type,
-                arguments.length + 1,
-              ),
-            )
             tasks.push(EmitStarshineExpression(target))
             let mut index = arguments.length
             while index > 0 {
@@ -2584,6 +2778,72 @@ fn starshine_emit_body_instructions(
                 ),
               )
             }
+          }
+          @semantic.PlannedCaptureGet(capture) => {
+            if current_lambda < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            results.push(
+              starshine_capture_get_instructions(
+                lowering, planned, program, program_module_index, current_lambda,
+                capture,
+              ),
+            )
+          }
+          @semantic.PlannedLambdaClosure(lambda, captures) => {
+            let function_index = starshine_lambda_function_index(
+              planned, program, lambda,
+            )
+            if function_index < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            let environment_type = starshine_local_physical_type_index(
+              program,
+              program_module_index,
+              planned.lambda_environment_type_indices[lambda],
+            )
+            let closure_type = starshine_local_physical_type_index(
+              program,
+              program_module_index,
+              planned.closure_type_index,
+            )
+            let output : Array[@lib.Instruction] = [
+              @lib.Instruction::ref_func(
+                @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+              ),
+            ]
+            for capture in 0..<captures.length {
+              let global_capture = captures.start + capture
+              if planned.lambda_capture_field_indices[global_capture] < 0 {
+                continue
+              }
+              match
+                starshine_capture_source_instructions(
+                  lowering,
+                  planned,
+                  program,
+                  program_module_index,
+                  current_lambda,
+                  lowering.captures[global_capture].source,
+                  local_indices,
+                  body,
+                ) {
+                Ok(instructions) =>
+                  append_starshine_instructions(output, instructions)
+                Err(error) => return Err(error)
+              }
+            }
+            output.push(
+              @lib.Instruction::struct_new(
+                @lib.TypeIdx::new(environment_type.reinterpret_as_uint()),
+              ),
+            )
+            output.push(
+              @lib.Instruction::struct_new(
+                @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+              ),
+            )
+            results.push(output)
           }
           @semantic.PlannedLocalGet(local_id) => {
             if local_id < 0 ||
@@ -3254,9 +3514,7 @@ fn starshine_emit_body_instructions(
               None => return Err(UnsupportedExpression(body.body, expression))
             }
           @semantic.PlannedPoisonExpression
-          | @semantic.PlannedConsumedExpression
-          | @semantic.PlannedCaptureGet(_)
-          | @semantic.PlannedLambdaClosure(_, _) =>
+          | @semantic.PlannedConsumedExpression =>
             return Err(UnsupportedExpression(body.body, expression))
         }
       }
@@ -4827,6 +5085,111 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
+      FinishStarshineClosureCall(
+        entry_type,
+        direct_type,
+        closure_type,
+        scratch,
+        count,
+        result_shape
+      ) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let output : Array[@lib.Instruction] = []
+        append_starshine_instructions(output, fragments[count - 1])
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        let direct : Array[@lib.Instruction] = []
+        for index in 0..<(count - 1) {
+          append_starshine_instructions(direct, fragments[index])
+        }
+        direct.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        direct.push(starshine_match_cast(closure_type))
+        direct.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+        )
+        direct.push(
+          @lib.Instruction::ref_cast(
+            false,
+            @lib.HeapType::new(
+              @lib.TypeIdx::new(direct_type.reinterpret_as_uint()),
+            ),
+          ),
+        )
+        direct.push(
+          @lib.Instruction::call_ref(
+            @lib.TypeIdx::new(direct_type.reinterpret_as_uint()),
+          ),
+        )
+        let captured : Array[@lib.Instruction] = [
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+          starshine_match_cast(closure_type),
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+            @lib.U32::new(1U),
+          ),
+        ]
+        for index in 0..<(count - 1) {
+          append_starshine_instructions(captured, fragments[index])
+        }
+        captured.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        captured.push(starshine_match_cast(closure_type))
+        captured.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+        )
+        captured.push(
+          @lib.Instruction::ref_cast(
+            false,
+            @lib.HeapType::new(
+              @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
+            ),
+          ),
+        )
+        captured.push(
+          @lib.Instruction::call_ref(
+            @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
+          ),
+        )
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(closure_type))
+        output.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+            @lib.U32::new(1U),
+          ),
+        )
+        output.push(@lib.Instruction::ref_is_null())
+        output.push(
+          @lib.Instruction::if_(
+            starshine_block_type(result_shape),
+            direct,
+            Some(captured),
+          ),
+        )
+        results.push(output)
+      }
       FinishStarshineStructNew(type_index, count) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = []
@@ -5392,6 +5755,62 @@ fn starshine_append_program_result_cast(
 }
 
 ///|
+fn starshine_lambda_body(
+  lowering : @semantic.PlannedModuleLowering,
+  lambda : @semantic.LambdaId,
+) -> @semantic.PlannedBodyLowering {
+  lowering.lambda_body(lambda).unwrap()
+}
+
+///|
+fn emit_starshine_lambda_body(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  lambda : @semantic.LambdaId,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let body = starshine_lambda_body(lowering, lambda)
+  let (
+    local_indices,
+    body_local_types,
+    match_local_indices,
+    match_result_local_indices,
+    conversion_scratch_index,
+    fixed_array_ref_scratch_index,
+    fixed_array_i32_scratch_index,
+    map_key_local_indices,
+    map_value_local_indices,
+    map_ref_scratch_index,
+    map_bucket_scratch_index,
+    map_hash_scratch_index,
+    map_entry_scratch_index,
+    map_previous_scratch_index,
+    map_growth_index_scratch_index,
+    control_state_local_indices,
+    control_result_local_indices,
+  ) = starshine_body_locals(lowering, planned, program, body, 1)
+  match
+    starshine_emit_body_instructions(
+      lowering, planned, program, program_module_index, body, lambda, local_indices,
+      match_local_indices, match_result_local_indices, conversion_scratch_index,
+      fixed_array_ref_scratch_index, fixed_array_i32_scratch_index, map_key_local_indices,
+      map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index, map_hash_scratch_index,
+      map_entry_scratch_index, map_previous_scratch_index, map_growth_index_scratch_index,
+      control_state_local_indices, control_result_local_indices,
+    ) {
+    Ok(instructions) =>
+      Ok(
+        @lib.Func::new(
+          @lib.Locals::from_types(body_local_types),
+          @lib.Expr::new(instructions),
+        ),
+      )
+    Err(error) => Err(error)
+  }
+}
+
+///|
 fn emit_starshine_function_body(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -5420,7 +5839,7 @@ fn emit_starshine_function_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
-  ) = starshine_body_locals(lowering, planned, None, body)
+  ) = starshine_body_locals(lowering, planned, None, body, 0)
   match
     starshine_emit_body_instructions(
       lowering,
@@ -5428,6 +5847,7 @@ fn emit_starshine_function_body(
       None,
       -1,
       body,
+      -1,
       local_indices,
       match_local_indices,
       match_result_local_indices,
@@ -5507,6 +5927,14 @@ pub fn emit_starshine_code_section(
       @semantic.PlannedWasmDefinedFunction(body) =>
         if !function_.elided {
           match emit_starshine_function_body(lowering, planned, body) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmDefinedLambdaFunction(lambda) =>
+        if !function_.elided {
+          match
+            emit_starshine_lambda_body(lowering, planned, None, -1, lambda) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
           }
@@ -5619,6 +6047,12 @@ fn starshine_function_reference_element_section(
             referenced[function_.function_index] = true
           _ => ()
         }
+      @semantic.PlannedLambdaClosure(lambda, _) => {
+        let function_index = planned.functions[planned.lambda_function_indices[lambda]].function_index
+        if function_index >= 0 {
+          referenced[function_index] = true
+        }
+      }
       _ => ()
     }
   }
@@ -6183,6 +6617,7 @@ fn emit_starshine_program_import_section(
       @semantic.PlannedWasmInlineBuiltinFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -6197,6 +6632,7 @@ fn emit_starshine_program_function_section(
   for function_ in planned.functions {
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_) =>
         if !function_.elided {
           signatures.push(
@@ -6330,6 +6766,7 @@ fn emit_starshine_program_function_body(
     module_fragments,
     Some(planned),
     body,
+    0,
   )
   match
     starshine_emit_body_instructions(
@@ -6338,6 +6775,7 @@ fn emit_starshine_program_function_body(
       Some(planned),
       function_.module_index,
       body,
+      -1,
       local_indices,
       match_local_indices,
       match_result_local_indices,
@@ -6436,6 +6874,9 @@ fn starshine_program_global_function_type_index(
   }
   let resolved_type = -body.root_type - 2
   let fragments = planned.modules[initializer.module_index]
+  if fragments.closure_type_index >= 0 {
+    return -1
+  }
   if resolved_type < 0 ||
     resolved_type >= fragments.function_type_by_resolved.length() {
     return -1
@@ -6641,6 +7082,7 @@ fn emit_starshine_program_initializer_body(
     module_fragments,
     Some(planned),
     body,
+    0,
   )
   match
     starshine_emit_body_instructions(
@@ -6649,6 +7091,7 @@ fn emit_starshine_program_initializer_body(
       Some(planned),
       initializer.module_index,
       body,
+      -1,
       local_indices,
       match_local_indices,
       match_result_local_indices,
@@ -6720,6 +7163,20 @@ fn emit_starshine_program_code_section(
             Err(error) => return Err(error)
           }
         }
+      @semantic.PlannedWasmDefinedLambdaFunction(lambda) =>
+        if !function_.elided {
+          match
+            emit_starshine_lambda_body(
+              lowering.modules[function_.module_index],
+              planned.modules[function_.module_index],
+              Some(planned),
+              function_.module_index,
+              lambda,
+            ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if !function_.elided {
           if name == b"dew_test_assert" {
@@ -6779,7 +7236,7 @@ fn starshine_program_function_reference_element_section(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.ElemSec? {
   let referenced : Map[Int, Bool] = Map::default()
-  for module_ in lowering.modules {
+  for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
         @semantic.PlannedFunctionReference(declaration) =>
@@ -6788,6 +7245,15 @@ fn starshine_program_function_reference_element_section(
               referenced[function_.function_index] = true
             _ => ()
           }
+        @semantic.PlannedLambdaClosure(lambda, _) => {
+          let module_fragments = planned.modules[module_index]
+          let fragment = module_fragments.functions[module_fragments.lambda_function_indices[lambda]]
+          match planned.function_of(fragment.declaration) {
+            Some(function_) if function_.function_index >= 0 =>
+              referenced[function_.function_index] = true
+            _ => ()
+          }
+        }
         _ => ()
       }
     }

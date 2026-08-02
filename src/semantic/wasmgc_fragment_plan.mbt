@@ -138,12 +138,14 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(BodyId)
+  PlannedWasmDefinedLambdaFunction(LambdaId)
   PlannedWasmSignatureOnlyFunction
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedWasmFunctionFragment {
   declaration : DeclId
+  lambda : LambdaId
   name : Bytes
   visibility : SemanticVisibility
   is_test : Bool
@@ -186,8 +188,11 @@ pub struct PlannedModuleWasmGCFragments {
   lambda_capture_field_indices : Array[Int]
   function_types : Array[PlannedWasmFunctionTypeFragment]
   function_type_by_resolved : Array[Int]
+  closure_entry_type_by_resolved : Array[Int]
+  lambda_entry_signature_indices : Array[Int]
   functions : Array[PlannedWasmFunctionFragment]
   function_by_declaration : Array[Int]
+  lambda_function_indices : Array[Int]
   function_value_types : Array[PlannedWasmValueType]
   signature_type_count : Int
   imported_function_count : Int
@@ -1369,6 +1374,7 @@ fn wasmgc_value_type(
   self_type : ResolvedTypeId,
   type_index_by_declaration : Array[Int],
   function_type_by_resolved : Array[Int],
+  closure_abi : Bool,
 ) -> PlannedWasmValueType? {
   let mut current = root
   while true {
@@ -1423,6 +1429,9 @@ fn wasmgc_value_type(
         | BytesBuilderType
       ) => return Some(WasmStringRefValue)
       FunctionType(_, _) => {
+        if closure_abi {
+          return Some(WasmNullableEqRefValue)
+        }
         let index = function_type_by_resolved[current]
         if index >= 0 {
           return Some(WasmFunctionRefValue(index))
@@ -1621,6 +1630,7 @@ fn wasmgc_plan_function_job(
   callable : PlannedCallable,
   type_index_by_declaration : Array[Int],
   function_type_by_resolved : Array[Int],
+  closure_abi : Bool,
 ) -> WasmFunctionFragmentJob {
   let parameters : Array[PlannedWasmValueType] = []
   for index in 0..<callable.parameters.length {
@@ -1632,6 +1642,7 @@ fn wasmgc_plan_function_job(
         callable.self_type,
         type_index_by_declaration,
         function_type_by_resolved,
+        closure_abi,
       ) {
       Some(value) => parameters.push(value)
       None => ()
@@ -1645,6 +1656,7 @@ fn wasmgc_plan_function_job(
       callable.self_type,
       type_index_by_declaration,
       function_type_by_resolved,
+      closure_abi,
     ) {
     Some(value) => results.push(value)
     None => ()
@@ -1748,6 +1760,39 @@ fn wasmgc_validate_order(order : Array[Int], count : Int) -> Unit {
 }
 
 ///|
+fn wasmgc_module_uses_closure_abi(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+) -> Bool {
+  for expression in lowering.expressions {
+    match expression.kind {
+      PlannedFunctionReference(_)
+      | PlannedLambdaClosure(_, _)
+      | PlannedFunctionValueCall(_, _, _) => return true
+      _ => ()
+    }
+  }
+  for type_ in resolved.parameter_types {
+    match resolved.types[type_] {
+      FunctionType(_, _) => return true
+      _ => ()
+    }
+  }
+  for type_ in resolved.callable_return_types {
+    match resolved.types[type_] {
+      FunctionType(_, _) => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn wasmgc_lambda_declaration(module_id : ModuleId, lambda : LambdaId) -> DeclId {
+  make_semantic_id(module_id, 0x70000000 + lambda)
+}
+
+///|
 fn plan_module_wasmgc_fragments_in_orders(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
@@ -1762,6 +1807,7 @@ fn plan_module_wasmgc_fragments_in_orders(
   }
   let layouts = lowering.type_layouts
   let functions = lowering.functions
+  let closure_abi = wasmgc_module_uses_closure_abi(resolved, lowering)
   let reachable_functions = wasmgc_reachable_defined_functions(
     lowering,
     functions,
@@ -1880,7 +1926,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     -1,
   )
   let lambda_capture_field_indices = Array::make(lowering.captures.length(), -1)
-  if lowering.lambdas.length() > 0 {
+  if closure_abi {
     closure_type_index = next_type_index
     next_type_index += 1
     let closure_field_start = fields.length()
@@ -1981,6 +2027,9 @@ fn plan_module_wasmgc_fragments_in_orders(
       _ => ()
     }
   }
+  for type_ in resolved.lambda_function_types {
+    function_type_work.push(type_)
+  }
   while function_type_work.length() > 0 {
     let type_ = function_type_work.pop().unwrap()
     if required_function_types[type_] {
@@ -2028,6 +2077,7 @@ fn plan_module_wasmgc_fragments_in_orders(
               -1,
               type_index_by_declaration,
               function_type_by_resolved,
+              closure_abi,
             ) {
             Some(value) => function_value_types.push(value)
             None => ()
@@ -2041,6 +2091,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         match
           wasmgc_value_type(
             resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
+            closure_abi,
           ) {
           Some(value) => function_value_types.push(value)
           None => ()
@@ -2058,6 +2109,66 @@ fn plan_module_wasmgc_fragments_in_orders(
       _ => ()
     }
   }
+  let closure_entry_type_by_resolved = Array::make(resolved.types.length(), -1)
+  if closure_abi {
+    for type_id, type_ in resolved.types {
+      if !required_function_types[type_id] {
+        continue
+      }
+      let (parameters, result) = match type_ {
+        FunctionType(parameters, result) => (parameters, result)
+        _ => continue
+      }
+      let signature_type_index = next_signature_type
+      next_signature_type += 1
+      closure_entry_type_by_resolved[type_id] = signature_type_index
+      let parameter_start = function_value_types.length()
+      function_value_types.push(WasmNullableEqRefValue)
+      for index in 0..<parameters.length {
+        match
+          wasmgc_value_type(
+            resolved,
+            resolved.type_arguments[parameters.start + index],
+            -1,
+            type_index_by_declaration,
+            function_type_by_resolved,
+            closure_abi,
+          ) {
+          Some(value) => function_value_types.push(value)
+          None => ()
+        }
+      }
+      let parameter_span = {
+        start: parameter_start,
+        length: function_value_types.length() - parameter_start,
+      }
+      let result_start = function_value_types.length()
+      match
+        wasmgc_value_type(
+          resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
+          closure_abi,
+        ) {
+        Some(value) => function_value_types.push(value)
+        None => ()
+      }
+      function_types.push({
+        resolved_type: -1,
+        signature_type_index,
+        parameters: parameter_span,
+        results: {
+          start: result_start,
+          length: function_value_types.length() - result_start,
+        },
+      })
+    }
+  }
+  let lambda_entry_signature_indices = Array::make(
+    lowering.lambdas.length(),
+    -1,
+  )
+  for lambda_index, _ in lowering.lambdas {
+    lambda_entry_signature_indices[lambda_index] = closure_entry_type_by_resolved[resolved.lambda_function_types[lambda_index]]
+  }
   let function_jobs : Array[WasmFunctionFragmentJob?] = Array::make(
     functions.callables.length(),
     None,
@@ -2070,6 +2181,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         functions.callables[callable_index],
         type_index_by_declaration,
         function_type_by_resolved,
+        closure_abi,
       ),
     )
   }
@@ -2090,7 +2202,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       })
   }
   let mut imported_function_count = 0
-  let mut defined_function_count = 0
+  let mut defined_function_count = lowering.lambdas.length()
   for callable_index, job in function_jobs {
     match job.unwrap().kind {
       PlannedWasmImportedFunction(_) =>
@@ -2103,6 +2215,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         }
       PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
         ()
+      PlannedWasmDefinedLambdaFunction(_) =>
+        abort("lambda function appeared in callable fragment job")
     }
   }
   let planned_functions : Array[PlannedWasmFunctionFragment] = []
@@ -2149,6 +2263,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         }
       PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
         -1
+      PlannedWasmDefinedLambdaFunction(_) =>
+        abort("lambda function appeared in callable index assignment")
     }
     let emits_signature = match job.kind {
       PlannedWasmImportedFunction(_)
@@ -2171,6 +2287,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     function_by_declaration[semantic_id_local(callable.declaration)] = callable_index
     planned_functions.push({
       declaration: callable.declaration,
+      lambda: -1,
       name: callable.name,
       visibility: callable.visibility,
       is_test: callable.is_test,
@@ -2184,6 +2301,45 @@ fn plan_module_wasmgc_fragments_in_orders(
       parameters,
       results,
       offset: callable.offset,
+    })
+  }
+  let lambda_function_indices = Array::make(lowering.lambdas.length(), -1)
+  for lambda_index, lambda in lowering.lambdas {
+    let signature_type_index = lambda_entry_signature_indices[lambda_index]
+    let mut function_type_index = -1
+    for index, fragment in function_types {
+      if fragment.signature_type_index == signature_type_index {
+        function_type_index = index
+        break
+      }
+    }
+    guard function_type_index >= 0 else {
+      abort("lambda entry signature fragment is missing")
+    }
+    let function_type = function_types[function_type_index]
+    let function_index = defined_index
+    defined_index += 1
+    lambda_function_indices[lambda_index] = planned_functions.length()
+    planned_functions.push({
+      declaration: wasmgc_lambda_declaration(lowering.module_id, lambda_index),
+      lambda: lambda_index,
+      name: b"",
+      visibility: ModuleVisible,
+      is_test: false,
+      is_test_entry: false,
+      test_name: b"",
+      kind: PlannedWasmDefinedLambdaFunction(lambda_index),
+      direct_builtin: b"",
+      elided: false,
+      signature_type_index: lambda_entry_signature_indices[lambda_index],
+      function_index,
+      parameters: function_type.parameters,
+      results: function_type.results,
+      offset: match lambda.root {
+        BlockBodyRoot(block) => lowering.blocks[block].offset
+        ExpressionBodyRoot(expression) =>
+          lowering.expressions[expression].offset
+      },
     })
   }
   let variant_declarations = Array::make(layouts.variants.length(), 0UL)
@@ -2460,8 +2616,11 @@ fn plan_module_wasmgc_fragments_in_orders(
     lambda_capture_field_indices,
     function_types,
     function_type_by_resolved,
+    closure_entry_type_by_resolved,
+    lambda_entry_signature_indices,
     functions: planned_functions,
     function_by_declaration,
+    lambda_function_indices,
     function_value_types,
     signature_type_count: next_signature_type - physical_types.length(),
     imported_function_count,

@@ -112,6 +112,25 @@ test "nested lambda inference imports routed root and parent local types" {
 }
 
 ///|
+test "function values returned from calls can be invoked directly and later" {
+  let collected = collect_bytes(
+    623UL, b"fn make(amount: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value + amount\n  }\n}\nfn main() -> Unit {\n  let callback = make(1)\n  let first = callback(41)\n  let second = make(2)(40)\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let mut function_value_calls = 0
+  for target in inferred.call_targets {
+    match target {
+      SelectedFunctionValueCallTarget(_) => function_value_calls += 1
+      _ => ()
+    }
+  }
+  assert_eq(function_value_calls, 2)
+}
+
+///|
 test "lambda bodies diagnose declared result mismatches" {
   let collected = collect_bytes(
     622UL, b"fn main() -> Unit {\n  let invalid = fn(value: I32) -> Bool {\n    value + 1\n  }\n}\n",

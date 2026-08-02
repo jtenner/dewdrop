@@ -211,7 +211,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [ ] Enforce `(Self, key) -> value` coherence; FixedArray and Map already use the implemented indexing and indexed-setting lowering.
 - [x] Parse, resolve, structurally intern, alias-normalize, import, cache, and plan opaque-reference ABI shapes for `fn(T, ...) -> R` types.
 - [x] Resolve unambiguous non-generic local/imported function names as values and type-check calls through function-typed locals.
-- [ ] Emit first-class function references/calls, closures, captures, and indirect calls.
+- [x] Emit first-class named references, typed lambda entries, WasmGC closure environments, lexical captures, returned/imported closures, and indirect calls.
+- [ ] Add expected-type generic/overloaded function references, mutable scalar capture cells, and closure directization/allocation elimination.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.

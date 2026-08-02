@@ -16,6 +16,7 @@ pub enum ProgramWasmGCLinkDiagnostic {
 ///|
 pub struct PlannedProgramWasmFunction {
   declaration : DeclId
+  lambda : LambdaId
   module_index : Int
   fragment_index : Int
   name : Bytes
@@ -1545,6 +1546,7 @@ pub fn link_program_wasmgc_fragments(
         function_lookup[function_.declaration] = entry
         functions.push({
           declaration: function_.declaration,
+          lambda: function_.lambda,
           module_index,
           fragment_index,
           name: match test_ordinals.get(function_.declaration) {
@@ -1585,13 +1587,16 @@ pub fn link_program_wasmgc_fragments(
       PlannedWasmInlineBuiltinFunction(_)
       | PlannedWasmRuntimeFunction(_)
       | PlannedWasmDefinedFunction(_)
+      | PlannedWasmDefinedLambdaFunction(_)
       | PlannedWasmSignatureOnlyFunction => ()
     }
   }
   let mut defined_function_count = 0
   for function_ in functions {
     match function_.kind {
-      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_) =>
+      PlannedWasmDefinedFunction(_)
+      | PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmRuntimeFunction(_) =>
         if !function_.elided {
           function_.function_index = imported_function_count +
             defined_function_count

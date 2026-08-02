@@ -310,7 +310,9 @@ erased fallback.
   - [x] Analyze isolated lambda control flow and exhaustiveness.
   - [x] Lower explicit closure construction, capture reads, and lambda bodies.
   - [x] Plan deterministic closure and per-lambda environment structs.
-  - [ ] Emit entry signatures/functions, allocation, captured loads, and calls.
+  - [x] Emit environment-first entries, allocation, captured loads, and typed calls.
+  - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
+  - [ ] Add shared cells when mutable scalar assignment is introduced.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.

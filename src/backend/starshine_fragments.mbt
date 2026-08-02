@@ -426,6 +426,7 @@ pub fn emit_starshine_import_section(
       @semantic.PlannedWasmInlineBuiltinFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -443,6 +444,7 @@ pub fn emit_starshine_function_section(
   for function_ in planned.functions {
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_) =>
         if !function_.elided {
           signatures.push(

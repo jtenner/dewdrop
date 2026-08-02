@@ -1,0 +1,13 @@
+open fixture.closure
+
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+pub fn main() -> Unit {
+  let add_two = make_adder(2)
+  assert(add_two(40) == 42, "imported returned closure")
+  assert(apply(add_two, 40) == 42, "imported closure parameter")
+  assert(stored_add_one(41) == 42, "imported stored closure")
+  assert(make_adder(1)(41) == 42, "immediate imported returned closure")
+}

@@ -217,12 +217,14 @@ pub struct PlannedCapture {
   mutable_ : Bool
   type_ : BodyTypeId
   shape : PlannedValueShape
+  nominal : DeclId
   offset : UInt64
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedLambdaLowering {
   lambda : LambdaId
+  root_body : BodyId
   root : HirBodyRoot
   root_type : BodyTypeId
   root_shape : PlannedValueShape
@@ -278,6 +280,37 @@ pub struct PlannedModuleLowering {
   pattern_type_arguments : Array[BodyTypeId]
   diagnostics : Array[LoweringPlanDiagnostic]
 } derive(Eq, Debug)
+
+///|
+pub fn PlannedModuleLowering::lambda_body(
+  self : PlannedModuleLowering,
+  lambda : LambdaId,
+) -> PlannedBodyLowering? {
+  if lambda < 0 || lambda >= self.lambdas.length() {
+    return None
+  }
+  let source = self.lambdas[lambda]
+  let root_index = semantic_id_local(source.root_body)
+  if root_index < 0 || root_index >= self.bodies.length() {
+    return None
+  }
+  let root = self.bodies[root_index]
+  Some({
+    body: source.root_body,
+    declaration: root.declaration,
+    kind: root.kind,
+    root: source.root,
+    root_type: source.root_type,
+    root_shape: source.root_shape,
+    flow: source.flow,
+    locals: source.locals,
+    expressions: source.expressions,
+    blocks: source.blocks,
+    patterns: source.patterns,
+    pattern_arms: source.pattern_arms,
+    diagnostics: source.diagnostics,
+  })
+}
 
 ///|
 priv struct BodyLoweringPlanJob {
@@ -1111,6 +1144,7 @@ fn copy_body_lowering_job(
     let capture_span = target.lambdas[job.lambda].captures
     target.lambdas[job.lambda] = {
       lambda: job.lambda,
+      root_body: target.lambdas[job.lambda].root_body,
       root: job.body.root,
       root_type: job.body.root_type,
       root_shape: job.body.root_shape,
@@ -1267,6 +1301,7 @@ fn plan_module_lowering_in_order(
         mutable_: source.mutable_,
         type_,
         shape: planned_value_shape(resolved, inferred, type_),
+        nominal: planned_nominal_declaration(resolved, inferred, type_),
         offset: source.offset,
       })
     }
@@ -1294,6 +1329,7 @@ fn plan_module_lowering_in_order(
     lambdas: names.lambdas.map(fn(info) {
       {
         lambda: info.lambda,
+        root_body: collected.lambdas[info.lambda].root_body,
         root: BlockBodyRoot(collected.lambdas[info.lambda].body.root),
         root_type: 0,
         root_shape: ErrorPlannedValueShape,

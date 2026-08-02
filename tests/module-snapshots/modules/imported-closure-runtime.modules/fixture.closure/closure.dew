@@ -1,0 +1,7 @@
+pub fn make_adder(amount: I32) -> fn(I32) -> I32 {
+  fn(value: I32) -> I32 {
+    value + amount
+  }
+}
+
+pub let stored_add_one = make_adder(1)

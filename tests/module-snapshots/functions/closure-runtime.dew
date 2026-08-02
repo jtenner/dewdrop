@@ -1,0 +1,58 @@
+struct Box {
+  value: I32
+}
+
+fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+fn make_adder(amount: I32) -> fn(I32) -> I32 {
+  fn(value: I32) -> I32 {
+    value + amount
+  }
+}
+
+fn make_nested(base: I32) -> fn(I32) -> I32 {
+  let outer = fn(offset: I32) -> fn(I32) -> I32 {
+    fn(value: I32) -> I32 {
+      base + offset + value
+    }
+  }
+  outer(2)
+}
+
+pub fn main() -> Unit {
+  let identity = fn(value: I32) -> I32 {
+    value
+  }
+  assert(identity(42) == 42, "non-capturing lambda")
+
+  let add_one = make_adder(1)
+  assert(add_one(41) == 42, "returned closure")
+  assert(apply(add_one, 41) == 42, "closure parameter")
+
+  let nested = make_nested(39)
+  assert(nested(1) == 42, "nested closure")
+
+  let box = Box {
+    value: 41
+  }
+  let read_box = fn() -> I32 {
+    box.value + 1
+  }
+  assert(read_box() == 42, "reference capture")
+
+  let callback = increment
+  let twice = fn(value: I32) -> I32 {
+    callback(callback(value))
+  }
+  assert(twice(40) == 42, "function capture")
+
+  assert(fn(value: I32) -> I32 {
+    value + 1
+  }(41) == 42, "immediate lambda call")
+}

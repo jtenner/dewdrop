@@ -148,6 +148,8 @@ fn BodyJobTypeImporter::import_type(
 priv struct CallInferenceScratch {
   pending_calls : Array[ExprId]
   deferred_calls : Array[ExprId]
+  pending_function_calls : Array[Int]
+  deferred_function_calls : Array[Int]
   overload_candidates : Array[DeclId]
   pending_methods : Array[ExprId]
   deferred_methods : Array[ExprId]
@@ -187,6 +189,8 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
   {
     pending_calls: [],
     deferred_calls: [],
+    pending_function_calls: [],
+    deferred_function_calls: [],
     overload_candidates: [],
     pending_methods: [],
     deferred_methods: [],
@@ -226,6 +230,8 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
 fn CallInferenceScratch::begin_body(self : CallInferenceScratch) -> Unit {
   self.pending_calls.clear()
   self.deferred_calls.clear()
+  self.pending_function_calls.clear()
+  self.deferred_function_calls.clear()
   self.overload_candidates.clear()
   self.pending_methods.clear()
   self.deferred_methods.clear()
@@ -5370,11 +5376,13 @@ fn BasicBodyInferencer::prepare_call(
           self.prepare_imported_value_call(
             call_slot, expression, target, arguments, offset, head,
           )
-        LocalNameReference(_) | ImportedModuleValueNameReference(_) =>
+        LocalNameReference(_)
+        | LambdaCaptureNameReference(_)
+        | ImportedModuleValueNameReference(_) =>
           if !self.select_function_value_call(
               call_slot, expression, target, arguments, offset,
             ) {
-            self.record_invalid_call(call_slot, expression, offset)
+            self.call_scratch.pending_function_calls.push(call_slot)
           }
         VariantNameReference(_) => {
           self.consume_member_root(target)
@@ -5529,8 +5537,7 @@ fn BasicBodyInferencer::prepare_call(
       if !self.select_function_value_call(
           call_slot, expression, target, arguments, offset,
         ) {
-        self.mark_unsupported(expression)
-        self.consume_member_root(target)
+        self.call_scratch.pending_function_calls.push(call_slot)
       }
   }
 }
@@ -5704,6 +5711,44 @@ fn BasicBodyInferencer::constrain_pending_calls(
 }
 
 ///|
+fn BasicBodyInferencer::constrain_pending_function_calls(
+  self : BasicBodyInferencer,
+) -> Unit {
+  while self.call_scratch.pending_function_calls.length() > 0 {
+    self.call_scratch.deferred_function_calls.clear()
+    let mut progress = false
+    for call_slot in self.call_scratch.pending_function_calls {
+      let expression = self.call_expressions[call_slot]
+      let (target, arguments, offset) = match
+        self.collected.expressions[expression] {
+        HirCallExpr(target, arguments, offset) => (target, arguments, offset)
+        _ => abort("pending function-value call is not a call expression")
+      }
+      if self.select_function_value_call(
+          call_slot, expression, target, arguments, offset,
+        ) {
+        progress = true
+      } else {
+        self.call_scratch.deferred_function_calls.push(call_slot)
+      }
+    }
+    self.call_scratch.pending_function_calls.clear()
+    for call_slot in self.call_scratch.deferred_function_calls {
+      self.call_scratch.pending_function_calls.push(call_slot)
+    }
+    if !progress {
+      break
+    }
+  }
+  for call_slot in self.call_scratch.pending_function_calls {
+    let expression = self.call_expressions[call_slot]
+    let offset = self.collected.expressions[expression].offset()
+    self.record_invalid_call(call_slot, expression, offset)
+  }
+  self.call_scratch.pending_function_calls.clear()
+}
+
+///|
 fn BasicBodyInferencer::constrain_calls(self : BasicBodyInferencer) -> Unit {
   let mut call_slot = self.call_expressions.length()
   while call_slot > 0 {
@@ -5716,6 +5761,7 @@ fn BasicBodyInferencer::constrain_calls(self : BasicBodyInferencer) -> Unit {
     }
   }
   self.constrain_pending_calls()
+  self.constrain_pending_function_calls()
 }
 
 ///|
