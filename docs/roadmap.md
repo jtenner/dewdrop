@@ -364,7 +364,7 @@ count = count + 1
   - [x] Snapshot an allocation-free directization fixture with no closure type or `call_ref`.
   - [x] Conservatively retain the closure ABI for captured, returned, passed, global, and imported values.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
-  - [ ] Box captured `let mut` bindings in the shared carrier-specialized cells specified by the Mutation plan above; closures capture and route the cell reference, while uncaptured mutation remains an unboxed Wasm local.
+  - [x] Box captured `let mut` bindings in shared carrier-specialized cells; closures capture and route the cell reference, while uncaptured mutation remains an unboxed Wasm local.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.

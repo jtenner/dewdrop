@@ -64,16 +64,16 @@ A future shared-environment optimization may still select a split representation
 
 ## Required next milestones
 
-1. Add expected-type disambiguation for overloaded and generic function references.
-2. Define shared mutable-capture cells when scalar local assignment becomes part of the language.
+1. Add expected-type disambiguation for overloaded non-generic function references.
+2. Define executable specialization and ABI identity for generic function references.
 3. Add closure ABI fingerprints to persistent external package interfaces.
-4. Extend the implemented local directization and named-reference reuse passes with interprocedural escape summaries and program-wide immutable singletons.
-5. Measure closure allocation, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
+4. Extend the implemented local directization and named-reference reuse passes with interprocedural escape summaries and cross-module closure-base unification.
+5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints
 
 - Function overload sets cannot become values without an expected function type or explicit disambiguation.
-- Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Scalar reassignment is not yet a language operation; when it is added, mutable captures must use shared cells referenced by flattened closure fields.
+- Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Mutable captures use shared carrier-specialized cells referenced by flattened closure fields; directization must route the cell reference rather than copy its value.
 - Cross-module concrete function signatures are structurally coalesced during one program link; persistent package interfaces still require stable signature and closure ABI fingerprints.
 - Generic function values remain blocked on executable generic ABI work.
 - Runtime performance favors directization and allocation elimination, but these optimizations must not define source semantics.

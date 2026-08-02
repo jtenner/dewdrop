@@ -205,8 +205,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 
 ## Additional language/runtime design
 
-- [ ] Decide assignment syntax and mutable local semantics.
-- [ ] Decide aggregate field mutation and compound assignment policy.
+- [x] Define simple-name assignment for `let mut`, including unboxed uncaptured locals and shared boxed mutable captures.
+- [x] Explicitly defer aggregate field mutation, destructuring assignment, and compound assignment to separate language/ABI decisions.
 - [x] Define trait-extensible `Index`/`IndexSet`, exact inference evidence, block-item-only indexed setting, and FixedArray optional/trapping bounds behavior.
 - [ ] Enforce `(Self, key) -> value` coherence; FixedArray and Map already use the implemented indexing and indexed-setting lowering.
 - [x] Parse, resolve, structurally intern, alias-normalize, import, cache, and plan opaque-reference ABI shapes for `fn(T, ...) -> R` types.
