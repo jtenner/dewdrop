@@ -10,7 +10,7 @@
   (type (;8;) (struct (field (mut (ref 3))) (field (mut i32)) (field (mut i32))))
   (export "main" (func 0))
   (func (;0;) (type 2)
-    (local i32 (ref null 0))
+    (local i32)
     i32.const 1
     local.set 0
     local.get 0

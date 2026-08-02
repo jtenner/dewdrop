@@ -56,13 +56,12 @@
     struct.new 2
   )
   (func (;3;) (type 5) (param i32) (result eqref)
-    (local eqref)
     local.get 0
     i32.const 2
     call 6
   )
   (func (;4;) (type 12)
-    (local eqref eqref eqref eqref eqref eqref eqref eqref eqref)
+    (local eqref eqref eqref eqref eqref eqref)
     i32.const 42
     call 8
     i32.const 42
@@ -80,24 +79,24 @@
     end
     i32.const 1
     call 2
-    local.set 1
-    local.get 1
-    local.set 7
-    local.get 7
+    local.set 0
+    local.get 0
+    local.set 4
+    local.get 4
     ref.cast (ref 1)
     struct.get 1 0
     ref.test (ref 4)
     if (result i32) ;; label = @1
       i32.const 41
-      local.get 7
+      local.get 4
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 4)
       call_ref 4
     else
-      local.get 7
+      local.get 4
       i32.const 41
-      local.get 7
+      local.get 4
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 7)
@@ -115,7 +114,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 1
+    local.get 0
     i32.const 41
     call 1
     i32.const 42
@@ -133,24 +132,24 @@
     end
     i32.const 39
     call 3
-    local.set 2
-    local.get 2
-    local.set 8
-    local.get 8
+    local.set 1
+    local.get 1
+    local.set 5
+    local.get 5
     ref.cast (ref 1)
     struct.get 1 0
     ref.test (ref 4)
     if (result i32) ;; label = @1
       i32.const 1
-      local.get 8
+      local.get 5
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 4)
       call_ref 4
     else
-      local.get 8
+      local.get 5
       i32.const 1
-      local.get 8
+      local.get 5
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 7)
@@ -170,8 +169,8 @@
     end
     i32.const 41
     struct.new 0
-    local.set 3
-    local.get 3
+    local.set 2
+    local.get 2
     call 9
     i32.const 42
     i32.eq
@@ -188,8 +187,8 @@
     end
     ref.func 0
     struct.new 1
-    local.set 5
-    local.get 5
+    local.set 3
+    local.get 3
     i32.const 40
     call 10
     i32.const 42

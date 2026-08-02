@@ -1592,6 +1592,17 @@ fn starshine_body_locals(
   Array[Int],
 ) {
   let local_indices = Array::make(body.locals.length, -1)
+  let elided_locals = Array::make(body.locals.length, false)
+  for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+    let items = lowering.blocks[block].items
+    for item in items.start..<(items.start + items.length) {
+      match lowering.block_items[item].kind {
+        @semantic.PlannedElidedLetItem(local_id) if local_id >= 0 &&
+          local_id < elided_locals.length() => elided_locals[local_id] = true
+        _ => ()
+      }
+    }
+  }
   let body_local_types : Array[@lib.ValType] = []
   let mut parameter_count = leading_parameter_count
   for local_id in 0..<body.locals.length {
@@ -1612,7 +1623,10 @@ fn starshine_body_locals(
           }
           None => ()
         }
-      @semantic.LetLocal | @semantic.PatternLocal =>
+      @semantic.LetLocal | @semantic.PatternLocal => {
+        if elided_locals[local_id] {
+          continue
+        }
         match
           starshine_body_value_type(
             lowering,
@@ -1628,6 +1642,7 @@ fn starshine_body_locals(
           }
           None => ()
         }
+      }
     }
   }
   let match_local_indices = Array::make(lowering.expressions.length(), -1)

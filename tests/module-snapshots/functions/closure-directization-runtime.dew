@@ -1,0 +1,23 @@
+fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+pub fn main() -> Unit {
+  let offset = 1
+  let callback = fn(value: I32) -> I32 {
+    value + offset
+  }
+  assert(callback(41) == 42, "capturing local lambda directized")
+  assert(callback(40) == 41, "repeated local lambda directized")
+
+  let named = increment
+  assert(named(41) == 42, "named function value directized")
+
+  assert(fn(value: I32) -> I32 {
+    value + 1
+  }(41) == 42, "immediate lambda directized")
+
+  let unused = fn(value: I32) -> I32 {
+    value + 100
+  }
+}
