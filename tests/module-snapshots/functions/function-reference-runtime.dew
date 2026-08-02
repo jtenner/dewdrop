@@ -12,7 +12,9 @@ pub fn main() -> Unit {
   let callback = increment
   let first = callback(20)
   let second = apply(increment, 21)
+  let third = apply(increment, 41)
   assert(first == 21, "function reference stored in a local")
   assert(second == 22, "function reference passed as an argument")
+  assert(third == 42, "repeated named reference reuses one closure")
   assert(module_callback(41) == 42, "function reference stored in a module value")
 }

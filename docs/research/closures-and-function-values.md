@@ -56,6 +56,8 @@ A deterministic post-lowering use pass now directizes immediate lambdas and immu
 
 After directization, `functions/closure-runtime` contains 11 static `struct.new` instructions and 12 `call_ref` instructions, down from 16 and 22 after flattening. Its WAT is 7,634 bytes and its Wasm binary is 1,065 bytes, down from 10,025 WAT bytes and 1,378 Wasm bytes. The remaining closure allocations correspond to values that escape through returns, parameters, captures, or module state.
 
+Repeated escaping references to the same named function within one body now share one activation-local closure object. The backend allocates the immutable one-field base once in the body prelude and rewrites each repeated reference to `local.get`; single occurrences remain inline and call-only locals are still directized away. Module-level values retain their existing once-per-module initializer allocation.
+
 A future shared-environment optimization may still select a split representation for a proven group of sibling escaping closures. The default remains flat because the current compiler does not share environments, and mutable captures can share explicit cell references without restoring the wrapper/environment pair.
 
 ## Required next milestones
@@ -63,7 +65,7 @@ A future shared-environment optimization may still select a split representation
 1. Add expected-type disambiguation for overloaded and generic function references.
 2. Define shared mutable-capture cells when scalar local assignment becomes part of the language.
 3. Add closure ABI fingerprints to persistent external package interfaces.
-4. Extend the implemented local directization pass with interprocedural escape summaries and named-closure singleton reuse.
+4. Extend the implemented local directization and named-reference reuse passes with interprocedural escape summaries and program-wide immutable singletons.
 5. Measure closure allocation, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints

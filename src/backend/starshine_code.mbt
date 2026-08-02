@@ -2609,6 +2609,103 @@ fn starshine_lambda_function_index(
 }
 
 ///|
+fn starshine_function_reference_cache_indices(
+  lowering : @semantic.PlannedModuleLowering,
+  body : @semantic.PlannedBodyLowering,
+  first_local : Int,
+) -> (Array[Int], Int) {
+  let counts : Map[@semantic.DeclId, Int] = Map::default()
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match lowering.expressions[expression].kind {
+      @semantic.PlannedFunctionReference(declaration) =>
+        counts[declaration] = match counts.get(declaration) {
+          Some(count) => count + 1
+          None => 1
+        }
+      _ => ()
+    }
+  }
+  let local_by_declaration : Map[@semantic.DeclId, Int] = Map::default()
+  let indices = Array::make(lowering.expressions.length(), -1)
+  let mut next_local = first_local
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match lowering.expressions[expression].kind {
+      @semantic.PlannedFunctionReference(declaration) =>
+        if counts.get(declaration).unwrap_or(0) > 1 {
+          let local_index = match local_by_declaration.get(declaration) {
+            Some(index) => index
+            None => {
+              let index = next_local
+              next_local += 1
+              local_by_declaration[declaration] = index
+              index
+            }
+          }
+          indices[expression] = local_index
+        }
+      _ => ()
+    }
+  }
+  (indices, next_local - first_local)
+}
+
+///|
+fn starshine_function_reference_cache_prefix(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  body : @semantic.PlannedBodyLowering,
+  cache_indices : Array[Int],
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let initialized : Map[Int, Bool] = Map::default()
+  let output : Array[@lib.Instruction] = []
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    let local_index = cache_indices[expression]
+    if local_index < 0 || initialized.contains(local_index) {
+      continue
+    }
+    let declaration = match lowering.expressions[expression].kind {
+      @semantic.PlannedFunctionReference(declaration) => declaration
+      _ => continue
+    }
+    let function_index = match
+      starshine_function_reference_index(planned, program, declaration) {
+      Ok(index) => index
+      Err(error) => return Err(error)
+    }
+    output.push(
+      @lib.Instruction::ref_func(
+        @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+      ),
+    )
+    let closure_type = starshine_local_physical_type_index(
+      program,
+      program_module_index,
+      planned.closure_type_index,
+    )
+    output.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(
+      @lib.Instruction::local_set(
+        @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
+      ),
+    )
+    initialized[local_index] = true
+  }
+  Ok(output)
+}
+
+///|
 fn starshine_emit_body_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -2619,6 +2716,7 @@ fn starshine_emit_body_instructions(
   local_indices : Array[Int],
   match_local_indices : Array[Int],
   match_result_local_indices : Array[Int],
+  function_reference_cache_indices : Array[Int],
   conversion_scratch_index : Int,
   fixed_array_ref_scratch_index : Int,
   fixed_array_i32_scratch_index : Int,
@@ -2702,29 +2800,40 @@ fn starshine_emit_body_instructions(
               ),
             )
           @semantic.PlannedFunctionReference(declaration) => {
-            let function_index = match
-              starshine_function_reference_index(planned, program, declaration) {
-              Ok(index) => index
-              Err(error) => return Err(error)
-            }
-            let output : Array[@lib.Instruction] = [
-              @lib.Instruction::ref_func(
-                @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
-              ),
-            ]
-            if planned.closure_type_index >= 0 {
-              let closure_type = starshine_local_physical_type_index(
-                program,
-                program_module_index,
-                planned.closure_type_index,
-              )
-              output.push(
-                @lib.Instruction::struct_new(
-                  @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+            let cache_local = function_reference_cache_indices[expression]
+            if cache_local >= 0 {
+              results.push([
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(cache_local.reinterpret_as_uint()),
                 ),
-              )
+              ])
+            } else {
+              let function_index = match
+                starshine_function_reference_index(
+                  planned, program, declaration,
+                ) {
+                Ok(index) => index
+                Err(error) => return Err(error)
+              }
+              let output : Array[@lib.Instruction] = [
+                @lib.Instruction::ref_func(
+                  @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+                ),
+              ]
+              if planned.closure_type_index >= 0 {
+                let closure_type = starshine_local_physical_type_index(
+                  program,
+                  program_module_index,
+                  planned.closure_type_index,
+                )
+                output.push(
+                  @lib.Instruction::struct_new(
+                    @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+                  ),
+                )
+              }
+              results.push(output)
             }
-            results.push(output)
           }
           @semantic.PlannedDirectLambdaCall(lambda, captures, arguments) => {
             let function_index = starshine_lambda_function_index(
@@ -5885,22 +5994,40 @@ fn emit_starshine_lambda_body(
     body,
     starshine_lambda_leading_parameter_count(lowering, planned, lambda),
   )
+  let parameter_count = planned.functions[planned.lambda_function_indices[lambda]].parameters.length
+  let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
+    lowering,
+    body,
+    parameter_count + body_local_types.length(),
+  )
+  for _ in 0..<cache_count {
+    body_local_types.push(@lib.ValType::eqref_null())
+  }
   match
     starshine_emit_body_instructions(
       lowering, planned, program, program_module_index, body, lambda, local_indices,
-      match_local_indices, match_result_local_indices, conversion_scratch_index,
-      fixed_array_ref_scratch_index, fixed_array_i32_scratch_index, map_key_local_indices,
-      map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index, map_hash_scratch_index,
-      map_entry_scratch_index, map_previous_scratch_index, map_growth_index_scratch_index,
-      control_state_local_indices, control_result_local_indices,
+      match_local_indices, match_result_local_indices, function_reference_cache_indices,
+      conversion_scratch_index, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+      map_key_local_indices, map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index,
+      map_hash_scratch_index, map_entry_scratch_index, map_previous_scratch_index,
+      map_growth_index_scratch_index, control_state_local_indices, control_result_local_indices,
     ) {
-    Ok(instructions) =>
+    Ok(instructions) => {
+      let prefixed = match
+        starshine_function_reference_cache_prefix(
+          lowering, planned, program, program_module_index, body, function_reference_cache_indices,
+        ) {
+        Ok(prefix) => prefix
+        Err(error) => return Err(error)
+      }
+      append_starshine_instructions(prefixed, instructions)
       Ok(
         @lib.Func::new(
           @lib.Locals::from_types(body_local_types),
-          @lib.Expr::new(instructions),
+          @lib.Expr::new(prefixed),
         ),
       )
+    }
     Err(error) => Err(error)
   }
 }
@@ -5935,6 +6062,18 @@ fn emit_starshine_function_body(
     control_state_local_indices,
     control_result_local_indices,
   ) = starshine_body_locals(lowering, planned, None, body, 0)
+  let parameter_count = match planned.function_of(body.declaration) {
+    Some(function_) => function_.parameters.length
+    None => 0
+  }
+  let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
+    lowering,
+    body,
+    parameter_count + body_local_types.length(),
+  )
+  for _ in 0..<cache_count {
+    body_local_types.push(@lib.ValType::eqref_null())
+  }
   match
     starshine_emit_body_instructions(
       lowering,
@@ -5946,6 +6085,7 @@ fn emit_starshine_function_body(
       local_indices,
       match_local_indices,
       match_result_local_indices,
+      function_reference_cache_indices,
       conversion_scratch_index,
       fixed_array_ref_scratch_index,
       fixed_array_i32_scratch_index,
@@ -5966,10 +6106,23 @@ fn emit_starshine_function_body(
         body.declaration,
         instructions,
       )
+      let prefixed = match
+        starshine_function_reference_cache_prefix(
+          lowering,
+          planned,
+          None,
+          -1,
+          body,
+          function_reference_cache_indices,
+        ) {
+        Ok(prefix) => prefix
+        Err(error) => return Err(error)
+      }
+      append_starshine_instructions(prefixed, instructions)
       Ok(
         @lib.Func::new(
           @lib.Locals::from_types(body_local_types),
-          @lib.Expr::new(instructions),
+          @lib.Expr::new(prefixed),
         ),
       )
     }
@@ -6884,6 +7037,14 @@ fn emit_starshine_program_function_body(
     body,
     0,
   )
+  let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
+    module_lowering,
+    body,
+    function_.parameters.length + body_local_types.length(),
+  )
+  for _ in 0..<cache_count {
+    body_local_types.push(@lib.ValType::eqref_null())
+  }
   match
     starshine_emit_body_instructions(
       module_lowering,
@@ -6895,6 +7056,7 @@ fn emit_starshine_program_function_body(
       local_indices,
       match_local_indices,
       match_result_local_indices,
+      function_reference_cache_indices,
       conversion_scratch_index,
       fixed_array_ref_scratch_index,
       fixed_array_i32_scratch_index,
@@ -6911,10 +7073,23 @@ fn emit_starshine_program_function_body(
     ) {
     Ok(instructions) => {
       starshine_append_program_result_cast(planned, function_, instructions)
+      let prefixed = match
+        starshine_function_reference_cache_prefix(
+          module_lowering,
+          module_fragments,
+          Some(planned),
+          function_.module_index,
+          body,
+          function_reference_cache_indices,
+        ) {
+        Ok(prefix) => prefix
+        Err(error) => return Err(error)
+      }
+      append_starshine_instructions(prefixed, instructions)
       Ok(
         @lib.Func::new(
           @lib.Locals::from_types(body_local_types),
-          @lib.Expr::new(instructions),
+          @lib.Expr::new(prefixed),
         ),
       )
     }
@@ -7200,6 +7375,14 @@ fn emit_starshine_program_initializer_body(
     body,
     0,
   )
+  let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
+    module_lowering,
+    body,
+    body_local_types.length(),
+  )
+  for _ in 0..<cache_count {
+    body_local_types.push(@lib.ValType::eqref_null())
+  }
   match
     starshine_emit_body_instructions(
       module_lowering,
@@ -7211,6 +7394,7 @@ fn emit_starshine_program_initializer_body(
       local_indices,
       match_local_indices,
       match_result_local_indices,
+      function_reference_cache_indices,
       conversion_scratch_index,
       fixed_array_ref_scratch_index,
       fixed_array_i32_scratch_index,
@@ -7233,10 +7417,23 @@ fn emit_starshine_program_initializer_body(
           ),
         )
       }
+      let prefixed = match
+        starshine_function_reference_cache_prefix(
+          module_lowering,
+          module_fragments,
+          Some(planned),
+          initializer.module_index,
+          body,
+          function_reference_cache_indices,
+        ) {
+        Ok(prefix) => prefix
+        Err(error) => return Err(error)
+      }
+      append_starshine_instructions(prefixed, instructions)
       Ok(
         @lib.Func::new(
           @lib.Locals::from_types(body_local_types),
-          @lib.Expr::new(instructions),
+          @lib.Expr::new(prefixed),
         ),
       )
     }

@@ -213,7 +213,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Resolve unambiguous non-generic local/imported function names as values and type-check calls through function-typed locals.
 - [x] Emit first-class named references, typed lambda entries, flattened WasmGC closure subtypes, lexical captures, returned/imported closures, and indirect calls.
 - [x] Directize immediate and call-only local lambdas/named references, lift immutable captures into direct signatures, remove their allocations, and elide unused closure values.
-- [ ] Add interprocedural escape summaries, named-reference singleton reuse, expected-type generic/overloaded references, and mutable scalar capture cells.
+- [x] Reuse repeated escaping named references through deterministic body-local closure caches.
+- [ ] Add interprocedural escape summaries, program-wide named-reference singletons, expected-type generic/overloaded references, and mutable scalar capture cells.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.

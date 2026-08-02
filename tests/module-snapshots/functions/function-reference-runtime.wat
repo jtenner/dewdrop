@@ -46,15 +46,21 @@
     end
   )
   (func (;2;) (type 4)
-    (local eqref i32 i32 eqref)
+    (local eqref i32 i32 i32 eqref eqref)
+    ref.func 0
+    struct.new 0
+    local.set 5
     i32.const 20
     call 0
     local.set 1
-    ref.func 0
-    struct.new 0
+    local.get 5
     i32.const 21
     call 1
     local.set 2
+    local.get 5
+    i32.const 41
+    call 1
+    local.set 3
     local.get 1
     i32.const 21
     i32.eq
@@ -85,23 +91,38 @@
     if ;; label = @1
       unreachable
     end
-    global.get 0
-    local.set 3
     local.get 3
+    i32.const 42
+    i32.eq
+    v128.const i32x4 0x65706572 0x64657461 0x6d616e20 0x72206465
+    v128.const i32x4 0x72656665 0x65636e65 0x75657220 0x20736573
+    v128.const i32x4 0x20656e6f 0x736f6c63 0x00657275 0x00000000
+    array.new_fixed 6 3
+    i32.const 0
+    i32.const 43
+    struct.new 7
+    drop
+    i32.eqz
+    if ;; label = @1
+      unreachable
+    end
+    global.get 0
+    local.set 4
+    local.get 4
     ref.cast (ref 0)
     struct.get 0 0
     ref.test (ref 1)
     if (result i32) ;; label = @1
       i32.const 41
-      local.get 3
+      local.get 4
       ref.cast (ref 0)
       struct.get 0 0
       ref.cast (ref 1)
       call_ref 1
     else
-      local.get 3
+      local.get 4
       i32.const 41
-      local.get 3
+      local.get 4
       ref.cast (ref 0)
       struct.get 0 0
       ref.cast (ref 2)
