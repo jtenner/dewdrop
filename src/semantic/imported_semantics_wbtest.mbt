@@ -172,6 +172,25 @@ test "imported nominal signatures unify with consumer signature types" {
 }
 
 ///|
+test "imported named functions resolve as first-class references" {
+  let (_, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn select() -> fn(I32) -> I32 {\n  increment\n}\n", b"pub fn increment(value: I32) -> I32 {\n  value + 1\n}\n",
+  )
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let expected = frozen.interfaces[1].callables_named("increment")[0].declaration
+  let mut saw_reference = false
+  for selection in inferred.expression_selections {
+    match selection {
+      FunctionReferenceSelection(declaration) if declaration == expected =>
+        saw_reference = true
+      _ => ()
+    }
+  }
+  assert_true(saw_reference)
+}
+
+///|
 test "imported function signatures retain canonical structural types" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(value: fn(I32) -> I64) -> fn(I32) -> I64 {\n  keep(value)\n}\n",

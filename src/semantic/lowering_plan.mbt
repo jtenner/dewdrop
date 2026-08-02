@@ -39,6 +39,7 @@ pub enum PlannedExpressionKind {
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
   PlannedModuleValueGet(DeclId, DeclId)
+  PlannedFunctionReference(DeclId)
   PlannedStructNew(DeclId, HirSpan, HirSpan)
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
   PlannedVariantStructNew(VariantId, HirSpan, HirSpan)
@@ -116,6 +117,7 @@ pub enum PlannedExpressionKind {
   PlannedSetRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetClear(ExprId)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
+  PlannedFunctionValueCall(ExprId, HirSpan)
   PlannedFieldGet(FieldId, ExprId)
 } derive(Eq, Debug)
 
@@ -455,6 +457,8 @@ fn plan_expression_kind(
           inferred.expression_types[expression],
         ),
       )
+    FunctionReferenceSelection(declaration) =>
+      return PlannedFunctionReference(declaration)
     NoExpressionSelection => ()
   }
   match collected.expressions[expression] {
@@ -534,7 +538,8 @@ fn plan_expression_kind(
             declaration, operator, left, right, type_arguments,
           )
         NoInferredCallTarget => PlannedBinaryExpression(operator, left, right)
-        ErrorInferredCallTarget => PlannedPoisonExpression
+        ErrorInferredCallTarget | SelectedFunctionValueCallTarget(_) =>
+          PlannedPoisonExpression
       }
     HirCallExpr(_, arguments, _) =>
       match inferred.call_targets[expression] {
@@ -720,6 +725,8 @@ fn plan_expression_kind(
               }
           }
         }
+        SelectedFunctionValueCallTarget(target) =>
+          PlannedFunctionValueCall(target, arguments)
         NoInferredCallTarget | ErrorInferredCallTarget =>
           PlannedPoisonExpression
       }
@@ -766,7 +773,9 @@ fn plan_expression_kind(
           } else {
             PlannedIndexCall(declaration, base, index, type_arguments)
           }
-        NoInferredCallTarget | ErrorInferredCallTarget => {
+        NoInferredCallTarget
+        | ErrorInferredCallTarget
+        | SelectedFunctionValueCallTarget(_) => {
           diagnostics.push(UnsupportedIndexLowering(expression, offset))
           PlannedPoisonExpression
         }
@@ -814,7 +823,9 @@ fn plan_expression_kind(
           } else {
             PlannedIndexSetCall(declaration, base, index, value, type_arguments)
           }
-        NoInferredCallTarget | ErrorInferredCallTarget => {
+        NoInferredCallTarget
+        | ErrorInferredCallTarget
+        | SelectedFunctionValueCallTarget(_) => {
           diagnostics.push(UnsupportedIndexLowering(expression, offset))
           PlannedPoisonExpression
         }

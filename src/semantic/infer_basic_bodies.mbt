@@ -614,6 +614,79 @@ fn BasicBodyInferencer::module_value_type(
 }
 
 ///|
+fn BasicBodyInferencer::local_function_reference(
+  self : BasicBodyInferencer,
+  name : NameId,
+) -> (DeclId, ResolvedTypeId)? {
+  let binding = match self.collected.value_bindings.get(name) {
+    Some(binding) => binding
+    None => return None
+  }
+  let mut cursor = binding.head
+  let mut selected_declaration = 0UL
+  let mut selected_type = -1
+  while cursor >= 0 {
+    let candidate = self.collected.value_binding_candidates[cursor]
+    if self.declaration_visible(candidate.declaration) {
+      let local_index = semantic_id_local(candidate.declaration)
+      if local_index >= 0 && local_index < self.callable_indices.length() {
+        let callable_index = self.callable_indices[local_index]
+        if callable_index >= 0 &&
+          self.collected.generic_parameters_of(candidate.declaration).length ==
+          0 {
+          if selected_type >= 0 {
+            return None
+          }
+          selected_declaration = candidate.declaration
+          selected_type = self.resolved.callable_function_types[callable_index]
+        }
+      }
+    }
+    cursor = candidate.next
+  }
+  if selected_type >= 0 {
+    Some((selected_declaration, selected_type))
+  } else {
+    None
+  }
+}
+
+///|
+fn BasicBodyInferencer::imported_function_reference(
+  self : BasicBodyInferencer,
+  head : Int,
+) -> (DeclId, ResolvedTypeId)? {
+  let imports = match self.imports {
+    Some(imports) => imports
+    None => return None
+  }
+  let mut cursor = head
+  let mut selected_declaration = 0UL
+  let mut selected_type = -1
+  while cursor >= 0 {
+    let reference = imports.scope.callable_references[cursor]
+    let interface_ = imports.scope.interfaces[reference.interface_index].unwrap()
+    let declaration = interface_.callables[reference.callable_index].declaration
+    match imports.callable(declaration) {
+      Some(callable) if callable.generic_parameters.length == 0 => {
+        if selected_type >= 0 {
+          return None
+        }
+        selected_declaration = declaration
+        selected_type = callable.function_type
+      }
+      _ => ()
+    }
+    cursor = reference.next
+  }
+  if selected_type >= 0 {
+    Some((selected_declaration, selected_type))
+  } else {
+    None
+  }
+}
+
+///|
 fn BasicBodyInferencer::initialize_control_types(
   self : BasicBodyInferencer,
 ) -> Unit {
@@ -707,9 +780,31 @@ fn BasicBodyInferencer::initialize_expression_types(
         match self.names.expression_references[expression] {
           LocalNameReference(local_id) => self.local_types[local_id]
           ModuleValueNameReference(_) =>
-            self
-            .module_value_type(name)
-            .unwrap_or_else(fn() { self.solver.fresh_variable() })
+            match self.module_value_type(name) {
+              Some(type_) => type_
+              None =>
+                match self.local_function_reference(name) {
+                  Some((declaration, type_)) => {
+                    self.ensure_member_storage()
+                    self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
+                      declaration,
+                    )
+                    self.solver.resolved_type(type_)
+                  }
+                  None => self.solver.fresh_variable()
+                }
+            }
+          ImportedValueNameReference(head) =>
+            match self.imported_function_reference(head) {
+              Some((declaration, type_)) => {
+                self.ensure_member_storage()
+                self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
+                  declaration,
+                )
+                self.solver.resolved_type(type_)
+              }
+              None => self.solver.fresh_variable()
+            }
           ImportedModuleValueNameReference(declaration) =>
             match self.imports {
               Some(imports) =>
@@ -4927,6 +5022,70 @@ fn BasicBodyInferencer::select_call_candidate(
 }
 
 ///|
+fn BasicBodyInferencer::resolved_function_signature(
+  self : BasicBodyInferencer,
+  type_ : BodyTypeId,
+) -> (HirSpan, ResolvedTypeId)? {
+  let representative = self.solver.representative_type(type_)
+  match self.solver.type_term(representative) {
+    BodyResolvedType(resolved_type) =>
+      match self.resolved.types[resolved_type] {
+        FunctionType(parameters, result) => Some((parameters, result))
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn BasicBodyInferencer::select_function_value_call(
+  self : BasicBodyInferencer,
+  call_slot : Int,
+  expression : ExprId,
+  target : ExprId,
+  arguments : HirSpan,
+  offset : UInt64,
+) -> Bool {
+  let (parameters, result) = match
+    self.resolved_function_signature(self.expression_type(target)) {
+    Some(signature) => signature
+    None => return false
+  }
+  if parameters.length != arguments.length {
+    self.call_targets[call_slot] = ErrorInferredCallTarget
+    self.poison_expression(expression)
+    self.diagnose(
+      FunctionCallArgumentCountMismatch(
+        expression,
+        parameters.length,
+        arguments.length,
+        offset,
+      ),
+    )
+    return true
+  }
+  let origin = call_type_origin(expression, offset)
+  for index in 0..<arguments.length {
+    self.constrain(
+      self.expression_type(
+        self.collected.expression_children[arguments.start + index],
+      ),
+      self.solver.resolved_type(
+        self.resolved.type_arguments[parameters.start + index],
+      ),
+      origin,
+    )
+  }
+  self.constrain(
+    self.expression_type(expression),
+    self.solver.resolved_type(result),
+    origin,
+  )
+  self.call_targets[call_slot] = SelectedFunctionValueCallTarget(target)
+  true
+}
+
+///|
 fn BasicBodyInferencer::record_invalid_call(
   self : BasicBodyInferencer,
   call_slot : Int,
@@ -5002,7 +5161,11 @@ fn BasicBodyInferencer::prepare_call(
                 let declaration = first.declaration
                 let callable_index = self.callable_index_of(declaration)
                 if callable_index < 0 {
-                  self.record_invalid_call(call_slot, expression, offset)
+                  if !self.select_function_value_call(
+                      call_slot, expression, target, arguments, offset,
+                    ) {
+                    self.record_invalid_call(call_slot, expression, offset)
+                  }
                 } else if !self.call_arity_matches(declaration, arguments) {
                   self.call_targets[call_slot] = ErrorInferredCallTarget
                   self.poison_expression(expression)
@@ -5030,6 +5193,12 @@ fn BasicBodyInferencer::prepare_call(
           self.prepare_imported_value_call(
             call_slot, expression, target, arguments, offset, head,
           )
+        LocalNameReference(_) | ImportedModuleValueNameReference(_) =>
+          if !self.select_function_value_call(
+              call_slot, expression, target, arguments, offset,
+            ) {
+            self.record_invalid_call(call_slot, expression, offset)
+          }
         VariantNameReference(_) => {
           self.consume_member_root(target)
           let variant_index = self.select_value_variant(
@@ -5179,10 +5348,13 @@ fn BasicBodyInferencer::prepare_call(
           self.consume_member_root(target)
         }
       }
-    _ => {
-      self.mark_unsupported(expression)
-      self.consume_member_root(target)
-    }
+    _ =>
+      if !self.select_function_value_call(
+          call_slot, expression, target, arguments, offset,
+        ) {
+        self.mark_unsupported(expression)
+        self.consume_member_root(target)
+      }
   }
 }
 
@@ -5370,6 +5542,20 @@ fn BasicBodyInferencer::constrain_calls(self : BasicBodyInferencer) -> Unit {
 }
 
 ///|
+fn BasicBodyInferencer::is_function_reference(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+) -> Bool {
+  if !self.has_member_expressions {
+    return false
+  }
+  match self.expression_selections[self.expression_index(expression)] {
+    FunctionReferenceSelection(_) => true
+    _ => false
+  }
+}
+
+///|
 fn BasicBodyInferencer::constrain_name_expressions(
   self : BasicBodyInferencer,
 ) -> Unit {
@@ -5381,11 +5567,15 @@ fn BasicBodyInferencer::constrain_name_expressions(
         match self.names.expression_references[expression] {
           LocalNameReference(_) | ErrorNameReference => ()
           ModuleValueNameReference(name) =>
-            if self.module_value_type(name) is None {
+            if self.module_value_type(name) is None &&
+              !self.is_function_reference(expression) {
               self.mark_unsupported(expression)
             }
-          ImportedValueNameReference(_) | ImportedModuleNameReference(_) =>
-            self.mark_unsupported(expression)
+          ImportedValueNameReference(_) =>
+            if !self.is_function_reference(expression) {
+              self.mark_unsupported(expression)
+            }
+          ImportedModuleNameReference(_) => self.mark_unsupported(expression)
           ImportedModuleValueNameReference(_) => ()
           VariantNameReference(_) => ()
           PrimitiveTypeNameReference(_)
@@ -5823,40 +6013,41 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     BodyConstraintDiagnostic(_) => 0
     ReturnOutsideCallable(_) => 1
     InvalidCallTarget(_, _) => 2
-    CallArgumentCountMismatch(_, _, _, _, _) => 3
-    NoMatchingCallOverload(_, _, _) => 4
-    AmbiguousCallOverload(_, _, _, _, _, _) => 5
-    UnresolvedCallTypeArgument(_, _, _) => 6
-    UnresolvedModuleValue(_, _) => 7
-    InvalidPatternConstructor(_, _) => 8
-    UnknownVariantForType(_, _, _, _) => 9
-    AmbiguousPatternVariant(_, _, _, _, _, _) => 10
-    PatternPayloadKindMismatch(_, _, _) => 11
-    PatternPayloadArityMismatch(_, _, _, _) => 12
-    UnknownPatternField(_, _, _) => 13
-    MissingPatternField(_, _, _) => 14
-    MissingImportedPatternField(_, _, _) => 15
-    UnresolvedPatternTypeArgument(_, _, _) => 16
-    InvalidConstructionTarget(_, _) => 17
-    ObjectTypeRequired(_, _) => 18
-    ConstructionPayloadKindMismatch(_, _, _) => 19
-    ConstructionPayloadArityMismatch(_, _, _, _, _) => 20
-    UnknownVariantValue(_, _, _) => 21
-    AmbiguousVariantValue(_, _, _, _, _, _) => 22
-    DuplicateConstructionField(_, _, _) => 23
-    UnknownConstructionField(_, _, _) => 24
-    MissingConstructionField(_, _, _) => 25
-    FieldAccessRequiresNominal(_, _) => 26
-    UnknownFieldForType(_, _, _, _) => 27
-    UnknownQualifiedMember(_, _, _, _) => 28
-    UnknownImportedModuleMember(_, _, _) => 29
-    NoMatchingMethod(_, _, _) => 30
-    AmbiguousMethod(_, _, _, _, _, _) => 31
-    UnresolvedExpressionTypeArgument(_, _, _) => 32
-    UnsupportedExpressionInference(_, _) => 33
-    UnresolvedExpressionType(_, _) => 34
-    UnresolvedLocalType(_, _, _) => 35
-    NumericLiteralOutOfRange(_, _, _) => 36
+    FunctionCallArgumentCountMismatch(_, _, _, _) => 3
+    CallArgumentCountMismatch(_, _, _, _, _) => 4
+    NoMatchingCallOverload(_, _, _) => 5
+    AmbiguousCallOverload(_, _, _, _, _, _) => 6
+    UnresolvedCallTypeArgument(_, _, _) => 7
+    UnresolvedModuleValue(_, _) => 8
+    InvalidPatternConstructor(_, _) => 9
+    UnknownVariantForType(_, _, _, _) => 10
+    AmbiguousPatternVariant(_, _, _, _, _, _) => 11
+    PatternPayloadKindMismatch(_, _, _) => 12
+    PatternPayloadArityMismatch(_, _, _, _) => 13
+    UnknownPatternField(_, _, _) => 14
+    MissingPatternField(_, _, _) => 15
+    MissingImportedPatternField(_, _, _) => 16
+    UnresolvedPatternTypeArgument(_, _, _) => 17
+    InvalidConstructionTarget(_, _) => 18
+    ObjectTypeRequired(_, _) => 19
+    ConstructionPayloadKindMismatch(_, _, _) => 20
+    ConstructionPayloadArityMismatch(_, _, _, _, _) => 21
+    UnknownVariantValue(_, _, _) => 22
+    AmbiguousVariantValue(_, _, _, _, _, _) => 23
+    DuplicateConstructionField(_, _, _) => 24
+    UnknownConstructionField(_, _, _) => 25
+    MissingConstructionField(_, _, _) => 26
+    FieldAccessRequiresNominal(_, _) => 27
+    UnknownFieldForType(_, _, _, _) => 28
+    UnknownQualifiedMember(_, _, _, _) => 29
+    UnknownImportedModuleMember(_, _, _) => 30
+    NoMatchingMethod(_, _, _) => 31
+    AmbiguousMethod(_, _, _, _, _, _) => 32
+    UnresolvedExpressionTypeArgument(_, _, _) => 33
+    UnsupportedExpressionInference(_, _) => 34
+    UnresolvedExpressionType(_, _) => 35
+    UnresolvedLocalType(_, _, _) => 36
+    NumericLiteralOutOfRange(_, _, _) => 37
   }
 }
 
@@ -5908,7 +6099,9 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
             )
           }
         }
-      NoInferredCallTarget | ErrorInferredCallTarget => ()
+      NoInferredCallTarget
+      | ErrorInferredCallTarget
+      | SelectedFunctionValueCallTarget(_) => ()
     }
   }
   for expression_index in 0..<self.operator_targets.length() {
@@ -5929,7 +6122,9 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
             )
           }
         }
-      NoInferredCallTarget | ErrorInferredCallTarget => ()
+      NoInferredCallTarget
+      | ErrorInferredCallTarget
+      | SelectedFunctionValueCallTarget(_) => ()
     }
   }
   for targets in [self.map_hash_targets, self.map_eq_targets] {
@@ -5951,7 +6146,9 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
               )
             }
           }
-        NoInferredCallTarget | ErrorInferredCallTarget => ()
+        NoInferredCallTarget
+        | ErrorInferredCallTarget
+        | SelectedFunctionValueCallTarget(_) => ()
       }
     }
   }
@@ -5980,7 +6177,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
       NoExpressionSelection
       | ErrorExpressionSelection
       | FieldAccessSelection(_)
-      | ImportedModuleValueSelection(_) => ()
+      | ImportedModuleValueSelection(_)
+      | FunctionReferenceSelection(_) => ()
     }
   }
   for pattern_index in 0..<self.pattern_constructors.length() {
@@ -6842,6 +7040,8 @@ fn merge_body_inference_jobs(
           FieldAccessSelection(field) => FieldAccessSelection(field)
           ImportedModuleValueSelection(declaration) =>
             ImportedModuleValueSelection(declaration)
+          FunctionReferenceSelection(declaration) =>
+            FunctionReferenceSelection(declaration)
           NoExpressionSelection => NoExpressionSelection
           ErrorExpressionSelection => ErrorExpressionSelection
         }
@@ -6858,6 +7058,8 @@ fn merge_body_inference_jobs(
             start: call_argument_start + arguments.start,
             length: arguments.length,
           })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
         NoInferredCallTarget => NoInferredCallTarget
         ErrorInferredCallTarget => ErrorInferredCallTarget
       }
@@ -6870,6 +7072,8 @@ fn merge_body_inference_jobs(
             start: call_argument_start + arguments.start,
             length: arguments.length,
           })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
         NoInferredCallTarget => NoInferredCallTarget
         ErrorInferredCallTarget => ErrorInferredCallTarget
       }
@@ -6879,6 +7083,8 @@ fn merge_body_inference_jobs(
             start: call_argument_start + arguments.start,
             length: arguments.length,
           })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
         NoInferredCallTarget => NoInferredCallTarget
         ErrorInferredCallTarget => ErrorInferredCallTarget
       }
@@ -6888,6 +7094,8 @@ fn merge_body_inference_jobs(
             start: call_argument_start + arguments.start,
             length: arguments.length,
           })
+        SelectedFunctionValueCallTarget(target) =>
+          SelectedFunctionValueCallTarget(target)
         NoInferredCallTarget => NoInferredCallTarget
         ErrorInferredCallTarget => ErrorInferredCallTarget
       }

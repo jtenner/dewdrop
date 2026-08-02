@@ -14,6 +14,7 @@ priv struct TypeResolver {
   generic_parameter_types : Array[ResolvedTypeId]
   parameter_types : Array[ResolvedTypeId]
   callable_return_types : Array[ResolvedTypeId]
+  callable_function_types : Array[ResolvedTypeId]
   field_types : Array[ResolvedTypeId]
   variant_payloads : Array[HirSpan]
   signature_type_lists : Array[ResolvedTypeId]
@@ -107,6 +108,7 @@ fn TypeResolver::new(
     generic_parameter_types,
     parameter_types: Array::make(collected.parameters.length(), -1),
     callable_return_types: Array::make(collected.callables.length(), -1),
+    callable_function_types: Array::make(collected.callables.length(), -1),
     field_types: Array::make(collected.fields.length(), -1),
     variant_payloads: Array::make(
       collected.variants.length(),
@@ -990,6 +992,7 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
     generic_parameter_types: self.generic_parameter_types,
     parameter_types: self.parameter_types,
     callable_return_types: self.callable_return_types,
+    callable_function_types: self.callable_function_types,
     field_types: self.field_types,
     variant_payloads: self.variant_payloads,
     signature_type_lists: self.signature_type_lists,

@@ -2466,6 +2466,9 @@ fn starshine_emit_body_instructions(
                 planned, program, value, false,
               ),
             )
+          @semantic.PlannedFunctionReference(_)
+          | @semantic.PlannedFunctionValueCall(_, _) =>
+            return Err(UnsupportedExpression(body.body, expression))
           @semantic.PlannedLocalGet(local_id) => {
             if local_id < 0 ||
               local_id >= local_indices.length() ||

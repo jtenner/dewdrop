@@ -4,6 +4,7 @@ pub enum BodyInferenceDiagnostic {
   NumericLiteralOutOfRange(ExprId, PrimitiveType, UInt64)
   UnsupportedExpressionInference(ExprId, UInt64)
   InvalidCallTarget(ExprId, UInt64)
+  FunctionCallArgumentCountMismatch(ExprId, Int, Int, UInt64)
   CallArgumentCountMismatch(ExprId, DeclId, Int, Int, UInt64)
   NoMatchingCallOverload(NameId, ExprId, UInt64)
   AmbiguousCallOverload(NameId, ExprId, DeclId, DeclId, Int, UInt64)
@@ -48,6 +49,7 @@ pub fn BodyInferenceDiagnostic::offset(
     NumericLiteralOutOfRange(_, _, offset)
     | UnsupportedExpressionInference(_, offset)
     | InvalidCallTarget(_, offset)
+    | FunctionCallArgumentCountMismatch(_, _, _, offset)
     | CallArgumentCountMismatch(_, _, _, _, offset)
     | NoMatchingCallOverload(_, _, offset)
     | AmbiguousCallOverload(_, _, _, _, _, offset)
@@ -145,6 +147,7 @@ pub enum InferredExpressionSelection {
   UnitVariantValueSelection(VariantId, HirSpan)
   FieldAccessSelection(FieldId)
   ImportedModuleValueSelection(DeclId)
+  FunctionReferenceSelection(DeclId)
 } derive(Eq, Debug)
 
 ///|
@@ -152,6 +155,7 @@ pub enum InferredCallTarget {
   NoInferredCallTarget
   ErrorInferredCallTarget
   SelectedInferredCallTarget(DeclId, HirSpan)
+  SelectedFunctionValueCallTarget(ExprId)
 } derive(Eq, Debug)
 
 ///|

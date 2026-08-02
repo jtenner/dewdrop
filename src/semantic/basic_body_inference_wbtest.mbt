@@ -73,6 +73,64 @@ test "basic inference types parameters lets binary expressions and tails" {
 }
 
 ///|
+test "basic inference selects unambiguous named function references" {
+  let (collected, resolved, _, inferred) = infer_test_module(
+    96UL, b"fn increment(value: I32) -> I32 {\n  value + 1\n}\nfn select() -> fn(I32) -> I32 {\n  increment\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let mut selected = -1
+  for expression, selection in inferred.expression_selections {
+    match selection {
+      FunctionReferenceSelection(declaration) => {
+        assert_eq(declaration, collected.callables[0].declaration)
+        selected = expression
+      }
+      _ => ()
+    }
+  }
+  assert_true(selected >= 0)
+  match inferred.type_term(inferred.expression_types[selected]) {
+    BodyResolvedType(type_) =>
+      assert_eq(type_, resolved.callable_function_types[0])
+    _ => fail("expected resolved function-reference type")
+  }
+}
+
+///|
+test "basic inference type-checks calls through function-valued locals" {
+  let (collected, resolved, _, inferred) = infer_test_module(
+    97UL, b"fn apply(callback: fn(I32) -> I64, value: I32) -> I64 {\n  callback(value)\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let body = collected.bodies[0]
+  let call = match body.root {
+    BlockBodyRoot(block) => {
+      let items = collected.blocks[block].items
+      match collected.block_items[items.start] {
+        HirExpressionItem(expression, _) => expression
+        _ => fail("expected call tail")
+      }
+    }
+    _ => fail("expected function block")
+  }
+  match inferred.call_targets[call] {
+    SelectedFunctionValueCallTarget(target) =>
+      match inferred.type_term(inferred.expression_types[target]) {
+        BodyResolvedType(type_) =>
+          match resolved.types[type_] {
+            FunctionType(parameters, result) => {
+              assert_eq(parameters.length, 1)
+              assert_eq(result, resolved.primitive(I64Type))
+            }
+            _ => fail("expected function-valued call target")
+          }
+        _ => fail("expected resolved call-target type")
+      }
+    _ => fail("expected selected function-valued call")
+  }
+}
+
+///|
 test "basic inference preserves initializer-before-shadow local types" {
   let (collected, resolved, names, inferred) = infer_test_module(
     91UL, b"fn choose(value: I32) -> I32 {\n  let first = value\n  let mut value = first\n  value\n}\n",

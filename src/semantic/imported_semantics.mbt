@@ -29,6 +29,7 @@ pub struct ResolvedImportedCallable {
   generic_parameters : HirSpan
   parameters : HirSpan
   result_type : ResolvedTypeId
+  function_type : ResolvedTypeId
 } derive(Eq, Debug)
 
 ///|
@@ -488,12 +489,16 @@ pub fn resolve_module_imports(
         reference.interface_index,
         callable.result_type,
       ),
+      function_type: importer.import_type(
+        reference.interface_index,
+        interface_.resolved_types.callable_function_types[reference.callable_index],
+      ),
     })
     callable_by_declaration[callable.declaration] = imported_index
   }
   for interface_index in scope.imported_interfaces {
     let interface_ = scope.interfaces[interface_index].unwrap()
-    for callable in interface_.callables {
+    for callable_index, callable in interface_.callables {
       if callable_by_declaration.contains(callable.declaration) {
         continue
       }
@@ -514,6 +519,10 @@ pub fn resolve_module_imports(
           length: parameter_types.length() - parameter_start,
         },
         result_type: importer.import_type(interface_index, callable.result_type),
+        function_type: importer.import_type(
+          interface_index,
+          interface_.resolved_types.callable_function_types[callable_index],
+        ),
       })
       callable_by_declaration[callable.declaration] = imported_index
     }

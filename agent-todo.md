@@ -210,7 +210,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Define trait-extensible `Index`/`IndexSet`, exact inference evidence, block-item-only indexed setting, and FixedArray optional/trapping bounds behavior.
 - [ ] Enforce `(Self, key) -> value` coherence; FixedArray and Map already use the implemented indexing and indexed-setting lowering.
 - [x] Parse, resolve, structurally intern, alias-normalize, import, cache, and plan opaque-reference ABI shapes for `fn(T, ...) -> R` types.
-- [ ] Resolve named function references and execute first-class calls, closures, captures, and indirect calls.
+- [x] Resolve unambiguous non-generic local/imported function names as values and type-check calls through function-typed locals.
+- [ ] Emit first-class function references/calls, closures, captures, and indirect calls.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.

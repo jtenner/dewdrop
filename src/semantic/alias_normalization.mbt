@@ -644,6 +644,23 @@ fn TypeResolver::normalize_signature_tables(self : TypeResolver) -> Unit {
 }
 
 ///|
+fn TypeResolver::resolve_callable_function_types(self : TypeResolver) -> Unit {
+  for index, callable in self.collected.callables {
+    let parameters = self.collected.parameters_of(callable.declaration)
+    self.application_scratch.clear()
+    for
+      parameter_index in parameters.start..<(parameters.start +
+      parameters.length) {
+      self.application_scratch.push(self.parameter_types[parameter_index])
+    }
+    self.callable_function_types[index] = self.interner.intern_function(
+      self.application_scratch,
+      self.callable_return_types[index],
+    )
+  }
+}
+
+///|
 fn TypeResolver::normalize_aliases(
   self : TypeResolver,
   requested_limit : Int,
@@ -658,4 +675,5 @@ fn TypeResolver::normalize_aliases(
   }
   self.ensure_normalization_slots()
   self.normalize_signature_tables()
+  self.resolve_callable_function_types()
 }

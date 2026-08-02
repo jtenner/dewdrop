@@ -299,7 +299,8 @@ erased fallback.
 - [x] Direct free, builtin, inherent, trait, and qualified method selection.
 - [x] Parse deterministic `fn(T, ...) -> R` type syntax and preserve it through HIR collection.
 - [x] Structurally intern, alias-normalize, import, cache, compare, and assign opaque reference shapes to first-class function types.
-- [ ] Function references and first-class call execution.
+- [x] Resolve unambiguous non-generic local/imported function references and structurally type-check calls through function-valued locals.
+- [ ] Emit function references and first-class calls.
 - [ ] Closures and captured environments.
 - [ ] Indirect calls.
 - [ ] Tail-call optimization if supported and measured.

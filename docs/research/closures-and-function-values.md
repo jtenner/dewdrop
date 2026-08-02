@@ -10,9 +10,9 @@ fn() -> Unit
 fn(I32) -> fn(Bool) -> String
 ```
 
-Parser types preserve ordered parameter types, result type, and source offset. Collection lowers them iteratively into `FunctionTypeSyntax`, reusing the module type-argument arena for the parameter span. Resolution interns `FunctionType` nodes structurally and traverses them through generic alias substitution, alias normalization, imported-interface translation, visibility checks, coherence signature comparison, nominal reachability, and frozen-interface cache V2.
+Parser types preserve ordered parameter types, result type, and source offset. Collection lowers them iteratively into `FunctionTypeSyntax`, reusing the module type-argument arena for the parameter span. Resolution interns `FunctionType` nodes structurally and traverses them through generic alias substitution, alias normalization, imported-interface translation, visibility checks, coherence signature comparison, nominal reachability, and frozen-interface cache V3. Every callable also receives a canonical structural function-type ID after signature normalization.
 
-Lowering currently assigns function values the provisional nullable `eqref` shape. This permits signatures and pass-through bodies to type-check without prematurely fixing the eventual closure-object layout. Calls rooted at local or module values still report `InvalidCallTarget`; named function references, anonymous function expressions, captures, closure allocation, and indirect calls are not yet accepted.
+Lowering currently assigns function values the provisional nullable `eqref` shape. This permits signatures and pass-through bodies to type-check without prematurely fixing the eventual closure-object layout. Unambiguous non-generic local/imported function names now produce `FunctionReferenceSelection`, and calls through function-typed locals produce `SelectedFunctionValueCallTarget` after structural arity/parameter/result checking. Lowering preserves both operations explicitly, while the backend currently rejects their emission at a deterministic `UnsupportedExpression` boundary. Anonymous function expressions, captures, closure allocation, and indirect calls are not yet accepted.
 
 ## Proposed representation
 
@@ -25,8 +25,8 @@ The lowered callable signature should receive the environment explicitly before 
 
 ## Required next milestones
 
-1. Resolve unambiguous named functions as values separately from direct-call overload resolution.
-2. Emit non-capturing function references and calls through typed `call_ref`.
+1. Emit non-capturing function references and calls through typed `call_ref`.
+2. Add expected-type disambiguation for overloaded and generic function references.
 3. Parse anonymous function expressions and collect nested callable bodies.
 4. Compute deterministic free-variable/capture sets.
 5. Emit environment structs and captured loads.

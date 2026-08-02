@@ -195,6 +195,7 @@ pub struct ResolvedModuleTypes {
   generic_parameter_types : Array[ResolvedTypeId]
   parameter_types : Array[ResolvedTypeId]
   callable_return_types : Array[ResolvedTypeId]
+  callable_function_types : Array[ResolvedTypeId]
   field_types : Array[ResolvedTypeId]
   variant_payloads : Array[HirSpan]
   signature_type_lists : Array[ResolvedTypeId]

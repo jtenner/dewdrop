@@ -1,6 +1,6 @@
 {
   "errors": [
-    "InvalidCallTarget(2, 58)"
+    "StarshineProgramCodeError(UnsupportedExpression(12884901888000, 2))"
   ],
   "warnings": [],
   "output": null
