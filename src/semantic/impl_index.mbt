@@ -345,8 +345,10 @@ fn resolved_impl_target_head(
       NominalType(declaration) =>
         return (NominalImplTargetHead(declaration), false)
       AppliedType(base, _) => type_ = base
-      GenericParameterType(_) | TraitType(_) | SelfType(_) =>
-        return (ErrorImplTargetHead, false)
+      GenericParameterType(_)
+      | TraitType(_)
+      | SelfType(_)
+      | FunctionType(_, _) => return (ErrorImplTargetHead, false)
     }
   }
   (ErrorImplTargetHead, false)
@@ -366,7 +368,8 @@ fn resolved_impl_trait_head(
       PrimitiveType(_)
       | GenericParameterType(_)
       | NominalType(_)
-      | SelfType(_) => return (None, false)
+      | SelfType(_)
+      | FunctionType(_, _) => return (None, false)
     }
   }
   (None, false)
@@ -571,6 +574,26 @@ fn impl_signature_types_equal(
           left_stack.push(resolved.type_arguments[left_arguments.start + index])
           right_stack.push(
             resolved.type_arguments[right_arguments.start + index],
+          )
+        }
+      }
+      (
+        FunctionType(left_parameters, left_result),
+        FunctionType(right_parameters, right_result),
+      ) => {
+        if left_parameters.length != right_parameters.length {
+          return false
+        }
+        left_stack.push(left_result)
+        right_stack.push(right_result)
+        let mut index = left_parameters.length
+        while index > 0 {
+          index -= 1
+          left_stack.push(
+            resolved.type_arguments[left_parameters.start + index],
+          )
+          right_stack.push(
+            resolved.type_arguments[right_parameters.start + index],
           )
         }
       }
@@ -982,7 +1005,8 @@ fn ImplPatternScratch::import_pattern(
         | PrimitiveType(_)
         | NominalType(_)
         | TraitType(_)
-        | SelfType(_) => {
+        | SelfType(_)
+        | FunctionType(_, _) => {
           let result = self.solver.resolved_type(source)
           self.marks[source] = self.generation
           self.values[source] = result
@@ -1035,6 +1059,12 @@ fn impl_type_contains_generic(
         work.push(base)
         for index in 0..<arguments.length {
           work.push(resolved.type_arguments[arguments.start + index])
+        }
+      }
+      FunctionType(parameters, result) => {
+        work.push(result)
+        for index in 0..<parameters.length {
+          work.push(resolved.type_arguments[parameters.start + index])
         }
       }
       ErrorType

@@ -512,6 +512,7 @@ fn BodyFlowAnalyzer::coverage_domain(
                   }
               }
             AppliedType(base, _) => resolved_current = base
+            FunctionType(_, _) => return OpenCoverageDomain
           }
         }
       }

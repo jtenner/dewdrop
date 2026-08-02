@@ -150,6 +150,7 @@ pub enum ResolvedType {
   TraitType(DeclId)
   SelfType(DeclId)
   AppliedType(ResolvedTypeId, HirSpan)
+  FunctionType(HirSpan, ResolvedTypeId)
 } derive(Eq, Debug)
 
 ///|
@@ -162,7 +163,6 @@ pub enum TypeDiagnostic {
   ExpectedTraitType(NameId, DeclId, UInt64)
   TypeArityMismatch(ResolvedTypeId, Int, Int, DeclId, UInt64)
   TypeNotApplicable(ResolvedTypeId, DeclId, UInt64)
-  UnsupportedFunctionType(DeclId, UInt64)
   SelfOutsideContext(DeclId, UInt64)
   AliasCycle(HirSpan, UInt64)
   AliasExpansionLimit(DeclId, Int, UInt64)
@@ -179,7 +179,6 @@ pub fn TypeDiagnostic::offset(self : TypeDiagnostic) -> UInt64 {
     | ExpectedTraitType(_, _, offset)
     | TypeArityMismatch(_, _, _, _, offset)
     | TypeNotApplicable(_, _, offset)
-    | UnsupportedFunctionType(_, offset)
     | SelfOutsideContext(_, offset)
     | AliasCycle(_, offset)
     | AliasExpansionLimit(_, _, offset) => offset
@@ -252,7 +251,7 @@ pub fn ResolvedModuleTypes::arguments(
   type_ : ResolvedTypeId,
 ) -> ArrayView[ResolvedTypeId] {
   match self.types[type_] {
-    AppliedType(_, span) =>
+    AppliedType(_, span) | FunctionType(span, _) =>
       self.type_arguments[span.start:span.start + span.length]
     _ => self.type_arguments[0:0]
   }
@@ -446,6 +445,57 @@ fn ResolvedTypeInterner::applied_matches(
     }
     _ => false
   }
+}
+
+///|
+fn ResolvedTypeInterner::function_matches(
+  self : ResolvedTypeInterner,
+  candidate : ResolvedTypeId,
+  parameters : Array[ResolvedTypeId],
+  result : ResolvedTypeId,
+) -> Bool {
+  match self.types[candidate] {
+    FunctionType(span, candidate_result) => {
+      if candidate_result != result || span.length != parameters.length() {
+        return false
+      }
+      for index in 0..<parameters.length() {
+        if self.arguments[span.start + index] != parameters[index] {
+          return false
+        }
+      }
+      true
+    }
+    _ => false
+  }
+}
+
+///|
+fn ResolvedTypeInterner::intern_function(
+  self : ResolvedTypeInterner,
+  parameters : Array[ResolvedTypeId],
+  result : ResolvedTypeId,
+) -> ResolvedTypeId {
+  let mut hash = type_hash_mix(0x720001, self.hashes[result])
+  for parameter in parameters {
+    hash = type_hash_mix(hash, self.hashes[parameter])
+  }
+  hash = type_hash_mix(hash, parameters.length())
+  let mut candidate = self.buckets.get(hash).unwrap_or(-1)
+  while candidate >= 0 {
+    if self.function_matches(candidate, parameters, result) {
+      return candidate
+    }
+    candidate = self.next[candidate]
+  }
+  let start = self.arguments.length()
+  for parameter in parameters {
+    self.arguments.push(parameter)
+  }
+  self.insert(
+    FunctionType({ start, length: parameters.length() }, result),
+    hash,
+  )
 }
 
 ///|

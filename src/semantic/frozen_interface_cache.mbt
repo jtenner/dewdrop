@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V2\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -164,6 +164,11 @@ fn cache_write_resolved_type(output : Buffer, value : ResolvedType) -> Unit {
       cache_write_int(output, 6)
       cache_write_int(output, base)
       cache_write_span(output, arguments)
+    }
+    FunctionType(parameters, result) => {
+      cache_write_int(output, 7)
+      cache_write_span(output, parameters)
+      cache_write_int(output, result)
     }
   }
 }
@@ -602,6 +607,7 @@ fn FrozenInterfaceCacheReader::read_resolved_type(
     4 => TraitType(self.read_u64())
     5 => SelfType(self.read_u64())
     6 => AppliedType(self.read_int(), self.read_span())
+    7 => FunctionType(self.read_span(), self.read_int())
     _ => {
       self.fail("unknown resolved type in frozen-interface cache")
       ErrorType

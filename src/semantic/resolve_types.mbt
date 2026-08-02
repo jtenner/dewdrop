@@ -269,8 +269,27 @@ fn TypeResolver::import_interface_type(
           }
           self.push_import_type_task(source_interface, base, 0, 0)
         }
+        FunctionType(parameters, result) => {
+          self.push_import_type_task(
+            source_interface,
+            source_type,
+            2,
+            self.import_results.length(),
+          )
+          self.push_import_type_task(source_interface, result, 0, 0)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push_import_type_task(
+              source_interface,
+              source.type_arguments[parameters.start + index],
+              0,
+              0,
+            )
+          }
+        }
       }
-    } else {
+    } else if state == 1 {
       let arguments = match source.types[source_type] {
         AppliedType(_, arguments) => arguments
         _ => abort("imported type finish task is not applied")
@@ -285,6 +304,24 @@ fn TypeResolver::import_interface_type(
       let imported = self.interner.intern_applied(
         imported_base,
         self.import_application_scratch,
+      )
+      self.import_type_memos[source_interface][source_type] = imported
+      self.import_results.truncate(result_start)
+      self.import_results.push(imported)
+    } else {
+      let parameters = match source.types[source_type] {
+        FunctionType(parameters, _) => parameters
+        _ => abort("imported type finish task is not a function")
+      }
+      self.import_application_scratch.clear()
+      for index in 0..<parameters.length {
+        self.import_application_scratch.push(
+          self.import_results[result_start + index],
+        )
+      }
+      let imported = self.interner.intern_function(
+        self.import_application_scratch,
+        self.import_results[result_start + parameters.length],
       )
       self.import_type_memos[source_interface][source_type] = imported
       self.import_results.truncate(result_start)
@@ -382,7 +419,10 @@ fn TypeResolver::constructor_arity(
     PrimitiveType(_) => Some(0)
     NominalType(declaration) | TraitType(declaration) =>
       Some(self.declaration_arity(declaration))
-    GenericParameterType(_) | SelfType(_) | AppliedType(_, _) => None
+    GenericParameterType(_)
+    | SelfType(_)
+    | AppliedType(_, _)
+    | FunctionType(_, _) => None
   }
 }
 
@@ -696,7 +736,7 @@ fn TypeResolver::resolve_syntax(
         } else {
           self.finish_applied_type(owner, current, base, arguments, offset)
         }
-      FunctionTypeSyntax(parameters, result, offset) =>
+      FunctionTypeSyntax(parameters, result, _) =>
         if state == 0 {
           self.push_type_task(
             current, 1, current_expectation, constructor_position,
@@ -713,8 +753,17 @@ fn TypeResolver::resolve_syntax(
             )
           }
         } else {
-          self.diagnose(UnsupportedFunctionType(owner, offset))
-          self.syntax_types[current] = self.interner.error_type
+          self.application_scratch.clear()
+          for index in 0..<parameters.length {
+            self.application_scratch.push(
+              self.syntax_types[self.collected.type_arguments[parameters.start +
+              index]],
+            )
+          }
+          self.syntax_types[current] = self.interner.intern_function(
+            self.application_scratch,
+            self.syntax_types[result],
+          )
         }
     }
   }
@@ -873,6 +922,16 @@ fn TypeResolver::collect_alias_dependencies(self : TypeResolver) -> Unit {
           }
           self.type_visit_stack.push(base)
         }
+        FunctionType(parameters, result) => {
+          self.type_visit_stack.push(result)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.type_visit_stack.push(
+              self.interner.arguments[parameters.start + index],
+            )
+          }
+        }
         _ => ()
       }
     }
@@ -901,10 +960,9 @@ fn TypeDiagnostic::rank(self : TypeDiagnostic) -> Int {
     ExpectedTraitType(_, _, _) => 5
     TypeArityMismatch(_, _, _, _, _) => 6
     TypeNotApplicable(_, _, _) => 7
-    UnsupportedFunctionType(_, _) => 8
-    SelfOutsideContext(_, _) => 9
-    AliasCycle(_, _) => 10
-    AliasExpansionLimit(_, _, _) => 11
+    SelfOutsideContext(_, _) => 8
+    AliasCycle(_, _) => 9
+    AliasExpansionLimit(_, _, _) => 10
   }
 }
 

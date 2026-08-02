@@ -5,7 +5,7 @@ test "frozen interfaces serialize and decode byte-identically" {
     ProgramManifest::new([
       ManifestModule::new("cache.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.string\nopen dew.std.bytes\npub struct Item {\n  text: String\n}\npub fn keep(value: Option<U32>) -> Option<U32> {\n  value\n}\n",
+          "main.dew", b"open dew.std.string\nopen dew.std.bytes\npub struct Item {\n  text: String\n}\npub fn keep(value: Option<U32>) -> Option<U32> {\n  value\n}\npub fn passthrough(callback: fn(I32) -> I64) -> fn(I32) -> I64 {\n  callback\n}\n",
         ),
       ]),
     ]),

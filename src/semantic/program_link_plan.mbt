@@ -269,6 +269,12 @@ fn program_mark_resolved_nominal_roots(
           work.push(resolved.type_arguments[arguments.start + index])
         }
       }
+      FunctionType(parameters, result) => {
+        work.push(result)
+        for index in 0..<parameters.length {
+          work.push(resolved.type_arguments[parameters.start + index])
+        }
+      }
       _ => ()
     }
   }

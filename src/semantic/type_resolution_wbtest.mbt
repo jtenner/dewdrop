@@ -40,6 +40,27 @@ test "type resolution canonicalizes primitives generics and applications" {
 }
 
 ///|
+test "function types intern canonically and normalize generic aliases" {
+  let collected = collect_bytes(
+    56UL, b"type Callback<t> = fn(t) -> t\nfn passthrough(value: Callback<I32>) -> fn(I32) -> I32 {\n  value\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  assert_eq(resolved.diagnostics.length(), 0)
+  assert_eq(resolved.parameter_types[0], resolved.callable_return_types[0])
+  match resolved.types[resolved.parameter_types[0]] {
+    FunctionType(parameters, result) => {
+      assert_eq(parameters.length, 1)
+      assert_eq(
+        resolved.type_arguments[parameters.start],
+        resolved.primitive(I32Type),
+      )
+      assert_eq(result, resolved.primitive(I32Type))
+    }
+    _ => fail("expected normalized function type")
+  }
+}
+
+///|
 test "type resolution diagnoses unknown names and generic arity" {
   let collected = collect_bytes(
     41UL, b"struct Box<t> {}\nfn bad<t>(a: Missing, b: Box, c: I32<String>, d: t<I32>, e: Unknown) -> Unit {}\n",

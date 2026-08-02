@@ -325,7 +325,8 @@ fn planned_resolved_value_shape(
         | BytesBuilderType
       ) => return RefPlannedValueShape
       PrimitiveType(NeverType) => return NeverPlannedValueShape
-      NominalType(_) | TraitType(_) => return RefPlannedValueShape
+      NominalType(_) | TraitType(_) | FunctionType(_, _) =>
+        return RefPlannedValueShape
       GenericParameterType(_) | SelfType(_) => return GenericPlannedValueShape
       AppliedType(base, _) => current = base
     }

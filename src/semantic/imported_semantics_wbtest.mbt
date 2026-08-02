@@ -172,6 +172,36 @@ test "imported nominal signatures unify with consumer signature types" {
 }
 
 ///|
+test "imported function signatures retain canonical structural types" {
+  let (program, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn run(value: fn(I32) -> I64) -> fn(I32) -> I64 {\n  keep(value)\n}\n",
+    b"pub fn keep(value: fn(I32) -> I64) -> fn(I32) -> I64 {\n  value\n}\n",
+  )
+  assert_eq(frozen.interfaces[0].resolved_types.diagnostics.length(), 0)
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let collected = program.modules[0]
+  let run = collected.lookup_value("run").unwrap()
+  let parameters = collected.parameters_of(run)
+  let resolved = frozen.interfaces[0].resolved_types
+  assert_eq(
+    resolved.parameter_types[parameters.start],
+    resolved.callable_return_types[0],
+  )
+  match resolved.types[resolved.callable_return_types[0]] {
+    FunctionType(function_parameters, result) => {
+      assert_eq(function_parameters.length, 1)
+      assert_eq(
+        resolved.type_arguments[function_parameters.start],
+        resolved.primitive(I32Type),
+      )
+      assert_eq(result, resolved.primitive(I64Type))
+    }
+    _ => fail("expected imported function type")
+  }
+}
+
+///|
 test "imported transparent aliases normalize in consumer signatures" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(value: Count) -> Count {\n  keep(value)\n}\n",

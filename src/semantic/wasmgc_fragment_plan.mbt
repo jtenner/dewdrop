@@ -862,8 +862,10 @@ fn wasmgc_storage_type(
         | StringBuilderType
         | BytesBuilderType
       ) => return Some(WasmStringRefStorage)
-      GenericParameterType(_) | TraitType(_) | SelfType(_) =>
-        return Some(WasmNullableEqRefStorage)
+      GenericParameterType(_)
+      | TraitType(_)
+      | SelfType(_)
+      | FunctionType(_, _) => return Some(WasmNullableEqRefStorage)
       NominalType(declaration) => {
         if semantic_id_module(declaration) != resolved.module_id {
           return Some(WasmExternalNominalRefStorage(declaration))
@@ -1373,7 +1375,7 @@ fn wasmgc_value_type(
         | StringBuilderType
         | BytesBuilderType
       ) => return Some(WasmStringRefValue)
-      GenericParameterType(_) | TraitType(_) =>
+      GenericParameterType(_) | TraitType(_) | FunctionType(_, _) =>
         return Some(WasmNullableEqRefValue)
       SelfType(_) =>
         if self_type >= 0 {

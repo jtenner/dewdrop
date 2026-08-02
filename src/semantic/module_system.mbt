@@ -1356,6 +1356,18 @@ fn frozen_impl_type_is_visible(
         }
         current = base
       }
+      FunctionType(parameters, result) => {
+        for index in 0..<parameters.length {
+          if !frozen_impl_type_is_visible(
+              resolved,
+              resolved.type_arguments[parameters.start + index],
+              exported,
+            ) {
+            return false
+          }
+        }
+        return frozen_impl_type_is_visible(resolved, result, exported)
+      }
       ErrorType => return false
       PrimitiveType(_) | GenericParameterType(_) | SelfType(_) => return true
     }

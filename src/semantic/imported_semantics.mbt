@@ -234,7 +234,8 @@ fn InterfaceTypeImporter::intern_simple(
   match type_ {
     ErrorType => return self.resolved.error_type
     PrimitiveType(primitive) => return self.resolved.primitive(primitive)
-    AppliedType(_, _) => abort("simple imported type is applied")
+    AppliedType(_, _) | FunctionType(_, _) =>
+      abort("simple imported type is structural")
     _ => ()
   }
   for index, existing in self.resolved.types {
@@ -279,6 +280,42 @@ fn InterfaceTypeImporter::intern_applied(
   let index = self.resolved.types.length()
   self.resolved.types.push(
     AppliedType(base, { start, length: arguments.length() }),
+  )
+  index
+}
+
+///|
+fn InterfaceTypeImporter::intern_function(
+  self : InterfaceTypeImporter,
+  parameters : Array[ResolvedTypeId],
+  result : ResolvedTypeId,
+) -> ResolvedTypeId {
+  for index, existing in self.resolved.types {
+    match existing {
+      FunctionType(span, existing_result) if existing_result == result &&
+        span.length == parameters.length() => {
+        let mut same = true
+        for parameter_index in 0..<span.length {
+          if self.resolved.type_arguments[span.start + parameter_index] !=
+            parameters[parameter_index] {
+            same = false
+            break
+          }
+        }
+        if same {
+          return index
+        }
+      }
+      _ => ()
+    }
+  }
+  let start = self.resolved.type_arguments.length()
+  for parameter in parameters {
+    self.resolved.type_arguments.push(parameter)
+  }
+  let index = self.resolved.types.length()
+  self.resolved.types.push(
+    FunctionType({ start, length: parameters.length() }, result),
   )
   index
 }
@@ -344,13 +381,27 @@ fn InterfaceTypeImporter::import_type(
           }
           self.push(source_interface, base, 0, 0)
         }
+        FunctionType(parameters, result) => {
+          self.push(source_interface, source_type, 2, self.results.length())
+          self.push(source_interface, result, 0, 0)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push(
+              source_interface,
+              source.type_arguments[parameters.start + index],
+              0,
+              0,
+            )
+          }
+        }
         simple => {
           let imported = self.intern_simple(source_interface, simple)
           self.memos[source_interface][source_type] = imported
           self.results.push(imported)
         }
       }
-    } else {
+    } else if state == 1 {
       let (_, arguments) = match source.types[source_type] {
         AppliedType(base, arguments) => (base, arguments)
         _ => abort("imported type finish task is not applied")
@@ -363,6 +414,22 @@ fn InterfaceTypeImporter::import_type(
       let imported = self.intern_applied(
         imported_base,
         self.application_scratch,
+      )
+      self.memos[source_interface][source_type] = imported
+      self.results.truncate(result_start)
+      self.results.push(imported)
+    } else {
+      let parameters = match source.types[source_type] {
+        FunctionType(parameters, _) => parameters
+        _ => abort("imported type finish task is not a function")
+      }
+      self.application_scratch.clear()
+      for index in 0..<parameters.length {
+        self.application_scratch.push(self.results[result_start + index])
+      }
+      let imported = self.intern_function(
+        self.application_scratch,
+        self.results[result_start + parameters.length],
       )
       self.memos[source_interface][source_type] = imported
       self.results.truncate(result_start)
