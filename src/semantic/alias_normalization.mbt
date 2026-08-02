@@ -623,6 +623,16 @@ fn TypeResolver::normalize_signature_tables(self : TypeResolver) -> Unit {
       self.callable_return_types[index],
     )
   }
+  for index in 0..<self.lambda_parameter_types.length() {
+    self.lambda_parameter_types[index] = self.normalize_type(
+      self.lambda_parameter_types[index],
+    )
+  }
+  for index in 0..<self.lambda_return_types.length() {
+    self.lambda_return_types[index] = self.normalize_type(
+      self.lambda_return_types[index],
+    )
+  }
   for index in 0..<self.field_types.length() {
     self.field_types[index] = self.normalize_type(self.field_types[index])
   }
@@ -656,6 +666,20 @@ fn TypeResolver::resolve_callable_function_types(self : TypeResolver) -> Unit {
     self.callable_function_types[index] = self.interner.intern_function(
       self.application_scratch,
       self.callable_return_types[index],
+    )
+  }
+  for index, lambda in self.collected.lambdas {
+    self.application_scratch.clear()
+    for
+      parameter_index in lambda.parameters.start..<(lambda.parameters.start +
+      lambda.parameters.length) {
+      self.application_scratch.push(
+        self.lambda_parameter_types[parameter_index],
+      )
+    }
+    self.lambda_function_types[index] = self.interner.intern_function(
+      self.application_scratch,
+      self.lambda_return_types[index],
     )
   }
 }

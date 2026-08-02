@@ -10,7 +10,7 @@ fn() -> Unit
 fn(I32) -> fn(Bool) -> String
 ```
 
-Parser types preserve ordered parameter types, result type, and source offset. Collection lowers them iteratively into `FunctionTypeSyntax`, reusing the module type-argument arena for the parameter span. Resolution interns `FunctionType` nodes structurally and traverses them through generic alias substitution, alias normalization, imported-interface translation, visibility checks, coherence signature comparison, nominal reachability, and frozen-interface cache V3. Every callable also receives a canonical structural function-type ID after signature normalization.
+Parser types preserve ordered parameter types, result type, and source offset. Collection lowers them iteratively into `FunctionTypeSyntax`, reusing the module type-argument arena for the parameter span. Resolution interns `FunctionType` nodes structurally and traverses them through generic alias substitution, alias normalization, imported-interface translation, visibility checks, coherence signature comparison, nominal reachability, and frozen-interface cache V4. Every callable also receives a canonical structural function-type ID after signature normalization.
 
 Semantic lowering retains a provisional reference shape for function values, while WasmGC fragment planning refines every reachable structural function type to a nullable typed function reference. Unambiguous non-generic local/imported function names produce `FunctionReferenceSelection`, and calls through function-typed locals produce `SelectedFunctionValueCallTarget` after structural arity/parameter/result checking. Lowering preserves both operations explicitly. The backend now emits non-capturing references with `ref.func`, declares referenced functions in a declarative element segment, and invokes function values with typed `call_ref`. Function-typed parameters and locals use the exact canonical reference type rather than erased `eqref`.
 
@@ -30,7 +30,7 @@ Collection lowers each lambda header immediately and defers its block into an is
 
 Lexical name resolution now processes those isolated bodies after their enclosing root-body jobs. Each lambda receives its own parameter, local, control, and diagnostic spans. A lambda expression freezes the active binding stack at its exact source position, so later declarations are not accidentally visible and shadowed bindings retain the correct identity. Direct captures are ordered by first use. Each capture records an exact `BodyLocalCapture` or `LambdaLocalCapture` source plus mutability. Free variables used only by nested lambdas are routed through every intermediate lambda in deterministic nested-lambda/source order, preparing those environments to construct descendant closures. Module/import names remain ordinary non-captured references.
 
-Semantic type inference still reports the explicit unsupported lambda-expression boundary; lambda signature resolution, closure allocation, and generic or overloaded function-value disambiguation remain pending.
+Lambda parameter and result syntax now resolves in the enclosing root declaration's generic/type scope. Each lambda receives one canonical structural `FunctionType`, with alias-normalized parameter and result types, and the frozen-interface cache is versioned to V4 for the added resolved signature tables. Body inference still reports the explicit unsupported lambda-expression boundary; isolated-body inference, closure allocation, and generic or overloaded function-value disambiguation remain pending.
 
 ## Proposed representation
 
@@ -43,9 +43,9 @@ The lowered callable signature should receive the environment explicitly before 
 
 ## Required next milestones
 
-1. Resolve lambda signatures into canonical structural function types.
-2. Infer isolated lambda bodies against parameters, captures, and declared results.
-3. Add expected-type disambiguation for overloaded and generic function references.
+1. Infer isolated lambda bodies against parameters, captures, and declared results.
+2. Add expected-type disambiguation for overloaded and generic function references.
+3. Define canonical immutable and mutable environment field representations.
 4. Emit environment structs and captured loads.
 5. Introduce the closure-object ABI for captured and uniformly escaping values.
 6. Add escape analysis and directization before allocation optimization.

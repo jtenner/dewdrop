@@ -15,6 +15,9 @@ priv struct TypeResolver {
   parameter_types : Array[ResolvedTypeId]
   callable_return_types : Array[ResolvedTypeId]
   callable_function_types : Array[ResolvedTypeId]
+  lambda_parameter_types : Array[ResolvedTypeId]
+  lambda_return_types : Array[ResolvedTypeId]
+  lambda_function_types : Array[ResolvedTypeId]
   field_types : Array[ResolvedTypeId]
   variant_payloads : Array[HirSpan]
   signature_type_lists : Array[ResolvedTypeId]
@@ -109,6 +112,12 @@ fn TypeResolver::new(
     parameter_types: Array::make(collected.parameters.length(), -1),
     callable_return_types: Array::make(collected.callables.length(), -1),
     callable_function_types: Array::make(collected.callables.length(), -1),
+    lambda_parameter_types: Array::make(
+      collected.lambda_parameters.length(),
+      -1,
+    ),
+    lambda_return_types: Array::make(collected.lambdas.length(), -1),
+    lambda_function_types: Array::make(collected.lambdas.length(), -1),
     field_types: Array::make(collected.fields.length(), -1),
     variant_payloads: Array::make(
       collected.variants.length(),
@@ -839,6 +848,23 @@ fn TypeResolver::resolve_signatures(self : TypeResolver) -> Unit {
       any_type_name,
     )
   }
+  for index, lambda in self.collected.lambdas {
+    let root_body = self.collected.bodies[semantic_id_local(lambda.root_body)]
+    for
+      parameter_index in lambda.parameters.start..<(lambda.parameters.start +
+      lambda.parameters.length) {
+      self.lambda_parameter_types[parameter_index] = self.resolve_syntax(
+        root_body.declaration,
+        self.collected.lambda_parameters[parameter_index].type_,
+        any_type_name,
+      )
+    }
+    self.lambda_return_types[index] = self.resolve_syntax(
+      root_body.declaration,
+      lambda.return_type,
+      any_type_name,
+    )
+  }
   for index, field in self.collected.fields {
     self.field_types[index] = self.resolve_syntax(
       field.declaration,
@@ -993,6 +1019,9 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
     parameter_types: self.parameter_types,
     callable_return_types: self.callable_return_types,
     callable_function_types: self.callable_function_types,
+    lambda_parameter_types: self.lambda_parameter_types,
+    lambda_return_types: self.lambda_return_types,
+    lambda_function_types: self.lambda_function_types,
     field_types: self.field_types,
     variant_payloads: self.variant_payloads,
     signature_type_lists: self.signature_type_lists,

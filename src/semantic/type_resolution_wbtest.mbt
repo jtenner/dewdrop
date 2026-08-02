@@ -61,6 +61,41 @@ test "function types intern canonically and normalize generic aliases" {
 }
 
 ///|
+test "lambda signatures resolve canonically in their root generic context" {
+  let collected = collect_bytes(
+    57UL, b"fn wrap<t>(value: t) -> t {\n  let callback = fn(item: t, transform: fn(t) -> I32) -> t {\n    item\n  }\n  value\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  assert_eq(resolved.diagnostics.length(), 0)
+  assert_eq(resolved.lambda_parameter_types.length(), 2)
+  assert_eq(resolved.lambda_return_types.length(), 1)
+  assert_eq(resolved.lambda_function_types.length(), 1)
+  let generic = resolved.generic_parameter_types[0]
+  assert_eq(resolved.lambda_parameter_types[0], generic)
+  assert_eq(resolved.lambda_return_types[0], generic)
+  match resolved.types[resolved.lambda_parameter_types[1]] {
+    FunctionType(parameters, result) => {
+      assert_eq(parameters.length, 1)
+      assert_eq(resolved.type_arguments[parameters.start], generic)
+      assert_eq(result, resolved.primitive(I32Type))
+    }
+    _ => fail("expected nested lambda parameter function type")
+  }
+  match resolved.types[resolved.lambda_function_types[0]] {
+    FunctionType(parameters, result) => {
+      assert_eq(parameters.length, 2)
+      assert_eq(resolved.type_arguments[parameters.start], generic)
+      assert_eq(
+        resolved.type_arguments[parameters.start + 1],
+        resolved.lambda_parameter_types[1],
+      )
+      assert_eq(result, generic)
+    }
+    _ => fail("expected canonical lambda function type")
+  }
+}
+
+///|
 test "type resolution diagnoses unknown names and generic arity" {
   let collected = collect_bytes(
     41UL, b"struct Box<t> {}\nfn bad<t>(a: Missing, b: Box, c: I32<String>, d: t<I32>, e: Unknown) -> Unit {}\n",
