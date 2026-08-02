@@ -882,7 +882,8 @@ fn BodyNameResolver::schedule_expression_children(
     | HirF64Expr(_, _)
     | HirBoolExpr(_, _)
     | HirStringExpr(_, _)
-    | HirBytesExpr(_, _) => ()
+    | HirBytesExpr(_, _)
+    | HirLambdaExpr(_, _) => ()
     HirNameExpr(name, offset) =>
       self.resolve_expression_name(expression, name, offset, expectation)
     HirImportAliasExpr(name, offset) =>

@@ -530,6 +530,7 @@ fn plan_expression_kind(
         | NoNameReference => PlannedConsumedExpression
       }
     HirImportAliasExpr(_, _) => PlannedConsumedExpression
+    HirLambdaExpr(_, _) => PlannedPoisonExpression
     HirObjectExpr(_, _) | HirConstructExpr(_, _, _) => PlannedPoisonExpression
     HirBlockExpr(block, _) => PlannedBlockExpression(block)
     HirIfExpr(condition, then_block, else_expression, _) =>

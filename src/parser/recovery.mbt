@@ -103,6 +103,35 @@ fn RecoveryFailure::fence(self : RecoveryFailure) -> RecoveryFence {
 }
 
 ///|
+fn expression_failure_with_fence(
+  error : ExpressionError,
+  fence : RecoveryFence,
+) -> RecoveryFailure {
+  let mut failure = expression_failure(error)
+  let mut braces = fence.braces
+  while braces > 0 {
+    failure = InsideBrace(failure)
+    braces -= 1
+  }
+  let mut parentheses = fence.parentheses
+  while parentheses > 0 {
+    failure = InsideParenthesis(failure)
+    parentheses -= 1
+  }
+  let mut brackets = fence.brackets
+  while brackets > 0 {
+    failure = InsideBracket(failure)
+    brackets -= 1
+  }
+  let mut angles = fence.angles
+  while angles > 0 {
+    failure = InsideAngle(failure)
+    angles -= 1
+  }
+  failure
+}
+
+///|
 fn declaration_failure_with_fence(
   error : DeclarationError,
   fence : RecoveryFence,

@@ -88,6 +88,36 @@ fn CollectionBuilder::emit_expr(
 }
 
 ///|
+fn CollectionBuilder::record_lambda(
+  self : CollectionBuilder,
+  parameters : Array[@parser.FnParameter],
+  return_type : @parser.TypeExpr,
+  body : @parser.Block,
+  offset : UInt64,
+) -> LambdaId {
+  let id = self.lambda_sources.length()
+  let parameter_start = self.lambda_parameters.length()
+  for parameter in parameters {
+    self.lambda_parameters.push({
+      name: self.intern(parameter.name),
+      type_: self.lower_type(parameter.type_),
+      offset: parameter.offset,
+    })
+  }
+  self.lambda_parameter_spans.push({
+    start: parameter_start,
+    length: self.lambda_parameters.length() - parameter_start,
+  })
+  self.lambda_return_types.push(self.lower_type(return_type))
+  self.lambda_sources.push(body)
+  self.lambda_files.push(self.current_file)
+  self.lambda_offsets.push(offset)
+  self.lambda_parents.push(self.current_lambda)
+  self.lambda_root_bodies.push(self.current_root_body)
+  id
+}
+
+///|
 fn CollectionBuilder::emit_pattern(
   self : CollectionBuilder,
   pattern : HirPattern,
@@ -141,6 +171,15 @@ fn CollectionBuilder::visit_expr_source(
       ignore(self.emit_expr(HirNameExpr(self.intern(name), offset)))
     @parser.ImportAliasExpr(name, offset) =>
       ignore(self.emit_expr(HirImportAliasExpr(self.intern(name), offset)))
+    @parser.LambdaExpr(parameters, return_type, body, offset) =>
+      ignore(
+        self.emit_expr(
+          HirLambdaExpr(
+            self.record_lambda(parameters, return_type, body, offset),
+            offset,
+          ),
+        ),
+      )
     @parser.ObjectExpr(fields, _) => {
       let start = self.body_expr_results.length()
       self.push_body_task(body_finish_expr, source_index, start, 0)
@@ -722,6 +761,88 @@ fn CollectionBuilder::append_body(
 }
 
 ///|
+fn CollectionBuilder::lower_pending_lambda_bodies(
+  self : CollectionBuilder,
+) -> Unit {
+  while self.lambdas.length() < self.lambda_sources.length() {
+    let lambda = self.lambdas.length()
+    self.reset_body_scratch()
+    let expression_start = self.expressions.length()
+    let expression_child_start = self.expression_children.length()
+    let block_start = self.blocks.length()
+    let block_item_start = self.block_items.length()
+    let pattern_start = self.patterns.length()
+    let pattern_child_start = self.pattern_children.length()
+    let arm_start = self.pattern_arms.length()
+    let arm_child_start = self.arm_children.length()
+    let object_field_start = self.object_fields.length()
+    let pattern_field_start = self.pattern_fields.length()
+    self.current_lambda = lambda
+    self.current_root_body = self.lambda_root_bodies[lambda]
+    self.schedule_block(self.lambda_sources[lambda])
+    self.run_body_tasks()
+    guard self.body_block_results.length() == 1 else {
+      abort("invalid lambda block lowering result")
+    }
+    self.lambdas.push({
+      id: lambda,
+      parent: self.lambda_parents[lambda],
+      root_body: self.lambda_root_bodies[lambda],
+      parameters: self.lambda_parameter_spans[lambda],
+      return_type: self.lambda_return_types[lambda],
+      body: {
+        root: self.body_block_results[0],
+        expressions: {
+          start: expression_start,
+          length: self.expressions.length() - expression_start,
+        },
+        expression_children: {
+          start: expression_child_start,
+          length: self.expression_children.length() - expression_child_start,
+        },
+        blocks: {
+          start: block_start,
+          length: self.blocks.length() - block_start,
+        },
+        block_items: {
+          start: block_item_start,
+          length: self.block_items.length() - block_item_start,
+        },
+        patterns: {
+          start: pattern_start,
+          length: self.patterns.length() - pattern_start,
+        },
+        pattern_children: {
+          start: pattern_child_start,
+          length: self.pattern_children.length() - pattern_child_start,
+        },
+        pattern_arms: {
+          start: arm_start,
+          length: self.pattern_arms.length() - arm_start,
+        },
+        arm_children: {
+          start: arm_child_start,
+          length: self.arm_children.length() - arm_child_start,
+        },
+        object_fields: {
+          start: object_field_start,
+          length: self.object_fields.length() - object_field_start,
+        },
+        pattern_fields: {
+          start: pattern_field_start,
+          length: self.pattern_fields.length() - pattern_field_start,
+        },
+      },
+      file: self.lambda_files[lambda],
+      offset: self.lambda_offsets[lambda],
+    })
+    self.reset_body_scratch()
+    self.current_lambda = -1
+    self.current_root_body = 0UL
+  }
+}
+
+///|
 fn CollectionBuilder::lower_expression_body(
   self : CollectionBuilder,
   declaration : DeclId,
@@ -730,6 +851,11 @@ fn CollectionBuilder::lower_expression_body(
   offset : UInt64,
 ) -> Unit {
   self.reset_body_scratch()
+  self.current_lambda = -1
+  self.current_root_body = make_semantic_id(
+    self.module_id,
+    self.bodies.length(),
+  )
   let expression_start = self.expressions.length()
   let expression_child_start = self.expression_children.length()
   let block_start = self.blocks.length()
@@ -762,6 +888,7 @@ fn CollectionBuilder::lower_expression_body(
     offset,
   )
   self.reset_body_scratch()
+  self.lower_pending_lambda_bodies()
 }
 
 ///|
@@ -773,6 +900,11 @@ fn CollectionBuilder::lower_block_body(
   offset : UInt64,
 ) -> Unit {
   self.reset_body_scratch()
+  self.current_lambda = -1
+  self.current_root_body = make_semantic_id(
+    self.module_id,
+    self.bodies.length(),
+  )
   let expression_start = self.expressions.length()
   let expression_child_start = self.expression_children.length()
   let block_start = self.blocks.length()
@@ -805,4 +937,5 @@ fn CollectionBuilder::lower_block_body(
     offset,
   )
   self.reset_body_scratch()
+  self.lower_pending_lambda_bodies()
 }

@@ -23,6 +23,56 @@ test "collection assigns stable bodies to lets functions and impl methods" {
 }
 
 ///|
+test "lambda bodies lower into isolated source-ordered HIR fragments" {
+  let collected = collect_bytes(
+    22UL, b"fn make() -> fn(I32) -> fn(I32) -> I32 {\n  fn(first: I32) -> fn(I32) -> I32 {\n    fn(second: I32) -> I32 {\n      first + second\n    }\n  }\n}\n",
+  )
+  assert_eq(collected.diagnostics.length(), 0)
+  assert_eq(collected.bodies.length(), 1)
+  assert_eq(collected.lambdas.length(), 2)
+  let function_root = match collected.bodies[0].root {
+    BlockBodyRoot(block) => collected.blocks[block].items
+    _ => fail("expected function block")
+  }
+  let outer_expression = match collected.block_items[function_root.start] {
+    HirExpressionItem(expression, _) => expression
+    _ => fail("expected outer lambda expression")
+  }
+  assert_eq(collected.expressions[outer_expression], HirLambdaExpr(0, 43UL))
+  let outer = collected.lambdas[0]
+  assert_eq(outer.parent, -1)
+  assert_eq(outer.root_body, collected.bodies[0].id)
+  assert_eq(outer.parameters.length, 1)
+  assert_eq(
+    collected.name(collected.lambda_parameters[outer.parameters.start].name),
+    "first",
+  )
+  assert_true(
+    outer.body.expressions.start > collected.bodies[0].expressions.start,
+  )
+  let outer_items = collected.blocks[outer.body.root].items
+  let nested_expression = match collected.block_items[outer_items.start] {
+    HirExpressionItem(expression, _) => expression
+    _ => fail("expected nested lambda expression")
+  }
+  assert_eq(collected.expressions[nested_expression], HirLambdaExpr(1, 82UL))
+  let nested = collected.lambdas[1]
+  assert_eq(nested.parent, 0)
+  assert_eq(nested.root_body, collected.bodies[0].id)
+  assert_eq(nested.parameters.length, 1)
+  let nested_items = collected.blocks[nested.body.root].items
+  let nested_tail = match collected.block_items[nested_items.start] {
+    HirExpressionItem(expression, _) => expression
+    _ => fail("expected nested lambda body tail")
+  }
+  match collected.expressions[nested_tail] {
+    HirBinaryExpr(HirAdd, _, _, _) => ()
+    _ => fail("expected nested lambda addition")
+  }
+  assert_true(nested.body.expressions.start > outer.body.expressions.start)
+}
+
+///|
 test "body HIR emits expression children before parents" {
   let collected = collect_bytes(22UL, b"let answer = left + right * 2\n")
   assert_eq(collected.bodies.length(), 1)

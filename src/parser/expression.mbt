@@ -627,6 +627,82 @@ fn Parser::parse_object_literal(
 }
 
 ///|
+fn lambda_header_failure(
+  failure : RecoveryFailure,
+  lambda_offset : UInt64,
+) -> RecoveryFailure {
+  let fence = failure.fence()
+  let error = match failure.declaration_error() {
+    ExpectedDeclarationSyntax(expectation, token) =>
+      ExpectedLambdaSyntax(expectation, token, lambda_offset)
+    DeclarationLexicalError(error, offset) => LexicalError(error, offset)
+    UnexpectedTypeCloser(offset) =>
+      UnexpectedLambdaTypeCloser(offset, lambda_offset)
+    _ => InvalidLambdaSyntax(lambda_offset)
+  }
+  expression_failure_with_fence(error, fence)
+}
+
+///|
+fn Parser::parse_lambda_expression(
+  self : Parser,
+  lambda_offset : UInt64,
+) -> Result[Expr, RecoveryFailure] {
+  guard self.consume_left_paren() else {
+    return Err(
+      lambda_header_failure(self.declaration_error(LeftParen), lambda_offset),
+    )
+  }
+  let parameters = match self.parse_parameters() {
+    Ok(value) => value
+    Err(error) => return Err(lambda_header_failure(error, lambda_offset))
+  }
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Arrow) => self.consume_lookahead()
+        _ =>
+          return Err(
+            lambda_header_failure(self.declaration_error(Arrow), lambda_offset),
+          )
+      }
+    None =>
+      return Err(
+        lambda_header_failure(self.declaration_error(Arrow), lambda_offset),
+      )
+  }
+  let return_type = match self.parse_type() {
+    Ok(value) => value
+    Err(error) => return Err(lambda_header_failure(error, lambda_offset))
+  }
+  let open_offset = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+          self.consume_lookahead()
+          token.offset()
+        }
+        _ =>
+          return Err(
+            lambda_header_failure(
+              self.declaration_error(LeftBrace),
+              lambda_offset,
+            ),
+          )
+      }
+    None =>
+      return Err(
+        lambda_header_failure(self.declaration_error(LeftBrace), lambda_offset),
+      )
+  }
+  let body = match self.parse_block_after_left_brace(open_offset) {
+    Ok(value) => value
+    Err(error) => return Err(error.inside_brace())
+  }
+  Ok(LambdaExpr(parameters, return_type, body, lambda_offset))
+}
+
+///|
 /// Parses one expression in a single forward pass. The state alternates
 /// between value-seeking and binary-operator-seeking modes. A token that does
 /// not continue the expression remains in the parser's one-token lookahead.
@@ -673,6 +749,16 @@ fn Parser::parse_expression_context(
                     nested_groups,
                   ),
                 )
+              }
+              @tokenizer.Keyword(@tokenizer.Fn) => {
+                self.consume_lookahead()
+                let expression = match self.parse_lambda_expression(offset) {
+                  Ok(value) => value
+                  Err(error) =>
+                    return Err(error.inside_parentheses_count(nested_groups))
+                }
+                values.push(expression)
+                mode = SeekingBinaryOperator
               }
               @tokenizer.Keyword(@tokenizer.If) => {
                 self.consume_lookahead()

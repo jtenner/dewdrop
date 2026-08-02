@@ -930,7 +930,8 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
       | HirStringExpr(_, _)
       | HirBytesExpr(_, _)
       | HirNameExpr(_, _)
-      | HirImportAliasExpr(_, _) => self.terminal_flow(expression)
+      | HirImportAliasExpr(_, _)
+      | HirLambdaExpr(_, _) => self.terminal_flow(expression)
       HirObjectExpr(fields, _) => {
         let mut prefix = flow(flow_falls_through)
         for index in 0..<fields.length {

@@ -255,6 +255,8 @@ pub struct CollectedModule {
   impls : Array[CollectedImpl]
   type_syntax : Array[HirTypeSyntax]
   type_arguments : Array[HirTypeId]
+  lambda_parameters : Array[HirLambdaParameter]
+  lambdas : Array[HirLambda]
   bodies : Array[HirBody]
   body_by_declaration : Array[Int]
   expressions : Array[HirExpr]

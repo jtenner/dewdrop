@@ -11,6 +11,9 @@ pub type BlockId = Int
 pub type PatternArmId = Int
 
 ///|
+pub type LambdaId = Int
+
+///|
 pub enum HirBodyKind {
   ModuleLetBody
   FunctionBody
@@ -61,6 +64,40 @@ pub fn CollectedModule::body_of(
     Some(self.bodies[body_index])
   }
 }
+
+///|
+pub struct HirLambdaParameter {
+  name : NameId
+  type_ : HirTypeId
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
+pub struct HirLambdaBody {
+  root : BlockId
+  expressions : HirSpan
+  expression_children : HirSpan
+  blocks : HirSpan
+  block_items : HirSpan
+  patterns : HirSpan
+  pattern_children : HirSpan
+  pattern_arms : HirSpan
+  arm_children : HirSpan
+  object_fields : HirSpan
+  pattern_fields : HirSpan
+} derive(Eq, Debug)
+
+///|
+pub struct HirLambda {
+  id : LambdaId
+  parent : LambdaId
+  root_body : BodyId
+  parameters : HirSpan
+  return_type : HirTypeId
+  body : HirLambdaBody
+  file : FileId
+  offset : UInt64
+} derive(Eq, Debug)
 
 ///|
 pub struct HirObjectField {
@@ -178,6 +215,7 @@ pub enum HirExpr {
   HirBytesExpr(Bytes, UInt64)
   HirNameExpr(NameId, UInt64)
   HirImportAliasExpr(NameId, UInt64)
+  HirLambdaExpr(LambdaId, UInt64)
   HirObjectExpr(HirSpan, UInt64)
   HirConstructExpr(ExprId, HirSpan, UInt64)
   HirBlockExpr(BlockId, UInt64)
@@ -213,6 +251,7 @@ pub fn HirExpr::offset(self : HirExpr) -> UInt64 {
     | HirBytesExpr(_, offset)
     | HirNameExpr(_, offset)
     | HirImportAliasExpr(_, offset)
+    | HirLambdaExpr(_, offset)
     | HirObjectExpr(_, offset)
     | HirConstructExpr(_, _, offset)
     | HirIfExpr(_, _, _, offset)

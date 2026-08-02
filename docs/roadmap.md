@@ -302,6 +302,9 @@ erased fallback.
 - [x] Resolve unambiguous non-generic local/imported function references and structurally type-check calls through function-valued locals.
 - [x] Emit non-capturing function references and first-class calls with typed `ref.func`/`call_ref`.
 - [ ] Closures and captured environments.
+  - [x] Parse explicit typed lambda expressions with forward-only cursor movement.
+  - [x] Collect nested lambda bodies into isolated source-ordered HIR fragments.
+  - [ ] Resolve captures and emit closure environments.
 - [x] Emit typed indirect calls for non-capturing function values.
 - [ ] Tail-call optimization if supported and measured.
 - [x] Cross-module direct calls and static imports.

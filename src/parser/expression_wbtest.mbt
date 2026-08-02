@@ -170,6 +170,52 @@ test "prefix operators wait for postfix calls" {
 }
 
 ///|
+test "lambda expressions reuse typed parameters and block bodies" {
+  match parse_test_expression(b"fn(value: I32) -> I32 {\n  value + 1\n}") {
+    Ok(LambdaExpr([parameter], NamedType("I32", _), body, 0UL)) => {
+      assert_eq(parameter.name, "value")
+      assert_eq(parameter.type_, NamedType("I32", 10UL))
+      match body.tail_expression() {
+        Some(BinaryExpr(Add, NameExpr("value", _), I32Expr(1UL, _), _)) => ()
+        _ => fail("expected lambda block tail")
+      }
+    }
+    _ => fail("expected typed lambda expression")
+  }
+}
+
+///|
+test "lambda expressions enter postfix mode without parser rewinding" {
+  match
+    parse_test_expression(b"fn(value: I32) -> I32 {\n  value\n}(41).result") {
+    Ok(
+      FieldExpr(
+        CallExpr(
+          LambdaExpr([_], NamedType("I32", _), _, 0UL),
+          [I32Expr(41UL, _)],
+          _
+        ),
+        "result",
+        _
+      )
+    ) => ()
+    _ => fail("expected postfix continuation after lambda")
+  }
+}
+
+///|
+test "lambda headers fail deterministically at the forward cursor" {
+  match parse_test_expression(b"fn(: I32) -> I32 {\n  0\n}") {
+    Err(ExpectedLambdaSyntax(ParameterName, Some(token), 0UL)) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Colon) => ()
+        _ => fail("expected colon at the lambda parameter cursor")
+      }
+    _ => fail("expected deterministic lambda parameter error")
+  }
+}
+
+///|
 test "calls chain without expression backtracking" {
   assert_eq(
     parse_test_expression(b"f()(1)"),

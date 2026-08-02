@@ -32,6 +32,17 @@ priv struct CollectionBuilder {
   type_result_start_scratch : Array[Int]
   type_result_scratch : Array[HirTypeId]
   type_list_scratch : Array[HirTypeId]
+  lambda_parameters : Array[HirLambdaParameter]
+  lambdas : Array[HirLambda]
+  lambda_sources : Array[@parser.Block]
+  lambda_parameter_spans : Array[HirSpan]
+  lambda_return_types : Array[HirTypeId]
+  lambda_files : Array[FileId]
+  lambda_offsets : Array[UInt64]
+  lambda_parents : Array[LambdaId]
+  lambda_root_bodies : Array[BodyId]
+  mut current_lambda : LambdaId
+  mut current_root_body : BodyId
   bodies : Array[HirBody]
   body_by_declaration : Array[Int]
   expressions : Array[HirExpr]
@@ -103,6 +114,17 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     type_result_start_scratch: [],
     type_result_scratch: [],
     type_list_scratch: [],
+    lambda_parameters: [],
+    lambdas: [],
+    lambda_sources: [],
+    lambda_parameter_spans: [],
+    lambda_return_types: [],
+    lambda_files: [],
+    lambda_offsets: [],
+    lambda_parents: [],
+    lambda_root_bodies: [],
+    current_lambda: -1,
+    current_root_body: 0UL,
     bodies: [],
     body_by_declaration: [],
     expressions: [],
@@ -1054,6 +1076,8 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     impls: self.impls,
     type_syntax: self.type_syntax,
     type_arguments: self.type_arguments,
+    lambda_parameters: self.lambda_parameters,
+    lambdas: self.lambdas,
     bodies: self.bodies,
     body_by_declaration: self.body_by_declaration,
     expressions: self.expressions,

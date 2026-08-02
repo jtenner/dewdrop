@@ -5936,6 +5936,7 @@ fn BasicBodyInferencer::constrain_expressions(
       | HirBytesExpr(_, _)
       | HirNameExpr(_, _)
       | HirImportAliasExpr(_, _) => ()
+      HirLambdaExpr(_, _) => self.mark_unsupported(expression)
       HirBreakExpr(value, offset) =>
         self.constrain_transfer_expression(expression, value, true, offset)
       HirContinueExpr(value, offset) =>

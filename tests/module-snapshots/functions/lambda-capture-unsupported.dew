@@ -1,0 +1,7 @@
+pub fn main() -> Unit {
+  let offset = 1
+  let add = fn(value: I32) -> I32 {
+    value + offset
+  }
+  assert(add(41) == 42, "capturing lambda")
+}
