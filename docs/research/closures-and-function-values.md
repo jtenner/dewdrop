@@ -66,7 +66,7 @@ A future shared-environment optimization may still select a split representation
 
 1. Define executable specialization and ABI identity for generic function references.
 2. Add closure ABI fingerprints to persistent external package interfaces.
-4. Extend the implemented local directization and named-reference reuse passes with interprocedural escape summaries and cross-module closure-base unification.
+4. Extend the implemented transparent call-only wrapper summaries to returned, stored, conditionally called, multiply forwarded, and unknown callback uses.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints

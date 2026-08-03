@@ -34,6 +34,13 @@ pub fn main() -> Unit {
   let add_one = make_adder(1)
   assert(add_one(41) == 42, "returned closure")
   assert(apply(add_one, 41) == 42, "closure parameter")
+  assert(apply(identity, 42) == 42, "transparent named callback")
+  assert(
+    apply(fn(value: I32) -> I32 {
+      value + 1
+    }, 41) == 42,
+    "transparent lambda callback",
+  )
 
   let nested = make_nested(39)
   assert(nested(1) == 42, "nested closure")

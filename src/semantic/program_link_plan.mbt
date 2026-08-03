@@ -183,6 +183,109 @@ pub fn PlannedProgramWasmGCLink::physical_type_index(
 }
 
 ///|
+fn transparent_callback_parameter_count(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+) -> Int {
+  let mut parameter_count = 0
+  for local_id in 0..<body.locals.length {
+    match module_.locals[body.locals.start + local_id].kind {
+      ParameterLocal => parameter_count += 1
+      _ => break
+    }
+  }
+  if parameter_count <= 0 {
+    return -1
+  }
+  let root_expression = match body.root {
+    BlockBodyRoot(block) => {
+      let items = module_.blocks[block].items
+      if items.length != 1 {
+        return -1
+      }
+      match module_.block_items[items.start].kind {
+        PlannedExpressionItem(expression) => expression
+        _ => return -1
+      }
+    }
+    ExpressionBodyRoot(expression) => expression
+  }
+  let (target, arguments) = match module_.expressions[root_expression].kind {
+    PlannedFunctionValueCall(target, arguments, _) => (target, arguments)
+    _ => return -1
+  }
+  match module_.expressions[target].kind {
+    PlannedLocalGet(0) => ()
+    _ => return -1
+  }
+  if arguments.length != parameter_count - 1 {
+    return -1
+  }
+  for index in 0..<arguments.length {
+    let argument = module_.expression_children[arguments.start + index]
+    match module_.expressions[argument].kind {
+      PlannedLocalGet(local_id) if local_id == index + 1 => ()
+      _ => return -1
+    }
+  }
+  parameter_count
+}
+
+///|
+fn directize_transparent_callback_calls(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  let summaries : Map[DeclId, Int] = Map::default()
+  for module_ in modules {
+    for body in module_.bodies {
+      let parameter_count = transparent_callback_parameter_count(module_, body)
+      if parameter_count > 0 {
+        summaries[body.declaration] = parameter_count
+      }
+    }
+  }
+  for module_ in modules {
+    for expression in 0..<module_.expressions.length() {
+      let (declaration, arguments) = match
+        module_.expressions[expression].kind {
+        PlannedDirectCall(declaration, receiver, arguments, _) if receiver < 0 =>
+          (declaration, arguments)
+        _ => continue
+      }
+      let parameter_count = match summaries.get(declaration) {
+        Some(count) => count
+        None => continue
+      }
+      if arguments.length != parameter_count {
+        continue
+      }
+      let callback_expression = module_.expression_children[arguments.start]
+      let forwarded = {
+        start: arguments.start + 1,
+        length: arguments.length - 1,
+      }
+      let replacement = match module_.expressions[callback_expression].kind {
+        PlannedLambdaClosure(lambda, captures) => {
+          let lambda_source = module_.lambdas[lambda]
+          module_.lambdas[lambda] = { ..lambda_source, directized: true }
+          PlannedDirectLambdaCall(lambda, captures, forwarded)
+        }
+        PlannedFunctionReference(target) =>
+          PlannedDirectCall(target, -1, forwarded, { start: 0, length: 0 })
+        _ => continue
+      }
+      let callback_source = module_.expressions[callback_expression]
+      module_.expressions[callback_expression] = {
+        ..callback_source,
+        kind: PlannedConsumedExpression,
+      }
+      let call_source = module_.expressions[expression]
+      module_.expressions[expression] = { ..call_source, kind: replacement }
+    }
+  }
+}
+
+///|
 /// Runs backend-neutral module lowering jobs in dependency-SCC order. Final
 /// module slots remain in manifest order.
 pub fn plan_program_lowering(
@@ -232,6 +335,7 @@ pub fn plan_program_lowering(
   for slot in slots {
     modules.push(slot.unwrap())
   }
+  directize_transparent_callback_calls(modules)
   { graph: analyzed.frozen.graph, modules }
 }
 

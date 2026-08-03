@@ -361,6 +361,7 @@ count = count + 1
   - [x] Elide unused local closure values, lambda entries, and physical subtypes.
   - [x] Reuse repeated escaping named references through one body-local closure cache.
   - [x] Unify linked module closure bases and promote each surviving named declaration to one deterministic program-wide singleton global.
+  - [x] Directize transparent call-only callback wrappers interprocedurally for known lambda and named arguments.
   - [x] Snapshot an allocation-free directization fixture with no closure type or `call_ref`.
   - [x] Conservatively retain the closure ABI for captured, returned, passed, global, and imported values.
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.

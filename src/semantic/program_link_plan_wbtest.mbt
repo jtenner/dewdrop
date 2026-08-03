@@ -274,6 +274,34 @@ test "program linker eliminates unused physical aggregate types" {
 }
 
 ///|
+test "program lowering directizes transparent callback wrappers" {
+  let program = collect_program_manifest(
+    2280UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn increment(value: I32) -> I32 {\n  value + 1\n}\nfn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  callback(value)\n}\npub fn main() -> I32 {\n  apply(increment, 41)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let collected = program.modules[0]
+  let main = collected.lookup_value("main").unwrap()
+  let body = collected.body_of(main).unwrap()
+  let call = body_calls(collected, body)[0]
+  let increment = collected.lookup_value("increment").unwrap()
+  match lowering.modules[0].expressions[call].kind {
+    PlannedDirectCall(declaration, _, arguments, _) => {
+      assert_eq(declaration, increment)
+      assert_eq(arguments.length, 1)
+    }
+    _ => fail("expected transparent callback wrapper directization")
+  }
+}
+
+///|
 test "program link unifies closure bases and named singletons across modules" {
   let program = collect_program_manifest(
     2285UL,
