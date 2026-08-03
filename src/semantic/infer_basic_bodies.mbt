@@ -877,9 +877,7 @@ fn BasicBodyInferencer::local_function_reference_candidate_count(
       let local_index = semantic_id_local(candidate.declaration)
       if local_index >= 0 && local_index < self.callable_indices.length() {
         let callable_index = self.callable_indices[local_index]
-        if callable_index >= 0 &&
-          self.collected.generic_parameters_of(candidate.declaration).length ==
-          0 {
+        if callable_index >= 0 {
           count += 1
         }
       }
@@ -905,7 +903,7 @@ fn BasicBodyInferencer::imported_function_reference_candidate_count(
     let interface_ = imports.scope.interfaces[reference.interface_index].unwrap()
     let declaration = interface_.callables[reference.callable_index].declaration
     match imports.callable(declaration) {
-      Some(callable) if callable.generic_parameters.length == 0 => count += 1
+      Some(_) => count += 1
       _ => ()
     }
     cursor = reference.next
@@ -917,16 +915,41 @@ fn BasicBodyInferencer::imported_function_reference_candidate_count(
 fn BasicBodyInferencer::function_reference_candidate_viable(
   self : BasicBodyInferencer,
   expression : ExprId,
+  declaration : DeclId,
   candidate_type : ResolvedTypeId,
   offset : UInt64,
 ) -> Bool {
+  ignore(candidate_type)
+  let (expected_parameters, expected_result) = match
+    self.resolved_function_signature(self.expression_type(expression)) {
+    Some(signature) => signature
+    None => return false
+  }
+  if expected_parameters.length != self.call_parameter_count(declaration) {
+    return false
+  }
   let snapshot = self.solver.snapshot()
   let diagnostic_start = self.solver.diagnostics.length()
+  self.begin_call_candidate(declaration)
+  let origin = expression_type_origin(expression, offset)
+  for index in 0..<expected_parameters.length {
+    ignore(
+      self.solver.unify(
+        self.solver.resolved_type(
+          self.resolved.type_arguments[expected_parameters.start + index],
+        ),
+        self.instantiate_signature_type(
+          self.call_parameter_type(declaration, index),
+        ),
+        origin,
+      ),
+    )
+  }
   ignore(
     self.solver.unify(
-      self.expression_type(expression),
-      self.solver.resolved_type(candidate_type),
-      expression_type_origin(expression, offset),
+      self.solver.resolved_type(expected_result),
+      self.instantiate_signature_type(self.call_result_type(declaration)),
+      origin,
     ),
   )
   let viable = self.solver.diagnostics.length() == diagnostic_start
@@ -942,16 +965,40 @@ fn BasicBodyInferencer::commit_function_reference(
   candidate_type : ResolvedTypeId,
   offset : UInt64,
 ) -> Unit {
+  ignore(candidate_type)
+  let (expected_parameters, expected_result) = self
+    .resolved_function_signature(self.expression_type(expression))
+    .unwrap()
+  self.begin_call_candidate(declaration)
+  let origin = expression_type_origin(expression, offset)
+  for index in 0..<expected_parameters.length {
+    ignore(
+      self.solver.unify(
+        self.solver.resolved_type(
+          self.resolved.type_arguments[expected_parameters.start + index],
+        ),
+        self.instantiate_signature_type(
+          self.call_parameter_type(declaration, index),
+        ),
+        origin,
+      ),
+    )
+  }
   ignore(
     self.solver.unify(
-      self.expression_type(expression),
-      self.solver.resolved_type(candidate_type),
-      expression_type_origin(expression, offset),
+      self.solver.resolved_type(expected_result),
+      self.instantiate_signature_type(self.call_result_type(declaration)),
+      origin,
     ),
   )
+  let start = self.expression_type_arguments.length()
+  for type_ in self.call_scratch.candidate_type_arguments {
+    self.expression_type_arguments.push(type_)
+  }
   self.ensure_member_storage()
   self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
     declaration,
+    { start, length: self.call_scratch.candidate_type_arguments.length() },
   )
 }
 
@@ -977,12 +1024,13 @@ fn BasicBodyInferencer::select_local_function_reference(
       let local_index = semantic_id_local(candidate.declaration)
       if local_index >= 0 && local_index < self.callable_indices.length() {
         let callable_index = self.callable_indices[local_index]
-        if callable_index >= 0 &&
-          self.collected.generic_parameters_of(candidate.declaration).length ==
-          0 {
+        if callable_index >= 0 {
           let candidate_type = self.resolved.callable_function_types[callable_index]
           if self.function_reference_candidate_viable(
-              expression, candidate_type, offset,
+              expression,
+              candidate.declaration,
+              candidate_type,
+              offset,
             ) {
             viable_count += 1
             if viable_count == 1 {
@@ -1034,9 +1082,10 @@ fn BasicBodyInferencer::select_imported_function_reference(
     let interface_ = imports.scope.interfaces[reference.interface_index].unwrap()
     let declaration = interface_.callables[reference.callable_index].declaration
     match imports.callable(declaration) {
-      Some(callable) if callable.generic_parameters.length == 0 =>
+      Some(callable) =>
         if self.function_reference_candidate_viable(
             expression,
+            declaration,
             callable.function_type,
             offset,
           ) {
@@ -1238,6 +1287,7 @@ fn BasicBodyInferencer::initialize_expression_types(
                     self.ensure_member_storage()
                     self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
                       declaration,
+                      { start: 0, length: 0 },
                     )
                     self.solver.resolved_type(type_)
                   }
@@ -1250,6 +1300,7 @@ fn BasicBodyInferencer::initialize_expression_types(
                 self.ensure_member_storage()
                 self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
                   declaration,
+                  { start: 0, length: 0 },
                 )
                 self.solver.resolved_type(type_)
               }
@@ -6049,7 +6100,7 @@ fn BasicBodyInferencer::is_function_reference(
     return false
   }
   match self.expression_selections[self.expression_index(expression)] {
-    FunctionReferenceSelection(_) => true
+    FunctionReferenceSelection(_, _) => true
     _ => false
   }
 }
@@ -6725,7 +6776,7 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
       | ErrorExpressionSelection
       | FieldAccessSelection(_)
       | ImportedModuleValueSelection(_)
-      | FunctionReferenceSelection(_) => ()
+      | FunctionReferenceSelection(_, _) => ()
     }
   }
   for pattern_index in 0..<self.pattern_constructors.length() {
@@ -7610,8 +7661,11 @@ fn merge_body_inference_jobs(
           FieldAccessSelection(field) => FieldAccessSelection(field)
           ImportedModuleValueSelection(declaration) =>
             ImportedModuleValueSelection(declaration)
-          FunctionReferenceSelection(declaration) =>
-            FunctionReferenceSelection(declaration)
+          FunctionReferenceSelection(declaration, arguments) =>
+            FunctionReferenceSelection(declaration, {
+              start: expression_argument_start + arguments.start,
+              length: arguments.length,
+            })
           NoExpressionSelection => NoExpressionSelection
           ErrorExpressionSelection => ErrorExpressionSelection
         }
@@ -7802,8 +7856,11 @@ fn merge_body_inference_jobs(
           FieldAccessSelection(field) => FieldAccessSelection(field)
           ImportedModuleValueSelection(declaration) =>
             ImportedModuleValueSelection(declaration)
-          FunctionReferenceSelection(declaration) =>
-            FunctionReferenceSelection(declaration)
+          FunctionReferenceSelection(declaration, arguments) =>
+            FunctionReferenceSelection(declaration, {
+              start: expression_argument_start + arguments.start,
+              length: arguments.length,
+            })
           NoExpressionSelection => NoExpressionSelection
           ErrorExpressionSelection => ErrorExpressionSelection
         }

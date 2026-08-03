@@ -182,7 +182,7 @@ test "imported named functions resolve as first-class references" {
   let mut saw_reference = false
   for selection in inferred.expression_selections {
     match selection {
-      FunctionReferenceSelection(declaration) if declaration == expected =>
+      FunctionReferenceSelection(declaration, _) if declaration == expected =>
         saw_reference = true
       _ => ()
     }
@@ -422,7 +422,7 @@ test "imported callable collisions form expected-type overload sets" {
   let mut selected = false
   for selection in inferred.expression_selections {
     match selection {
-      FunctionReferenceSelection(declaration) if declaration == expected =>
+      FunctionReferenceSelection(declaration, _) if declaration == expected =>
         selected = true
       _ => ()
     }

@@ -64,7 +64,7 @@ A future shared-environment optimization may still select a split representation
 
 ## Required next milestones
 
-1. Define executable specialization and ABI identity for generic function references.
+1. Extend the implemented call-only generic-reference specialization from parameter selectors and transparent callback wrappers to arbitrary bodies and escaping values with stable specialization identities.
 2. Add closure ABI fingerprints to persistent external package interfaces.
 4. Extend the implemented transparent call-only wrapper summaries to returned, stored, conditionally called, multiply forwarded, and unknown callback uses.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
@@ -74,5 +74,5 @@ A future shared-environment optimization may still select a split representation
 - Non-generic function overload sets become values only with a deterministic structural expected function type. Local/imported candidates are filtered by exact signature; missing, unmatched, and multiply matched expectations have separate diagnostics.
 - Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Mutable captures use shared carrier-specialized cells referenced by flattened closure fields; directization must route the cell reference rather than copy its value.
 - Cross-module concrete function signatures are structurally coalesced during one program link; persistent package interfaces still require stable signature and closure ABI fingerprints.
-- Generic function values remain blocked on executable generic ABI work.
+- Expected-type generic function references are inferred and execute when call-only analysis reduces them to supported parameter-selector or transparent callback specializations. Escaping generic values and arbitrary generic bodies remain blocked on stable specialization identities and the general executable generic ABI.
 - Runtime performance favors directization and allocation elimination, but these optimizations must not define source semantics.

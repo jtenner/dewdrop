@@ -232,6 +232,86 @@ fn transparent_callback_parameter_count(
 }
 
 ///|
+fn generic_parameter_selector(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+) -> Int {
+  let callable = match module_.functions.callable_of(body.declaration) {
+    Some(callable) => callable
+    None => return -1
+  }
+  if callable.generic_parameters.length == 0 {
+    return -1
+  }
+  let root_expression = match body.root {
+    BlockBodyRoot(block) => {
+      let items = module_.blocks[block].items
+      if items.length != 1 {
+        return -1
+      }
+      match module_.block_items[items.start].kind {
+        PlannedExpressionItem(expression) => expression
+        _ => return -1
+      }
+    }
+    ExpressionBodyRoot(expression) => expression
+  }
+  let local_id = match module_.expressions[root_expression].kind {
+    PlannedLocalGet(local_id) => local_id
+    _ => return -1
+  }
+  let mut parameter_index = 0
+  for index in 0..<body.locals.length {
+    match module_.locals[body.locals.start + index].kind {
+      ParameterLocal => {
+        if index == local_id {
+          return parameter_index
+        }
+        parameter_index += 1
+      }
+      _ => return -1
+    }
+  }
+  -1
+}
+
+///|
+fn directize_generic_parameter_selectors(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  let selectors : Map[DeclId, Int] = Map::default()
+  for module_ in modules {
+    for body in module_.bodies {
+      let selected = generic_parameter_selector(module_, body)
+      if selected >= 0 {
+        selectors[body.declaration] = selected
+      }
+    }
+  }
+  for module_ in modules {
+    for expression in 0..<module_.expressions.length() {
+      let (declaration, arguments, type_arguments) = match
+        module_.expressions[expression].kind {
+        PlannedDirectCall(declaration, receiver, arguments, type_arguments) if receiver <
+          0 &&
+          type_arguments.length > 0 => (declaration, arguments, type_arguments)
+        _ => continue
+      }
+      ignore(type_arguments)
+      let selected = match selectors.get(declaration) {
+        Some(index) if index < arguments.length => index
+        _ => continue
+      }
+      let source = module_.expressions[expression]
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedParameterSelect(arguments, selected),
+      }
+    }
+  }
+}
+
+///|
 fn directize_transparent_callback_calls(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -270,8 +350,8 @@ fn directize_transparent_callback_calls(
           module_.lambdas[lambda] = { ..lambda_source, directized: true }
           PlannedDirectLambdaCall(lambda, captures, forwarded)
         }
-        PlannedFunctionReference(target) =>
-          PlannedDirectCall(target, -1, forwarded, { start: 0, length: 0 })
+        PlannedFunctionReference(target, type_arguments) =>
+          PlannedDirectCall(target, -1, forwarded, type_arguments)
         _ => continue
       }
       let callback_source = module_.expressions[callback_expression]
@@ -336,6 +416,7 @@ pub fn plan_program_lowering(
     modules.push(slot.unwrap())
   }
   directize_transparent_callback_calls(modules)
+  directize_generic_parameter_selectors(modules)
   { graph: analyzed.frozen.graph, modules }
 }
 
@@ -825,7 +906,7 @@ pub fn plan_program_wasmgc_fragments_with_options(
   for module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
-        PlannedFunctionReference(declaration) =>
+        PlannedFunctionReference(declaration, _) =>
           program_function_value_roots[declaration] = true
         _ => ()
       }
@@ -1837,7 +1918,7 @@ pub fn link_program_wasmgc_fragments(
   for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
-        PlannedFunctionReference(declaration) =>
+        PlannedFunctionReference(declaration, _) =>
           if !singleton_declarations.contains(declaration) {
             singleton_declarations[declaration] = true
             function_reference_singletons.push({

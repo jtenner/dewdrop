@@ -104,7 +104,7 @@ docs/research/       implementation notes and design measurements
 
 ## Status
 
-Dew is under active development. The compiler and standard library are usable for the supported subset, but package TOML/lockfiles, general executable generic functions and aggregates, mutable scalar assignment/capture cells, growable arrays, queues, iterators, and several tooling surfaces remain planned.
+Dew is under active development. The compiler and standard library are usable for the supported subset. Generic parameter selectors and transparent generic callback wrappers execute through deterministic call-site specialization; arbitrary generic function bodies, generic structs, package TOML/lockfiles, growable arrays, queues, iterators, and several tooling surfaces remain planned.
 
 ## License
 

@@ -231,12 +231,12 @@ test "initial program linker diagnoses unspecialized generic calls" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"open app.library\npub fn run() -> I32 {\n  identity(1)\n}\n",
+          "main.dew", b"open app.library\npub fn run() -> I32 {\n  choose(true, 1, 2)\n}\n",
         ),
       ]),
       ManifestModule::new("app.library", [
         ManifestFile::new(
-          "library.dew", b"pub fn identity<t>(value: t) -> t {\n  value\n}\n",
+          "library.dew", b"pub fn choose<t>(condition: Bool, left: t, right: t) -> t {\n  if condition {\n    left\n  } else {\n    right\n  }\n}\n",
         ),
       ]),
     ]),
@@ -244,11 +244,11 @@ test "initial program linker diagnoses unspecialized generic calls" {
   let analyzed = analyze_program_semantics(program)
   let lowering = plan_program_lowering(program, analyzed)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
-  let identity = program.modules[1].lookup_value("identity").unwrap()
+  let choose = program.modules[1].lookup_value("choose").unwrap()
   assert_eq(link.diagnostics.length(), 1)
   match link.diagnostics[0] {
     UnsupportedProgramGenericCall(2250UL, declaration, _) =>
-      assert_eq(declaration, identity)
+      assert_eq(declaration, choose)
     _ => fail("expected unsupported generic call diagnostic")
   }
 }
@@ -271,6 +271,33 @@ test "program linker eliminates unused physical aggregate types" {
   assert_eq(link.diagnostics.length(), 0)
   let item = program.modules[0].lookup_type("Item").unwrap()
   assert_eq(link.type_lookup.get(item), None)
+}
+
+///|
+test "program lowering specializes generic parameter selectors" {
+  let program = collect_program_manifest(
+    2275UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn first<t>(left: t, right: t) -> t {\n  left\n}\npub fn main() -> I32 {\n  first(42, 7)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let collected = program.modules[0]
+  let main = collected.lookup_value("main").unwrap()
+  let body = collected.body_of(main).unwrap()
+  let call = body_calls(collected, body)[0]
+  match lowering.modules[0].expressions[call].kind {
+    PlannedParameterSelect(arguments, selected) => {
+      assert_eq(arguments.length, 2)
+      assert_eq(selected, 0)
+    }
+    _ => fail("expected generic parameter-selector specialization")
+  }
 }
 
 ///|

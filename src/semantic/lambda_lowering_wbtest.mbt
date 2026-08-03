@@ -152,7 +152,7 @@ test "lowering removes call-only named function values" {
     match planned.expressions[expression].kind {
       PlannedDirectCall(declaration, _, _, _) if declaration ==
         collected.declarations[0].id => direct_increment_calls += 1
-      PlannedFunctionReference(_) => function_references += 1
+      PlannedFunctionReference(_, _) => function_references += 1
       _ => ()
     }
   }

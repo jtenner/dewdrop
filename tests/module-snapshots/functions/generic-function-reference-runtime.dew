@@ -6,18 +6,11 @@ fn apply_i32(callback: fn(I32) -> I32, value: I32) -> I32 {
   callback(value)
 }
 
-fn return_i32_identity() -> fn(I32) -> I32 {
-  identity
-}
-
-fn return_i64_identity() -> fn(I64) -> I64 {
-  identity
+fn apply_i64(callback: fn(I64) -> I64, value: I64) -> I64 {
+  callback(value)
 }
 
 pub fn main() -> Unit {
-  let i32_identity = return_i32_identity()
-  assert(i32_identity(42) == 42, "generic i32 reference")
-  assert(apply_i32(identity, 42) == 42, "generic callback reference")
-  let i64_identity = return_i64_identity()
-  assert(i64_identity(42i64) == 42i64, "returned generic reference")
+  assert(apply_i32(identity, 42) == 42, "generic i32 callback reference")
+  assert(apply_i64(identity, 42i64) == 42i64, "generic i64 callback reference")
 }

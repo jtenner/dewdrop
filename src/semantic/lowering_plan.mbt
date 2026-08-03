@@ -42,7 +42,7 @@ pub enum PlannedExpressionKind {
   PlannedCaptureGet(Int)
   PlannedCaptureSet(Int, ExprId)
   PlannedModuleValueGet(DeclId, DeclId)
-  PlannedFunctionReference(DeclId)
+  PlannedFunctionReference(DeclId, HirSpan)
   PlannedLambdaClosure(LambdaId, HirSpan)
   PlannedDirectLambdaCall(LambdaId, HirSpan, HirSpan)
   PlannedStructNew(DeclId, HirSpan, HirSpan)
@@ -122,6 +122,7 @@ pub enum PlannedExpressionKind {
   PlannedSetRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetClear(ExprId)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
+  PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
   PlannedFieldGet(FieldId, ExprId)
 } derive(Eq, Debug)
@@ -546,8 +547,8 @@ fn plan_expression_kind(
           inferred.expression_types[expression],
         ),
       )
-    FunctionReferenceSelection(declaration) =>
-      return PlannedFunctionReference(declaration)
+    FunctionReferenceSelection(declaration, arguments) =>
+      return PlannedFunctionReference(declaration, arguments)
     NoExpressionSelection => ()
   }
   match collected.expressions[expression] {
@@ -1295,7 +1296,7 @@ fn directize_body_function_values(
           let lambda_source = target.lambdas[lambda]
           target.lambdas[lambda] = { ..lambda_source, elided: true }
         }
-        PlannedFunctionReference(_) => ()
+        PlannedFunctionReference(_, _) => ()
         _ => continue
       }
       let initializer_source = target.expressions[initializer]
@@ -1343,7 +1344,7 @@ fn directize_body_function_values(
         let lambda_source = target.lambdas[lambda]
         target.lambdas[lambda] = { ..lambda_source, directized: true }
       }
-      PlannedFunctionReference(declaration) =>
+      PlannedFunctionReference(declaration, type_arguments) =>
         for
           expression in body.expressions.start..<(body.expressions.start +
           body.expressions.length) {
@@ -1355,10 +1356,9 @@ fn directize_body_function_values(
                   let call_source = target.expressions[call]
                   target.expressions[call] = {
                     ..call_source,
-                    kind: PlannedDirectCall(declaration, -1, arguments, {
-                      start: 0,
-                      length: 0,
-                    }),
+                    kind: PlannedDirectCall(
+                      declaration, -1, arguments, type_arguments,
+                    ),
                   }
                   let get_source = target.expressions[expression]
                   target.expressions[expression] = {

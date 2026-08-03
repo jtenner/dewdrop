@@ -34,6 +34,7 @@ priv enum StarshineEmitTask {
   FinishStarshineLocalSet(Int, Int)
   FinishStarshineCaptureSet(Int, Int)
   FinishStarshineCall(@semantic.DeclId, Int, Int)
+  FinishStarshineParameterSelect(Int, Int)
   FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
   FinishStarshineClosureCall(
@@ -2767,7 +2768,7 @@ fn starshine_function_reference_cache_indices(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match lowering.expressions[expression].kind {
-      @semantic.PlannedFunctionReference(declaration) =>
+      @semantic.PlannedFunctionReference(declaration, _) =>
         if (match program {
             Some(link) =>
               link.function_reference_singleton_global(
@@ -2791,7 +2792,7 @@ fn starshine_function_reference_cache_indices(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match lowering.expressions[expression].kind {
-      @semantic.PlannedFunctionReference(declaration) =>
+      @semantic.PlannedFunctionReference(declaration, _) =>
         if counts.get(declaration).unwrap_or(0) > 1 {
           let local_index = match local_by_declaration.get(declaration) {
             Some(index) => index
@@ -2829,7 +2830,7 @@ fn starshine_function_reference_cache_prefix(
       continue
     }
     let declaration = match lowering.expressions[expression].kind {
-      @semantic.PlannedFunctionReference(declaration) => declaration
+      @semantic.PlannedFunctionReference(declaration, _) => declaration
       _ => continue
     }
     let function_index = match
@@ -2956,7 +2957,7 @@ fn starshine_emit_body_instructions(
                 planned, program, value, false,
               ),
             )
-          @semantic.PlannedFunctionReference(declaration) => {
+          @semantic.PlannedFunctionReference(declaration, _) => {
             let singleton_global = match program {
               Some(link) =>
                 link.function_reference_singleton_global(
@@ -3231,6 +3232,20 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(alternative))
             tasks.push(EmitStarshineBlock(then_block))
             tasks.push(EmitStarshineExpression(condition))
+          }
+          @semantic.PlannedParameterSelect(arguments, selected) => {
+            tasks.push(
+              FinishStarshineParameterSelect(arguments.length, selected),
+            )
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
           }
           @semantic.PlannedDirectCall(declaration, receiver, arguments, _) => {
             let receiver_count = if receiver >= 0 { 1 } else { 0 }
@@ -5497,6 +5512,17 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
+      FinishStarshineParameterSelect(count, selected) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let output : Array[@lib.Instruction] = []
+        for index, fragment in fragments {
+          append_starshine_instructions(output, fragment)
+          if index != selected && fragment.length() > 0 {
+            output.push(@lib.Instruction::drop())
+          }
+        }
+        results.push(output)
+      }
       FinishStarshineCall(declaration, count, scratch_index) => {
         let fragments = pop_starshine_fragments(results, count)
         let emitted = match program {
@@ -6592,7 +6618,7 @@ fn starshine_function_reference_element_section(
   let referenced : Map[Int, Bool] = Map::default()
   for expression in lowering.expressions {
     match expression.kind {
-      @semantic.PlannedFunctionReference(declaration) =>
+      @semantic.PlannedFunctionReference(declaration, _) =>
         match planned.function_of(declaration) {
           Some(function_) if function_.function_index >= 0 =>
             referenced[function_.function_index] = true
@@ -7901,7 +7927,7 @@ fn starshine_program_function_reference_element_section(
   for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
-        @semantic.PlannedFunctionReference(declaration) =>
+        @semantic.PlannedFunctionReference(declaration, _) =>
           match planned.function_of(declaration) {
             Some(function_) if function_.function_index >= 0 =>
               referenced[function_.function_index] = true

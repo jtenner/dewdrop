@@ -391,7 +391,7 @@ fn wasmgc_reachable_defined_functions(
         | PlannedOperatorCall(declaration, _, _, _, _)
         | PlannedIndexCall(declaration, _, _, _)
         | PlannedIndexSetCall(declaration, _, _, _, _)
-        | PlannedFunctionReference(declaration) => declaration
+        | PlannedFunctionReference(declaration, _) => declaration
         _ => continue
       }
       if semantic_id_module(target) != lowering.module_id {
@@ -431,7 +431,7 @@ fn wasmgc_reachable_defined_functions(
         | PlannedOperatorCall(declaration, _, _, _, _)
         | PlannedIndexCall(declaration, _, _, _)
         | PlannedIndexSetCall(declaration, _, _, _, _)
-        | PlannedFunctionReference(declaration) => declaration
+        | PlannedFunctionReference(declaration, _) => declaration
         _ => continue
       }
       if semantic_id_module(target) != lowering.module_id {
@@ -1834,7 +1834,7 @@ fn wasmgc_module_uses_closure_abi(
 ) -> Bool {
   for expression in lowering.expressions {
     match expression.kind {
-      PlannedFunctionReference(_)
+      PlannedFunctionReference(_, _)
       | PlannedLambdaClosure(_, _)
       | PlannedFunctionValueCall(_, _, _) => return true
       _ => ()
@@ -2114,7 +2114,7 @@ fn plan_module_wasmgc_fragments_in_orders(
   let local_function_value_roots : Map[DeclId, Bool] = Map::default()
   for expression in lowering.expressions {
     match expression.kind {
-      PlannedFunctionReference(declaration) =>
+      PlannedFunctionReference(declaration, _) =>
         local_function_value_roots[declaration] = true
       _ => ()
     }
@@ -2750,7 +2750,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedOperatorCall(target, _, _, _, _)
         | PlannedIndexCall(target, _, _, _)
         | PlannedIndexSetCall(target, _, _, _, _)
-        | PlannedFunctionReference(target) => target
+        | PlannedFunctionReference(target, _) => target
         _ => continue
       }
       if semantic_id_module(declaration) != lowering.module_id {

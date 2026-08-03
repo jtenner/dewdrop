@@ -51,13 +51,11 @@
     i32.const 20
     call 0
     local.set 0
-    global.get 1
     i32.const 21
-    call 1
+    call 0
     local.set 1
-    global.get 1
     i32.const 41
-    call 1
+    call 0
     local.set 2
     local.get 0
     i32.const 21

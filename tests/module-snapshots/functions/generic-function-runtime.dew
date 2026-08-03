@@ -6,9 +6,19 @@ fn first<t>(left: t, right: t) -> t {
   left
 }
 
+fn second<t>(left: t, right: t) -> t {
+  right
+}
+
+fn apply<t>(callback: fn(t) -> t, value: t) -> t {
+  callback(value)
+}
+
 pub fn main() -> Unit {
   assert(identity(42) == 42, "generic i32 identity")
   assert(identity(42i64) == 42i64, "generic i64 identity")
   assert(identity(42.5f64) == 42.5f64, "generic f64 identity")
   assert(first(42, 7) == 42, "generic i32 first")
+  assert(second(7, 42) == 42, "generic i32 second")
+  assert(apply(identity, 42) == 42, "generic callback wrapper")
 }
