@@ -225,7 +225,7 @@ test "unused generic structs are eliminated before program linking" {
 }
 
 ///|
-test "program linker does not export unspecialized generic recipes" {
+test "program linker exports one erased fallback for public generics" {
   let program = collect_program_manifest(
     2240UL,
     ProgramManifest::new([
@@ -241,9 +241,30 @@ test "program linker does not export unspecialized generic recipes" {
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
   let identity = program.modules[0].lookup_value("identity").unwrap()
-  let function_ = link.function_of(identity).unwrap()
-  assert_true(function_.elided)
-  assert_eq(function_.function_index, -1)
+  let recipe = link.function_of(identity).unwrap()
+  assert_true(recipe.elided)
+  assert_eq(recipe.function_index, -1)
+  let mut fallbacks = 0
+  for function_ in link.functions {
+    if function_.declaration == identity &&
+      function_.specialization_abi_key == "\{identity}:eqref" {
+      fallbacks += 1
+      assert_eq(function_.visibility, Public)
+      assert_eq(function_.name, b"identity")
+      assert_eq(function_.parameters.length, 1)
+      assert_eq(function_.results.length, 1)
+      let module_ = link.modules[function_.module_index]
+      assert_eq(
+        module_.function_value_types[function_.parameters.start],
+        WasmNullableEqRefValue,
+      )
+      assert_eq(
+        module_.function_value_types[function_.results.start],
+        WasmNullableEqRefValue,
+      )
+    }
+  }
+  assert_eq(fallbacks, 1)
 }
 
 ///|

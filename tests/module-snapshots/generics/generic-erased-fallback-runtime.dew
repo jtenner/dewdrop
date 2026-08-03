@@ -1,0 +1,19 @@
+struct Item {
+  value: I32
+}
+
+pub fn identity<t>(value: t) -> t {
+  value
+}
+
+fn return_erased_identity() -> fn(Item) -> Item {
+  identity
+}
+
+pub fn main() -> Unit {
+  let erased_identity = return_erased_identity()
+  let item = erased_identity(Item {
+    value: 42
+  })
+  assert(item.value == 42, "erased generic reference fallback")
+}
