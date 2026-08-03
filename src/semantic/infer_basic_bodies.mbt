@@ -5,10 +5,16 @@ let instantiate_visit = 0
 let instantiate_finish_application = 1
 
 ///|
+let instantiate_finish_function = 2
+
+///|
 let import_value_visit = 0
 
 ///|
 let import_value_finish_application = 1
+
+///|
+let import_value_finish_function = 2
 
 ///|
 let empty_body_type_array : Array[BodyTypeId] = []
@@ -118,12 +124,21 @@ fn BodyJobTypeImporter::import_type(
           }
           self.push(base, 0, 0)
         }
+        BodyFunctionType(parameters, result) => {
+          self.push(source, 2, self.results.length())
+          self.push(result, 0, 0)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push(job.type_arguments[parameters.start + index], 0, 0)
+          }
+        }
         BodyVariableType(_) | BodyErrorType =>
           self.results.push(self.solver.error_type())
         BodyResolvedType(type_) =>
           self.results.push(self.solver.resolved_type(type_))
       }
-    } else {
+    } else if state == 1 {
       let arguments = match job.types[source] {
         BodyAppliedType(_, arguments) => arguments
         _ => abort("body-job import expected an applied type")
@@ -134,6 +149,21 @@ fn BodyJobTypeImporter::import_type(
         self.arguments.push(self.results[result_start + index + 1])
       }
       let result = self.solver.applied_type(base, self.arguments)
+      self.results.truncate(result_start)
+      self.results.push(result)
+    } else {
+      let parameters = match job.types[source] {
+        BodyFunctionType(parameters, _) => parameters
+        _ => abort("body-job import expected a function type")
+      }
+      self.arguments.clear()
+      for index in 0..<parameters.length {
+        self.arguments.push(self.results[result_start + index])
+      }
+      let result = self.solver.function_type(
+        self.arguments,
+        self.results[result_start + parameters.length],
+      )
       self.results.truncate(result_start)
       self.results.push(result)
     }
@@ -362,6 +392,23 @@ fn ModuleValueImporter::import_type(
           }
           self.push_task(base, import_value_visit, 0)
         }
+        BodyFunctionType(parameters, result) => {
+          self.push_task(
+            source,
+            import_value_finish_function,
+            self.results.length(),
+          )
+          self.push_task(result, import_value_visit, 0)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push_task(
+              self.values.type_arguments[parameters.start + index],
+              import_value_visit,
+              0,
+            )
+          }
+        }
         BodyVariableType(_) => {
           self.marks[source] = self.generation
           self.cached[source] = self.solver.error_type()
@@ -371,7 +418,7 @@ fn ModuleValueImporter::import_type(
         BodyResolvedType(type_) =>
           self.results.push(self.solver.resolved_type(type_))
       }
-    } else {
+    } else if state == import_value_finish_application {
       let arguments = match self.values.types[source] {
         BodyAppliedType(_, arguments) => arguments
         _ => abort("module value import expected an applied type")
@@ -382,6 +429,23 @@ fn ModuleValueImporter::import_type(
         self.arguments.push(self.results[result_start + index + 1])
       }
       let result = self.solver.applied_type(base, self.arguments)
+      self.marks[source] = self.generation
+      self.cached[source] = result
+      self.results.truncate(result_start)
+      self.results.push(result)
+    } else {
+      let parameters = match self.values.types[source] {
+        BodyFunctionType(parameters, _) => parameters
+        _ => abort("module value import expected a function type")
+      }
+      self.arguments.clear()
+      for index in 0..<parameters.length {
+        self.arguments.push(self.results[result_start + index])
+      }
+      let result = self.solver.function_type(
+        self.arguments,
+        self.results[result_start + parameters.length],
+      )
       self.marks[source] = self.generation
       self.cached[source] = result
       self.results.truncate(result_start)
@@ -920,24 +984,22 @@ fn BasicBodyInferencer::function_reference_candidate_viable(
   offset : UInt64,
 ) -> Bool {
   ignore(candidate_type)
-  let (expected_parameters, expected_result) = match
+  let expected = match
     self.resolved_function_signature(self.expression_type(expression)) {
     Some(signature) => signature
     None => return false
   }
-  if expected_parameters.length != self.call_parameter_count(declaration) {
+  if expected.parameters.length() != self.call_parameter_count(declaration) {
     return false
   }
   let snapshot = self.solver.snapshot()
   let diagnostic_start = self.solver.diagnostics.length()
   self.begin_call_candidate(declaration)
   let origin = expression_type_origin(expression, offset)
-  for index in 0..<expected_parameters.length {
+  for index in 0..<expected.parameters.length() {
     ignore(
       self.solver.unify(
-        self.solver.resolved_type(
-          self.resolved.type_arguments[expected_parameters.start + index],
-        ),
+        expected.parameters[index],
         self.instantiate_signature_type(
           self.call_parameter_type(declaration, index),
         ),
@@ -947,7 +1009,7 @@ fn BasicBodyInferencer::function_reference_candidate_viable(
   }
   ignore(
     self.solver.unify(
-      self.solver.resolved_type(expected_result),
+      expected.result,
       self.instantiate_signature_type(self.call_result_type(declaration)),
       origin,
     ),
@@ -966,17 +1028,15 @@ fn BasicBodyInferencer::commit_function_reference(
   offset : UInt64,
 ) -> Unit {
   ignore(candidate_type)
-  let (expected_parameters, expected_result) = self
+  let expected = self
     .resolved_function_signature(self.expression_type(expression))
     .unwrap()
   self.begin_call_candidate(declaration)
   let origin = expression_type_origin(expression, offset)
-  for index in 0..<expected_parameters.length {
+  for index in 0..<expected.parameters.length() {
     ignore(
       self.solver.unify(
-        self.solver.resolved_type(
-          self.resolved.type_arguments[expected_parameters.start + index],
-        ),
+        expected.parameters[index],
         self.instantiate_signature_type(
           self.call_parameter_type(declaration, index),
         ),
@@ -986,7 +1046,7 @@ fn BasicBodyInferencer::commit_function_reference(
   }
   ignore(
     self.solver.unify(
-      self.solver.resolved_type(expected_result),
+      expected.result,
       self.instantiate_signature_type(self.call_result_type(declaration)),
       origin,
     ),
@@ -1644,6 +1704,23 @@ fn BasicBodyInferencer::instantiate_signature_type(
           }
           self.push_instantiation_task(base, instantiate_visit, 0)
         }
+        FunctionType(parameters, result) => {
+          self.push_instantiation_task(
+            source,
+            instantiate_finish_function,
+            self.call_scratch.instantiation_results.length(),
+          )
+          self.push_instantiation_task(result, instantiate_visit, 0)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push_instantiation_task(
+              self.resolved.type_arguments[parameters.start + index],
+              instantiate_visit,
+              0,
+            )
+          }
+        }
         SelfType(owner) => {
           let result = if owner == self.call_scratch.instantiation_self_owner &&
             self.call_scratch.instantiation_self_type != -1 {
@@ -1658,15 +1735,14 @@ fn BasicBodyInferencer::instantiate_signature_type(
         ErrorType
         | PrimitiveType(_)
         | NominalType(_)
-        | TraitType(_)
-        | FunctionType(_, _) => {
+        | TraitType(_) => {
           let result = self.solver.resolved_type(source)
           self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
           self.call_scratch.instantiation_values[source] = result
           self.call_scratch.instantiation_results.push(result)
         }
       }
-    } else {
+    } else if state == instantiate_finish_application {
       let (base, arguments) = match self.resolved.types[source] {
         AppliedType(base, arguments) => (base, arguments)
         _ => abort("signature instantiation expected an applied type")
@@ -1692,6 +1768,41 @@ fn BasicBodyInferencer::instantiate_signature_type(
         self.solver.applied_type(
           instantiated_base,
           self.call_scratch.instantiation_arguments,
+        )
+      }
+      self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
+      self.call_scratch.instantiation_values[source] = result
+      self.call_scratch.instantiation_results.truncate(result_start)
+      self.call_scratch.instantiation_results.push(result)
+    } else {
+      let (parameters, source_result) = match self.resolved.types[source] {
+        FunctionType(parameters, result) => (parameters, result)
+        _ => abort("signature instantiation expected a function type")
+      }
+      self.call_scratch.instantiation_arguments.clear()
+      let mut unchanged = true
+      for index in 0..<parameters.length {
+        let parameter = self.call_scratch.instantiation_results[result_start +
+          index]
+        if parameter !=
+          self.solver.resolved_type(
+            self.resolved.type_arguments[parameters.start + index],
+          ) {
+          unchanged = false
+        }
+        self.call_scratch.instantiation_arguments.push(parameter)
+      }
+      let instantiated_result = self.call_scratch.instantiation_results[result_start +
+        parameters.length]
+      if instantiated_result != self.solver.resolved_type(source_result) {
+        unchanged = false
+      }
+      let result = if unchanged {
+        self.solver.resolved_type(source)
+      } else {
+        self.solver.function_type(
+          self.call_scratch.instantiation_arguments,
+          instantiated_result,
         )
       }
       self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
@@ -3739,7 +3850,7 @@ fn BasicBodyInferencer::body_impl_target_head(
   let representative = self.solver.representative_type(type_)
   match self.solver.type_term(representative) {
     BodyErrorType => Some(ErrorImplTargetHead)
-    BodyVariableType(_) => None
+    BodyVariableType(_) | BodyFunctionType(_, _) => None
     BodyResolvedType(resolved_type) => {
       let (head, _) = resolved_impl_target_head(self.resolved, resolved_type)
       Some(head)
@@ -5532,17 +5643,40 @@ fn BasicBodyInferencer::select_call_candidate(
 }
 
 ///|
+priv struct InferredFunctionSignature {
+  parameters : Array[BodyTypeId]
+  result : BodyTypeId
+}
+
+///|
 fn BasicBodyInferencer::resolved_function_signature(
   self : BasicBodyInferencer,
   type_ : BodyTypeId,
-) -> (HirSpan, ResolvedTypeId)? {
+) -> InferredFunctionSignature? {
   let representative = self.solver.representative_type(type_)
   match self.solver.type_term(representative) {
     BodyResolvedType(resolved_type) =>
       match self.resolved.types[resolved_type] {
-        FunctionType(parameters, result) => Some((parameters, result))
+        FunctionType(parameters, result) => {
+          let values : Array[BodyTypeId] = []
+          for index in 0..<parameters.length {
+            values.push(
+              self.solver.resolved_type(
+                self.resolved.type_arguments[parameters.start + index],
+              ),
+            )
+          }
+          Some({ parameters: values, result: self.solver.resolved_type(result) })
+        }
         _ => None
       }
+    BodyFunctionType(parameters, result) => {
+      let values : Array[BodyTypeId] = []
+      for index in 0..<parameters.length {
+        values.push(self.solver.type_arguments[parameters.start + index])
+      }
+      Some({ parameters: values, result })
+    }
     _ => None
   }
 }
@@ -5556,18 +5690,18 @@ fn BasicBodyInferencer::select_function_value_call(
   arguments : HirSpan,
   offset : UInt64,
 ) -> Bool {
-  let (parameters, result) = match
+  let signature = match
     self.resolved_function_signature(self.expression_type(target)) {
-    Some(signature) => signature
+    Some(value) => value
     None => return false
   }
-  if parameters.length != arguments.length {
+  if signature.parameters.length() != arguments.length {
     self.call_targets[call_slot] = ErrorInferredCallTarget
     self.poison_expression(expression)
     self.diagnose(
       FunctionCallArgumentCountMismatch(
         expression,
-        parameters.length,
+        signature.parameters.length(),
         arguments.length,
         offset,
       ),
@@ -5580,15 +5714,13 @@ fn BasicBodyInferencer::select_function_value_call(
       self.expression_type(
         self.collected.expression_children[arguments.start + index],
       ),
-      self.solver.resolved_type(
-        self.resolved.type_arguments[parameters.start + index],
-      ),
+      signature.parameters[index],
       origin,
     )
   }
   self.constrain(
     self.expression_type(expression),
-    self.solver.resolved_type(result),
+    signature.result,
     origin,
   )
   self.call_targets[call_slot] = SelectedFunctionValueCallTarget(target)
@@ -6877,6 +7009,16 @@ fn BasicBodyInferencer::mark_compact_type(
         }
         self.compact_stack.push(base)
       }
+      BodyFunctionType(parameters, result) => {
+        self.compact_stack.push(result)
+        let mut index = parameters.length
+        while index > 0 {
+          index -= 1
+          self.compact_stack.push(
+            self.solver.type_arguments[parameters.start + index],
+          )
+        }
+      }
       _ => ()
     }
   }
@@ -7050,6 +7192,22 @@ fn BasicBodyInferencer::build_compact_types(self : BasicBodyInferencer) -> Unit 
             start,
             length: arguments.length,
           }),
+        )
+      }
+      BodyFunctionType(parameters, result) => {
+        let start = self.compact_arguments.length()
+        for index in 0..<parameters.length {
+          self.compact_arguments.push(
+            self.compact_type_id(
+              self.solver.type_arguments[parameters.start + index],
+            ),
+          )
+        }
+        self.compact_types.push(
+          BodyFunctionType(
+            { start, length: parameters.length },
+            self.compact_type_id(result),
+          ),
         )
       }
       BodyErrorType | BodyResolvedType(_) =>
@@ -7311,6 +7469,23 @@ fn append_module_value_job(
             start,
             length: arguments.length,
           }),
+        )
+      }
+      BodyFunctionType(parameters, result) => {
+        let start = values.type_arguments.length()
+        for index in 0..<parameters.length {
+          values.type_arguments.push(
+            remap_job_type(
+              job.type_arguments[parameters.start + index],
+              type_start,
+            ),
+          )
+        }
+        values.types.push(
+          BodyFunctionType(
+            { start, length: parameters.length },
+            remap_job_type(result, type_start),
+          ),
         )
       }
       BodyErrorType | BodyResolvedType(_) =>
@@ -7615,6 +7790,23 @@ fn merge_body_inference_jobs(
             }),
           )
         }
+        BodyFunctionType(parameters, result) => {
+          let start = type_arguments.length()
+          for index in 0..<parameters.length {
+            type_arguments.push(
+              remap_job_type(
+                job.type_arguments[parameters.start + index],
+                type_start,
+              ),
+            )
+          }
+          types.push(
+            BodyFunctionType(
+              { start, length: parameters.length },
+              remap_job_type(result, type_start),
+            ),
+          )
+        }
         BodyErrorType | BodyResolvedType(_) =>
           abort("unexpected compact body type during merge")
       }
@@ -7808,6 +8000,23 @@ fn merge_body_inference_jobs(
               start,
               length: arguments.length,
             }),
+          )
+        }
+        BodyFunctionType(parameters, result) => {
+          let start = type_arguments.length()
+          for index in 0..<parameters.length {
+            type_arguments.push(
+              remap_job_type(
+                job.type_arguments[parameters.start + index],
+                type_start,
+              ),
+            )
+          }
+          types.push(
+            BodyFunctionType(
+              { start, length: parameters.length },
+              remap_job_type(result, type_start),
+            ),
           )
         }
         BodyErrorType | BodyResolvedType(_) =>

@@ -14,6 +14,9 @@ let zonk_visit = 0
 let zonk_finish_application = 1
 
 ///|
+let zonk_finish_function = 2
+
+///|
 pub struct InferenceSnapshot {
   undo_start : Int
   variable_count : Int
@@ -203,6 +206,21 @@ pub fn LocalTypeSolver::applied_type(
 }
 
 ///|
+pub fn LocalTypeSolver::function_type(
+  self : LocalTypeSolver,
+  parameters : Array[BodyTypeId],
+  result : BodyTypeId,
+) -> BodyTypeId {
+  let start = self.type_arguments.length()
+  for parameter in parameters {
+    self.type_arguments.push(parameter)
+  }
+  self.push_type_term(
+    BodyFunctionType({ start, length: parameters.length() }, result),
+  )
+}
+
+///|
 fn LocalTypeSolver::find_variable_root(
   self : LocalTypeSolver,
   variable : TypeVariableId,
@@ -363,6 +381,23 @@ fn LocalTypeSolver::occurs_in(
           }
           self.occurs_stack.push(self.resolved_type(base))
         }
+        FunctionType(parameters, result) => {
+          self.ensure_occurs_resolved_marks()
+          if self.occurs_resolved_marks[resolved_id] == self.occurs_generation {
+            continue
+          }
+          self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+          self.occurs_stack.push(self.resolved_type(result))
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.occurs_stack.push(
+              self.resolved_type(
+                self.resolved.type_arguments[parameters.start + index],
+              ),
+            )
+          }
+        }
         _ => ()
       }
       continue
@@ -383,6 +418,14 @@ fn LocalTypeSolver::occurs_in(
           self.occurs_stack.push(self.type_arguments[arguments.start + index])
         }
         self.occurs_stack.push(base)
+      }
+      BodyFunctionType(parameters, result) => {
+        self.occurs_stack.push(result)
+        let mut index = parameters.length
+        while index > 0 {
+          index -= 1
+          self.occurs_stack.push(self.type_arguments[parameters.start + index])
+        }
       }
       BodyErrorType | BodyResolvedType(_) => ()
     }
@@ -540,6 +583,92 @@ fn LocalTypeSolver::push_mixed_application_pairs(
 }
 
 ///|
+fn LocalTypeSolver::push_body_function_pairs(
+  self : LocalTypeSolver,
+  left_parameters : HirSpan,
+  left_result : BodyTypeId,
+  right_parameters : HirSpan,
+  right_result : BodyTypeId,
+) -> Bool {
+  if left_parameters.length != right_parameters.length {
+    return false
+  }
+  self.push_unification_pair(left_result, right_result)
+  let mut index = left_parameters.length
+  while index > 0 {
+    index -= 1
+    self.push_unification_pair(
+      self.type_arguments[left_parameters.start + index],
+      self.type_arguments[right_parameters.start + index],
+    )
+  }
+  true
+}
+
+///|
+fn LocalTypeSolver::push_resolved_function_pairs(
+  self : LocalTypeSolver,
+  left_parameters : HirSpan,
+  left_result : ResolvedTypeId,
+  right_parameters : HirSpan,
+  right_result : ResolvedTypeId,
+) -> Bool {
+  if left_parameters.length != right_parameters.length {
+    return false
+  }
+  self.push_unification_pair(
+    self.resolved_type(left_result),
+    self.resolved_type(right_result),
+  )
+  let mut index = left_parameters.length
+  while index > 0 {
+    index -= 1
+    self.push_unification_pair(
+      self.resolved_type(
+        self.resolved.type_arguments[left_parameters.start + index],
+      ),
+      self.resolved_type(
+        self.resolved.type_arguments[right_parameters.start + index],
+      ),
+    )
+  }
+  true
+}
+
+///|
+fn LocalTypeSolver::push_mixed_function_pairs(
+  self : LocalTypeSolver,
+  body_parameters : HirSpan,
+  body_result : BodyTypeId,
+  resolved_parameters : HirSpan,
+  resolved_result : ResolvedTypeId,
+  body_on_left : Bool,
+) -> Bool {
+  if body_parameters.length != resolved_parameters.length {
+    return false
+  }
+  if body_on_left {
+    self.push_unification_pair(body_result, self.resolved_type(resolved_result))
+  } else {
+    self.push_unification_pair(self.resolved_type(resolved_result), body_result)
+  }
+  let mut index = body_parameters.length
+  while index > 0 {
+    index -= 1
+    let body_parameter = self.type_arguments[body_parameters.start + index]
+    let resolved_parameter = self.resolved_type(
+      self.resolved.type_arguments[resolved_parameters.start + index],
+    )
+    if body_on_left {
+      self.push_unification_pair(body_parameter, resolved_parameter)
+    } else {
+      self.push_unification_pair(resolved_parameter, body_parameter)
+    }
+  }
+  true
+}
+
+///|
 fn LocalTypeSolver::report_mismatch(
   self : LocalTypeSolver,
   left_original : BodyTypeId,
@@ -608,6 +737,16 @@ pub fn LocalTypeSolver::unify(
             self.push_resolved_application_pairs(
               left_base, left_arguments, right_base, right_arguments,
             )
+          (
+            FunctionType(left_parameters, left_result),
+            FunctionType(right_parameters, right_result),
+          ) =>
+            self.push_resolved_function_pairs(
+              left_parameters,
+              left_result,
+              right_parameters,
+              right_result,
+            )
           _ => false
         }
       (
@@ -616,6 +755,16 @@ pub fn LocalTypeSolver::unify(
       ) =>
         self.push_body_application_pairs(
           left_base, left_arguments, right_base, right_arguments,
+        )
+      (
+        BodyFunctionType(left_parameters, left_result),
+        BodyFunctionType(right_parameters, right_result),
+      ) =>
+        self.push_body_function_pairs(
+          left_parameters,
+          left_result,
+          right_parameters,
+          right_result,
         )
       (
         BodyAppliedType(body_base, body_arguments),
@@ -636,6 +785,36 @@ pub fn LocalTypeSolver::unify(
           AppliedType(resolved_base, resolved_arguments) =>
             self.push_mixed_application_pairs(
               body_base, body_arguments, resolved_base, resolved_arguments, false,
+            )
+          _ => false
+        }
+      (
+        BodyFunctionType(body_parameters, body_result),
+        BodyResolvedType(resolved_type),
+      ) =>
+        match self.resolved.types[resolved_type] {
+          FunctionType(resolved_parameters, resolved_result) =>
+            self.push_mixed_function_pairs(
+              body_parameters,
+              body_result,
+              resolved_parameters,
+              resolved_result,
+              true,
+            )
+          _ => false
+        }
+      (
+        BodyResolvedType(resolved_type),
+        BodyFunctionType(body_parameters, body_result),
+      ) =>
+        match self.resolved.types[resolved_type] {
+          FunctionType(resolved_parameters, resolved_result) =>
+            self.push_mixed_function_pairs(
+              body_parameters,
+              body_result,
+              resolved_parameters,
+              resolved_result,
+              false,
             )
           _ => false
         }
@@ -757,7 +936,7 @@ pub fn LocalTypeSolver::zonk_type(
     return representative
   }
   match self.types[representative] {
-    BodyAppliedType(_, _) => ()
+    BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
     _ => return representative
   }
   self.next_zonk_generation()
@@ -798,13 +977,30 @@ pub fn LocalTypeSolver::zonk_type(
           }
           self.push_zonk_task(base, zonk_visit, 0)
         }
+        BodyFunctionType(parameters, result) => {
+          self.push_zonk_task(
+            current,
+            zonk_finish_function,
+            self.zonk_results.length(),
+          )
+          self.push_zonk_task(result, zonk_visit, 0)
+          let mut index = parameters.length
+          while index > 0 {
+            index -= 1
+            self.push_zonk_task(
+              self.type_arguments[parameters.start + index],
+              zonk_visit,
+              0,
+            )
+          }
+        }
         _ => {
           self.zonk_marks[current] = self.zonk_generation
           self.zonk_values[current] = current
           self.zonk_results.push(current)
         }
       }
-    } else {
+    } else if state == zonk_finish_application {
       let original = match self.types[current] {
         BodyAppliedType(_, arguments) => arguments
         _ => abort("zonk finish expected an applied type")
@@ -841,6 +1037,43 @@ pub fn LocalTypeSolver::zonk_type(
       self.zonk_values[current] = result
       self.zonk_results.truncate(result_start)
       self.zonk_results.push(result)
+    } else {
+      let (original_parameters, original_result) = match self.types[current] {
+        BodyFunctionType(parameters, result) => (parameters, result)
+        _ => abort("zonk finish expected a function type")
+      }
+      self.zonk_application_scratch.clear()
+      let mut poisoned = false
+      let mut unchanged = true
+      for index in 0..<original_parameters.length {
+        let parameter = self.zonk_results[result_start + index]
+        if parameter == self.error_type() {
+          poisoned = true
+        }
+        if parameter != self.type_arguments[original_parameters.start + index] {
+          unchanged = false
+        }
+        self.zonk_application_scratch.push(parameter)
+      }
+      let frozen_result = self.zonk_results[result_start +
+        original_parameters.length]
+      if frozen_result == self.error_type() {
+        poisoned = true
+      }
+      if frozen_result != original_result {
+        unchanged = false
+      }
+      let result = if poisoned {
+        self.error_type()
+      } else if unchanged {
+        current
+      } else {
+        self.function_type(self.zonk_application_scratch, frozen_result)
+      }
+      self.zonk_marks[current] = self.zonk_generation
+      self.zonk_values[current] = result
+      self.zonk_results.truncate(result_start)
+      self.zonk_results.push(result)
     }
   }
   guard self.zonk_results.length() == 1 else {
@@ -860,7 +1093,7 @@ pub fn LocalTypeSolver::has_unresolved_variable(
   }
   match self.types[representative] {
     BodyVariableType(_) => return true
-    BodyAppliedType(_, _) => ()
+    BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
     BodyErrorType | BodyResolvedType(_) => return false
   }
   self.next_occurs_generation()
@@ -905,6 +1138,14 @@ pub fn LocalTypeSolver::has_unresolved_variable(
           self.occurs_stack.push(self.type_arguments[arguments.start + index])
         }
         self.occurs_stack.push(base)
+      }
+      BodyFunctionType(parameters, result) => {
+        self.occurs_stack.push(result)
+        let mut index = parameters.length
+        while index > 0 {
+          index -= 1
+          self.occurs_stack.push(self.type_arguments[parameters.start + index])
+        }
       }
       BodyErrorType | BodyResolvedType(_) => ()
     }

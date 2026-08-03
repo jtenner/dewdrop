@@ -1280,6 +1280,55 @@ fn frozen_body_type_to_resolved(
       )
       result
     }
+    BodyFunctionType(parameters, body_result) => {
+      let resolved_parameters : Array[ResolvedTypeId] = []
+      for index in 0..<parameters.length {
+        resolved_parameters.push(
+          frozen_body_type_to_resolved(
+            resolved,
+            inferred,
+            inferred.type_arguments[parameters.start + index],
+          ),
+        )
+      }
+      let resolved_result = frozen_body_type_to_resolved(
+        resolved,
+        inferred,
+        body_result,
+      )
+      for index, existing in resolved.types {
+        match existing {
+          FunctionType(candidate_parameters, candidate_result) if
+            candidate_result == resolved_result &&
+            candidate_parameters.length == resolved_parameters.length() => {
+            let mut same = true
+            for parameter_index in 0..<candidate_parameters.length {
+              if resolved.type_arguments[candidate_parameters.start +
+                parameter_index] != resolved_parameters[parameter_index] {
+                same = false
+                break
+              }
+            }
+            if same {
+              return index
+            }
+          }
+          _ => ()
+        }
+      }
+      let start = resolved.type_arguments.length()
+      for parameter in resolved_parameters {
+        resolved.type_arguments.push(parameter)
+      }
+      let result = resolved.types.length()
+      resolved.types.push(
+        FunctionType(
+          { start, length: resolved_parameters.length() },
+          resolved_result,
+        ),
+      )
+      result
+    }
   }
 }
 

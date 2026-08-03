@@ -10,6 +10,7 @@ pub enum BodyTypeTerm {
   BodyResolvedType(ResolvedTypeId)
   BodyVariableType(TypeVariableId)
   BodyAppliedType(BodyTypeId, HirSpan)
+  BodyFunctionType(HirSpan, BodyTypeId)
 } derive(Eq, Debug)
 
 ///|

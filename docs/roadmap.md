@@ -155,7 +155,7 @@ direct typed references.
 - [x] Support generic struct construction/access through deterministic per-field erased carrier slots without scalar boxes.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
-- [ ] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures.
+- [ ] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct generic struct leaves now clone across erased boundaries with lazy scalar box/unbox conversion, and structural generic callback calls specialize their direct/environment signatures; nested aggregate graphs and generated callback wrapper closures remain.
 - [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
 

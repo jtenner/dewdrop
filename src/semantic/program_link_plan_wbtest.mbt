@@ -363,6 +363,75 @@ test "program linker exports boxed scalar adapters for erased generics" {
 }
 
 ///|
+test "program linker plans recursive aggregate erased adapters" {
+  let program = collect_program_manifest(
+    2246UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Box<t> {\n  value: t\n}\npub fn echo_box<t>(value: Box<t>) -> Box<t> {\n  Box {\n    value: value.value\n  }\n}\npub fn main() -> Unit {\n  let boxed = echo_box(Box {\n    value: 42\n  })\n  assert(boxed.value == 42, \"nested aggregate adapter demand\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let echo_box = program.modules[0].lookup_value("echo_box").unwrap()
+  let mut fallback = 0
+  let mut adapter = 0
+  for function_ in link.functions {
+    if function_.declaration == echo_box &&
+      function_.specialization_abi_key == "\{echo_box}:eqref" {
+      fallback += 1
+      assert_eq(function_.name, b"echo_box")
+    }
+    if function_.name == b"echo_box$dew$i32" {
+      adapter += 1
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+  }
+  assert_eq(fallback, 1)
+  assert_eq(adapter, 1)
+  assert_true(link.erased_box_type_indices[0] >= 0)
+}
+
+///|
+test "program linker defers structural callback adapters until wrappers exist" {
+  let program = collect_program_manifest(
+    2247UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn invoke<t>(callback: fn(t) -> t, value: t) -> t {\n  let result = callback(value)\n  result\n}\nfn return_invoke() -> fn(fn(I32) -> I32, I32) -> I32 {\n  invoke\n}\npub fn main() -> Unit {\n  assert(invoke(increment, 41) == 42, \"direct structural callback demand\")\n  let callback = return_invoke()\n  assert(callback(increment, 41) == 42, \"structural callback adapter demand\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let invoke = program.modules[0].lookup_value("invoke").unwrap()
+  let mut fallback = 0
+  let mut adapter = 0
+  for function_ in link.functions {
+    if function_.declaration == invoke &&
+      function_.specialization_abi_key == "\{invoke}:eqref" {
+      fallback += 1
+    }
+    if function_.name == b"invoke$dew$i32" {
+      adapter += 1
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+  }
+  assert_eq(fallback, 1)
+  assert_eq(adapter, 0)
+  assert_eq(link.erased_box_type_indices[0], -1)
+}
+
+///|
 test "program linker coalesces generic specializations by physical carrier" {
   let program = collect_program_manifest(
     2245UL,

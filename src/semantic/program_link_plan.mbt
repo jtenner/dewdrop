@@ -1563,13 +1563,20 @@ fn program_body_resolved_type(
 }
 
 ///|
-fn program_erased_adapter_value_type(type_ : PlannedWasmValueType) -> Bool {
+fn program_erased_adapter_reference_type(type_ : PlannedWasmValueType) -> Bool {
   match type_ {
     WasmNullableEqRefValue
+    | WasmFunctionRefValue(_)
     | WasmNominalRefValue(_)
     | WasmExternalNominalRefValue(_) => true
-    _ => program_erased_box_slot_for_value(type_) >= 0
+    _ => false
   }
+}
+
+///|
+fn program_erased_adapter_value_type(type_ : PlannedWasmValueType) -> Bool {
+  program_erased_adapter_reference_type(type_) ||
+  program_erased_box_slot_for_value(type_) >= 0
 }
 
 ///|
@@ -1590,7 +1597,9 @@ fn program_erased_adapter_compatible(
       index]
     if source_type != target_type &&
       !(target_type == WasmNullableEqRefValue &&
-      program_erased_adapter_value_type(source_type)) {
+      program_erased_adapter_value_type(source_type)) &&
+      !(program_erased_adapter_reference_type(source_type) &&
+      program_erased_adapter_reference_type(target_type)) {
       return false
     }
   }
@@ -1601,7 +1610,9 @@ fn program_erased_adapter_compatible(
       index]
     if source_type != target_type &&
       !(target_type == WasmNullableEqRefValue &&
-      program_erased_adapter_value_type(source_type)) {
+      program_erased_adapter_value_type(source_type)) &&
+      !(program_erased_adapter_reference_type(source_type) &&
+      program_erased_adapter_reference_type(target_type)) {
       return false
     }
   }
@@ -1633,59 +1644,48 @@ fn program_erased_box_slot_for_value(type_ : PlannedWasmValueType) -> Int {
 }
 
 ///|
-fn program_type_generic_use(
-  resolved : Array[ResolvedType],
+fn program_erased_type_contains_function(
+  lowering : PlannedModuleLowering,
   root : ResolvedTypeId,
-  generic_parameters : HirSpan,
-) -> Int {
-  if root < 0 || root >= resolved.length() {
-    return 0
-  }
-  match resolved[root] {
-    GenericParameterType(parameter) => {
-      let parameter_local = semantic_id_local(parameter)
-      if parameter_local >= generic_parameters.start &&
-        parameter_local < generic_parameters.start + generic_parameters.length {
-        1
-      } else {
-        0
-      }
+) -> Bool {
+  let work : Array[ResolvedTypeId] = [root]
+  let seen : Map[ResolvedTypeId, Bool] = Map::default()
+  while work.length() > 0 {
+    let current = work.pop().unwrap()
+    if current < 0 || current >= lowering.resolved_types.length() ||
+      seen.contains(current) {
+      continue
     }
-    // Lowering retains the normalized outer recipe but not the resolved
-    // argument arenas. Nested aggregate and function occurrences need a
-    // recursive representation adapter, so scalar exports stay conservative.
-    AppliedType(_, _) | FunctionType(_, _) => 2
-    _ => 0
+    seen[current] = true
+    match lowering.resolved_types[current] {
+      FunctionType(_, _) => return true
+      AppliedType(base, arguments) => {
+        work.push(base)
+        for index in 0..<arguments.length {
+          work.push(
+            lowering.resolved_type_arguments[arguments.start + index],
+          )
+        }
+      }
+      _ => ()
+    }
   }
+  false
 }
 
 ///|
-fn program_erased_scalar_signature_safe(
-  resolved : Array[ResolvedType],
+fn program_erased_signature_supports_recursive_adapter(
+  lowering : PlannedModuleLowering,
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
 ) -> Bool {
   for index in 0..<callable.parameters.length {
     let parameter = functions.parameters[callable.parameters.start + index]
-    if parameter.shape == GenericPlannedValueShape {
-      continue
-    }
-    if program_type_generic_use(
-        resolved,
-        parameter.type_,
-        callable.generic_parameters,
-      ) ==
-      2 {
+    if program_erased_type_contains_function(lowering, parameter.type_) {
       return false
     }
   }
-  callable.result_shape == GenericPlannedValueShape ||
-  program_type_generic_use(
-    resolved,
-    callable.result_type,
-    callable.generic_parameters,
-  ) !=
-  2
+  !program_erased_type_contains_function(lowering, callable.result_type)
 }
 
 ///|
@@ -2498,8 +2498,8 @@ pub fn link_program_wasmgc_fragments(
       None => continue
     }
     if callable.visibility != Public ||
-      !program_erased_scalar_signature_safe(
-        root_lowering.resolved_types,
+      !program_erased_signature_supports_recursive_adapter(
+        root_lowering,
         root_lowering.functions,
         callable,
       ) {
@@ -2616,8 +2616,8 @@ pub fn link_program_wasmgc_fragments(
   for callable in root_lowering.functions.callables {
     if callable.visibility != Public ||
       callable.generic_parameters.length == 0 ||
-      !program_erased_scalar_signature_safe(
-        root_lowering.resolved_types,
+      !program_erased_signature_supports_recursive_adapter(
+        root_lowering,
         root_lowering.functions,
         callable,
       ) {
@@ -2710,7 +2710,7 @@ pub fn link_program_wasmgc_fragments(
         function_index: imported_function_count + defined_function_count,
         parameters: specialization.parameters,
         results: specialization.results,
-        specialization_shapes: { start: 0, length: 0 },
+        specialization_shapes: specialization.specialization_shapes,
         specialization_abi_key: specialization.specialization_abi_key,
         erased_adapter_target: fallback.function_index,
         offset: callable.offset,

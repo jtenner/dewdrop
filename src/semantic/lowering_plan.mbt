@@ -284,6 +284,7 @@ pub struct PlannedModuleLowering {
   pattern_children : Array[PatternId]
   arm_children : Array[PatternArmId]
   resolved_types : Array[ResolvedType]
+  resolved_type_arguments : Array[ResolvedTypeId]
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   expression_type_arguments : Array[BodyTypeId]
@@ -426,6 +427,7 @@ fn planned_value_shape(
     match inferred.type_term(type_) {
       BodyErrorType => return ErrorPlannedValueShape
       BodyVariableType(_) => return ErrorPlannedValueShape
+      BodyFunctionType(_, _) => return RefPlannedValueShape
       BodyAppliedType(base, _) => type_ = base
       BodyResolvedType(resolved_type) =>
         return planned_resolved_value_shape(resolved, resolved_type)
@@ -446,6 +448,7 @@ fn planned_function_type(
         FunctionType(_, _) => resolved_type
         _ => -1
       }
+    BodyFunctionType(_, _) => -1
     _ => -1
   }
 }
@@ -470,7 +473,8 @@ fn planned_nominal_declaration(
           }
         }
       }
-      BodyErrorType | BodyVariableType(_) => return 0UL
+      BodyErrorType | BodyVariableType(_) | BodyFunctionType(_, _) =>
+        return 0UL
     }
   }
   0UL
@@ -1620,6 +1624,7 @@ fn plan_module_lowering_in_order(
     pattern_children: collected.pattern_children,
     arm_children: collected.arm_children,
     resolved_types: resolved.types,
+    resolved_type_arguments: resolved.type_arguments,
     types: inferred.types,
     type_arguments: inferred.type_arguments,
     expression_type_arguments: inferred.expression_type_arguments,
