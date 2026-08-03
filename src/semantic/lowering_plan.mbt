@@ -283,8 +283,13 @@ pub struct PlannedModuleLowering {
   expression_children : Array[ExprId]
   pattern_children : Array[PatternId]
   arm_children : Array[PatternArmId]
+  resolved_types : Array[ResolvedType]
+  types : Array[BodyTypeTerm]
+  type_arguments : Array[BodyTypeId]
   expression_type_arguments : Array[BodyTypeId]
+  expression_type_argument_shapes : Array[PlannedValueShape]
   call_type_arguments : Array[BodyTypeId]
+  call_type_argument_shapes : Array[PlannedValueShape]
   pattern_type_arguments : Array[BodyTypeId]
   diagnostics : Array[LoweringPlanDiagnostic]
 } derive(Eq, Debug)
@@ -1614,8 +1619,19 @@ fn plan_module_lowering_in_order(
     expression_children: collected.expression_children,
     pattern_children: collected.pattern_children,
     arm_children: collected.arm_children,
+    resolved_types: resolved.types,
+    types: inferred.types,
+    type_arguments: inferred.type_arguments,
     expression_type_arguments: inferred.expression_type_arguments,
+    expression_type_argument_shapes: inferred.expression_type_arguments.map(fn(
+      type_,
+    ) {
+      planned_value_shape(resolved, inferred, type_)
+    }),
     call_type_arguments: inferred.call_type_arguments,
+    call_type_argument_shapes: inferred.call_type_arguments.map(fn(type_) {
+      planned_value_shape(resolved, inferred, type_)
+    }),
     pattern_type_arguments: inferred.pattern_type_arguments,
     diagnostics: [],
   }

@@ -993,7 +993,7 @@ fn BasicBodyInferencer::commit_function_reference(
   )
   let start = self.expression_type_arguments.length()
   for type_ in self.call_scratch.candidate_type_arguments {
-    self.expression_type_arguments.push(type_)
+    self.expression_type_arguments.push(self.solver.representative_type(type_))
   }
   self.ensure_member_storage()
   self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(

@@ -159,6 +159,7 @@ pub struct PlannedWasmFunctionFragment {
   function_index : Int
   parameters : HirSpan
   results : HirSpan
+  specialization_shapes : HirSpan
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -197,6 +198,7 @@ pub struct PlannedModuleWasmGCFragments {
   function_by_declaration : Array[Int]
   lambda_function_indices : Array[Int]
   function_value_types : Array[PlannedWasmValueType]
+  specialization_shapes : Array[PlannedValueShape]
   signature_type_count : Int
   imported_function_count : Int
   defined_function_count : Int
@@ -2483,6 +2485,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       function_index,
       parameters,
       results,
+      specialization_shapes: { start: 0, length: 0 },
       offset: callable.offset,
     })
   }
@@ -2521,6 +2524,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       function_index,
       parameters: function_type.parameters,
       results: function_type.results,
+      specialization_shapes: { start: 0, length: 0 },
       offset: match lambda.root {
         BlockBodyRoot(block) => lowering.blocks[block].offset
         ExpressionBodyRoot(expression) =>
@@ -2810,6 +2814,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     function_by_declaration,
     lambda_function_indices,
     function_value_types,
+    specialization_shapes: [],
     signature_type_count: next_signature_type - physical_types.length(),
     imported_function_count,
     defined_function_count,

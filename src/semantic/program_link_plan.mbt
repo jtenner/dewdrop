@@ -31,6 +31,7 @@ pub struct PlannedProgramWasmFunction {
   mut function_index : Int
   parameters : HirSpan
   results : HirSpan
+  specialization_shapes : HirSpan
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -88,6 +89,9 @@ pub struct PlannedProgramWasmSignatureType {
 pub struct PlannedProgramFunctionReferenceSingleton {
   module_index : Int
   declaration : DeclId
+  function_index : Int
+  specialization_module_index : Int
+  specialization_shapes : HirSpan
   global_index : Int
 } derive(Eq, Debug)
 
@@ -127,7 +131,30 @@ pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(
 ) -> Int {
   ignore(module_index)
   for singleton in self.function_reference_singletons {
-    if singleton.declaration == declaration {
+    if singleton.declaration == declaration &&
+      singleton.specialization_shapes.length == 0 {
+      return singleton.global_index
+    }
+  }
+  -1
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::specialized_function_reference_singleton_global(
+  self : PlannedProgramWasmGCLink,
+  declaration : DeclId,
+  shapes : Array[PlannedValueShape],
+  span : HirSpan,
+) -> Int {
+  for singleton in self.function_reference_singletons {
+    if singleton.declaration == declaration &&
+      singleton.specialization_shapes.length > 0 &&
+      program_specialization_shapes_equal(
+        self.modules[singleton.specialization_module_index].specialization_shapes,
+        singleton.specialization_shapes,
+        shapes,
+        span,
+      ) {
       return singleton.global_index
     }
   }
@@ -143,6 +170,28 @@ pub fn PlannedProgramWasmGCLink::function_of(
     Some(index) => Some(self.functions[index])
     None => None
   }
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::specialized_function_of(
+  self : PlannedProgramWasmGCLink,
+  declaration : DeclId,
+  shapes : Array[PlannedValueShape],
+  span : HirSpan,
+) -> PlannedProgramWasmFunction? {
+  for function_ in self.functions {
+    if function_.declaration == declaration &&
+      function_.specialization_shapes.length > 0 &&
+      program_specialization_shapes_equal(
+        self.modules[function_.module_index].specialization_shapes,
+        function_.specialization_shapes,
+        shapes,
+        span,
+      ) {
+      return Some(function_)
+    }
+  }
+  None
 }
 
 ///|
@@ -423,32 +472,50 @@ pub fn plan_program_lowering(
 ///|
 fn program_link_validate_calls(
   lowering : PlannedProgramLowering,
+  modules : Array[PlannedModuleWasmGCFragments],
   functions : Array[PlannedProgramWasmFunction],
   lookup : Map[DeclId, Int],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
   for module_ in lowering.modules {
     for expression in module_.expressions {
-      let target = match expression.kind {
-        PlannedDirectCall(declaration, _, _, _)
-        | PlannedOperatorCall(declaration, _, _, _, _)
-        | PlannedIndexCall(declaration, _, _, _)
-        | PlannedIndexSetCall(declaration, _, _, _, _) => declaration
+      let (target, type_arguments) = match expression.kind {
+        PlannedDirectCall(declaration, _, _, type_arguments)
+        | PlannedOperatorCall(declaration, _, _, _, type_arguments)
+        | PlannedIndexCall(declaration, _, _, type_arguments)
+        | PlannedIndexSetCall(declaration, _, _, _, type_arguments) =>
+          (declaration, type_arguments)
         _ => continue
       }
       match lookup.get(target) {
         Some(function_index) => {
           let function_ = functions[function_index]
           let owner = lowering.modules[function_.module_index]
-          let callable = owner.functions.callables[function_.fragment_index]
+          let callable = owner.functions.callable_of(target).unwrap()
           if callable.generic_parameters.length > 0 {
-            diagnostics.push(
-              UnsupportedProgramGenericCall(
-                module_.module_id,
-                target,
-                expression.offset,
-              ),
-            )
+            let mut specialized = false
+            for candidate in functions {
+              if candidate.declaration == target &&
+                candidate.specialization_shapes.length > 0 &&
+                program_specialization_shapes_equal(
+                  modules[candidate.module_index].specialization_shapes,
+                  candidate.specialization_shapes,
+                  module_.call_type_argument_shapes,
+                  type_arguments,
+                ) {
+                specialized = true
+                break
+              }
+            }
+            if !specialized {
+              diagnostics.push(
+                UnsupportedProgramGenericCall(
+                  module_.module_id,
+                  target,
+                  expression.offset,
+                ),
+              )
+            }
           }
         }
         None =>
@@ -883,6 +950,201 @@ fn program_reachable_callable_roots(
 }
 
 ///|
+fn program_specialization_value_type(
+  shape : PlannedValueShape,
+) -> PlannedWasmValueType? {
+  match shape {
+    UnitPlannedValueShape | NeverPlannedValueShape => None
+    I8PlannedValueShape
+    | U8PlannedValueShape
+    | I16PlannedValueShape
+    | U16PlannedValueShape
+    | I32PlannedValueShape
+    | U32PlannedValueShape
+    | Swar32PlannedValueShape => Some(WasmI32Value)
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape =>
+      Some(WasmI64Value)
+    F32PlannedValueShape => Some(WasmF32Value)
+    F64PlannedValueShape => Some(WasmF64Value)
+    V128PlannedValueShape => Some(WasmV128Value)
+    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
+      Some(WasmNullableEqRefValue)
+  }
+}
+
+///|
+fn program_specialization_shapes_equal(
+  values : Array[PlannedValueShape],
+  left : HirSpan,
+  right_values : Array[PlannedValueShape],
+  right : HirSpan,
+) -> Bool {
+  if left.length != right.length {
+    return false
+  }
+  for index in 0..<left.length {
+    if values[left.start + index] != right_values[right.start + index] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn program_generic_parameter_shape(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+  generic_parameters : HirSpan,
+  shapes : Array[PlannedValueShape],
+  shape_span : HirSpan,
+) -> PlannedValueShape? {
+  match resolved.types[type_] {
+    GenericParameterType(parameter) => {
+      let parameter_local = semantic_id_local(parameter)
+      if parameter_local >= generic_parameters.start &&
+        parameter_local < generic_parameters.start + generic_parameters.length {
+        let relative = parameter_local - generic_parameters.start
+        if relative < shape_span.length {
+          return Some(shapes[shape_span.start + relative])
+        }
+      }
+      None
+    }
+    _ => None
+  }
+}
+
+///|
+fn materialize_program_generic_specialization(
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  modules : Array[PlannedModuleWasmGCFragments],
+  module_lookup : Map[ModuleId, Int],
+  declaration : DeclId,
+  request_shapes : Array[PlannedValueShape],
+  request : HirSpan,
+) -> Unit {
+  let owner_index = match module_lookup.get(semantic_id_module(declaration)) {
+    Some(index) => index
+    None => return
+  }
+  let module_ = modules[owner_index]
+  for function_ in module_.functions {
+    if function_.declaration == declaration &&
+      function_.specialization_shapes.length > 0 &&
+      program_specialization_shapes_equal(
+        module_.specialization_shapes,
+        function_.specialization_shapes,
+        request_shapes,
+        request,
+      ) {
+      return
+    }
+  }
+  let base_index = module_.function_by_declaration[semantic_id_local(
+      declaration,
+    )]
+  if base_index < 0 || base_index >= module_.functions.length() {
+    return
+  }
+  let base = module_.functions[base_index]
+  match base.kind {
+    PlannedWasmDefinedFunction(_) => ()
+    _ => return
+  }
+  let callable = match
+    lowering.modules[owner_index].functions.callable_of(declaration) {
+    Some(callable) => callable
+    None => return
+  }
+  if callable.generic_parameters.length != request.length {
+    return
+  }
+  let shape_start = module_.specialization_shapes.length()
+  for index in 0..<request.length {
+    module_.specialization_shapes.push(request_shapes[request.start + index])
+  }
+  let specialization_shapes = { start: shape_start, length: request.length }
+  let resolved = analyzed.frozen.interfaces[owner_index].resolved_types
+  let parameter_start = module_.function_value_types.length()
+  let mut base_parameter_index = 0
+  for index in 0..<callable.parameters.length {
+    let parameter = lowering.modules[owner_index].functions.parameters[callable.parameters.start +
+      index]
+    let specialized = program_generic_parameter_shape(
+      resolved,
+      parameter.type_,
+      callable.generic_parameters,
+      module_.specialization_shapes,
+      specialization_shapes,
+    )
+    if parameter.shape != UnitPlannedValueShape &&
+      parameter.shape != NeverPlannedValueShape {
+      match specialized {
+        Some(shape) =>
+          match program_specialization_value_type(shape) {
+            Some(value) => module_.function_value_types.push(value)
+            None => ()
+          }
+        None => {
+          module_.function_value_types.push(
+            module_.function_value_types[base.parameters.start +
+            base_parameter_index],
+          )
+          base_parameter_index += 1
+        }
+      }
+    }
+  }
+  let result_start = module_.function_value_types.length()
+  let specialized_result = program_generic_parameter_shape(
+    resolved,
+    callable.result_type,
+    callable.generic_parameters,
+    module_.specialization_shapes,
+    specialization_shapes,
+  )
+  match specialized_result {
+    Some(shape) =>
+      match program_specialization_value_type(shape) {
+        Some(value) => module_.function_value_types.push(value)
+        None => ()
+      }
+    None =>
+      for index in 0..<base.results.length {
+        module_.function_value_types.push(
+          module_.function_value_types[base.results.start + index],
+        )
+      }
+  }
+  module_.functions[base_index] = { ..base, elided: true }
+  module_.functions.push({
+    ..base,
+    visibility: ModuleVisible,
+    is_test: false,
+    is_test_entry: false,
+    test_name: b"",
+    elided: false,
+    signature_type_index: module_.physical_types.length() +
+    module_.signature_type_count,
+    function_index: -1,
+    parameters: {
+      start: parameter_start,
+      length: result_start - parameter_start,
+    },
+    results: {
+      start: result_start,
+      length: module_.function_value_types.length() - result_start,
+    },
+    specialization_shapes,
+  })
+  modules[owner_index] = {
+    ..module_,
+    signature_type_count: module_.signature_type_count + 1,
+  }
+}
+
+///|
 /// Runs module-local WasmGC fragment jobs in dependency-SCC order while
 /// retaining manifest-indexed outputs.
 pub fn plan_program_wasmgc_fragments_with_options(
@@ -929,6 +1191,38 @@ pub fn plan_program_wasmgc_fragments_with_options(
   let modules : Array[PlannedModuleWasmGCFragments] = []
   for slot in slots {
     modules.push(slot.unwrap())
+  }
+  let specialization_module_lookup : Map[ModuleId, Int] = Map::default()
+  for module_index, module_ in modules {
+    specialization_module_lookup[module_.module_id] = module_index
+  }
+  for module_index, module_ in lowering.modules {
+    for expression in module_.expressions {
+      match expression.kind {
+        PlannedDirectCall(declaration, _, _, arguments) if arguments.length > 0 =>
+          materialize_program_generic_specialization(
+            analyzed,
+            lowering,
+            modules,
+            specialization_module_lookup,
+            declaration,
+            module_.call_type_argument_shapes,
+            arguments,
+          )
+        PlannedFunctionReference(declaration, arguments) if arguments.length > 0 =>
+          materialize_program_generic_specialization(
+            analyzed,
+            lowering,
+            modules,
+            specialization_module_lookup,
+            declaration,
+            module_.expression_type_argument_shapes,
+            arguments,
+          )
+        _ => ()
+      }
+    }
+    ignore(module_index)
   }
   let external_type_references : Array[PlannedProgramExternalTypeReference] = []
   for module_index, module_ in modules {
@@ -1786,7 +2080,9 @@ pub fn link_program_wasmgc_fragments(
       }
       for fragment_index, function_ in module_fragments.functions {
         let entry = functions.length()
-        function_lookup[function_.declaration] = entry
+        if function_.specialization_shapes.length == 0 {
+          function_lookup[function_.declaration] = entry
+        }
         functions.push({
           declaration: function_.declaration,
           lambda: function_.lambda,
@@ -1812,6 +2108,7 @@ pub fn link_program_wasmgc_fragments(
           function_index: -1,
           parameters: function_.parameters,
           results: function_.results,
+          specialization_shapes: function_.specialization_shapes,
           offset: function_.offset,
         })
       }
@@ -1914,20 +2211,50 @@ pub fn link_program_wasmgc_fragments(
   let function_reference_singletons : Array[
     PlannedProgramFunctionReferenceSingleton,
   ] = []
-  let singleton_declarations : Map[DeclId, Bool] = Map::default()
+  let singleton_functions : Map[Int, Bool] = Map::default()
   for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
-        PlannedFunctionReference(declaration, _) =>
-          if !singleton_declarations.contains(declaration) {
-            singleton_declarations[declaration] = true
-            function_reference_singletons.push({
-              module_index,
-              declaration,
-              global_index,
-            })
-            global_index += 1
+        PlannedFunctionReference(declaration, arguments) => {
+          let target = if arguments.length > 0 {
+            let mut selected = None
+            for function_ in functions {
+              if function_.declaration == declaration &&
+                function_.specialization_shapes.length > 0 &&
+                program_specialization_shapes_equal(
+                  fragments.modules[function_.module_index].specialization_shapes,
+                  function_.specialization_shapes,
+                  module_.expression_type_argument_shapes,
+                  arguments,
+                ) {
+                selected = Some(function_)
+                break
+              }
+            }
+            selected
+          } else {
+            match function_lookup.get(declaration) {
+              Some(index) => Some(functions[index])
+              None => None
+            }
           }
+          match target {
+            Some(function_) if function_.function_index >= 0 &&
+              !singleton_functions.contains(function_.function_index) => {
+              singleton_functions[function_.function_index] = true
+              function_reference_singletons.push({
+                module_index,
+                declaration,
+                function_index: function_.function_index,
+                specialization_module_index: function_.module_index,
+                specialization_shapes: function_.specialization_shapes,
+                global_index,
+              })
+              global_index += 1
+            }
+            _ => ()
+          }
+        }
         _ => ()
       }
     }
@@ -1965,7 +2292,13 @@ pub fn link_program_wasmgc_fragments(
   } else {
     -1
   }
-  program_link_validate_calls(lowering, functions, function_lookup, diagnostics)
+  program_link_validate_calls(
+    lowering,
+    fragments.modules,
+    functions,
+    function_lookup,
+    diagnostics,
+  )
   {
     root_module_index,
     graph: lowering.graph,

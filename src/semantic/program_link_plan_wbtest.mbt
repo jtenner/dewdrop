@@ -225,7 +225,7 @@ test "unused generic structs are eliminated before program linking" {
 }
 
 ///|
-test "initial program linker diagnoses unspecialized generic calls" {
+test "program linker materializes generic control-flow specializations" {
   let program = collect_program_manifest(
     2250UL,
     ProgramManifest::new([
@@ -245,12 +245,15 @@ test "initial program linker diagnoses unspecialized generic calls" {
   let lowering = plan_program_lowering(program, analyzed)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   let choose = program.modules[1].lookup_value("choose").unwrap()
-  assert_eq(link.diagnostics.length(), 1)
-  match link.diagnostics[0] {
-    UnsupportedProgramGenericCall(2250UL, declaration, _) =>
-      assert_eq(declaration, choose)
-    _ => fail("expected unsupported generic call diagnostic")
+  assert_eq(link.diagnostics.length(), 0)
+  let mut specializations = 0
+  for function_ in link.functions {
+    if function_.declaration == choose &&
+      function_.specialization_shapes.length > 0 {
+      specializations += 1
+    }
   }
+  assert_eq(specializations, 1)
 }
 
 ///|

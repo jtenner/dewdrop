@@ -148,7 +148,8 @@ direct typed references.
 - [ ] Emit boxes, unboxes, and static-to-erased adapters only at required boundaries.
 - [x] Support executable generic enum construction, transport, and pattern access through deterministic erased physical-carrier fields.
 - [x] Execute generic parameter-selector functions and transparent generic callback wrappers through deterministic call-site specialization, including imported calls and expected-type generic references.
-- [ ] Support general executable generic function bodies and generic struct construction/access.
+- [x] Materialize deterministic physical-shape specializations for general generic function bodies, including locals, structured control flow, escaping references, and imported definitions.
+- [ ] Support generic struct construction/access and erased fallback adapters for specialization boundaries.
 - [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
 

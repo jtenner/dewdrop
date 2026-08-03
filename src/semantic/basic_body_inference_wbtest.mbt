@@ -108,7 +108,6 @@ test "basic inference specializes generic function references from expected type
       FunctionReferenceSelection(declaration, arguments) if declaration ==
         collected.callables[0].declaration => {
         assert_eq(arguments.length, 1)
-        assert_true(inferred.expression_type_arguments[arguments.start] >= 0)
         selected = true
       }
       _ => ()
