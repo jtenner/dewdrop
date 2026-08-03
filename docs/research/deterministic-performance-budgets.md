@@ -24,7 +24,9 @@ The tool reports JSON in a fixed field order. Budgets use non-negative integer b
 
 `tests/performance-budgets/generic-erased-scalar-adapter.json` requires exactly five scalar adapter exports and bounds the box allocation, dynamic closure call, cast/test, type, function, and output-size costs of the erased generic scalar ABI.
 
-`tools/check.sh` builds both production modules and validates the budgets. The generated JSON metric reports remain under `.tmp/` for diagnosis.
+`tests/performance-budgets/generic-structural-callback-adapter.json` requires exactly three callback-bearing adapter exports, including a callback nested in another callback signature, retains the expected direct/environment-first wrapper dispatch sites, and bounds wrapper closure allocations, box sites, casts/tests, type/function growth, and output size.
+
+`tools/check.sh` builds all three production modules and validates the budgets. The generated JSON metric reports remain under `.tmp/` for diagnosis.
 
 ## Interpretation
 
@@ -37,7 +39,7 @@ Budget changes should be reviewed with the implementation and snapshots in the s
 
 ## Remaining work
 
-- Add recursive aggregate, enum, callback-wrapper, mutable-cell, imported specialization, and package-consumer budgets.
+- Add recursive aggregate, enum, cyclic-helper, mutable-cell, imported specialization, and package-consumer budgets.
 - Distinguish compiler-generated generic box/allocation sites from standard-library assertion/string sites using stable producer metadata or named custom sections.
 - Record materialized specialization count directly instead of inferring only exported adapter count.
 - Add deterministic compile/validation/encoding timing harnesses with warmup and variance reporting.

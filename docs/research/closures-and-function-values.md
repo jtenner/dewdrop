@@ -48,6 +48,8 @@ Invocation evaluates the closure target once and tests the concrete function typ
 
 The runtime snapshots cover non-capturing lambdas, scalar captures, reference captures, function-valued captures, nested/transitive captures, immediate invocation, returned closures, closure parameters, module-level closures, and imported closures.
 
+Erased generic export adapters reuse this representation for structural callback conversion. A generated final wrapper subtype inherits the linked closure base and adds one immutable `eqref` field containing the source callback. Its entry function converts callback arguments, evaluates the captured closure once, selects the source direct or environment-first signature with `ref.test`, and converts the result back to the wrapper-visible representation. Scalar generic leaves use the existing lazy WasmGC boxes. Structural callbacks nested in callback parameter/result signatures recursively receive direction-correct wrappers, so boundary conversion does not introduce a parallel function-object ABI. Wrapper types and entry functions append deterministically after planned program and cyclic-helper identities and are included in the declarative function element.
+
 ## Flattening result
 
 The comprehensive `functions/closure-runtime` snapshot first fell from 23 to 16 static `struct.new` instructions after flattening, exactly removing the seven separate lambda-environment allocations in that fixture. Its deterministic WAT fell from 10,393 to 10,025 bytes. The focused capture fixture fell from three allocations to two, and the imported-closure fixture fell from six to five. These are generated-code improvements owned by Dewdrop; no Wago runtime change is required.
@@ -64,15 +66,16 @@ A future shared-environment optimization may still select a split representation
 
 ## Required next milestones
 
-1. Promote deterministic program specialization ABI keys into persistent interface fingerprints and add erased fallback adapters for boundaries that cannot be statically closed.
-2. Add closure ABI fingerprints to persistent external package interfaces.
-4. Extend callback summaries beyond the implemented expression-tail, explicit-return, and immutable local-return transparent wrappers to stored, conditionally called, multiply forwarded, and unknown callback uses.
-5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
+1. Add content-sensitive nominal and closure ABI fingerprints plus compatibility negotiation to persistent external package interfaces.
+2. Extend callback summaries beyond the implemented expression-tail, explicit-return, and immutable local-return transparent wrappers to stored, conditionally called, multiply forwarded, and unknown callback uses.
+3. Extend erased callback conversion through function-valued fields stored inside nominal aggregate payloads.
+4. Add in-Wasm package consumers that can exercise `eqref`, aggregate, callback-wrapper, and `v128` boundaries.
+5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after focused Wago compatibility is green.
 
 ## Constraints
 
 - Non-generic function overload sets become values only with a deterministic structural expected function type. Local/imported candidates are filtered by exact signature; missing, unmatched, and multiply matched expectations have separate diagnostics.
 - Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Mutable captures use shared carrier-specialized cells referenced by flattened closure fields; directization must route the cell reference rather than copy its value.
 - Cross-module concrete function signatures are structurally coalesced during one program link; persistent package interfaces still require stable signature and closure ABI fingerprints.
-- Expected-type generic function references retain inferred type arguments. Program linking transitively closes nested demands and materializes one deterministic function body per canonical physical-carrier vector, including imported definitions, multiple type parameters, and escaping references. Specialized named references receive one singleton per specialized function identity. Unspecialized recipes are not executable or exported; erased fallback adapters and persistent cross-package fingerprints remain pending.
+- Expected-type generic function references retain inferred type arguments. Program linking transitively closes nested demands and materializes one deterministic function body per canonical physical-carrier vector, including imported definitions, multiple type parameters, and escaping references. Specialized named references receive one singleton per specialized function identity. Unspecialized recipes are not executable or exported; root erased fallbacks and structural callback wrappers use the same flattened closure ABI, while content-sensitive cross-package compatibility remains pending.
 - Runtime performance favors directization and allocation elimination, but these optimizations must not define source semantics.

@@ -479,7 +479,7 @@ test "program linker plans cyclic nominal erased adapters" {
 }
 
 ///|
-test "program linker defers structural callback adapters until wrappers exist" {
+test "program linker plans structural callback erased adapters" {
   let program = collect_program_manifest(
     2247UL,
     ProgramManifest::new([
@@ -508,8 +508,8 @@ test "program linker defers structural callback adapters until wrappers exist" {
     }
   }
   assert_eq(fallback, 1)
-  assert_eq(adapter, 0)
-  assert_eq(link.erased_box_type_indices[0], -1)
+  assert_eq(adapter, 1)
+  assert_true(link.erased_box_type_indices[0] >= 0)
 }
 
 ///|

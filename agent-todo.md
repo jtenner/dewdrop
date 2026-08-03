@@ -145,13 +145,13 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Define one erased nullable-`eqref` fallback for each public root-module generic callable.
 - [x] Emit exact nominal-reference static-to-erased adapters only when callable signatures differ.
 - [x] Emit immutable scalar boxes, unboxes, and deterministic `$dew$<carrier>` adapters for demanded direct generic parameter/result boundaries.
-- [ ] Emit recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures.
+- [x] Emit recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures.
   - [x] Instantiate generic parameters recursively through structural function types during call/reference inference and specialize callback call signatures/results by carrier.
   - [x] Clone direct generic struct fields across static/erased boundaries, boxing and unboxing only the selected scalar carrier leaf.
   - [x] Recurse through acyclic nested generic struct graphs with deterministic scratch locals and leaf-only box/unbox conversion.
   - [x] Extend recursive conversion through generic enum tuple/struct payloads and acyclic nested struct/enum graphs with exact subtype reconstruction.
   - [x] Replace cyclic nominal rejection with deterministic per-adapter recursive conversion helpers that preserve finite runtime recursion through cyclic type graphs.
-  - [ ] Generate structural callback wrapper closures; function-containing adapter signatures remain conservatively excluded.
+  - [x] Generate deterministic static-to-erased and erased-to-static structural callback wrapper closures using the flattened closure ABI, recursive nested callback wrapping, scalar leaf boxes, and target-once typed dispatch.
 - [x] Support executable generic enum and struct construction and access.
 - [x] Support executable generic calls, nested fixed-point specialization, and escaping generic references.
 - [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.

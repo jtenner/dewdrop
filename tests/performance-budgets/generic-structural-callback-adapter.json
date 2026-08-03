@@ -1,0 +1,13 @@
+{
+  "wasm_bytes": { "max": 2100 },
+  "wat_bytes": { "max": 15500 },
+  "types": { "max": 31 },
+  "functions": { "max": 22 },
+  "adapter_exports": { "exact": 3 },
+  "call_refs": { "min": 30, "max": 34 },
+  "return_call_refs": { "exact": 0 },
+  "struct_news": { "min": 25, "max": 27 },
+  "array_news": { "max": 2 },
+  "ref_casts": { "max": 108 },
+  "ref_tests": { "exact": 17 }
+}

@@ -2,6 +2,10 @@ fn increment(value: I32) -> I32 {
   value + 1
 }
 
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
 pub fn invoke<t>(callback: fn(t) -> t, value: t, first: Bool) -> t {
   if first {
     callback(value)
@@ -10,6 +14,24 @@ pub fn invoke<t>(callback: fn(t) -> t, value: t, first: Bool) -> t {
   }
 }
 
+pub fn invoke_nested<t>(callback: fn(fn(t) -> t, t) -> t, inner: fn(t) -> t, value: t, first: Bool) -> t {
+  if first {
+    callback(inner, value)
+  } else {
+    callback(inner, value)
+  }
+}
+
+pub fn round_trip<t>(callback: fn(t) -> t, first: Bool) -> fn(t) -> t {
+  if first {
+    callback
+  } else {
+    callback
+  }
+}
+
 pub fn main() -> Unit {
-  assert(invoke(increment, 41, true) == 42, "structural callback demand")
+  assert(invoke(increment, 41, true) == 42, "structural callback argument")
+  assert(invoke_nested(apply, increment, 41, true) == 42, "nested callback argument")
+  let returned = round_trip(increment, true)
 }

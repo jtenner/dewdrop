@@ -51,6 +51,7 @@
       ref.cast (ref 4)
       call_ref 4
     end
+    ref.cast (ref 0)
     local.set 1
     local.get 1
     ref.cast (ref 0)

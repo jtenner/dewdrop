@@ -1673,50 +1673,6 @@ fn program_erased_box_slot_for_value(type_ : PlannedWasmValueType) -> Int {
 }
 
 ///|
-fn program_erased_type_contains_function(
-  lowering : PlannedModuleLowering,
-  root : ResolvedTypeId,
-) -> Bool {
-  let work : Array[ResolvedTypeId] = [root]
-  let seen : Map[ResolvedTypeId, Bool] = Map::default()
-  while work.length() > 0 {
-    let current = work.pop().unwrap()
-    if current < 0 ||
-      current >= lowering.resolved_types.length() ||
-      seen.contains(current) {
-      continue
-    }
-    seen[current] = true
-    match lowering.resolved_types[current] {
-      FunctionType(_, _) => return true
-      AppliedType(base, arguments) => {
-        work.push(base)
-        for index in 0..<arguments.length {
-          work.push(lowering.resolved_type_arguments[arguments.start + index])
-        }
-      }
-      _ => ()
-    }
-  }
-  false
-}
-
-///|
-fn program_erased_signature_supports_recursive_adapter(
-  lowering : PlannedModuleLowering,
-  functions : PlannedModuleFunctions,
-  callable : PlannedCallable,
-) -> Bool {
-  for index in 0..<callable.parameters.length {
-    let parameter = functions.parameters[callable.parameters.start + index]
-    if program_erased_type_contains_function(lowering, parameter.type_) {
-      return false
-    }
-  }
-  !program_erased_type_contains_function(lowering, callable.result_type)
-}
-
-///|
 fn program_erased_adapter_export_name(
   name : Bytes,
   shapes : Array[PlannedValueShape],
@@ -2525,12 +2481,7 @@ pub fn link_program_wasmgc_fragments(
       Some(value) => value
       None => continue
     }
-    if callable.visibility != Public ||
-      !program_erased_signature_supports_recursive_adapter(
-        root_lowering,
-        root_lowering.functions,
-        callable,
-      ) {
+    if callable.visibility != Public {
       continue
     }
     for index in 0..<function_.specialization_shapes.length {
@@ -2642,13 +2593,7 @@ pub fn link_program_wasmgc_fragments(
   }
   let root_function_count = functions.length()
   for callable in root_lowering.functions.callables {
-    if callable.visibility != Public ||
-      callable.generic_parameters.length == 0 ||
-      !program_erased_signature_supports_recursive_adapter(
-        root_lowering,
-        root_lowering.functions,
-        callable,
-      ) {
+    if callable.visibility != Public || callable.generic_parameters.length == 0 {
       continue
     }
     let mut fallback_index = -1

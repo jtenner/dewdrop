@@ -150,6 +150,14 @@ node tools/wasm-metrics.mjs \
   tests/performance-budgets/generic-erased-scalar-adapter.json \
   > .tmp/dew-generic-abi-metrics.json
 tools/dew build \
+  tests/module-snapshots/functions/generic-structural-callback-runtime.dew \
+  -o .tmp/dew-callback-wrapper-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/functions/generic-structural-callback-runtime.wat \
+  .tmp/dew-callback-wrapper-budget.wasm \
+  tests/performance-budgets/generic-structural-callback-adapter.json \
+  > .tmp/dew-callback-wrapper-metrics.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \
