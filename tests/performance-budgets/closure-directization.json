@@ -1,5 +1,5 @@
 {
-  "wasm_bytes": { "max": 420 },
+  "wasm_bytes": { "max": 850 },
   "wat_bytes": { "max": 2500 },
   "types": { "max": 9 },
   "functions": { "max": 4 },

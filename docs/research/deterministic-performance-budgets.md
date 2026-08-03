@@ -17,7 +17,7 @@ The initial deterministic metrics are:
 - `ref.cast` and `ref.test` counts;
 - local read/write instruction counts.
 
-The compiler appends exactly one `dew.metrics` custom section to CLI-built production binaries. Its eight-byte V1 payload is the `DWM1` magic followed by the materialized specialization count as a little-endian unsigned 32-bit integer. The count includes emitted concrete and erased-fallback generic bodies, but excludes `$dew$` boundary adapters, exact-reference adapters, elided recipes, and functions without executable indices. `tools/wasm-metrics.mjs` rejects absent, duplicate, malformed, or unsupported metadata instead of inferring this value from exports.
+The compiler appends exactly one `dew.abi` compatibility section and one `dew.metrics` cost section to CLI-built production binaries. Its eight-byte V1 payload is the `DWM1` magic followed by the materialized specialization count as a little-endian unsigned 32-bit integer. The count includes emitted concrete and erased-fallback generic bodies, but excludes `$dew$` boundary adapters, exact-reference adapters, elided recipes, and functions without executable indices. `tools/wasm-metrics.mjs` rejects absent, duplicate, malformed, or unsupported metadata instead of inferring this value from exports.
 
 The tool reports JSON in a fixed field order. Budgets use non-negative integer bounds and reject unknown metrics or malformed constraints rather than silently skipping them.
 
@@ -49,6 +49,8 @@ Static instruction counts are compiler regression gates, not runtime timing clai
 2. scalar erased-boundary support must not grow adapter count, box sites, or cast/call machinery without an explicit budget update;
 3. imported-package adapter linkage must remain compact and allocation-bounded while its external Wasm consumer stays executable;
 4. materialized generic bodies must not multiply or disappear behind unchanged adapter-export counts.
+
+Binary-size ceilings include the deterministic `dew.abi` module path, schema versions, transitive interface fingerprint, and direct dependency content records. The compatibility metadata intentionally increased every baseline while leaving instruction/entity metrics unchanged.
 
 Budget changes should be reviewed with the implementation and snapshots in the same atomic commit. A semantic improvement may intentionally increase one count while reducing runtime work elsewhere; in that case the rationale belongs in this document.
 

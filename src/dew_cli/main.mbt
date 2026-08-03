@@ -323,8 +323,12 @@ fn main {
       b""
     }
   }
-  let binary = @backend.append_wasm_metrics_section(
+  let with_abi = @backend.append_wasm_abi_section(
     encoded,
+    analyzed.frozen.interfaces[root_module_index],
+  )
+  let binary = @backend.append_wasm_metrics_section(
+    with_abi,
     link.materialized_specialization_count(),
   )
   write_cli_output(output, binary)

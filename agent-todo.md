@@ -160,7 +160,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
   - [x] Persist V2 SHA-256 callable ABI fingerprints in frozen-interface/cache V6 using normalized signatures, physical shapes, explicit box/closure schema domains, and stable dependency declaration identities.
   - [x] Replace exact external nominal `DeclId` members in callable fingerprints with dependency module path, declaration name, and generic arity.
   - [x] Add content-sensitive nominal declaration and transitive module-interface fingerprints with dependency content records in frozen-interface/cache V7.
-  - [ ] Define and enforce compatibility/version negotiation at separately compiled Wasm and package boundaries.
+  - [x] Emit versioned `dew.abi` schema/interface metadata, reject malformed or mismatched providers, and snapshot independently compiled provider compatibility.
   - [x] Add a deterministic Node host consumer that lists `$dew$<carrier,...>` exports and invokes scalar adapters with explicit parameter/result carrier conversion.
   - [x] Add in-Wasm package consumers for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
     - [x] Add focused WasmGC consumers that construct struct and enum payloads containing direct `i32` callbacks, invoke `identity_box$dew$i32` and `identity_choice$dew$i32`, and call the reconstructed wrappers entirely inside Wasm.

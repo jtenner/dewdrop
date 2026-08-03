@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "versions": {
+    "language": 1,
+    "closure": 1,
+    "genericCarrier": 1,
+    "box": 1,
+    "callbackWrapper": 1
+  },
+  "path": "fixture.main",
+  "interfaceFingerprint": "64613b06a3d3e22a2949617ad72d8689b85d6bd37ccb282726f876a820b8c7f3",
+  "dependencies": [
+    {
+      "path": "dew.std.option",
+      "contentFingerprint": "1843d39839069a7dcf1858adad9cf73812a471f26e3dc423bf3915ffbadd56c3"
+    },
+    {
+      "path": "dew.std.result",
+      "contentFingerprint": "b97a6fc7424649d8f8b97f51a38b2801b16a25242b1812aa2c667bcb5494143b"
+    },
+    {
+      "path": "dew.std.preamble",
+      "contentFingerprint": "44ace899afbe1fd5450853cde4d0b15f44b40b4a10161448b26c8238fc4e061e"
+    },
+    {
+      "path": "fixture.package_callback",
+      "contentFingerprint": "34d596e5725ba20895a290fd8fcf8d9a442e7d4797fdbc0fafdaeadfc8fb27e4"
+    }
+  ]
+}

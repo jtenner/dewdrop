@@ -19,6 +19,42 @@ fn wasm_u32_leb_length(initial : Int) -> Int {
   length
 }
 
+///|
+fn write_wasm_u32_le(output : Buffer, value : Int) -> Unit {
+  output.write_byte((value & 255).to_byte())
+  output.write_byte(((value >> 8) & 255).to_byte())
+  output.write_byte(((value >> 16) & 255).to_byte())
+  output.write_byte(((value >> 24) & 255).to_byte())
+}
+
+///|
+fn write_wasm_abi_string(output : Buffer, value : String) -> Unit {
+  let encoded = Buffer()
+  encoded.write_string_utf8(value)
+  let bytes = encoded.to_bytes()
+  write_wasm_u32_le(output, bytes.length())
+  output.write_bytes(bytes)
+}
+
+///|
+/// Append one versioned Dew ABI/interface compatibility record.
+pub fn append_wasm_abi_section(
+  module_ : Bytes,
+  interface_ : @semantic.FrozenModuleInterface,
+) -> Bytes {
+  let payload = Buffer()
+  payload.write_bytes(b"DWA1")
+  payload.write_bytes(b"\x01\x01\x01\x01\x01")
+  write_wasm_abi_string(payload, interface_.path)
+  write_wasm_abi_string(payload, interface_.interface_fingerprint)
+  write_wasm_u32_le(payload, interface_.dependencies.length())
+  for dependency in interface_.dependencies {
+    write_wasm_abi_string(payload, dependency.path)
+    write_wasm_abi_string(payload, dependency.content_fingerprint)
+  }
+  append_wasm_custom_section(module_, "dew.abi", payload.to_bytes())
+}
+
 ///| Append deterministic compiler-owned static metrics to a validated module.
 
 ///|

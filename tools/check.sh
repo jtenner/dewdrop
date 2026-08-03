@@ -24,7 +24,8 @@ python3 tools/generate_fixed_array_std.py --check
 python3 tools/generate_map_std.py --check
 python3 tools/generate_set_std.py --check
 python3 tools/generate_std_tests.py --check
-node --test tools/dew-test/metadata.test.mjs
+node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs
+node --check tools/dew-abi-metadata.mjs
 node --check tools/dew-abi.mjs
 node --check tools/dew-wasm-consumer.mjs
 node --check tools/wasm-metrics.mjs
@@ -133,6 +134,7 @@ tools/dew build --emit wat -o .tmp/dew-cli-smoke.wat \
 test -s .tmp/dew-cli-smoke.hir
 test -s .tmp/dew-cli-smoke.lowering
 test -s .tmp/dew-cli-smoke.wat
+grep -Fq '(@custom "dew.abi"' .tmp/dew-cli-smoke.wat
 grep -Fq '(@custom "dew.metrics"' .tmp/dew-cli-smoke.wat
 tools/dew run tests/module-snapshots/control-flow/short-circuit-runtime.dew \
   > .tmp/dew-cli-run.txt
@@ -207,6 +209,19 @@ grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
 tools/dew build \
   --manifest tests/abi-consumers/imported-package/dew.json \
   -o .tmp/dew-imported-package-provider.wasm
+node tools/dew-abi.mjs \
+  .tmp/dew-imported-package-provider.wasm interface \
+  > .tmp/dew-imported-package-abi.json
+node --input-type=module -e '
+  import { readFile } from "node:fs/promises";
+  const [actual, expected] = await Promise.all([
+    readFile(".tmp/dew-imported-package-abi.json", "utf8").then(JSON.parse),
+    readFile("tests/abi-consumers/imported-package/expected-abi.json", "utf8").then(JSON.parse),
+  ]);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error("imported package ABI metadata changed");
+  }
+'
 node tools/wasm-metrics.mjs \
   tests/module-snapshots/modules/imported-generic-callback-adapter-runtime.wat \
   .tmp/dew-imported-package-provider.wasm \
@@ -215,7 +230,22 @@ node tools/wasm-metrics.mjs \
 node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \
   .tmp/dew-aggregate-callback-consumer.wasm \
-  run i32 > .tmp/dew-imported-package-consumer.json
+  run i32 \
+  fixture.main \
+  64613b06a3d3e22a2949617ad72d8689b85d6bd37ccb282726f876a820b8c7f3 \
+  > .tmp/dew-imported-package-consumer.json
+if node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-imported-package-provider.wasm \
+  .tmp/dew-aggregate-callback-consumer.wasm \
+  run i32 \
+  fixture.main \
+  0000000000000000000000000000000000000000000000000000000000000000 \
+  > .tmp/dew-incompatible-package-consumer.txt 2>&1; then
+  echo "expected incompatible package interface to fail visibly" >&2
+  exit 1
+fi
+grep -q 'interface fingerprint mismatch for fixture.main' \
+  .tmp/dew-incompatible-package-consumer.txt
 grep -q '"type":"i32","value":42' \
   .tmp/dew-imported-package-consumer.json
 tools/dew build \
@@ -270,6 +300,10 @@ node --input-type=module -e '
   import { readFile } from "node:fs/promises";
   const bytes = await readFile(".tmp/dew-cli-smoke.wasm");
   const module = await WebAssembly.compile(bytes);
+  const abiSections = WebAssembly.Module.customSections(module, "dew.abi");
+  if (abiSections.length !== 1) {
+    throw new Error("production binary lacks one dew.abi section");
+  }
   const testSections = WebAssembly.Module.customSections(module, "dew.tests");
   if (testSections.length !== 0) {
     throw new Error("production binary contains dew.tests");

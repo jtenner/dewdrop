@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { decodeDewAbi } from "./dew-abi-metadata.mjs";
 
 function usage(message) {
   if (message) console.error(`dew abi: ${message}`);
   console.error("usage:");
+  console.error("  dew-abi.mjs BINARY interface");
   console.error("  dew-abi.mjs BINARY list");
   console.error("  dew-abi.mjs BINARY call SOURCE CARRIERS PARAM_TYPES RESULT_TYPE ARGS_JSON");
   process.exit(2);
@@ -94,7 +96,19 @@ function normalizeResult(type, value) {
 
 const binary = await readFile(binaryPath);
 const module = await WebAssembly.compile(binary);
+let abi;
+try {
+  abi = decodeDewAbi(module);
+} catch (error) {
+  usage(error instanceof Error ? error.message : String(error));
+}
 const records = adapterRecords(module);
+
+if (command === "interface") {
+  if (arguments_.length !== 0) usage("interface accepts no additional arguments");
+  process.stdout.write(`${JSON.stringify(abi)}\n`);
+  process.exit(0);
+}
 
 if (command === "list") {
   if (arguments_.length !== 0) usage("list accepts no additional arguments");

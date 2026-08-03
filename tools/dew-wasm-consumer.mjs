@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { readFile } from "node:fs/promises";
+import { requireDewAbi } from "./dew-abi-metadata.mjs";
 
 function usage() {
   console.error(
-    "usage: dew-wasm-consumer.mjs PROVIDER_WASM CONSUMER_WASM EXPORT RESULT_TYPE",
+    "usage: dew-wasm-consumer.mjs PROVIDER_WASM CONSUMER_WASM EXPORT RESULT_TYPE [EXPECTED_PROVIDER_PATH EXPECTED_INTERFACE_FINGERPRINT]",
   );
 }
 
@@ -33,18 +34,34 @@ function normalizeResult(type, value) {
 }
 
 async function main() {
-  if (process.argv.length !== 6) {
+  if (process.argv.length !== 6 && process.argv.length !== 8) {
     usage();
     process.exitCode = 2;
     return;
   }
-  const [, , providerPath, consumerPath, exportName, resultType] = process.argv;
+  const [
+    ,
+    ,
+    providerPath,
+    consumerPath,
+    exportName,
+    resultType,
+    expectedPath,
+    expectedInterfaceFingerprint,
+  ] = process.argv;
   const [providerBytes, consumerBytes] = await Promise.all([
     readFile(providerPath),
     readFile(consumerPath),
   ]);
-  const provider = await WebAssembly.instantiate(providerBytes, {});
-  const initialize = provider.instance.exports.__dew_init;
+  const providerModule = await WebAssembly.compile(providerBytes);
+  requireDewAbi(
+    providerModule,
+    expectedPath === undefined
+      ? undefined
+      : { path: expectedPath, interfaceFingerprint: expectedInterfaceFingerprint },
+  );
+  const provider = await WebAssembly.instantiate(providerModule, {});
+  const initialize = provider.exports.__dew_init;
   if (initialize !== undefined) {
     if (typeof initialize !== "function") {
       throw new Error("provider __dew_init export is not a function");
@@ -52,7 +69,7 @@ async function main() {
     initialize();
   }
   const consumer = await WebAssembly.instantiate(consumerBytes, {
-    dew: provider.instance.exports,
+    dew: provider.exports,
   });
   const entry = consumer.instance.exports[exportName];
   if (typeof entry !== "function") {
