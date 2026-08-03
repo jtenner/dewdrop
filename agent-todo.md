@@ -269,11 +269,11 @@ Performance and correctness work remains continuous: expand generated lane-famil
 
 - [x] Add deterministic Wasm/WAT size, type/function/global/export, adapter, call, allocation-site, cast/test, and local-access metrics with fail-visible JSON budgets.
 - [x] Gate transparent closure directization and erased scalar generic adapters with initial static performance budgets in `tools/check.sh`.
-- [ ] Expand budgets to recursive aggregate/enum/callback adapters, mutable cells, imported/package specializations, and direct materialized-specialization counts.
+- [x] Expand budgets to recursive aggregate/enum/callback adapters, mutable cells, imported/package specializations, and direct materialized-specialization counts.
   - [x] Gate direct/nested callback wrappers, callback-bearing struct/enum reconstruction, and an imported-package adapter plus its in-Wasm consumer.
   - [x] Add dedicated generic enum reconstruction and cyclic nominal-helper budgets.
   - [x] Add dedicated nested aggregate and mutable capture-cell budgets.
-  - [ ] Record and gate direct materialized-specialization counts.
+  - [x] Record exact materialized-specialization counts in versioned `dew.metrics` Wasm metadata and gate every static budget against them.
 - [ ] Add compile/validation/encoding and Node/Wago runtime timing plus peak-memory workloads with warmup and variance reporting.
 - [ ] Add the real compile-pass, compile-fail, and run-pass fixture suites.
 - [ ] Later: add broader malformed-input fuzzing for tokenizer, parser, and lowering after deterministic snapshot and CLI fixture infrastructure is established.

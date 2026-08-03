@@ -11,10 +11,13 @@ The initial deterministic metrics are:
 - encoded Wasm and printed WAT byte size;
 - type, function, global, import, and export counts;
 - deterministic `$dew$<carrier,...>` adapter export count;
+- compiler-reported materialized generic-specialization count;
 - direct `call`, `call_ref`, and `return_call_ref` counts;
 - `struct.new` and `array.new*` allocation-site counts;
 - `ref.cast` and `ref.test` counts;
 - local read/write instruction counts.
+
+The compiler appends exactly one `dew.metrics` custom section to CLI-built production binaries. Its eight-byte V1 payload is the `DWM1` magic followed by the materialized specialization count as a little-endian unsigned 32-bit integer. The count includes emitted concrete and erased-fallback generic bodies, but excludes `$dew$` boundary adapters, exact-reference adapters, elided recipes, and functions without executable indices. `tools/wasm-metrics.mjs` rejects absent, duplicate, malformed, or unsupported metadata instead of inferring this value from exports.
 
 The tool reports JSON in a fixed field order. Budgets use non-negative integer bounds and reject unknown metrics or malformed constraints rather than silently skipping them.
 
@@ -34,23 +37,24 @@ The tool reports JSON in a fixed field order. Budgets use non-negative integer b
 
 `tests/performance-budgets/generic-nested-aggregate-adapter.json` gates the compact acyclic nested-clone path at zero indirect dispatch with one adapter export and bounded reconstruction/cast sites. `mutable-capture-cells.json` bounds the comprehensive mutable-local fixture's closure/cell allocations, indirect dispatch, casts/tests, locals, and output size while preserving its expected ten `call_ref` and five `ref.test` sites.
 
-`tools/check.sh` builds all nine production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, a standalone `eqref` identity consumer, and a `v128` identity consumer, links them against generated single- and multi-module providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
+`tests/performance-budgets/generic-materialized-specializations.json` requires exactly three direct specialization bodies—`choose:i32`, `choose:i64`, and `roundtrip:f64`—with no exported boundary adapters or indirect calls. Every other static budget also records its exact specialization count so changes in body materialization fail independently of adapter-export counts.
+
+`tools/check.sh` builds all ten production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, a standalone `eqref` identity consumer, and a `v128` identity consumer, links them against generated single- and multi-module providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
 
 ## Interpretation
 
-Static instruction counts are compiler regression gates, not runtime timing claims. One instruction site may execute zero, one, or many times. The initial budgets intentionally cover two high-value invariants:
+Static instruction counts are compiler regression gates, not runtime timing claims. One instruction site may execute zero, one, or many times. The budgets intentionally cover four high-value invariants:
 
 1. transparent callback directization must not reintroduce closure dispatch;
 2. scalar erased-boundary support must not grow adapter count, box sites, or cast/call machinery without an explicit budget update;
-3. imported-package adapter linkage must remain compact and allocation-bounded while its external Wasm consumer stays executable.
+3. imported-package adapter linkage must remain compact and allocation-bounded while its external Wasm consumer stays executable;
+4. materialized generic bodies must not multiply or disappear behind unchanged adapter-export counts.
 
 Budget changes should be reviewed with the implementation and snapshots in the same atomic commit. A semantic improvement may intentionally increase one count while reducing runtime work elsewhere; in that case the rationale belongs in this document.
 
 ## Remaining work
 
-- Record and gate direct materialized-specialization counts.
-- Distinguish compiler-generated generic box/allocation sites from standard-library assertion/string sites using stable producer metadata or named custom sections.
-- Record materialized specialization count directly instead of inferring only exported adapter count.
+- Distinguish compiler-generated generic box/allocation sites from standard-library assertion/string sites using stable producer metadata or additional named custom-section records.
 - Add deterministic compile/validation/encoding timing harnesses with warmup and variance reporting.
 - Add Node and Wago runtime workloads after focused Wago closure compatibility is green.
 - Track peak compiler and runtime memory separately from static binary metrics.

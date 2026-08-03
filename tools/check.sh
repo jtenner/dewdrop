@@ -133,6 +133,7 @@ tools/dew build --emit wat -o .tmp/dew-cli-smoke.wat \
 test -s .tmp/dew-cli-smoke.hir
 test -s .tmp/dew-cli-smoke.lowering
 test -s .tmp/dew-cli-smoke.wat
+grep -Fq '(@custom "dew.metrics"' .tmp/dew-cli-smoke.wat
 tools/dew run tests/module-snapshots/control-flow/short-circuit-runtime.dew \
   > .tmp/dew-cli-run.txt
 grep -q '^control:short-circuit$' .tmp/dew-cli-run.txt
@@ -250,6 +251,14 @@ node tools/wasm-metrics.mjs \
   tests/performance-budgets/mutable-capture-cells.json \
   > .tmp/dew-mutable-cell-metrics.json
 tools/dew build \
+  tests/module-snapshots/functions/generic-function-specialization-runtime.dew \
+  -o .tmp/dew-materialized-specialization-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/functions/generic-function-specialization-runtime.wat \
+  .tmp/dew-materialized-specialization-budget.wasm \
+  tests/performance-budgets/generic-materialized-specializations.json \
+  > .tmp/dew-materialized-specialization-metrics.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \
@@ -261,9 +270,54 @@ node --input-type=module -e '
   import { readFile } from "node:fs/promises";
   const bytes = await readFile(".tmp/dew-cli-smoke.wasm");
   const module = await WebAssembly.compile(bytes);
-  const sections = WebAssembly.Module.customSections(module, "dew.tests");
-  if (sections.length !== 0) throw new Error("production binary contains dew.tests");
+  const testSections = WebAssembly.Module.customSections(module, "dew.tests");
+  if (testSections.length !== 0) {
+    throw new Error("production binary contains dew.tests");
+  }
+  const metricSections = WebAssembly.Module.customSections(module, "dew.metrics");
+  if (metricSections.length !== 1) {
+    throw new Error("production binary lacks one dew.metrics section");
+  }
+  const metrics = new Uint8Array(metricSections[0]);
+  if (
+    metrics.length !== 8 ||
+    metrics[0] !== 0x44 ||
+    metrics[1] !== 0x57 ||
+    metrics[2] !== 0x4d ||
+    metrics[3] !== 0x31 ||
+    metrics.slice(4).some((value) => value !== 0)
+  ) {
+    throw new Error("production binary contains invalid static metrics");
+  }
 '
+wasm-tools parse \
+  tests/module-snapshots/functions/generic-function-specialization-runtime.wat \
+  -o .tmp/dew-missing-metrics.wasm
+if node tools/wasm-metrics.mjs \
+  tests/module-snapshots/functions/generic-function-specialization-runtime.wat \
+  .tmp/dew-missing-metrics.wasm \
+  > .tmp/dew-missing-metrics.txt 2>&1; then
+  echo "expected missing dew.metrics metadata to fail visibly" >&2
+  exit 1
+fi
+grep -q 'expected exactly one dew.metrics custom section, got 0' \
+  .tmp/dew-missing-metrics.txt
+cat > .tmp/dew-malformed-metrics.wat <<'EOF'
+(module
+  (@custom "dew.metrics" "bad")
+)
+EOF
+wasm-tools parse .tmp/dew-malformed-metrics.wat \
+  -o .tmp/dew-malformed-metrics.wasm
+if node tools/wasm-metrics.mjs \
+  .tmp/dew-malformed-metrics.wat \
+  .tmp/dew-malformed-metrics.wasm \
+  > .tmp/dew-malformed-metrics.txt 2>&1; then
+  echo "expected malformed dew.metrics metadata to fail visibly" >&2
+  exit 1
+fi
+grep -q 'unsupported or malformed dew.metrics custom section' \
+  .tmp/dew-malformed-metrics.txt
 if tools/dew check --no-default-preamble \
   tests/cli/no-default-preamble.dew > .tmp/dew-no-preamble-error.txt; then
   echo "expected no-default-preamble source to lose implicit assert" >&2

@@ -4,6 +4,7 @@
   "types": { "max": 39 },
   "functions": { "max": 19 },
   "adapter_exports": { "exact": 5 },
+  "materialized_specializations": { "exact": 7 },
   "call_refs": { "max": 6 },
   "return_call_refs": { "exact": 0 },
   "struct_news": { "max": 13 },

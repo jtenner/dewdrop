@@ -475,6 +475,7 @@ test "program linker plans cyclic nominal erased adapters" {
   }
   assert_eq(fallback, 1)
   assert_eq(adapter, 1)
+  assert_eq(link.materialized_specialization_count(), 2)
   assert_true(link.erased_box_type_indices[0] >= 0)
 }
 
@@ -539,6 +540,7 @@ test "program linker coalesces generic specializations by physical carrier" {
     }
   }
   assert_eq(specializations, 1)
+  assert_eq(link.materialized_specialization_count(), 1)
   assert_eq(abi_key, "\{choose}:i32")
 }
 

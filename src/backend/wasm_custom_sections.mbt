@@ -19,6 +19,32 @@ fn wasm_u32_leb_length(initial : Int) -> Int {
   length
 }
 
+///| Append deterministic compiler-owned static metrics to a validated module.
+
+///|
+
+///| The `dew.metrics` V1 payload is exactly eight bytes: the ASCII magic `DWM1`
+
+///| followed by the materialized generic-specialization count as a little-endian
+
+///|
+/// unsigned 32-bit integer.
+pub fn append_wasm_metrics_section(
+  module_ : Bytes,
+  materialized_specializations : Int,
+) -> Bytes {
+  guard materialized_specializations >= 0 else {
+    abort("materialized specialization count cannot be negative")
+  }
+  let payload = Buffer(size_hint=8)
+  payload.write_bytes(b"DWM1")
+  payload.write_byte((materialized_specializations & 255).to_byte())
+  payload.write_byte(((materialized_specializations >> 8) & 255).to_byte())
+  payload.write_byte(((materialized_specializations >> 16) & 255).to_byte())
+  payload.write_byte(((materialized_specializations >> 24) & 255).to_byte())
+  append_wasm_custom_section(module_, "dew.metrics", payload.to_bytes())
+}
+
 ///| Append one deterministic custom section to an already validated and encoded
 
 ///| WebAssembly module. Custom sections do not alter validation semantics and

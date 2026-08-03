@@ -168,7 +168,7 @@ erased fallback.
 - [ ] Expand generated lane tests from smoke coverage to every generated operation family.
 - [ ] Add retained-range, small-inline-string, hashing, ordering, and UTF-8 scalar-iteration measurements before extending the text ABI.
 - [ ] Add source provenance to every HIR node needed for user-facing diagnostics.
-- [ ] Define explicit compiler resource budgets and diagnostic behavior before the later fuzzing phase. Deterministic static Wasm/WAT size, section/entity, adapter, call, allocation-site, cast/test, and local-access metrics now gate closure directization and scalar erased adapters.
+- [ ] Define explicit compiler resource budgets and diagnostic behavior before the later fuzzing phase. Deterministic static Wasm/WAT size, section/entity, adapter, materialized-specialization, call, allocation-site, cast/test, and local-access metrics now gate closure, mutable-cell, generic-adapter, recursive-helper, and imported-package workloads.
 - [ ] Track compile time, validation/encoding time, runtime time, allocations, and peak memory separately; static instruction-site budgets are implemented, while timing and peak-memory workloads remain.
 - [x] Re-run Wago Core 3 compatibility checks for `array<mut v128>`, erased generic enums, Dew text search, all compiler snapshots, and WASI host callbacks; the standalone CLI now supports explicit `--core 3` activation.
 - [ ] Design optional arguments only after the callable ABI and interface format above stabilize.

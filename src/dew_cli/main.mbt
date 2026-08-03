@@ -315,7 +315,7 @@ fn main {
     write_cli_output(output, render_program_lowering(program, lowering))
     return
   }
-  let binary = match @backend.emit_starshine_program_binary(lowering, link) {
+  let encoded = match @backend.emit_starshine_program_binary(lowering, link) {
     Ok(binary) => binary
     Err(error) => {
       cli_error(@debug.to_string(error))
@@ -323,5 +323,9 @@ fn main {
       b""
     }
   }
+  let binary = @backend.append_wasm_metrics_section(
+    encoded,
+    link.materialized_specialization_count(),
+  )
   write_cli_output(output, binary)
 }

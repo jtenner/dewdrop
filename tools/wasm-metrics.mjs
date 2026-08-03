@@ -21,6 +21,28 @@ function count(pattern) {
   return [...wat.matchAll(pattern)].length;
 }
 
+function materializedSpecializationCount(module) {
+  const sections = WebAssembly.Module.customSections(module, "dew.metrics");
+  if (sections.length !== 1) {
+    usage(`expected exactly one dew.metrics custom section, got ${sections.length}`);
+  }
+  const payload = new Uint8Array(sections[0]);
+  if (
+    payload.length !== 8 ||
+    payload[0] !== 0x44 ||
+    payload[1] !== 0x57 ||
+    payload[2] !== 0x4d ||
+    payload[3] !== 0x31
+  ) {
+    usage("unsupported or malformed dew.metrics custom section");
+  }
+  return new DataView(
+    payload.buffer,
+    payload.byteOffset + 4,
+    4,
+  ).getUint32(0, true);
+}
+
 const exports = WebAssembly.Module.exports(module);
 const imports = WebAssembly.Module.imports(module);
 const metrics = {
@@ -35,6 +57,7 @@ const metrics = {
   adapter_exports: exports.filter(
     (value) => value.kind === "function" && value.name.includes("$dew$"),
   ).length,
+  materialized_specializations: materializedSpecializationCount(module),
   direct_calls: count(/^\s*call\s+\d+/gm),
   call_refs: count(/^\s*call_ref\b/gm),
   return_call_refs: count(/^\s*return_call_ref\b/gm),

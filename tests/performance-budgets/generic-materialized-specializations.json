@@ -1,14 +1,15 @@
 {
-  "wasm_bytes": { "max": 420 },
+  "wasm_bytes": { "max": 430 },
   "wat_bytes": { "max": 2500 },
-  "types": { "max": 9 },
+  "types": { "max": 12 },
   "functions": { "max": 4 },
   "adapter_exports": { "exact": 0 },
-  "materialized_specializations": { "exact": 0 },
+  "materialized_specializations": { "exact": 3 },
+  "direct_calls": { "exact": 3 },
   "call_refs": { "exact": 0 },
   "return_call_refs": { "exact": 0 },
-  "struct_news": { "max": 4 },
-  "array_news": { "max": 4 },
+  "struct_news": { "max": 3 },
+  "array_news": { "max": 3 },
   "ref_casts": { "exact": 0 },
   "ref_tests": { "exact": 0 }
 }

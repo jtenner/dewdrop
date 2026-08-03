@@ -127,6 +127,22 @@ pub struct PlannedProgramWasmGCLink {
 }
 
 ///|
+pub fn PlannedProgramWasmGCLink::materialized_specialization_count(
+  self : PlannedProgramWasmGCLink,
+) -> Int {
+  let mut count = 0
+  for function_ in self.functions {
+    if function_.specialization_shapes.length > 0 &&
+      function_.erased_adapter_target < 0 &&
+      function_.function_index >= 0 &&
+      !function_.elided {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
 pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(
   self : PlannedProgramWasmGCLink,
   module_index : Int,

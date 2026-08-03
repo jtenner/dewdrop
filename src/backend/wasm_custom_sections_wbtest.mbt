@@ -6,6 +6,15 @@ test "append deterministic Wasm custom section" {
 }
 
 ///|
+test "append deterministic Wasm static metrics section" {
+  let module_ = b"\x00asm\x01\x00\x00\x00"
+  let result = append_wasm_metrics_section(module_, 2)
+  assert_eq(
+    result, b"\x00asm\x01\x00\x00\x00\x00\x14\x0Bdew.metricsDWM1\x02\x00\x00\x00",
+  )
+}
+
+///|
 test "custom section lengths use unsigned LEB128" {
   let payload = Buffer(size_hint=128)
   for _ in 0..<128 {
