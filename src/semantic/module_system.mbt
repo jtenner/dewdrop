@@ -1199,6 +1199,7 @@ pub struct FrozenInterfaceCallable {
   parameters : HirSpan
   result_type : ResolvedTypeId
   result_shape : PlannedValueShape
+  abi_fingerprint : String
   location : SourceLocation
 } derive(Eq, Debug)
 
@@ -1224,6 +1225,164 @@ pub struct FrozenModuleInterface {
   parameters : Array[FrozenInterfaceParameter]
   implementations : Array[FrozenInterfaceImplementation]
 } derive(Eq, Debug)
+
+///|
+fn callable_abi_write_int(output : Buffer, value : Int) -> Unit {
+  let bits = value.reinterpret_as_uint()
+  output.write_byte((bits & 0xffU).to_byte())
+  output.write_byte(((bits >> 8) & 0xffU).to_byte())
+  output.write_byte(((bits >> 16) & 0xffU).to_byte())
+  output.write_byte(((bits >> 24) & 0xffU).to_byte())
+}
+
+///|
+fn callable_abi_write_u64(output : Buffer, value : UInt64) -> Unit {
+  for shift in 0..<8 {
+    output.write_byte(((value >> (shift * 8)) & 0xffUL).to_byte())
+  }
+}
+
+///|
+fn callable_abi_write_string(output : Buffer, value : String) -> Unit {
+  let bytes = Buffer()
+  bytes.write_string_utf8(value)
+  let encoded = bytes.to_bytes()
+  callable_abi_write_int(output, encoded.length())
+  output.write_bytes(encoded)
+}
+
+///|
+fn callable_abi_write_shape(
+  output : Buffer,
+  shape : PlannedValueShape,
+) -> Unit {
+  let tag = match shape {
+    UnitPlannedValueShape => 0
+    NeverPlannedValueShape => 1
+    I8PlannedValueShape => 2
+    U8PlannedValueShape => 3
+    I16PlannedValueShape => 4
+    U16PlannedValueShape => 5
+    I32PlannedValueShape => 6
+    U32PlannedValueShape => 7
+    I64PlannedValueShape => 8
+    U64PlannedValueShape => 9
+    F32PlannedValueShape => 10
+    F64PlannedValueShape => 11
+    RefPlannedValueShape => 12
+    GenericPlannedValueShape => 13
+    ErrorPlannedValueShape => 14
+    V128PlannedValueShape => 15
+    Swar32PlannedValueShape => 16
+    Swar64PlannedValueShape => 17
+  }
+  callable_abi_write_int(output, tag)
+}
+
+///|
+fn callable_abi_write_type(
+  output : Buffer,
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+  generic_parameters : HirSpan,
+) -> Unit {
+  let types : Array[ResolvedTypeId] = [root]
+  while types.length() > 0 {
+    let current = types.pop().unwrap()
+    if current < 0 || current >= resolved.types.length() {
+      callable_abi_write_int(output, -1)
+      continue
+    }
+    match resolved.types[current] {
+      ErrorType => callable_abi_write_int(output, 0)
+      PrimitiveType(primitive) => {
+        callable_abi_write_int(output, 1)
+        callable_abi_write_int(output, primitive.rank())
+      }
+      GenericParameterType(parameter) => {
+        callable_abi_write_int(output, 2)
+        let parameter_index = semantic_id_local(parameter)
+        if parameter_index >= generic_parameters.start &&
+          parameter_index < generic_parameters.start + generic_parameters.length {
+          callable_abi_write_int(
+            output,
+            parameter_index - generic_parameters.start,
+          )
+        } else {
+          callable_abi_write_int(output, -1)
+          callable_abi_write_u64(output, parameter)
+        }
+      }
+      NominalType(declaration) => {
+        callable_abi_write_int(output, 3)
+        callable_abi_write_u64(output, declaration)
+      }
+      TraitType(declaration) => {
+        callable_abi_write_int(output, 4)
+        callable_abi_write_u64(output, declaration)
+      }
+      SelfType(declaration) => {
+        callable_abi_write_int(output, 5)
+        callable_abi_write_u64(output, declaration)
+      }
+      AppliedType(base, arguments) => {
+        callable_abi_write_int(output, 6)
+        callable_abi_write_int(output, arguments.length)
+        let mut index = arguments.length
+        while index > 0 {
+          index -= 1
+          types.push(resolved.type_arguments[arguments.start + index])
+        }
+        types.push(base)
+      }
+      FunctionType(parameters, result) => {
+        callable_abi_write_int(output, 7)
+        callable_abi_write_int(output, parameters.length)
+        types.push(result)
+        let mut index = parameters.length
+        while index > 0 {
+          index -= 1
+          types.push(resolved.type_arguments[parameters.start + index])
+        }
+      }
+    }
+  }
+}
+
+///|
+fn frozen_callable_abi_fingerprint(
+  path : String,
+  resolved : ResolvedModuleTypes,
+  functions : PlannedModuleFunctions,
+  callable : PlannedCallable,
+) -> String {
+  let output = Buffer()
+  output.write_bytes(b"DEW_CALLABLE_ABI_V1\x00")
+  output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
+  output.write_bytes(b"DEW_FLAT_CLOSURE_ABI_V1\x00")
+  callable_abi_write_string(output, path)
+  callable_abi_write_string(output, @utf8.decode_lossy(callable.name))
+  callable_abi_write_int(output, callable.generic_parameters.length)
+  callable_abi_write_int(output, callable.parameters.length)
+  for index in 0..<callable.parameters.length {
+    let parameter = functions.parameters[callable.parameters.start + index]
+    callable_abi_write_type(
+      output,
+      resolved,
+      parameter.type_,
+      callable.generic_parameters,
+    )
+    callable_abi_write_shape(output, parameter.shape)
+  }
+  callable_abi_write_type(
+    output,
+    resolved,
+    callable.result_type,
+    callable.generic_parameters,
+  )
+  callable_abi_write_shape(output, callable.result_shape)
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
 
 ///|
 fn frozen_body_type_to_resolved(
@@ -1617,6 +1776,12 @@ pub fn freeze_module_interface(
       },
       result_type: callable.result_type,
       result_shape: callable.result_shape,
+      abi_fingerprint: frozen_callable_abi_fingerprint(
+        path,
+        resolved,
+        functions,
+        callable,
+      ),
       location: collected.declaration_location(callable.declaration).unwrap(),
     })
   }

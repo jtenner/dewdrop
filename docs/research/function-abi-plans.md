@@ -84,10 +84,12 @@ For every demanded scalar specialization of a public root generic whose supporte
 
 Generic signature instantiation now descends through structural function types instead of treating `fn(...) -> ...` as rigid. Specialized bodies therefore select carrier-correct direct and environment-first callback signatures and result block types. Export adapters whose representation tree contains a structural function remain excluded until the linker can synthesize wrapper closures that recursively convert callback arguments and results.
 
+Frozen exported callables now carry V1 SHA-256 ABI fingerprints persisted in frozen-interface/cache V5. The preimage includes explicit callable, box, and flattened-closure schema domains, module path, source export name, generic arity, normalized parameter/result type trees, and physical shapes. Generic parameters use callable-relative ordinals. Exact nominal identities still use current `DeclId` values; replacing external nominal identities with dependency-interface fingerprints remains necessary before independently assigned package module IDs are compatible.
+
 ## Remaining work
 
 1. Extend acyclic nested struct conversion to enum payloads and cyclic graph helpers, then synthesize structural callback wrapper closures. Function-containing and cyclic export adapters remain conservatively excluded until those helpers exist.
 2. Build trait dictionary method slots from trait requirement plans.
 3. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
-4. Define persistent cross-package export/import naming, signature fingerprints, and ABI compatibility rules.
+4. Replace provisional exact-`DeclId` nominal fingerprint members with dependency-interface fingerprints and define compatibility/version negotiation rules.
 5. Add executable host/package consumers for deterministic `$dew$<carrier,...>` specialization adapters.

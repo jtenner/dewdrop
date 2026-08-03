@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V4\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V5\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -371,6 +371,7 @@ fn cache_write_interface(
     cache_write_span(output, callable.parameters)
     cache_write_int(output, callable.result_type)
     cache_write_shape(output, callable.result_shape)
+    cache_write_string(output, callable.abi_fingerprint)
     cache_write_location(output, callable.location)
   }
   cache_write_int(output, interface_.parameters.length())
@@ -819,6 +820,7 @@ fn FrozenInterfaceCacheReader::read_interface(
       parameters: self.read_span(),
       result_type: self.read_int(),
       result_shape: self.read_shape(),
+      abi_fingerprint: self.read_string(),
       location: self.read_location(),
     })
   }

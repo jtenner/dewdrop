@@ -463,6 +463,35 @@ test "imported public types and traits resolve in consumer signatures" {
 }
 
 ///|
+test "frozen callable ABI fingerprints are stable and signature sensitive" {
+  let freeze = fn(seed: ModuleId, source: Bytes) -> String {
+    let program = collect_program_manifest(
+      seed,
+      ProgramManifest::new([
+        ManifestModule::new("abi.library", [
+          ManifestFile::new("library.dew", source),
+        ]),
+      ]),
+    )
+    let frozen = freeze_program_interfaces(program)
+    if frozen.import_diagnostics.length() != 0 {
+      abort("unexpected ABI fingerprint import diagnostics")
+    }
+    frozen.interfaces[0].callables_named("identity")[0].abi_fingerprint
+  }
+  let generic_source = b"pub fn identity<t>(value: t) -> t {\n  value\n}\n"
+  let first = freeze(1650UL, generic_source)
+  let repeated = freeze(2650UL, generic_source)
+  let changed = freeze(
+    1650UL,
+    b"pub fn identity(value: I64) -> I64 {\n  value\n}\n",
+  )
+  assert_eq(first.length(), 64)
+  assert_eq(first, repeated)
+  assert_true(first != changed)
+}
+
+///|
 test "cyclic module interfaces resolve imported nominal signatures" {
   let program = collect_program_manifest(
     1700UL,
