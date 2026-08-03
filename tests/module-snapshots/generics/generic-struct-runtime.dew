@@ -1,0 +1,35 @@
+struct Item {
+  value: I32
+}
+
+struct Pair<a, b> {
+  first: a
+  second: b
+}
+
+fn make_pair<a, b>(first: a, second: b) -> Pair<a, b> {
+  Pair {
+    first: first
+    second: second
+  }
+}
+
+fn read_first<a, b>(pair: Pair<a, b>) -> a {
+  pair.first
+}
+
+fn read_second<a, b>(pair: Pair<a, b>) -> b {
+  pair.second
+}
+
+pub fn main() -> Unit {
+  let scalar_pair = make_pair(42, 7i64)
+  assert(read_first(scalar_pair) == 42, "generic struct i32 field")
+  assert(read_second(scalar_pair) == 7i64, "generic struct i64 field")
+
+  let mixed_pair = make_pair(42.5f64, Item {
+    value: 7
+  })
+  assert(read_first(mixed_pair) == 42.5f64, "generic struct f64 field")
+  assert(read_second(mixed_pair).value == 7, "generic struct reference field")
+}
