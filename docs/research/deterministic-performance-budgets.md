@@ -30,7 +30,9 @@ The tool reports JSON in a fixed field order. Budgets use non-negative integer b
 
 `tests/performance-budgets/imported-package-callback-adapter.json` requires one root-owned adapter over an imported generic callback aggregate, retains zero indirect dispatch sites in the identity provider, and bounds linked type/function growth, direct calls, reconstruction sites, casts, and output size.
 
-`tools/check.sh` builds all five production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, a standalone `eqref` identity consumer, and a `v128` identity consumer, links them against generated single- and multi-module providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
+`tests/performance-budgets/generic-enum-adapter.json` bounds exact-variant reconstruction across tuple, struct, nested-struct, and nested-enum payloads, including adapter count, aggregate allocation sites, calls, casts/tests, and output size. `generic-cyclic-aggregate-adapter.json` requires the expected helper-call count while retaining zero indirect dispatch and bounding helper signatures, reconstruction sites, casts, and binary/text growth.
+
+`tools/check.sh` builds all seven production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, a standalone `eqref` identity consumer, and a `v128` identity consumer, links them against generated single- and multi-module providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
 
 ## Interpretation
 
@@ -44,7 +46,7 @@ Budget changes should be reviewed with the implementation and snapshots in the s
 
 ## Remaining work
 
-- Add dedicated recursive aggregate, enum, cyclic-helper, mutable-cell, and direct specialization-count budgets.
+- Add dedicated nested aggregate, mutable-cell, and direct specialization-count budgets.
 - Distinguish compiler-generated generic box/allocation sites from standard-library assertion/string sites using stable producer metadata or named custom sections.
 - Record materialized specialization count directly instead of inferring only exported adapter count.
 - Add deterministic compile/validation/encoding timing harnesses with warmup and variance reporting.

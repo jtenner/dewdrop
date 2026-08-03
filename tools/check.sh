@@ -218,6 +218,22 @@ node tools/dew-wasm-consumer.mjs \
 grep -q '"type":"i32","value":42' \
   .tmp/dew-imported-package-consumer.json
 tools/dew build \
+  tests/module-snapshots/generics/generic-enum-adapter-runtime.dew \
+  -o .tmp/dew-enum-adapter-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/generics/generic-enum-adapter-runtime.wat \
+  .tmp/dew-enum-adapter-budget.wasm \
+  tests/performance-budgets/generic-enum-adapter.json \
+  > .tmp/dew-enum-adapter-metrics.json
+tools/dew build \
+  tests/module-snapshots/generics/generic-cyclic-aggregate-adapter-runtime.dew \
+  -o .tmp/dew-cyclic-adapter-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/generics/generic-cyclic-aggregate-adapter-runtime.wat \
+  .tmp/dew-cyclic-adapter-budget.wasm \
+  tests/performance-budgets/generic-cyclic-aggregate-adapter.json \
+  > .tmp/dew-cyclic-adapter-metrics.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \
