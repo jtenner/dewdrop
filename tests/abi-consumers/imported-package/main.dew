@@ -1,0 +1,14 @@
+open fixture.package_callback
+
+pub fn identity_box<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {
+  if first {
+    value
+  } else {
+    value
+  }
+}
+
+pub fn main() -> Unit {
+  let box = identity_box(make_box(), true)
+  assert(true, "imported generic callback aggregate")
+}

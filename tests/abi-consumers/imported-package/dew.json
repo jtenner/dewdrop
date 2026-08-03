@@ -1,0 +1,17 @@
+{
+  "root": "fixture.main",
+  "modules": [
+    {
+      "name": "fixture.package_callback",
+      "files": [
+        "callback.dew"
+      ]
+    },
+    {
+      "name": "fixture.main",
+      "files": [
+        "main.dew"
+      ]
+    }
+  ]
+}

@@ -161,11 +161,11 @@ Performance and correctness work remains continuous: expand generated lane-famil
   - [x] Replace exact external nominal `DeclId` members in callable fingerprints with dependency module path, declaration name, and generic arity.
   - [ ] Add content-sensitive nominal declaration/interface fingerprints and define compatibility/version negotiation.
   - [x] Add a deterministic Node host consumer that lists `$dew$<carrier,...>` exports and invokes scalar adapters with explicit parameter/result carrier conversion.
-  - [ ] Add in-Wasm package consumers for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
+  - [x] Add in-Wasm package consumers for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
     - [x] Add focused WasmGC consumers that construct struct and enum payloads containing direct `i32` callbacks, invoke `identity_box$dew$i32` and `identity_choice$dew$i32`, and call the reconstructed wrappers entirely inside Wasm.
     - [x] Add a standalone `eqref` consumer that constructs an exact nominal value, invokes the public erased fallback, casts the result, and reads it entirely inside Wasm.
     - [x] Add an in-Wasm `v128` consumer that invokes `identity$dew$v128` and extracts the returned vector lane without crossing the JavaScript value boundary.
-    - [ ] Extend consumers to imported packages.
+    - [x] Add a multi-module provider whose root `$dew$i32` adapter exposes an imported generic callback aggregate and execute it through the same structurally equivalent Wasm consumer.
 
 ## Generic trait obligations and runtime traits
 

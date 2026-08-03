@@ -1,0 +1,13 @@
+pub struct CallbackBox<t> {
+  callback: fn(t) -> t
+}
+
+pub fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+pub fn make_box() -> CallbackBox<I32> {
+  CallbackBox {
+    callback: increment
+  }
+}

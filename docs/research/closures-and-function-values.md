@@ -68,8 +68,8 @@ A future shared-environment optimization may still select a split representation
 
 1. Add content-sensitive nominal and closure ABI fingerprints plus compatibility negotiation to persistent external package interfaces.
 2. Extend callback summaries beyond the implemented expression-tail, explicit-return, and immutable local-return transparent wrappers to stored, conditionally called, multiply forwarded, and unknown callback uses.
-3. Extend the focused in-Wasm callback, standalone-`eqref`, and `v128` consumers to imported-package boundaries.
-4. Define recursive generic aggregate layout sharing while preserving exact callback signatures.
+3. Define recursive generic aggregate layout sharing while preserving exact callback signatures.
+4. Add package integrity and dependency-interface fingerprints before multi-module linkage becomes a persistent external package contract.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after focused Wago compatibility is green.
 
 ## Constraints

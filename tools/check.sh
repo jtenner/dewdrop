@@ -204,6 +204,15 @@ node tools/dew-wasm-consumer.mjs \
   run i32 > .tmp/dew-eqref-consumer.json
 grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
 tools/dew build \
+  --manifest tests/abi-consumers/imported-package/dew.json \
+  -o .tmp/dew-imported-package-provider.wasm
+node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-imported-package-provider.wasm \
+  .tmp/dew-aggregate-callback-consumer.wasm \
+  run i32 > .tmp/dew-imported-package-consumer.json
+grep -q '"type":"i32","value":42' \
+  .tmp/dew-imported-package-consumer.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \
