@@ -73,10 +73,11 @@ runtime artifacts.
 
 ### 3. Replace bootstrap-wide standard-library injection
 
-- [x] Define a strict minimal `dew.json` manifest with an explicit root module and ordered module/file arrays.
-- [x] Resolve manifest sources relative to the manifest directory, reject escaping/absolute/duplicate paths, and preserve listed order without filesystem enumeration.
+- [x] Define strict explicit `dew.modules.json` compiler graphs with a root module and ordered module/file arrays.
+- [x] Resolve explicit graph sources relative to the graph, reject escaping/absolute/duplicate paths, and preserve listed order without filesystem enumeration.
+- [x] Split convention-first `dew.json` package intent from exact `dew.lock` resolution; derive module/source ownership from `@scope/name` and sorted package paths.
 - [x] Define ordered compiler-owned package roots, deterministic fixed-registry source selection, and real on-disk `dew.std` lookup with `--package-root`/`DEW_PACKAGE_ROOTS`.
-- [x] Resolve versioned external dependency manifests with exact semantic versions, canonical SHA-256 integrity, deterministic transitive module order, and conflict/cycle rejection.
+- [x] Resolve semantic-version and Git dependency requests through exact root `dew.lock` records with canonical SHA-256 integrity, expected interface fingerprints, deterministic transitive module order, and conflict/cycle rejection.
 - [x] Split text ownership into `std/string.dew`, `std/string_builder.dew`, `std/bytes.dew`, and `std/bytes_builder.dew` plus a private bootstrap text-runtime declaration file.
 - [x] Compile `std/preamble/*.dew`, ambient Option/Result, split text/bytes modules, WASI, and selected lane sources as independent compiler-owned modules.
 - [x] Collect and freeze each selected standard interface once per compilation session rather than once per user module.
@@ -759,9 +760,10 @@ remain easier to diagnose and maintain.
 
 ## Packaging and releases
 
-- [ ] Define package manifest and lockfile.
-- [ ] Define package/module naming and version rules.
-- [ ] Define dependency source and integrity verification.
+- [x] Define separate convention-first `dew.json` package definitions and exact `dew.lock` resolution records.
+- [x] Define `@scope/name` package identities, derived dotted module names, exact package versions, and basic exact/`^`/`~`/`*` requirements.
+- [x] Verify materialized semantic-version and Git dependency sources through lockfile identity, source, SHA-256 integrity, and transitive interface fingerprints.
+- [ ] Add registry lookup, Git checkout, lockfile generation/update, and a content-addressed installed package store.
 - [ ] Package `dew.std` with the compiler or as a versioned dependency.
 - [ ] Version the compiler/prelude ABI together initially.
 - [ ] Add reproducible release builds.

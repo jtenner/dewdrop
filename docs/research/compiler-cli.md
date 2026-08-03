@@ -7,10 +7,7 @@ explicitly ordered source paths and statically linked module groups, plus an
 explicit-file `test` command driven by compiler-owned V3 metadata. It resolves
 the compiler-owned `dew.std` package from ordered package roots, loads the exact
 import-selected source subset from disk, and reuses content-addressed persistent
-standard frozen interfaces. General external dependencies, `run`, human source
-excerpts, user-package caching, and installed release binaries remain pending.
-Strict minimal `dew.json` manifests are supported for checking, building, and
-self-describing multi-module tests.
+standard frozen interfaces. Human source excerpts, network package installation, and installed release binaries remain pending. Convention-discovered `dew.json` packages, exact `dew.lock` resolution, external dependency-interface caching, `run`, and explicit `dew.modules.json` compiler graphs are supported.
 
 ## Commands
 
@@ -18,6 +15,9 @@ self-describing multi-module tests.
 tools/dew check [--root NAME] [--module NAME] FILE ...
 tools/dew build [--root NAME] [--module NAME] -o OUTPUT FILE ...
 tools/dew test [--module NAME] [filters] FILE ...
+tools/dew check                         # discovers ./dew.json
+tools/dew build -o OUTPUT               # discovers ./dew.json
+tools/dew test [filters]                # discovers ./dew.json
 tools/dew check --manifest PATH
 tools/dew build --manifest PATH -o OUTPUT
 tools/dew test --manifest PATH [filters]
@@ -28,11 +28,7 @@ tools/dew check --cache-report FILE ...
 tools/dew check --no-interface-cache FILE ...
 ```
 
-The default module name is `main`. Repeating `--module NAME` starts another
-statically linked module, and `--root NAME` selects the link root (the first
-module is the default). Module and file order are manifest order; the CLI never
-depends on filesystem enumeration. Every path is retained as its logical source
-path, including `_test.dew` ownership.
+The default explicit-file module name is `main`. Repeating `--module NAME` starts another statically linked module, and `--root NAME` selects the link root. Explicit `dew.modules.json` graphs preserve listed module/file order. Package mode instead derives one module from `@scope/name` and deterministically sorts conventional `src/**/*.dew` or immediate sibling `*.dew` sources. Production commands exclude `_test.dew`; package tests include it.
 
 `--package-root ROOT` is repeatable and resolves `dew.std` from either
 `ROOT/dew.std/std/...` or the checkout-compatible `ROOT/std/...` layout.

@@ -184,20 +184,22 @@ Performance and correctness work remains continuous: expand generated lane-famil
 
 ## Driver, packages, and preamble
 
-- [x] Define the initial strict `dew.json` root/module/ordered-file manifest for check and build.
-- [x] Resolve manifest sources relative to the manifest directory and reject duplicate, absolute, escaping, missing, or non-Dew paths.
+- [x] Define strict explicit `dew.modules.json` root/module/ordered-file compiler graphs for check and build.
+- [x] Resolve explicit graph sources relative to the graph and reject duplicate, absolute, escaping, missing, or non-Dew paths.
+- [x] Define convention-first `dew.json` package identity/dependency requests, exact `dew.lock` resolution, derived module names, and sorted source discovery.
 - [x] Define ordered compiler-owned package roots, deterministic fixed-registry source selection, and on-disk standard-library lookup through `--package-root` and `DEW_PACKAGE_ROOTS`.
 - [x] Reserve stable identities for `dew.std` modules independently of physical package roots.
-- [ ] Extend package identities, roots, versions, and integrity rules to external user dependencies.
+- [x] Extend package identities, roots, semantic-version/Git requests, source integrity, and interface expectations to external user dependencies.
+- [ ] Add registry/Git installation and deterministic lockfile generation/update; compilation currently consumes materialized locked package paths.
 - [x] Implement initial `dew check` and `dew build` over explicitly ordered multi-file/multi-module inputs with root selection and deterministic exit status.
 - [x] Implement initial explicit-file `dew test` with V3 metadata, filters, and expected traps.
 - [x] Extend `dew test` to strict package manifests and multi-module test programs with manifest-order global test ordinals.
 - [x] Implement `dew run` for zero-argument `main` with Preview 1 stdin/stdout hosting.
 - [x] Execute the complete immutable collection/interface/analysis/lowering/link DAG through the CLI.
-- [x] Accept strict minimal package manifests for check and build.
-- [x] Add manifest-driven multi-module tests without filesystem discovery.
-- [ ] Replace ordinary package file lists with strict TOML manifests and deterministic sorted `src/**/*.dew` discovery under the root package and `.dew/packages/<name>/` dependencies.
-- [ ] Add deterministic discovered source roots.
+- [x] Accept strict convention-discovered package definitions and lockfiles for check and build.
+- [x] Add explicit-graph multi-module tests without filesystem discovery and convention-discovered package tests with `_test.dew` filtering.
+- [x] Replace ordinary package file lists with deterministic sorted `src/**/*.dew` discovery, with immediate sibling `*.dew` fallback for small packages.
+- [x] Add deterministic discovered source roots and derive one module identity from each `@scope/name` package.
 - [x] Write deterministic Starshine-validated `.wasm` output plus explicit HIR, lowering, pinned-printer WAT, and Wasm emit modes.
 - [x] Split String, StringBuilder, Bytes, and BytesBuilder into separate standard source modules while retaining one private bootstrap text-runtime declaration file.
 - [x] Add a deterministic import prepass that selects explicitly imported lane, split text/bytes, and WASI standard modules plus private dependency closure.

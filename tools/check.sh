@@ -121,9 +121,9 @@ grep -q '^standard interface cache: miss$' .tmp/dew-cache-content-changed.txt
 test "$(find .tmp/dew-cache-invalidation/interfaces -type f | wc -l)" -eq 2
 rm -rf .tmp/dew-interface-cache .tmp/dew-cache-package-root \
   .tmp/dew-cache-invalidation
-tools/dew check --manifest tests/cli/multi-module/dew.json
+tools/dew check --manifest tests/cli/multi-module/dew.modules.json
 tools/dew build \
-  --manifest tests/cli/multi-module/dew.json \
+  --manifest tests/cli/multi-module/dew.modules.json \
   -o .tmp/dew-cli-smoke.wasm
 tools/dew build --emit hir -o .tmp/dew-cli-smoke.hir \
   tests/module-snapshots/numeric/scalar.dew
@@ -206,6 +206,10 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-eqref-consumer.wasm \
   run i32 > .tmp/dew-eqref-consumer.json
 grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
+(
+  cd tests/abi-consumers/imported-package
+  ../../../tools/dew check
+)
 rm -rf .tmp/dew-external-package-cache \
   .tmp/dew-versioned-package-changed \
   .tmp/dew-versioned-package-invalid \
@@ -233,16 +237,16 @@ if tools/dew check \
   echo "expected external package integrity mismatch to fail visibly" >&2
   exit 1
 fi
-grep -q 'dependency integrity mismatch for fixture.package-callback@1.0.0' \
+grep -q 'dependency integrity mismatch for @fixture/package-callback@1.0.0' \
   .tmp/dew-versioned-package-invalid.txt
 cp -R tests/abi-consumers/imported-package \
   .tmp/dew-versioned-interface-invalid
 node --input-type=module -e '
   import { readFile, writeFile } from "node:fs/promises";
-  const path = ".tmp/dew-versioned-interface-invalid/dew.json";
-  const manifest = JSON.parse(await readFile(path, "utf8"));
-  manifest.dependencies[0].interface = "0".repeat(64);
-  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+  const path = ".tmp/dew-versioned-interface-invalid/dew.lock";
+  const lockfile = JSON.parse(await readFile(path, "utf8"));
+  lockfile.packages[0].interface = "0".repeat(64);
+  await writeFile(path, `${JSON.stringify(lockfile, null, 2)}\n`);
 '
 if tools/dew check \
   --manifest .tmp/dew-versioned-interface-invalid/dew.json \
@@ -260,10 +264,10 @@ changed_integrity=$(tools/dew package-integrity \
   .tmp/dew-versioned-package-changed/dependency/dew.json)
 node --input-type=module -e '
   import { readFile, writeFile } from "node:fs/promises";
-  const path = ".tmp/dew-versioned-package-changed/dew.json";
-  const manifest = JSON.parse(await readFile(path, "utf8"));
-  manifest.dependencies[0].integrity = process.argv[1];
-  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+  const path = ".tmp/dew-versioned-package-changed/dew.lock";
+  const lockfile = JSON.parse(await readFile(path, "utf8"));
+  lockfile.packages[0].integrity = process.argv[1];
+  await writeFile(path, `${JSON.stringify(lockfile, null, 2)}\n`);
 ' "$changed_integrity"
 DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
   --cache-report \
@@ -275,6 +279,12 @@ test "$(find .tmp/dew-external-package-cache/interfaces -name 'v7-*.dwi' | wc -l
 tools/dew build \
   --manifest tests/abi-consumers/imported-package/dew.json \
   -o .tmp/dew-imported-package-provider.wasm
+(
+  cd tests/abi-consumers/imported-package
+  ../../../tools/dew build -o ../../../.tmp/dew-convention-provider.wasm
+)
+cmp .tmp/dew-imported-package-provider.wasm \
+  .tmp/dew-convention-provider.wasm
 node tools/dew-abi.mjs \
   .tmp/dew-imported-package-provider.wasm interface \
   > .tmp/dew-imported-package-abi.json
@@ -297,20 +307,20 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \
   .tmp/dew-aggregate-callback-consumer.wasm \
   run i32 \
-  fixture.main \
-  64613b06a3d3e22a2949617ad72d8689b85d6bd37ccb282726f876a820b8c7f3 \
+  fixture.application \
+  9d1eefe88a5c7f58b9b2a09ae812ef7221a808b91e0c2da0fe36a65b39b049c3 \
   > .tmp/dew-imported-package-consumer.json
 if node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \
   .tmp/dew-aggregate-callback-consumer.wasm \
   run i32 \
-  fixture.main \
+  fixture.application \
   0000000000000000000000000000000000000000000000000000000000000000 \
   > .tmp/dew-incompatible-package-consumer.txt 2>&1; then
   echo "expected incompatible package interface to fail visibly" >&2
   exit 1
 fi
-grep -q 'interface fingerprint mismatch for fixture.main' \
+grep -q 'interface fingerprint mismatch for fixture.application' \
   .tmp/dew-incompatible-package-consumer.txt
 grep -q '"type":"i32","value":42' \
   .tmp/dew-imported-package-consumer.json
@@ -432,9 +442,9 @@ if tools/dew check tests/module-snapshots/names/unknown-value.dew > .tmp/dew-cli
 fi
 grep -q '^DEW_ERROR$' .tmp/dew-cli-error.txt
 tools/dew test --module dew.std std/tests/core_test.dew
-tools/dew test --manifest tests/cli/test-package/dew.json
+tools/dew test --manifest tests/cli/test-package/dew.modules.json
 tools/dew test \
-  --manifest tests/cli/test-package/dew.json \
+  --manifest tests/cli/test-package/dew.modules.json \
   --list \
   > .tmp/dew-manifest-tests.txt
 tail -n 2 .tmp/dew-manifest-tests.txt > .tmp/dew-manifest-test-identities.txt

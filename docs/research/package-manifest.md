@@ -1,89 +1,145 @@
-# Minimal Dew package manifest
+# Dew package definition and lockfile
 
 ## Status
 
-Implemented for bootstrap `dew check`, `dew build`, and self-describing
-multi-module `dew test`. Compiler-owned `dew.std` package-root resolution and
-explicit default-preamble opt-out are implemented outside the strict manifest
-schema. General external dependencies, package publication metadata, versions,
-and source globs remain pending.
+Implemented for `dew check`, `build`, `test`, and `run`. Package intent and
+resolution state are separate:
 
-## File and schema
+- `dew.json` contains only package identity, version, and dependency requests;
+- `dew.lock` contains exact resolved package locations and compatibility data;
+- Dew source ownership follows deterministic conventions rather than file lists.
 
-The initial manifest is strict UTF-8 JSON, conventionally named `dew.json`:
+The earlier explicit root/module/file graph remains available as a bootstrap
+module manifest, conventionally named `dew.modules.json`. It is not a package
+definition and cannot contain package identity or dependency records.
+
+## Package definition
+
+`dew.json` is strict UTF-8 JSON:
 
 ```json
 {
-  "root": "app.main",
-  "modules": [
+  "name": "@fixture/application",
+  "version": "1.0.0",
+  "dependencies": {
+    "@fixture/library": "^1.2.0",
+    "@fixture/git-library": "git+https://example.test/fixture/git-library.git#abc123"
+  }
+}
+```
+
+`name` and `version` are required. `dependencies` is optional and defaults to an
+empty object. Package names use `@scope/name`; package versions are exact semantic
+versions. Dependency values accept exact versions, `^` ranges, `~` ranges, `*`,
+or Git URLs. Duplicate JSON keys, unknown fields, invalid package names, invalid
+versions, and invalid requirements fail before source collection.
+
+The package definition never contains resolved paths, integrity hashes, ABI
+fingerprints, module names, root selection, or source lists.
+
+## Source and module conventions
+
+One package defines one Dew module. Its module path is derived from its package
+name by removing `@`, replacing `/` with `.`, and replacing `-` with `_`:
+
+```text
+@fixture/application      -> fixture.application
+@fixture/package-callback -> fixture.package_callback
+```
+
+If `src/` exists, source files are the lexicographically sorted recursive
+`src/**/*.dew` set. Otherwise, source files are the lexicographically sorted
+immediate `*.dew` files beside `dew.json`. The fallback keeps small packages
+minimal without accidentally collecting nested dependency checkouts.
+
+`check`, `build`, and `run` exclude `_test.dew`; `test` includes it only for the root package, not dependencies. Package integrity covers both production and test sources so changing any published Dew
+source changes the package digest.
+
+Running `tools/dew` in a directory containing `dew.json` discovers the package
+automatically:
+
+```text
+tools/dew check
+tools/dew build -o application.wasm
+tools/dew test
+tools/dew run
+```
+
+`--manifest PATH` remains available for automation and may name either a package
+directory, `dew.json`, or an explicit `dew.modules.json` bootstrap graph.
+
+## Lockfile
+
+A package with dependencies requires sibling `dew.lock`:
+
+```json
+{
+  "lockfileVersion": 1,
+  "packages": [
     {
-      "name": "app.library",
-      "files": [
-        "library.dew"
-      ]
-    },
-    {
-      "name": "app.main",
-      "files": [
-        "main.dew"
-      ]
+      "name": "@fixture/library",
+      "version": "1.2.3",
+      "source": "file:dependency",
+      "path": "dependency",
+      "integrity": "sha256-...",
+      "interface": "64 lowercase hexadecimal digits"
     }
   ]
 }
 ```
 
-Only the shown fields are accepted. Duplicate JSON keys, duplicate module names,
-duplicate source paths, unknown fields, missing fields, empty module/file lists,
-undeclared roots, absolute paths, non-`.dew` paths, missing files, paths outside
-the manifest directory, and paths outside the compiler workspace are rejected
-before compilation.
+The root lockfile owns the complete transitive resolution. Each package record
+contains:
 
-## Determinism
+- exact package identity and semantic version;
+- resolution source, equal to the dependency Git URL for Git requirements;
+- relative path to the materialized package checkout;
+- canonical package source integrity;
+- expected transitive Dew interface fingerprint.
 
-Module array order is semantic manifest order. Each module's file array is its
-semantic file order. The loader performs no filesystem enumeration, globbing,
-or hash-order traversal. Paths are resolved relative to the manifest directory
-and passed to the compiler as stable workspace-relative logical paths.
+The current bootstrap resolver consumes already materialized package paths; it
+does not perform network or registry installation. A future installer may choose
+the package-store path, but compilation continues to consume the same lockfile
+record.
 
-The `root` field selects the static-link root independently of module order.
-Imports inside Dew sources continue to use canonical dotted module names.
-Wildcard imports expand only over deterministic module paths already collected;
-they do not discover manifest files or modules from disk.
+Resolution rejects missing lock entries, duplicate records, unsupported lockfile
+versions, paths outside the workspace, semantic-version mismatches, Git-source
+mismatches, package identity mismatches, source-integrity mismatches, dependency
+cycles, module-name collisions, and compiler-observed interface mismatches.
+Dependency modules are ordered before dependents deterministically.
 
-## Commands
+## Integrity and cache identity
 
 ```text
-tools/dew check --manifest path/to/dew.json
-tools/dew build --manifest path/to/dew.json -o output.wasm
-tools/dew test --manifest path/to/dew.json
-tools/dew check --package-root /opt/dew/packages --manifest path/to/dew.json
-tools/dew check --no-default-preamble --manifest path/to/dew.json
+tools/dew package-integrity path/to/package
+tools/dew package-integrity path/to/package/dew.json
 ```
 
-Explicit `--module` and `--root` arguments cannot be mixed with `--manifest`.
-Explicit ordered-file mode remains available for compiler fixtures and bootstrap
-workflows.
+Package integrity V2 hashes package identity/version, derived module identity,
+ordered conventional logical paths and exact source bytes, and sorted dependency
+requests. It intentionally does not hash `dew.lock`: changing only where an
+identical dependency is materialized does not change package source identity.
 
-## Convention-based successor
+The persistent interface-cache key separately hashes every resolved dependency's
+name, exact version, source, package integrity, and expected interface fingerprint.
+Changing lock resolution or dependency content therefore creates a different V7
+cache artifact.
 
-The current explicit JSON graph remains the bootstrap format while a strict TOML package format is implemented. The successor manifest will contain package identity/version/edition and dependencies rather than ordinary module/file lists. Modules are derived from deterministic sorted `src/**/*.dew` paths beneath the root package or `.dew/packages/<package-name>/`, with the package name prepended and path separators converted to dots. For example, `.dew/packages/custom/src/sub/package.dew` defines `custom.sub.package`; `package_test.dew` is the test-only companion of that module.
+## Explicit module manifests
 
-Imports derive the final path segment as a default `@alias`, and `import my.lib as @custom` selects an explicit alias. Direct `@intrinsic` expressions are removed; compiler-known WebAssembly operations are declared in `dew.std.wasm.intrinsics`. The bootstrap may use host TOML parsing initially, but `dew.std.toml`, `dew.std.json`, and `dew.std.yaml` are all roadmap-owned Dew implementations.
+Compiler fixtures that require multiple hand-authored modules may use a strict
+`dew.modules.json` graph:
 
-## Boundaries
+```json
+{
+  "root": "fixture.main",
+  "modules": [
+    { "name": "fixture.library", "files": ["library.dew"] },
+    { "name": "fixture.main", "files": ["main.dew"] }
+  ]
+}
+```
 
-This schema intentionally omits version ranges, external dependencies, package
-identity, source discovery, generated sources, resources, target profiles,
-features, editions, and host permissions. The bootstrap launcher resolves only
-the compiler-owned `dew.std` identity from ordered `--package-root` values or
-`DEW_PACKAGE_ROOTS`, using a fixed source registry rather than directory
-enumeration. Its standard frozen interfaces are persisted by exact source
-content, but general dependency fields should be added only when the compiler
-can assign versioned external package identities, integrity hashes, and
-dependency-interface fingerprints without weakening deterministic builds.
-
-Manifest-driven `dew test` compiles every listed module/file in exact manifest
-order. Program linking assigns globally unique `__dew_test_<ordinal>` exports in
-manifest module/file/declaration order, embeds complete V3 identities in
-`dew.tests`, and supports package-wide filters and listing without source
-scanning or filesystem discovery.
+This format preserves exact listed order and performs no discovery. It is an
+explicit compiler-input graph, not package metadata, and cannot declare package
+versions or dependencies.

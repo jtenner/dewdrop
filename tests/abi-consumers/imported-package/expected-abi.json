@@ -7,8 +7,8 @@
     "box": 1,
     "callbackWrapper": 1
   },
-  "path": "fixture.main",
-  "interfaceFingerprint": "64613b06a3d3e22a2949617ad72d8689b85d6bd37ccb282726f876a820b8c7f3",
+  "path": "fixture.application",
+  "interfaceFingerprint": "9d1eefe88a5c7f58b9b2a09ae812ef7221a808b91e0c2da0fe36a65b39b049c3",
   "dependencies": [
     {
       "path": "dew.std.option",
