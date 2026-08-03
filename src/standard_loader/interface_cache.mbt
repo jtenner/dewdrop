@@ -73,6 +73,19 @@ pub struct StandardCachedAnalysis {
 }
 
 ///|
+fn interface_bundle_fingerprint(loaded : StandardLibraryLoad) -> String {
+  if loaded.dependency_fingerprint == "" {
+    return loaded.fingerprint
+  }
+  let output = Buffer()
+  output.write_bytes(b"DEW_INTERFACE_BUNDLE_KEY_V1\x00")
+  output.write_string_utf8(loaded.fingerprint)
+  output.write_byte(0)
+  output.write_string_utf8(loaded.dependency_fingerprint)
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
 fn interface_cache_enabled(fingerprint : String) -> Bool {
   fingerprint != "" &&
   @sys.get_env_var("DEW_INTERFACE_CACHE").unwrap_or("1") != "0"
@@ -123,6 +136,8 @@ fn interface_cache_file(fingerprint : String) -> String {
 pub fn lookup_standard_interfaces(
   program : @semantic.CollectedProgram,
   fingerprint : String,
+  root_module_index : Int,
+  include_dependencies : Bool,
 ) -> Result[StandardInterfaceCacheLookup, String] {
   if !interface_cache_enabled(fingerprint) {
     return Ok(StandardInterfaceCacheDisabled)
@@ -147,8 +162,9 @@ pub fn lookup_standard_interfaces(
     None,
   )
   let mut expected = 0
-  for path in program.module_paths {
-    if path.has_prefix("dew.std.") {
+  for index, path in program.module_paths {
+    if path.has_prefix("dew.std.") ||
+      (include_dependencies && index != root_module_index) {
       expected += 1
     }
   }
@@ -156,15 +172,18 @@ pub fn lookup_standard_interfaces(
     return Err("frozen-interface cache module count does not match the program")
   }
   for interface_ in interfaces {
-    if !interface_.path.has_prefix("dew.std.") {
-      return Err("frozen-interface cache contains a non-standard module")
-    }
     let index = match program.module_index(interface_.path) {
       Some(index) => index
       None =>
         return Err(
           "frozen-interface cache contains unavailable module \{interface_.path}",
         )
+    }
+    if !interface_.path.has_prefix("dew.std.") &&
+      (!include_dependencies || index == root_module_index) {
+      return Err(
+        "frozen-interface cache contains an unavailable dependency module",
+      )
     }
     if slots[index] is Some(_) {
       return Err("frozen-interface cache duplicates module \{interface_.path}")
@@ -184,6 +203,8 @@ pub fn store_standard_interfaces(
   program : @semantic.CollectedProgram,
   interfaces : Array[@semantic.FrozenModuleInterface],
   fingerprint : String,
+  root_module_index : Int,
+  include_dependencies : Bool,
 ) -> Result[Unit, String] {
   if !interface_cache_enabled(fingerprint) {
     return Ok(())
@@ -193,10 +214,11 @@ pub fn store_standard_interfaces(
   }
   let standard : Array[@semantic.FrozenModuleInterface] = []
   for index, interface_ in interfaces {
-    if program.module_paths[index].has_prefix("dew.std.") {
+    if program.module_paths[index].has_prefix("dew.std.") ||
+      (include_dependencies && index != root_module_index) {
       if interface_.path != program.module_paths[index] ||
         interface_.module_id != program.modules[index].module_id {
-        return Err("cannot cache a standard interface with mismatched identity")
+        return Err("cannot cache an interface with mismatched identity")
       }
       standard.push(interface_)
     }
@@ -231,6 +253,7 @@ pub fn store_standard_interfaces(
 pub fn analyze_program_with_standard_cache(
   program : @semantic.CollectedProgram,
   loaded : StandardLibraryLoad,
+  root_module_index? : Int = 0,
 ) -> Result[StandardCachedAnalysis, String] {
   let cached : Array[@semantic.FrozenModuleInterface?] = Array::make(
     program.modules.length(),
@@ -238,7 +261,12 @@ pub fn analyze_program_with_standard_cache(
   )
   let mut status = StandardInterfaceCacheWasDisabled
   let mut miss = false
-  match lookup_standard_interfaces(program, loaded.fingerprint) {
+  let fingerprint = interface_bundle_fingerprint(loaded)
+  let include_dependencies = loaded.dependency_fingerprint != ""
+  match
+    lookup_standard_interfaces(
+      program, fingerprint, root_module_index, include_dependencies,
+    ) {
     Err(error) => return Err(error)
     Ok(StandardInterfaceCacheDisabled) => ()
     Ok(StandardInterfaceCacheMiss) => {
@@ -260,7 +288,9 @@ pub fn analyze_program_with_standard_cache(
       store_standard_interfaces(
         program,
         analyzed.frozen.interfaces,
-        loaded.fingerprint,
+        fingerprint,
+        root_module_index,
+        include_dependencies,
       ) {
       Err(error) => return Err(error)
       Ok(_) => ()

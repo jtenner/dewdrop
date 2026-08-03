@@ -206,6 +206,72 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-eqref-consumer.wasm \
   run i32 > .tmp/dew-eqref-consumer.json
 grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
+rm -rf .tmp/dew-external-package-cache \
+  .tmp/dew-versioned-package-changed \
+  .tmp/dew-versioned-package-invalid \
+  .tmp/dew-versioned-interface-invalid
+DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
+  --cache-report \
+  --manifest tests/abi-consumers/imported-package/dew.json \
+  > .tmp/dew-external-package-cache-miss.txt
+DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
+  --cache-report \
+  --manifest tests/abi-consumers/imported-package/dew.json \
+  > .tmp/dew-external-package-cache-hit.txt
+grep -q '^standard interface cache: miss$' \
+  .tmp/dew-external-package-cache-miss.txt
+grep -q '^standard interface cache: hit$' \
+  .tmp/dew-external-package-cache-hit.txt
+test "$(find .tmp/dew-external-package-cache/interfaces -name 'v7-*.dwi' | wc -l)" -eq 1
+cp -R tests/abi-consumers/imported-package \
+  .tmp/dew-versioned-package-invalid
+printf '\n' >> \
+  .tmp/dew-versioned-package-invalid/dependency/callback.dew
+if tools/dew check \
+  --manifest .tmp/dew-versioned-package-invalid/dew.json \
+  > .tmp/dew-versioned-package-invalid.txt 2>&1; then
+  echo "expected external package integrity mismatch to fail visibly" >&2
+  exit 1
+fi
+grep -q 'dependency integrity mismatch for fixture.package-callback@1.0.0' \
+  .tmp/dew-versioned-package-invalid.txt
+cp -R tests/abi-consumers/imported-package \
+  .tmp/dew-versioned-interface-invalid
+node --input-type=module -e '
+  import { readFile, writeFile } from "node:fs/promises";
+  const path = ".tmp/dew-versioned-interface-invalid/dew.json";
+  const manifest = JSON.parse(await readFile(path, "utf8"));
+  manifest.dependencies[0].interface = "0".repeat(64);
+  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+'
+if tools/dew check \
+  --manifest .tmp/dew-versioned-interface-invalid/dew.json \
+  > .tmp/dew-versioned-interface-invalid.txt 2>&1; then
+  echo "expected external package interface mismatch to fail visibly" >&2
+  exit 1
+fi
+grep -q 'dependency interface mismatch for fixture.package_callback' \
+  .tmp/dew-versioned-interface-invalid.txt
+cp -R tests/abi-consumers/imported-package \
+  .tmp/dew-versioned-package-changed
+printf '\n' >> \
+  .tmp/dew-versioned-package-changed/dependency/callback.dew
+changed_integrity=$(tools/dew package-integrity \
+  .tmp/dew-versioned-package-changed/dependency/dew.json)
+node --input-type=module -e '
+  import { readFile, writeFile } from "node:fs/promises";
+  const path = ".tmp/dew-versioned-package-changed/dew.json";
+  const manifest = JSON.parse(await readFile(path, "utf8"));
+  manifest.dependencies[0].integrity = process.argv[1];
+  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+' "$changed_integrity"
+DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
+  --cache-report \
+  --manifest .tmp/dew-versioned-package-changed/dew.json \
+  > .tmp/dew-external-package-cache-changed.txt
+grep -q '^standard interface cache: miss$' \
+  .tmp/dew-external-package-cache-changed.txt
+test "$(find .tmp/dew-external-package-cache/interfaces -name 'v7-*.dwi' | wc -l)" -eq 2
 tools/dew build \
   --manifest tests/abi-consumers/imported-package/dew.json \
   -o .tmp/dew-imported-package-provider.wasm

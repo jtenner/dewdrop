@@ -17,6 +17,89 @@ dew_cli = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(dew_cli)
 
 
+class VersionedManifestTests(unittest.TestCase):
+    def write_manifest(self, path: Path, value: object) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(__import__("json").dumps(value), encoding="utf-8")
+
+    def package(self, root: Path) -> tuple[Path, str]:
+        package = root / "dependency"
+        package.mkdir(parents=True)
+        (package / "library.dew").write_text(
+            "pub fn answer() -> I32 {\n  42\n}\n", encoding="utf-8"
+        )
+        manifest = package / "dew.json"
+        self.write_manifest(
+            manifest,
+            {
+                "package": {"name": "fixture.library", "version": "1.2.3"},
+                "root": "fixture.library",
+                "modules": [{"name": "fixture.library", "files": ["library.dew"]}],
+            },
+        )
+        return manifest, dew_cli.package_integrity(manifest)
+
+    def test_resolve_versioned_dependency_and_integrity_key(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root):
+                dependency, integrity = self.package(root)
+                (root / "main.dew").write_text(
+                    "open fixture.library\npub fn main() -> I32 {\n  answer()\n}\n",
+                    encoding="utf-8",
+                )
+                manifest = root / "dew.json"
+                self.write_manifest(
+                    manifest,
+                    {
+                        "package": {"name": "fixture.app", "version": "1.0.0"},
+                        "root": "fixture.main",
+                        "modules": [{"name": "fixture.main", "files": ["main.dew"]}],
+                        "dependencies": [
+                            {
+                                "name": "fixture.library",
+                                "version": "1.2.3",
+                                "path": str(dependency.relative_to(root)),
+                                "integrity": integrity,
+                                "interface": "1" * 64,
+                            }
+                        ],
+                    },
+                )
+                resolved_root, modules, dependency_key, interfaces = dew_cli.load_manifest(manifest)
+                self.assertEqual(resolved_root, "fixture.main")
+                self.assertEqual([name for name, _ in modules], ["fixture.library", "fixture.main"])
+                self.assertRegex(dependency_key, r"^[0-9a-f]{64}$")
+                self.assertEqual(interfaces, [("fixture.library", "1" * 64)])
+
+    def test_reject_dependency_integrity_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root):
+                dependency, _ = self.package(root)
+                (root / "main.dew").write_text("pub fn main() -> Unit {}\n", encoding="utf-8")
+                manifest = root / "dew.json"
+                self.write_manifest(
+                    manifest,
+                    {
+                        "package": {"name": "fixture.app", "version": "1.0.0"},
+                        "root": "fixture.main",
+                        "modules": [{"name": "fixture.main", "files": ["main.dew"]}],
+                        "dependencies": [
+                            {
+                                "name": "fixture.library",
+                                "version": "1.2.3",
+                                "path": str(dependency.relative_to(root)),
+                                "integrity": "sha256-" + "0" * 64,
+                                "interface": "1" * 64,
+                            }
+                        ],
+                    },
+                )
+                with self.assertRaisesRegex(dew_cli.ManifestError, "integrity mismatch"):
+                    dew_cli.load_manifest(manifest)
+
+
 class PackageRootTests(unittest.TestCase):
     def package(self, root: Path, nested: bool) -> Path:
         package = root / "dew.std" if nested else root

@@ -142,6 +142,7 @@ fn print_usage() -> Unit {
     "  dew build [--root NAME] [--module NAME] [--no-default-preamble] [--emit hir|lowering|wasm] -o OUTPUT FILE ...",
   )
   println("  repeat --module NAME to begin another statically linked module")
+  println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
     "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-interface-cache, --cache-report",
   )
@@ -170,6 +171,8 @@ fn main {
   let mut cache_report = false
   let modules : Array[@semantic.ManifestModule] = []
   let module_names : Array[String] = []
+  let dependency_interface_modules : Array[String] = []
+  let dependency_interface_fingerprints : Array[String] = []
   let mut files : Array[@semantic.ManifestFile] = []
   let mut total_file_count = 0
   let mut index = 2
@@ -186,6 +189,13 @@ fn main {
       }
       module_name = args[index + 1]
       index += 2
+    } else if argument == "--dependency-interface" {
+      if index + 2 >= args.length() {
+        cli_fail("missing module or fingerprint for --dependency-interface")
+      }
+      dependency_interface_modules.push(args[index + 1])
+      dependency_interface_fingerprints.push(args[index + 2])
+      index += 3
     } else if argument == "--root" {
       if index + 1 >= args.length() {
         cli_fail("missing value for --root")
@@ -282,7 +292,11 @@ fn main {
     default_preamble,
   )
   let cached_analysis = match
-    @standard_loader.analyze_program_with_standard_cache(program, loaded) {
+    @standard_loader.analyze_program_with_standard_cache(
+      program,
+      loaded,
+      root_module_index~,
+    ) {
     Ok(cached) => cached
     Err(error) => {
       cli_fail(error)
@@ -290,6 +304,25 @@ fn main {
     }
   }
   let analyzed = cached_analysis.analyzed
+  for expected_index, dependency_path in dependency_interface_modules {
+    let mut dependency_index = -1
+    for candidate, path in module_names {
+      if path == dependency_path {
+        dependency_index = candidate
+        break
+      }
+    }
+    if dependency_index < 0 {
+      cli_fail("unavailable dependency interface module \{dependency_path}")
+    }
+    let expected = dependency_interface_fingerprints[expected_index]
+    let actual = analyzed.frozen.interfaces[dependency_index].interface_fingerprint
+    if actual != expected {
+      cli_fail(
+        "dependency interface mismatch for \{dependency_path}: expected \{expected}, got \{actual}",
+      )
+    }
+  }
   let cache_status = cached_analysis.status.label()
   let lowering = @semantic.plan_program_lowering(program, analyzed)
   let link = @semantic.plan_program_wasmgc_link(

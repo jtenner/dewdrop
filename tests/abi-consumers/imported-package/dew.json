@@ -1,17 +1,24 @@
 {
+  "package": {
+    "name": "fixture.application",
+    "version": "1.0.0"
+  },
   "root": "fixture.main",
   "modules": [
-    {
-      "name": "fixture.package_callback",
-      "files": [
-        "callback.dew"
-      ]
-    },
     {
       "name": "fixture.main",
       "files": [
         "main.dew"
       ]
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "fixture.package-callback",
+      "version": "1.0.0",
+      "path": "dependency/dew.json",
+      "integrity": "sha256-d6872b19f5be0f4a5fca3869601652dbbc23fda1fe819f88de4173f8029dd9de",
+      "interface": "6e5507835b77134269190a1d171833ca9658e201d58cbc17c4f95d5f73060b1b"
     }
   ]
 }

@@ -13,6 +13,7 @@ fn join_standard_path(root : String, logical : String) -> String {
 pub struct StandardLibraryLoad {
   sources : @semantic.StandardLibrarySources
   fingerprint : String
+  dependency_fingerprint : String
   cacheable : Bool
 }
 
@@ -21,6 +22,9 @@ pub fn StandardLibraryLoad::bootstrap() -> StandardLibraryLoad {
   {
     sources: @semantic.StandardLibrarySources::bootstrap(),
     fingerprint: "",
+    dependency_fingerprint: @sys.get_env_var("DEW_DEPENDENCY_INTERFACE_KEY").unwrap_or(
+      "",
+    ),
     cacheable: false,
   }
 }
@@ -67,6 +71,9 @@ fn load_paths_with_fingerprint(
     sources: @semantic.StandardLibrarySources::new(files),
     fingerprint: @crypto.bytes_to_hex_string(
       @crypto.sha256(fingerprint.to_bytes()),
+    ),
+    dependency_fingerprint: @sys.get_env_var("DEW_DEPENDENCY_INTERFACE_KEY").unwrap_or(
+      "",
     ),
     cacheable: true,
   })
@@ -151,6 +158,9 @@ pub fn load_default_for_manifest_with_fingerprint(
     return Ok({
       sources: @semantic.StandardLibrarySources::bootstrap(),
       fingerprint: "",
+      dependency_fingerprint: @sys.get_env_var("DEW_DEPENDENCY_INTERFACE_KEY").unwrap_or(
+        "",
+      ),
       cacheable: false,
     })
   }

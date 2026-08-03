@@ -1,0 +1,15 @@
+{
+  "package": {
+    "name": "fixture.package-callback",
+    "version": "1.0.0"
+  },
+  "root": "fixture.package_callback",
+  "modules": [
+    {
+      "name": "fixture.package_callback",
+      "files": [
+        "callback.dew"
+      ]
+    }
+  ]
+}

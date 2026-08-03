@@ -96,4 +96,4 @@ Frozen exported callables carry V2 SHA-256 ABI fingerprints, while public nomina
 2. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
 3. Replace the unresolved raw-`DeclId` callable fallback where possible and define compatibility/version negotiation rules over module-interface fingerprints.
 4. Define recursive generic aggregate instantiation/layout sharing without weakening exact callback signatures.
-5. Carry the implemented Wasm schema/interface negotiation through versioned external package resolution and persistent dependency-interface caching.
+5. Stop recollecting dependency source bodies on cache hits only after installed artifact provenance and package recovery are reliable.

@@ -1,10 +1,10 @@
-# Persistent standard frozen-interface cache
+# Persistent standard and dependency frozen-interface cache
 
 ## Status
 
-Implemented for compiler-owned `dew.std.*` frozen interfaces. The cache is content-addressed by the exact ordered on-disk standard source subset selected for one compilation. It skips standard-module type/interface resolution on a hit while continuing to collect executable standard bodies and run body inference, lowering, reachability, linking, Starshine validation, and encoding normally.
+Implemented for compiler-owned `dew.std.*` interfaces and source-bundled versioned external dependency packages. The cache key combines the exact ordered standard source subset with the resolved dependency package identity/version/integrity closure. A hit injects standard and non-root dependency interfaces while continuing to collect executable bodies and run body inference, lowering, reachability, linking, Starshine validation, and encoding normally.
 
-General user-package interfaces, body artifacts, layouts, lowering fragments, and emitted Wasm are not cached yet.
+Root-package interfaces, body artifacts, layouts, lowering fragments, and emitted Wasm are not cached yet.
 
 ## Content key
 
@@ -24,7 +24,7 @@ Source order comes from `required_standard_library_source_paths`; neither hashin
 - the selected standard source set changes;
 - the private cache-key ABI marker is bumped.
 
-The current bundle key includes the complete source closure rather than separately stored dependency-interface fingerprints. Because all compiler-owned standard dependencies are in that exact closure, this is equivalent for the current single-package `dew.std` cache. Versioned external packages will require explicit package and dependency-interface fingerprints.
+For versioned external dependencies, `dew.json` records exact package name, semantic version, relative manifest path, `sha256-<hex>` source integrity, and the expected 64-hex transitive interface fingerprint. Integrity hashes package identity, root module, ordered module/logical-source bytes, and declared dependency identity/version/integrity/interface records. After freezing or cache injection, the compiler compares each resolved dependency root module's transitive interface fingerprint with the manifest expectation before lowering or linking. The resolver validates the complete acyclic dependency closure before compilation and derives a separate dependency-interface cache key from the resolved package records. That key is domain-separated and combined with the standard-source fingerprint.
 
 Generated `--bootstrap-std` providers are intentionally not cacheable. Bootstrap mode remains an independent comparison path.
 
@@ -33,7 +33,7 @@ Generated `--bootstrap-std` providers are intentionally not cacheable. Bootstrap
 `serialize_frozen_interfaces` writes a private deterministic binary format beginning with:
 
 ```text
-DEW_FROZEN_INTERFACES_V1\0
+DEW_FROZEN_INTERFACES_V7\0
 ```
 
 It serializes diagnostics-free `FrozenModuleInterface` records, including:
@@ -43,6 +43,8 @@ It serializes diagnostics-free `FrozenModuleInterface` records, including:
 - public declarations, aggregate fields, and variants;
 - callable kinds, parameters, result shapes, and receiver bits;
 - public implementation evidence;
+- content-sensitive nominal declaration fingerprints;
+- module content/transitive interface fingerprints and direct dependency records;
 - source locations and preamble declaration counts.
 
 No maps, addresses, filesystem paths, or worker-order values enter the artifact. Arrays remain in their existing frozen semantic order. Decoding checks the version, every byte range, bounded collection counts, enum tags, Booleans, UTF-8 strings, trailing bytes, module identities, duplicate modules, and the exact expected standard-module count.
@@ -50,7 +52,7 @@ No maps, addresses, filesystem paths, or worker-order values enter the artifact.
 The serialized payload is wrapped in a second cache-file envelope:
 
 ```text
-DEW_STD_INTERFACE_CACHE_V1\0
+DEW_STD_INTERFACE_CACHE_V7\0
 SHA-256(payload)
 payload
 ```
@@ -62,7 +64,7 @@ The envelope checksum catches corruption that might otherwise remain structurall
 The default location is:
 
 ```text
-.dew-cache/interfaces/<source-fingerprint>.dwi
+.dew-cache/interfaces/v7-<bundle-fingerprint>.dwi
 ```
 
 The cache root may be changed with:
@@ -107,6 +109,9 @@ Permanent coverage includes:
 - explicit disabled mode;
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
+- versioned external package miss/hit behavior and `v7-*.dwi` filenames;
+- fail-visible package identity, version, and integrity mismatches;
+- dependency integrity changes producing a distinct bundle key;
 - byte-identical Wasm between cache miss, cache hit, on-disk uncached, and generated bootstrap providers;
 - the complete Node/Wago module snapshot suite with cache-enabled native generation.
 
@@ -124,7 +129,6 @@ A complete hit currently pays decode plus cached graph/scope injection, about 4.
 ## Remaining work
 
 1. Add cache-file I/O and checksum-only benchmarks, allocation counts, and representative larger external-package workloads.
-2. Add package identity, version, integrity, and dependency-interface fingerprints for external user packages.
-3. Cache user-package interfaces after source provenance and public-interface ABI versioning stabilize.
-4. Define atomic artifact publication when the filesystem abstraction exposes rename/replace semantics; current deterministic same-key writers produce identical bytes, and interrupted partial artifacts remain visible checksum failures.
-5. Extend caching to body, layout, fragment, and final Wasm artifacts only after their serialization schemas stabilize.
+2. Load dependency interfaces without recollecting their source bodies once installed-package recovery and artifact provenance are reliable.
+3. Define atomic artifact publication when the filesystem abstraction exposes rename/replace semantics; current deterministic same-key writers produce identical bytes, and interrupted partial artifacts remain visible checksum failures.
+4. Extend caching to body, layout, fragment, and final Wasm artifacts only after their serialization schemas stabilize.

@@ -4,10 +4,10 @@ This file tracks designed or partially designed features that remain unimplement
 
 ## Current priority order
 
-1. Extend the on-disk package-root and persistent standard-interface cache model to versioned external dependencies with integrity and dependency-interface fingerprints.
-2. Complete imported trait requirement validation, merge imported impl evidence into coherence/dispatch indexes, and define visibility/orphan rules.
-3. Add stable file-aware diagnostics to the completed check/build/test/run and deterministic emit driver.
-4. Define and implement generic obligations, specialization, erased fallback ABIs, and executable cross-module generic aggregates.
+1. Complete imported trait requirement validation, merge imported impl evidence into coherence/dispatch indexes, and define visibility/orphan rules.
+2. Add stable file-aware diagnostics to the completed check/build/test/run and deterministic emit driver.
+3. Define and implement trait-bound generic obligations, dictionary representation, specialization, and static/dynamic dispatch.
+4. Define recursive generic aggregate instantiation and layout sharing.
 5. Add the deterministic optimization pipeline and optimized snapshots.
 6. Continue deterministic snapshots, generated lane coverage, resource-budget definition, and phase/runtime/allocation measurement.
 
@@ -210,7 +210,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Retain explicit `--no-default-preamble` and generated `--bootstrap-std` bootstrap/test modes.
 - [x] Use import-selected installed/on-disk standard package sources by default and require byte-identical output against generated bootstrap providers.
 - [x] Add persistent SHA-256 content-addressed caching for diagnostics-free compiler-owned standard frozen interfaces, with deterministic encoding, hit injection, checksums, explicit disable/report controls, and fail-visible corruption handling.
-- [ ] Extend persistent interface caching to versioned external user packages and remove generated providers only after installed-package recovery is reliable.
+- [x] Extend manifest resolution and persistent interface caching to versioned external user packages with exact semantic versions, SHA-256 source integrity, expected transitive interface fingerprints, dependency closure keys, V7 artifacts, and fail-visible invalidation.
+- [ ] Remove source recollection for cached dependency interfaces only after installed-package recovery and artifact provenance are reliable.
 
 ## Source diagnostics
 

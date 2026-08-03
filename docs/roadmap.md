@@ -18,7 +18,7 @@ Dew currently has:
 - first-class `_test.dew` semantics, frozen test metadata, test-mode exports, 198 direct standard tests, and independent UTF/SWAR/WASI differential harnesses;
 - compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
-- a SHA-256 content-addressed persistent cache for diagnostics-free compiler-owned standard frozen interfaces, with versioned deterministic encoding, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
+- a SHA-256 content-addressed persistent V7 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
 - 175 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 154 compiled WAT/runtime snapshots plus 21 compiler-error snapshots.
 
 ## Immediate execution queue
@@ -76,7 +76,7 @@ runtime artifacts.
 - [x] Define a strict minimal `dew.json` manifest with an explicit root module and ordered module/file arrays.
 - [x] Resolve manifest sources relative to the manifest directory, reject escaping/absolute/duplicate paths, and preserve listed order without filesystem enumeration.
 - [x] Define ordered compiler-owned package roots, deterministic fixed-registry source selection, and real on-disk `dew.std` lookup with `--package-root`/`DEW_PACKAGE_ROOTS`.
-- [ ] Extend package roots and identities to versioned external user dependencies.
+- [x] Resolve versioned external dependency manifests with exact semantic versions, canonical SHA-256 integrity, deterministic transitive module order, and conflict/cycle rejection.
 - [x] Split text ownership into `std/string.dew`, `std/string_builder.dew`, `std/bytes.dew`, and `std/bytes_builder.dew` plus a private bootstrap text-runtime declaration file.
 - [x] Compile `std/preamble/*.dew`, ambient Option/Result, split text/bytes modules, WASI, and selected lane sources as independent compiler-owned modules.
 - [x] Collect and freeze each selected standard interface once per compilation session rather than once per user module.
@@ -89,7 +89,7 @@ runtime artifacts.
 - [x] Elide dead imported signatures, external type references, callables, and nominal layouts before final program indexing.
 - [x] Make installed/on-disk import-selected standard sources the default driver provider and require byte identity with generated bootstrap sources.
 - [x] Add a persistent SHA-256 content-addressed frozen-interface cache for compiler-owned standard modules, including deterministic private serialization, cache-hit injection, checksum/identity validation, and fail-visible corruption handling.
-- [ ] Extend persistent interface caching to versioned external user packages and decide when generated bootstrap providers can be removed.
+- [x] Extend persistent interface caching to versioned external user packages with dependency closure keys and V7 artifacts; source recollection and generated bootstrap removal remain deferred until installed artifact provenance is reliable.
 
 **Done when:** installed package lookup can replace generated bootstrap byte
 providers without changing frozen interfaces or Wasm bytes, an ordinary module
@@ -156,7 +156,7 @@ direct typed references.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
 - [x] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct leaves and nested generic struct/enum graphs clone across erased boundaries with exact variant subtype reconstruction, lazy scalar box/unbox conversion, and deterministic recursive helpers at cyclic nominal edges. Structural callbacks use deterministic flattened closure subtypes that capture the source closure once, recursively wrap nested callback parameters/results, convert scalar leaves, populate function-valued struct/enum payload fields during nominal reconstruction, and dispatch through the source direct or environment-first signature. Instantiated generic aggregate fields and enum pattern bindings retain concrete structural signatures and execute through the ordinary function-value call path.
-- [ ] Complete ABI/interface compatibility after specialization and erasure rules stabilize. V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V7 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation is implemented; versioned external-package resolution and persistent dependency-interface caching remain. A Node host consumer lists deterministic adapter exports and invokes scalar carrier boundaries. Focused in-Wasm consumers now exercise `i32` callback-bearing struct and enum adapters, a standalone exact-nominal `eqref` fallback, the JavaScript-inaccessible `v128` identity adapter, and a multi-module provider whose root adapter exposes an imported generic callback aggregate.
+- [ ] Complete ABI/interface compatibility after specialization and erasure rules stabilize. V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V7 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation is implemented; versioned external-package resolution and persistent dependency-interface caching are implemented; installed artifact-only recovery remains. A Node host consumer lists deterministic adapter exports and invokes scalar carrier boundaries. Focused in-Wasm consumers now exercise `i32` callback-bearing struct and enum adapters, a standalone exact-nominal `eqref` fallback, the JavaScript-inaccessible `v128` identity adapter, and a multi-module provider whose root adapter exposes an imported generic callback aggregate.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
 
 **Done when:** representative cross-module generic functions and aggregates

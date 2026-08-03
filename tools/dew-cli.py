@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -35,7 +37,81 @@ def exact_keys(value: dict[str, Any], expected: set[str], context: str) -> None:
         raise ManifestError(f"missing {context} field: {sorted(missing)[0]}")
 
 
-def load_manifest(path: Path) -> tuple[str, list[tuple[str, list[str]]]]:
+class DependencySpec:
+    def __init__(
+        self,
+        name: str,
+        version: str,
+        path: Path,
+        integrity: str,
+        interface_fingerprint: str,
+    ) -> None:
+        self.name = name
+        self.version = version
+        self.path = path
+        self.integrity = integrity
+        self.interface_fingerprint = interface_fingerprint
+
+
+class ParsedManifest:
+    def __init__(
+        self,
+        path: Path,
+        root: str,
+        modules: tuple[tuple[str, tuple[str, ...]], ...],
+        package_name: str | None,
+        package_version: str | None,
+        dependencies: tuple[DependencySpec, ...],
+        integrity: str,
+    ) -> None:
+        self.path = path
+        self.root = root
+        self.modules = modules
+        self.package_name = package_name
+        self.package_version = package_version
+        self.dependencies = dependencies
+        self.integrity = integrity
+
+
+_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
+_INTEGRITY = re.compile(r"^sha256-[0-9a-f]{64}$")
+
+
+def _write_hash_string(digest: "hashlib._Hash", value: str) -> None:
+    encoded = value.encode("utf-8")
+    digest.update(len(encoded).to_bytes(4, "little"))
+    digest.update(encoded)
+
+
+def _manifest_integrity(
+    root: str,
+    modules: list[tuple[str, list[tuple[str, Path]]]],
+    package_name: str,
+    package_version: str,
+    dependencies: list[DependencySpec],
+) -> str:
+    digest = hashlib.sha256()
+    digest.update(b"DEW_PACKAGE_INTEGRITY_V1\x00")
+    _write_hash_string(digest, package_name)
+    _write_hash_string(digest, package_version)
+    _write_hash_string(digest, root)
+    for module_name, files in modules:
+        _write_hash_string(digest, module_name)
+        for logical, source in files:
+            _write_hash_string(digest, logical)
+            data = source.read_bytes()
+            digest.update(len(data).to_bytes(4, "little"))
+            digest.update(data)
+    for dependency in dependencies:
+        _write_hash_string(digest, dependency.name)
+        _write_hash_string(digest, dependency.version)
+        _write_hash_string(digest, dependency.integrity)
+        _write_hash_string(digest, dependency.interface_fingerprint)
+    return f"sha256-{digest.hexdigest()}"
+
+
+def _load_manifest_file(path: Path) -> ParsedManifest:
+    path = path.expanduser().resolve()
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as error:
@@ -46,7 +122,12 @@ def load_manifest(path: Path) -> tuple[str, list[tuple[str, list[str]]]]:
         raise ManifestError(f"invalid manifest {path}: {error}") from error
     if not isinstance(raw, dict):
         raise ManifestError("manifest root must be an object")
-    exact_keys(raw, {"root", "modules"}, "manifest")
+    unknown = set(raw) - {"root", "modules", "package", "dependencies"}
+    missing = {"root", "modules"} - set(raw)
+    if unknown:
+        raise ManifestError(f"unknown manifest field: {sorted(unknown)[0]}")
+    if missing:
+        raise ManifestError(f"missing manifest field: {sorted(missing)[0]}")
     root = raw["root"]
     entries = raw["modules"]
     if not isinstance(root, str) or not root:
@@ -54,8 +135,23 @@ def load_manifest(path: Path) -> tuple[str, list[tuple[str, list[str]]]]:
     if not isinstance(entries, list) or not entries:
         raise ManifestError("manifest modules must be a nonempty array")
 
-    package_root = path.resolve().parent
-    modules: list[tuple[str, list[str]]] = []
+    package_name: str | None = None
+    package_version: str | None = None
+    package = raw.get("package")
+    if package is not None:
+        if not isinstance(package, dict):
+            raise ManifestError("manifest package must be an object")
+        exact_keys(package, {"name", "version"}, "package")
+        package_name = package["name"]
+        package_version = package["version"]
+        if not isinstance(package_name, str) or not package_name:
+            raise ManifestError("package name must be nonempty")
+        if not isinstance(package_version, str) or not _VERSION.fullmatch(package_version):
+            raise ManifestError("package version must be a semantic version")
+
+    package_root = path.parent
+    modules_for_hash: list[tuple[str, list[tuple[str, Path]]]] = []
+    modules: list[tuple[str, tuple[str, ...]]] = []
     names: set[str] = set()
     logical_files: set[str] = set()
     for index, entry in enumerate(entries):
@@ -72,6 +168,7 @@ def load_manifest(path: Path) -> tuple[str, list[tuple[str, list[str]]]]:
         if not isinstance(files, list) or not files:
             raise ManifestError(f"module {name} files must be a nonempty array")
         resolved_files: list[str] = []
+        hash_files: list[tuple[str, Path]] = []
         for file_index, logical in enumerate(files):
             if not isinstance(logical, str) or not logical:
                 raise ManifestError(
@@ -85,9 +182,10 @@ def load_manifest(path: Path) -> tuple[str, list[tuple[str, list[str]]]]:
                 source.relative_to(package_root)
             except ValueError as error:
                 raise ManifestError(f"manifest source escapes package root: {logical}") from error
-            canonical = source.relative_to(ROOT).as_posix() if source.is_relative_to(ROOT) else ""
-            if not canonical:
-                raise ManifestError(f"manifest source is outside the workspace: {logical}")
+            try:
+                canonical = source.relative_to(ROOT).as_posix()
+            except ValueError as error:
+                raise ManifestError(f"manifest source is outside the workspace: {logical}") from error
             if not canonical.endswith(".dew"):
                 raise ManifestError(f"manifest source must end in .dew: {logical}")
             if canonical in logical_files:
@@ -96,10 +194,152 @@ def load_manifest(path: Path) -> tuple[str, list[tuple[str, list[str]]]]:
                 raise ManifestError(f"manifest source does not exist: {logical}")
             logical_files.add(canonical)
             resolved_files.append(canonical)
-        modules.append((name, resolved_files))
+            hash_files.append((logical_path.as_posix(), source))
+        modules.append((name, tuple(resolved_files)))
+        modules_for_hash.append((name, hash_files))
     if root not in names:
         raise ManifestError(f"manifest root module is not declared: {root}")
-    return root, modules
+
+    dependencies: list[DependencySpec] = []
+    dependency_entries = raw.get("dependencies", [])
+    if not isinstance(dependency_entries, list):
+        raise ManifestError("manifest dependencies must be an array")
+    if dependency_entries and package_name is None:
+        raise ManifestError("manifest dependencies require package identity")
+    dependency_names: set[str] = set()
+    for index, entry in enumerate(dependency_entries):
+        if not isinstance(entry, dict):
+            raise ManifestError(f"dependency {index} must be an object")
+        exact_keys(
+            entry,
+            {"name", "version", "path", "integrity", "interface"},
+            f"dependency {index}",
+        )
+        name = entry["name"]
+        version = entry["version"]
+        logical = entry["path"]
+        integrity = entry["integrity"]
+        interface_fingerprint = entry["interface"]
+        if not isinstance(name, str) or not name:
+            raise ManifestError(f"dependency {index} name must be nonempty")
+        if name in dependency_names:
+            raise ManifestError(f"duplicate dependency package: {name}")
+        dependency_names.add(name)
+        if not isinstance(version, str) or not _VERSION.fullmatch(version):
+            raise ManifestError(f"dependency {name} version must be semantic")
+        if not isinstance(logical, str) or not logical:
+            raise ManifestError(f"dependency {name} path must be nonempty")
+        dependency_path = (package_root / logical).resolve()
+        if dependency_path.is_dir():
+            dependency_path /= "dew.json"
+        try:
+            dependency_path.relative_to(ROOT)
+        except ValueError as error:
+            raise ManifestError(f"dependency {name} is outside the workspace") from error
+        if not isinstance(integrity, str) or not _INTEGRITY.fullmatch(integrity):
+            raise ManifestError(f"dependency {name} integrity must be sha256-<hex>")
+        if (
+            not isinstance(interface_fingerprint, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", interface_fingerprint)
+        ):
+            raise ManifestError(f"dependency {name} interface must be 64 lowercase hexadecimal digits")
+        dependencies.append(
+            DependencySpec(name, version, dependency_path, integrity, interface_fingerprint)
+        )
+
+    if package_name is None:
+        integrity = ""
+    else:
+        assert package_version is not None
+        integrity = _manifest_integrity(
+            root,
+            modules_for_hash,
+            package_name,
+            package_version,
+            dependencies,
+        )
+    return ParsedManifest(
+        path,
+        root,
+        tuple(modules),
+        package_name,
+        package_version,
+        tuple(dependencies),
+        integrity,
+    )
+
+
+def package_integrity(path: Path) -> str:
+    manifest = _load_manifest_file(path)
+    if manifest.package_name is None:
+        raise ManifestError("package integrity requires manifest package identity")
+    return manifest.integrity
+
+
+def load_manifest(
+    path: Path,
+) -> tuple[str, list[tuple[str, list[str]]], str, list[tuple[str, str]]]:
+    root_manifest = _load_manifest_file(path)
+    visiting: set[Path] = set()
+    visited: dict[str, ParsedManifest] = {}
+    ordered: list[ParsedManifest] = []
+
+    def visit(manifest: ParsedManifest, expected: DependencySpec | None = None) -> None:
+        if expected is not None:
+            if manifest.package_name != expected.name or manifest.package_version != expected.version:
+                raise ManifestError(
+                    f"dependency identity mismatch for {expected.name}@{expected.version}"
+                )
+            if manifest.integrity != expected.integrity:
+                raise ManifestError(
+                    f"dependency integrity mismatch for {expected.name}@{expected.version}: "
+                    f"expected {expected.integrity}, got {manifest.integrity}"
+                )
+        if manifest.path in visiting:
+            raise ManifestError(f"dependency manifest cycle at {manifest.path}")
+        if manifest.package_name is not None and manifest.package_name in visited:
+            previous = visited[manifest.package_name]
+            if previous.package_version != manifest.package_version or previous.integrity != manifest.integrity:
+                raise ManifestError(f"conflicting dependency package: {manifest.package_name}")
+            return
+        visiting.add(manifest.path)
+        for dependency in manifest.dependencies:
+            visit(_load_manifest_file(dependency.path), dependency)
+        visiting.remove(manifest.path)
+        if manifest.package_name is not None:
+            visited[manifest.package_name] = manifest
+        ordered.append(manifest)
+
+    visit(root_manifest)
+    modules: list[tuple[str, list[str]]] = []
+    module_names: set[str] = set()
+    for manifest in ordered:
+        for name, files in manifest.modules:
+            if name in module_names:
+                raise ManifestError(f"duplicate resolved package module: {name}")
+            module_names.add(name)
+            modules.append((name, list(files)))
+    dependency_digest = hashlib.sha256()
+    dependency_digest.update(b"DEW_DEPENDENCY_INTERFACE_KEY_V1\x00")
+    for manifest in ordered:
+        if manifest is root_manifest or manifest.package_name is None:
+            continue
+        _write_hash_string(dependency_digest, manifest.package_name)
+        _write_hash_string(dependency_digest, manifest.package_version or "")
+        _write_hash_string(dependency_digest, manifest.integrity)
+    expectations: dict[str, str] = {}
+    for manifest in ordered:
+        for dependency in manifest.dependencies:
+            dependency_manifest = _load_manifest_file(dependency.path)
+            previous = expectations.get(dependency_manifest.root)
+            if previous is not None and previous != dependency.interface_fingerprint:
+                raise ManifestError(
+                    f"conflicting interface fingerprints for {dependency_manifest.root}"
+                )
+            expectations[dependency_manifest.root] = dependency.interface_fingerprint
+            _write_hash_string(dependency_digest, dependency.interface_fingerprint)
+    dependency_key = dependency_digest.hexdigest() if root_manifest.dependencies else ""
+    return root_manifest.root, modules, dependency_key, sorted(expectations.items())
 
 
 def package_root_arguments(arguments: list[str]) -> tuple[list[Path], bool, list[str]]:
@@ -334,6 +574,11 @@ def main() -> None:
         )
     command = sys.argv[1]
     try:
+        if command == "package-integrity":
+            if len(sys.argv) != 3:
+                raise ManifestError("usage: dew package-integrity MANIFEST")
+            print(package_integrity(Path(sys.argv[2])))
+            return
         configured = configure_standard_package(sys.argv[2:])
         manifest, remaining = manifest_argument(configured)
         if command == "test" and "--no-default-preamble" in remaining:
@@ -350,15 +595,23 @@ def main() -> None:
                     raise ManifestError(
                         "explicit module/root selection cannot be combined with this manifest command"
                     )
-            root, modules = load_manifest(manifest)
+            root, modules, dependency_key, dependency_interfaces = load_manifest(manifest)
+            if dependency_key:
+                os.environ["DEW_DEPENDENCY_INTERFACE_KEY"] = dependency_key
+            else:
+                os.environ.pop("DEW_DEPENDENCY_INTERFACE_KEY", None)
             if command == "test":
                 run_manifest_tests(root, modules, remaining)
                 return
             remaining = [*remaining, "--root", root]
+            for module_name, fingerprint in dependency_interfaces:
+                remaining.extend(("--dependency-interface", module_name, fingerprint))
             for name, files in modules:
                 remaining.extend(("--module", name, *files))
-        elif command == "test":
-            os.execvp("python3", ["python3", "tools/dew-test-cli.py", *remaining])
+        else:
+            os.environ.pop("DEW_DEPENDENCY_INTERFACE_KEY", None)
+            if command == "test":
+                os.execvp("python3", ["python3", "tools/dew-test-cli.py", *remaining])
 
         if command == "run":
             run_compiled(remaining)
