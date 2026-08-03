@@ -104,7 +104,7 @@ docs/research/       implementation notes and design measurements
 
 ## Status
 
-Dew is under active development. The compiler and standard library are usable for the supported subset. Generic functions execute through deterministic program-wide physical-shape specialization, including structured bodies, imported definitions, and escaping function references. Generic structs, erased fallback adapters, package TOML/lockfiles, growable arrays, queues, iterators, and several tooling surfaces remain planned.
+Dew is under active development. The compiler and standard library are usable for the supported subset. Generic functions execute through deterministic program-wide physical-carrier specialization, including structured bodies, nested generic calls, multiple type parameters, imported definitions, and escaping function references. Generic structs, erased fallback adapters, package TOML/lockfiles, growable arrays, queues, iterators, and several tooling surfaces remain planned.
 
 ## License
 

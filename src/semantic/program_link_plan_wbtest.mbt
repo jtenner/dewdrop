@@ -225,6 +225,58 @@ test "unused generic structs are eliminated before program linking" {
 }
 
 ///|
+test "program linker does not export unspecialized generic recipes" {
+  let program = collect_program_manifest(
+    2240UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"pub fn identity<t>(value: t) -> t {\n  value\n}\npub fn main() -> Unit {}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let identity = program.modules[0].lookup_value("identity").unwrap()
+  let function_ = link.function_of(identity).unwrap()
+  assert_true(function_.elided)
+  assert_eq(function_.function_index, -1)
+}
+
+///|
+test "program linker coalesces generic specializations by physical carrier" {
+  let program = collect_program_manifest(
+    2245UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn choose<t>(condition: Bool, left: t, right: t) -> t {\n  if condition {\n    left\n  } else {\n    right\n  }\n}\npub fn main() -> Unit {\n  assert(choose(true, 1i8, 2i8) == 1i8, \"i8\")\n  assert(choose(true, 1, 2) == 1, \"i32\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let choose = program.modules[0].lookup_value("choose").unwrap()
+  let mut specializations = 0
+  let mut abi_key = ""
+  for function_ in link.functions {
+    if function_.declaration == choose &&
+      function_.specialization_shapes.length > 0 {
+      specializations += 1
+      abi_key = function_.specialization_abi_key
+    }
+  }
+  assert_eq(specializations, 1)
+  assert_eq(abi_key, "\{choose}:i32")
+}
+
+///|
 test "program linker materializes generic control-flow specializations" {
   let program = collect_program_manifest(
     2250UL,

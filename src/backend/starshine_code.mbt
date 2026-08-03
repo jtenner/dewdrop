@@ -48,12 +48,15 @@ fn starshine_specialized_shape(
       return specialization.shapes[specialization.specialization_shapes.start]
     _ => ()
   }
-  if type_ < 0 || type_ >= lowering.types.length() {
+  let resolved_type = if type_ < -1 {
+    -type_ - 2
+  } else if type_ >= 0 && type_ < lowering.types.length() {
+    match lowering.types[type_] {
+      @semantic.BodyResolvedType(type_) => type_
+      _ => return fallback
+    }
+  } else {
     return fallback
-  }
-  let resolved_type = match lowering.types[type_] {
-    @semantic.BodyResolvedType(type_) => type_
-    _ => return fallback
   }
   if resolved_type < 0 || resolved_type >= lowering.resolved_types.length() {
     return fallback
@@ -622,6 +625,7 @@ fn starshine_finish_program_call(
   caller : @semantic.PlannedModuleWasmGCFragments,
   declaration : @semantic.DeclId,
   type_arguments : @semantic.HirSpan?,
+  generic_specialization : StarshineGenericSpecialization?,
   fragments : Array[Array[@lib.Instruction]],
   scratch_index : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
@@ -639,11 +643,21 @@ fn starshine_finish_program_call(
   let function_ = match type_arguments {
     Some(arguments) if arguments.length > 0 => {
       let caller_lowering = lowering.unwrap()
+      let resolved_shapes : Array[@semantic.PlannedValueShape] = []
+      for index in 0..<arguments.length {
+        let source_index = arguments.start + index
+        resolved_shapes.push(
+          starshine_specialized_shape(
+            caller_lowering,
+            generic_specialization,
+            caller_lowering.call_type_arguments[source_index],
+            caller_lowering.call_type_argument_shapes[source_index],
+          ),
+        )
+      }
       match
-        planned.specialized_function_of(
-          declaration,
-          caller_lowering.call_type_argument_shapes,
-          arguments,
+        planned.specialized_function_of_exact_shapes(
+          declaration, resolved_shapes,
         ) {
         Some(function_) => function_
         None => return Err(MissingFunction(declaration))
@@ -2581,6 +2595,7 @@ fn starshine_map_call(
         link,
         planned,
         declaration,
+        None,
         None,
         arguments,
         scratch_index,
@@ -5668,6 +5683,7 @@ fn starshine_emit_body_instructions(
               planned,
               declaration,
               Some(type_arguments),
+              generic_specialization,
               fragments,
               scratch_index,
             )

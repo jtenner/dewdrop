@@ -14,11 +14,8 @@
   (type (;12;) (struct (field (ref 9)) (field i32) (field i32)))
   (type (;13;) (struct (field (mut (ref 9))) (field (mut i32)) (field (mut i32))))
   (type (;14;) (struct (field (mut (ref 9))) (field (mut i32)) (field (mut i32))))
-  (export "main" (func 3))
-  (func (;0;) (type 5) (param eqref) (result eqref)
-    local.get 0
-  )
-  (func (;1;) (type 6) (param eqref i32) (result i32)
+  (export "main" (func 2))
+  (func (;0;) (type 6) (param eqref i32) (result i32)
     (local eqref)
     local.get 0
     local.set 2
@@ -43,7 +40,7 @@
       call_ref 3
     end
   )
-  (func (;2;) (type 7) (param eqref i64) (result i64)
+  (func (;1;) (type 7) (param eqref i64) (result i64)
     (local eqref)
     local.get 0
     local.set 2
@@ -68,7 +65,7 @@
       call_ref 4
     end
   )
-  (func (;3;) (type 8)
+  (func (;2;) (type 8)
     i32.const 42
     i32.const 42
     i32.eq

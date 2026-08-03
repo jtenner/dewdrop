@@ -160,6 +160,7 @@ pub struct PlannedWasmFunctionFragment {
   parameters : HirSpan
   results : HirSpan
   specialization_shapes : HirSpan
+  specialization_abi_key : String
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -2486,6 +2487,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       parameters,
       results,
       specialization_shapes: { start: 0, length: 0 },
+      specialization_abi_key: "",
       offset: callable.offset,
     })
   }
@@ -2525,6 +2527,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       parameters: function_type.parameters,
       results: function_type.results,
       specialization_shapes: { start: 0, length: 0 },
+      specialization_abi_key: "",
       offset: match lambda.root {
         BlockBodyRoot(block) => lowering.blocks[block].offset
         ExpressionBodyRoot(expression) =>

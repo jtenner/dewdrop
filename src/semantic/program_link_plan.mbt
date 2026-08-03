@@ -32,6 +32,7 @@ pub struct PlannedProgramWasmFunction {
   parameters : HirSpan
   results : HirSpan
   specialization_shapes : HirSpan
+  specialization_abi_key : String
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -188,6 +189,35 @@ pub fn PlannedProgramWasmGCLink::specialized_function_of(
         shapes,
         span,
       ) {
+      return Some(function_)
+    }
+  }
+  None
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::specialized_function_of_exact_shapes(
+  self : PlannedProgramWasmGCLink,
+  declaration : DeclId,
+  shapes : Array[PlannedValueShape],
+) -> PlannedProgramWasmFunction? {
+  for function_ in self.functions {
+    if function_.declaration != declaration ||
+      function_.specialization_shapes.length != shapes.length() {
+      continue
+    }
+    let values = self.modules[function_.module_index].specialization_shapes
+    let mut equal = true
+    for index in 0..<shapes.length() {
+      if program_canonical_specialization_shape(
+          values[function_.specialization_shapes.start + index],
+        ) !=
+        program_canonical_specialization_shape(shapes[index]) {
+        equal = false
+        break
+      }
+    }
+    if equal {
       return Some(function_)
     }
   }
@@ -950,6 +980,61 @@ fn program_reachable_callable_roots(
 }
 
 ///|
+fn program_canonical_specialization_shape(
+  shape : PlannedValueShape,
+) -> PlannedValueShape {
+  match shape {
+    I8PlannedValueShape
+    | U8PlannedValueShape
+    | I16PlannedValueShape
+    | U16PlannedValueShape
+    | I32PlannedValueShape
+    | U32PlannedValueShape
+    | Swar32PlannedValueShape => I32PlannedValueShape
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape =>
+      I64PlannedValueShape
+    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
+      RefPlannedValueShape
+    _ => shape
+  }
+}
+
+///|
+fn program_specialization_shape_name(shape : PlannedValueShape) -> String {
+  match program_canonical_specialization_shape(shape) {
+    UnitPlannedValueShape => "unit"
+    NeverPlannedValueShape => "never"
+    I32PlannedValueShape => "i32"
+    I64PlannedValueShape => "i64"
+    F32PlannedValueShape => "f32"
+    F64PlannedValueShape => "f64"
+    V128PlannedValueShape => "v128"
+    RefPlannedValueShape => "eqref"
+    _ => "error"
+  }
+}
+
+///|
+fn program_specialization_abi_key(
+  declaration : DeclId,
+  shapes : Array[PlannedValueShape],
+  span : HirSpan,
+) -> String {
+  let output = Buffer(size_hint=32 + span.length * 8)
+  output.write_string_utf8(declaration.to_string())
+  output.write_string_utf8(":")
+  for index in 0..<span.length {
+    if index > 0 {
+      output.write_string_utf8(",")
+    }
+    output.write_string_utf8(
+      program_specialization_shape_name(shapes[span.start + index]),
+    )
+  }
+  @utf8.decode_lossy(output.to_bytes())
+}
+
+///|
 fn program_specialization_value_type(
   shape : PlannedValueShape,
 ) -> PlannedWasmValueType? {
@@ -983,7 +1068,8 @@ fn program_specialization_shapes_equal(
     return false
   }
   for index in 0..<left.length {
-    if values[left.start + index] != right_values[right.start + index] {
+    if program_canonical_specialization_shape(values[left.start + index]) !=
+      program_canonical_specialization_shape(right_values[right.start + index]) {
       return false
     }
   }
@@ -1012,6 +1098,50 @@ fn program_generic_parameter_shape(
     }
     _ => None
   }
+}
+
+///|
+fn program_resolve_specialized_shape(
+  module_ : PlannedModuleLowering,
+  generic_parameters : HirSpan,
+  specialization_values : Array[PlannedValueShape],
+  specialization : HirSpan,
+  type_ : BodyTypeId,
+  fallback : PlannedValueShape,
+) -> PlannedValueShape {
+  let resolved_type = if type_ < -1 {
+    -type_ - 2
+  } else if type_ >= 0 && type_ < module_.types.length() {
+    match module_.types[type_] {
+      BodyResolvedType(value) => value
+      _ => -1
+    }
+  } else {
+    -1
+  }
+  if resolved_type >= 0 && resolved_type < module_.resolved_types.length() {
+    match module_.resolved_types[resolved_type] {
+      GenericParameterType(parameter) => {
+        let parameter_local = semantic_id_local(parameter)
+        if parameter_local >= generic_parameters.start &&
+          parameter_local < generic_parameters.start + generic_parameters.length {
+          let relative = parameter_local - generic_parameters.start
+          if relative < specialization.length {
+            return specialization_values[specialization.start + relative]
+          }
+        }
+      }
+      _ => ()
+    }
+  }
+  if specialization.length == 1 {
+    match fallback {
+      GenericPlannedValueShape | ErrorPlannedValueShape =>
+        return specialization_values[specialization.start]
+      _ => ()
+    }
+  }
+  fallback
 }
 
 ///|
@@ -1062,7 +1192,11 @@ fn materialize_program_generic_specialization(
   }
   let shape_start = module_.specialization_shapes.length()
   for index in 0..<request.length {
-    module_.specialization_shapes.push(request_shapes[request.start + index])
+    module_.specialization_shapes.push(
+      program_canonical_specialization_shape(
+        request_shapes[request.start + index],
+      ),
+    )
   }
   let specialization_shapes = { start: shape_start, length: request.length }
   let resolved = analyzed.frozen.interfaces[owner_index].resolved_types
@@ -1086,14 +1220,13 @@ fn materialize_program_generic_specialization(
             Some(value) => module_.function_value_types.push(value)
             None => ()
           }
-        None => {
+        None =>
           module_.function_value_types.push(
             module_.function_value_types[base.parameters.start +
             base_parameter_index],
           )
-          base_parameter_index += 1
-        }
       }
+      base_parameter_index += 1
     }
   }
   let result_start = module_.function_value_types.length()
@@ -1137,6 +1270,11 @@ fn materialize_program_generic_specialization(
       length: module_.function_value_types.length() - result_start,
     },
     specialization_shapes,
+    specialization_abi_key: program_specialization_abi_key(
+      declaration,
+      module_.specialization_shapes,
+      specialization_shapes,
+    ),
   })
   modules[owner_index] = {
     ..module_,
@@ -1223,6 +1361,91 @@ pub fn plan_program_wasmgc_fragments_with_options(
       }
     }
     ignore(module_index)
+  }
+  let mut specialization_changed = true
+  while specialization_changed {
+    let mut before = 0
+    for module_ in modules {
+      before += module_.functions.length()
+    }
+    for owner_index, fragments_ in modules {
+      let function_count = fragments_.functions.length()
+      for function_index in 0..<function_count {
+        let function_ = fragments_.functions[function_index]
+        if function_.specialization_shapes.length == 0 {
+          continue
+        }
+        let body_id = match function_.kind {
+          PlannedWasmDefinedFunction(body) => body
+          _ => continue
+        }
+        let owner = lowering.modules[owner_index]
+        let callable = match
+          owner.functions.callable_of(function_.declaration) {
+          Some(value) => value
+          None => continue
+        }
+        let body_index = semantic_id_local(body_id)
+        if body_index < 0 || body_index >= owner.bodies.length() {
+          continue
+        }
+        let body = owner.bodies[body_index]
+        for
+          expression_index in body.expressions.start..<(body.expressions.start +
+          body.expressions.length) {
+          let (target, arguments) = match
+            owner.expressions[expression_index].kind {
+            PlannedDirectCall(target, _, _, arguments) if arguments.length > 0 =>
+              (target, arguments)
+            _ => continue
+          }
+          let resolved_shapes : Array[PlannedValueShape] = []
+          for argument_index in 0..<arguments.length {
+            let source_index = arguments.start + argument_index
+            resolved_shapes.push(
+              program_resolve_specialized_shape(
+                owner,
+                callable.generic_parameters,
+                fragments_.specialization_shapes,
+                function_.specialization_shapes,
+                owner.call_type_arguments[source_index],
+                owner.call_type_argument_shapes[source_index],
+              ),
+            )
+          }
+          materialize_program_generic_specialization(
+            analyzed,
+            lowering,
+            modules,
+            specialization_module_lookup,
+            target,
+            resolved_shapes,
+            { start: 0, length: resolved_shapes.length() },
+          )
+        }
+      }
+    }
+    let mut after = 0
+    for module_ in modules {
+      after += module_.functions.length()
+    }
+    specialization_changed = after > before
+  }
+  for module_index, fragments_ in modules {
+    for function_index in 0..<fragments_.functions.length() {
+      let function_ = fragments_.functions[function_index]
+      if function_.specialization_shapes.length > 0 {
+        continue
+      }
+      match
+        lowering.modules[module_index].functions.callable_of(
+          function_.declaration,
+        ) {
+        Some(callable) if callable.generic_parameters.length > 0 =>
+          fragments_.functions[function_index] = { ..function_, elided: true }
+        _ => ()
+      }
+    }
   }
   let external_type_references : Array[PlannedProgramExternalTypeReference] = []
   for module_index, module_ in modules {
@@ -2109,6 +2332,7 @@ pub fn link_program_wasmgc_fragments(
           parameters: function_.parameters,
           results: function_.results,
           specialization_shapes: function_.specialization_shapes,
+          specialization_abi_key: function_.specialization_abi_key,
           offset: function_.offset,
         })
       }

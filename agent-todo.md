@@ -221,6 +221,7 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Summarize transparent call-only callback wrappers and directize known lambda/named arguments across module lowering.
 - [x] Infer expected-type generic function references and execute call-only parameter-selector/callback specializations without closure allocation.
 - [x] Extend generic specialization to arbitrary function bodies, imported definitions, and escaping references with per-shape singleton identities.
+- [x] Close nested generic specialization demands, coalesce physical carriers, assign stable program ABI keys, and elide unspecialized export recipes.
 - [ ] Add erased generic fallback/adapters and generic structs; extend interprocedural summaries to returned, stored, forwarded, and unknown callback uses.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.

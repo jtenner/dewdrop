@@ -64,7 +64,7 @@ A future shared-environment optimization may still select a split representation
 
 ## Required next milestones
 
-1. Add persistent ABI fingerprints and erased fallback adapters for the implemented program-wide physical-shape generic specializations.
+1. Promote deterministic program specialization ABI keys into persistent interface fingerprints and add erased fallback adapters for boundaries that cannot be statically closed.
 2. Add closure ABI fingerprints to persistent external package interfaces.
 4. Extend the implemented transparent call-only wrapper summaries to returned, stored, conditionally called, multiply forwarded, and unknown callback uses.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
@@ -74,5 +74,5 @@ A future shared-environment optimization may still select a split representation
 - Non-generic function overload sets become values only with a deterministic structural expected function type. Local/imported candidates are filtered by exact signature; missing, unmatched, and multiply matched expectations have separate diagnostics.
 - Captures preserve lexical binding identity, deterministic source order, and exact source mutability metadata. Mutable captures use shared carrier-specialized cells referenced by flattened closure fields; directization must route the cell reference rather than copy its value.
 - Cross-module concrete function signatures are structurally coalesced during one program link; persistent package interfaces still require stable signature and closure ABI fingerprints.
-- Expected-type generic function references retain inferred type arguments. Program linking materializes one deterministic function body per required physical-shape vector, including imported definitions and escaping references. Specialized named references receive one singleton per specialized function identity; erased fallback adapters and persistent cross-package ABI fingerprints remain pending.
+- Expected-type generic function references retain inferred type arguments. Program linking transitively closes nested demands and materializes one deterministic function body per canonical physical-carrier vector, including imported definitions, multiple type parameters, and escaping references. Specialized named references receive one singleton per specialized function identity. Unspecialized recipes are not executable or exported; erased fallback adapters and persistent cross-package fingerprints remain pending.
 - Runtime performance favors directization and allocation elimination, but these optimizations must not define source semantics.

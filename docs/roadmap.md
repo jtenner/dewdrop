@@ -148,7 +148,9 @@ direct typed references.
 - [ ] Emit boxes, unboxes, and static-to-erased adapters only at required boundaries.
 - [x] Support executable generic enum construction, transport, and pattern access through deterministic erased physical-carrier fields.
 - [x] Execute generic parameter-selector functions and transparent generic callback wrappers through deterministic call-site specialization, including imported calls and expected-type generic references.
-- [x] Materialize deterministic physical-shape specializations for general generic function bodies, including locals, structured control flow, escaping references, and imported definitions.
+- [x] Materialize deterministic physical-carrier specializations for general generic function bodies, including locals, structured control flow, nested/transitive generic calls, multiple type parameters, escaping references, and imported definitions.
+- [x] Coalesce source shapes with the same Wasm carrier and assign deterministic declaration-plus-carrier ABI keys.
+- [x] Keep unspecialized generic recipes out of the executable/export ABI until erased fallback adapters are defined.
 - [ ] Support generic struct construction/access and erased fallback adapters for specialization boundaries.
 - [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.

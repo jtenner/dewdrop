@@ -13,42 +13,8 @@
   (type (;11;) (struct (field (ref 8)) (field i32) (field i32)))
   (type (;12;) (struct (field (mut (ref 8))) (field (mut i32)) (field (mut i32))))
   (type (;13;) (struct (field (mut (ref 8))) (field (mut i32)) (field (mut i32))))
-  (export "main" (func 4))
-  (func (;0;) (type 3) (param eqref) (result eqref)
-    local.get 0
-  )
-  (func (;1;) (type 4) (param eqref eqref) (result eqref)
-    local.get 0
-  )
-  (func (;2;) (type 5) (param eqref eqref) (result eqref)
-    local.get 1
-  )
-  (func (;3;) (type 6) (param eqref eqref) (result eqref)
-    (local eqref)
-    local.get 0
-    local.set 2
-    local.get 2
-    ref.cast (ref 0)
-    struct.get 0 0
-    ref.test (ref 1)
-    if (result eqref) ;; label = @1
-      local.get 1
-      local.get 2
-      ref.cast (ref 0)
-      struct.get 0 0
-      ref.cast (ref 1)
-      call_ref 1
-    else
-      local.get 2
-      local.get 1
-      local.get 2
-      ref.cast (ref 0)
-      struct.get 0 0
-      ref.cast (ref 2)
-      call_ref 2
-    end
-  )
-  (func (;4;) (type 7)
+  (export "main" (func 0))
+  (func (;0;) (type 7)
     i32.const 42
     i32.const 42
     i32.eq
