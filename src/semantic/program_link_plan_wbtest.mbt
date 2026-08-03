@@ -274,6 +274,49 @@ test "program linker eliminates unused physical aggregate types" {
 }
 
 ///|
+test "program link unifies closure bases and named singletons across modules" {
+  let program = collect_program_manifest(
+    2285UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open app.library\npub fn choose() -> fn(I32) -> I32 {\n  increment\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.library", [
+        ManifestFile::new(
+          "library.dew", b"pub fn increment(value: I32) -> I32 {\n  value + 1\n}\npub let stored = increment\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let main_closure = link.modules[0].closure_type_index
+  let library_closure = link.modules[1].closure_type_index
+  assert_true(main_closure >= 0)
+  assert_true(library_closure >= 0)
+  assert_eq(
+    link.physical_type_index(0, main_closure),
+    link.physical_type_index(1, library_closure),
+  )
+  let mut closure_bases = 0
+  for physical in link.program_physical_types {
+    let module_ = link.modules[physical.module_index]
+    match module_.physical_types[physical.fragment_index].kind {
+      PlannedWasmClosureType => closure_bases += 1
+      _ => ()
+    }
+  }
+  assert_eq(closure_bases, 1)
+  assert_eq(link.function_reference_singletons.length(), 1)
+  let increment = program.modules[1].lookup_value("increment").unwrap()
+  assert_eq(link.function_reference_singletons[0].declaration, increment)
+}
+
+///|
 test "program link plans deterministic named function singleton globals" {
   let program = collect_program_manifest(
     2290UL,

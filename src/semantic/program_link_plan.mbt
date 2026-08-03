@@ -125,9 +125,9 @@ pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(
   module_index : Int,
   declaration : DeclId,
 ) -> Int {
+  ignore(module_index)
   for singleton in self.function_reference_singletons {
-    if singleton.module_index == module_index &&
-      singleton.declaration == declaration {
+    if singleton.declaration == declaration {
       return singleton.global_index
     }
   }
@@ -1086,13 +1086,25 @@ fn program_cross_module_type_groups(
     node_by_module_type.push(Array::make(module_.physical_types.length(), -1))
   }
   let nodes : Array[PlannedProgramWasmPhysicalType] = []
+  let mut canonical_closure_node = -1
   for scc in fragments.graph.sccs {
     for member_index in 0..<scc.length {
       let module_index = fragments.graph.scc_modules[scc.start + member_index]
       let module_ = fragments.modules[module_index]
-      for fragment_index, _ in module_.physical_types {
-        node_by_module_type[module_index][fragment_index] = nodes.length()
-        nodes.push({ module_index, fragment_index })
+      for fragment_index, physical in module_.physical_types {
+        match physical.kind {
+          PlannedWasmClosureType if canonical_closure_node >= 0 =>
+            node_by_module_type[module_index][fragment_index] = canonical_closure_node
+          PlannedWasmClosureType => {
+            canonical_closure_node = nodes.length()
+            node_by_module_type[module_index][fragment_index] = canonical_closure_node
+            nodes.push({ module_index, fragment_index })
+          }
+          _ => {
+            node_by_module_type[module_index][fragment_index] = nodes.length()
+            nodes.push({ module_index, fragment_index })
+          }
+        }
       }
     }
   }
@@ -1165,12 +1177,14 @@ fn program_cross_module_type_groups(
   let groups : Array[PlannedProgramWasmRecursiveGroup] = []
   let physical_types : Array[PlannedProgramWasmPhysicalType] = []
   let type_lookup : Map[DeclId, Int] = Map::default()
+  let final_index_by_node = Array::make(nodes.length(), -1)
   for component in component_spans {
     let first_type_index = physical_types.length()
     let start = physical_types.length()
     for index in 0..<component.length {
       let node = nodes[component_members[component.start + index]]
       let final_type_index = physical_types.length()
+      final_index_by_node[component_members[component.start + index]] = final_type_index
       module_type_indices[node.module_index][node.fragment_index] = final_type_index
       let physical = fragments.modules[node.module_index].physical_types[node.fragment_index]
       match physical.kind {
@@ -1188,6 +1202,13 @@ fn program_cross_module_type_groups(
       types: { start, length: physical_types.length() - start },
       first_type_index,
     })
+  }
+  for module_index, indices in node_by_module_type {
+    for fragment_index, node in indices {
+      if node >= 0 {
+        module_type_indices[module_index][fragment_index] = final_index_by_node[node]
+      }
+    }
   }
   (module_type_indices, groups, physical_types, type_lookup)
 }
@@ -1429,7 +1450,13 @@ pub fn link_program_wasmgc_fragments(
       type_count += module_fragments.physical_types.length()
     }
   }
-  let mut cross_module_type_scc = false
+  let mut closure_base_count = 0
+  for module_ in fragments.modules {
+    if module_.closure_type_index >= 0 {
+      closure_base_count += 1
+    }
+  }
+  let mut cross_module_type_scc = closure_base_count > 1
   for reference in fragments.external_type_references {
     match type_lookup.get(reference.declaration) {
       Some(index) =>
@@ -1702,26 +1729,22 @@ pub fn link_program_wasmgc_fragments(
   let function_reference_singletons : Array[
     PlannedProgramFunctionReferenceSingleton,
   ] = []
+  let singleton_declarations : Map[DeclId, Bool] = Map::default()
   for module_index, module_ in lowering.modules {
-    let seen : Map[DeclId, Bool] = Map::default()
-    let declarations : Array[DeclId] = []
     for expression in module_.expressions {
       match expression.kind {
         PlannedFunctionReference(declaration) =>
-          if !seen.contains(declaration) {
-            seen[declaration] = true
-            declarations.push(declaration)
+          if !singleton_declarations.contains(declaration) {
+            singleton_declarations[declaration] = true
+            function_reference_singletons.push({
+              module_index,
+              declaration,
+              global_index,
+            })
+            global_index += 1
           }
         _ => ()
       }
-    }
-    for declaration in declarations {
-      function_reference_singletons.push({
-        module_index,
-        declaration,
-        global_index,
-      })
-      global_index += 1
     }
   }
   let scheduled_initializers = program_schedule_initializers(

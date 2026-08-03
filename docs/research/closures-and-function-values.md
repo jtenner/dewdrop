@@ -56,7 +56,7 @@ A deterministic post-lowering use pass now directizes immediate lambdas and immu
 
 After directization, `functions/closure-runtime` contains 11 static `struct.new` instructions and 12 `call_ref` instructions, down from 16 and 22 after flattening. Its WAT is 7,634 bytes and its Wasm binary is 1,065 bytes, down from 10,025 WAT bytes and 1,378 Wasm bytes. Pruning directized physical subtypes reduces that binary further to 1,022 bytes. The dedicated `closure-directization-runtime` fixture contains no closure base type and no `call_ref`; its capturing local, repeated local, named local, immediate, and unused lambdas all lower without closure allocation. The remaining closure allocations in the comprehensive fixture correspond to values that escape through returns, parameters, captures, or module state.
 
-Repeated escaping references to the same named function within one standalone body share one activation-local closure object. In a linked program, every surviving named reference is promoted to one singleton global per consumer-module closure representation. `__dew_init` constructs those singletons in module/first-reference order before source module initializers, and body expressions use `global.get`. This removes per-invocation named-closure allocation while preserving exact consumer closure-base casts; separate modules still receive separate objects until closure-base identities are unified program-wide.
+Repeated escaping references to the same named function within one standalone body share one activation-local closure object. In a linked program, all module-local closure-base plans map to one program physical base, and every surviving named declaration receives one program-wide singleton global. `__dew_init` constructs those singletons in first-reference order before source module initializers, and body expressions use `global.get`. Source and consumer lambdas inherit or cast through the shared base, removing duplicate closure types and per-module named-reference objects.
 
 Mutable lexical state now uses those explicit shared cells without restoring the wrapper/environment pair. An uncaptured `let mut` remains an ordinary carrier-typed Wasm local. Once any lambda captures it, the binding allocates one final carrier-specialized cell at binding execution; the declaring body and every direct, sibling, nested, transitive, returned, or directized closure route the same cell reference. Cell fields use `i32`, `i64`, `f32`, `f64`, `v128`, or `eqref`; nominal and function identities are restored with exact casts after `eqref` loads. Directized lambdas lift the cell reference rather than the current value, so closure elimination preserves mutation aliasing.
 
@@ -65,8 +65,7 @@ A future shared-environment optimization may still select a split representation
 ## Required next milestones
 
 1. Define executable specialization and ABI identity for generic function references.
-2. Unify closure-base identities across linked modules so imported named references can share one program singleton.
-3. Add closure ABI fingerprints to persistent external package interfaces.
+2. Add closure ABI fingerprints to persistent external package interfaces.
 4. Extend the implemented local directization and named-reference reuse passes with interprocedural escape summaries and cross-module closure-base unification.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
