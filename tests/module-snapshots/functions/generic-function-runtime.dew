@@ -1,0 +1,14 @@
+fn identity<t>(value: t) -> t {
+  value
+}
+
+fn first<t>(left: t, right: t) -> t {
+  left
+}
+
+pub fn main() -> Unit {
+  assert(identity(42) == 42, "generic i32 identity")
+  assert(identity(42i64) == 42i64, "generic i64 identity")
+  assert(identity(42.5f64) == 42.5f64, "generic f64 identity")
+  assert(first(42, 7) == 42, "generic i32 first")
+}

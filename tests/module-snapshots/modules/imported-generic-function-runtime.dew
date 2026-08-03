@@ -1,0 +1,16 @@
+open fixture.generic
+
+fn apply_i32(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+fn return_i64_identity() -> fn(I64) -> I64 {
+  identity
+}
+
+pub fn main() -> Unit {
+  assert(identity(42) == 42, "imported generic direct call")
+  let i64_identity = return_i64_identity()
+  assert(i64_identity(42i64) == 42i64, "imported generic reference")
+  assert(apply_i32(identity, 42) == 42, "imported generic callback")
+}
