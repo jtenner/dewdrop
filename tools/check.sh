@@ -175,6 +175,15 @@ node tools/dew-wasm-consumer.mjs \
   run i32 > .tmp/dew-aggregate-callback-consumer.json
 grep -q '"type":"i32","value":42' \
   .tmp/dew-aggregate-callback-consumer.json
+wasm-tools parse \
+  tests/abi-consumers/generic-enum-callback-i32.wat \
+  -o .tmp/dew-enum-callback-consumer.wasm
+node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-aggregate-callback-budget.wasm \
+  .tmp/dew-enum-callback-consumer.wasm \
+  run i32 > .tmp/dew-enum-callback-consumer.json
+grep -q '"type":"i32","value":42' \
+  .tmp/dew-enum-callback-consumer.json
 tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm

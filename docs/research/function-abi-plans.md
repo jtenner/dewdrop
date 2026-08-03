@@ -88,12 +88,12 @@ Frozen exported callables now carry V2 SHA-256 ABI fingerprints persisted in fro
 
 `tools/dew-abi.mjs` is the scalar executable host consumer. `list` discovers and deterministically sorts valid `<source>$dew$<carrier,...>` function exports. `call` selects one source/carrier vector, performs explicit `i32`/`i64`/`f32`/`f64` JavaScript conversion, invokes `__dew_init` once, calls the adapter, and emits normalized JSON. It rejects `v128` because the JavaScript WebAssembly API cannot invoke it and rejects `eqref` because aggregate/reference values require an in-Wasm package consumer.
 
-`tools/dew-wasm-consumer.mjs PROVIDER_WASM CONSUMER_WASM EXPORT RESULT_TYPE` instantiates the provider, invokes its exported `__dew_init` exactly once, and then instantiates a Wasm consumer with the provider exports under the `dew` import namespace. The focused `tests/abi-consumers/generic-aggregate-callback-i32.wat` consumer defines structurally equivalent aggregate and flattened-closure types, constructs a direct `i32` callback, imports `identity_box$dew$i32`, and calls the callback returned by the static-to-erased-to-static adapter path. JavaScript observes only the final scalar `42`; both `eqref` aggregate values and wrapper closures remain inside Wasm.
+`tools/dew-wasm-consumer.mjs PROVIDER_WASM CONSUMER_WASM EXPORT RESULT_TYPE` instantiates the provider, invokes its exported `__dew_init` exactly once, and then instantiates a Wasm consumer with the provider exports under the `dew` import namespace. The focused `tests/abi-consumers/generic-aggregate-callback-i32.wat` and `generic-enum-callback-i32.wat` consumers define structurally equivalent aggregate, enum-subtype, and flattened-closure types. They construct direct `i32` callbacks, import `identity_box$dew$i32` or `identity_choice$dew$i32`, and call the callbacks returned by the static-to-erased-to-static adapter paths. JavaScript observes only the final scalar `42`; all `eqref` values, variant casts, and wrapper closures remain inside Wasm.
 
 ## Remaining work
 
 1. Build trait dictionary method slots from trait requirement plans.
 2. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
 3. Replace provisional fallback nominal fingerprint members with dependency-interface fingerprints and define compatibility/version negotiation rules.
-4. Extend the focused in-Wasm callback-aggregate consumer to enum payloads, standalone `eqref`, imported packages, and `v128` specialization adapters.
+4. Extend the focused in-Wasm consumers to standalone `eqref`, imported packages, and `v128` specialization adapters.
 5. Define recursive generic aggregate instantiation/layout sharing without weakening exact callback signatures.
