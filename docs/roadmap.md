@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 2, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries.
+> Living roadmap as of August 3, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
 
 ## Current baseline
 
@@ -157,8 +157,9 @@ direct typed references.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
 - [x] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct leaves and nested generic struct/enum graphs clone across erased boundaries with exact variant subtype reconstruction, lazy scalar box/unbox conversion, and deterministic recursive helpers at cyclic nominal edges. Structural callbacks use deterministic flattened closure subtypes that capture the source closure once, recursively wrap nested callback parameters/results, convert scalar leaves, populate function-valued struct/enum payload fields during nominal reconstruction, and dispatch through the source direct or environment-first signature. Instantiated generic aggregate fields and enum pattern bindings retain concrete structural signatures and execute through the ordinary function-value call path.
-- [ ] Complete ABI/interface compatibility after specialization and erasure rules stabilize. V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V7 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation is implemented; versioned external-package resolution and persistent dependency-interface caching are implemented; installed artifact-only recovery remains. A Node host consumer lists deterministic adapter exports and invokes scalar carrier boundaries. Focused in-Wasm consumers now exercise `i32` callback-bearing struct and enum adapters, a standalone exact-nominal `eqref` fallback, the JavaScript-inaccessible `v128` identity adapter, and a multi-module provider whose root adapter exposes an imported generic callback aggregate.
-- [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
+- [x] Complete the implemented ABI/interface compatibility layer: V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V7 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, and imported generic boundaries.
+- [ ] Add installed artifact-only interface recovery so versioned dependencies can compile from verified cached artifacts without recollecting source.
+- [ ] Define and implement trait objects, dictionaries, and `call_ref` dispatch after static generic execution is stable.
 
 **Done when:** representative cross-module generic functions and aggregates
 execute with deterministic specialization, bounded code growth, and a documented
@@ -232,6 +233,13 @@ erased fallback.
 - [x] Monomorphic local and module lets.
 - [x] Expected-type-driven calls, constructors, patterns, methods, and loops.
 
+### Compile-time annotations and derivation
+
+- [ ] Define `#annotation(...)` syntax with compile-time constant parameters, including the permitted constant types, name resolution, validation, retention, and interface serialization rules.
+- [ ] Expose frozen annotations to compiler features and future tooling without making runtime reflection ambient.
+- [ ] Add `#derive(...)` for easy system traits, initially `Eq`, `Debug`, `Show`, and `Hash`, with deterministic generated identities, generic-bound propagation, field/variant ordering, visibility, diagnostics, and cross-module ABI behavior.
+- [ ] Specify conflicts between derived and handwritten implementations and prevent generated evidence from bypassing coherence or orphan rules.
+
 ### Remaining generic work
 
 - [ ] Parse and represent generic bounds.
@@ -261,7 +269,7 @@ erased fallback.
 - [x] Freeze and translate cross-module impl heads into consumer type arenas.
 - [x] Merge owner-coherent imported impl evidence into method/operator dispatch indexes.
 - [x] Add public/private evidence visibility checks and keep `foreign impl` evidence module-local.
-- [ ] Diagnose structural overlap between independently imported or local/imported evidence.
+- [x] Diagnose structural overlap between independently imported or local/imported evidence.
 - [ ] Add trait obligations on generic functions.
 - [ ] Add cross-package orphan rules.
 - [ ] Define negative impls only if required.
@@ -280,6 +288,14 @@ erased fallback.
 - [ ] Optimize non-escaping trait boxes.
 
 ## Expressions and statements
+
+### Deterministic cleanup
+
+- [ ] Add `dew.std.disposable.Disposable` with an explicit cleanup operation and clear ownership/error semantics.
+- [ ] Add `defer` for deterministic scope-exit cleanup, defining LIFO order across normal fallthrough, `return`, `break`, `continue`, and traps or explicitly documenting trap exclusions.
+- [ ] Add `using` for scoped `Disposable` values, lowering it through the same cleanup plan without hidden nondeterministic finalization.
+- [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control-flow cases that cannot satisfy exactly-once disposal.
+- [ ] Add parser, HIR, flow, lowering, WAT snapshot, runtime, and cross-module tests for `defer`, `using`, and `Disposable`.
 
 ### Scalar execution
 
@@ -395,7 +411,7 @@ count = count + 1
 - [x] Emit non-generic local and imported struct construction.
 - [x] Emit typed local and imported field reads.
 - [ ] Emit field writes if mutation is supported.
-- [ ] Handle generic struct ABI specialization/erasure.
+- [x] Handle generic struct ABI specialization/erasure.
 - [ ] Add allocation and field-access benchmarks.
 
 ### Enums
@@ -432,6 +448,11 @@ count = count + 1
 
 - [x] Implement carrier-specialized mutable `dew.std.fixed_array` with safe optional get, trapping index get/set, explicit unchecked operations, aliases, and zero-length behavior.
 - [ ] Implement growable `dew.std.array` over the same six physical carrier families.
+- [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
+- [ ] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
+- [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and min/max policy.
+- [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
+- [ ] Implement `dew.std.collections.finger_tree` only after sequence/deque/measure use cases and representation costs are specified and benchmarked.
 - [ ] Define a standard persistent list representation only if measured workloads justify it.
 - [x] Implement `dew.std.map` with ambient U64 Hash evidence, collision-safe equality, deterministic buckets, erased carriers, safe lookup, insertion/replacement, and index syntax.
 - [x] Implement `dew.std.set` over the same collision-safe Hash table with idempotent insertion, linked-chain removal, clear, membership, emptiness, and length.
@@ -497,7 +518,7 @@ count = count + 1
 - [x] Function section.
 - [x] Export section.
 - [x] Code section for the implemented scalar, aggregate, text, lane, test, and WASI subset.
-- [ ] Global section.
+- [x] Global section.
 - [ ] Start section.
 - [ ] Element/table sections for dynamic dispatch.
 - [ ] Data/string sections as required.
@@ -519,9 +540,9 @@ count = count + 1
 - [x] Emit scalar boxes/unboxes for demanded direct generic parameter/result boundaries.
 - [x] Emit exact nominal-reference static-to-erased adapters.
 - [x] Emit deterministic scalar-to-erased export adapters.
-- [ ] Emit recursive adapters for nested generic aggregate/function representations.
-- [ ] Define cross-module ABI fingerprints.
-- [ ] Reject incompatible separately compiled interfaces.
+- [x] Emit recursive adapters for nested generic aggregate/function representations.
+- [x] Define cross-module ABI fingerprints with content-sensitive nominal and transitive reachable-interface fingerprints.
+- [x] Reject incompatible separately compiled interfaces through versioned `dew.abi` negotiation.
 
 ### Validation and compatibility
 
@@ -572,6 +593,9 @@ count = count + 1
 - [x] Complete primitive arithmetic and bit operations.
 - [x] Complete the scalar `Into<T>` conversion matrix.
 - [x] Ambient generic `Option<t>` and `Result<t, e>` through separate canonical `dew.std.option` and `dew.std.result` modules.
+- [ ] Define `Show` and `Debug` system traits, including their relationship to `StringBuilder`, recursion limits, formatting stability, and derived implementations.
+- [ ] Add `show(value) -> String` using `Show` evidence.
+- [ ] Add `debug(value)` using `Debug` evidence and bounded WASI output, with deterministic formatting and explicit behavior when WASI is unavailable.
 - [ ] Core iterator traits if they are intended to be ambient.
 - [ ] Keep the ambient surface intentionally small.
 
@@ -601,15 +625,33 @@ count = count + 1
 - [ ] `dew.std.list`
 - [x] `dew.std.fixed_array`
 - [ ] `dew.std.array`
+- [ ] `dew.std.collections.circular_buffer`
+- [ ] `dew.std.collections.stack`
+- [ ] `dew.std.collections.binary_heap`
+- [ ] `dew.std.collections.red_black_tree`
+- [ ] `dew.std.collections.finger_tree`
 - [x] `dew.std.string`
 - [x] `dew.std.set`
 - [ ] `dew.std.iter`
 - [ ] `dew.std.math`
 - [ ] `dew.std.io`
 - [ ] `dew.std.testing`
+- [ ] `dew.std.disposable`
+- [ ] `dew.std.http`
+- [ ] `dew.std.crypto.fast`
+- [ ] `dew.std.crypto.timing`
+- [ ] `dew.std.crypto.password`
 - [x] `dew.std.wasi`
 - [x] Establish `dew.std.wasm.intrinsics` as the sole source-language home for direct compiler-known WebAssembly intrinsics; `@identifier` is now reserved for imported module aliases and the first migrated intrinsic is executable through that module.
 - [ ] Complete `dew.std.wasm.intrinsics` coverage for every supported WebAssembly Core 3 scalar, reference, GC, memory, table, SIMD, conversion, control, and host-boundary builtin, with generated declaration/backend parity checks so no compiler builtin remains source-addressable outside the module.
+
+### Cryptography and HTTP
+
+- [ ] Define the security and API boundaries among `dew.std.crypto.fast` for non-secret fast hashes/checksums, `dew.std.crypto.timing` for constant-time primitives and secret comparison, and `dew.std.crypto.password` for password hashing/KDF APIs.
+- [ ] Select reviewed algorithms and implementations, expose versioned parameters and algorithm identifiers, use cryptographically secure randomness where required, and document which APIs are not suitable for secrets.
+- [ ] Add known-answer, differential, side-channel-aware, malformed-input, resource-limit, and cross-runtime tests; do not claim constant-time behavior without measurement on supported runtimes.
+- [ ] Implement `dew.std.http` with bounded request/response types, header validation, streaming bodies, deterministic parsing/serialization, explicit limits, and host adapters separated from protocol semantics.
+- [ ] Define URL/URI ownership, TLS boundaries, redirects, decompression, timeout/cancellation behavior, and client/server scope before committing a stable HTTP API.
 
 ### Structured data formats
 
@@ -624,15 +666,15 @@ count = count + 1
 
 - [x] `dew check`
 - [x] `dew build`
-- [ ] `dew run`
+- [x] `dew run`
 - [x] `dew test`
 - [ ] `dew fmt`
 - [ ] `dew doc`
 - [ ] `dew clean`
-- [ ] `--emit hir`
-- [ ] `--emit lowering`
-- [ ] `--emit wat`
-- [ ] `--emit wasm`
+- [x] `--emit hir`
+- [x] `--emit lowering`
+- [x] `--emit wat`
+- [x] `--emit wasm`
 - [ ] phase timing and allocation reporting
 
 ### Formatting
@@ -668,7 +710,8 @@ count = count + 1
 
 - [ ] Fingerprint source files.
 - [ ] Cache parser events or compact syntax/HIR artifacts.
-- [ ] Cache frozen module interfaces.
+- [x] Cache compiler-owned standard and versioned external dependency frozen interfaces.
+- [ ] Extend frozen-interface caching to ordinary workspace modules once source/artifact provenance and invalidation rules are stable.
 - [ ] Cache body inference by declaration/body fingerprint.
 - [ ] Cache layout and fragment plans.
 - [ ] Invalidate dependents by interface fingerprint rather than implementation changes.
@@ -700,7 +743,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
-- [x] Establish broad feature-oriented coverage with 146 compiled fixtures, 20 compiler-error fixtures, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture requires identical Node/Wago Core 3 output and traps, and checked-in WAT is 94,494 lines after adding cross-module recursive WasmGC groups.
+- [x] Establish broad feature-oriented coverage with 175 fixtures: 154 compiled WAT/runtime snapshots and 21 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.
@@ -773,28 +816,30 @@ remain easier to diagnose and maintain.
 
 ## Decisions that should remain explicit
 
-- [ ] Whether imports are contributed per file or declared once per module.
+- [x] Imports and opens are contributed per source file to the owning module's shared import scope.
 - [ ] Whether local declarations may shadow ordinary imports.
 - [ ] Whether canonical preamble traits may be shadowed at all.
 - [x] `Option` and `Result` are ambient separate standard modules rather than declarations inside `dew.std.preamble`; iterator traits remain undecided.
 - [ ] Whether mutation is local-only or extends to aggregate fields and collections.
-- [ ] Whether function values and closures are in the first complete language release.
+- [x] Function values and closures are part of the first complete language release.
 - [ ] Whether associated types are required for collections/iterators.
 - [ ] Whether ordinary Boolean loops are needed alongside functional loops.
-- [ ] Whether cross-module generic code uses specialization, dictionaries, erasure, or a hybrid.
+- [x] Cross-module generic code uses deterministic carrier specialization with erased `eqref` fallbacks; dictionaries remain reserved for runtime trait values.
 - [x] Strings use strict-UTF-8 custom WasmGC objects backed by `array<mut v128>`; malformed bytes use Bytes.
 - [ ] Which WasmGC runtimes define the supported execution baseline.
 
 ## Suggested milestone sequence
 
-1. **Module WAT snapshots:** canonical readable output fixtures, fail-closed diffs, deterministic regeneration, and multi-module coverage.
-2. **Self-describing tests:** compiler-emitted test manifest, stable identities, filtering, expected traps, and assertion reporting.
-3. **Installed standard packages:** replace generated bootstrap source providers with canonical package lookup and persistent content-addressed frozen-interface caching.
-4. **Compiler CLI and fixtures:** `check`, `build`, `test`, then `run`, with deterministic diagnostics and compile/run fixture suites.
-5. **Structured execution:** short-circuit logic, functional loops, nested/alternative patterns, and imported enum exhaustiveness.
-6. **Linked module state:** globals, startup scheduling, eager-cycle diagnostics, imported impl dispatch, and cross-module recursive type groups.
-7. **Executable generics:** obligations, specialization, erased fallback ABIs, adapters, and cross-module generic aggregates.
-8. **Core collections and iteration:** array/list, hashing/ordering, map/set, iterators, and explicit mutation/persistence rules.
-9. **Higher-order runtime features:** function values, closures, trait objects, dictionaries, and indirect calls if still required.
-10. **Optimization and incremental compilation:** dead types, folding, inlining, escape analysis, fingerprints, caches, and deterministic parallel scheduling.
-11. **Later quality and release:** fuzzing, formatter, LSP, package manager, compatibility matrix, conformance hardening, and reproducible releases.
+1. **Module WAT snapshots — foundation complete:** keep expanding canonical readable fixtures, warning coverage, deterministic regeneration, and completion-order checks.
+2. **Self-describing tests — complete:** compiler-emitted test metadata, stable identities, filtering, expected traps, and assertion reporting are implemented.
+3. **Installed standard packages — mostly complete:** canonical package lookup and persistent content-addressed interface caching are implemented; installed artifact-only recovery remains.
+4. **Compiler CLI — driver complete:** `check`, `build`, `test`, `run`, and deterministic emit modes are implemented; file-aware diagnostics and compile/run fixture directories remain.
+5. **Structured execution — complete:** short-circuit logic, functional loops, nested/alternative patterns, and imported enum exhaustiveness execute.
+6. **Linked module state — complete:** globals, explicit host initialization, eager-cycle diagnostics, imported impl dispatch, and cross-module recursive type groups are implemented.
+7. **Executable generics — static ABI complete:** specialization, erased fallback ABIs, recursive adapters, cross-module generic aggregates, fingerprints, and compatibility negotiation execute; bounds/obligations and runtime trait dictionaries remain.
+8. **Core collections and iteration — active:** array/list, circular buffer, stack, binary heap, red-black tree, finger tree, text hashing/ordering, iterators, and explicit mutation/persistence rules.
+9. **Language ergonomics and cleanup:** constant-parameter `#annotations`, `#derive`, `Show`/`Debug`, and deterministic `defer`/`using` through `Disposable`.
+10. **Runtime trait values:** trait objects, dictionaries, and dynamic indirect dispatch; function values and closures are already executable.
+11. **Optimization and incremental compilation:** folding, inlining, escape analysis, workspace fingerprints/caches, and deterministic parallel scheduling.
+12. **Broader standard library:** cryptography boundaries, HTTP, structured data, and conformance/security hardening.
+13. **Later quality and release:** fuzzing, formatter, LSP, package manager, compatibility matrix, conformance hardening, and reproducible releases.

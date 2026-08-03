@@ -1,294 +1,280 @@
 # Dew Agent TODO
 
-This file tracks designed or partially designed features that remain unimplemented. Persistent/warm compilation and artifact serialization are intentionally deferred until the language, ABI, module, and backend surfaces below stabilize.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 3, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
-1. Complete imported trait requirement validation, merge imported impl evidence into coherence/dispatch indexes, and define visibility/orphan rules.
-2. Add stable file-aware diagnostics to the completed check/build/test/run and deterministic emit driver.
-3. Define and implement trait-bound generic obligations, dictionary representation, specialization, and static/dynamic dispatch.
-4. Define recursive generic aggregate instantiation and layout sharing.
-5. Add the deterministic optimization pipeline and optimized snapshots.
-6. Continue deterministic snapshots, generated lane coverage, resource-budget definition, and phase/runtime/allocation measurement.
+1. Finish file-aware source provenance and deterministic diagnostics.
+2. Define generic bounds, trait obligations, coherence/orphan rules, and runtime trait values.
+3. Add constant-parameter `#annotations`, `#derive`, `Show`/`Debug`, and deterministic cleanup with `defer`/`using`.
+4. Complete the core collection families and iteration protocols.
+5. Build the deterministic optimization, workspace-cache, and parallel-compilation pipelines.
+6. Expand fixtures, measurements, resource budgets, fuzzing, package/release tooling, and the broader standard library.
 
-Performance and correctness work remains continuous: expand generated lane-family tests, measure retained text ranges and scalar iteration, define explicit resource budgets, and keep phase/runtime benchmarks current. Broad fuzzing begins later, after snapshots, the initial CLI/fixture framework, and the principal executable control-flow surface are stable.
+## Snapshots, diagnostics, and fixture suites
 
-## Primitive and runtime foundations
+- [ ] Continue adding successful, warning, compiler-failure, boundary, edge, and reduced-stress module snapshots beside each feature.
+- [ ] Connect ordered compiler warnings to stable rendering and compare them through the snapshot JSON oracle.
+- [ ] Add optimized WAT snapshots once optimization output is intentionally contractual.
+- [ ] Add reversed simulated job-order reproducibility snapshots.
+- [ ] Retain file identity for every HIR expression, pattern, block, arm, field, and type-syntax node needed by diagnostics.
+- [ ] Replace offset-only semantic diagnostics with stable source locations or body-relative provenance.
+- [ ] Add stable per-file byte-offset-to-line/column lookup.
+- [ ] Render source excerpts and carets.
+- [ ] Add secondary labels for duplicate declarations, type mismatches, implementation conflicts, and cross-file errors.
+- [ ] Preserve diagnostics after parser token eviction.
+- [ ] Sort diagnostics by module, manifest file order, byte offset, and deterministic rank.
+- [ ] Print stable file-aware CLI diagnostics with line/column, excerpts, and secondary labels.
+- [ ] Create `tests/compile-pass`.
+- [ ] Create `tests/compile-fail` with expected diagnostics.
+- [ ] Create `tests/run-pass` with expected output/results.
+- [ ] Add multi-module fixtures to the compile/run suites.
+- [ ] Add tests for every new import and module rule.
+- [ ] Add source-location assertions to all cross-file diagnostics.
+- [ ] Add malformed standard-library source tests.
+- [ ] Add cross-file type, trait, impl, enum, struct, and module-let tests.
+- [ ] Add forward/reverse simulated file-job completion tests.
+- [ ] Add hundreds-of-files stress tests.
 
-- [x] Define and implement `I8`, `I16`, `I32`, and `I64`.
-- [x] Define and implement `U8`, `U16`, `U32`, and `U64`.
-- [x] Define and implement `F32` and `F64`.
-- [x] Define native physical, ABI, memory, operator, and broad lane-operation support for `V128`.
-- [x] Define and implement allocation-free `Swar32` over Wasm `i32`.
-- [x] Define and implement allocation-free `Swar64` over Wasm `i64`.
-- [x] Differentially execute the selected deterministic integer lane surface derived from `JairusSW/as-simd`; the Node/Wasm harness now covers 61,000 checks and found/fixed a bad `Swar64` bitmask multiplier.
-- [x] Finish scalar-packed `i8`/`i16`/`i32` multiply, min/max, saturation, comparisons, averages, abs/neg, masks, and reductions with 61,000 executable parity checks.
-- [x] Add the 20 useful zero-wrapper packed-lane views over `V128`, `Swar64`, and `Swar32`; `F32x2` is intentionally excluded.
-- [x] Keep every same-carrier reinterpretation explicit and instruction-free; numeric lane conversions remain separately named.
-- [x] Add fixed-immediate native lane extract/replace operations and broad native widening, narrowing, extmul, dot, swizzle, rounding, and numeric conversion APIs.
-- [x] Add deterministic named byte shuffles, concatenated-window shifts, scalar splat loads, lane loads/stores, widening loads, and partial zero loads.
-- [x] Exclude relaxed SIMD and arbitrary-immediate shuffle syntax from the deterministic default surface; dynamic swizzle and named shuffles cover the intended workloads.
-- [x] Replace provisional `stringref` with distinct GC-managed `String`, `StringView`, and `Bytes` wrappers plus a consuming `StringBuilder` over zero-padded `array<v128>` chunks.
-- [x] Define `Bytes` and `b"..."` literals with executable GC constants.
-- [x] Port strict RFC 3629 validation and UTF-16 length counting from `JairusSW/utf-as`, with executable cross-chunk parity.
-- [x] Add exact-length V128 equality and bounds-checked dynamic byte indexing for String and Bytes.
-- [x] Add checked Bytes-to-String conversion with strict validation, malformed-input traps, shared backing, and frozen runtime dependency reachability.
-- [x] Add UTF-8-boundary-checked shared StringView ranges and a consuming, geometrically grown GC-backed StringBuilder with String/StringView append.
-- [x] Add a consuming, geometrically grown GC-backed BytesBuilder with arbitrary Bytes and individual U8 append.
-- [x] Complete StringBuilder with strict ASCII append, direct Unicode scalar encoding, and checked Bytes append.
-- [x] Add shared Bytes ranges directly as Bytes plus strict String/StringView/Bytes `view`, `subarray`, `slice`, and `compact` operations.
-- [x] Add overflow-checked flat `String.concat`, `String.concat_view`, and `Bytes.concat` with exact start-zero storage and no rope nodes.
-- [x] Add SIMD `Bytes.find_byte`/`contains_byte`, exact `starts_with`/`ends_with`, and public `Option<U32>` without exposing a sentinel.
-- [x] Add allocation-free exact `Bytes.find(Bytes)` and `contains(Bytes)` with empty/single-byte specialization, short-needle SIMD filtering, and long-needle rolling fingerprints.
-- [x] Run a test-only text-runtime hardening sprint: 17,471 parity checks, all-byte/alignment and range/concat/builder matrices, deliberate rolling-hash collision, full consumed-builder aliases, nominal ABI joins, and 64 KiB stress.
-- [x] Add allocation-free String/StringView find, contains, prefix, and suffix matching across all String/View operand combinations with byte-offset results.
-- [x] Add bounded full-page WASI Preview 1 scratch lowering for GC Bytes writes and reads, including aligned four-vector copies, no-restage partial writes, short reads, errors, every alignment, multi-window coverage, and phase-only benchmarks.
-- [ ] Add retained-range policy, small inline strings, hashing, ordering, and code-point iteration.
-- [x] Add first-class MoonBit-style test declarations with frozen metadata, default elision, explicit test-mode exports, standard assert/unreachable builtins, and executable stdlib test infrastructure.
-- [x] Permit compiler-known primitive types as qualified static roots and expose `StringBuilder::new()`, `StringBuilder::with_capacity()`, `BytesBuilder::new()`, and `BytesBuilder::with_capacity()`.
-- [x] Generate direct MoonBit-style coverage for all 100 scalar conversions, every typed memory carrier, and every packed-lane identity's splat/extract/replace/add baseline.
-- [ ] Expand `std/tests/*_test.dew` from lane-family smoke coverage to every generated operation family, including shuffle, saturation, narrowing, widening, masks, and lane memory variants.
-- [ ] Design optional arguments as a future improvement; define defaults, omission, overload resolution, evaluation order, and ABI effects before implementation.
-- [x] Define scalar literal typing and signed/unsigned range diagnostics, including minimum signed values beneath unary negation.
-- [x] Define arithmetic, comparison, bitwise, shift, and prefix operations by scalar primitive family.
-- [x] Define and implement `Into<t>` for every ordered pair of scalar numeric types.
-- [ ] Add separate checked, saturating, and explicitly named wrapping/truncating conversion families beyond `Into<t>`.
-- [x] Freeze exact conversion evidence before lowering and emit native Wasm conversion instructions and narrow-target guards.
-- [x] Define explicit load/store intrinsic APIs, widths, signedness, natural alignment hints, memory-zero behavior, and bounds traps.
-- [x] Freeze exact memory operation evidence before lowering and expose corresponding Wasm load/store instructions.
-- [ ] Add complete native, WasmGC, JavaScript, classic Wasm, Node, and Wago execution/benchmark coverage; native tests and release semantic benchmarks are current.
+## Modules, imports, packages, and visibility
 
-## Module WAT snapshots
+- [ ] Define duplicate identical imports, opens, and aliases across files and report both source locations.
+- [ ] Extend `@alias` lookup through type, trait, enum-constructor, pattern, and static-impl namespaces, including duplicate-alias labels.
+- [ ] Decide and define selective imports.
+- [ ] Define re-exports.
+- [ ] Define package visibility if module visibility is insufficient.
+- [ ] Specify orphan and foreign-implementation visibility across modules and packages.
+- [ ] Prevent private foreign evidence from leaking into public signatures.
+- [ ] Define canonical standard operator-trait identities across imports.
+- [ ] Diagnose local declarations that conflict with canonical ambient traits.
+- [ ] Decide default-preamble opt-out syntax.
+- [ ] Add registry lookup, Git checkout, deterministic lockfile generation/update, and a content-addressed installed-package store.
+- [ ] Add installed artifact-only interface recovery so verified versioned dependencies no longer require source recollection.
+- [ ] Package `dew.std` with the compiler or as a versioned dependency.
+- [ ] Version the compiler and prelude ABI together initially.
 
-- [x] Use recursive `<feature>/<test>.dew`, `<feature>/<test>.json`, and `<feature>/<test>.wat` files; compile each fixture as one production module and execute its exported zero-argument `main`.
-- [x] Render canonical WAT only after Starshine validation and binary encoding.
-- [x] Pin the external printer used by the suite until Starshine owns deterministic rendering.
-- [x] Commit readable `.wat` expectations while keeping generated `.wasm` temporary.
-- [x] Compare snapshots byte-for-byte and print unified diffs.
-- [x] Provide an explicit update command that ordinary test runs never invoke automatically.
-- [x] Cover 146 compiled fixtures across collections, control flow, enums, generic sums, lanes, memory, modules, numeric operations, reachability, structs, tests, text, and WASI without duplicating combinatorial semantic tests.
-- [x] Keep each JSON oracle to exactly ordered compiler `errors`, ordered compiler `warnings`, and ordered stdout-string `output`; `null` means no module or WAT was produced.
-- [x] Capture successful `main` stdout through deterministic Preview 1 writes and snapshot complete multiline compiler errors through framed MoonBit `Debug` strings.
-- [ ] Connect ordered compiler warnings to stable diagnostic rendering.
-- [x] Define minimal `<test>.files/`, `<test>.modules/<dotted.module>/`, and `<test>.tests/` sibling-directory conventions; never encode module graphs in JSON.
-- [x] Establish 166 fixtures with compiler failures kept beside their language features: 146 compiled WAT/runtime snapshots, 20 compiler-error snapshots, 91 nonempty stdout oracles, and 12 normalized trap oracles; every compiled fixture must match in Node and Wago Core 3.
-- [ ] Keep expanding successful, warning, compiler-failure, boundary, and reduced-stress fixtures beside the feature they exercise.
-- [x] Fix Bool literal-pattern backend emission with carrier-typed scratch locals and transition `control-flow/bool-match` to successful stdout plus WAT.
-- [x] Add focused test-mode, same-module multi-file, and statically linked imported-module fixtures through the small sibling-directory conventions.
-- [x] Add repeated-build reproducibility checks.
-- [ ] Add reversed-job-order reproducibility fixtures.
+## Compile-time annotations and derivation
 
-## Test infrastructure
+- [ ] Define `#annotation(...)` syntax with compile-time constant parameters.
+- [ ] Specify permitted annotation constant types, name resolution, validation, retention, and frozen-interface serialization.
+- [ ] Expose frozen annotations to compiler features and tooling without ambient runtime reflection.
+- [ ] Add `#derive(...)` for easy system traits, initially `Eq`, `Debug`, `Show`, and `Hash`.
+- [ ] Make derivation deterministic across generic-bound propagation, field/variant ordering, generated identities, visibility, diagnostics, and cross-module ABI behavior.
+- [ ] Define conflicts between derived and handwritten implementations without bypassing coherence or orphan rules.
 
-- [x] Emit versioned deterministic `DEW_TESTS_V3` metadata directly from semantic test records in one `dew.tests` Wasm custom section.
-- [x] Replace regex and assembled-source-offset discovery in `tools/dew-test`; compile sorted test files individually.
-- [x] Promote module/file/display-name records into duplicate-checked stable test identities.
-- [x] Add deterministic exact filtering by module, file, and display name, identity substring filtering, and metadata-only listing.
-- [x] Remove the metadata sidecar and make every CLI/standard test binary self-describing through `dew.tests`.
-- [x] Add declaration-level expected-trap syntax, stable category validation, metadata transport, and runner support.
-- [x] Transport dynamic failed-assertion messages through test-only bounded WASI stdout writes, with no static assertion metadata or globals and no production ABI change.
-- [x] Hide test-only values, nominal types, traits, and impl evidence from ordinary-file resolution.
-- [x] Exclude test-only nominal layouts and test-callable reachability edges from production fragments.
-- [x] Exclude test-only impl evidence from frozen/imported interfaces and mark test-only initialization steps explicitly.
-- [x] Omit marked test-only initialization steps from production module-global/startup emission.
-
-## Executable core
-
-- [x] Complete scalar integer arithmetic, comparison, unsigned division/remainder, bitwise, and shift emission.
-- [x] Emit `i64`, `f32`, and `f64` constants and operations.
-- [x] Emit numeric conversions and reinterpretations through registered builtins.
-- [x] Finish structural short-circuit logical binary emission; scalar prefix operators are emitted.
-- [ ] Validate `Never`, unreachable, drop, local-let, and return stack behavior across all value shapes.
-- [x] Emit functional `while` using state/result locals and structured Wasm blocks/loops.
-- [x] Emit `continue Expr` state updates and `break Expr` results.
-- [x] Handle return and divergence inside functional-loop arms.
-- [ ] Add deep and wide functional-loop execution tests.
-
-## Pattern matching and flow
-
-- [x] Emit nested tuple, struct, and enum destructuring.
-- [x] Emit comma-separated alternative patterns with shared binding identities.
-- [ ] Share extraction work across alternatives where paths overlap.
-- [x] Complete literal, rest, and catch-all execution in nested patterns.
-- [x] Consume frozen imported enum domains during exhaustiveness analysis.
-- [x] Remove conservative open-domain behavior for complete imported enums.
-- [ ] Add full nested pattern-matrix usefulness when justified.
-- [ ] Add typed payload-local reuse, cast elimination, and extraction CSE.
-
-## Module values and initialization
-
-- [x] Export public module-level `let` types after the module-value inference barrier.
-- [x] Emit Wasm globals and `PlannedModuleValueGet` for local, opened imported, and alias-qualified imported module values.
-- [x] Emit direct scalar constant global initializers when legal.
-- [x] Emit deterministic per-value initialization functions for non-constant values.
-- [x] Emit an explicit `__dew_init` initializer called by Dew hosts before entry points.
-- [x] Order cross-module initialization by dependency SCCs.
-- [x] Diagnose direct and callable-transitive cross-module eager initialization cycles.
-- [ ] Integrate host-provided initialization and startup entry points.
-
-## Cross-module semantics and linking
-
-- [x] Merge owner-coherent imported implementation evidence into method/operator dispatch indexes.
-- [x] Enforce imported evidence visibility and foreign-impl privacy.
-- [x] Preserve exact external implementation and method identities through lowering.
-- [x] Diagnose structural overlap between independently imported or local/imported implementation sets.
-- [x] Merge reachable physical WasmGC SCCs spanning multiple Dew modules.
-- [x] Replace supported `UnsupportedProgramForwardTypeReference` cases with deterministic global recursive groups.
-- [x] Distinguish qualified imports from module-scoped opens: `import` binds only `@alias`, while `open` contributes unqualified names only to the owning module and never re-exports them.
-- [x] Remove `global` as a keyword, reserve `@identifier` for imported module aliases, support explicit `import path as @alias`, derive default final-segment aliases, and select aliased imported function calls.
-- [ ] Extend `@alias` to types, traits, variants, patterns, static impls, and duplicate-alias source labels; non-callable values are implemented.
-- [ ] Define selective imports and re-exports if retained.
-
-## Generic executable ABI
-
-- [x] Define shared physical scalar/reference ABI specializations keyed by canonical Wasm carrier.
-- [x] Define one erased nullable-`eqref` fallback for each public root-module generic callable.
-- [x] Emit exact nominal-reference static-to-erased adapters only when callable signatures differ.
-- [x] Emit immutable scalar boxes, unboxes, and deterministic `$dew$<carrier>` adapters for demanded direct generic parameter/result boundaries.
-- [x] Emit recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures.
-  - [x] Instantiate generic parameters recursively through structural function types during call/reference inference and specialize callback call signatures/results by carrier.
-  - [x] Clone direct generic struct fields across static/erased boundaries, boxing and unboxing only the selected scalar carrier leaf.
-  - [x] Recurse through acyclic nested generic struct graphs with deterministic scratch locals and leaf-only box/unbox conversion.
-  - [x] Extend recursive conversion through generic enum tuple/struct payloads and acyclic nested struct/enum graphs with exact subtype reconstruction.
-  - [x] Replace cyclic nominal rejection with deterministic per-adapter recursive conversion helpers that preserve finite runtime recursion through cyclic type graphs.
-  - [x] Generate deterministic static-to-erased and erased-to-static structural callback wrapper closures using the flattened closure ABI, recursive nested callback wrapping, scalar leaf boxes, target-once typed dispatch, conversion of function-valued struct/enum payload fields, and executable calls through instantiated aggregate fields and pattern bindings.
-- [x] Support executable generic enum and struct construction and access.
-- [x] Support executable generic calls, nested fixed-point specialization, and escaping generic references.
-- [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.
-- [ ] Define recursive generic aggregate instantiation and sharing.
-- [ ] Define ABI compatibility fingerprints after the ABI stabilizes.
-  - [x] Persist V2 SHA-256 callable ABI fingerprints in frozen-interface/cache V6 using normalized signatures, physical shapes, explicit box/closure schema domains, and stable dependency declaration identities.
-  - [x] Replace exact external nominal `DeclId` members in callable fingerprints with dependency module path, declaration name, and generic arity.
-  - [x] Add content-sensitive nominal declaration and transitive module-interface fingerprints with dependency content records in frozen-interface/cache V7.
-  - [x] Emit versioned `dew.abi` schema/interface metadata, reject malformed or mismatched providers, and snapshot independently compiled provider compatibility.
-  - [x] Add a deterministic Node host consumer that lists `$dew$<carrier,...>` exports and invokes scalar adapters with explicit parameter/result carrier conversion.
-  - [x] Add in-Wasm package consumers for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
-    - [x] Add focused WasmGC consumers that construct struct and enum payloads containing direct `i32` callbacks, invoke `identity_box$dew$i32` and `identity_choice$dew$i32`, and call the reconstructed wrappers entirely inside Wasm.
-    - [x] Add a standalone `eqref` consumer that constructs an exact nominal value, invokes the public erased fallback, casts the result, and reads it entirely inside Wasm.
-    - [x] Add an in-Wasm `v128` consumer that invokes `identity$dew$v128` and extracts the returned vector lane without crossing the JavaScript value boundary.
-    - [x] Add a multi-module provider whose root `$dew$i32` adapter exposes an imported generic callback aggregate and execute it through the same structurally equivalent Wasm consumer.
-
-## Generic trait obligations and runtime traits
+## Generics, traits, and dispatch
 
 - [ ] Parse and represent generic bounds.
-- [ ] Add trait obligations to generic signatures and bodies.
-- [ ] Solve obligations using imported coherent evidence.
-- [ ] Freeze selected evidence per generic call.
-- [ ] Improve generic overload specificity to structural match-set containment.
-- [ ] Define trait-object source syntax and concrete-to-erased coercion.
-- [ ] Plan WasmGC trait object and typed dictionary layouts.
-- [ ] Emit dictionary construction and `call_ref` dispatch.
+- [ ] Add trait obligations to generic signatures, generic bodies, and generic functions.
+- [ ] Solve obligations using local and imported coherent evidence.
+- [ ] Freeze selected evidence for every generic call.
+- [ ] Define method-level generic syntax and shadowing.
+- [ ] Define explicit call-site type-argument syntax.
+- [ ] Improve ordinary and generic overload specificity from generic-count tiers to structural match-set containment.
+- [ ] Decide whether associated types are in the initial language and define them if retained.
+- [ ] Decide whether associated constants are in the initial language and define them if retained.
+- [ ] Decide whether supertraits are in the initial language and define them if retained.
+- [ ] Define higher-kinded types only if concrete library requirements justify them.
+- [ ] Define variance only if subtyping or mutable generic references expose a need.
+- [ ] Keep inference variables out of frozen module type interners.
+- [ ] Add cross-package orphan rules.
+- [ ] Define negative implementations only if required.
+- [ ] Define sealed traits only if required.
+- [ ] Define trait-object source syntax.
+- [ ] Define explicit or implicit boxing at erased trait boundaries.
+- [ ] Plan WasmGC trait-object layouts and typed function-reference dictionary slots.
+- [ ] Emit dictionary construction and `call_ref` dynamic dispatch.
 - [ ] Define mutable boxed scalar receiver behavior.
 - [ ] Define trait-object identity and equality semantics.
 - [ ] Optimize non-escaping trait boxes.
 
-## Driver, packages, and preamble
+## Deterministic cleanup and executable language surface
 
-- [x] Define strict explicit `dew.modules.json` root/module/ordered-file compiler graphs for check and build.
-- [x] Resolve explicit graph sources relative to the graph and reject duplicate, absolute, escaping, missing, or non-Dew paths.
-- [x] Define convention-first `dew.json` package identity/dependency requests, exact `dew.lock` resolution, derived module names, and sorted source discovery.
-- [x] Define ordered compiler-owned package roots, deterministic fixed-registry source selection, and on-disk standard-library lookup through `--package-root` and `DEW_PACKAGE_ROOTS`.
-- [x] Reserve stable identities for `dew.std` modules independently of physical package roots.
-- [x] Extend package identities, roots, semantic-version/Git requests, source integrity, and interface expectations to external user dependencies.
-- [ ] Add registry/Git installation and deterministic lockfile generation/update; compilation currently consumes materialized locked package paths.
-- [x] Implement initial `dew check` and `dew build` over explicitly ordered multi-file/multi-module inputs with root selection and deterministic exit status.
-- [x] Implement initial explicit-file `dew test` with V3 metadata, filters, and expected traps.
-- [x] Extend `dew test` to strict package manifests and multi-module test programs with manifest-order global test ordinals.
-- [x] Implement `dew run` for zero-argument `main` with Preview 1 stdin/stdout hosting.
-- [x] Execute the complete immutable collection/interface/analysis/lowering/link DAG through the CLI.
-- [x] Accept strict convention-discovered package definitions and lockfiles for check and build.
-- [x] Add explicit-graph multi-module tests without filesystem discovery and convention-discovered package tests with `_test.dew` filtering.
-- [x] Replace ordinary package file lists with deterministic sorted `src/**/*.dew` discovery, with immediate sibling `*.dew` fallback for small packages.
-- [x] Add deterministic discovered source roots and derive one module identity from each `@scope/name` package.
-- [x] Write deterministic Starshine-validated `.wasm` output plus explicit HIR, lowering, pinned-printer WAT, and Wasm emit modes.
-- [x] Split String, StringBuilder, Bytes, and BytesBuilder into separate standard source modules while retaining one private bootstrap text-runtime declaration file.
-- [x] Add a deterministic import prepass that selects explicitly imported lane, split text/bytes, and WASI standard modules plus private dependency closure.
-- [x] Use the scalar WAT snapshot to prove unrelated standard families are omitted: the two-function scalar module fell from more than 3,100 types to 951 type entries before the frozen-module migration.
-- [x] Compile `std/preamble/*.dew`, Option/Result, and selected split standard sources as independently frozen compiler-owned `dew.std.*` modules.
-- [x] Collect and load each selected frozen standard interface once per compilation session instead of reparsing optional sources into every user module.
-- [x] Preserve primitive/static impl evidence and cross-module runtime dependencies through real imported interfaces.
-- [x] Eliminate dead imported signatures, external type references, callables, and nominal layouts before final linking.
-- [x] Replace `FindResult` with ambient generic `Option<U32>` and add standard `Result<t, e>` plus executable generic-enum carrier lowering.
-- [x] Retain explicit `--no-default-preamble` and generated `--bootstrap-std` bootstrap/test modes.
-- [x] Use import-selected installed/on-disk standard package sources by default and require byte-identical output against generated bootstrap providers.
-- [x] Add persistent SHA-256 content-addressed caching for diagnostics-free compiler-owned standard frozen interfaces, with deterministic encoding, hit injection, checksums, explicit disable/report controls, and fail-visible corruption handling.
-- [x] Extend manifest resolution and persistent interface caching to versioned external user packages with exact semantic versions, SHA-256 source integrity, expected transitive interface fingerprints, dependency closure keys, V7 artifacts, and fail-visible invalidation.
-- [ ] Remove source recollection for cached dependency interfaces only after installed-package recovery and artifact provenance are reliable.
+- [ ] Add `dew.std.disposable.Disposable` with an explicit cleanup operation and defined ownership/error semantics.
+- [ ] Add `defer` with deterministic LIFO scope-exit behavior across fallthrough, `return`, `break`, and `continue`; define or explicitly exclude trap unwinding.
+- [ ] Add `using` for scoped `Disposable` values through the same cleanup plan.
+- [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control flow that cannot guarantee exactly-once disposal.
+- [ ] Add parser, HIR, flow, lowering, WAT snapshot, runtime, and cross-module tests for `defer`, `using`, and `Disposable`.
+- [ ] Emit every local-let form.
+- [ ] Emit every return form, including bare `return`.
+- [ ] Emit drops for all non-tail value shapes.
+- [ ] Validate unreachable and `Never` stack behavior.
+- [ ] Design optional arguments, including defaults, omission, overload resolution, evaluation order, and ABI effects.
+- [ ] Add separate checked, saturating, and explicitly named wrapping/truncating conversion families beyond `Into<T>`.
+- [ ] Add deep and wide functional-loop execution tests.
+- [ ] Decide whether reserved `loop` becomes a second loop form.
+- [ ] Decide whether ordinary Boolean `while` is added.
+- [ ] Add tail-position branch optimization.
+- [ ] Add tail-call optimization only if runtime support and measurements justify it.
 
-## Source diagnostics
+## Indexing, aggregates, patterns, and module state
 
-- [ ] Retain file identity for expressions, patterns, blocks, arms, fields, and type syntax.
-- [ ] Replace offset-only semantic diagnostics with stable source locations.
-- [ ] Add per-file byte-offset to line/column lookup.
-- [ ] Add excerpts, carets, and secondary labels.
-- [ ] Sort diagnostics by module, manifest file order, byte offset, and stable rank.
-- [ ] Preserve useful diagnostics after parser token eviction.
+- [ ] Enforce the `(Self, key) -> value` indexing functional dependency and extend indexing to growable arrays and later map types.
+- [ ] Emit aggregate field writes if aggregate mutation is adopted.
+- [ ] Add aggregate allocation and field-access benchmarks.
+- [ ] Add flat scalar-enum specialization only after representative measurement.
+- [ ] Share extraction work across nested alternative patterns.
+- [ ] Add full nested pattern-matrix usefulness analysis when needed.
+- [ ] Preserve deterministic source-order pattern diagnostics.
+- [ ] Define lazy module values only if required.
+- [ ] Integrate host-provided initialization and startup entry points where the explicit `__dew_init` convention is insufficient.
 
-## Additional language/runtime design
+## Text and primitive runtime hardening
 
-- [x] Define simple-name assignment for `let mut`, including unboxed uncaptured locals and shared boxed mutable captures.
-- [x] Explicitly defer aggregate field mutation, destructuring assignment, and compound assignment to separate language/ABI decisions.
-- [x] Define trait-extensible `Index`/`IndexSet`, exact inference evidence, block-item-only indexed setting, and FixedArray optional/trapping bounds behavior.
-- [ ] Enforce `(Self, key) -> value` coherence; FixedArray and Map already use the implemented indexing and indexed-setting lowering.
-- [x] Parse, resolve, structurally intern, alias-normalize, import, cache, and plan opaque-reference ABI shapes for `fn(T, ...) -> R` types.
-- [x] Resolve unambiguous non-generic local/imported function names as values and type-check calls through function-typed locals.
-- [x] Emit first-class named references, typed lambda entries, flattened WasmGC closure subtypes, lexical captures, returned/imported closures, and indirect calls.
-- [x] Directize immediate and call-only local lambdas/named references, lift immutable captures into direct signatures, remove their allocations, and elide unused closure values.
-- [x] Reuse repeated escaping named references through deterministic body-local closure caches.
-- [x] Reuse every surviving named-function value through a deterministic linked-module singleton global initialized before source module state.
-- [x] Add `let mut` local assignment with unboxed uncaptured locals and carrier-specialized shared WasmGC cells for mutable captures.
-- [x] Select local/imported non-generic overloaded function references from deterministic structural expected types.
-- [x] Unify closure-base physical identities and named-reference singletons across linked modules.
-- [x] Summarize transparent call-only callback wrappers and directize known lambda/named arguments across module lowering.
-- [x] Infer expected-type generic function references and execute call-only parameter-selector/callback specializations without closure allocation.
-- [x] Extend generic specialization to arbitrary function bodies, imported definitions, and escaping references with per-shape singleton identities.
-- [x] Close nested generic specialization demands, coalesce physical carriers, assign stable program ABI keys, and elide unspecialized export recipes.
-- [x] Execute generic structs with deterministic erased carrier fields and shape-selected construction/access.
-- [ ] Add erased generic callable fallback/adapters; extend interprocedural summaries to returned, stored, forwarded, and unknown callback uses.
+- [ ] Measure retained-range policy, small-inline strings, hashing, ordering, and UTF-8 scalar iteration before extending the text ABI.
+- [ ] Add String, StringView, and Bytes ordering, hashing, and code-point iteration.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
-- [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
-- [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.
-- [x] Implement mutable deterministic `Set<key>` over the shared collision-safe Hash table with empty/singleton construction, idempotent insertion, linked-chain removal, clear, membership, emptiness, and length.
-- [x] Add shared geometric Map/Set bucket growth with a measured maximum load factor of 1.0 and deterministic iterative rehashing that reuses stored hashes.
-- [x] Add Boolean Map removal and alias-visible O(1) clear using the proven Set chain-unlinking machinery and logical-length updates.
-- [ ] Add deterministic allocation-free `Hash` implementations for `String`, `StringView`, and `Bytes` after finalizing their cross-type equality contract.
-- [ ] Implement growable `Array<t>` over the six existing physical carriers with separate logical length/capacity and cleared removed reference slots.
-- [ ] Implement mutable ring-buffer `Queue<t>`, then explicit iterator types and Map key/value/entry plus Set key iterators; keep hash traversal order unspecified.
-- [ ] Implement Dew-native `dew.std.json`, `dew.std.toml`, and `dew.std.yaml` parsers and serializers, beginning with the strict TOML package-manifest subset and retaining deterministic output plus bounded hostile-input behavior.
-- [ ] Complete `dew.std.wasm.intrinsics` as the sole source-language catalog for every supported WebAssembly Core 3 builtin, with generated declaration/backend parity tests.
-- [ ] Consider flat scalar-enum specialization only after representative measurement.
+- [ ] Expand generated lane tests from smoke coverage to every generated operation family, including shuffle, saturation, narrowing, widening, masks, and lane-memory variants.
+- [ ] Complete native, WasmGC, JavaScript, classic Wasm, Node, and Wago execution and benchmark coverage for supported primitive/runtime features.
 
-## Optimization after feature completion
+## Collections and iteration
 
-- [x] Callable reachability and dead function elimination for compiler-owned definitions; user definitions remain roots.
-- [ ] Dead signature and nominal type elimination.
-- [ ] Constant folding after exact operation selection.
-- [ ] Inlining from immutable call graph summaries.
-- [ ] Tail-recursion optimization.
-- [ ] Common subexpression elimination where effects permit.
-- [ ] Escape analysis and scalar replacement of short-lived aggregates.
-- [ ] Local lifetime coalescing and deeper payload-load CSE.
+- [ ] Implement growable `dew.std.array` over the six physical carrier families, with logical length/capacity and cleared removed reference slots.
+- [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
+- [ ] Implement `dew.std.collections.stack` with explicit empty-pop and empty-peek result semantics.
+- [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and a defined min/max policy.
+- [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
+- [ ] Specify and benchmark sequence/deque/measure use cases before implementing `dew.std.collections.finger_tree`.
+- [ ] Define and implement `dew.std.list` only if measured workloads justify a persistent list representation.
+- [ ] Add deterministic allocation-free `Hash` implementations for String, StringView, and Bytes after their cross-type equality contract is final.
+- [ ] Define the public `dew.std.queue` API and choose a mutable ring buffer, persistent queue, or separate types.
+- [ ] Implement queue enqueue, dequeue, peek, size, iteration, and empty-queue result semantics.
+- [ ] Benchmark array-backed and linked queue representations.
+- [ ] Add explicit iterator types and iteration protocols.
+- [ ] Add Map key/value/entry and Set key iterators while leaving hash traversal order unspecified.
+- [ ] Define remaining collection mutation and persistence rules.
+- [ ] Benchmark WasmGC arrays and hash buckets against linked and tree representations.
+- [ ] Decide whether core iterator traits belong in the ambient preamble while keeping the ambient surface intentionally small.
 
-## Tooling and quality
+## `Show`, `Debug`, and output
 
-- [x] Add deterministic Wasm/WAT size, type/function/global/export, adapter, call, allocation-site, cast/test, and local-access metrics with fail-visible JSON budgets.
-- [x] Gate transparent closure directization and erased scalar generic adapters with initial static performance budgets in `tools/check.sh`.
-- [x] Expand budgets to recursive aggregate/enum/callback adapters, mutable cells, imported/package specializations, and direct materialized-specialization counts.
-  - [x] Gate direct/nested callback wrappers, callback-bearing struct/enum reconstruction, and an imported-package adapter plus its in-Wasm consumer.
-  - [x] Add dedicated generic enum reconstruction and cyclic nominal-helper budgets.
-  - [x] Add dedicated nested aggregate and mutable capture-cell budgets.
-  - [x] Record exact materialized-specialization counts in versioned `dew.metrics` Wasm metadata and gate every static budget against them.
-- [ ] Add compile/validation/encoding and Node/Wago runtime timing plus peak-memory workloads with warmup and variance reporting.
-- [ ] Add the real compile-pass, compile-fail, and run-pass fixture suites.
-- [ ] Later: add broader malformed-input fuzzing for tokenizer, parser, and lowering after deterministic snapshot and CLI fixture infrastructure is established.
-- [ ] Define canonical formatting and implement `dew fmt`.
-- [ ] Build LSP diagnostics, navigation, hover, completion, rename, and semantic tokens.
-- [ ] Retain doc comments and generate linked API documentation.
+- [ ] Define `Show` and `Debug` system traits and their relationship to `StringBuilder`.
+- [ ] Define formatting stability, recursion/resource limits, and derived behavior for `Show` and `Debug`.
+- [ ] Add `show(value) -> String` using `Show` evidence.
+- [ ] Add `debug(value)` using `Debug` evidence and bounded WASI output.
+- [ ] Define deterministic `debug` behavior when WASI is unavailable.
 
-## Deferred until the above stabilizes
+## Broader standard library
 
-- [ ] Source, user-package interface, body, layout, and fragment fingerprints; compiler-owned standard source/interface fingerprints are implemented.
-- [ ] Persistent user-package and later compilation artifact serialization; compiler-owned standard frozen-interface serialization is implemented.
-- [ ] Warm compilation and cache hit/miss paths.
-- [ ] Incremental invalidation by public interface fingerprint.
-- [ ] Parallel worker scheduling with deterministic output merge.
+- [ ] Implement `dew.std.iter`.
+- [ ] Implement `dew.std.math`.
+- [ ] Implement `dew.std.io`.
+- [ ] Implement `dew.std.testing` beyond the current compiler-owned test primitives.
+- [ ] Complete `dew.std.wasm.intrinsics` for every supported WebAssembly Core 3 scalar, reference, GC, memory, table, SIMD, conversion, control, and host-boundary builtin.
+- [ ] Add generated declaration/backend parity checks so no compiler builtin remains source-addressable outside `dew.std.wasm.intrinsics`.
+- [ ] Implement `dew.std.json` in Dew with strict UTF-8 parsing, deterministic serialization, streaming/event and DOM/value APIs, bounded resources, canonical-number decisions, and differential conformance tests.
+- [ ] Implement `dew.std.toml` in Dew, starting with the package-manifest subset and covering duplicate keys, dotted/quoted keys, arrays/tables/inline tables, date-time policy, deterministic serialization, and conformance fixtures.
+- [ ] Implement `dew.std.yaml` after JSON/TOML stabilize, with an explicitly versioned subset, alias/anchor limits, duplicate-key policy, deterministic emission, and hostile-input tests.
+- [ ] Require Dew-native JSON/TOML parsers for the installed compiler, package manager, self-hosted tools, and standard APIs while allowing host parsers in the bootstrap driver.
+
+## Cryptography and HTTP
+
+- [ ] Define the security and API boundaries among `dew.std.crypto.fast`, `dew.std.crypto.timing`, and `dew.std.crypto.password`.
+- [ ] Reserve `crypto.fast` for non-secret hashes/checksums, `crypto.timing` for constant-time primitives and secret comparison, and `crypto.password` for password hashing/KDF APIs.
+- [ ] Select reviewed algorithms and implementations, version parameters and algorithm identifiers, use secure randomness where required, and label APIs that are unsafe for secrets.
+- [ ] Add known-answer, differential, side-channel-aware, malformed-input, resource-limit, and cross-runtime crypto tests.
+- [ ] Measure supported runtimes before making constant-time claims.
+- [ ] Implement `dew.std.http` with bounded request/response types, header validation, streaming bodies, deterministic parsing/serialization, explicit limits, and host adapters separated from protocol semantics.
+- [ ] Define URL/URI ownership, TLS boundaries, redirects, decompression, timeout/cancellation behavior, and client/server scope before stabilizing HTTP APIs.
+
+## WasmGC backend and interoperability
+
+- [ ] Add a Start section if explicit host initialization is replaced or supplemented by Wasm startup.
+- [ ] Add element/table sections for dynamic dispatch.
+- [ ] Add data/string sections as required by future runtime representations.
+- [ ] Add a deterministic Name section.
+- [ ] Add source maps or a custom diagnostic/source section.
+- [ ] Deduplicate equivalent ABI signatures.
+- [ ] Add loop, module-initialization, and dynamic-dispatch execution tests.
+- [ ] Track required WasmGC feature versions and runtime compatibility.
+- [ ] Define the Dew builtin-registry extension API.
+- [ ] Define Wasm import declaration syntax and ABI.
+- [ ] Define export naming and collision rules.
+- [ ] Define JavaScript host bindings.
+- [ ] Define string and reference interop.
+- [ ] Define component-model/WIT integration only after the core Wasm ABI is stable.
+- [ ] Provide low-level escape hatches without making them ambient language semantics.
+
+## Optimization and performance discipline
+
+- [ ] Add constant folding after exact operation selection.
+- [ ] Add inlining from immutable call-graph summaries.
+- [ ] Add tail-recursion optimization.
+- [ ] Add common-subexpression elimination where allocation and effects permit.
+- [ ] Add escape analysis for boxes, payloads, and trait objects.
+- [ ] Add scalar replacement of short-lived aggregates.
+- [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
+- [ ] Devirtualize trait-object calls when evidence becomes exact.
+- [ ] Specialize enum representations from frozen usage/layout data.
+- [ ] Consider profile-guided optimization only after deterministic baseline builds exist.
+- [ ] Define explicit compiler resource budgets and fail-visible diagnostic behavior.
+- [ ] Bound alias expansion, inference work, pattern usefulness, and module-graph size.
+- [ ] Diagnose budget exhaustion without crashing.
+- [ ] Track compile, validation/encoding, and runtime time separately with warmup and variance reporting.
+- [ ] Track allocations and peak memory separately from wall time.
+- [ ] Measure cache-file I/O/checksum costs and representative external-package workloads before treating cache hits as an end-to-end win.
+- [ ] Establish regression thresholds for hot workloads.
+
+## Incremental and parallel compilation
+
+- [ ] Fingerprint source files.
+- [ ] Cache parser events or compact syntax/HIR artifacts.
+- [ ] Extend frozen-interface caching to ordinary workspace modules after provenance and invalidation rules stabilize.
+- [ ] Cache body inference by declaration/body fingerprint.
+- [ ] Cache layout and fragment plans.
+- [ ] Invalidate dependents by public-interface fingerprint rather than implementation changes.
+- [ ] Schedule module and body jobs across workers.
+- [ ] Keep diagnostic and output ordering stable under parallelism.
+- [ ] Add forward, reverse, and random completion-order tests.
+- [ ] Add byte-for-byte reproducible-build checks for incremental and parallel paths.
+
+## CLI, formatting, language server, and docs
+
+- [ ] Implement `dew fmt`.
+- [ ] Implement `dew doc`.
+- [ ] Implement `dew clean`.
+- [ ] Add phase timing and allocation reporting to the CLI.
+- [ ] Define canonical formatting rules.
+- [ ] Implement the formatter over parser ASTs or lossless syntax.
+- [ ] Preserve comments and intentional multiline strings.
+- [ ] Add formatter idempotence and parse/format round-trip tests.
+- [ ] Add incremental file parsing to the language server.
+- [ ] Keep stable file/module identities in language-server workspace state.
+- [ ] Add language-server diagnostics.
+- [ ] Add go to definition and find references.
+- [ ] Add hover types and selected implementation evidence.
+- [ ] Add completion, rename, document symbols, and semantic tokens.
+- [ ] Add code actions for missing imports, methods, and match cases.
+- [ ] Retain documentation comments.
+- [ ] Generate module, type, trait, and function documentation.
+- [ ] Link imported identities in generated docs.
+- [ ] Show alias-normalized signatures without erasing source spelling.
+- [ ] Add runnable documentation examples.
+
+## Fuzzing, stress, and safety
+
+- [ ] Add tokenizer byte fuzzing, including malformed WTF-8.
+- [ ] Add parser token-stream fuzzing.
+- [ ] Add AST/HIR lowering fuzzing.
+- [ ] Add type-solver operation-sequence fuzzing.
+- [ ] Add Wasm validation/encoding round-trip fuzzing.
+- [ ] Add differential parsing/formatting tests.
+- [ ] Add resource-limit fuzzing for deeply nested and very wide inputs.
+- [ ] Audit integer conversions and packed-identity limits.
+- [ ] Audit every array index driven by malformed input.
+
+## Releases and compatibility
+
+- [ ] Add reproducible release builds.
+- [ ] Add CI across supported MoonBit targets and host platforms.
+- [ ] Publish compiler binaries and standard-library sources.
+- [ ] Define language edition/version behavior before compatibility commitments.
+
+## Explicit open decisions
+
+- [ ] Decide whether local declarations may shadow ordinary imports.
+- [ ] Decide whether canonical preamble traits may be shadowed.
+- [ ] Decide whether mutation remains local-only or extends to aggregate fields and additional collections.
+- [ ] Decide whether associated types are required for collections and iterators.
+- [ ] Decide whether ordinary Boolean loops are needed alongside functional loops.
+- [ ] Define the supported WasmGC runtime baseline.
