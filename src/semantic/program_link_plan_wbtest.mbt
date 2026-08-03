@@ -309,7 +309,7 @@ test "program linker exports boxed scalar adapters for erased generics" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"pub fn identity<t>(value: t) -> t {\n  value\n}\npub fn choose<t>(condition: Bool, left: t, right: t) -> t {\n  if condition { left } else { right }\n}\npub fn main() -> Unit {\n  let a = identity(42)\n  let b = identity(42i64)\n  let c = choose(false, 7.0f64, 42.5f64)\n}\n",
+          "main.dew", b"pub fn identity<t>(value: t) -> t {\n  value\n}\npub fn choose<t>(condition: Bool, left: t, right: t) -> t {\n  if condition { left } else { right }\n}\nfn return_i32_identity() -> fn(I32) -> I32 {\n  identity\n}\nfn return_i64_identity() -> fn(I64) -> I64 {\n  identity\n}\nfn return_f32_identity() -> fn(F32) -> F32 {\n  identity\n}\nfn return_f64_identity() -> fn(F64) -> F64 {\n  identity\n}\nfn return_v128_identity() -> fn(V128) -> V128 {\n  identity\n}\npub fn main() -> Unit {\n  let a = return_i32_identity()\n  let b = return_i64_identity()\n  let c = return_f32_identity()\n  let d = return_f64_identity()\n  let e = return_v128_identity()\n}\n",
         ),
       ]),
     ]),
@@ -320,10 +320,14 @@ test "program linker exports boxed scalar adapters for erased generics" {
   assert_eq(link.diagnostics.length(), 0)
   assert_true(link.erased_box_type_indices[0] >= 0)
   assert_true(link.erased_box_type_indices[1] >= 0)
+  assert_true(link.erased_box_type_indices[2] >= 0)
   assert_true(link.erased_box_type_indices[3] >= 0)
+  assert_true(link.erased_box_type_indices[4] >= 0)
   let mut i32_adapter = 0
   let mut i64_adapter = 0
+  let mut f32_adapter = 0
   let mut f64_adapter = 0
+  let mut v128_adapter = 0
   for function_ in link.functions {
     if function_.name == b"identity$dew$i32" {
       i32_adapter += 1
@@ -335,15 +339,27 @@ test "program linker exports boxed scalar adapters for erased generics" {
       assert_eq(function_.visibility, Public)
       assert_true(function_.erased_adapter_target >= 0)
     }
-    if function_.name == b"choose$dew$f64" {
+    if function_.name == b"identity$dew$f32" {
+      f32_adapter += 1
+      assert_eq(function_.visibility, Public)
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+    if function_.name == b"identity$dew$f64" {
       f64_adapter += 1
+      assert_eq(function_.visibility, Public)
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+    if function_.name == b"identity$dew$v128" {
+      v128_adapter += 1
       assert_eq(function_.visibility, Public)
       assert_true(function_.erased_adapter_target >= 0)
     }
   }
   assert_eq(i32_adapter, 1)
   assert_eq(i64_adapter, 1)
+  assert_eq(f32_adapter, 1)
   assert_eq(f64_adapter, 1)
+  assert_eq(v128_adapter, 1)
 }
 
 ///|

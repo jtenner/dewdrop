@@ -144,7 +144,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Define shared physical scalar/reference ABI specializations keyed by canonical Wasm carrier.
 - [x] Define one erased nullable-`eqref` fallback for each public root-module generic callable.
 - [x] Emit exact nominal-reference static-to-erased adapters only when callable signatures differ.
-- [ ] Emit scalar boxes, unboxes, and scalar-to-erased adapters.
+- [x] Emit immutable scalar boxes, unboxes, and deterministic `$dew$<carrier>` adapters for demanded direct generic parameter/result boundaries.
+- [ ] Emit recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures.
 - [x] Support executable generic enum and struct construction and access.
 - [x] Support executable generic calls, nested fixed-point specialization, and escaping generic references.
 - [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.

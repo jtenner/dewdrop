@@ -119,6 +119,7 @@ pub struct PlannedProgramWasmGCLink {
   startup_function_index : Int
   type_lookup : Map[DeclId, Int]
   module_lookup : Map[ModuleId, Int]
+  erased_box_type_indices : Array[Int]
   type_count : Int
   imported_function_count : Int
   defined_function_count : Int
@@ -1562,12 +1563,12 @@ fn program_body_resolved_type(
 }
 
 ///|
-fn program_erased_adapter_reference_type(type_ : PlannedWasmValueType) -> Bool {
+fn program_erased_adapter_value_type(type_ : PlannedWasmValueType) -> Bool {
   match type_ {
     WasmNullableEqRefValue
     | WasmNominalRefValue(_)
     | WasmExternalNominalRefValue(_) => true
-    _ => false
+    _ => program_erased_box_slot_for_value(type_) >= 0
   }
 }
 
@@ -1589,7 +1590,7 @@ fn program_erased_adapter_compatible(
       index]
     if source_type != target_type &&
       !(target_type == WasmNullableEqRefValue &&
-      program_erased_adapter_reference_type(source_type)) {
+      program_erased_adapter_value_type(source_type)) {
       return false
     }
   }
@@ -1600,11 +1601,111 @@ fn program_erased_adapter_compatible(
       index]
     if source_type != target_type &&
       !(target_type == WasmNullableEqRefValue &&
-      program_erased_adapter_reference_type(source_type)) {
+      program_erased_adapter_value_type(source_type)) {
       return false
     }
   }
   true
+}
+
+///|
+fn program_erased_box_slot_for_shape(shape : PlannedValueShape) -> Int {
+  match program_canonical_specialization_shape(shape) {
+    I32PlannedValueShape => 0
+    I64PlannedValueShape => 1
+    F32PlannedValueShape => 2
+    F64PlannedValueShape => 3
+    V128PlannedValueShape => 4
+    _ => -1
+  }
+}
+
+///|
+fn program_erased_box_slot_for_value(type_ : PlannedWasmValueType) -> Int {
+  match type_ {
+    WasmI32Value => 0
+    WasmI64Value => 1
+    WasmF32Value => 2
+    WasmF64Value => 3
+    WasmV128Value => 4
+    _ => -1
+  }
+}
+
+///|
+fn program_type_generic_use(
+  resolved : Array[ResolvedType],
+  root : ResolvedTypeId,
+  generic_parameters : HirSpan,
+) -> Int {
+  if root < 0 || root >= resolved.length() {
+    return 0
+  }
+  match resolved[root] {
+    GenericParameterType(parameter) => {
+      let parameter_local = semantic_id_local(parameter)
+      if parameter_local >= generic_parameters.start &&
+        parameter_local < generic_parameters.start + generic_parameters.length {
+        1
+      } else {
+        0
+      }
+    }
+    // Lowering retains the normalized outer recipe but not the resolved
+    // argument arenas. Nested aggregate and function occurrences need a
+    // recursive representation adapter, so scalar exports stay conservative.
+    AppliedType(_, _) | FunctionType(_, _) => 2
+    _ => 0
+  }
+}
+
+///|
+fn program_erased_scalar_signature_safe(
+  resolved : Array[ResolvedType],
+  functions : PlannedModuleFunctions,
+  callable : PlannedCallable,
+) -> Bool {
+  for index in 0..<callable.parameters.length {
+    let parameter = functions.parameters[callable.parameters.start + index]
+    if parameter.shape == GenericPlannedValueShape {
+      continue
+    }
+    if program_type_generic_use(
+        resolved,
+        parameter.type_,
+        callable.generic_parameters,
+      ) ==
+      2 {
+      return false
+    }
+  }
+  callable.result_shape == GenericPlannedValueShape ||
+  program_type_generic_use(
+    resolved,
+    callable.result_type,
+    callable.generic_parameters,
+  ) !=
+  2
+}
+
+///|
+fn program_erased_adapter_export_name(
+  name : Bytes,
+  shapes : Array[PlannedValueShape],
+  span : HirSpan,
+) -> Bytes {
+  let output = Buffer(size_hint=name.length() + 16 + span.length * 8)
+  output.write_bytes(name)
+  output.write_string_utf8("$dew$")
+  for index in 0..<span.length {
+    if index > 0 {
+      output.write_string_utf8("_")
+    }
+    output.write_string_utf8(
+      program_specialization_shape_name(shapes[span.start + index]),
+    )
+  }
+  output.to_bytes()
 }
 
 ///|
@@ -2384,6 +2485,43 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
+  let erased_box_used = Array::make(5, false)
+  let root_lowering = lowering.modules[root_module_index]
+  let root_fragments = fragments.modules[root_module_index]
+  for function_ in root_fragments.functions {
+    if function_.specialization_shapes.length == 0 {
+      continue
+    }
+    let callable = match
+      root_lowering.functions.callable_of(function_.declaration) {
+      Some(value) => value
+      None => continue
+    }
+    if callable.visibility != Public ||
+      !program_erased_scalar_signature_safe(
+        root_lowering.resolved_types,
+        root_lowering.functions,
+        callable,
+      ) {
+      continue
+    }
+    for index in 0..<function_.specialization_shapes.length {
+      let slot = program_erased_box_slot_for_shape(
+        root_fragments.specialization_shapes[function_.specialization_shapes.start +
+        index],
+      )
+      if slot >= 0 {
+        erased_box_used[slot] = true
+      }
+    }
+  }
+  let erased_box_type_indices = Array::make(5, -1)
+  for slot in 0..<erased_box_used.length() {
+    if erased_box_used[slot] {
+      erased_box_type_indices[slot] = type_count
+      type_count += 1
+    }
+  }
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
       let module_index = lowering.graph.scc_modules[scc.start + index]
@@ -2472,6 +2610,112 @@ pub fn link_program_wasmgc_fragments(
       PlannedWasmImportedFunction(_)
       | PlannedWasmInlineBuiltinFunction(_)
       | PlannedWasmSignatureOnlyFunction => ()
+    }
+  }
+  let root_function_count = functions.length()
+  for callable in root_lowering.functions.callables {
+    if callable.visibility != Public ||
+      callable.generic_parameters.length == 0 ||
+      !program_erased_scalar_signature_safe(
+        root_lowering.resolved_types,
+        root_lowering.functions,
+        callable,
+      ) {
+      continue
+    }
+    let mut fallback_index = -1
+    for index in 0..<root_function_count {
+      let candidate = functions[index]
+      if candidate.declaration != callable.declaration ||
+        candidate.specialization_shapes.length !=
+        callable.generic_parameters.length {
+        continue
+      }
+      let candidate_module = fragments.modules[candidate.module_index]
+      let mut all_ref = true
+      for shape_index in 0..<candidate.specialization_shapes.length {
+        if program_canonical_specialization_shape(
+            candidate_module.specialization_shapes[candidate.specialization_shapes.start +
+            shape_index],
+          ) !=
+          RefPlannedValueShape {
+          all_ref = false
+          break
+        }
+      }
+      if all_ref {
+        fallback_index = index
+        break
+      }
+    }
+    if fallback_index < 0 || functions[fallback_index].function_index < 0 {
+      continue
+    }
+    let fallback = functions[fallback_index]
+    for specialization_index in 0..<root_function_count {
+      let specialization = functions[specialization_index]
+      if specialization.declaration != callable.declaration ||
+        specialization.specialization_shapes.length == 0 ||
+        specialization.function_index < 0 ||
+        specialization_index == fallback_index {
+        continue
+      }
+      let specialization_module = fragments.modules[specialization.module_index]
+      let mut has_scalar = false
+      for shape_index in 0..<specialization.specialization_shapes.length {
+        if program_erased_box_slot_for_shape(
+            specialization_module.specialization_shapes[specialization.specialization_shapes.start +
+            shape_index],
+          ) >=
+          0 {
+          has_scalar = true
+          break
+        }
+      }
+      if !has_scalar {
+        continue
+      }
+      let source = {
+        resolved_type: -1,
+        signature_type_index: specialization.signature_type_index,
+        parameters: specialization.parameters,
+        results: specialization.results,
+      }
+      if !program_erased_adapter_compatible(
+          specialization_module,
+          source,
+          fragments.modules[fallback.module_index],
+          fallback,
+        ) {
+        continue
+      }
+      functions.push({
+        declaration: callable.declaration,
+        lambda: -1,
+        module_index: root_module_index,
+        fragment_index: -1,
+        name: program_erased_adapter_export_name(
+          callable.name,
+          specialization_module.specialization_shapes,
+          specialization.specialization_shapes,
+        ),
+        visibility: Public,
+        is_test: false,
+        is_test_entry: false,
+        test_name: b"",
+        kind: PlannedWasmRuntimeFunction(b""),
+        direct_builtin: b"",
+        elided: false,
+        signature_type_index: specialization.signature_type_index,
+        function_index: imported_function_count + defined_function_count,
+        parameters: specialization.parameters,
+        results: specialization.results,
+        specialization_shapes: { start: 0, length: 0 },
+        specialization_abi_key: specialization.specialization_abi_key,
+        erased_adapter_target: fallback.function_index,
+        offset: callable.offset,
+      })
+      defined_function_count += 1
     }
   }
   let initializer_candidates : Array[PlannedProgramModuleInitializer] = []
@@ -2738,6 +2982,7 @@ pub fn link_program_wasmgc_fragments(
     startup_function_index,
     type_lookup,
     module_lookup,
+    erased_box_type_indices,
     type_count,
     imported_function_count,
     defined_function_count,

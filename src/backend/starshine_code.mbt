@@ -7314,6 +7314,28 @@ fn starshine_program_signature_rec_type(
 }
 
 ///|
+fn starshine_program_erased_box_rec_type(slot : Int) -> @lib.RecType {
+  let value_type = match slot {
+    0 => @lib.ValType::i32()
+    1 => @lib.ValType::i64()
+    2 => @lib.ValType::f32()
+    3 => @lib.ValType::f64()
+    4 => @lib.ValType::v128()
+    _ => @lib.ValType::eqref_null()
+  }
+  @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(value_type),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+}
+
+///|
 fn emit_starshine_program_type_section(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.TypeSec {
@@ -7365,6 +7387,11 @@ fn emit_starshine_program_type_section(
       }
     }
   }
+  for slot in 0..<planned.erased_box_type_indices.length() {
+    if planned.erased_box_type_indices[slot] >= 0 {
+      rec_types.push(starshine_program_erased_box_rec_type(slot))
+    }
+  }
   if planned.initializer_type_index >= 0 {
     rec_types.push(
       @lib.RecType::new(@lib.SubType::comp_type(@lib.CompType::func([], []))),
@@ -7376,10 +7403,11 @@ fn emit_starshine_program_type_section(
       continue
     }
     match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(_) => {
-        uses_text = true
-        break
-      }
+      @semantic.PlannedWasmRuntimeFunction(name) =>
+        if name.length() > 0 {
+          uses_text = true
+          break
+        }
       _ => ()
     }
   }
@@ -8137,6 +8165,20 @@ fn starshine_program_erased_adapter_cast_index(
 }
 
 ///|
+fn starshine_program_erased_adapter_box_slot(
+  type_ : @semantic.PlannedWasmValueType,
+) -> Int {
+  match type_ {
+    @semantic.WasmI32Value => 0
+    @semantic.WasmI64Value => 1
+    @semantic.WasmF32Value => 2
+    @semantic.WasmF64Value => 3
+    @semantic.WasmV128Value => 4
+    _ => -1
+  }
+}
+
+///|
 fn starshine_program_erased_adapter_is_eqref(
   type_ : @semantic.PlannedWasmValueType,
 ) -> Bool {
@@ -8179,9 +8221,22 @@ fn starshine_program_erased_adapter_body(
       index]
     let target_type = target_module.function_value_types[target_function.parameters.start +
       index]
-    if source_type != target_type &&
-      !starshine_program_erased_adapter_is_eqref(target_type) {
-      return Err(MissingFunction(function_.declaration))
+    if source_type != target_type {
+      if !starshine_program_erased_adapter_is_eqref(target_type) {
+        return Err(MissingFunction(function_.declaration))
+      }
+      let box_slot = starshine_program_erased_adapter_box_slot(source_type)
+      if box_slot >= 0 {
+        let box_type = planned.erased_box_type_indices[box_slot]
+        if box_type < 0 {
+          return Err(MissingFunction(function_.declaration))
+        }
+        instructions.push(
+          @lib.Instruction::struct_new(
+            @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+          ),
+        )
+      }
     }
   }
   instructions.push(
@@ -8191,16 +8246,33 @@ fn starshine_program_erased_adapter_body(
     let source_type = source_module.function_value_types[function_.results.start]
     let target_type = target_module.function_value_types[target_function.results.start]
     if source_type != target_type {
-      let cast_index = starshine_program_erased_adapter_cast_index(
-        planned,
-        function_.module_index,
-        source_type,
-      )
-      if !starshine_program_erased_adapter_is_eqref(target_type) ||
-        cast_index < 0 {
+      if !starshine_program_erased_adapter_is_eqref(target_type) {
         return Err(MissingFunction(function_.declaration))
       }
-      instructions.push(starshine_match_cast(cast_index))
+      let box_slot = starshine_program_erased_adapter_box_slot(source_type)
+      if box_slot >= 0 {
+        let box_type = planned.erased_box_type_indices[box_slot]
+        if box_type < 0 {
+          return Err(MissingFunction(function_.declaration))
+        }
+        instructions.push(starshine_match_cast(box_type))
+        instructions.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+            0U,
+          ),
+        )
+      } else {
+        let cast_index = starshine_program_erased_adapter_cast_index(
+          planned,
+          function_.module_index,
+          source_type,
+        )
+        if cast_index < 0 {
+          return Err(MissingFunction(function_.declaration))
+        }
+        instructions.push(starshine_match_cast(cast_index))
+      }
     }
   }
   Ok(@lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions)))

@@ -78,12 +78,14 @@ Concrete closure entries use canonical environment-first signatures `(eqref, par
 
 A public generic owned by the linked root module materializes an all-reference specialization whose ABI key uses `eqref` for every generic parameter. That specialization retains the source name and public visibility; the unspecialized recipe remains elided. Dependency-module public generics do not add dead fallback functions to the final executable.
 
-When an escaping generic reference expects an exact nominal signature such as `fn(Item) -> Item`, but carrier canonicalization selected `(eqref) -> eqref`, the linker emits one private adapter for the exact structural signature. The adapter passes exact GC references directly into the erased fallback and casts erased reference results back to the frozen nominal type. Singleton closure globals and declarative element entries point at the adapter, not the incompatible fallback. Physically identical scalar signatures continue to reference their specialized function directly and receive no redundant adapter.
+When an escaping generic reference expects an exact nominal signature such as `fn(Item) -> Item`, but carrier canonicalization selected `(eqref) -> eqref`, the linker emits one private adapter for the exact structural signature. The adapter passes exact GC references directly into the erased fallback and casts erased reference results back to the frozen nominal type. Singleton closure globals and declarative element entries point at the adapter, not the incompatible fallback. Physically identical scalar function references continue to use their specialized function directly and receive no redundant closure adapter.
+
+For every demanded scalar specialization of a public root generic whose generic occurrences are direct parameters/results, the linker additionally exports a deterministic `<name>$dew$<carrier,...>` adapter. Five immutable one-field WasmGC box families cover `i32`, `i64`, `f32`, `f64`, and `v128`. The adapter boxes each scalar argument before calling the all-`eqref` fallback, then casts and unboxes scalar results. Ordinary Dew calls still target unboxed specializations, so allocations occur only when the explicit erased export adapter is invoked. Box types are emitted only for demanded carrier families.
 
 ## Remaining work
 
-1. Emit deterministic WasmGC scalar boxes, unboxes, and scalar-to-erased adapters at genuinely erased scalar boundaries.
+1. Add recursive representation adapters for generic values nested inside aggregate and structural function signatures; current scalar export adapters deliberately require direct generic parameter/result occurrences.
 2. Build trait dictionary method slots from trait requirement plans.
 3. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
 4. Define persistent cross-package export/import naming, signature fingerprints, and ABI compatibility rules.
-5. Extend erased adaptation to nested structural reference carriers where runtime representation requires more than a nominal cast.
+5. Add executable host/package consumers for deterministic `$dew$<carrier,...>` specialization adapters.

@@ -10,8 +10,33 @@ pub fn choose<t>(condition: Bool, left: t, right: t) -> t {
   }
 }
 
+fn return_i32_identity() -> fn(I32) -> I32 {
+  identity
+}
+
+fn return_i64_identity() -> fn(I64) -> I64 {
+  identity
+}
+
+fn return_f32_identity() -> fn(F32) -> F32 {
+  identity
+}
+
+fn return_f64_identity() -> fn(F64) -> F64 {
+  identity
+}
+
+fn return_v128_identity() -> fn(V128) -> V128 {
+  identity
+}
+
 pub fn main() -> Unit {
-  assert(identity(42) == 42, "specialized i32 identity")
-  assert(identity(42i64) == 42i64, "specialized i64 identity")
-  assert(choose(false, 7.0f64, 42.5f64) == 42.5f64, "specialized f64 choice")
+  let i32_identity = return_i32_identity()
+  let i64_identity = return_i64_identity()
+  let f32_identity = return_f32_identity()
+  let f64_identity = return_f64_identity()
+  let v128_identity = return_v128_identity()
+  assert(i32_identity(42) == 42, "specialized i32 identity")
+  assert(i64_identity(42i64) == 42i64, "specialized i64 identity")
+  assert(f64_identity(42.5f64) == 42.5f64, "specialized f64 identity")
 }

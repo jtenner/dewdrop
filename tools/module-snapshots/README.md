@@ -125,7 +125,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 184 fixtures:
+The suite contains 185 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -134,7 +134,7 @@ collections         14          9                 5                2
 control-flow       18         18                 0                1
 enums               11         11                 0                0
 functions           13         10                 3                0
-generics             3          3                 0                0
+generics             4          4                 0                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
 modules             18         16                 2                0
@@ -147,15 +147,15 @@ text                 23         23                 0                1
 types                1          0                 1                0
 wasi                 16         16                 0                5
 
-total               184        163                21               12
+total               185        164                21               12
 ```
 
 Ninety-one compiled fixtures assert nonempty stdout, twelve assert normalized
-runtime traps, and sixty intentionally remain WAT/no-trap fixtures. The
+runtime traps, and sixty-one intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 3, 2026, all 163 compiled fixtures pass in Node, including root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic
+As of August 3, 2026, all 164 compiled fixtures pass in Node, including boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic
 control-flow specialization, escaping/imported generic references, module
 initialization, imported values, imported method/operator dispatch,
 cross-module recursive types, named function values, and local/imported
