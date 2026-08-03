@@ -1,0 +1,24 @@
+struct Box<t> {
+  value: t
+}
+
+struct Envelope<t> {
+  box: Box<t>
+}
+
+pub fn echo_envelope<t>(value: Envelope<t>) -> Envelope<t> {
+  Envelope {
+    box: Box {
+      value: value.box.value
+    }
+  }
+}
+
+pub fn main() -> Unit {
+  let result = echo_envelope(Envelope {
+    box: Box {
+      value: 42
+    }
+  })
+  assert(result.box.value == 42, "recursive aggregate specialization")
+}

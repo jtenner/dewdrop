@@ -148,7 +148,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [ ] Emit recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures.
   - [x] Instantiate generic parameters recursively through structural function types during call/reference inference and specialize callback call signatures/results by carrier.
   - [x] Clone direct generic struct fields across static/erased boundaries, boxing and unboxing only the selected scalar carrier leaf.
-  - [ ] Recurse through nested struct/enum graphs and generate structural callback wrapper closures; function-containing adapter signatures remain conservatively excluded.
+  - [x] Recurse through acyclic nested generic struct graphs with deterministic scratch locals and leaf-only box/unbox conversion.
+  - [ ] Extend recursive conversion to enum payloads and cyclic nominal graphs, and generate structural callback wrapper closures; function-containing and cyclic adapter signatures remain conservatively excluded.
 - [x] Support executable generic enum and struct construction and access.
 - [x] Support executable generic calls, nested fixed-point specialization, and escaping generic references.
 - [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.

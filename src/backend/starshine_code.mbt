@@ -8418,32 +8418,6 @@ fn starshine_program_adapter_generic_shape(
 }
 
 ///|
-fn starshine_program_adapter_layout_argument(
-  lowering : @semantic.PlannedModuleLowering,
-  layout : @semantic.PlannedNominalLayout,
-  applied_arguments : @semantic.HirSpan,
-  field_type : @semantic.ResolvedTypeId,
-) -> @semantic.ResolvedTypeId {
-  if field_type < 0 || field_type >= lowering.resolved_types.length() {
-    return field_type
-  }
-  match lowering.resolved_types[field_type] {
-    @semantic.GenericParameterType(parameter) => {
-      let parameter_index = @semantic.semantic_id_local(parameter)
-      if parameter_index >= layout.generic_parameters.start &&
-        parameter_index < layout.generic_parameters.start + layout.generic_parameters.length {
-        let relative = parameter_index - layout.generic_parameters.start
-        if relative < applied_arguments.length {
-          return lowering.resolved_type_arguments[applied_arguments.start + relative]
-        }
-      }
-      field_type
-    }
-    _ => field_type
-  }
-}
-
-///|
 fn starshine_program_adapter_field_layout(
   lowering : @semantic.PlannedModuleLowering,
   layout : @semantic.PlannedNominalLayout,
@@ -8519,26 +8493,50 @@ fn starshine_program_erased_adapter_shape_box_slot(
 }
 
 ///|
-fn starshine_program_append_aggregate_adapter(
+fn starshine_program_adapter_explicit_argument(
+  lowering : @semantic.PlannedModuleLowering,
+  layout : @semantic.PlannedNominalLayout,
+  actual_arguments : Array[@semantic.ResolvedTypeId],
+  type_ : @semantic.ResolvedTypeId,
+) -> @semantic.ResolvedTypeId {
+  if type_ < 0 || type_ >= lowering.resolved_types.length() {
+    return type_
+  }
+  match lowering.resolved_types[type_] {
+    @semantic.GenericParameterType(parameter) => {
+      let parameter_index = @semantic.semantic_id_local(parameter)
+      if parameter_index >= layout.generic_parameters.start &&
+        parameter_index < layout.generic_parameters.start +
+        layout.generic_parameters.length {
+        let relative = parameter_index - layout.generic_parameters.start
+        if relative < actual_arguments.length() {
+          return actual_arguments[relative]
+        }
+      }
+      type_
+    }
+    _ => type_
+  }
+}
+
+///|
+fn starshine_program_append_nominal_aggregate_adapter(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   function_ : @semantic.PlannedProgramWasmFunction,
   callable : @semantic.PlannedCallable,
-  type_ : @semantic.ResolvedTypeId,
+  declaration : @semantic.DeclId,
+  actual_arguments : Array[@semantic.ResolvedTypeId],
   source_local : Int,
   to_erased : Bool,
   output : Array[@lib.Instruction],
+  adapter_locals : Array[@lib.ValType],
+  active : Array[@semantic.DeclId],
 ) -> Bool {
-  if type_ < 0 || type_ >= lowering.resolved_types.length() {
-    return false
-  }
-  let (base, applied_arguments) = match lowering.resolved_types[type_] {
-    @semantic.AppliedType(base, arguments) => (base, arguments)
-    _ => return false
-  }
-  let declaration = match lowering.resolved_types[base] {
-    @semantic.NominalType(value) => value
-    _ => return false
+  for current in active {
+    if current == declaration {
+      return false
+    }
   }
   let layout = match lowering.type_layouts.layout_of(declaration) {
     Some(value) if value.generic_parameters.length > 0 => value
@@ -8549,6 +8547,7 @@ fn starshine_program_append_aggregate_adapter(
     Some(value) => value
     None => return false
   }
+  active.push(declaration)
   let type_index = planned.physical_type_index(
     function_.module_index,
     physical.type_index,
@@ -8557,17 +8556,23 @@ fn starshine_program_append_aggregate_adapter(
     let target_field = fragments.fields[physical.fields.start + physical_offset]
     let field_id = match target_field.role {
       @semantic.WasmStructField(field) => field
-      _ => return false
+      _ => {
+        ignore(active.pop())
+        return false
+      }
     }
     let field_layout = match
       starshine_program_adapter_field_layout(lowering, layout, field_id) {
       Some(value) => value
-      None => return false
+      None => {
+        ignore(active.pop())
+        return false
+      }
     }
-    let substituted = starshine_program_adapter_layout_argument(
+    let substituted = starshine_program_adapter_explicit_argument(
       lowering,
       layout,
-      applied_arguments,
+      actual_arguments,
       field_layout.type_,
     )
     let concrete_shape = starshine_program_adapter_generic_shape(
@@ -8599,7 +8604,10 @@ fn starshine_program_append_aggregate_adapter(
               shape,
             ) {
             Some(value) => value
-            None => return false
+            None => {
+              ignore(active.pop())
+              return false
+            }
           }
           output.push(
             @lib.Instruction::local_get(
@@ -8618,6 +8626,7 @@ fn starshine_program_append_aggregate_adapter(
           if box_slot >= 0 {
             let box_type = planned.erased_box_type_indices[box_slot]
             if box_type < 0 {
+              ignore(active.pop())
               return false
             }
             output.push(
@@ -8641,7 +8650,10 @@ fn starshine_program_append_aggregate_adapter(
               target_field.role,
             ) {
             Some(value) => value
-            None => return false
+            None => {
+              ignore(active.pop())
+              return false
+            }
           }
           output.push(
             @lib.Instruction::local_get(
@@ -8660,6 +8672,7 @@ fn starshine_program_append_aggregate_adapter(
           if box_slot >= 0 {
             let box_type = planned.erased_box_type_indices[box_slot]
             if box_type < 0 {
+              ignore(active.pop())
               return false
             }
             output.push(starshine_match_cast(box_type))
@@ -8673,19 +8686,94 @@ fn starshine_program_append_aggregate_adapter(
         }
       }
       None => {
-        output.push(
-          @lib.Instruction::local_get(
-            @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
-          ),
-        )
-        output.push(starshine_match_cast(type_index))
-        output.push(
-          starshine_struct_get_instruction(
-            type_index,
-            target_field.physical_index,
-            target_field.storage,
-          ),
-        )
+        let mut nested_declaration = 0UL
+        let nested_arguments : Array[@semantic.ResolvedTypeId] = []
+        if field_layout.type_ >= 0 &&
+          field_layout.type_ < lowering.resolved_types.length() {
+          match lowering.resolved_types[field_layout.type_] {
+            @semantic.AppliedType(nested_base, arguments) => {
+              match lowering.resolved_types[nested_base] {
+                @semantic.NominalType(value) => nested_declaration = value
+                _ => ()
+              }
+              for index in 0..<arguments.length {
+                nested_arguments.push(
+                  starshine_program_adapter_explicit_argument(
+                    lowering,
+                    layout,
+                    actual_arguments,
+                    lowering.resolved_type_arguments[arguments.start + index],
+                  ),
+                )
+              }
+            }
+            _ => ()
+          }
+        }
+        let nested_layout = if nested_declaration != 0UL {
+          lowering.type_layouts.layout_of(nested_declaration)
+        } else {
+          None
+        }
+        match nested_layout {
+          Some(value) if value.generic_parameters.length > 0 => {
+            let nested_output : Array[@lib.Instruction] = []
+            let nested_local = function_.parameters.length +
+              adapter_locals.length()
+            adapter_locals.push(@lib.ValType::eqref_null())
+            if !starshine_program_append_nominal_aggregate_adapter(
+                lowering,
+                planned,
+                function_,
+                callable,
+                nested_declaration,
+                nested_arguments,
+                nested_local,
+                to_erased,
+                nested_output,
+                adapter_locals,
+                active,
+              ) {
+              ignore(adapter_locals.pop())
+              ignore(active.pop())
+              return false
+            }
+            output.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+              ),
+            )
+            output.push(starshine_match_cast(type_index))
+            output.push(
+              starshine_struct_get_instruction(
+                type_index,
+                target_field.physical_index,
+                target_field.storage,
+              ),
+            )
+            output.push(
+              @lib.Instruction::local_set(
+                @lib.LocalIdx::new(nested_local.reinterpret_as_uint()),
+              ),
+            )
+            append_starshine_instructions(output, nested_output)
+          }
+          _ => {
+            output.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+              ),
+            )
+            output.push(starshine_match_cast(type_index))
+            output.push(
+              starshine_struct_get_instruction(
+                type_index,
+                target_field.physical_index,
+                target_field.storage,
+              ),
+            )
+          }
+        }
       }
     }
   }
@@ -8694,7 +8782,52 @@ fn starshine_program_append_aggregate_adapter(
       @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
     ),
   )
+  ignore(active.pop())
   true
+}
+
+///|
+fn starshine_program_append_recursive_aggregate_adapter(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  callable : @semantic.PlannedCallable,
+  type_ : @semantic.ResolvedTypeId,
+  source_local : Int,
+  to_erased : Bool,
+  output : Array[@lib.Instruction],
+  adapter_locals : Array[@lib.ValType],
+) -> Bool {
+  if type_ < 0 || type_ >= lowering.resolved_types.length() {
+    return false
+  }
+  let (base, arguments) = match lowering.resolved_types[type_] {
+    @semantic.AppliedType(base, arguments) => (base, arguments)
+    _ => return false
+  }
+  let declaration = match lowering.resolved_types[base] {
+    @semantic.NominalType(value) => value
+    _ => return false
+  }
+  let actual_arguments : Array[@semantic.ResolvedTypeId] = []
+  for index in 0..<arguments.length {
+    actual_arguments.push(
+      lowering.resolved_type_arguments[arguments.start + index],
+    )
+  }
+  starshine_program_append_nominal_aggregate_adapter(
+    lowering,
+    planned,
+    function_,
+    callable,
+    declaration,
+    actual_arguments,
+    source_local,
+    to_erased,
+    output,
+    adapter_locals,
+    [],
+  )
 }
 
 ///|
@@ -8780,11 +8913,12 @@ fn starshine_program_erased_adapter_body(
     }
   }
   let instructions : Array[@lib.Instruction] = []
+  let adapter_locals : Array[@lib.ValType] = []
   for index in 0..<function_.parameters.length {
     if function_.specialization_shapes.length > 0 &&
       index < runtime_parameter_types.length() {
       let converted : Array[@lib.Instruction] = []
-      if starshine_program_append_aggregate_adapter(
+      if starshine_program_append_recursive_aggregate_adapter(
           source_lowering,
           planned,
           function_,
@@ -8793,6 +8927,7 @@ fn starshine_program_erased_adapter_body(
           index,
           true,
           converted,
+          adapter_locals,
         ) {
         append_starshine_instructions(instructions, converted)
         continue
@@ -8831,8 +8966,9 @@ fn starshine_program_erased_adapter_body(
   if function_.results.length == 1 {
     if function_.specialization_shapes.length > 0 {
       let converted : Array[@lib.Instruction] = []
-      let scratch = function_.parameters.length
-      if starshine_program_append_aggregate_adapter(
+      let scratch = function_.parameters.length + adapter_locals.length()
+      adapter_locals.push(@lib.ValType::eqref_null())
+      if starshine_program_append_recursive_aggregate_adapter(
           source_lowering,
           planned,
           function_,
@@ -8841,6 +8977,7 @@ fn starshine_program_erased_adapter_body(
           scratch,
           false,
           converted,
+          adapter_locals,
         ) {
         instructions.push(
           @lib.Instruction::local_set(
@@ -8850,10 +8987,12 @@ fn starshine_program_erased_adapter_body(
         append_starshine_instructions(instructions, converted)
         return Ok(
           @lib.Func::new(
-            @lib.Locals::from_types([@lib.ValType::eqref_null()]),
+            @lib.Locals::from_types(adapter_locals),
             @lib.Expr::new(instructions),
           ),
         )
+      } else {
+        ignore(adapter_locals.pop())
       }
     }
     let source_type = source_module.function_value_types[function_.results.start]
@@ -8888,7 +9027,12 @@ fn starshine_program_erased_adapter_body(
       }
     }
   }
-  Ok(@lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions)))
+  Ok(
+    @lib.Func::new(
+      @lib.Locals::from_types(adapter_locals),
+      @lib.Expr::new(instructions),
+    ),
+  )
 }
 
 ///|
