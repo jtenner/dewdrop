@@ -1,0 +1,81 @@
+struct Box<t> {
+  value: t
+}
+
+struct Envelope<t> {
+  payload: Maybe<t>
+}
+
+enum Maybe<t> {
+  None
+  Some(t)
+  Named {
+    value: t
+  }
+  Boxed(Box<t>)
+}
+
+pub fn echo_maybe<t>(value: Maybe<t>) -> Maybe<t> {
+  match value {
+    Maybe::None => Maybe::None
+    Maybe::Some(item) => Maybe::Some(item)
+    Maybe::Named {
+      value
+    } => Maybe::Named {
+      value: value
+    }
+    Maybe::Boxed(box) => Maybe::Boxed(Box {
+      value: box.value
+    })
+  }
+}
+
+pub fn echo_envelope<t>(value: Envelope<t>) -> Envelope<t> {
+  Envelope {
+    payload: echo_maybe(value.payload)
+  }
+}
+
+fn return_echo_maybe() -> fn(Maybe<I32>) -> Maybe<I32> {
+  echo_maybe
+}
+
+pub fn main() -> Unit {
+  let echo = return_echo_maybe()
+  assert(
+    match echo(Maybe::Some(42)) {
+      Maybe::Some(value) => value == 42
+      _ => false
+    },
+    "generic tuple enum payload",
+  )
+  assert(
+    match echo_maybe(Maybe::Named {
+      value: 43
+    }) {
+      Maybe::Named {
+        value
+      } => value == 43
+      _ => false
+    },
+    "generic struct enum payload",
+  )
+  assert(
+    match echo_maybe(Maybe::Boxed(Box {
+      value: 44
+    })) {
+      Maybe::Boxed(box) => box.value == 44
+      _ => false
+    },
+    "nested generic struct enum payload",
+  )
+  assert(
+    match echo_envelope(Envelope {
+      payload: Maybe::Some(45)
+    }).payload {
+      Maybe::Some(value) => value == 45
+      _ => false
+    },
+    "nested generic enum struct field",
+  )
+}

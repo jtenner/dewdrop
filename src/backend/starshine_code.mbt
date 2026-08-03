@@ -98,7 +98,8 @@ priv enum StarshineEmitTask {
     Int,
     Int,
     Int,
-    @semantic.PlannedValueShape
+    @semantic.PlannedValueShape,
+    Int
   )
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineMap(
@@ -1029,6 +1030,7 @@ fn starshine_general_match_pattern_instructions(
   root : @semantic.PatternId,
   scratch_local : Int,
   local_indices : Array[Int],
+  generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
   (Array[@lib.Instruction], Array[@lib.Instruction]),
   StarshineCodeEmissionError,
@@ -1133,7 +1135,12 @@ fn starshine_general_match_pattern_instructions(
                     match owner_plan.field_name_of(field) {
                       Some(name) if name == pattern_field.name &&
                         starshine_shape_matches_storage(
-                          lowering.patterns[pattern_field.pattern].shape,
+                          starshine_specialized_shape(
+                            lowering,
+                            generic_specialization,
+                            lowering.patterns[pattern_field.pattern].type_,
+                            lowering.patterns[pattern_field.pattern].shape,
+                          ),
                           candidate.storage,
                         ) => selected = Some(candidate)
                       _ => ()
@@ -1217,7 +1224,12 @@ fn starshine_general_match_pattern_instructions(
                   let child = lowering.pattern_children[arguments.start +
                     source_index]
                   if starshine_shape_matches_storage(
-                      lowering.patterns[child].shape,
+                      starshine_specialized_shape(
+                        lowering,
+                        generic_specialization,
+                        lowering.patterns[child].type_,
+                        lowering.patterns[child].shape,
+                      ),
                       field.storage,
                     ) {
                     let loader = value.copy()
@@ -1244,7 +1256,12 @@ fn starshine_general_match_pattern_instructions(
                         match variant_plan.field_name_of(field) {
                           Some(name) if name == pattern_field.name &&
                             starshine_shape_matches_storage(
-                              lowering.patterns[pattern_field.pattern].shape,
+                              starshine_specialized_shape(
+                                lowering,
+                                generic_specialization,
+                                lowering.patterns[pattern_field.pattern].type_,
+                                lowering.patterns[pattern_field.pattern].shape,
+                              ),
                               candidate.storage,
                             ) => selected = Some(candidate)
                           _ => ()
@@ -1341,6 +1358,7 @@ fn starshine_simple_match_pattern_instructions(
   pattern : @semantic.PatternId,
   scratch_local : Int,
   local_indices : Array[Int],
+  generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
   (Array[@lib.Instruction], Array[@lib.Instruction]),
   StarshineCodeEmissionError,
@@ -1442,8 +1460,14 @@ fn starshine_simple_match_pattern_instructions(
           @semantic.PatternBindingReference(local_id) => local_id
           _ => continue
         }
+        let planned_local = lowering.locals[body.locals.start + local_id]
         if !starshine_shape_matches_storage(
-            lowering.locals[body.locals.start + local_id].shape,
+            starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              planned_local.type_,
+              planned_local.shape,
+            ),
             field.storage,
           ) {
           continue
@@ -1488,7 +1512,13 @@ fn starshine_simple_match_pattern_instructions(
           @semantic.PatternBindingReference(local_id) => local_id
           _ => continue
         }
-        let child_shape = lowering.locals[body.locals.start + local_id].shape
+        let child_local = lowering.locals[body.locals.start + local_id]
+        let child_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          child_local.type_,
+          child_local.shape,
+        )
         let mut selected_field : @semantic.PlannedWasmVariantField? = None
         for candidate in variant_plan.variant_fields_of(variant) {
           match candidate.role {
@@ -1547,6 +1577,7 @@ fn starshine_match_pattern_instructions(
   pattern : @semantic.PatternId,
   scratch_local : Int,
   local_indices : Array[Int],
+  generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
   (Array[@lib.Instruction], Array[@lib.Instruction]),
   StarshineCodeEmissionError,
@@ -1554,13 +1585,48 @@ fn starshine_match_pattern_instructions(
   if starshine_pattern_uses_general_emission(lowering, pattern) {
     starshine_general_match_pattern_instructions(
       lowering, planned, program, program_module_index, body, pattern, scratch_local,
-      local_indices,
+      local_indices, generic_specialization,
     )
   } else {
     starshine_simple_match_pattern_instructions(
       lowering, planned, program, program_module_index, body, pattern, scratch_local,
-      local_indices,
+      local_indices, generic_specialization,
     )
+  }
+}
+
+///|
+fn starshine_function_result_cast_type(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  local_signature : Int,
+) -> Int {
+  let mut result_type = None
+  for candidate in planned.function_types {
+    if candidate.signature_type_index == local_signature &&
+      candidate.results.length == 1 {
+      result_type = Some(planned.function_value_types[candidate.results.start])
+      break
+    }
+  }
+  match result_type {
+    Some(@semantic.WasmNominalRefValue(local_type)) =>
+      match program {
+        Some(link) => link.physical_type_index(program_module_index, local_type)
+        None => local_type
+      }
+    Some(@semantic.WasmExternalNominalRefValue(declaration)) =>
+      match program {
+        Some(link) => link.type_lookup.get(declaration).unwrap_or(-1)
+        None => -1
+      }
+    Some(@semantic.WasmFunctionRefValue(local_type)) =>
+      match program {
+        Some(link) => link.signature_type_index(program_module_index, local_type)
+        None => local_type
+      }
+    _ => -1
   }
 }
 
@@ -3439,6 +3505,12 @@ fn starshine_emit_body_instructions(
                     source.type_,
                     source.shape,
                   ),
+                  starshine_function_result_cast_type(
+                    planned,
+                    program,
+                    program_module_index,
+                    direct_local_type,
+                  ),
                 ),
               )
             } else {
@@ -4127,8 +4199,14 @@ fn starshine_emit_body_instructions(
                   lowering.expression_children[arguments.start + source_index]
                 _ => return Err(UnsupportedExpression(body.body, expression))
               }
+              let value_source = lowering.expressions[value]
               if starshine_shape_matches_storage(
-                  lowering.expressions[value].shape,
+                  starshine_specialized_shape(
+                    lowering,
+                    generic_specialization,
+                    value_source.type_,
+                    value_source.shape,
+                  ),
                   field.storage,
                 ) {
                 values.push(EmitStarshineExpression(value))
@@ -4187,8 +4265,14 @@ fn starshine_emit_body_instructions(
               value_index -= 1
               let field = variant_fields[value_index]
               let value = values[value_index]
+              let value_source = lowering.expressions[value]
               if starshine_shape_matches_storage(
-                  lowering.expressions[value].shape,
+                  starshine_specialized_shape(
+                    lowering,
+                    generic_specialization,
+                    value_source.type_,
+                    value_source.shape,
+                  ),
                   field.storage,
                 ) {
                 tasks.push(EmitStarshineExpression(value))
@@ -6062,7 +6146,8 @@ fn starshine_emit_body_instructions(
         closure_type,
         scratch,
         count,
-        result_shape
+        result_shape,
+        result_cast_type
       ) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = []
@@ -6161,6 +6246,9 @@ fn starshine_emit_body_instructions(
             Some(captured),
           ),
         )
+        if result_cast_type >= 0 {
+          output.push(starshine_match_cast(result_cast_type))
+        }
         results.push(output)
       }
       FinishStarshineStructNew(type_index, count) => {
@@ -6302,6 +6390,7 @@ fn starshine_emit_body_instructions(
                 arm.pattern,
                 scratch_local,
                 local_indices,
+                generic_specialization,
               ) {
               Ok(value) => value
               Err(error) => return Err(error)
@@ -6378,6 +6467,7 @@ fn starshine_emit_body_instructions(
                 arm.pattern,
                 scratch_local,
                 local_indices,
+                generic_specialization,
               ) {
               Ok(value) => value
               Err(error) => return Err(error)
@@ -6471,6 +6561,7 @@ fn starshine_emit_body_instructions(
               arm.pattern,
               state_local,
               local_indices,
+              generic_specialization,
             ) {
             Ok(value) => value
             Err(error) => return Err(error)
@@ -8520,6 +8611,320 @@ fn starshine_program_adapter_explicit_argument(
 }
 
 ///|
+fn starshine_program_append_nominal_enum_adapter(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  callable : @semantic.PlannedCallable,
+  declaration : @semantic.DeclId,
+  actual_arguments : Array[@semantic.ResolvedTypeId],
+  source_local : Int,
+  to_erased : Bool,
+  output : Array[@lib.Instruction],
+  adapter_locals : Array[@lib.ValType],
+  active : Array[@semantic.DeclId],
+) -> Bool {
+  for current in active {
+    if current == declaration {
+      return false
+    }
+  }
+  let layout = match lowering.type_layouts.layout_of(declaration) {
+    Some(value) if value.generic_parameters.length > 0 => value
+    _ => return false
+  }
+  let variants = match layout.kind {
+    @semantic.PlannedEnumLayout(value) => value
+    _ => return false
+  }
+  let fragments = planned.modules[function_.module_index]
+  let base_type = match
+    starshine_emitted_type_index(fragments, Some(planned), declaration) {
+    Some(value) => value
+    None => return false
+  }
+  active.push(declaration)
+  let mut dispatch : Array[@lib.Instruction] = [
+    @lib.Instruction::unreachable_(),
+  ]
+  let mut variant_offset = variants.length
+  while variant_offset > 0 {
+    variant_offset -= 1
+    let variant = lowering.type_layouts.variants[variants.start + variant_offset]
+    let physical = match
+      starshine_variant_payload_physical_type(fragments, variant.variant) {
+      Some(value) => value
+      None => {
+        ignore(active.pop())
+        return false
+      }
+    }
+    let subtype = planned.physical_type_index(
+      function_.module_index,
+      physical.type_index,
+    )
+    let branch : Array[@lib.Instruction] = [
+      @lib.Instruction::i32_const(@lib.I32::new(variant.tag)),
+    ]
+    for target_field in fragments.variant_fields_of(variant.variant) {
+      let field_type = match (variant.payload, target_field.role) {
+        (
+          @semantic.PlannedTupleVariantLayout(types),
+          @semantic.WasmTuplePayloadField(_, source_index),
+        ) if source_index >= 0 && source_index < types.length =>
+          lowering.type_layouts.payload_types[types.start + source_index]
+        (
+          @semantic.PlannedStructVariantLayout(fields),
+          @semantic.WasmStructPayloadField(field),
+        ) => {
+          let mut found = -1
+          for index in 0..<fields.length {
+            let candidate = lowering.type_layouts.fields[fields.start + index]
+            if candidate.field == field {
+              found = candidate.type_
+              break
+            }
+          }
+          if found < 0 {
+            ignore(active.pop())
+            return false
+          }
+          found
+        }
+        _ => {
+          ignore(active.pop())
+          return false
+        }
+      }
+      let substituted = starshine_program_adapter_explicit_argument(
+        lowering,
+        layout,
+        actual_arguments,
+        field_type,
+      )
+      match
+        starshine_program_adapter_generic_shape(
+          lowering, fragments, function_, callable, substituted,
+        ) {
+        Some(shape) => {
+          if to_erased {
+            let target_is_eqref = match target_field.storage {
+              @semantic.WasmNullableEqRefStorage => true
+              _ => false
+            }
+            if !target_is_eqref {
+              append_starshine_instructions(
+                branch,
+                starshine_default_storage_instructions(target_field.storage),
+              )
+              continue
+            }
+            let source_field = match
+              starshine_program_adapter_source_field(
+                fragments, physical, target_field.role, shape,
+              ) {
+              Some(value) => value
+              None => {
+                ignore(active.pop())
+                return false
+              }
+            }
+            branch.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+              ),
+            )
+            branch.push(starshine_match_cast(subtype))
+            branch.push(
+              starshine_struct_get_instruction(
+                subtype,
+                source_field.physical_index,
+                source_field.storage,
+              ),
+            )
+            let box_slot = starshine_program_erased_adapter_shape_box_slot(shape)
+            if box_slot >= 0 {
+              let box_type = planned.erased_box_type_indices[box_slot]
+              if box_type < 0 {
+                ignore(active.pop())
+                return false
+              }
+              branch.push(
+                @lib.Instruction::struct_new(
+                  @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+                ),
+              )
+            }
+          } else {
+            if !starshine_shape_matches_storage(shape, target_field.storage) {
+              append_starshine_instructions(
+                branch,
+                starshine_default_storage_instructions(target_field.storage),
+              )
+              continue
+            }
+            let source_field = match
+              starshine_program_adapter_eq_field(
+                fragments, physical, target_field.role,
+              ) {
+              Some(value) => value
+              None => {
+                ignore(active.pop())
+                return false
+              }
+            }
+            branch.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+              ),
+            )
+            branch.push(starshine_match_cast(subtype))
+            branch.push(
+              starshine_struct_get_instruction(
+                subtype,
+                source_field.physical_index,
+                source_field.storage,
+              ),
+            )
+            let box_slot = starshine_program_erased_adapter_shape_box_slot(shape)
+            if box_slot >= 0 {
+              let box_type = planned.erased_box_type_indices[box_slot]
+              if box_type < 0 {
+                ignore(active.pop())
+                return false
+              }
+              branch.push(starshine_match_cast(box_type))
+              branch.push(
+                @lib.Instruction::struct_get(
+                  @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+                  0U,
+                ),
+              )
+            }
+          }
+        }
+        None => {
+          let mut nested_declaration = 0UL
+          let nested_arguments : Array[@semantic.ResolvedTypeId] = []
+          if field_type >= 0 && field_type < lowering.resolved_types.length() {
+            match lowering.resolved_types[field_type] {
+              @semantic.AppliedType(nested_base, arguments) => {
+                match lowering.resolved_types[nested_base] {
+                  @semantic.NominalType(value) => nested_declaration = value
+                  _ => ()
+                }
+                for index in 0..<arguments.length {
+                  nested_arguments.push(
+                    starshine_program_adapter_explicit_argument(
+                      lowering,
+                      layout,
+                      actual_arguments,
+                      lowering.resolved_type_arguments[arguments.start + index],
+                    ),
+                  )
+                }
+              }
+              _ => ()
+            }
+          }
+          let nested_layout = if nested_declaration != 0UL {
+            lowering.type_layouts.layout_of(nested_declaration)
+          } else {
+            None
+          }
+          match nested_layout {
+            Some(value) if value.generic_parameters.length > 0 => {
+              let nested_output : Array[@lib.Instruction] = []
+              let nested_local = function_.parameters.length +
+                adapter_locals.length()
+              adapter_locals.push(@lib.ValType::eqref_null())
+              if !starshine_program_append_nominal_aggregate_adapter(
+                  lowering,
+                  planned,
+                  function_,
+                  callable,
+                  nested_declaration,
+                  nested_arguments,
+                  nested_local,
+                  to_erased,
+                  nested_output,
+                  adapter_locals,
+                  active,
+                ) {
+                ignore(adapter_locals.pop())
+                ignore(active.pop())
+                return false
+              }
+              branch.push(
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+                ),
+              )
+              branch.push(starshine_match_cast(subtype))
+              branch.push(
+                starshine_struct_get_instruction(
+                  subtype,
+                  target_field.physical_index,
+                  target_field.storage,
+                ),
+              )
+              branch.push(
+                @lib.Instruction::local_set(
+                  @lib.LocalIdx::new(nested_local.reinterpret_as_uint()),
+                ),
+              )
+              append_starshine_instructions(branch, nested_output)
+            }
+            _ => {
+              branch.push(
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+                ),
+              )
+              branch.push(starshine_match_cast(subtype))
+              branch.push(
+                starshine_struct_get_instruction(
+                  subtype,
+                  target_field.physical_index,
+                  target_field.storage,
+                ),
+              )
+            }
+          }
+        }
+      }
+    }
+    branch.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(subtype.reinterpret_as_uint()),
+      ),
+    )
+    let condition : Array[@lib.Instruction] = [
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+      ),
+      starshine_match_cast(base_type),
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(base_type.reinterpret_as_uint()),
+        0U,
+      ),
+      @lib.Instruction::i32_const(@lib.I32::new(variant.tag)),
+      @lib.Instruction::i32_eq(),
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::eqref_null()),
+        branch,
+        Some(dispatch),
+      ),
+    ]
+    dispatch = condition
+  }
+  append_starshine_instructions(output, dispatch)
+  output.push(starshine_match_cast(base_type))
+  ignore(active.pop())
+  true
+}
+
+///|
 fn starshine_program_append_nominal_aggregate_adapter(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -8541,6 +8946,23 @@ fn starshine_program_append_nominal_aggregate_adapter(
   let layout = match lowering.type_layouts.layout_of(declaration) {
     Some(value) if value.generic_parameters.length > 0 => value
     _ => return false
+  }
+  match layout.kind {
+    @semantic.PlannedEnumLayout(_) =>
+      return starshine_program_append_nominal_enum_adapter(
+        lowering,
+        planned,
+        function_,
+        callable,
+        declaration,
+        actual_arguments,
+        source_local,
+        to_erased,
+        output,
+        adapter_locals,
+        active,
+      )
+    @semantic.PlannedStructLayout(_) => ()
   }
   let fragments = planned.modules[function_.module_index]
   let physical = match starshine_struct_physical_type(fragments, declaration) {

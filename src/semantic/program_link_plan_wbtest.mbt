@@ -398,6 +398,53 @@ test "program linker plans recursive aggregate erased adapters" {
 }
 
 ///|
+test "program linker plans recursive enum erased adapters" {
+  let program = collect_program_manifest(
+    2247UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Box<t> {\n  value: t\n}\nstruct Envelope<t> {\n  payload: Maybe<t>\n}\nenum Maybe<t> {\n  None\n  Some(t)\n  Boxed(Box<t>)\n}\npub fn echo_maybe<t>(value: Maybe<t>) -> Maybe<t> {\n  match value {\n    Maybe::None => Maybe::None\n    Maybe::Some(item) => Maybe::Some(item)\n    Maybe::Boxed(box) => Maybe::Boxed(Box {\n      value: box.value\n    })\n  }\n}\npub fn echo_envelope<t>(value: Envelope<t>) -> Envelope<t> {\n  Envelope {\n    payload: echo_maybe(value.payload)\n  }\n}\npub fn main() -> Unit {\n  let maybe = echo_maybe(Maybe::Some(42))\n  let envelope = echo_envelope(Envelope {\n    payload: Maybe::Boxed(Box {\n      value: 43\n    })\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let echo_maybe = program.modules[0].lookup_value("echo_maybe").unwrap()
+  let echo_envelope = program.modules[0].lookup_value("echo_envelope").unwrap()
+  let mut maybe_fallback = 0
+  let mut maybe_adapter = 0
+  let mut envelope_fallback = 0
+  let mut envelope_adapter = 0
+  for function_ in link.functions {
+    if function_.declaration == echo_maybe &&
+      function_.specialization_abi_key == "\{echo_maybe}:eqref" {
+      maybe_fallback += 1
+    }
+    if function_.name == b"echo_maybe$dew$i32" {
+      maybe_adapter += 1
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+    if function_.declaration == echo_envelope &&
+      function_.specialization_abi_key == "\{echo_envelope}:eqref" {
+      envelope_fallback += 1
+    }
+    if function_.name == b"echo_envelope$dew$i32" {
+      envelope_adapter += 1
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+  }
+  assert_eq(maybe_fallback, 1)
+  assert_eq(maybe_adapter, 1)
+  assert_eq(envelope_fallback, 1)
+  assert_eq(envelope_adapter, 1)
+  assert_true(link.erased_box_type_indices[0] >= 0)
+}
+
+///|
 test "program linker defers structural callback adapters until wrappers exist" {
   let program = collect_program_manifest(
     2247UL,
