@@ -1212,18 +1212,28 @@ pub struct FrozenInterfaceImplementation {
 } derive(Eq, Debug)
 
 ///|
+pub struct FrozenInterfaceDependency {
+  path : String
+  content_fingerprint : String
+} derive(Eq, Debug)
+
+///|
 pub struct FrozenModuleInterface {
   module_id : ModuleId
   path : String
   preamble_declaration_count : Int
   resolved_types : ResolvedModuleTypes
   declarations : Array[FrozenInterfaceDeclaration]
+  declaration_abi_fingerprints : Array[String]
   fields : Array[FrozenInterfaceField]
   variants : Array[FrozenInterfaceVariant]
   variant_payload_types : Array[ResolvedTypeId]
   callables : Array[FrozenInterfaceCallable]
   parameters : Array[FrozenInterfaceParameter]
   implementations : Array[FrozenInterfaceImplementation]
+  content_fingerprint : String
+  interface_fingerprint : String
+  dependencies : Array[FrozenInterfaceDependency]
 } derive(Eq, Debug)
 
 ///|
@@ -1446,6 +1456,283 @@ fn frozen_callable_abi_fingerprint(
   )
   callable_abi_write_shape(output, callable.result_shape)
   @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
+fn frozen_abi_collected_kind_rank(kind : CollectedDeclKind) -> Int {
+  match kind {
+    BuiltinDecl => 0
+    LetDecl => 1
+    TraitDecl => 2
+    FunctionDecl => 3
+    TestDecl => 4
+    ImplDecl => 5
+    StructDecl => 6
+    EnumDecl => 7
+    TypeAliasDecl => 8
+  }
+}
+
+///|
+fn frozen_abi_variant_kind_rank(kind : CollectedVariantKind) -> Int {
+  match kind {
+    UnitVariantDecl => 0
+    TupleVariantDecl => 1
+    StructVariantDecl => 2
+  }
+}
+
+///|
+fn frozen_interface_declaration_identities(
+  interfaces : Array[FrozenModuleInterface],
+) -> Map[DeclId, CallableAbiDeclarationIdentity] {
+  let identities : Map[DeclId, CallableAbiDeclarationIdentity] = Map::default()
+  for interface_ in interfaces {
+    for declaration in interface_.declarations {
+      identities[declaration.declaration] = {
+        path: interface_.path,
+        name: declaration.name,
+        generic_parameter_count: declaration.generic_parameter_count,
+      }
+    }
+  }
+  identities
+}
+
+///|
+fn frozen_declaration_abi_fingerprint(
+  interface_ : FrozenModuleInterface,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
+  declaration : FrozenInterfaceDeclaration,
+) -> String {
+  let output = Buffer()
+  output.write_bytes(b"DEW_NOMINAL_DECLARATION_ABI_V1\x00")
+  output.write_bytes(b"DEW_GENERIC_AGGREGATE_ABI_V1\x00")
+  output.write_bytes(b"DEW_ENUM_SUBTYPE_ABI_V1\x00")
+  output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
+  output.write_bytes(b"DEW_FLAT_CLOSURE_ABI_V1\x00")
+  callable_abi_write_string(output, interface_.path)
+  callable_abi_write_string(output, declaration.name)
+  callable_abi_write_int(
+    output,
+    frozen_abi_collected_kind_rank(declaration.source_kind),
+  )
+  callable_abi_write_int(output, declaration.generic_parameter_count)
+  callable_abi_write_type(
+    output,
+    identities,
+    interface_.resolved_types,
+    declaration.semantic_type,
+    declaration.generic_parameters,
+  )
+  let mut field_count = 0
+  for field in interface_.fields {
+    if field.declaration == declaration.declaration {
+      field_count += 1
+    }
+  }
+  callable_abi_write_int(output, field_count)
+  for field in interface_.fields {
+    if field.declaration != declaration.declaration {
+      continue
+    }
+    match field.variant {
+      Some(variant) => {
+        callable_abi_write_int(output, 1)
+        callable_abi_write_u64(output, variant)
+      }
+      None => callable_abi_write_int(output, 0)
+    }
+    callable_abi_write_string(output, field.name)
+    callable_abi_write_type(
+      output,
+      identities,
+      interface_.resolved_types,
+      field.type_,
+      declaration.generic_parameters,
+    )
+  }
+  let mut variant_count = 0
+  for variant in interface_.variants {
+    if variant.declaration == declaration.declaration {
+      variant_count += 1
+    }
+  }
+  callable_abi_write_int(output, variant_count)
+  for variant in interface_.variants {
+    if variant.declaration != declaration.declaration {
+      continue
+    }
+    callable_abi_write_int(output, frozen_abi_variant_kind_rank(variant.kind))
+    callable_abi_write_string(output, variant.name)
+    callable_abi_write_int(output, variant.payload_types.length)
+    for index in 0..<variant.payload_types.length {
+      callable_abi_write_type(
+        output,
+        identities,
+        interface_.resolved_types,
+        interface_.variant_payload_types[variant.payload_types.start + index],
+        declaration.generic_parameters,
+      )
+    }
+  }
+  let mut requirement_count = 0
+  for callable in interface_.callables {
+    match callable.kind {
+      FrozenTraitCallable(trait_) if trait_ == declaration.declaration =>
+        requirement_count += 1
+      _ => ()
+    }
+  }
+  callable_abi_write_int(output, requirement_count)
+  for callable in interface_.callables {
+    match callable.kind {
+      FrozenTraitCallable(trait_) if trait_ == declaration.declaration => {
+        callable_abi_write_string(output, callable.name)
+        callable_abi_write_string(output, callable.abi_fingerprint)
+      }
+      _ => ()
+    }
+  }
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
+fn frozen_interface_content_fingerprint(
+  interface_ : FrozenModuleInterface,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
+  declaration_fingerprints : Array[String],
+) -> String {
+  let output = Buffer()
+  output.write_bytes(b"DEW_MODULE_INTERFACE_CONTENT_V1\x00")
+  callable_abi_write_string(output, interface_.path)
+  callable_abi_write_int(output, interface_.declarations.length())
+  for index, declaration in interface_.declarations {
+    callable_abi_write_string(output, declaration.name)
+    callable_abi_write_string(output, declaration_fingerprints[index])
+  }
+  callable_abi_write_int(output, interface_.callables.length())
+  for callable in interface_.callables {
+    callable_abi_write_string(output, callable.name)
+    callable_abi_write_string(output, callable.abi_fingerprint)
+  }
+  callable_abi_write_int(output, interface_.implementations.length())
+  for implementation in interface_.implementations {
+    callable_abi_write_type(
+      output,
+      identities,
+      interface_.resolved_types,
+      implementation.trait_type,
+      { start: 0, length: 0 },
+    )
+    callable_abi_write_type(
+      output,
+      identities,
+      interface_.resolved_types,
+      implementation.target_type,
+      { start: 0, length: 0 },
+    )
+  }
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
+fn frozen_interface_with_content_fingerprint(
+  interface_ : FrozenModuleInterface,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
+) -> FrozenModuleInterface {
+  let declaration_abi_fingerprints : Array[String] = []
+  for declaration in interface_.declarations {
+    declaration_abi_fingerprints.push(
+      frozen_declaration_abi_fingerprint(interface_, identities, declaration),
+    )
+  }
+  {
+    ..interface_,
+    declaration_abi_fingerprints,
+    content_fingerprint: frozen_interface_content_fingerprint(
+      interface_, identities, declaration_abi_fingerprints,
+    ),
+  }
+}
+
+///|
+fn frozen_program_interface_fingerprint(
+  module_index : Int,
+  graph : ModuleDependencyGraph,
+  interfaces : Array[FrozenModuleInterface],
+) -> String {
+  let reachable = Array::make(interfaces.length(), false)
+  let pending : Array[Int] = [module_index]
+  while pending.length() > 0 {
+    let current = pending.pop().unwrap()
+    if reachable[current] {
+      continue
+    }
+    reachable[current] = true
+    let dependencies = graph.dependencies[current]
+    for index in 0..<dependencies.length {
+      pending.push(graph.dependency_modules[dependencies.start + index])
+    }
+  }
+  let records : Array[String] = []
+  for index, interface_ in interfaces {
+    if reachable[index] {
+      records.push(interface_.path + "\u0000" + interface_.content_fingerprint)
+    }
+  }
+  records.sort()
+  let output = Buffer()
+  output.write_bytes(b"DEW_MODULE_INTERFACE_GRAPH_V1\x00")
+  for record in records {
+    callable_abi_write_string(output, record)
+  }
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
+fn frozen_program_interfaces_with_fingerprints(
+  graph : ModuleDependencyGraph,
+  initial : Array[FrozenModuleInterface],
+) -> Array[FrozenModuleInterface] {
+  let identities = frozen_interface_declaration_identities(initial)
+  let content : Array[FrozenModuleInterface] = []
+  for interface_ in initial {
+    content.push(
+      frozen_interface_with_content_fingerprint(interface_, identities),
+    )
+  }
+  let output : Array[FrozenModuleInterface] = []
+  for module_index, interface_ in content {
+    let dependency_paths : Array[String] = []
+    let dependencies = graph.dependencies[module_index]
+    for index in 0..<dependencies.length {
+      dependency_paths.push(
+        content[graph.dependency_modules[dependencies.start + index]].path,
+      )
+    }
+    dependency_paths.sort()
+    let frozen_dependencies : Array[FrozenInterfaceDependency] = []
+    for path in dependency_paths {
+      for dependency in content {
+        if dependency.path == path {
+          frozen_dependencies.push({
+            path,
+            content_fingerprint: dependency.content_fingerprint,
+          })
+          break
+        }
+      }
+    }
+    output.push({
+      ..interface_,
+      interface_fingerprint: frozen_program_interface_fingerprint(
+        module_index, graph, content,
+      ),
+      dependencies: frozen_dependencies,
+    })
+  }
+  output
 }
 
 ///|
@@ -1869,12 +2156,16 @@ pub fn freeze_module_interface(
     preamble_declaration_count: collected.preamble_declaration_count,
     resolved_types: resolved,
     declarations,
+    declaration_abi_fingerprints: [],
     fields,
     variants,
     variant_payload_types,
     callables,
     parameters,
     implementations,
+    content_fingerprint: "",
+    interface_fingerprint: "",
+    dependencies: [],
   }
 }
 
@@ -2652,7 +2943,12 @@ pub fn freeze_program_interfaces_with_cached(
     interfaces.push(slots[index].unwrap())
     import_scopes.push(scope_slots[index].unwrap())
   }
-  { graph, interfaces, import_scopes, import_diagnostics }
+  {
+    graph,
+    interfaces: frozen_program_interfaces_with_fingerprints(graph, interfaces),
+    import_scopes,
+    import_diagnostics,
+  }
 }
 
 ///|

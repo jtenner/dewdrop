@@ -1,5 +1,5 @@
 ///|
-let standard_interface_cache_file_magic : Bytes = b"DEW_STD_INTERFACE_CACHE_V6\x00"
+let standard_interface_cache_file_magic : Bytes = b"DEW_STD_INTERFACE_CACHE_V7\x00"
 
 ///|
 fn wrap_interface_cache_payload(payload : Bytes) -> Bytes {
@@ -115,7 +115,7 @@ fn ensure_cache_directory(path : String) -> Result[Unit, String] {
 fn interface_cache_file(fingerprint : String) -> String {
   interface_cache_join(
     interface_cache_join(interface_cache_root(), "interfaces"),
-    "v6-" + fingerprint + ".dwi",
+    "v7-" + fingerprint + ".dwi",
   )
 }
 

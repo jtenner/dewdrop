@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V6\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V7\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -337,6 +337,10 @@ fn cache_write_interface(
     cache_write_int(output, declaration.semantic_type)
     cache_write_location(output, declaration.location)
   }
+  cache_write_int(output, interface_.declaration_abi_fingerprints.length())
+  for fingerprint in interface_.declaration_abi_fingerprints {
+    cache_write_string(output, fingerprint)
+  }
   cache_write_int(output, interface_.fields.length())
   for field in interface_.fields {
     cache_write_u64(output, field.field)
@@ -389,6 +393,13 @@ fn cache_write_interface(
     cache_write_int(output, implementation.trait_type)
     cache_write_int(output, implementation.target_type)
     cache_write_location(output, implementation.location)
+  }
+  cache_write_string(output, interface_.content_fingerprint)
+  cache_write_string(output, interface_.interface_fingerprint)
+  cache_write_int(output, interface_.dependencies.length())
+  for dependency in interface_.dependencies {
+    cache_write_string(output, dependency.path)
+    cache_write_string(output, dependency.content_fingerprint)
   }
   Ok(())
 }
@@ -781,6 +792,11 @@ fn FrozenInterfaceCacheReader::read_interface(
       location: self.read_location(),
     })
   }
+  let fingerprint_count = self.read_count(1, "declaration fingerprint")
+  let declaration_abi_fingerprints : Array[String] = []
+  for _ in 0..<fingerprint_count {
+    declaration_abi_fingerprints.push(self.read_string())
+  }
   let field_count = self.read_count(1, "field")
   let fields : Array[FrozenInterfaceField] = []
   for _ in 0..<field_count {
@@ -846,18 +862,32 @@ fn FrozenInterfaceCacheReader::read_interface(
       location: self.read_location(),
     })
   }
+  let content_fingerprint = self.read_string()
+  let interface_fingerprint = self.read_string()
+  let dependency_count = self.read_count(1, "interface dependency")
+  let dependencies : Array[FrozenInterfaceDependency] = []
+  for _ in 0..<dependency_count {
+    dependencies.push({
+      path: self.read_string(),
+      content_fingerprint: self.read_string(),
+    })
+  }
   {
     module_id,
     path,
     preamble_declaration_count,
     resolved_types,
     declarations,
+    declaration_abi_fingerprints,
     fields,
     variants,
     variant_payload_types,
     callables,
     parameters,
     implementations,
+    content_fingerprint,
+    interface_fingerprint,
+    dependencies,
   }
 }
 

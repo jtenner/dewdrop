@@ -518,6 +518,74 @@ test "frozen callable ABI fingerprints are stable and signature sensitive" {
 }
 
 ///|
+test "nominal declaration ABI fingerprints are stable and content sensitive" {
+  let freeze = fn(seed : ModuleId, source : Bytes) -> String {
+    let program = collect_program_manifest(
+      seed,
+      ProgramManifest::new([
+        ManifestModule::new("abi.nominal", [
+          ManifestFile::new("nominal.dew", source),
+        ]),
+      ]),
+    )
+    let interface_ = freeze_program_interfaces(program).interfaces[0]
+    for index, declaration in interface_.declarations {
+      if declaration.name == "Item" {
+        return interface_.declaration_abi_fingerprints[index]
+      }
+    }
+    abort("missing Item declaration fingerprint")
+  }
+  let i32 = b"pub struct Item {\n  value: I32\n}\n"
+  let i64 = b"pub struct Item {\n  value: I64\n}\n"
+  assert_eq(freeze(1660UL, i32), freeze(2660UL, i32))
+  assert_true(freeze(1660UL, i32) != freeze(1660UL, i64))
+}
+
+///|
+test "module interface fingerprints ignore private implementation changes" {
+  let freeze = fn(source : Bytes) -> String {
+    let program = collect_program_manifest(
+      1670UL,
+      ProgramManifest::new([
+        ManifestModule::new("abi.private", [
+          ManifestFile::new("private.dew", source),
+        ]),
+      ]),
+    )
+    freeze_program_interfaces(program).interfaces[0].interface_fingerprint
+  }
+  let first = b"pub struct Item {\n  value: I32\n}\nfn hidden() -> I32 {\n  1\n}\n"
+  let second = b"pub struct Item {\n  value: I32\n}\nfn hidden() -> I32 {\n  2\n}\n"
+  assert_eq(freeze(first), freeze(second))
+}
+
+///|
+test "module interface fingerprints include transitive dependency content" {
+  let freeze = fn(field_type : Bytes) -> String {
+    let library = Buffer()
+    library.write_bytes(b"pub struct Item {\n  value: ")
+    library.write_bytes(field_type)
+    library.write_bytes(b"\n}\n")
+    let program = collect_program_manifest(
+      1680UL,
+      ProgramManifest::new([
+        ManifestModule::new("abi.main", [
+          ManifestFile::new(
+            "main.dew", b"open abi.library\npub fn keep(value: Item) -> Item {\n  value\n}\n",
+          ),
+        ]),
+        ManifestModule::new("abi.library", [
+          ManifestFile::new("library.dew", library.to_bytes()),
+        ]),
+      ]),
+    )
+    freeze_program_interfaces(program).interfaces[0].interface_fingerprint
+  }
+  assert_true(freeze(b"I32") != freeze(b"I64"))
+}
+
+///|
 test "cyclic module interfaces resolve imported nominal signatures" {
   let program = collect_program_manifest(
     1700UL,
