@@ -26,6 +26,7 @@ python3 tools/generate_set_std.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs
 node --check tools/dew-abi.mjs
+node --check tools/dew-wasm-consumer.mjs
 node --check tools/wasm-metrics.mjs
 python3 tools/dew_cli_test.py
 
@@ -165,6 +166,15 @@ node tools/wasm-metrics.mjs \
   .tmp/dew-aggregate-callback-budget.wasm \
   tests/performance-budgets/generic-aggregate-callback-adapter.json \
   > .tmp/dew-aggregate-callback-metrics.json
+wasm-tools parse \
+  tests/abi-consumers/generic-aggregate-callback-i32.wat \
+  -o .tmp/dew-aggregate-callback-consumer.wasm
+node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-aggregate-callback-budget.wasm \
+  .tmp/dew-aggregate-callback-consumer.wasm \
+  run i32 > .tmp/dew-aggregate-callback-consumer.json
+grep -q '"type":"i32","value":42' \
+  .tmp/dew-aggregate-callback-consumer.json
 tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
