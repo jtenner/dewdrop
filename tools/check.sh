@@ -25,6 +25,7 @@ python3 tools/generate_map_std.py --check
 python3 tools/generate_set_std.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs
+node --check tools/dew-abi.mjs
 python3 tools/dew_cli_test.py
 
 targets=(native)
@@ -133,6 +134,15 @@ test -s .tmp/dew-cli-smoke.wat
 tools/dew run tests/module-snapshots/control-flow/short-circuit-runtime.dew \
   > .tmp/dew-cli-run.txt
 grep -q '^control:short-circuit$' .tmp/dew-cli-run.txt
+tools/dew build \
+  tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.dew \
+  -o .tmp/dew-abi-smoke.wasm
+node tools/dew-abi.mjs .tmp/dew-abi-smoke.wasm list \
+  > .tmp/dew-abi-list.json
+grep -q '"export":"identity[$]dew[$]i32"' .tmp/dew-abi-list.json
+node tools/dew-abi.mjs .tmp/dew-abi-smoke.wasm \
+  call identity i32 i32 i32 '[42]' > .tmp/dew-abi-call.json
+grep -q '"value":42' .tmp/dew-abi-call.json
 node --input-type=module -e '
   import { readFile } from "node:fs/promises";
   const bytes = await readFile(".tmp/dew-cli-smoke.wasm");

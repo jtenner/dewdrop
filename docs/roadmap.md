@@ -156,7 +156,7 @@ direct typed references.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
 - [ ] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct leaves and acyclic nested generic struct graphs now clone across erased boundaries with lazy scalar box/unbox conversion, and structural generic callback calls specialize their direct/environment signatures; enum payload graphs, cyclic schemas, and generated callback wrapper closures remain.
-- [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize. V1 SHA-256 callable fingerprints now persist through frozen-interface/cache V5; dependency-interface identities and compatibility negotiation remain.
+- [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize. V1 SHA-256 callable fingerprints now persist through frozen-interface/cache V5; dependency-interface identities and compatibility negotiation remain. A Node host consumer lists deterministic adapter exports and invokes scalar carrier boundaries; in-Wasm aggregate/callback consumers remain.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
 
 **Done when:** representative cross-module generic functions and aggregates

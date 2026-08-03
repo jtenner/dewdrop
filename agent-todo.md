@@ -157,6 +157,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [ ] Define ABI compatibility fingerprints after the ABI stabilizes.
   - [x] Persist V1 SHA-256 callable ABI fingerprints in frozen-interface/cache V5 using normalized signatures, physical shapes, and explicit box/closure schema domains.
   - [ ] Replace exact external nominal `DeclId` members with dependency-interface fingerprints and define compatibility/version negotiation.
+  - [x] Add a deterministic Node host consumer that lists `$dew$<carrier,...>` exports and invokes scalar adapters with explicit parameter/result carrier conversion.
+  - [ ] Add an in-Wasm package consumer for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
 
 ## Generic trait obligations and runtime traits
 

@@ -86,6 +86,8 @@ Generic signature instantiation now descends through structural function types i
 
 Frozen exported callables now carry V1 SHA-256 ABI fingerprints persisted in frozen-interface/cache V5. The preimage includes explicit callable, box, and flattened-closure schema domains, module path, source export name, generic arity, normalized parameter/result type trees, and physical shapes. Generic parameters use callable-relative ordinals. Exact nominal identities still use current `DeclId` values; replacing external nominal identities with dependency-interface fingerprints remains necessary before independently assigned package module IDs are compatible.
 
+`tools/dew-abi.mjs` is the first executable host consumer. `list` discovers and deterministically sorts valid `<source>$dew$<carrier,...>` function exports. `call` selects one source/carrier vector, performs explicit `i32`/`i64`/`f32`/`f64` JavaScript conversion, invokes `__dew_init` once, calls the adapter, and emits normalized JSON. It rejects `v128` because the JavaScript WebAssembly API cannot invoke it and rejects `eqref` because aggregate/reference values require an in-Wasm package consumer.
+
 ## Remaining work
 
 1. Extend acyclic nested struct conversion to enum payloads and cyclic graph helpers, then synthesize structural callback wrapper closures. Function-containing and cyclic export adapters remain conservatively excluded until those helpers exist.
