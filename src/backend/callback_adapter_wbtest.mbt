@@ -36,3 +36,28 @@ test "generic structural callback adapters validate flattened wrapper closures" 
     emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
   )
 }
+
+///|
+test "generic aggregate callback fields plan flattened wrapper closures" {
+  let program = @semantic.collect_program_manifest(
+    2411UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn identity_box<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {\n  if first {\n    value\n  } else {\n    value\n  }\n}\npub fn main() -> Unit {\n  let box = identity_box(CallbackBox {\n    callback: increment\n  }, true)\n  assert(true, \"aggregate callback\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(program.diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let helper_plan = starshine_program_adapter_helper_plan(lowering, link)
+  assert_true(helper_plan.wrappers.length() >= 2)
+  assert_true(
+    emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
+  )
+}

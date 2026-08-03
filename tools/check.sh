@@ -158,6 +158,14 @@ node tools/wasm-metrics.mjs \
   tests/performance-budgets/generic-structural-callback-adapter.json \
   > .tmp/dew-callback-wrapper-metrics.json
 tools/dew build \
+  tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew \
+  -o .tmp/dew-aggregate-callback-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.wat \
+  .tmp/dew-aggregate-callback-budget.wasm \
+  tests/performance-budgets/generic-aggregate-callback-adapter.json \
+  > .tmp/dew-aggregate-callback-metrics.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \

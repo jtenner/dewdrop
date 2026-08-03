@@ -26,7 +26,9 @@ The tool reports JSON in a fixed field order. Budgets use non-negative integer b
 
 `tests/performance-budgets/generic-structural-callback-adapter.json` requires exactly three callback-bearing adapter exports, including a callback nested in another callback signature, retains the expected direct/environment-first wrapper dispatch sites, and bounds wrapper closure allocations, box sites, casts/tests, type/function growth, and output size.
 
-`tools/check.sh` builds all three production modules and validates the budgets. The generated JSON metric reports remain under `.tmp/` for diagnosis.
+`tests/performance-budgets/generic-aggregate-callback-adapter.json` requires exactly two adapter exports whose struct and enum payload conversion inserts callback wrappers. It bounds synthetic callback signatures, wrapper and aggregate reconstruction sites, casts/tests, indirect calls, and output size.
+
+`tools/check.sh` builds all four production modules and validates the budgets. The generated JSON metric reports remain under `.tmp/` for diagnosis.
 
 ## Interpretation
 

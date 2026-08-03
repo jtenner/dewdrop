@@ -1,0 +1,41 @@
+struct CallbackBox<t> {
+  callback: fn(t) -> t
+}
+
+enum CallbackChoice<t> {
+  Tuple(fn(t) -> t)
+  Struct {
+    callback: fn(t) -> t
+  }
+}
+
+fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+pub fn identity_box<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {
+  if first {
+    value
+  } else {
+    value
+  }
+}
+
+pub fn identity_choice<t>(value: CallbackChoice<t>, first: Bool) -> CallbackChoice<t> {
+  if first {
+    value
+  } else {
+    value
+  }
+}
+
+pub fn main() -> Unit {
+  let box = identity_box(CallbackBox {
+    callback: increment
+  }, true)
+  let tuple = identity_choice(CallbackChoice::Tuple(increment), true)
+  let structured = identity_choice(CallbackChoice::Struct {
+    callback: increment
+  }, false)
+  assert(true, "aggregate callback adapter construction")
+}
