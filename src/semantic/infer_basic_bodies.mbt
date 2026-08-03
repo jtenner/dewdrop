@@ -1732,10 +1732,7 @@ fn BasicBodyInferencer::instantiate_signature_type(
           self.call_scratch.instantiation_values[source] = result
           self.call_scratch.instantiation_results.push(result)
         }
-        ErrorType
-        | PrimitiveType(_)
-        | NominalType(_)
-        | TraitType(_) => {
+        ErrorType | PrimitiveType(_) | NominalType(_) | TraitType(_) => {
           let result = self.solver.resolved_type(source)
           self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
           self.call_scratch.instantiation_values[source] = result
@@ -5718,11 +5715,7 @@ fn BasicBodyInferencer::select_function_value_call(
       origin,
     )
   }
-  self.constrain(
-    self.expression_type(expression),
-    signature.result,
-    origin,
-  )
+  self.constrain(self.expression_type(expression), signature.result, origin)
   self.call_targets[call_slot] = SelectedFunctionValueCallTarget(target)
   true
 }

@@ -1252,10 +1252,7 @@ fn callable_abi_write_string(output : Buffer, value : String) -> Unit {
 }
 
 ///|
-fn callable_abi_write_shape(
-  output : Buffer,
-  shape : PlannedValueShape,
-) -> Unit {
+fn callable_abi_write_shape(output : Buffer, shape : PlannedValueShape) -> Unit {
   let tag = match shape {
     UnitPlannedValueShape => 0
     NeverPlannedValueShape => 1
@@ -1518,19 +1515,18 @@ fn frozen_body_type_to_resolved(
         )
       }
       let resolved_result = frozen_body_type_to_resolved(
-        resolved,
-        inferred,
-        body_result,
+        resolved, inferred, body_result,
       )
       for index, existing in resolved.types {
         match existing {
-          FunctionType(candidate_parameters, candidate_result) if
-            candidate_result == resolved_result &&
+          FunctionType(candidate_parameters, candidate_result) if candidate_result ==
+            resolved_result &&
             candidate_parameters.length == resolved_parameters.length() => {
             let mut same = true
             for parameter_index in 0..<candidate_parameters.length {
               if resolved.type_arguments[candidate_parameters.start +
-                parameter_index] != resolved_parameters[parameter_index] {
+                parameter_index] !=
+                resolved_parameters[parameter_index] {
                 same = false
                 break
               }
@@ -1848,11 +1844,7 @@ pub fn freeze_module_interface(
       result_type: callable.result_type,
       result_shape: callable.result_shape,
       abi_fingerprint: frozen_callable_abi_fingerprint(
-        path,
-        callable_abi_identities,
-        resolved,
-        functions,
-        callable,
+        path, callable_abi_identities, resolved, functions, callable,
       ),
       location: collected.declaration_location(callable.declaration).unwrap(),
     })

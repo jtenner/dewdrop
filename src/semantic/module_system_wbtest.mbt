@@ -464,20 +464,18 @@ test "imported public types and traits resolve in consumer signatures" {
 
 ///|
 test "frozen callable ABI fingerprints ignore external module ID assignment" {
-  let freeze = fn(seed: ModuleId) -> String {
+  let freeze = fn(seed : ModuleId) -> String {
     let program = collect_program_manifest(
       seed,
       ProgramManifest::new([
         ManifestModule::new("app.main", [
           ManifestFile::new(
-            "main.dew",
-            b"open app.library\npub fn keep(value: Item) -> Item {\n  value\n}\n",
+            "main.dew", b"open app.library\npub fn keep(value: Item) -> Item {\n  value\n}\n",
           ),
         ]),
         ManifestModule::new("app.library", [
           ManifestFile::new(
-            "library.dew",
-            b"pub struct Item {\n  value: I32\n}\n",
+            "library.dew", b"pub struct Item {\n  value: I32\n}\n",
           ),
         ]),
       ]),
@@ -493,7 +491,7 @@ test "frozen callable ABI fingerprints ignore external module ID assignment" {
 
 ///|
 test "frozen callable ABI fingerprints are stable and signature sensitive" {
-  let freeze = fn(seed: ModuleId, source: Bytes) -> String {
+  let freeze = fn(seed : ModuleId, source : Bytes) -> String {
     let program = collect_program_manifest(
       seed,
       ProgramManifest::new([
@@ -512,8 +510,7 @@ test "frozen callable ABI fingerprints are stable and signature sensitive" {
   let first = freeze(1650UL, generic_source)
   let repeated = freeze(2650UL, generic_source)
   let changed = freeze(
-    1650UL,
-    b"pub fn identity(value: I64) -> I64 {\n  value\n}\n",
+    1650UL, b"pub fn identity(value: I64) -> I64 {\n  value\n}\n",
   )
   assert_eq(first.length(), 64)
   assert_eq(first, repeated)

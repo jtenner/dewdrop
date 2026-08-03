@@ -742,10 +742,7 @@ pub fn LocalTypeSolver::unify(
             FunctionType(right_parameters, right_result),
           ) =>
             self.push_resolved_function_pairs(
-              left_parameters,
-              left_result,
-              right_parameters,
-              right_result,
+              left_parameters, left_result, right_parameters, right_result,
             )
           _ => false
         }
@@ -761,10 +758,7 @@ pub fn LocalTypeSolver::unify(
         BodyFunctionType(right_parameters, right_result),
       ) =>
         self.push_body_function_pairs(
-          left_parameters,
-          left_result,
-          right_parameters,
-          right_result,
+          left_parameters, left_result, right_parameters, right_result,
         )
       (
         BodyAppliedType(body_base, body_arguments),
@@ -795,10 +789,7 @@ pub fn LocalTypeSolver::unify(
         match self.resolved.types[resolved_type] {
           FunctionType(resolved_parameters, resolved_result) =>
             self.push_mixed_function_pairs(
-              body_parameters,
-              body_result,
-              resolved_parameters,
-              resolved_result,
+              body_parameters, body_result, resolved_parameters, resolved_result,
               true,
             )
           _ => false
@@ -810,10 +801,7 @@ pub fn LocalTypeSolver::unify(
         match self.resolved.types[resolved_type] {
           FunctionType(resolved_parameters, resolved_result) =>
             self.push_mixed_function_pairs(
-              body_parameters,
-              body_result,
-              resolved_parameters,
-              resolved_result,
+              body_parameters, body_result, resolved_parameters, resolved_result,
               false,
             )
           _ => false
