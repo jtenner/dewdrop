@@ -547,7 +547,7 @@ test "program lowering directizes transparent callback wrappers" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"fn increment(value: I32) -> I32 {\n  value + 1\n}\nfn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  callback(value)\n}\npub fn main() -> I32 {\n  apply(increment, 41)\n}\n",
+          "main.dew", b"fn increment(value: I32) -> I32 {\n  value + 1\n}\nfn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  let result = callback(value)\n  result\n}\npub fn main() -> I32 {\n  apply(increment, 41)\n}\n",
         ),
       ]),
     ]),
@@ -564,7 +564,7 @@ test "program lowering directizes transparent callback wrappers" {
       assert_eq(declaration, increment)
       assert_eq(arguments.length, 1)
     }
-    _ => fail("expected transparent callback wrapper directization")
+    _ => fail("expected local-return callback wrapper directization")
   }
 }
 

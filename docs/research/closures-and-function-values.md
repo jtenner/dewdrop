@@ -66,7 +66,7 @@ A future shared-environment optimization may still select a split representation
 
 1. Promote deterministic program specialization ABI keys into persistent interface fingerprints and add erased fallback adapters for boundaries that cannot be statically closed.
 2. Add closure ABI fingerprints to persistent external package interfaces.
-4. Extend the implemented transparent call-only wrapper summaries to returned, stored, conditionally called, multiply forwarded, and unknown callback uses.
+4. Extend callback summaries beyond the implemented expression-tail, explicit-return, and immutable local-return transparent wrappers to stored, conditionally called, multiply forwarded, and unknown callback uses.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after the Wago rebase completes.
 
 ## Constraints

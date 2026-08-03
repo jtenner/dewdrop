@@ -269,6 +269,44 @@ pub fn PlannedProgramWasmGCLink::physical_type_index(
 }
 
 ///|
+fn transparent_callback_root_expression(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+) -> ExprId {
+  match body.root {
+    ExpressionBodyRoot(expression) => expression
+    BlockBodyRoot(block) => {
+      let items = module_.blocks[block].items
+      if items.length == 1 {
+        return match module_.block_items[items.start].kind {
+          PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
+            expression
+          _ => -1
+        }
+      }
+      if items.length != 2 {
+        return -1
+      }
+      let (local_id, initializer) = match
+        module_.block_items[items.start].kind {
+        PlannedLetItem(local_id, false, initializer) => (local_id, initializer)
+        _ => return -1
+      }
+      let tail = match module_.block_items[items.start + 1].kind {
+        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
+          expression
+        _ => return -1
+      }
+      match module_.expressions[tail].kind {
+        PlannedLocalGet(tail_local_id) if tail_local_id == local_id =>
+          initializer
+        _ => -1
+      }
+    }
+  }
+}
+
+///|
 fn transparent_callback_parameter_count(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -283,18 +321,9 @@ fn transparent_callback_parameter_count(
   if parameter_count <= 0 {
     return -1
   }
-  let root_expression = match body.root {
-    BlockBodyRoot(block) => {
-      let items = module_.blocks[block].items
-      if items.length != 1 {
-        return -1
-      }
-      match module_.block_items[items.start].kind {
-        PlannedExpressionItem(expression) => expression
-        _ => return -1
-      }
-    }
-    ExpressionBodyRoot(expression) => expression
+  let root_expression = transparent_callback_root_expression(module_, body)
+  if root_expression < 0 {
+    return -1
   }
   let (target, arguments) = match module_.expressions[root_expression].kind {
     PlannedFunctionValueCall(target, arguments, _) => (target, arguments)
@@ -1652,7 +1681,8 @@ fn program_erased_type_contains_function(
   let seen : Map[ResolvedTypeId, Bool] = Map::default()
   while work.length() > 0 {
     let current = work.pop().unwrap()
-    if current < 0 || current >= lowering.resolved_types.length() ||
+    if current < 0 ||
+      current >= lowering.resolved_types.length() ||
       seen.contains(current) {
       continue
     }
@@ -1662,9 +1692,7 @@ fn program_erased_type_contains_function(
       AppliedType(base, arguments) => {
         work.push(base)
         for index in 0..<arguments.length {
-          work.push(
-            lowering.resolved_type_arguments[arguments.start + index],
-          )
+          work.push(lowering.resolved_type_arguments[arguments.start + index])
         }
       }
       _ => ()
@@ -1734,7 +1762,7 @@ fn program_erased_type_has_nominal_cycle(
                           for payload_index in 0..<types.length {
                             work_types.push(
                               lowering.type_layouts.payload_types[types.start +
-                                payload_index],
+                              payload_index],
                             )
                             work_states.push(0)
                             work_declarations.push(0UL)
@@ -1743,7 +1771,7 @@ fn program_erased_type_has_nominal_cycle(
                           for field_index in 0..<fields.length {
                             work_types.push(
                               lowering.type_layouts.fields[fields.start +
-                                field_index].type_,
+                              field_index].type_,
                             )
                             work_states.push(0)
                             work_declarations.push(0UL)

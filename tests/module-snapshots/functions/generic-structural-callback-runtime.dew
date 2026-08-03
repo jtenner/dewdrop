@@ -2,11 +2,14 @@ fn increment(value: I32) -> I32 {
   value + 1
 }
 
-pub fn invoke<t>(callback: fn(t) -> t, value: t) -> t {
-  let result = callback(value)
-  result
+pub fn invoke<t>(callback: fn(t) -> t, value: t, first: Bool) -> t {
+  if first {
+    callback(value)
+  } else {
+    callback(value)
+  }
 }
 
 pub fn main() -> Unit {
-  assert(invoke(increment, 41) == 42, "direct structural callback demand")
+  assert(invoke(increment, 41, true) == 42, "structural callback demand")
 }
