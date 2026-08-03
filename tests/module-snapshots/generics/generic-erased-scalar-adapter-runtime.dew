@@ -1,0 +1,17 @@
+pub fn identity<t>(value: t) -> t {
+  value
+}
+
+pub fn choose<t>(condition: Bool, left: t, right: t) -> t {
+  if condition {
+    left
+  } else {
+    right
+  }
+}
+
+pub fn main() -> Unit {
+  assert(identity(42) == 42, "specialized i32 identity")
+  assert(identity(42i64) == 42i64, "specialized i64 identity")
+  assert(choose(false, 7.0f64, 42.5f64) == 42.5f64, "specialized f64 choice")
+}

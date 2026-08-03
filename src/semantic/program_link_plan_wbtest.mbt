@@ -303,6 +303,50 @@ test "program linker adapts exact references to erased generic fallbacks" {
 }
 
 ///|
+test "program linker exports boxed scalar adapters for erased generics" {
+  let program = collect_program_manifest(
+    2244UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"pub fn identity<t>(value: t) -> t {\n  value\n}\npub fn choose<t>(condition: Bool, left: t, right: t) -> t {\n  if condition { left } else { right }\n}\npub fn main() -> Unit {\n  let a = identity(42)\n  let b = identity(42i64)\n  let c = choose(false, 7.0f64, 42.5f64)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_true(link.erased_box_type_indices[0] >= 0)
+  assert_true(link.erased_box_type_indices[1] >= 0)
+  assert_true(link.erased_box_type_indices[3] >= 0)
+  let mut i32_adapter = 0
+  let mut i64_adapter = 0
+  let mut f64_adapter = 0
+  for function_ in link.functions {
+    if function_.name == b"identity$dew$i32" {
+      i32_adapter += 1
+      assert_eq(function_.visibility, Public)
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+    if function_.name == b"identity$dew$i64" {
+      i64_adapter += 1
+      assert_eq(function_.visibility, Public)
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+    if function_.name == b"choose$dew$f64" {
+      f64_adapter += 1
+      assert_eq(function_.visibility, Public)
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+  }
+  assert_eq(i32_adapter, 1)
+  assert_eq(i64_adapter, 1)
+  assert_eq(f64_adapter, 1)
+}
+
+///|
 test "program linker coalesces generic specializations by physical carrier" {
   let program = collect_program_manifest(
     2245UL,
