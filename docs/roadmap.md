@@ -144,15 +144,17 @@ direct typed references.
 
 - [ ] Parse generic bounds and freeze trait obligations.
 - [ ] Solve obligations using local and imported coherent evidence.
-- [ ] Define shared scalar/reference specializations and an erased `eqref` fallback.
-- [ ] Emit boxes, unboxes, and static-to-erased adapters only at required boundaries.
+- [x] Define shared physical-carrier specializations and one nullable-`eqref` fallback for each public generic exported by the root module.
+- [x] Emit exact-reference-to-erased callable adapters only when an escaping generic reference's concrete signature differs from its `eqref` fallback.
+- [ ] Emit scalar boxes, unboxes, and scalar-to-erased adapters only at required boundaries.
 - [x] Support executable generic enum construction, transport, and pattern access through deterministic erased physical-carrier fields.
 - [x] Execute generic parameter-selector functions and transparent generic callback wrappers through deterministic call-site specialization, including imported calls and expected-type generic references.
 - [x] Materialize deterministic physical-carrier specializations for general generic function bodies, including locals, structured control flow, nested/transitive generic calls, multiple type parameters, escaping references, and imported definitions.
 - [x] Coalesce source shapes with the same Wasm carrier and assign deterministic declaration-plus-carrier ABI keys.
 - [x] Keep unspecialized generic recipes out of the executable/export ABI until erased fallback adapters are defined.
 - [x] Support generic struct construction/access through deterministic per-field erased carrier slots without scalar boxes.
-- [ ] Add erased callable fallback adapters for specialization boundaries that cannot be statically closed.
+- [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
+- [ ] Extend erased adapters to scalar boundaries with deterministic WasmGC boxes.
 - [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
 
@@ -510,10 +512,11 @@ count = count + 1
 - [x] Rebase module-local physical WasmGC groups and dependency-directed nominal references.
 - [x] Merge physical WasmGC SCCs spanning multiple modules and emit binary-encodable final-index references inside shared recursive groups.
 - [ ] Deduplicate equivalent ABI signatures.
-- [ ] Define generic scalar specializations.
-- [ ] Define erased `eqref` fallback ABIs.
+- [x] Define generic scalar/reference specializations by canonical Wasm carrier.
+- [x] Define root-exported erased `eqref` fallback ABIs.
 - [ ] Emit scalar boxes/unboxes.
-- [ ] Emit static-to-erased adapters.
+- [x] Emit exact nominal-reference static-to-erased adapters.
+- [ ] Emit scalar-to-erased adapters.
 - [ ] Define cross-module ABI fingerprints.
 - [ ] Reject incompatible separately compiled interfaces.
 

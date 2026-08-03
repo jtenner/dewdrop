@@ -104,7 +104,7 @@ docs/research/       implementation notes and design measurements
 
 ## Status
 
-Dew is under active development. The compiler and standard library are usable for the supported subset. Generic functions execute through deterministic program-wide physical-carrier specialization, including structured bodies, nested generic calls, multiple type parameters, imported definitions, and escaping function references. Generic structs use deterministic erased carrier fields and execute without scalar boxes. Erased callable fallback adapters, package TOML/lockfiles, growable arrays, queues, iterators, and several tooling surfaces remain planned.
+Dew is under active development. The compiler and standard library are usable for the supported subset. Generic functions execute through deterministic program-wide physical-carrier specialization, including structured bodies, nested generic calls, multiple type parameters, imported definitions, and escaping function references. Public root-module generics also expose one nullable-`eqref` fallback, and exact nominal function references receive deterministic static-to-erased adapters only when their callable signatures differ. Generic structs use deterministic erased carrier fields and execute without scalar boxes. Scalar boxing adapters, persistent ABI fingerprints, package TOML/lockfiles, growable arrays, queues, iterators, and several tooling surfaces remain planned.
 
 ## License
 

@@ -1565,6 +1565,36 @@ fn starshine_match_pattern_instructions(
 }
 
 ///|
+fn starshine_program_expression_function_type_index(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink,
+  program_module_index : Int,
+  expression : @semantic.ExprId,
+) -> Int {
+  let type_ = lowering.expressions[expression].type_
+  let resolved_type = if type_ < -1 {
+    -type_ - 2
+  } else if type_ >= 0 && type_ < lowering.types.length() {
+    match lowering.types[type_] {
+      @semantic.BodyResolvedType(value) => value
+      _ => -1
+    }
+  } else {
+    -1
+  }
+  if resolved_type < 0 ||
+    resolved_type >= planned.function_type_by_resolved.length() {
+    return -1
+  }
+  let local_type = planned.function_type_by_resolved[resolved_type]
+  if local_type < 0 {
+    return -1
+  }
+  program.signature_type_index(program_module_index, local_type)
+}
+
+///|
 fn starshine_body_value_type(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -2841,6 +2871,7 @@ fn starshine_function_reference_cache_indices(
                 declaration,
                 lowering.expression_type_argument_shapes,
                 type_arguments,
+                -1,
               ) <
               0
             Some(link) =>
@@ -3038,6 +3069,9 @@ fn starshine_emit_body_instructions(
                   declaration,
                   lowering.expression_type_argument_shapes,
                   type_arguments,
+                  starshine_program_expression_function_type_index(
+                    lowering, planned, link, program_module_index, expression,
+                  ),
                 )
               Some(link) =>
                 link.function_reference_singleton_global(
@@ -4016,6 +4050,26 @@ fn starshine_emit_body_instructions(
             let needs_cast = match lowering.expressions[base].kind {
               @semantic.PlannedDirectCall(_, _, _, arguments) if arguments.length >
                 0 => true
+              @semantic.PlannedFunctionValueCall(_, _, _) => true
+              @semantic.PlannedLocalGet(local_id) => {
+                let local_info = lowering.locals[body.locals.start + local_id]
+                (match local_info.kind {
+                  @semantic.ParameterLocal => false
+                  _ => true
+                }) &&
+                !(local_info.nominal != 0UL &&
+                local_info.nominal !=
+                @semantic.standard_fixed_array_type_declaration() &&
+                local_info.nominal != @semantic.standard_map_type_declaration() &&
+                local_info.nominal != @semantic.standard_set_type_declaration() &&
+                (match lowering.type_layouts.layout_of(local_info.nominal) {
+                  Some(layout) => layout.generic_parameters.length > 0
+                  None => false
+                }))
+              }
+              @semantic.PlannedBlockExpression(_)
+              | @semantic.PlannedIfExpression(_, _, _)
+              | @semantic.PlannedMatchExpression(_, _) => true
               _ => false
             }
             tasks.push(
@@ -8063,6 +8117,96 @@ fn starshine_program_startup_body(
 }
 
 ///|
+fn starshine_program_erased_adapter_cast_index(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  module_index : Int,
+  type_ : @semantic.PlannedWasmValueType,
+) -> Int {
+  match type_ {
+    @semantic.WasmFunctionRefValue(local_type) =>
+      planned.signature_type_index(module_index, local_type)
+    @semantic.WasmNominalRefValue(local_type) =>
+      planned.physical_type_index(module_index, local_type)
+    @semantic.WasmExternalNominalRefValue(declaration) =>
+      match planned.type_lookup.get(declaration) {
+        Some(type_index) => type_index
+        None => -1
+      }
+    _ => -1
+  }
+}
+
+///|
+fn starshine_program_erased_adapter_is_eqref(
+  type_ : @semantic.PlannedWasmValueType,
+) -> Bool {
+  match type_ {
+    @semantic.WasmNullableEqRefValue => true
+    _ => false
+  }
+}
+
+///|
+fn starshine_program_erased_adapter_body(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let target = function_.erased_adapter_target
+  if target < 0 {
+    return Err(MissingFunction(function_.declaration))
+  }
+  let mut target_function = None
+  for candidate in planned.functions {
+    if candidate.function_index == target {
+      target_function = Some(candidate)
+      break
+    }
+  }
+  let target_function = match target_function {
+    Some(value) => value
+    None => return Err(MissingFunction(function_.declaration))
+  }
+  let source_module = planned.modules[function_.module_index]
+  let target_module = planned.modules[target_function.module_index]
+  let instructions : Array[@lib.Instruction] = []
+  for index in 0..<function_.parameters.length {
+    instructions.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(index.reinterpret_as_uint()),
+      ),
+    )
+    let source_type = source_module.function_value_types[function_.parameters.start +
+      index]
+    let target_type = target_module.function_value_types[target_function.parameters.start +
+      index]
+    if source_type != target_type &&
+      !starshine_program_erased_adapter_is_eqref(target_type) {
+      return Err(MissingFunction(function_.declaration))
+    }
+  }
+  instructions.push(
+    @lib.Instruction::call(@lib.FuncIdx::new(target.reinterpret_as_uint())),
+  )
+  if function_.results.length == 1 {
+    let source_type = source_module.function_value_types[function_.results.start]
+    let target_type = target_module.function_value_types[target_function.results.start]
+    if source_type != target_type {
+      let cast_index = starshine_program_erased_adapter_cast_index(
+        planned,
+        function_.module_index,
+        source_type,
+      )
+      if !starshine_program_erased_adapter_is_eqref(target_type) ||
+        cast_index < 0 {
+        return Err(MissingFunction(function_.declaration))
+      }
+      instructions.push(starshine_match_cast(cast_index))
+    }
+  }
+  Ok(@lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions)))
+}
+
+///|
 fn emit_starshine_program_code_section(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -8096,7 +8240,12 @@ fn emit_starshine_program_code_section(
         }
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if !function_.elided {
-          if name == b"dew_test_assert" {
+          if function_.erased_adapter_target >= 0 {
+            match starshine_program_erased_adapter_body(planned, function_) {
+              Ok(function_body) => functions.push(function_body)
+              Err(error) => return Err(error)
+            }
+          } else if name == b"dew_test_assert" {
             functions.push(
               starshine_test_assert_body(
                 starshine_program_runtime_function_index(
@@ -8153,25 +8302,15 @@ fn starshine_program_function_reference_element_section(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.ElemSec? {
   let referenced : Map[Int, Bool] = Map::default()
+  for singleton in planned.function_reference_singletons {
+    if singleton.function_index >= 0 {
+      referenced[singleton.function_index] = true
+    }
+  }
   for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
-        @semantic.PlannedFunctionReference(declaration, type_arguments) => {
-          let function_ = if type_arguments.length > 0 {
-            planned.specialized_function_of(
-              declaration,
-              module_.expression_type_argument_shapes,
-              type_arguments,
-            )
-          } else {
-            planned.function_of(declaration)
-          }
-          match function_ {
-            Some(value) if value.function_index >= 0 =>
-              referenced[value.function_index] = true
-            _ => ()
-          }
-        }
+        @semantic.PlannedFunctionReference(_, _) => ()
         @semantic.PlannedLambdaClosure(lambda, _) => {
           let module_fragments = planned.modules[module_index]
           let fragment = module_fragments.functions[module_fragments.lambda_function_indices[lambda]]

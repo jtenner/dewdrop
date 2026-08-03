@@ -141,12 +141,13 @@ Performance and correctness work remains continuous: expand generated lane-famil
 
 ## Generic executable ABI
 
-- [ ] Define shared scalar and reference ABI specializations.
-- [ ] Define erased nullable-`eqref` fallback ABIs.
-- [ ] Emit scalar boxes, unboxes, and static-to-erased adapters.
-- [ ] Support generic aggregate construction and access.
-- [ ] Support executable generic calls currently rejected by `UnsupportedProgramGenericCall`.
-- [ ] Support executable generic types currently rejected by `UnsupportedProgramGenericType`.
+- [x] Define shared physical scalar/reference ABI specializations keyed by canonical Wasm carrier.
+- [x] Define one erased nullable-`eqref` fallback for each public root-module generic callable.
+- [x] Emit exact nominal-reference static-to-erased adapters only when callable signatures differ.
+- [ ] Emit scalar boxes, unboxes, and scalar-to-erased adapters.
+- [x] Support executable generic enum and struct construction and access.
+- [x] Support executable generic calls, nested fixed-point specialization, and escaping generic references.
+- [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.
 - [ ] Define recursive generic aggregate instantiation and sharing.
 - [ ] Define ABI compatibility fingerprints after the ABI stabilizes.
 

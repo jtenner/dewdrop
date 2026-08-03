@@ -268,6 +268,41 @@ test "program linker exports one erased fallback for public generics" {
 }
 
 ///|
+test "program linker adapts exact references to erased generic fallbacks" {
+  let program = collect_program_manifest(
+    2242UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Item {\n  value: I32\n}\npub fn identity<t>(value: t) -> t {\n  value\n}\nfn return_identity() -> fn(Item) -> Item {\n  identity\n}\npub fn main() -> Unit {}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let identity = program.modules[0].lookup_value("identity").unwrap()
+  let mut fallback_index = -1
+  let mut adapter_index = -1
+  for function_ in link.functions {
+    if function_.declaration == identity &&
+      function_.specialization_abi_key == "\{identity}:eqref" {
+      fallback_index = function_.function_index
+    }
+    if function_.declaration == identity && function_.erased_adapter_target >= 0 {
+      adapter_index = function_.function_index
+      assert_eq(function_.erased_adapter_target, fallback_index)
+    }
+  }
+  assert_true(fallback_index >= 0)
+  assert_true(adapter_index >= 0)
+  assert_eq(link.function_reference_singletons.length(), 1)
+  assert_eq(link.function_reference_singletons[0].function_index, adapter_index)
+}
+
+///|
 test "program linker coalesces generic specializations by physical carrier" {
   let program = collect_program_manifest(
     2245UL,

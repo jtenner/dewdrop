@@ -32,6 +32,7 @@ pub struct PlannedProgramWasmFunction {
   results : HirSpan
   specialization_shapes : HirSpan
   specialization_abi_key : String
+  erased_adapter_target : Int
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -92,6 +93,7 @@ pub struct PlannedProgramFunctionReferenceSingleton {
   function_index : Int
   specialization_module_index : Int
   specialization_shapes : HirSpan
+  signature_type_index : Int
   global_index : Int
 } derive(Eq, Debug)
 
@@ -145,10 +147,15 @@ pub fn PlannedProgramWasmGCLink::specialized_function_reference_singleton_global
   declaration : DeclId,
   shapes : Array[PlannedValueShape],
   span : HirSpan,
+  signature_type_index : Int,
 ) -> Int {
   for singleton in self.function_reference_singletons {
     if singleton.declaration == declaration &&
       singleton.specialization_shapes.length > 0 &&
+      (
+        signature_type_index < 0 ||
+        singleton.signature_type_index == signature_type_index
+      ) &&
       program_specialization_shapes_equal(
         self.modules[singleton.specialization_module_index].specialization_shapes,
         singleton.specialization_shapes,
@@ -1152,13 +1159,14 @@ fn materialize_program_generic_specialization(
   declaration : DeclId,
   request_shapes : Array[PlannedValueShape],
   request : HirSpan,
+  erased_fallback : Bool,
 ) -> Unit {
   let owner_index = match module_lookup.get(semantic_id_module(declaration)) {
     Some(index) => index
     None => return
   }
   let module_ = modules[owner_index]
-  for function_ in module_.functions {
+  for function_index, function_ in module_.functions {
     if function_.declaration == declaration &&
       function_.specialization_shapes.length > 0 &&
       program_specialization_shapes_equal(
@@ -1167,6 +1175,10 @@ fn materialize_program_generic_specialization(
         request_shapes,
         request,
       ) {
+      if erased_fallback && function_.visibility != Public {
+        module_.functions[function_index] = { ..function_, visibility: Public }
+        modules[owner_index] = module_
+      }
       return
     }
   }
@@ -1252,7 +1264,11 @@ fn materialize_program_generic_specialization(
   module_.functions[base_index] = { ..base, elided: true }
   module_.functions.push({
     ..base,
-    visibility: ModuleVisible,
+    visibility: if erased_fallback {
+      Public
+    } else {
+      ModuleVisible
+    },
     is_test: false,
     is_test_entry: false,
     test_name: b"",
@@ -1284,10 +1300,11 @@ fn materialize_program_generic_specialization(
 ///|
 /// Runs module-local WasmGC fragment jobs in dependency-SCC order while
 /// retaining manifest-indexed outputs.
-pub fn plan_program_wasmgc_fragments_with_options(
+fn plan_program_wasmgc_fragments_for_root(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
+  erased_fallback_module_index : Int,
 ) -> PlannedProgramWasmGCFragments {
   guard lowering.modules.length() == analyzed.modules.length() else {
     abort("program fragment inputs have different module counts")
@@ -1334,6 +1351,31 @@ pub fn plan_program_wasmgc_fragments_with_options(
     specialization_module_lookup[module_.module_id] = module_index
   }
   for module_index, module_ in lowering.modules {
+    if module_index != erased_fallback_module_index {
+      continue
+    }
+    for callable in module_.functions.callables {
+      if callable.visibility != Public ||
+        callable.generic_parameters.length == 0 {
+        continue
+      }
+      let erased_shapes = Array::make(
+        callable.generic_parameters.length,
+        RefPlannedValueShape,
+      )
+      materialize_program_generic_specialization(
+        analyzed,
+        lowering,
+        modules,
+        specialization_module_lookup,
+        callable.declaration,
+        erased_shapes,
+        { start: 0, length: erased_shapes.length() },
+        true,
+      )
+    }
+  }
+  for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
         PlannedDirectCall(declaration, _, _, arguments) if arguments.length > 0 =>
@@ -1345,6 +1387,7 @@ pub fn plan_program_wasmgc_fragments_with_options(
             declaration,
             module_.call_type_argument_shapes,
             arguments,
+            false,
           )
         PlannedFunctionReference(declaration, arguments) if arguments.length > 0 =>
           materialize_program_generic_specialization(
@@ -1355,6 +1398,7 @@ pub fn plan_program_wasmgc_fragments_with_options(
             declaration,
             module_.expression_type_argument_shapes,
             arguments,
+            false,
           )
         _ => ()
       }
@@ -1420,6 +1464,7 @@ pub fn plan_program_wasmgc_fragments_with_options(
             target,
             resolved_shapes,
             { start: 0, length: resolved_shapes.length() },
+            false,
           )
         }
       }
@@ -1479,6 +1524,15 @@ pub fn plan_program_wasmgc_fragments_with_options(
 }
 
 ///|
+pub fn plan_program_wasmgc_fragments_with_options(
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  options : WasmGCPlanningOptions,
+) -> PlannedProgramWasmGCFragments {
+  plan_program_wasmgc_fragments_for_root(analyzed, lowering, options, 0)
+}
+
+///|
 pub fn plan_program_wasmgc_fragments(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
@@ -1488,6 +1542,69 @@ pub fn plan_program_wasmgc_fragments(
     lowering,
     WasmGCPlanningOptions::optimized_subtype_families(),
   )
+}
+
+///|
+fn program_body_resolved_type(
+  module_ : PlannedModuleLowering,
+  type_ : BodyTypeId,
+) -> ResolvedTypeId {
+  if type_ < -1 {
+    return -type_ - 2
+  }
+  if type_ >= 0 && type_ < module_.types.length() {
+    match module_.types[type_] {
+      BodyResolvedType(value) => return value
+      _ => ()
+    }
+  }
+  -1
+}
+
+///|
+fn program_erased_adapter_reference_type(type_ : PlannedWasmValueType) -> Bool {
+  match type_ {
+    WasmNullableEqRefValue
+    | WasmNominalRefValue(_)
+    | WasmExternalNominalRefValue(_) => true
+    _ => false
+  }
+}
+
+///|
+fn program_erased_adapter_compatible(
+  source_module : PlannedModuleWasmGCFragments,
+  source : PlannedWasmFunctionTypeFragment,
+  target_module : PlannedModuleWasmGCFragments,
+  target : PlannedProgramWasmFunction,
+) -> Bool {
+  if source.parameters.length != target.parameters.length ||
+    source.results.length != target.results.length {
+    return false
+  }
+  for index in 0..<source.parameters.length {
+    let source_type = source_module.function_value_types[source.parameters.start +
+      index]
+    let target_type = target_module.function_value_types[target.parameters.start +
+      index]
+    if source_type != target_type &&
+      !(target_type == WasmNullableEqRefValue &&
+      program_erased_adapter_reference_type(source_type)) {
+      return false
+    }
+  }
+  for index in 0..<source.results.length {
+    let source_type = source_module.function_value_types[source.results.start +
+      index]
+    let target_type = target_module.function_value_types[target.results.start +
+      index]
+    if source_type != target_type &&
+      !(target_type == WasmNullableEqRefValue &&
+      program_erased_adapter_reference_type(source_type)) {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -2318,6 +2435,7 @@ pub fn link_program_wasmgc_fragments(
           results: function_.results,
           specialization_shapes: function_.specialization_shapes,
           specialization_abi_key: function_.specialization_abi_key,
+          erased_adapter_target: -1,
           offset: function_.offset,
         })
       }
@@ -2422,7 +2540,7 @@ pub fn link_program_wasmgc_fragments(
   ] = []
   let singleton_functions : Map[Int, Bool] = Map::default()
   for module_index, module_ in lowering.modules {
-    for expression in module_.expressions {
+    for expression_index, expression in module_.expressions {
       match expression.kind {
         PlannedFunctionReference(declaration, arguments) => {
           let target = if arguments.length > 0 {
@@ -2447,25 +2565,118 @@ pub fn link_program_wasmgc_fragments(
               None => None
             }
           }
+          let resolved_type = program_body_resolved_type(
+            module_,
+            expression.type_,
+          )
+          let local_signature = if resolved_type >= 0 &&
+            resolved_type <
+            fragments.modules[module_index].function_type_by_resolved.length() {
+            fragments.modules[module_index].function_type_by_resolved[resolved_type]
+          } else {
+            -1
+          }
+          let signature_type_index = if local_signature >=
+            fragments.modules[module_index].physical_types.length() {
+            module_signature_indices[module_index][local_signature -
+            fragments.modules[module_index].physical_types.length()]
+          } else {
+            -1
+          }
           match target {
-            Some(function_) if function_.function_index >= 0 &&
-              !singleton_functions.contains(function_.function_index) => {
-              singleton_functions[function_.function_index] = true
-              function_reference_singletons.push({
-                module_index,
-                declaration,
-                function_index: function_.function_index,
-                specialization_module_index: function_.module_index,
-                specialization_shapes: function_.specialization_shapes,
-                global_index,
-              })
-              global_index += 1
+            Some(function_) if function_.function_index >= 0 => {
+              let mut reference_function = function_
+              if signature_type_index >= 0 &&
+                signature_type_index != function_.signature_type_index {
+                let mut source_signature = None
+                for candidate in fragments.modules[module_index].function_types {
+                  if candidate.signature_type_index == local_signature {
+                    source_signature = Some(candidate)
+                    break
+                  }
+                }
+                match source_signature {
+                  Some(source) if !planned_program_function_types_equal(
+                      fragments.modules,
+                      module_index,
+                      source,
+                      function_.module_index,
+                      {
+                        resolved_type: -1,
+                        signature_type_index: function_.signature_type_index,
+                        parameters: function_.parameters,
+                        results: function_.results,
+                      },
+                    ) &&
+                    program_erased_adapter_compatible(
+                      fragments.modules[module_index],
+                      source,
+                      fragments.modules[function_.module_index],
+                      function_,
+                    ) => {
+                    let mut adapter_index = -1
+                    for index, candidate in functions {
+                      if candidate.erased_adapter_target ==
+                        function_.function_index &&
+                        candidate.signature_type_index == signature_type_index {
+                        adapter_index = index
+                        break
+                      }
+                    }
+                    if adapter_index < 0 {
+                      adapter_index = functions.length()
+                      functions.push({
+                        declaration,
+                        lambda: -1,
+                        module_index,
+                        fragment_index: -1,
+                        name: b"",
+                        visibility: ModuleVisible,
+                        is_test: false,
+                        is_test_entry: false,
+                        test_name: b"",
+                        kind: PlannedWasmRuntimeFunction(b""),
+                        direct_builtin: b"",
+                        elided: false,
+                        signature_type_index,
+                        function_index: imported_function_count +
+                        defined_function_count,
+                        parameters: source.parameters,
+                        results: source.results,
+                        specialization_shapes: { start: 0, length: 0 },
+                        specialization_abi_key: "",
+                        erased_adapter_target: function_.function_index,
+                        offset: expression.offset,
+                      })
+                      defined_function_count += 1
+                    }
+                    reference_function = functions[adapter_index]
+                  }
+                  _ => ()
+                }
+              }
+              if !singleton_functions.contains(
+                  reference_function.function_index,
+                ) {
+                singleton_functions[reference_function.function_index] = true
+                function_reference_singletons.push({
+                  module_index,
+                  declaration,
+                  function_index: reference_function.function_index,
+                  specialization_module_index: function_.module_index,
+                  specialization_shapes: function_.specialization_shapes,
+                  signature_type_index,
+                  global_index,
+                })
+                global_index += 1
+              }
             }
             _ => ()
           }
         }
         _ => ()
       }
+      ignore(expression_index)
     }
   }
   let scheduled_initializers = program_schedule_initializers(
@@ -2542,7 +2753,9 @@ pub fn plan_program_wasmgc_link_with_options(
   options : WasmGCPlanningOptions,
 ) -> PlannedProgramWasmGCLink {
   link_program_wasmgc_fragments(
-    plan_program_wasmgc_fragments_with_options(analyzed, lowering, options),
+    plan_program_wasmgc_fragments_for_root(
+      analyzed, lowering, options, root_module_index,
+    ),
     lowering,
     root_module_index,
   )

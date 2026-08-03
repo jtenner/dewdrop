@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented as deterministic backend-neutral callable signatures for builtins, top-level functions, trait requirements, and impl methods. Program linking now closes generic demand transitively and materializes concrete functions by canonical Wasm carrier vector. Equivalent source shapes such as `I8`, `U32`, and `I32` share the `i32` specialization. Each specialized function retains a deterministic `<DeclId>:<carrier,...>` ABI key; unspecialized generic recipes are never emitted or exported.
+Implemented as deterministic backend-neutral callable signatures for builtins, top-level functions, trait requirements, and impl methods. Program linking now closes generic demand transitively and materializes concrete functions by canonical Wasm carrier vector. Equivalent source shapes such as `I8`, `U32`, and `I32` share the `i32` specialization. Each specialized function retains a deterministic `<DeclId>:<carrier,...>` ABI key; unspecialized generic recipes are never emitted. Every public generic in the root module instead receives one public all-reference specialization under its source export name. Escaping exact nominal references use a private static-to-erased adapter only when their concrete callable signature differs from that fallback.
 
 ## API
 
@@ -74,11 +74,16 @@ Release-mode measurements:
 
 Concrete closure entries use canonical environment-first signatures `(eqref, parameters...) -> result`. Program linking coalesces these independently from direct signatures. First-class values use an open WasmGC closure base containing one abstract function reference. Named references instantiate that base directly; each lambda instantiates a final subtype that stores its captures after the inherited entry field. Calls evaluate the target once, test whether the entry has the source direct signature, and select a typed direct or environment-first `call_ref` branch. The environment-first branch passes the flattened closure object itself.
 
+## Erased generic callable boundary
+
+A public generic owned by the linked root module materializes an all-reference specialization whose ABI key uses `eqref` for every generic parameter. That specialization retains the source name and public visibility; the unspecialized recipe remains elided. Dependency-module public generics do not add dead fallback functions to the final executable.
+
+When an escaping generic reference expects an exact nominal signature such as `fn(Item) -> Item`, but carrier canonicalization selected `(eqref) -> eqref`, the linker emits one private adapter for the exact structural signature. The adapter passes exact GC references directly into the erased fallback and casts erased reference results back to the frozen nominal type. Singleton closure globals and declarative element entries point at the adapter, not the incompatible fallback. Physically identical scalar signatures continue to reference their specialized function directly and receive no redundant adapter.
+
 ## Remaining work
 
-1. Define erased callable fallback ABIs for boundaries that cannot be statically closed; generic structs already use per-field erased carrier slots.
+1. Emit deterministic WasmGC scalar boxes, unboxes, and scalar-to-erased adapters at genuinely erased scalar boundaries.
 2. Build trait dictionary method slots from trait requirement plans.
-3. Emit boxes, unboxes, and adapters only where static and erased ABI carriers differ.
-4. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
-5. Define persistent cross-package export/import naming, signature fingerprints, and ABI compatibility rules.
-6. Add shared mutable-capture cells and closure escape/directization optimization.
+3. Extend callable reachability so unused signature and closure-entry types can be removed after directization.
+4. Define persistent cross-package export/import naming, signature fingerprints, and ABI compatibility rules.
+5. Extend erased adaptation to nested structural reference carriers where runtime representation requires more than a nominal cast.
