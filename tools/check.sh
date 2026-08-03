@@ -185,6 +185,17 @@ node tools/dew-wasm-consumer.mjs \
 grep -q '"type":"i32","value":42' \
   .tmp/dew-enum-callback-consumer.json
 tools/dew build \
+  tests/module-snapshots/generics/generic-erased-fallback-runtime.dew \
+  -o .tmp/dew-eqref-provider.wasm
+wasm-tools parse \
+  tests/abi-consumers/generic-eqref-identity.wat \
+  -o .tmp/dew-eqref-consumer.wasm
+node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-eqref-provider.wasm \
+  .tmp/dew-eqref-consumer.wasm \
+  run i32 > .tmp/dew-eqref-consumer.json
+grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \

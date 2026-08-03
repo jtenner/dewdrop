@@ -28,7 +28,7 @@ The tool reports JSON in a fixed field order. Budgets use non-negative integer b
 
 `tests/performance-budgets/generic-aggregate-callback-adapter.json` requires exactly two adapter exports whose struct and enum payload conversion inserts callback wrappers. The runtime fixture also invokes callbacks loaded from an instantiated struct field and enum tuple/struct pattern bindings. The budget bounds synthetic callback signatures, wrapper and aggregate reconstruction sites, casts/tests, indirect calls, and output size.
 
-`tools/check.sh` builds all four production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, links both against the generated provider, and requires each fully in-Wasm wrapper call to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
+`tools/check.sh` builds all four production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers plus a standalone `eqref` identity consumer, links them against generated providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
 
 ## Interpretation
 
