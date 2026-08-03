@@ -222,7 +222,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Infer expected-type generic function references and execute call-only parameter-selector/callback specializations without closure allocation.
 - [x] Extend generic specialization to arbitrary function bodies, imported definitions, and escaping references with per-shape singleton identities.
 - [x] Close nested generic specialization demands, coalesce physical carriers, assign stable program ABI keys, and elide unspecialized export recipes.
-- [ ] Add erased generic fallback/adapters and generic structs; extend interprocedural summaries to returned, stored, forwarded, and unknown callback uses.
+- [x] Execute generic structs with deterministic erased carrier fields and shape-selected construction/access.
+- [ ] Add erased generic callable fallback/adapters; extend interprocedural summaries to returned, stored, forwarded, and unknown callback uses.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [x] Implement carrier-specialized mutable `FixedArray<t>` across unboxed scalar/vector/reference shapes with safe `Option` get and trapping index get/set.
 - [x] Implement ambient U64 `Hash` with collision equality and a mutable deterministic separate-chaining `Map<key, value>` with empty/singleton construction, lookup, insertion/replacement, membership, length, index syntax, and indexed setting.

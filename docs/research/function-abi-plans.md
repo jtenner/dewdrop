@@ -76,7 +76,7 @@ Concrete closure entries use canonical environment-first signatures `(eqref, par
 
 ## Remaining work
 
-1. Define erased fallback ABIs for boundaries that cannot be statically closed.
+1. Define erased callable fallback ABIs for boundaries that cannot be statically closed; generic structs already use per-field erased carrier slots.
 2. Build trait dictionary method slots from trait requirement plans.
 3. Emit boxes, unboxes, and adapters only where static and erased ABI carriers differ.
 4. Extend callable reachability so unused signature and closure-entry types can be removed after directization.

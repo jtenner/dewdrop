@@ -151,7 +151,8 @@ direct typed references.
 - [x] Materialize deterministic physical-carrier specializations for general generic function bodies, including locals, structured control flow, nested/transitive generic calls, multiple type parameters, escaping references, and imported definitions.
 - [x] Coalesce source shapes with the same Wasm carrier and assign deterministic declaration-plus-carrier ABI keys.
 - [x] Keep unspecialized generic recipes out of the executable/export ABI until erased fallback adapters are defined.
-- [ ] Support generic struct construction/access and erased fallback adapters for specialization boundaries.
+- [x] Support generic struct construction/access through deterministic per-field erased carrier slots without scalar boxes.
+- [ ] Add erased callable fallback adapters for specialization boundaries that cannot be statically closed.
 - [ ] Define ABI/interface fingerprints after specialization and erasure rules stabilize.
 - [ ] Defer trait objects, dictionaries, and `call_ref` dispatch until static generic execution is complete.
 

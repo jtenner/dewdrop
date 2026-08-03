@@ -7,7 +7,6 @@ pub struct PlannedProgramLowering {
 ///|
 pub enum ProgramWasmGCLinkDiagnostic {
   MissingProgramType(ModuleId, DeclId)
-  UnsupportedProgramGenericType(ModuleId, DeclId)
   UnsupportedProgramGenericCall(ModuleId, DeclId, UInt64)
   MissingProgramFunction(ModuleId, DeclId, UInt64)
   EagerProgramInitializationCycle(DeclId, DeclId)
@@ -2278,21 +2277,7 @@ pub fn link_program_wasmgc_fragments(
           | PlannedWasmEnumBaseType(declaration) =>
             match
               lowering.modules[module_index].type_layouts.layout_of(declaration) {
-              Some(layout) if layout.generic_parameters.length > 0 =>
-                match layout.kind {
-                  PlannedStructLayout(_) =>
-                    if declaration != standard_fixed_array_type_declaration() &&
-                      declaration != standard_map_type_declaration() &&
-                      declaration != standard_set_type_declaration() {
-                      diagnostics.push(
-                        UnsupportedProgramGenericType(
-                          module_fragments.module_id,
-                          declaration,
-                        ),
-                      )
-                    }
-                  PlannedEnumLayout(_) => ()
-                }
+              Some(layout) if layout.generic_parameters.length > 0 => ()
               _ => ()
             }
           PlannedWasmEnumSubtypeType(_, _, _)
