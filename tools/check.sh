@@ -26,6 +26,7 @@ python3 tools/generate_set_std.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs
 node --check tools/dew-abi.mjs
+node --check tools/wasm-metrics.mjs
 python3 tools/dew_cli_test.py
 
 targets=(native)
@@ -143,6 +144,19 @@ grep -q '"export":"identity[$]dew[$]i32"' .tmp/dew-abi-list.json
 node tools/dew-abi.mjs .tmp/dew-abi-smoke.wasm \
   call identity i32 i32 i32 '[42]' > .tmp/dew-abi-call.json
 grep -q '"value":42' .tmp/dew-abi-call.json
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.wat \
+  .tmp/dew-abi-smoke.wasm \
+  tests/performance-budgets/generic-erased-scalar-adapter.json \
+  > .tmp/dew-generic-abi-metrics.json
+tools/dew build \
+  tests/module-snapshots/functions/closure-directization-runtime.dew \
+  -o .tmp/dew-closure-directization-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/functions/closure-directization-runtime.wat \
+  .tmp/dew-closure-directization-budget.wasm \
+  tests/performance-budgets/closure-directization.json \
+  > .tmp/dew-closure-directization-metrics.json
 node --input-type=module -e '
   import { readFile } from "node:fs/promises";
   const bytes = await readFile(".tmp/dew-cli-smoke.wasm");
