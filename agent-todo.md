@@ -164,7 +164,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
   - [ ] Add in-Wasm package consumers for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
     - [x] Add focused WasmGC consumers that construct struct and enum payloads containing direct `i32` callbacks, invoke `identity_box$dew$i32` and `identity_choice$dew$i32`, and call the reconstructed wrappers entirely inside Wasm.
     - [x] Add a standalone `eqref` consumer that constructs an exact nominal value, invokes the public erased fallback, casts the result, and reads it entirely inside Wasm.
-    - [ ] Extend consumers to imported packages and `v128` boundaries.
+    - [x] Add an in-Wasm `v128` consumer that invokes `identity$dew$v128` and extracts the returned vector lane without crossing the JavaScript value boundary.
+    - [ ] Extend consumers to imported packages.
 
 ## Generic trait obligations and runtime traits
 

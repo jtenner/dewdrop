@@ -150,6 +150,14 @@ node tools/wasm-metrics.mjs \
   .tmp/dew-abi-smoke.wasm \
   tests/performance-budgets/generic-erased-scalar-adapter.json \
   > .tmp/dew-generic-abi-metrics.json
+wasm-tools parse \
+  tests/abi-consumers/generic-v128-identity.wat \
+  -o .tmp/dew-v128-consumer.wasm
+node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-abi-smoke.wasm \
+  .tmp/dew-v128-consumer.wasm \
+  run i32 > .tmp/dew-v128-consumer.json
+grep -q '"type":"i32","value":42' .tmp/dew-v128-consumer.json
 tools/dew build \
   tests/module-snapshots/functions/generic-structural-callback-runtime.dew \
   -o .tmp/dew-callback-wrapper-budget.wasm
