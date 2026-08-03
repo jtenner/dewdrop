@@ -1,0 +1,29 @@
+fn choose<t>(condition: Bool, left: t, right: t) -> t {
+  if condition {
+    left
+  } else {
+    right
+  }
+}
+
+fn nested_choose<t>(condition: Bool, left: t, right: t) -> t {
+  choose(condition, left, right)
+}
+
+fn choose_second<a, b>(ignored: a, condition: Bool, left: b, right: b) -> b {
+  let stored = if condition {
+    left
+  } else {
+    right
+  }
+  stored
+}
+
+pub fn main() -> Unit {
+  assert(nested_choose(true, 42, 7) == 42, "nested generic i32")
+  assert(nested_choose(false, 7i64, 42i64) == 42i64, "nested generic i64")
+  assert(
+    choose_second(1, false, 7.0f64, 42.5f64) == 42.5f64,
+    "second generic parameter carrier",
+  )
+}
