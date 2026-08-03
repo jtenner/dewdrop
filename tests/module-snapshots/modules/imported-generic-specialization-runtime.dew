@@ -1,0 +1,11 @@
+open fixture.generic_specialization
+
+fn return_i64_choose() -> fn(Bool, I64, I64) -> I64 {
+  choose
+}
+
+pub fn main() -> Unit {
+  assert(choose(true, 42, 7) == 42, "imported generic conditional")
+  let choose_i64 = return_i64_choose()
+  assert(choose_i64(false, 7i64, 42i64) == 42i64, "escaping imported generic reference")
+}

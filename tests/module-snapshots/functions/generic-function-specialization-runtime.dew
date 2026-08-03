@@ -1,0 +1,18 @@
+fn choose<t>(condition: Bool, left: t, right: t) -> t {
+  if condition {
+    left
+  } else {
+    right
+  }
+}
+
+fn roundtrip<t>(value: t) -> t {
+  let stored = value
+  stored
+}
+
+pub fn main() -> Unit {
+  assert(choose(true, 42, 7) == 42, "generic conditional i32")
+  assert(choose(false, 7i64, 42i64) == 42i64, "generic conditional i64")
+  assert(roundtrip(42.5f64) == 42.5f64, "generic local f64")
+}

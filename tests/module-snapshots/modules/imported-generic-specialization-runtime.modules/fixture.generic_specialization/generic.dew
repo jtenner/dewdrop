@@ -1,0 +1,7 @@
+pub fn choose<t>(condition: Bool, left: t, right: t) -> t {
+  if condition {
+    left
+  } else {
+    right
+  }
+}
