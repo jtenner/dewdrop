@@ -445,6 +445,40 @@ test "program linker plans recursive enum erased adapters" {
 }
 
 ///|
+test "program linker plans cyclic nominal erased adapters" {
+  let program = collect_program_manifest(
+    2248UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum List<t> {\n  Nil\n  Cons(t, List<t>)\n}\npub fn echo_list<t>(value: List<t>) -> List<t> {\n  match value {\n    List::Nil => List::Nil\n    List::Cons(head, tail) => List::Cons(head, tail)\n  }\n}\npub fn main() -> Unit {\n  let value = echo_list(List::Cons(1, List::Cons(2, List::Nil)))\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let echo_list = program.modules[0].lookup_value("echo_list").unwrap()
+  let mut fallback = 0
+  let mut adapter = 0
+  for function_ in link.functions {
+    if function_.declaration == echo_list &&
+      function_.specialization_abi_key == "\{echo_list}:eqref" {
+      fallback += 1
+    }
+    if function_.name == b"echo_list$dew$i32" {
+      adapter += 1
+      assert_true(function_.erased_adapter_target >= 0)
+    }
+  }
+  assert_eq(fallback, 1)
+  assert_eq(adapter, 1)
+  assert_true(link.erased_box_type_indices[0] >= 0)
+}
+
+///|
 test "program linker defers structural callback adapters until wrappers exist" {
   let program = collect_program_manifest(
     2247UL,

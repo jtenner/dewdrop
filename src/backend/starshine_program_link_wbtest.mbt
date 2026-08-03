@@ -265,8 +265,9 @@ test "cross module scalar call emits one valid linked module" {
   assert_eq(link.diagnostics.length(), 0)
   assert_eq(link.imported_function_count, 0)
   assert_eq(link.defined_function_count, 2)
+  let helper_plan = starshine_program_adapter_helper_plan(lowering, link)
   assert_eq(
-    emit_starshine_program_type_section(link),
+    emit_starshine_program_type_section(link, helper_plan),
     @lib.TypeSec::new([
       @lib.RecType::new(
         @lib.SubType::comp_type(
@@ -305,12 +306,16 @@ test "linked module exports only public functions from the root module" {
     ),
   ])
   let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  let helper_plan = starshine_program_adapter_helper_plan(lowering, link)
+  let type_section = emit_starshine_program_type_section(link, helper_plan)
   let expected_module = @lib.Module::new()
-    .with_type_sec(emit_starshine_program_type_section(link))
+    .with_type_sec(type_section)
     .with_import_sec(emit_starshine_program_import_section(link))
-    .with_func_sec(emit_starshine_program_function_section(link))
+    .with_func_sec(emit_starshine_program_function_section(link, helper_plan))
     .with_export_sec(expected)
-    .with_code_sec(emit_starshine_program_code_section(lowering, link).unwrap())
+    .with_code_sec(
+      emit_starshine_program_code_section(lowering, link, helper_plan).unwrap(),
+    )
   assert_eq(module_, expected_module)
 }
 

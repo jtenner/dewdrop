@@ -1702,109 +1702,6 @@ fn program_erased_type_contains_function(
 }
 
 ///|
-fn program_erased_type_has_nominal_cycle(
-  lowering : PlannedModuleLowering,
-  root : ResolvedTypeId,
-) -> Bool {
-  let work_types : Array[ResolvedTypeId] = [root]
-  let work_states : Array[Int] = [0]
-  let work_declarations : Array[DeclId] = [0UL]
-  let active : Map[DeclId, Bool] = Map::default()
-  while work_types.length() > 0 {
-    let current = work_types.pop().unwrap()
-    let state = work_states.pop().unwrap()
-    let declaration = work_declarations.pop().unwrap()
-    if state == 1 {
-      active[declaration] = false
-      continue
-    }
-    if current < 0 || current >= lowering.resolved_types.length() {
-      continue
-    }
-    match lowering.resolved_types[current] {
-      AppliedType(base, arguments) => {
-        for index in 0..<arguments.length {
-          work_types.push(
-            lowering.resolved_type_arguments[arguments.start + index],
-          )
-          work_states.push(0)
-          work_declarations.push(0UL)
-        }
-        if base < 0 || base >= lowering.resolved_types.length() {
-          continue
-        }
-        match lowering.resolved_types[base] {
-          NominalType(owner) => {
-            if active.get(owner).unwrap_or(false) {
-              return true
-            }
-            active[owner] = true
-            work_types.push(-1)
-            work_states.push(1)
-            work_declarations.push(owner)
-            match lowering.type_layouts.layout_of(owner) {
-              Some(layout) =>
-                match layout.kind {
-                  PlannedStructLayout(fields) =>
-                    for index in 0..<fields.length {
-                      work_types.push(
-                        lowering.type_layouts.fields[fields.start + index].type_,
-                      )
-                      work_states.push(0)
-                      work_declarations.push(0UL)
-                    }
-                  PlannedEnumLayout(variants) =>
-                    for index in 0..<variants.length {
-                      let variant = lowering.type_layouts.variants[variants.start +
-                        index]
-                      match variant.payload {
-                        PlannedTupleVariantLayout(types) =>
-                          for payload_index in 0..<types.length {
-                            work_types.push(
-                              lowering.type_layouts.payload_types[types.start +
-                              payload_index],
-                            )
-                            work_states.push(0)
-                            work_declarations.push(0UL)
-                          }
-                        PlannedStructVariantLayout(fields) =>
-                          for field_index in 0..<fields.length {
-                            work_types.push(
-                              lowering.type_layouts.fields[fields.start +
-                              field_index].type_,
-                            )
-                            work_states.push(0)
-                            work_declarations.push(0UL)
-                          }
-                        PlannedUnitVariantLayout => ()
-                      }
-                    }
-                }
-              None => ()
-            }
-          }
-          _ => work_types.push(base)
-        }
-      }
-      FunctionType(parameters, result) => {
-        work_types.push(result)
-        work_states.push(0)
-        work_declarations.push(0UL)
-        for index in 0..<parameters.length {
-          work_types.push(
-            lowering.resolved_type_arguments[parameters.start + index],
-          )
-          work_states.push(0)
-          work_declarations.push(0UL)
-        }
-      }
-      _ => ()
-    }
-  }
-  false
-}
-
-///|
 fn program_erased_signature_supports_recursive_adapter(
   lowering : PlannedModuleLowering,
   functions : PlannedModuleFunctions,
@@ -1812,13 +1709,11 @@ fn program_erased_signature_supports_recursive_adapter(
 ) -> Bool {
   for index in 0..<callable.parameters.length {
     let parameter = functions.parameters[callable.parameters.start + index]
-    if program_erased_type_contains_function(lowering, parameter.type_) ||
-      program_erased_type_has_nominal_cycle(lowering, parameter.type_) {
+    if program_erased_type_contains_function(lowering, parameter.type_) {
       return false
     }
   }
-  !program_erased_type_contains_function(lowering, callable.result_type) &&
-  !program_erased_type_has_nominal_cycle(lowering, callable.result_type)
+  !program_erased_type_contains_function(lowering, callable.result_type)
 }
 
 ///|

@@ -150,7 +150,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
   - [x] Clone direct generic struct fields across static/erased boundaries, boxing and unboxing only the selected scalar carrier leaf.
   - [x] Recurse through acyclic nested generic struct graphs with deterministic scratch locals and leaf-only box/unbox conversion.
   - [x] Extend recursive conversion through generic enum tuple/struct payloads and acyclic nested struct/enum graphs with exact subtype reconstruction.
-  - [ ] Replace cyclic nominal rejection with graph helpers and generate structural callback wrapper closures; function-containing and cyclic adapter signatures remain conservatively excluded.
+  - [x] Replace cyclic nominal rejection with deterministic per-adapter recursive conversion helpers that preserve finite runtime recursion through cyclic type graphs.
+  - [ ] Generate structural callback wrapper closures; function-containing adapter signatures remain conservatively excluded.
 - [x] Support executable generic enum and struct construction and access.
 - [x] Support executable generic calls, nested fixed-point specialization, and escaping generic references.
 - [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.

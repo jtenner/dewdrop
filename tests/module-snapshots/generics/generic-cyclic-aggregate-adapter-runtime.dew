@@ -1,0 +1,25 @@
+enum List<t> {
+  Nil
+  Cons(t, List<t>)
+}
+
+pub fn echo_list<t>(value: List<t>) -> List<t> {
+  match value {
+    List::Nil => List::Nil
+    List::Cons(head, tail) => List::Cons(head, tail)
+  }
+}
+
+fn sum(value: List<I32>) -> I32 {
+  match value {
+    List::Nil => 0
+    List::Cons(head, tail) => head + sum(tail)
+  }
+}
+
+pub fn main() -> Unit {
+  let result = echo_list(
+    List::Cons(1, List::Cons(2, List::Cons(3, List::Nil))),
+  )
+  assert(sum(result) == 6, "cyclic nominal adapter graph")
+}

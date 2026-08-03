@@ -32,6 +32,22 @@ priv struct StarshineGenericSpecialization {
 }
 
 ///|
+priv struct StarshineProgramAdapterHelper {
+  adapter_function : Int
+  module_index : Int
+  declaration : @semantic.DeclId
+  actual_arguments : Array[@semantic.ResolvedTypeId]
+  to_erased : Bool
+  signature_type_index : Int
+  function_index : Int
+}
+
+///|
+priv struct StarshineProgramAdapterHelperPlan {
+  helpers : Array[StarshineProgramAdapterHelper]
+}
+
+///|
 fn starshine_specialized_shape(
   lowering : @semantic.PlannedModuleLowering,
   specialization : StarshineGenericSpecialization?,
@@ -7669,8 +7685,279 @@ fn starshine_program_erased_box_rec_type(slot : Int) -> @lib.RecType {
 }
 
 ///|
+fn starshine_program_adapter_helper_arguments_equal(
+  left : Array[@semantic.ResolvedTypeId],
+  right : Array[@semantic.ResolvedTypeId],
+) -> Bool {
+  if left.length() != right.length() {
+    return false
+  }
+  for index in 0..<left.length() {
+    if left[index] != right[index] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn starshine_program_add_adapter_cycle_helper(
+  helpers : Array[StarshineProgramAdapterHelper],
+  adapter_function : Int,
+  module_index : Int,
+  declaration : @semantic.DeclId,
+  actual_arguments : Array[@semantic.ResolvedTypeId],
+) -> Unit {
+  for direction in 0..<2 {
+    let to_erased = direction == 0
+    let mut exists = false
+    for helper in helpers {
+      if helper.adapter_function == adapter_function &&
+        helper.declaration == declaration &&
+        helper.to_erased == to_erased &&
+        starshine_program_adapter_helper_arguments_equal(
+          helper.actual_arguments, actual_arguments,
+        ) {
+        exists = true
+        break
+      }
+    }
+    if !exists {
+      helpers.push({
+        adapter_function,
+        module_index,
+        declaration,
+        actual_arguments: actual_arguments.copy(),
+        to_erased,
+        signature_type_index: -1,
+        function_index: -1,
+      })
+    }
+  }
+}
+
+///|
+fn starshine_program_collect_adapter_cycle_helpers(
+  lowering : @semantic.PlannedModuleLowering,
+  helpers : Array[StarshineProgramAdapterHelper],
+  adapter_function : Int,
+  module_index : Int,
+  type_ : @semantic.ResolvedTypeId,
+  owner_layout : @semantic.PlannedNominalLayout?,
+  owner_arguments : Array[@semantic.ResolvedTypeId],
+  active : Array[@semantic.DeclId],
+) -> Unit {
+  if type_ < 0 || type_ >= lowering.resolved_types.length() {
+    return
+  }
+  let substituted = match (owner_layout, lowering.resolved_types[type_]) {
+    (
+      Some(layout),
+      @semantic.GenericParameterType(parameter),
+    ) => {
+      let parameter_index = @semantic.semantic_id_local(parameter)
+      if parameter_index >= layout.generic_parameters.start &&
+        parameter_index < layout.generic_parameters.start +
+        layout.generic_parameters.length {
+        let relative = parameter_index - layout.generic_parameters.start
+        if relative < owner_arguments.length() {
+          owner_arguments[relative]
+        } else {
+          type_
+        }
+      } else {
+        type_
+      }
+    }
+    _ => type_
+  }
+  if substituted < 0 || substituted >= lowering.resolved_types.length() {
+    return
+  }
+  let (base, arguments) = match lowering.resolved_types[substituted] {
+    @semantic.AppliedType(base, arguments) => (base, arguments)
+    _ => return
+  }
+  if base < 0 || base >= lowering.resolved_types.length() {
+    return
+  }
+  let declaration = match lowering.resolved_types[base] {
+    @semantic.NominalType(value) => value
+    _ => {
+      for index in 0..<arguments.length {
+        starshine_program_collect_adapter_cycle_helpers(
+          lowering,
+          helpers,
+          adapter_function,
+          module_index,
+          lowering.resolved_type_arguments[arguments.start + index],
+          owner_layout,
+          owner_arguments,
+          active,
+        )
+      }
+      return
+    }
+  }
+  let layout = match lowering.type_layouts.layout_of(declaration) {
+    Some(value) if value.generic_parameters.length > 0 => value
+    _ => return
+  }
+  let actual_arguments : Array[@semantic.ResolvedTypeId] = []
+  for index in 0..<arguments.length {
+    let argument = lowering.resolved_type_arguments[arguments.start + index]
+    actual_arguments.push(
+      match (owner_layout, lowering.resolved_types[argument]) {
+        (Some(owner), @semantic.GenericParameterType(parameter)) => {
+          let parameter_index = @semantic.semantic_id_local(parameter)
+          if parameter_index >= owner.generic_parameters.start &&
+            parameter_index < owner.generic_parameters.start +
+            owner.generic_parameters.length {
+            let relative = parameter_index - owner.generic_parameters.start
+            if relative < owner_arguments.length() {
+              owner_arguments[relative]
+            } else {
+              argument
+            }
+          } else {
+            argument
+          }
+        }
+        _ => argument
+      },
+    )
+  }
+  for current in active {
+    if current == declaration {
+      starshine_program_add_adapter_cycle_helper(
+        helpers,
+        adapter_function,
+        module_index,
+        declaration,
+        actual_arguments,
+      )
+      return
+    }
+  }
+  active.push(declaration)
+  match layout.kind {
+    @semantic.PlannedStructLayout(fields) =>
+      for index in 0..<fields.length {
+        starshine_program_collect_adapter_cycle_helpers(
+          lowering,
+          helpers,
+          adapter_function,
+          module_index,
+          lowering.type_layouts.fields[fields.start + index].type_,
+          Some(layout),
+          actual_arguments,
+          active,
+        )
+      }
+    @semantic.PlannedEnumLayout(variants) =>
+      for index in 0..<variants.length {
+        let variant = lowering.type_layouts.variants[variants.start + index]
+        match variant.payload {
+          @semantic.PlannedTupleVariantLayout(types) =>
+            for payload_index in 0..<types.length {
+              starshine_program_collect_adapter_cycle_helpers(
+                lowering,
+                helpers,
+                adapter_function,
+                module_index,
+                lowering.type_layouts.payload_types[types.start + payload_index],
+                Some(layout),
+                actual_arguments,
+                active,
+              )
+            }
+          @semantic.PlannedStructVariantLayout(fields) =>
+            for field_index in 0..<fields.length {
+              starshine_program_collect_adapter_cycle_helpers(
+                lowering,
+                helpers,
+                adapter_function,
+                module_index,
+                lowering.type_layouts.fields[fields.start + field_index].type_,
+                Some(layout),
+                actual_arguments,
+                active,
+              )
+            }
+          @semantic.PlannedUnitVariantLayout => ()
+        }
+      }
+  }
+  ignore(active.pop())
+}
+
+///|
+fn starshine_program_adapter_helper_plan(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+) -> StarshineProgramAdapterHelperPlan {
+  let helpers : Array[StarshineProgramAdapterHelper] = []
+  for adapter_function, function_ in planned.functions {
+    if function_.erased_adapter_target < 0 ||
+      function_.specialization_shapes.length == 0 {
+      continue
+    }
+    let module_lowering = lowering.modules[function_.module_index]
+    let callable = match
+      module_lowering.functions.callable_of(function_.declaration) {
+      Some(value) => value
+      None => continue
+    }
+    for index in 0..<callable.parameters.length {
+      let parameter = module_lowering.functions.parameters[callable.parameters.start +
+        index]
+      starshine_program_collect_adapter_cycle_helpers(
+        module_lowering,
+        helpers,
+        adapter_function,
+        function_.module_index,
+        parameter.type_,
+        None,
+        [],
+        [],
+      )
+    }
+    starshine_program_collect_adapter_cycle_helpers(
+      module_lowering,
+      helpers,
+      adapter_function,
+      function_.module_index,
+      callable.result_type,
+      None,
+      [],
+      [],
+    )
+  }
+  let mut next_function_index = planned.startup_function_index + 1
+  if next_function_index <= 0 {
+    for function_ in planned.functions {
+      if function_.function_index >= next_function_index {
+        next_function_index = function_.function_index + 1
+      }
+    }
+    for initializer in planned.initializers {
+      if initializer.function_index >= next_function_index {
+        next_function_index = initializer.function_index + 1
+      }
+    }
+  }
+  for index in 0..<helpers.length() {
+    let helper = helpers[index]
+    helpers[index] = { ..helper, function_index: next_function_index }
+    next_function_index += 1
+  }
+  { helpers, }
+}
+
+///|
 fn emit_starshine_program_type_section(
   planned : @semantic.PlannedProgramWasmGCLink,
+  helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> @lib.TypeSec {
   let rec_types : Array[@lib.RecType] = []
   if planned.program_type_groups.length() > 0 {
@@ -7781,6 +8068,39 @@ fn emit_starshine_program_type_section(
       rec_types.push(runtime_type)
     }
   }
+  for helper_index in 0..<helper_plan.helpers.length() {
+    let helper = helper_plan.helpers[helper_index]
+    let mut signature_type_index = -1
+    for previous in 0..<helper_index {
+      let candidate = helper_plan.helpers[previous]
+      if candidate.module_index == helper.module_index &&
+        candidate.declaration == helper.declaration {
+        signature_type_index = candidate.signature_type_index
+        break
+      }
+    }
+    if signature_type_index < 0 {
+      let nominal_type = match planned.type_lookup.get(helper.declaration) {
+        Some(value) => value
+        None => continue
+      }
+      signature_type_index = rec_types.length()
+      let nominal = starshine_nominal_ref(
+        @lib.TypeIdx::new(nominal_type.reinterpret_as_uint()),
+      )
+      rec_types.push(
+        @lib.RecType::new(
+          @lib.SubType::comp_type(
+            @lib.CompType::func([nominal], [nominal]),
+          ),
+        ),
+      )
+    }
+    helper_plan.helpers[helper_index] = {
+      ..helper,
+      signature_type_index,
+    }
+  }
   @lib.TypeSec::new(rec_types)
 }
 
@@ -7839,6 +8159,7 @@ fn emit_starshine_program_import_section(
 ///|
 fn emit_starshine_program_function_section(
   planned : @semantic.PlannedProgramWasmGCLink,
+  helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> @lib.FuncSec {
   let signatures : Array[@lib.TypeIdx] = []
   for function_ in planned.functions {
@@ -7868,6 +8189,11 @@ fn emit_starshine_program_function_section(
       }
     }
     signatures.push(signature)
+  }
+  for helper in helper_plan.helpers {
+    signatures.push(
+      @lib.TypeIdx::new(helper.signature_type_index.reinterpret_as_uint()),
+    )
   }
   @lib.FuncSec::new(signatures)
 }
@@ -8611,6 +8937,46 @@ fn starshine_program_adapter_explicit_argument(
 }
 
 ///|
+fn starshine_program_append_cycle_adapter_helper_call(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  declaration : @semantic.DeclId,
+  actual_arguments : Array[@semantic.ResolvedTypeId],
+  source_local : Int,
+  to_erased : Bool,
+  output : Array[@lib.Instruction],
+) -> Bool {
+  for helper in helper_plan.helpers {
+    let adapter = planned.functions[helper.adapter_function]
+    if adapter.function_index == function_.function_index &&
+      helper.declaration == declaration &&
+      helper.to_erased == to_erased &&
+      starshine_program_adapter_helper_arguments_equal(
+        helper.actual_arguments, actual_arguments,
+      ) {
+      output.push(
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
+        ),
+      )
+      let nominal_type = match planned.type_lookup.get(declaration) {
+        Some(value) => value
+        None => return false
+      }
+      output.push(starshine_match_cast(nominal_type))
+      output.push(
+        @lib.Instruction::call(
+          @lib.FuncIdx::new(helper.function_index.reinterpret_as_uint()),
+        ),
+      )
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn starshine_program_append_nominal_enum_adapter(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -8623,10 +8989,21 @@ fn starshine_program_append_nominal_enum_adapter(
   output : Array[@lib.Instruction],
   adapter_locals : Array[@lib.ValType],
   active : Array[@semantic.DeclId],
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  parameter_count : Int,
 ) -> Bool {
   for current in active {
     if current == declaration {
-      return false
+      return starshine_program_append_cycle_adapter_helper_call(
+        planned,
+        helper_plan,
+        function_,
+        declaration,
+        actual_arguments,
+        source_local,
+        to_erased,
+        output,
+      )
     }
   }
   let layout = match lowering.type_layouts.layout_of(declaration) {
@@ -8835,8 +9212,7 @@ fn starshine_program_append_nominal_enum_adapter(
           match nested_layout {
             Some(value) if value.generic_parameters.length > 0 => {
               let nested_output : Array[@lib.Instruction] = []
-              let nested_local = function_.parameters.length +
-                adapter_locals.length()
+              let nested_local = parameter_count + adapter_locals.length()
               adapter_locals.push(@lib.ValType::eqref_null())
               if !starshine_program_append_nominal_aggregate_adapter(
                   lowering,
@@ -8850,6 +9226,8 @@ fn starshine_program_append_nominal_enum_adapter(
                   nested_output,
                   adapter_locals,
                   active,
+                  helper_plan,
+                  parameter_count,
                 ) {
                 ignore(adapter_locals.pop())
                 ignore(active.pop())
@@ -8937,10 +9315,21 @@ fn starshine_program_append_nominal_aggregate_adapter(
   output : Array[@lib.Instruction],
   adapter_locals : Array[@lib.ValType],
   active : Array[@semantic.DeclId],
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  parameter_count : Int,
 ) -> Bool {
   for current in active {
     if current == declaration {
-      return false
+      return starshine_program_append_cycle_adapter_helper_call(
+        planned,
+        helper_plan,
+        function_,
+        declaration,
+        actual_arguments,
+        source_local,
+        to_erased,
+        output,
+      )
     }
   }
   let layout = match lowering.type_layouts.layout_of(declaration) {
@@ -8961,6 +9350,8 @@ fn starshine_program_append_nominal_aggregate_adapter(
         output,
         adapter_locals,
         active,
+        helper_plan,
+        parameter_count,
       )
     @semantic.PlannedStructLayout(_) => ()
   }
@@ -9140,8 +9531,7 @@ fn starshine_program_append_nominal_aggregate_adapter(
         match nested_layout {
           Some(value) if value.generic_parameters.length > 0 => {
             let nested_output : Array[@lib.Instruction] = []
-            let nested_local = function_.parameters.length +
-              adapter_locals.length()
+            let nested_local = parameter_count + adapter_locals.length()
             adapter_locals.push(@lib.ValType::eqref_null())
             if !starshine_program_append_nominal_aggregate_adapter(
                 lowering,
@@ -9155,6 +9545,8 @@ fn starshine_program_append_nominal_aggregate_adapter(
                 nested_output,
                 adapter_locals,
                 active,
+                helper_plan,
+                parameter_count,
               ) {
               ignore(adapter_locals.pop())
               ignore(active.pop())
@@ -9219,6 +9611,8 @@ fn starshine_program_append_recursive_aggregate_adapter(
   to_erased : Bool,
   output : Array[@lib.Instruction],
   adapter_locals : Array[@lib.ValType],
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  parameter_count : Int,
 ) -> Bool {
   if type_ < 0 || type_ >= lowering.resolved_types.length() {
     return false
@@ -9249,6 +9643,8 @@ fn starshine_program_append_recursive_aggregate_adapter(
     output,
     adapter_locals,
     [],
+    helper_plan,
+    parameter_count,
   )
 }
 
@@ -9301,6 +9697,7 @@ fn starshine_program_erased_adapter_body(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   function_ : @semantic.PlannedProgramWasmFunction,
+  helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let target = function_.erased_adapter_target
   if target < 0 {
@@ -9350,6 +9747,8 @@ fn starshine_program_erased_adapter_body(
           true,
           converted,
           adapter_locals,
+          helper_plan,
+          function_.parameters.length,
         ) {
         append_starshine_instructions(instructions, converted)
         continue
@@ -9400,6 +9799,8 @@ fn starshine_program_erased_adapter_body(
           false,
           converted,
           adapter_locals,
+          helper_plan,
+          function_.parameters.length,
         ) {
         instructions.push(
           @lib.Instruction::local_set(
@@ -9458,9 +9859,50 @@ fn starshine_program_erased_adapter_body(
 }
 
 ///|
+fn emit_starshine_program_adapter_helper_body(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  helper : StarshineProgramAdapterHelper,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let function_ = planned.functions[helper.adapter_function]
+  let module_lowering = lowering.modules[helper.module_index]
+  let callable = match module_lowering.functions.callable_of(function_.declaration) {
+    Some(value) => value
+    None => return Err(MissingFunction(function_.declaration))
+  }
+  let instructions : Array[@lib.Instruction] = []
+  let adapter_locals : Array[@lib.ValType] = []
+  if !starshine_program_append_nominal_aggregate_adapter(
+      module_lowering,
+      planned,
+      function_,
+      callable,
+      helper.declaration,
+      helper.actual_arguments,
+      0,
+      helper.to_erased,
+      instructions,
+      adapter_locals,
+      [],
+      helper_plan,
+      1,
+    ) {
+    return Err(MissingFunction(function_.declaration))
+  }
+  Ok(
+    @lib.Func::new(
+      @lib.Locals::from_types(adapter_locals),
+      @lib.Expr::new(instructions),
+    ),
+  )
+}
+
+///|
 fn emit_starshine_program_code_section(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
+  helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.CodeSec, StarshineCodeEmissionError] {
   let functions : Array[@lib.Func] = []
   for function_ in planned.functions {
@@ -9497,6 +9939,7 @@ fn emit_starshine_program_code_section(
                 lowering,
                 planned,
                 function_,
+                helper_plan,
               ) {
               Ok(function_body) => functions.push(function_body)
               Err(error) => return Err(error)
@@ -9548,6 +9991,15 @@ fn emit_starshine_program_code_section(
   }
   if planned.startup_function_index >= 0 {
     functions.push(starshine_program_startup_body(planned))
+  }
+  for helper in helper_plan.helpers {
+    match
+      emit_starshine_program_adapter_helper_body(
+        lowering, planned, helper_plan, helper,
+      ) {
+      Ok(body) => functions.push(body)
+      Err(error) => return Err(error)
+    }
   }
   Ok(@lib.CodeSec::new(functions))
 }
@@ -9609,12 +10061,16 @@ pub fn emit_starshine_program_module(
   if planned.diagnostics.length() > 0 {
     return Err(ProgramLinkDiagnostics(planned.diagnostics.length()))
   }
-  match emit_starshine_program_code_section(lowering, planned) {
+  let helper_plan = starshine_program_adapter_helper_plan(lowering, planned)
+  let type_section = emit_starshine_program_type_section(planned, helper_plan)
+  match emit_starshine_program_code_section(lowering, planned, helper_plan) {
     Ok(code) => {
       let mut module_ = @lib.Module::new()
-        .with_type_sec(emit_starshine_program_type_section(planned))
+        .with_type_sec(type_section)
         .with_import_sec(emit_starshine_program_import_section(planned))
-        .with_func_sec(emit_starshine_program_function_section(planned))
+        .with_func_sec(
+          emit_starshine_program_function_section(planned, helper_plan),
+        )
         .with_export_sec(emit_starshine_program_export_section(planned))
         .with_code_sec(code)
       match
