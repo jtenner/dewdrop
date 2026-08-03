@@ -65,6 +65,34 @@ test "lowering plans freeze exact direct and method call targets" {
 }
 
 ///|
+test "lowering preserves instantiated generic aggregate callback signatures" {
+  let (collected, resolved, _, _, _, planned) = lowering_test_module(
+    906UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>) -> CallbackBox<t> {\n  value\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox {\n    callback: increment\n  })\n  let callback = box.callback\n  callback(41)\n}\n",
+  )
+  assert_eq(planned.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  let mut function_type = -1
+  for call in calls {
+    match planned.expressions[call].kind {
+      PlannedFunctionValueCall(_, _, type_) => function_type = type_
+      _ => ()
+    }
+  }
+  assert_true(function_type >= 0)
+  match resolved.types[function_type] {
+    FunctionType(parameters, result) => {
+      assert_eq(parameters.length, 1)
+      assert_eq(
+        resolved.types[resolved.type_arguments[parameters.start]],
+        PrimitiveType(I32Type),
+      )
+      assert_eq(resolved.types[result], PrimitiveType(I32Type))
+    }
+    _ => fail("expected concrete function type")
+  }
+}
+
+///|
 test "lowering plans freeze constructors fields locals and block items" {
   let (collected, _, names, _, _, planned) = lowering_test_module(
     902UL, b"struct Item {\n  value: I32\n}\nfn make(value: I32) -> I32 {\n  let item = Item {\n    value: value\n  }\n  item.value\n}\n",

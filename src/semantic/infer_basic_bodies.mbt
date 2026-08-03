@@ -6165,6 +6165,7 @@ fn BasicBodyInferencer::constrain_pending_calls(
 ///|
 fn BasicBodyInferencer::constrain_pending_function_calls(
   self : BasicBodyInferencer,
+  final_ : Bool,
 ) -> Unit {
   while self.call_scratch.pending_function_calls.length() > 0 {
     self.call_scratch.deferred_function_calls.clear()
@@ -6192,12 +6193,14 @@ fn BasicBodyInferencer::constrain_pending_function_calls(
       break
     }
   }
-  for call_slot in self.call_scratch.pending_function_calls {
-    let expression = self.call_expressions[call_slot]
-    let offset = self.collected.expressions[expression].offset()
-    self.record_invalid_call(call_slot, expression, offset)
+  if final_ {
+    for call_slot in self.call_scratch.pending_function_calls {
+      let expression = self.call_expressions[call_slot]
+      let offset = self.collected.expressions[expression].offset()
+      self.record_invalid_call(call_slot, expression, offset)
+    }
+    self.call_scratch.pending_function_calls.clear()
   }
-  self.call_scratch.pending_function_calls.clear()
 }
 
 ///|
@@ -6213,7 +6216,7 @@ fn BasicBodyInferencer::constrain_calls(self : BasicBodyInferencer) -> Unit {
     }
   }
   self.constrain_pending_calls()
-  self.constrain_pending_function_calls()
+  self.constrain_pending_function_calls(false)
 }
 
 ///|
@@ -7297,10 +7300,12 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.constrain_root()
   self.constrain_calls()
   self.constrain_members(false)
+  self.constrain_pending_function_calls(false)
   self.constrain_method_calls()
   self.constrain_operator_calls()
   self.constrain_members(true)
   self.constrain_function_references()
+  self.constrain_pending_function_calls(true)
   self.solver_diagnostic_end = self.solver.diagnostics.length()
 }
 

@@ -132,6 +132,65 @@ test "generic field access substitutes the base type arguments" {
 }
 
 ///|
+test "generic aggregate function fields remain callable after instantiation" {
+  let (collected, resolved, names, inferred) = call_test_module(
+    414UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {\n  if first {\n    value\n  } else {\n    value\n  }\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox {\n    callback: increment\n  }, true)\n  let callback = box.callback\n  callback(41)\n}\n",
+  )
+  let mut field_expression = -1
+  for index, expression in collected.expressions {
+    match expression {
+      HirFieldExpr(_, _, _) => field_expression = index
+      _ => ()
+    }
+  }
+  match inferred.type_term(inferred.expression_types[field_expression]) {
+    BodyFunctionType(_, _) => ()
+    BodyResolvedType(type_) =>
+      match resolved.types[type_] {
+        FunctionType(_, _) => ()
+        _ => fail("expected resolved function field type")
+      }
+    _ => fail("expected function field type")
+  }
+  let mut callback_target = -1
+  for expression in collected.expressions {
+    match expression {
+      HirCallExpr(target, _, _) =>
+        match names.expression_references[target] {
+          LocalNameReference(_) => callback_target = target
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  assert_true(callback_target >= 0)
+  match inferred.type_term(inferred.expression_types[callback_target]) {
+    BodyFunctionType(_, _) => ()
+    BodyResolvedType(type_) =>
+      match resolved.types[type_] {
+        FunctionType(_, _) => ()
+        _ => fail("expected resolved callback local type")
+      }
+    _ => fail("expected callback local function type")
+  }
+  assert_eq(inferred.diagnostics.length(), 0)
+  let mut function_call = -1
+  for index, selection in inferred.call_targets {
+    match selection {
+      SelectedFunctionValueCallTarget(_) => function_call = index
+      _ => ()
+    }
+  }
+  assert_true(function_call >= 0)
+  assert_call_primitive(
+    inferred,
+    resolved,
+    inferred.expression_types[function_call],
+    I32Type,
+  )
+}
+
+///|
 test "generic struct enum variant construction retains its variant" {
   let (collected, resolved, _, inferred) = call_test_module(
     404UL, b"enum Message<t> {\n  Empty\n  Data {\n    value: t\n    code: I32\n  }\n}\nfn make(value: String) -> Message<String> {\n  Message::Data {\n    value: value\n    code: 1\n  }\n}\n",

@@ -13,6 +13,10 @@ fn increment(value: I32) -> I32 {
   value + 1
 }
 
+fn assert_42(value: I32) -> Unit {
+  assert(value == 42, "aggregate callback result")
+}
+
 pub fn identity_box<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {
   if first {
     value
@@ -37,5 +41,20 @@ pub fn main() -> Unit {
   let structured = identity_choice(CallbackChoice::Struct {
     callback: increment
   }, false)
-  assert(true, "aggregate callback adapter construction")
+  let callback = box.callback
+  assert_42(callback(41))
+  assert_42(
+    match tuple {
+      CallbackChoice::Tuple(callback) => callback(41)
+      _ => 0
+    },
+  )
+  assert_42(
+    match structured {
+      CallbackChoice::Struct {
+        callback
+      } => callback(41)
+      _ => 0
+    },
+  )
 }

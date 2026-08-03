@@ -437,6 +437,67 @@ fn planned_value_shape(
 }
 
 ///|
+fn planned_body_type_matches_resolved(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  body_type : BodyTypeId,
+  resolved_type : ResolvedTypeId,
+) -> Bool {
+  if resolved_type < 0 || resolved_type >= resolved.types.length() {
+    return false
+  }
+  match inferred.type_term(body_type) {
+    BodyResolvedType(value) => value == resolved_type
+    BodyFunctionType(body_parameters, body_result) =>
+      match resolved.types[resolved_type] {
+        FunctionType(resolved_parameters, resolved_result) => {
+          if body_parameters.length != resolved_parameters.length {
+            return false
+          }
+          for index in 0..<body_parameters.length {
+            if !planned_body_type_matches_resolved(
+                resolved,
+                inferred,
+                inferred.type_arguments[body_parameters.start + index],
+                resolved.type_arguments[resolved_parameters.start + index],
+              ) {
+              return false
+            }
+          }
+          planned_body_type_matches_resolved(
+            resolved, inferred, body_result, resolved_result,
+          )
+        }
+        _ => false
+      }
+    BodyAppliedType(body_base, body_arguments) =>
+      match resolved.types[resolved_type] {
+        AppliedType(resolved_base, resolved_arguments) => {
+          if body_arguments.length != resolved_arguments.length ||
+            !planned_body_type_matches_resolved(
+              resolved, inferred, body_base, resolved_base,
+            ) {
+            return false
+          }
+          for index in 0..<body_arguments.length {
+            if !planned_body_type_matches_resolved(
+                resolved,
+                inferred,
+                inferred.type_arguments[body_arguments.start + index],
+                resolved.type_arguments[resolved_arguments.start + index],
+              ) {
+              return false
+            }
+          }
+          true
+        }
+        _ => false
+      }
+    BodyErrorType | BodyVariableType(_) => false
+  }
+}
+
+///|
 fn planned_function_type(
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
@@ -448,7 +509,20 @@ fn planned_function_type(
         FunctionType(_, _) => resolved_type
         _ => -1
       }
-    BodyFunctionType(_, _) => -1
+    BodyFunctionType(_, _) => {
+      for index, candidate in resolved.types {
+        match candidate {
+          FunctionType(_, _) =>
+            if planned_body_type_matches_resolved(
+                resolved, inferred, type_, index,
+              ) {
+              return index
+            }
+          _ => ()
+        }
+      }
+      -1
+    }
     _ => -1
   }
 }

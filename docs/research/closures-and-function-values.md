@@ -48,7 +48,7 @@ Invocation evaluates the closure target once and tests the concrete function typ
 
 The runtime snapshots cover non-capturing lambdas, scalar captures, reference captures, function-valued captures, nested/transitive captures, immediate invocation, returned closures, closure parameters, module-level closures, and imported closures.
 
-Erased generic export adapters reuse this representation for structural callback conversion. A generated final wrapper subtype inherits the linked closure base and adds one immutable `eqref` field containing the source callback. Its entry function converts callback arguments, evaluates the captured closure once, selects the source direct or environment-first signature with `ref.test`, and converts the result back to the wrapper-visible representation. Scalar generic leaves use the existing lazy WasmGC boxes. Structural callbacks nested in callback parameter/result signatures recursively receive direction-correct wrappers, so boundary conversion does not introduce a parallel function-object ABI. Recursive nominal conversion applies the same wrappers to function-valued struct fields and enum tuple/struct payloads while reconstructing the containing subtype. Wrapper types and entry functions append deterministically after planned program and cyclic-helper identities and are included in the declarative function element.
+Erased generic export adapters reuse this representation for structural callback conversion. A generated final wrapper subtype inherits the linked closure base and adds one immutable `eqref` field containing the source callback. Its entry function converts callback arguments, evaluates the captured closure once, selects the source direct or environment-first signature with `ref.test`, and converts the result back to the wrapper-visible representation. Scalar generic leaves use the existing lazy WasmGC boxes. Structural callbacks nested in callback parameter/result signatures recursively receive direction-correct wrappers, so boundary conversion does not introduce a parallel function-object ABI. Recursive nominal conversion applies the same wrappers to function-valued struct fields and enum tuple/struct payloads while reconstructing the containing subtype. Function-value calls remain pending across member inference when their target comes from an instantiated generic field or pattern binding, and lowering recovers the exact concrete resolved function signature from the frozen structural body type. Wrapper types and entry functions append deterministically after planned program and cyclic-helper identities and are included in the declarative function element.
 
 ## Flattening result
 
@@ -68,8 +68,8 @@ A future shared-environment optimization may still select a split representation
 
 1. Add content-sensitive nominal and closure ABI fingerprints plus compatibility negotiation to persistent external package interfaces.
 2. Extend callback summaries beyond the implemented expression-tail, explicit-return, and immutable local-return transparent wrappers to stored, conditionally called, multiply forwarded, and unknown callback uses.
-3. Make instantiated generic aggregate callback fields directly callable from Dew runtime fixtures.
-4. Add in-Wasm package consumers that can exercise `eqref`, aggregate, callback-wrapper, and `v128` boundaries.
+3. Add in-Wasm package consumers that can exercise `eqref`, aggregate, callback-wrapper, and `v128` boundaries.
+4. Define recursive generic aggregate layout sharing while preserving exact callback signatures.
 5. Measure closure allocation, cell, call, cast, and capture-load costs in Node and Wago after focused Wago compatibility is green.
 
 ## Constraints
