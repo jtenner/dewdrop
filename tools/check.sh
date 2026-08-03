@@ -234,6 +234,22 @@ node tools/wasm-metrics.mjs \
   tests/performance-budgets/generic-cyclic-aggregate-adapter.json \
   > .tmp/dew-cyclic-adapter-metrics.json
 tools/dew build \
+  tests/module-snapshots/generics/generic-nested-aggregate-adapter-runtime.dew \
+  -o .tmp/dew-nested-aggregate-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/generics/generic-nested-aggregate-adapter-runtime.wat \
+  .tmp/dew-nested-aggregate-budget.wasm \
+  tests/performance-budgets/generic-nested-aggregate-adapter.json \
+  > .tmp/dew-nested-aggregate-metrics.json
+tools/dew build \
+  tests/module-snapshots/functions/mutable-local-runtime.dew \
+  -o .tmp/dew-mutable-cell-budget.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/functions/mutable-local-runtime.wat \
+  .tmp/dew-mutable-cell-budget.wasm \
+  tests/performance-budgets/mutable-capture-cells.json \
+  > .tmp/dew-mutable-cell-metrics.json
+tools/dew build \
   tests/module-snapshots/functions/closure-directization-runtime.dew \
   -o .tmp/dew-closure-directization-budget.wasm
 node tools/wasm-metrics.mjs \

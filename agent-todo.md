@@ -272,7 +272,8 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [ ] Expand budgets to recursive aggregate/enum/callback adapters, mutable cells, imported/package specializations, and direct materialized-specialization counts.
   - [x] Gate direct/nested callback wrappers, callback-bearing struct/enum reconstruction, and an imported-package adapter plus its in-Wasm consumer.
   - [x] Add dedicated generic enum reconstruction and cyclic nominal-helper budgets.
-  - [ ] Add dedicated nested aggregate, mutable-cell, and direct specialization-count budgets.
+  - [x] Add dedicated nested aggregate and mutable capture-cell budgets.
+  - [ ] Record and gate direct materialized-specialization counts.
 - [ ] Add compile/validation/encoding and Node/Wago runtime timing plus peak-memory workloads with warmup and variance reporting.
 - [ ] Add the real compile-pass, compile-fail, and run-pass fixture suites.
 - [ ] Later: add broader malformed-input fuzzing for tokenizer, parser, and lowering after deterministic snapshot and CLI fixture infrastructure is established.
