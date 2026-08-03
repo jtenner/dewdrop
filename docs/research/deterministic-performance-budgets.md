@@ -28,20 +28,23 @@ The tool reports JSON in a fixed field order. Budgets use non-negative integer b
 
 `tests/performance-budgets/generic-aggregate-callback-adapter.json` requires exactly two adapter exports whose struct and enum payload conversion inserts callback wrappers. The runtime fixture also invokes callbacks loaded from an instantiated struct field and enum tuple/struct pattern bindings. The budget bounds synthetic callback signatures, wrapper and aggregate reconstruction sites, casts/tests, indirect calls, and output size.
 
-`tools/check.sh` builds all four production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, a standalone `eqref` identity consumer, and a `v128` identity consumer, links them against generated single- and multi-module providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
+`tests/performance-budgets/imported-package-callback-adapter.json` requires one root-owned adapter over an imported generic callback aggregate, retains zero indirect dispatch sites in the identity provider, and bounds linked type/function growth, direct calls, reconstruction sites, casts, and output size.
+
+`tools/check.sh` builds all five production modules and validates the budgets. It also parses focused WasmGC struct and enum callback consumers, a standalone `eqref` identity consumer, and a `v128` identity consumer, links them against generated single- and multi-module providers, and requires every fully in-Wasm path to return `42`. Generated JSON metric and consumer reports remain under `.tmp/` for diagnosis.
 
 ## Interpretation
 
 Static instruction counts are compiler regression gates, not runtime timing claims. One instruction site may execute zero, one, or many times. The initial budgets intentionally cover two high-value invariants:
 
 1. transparent callback directization must not reintroduce closure dispatch;
-2. scalar erased-boundary support must not grow adapter count, box sites, or cast/call machinery without an explicit budget update.
+2. scalar erased-boundary support must not grow adapter count, box sites, or cast/call machinery without an explicit budget update;
+3. imported-package adapter linkage must remain compact and allocation-bounded while its external Wasm consumer stays executable.
 
 Budget changes should be reviewed with the implementation and snapshots in the same atomic commit. A semantic improvement may intentionally increase one count while reducing runtime work elsewhere; in that case the rationale belongs in this document.
 
 ## Remaining work
 
-- Add recursive aggregate, enum, cyclic-helper, mutable-cell, imported specialization, and package-consumer budgets.
+- Add dedicated recursive aggregate, enum, cyclic-helper, mutable-cell, and direct specialization-count budgets.
 - Distinguish compiler-generated generic box/allocation sites from standard-library assertion/string sites using stable producer metadata or named custom sections.
 - Record materialized specialization count directly instead of inferring only exported adapter count.
 - Add deterministic compile/validation/encoding timing harnesses with warmup and variance reporting.

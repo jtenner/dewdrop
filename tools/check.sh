@@ -206,6 +206,11 @@ grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
 tools/dew build \
   --manifest tests/abi-consumers/imported-package/dew.json \
   -o .tmp/dew-imported-package-provider.wasm
+node tools/wasm-metrics.mjs \
+  tests/module-snapshots/modules/imported-generic-callback-adapter-runtime.wat \
+  .tmp/dew-imported-package-provider.wasm \
+  tests/performance-budgets/imported-package-callback-adapter.json \
+  > .tmp/dew-imported-package-metrics.json
 node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \
   .tmp/dew-aggregate-callback-consumer.wasm \
