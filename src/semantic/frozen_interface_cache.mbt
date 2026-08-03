@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V5\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V6\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {

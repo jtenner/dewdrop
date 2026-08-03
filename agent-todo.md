@@ -155,8 +155,9 @@ Performance and correctness work remains continuous: expand generated lane-famil
 - [x] Remove the obsolete executable generic-type rejection after generic aggregate carrier lowering.
 - [ ] Define recursive generic aggregate instantiation and sharing.
 - [ ] Define ABI compatibility fingerprints after the ABI stabilizes.
-  - [x] Persist V1 SHA-256 callable ABI fingerprints in frozen-interface/cache V5 using normalized signatures, physical shapes, and explicit box/closure schema domains.
-  - [ ] Replace exact external nominal `DeclId` members with dependency-interface fingerprints and define compatibility/version negotiation.
+  - [x] Persist V2 SHA-256 callable ABI fingerprints in frozen-interface/cache V6 using normalized signatures, physical shapes, explicit box/closure schema domains, and stable dependency declaration identities.
+  - [x] Replace exact external nominal `DeclId` members in callable fingerprints with dependency module path, declaration name, and generic arity.
+  - [ ] Add content-sensitive nominal declaration/interface fingerprints and define compatibility/version negotiation.
   - [x] Add a deterministic Node host consumer that lists `$dew$<carrier,...>` exports and invokes scalar adapters with explicit parameter/result carrier conversion.
   - [ ] Add an in-Wasm package consumer for `eqref`, aggregate, callback-wrapper, and `v128` adapters.
 

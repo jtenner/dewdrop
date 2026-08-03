@@ -463,6 +463,35 @@ test "imported public types and traits resolve in consumer signatures" {
 }
 
 ///|
+test "frozen callable ABI fingerprints ignore external module ID assignment" {
+  let freeze = fn(seed: ModuleId) -> String {
+    let program = collect_program_manifest(
+      seed,
+      ProgramManifest::new([
+        ManifestModule::new("app.main", [
+          ManifestFile::new(
+            "main.dew",
+            b"open app.library\npub fn keep(value: Item) -> Item {\n  value\n}\n",
+          ),
+        ]),
+        ManifestModule::new("app.library", [
+          ManifestFile::new(
+            "library.dew",
+            b"pub struct Item {\n  value: I32\n}\n",
+          ),
+        ]),
+      ]),
+    )
+    let frozen = freeze_program_interfaces(program)
+    if frozen.import_diagnostics.length() != 0 {
+      abort("unexpected external ABI fingerprint import diagnostics")
+    }
+    frozen.interfaces[0].callables_named("keep")[0].abi_fingerprint
+  }
+  assert_eq(freeze(1640UL), freeze(2640UL))
+}
+
+///|
 test "frozen callable ABI fingerprints are stable and signature sensitive" {
   let freeze = fn(seed: ModuleId, source: Bytes) -> String {
     let program = collect_program_manifest(

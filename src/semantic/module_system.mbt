@@ -1280,8 +1280,72 @@ fn callable_abi_write_shape(
 }
 
 ///|
+priv struct CallableAbiDeclarationIdentity {
+  path : String
+  name : String
+  generic_parameter_count : Int
+}
+
+///|
+fn callable_abi_declaration_identities(
+  path : String,
+  collected : CollectedModule,
+  imports : ModuleImportScope?,
+) -> Map[DeclId, CallableAbiDeclarationIdentity] {
+  let identities : Map[DeclId, CallableAbiDeclarationIdentity] = Map::default()
+  for value in collected.declarations {
+    if value.has_name() {
+      identities[value.id] = {
+        path,
+        name: collected.name(value.name),
+        generic_parameter_count: collected.generic_parameters_of(value.id).length,
+      }
+    }
+  }
+  match imports {
+    Some(scope) =>
+      for candidate in scope.interfaces {
+        match candidate {
+          Some(interface_) =>
+            for value in interface_.declarations {
+              identities[value.declaration] = {
+                path: interface_.path,
+                name: value.name,
+                generic_parameter_count: value.generic_parameter_count,
+              }
+            }
+          None => ()
+        }
+      }
+    None => ()
+  }
+  identities
+}
+
+///|
+fn callable_abi_write_declaration_identity(
+  output : Buffer,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
+  declaration : DeclId,
+) -> Unit {
+  match identities.get(declaration) {
+    Some(value) => {
+      callable_abi_write_int(output, 0)
+      callable_abi_write_string(output, value.path)
+      callable_abi_write_string(output, value.name)
+      callable_abi_write_int(output, value.generic_parameter_count)
+    }
+    None => {
+      callable_abi_write_int(output, 1)
+      callable_abi_write_u64(output, declaration)
+    }
+  }
+}
+
+///|
 fn callable_abi_write_type(
   output : Buffer,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
   generic_parameters : HirSpan,
@@ -1315,15 +1379,15 @@ fn callable_abi_write_type(
       }
       NominalType(declaration) => {
         callable_abi_write_int(output, 3)
-        callable_abi_write_u64(output, declaration)
+        callable_abi_write_declaration_identity(output, identities, declaration)
       }
       TraitType(declaration) => {
         callable_abi_write_int(output, 4)
-        callable_abi_write_u64(output, declaration)
+        callable_abi_write_declaration_identity(output, identities, declaration)
       }
       SelfType(declaration) => {
         callable_abi_write_int(output, 5)
-        callable_abi_write_u64(output, declaration)
+        callable_abi_write_declaration_identity(output, identities, declaration)
       }
       AppliedType(base, arguments) => {
         callable_abi_write_int(output, 6)
@@ -1352,12 +1416,13 @@ fn callable_abi_write_type(
 ///|
 fn frozen_callable_abi_fingerprint(
   path : String,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
 ) -> String {
   let output = Buffer()
-  output.write_bytes(b"DEW_CALLABLE_ABI_V1\x00")
+  output.write_bytes(b"DEW_CALLABLE_ABI_V2\x00")
   output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
   output.write_bytes(b"DEW_FLAT_CLOSURE_ABI_V1\x00")
   callable_abi_write_string(output, path)
@@ -1368,6 +1433,7 @@ fn frozen_callable_abi_fingerprint(
     let parameter = functions.parameters[callable.parameters.start + index]
     callable_abi_write_type(
       output,
+      identities,
       resolved,
       parameter.type_,
       callable.generic_parameters,
@@ -1376,6 +1442,7 @@ fn frozen_callable_abi_fingerprint(
   }
   callable_abi_write_type(
     output,
+    identities,
     resolved,
     callable.result_type,
     callable.generic_parameters,
@@ -1593,6 +1660,7 @@ pub fn freeze_module_interface(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
   module_values? : InferredModuleValues? = None,
+  imports? : ModuleImportScope? = None,
 ) -> FrozenModuleInterface {
   guard collected.module_id == resolved.module_id &&
     collected.module_id == functions.module_id else {
@@ -1705,6 +1773,9 @@ pub fn freeze_module_interface(
   }
   let parameters : Array[FrozenInterfaceParameter] = []
   let callables : Array[FrozenInterfaceCallable] = []
+  let callable_abi_identities = callable_abi_declaration_identities(
+    path, collected, imports,
+  )
   for callable in functions.callables {
     if semantic_id_local(callable.declaration) <
       collected.preamble_declaration_count {
@@ -1778,6 +1849,7 @@ pub fn freeze_module_interface(
       result_shape: callable.result_shape,
       abi_fingerprint: frozen_callable_abi_fingerprint(
         path,
+        callable_abi_identities,
         resolved,
         functions,
         callable,
@@ -2535,6 +2607,7 @@ pub fn freeze_program_interfaces_with_cached(
             resolved,
             functions,
             module_values=Some(module_values),
+            imports=Some(imports),
           ),
         )
       }
@@ -2571,6 +2644,7 @@ pub fn freeze_program_interfaces_with_cached(
             resolved,
             functions,
             module_values=Some(module_values),
+            imports=Some(imports),
           ),
         )
       }
