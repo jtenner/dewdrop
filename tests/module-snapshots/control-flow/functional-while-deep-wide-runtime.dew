@@ -1,0 +1,81 @@
+open dew.std.wasi
+
+fn deep(initial: I32) -> I32 {
+  while initial {
+    0 => {
+      let level2 = while 2 {
+        0 => {
+          let level3 = while 2 {
+            0 => {
+              let level4 = while 2 {
+                0 => {
+                  let level5 = while 2 {
+                    0 => {
+                      let level6 = while 2 {
+                        0 => {
+                          let level7 = while 2 {
+                            0 => {
+                              let level8 = while 2 {
+                                0 => break 8
+                                value => continue value - 1
+                              }
+                              break level8 + 1
+                            }
+                            value => continue value - 1
+                          }
+                          break level7 + 1
+                        }
+                        value => continue value - 1
+                      }
+                      break level6 + 1
+                    }
+                    value => continue value - 1
+                  }
+                  break level5 + 1
+                }
+                value => continue value - 1
+              }
+              break level4 + 1
+            }
+            value => continue value - 1
+          }
+          break level3 + 1
+        }
+        value => continue value - 1
+      }
+      break level2 + 1
+    }
+    value => continue value - 1
+  }
+}
+
+fn wide(initial: I32) -> I32 {
+  while initial {
+    0 => break 100
+    1 => break 1
+    2 => break 2
+    3 => break 3
+    4 => break 4
+    5 => break 5
+    6 => break 6
+    7 => break 7
+    8 => break 8
+    9 => break 9
+    10 => break 10
+    11 => break 11
+    12 => break 12
+    13 => break 13
+    14 => break 14
+    15 => break 15
+    value => continue value - 16
+  }
+}
+
+pub fn main() -> U32 {
+  let result = deep(3) + wide(0) + wide(1) + wide(7) + wide(15) + wide(31) + wide(48)
+  if result == 253 {
+    wasi_fd_write(1u32, b"control:while-deep-wide-15-238")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

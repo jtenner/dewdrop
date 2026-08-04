@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 3, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 4, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
@@ -101,7 +101,6 @@
 - [ ] Validate unreachable and `Never` stack behavior.
 - [ ] Design optional arguments, including defaults, omission, overload resolution, evaluation order, and ABI effects.
 - [ ] Add separate checked, saturating, and explicitly named wrapping/truncating conversion families beyond `Into<T>`.
-- [ ] Add deep and wide functional-loop execution tests.
 - [ ] Decide whether reserved `loop` becomes a second loop form.
 - [ ] Decide whether ordinary Boolean `while` is added.
 - [ ] Add tail-position branch optimization.
