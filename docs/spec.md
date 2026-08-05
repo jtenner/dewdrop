@@ -108,12 +108,12 @@ The initial fixed symbol set is:
 
 `**` is exponentiation. `@identifier` and dotted intrinsic paths such as `@wasm.i64_trunc_i32` produce one `AtIdentifier(String)` token.
 
-The initial keyword set is:
+The keyword set is:
 
 ```text
-fn pub builtin foreign impl trait for enum struct type let mut
+fn test pub builtin foreign impl trait for enum struct type let mut
 if else match while loop return break continue
-true false as in where import export package
+true false as in where open import export package
 ```
 
 Identifiers produce decoded MoonBit `String` values. The initial Unicode classifier is intentionally broad: ASCII names follow letter/underscore start rules, while non-ASCII Unicode scalars are accepted unless classified as whitespace. This is provisional until Q-029 defines Unicode XID and normalization behavior.
@@ -121,15 +121,15 @@ Identifiers produce decoded MoonBit `String` values. The initial Unicode classif
 Numeric literals use fixed-width token variants and unsigned magnitude payloads because unary `-` is a separate token:
 
 ```text
-1      -> I32
-1U     -> U32
-1L     -> I64
-1UL    -> U64
-1.0    -> F64
-1.0F   -> F32
+1       -> I32
+1i8     -> I8       1i16 -> I16       1i32 -> I32       1i64 -> I64
+1u8     -> U8       1u16 -> U16       1u32 -> U32       1u64 -> U64
+1U      -> U32      1L   -> I64       1UL  -> U64
+1.0     -> F64
+1.0F    -> F32      1.0f32 -> F32     1.0f64 -> F64
 ```
 
-A floating-point spelling must contain `.`. Therefore `1e3` and `1F` are lexical errors, while `1.0e3` and `1.0F` are valid. Decimal integer and fractional components may contain non-leading, non-trailing, non-consecutive `_` separators.
+A floating-point spelling must contain `.`. Therefore `1e3` and `1F` are lexical errors, while `1.0e3` and `1.0F` are valid. A leading-dot form such as `.5` is valid. Decimal integer and fractional components may contain non-leading, non-trailing, non-consecutive `_` separators.
 
 String tokens use `Bytes` payloads so WTF-8 surrogates and malformed raw bytes remain lossless:
 
@@ -659,7 +659,7 @@ The collected module artifact is frozen by convention after construction. Recurs
 
 ### 3.5 Declaration type resolution
 
-`resolve_module_types` converts declaration-level type HIR into a canonical module-local `ResolvedType` arena. The initial primitive types are `Unit`, `Bool`, `I32`, `U32`, `I64`, `U64`, `F32`, `F64`, `String`, and `Never`; these names and `Self` are reserved from user type declarations.
+`resolve_module_types` converts declaration-level type HIR into a canonical module-local `ResolvedType` arena. The resolved primitive set covers `Unit`, `Bool`, the complete fixed-width scalar set (`I8`, `I16`, `I32`, `I64`, `U8`, `U16`, `U32`, `U64`, `F32`, `F64`), `String`, `Bytes`, `StringView`, `StringBuilder`, `BytesBuilder`, `V128`, `Swar32`, `Swar64`, and the packed lane types; these names and `Self` are reserved from user type declarations.
 
 Ordinary type lookup checks immediate generic parameters, containing trait/impl generics for methods, contextual `Self`, primitives, the module type namespace, and finally the trait namespace. Type declarations outrank traits with the same spelling in an ordinary type position. Impl trait positions search the trait namespace exclusively and distinguish a known non-trait from an unknown trait.
 
@@ -699,9 +699,9 @@ Parameters and receivers use their normalized declared types. Literals have fixe
 
 The final expression item is a block's value; earlier expression values may be discarded. Empty blocks and blocks ending in let have type `Unit`, while blocks ending in return have type `Never`. Valued returns are checked against the declared callable return type, and bare return checks `Unit`. An actual `Never` expression is assignable to any expected value type without ordinary equality.
 
-`if` conditions check against `Bool`. With `else`, every non-diverging branch constrains one shared result type; without `else`, the expression has type `Unit` and the then-block value is discarded. Logical operators constrain `Bool`. Other binary operators map to homogeneous standard traits such as `Add`, `Sub`, `Lt`, and `Lte`; inference unifies both operand types, selects the exact implementation method through the impl index, and freezes that evidence for lowering. Unary-sign trait selection remains deferred.
+`if` conditions check against `Bool`. With `else`, every non-diverging branch constrains one shared result type; without `else`, the expression has type `Unit` and the then-block value is discarded. Logical operators constrain `Bool`. Other binary operators map to homogeneous standard traits such as `Add`, `Sub`, `Lt`, and `Lte`; inference unifies both operand types, selects the exact implementation method through the impl index, and freezes that evidence for lowering. Unary `+` and `-` constrain the result to the operand type and lower without trait selection (`+` emits nothing, `-` emits the native `*_neg` instruction), and prefix `!` constrains both the operand and the result to `Bool`.
 
-Basic inference initially defers members, qualification, constructors, objects, indexing, matches, and functional loops. Subsequent immutable inference phases now resolve every listed form except indexing; failed boundaries poison their outer expression and coalesce dependent diagnostics. Final zonking detects unresolved supported expressions and locals. Reachability compaction discards solver-only variables and applications before body fragments merge. A worker-local solver is reset and reused across sequential jobs, preserving capacity without sharing mutable state between workers. Full details, optimization history, and benchmarks are recorded in `docs/research/basic-body-type-inference.md`.
+Basic inference initially defers members, qualification, constructors, objects, indexing, matches, and functional loops. Subsequent immutable inference phases now resolve every listed form, including indexing and indexed setting through the ambient `Index<key, value>` and `IndexSet<key, value>` traits; failed boundaries poison their outer expression and coalesce dependent diagnostics. Final zonking detects unresolved supported expressions and locals. Reachability compaction discards solver-only variables and applications before body fragments merge. A worker-local solver is reset and reused across sequential jobs, preserving capacity without sharing mutable state between workers. Full details, optimization history, and benchmarks are recorded in `docs/research/basic-body-type-inference.md`.
 
 ### 3.9 Direct, generic, and overloaded calls
 
@@ -801,7 +801,7 @@ Candidate signatures are instantiated and trialed under solver rollback; receive
 
 A unique candidate publishes its exact implementation method `DeclId` through `SelectedInferredCallTarget`, so later lowering can emit a direct call. No viable candidate emits `NoMatchingMethod`; multiple equally specific viable candidates emit `AmbiguousMethod`; absent qualified names emit `UnknownQualifiedMember`. Poisoned receivers suppress dependent cascades. Impl method bodies substitute their containing target for `Self`, while declaration generics remain rigid in their own body. Member retries skip already selected or failed nodes, preventing duplicate diagnostics while allowing method parameters to type nested object arguments.
 
-Target dispatch entries sort by target head, name, inherent/trait tier, static/instance shape, implementation, and method source order; a secondary trait-qualified table sorts by trait declaration and the same stable member keys. Body jobs read the same immutable index and merge deterministically; forward and reverse schedules compare equal. Stress coverage includes 512 implementation buckets, 512 methods plus calls, and 512 applied specialization levels. Generic obligations, trait objects, and cross-module evidence remain later work. Full details and benchmarks are recorded in `docs/research/impl-index-instance-method-inference.md`.
+Target dispatch entries sort by target head, name, inherent/trait tier, static/instance shape, implementation, and method source order; a secondary trait-qualified table sorts by trait declaration and the same stable member keys. Body jobs read the same immutable index and merge deterministically; forward and reverse schedules compare equal. Stress coverage includes 512 implementation buckets, 512 methods plus calls, and 512 applied specialization levels. Imported impl evidence is merged into consumer dispatch indexes (see the decision-log entries D-337 and D-477); generic obligations and runtime trait objects remain later work. Full details and benchmarks are recorded in `docs/research/impl-index-instance-method-inference.md`.
 
 ### 3.15 Deterministic lowering plans
 
@@ -831,7 +831,7 @@ The sole WasmGC enum ABI is an optimized subtype family: one non-final tag-only 
 
 Callable signature types follow all physical GC types in stable callable order. Builtin imports receive the first function indices, executable top-level and impl functions follow, and trait requirements retain signature types without occupying function indices. Generic and trait ABI slots currently use nullable `eqref`; concrete nominal slots use non-null typed references; `Unit` and `Never` occupy no Wasm value slot.
 
-The backend package mechanically emits Starshine `TypeSec`, `ImportSec`, `FuncSec`, `ExportSec`, and `CodeSec` values from the frozen plan and assembles complete modules. Unrecognized builtins import from the reserved runtime module `dew`; recognized scalar builtins such as `i32_add`, `i32_sub`, and `i32_lte` emit native Wasm instructions and consume no function index. Frozen directization evidence replaces calls to trivial primitive impl wrappers with those instructions, and module-visible wrappers that become unreachable are elided deterministically. `emit_starshine_binary` validates the complete module through Starshine before encoding it through Starshine. The compiler does not invoke an external Wasm validator. The recursive trait-based Fibonacci module passes Starshine validation and executes in Node. Non-generic local and imported enum construction, field extraction, guarded matching, and dense dispatch emit the optimized subtype-family ABI through Starshine. Generic scalar boxing, startup sections, and module initialization instructions remain subsequent phases. Full details and measurements are recorded in `docs/research/deterministic-starshine-fragments.md`, `docs/research/enum-layout-dispatch-optimization.md`, and `docs/research/executable-trait-fibonacci.md`.
+The backend package mechanically emits Starshine `TypeSec`, `ImportSec`, `FuncSec`, `GlobalSec`, `ExportSec`, and `CodeSec` values from the frozen plan, appends the versioned `dew.abi` and `dew.metrics` custom sections, and assembles complete modules. Unrecognized builtins import from the reserved runtime module `dew`; recognized scalar builtins such as `i32_add`, `i32_sub`, and `i32_lte` emit native Wasm instructions and consume no function index. Frozen directization evidence replaces calls to trivial primitive impl wrappers with those instructions, and module-visible wrappers that become unreachable are elided deterministically. `emit_starshine_binary` validates the complete module through Starshine before encoding it through Starshine. The compiler does not invoke an external Wasm validator. The recursive trait-based Fibonacci module passes Starshine validation and executes in Node. Non-generic local and imported enum construction, field extraction, guarded matching, and dense dispatch emit the optimized subtype-family ABI through Starshine. Generic scalar boxes, erased ABI adapters, and explicit host-driven initialization (`__dew_init`) are implemented; the Wasm `Start` section remains subsequent work. Full details and measurements are recorded in `docs/research/deterministic-starshine-fragments.md`, `docs/research/enum-layout-dispatch-optimization.md`, and `docs/research/executable-trait-fibonacci.md`.
 
 ## 4. Names
 
@@ -863,7 +863,7 @@ trait Lte {
 
 An operator obligation unifies the left and right operand types before implementation selection. Thus `impl Add for I32` fixes both operands and the result to `I32`; forms such as `Add<I64> for I32` are not part of Dew's operator model. Generic traits remain available for non-operator abstractions.
 
-The compiler-owned `dew.std.preamble` module initially provides `Add`, `Sub`, and `Lte`, their `I32` implementations, and the `i32_add`, `i32_sub`, and `i32_lte` builtin declarations. `collect_program_bytes` includes this preamble automatically. The raw `collect_bytes` phase helper intentionally omits it for isolated semantic tests and benchmarks. Preamble and user source are parsed as separate event streams, so user byte offsets remain unchanged; `CollectedModule.preamble_declaration_count` records the fixed semantic-ID prefix. Other standard modules use the same root, including `dew.std.map` and `dew.std.queue`, and remain ordinary explicit imports unless `dew.std.preamble` re-exports selected declarations.
+The compiler-owned `dew.std.preamble` module provides the homogeneous operator traits `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Eq`, `Ne`, `Lt`, `Lte`, `Gt`, `Gte`, `BitAnd`, `BitOr`, `BitXor`, `Shl`, and `Shr`; the generic `Into<t>`, `Index<key, value>`, `IndexSet<key, value>`, and `Hash` traits; and the scalar builtin declarations such as `i32_add`, `i32_sub`, and `i32_lte` that back them. `collect_program_bytes` includes this preamble automatically. The raw `collect_bytes` phase helper intentionally omits it for isolated semantic tests and benchmarks. Preamble and user source are parsed as separate event streams, so user byte offsets remain unchanged; `CollectedModule.preamble_declaration_count` records the fixed semantic-ID prefix. In the production driver, `dew.std.preamble`, `dew.std.option`, and `dew.std.result` are ambient canonical imports; the remaining standard modules (text, bytes, builders, WASI, map, set, fixed arrays, lanes, and intrinsics) are selected by a deterministic leading-import prepass and resolved only through frozen interfaces, as described in `std/README.md`.
 
 A method does not repeat the trait's generic parameter list merely to use those parameters. Method-level generics are not accepted by the initial parser and may be specified separately in the future, but their syntax and shadowing rules are not yet decided.
 
@@ -901,6 +901,8 @@ Type::method(value, args)
 ```
 
 ### 5.1 Dispatch
+
+> **Status:** Static dispatch is implemented. Runtime trait values — trait objects, dictionaries, and `call_ref` dynamic dispatch — are not yet implemented; this section specifies their planned representation, tracked under runtime trait values in `docs/roadmap.md`.
 
 When semantic analysis knows the selected method and implementation, Dew emits a direct call. This applies to inherent methods, statically selected trait methods, and qualified trait calls whose receiver type is concrete.
 
@@ -969,7 +971,7 @@ Dew is garbage-collected because it targets WasmGC. User-defined aggregate and r
 
 `self` denotes the receiver semantically, but its lowered representation follows the receiver type: a primitive receiver is passed as an unboxed Wasm scalar, while a GC-managed receiver is passed as a Wasm reference.
 
-Generic lowering should avoid broad monomorphization so generated Wasm remains compact and deliverable. Generic trait operations use hidden immutable dictionaries containing typed function references. ABI-shape specialization may still be used to preserve unboxed primitive values.
+Executable generic code uses deterministic physical-carrier specialization: source shapes with the same Wasm carrier are coalesced into one materialized specialization, and supported exported boundaries receive nullable-`eqref` erased fallback adapters with recursive conversion of nested aggregates and structural function values. Unboxed scalar carriers remain unboxed at concrete boundaries. Hidden immutable dictionaries are reserved for the future runtime trait-value ABI (Section 5.1) rather than for static generics.
 
 When multiple implementations match, Dew selects the unique most-specific implementation:
 
@@ -1073,7 +1075,7 @@ let record = SumExample::StructKind {
 }
 ```
 
-Semantic analysis distinguishes unit and tuple constructors from qualified constants or static calls and validates struct-like construction targets. Generic argument inference, explicit generic qualification syntax, pattern syntax, runtime representation, tag assignment, and exhaustiveness rules remain open.
+Semantic analysis distinguishes unit and tuple constructors from qualified constants or static calls and validates struct-like construction targets. Generic argument inference, pattern syntax, the subtype-family runtime representation, source-order tag assignment, and exhaustiveness rules are implemented (Sections 3.11, 3.12, and 3.16); explicit generic qualification syntax at call sites remains open.
 
 ## 10. Decision log
 

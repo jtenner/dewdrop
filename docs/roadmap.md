@@ -16,7 +16,7 @@ Dew currently has:
 - bounded WASI Preview 1 `Bytes` I/O through the 65,520-byte data region of one reusable memory page, including partial writes and chunked reads;
 - exact callable reachability, compiler-owned import/runtime elision, frozen final indices, Starshine validation, and deterministic Starshine binary encoding;
 - first-class `_test.dew` semantics, frozen test metadata, test-mode exports, 198 direct standard tests, and independent UTF/SWAR/WASI differential harnesses;
-- compiler-owned generated standard mirrors under `src/semantic/`, pending replacement by selective on-disk standard-module loading;
+- selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/semantic/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent V7 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
 - 193 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 172 compiled WAT/runtime snapshots plus 21 compiler-error snapshots.

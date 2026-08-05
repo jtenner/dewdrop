@@ -861,6 +861,7 @@ src/tokenizer/       raw source cursor, WTF-8 decoding, and streaming lexer
 src/parser/          forward-only parser and syntax events
 src/semantic/        collection, name resolution, inference, flow, layouts,
                      lowering, interface freezing, specialization, and linking
+src/standard_loader/ on-disk dew.std selection and the persistent interface cache
 src/backend/         deterministic Starshine/WasmGC planning and emission
 src/dew_cli/         compiler-facing command implementation
 std/                 Dew standard-library sources
