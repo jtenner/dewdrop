@@ -29,14 +29,41 @@ fn text_length(value: String) -> U32 {
 pub fn main() -> U32 {
   let byte = Two::Byte(255u8)
   let wide = Two::Wide(65535u16)
-  let p = Point {
-    x: 5
-    y: 7
+  let conditional = if true {
+    Point {
+      x: 5
+      y: 7
+    }
+  } else {
+    Point {
+      x: 0
+      y: 0
+    }
+  }
+  let matched = match conditional {
+    value => value
+  }
+  let mut reassigned = Point {
+    x: 0
+    y: 0
+  }
+  reassigned = if false {
+    Point {
+      x: 0
+      y: 0
+    }
+  } else {
+    Point {
+      x: 13
+      y: 17
+    }
   }
   let s = "hello"
   if extract(byte) == 255 &&
     extract(wide) == 65535 &&
-    get(p) == 5 &&
+    get(conditional) == 5 &&
+    get(matched) == 5 &&
+    get(reassigned) == 13 &&
     text_length(s) == 5u32 {
     wasi_fd_write(1u32, b"ok\n")
   } else {

@@ -325,7 +325,7 @@
     call 2
   )
   (func (;7;) (type 11) (result i32)
-    (local (ref 4) (ref 4) (ref 7) eqref)
+    (local (ref 4) (ref 4) (ref 7) (ref 7) (ref 7) (ref 7) eqref eqref eqref)
     i32.const 0
     i32.const 255
     struct.new 5
@@ -334,16 +334,57 @@
     i32.const 65535
     struct.new 6
     local.set 1
-    i32.const 5
-    i32.const 7
-    struct.new 7
+    i32.const 1
+    if (result eqref) ;; label = @1
+      i32.const 5
+      i32.const 7
+      struct.new 7
+    else
+      i32.const 0
+      i32.const 0
+      struct.new 7
+    end
+    ref.cast (ref 7)
     local.set 2
+    local.get 2
+    local.set 7
+    block ;; label = @1
+      i32.const 1
+      if ;; label = @2
+        local.get 7
+        ref.cast (ref 7)
+        local.set 3
+        local.get 3
+        local.set 8
+        br 1 (;@1;)
+      end
+      unreachable
+    end
+    local.get 8
+    ref.cast (ref 7)
+    local.set 4
+    i32.const 0
+    i32.const 0
+    struct.new 7
+    local.set 5
+    i32.const 0
+    if (result eqref) ;; label = @1
+      i32.const 0
+      i32.const 0
+      struct.new 7
+    else
+      i32.const 13
+      i32.const 17
+      struct.new 7
+    end
+    ref.cast (ref 7)
+    local.set 5
     v128.const i32x4 0x6c6c6568 0x0000006f 0x00000000 0x00000000
     array.new_fixed 12 1
     i32.const 0
     i32.const 5
     struct.new 13
-    local.set 3
+    local.set 6
     local.get 0
     call 4
     i32.const 255
@@ -365,7 +406,23 @@
       i32.const 0
     end
     if (result i32) ;; label = @1
-      local.get 3
+      local.get 4
+      call 5
+      i32.const 5
+      i32.eq
+    else
+      i32.const 0
+    end
+    if (result i32) ;; label = @1
+      local.get 5
+      call 5
+      i32.const 13
+      i32.eq
+    else
+      i32.const 0
+    end
+    if (result i32) ;; label = @1
+      local.get 6
       call 6
       i32.const 5
       i32.eq

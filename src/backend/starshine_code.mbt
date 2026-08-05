@@ -124,7 +124,7 @@ priv enum StarshineEmitTask {
   EmitStarshineEmpty
   EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
   FinishStarshineBlock(@semantic.BlockId)
-  FinishStarshineLocalSet(Int, Int)
+  FinishStarshineLocalSet(Int, Int, @semantic.ExprId)
   FinishStarshineCaptureSet(Int, Int)
   FinishStarshineCall(@semantic.DeclId, Int, Int, @semantic.HirSpan)
   FinishStarshineParameterSelect(Int, Int)
@@ -894,6 +894,79 @@ fn starshine_match_cast(type_index : Int) -> @lib.Instruction {
 }
 
 ///|
+fn starshine_precise_nominal_local_type_index(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  planned_local : @semantic.PlannedLocal,
+) -> Int? {
+  if planned_local.nominal == 0UL ||
+    planned_local.nominal == @semantic.standard_fixed_array_type_declaration() ||
+    planned_local.nominal == @semantic.standard_map_type_declaration() ||
+    planned_local.nominal == @semantic.standard_set_type_declaration() {
+    return None
+  }
+  match lowering.type_layouts.layout_of(planned_local.nominal) {
+    Some(_) =>
+      starshine_emitted_type_index(planned, program, planned_local.nominal)
+    None => None
+  }
+}
+
+///|
+fn starshine_nominal_expression_result_is_precise(
+  lowering : @semantic.PlannedModuleLowering,
+  expression : @semantic.ExprId,
+) -> Bool {
+  if expression < 0 || expression >= lowering.expressions.length() {
+    return false
+  }
+  match lowering.expressions[expression].kind {
+    @semantic.PlannedLocalGet(_)
+    | @semantic.PlannedCaptureGet(_)
+    | @semantic.PlannedModuleValueGet(_, _)
+    | @semantic.PlannedDirectCall(_, _, _, _)
+    | @semantic.PlannedOperatorCall(_, _, _, _, _)
+    | @semantic.PlannedIndexCall(_, _, _, _)
+    | @semantic.PlannedIndexSetCall(_, _, _, _, _)
+    | @semantic.PlannedFunctionValueCall(_, _, _)
+    | @semantic.PlannedDirectLambdaCall(_, _, _)
+    | @semantic.PlannedStructNew(_, _, _)
+    | @semantic.PlannedVariantTupleNew(_, _, _)
+    | @semantic.PlannedVariantStructNew(_, _, _)
+    | @semantic.PlannedUnitVariant(_, _)
+    | @semantic.PlannedParameterSelect(_, _) => true
+    _ => false
+  }
+}
+
+///|
+fn starshine_append_precise_nominal_local_cast(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  body : @semantic.PlannedBodyLowering,
+  local_id : Int,
+  source_expression : @semantic.ExprId,
+  output : Array[@lib.Instruction],
+) -> Unit {
+  if local_id < 0 ||
+    local_id >= body.locals.length ||
+    starshine_local_capture_cell_slot(lowering, body, local_id) >= 0 ||
+    starshine_nominal_expression_result_is_precise(lowering, source_expression) {
+    return
+  }
+  let planned_local = lowering.locals[body.locals.start + local_id]
+  match
+    starshine_precise_nominal_local_type_index(
+      lowering, planned, program, planned_local,
+    ) {
+    Some(type_index) => output.push(starshine_match_cast(type_index))
+    None => ()
+  }
+}
+
+///|
 fn starshine_match_local_get(local_index : Int) -> @lib.Instruction {
   @lib.Instruction::local_get(
     @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
@@ -1120,6 +1193,9 @@ fn starshine_general_match_pattern_instructions(
                   return Err(InvalidLocal(body.body, local_id))
                 }
                 append_starshine_instructions(output, value)
+                starshine_append_precise_nominal_local_cast(
+                  lowering, planned, program, body, local_id, -1, output,
+                )
                 output.push(
                   @lib.Instruction::local_set(
                     @lib.LocalIdx::new(
@@ -1427,6 +1503,9 @@ fn starshine_simple_match_pattern_instructions(
             return Err(InvalidLocal(body.body, local_id))
           }
           bindings.push(starshine_match_local_get(scratch_local))
+          starshine_append_precise_nominal_local_cast(
+            lowering, planned, program, body, local_id, -1, bindings,
+          )
           bindings.push(
             @lib.Instruction::local_set(
               @lib.LocalIdx::new(local_indices[local_id].reinterpret_as_uint()),
@@ -1855,20 +1934,10 @@ fn starshine_body_locals(
         )
         let local_type = if cell_slot >= 0 {
           Some(@lib.ValType::eqref_null())
-        } else if planned_local.nominal != 0UL &&
-          planned_local.nominal !=
-          @semantic.standard_fixed_array_type_declaration() &&
-          planned_local.nominal != @semantic.standard_map_type_declaration() &&
-          planned_local.nominal != @semantic.standard_set_type_declaration() &&
-          (match lowering.type_layouts.layout_of(planned_local.nominal) {
-            Some(_) => true
-            None => false
-          }) {
+        } else {
           match
-            starshine_emitted_type_index(
-              planned,
-              program,
-              planned_local.nominal,
+            starshine_precise_nominal_local_type_index(
+              lowering, planned, program, planned_local,
             ) {
             Some(type_index) =>
               Some(
@@ -1876,16 +1945,15 @@ fn starshine_body_locals(
                   @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
                 ),
               )
-            None => Some(@lib.ValType::eqref_null())
+            None =>
+              starshine_body_value_type(
+                lowering,
+                planned,
+                program,
+                planned_local.type_,
+                planned_local.shape,
+              )
           }
-        } else {
-          starshine_body_value_type(
-            lowering,
-            planned,
-            program,
-            planned_local.type_,
-            planned_local.shape,
-          )
         }
         match local_type {
           Some(type_) => {
@@ -3633,7 +3701,11 @@ fn starshine_emit_body_instructions(
               }
             } else {
               tasks.push(
-                FinishStarshineLocalSet(local_id, local_indices[local_id]),
+                FinishStarshineLocalSet(
+                  local_id,
+                  local_indices[local_id],
+                  value,
+                ),
               )
               tasks.push(EmitStarshineExpression(value))
             }
@@ -4483,7 +4555,7 @@ fn starshine_emit_body_instructions(
           }
         }
       }
-      FinishStarshineLocalSet(local_id, local_index) => {
+      FinishStarshineLocalSet(local_id, local_index, source_expression) => {
         let value = results.pop().unwrap()
         let output : Array[@lib.Instruction] = []
         let cell_slot = starshine_local_capture_cell_slot(
@@ -4508,6 +4580,9 @@ fn starshine_emit_body_instructions(
           )
         } else {
           append_starshine_instructions(output, value)
+          starshine_append_precise_nominal_local_cast(
+            lowering, planned, program, body, local_id, source_expression, output,
+          )
           output.push(
             @lib.Instruction::local_set(
               @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
@@ -4555,7 +4630,7 @@ fn starshine_emit_body_instructions(
           let item = lowering.block_items[source.items.start + index]
           append_starshine_instructions(output, fragments[index])
           match item.kind {
-            @semantic.PlannedLetItem(local_id, _, _) => {
+            @semantic.PlannedLetItem(local_id, _, expression) => {
               if local_id < 0 ||
                 local_id >= local_indices.length() ||
                 local_indices[local_id] < 0 {
@@ -4574,6 +4649,9 @@ fn starshine_emit_body_instructions(
                   ),
                 )
               }
+              starshine_append_precise_nominal_local_cast(
+                lowering, planned, program, body, local_id, expression, output,
+              )
               output.push(
                 @lib.Instruction::local_set(
                   @lib.LocalIdx::new(

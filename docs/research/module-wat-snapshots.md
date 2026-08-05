@@ -162,37 +162,38 @@ layout.
 
 ## Current coverage and observation
 
-The suite now contains 193 fixtures: 172 compiled WAT/runtime snapshots and 21
-compiler-error snapshots. On August 4, 2026, the full suite passes identically
+The suite now contains 215 fixtures: 183 compiled WAT/runtime snapshots and 32
+compiler-error snapshots. On August 5, 2026, the full suite passes identically
 in Node and Wago Core 3, including deep and wide functional loops, module
 initialization, imported values, imported method/operator dispatch, collection
-growth, and cross-module recursive WasmGC types.
+growth, control-flow-initialized nominal locals, and cross-module recursive
+WasmGC types.
 
 ```text
 feature         total   compiled   compiler errors   expected traps
-calls                2          0                 2                0
-collections         14          9                 5                2
-control-flow       19         19                 0                1
+calls                3          0                 3                0
+collections         15         10                 5                2
+control-flow       20         20                 0                1
 enums               11         11                 0                0
-functions           15         12                 3                0
+functions           16         13                 3                0
 generics             8          8                 0                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             19         17                 2                0
-names                2          0                 2                0
-numeric             28         26                 2                1
+modules             21         17                 4                0
+names                3          0                 3                0
+numeric             34         30                 4                1
 reachability         1          1                 0                0
 structs             11          8                 3                0
-tests                3          2                 1                1
-text                 23         23                 0                1
-types                1          0                 1                0
+tests                4          2                 2                1
+text                 27         27                 0                4
+types                5          0                 5                0
 wasi                 16         16                 0                5
 
-total               193        172                21               12
-nonempty stdout fixtures        92
+total               215        183                32               15
+nonempty stdout fixtures       100
 WAT/no-trap-only fixtures       68
-checked-in WAT lines       100,834
-checked-in WAT bytes      2,894,206
+checked-in WAT lines       104,829
+checked-in WAT bytes      2,987,306
 ```
 
 Successful runtime coverage includes recursive and nested calls, scalar,
@@ -227,8 +228,8 @@ The import prepass now selects independently collected compiler-owned standard
 modules and user modules consume only their frozen interfaces. Whole-program
 reachability removes elided signature slots, dead external type references,
 unused standard nominal layouts, and unreachable runtime functions before final
-indices. Across 172 compiled fixtures, checked-in WAT is now 100,834 lines and
-2,894,206 bytes, down from the original 431,150 lines and 21,839,923 bytes while
+indices. Across 183 compiled fixtures, checked-in WAT is now 104,829 lines and
+2,987,306 bytes, down from the original 431,150 lines and 21,839,923 bytes while
 retaining deterministic diagnostics and runtime behavior. The generic fixture
 covers ambient `Option`/`Result` construction and pattern matching across scalar
 and reference carriers.

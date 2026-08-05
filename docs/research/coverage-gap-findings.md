@@ -30,17 +30,16 @@ binding, or match enum carriers with narrow payloads (see finding 2).
 ## 2. Let-bound enum values fail Wasm validation when passed to functions
 
 > FIXED (August 5, 2026): let-bound nominal locals are now declared with their
-> precise `(ref N)` type instead of the erased `eqref_null` fallback. The fix
-> is a one-line change in `starshine_body_locals`
-> (`src/backend/starshine_code.mbt`): the nominal branch no longer requires
-> `layout.generic_parameters.length > 0`, so every struct/enum in the nominal
-> layout table gets a precise local type. String, `fixed_array`, `map`, and
-> `set` remain erased (the latter three are explicitly excluded; strings are
-> not in the nominal layout table and are handled by the text runtime).
-> Regression coverage: `functions/let-bound-nominal-args-runtime` (let-bound
-> enum, struct, and string passed to typed functions) and
-> `control-flow/narrow-payload-match-runtime` now uses the natural let-bound
-> form it previously had to dodge.
+> precise `(ref N)` type instead of the erased `eqref_null` fallback. A shared
+> backend helper selects those precise local types and inserts `ref.cast` when
+> an erased control-flow or pattern result is stored into one. This covers
+> direct constructors, `if`/`match` initializers, pattern rebinding, and mutable
+> reassignment without reintroducing nullable locals. String, `fixed_array`,
+> `map`, and `set` remain erased (the latter three are explicitly excluded;
+> strings are not in the nominal layout table and are handled by the text
+> runtime). Regression coverage:
+> `functions/let-bound-nominal-args-runtime` and
+> `control-flow/narrow-payload-match-runtime`.
 
 Constructing an enum inline and passing it to a function compiles and runs,
 but binding the value with `let` first and then passing it to a function
@@ -160,8 +159,12 @@ if widen(a) == -128 { ... }
 
 ## Related fixture notes
 
-- `numeric/literal-out-of-range-matrix` locks in the full out-of-range
-  diagnostic surface (including `128i8` versus the valid `-128i8`).
+- `numeric/literal-out-of-range` and
+  `numeric/literal-out-of-range-wide` lock in semantic signed-width overflow
+  diagnostics, while `numeric/literal-out-of-range-matrix` uses separate
+  declarations so parser recovery retains every invalid signed/unsigned
+  magnitude diagnostic. `numeric/signed-minimum-narrow-runtime` covers the
+  valid `-128i8` and `-32768i16` spellings.
 - `text/bytes-to-string-surrogate-trap`, `text/string-view-oob-trap`, and
   `text/string-byte-at-oob-trap` verify the documented trap (not clamp)
   behavior for malformed UTF-8 and out-of-bounds text access.

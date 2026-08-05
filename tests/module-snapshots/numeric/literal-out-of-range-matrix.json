@@ -1,6 +1,9 @@
 {
   "errors": [
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"129i8\"), 57)),\n  },\n)"
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"129i8\"), 27)),\n  },\n)",
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"256u8\"), 62)),\n  },\n)",
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"65536u16\"), 99)),\n  },\n)",
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"4294967296u32\"), 139)),\n  },\n)"
   ],
   "warnings": [],
   "output": null

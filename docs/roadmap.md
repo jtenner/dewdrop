@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 4, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
+> Living roadmap as of August 5, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
 
 ## Current baseline
 
@@ -19,7 +19,7 @@ Dew currently has:
 - selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/semantic/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent V7 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 193 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 172 compiled WAT/runtime snapshots plus 21 compiler-error snapshots.
+- 215 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 183 compiled WAT/runtime snapshots plus 32 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -743,7 +743,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
-- [x] Establish broad feature-oriented coverage with 193 fixtures: 172 compiled WAT/runtime snapshots and 21 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
+- [x] Establish broad feature-oriented coverage with 215 fixtures: 183 compiled WAT/runtime snapshots and 32 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.

@@ -1,0 +1,9 @@
+fn invalid_i16() -> I16 {
+  32768i16
+}
+
+fn invalid_i32() -> I32 {
+  2147483648i32
+}
+
+pub fn main() -> Unit {}

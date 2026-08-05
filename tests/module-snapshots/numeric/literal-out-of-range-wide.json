@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "NumericLiteralOutOfRange(0, I16Type, 28)",
+    "NumericLiteralOutOfRange(1, I32Type, 68)"
+  ],
+  "warnings": [],
+  "output": null
+}
