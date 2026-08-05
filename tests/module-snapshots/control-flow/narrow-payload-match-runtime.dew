@@ -17,10 +17,14 @@ fn extract(value: Narrow) -> I32 {
 }
 
 pub fn main() -> U32 {
-  if extract(Narrow::Byte(255u8)) == 255 &&
-    extract(Narrow::Wide(65535u16)) == 65535 &&
-    extract(Narrow::SignedByte(-128i8)) == -128 &&
-    extract(Narrow::SignedWide(-32768i16)) == -32768 {
+  let byte = Narrow::Byte(255u8)
+  let wide = Narrow::Wide(65535u16)
+  let signed_byte = Narrow::SignedByte(-128i8)
+  let signed_wide = Narrow::SignedWide(-32768i16)
+  if extract(byte) == 255 &&
+    extract(wide) == 65535 &&
+    extract(signed_byte) == -128 &&
+    extract(signed_wide) == -32768 {
     wasi_fd_write(1u32, b"control:narrow-payload-match")
   } else {
     wasi_fd_write(1u32, b"FAIL")

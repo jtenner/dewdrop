@@ -65,7 +65,7 @@
     call 6
   )
   (func (;4;) (type 13)
-    (local eqref eqref eqref eqref eqref eqref eqref eqref)
+    (local eqref eqref eqref (ref 0) eqref eqref eqref eqref)
     ref.func 8
     struct.new 4
     local.set 0

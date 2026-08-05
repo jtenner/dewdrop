@@ -1,0 +1,45 @@
+open dew.std.string
+open dew.std.wasi
+
+enum Two {
+  Byte(U8)
+  Wide(U16)
+}
+
+struct Point {
+  x: I32
+  y: I32
+}
+
+fn extract(value: Two) -> I32 {
+  match value {
+    Two::Byte(item) => item.into()
+    Two::Wide(item) => item.into()
+  }
+}
+
+fn get(value: Point) -> I32 {
+  value.x
+}
+
+fn text_length(value: String) -> U32 {
+  value.byte_length()
+}
+
+pub fn main() -> U32 {
+  let byte = Two::Byte(255u8)
+  let wide = Two::Wide(65535u16)
+  let p = Point {
+    x: 5
+    y: 7
+  }
+  let s = "hello"
+  if extract(byte) == 255 &&
+    extract(wide) == 65535 &&
+    get(p) == 5 &&
+    text_length(s) == 5u32 {
+    wasi_fd_write(1u32, b"ok\n")
+  } else {
+    wasi_fd_write(1u32, b"FAIL\n")
+  }
+}

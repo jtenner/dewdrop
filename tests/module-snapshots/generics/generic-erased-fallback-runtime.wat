@@ -24,7 +24,7 @@
     global.get 0
   )
   (func (;1;) (type 7)
-    (local eqref eqref eqref)
+    (local eqref (ref 0) eqref)
     call 0
     local.set 0
     local.get 0

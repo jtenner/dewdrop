@@ -1861,7 +1861,7 @@ fn starshine_body_locals(
           planned_local.nominal != @semantic.standard_map_type_declaration() &&
           planned_local.nominal != @semantic.standard_set_type_declaration() &&
           (match lowering.type_layouts.layout_of(planned_local.nominal) {
-            Some(layout) => layout.generic_parameters.length > 0
+            Some(_) => true
             None => false
           }) {
           match

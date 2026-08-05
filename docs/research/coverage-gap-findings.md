@@ -29,6 +29,19 @@ binding, or match enum carriers with narrow payloads (see finding 2).
 
 ## 2. Let-bound enum values fail Wasm validation when passed to functions
 
+> FIXED (August 5, 2026): let-bound nominal locals are now declared with their
+> precise `(ref N)` type instead of the erased `eqref_null` fallback. The fix
+> is a one-line change in `starshine_body_locals`
+> (`src/backend/starshine_code.mbt`): the nominal branch no longer requires
+> `layout.generic_parameters.length > 0`, so every struct/enum in the nominal
+> layout table gets a precise local type. String, `fixed_array`, `map`, and
+> `set` remain erased (the latter three are explicitly excluded; strings are
+> not in the nominal layout table and are handled by the text runtime).
+> Regression coverage: `functions/let-bound-nominal-args-runtime` (let-bound
+> enum, struct, and string passed to typed functions) and
+> `control-flow/narrow-payload-match-runtime` now uses the natural let-bound
+> form it previously had to dodge.
+
 Constructing an enum inline and passing it to a function compiles and runs,
 but binding the value with `let` first and then passing it to a function
 fails backend validation:
@@ -60,10 +73,12 @@ pub fn main() -> U32 {
 `dew run` reports
 `StarshineProgramValidationError(Validation({ issue: FunctionBody("type
 mismatch"), func_idx: Some(FuncIdx(3)) }))`. The same code with inline
-constructor calls (`extract(Two::Byte(255u8))`) passes. Suspect the ABI for
-aggregate-typed locals (enum carrier layout) disagreeing with the function
-parameter ABI. The snapshot fixture `control-flow/narrow-payload-match-runtime`
-avoids the pattern by constructing inline.
+constructor calls (`extract(Two::Byte(255u8))`) passes. Root cause: the local
+was declared as nullable `eqref_null` (the `Ref`-shape fallback), so `local.get`
+yielded an erased nullable `eqref` that cannot be passed to a `(ref N)`
+parameter without a `ref.cast` — and the call path emits no cast, unlike the
+field-get path. Structs are affected the same way. See the resolution note
+above.
 
 ## 3. String literal patterns parse but are unsupported in the backend
 
@@ -152,3 +167,6 @@ if widen(a) == -128 { ... }
   behavior for malformed UTF-8 and out-of-bounds text access.
 - The `modules/module-value-cycle` fixture was dropped: local cycles cannot
   produce the intended diagnostic through the CLI (finding 5).
+- `functions/let-bound-nominal-args-runtime` locks in the fix for finding 2
+  (let-bound enum, struct, and string values passed to typed functions), and
+  `control-flow/narrow-payload-match-runtime` no longer avoids the pattern.
