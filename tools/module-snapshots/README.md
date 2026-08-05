@@ -123,39 +123,37 @@ module name.
 adds test-only files and selects compiler test mode. The runner invokes emitted
 `__dew_test_*` exports in export order before `main`.
 
-## Current coverage
-
-The suite contains 190 fixtures:
+## Current coverageThe suite contains 213 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
-calls                2          0                 2                0
-collections         14          9                 5                2
-control-flow       18         18                 0                1
+calls                3          0                 3                0
+collections         15         10                 5                2
+control-flow       20         20                 0                1
 enums               11         11                 0                0
-functions           14         11                 3                0
+functions           15         12                 3                0
 generics             8          8                 0                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             18         16                 2                0
-names                2          0                 2                0
-numeric             28         26                 2                1
+modules             21         17                 4                0
+names                3          0                 3                0
+numeric             33         30                 3                1
 reachability         1          1                 0                0
 structs             11          8                 3                0
-tests                3          2                 1                1
-text                 23         23                 0                1
-types                1          0                 1                0
+tests                4          2                 2                1
+text                 27         27                 0                4
+types                5          0                 5                0
 wasi                 16         16                 0                5
 
-total               190        169                21               12
+total               213        182               31               15
 ```
 
-Ninety-one compiled fixtures assert nonempty stdout, twelve assert normalized
-runtime traps, and sixty-six intentionally remain WAT/no-trap fixtures. The
+Ninety-nine compiled fixtures assert nonempty stdout, fifteen assert normalized
+runtime traps, and sixty-eight intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 3, 2026, all 169 compiled fixtures pass in Node, including cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, and local/imported closures. Full Wago execution remains pending its current abstract-null and declared-struct-subtype closure fixes.
+As of August 4, 2026, all 182 compiled fixtures pass in both Node and Wago, including cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, and narrow fixed-array carriers.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,
 literal and enum matching, aggregate construction and extraction, scalar numeric
@@ -165,7 +163,9 @@ writes, partial writes, deterministic input, short reads, errno/zero-progress/
 over-report failures, normalized traps, same-module multi-file compilation,
 static multi-module linking, expected-type imported overload references,
 flattened local/imported closures, unboxed mutable locals, shared boxed mutable
-captures, and explicit test-mode execution.
+captures, explicit test-mode execution, invalid-UTF-8 handling traps,
+`to_string`/`view`/`byte_at` out-of-bounds traps, and literal-range diagnostic
+matrices.
 
 ## Commands
 

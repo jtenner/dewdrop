@@ -1,0 +1,6 @@
+import dew.std.* as @everything
+open dew.std.map as @mapped
+
+pub fn main() -> I32 {
+  1
+}

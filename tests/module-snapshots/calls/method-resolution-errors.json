@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "NoMatchingMethod(3, 5, 150)",
+    "UnknownQualifiedMember(7, 12884901888000, 8, 171)"
+  ],
+  "warnings": [],
+  "output": null
+}

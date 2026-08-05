@@ -1,0 +1,28 @@
+open dew.std.wasi
+
+enum Narrow {
+  Byte(U8)
+  Wide(U16)
+  SignedByte(I8)
+  SignedWide(I16)
+}
+
+fn extract(value: Narrow) -> I32 {
+  match value {
+    Narrow::Byte(item) => item.into()
+    Narrow::Wide(item) => item.into()
+    Narrow::SignedByte(item) => item.into()
+    Narrow::SignedWide(item) => item.into()
+  }
+}
+
+pub fn main() -> U32 {
+  if extract(Narrow::Byte(255u8)) == 255 &&
+    extract(Narrow::Wide(65535u16)) == 65535 &&
+    extract(Narrow::SignedByte(-128i8)) == -128 &&
+    extract(Narrow::SignedWide(-32768i16)) == -32768 {
+    wasi_fd_write(1u32, b"control:narrow-payload-match")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

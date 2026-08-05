@@ -1,0 +1,7 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> Unit {
+  let text = "abc"
+  let view = text.view(4u32, 1u32)
+}

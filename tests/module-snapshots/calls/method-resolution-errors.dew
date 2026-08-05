@@ -1,0 +1,14 @@
+struct Counter {
+  count: I32
+}
+
+impl Counter {
+  fn read(self) -> I32 {
+    self.count
+  }
+}
+
+pub fn main() -> I32 {
+  let value = 42i32
+  value.read() + Counter::missing()
+}

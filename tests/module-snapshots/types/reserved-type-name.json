@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "ReservedTypeName(12884901888000, 0, 0)",
+    "ReservedTypeName(12884901888001, 1, 18)"
+  ],
+  "warnings": [],
+  "output": null
+}

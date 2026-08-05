@@ -1,0 +1,2 @@
+type String = I32
+struct I32 {}

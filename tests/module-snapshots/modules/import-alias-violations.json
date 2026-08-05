@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: ExpectedDeclarationSyntax(\n      ImportAlias,\n      Some(Token(AtIdentifier(\"everything\"), 20, 7)),\n    ),\n  },\n)",
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: ExpectedDeclarationSyntax(\n      ImportAlias,\n      Some(Token(AtIdentifier(\"mapped\"), 52, 16)),\n    ),\n  },\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

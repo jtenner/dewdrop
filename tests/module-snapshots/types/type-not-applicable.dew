@@ -1,0 +1,7 @@
+struct Point {
+  x: I32
+}
+
+fn read(point: Point<I32>) -> I32 {
+  point.x
+}

@@ -1,0 +1,7 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> Unit {
+  let text = "abc"
+  let byte = text.byte_at(3u32)
+}

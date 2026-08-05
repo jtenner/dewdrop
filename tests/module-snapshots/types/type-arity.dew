@@ -1,0 +1,9 @@
+struct Box<t> {
+  item: t
+}
+
+fn make() -> Box {
+  Box {
+    item: 1
+  }
+}

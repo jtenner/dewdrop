@@ -1,0 +1,20 @@
+open dew.std.wasi
+pub fn main() -> U32 {
+  let value = -5i32
+  let negated = -value
+  let identity = +value
+  let float_neg = -2.5f64
+  let float32_neg = -1.5f32
+  let not = !false
+  let not_nested = !(1 < 2)
+  if negated == 5i32 &&
+    identity == -5i32 &&
+    float_neg == -2.5f64 &&
+    float32_neg == -1.5f32 &&
+    not &&
+    !not_nested {
+    wasi_fd_write(1u32, b"numeric:unary-operators")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

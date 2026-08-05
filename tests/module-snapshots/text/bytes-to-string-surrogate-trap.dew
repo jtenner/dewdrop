@@ -1,0 +1,7 @@
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> Unit {
+  let bytes = b"\xED\xA0\x80"
+  let text = bytes.to_string()
+}

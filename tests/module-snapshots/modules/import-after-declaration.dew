@@ -1,0 +1,5 @@
+pub fn main() -> I32 {
+  1
+}
+
+open dew.std.wasi

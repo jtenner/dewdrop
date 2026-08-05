@@ -1,0 +1,16 @@
+open dew.std.bytes
+open dew.std.wasi
+pub fn main() -> U32 {
+  let surrogate = b"\xED\xA0\x80"
+  let overlong = b"\xC0\xAF"
+  let truncated = b"\xF0\x9F"
+  let too_high = b"\xF4\x90\x80\x80"
+  if !surrogate.is_valid_utf8() &&
+    !overlong.is_valid_utf8() &&
+    !truncated.is_valid_utf8() &&
+    !too_high.is_valid_utf8() {
+    wasi_fd_write(1u32, b"text:utf8-invalid-classes")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

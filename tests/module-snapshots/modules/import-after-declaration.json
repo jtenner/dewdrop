@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "ParseDiagnostic(\n  12884901888256,\n  { severity: Error, error: ImportAfterDeclaration(30) },\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

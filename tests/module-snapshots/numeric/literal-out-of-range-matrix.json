@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"129i8\"), 57)),\n  },\n)"
+  ],
+  "warnings": [],
+  "output": null
+}

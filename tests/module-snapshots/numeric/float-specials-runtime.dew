@@ -1,0 +1,18 @@
+open dew.std.wasi
+pub fn main() -> U32 {
+  let pos_inf = 1.0f64 / 0.0f64
+  let neg_inf = -1.0f64 / 0.0f64
+  let nan = 0.0f64 / 0.0f64
+  let zero = 0.0f64
+  let neg_zero = -zero
+  let f32_inf = 1.0f32 / 0.0f32
+  if pos_inf > 1.0e308f64 &&
+    neg_inf < -1.0e308f64 &&
+    nan != nan &&
+    zero == neg_zero &&
+    f32_inf == 1.0f32 / 0.0f32 {
+    wasi_fd_write(1u32, b"numeric:float-specials")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

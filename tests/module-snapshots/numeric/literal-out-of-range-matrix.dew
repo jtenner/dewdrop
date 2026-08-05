@@ -1,0 +1,9 @@
+pub fn main() -> Unit {
+  let a = 128i8
+  let negated = -129i8
+  let b = 32768i16
+  let c = 2147483648i32
+  let d = 256u8
+  let e = 65536u16
+  let f = 4294967296u32
+}

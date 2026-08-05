@@ -1,0 +1,7 @@
+test "test in ordinary file" {
+  assert(true, "tests require _test.dew files")
+}
+
+pub fn main() -> I32 {
+  1
+}

@@ -1,0 +1,22 @@
+open dew.std.fixed_array
+open dew.std.wasi
+pub fn main() -> U32 {
+  let bytes = fixed_array_make(2u32, 0u8)
+  bytes[1u32] = 255u8
+  let shorts = fixed_array_make(2u32, 0u16)
+  shorts[1u32] = 65535u16
+  let signed = fixed_array_make(2u32, 0i8)
+  signed[0u32] = -128i8
+  let small = fixed_array_make(2u32, 0i16)
+  small[1u32] = -32768i16
+  let empty = fixed_array_make(0u32, 0u8)
+  if bytes[1u32] == 255u8 &&
+    shorts[1u32] == 65535u16 &&
+    signed[0u32] == -128i8 &&
+    small[1u32] == -32768i16 &&
+    empty.length() == 0u32 {
+    wasi_fd_write(1u32, b"collections:fixed-array-narrow-carriers")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}
