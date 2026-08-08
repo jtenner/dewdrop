@@ -40,6 +40,26 @@ test "public generic functions preserve parameters return type and body" {
 }
 
 ///|
+test "generic parameters retain ordered trait bounds" {
+  match
+    Parser::from_bytes(
+      b"fn compare<t: Eq + Debug, u: Hash>(left: t, right: t) -> Bool {\n  left == right\n}\n",
+    ).parse_declaration() {
+    Ok(Function(declaration)) => {
+      assert_eq(declaration.type_parameters.length(), 2)
+      assert_eq(declaration.type_parameters[0].name, "t")
+      assert_eq(declaration.type_parameters[0].bounds, [
+        NamedType("Eq", 14UL),
+        NamedType("Debug", 19UL),
+      ])
+      assert_eq(declaration.type_parameters[1].name, "u")
+      assert_eq(declaration.type_parameters[1].bounds, [NamedType("Hash", 29UL)])
+    }
+    _ => fail("expected bounded generic function")
+  }
+}
+
+///|
 test "final expression lines are retained as body items" {
   match
     Parser::from_bytes(b"fn identity(value: I32) -> I32 {\n  value\n}\n").parse_declaration() {

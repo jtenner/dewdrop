@@ -27,6 +27,7 @@ pub fn TypeExpr::offset(self : TypeExpr) -> UInt64 {
 ///|
 pub struct TypeParameter {
   name : String
+  bounds : Array[TypeExpr]
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -175,6 +176,7 @@ pub enum DeclarationExpectation {
   TraitBodyNewline
   TypeParameter
   TypeParameterSeparatorOrClose
+  TypeBound
   DeriveName
   DeriveSeparatorOrClose
   TypeArgumentSeparatorOrClose
@@ -554,6 +556,21 @@ fn Parser::consume_comma(self : Parser) -> Bool {
 }
 
 ///|
+fn Parser::consume_plus(self : Parser) -> Bool {
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Plus) => {
+          self.consume_lookahead()
+          true
+        }
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
 fn Parser::consume_greater(self : Parser) -> Bool {
   match self.peek_token() {
     Some(token) =>
@@ -575,11 +592,32 @@ fn Parser::parse_type_parameters(
   let parameters : Array[TypeParameter] = []
   self.skip_newlines()
   while true {
-    let parameter : TypeParameter = match self.parse_identifier(TypeParameter) {
-      Ok((name, offset)) => { name, offset }
+    let (name, offset) = match self.parse_identifier(TypeParameter) {
+      Ok(value) => value
       Err(error) => return Err(error)
     }
-    parameters.push(parameter)
+    let bounds : Array[TypeExpr] = []
+    match self.peek_token() {
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Colon) => {
+            self.consume_lookahead()
+            while true {
+              let bound = match self.parse_type() {
+                Ok(value) => value
+                Err(_) => return Err(self.declaration_error(TypeBound))
+              }
+              bounds.push(bound)
+              if !self.consume_plus() {
+                break
+              }
+            }
+          }
+          _ => ()
+        }
+      None => ()
+    }
+    parameters.push({ name, bounds, offset })
     if self.consume_greater() {
       return Ok(parameters)
     }

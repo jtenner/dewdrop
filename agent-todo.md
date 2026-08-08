@@ -51,8 +51,7 @@
 
 ## Generics, traits, and dispatch
 
-- [ ] Parse and represent generic bounds.
-- [ ] Add trait obligations to generic signatures, generic bodies, and generic functions.
+- [ ] Add trait obligations to parsed generic signatures, generic bodies, and generic functions.
 - [ ] Solve obligations using local and imported coherent evidence.
 - [ ] Freeze selected evidence for every generic call.
 - [ ] Define method-level generic syntax and shadowing.

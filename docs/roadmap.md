@@ -18,7 +18,7 @@ Dew currently has:
 - first-class `_test.dew` semantics, frozen test metadata, test-mode exports, 198 direct standard tests, and independent UTF/SWAR/WASI differential harnesses;
 - selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/semantic/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
-- a SHA-256 content-addressed persistent V7 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
+- a SHA-256 content-addressed persistent V8 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
 - 218 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 185 compiled WAT/runtime snapshots plus 33 compiler-error snapshots.
 
 ## Immediate execution queue
@@ -91,7 +91,7 @@ runtime artifacts.
 - [x] Elide dead imported signatures, external type references, callables, and nominal layouts before final program indexing.
 - [x] Make installed/on-disk import-selected standard sources the default driver provider and require byte identity with generated bootstrap sources.
 - [x] Add a persistent SHA-256 content-addressed frozen-interface cache for compiler-owned standard modules, including deterministic private serialization, cache-hit injection, checksum/identity validation, and fail-visible corruption handling.
-- [x] Extend persistent interface caching to versioned external user packages with dependency closure keys and V7 artifacts; source recollection and generated bootstrap removal remain deferred until installed artifact provenance is reliable.
+- [x] Extend persistent interface caching to versioned external user packages with dependency closure keys and V8 artifacts; source recollection and generated bootstrap removal remain deferred until installed artifact provenance is reliable.
 
 **Done when:** installed package lookup can replace generated bootstrap byte
 providers without changing frozen interfaces or Wasm bytes, an ordinary module
@@ -144,7 +144,7 @@ direct typed references.
 
 ### 7. Define the executable generic ABI
 
-- [ ] Parse generic bounds and freeze trait obligations.
+- [ ] Freeze executable trait obligations for parsed generic bounds; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, and cache V8 round trips are implemented.
 - [ ] Solve obligations using local and imported coherent evidence.
 - [x] Define shared physical-carrier specializations and one nullable-`eqref` fallback for each public generic exported by the root module.
 - [x] Emit exact-reference-to-erased callable adapters only when an escaping generic reference's concrete signature differs from its `eqref` fallback.
@@ -158,7 +158,7 @@ direct typed references.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
 - [x] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct leaves and nested generic struct/enum graphs clone across erased boundaries with exact variant subtype reconstruction, lazy scalar box/unbox conversion, and deterministic recursive helpers at cyclic nominal edges. Structural callbacks use deterministic flattened closure subtypes that capture the source closure once, recursively wrap nested callback parameters/results, convert scalar leaves, populate function-valued struct/enum payload fields during nominal reconstruction, and dispatch through the source direct or environment-first signature. Instantiated generic aggregate fields and enum pattern bindings retain concrete structural signatures and execute through the ordinary function-value call path.
-- [x] Complete the implemented ABI/interface compatibility layer: V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V7 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, and imported generic boundaries.
+- [x] Complete the implemented ABI/interface compatibility layer: V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V8 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, and imported generic boundaries.
 - [ ] Add installed artifact-only interface recovery so versioned dependencies can compile from verified cached artifacts without recollecting source.
 - [ ] Define and implement trait objects, dictionaries, and `call_ref` dispatch after static generic execution is stable.
 
@@ -243,7 +243,7 @@ erased fallback.
 
 ### Remaining generic work
 
-- [ ] Parse and represent generic bounds.
+- [x] Parse and represent ordered generic bounds through `t: Trait + Trait`, flat HIR provenance, trait-namespace resolution, and private frozen-interface cache V8 serialization.
 - [ ] Add trait obligations to generic signatures.
 - [ ] Solve obligations using imported coherent evidence.
 - [ ] Freeze selected evidence per generic call.

@@ -20,7 +20,7 @@ test "public generic structs preserve ordered fields" {
         visibility: Public,
         name: "Point",
         name_offset: 11UL,
-        type_parameters: [{ name: "t", offset: 17UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 17UL }],
         fields: [
           { name: "x", type_: NamedType("t", 27UL), offset: 24UL },
           { name: "y", type_: NamedType("t", 34UL), offset: 31UL },

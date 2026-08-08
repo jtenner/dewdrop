@@ -193,6 +193,7 @@ pub struct ResolvedModuleTypes {
   syntax_types : Array[ResolvedTypeId]
   declaration_types : Array[ResolvedTypeId]
   generic_parameter_types : Array[ResolvedTypeId]
+  generic_bound_types : Array[ResolvedTypeId]
   parameter_types : Array[ResolvedTypeId]
   callable_return_types : Array[ResolvedTypeId]
   callable_function_types : Array[ResolvedTypeId]

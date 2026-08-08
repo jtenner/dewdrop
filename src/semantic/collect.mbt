@@ -19,6 +19,7 @@ priv struct CollectionBuilder {
   generic_parameters : Array[CollectedGenericParameter]
   parameters : Array[CollectedParameter]
   generic_parameter_spans : Array[HirSpan]
+  generic_bounds : Array[HirTypeId]
   parameter_spans : Array[HirSpan]
   callables : Array[CollectedCallable]
   tests : Array[CollectedTest]
@@ -112,6 +113,7 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     generic_parameters: [],
     parameters: [],
     generic_parameter_spans: [],
+    generic_bounds: [],
     parameter_spans: [],
     callables: [],
     tests: [],
@@ -400,11 +402,19 @@ fn CollectionBuilder::collect_generic_parameters(
           None => ()
         }
     }
+    let bound_start = self.generic_bounds.length()
+    for bound in parameter.bounds {
+      self.generic_bounds.push(self.lower_type(bound))
+    }
     self.generic_parameters.push({
       id,
       declaration,
       index,
       name,
+      bounds: {
+        start: bound_start,
+        length: self.generic_bounds.length() - bound_start,
+      },
       offset: parameter.offset,
     })
   }
@@ -1178,6 +1188,7 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     generic_parameters: self.generic_parameters,
     parameters: self.parameters,
     generic_parameter_spans: self.generic_parameter_spans,
+    generic_bounds: self.generic_bounds,
     parameter_spans: self.parameter_spans,
     callables: self.callables,
     tests: self.tests,

@@ -12,6 +12,7 @@ priv struct TypeResolver {
   syntax_types : Array[ResolvedTypeId]
   declaration_types : Array[ResolvedTypeId]
   generic_parameter_types : Array[ResolvedTypeId]
+  generic_bound_types : Array[ResolvedTypeId]
   parameter_types : Array[ResolvedTypeId]
   callable_return_types : Array[ResolvedTypeId]
   callable_function_types : Array[ResolvedTypeId]
@@ -109,6 +110,7 @@ fn TypeResolver::new(
     syntax_types: Array::make(collected.type_syntax.length(), -1),
     declaration_types,
     generic_parameter_types,
+    generic_bound_types: Array::make(collected.generic_bounds.length(), -1),
     parameter_types: Array::make(collected.parameters.length(), -1),
     callable_return_types: Array::make(collected.callables.length(), -1),
     callable_function_types: Array::make(collected.callables.length(), -1),
@@ -840,6 +842,17 @@ fn TypeResolver::resolve_parameters(self : TypeResolver) -> Unit {
 ///|
 fn TypeResolver::resolve_signatures(self : TypeResolver) -> Unit {
   self.resolve_reserved_names()
+  for parameter in self.collected.generic_parameters {
+    for
+      index in parameter.bounds.start..<(parameter.bounds.start +
+      parameter.bounds.length) {
+      self.generic_bound_types[index] = self.resolve_syntax(
+        parameter.declaration,
+        self.collected.generic_bounds[index],
+        trait_type_name,
+      )
+    }
+  }
   self.resolve_parameters()
   for index, callable in self.collected.callables {
     self.callable_return_types[index] = self.resolve_syntax(
@@ -1016,6 +1029,7 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
     syntax_types: self.syntax_types,
     declaration_types: self.declaration_types,
     generic_parameter_types: self.generic_parameter_types,
+    generic_bound_types: self.generic_bound_types,
     parameter_types: self.parameter_types,
     callable_return_types: self.callable_return_types,
     callable_function_types: self.callable_function_types,

@@ -20,7 +20,7 @@ test "generic trait declarations preserve method signatures" {
         visibility: ModuleVisible,
         name: "Add",
         name_offset: 6UL,
-        type_parameters: [{ name: "t", offset: 10UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 10UL }],
         methods: [
           {
             name: "add",
@@ -204,17 +204,14 @@ test "trait methods require return types and do not accept method generics" {
 }
 
 ///|
-test "trait generic bounds are not currently accepted" {
+test "trait generic bounds are retained" {
   match
     Parser::from_bytes(
       b"trait Bounded<t: Eq> {\n  fn value(value: t) -> t\n}\n",
     ).parse_declaration() {
-    Err(ExpectedDeclarationSyntax(TypeParameterSeparatorOrClose, Some(token))) =>
-      match token.kind() {
-        @tokenizer.Symbol(@tokenizer.Colon) => ()
-        _ => fail("expected trait bound colon")
-      }
-    _ => fail("expected trait generic bound to be rejected")
+    Ok(Trait(declaration)) =>
+      assert_eq(declaration.type_parameters[0].bounds, [NamedType("Eq", 17UL)])
+    _ => fail("expected bounded trait declaration")
   }
 }
 

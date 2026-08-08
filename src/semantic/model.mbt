@@ -102,6 +102,7 @@ pub struct CollectedGenericParameter {
   declaration : DeclId
   index : Int
   name : NameId
+  bounds : HirSpan
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -250,6 +251,7 @@ pub struct CollectedModule {
   generic_parameters : Array[CollectedGenericParameter]
   parameters : Array[CollectedParameter]
   generic_parameter_spans : Array[HirSpan]
+  generic_bounds : Array[HirTypeId]
   parameter_spans : Array[HirSpan]
   callables : Array[CollectedCallable]
   tests : Array[CollectedTest]

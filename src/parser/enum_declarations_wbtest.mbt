@@ -20,7 +20,7 @@ test "public generic enums preserve unit and tuple variants" {
         visibility: Public,
         name: "Option",
         name_offset: 9UL,
-        type_parameters: [{ name: "t", offset: 16UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 16UL }],
         variants: [
           UnitVariant("None", 23UL),
           TupleVariant("Some", [NamedType("t", 35UL)], 30UL),

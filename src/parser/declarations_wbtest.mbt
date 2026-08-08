@@ -194,17 +194,14 @@ test "builtin names reject multiline string syntax" {
 }
 
 ///|
-test "generic builtin bounds are not currently accepted" {
+test "generic builtin bounds are retained" {
   match
     parse_test_declaration(
       b"builtin bounded<t: Eq>(value: t) -> t = \"bounded\"",
     ) {
-    Err(ExpectedDeclarationSyntax(TypeParameterSeparatorOrClose, Some(token))) =>
-      match token.kind() {
-        @tokenizer.Symbol(@tokenizer.Colon) => ()
-        _ => fail("expected trait-bound colon")
-      }
-    _ => fail("expected generic bounds to be rejected")
+    Ok(Builtin(declaration)) =>
+      assert_eq(declaration.type_parameters[0].bounds, [NamedType("Eq", 19UL)])
+    _ => fail("expected bounded generic builtin")
   }
 }
 

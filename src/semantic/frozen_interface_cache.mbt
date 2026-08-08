@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V7\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V8\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -190,6 +190,7 @@ fn cache_write_resolved_types(
   cache_write_int_array(output, resolved.syntax_types)
   cache_write_int_array(output, resolved.declaration_types)
   cache_write_int_array(output, resolved.generic_parameter_types)
+  cache_write_int_array(output, resolved.generic_bound_types)
   cache_write_int_array(output, resolved.parameter_types)
   cache_write_int_array(output, resolved.callable_return_types)
   cache_write_int_array(output, resolved.callable_function_types)
@@ -648,6 +649,7 @@ fn FrozenInterfaceCacheReader::read_resolved_types(
     syntax_types: self.read_int_array(),
     declaration_types: self.read_int_array(),
     generic_parameter_types: self.read_int_array(),
+    generic_bound_types: self.read_int_array(),
     parameter_types: self.read_int_array(),
     callable_return_types: self.read_int_array(),
     callable_function_types: self.read_int_array(),

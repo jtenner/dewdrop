@@ -7,7 +7,7 @@ test "public generic type aliases preserve recursive targets" {
         visibility: Public,
         name: "Rows",
         name_offset: 9UL,
-        type_parameters: [{ name: "t", offset: 14UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 14UL }],
         target: AppliedType(
           NamedType("Result", 19UL),
           [AppliedType(NamedType("List", 26UL), [NamedType("t", 31UL)], 30UL)],

@@ -487,7 +487,7 @@ This is safer than inventing a special number such as `-1` to mean â€œmissing.â€
 
 A trait describes behavior a type can provide. An implementation connects that behavior to a type. Dew uses trait evidence for operators, methods, generic APIs, hashing, indexing, and other static dispatch.
 
-The exact generic-bound syntax remains planned, so beginners should learn from the working standard-library declarations and compiler fixtures rather than assuming Rust, MoonBit, or another language's trait syntax transfers directly.
+Generic parameters accept ordered bounds such as `t: Eq + Debug`. The compiler retains and resolves those trait identities, while generic-body obligation selection and call-site evidence checking remain under active implementation; bounded generic code should therefore still be treated as provisional.
 
 ### Function values and closures
 
