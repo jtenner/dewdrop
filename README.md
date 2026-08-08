@@ -14,6 +14,17 @@ Dewdrop is written in [MoonBit](https://www.moonbitlang.com/) and uses [Starshin
 
 > **Project status:** Dew is under active development. The implemented subset is substantial, but this is not yet a stable language release. Syntax, APIs, package formats, and generated Wasm may change. Check [`docs/roadmap.md`](docs/roadmap.md) before depending on a planned feature.
 
+## Find your way around
+
+- **Try Dew:** start with [`Getting started`](#getting-started), then use `tools/dew check`, `run`, `build`, and `test`.
+- **Learn the language:** read [`A beginner tour of Dew syntax`](#a-beginner-tour-of-dew-syntax); use [`docs/spec.md`](docs/spec.md) for exact and evolving rules.
+- **Use the CLI and packages:** see [`Command reference`](#command-reference), [`Building a small package`](#building-a-small-package), and [`docs/research/compiler-cli.md`](docs/research/compiler-cli.md).
+- **Use the standard library:** see [`std/README.md`](std/README.md) for module ownership, APIs, and source-generation rules.
+- **Contribute to the compiler:** read [`Contributing with TDD`](#contributing-with-tdd), [`docs/roadmap.md`](docs/roadmap.md), and [`agent-todo.md`](agent-todo.md).
+- **Study implementation details:** browse [`docs/research/`](docs/research/) for design notes, measurements, and coverage findings.
+
+The README is the practical guide; the specification is authoritative for language and compiler behavior; the roadmap records project status; and research notes explain individual implementation decisions.
+
 ## Welcome: contributions, AI, tests, and behavior
 
 **Everyone's reasonable contributions are welcome.** You do not need to be a compiler expert to report a clear bug, improve an explanation, add a focused test, reduce a failing example, or propose a carefully scoped change.

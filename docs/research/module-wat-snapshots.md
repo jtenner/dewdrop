@@ -162,7 +162,7 @@ layout.
 
 ## Current coverage and observation
 
-The suite now contains 215 fixtures: 183 compiled WAT/runtime snapshots and 32
+The suite now contains 216 fixtures: 184 compiled WAT/runtime snapshots and 32
 compiler-error snapshots. On August 5, 2026, the full suite passes identically
 in Node and Wago Core 3, including deep and wide functional loops, module
 initialization, imported values, imported method/operator dispatch, collection
@@ -173,7 +173,7 @@ WasmGC types.
 feature         total   compiled   compiler errors   expected traps
 calls                3          0                 3                0
 collections         15         10                 5                2
-control-flow       20         20                 0                1
+control-flow       21         21                 0                1
 enums               11         11                 0                0
 functions           16         13                 3                0
 generics             8          8                 0                0
@@ -189,16 +189,17 @@ text                 27         27                 0                4
 types                5          0                 5                0
 wasi                 16         16                 0                5
 
-total               215        183                32               15
-nonempty stdout fixtures       100
+total               216        184                32               15
+nonempty stdout fixtures       101
 WAT/no-trap-only fixtures       68
-checked-in WAT lines       104,829
-checked-in WAT bytes      2,987,306
+checked-in WAT lines       105,436
+checked-in WAT bytes      3,000,865
 ```
 
 Successful runtime coverage includes recursive and nested calls, scalar,
 guarded-enum, Unit, nested, return-producing, eight-level deep, and 17-arm wide
-functional loops, evaluation order, Boolean/integer/float literal matching,
+functional loops, evaluation order, Boolean and all fixed-width numeric literal
+matching (including signed-prefix minima and floats),
 guarded and dense enum dispatch,
 unit/tuple/struct payloads, nested and reordered aggregate construction, all
 scalar carrier widths, wrapping, conversion, comparison, floating arithmetic,
@@ -218,18 +219,20 @@ invalid call targets, return mismatches, unknown and missing fields, duplicate
 declarations and construction fields, out-of-range numeric literals, and
 homogeneous operator mismatch. Multiline diagnostic structure is retained.
 
-Bool literal-pattern emission is now successful. Match scratch locals use the
+Scalar literal-pattern emission is now complete. Match scratch locals use the
 scrutinee's physical scalar carrier instead of an unconditional nullable
-`eqref`, and literal conditions emit carrier-specific equality instructions.
-`control-flow/bool-match` exercises both `true` and `false`, writes `"10"`, and
-now has a validated deterministic WAT snapshot.
+`eqref`; literal conditions share ordinary prefix emission and append
+carrier-specific equality instructions. `control-flow/bool-match` covers both
+Boolean cases, while `control-flow/all-numeric-literal-match-runtime` executes
+all ten fixed-width numeric types, signed minima, negative floats, and explicit
+unary `+`.
 
 The import prepass now selects independently collected compiler-owned standard
 modules and user modules consume only their frozen interfaces. Whole-program
 reachability removes elided signature slots, dead external type references,
 unused standard nominal layouts, and unreachable runtime functions before final
-indices. Across 183 compiled fixtures, checked-in WAT is now 104,829 lines and
-2,987,306 bytes, down from the original 431,150 lines and 21,839,923 bytes while
+indices. Across 184 compiled fixtures, checked-in WAT is now 105,436 lines and
+3,000,865 bytes, down from the original 431,150 lines and 21,839,923 bytes while
 retaining deterministic diagnostics and runtime behavior. The generic fixture
 covers ambient `Option`/`Result` construction and pattern matching across scalar
 and reference carriers.

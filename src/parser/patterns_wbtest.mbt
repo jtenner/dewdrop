@@ -28,6 +28,37 @@ test "patterns parse wildcard binding and literal bases separately" {
 }
 
 ///|
+test "patterns accept every numeric literal width" {
+  let cases = [
+    (b"1i8", I8Expr(1UL, 0UL)),
+    (b"2i16", I16Expr(2UL, 0UL)),
+    (b"3i32", I32Expr(3UL, 0UL)),
+    (b"4i64", I64Expr(4UL, 0UL)),
+    (b"5u8", U8Expr(5UL, 0UL)),
+    (b"6u16", U16Expr(6UL, 0UL)),
+    (b"7u32", U32Expr(7UL, 0UL)),
+    (b"8u64", U64Expr(8UL, 0UL)),
+    (b"9.5f32", F32Expr(9.5, 0UL)),
+    (b"10.5f64", F64Expr(10.5, 0UL)),
+  ]
+  for case in cases {
+    let (source, expression) = case
+    assert_eq(
+      Parser::from_bytes(source).parse_pattern(),
+      Ok(LiteralPattern(expression, 0UL)),
+    )
+  }
+  assert_eq(
+    Parser::from_bytes(b"-128i8").parse_pattern(),
+    Ok(LiteralPattern(PrefixExpr(Negative, I8Expr(128UL, 1UL), 0UL), 0UL)),
+  )
+  assert_eq(
+    Parser::from_bytes(b"+65535u16").parse_pattern(),
+    Ok(LiteralPattern(PrefixExpr(Positive, U16Expr(65535UL, 1UL), 0UL), 0UL)),
+  )
+}
+
+///|
 test "qualified tuple patterns preserve nested bindings" {
   match
     Parser::from_bytes(b"Option::Some(Result::Ok(value),)").parse_pattern() {

@@ -286,9 +286,13 @@ fn Parser::parse_pattern_base(
           match self.peek_token() {
             Some(value_token) =>
               match value_token.kind() {
-                @tokenizer.I32(_)
-                | @tokenizer.U32(_)
+                @tokenizer.I8(_)
+                | @tokenizer.I16(_)
+                | @tokenizer.I32(_)
                 | @tokenizer.I64(_)
+                | @tokenizer.U8(_)
+                | @tokenizer.U16(_)
+                | @tokenizer.U32(_)
                 | @tokenizer.U64(_)
                 | @tokenizer.F32(_)
                 | @tokenizer.F64(_) => {
@@ -308,9 +312,13 @@ fn Parser::parse_pattern_base(
             None => Err(pattern_failure(ExpectedPattern(None)))
           }
         }
-        @tokenizer.I32(_)
-        | @tokenizer.U32(_)
+        @tokenizer.I8(_)
+        | @tokenizer.I16(_)
+        | @tokenizer.I32(_)
         | @tokenizer.I64(_)
+        | @tokenizer.U8(_)
+        | @tokenizer.U16(_)
+        | @tokenizer.U32(_)
         | @tokenizer.U64(_)
         | @tokenizer.F32(_)
         | @tokenizer.F64(_)

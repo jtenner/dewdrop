@@ -111,17 +111,13 @@ SCC discovery is iterative and does not recurse on the host stack. Members insid
 
 ## Current boundary
 
-The following remain intentionally deferred:
+The remaining boundaries are narrower than the initial implementation plan:
 
-- imported aggregate metadata is frozen but not yet consumed by constructor, field, or pattern inference;
-- imported implementation evidence is translated but not yet merged into impl coherence indexes;
-- imported module-level lets await the module-value inference/interface barrier;
-- aliases qualify imported function calls, while qualification of imported types, traits, variants, patterns, static impls, and non-callable values remains pending;
-- external selected calls are not yet lowered into Wasm function imports;
-- cross-module module-value initialization cycles are not yet analyzed;
-- external versioned packages remain pending; compiler-owned standard frozen-interface caching is implemented.
+- imported module aliases qualify function calls and non-callable public values; qualification of imported types, traits, variants, patterns, and static impls remains pending;
+- external selected calls are statically linked rather than exposed as separate Wasm imports;
+- registry/network package installation and installed artifact-only interface recovery remain pending; exact locked dependency resolution, integrity checks, interface fingerprints, and persistent external-interface caching are implemented.
 
-These are the next layer built on the now-frozen parser, identity, interface, and graph artifacts.
+Imported aggregate construction/access, implementation-evidence merging, module-value inference, and cross-module eager-initialization-cycle analysis now build on the frozen parser, identity, interface, and graph artifacts described above.
 
 ## Validation
 

@@ -103,9 +103,13 @@ Let locals receive fresh inference variables. Pattern locals currently receive p
 Literal spellings already determine fixed primitive types:
 
 ```text
+I8 literal     -> I8
+I16 literal    -> I16
 I32 literal    -> I32
-U32 literal    -> U32
 I64 literal    -> I64
+U8 literal     -> U8
+U16 literal    -> U16
+U32 literal    -> U32
 U64 literal    -> U64
 F32 literal    -> F32
 F64 literal    -> F64

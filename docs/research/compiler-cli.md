@@ -2,12 +2,16 @@
 
 ## Status
 
-`tools/dew` now provides deterministic `check` and `build` commands over
-explicitly ordered source paths and statically linked module groups, plus an
-explicit-file `test` command driven by compiler-owned V3 metadata. It resolves
-the compiler-owned `dew.std` package from ordered package roots, loads the exact
-import-selected source subset from disk, and reuses content-addressed persistent
-standard frozen interfaces. Human source excerpts, network package installation, and installed release binaries remain pending. Convention-discovered `dew.json` packages, exact `dew.lock` resolution, external dependency-interface caching, `run`, and explicit `dew.modules.json` compiler graphs are supported.
+`tools/dew` provides deterministic `check`, `build`, `run`, and `test` commands
+over explicitly ordered source paths and statically linked module groups. The
+explicit-file test command is driven by compiler-owned V3 metadata. The CLI
+resolves the compiler-owned `dew.std` package from ordered package roots, loads
+the exact import-selected source subset from disk, and reuses content-addressed
+persistent standard and versioned external dependency frozen interfaces. Human
+source excerpts, network package installation, and installed release binaries
+remain pending. Convention-discovered `dew.json` packages, exact `dew.lock`
+resolution, `run`, and explicit `dew.modules.json` compiler graphs are
+supported.
 
 ## Commands
 
@@ -108,8 +112,10 @@ without leaking a Python traceback.
 
 1. Add versioned external package identities, dependency integrity metadata,
    and dependency-interface fingerprints without weakening manifest order.
-2. Extend persistent interface caching from compiler-owned `dew.std` to external
-   user packages and add phase-only cache benchmarks.
-3. Add `dew run` after entry-point and host semantics stabilize.
+2. Measure cache-file I/O and representative external-package workloads, and
+   add artifact-only interface recovery once verified cached artifacts can replace
+   source recollection.
+3. Improve entry-point and host diagnostics as runtime semantics continue to
+   stabilize.
 4. Replace debug diagnostics with stable file-aware rendering and expose
    deterministic `--emit` artifacts.

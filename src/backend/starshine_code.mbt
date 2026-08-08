@@ -974,6 +974,148 @@ fn starshine_match_local_get(local_index : Int) -> @lib.Instruction {
 }
 
 ///|
+fn starshine_prefix_value_instructions(
+  operator : @semantic.HirPrefixOperator,
+  shape : @semantic.PlannedValueShape,
+  operand : Array[@lib.Instruction],
+) -> Array[@lib.Instruction]? {
+  let output : Array[@lib.Instruction] = []
+  match operator {
+    @semantic.HirPositive => append_starshine_instructions(output, operand)
+    @semantic.HirLogicalNot => {
+      append_starshine_instructions(output, operand)
+      output.push(@lib.Instruction::i32_eqz())
+    }
+    @semantic.HirNegative =>
+      match shape {
+        @semantic.I8PlannedValueShape => {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::i32_sub())
+          output.push(@lib.Instruction::i32_extend8s())
+        }
+        @semantic.I16PlannedValueShape => {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::i32_sub())
+          output.push(@lib.Instruction::i32_extend16s())
+        }
+        @semantic.U8PlannedValueShape => {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::i32_sub())
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0xFF)))
+          output.push(@lib.Instruction::i32_and())
+        }
+        @semantic.U16PlannedValueShape => {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::i32_sub())
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0xFFFF)))
+          output.push(@lib.Instruction::i32_and())
+        }
+        @semantic.I32PlannedValueShape
+        | @semantic.U32PlannedValueShape
+        | @semantic.Swar32PlannedValueShape => {
+          output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::i32_sub())
+        }
+        @semantic.I64PlannedValueShape
+        | @semantic.U64PlannedValueShape
+        | @semantic.Swar64PlannedValueShape => {
+          output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::i64_sub())
+        }
+        @semantic.F32PlannedValueShape => {
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::f32_neg())
+        }
+        @semantic.F64PlannedValueShape => {
+          append_starshine_instructions(output, operand)
+          output.push(@lib.Instruction::f64_neg())
+        }
+        _ => return None
+      }
+  }
+  Some(output)
+}
+
+///|
+fn starshine_literal_pattern_base_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  expression : @semantic.ExprId,
+) -> Array[@lib.Instruction]? {
+  if expression < 0 || expression >= lowering.expressions.length() {
+    return None
+  }
+  match lowering.expressions[expression].kind {
+    @semantic.PlannedI8Const(value) =>
+      Some([
+        @lib.Instruction::i32_const(
+          @lib.I32::new(starshine_signed_i8_constant(value)),
+        ),
+      ])
+    @semantic.PlannedI16Const(value) =>
+      Some([
+        @lib.Instruction::i32_const(
+          @lib.I32::new(starshine_signed_i16_constant(value)),
+        ),
+      ])
+    @semantic.PlannedU8Const(value) =>
+      Some([
+        @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFUL).to_int())),
+      ])
+    @semantic.PlannedU16Const(value) =>
+      Some([
+        @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFFFUL).to_int())),
+      ])
+    @semantic.PlannedI32Const(value) | @semantic.PlannedU32Const(value) =>
+      Some([@lib.Instruction::i32_const(@lib.I32::new(value.to_int()))])
+    @semantic.PlannedI64Const(value) | @semantic.PlannedU64Const(value) =>
+      Some([
+        @lib.Instruction::i64_const(@lib.I64::new(value.reinterpret_as_int64())),
+      ])
+    @semantic.PlannedF32Const(value) =>
+      Some([@lib.Instruction::f32_const(@lib.F32::new(value))])
+    @semantic.PlannedF64Const(value) =>
+      Some([@lib.Instruction::f64_const(@lib.F64::new(value))])
+    @semantic.PlannedBoolConst(value) =>
+      Some([
+        @lib.Instruction::i32_const(@lib.I32::new(if value { 1 } else { 0 })),
+      ])
+    _ => None
+  }
+}
+
+///|
+fn starshine_literal_pattern_value_instructions(
+  lowering : @semantic.PlannedModuleLowering,
+  expression : @semantic.ExprId,
+) -> Array[@lib.Instruction]? {
+  if expression < 0 || expression >= lowering.expressions.length() {
+    return None
+  }
+  let source = lowering.expressions[expression]
+  match source.kind {
+    @semantic.PlannedPrefixExpression(operator, operand) => {
+      let operand_instructions = match
+        starshine_literal_pattern_base_instructions(lowering, operand) {
+        Some(value) => value
+        None => return None
+      }
+      starshine_prefix_value_instructions(
+        operator,
+        source.shape,
+        operand_instructions,
+      )
+    }
+    _ => starshine_literal_pattern_base_instructions(lowering, expression)
+  }
+}
+
+///|
 fn starshine_match_literal_condition(
   lowering : @semantic.PlannedModuleLowering,
   body : @semantic.PlannedBodyLowering,
@@ -983,60 +1125,25 @@ fn starshine_match_literal_condition(
   if expression < 0 || expression >= lowering.expressions.length() {
     return Err(UnsupportedExpression(body.body, expression))
   }
+  let literal = match
+    starshine_literal_pattern_value_instructions(lowering, expression) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(body.body, expression))
+  }
   let condition = value.copy()
-  match lowering.expressions[expression].kind {
-    @semantic.PlannedI8Const(value) => {
-      condition.push(
-        @lib.Instruction::i32_const(
-          @lib.I32::new(starshine_signed_i8_constant(value)),
-        ),
-      )
+  append_starshine_instructions(condition, literal)
+  match lowering.expressions[expression].shape {
+    @semantic.I8PlannedValueShape
+    | @semantic.I16PlannedValueShape
+    | @semantic.I32PlannedValueShape
+    | @semantic.U8PlannedValueShape
+    | @semantic.U16PlannedValueShape
+    | @semantic.U32PlannedValueShape =>
       condition.push(@lib.Instruction::i32_eq())
-    }
-    @semantic.PlannedI16Const(value) => {
-      condition.push(
-        @lib.Instruction::i32_const(
-          @lib.I32::new(starshine_signed_i16_constant(value)),
-        ),
-      )
-      condition.push(@lib.Instruction::i32_eq())
-    }
-    @semantic.PlannedU8Const(value) => {
-      condition.push(
-        @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFUL).to_int())),
-      )
-      condition.push(@lib.Instruction::i32_eq())
-    }
-    @semantic.PlannedU16Const(value) => {
-      condition.push(
-        @lib.Instruction::i32_const(@lib.I32::new((value & 0xFFFFUL).to_int())),
-      )
-      condition.push(@lib.Instruction::i32_eq())
-    }
-    @semantic.PlannedI32Const(value) | @semantic.PlannedU32Const(value) => {
-      condition.push(@lib.Instruction::i32_const(@lib.I32::new(value.to_int())))
-      condition.push(@lib.Instruction::i32_eq())
-    }
-    @semantic.PlannedI64Const(value) | @semantic.PlannedU64Const(value) => {
-      condition.push(
-        @lib.Instruction::i64_const(@lib.I64::new(value.reinterpret_as_int64())),
-      )
+    @semantic.I64PlannedValueShape | @semantic.U64PlannedValueShape =>
       condition.push(@lib.Instruction::i64_eq())
-    }
-    @semantic.PlannedF32Const(value) => {
-      condition.push(@lib.Instruction::f32_const(@lib.F32::new(value)))
-      condition.push(@lib.Instruction::f32_eq())
-    }
-    @semantic.PlannedF64Const(value) => {
-      condition.push(@lib.Instruction::f64_const(@lib.F64::new(value)))
-      condition.push(@lib.Instruction::f64_eq())
-    }
-    @semantic.PlannedBoolConst(value) => {
-      condition.push(
-        @lib.Instruction::i32_const(@lib.I32::new(if value { 1 } else { 0 })),
-      )
-      condition.push(@lib.Instruction::i32_eq())
-    }
+    @semantic.F32PlannedValueShape => condition.push(@lib.Instruction::f32_eq())
+    @semantic.F64PlannedValueShape => condition.push(@lib.Instruction::f64_eq())
     _ => return Err(UnsupportedExpression(body.body, expression))
   }
   Ok(condition)
@@ -6763,71 +6870,11 @@ fn starshine_emit_body_instructions(
       }
       FinishStarshinePrefix(operator, shape) => {
         let operand = results.pop().unwrap()
-        let output : Array[@lib.Instruction] = []
-        match operator {
-          @semantic.HirPositive =>
-            append_starshine_instructions(output, operand)
-          @semantic.HirLogicalNot => {
-            append_starshine_instructions(output, operand)
-            output.push(@lib.Instruction::i32_eqz())
-          }
-          @semantic.HirNegative =>
-            match shape {
-              @semantic.I8PlannedValueShape => {
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::i32_sub())
-                output.push(@lib.Instruction::i32_extend8s())
-              }
-              @semantic.I16PlannedValueShape => {
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::i32_sub())
-                output.push(@lib.Instruction::i32_extend16s())
-              }
-              @semantic.U8PlannedValueShape => {
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::i32_sub())
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0xFF)))
-                output.push(@lib.Instruction::i32_and())
-              }
-              @semantic.U16PlannedValueShape => {
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::i32_sub())
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0xFFFF)))
-                output.push(@lib.Instruction::i32_and())
-              }
-              @semantic.I32PlannedValueShape
-              | @semantic.U32PlannedValueShape
-              | @semantic.Swar32PlannedValueShape => {
-                output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::i32_sub())
-              }
-              @semantic.I64PlannedValueShape
-              | @semantic.U64PlannedValueShape
-              | @semantic.Swar64PlannedValueShape => {
-                output.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::i64_sub())
-              }
-              @semantic.F32PlannedValueShape => {
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::f32_neg())
-              }
-              @semantic.F64PlannedValueShape => {
-                append_starshine_instructions(output, operand)
-                output.push(@lib.Instruction::f64_neg())
-              }
-              _ =>
-                return Err(
-                  UnsupportedExpression(body.body, body.expressions.start),
-                )
-            }
+        match starshine_prefix_value_instructions(operator, shape, operand) {
+          Some(output) => results.push(output)
+          None =>
+            return Err(UnsupportedExpression(body.body, body.expressions.start))
         }
-        results.push(output)
       }
       FinishStarshineLogical(operator) => {
         let fragments = pop_starshine_fragments(results, 2)

@@ -1,0 +1,88 @@
+open dew.std.wasi
+
+fn matches_i8(value: I8) -> Bool {
+  match value {
+    -128i8 => true
+    _ => false
+  }
+}
+
+fn matches_i16(value: I16) -> Bool {
+  match value {
+    -32768i16 => true
+    _ => false
+  }
+}
+
+fn matches_i32(value: I32) -> Bool {
+  match value {
+    -2147483648i32 => true
+    _ => false
+  }
+}
+
+fn matches_i64(value: I64) -> Bool {
+  match value {
+    -9223372036854775808i64 => true
+    _ => false
+  }
+}
+
+fn matches_u8(value: U8) -> Bool {
+  match value {
+    255u8 => true
+    _ => false
+  }
+}
+
+fn matches_u16(value: U16) -> Bool {
+  match value {
+    65535u16 => true
+    _ => false
+  }
+}
+
+fn matches_u32(value: U32) -> Bool {
+  match value {
+    4294967295u32 => true
+    _ => false
+  }
+}
+
+fn matches_u64(value: U64) -> Bool {
+  match value {
+    18446744073709551615u64 => true
+    _ => false
+  }
+}
+
+fn matches_f32(value: F32) -> Bool {
+  match value {
+    -1.5f32 => true
+    _ => false
+  }
+}
+
+fn matches_f64(value: F64) -> Bool {
+  match value {
+    +2.5f64 => true
+    _ => false
+  }
+}
+
+pub fn main() -> U32 {
+  if matches_i8(-128i8) &&
+    matches_i16(-32768i16) &&
+    matches_i32(-2147483648i32) &&
+    matches_i64(-9223372036854775808i64) &&
+    matches_u8(255u8) &&
+    matches_u16(65535u16) &&
+    matches_u32(4294967295u32) &&
+    matches_u64(18446744073709551615u64) &&
+    matches_f32(-1.5f32) &&
+    matches_f64(+2.5f64) {
+    wasi_fd_write(1u32, b"control:all-numeric-literal-match")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

@@ -19,7 +19,7 @@ Dew currently has:
 - selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/semantic/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent V7 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 215 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 183 compiled WAT/runtime snapshots plus 32 compiler-error snapshots.
+- 216 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 184 compiled WAT/runtime snapshots plus 32 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -42,6 +42,7 @@ by dependency and expected user value.
 - [x] Snapshot deterministic compiler errors with `output: null` and no WAT, preserving multiline `Debug` diagnostics through a framed protocol.
 - [ ] Continue adding successful cases, warnings, compiler failures, boundaries, and reduced stress cases within each feature.
 - [x] Fix Bool literal-pattern emission with carrier-typed scratch locals and scalar equality instructions; `control-flow/bool-match` now verifies both cases through stdout and WAT.
+- [x] Accept and emit literal patterns for every fixed-width integer and float type, including signed and explicit-positive prefix forms.
 - [x] Add focused passing and failing test-mode fixtures through the optional `<test>.tests/*_test.dew` convention.
 - [ ] Connect ordered compiler warnings to the JSON oracle once stable diagnostic rendering exists.
 - [x] Add minimal `<test>.files/` and `<test>.modules/<dotted.module>/` conventions for multi-file and multi-module fixtures without putting module graphs into JSON.
@@ -743,7 +744,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
-- [x] Establish broad feature-oriented coverage with 215 fixtures: 183 compiled WAT/runtime snapshots and 32 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
+- [x] Establish broad feature-oriented coverage with 216 fixtures: 184 compiled WAT/runtime snapshots and 32 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.

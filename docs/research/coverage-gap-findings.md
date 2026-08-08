@@ -7,10 +7,18 @@ regressions; they are pre-existing gaps surfaced by the new fixtures.
 
 ## 1. Narrow-width literal patterns are rejected by the parser
 
-`match` patterns accept literal tokens only for `I32`, `U32`, `I64`, `U64`,
-`F32`, `F64`, strings, and bools. Suffixed `i8`/`i16`/`u8`/`u16` literals in a
-pattern produce `ExpectedPattern` (see the token filter in
-`src/parser/patterns.mbt` around the `LiteralPattern` construction).
+> FIXED (August 5, 2026): pattern parsing now accepts every fixed-width numeric
+> token (`I8`, `I16`, `I32`, `I64`, `U8`, `U16`, `U32`, `U64`, `F32`, and
+> `F64`) in both direct and signed-prefix forms. Backend literal matching now
+> shares the ordinary prefix emitter, so negative signed minima, negative
+> floats, and explicit unary `+` compare through the correct physical carrier.
+> `control-flow/all-numeric-literal-match-runtime` verifies all ten types in
+> Node and Wago.
+
+Previously, `match` patterns accepted literal tokens only for `I32`, `U32`,
+`I64`, `U64`, `F32`, and `F64`. Suffixed `i8`/`i16`/`u8`/`u16` literals in a
+pattern produced `ExpectedPattern`, while parsed negative literals reached an
+unsupported backend expression.
 
 Repro:
 
@@ -24,8 +32,8 @@ fn f(x: I32) -> I32 {
 }
 ```
 
-Workaround: match wide-width literals and constrain the payload width in the
-binding, or match enum carriers with narrow payloads (see finding 2).
+The parser and backend now handle these forms directly; no width-widening or
+enum-carrier workaround is required.
 
 ## 2. Let-bound enum values fail Wasm validation when passed to functions
 
