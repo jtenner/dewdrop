@@ -43,6 +43,11 @@ fn standard_preamble_traits_source() -> Bytes {
 }
 
 ///|
+fn standard_debug_preamble_source() -> Bytes {
+  b"pub trait Debug {\n  fn debug(self) -> U32\n}\n\nbuiltin __dew_debug_write(fd: U32, value: Bytes) -> U32 = \"dew_wasi_fd_write\"\npub builtin debug<t: Debug>(value: t) -> U32 = \"dew_debug_dispatch\"\n"
+}
+
+///|
 fn standard_preamble_i32_source() -> Bytes {
   b"impl Add for I32 {\n  fn add(self, right: I32) -> I32 {\n    i32_add(self, right)\n  }\n}\nimpl Sub for I32 {\n  fn sub(self, right: I32) -> I32 {\n    i32_sub(self, right)\n  }\n}\nimpl Lte for I32 {\n  fn lte(self, right: I32) -> Bool {\n    i32_lte(self, right)\n  }\n}\n"
 }
@@ -137,7 +142,7 @@ fn CollectionBuilder::collect_standard_preamble(
     "__dew_preamble_builtins.dew", "__dew_preamble_traits.dew", "__dew_preamble_i32.dew",
     "__dew_preamble_packed.dew", "__dew_numeric_builtins.dew", "__dew_numeric_impls.dew",
     "__dew_memory_preamble.dew", "__dew_into_builtins.dew", "__dew_into_impls.dew",
-    "__dew_swar_preamble.dew", "__dew_v128_preamble.dew",
+    "__dew_swar_preamble.dew", "__dew_v128_preamble.dew", "__dew_debug_preamble.dew",
   ]
   let sources = [
     standard_preamble_builtins_source(),
@@ -151,6 +156,7 @@ fn CollectionBuilder::collect_standard_preamble(
     standard_into_impls_source(),
     standard_swar_preamble_source(),
     standard_v128_preamble_source(),
+    standard_debug_preamble_source(),
   ]
   for index, source in sources {
     self.collect_file_events(

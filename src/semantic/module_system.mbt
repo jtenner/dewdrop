@@ -335,7 +335,7 @@ fn standard_preamble_source_paths() -> Array[String] {
     "std/preamble/00-builtins.dew", "std/preamble/10-traits.dew", "std/preamble/20-i32.dew",
     "std/preamble/30-packed.dew", "std/preamble/40-numeric-builtins.dew", "std/preamble/50-numeric-impls.dew",
     "std/preamble/60-memory.dew", "std/preamble/70-into-builtins.dew", "std/preamble/80-into-impls.dew",
-    "std/preamble/90-swar-core.dew", "std/preamble/100-v128.dew",
+    "std/preamble/90-swar-core.dew", "std/preamble/100-v128.dew", "std/preamble/110-debug.dew",
   ]
 }
 
@@ -503,6 +503,7 @@ fn standard_preamble_program_files(
     standard_into_impls_source(),
     standard_swar_preamble_source(),
     standard_v128_preamble_source(),
+    standard_debug_preamble_source(),
   ]
   let files : Array[ProgramFile] = []
   for index, path in paths {

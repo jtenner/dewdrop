@@ -1,0 +1,7 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": [
+    "Point { x, y }|Choice::Number(_)|Choice::Named { label, active }|Wrapper { value }"
+  ]
+}

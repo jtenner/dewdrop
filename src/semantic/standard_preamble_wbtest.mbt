@@ -2,8 +2,8 @@
 test "standard preamble is a deterministic declaration prefix" {
   let source = b"pub fn identity(value: I32) -> I32 {\n  value\n}\n"
   let collected = collect_bytes_with_standard_preamble(995UL, source)
-  assert_eq(collected.preamble_declaration_count, 1256)
-  assert_eq(collected.declarations.length(), 777)
+  assert_eq(collected.preamble_declaration_count, 1260)
+  assert_eq(collected.declarations.length(), 780)
   assert_eq(collected.diagnostics.length(), 0)
   let identity = collected.lookup_value("identity").unwrap()
   assert_eq(semantic_id_local(identity), collected.preamble_declaration_count)
@@ -21,9 +21,9 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let scalar_paths = required_standard_library_source_paths(scalar, true)
-  assert_eq(scalar_paths.length(), 13)
+  assert_eq(scalar_paths.length(), 14)
   assert_eq(scalar_paths[0], "std/preamble/00-builtins.dew")
-  assert_eq(scalar_paths[12], "std/result.dew")
+  assert_eq(scalar_paths[13], "std/result.dew")
   assert_eq(required_standard_library_source_paths(scalar, false), [])
 
   let wildcard = ProgramManifest::new([
@@ -34,13 +34,13 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 43)
-  assert_eq(wildcard_paths[13], "std/fixed_array.dew")
-  assert_eq(wildcard_paths[14], "std/map.dew")
-  assert_eq(wildcard_paths[15], "std/set.dew")
-  assert_eq(wildcard_paths[16], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[22], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[42], "std/f64x2.dew")
+  assert_eq(wildcard_paths.length(), 44)
+  assert_eq(wildcard_paths[14], "std/fixed_array.dew")
+  assert_eq(wildcard_paths[15], "std/map.dew")
+  assert_eq(wildcard_paths[16], "std/set.dew")
+  assert_eq(wildcard_paths[17], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[23], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[43], "std/f64x2.dew")
 }
 
 ///|
@@ -172,7 +172,7 @@ test "single-module phase helper never injects optional standard sources" {
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
   let inferred = infer_module_bodies(collected, resolved, names)
-  assert_eq(collected.preamble_declaration_count, 1256)
+  assert_eq(collected.preamble_declaration_count, 1260)
   assert_eq(inferred.diagnostics.length(), 1)
   match inferred.diagnostics[0] {
     NoMatchingMethod(_, _, _) => ()

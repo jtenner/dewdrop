@@ -8,7 +8,7 @@
     "callbackWrapper": 1
   },
   "path": "fixture.application",
-  "interfaceFingerprint": "c5c9e78b5277d378fb7ca4bfad5960993aa52ff35146ce1fca0d81c3367cd70e",
+  "interfaceFingerprint": "e218cf9976f494611e8142d1d975fec61e8e1d5b0379112f805fe2536905730d",
   "dependencies": [
     {
       "path": "dew.std.option",
@@ -20,7 +20,7 @@
     },
     {
       "path": "dew.std.preamble",
-      "contentFingerprint": "1da290b06e8ee67f2b75c6ac5c41fd9a94d503e0f34f3268e28b27b11c5b6b05"
+      "contentFingerprint": "12971e4db5ebe36cd85e683258faecf733a93ff9c3a2e58e9d887996761a4dcd"
     },
     {
       "path": "fixture.package_callback",

@@ -905,13 +905,19 @@ fn CollectionBuilder::collect_impl(
 }
 
 ///|
+priv struct CollectedDeriveOffsets {
+  eq : UInt64?
+  debug : UInt64?
+}
+
+///|
 fn CollectionBuilder::collect_derive_requests(
   self : CollectionBuilder,
   generic : Bool,
   requests : Array[@parser.DeriveRequest],
-) -> UInt64? {
+) -> CollectedDeriveOffsets {
   if requests.length() == 0 {
-    return None
+    return { eq: None, debug: None }
   }
   let seen : Map[String, UInt64]? = if requests.length() > 8 {
     Some(Map::default())
@@ -919,6 +925,7 @@ fn CollectionBuilder::collect_derive_requests(
     None
   }
   let mut eq_offset : UInt64? = None
+  let mut debug_offset : UInt64? = None
   for index, request in requests {
     let first_offset = match seen {
       Some(table) => table.get(request.name)
@@ -951,23 +958,27 @@ fn CollectionBuilder::collect_derive_requests(
           None => ()
         }
     }
-    if request.name != "Eq" {
+    if request.name == "Eq" {
+      if generic {
+        self.diagnostics.push(
+          GenericDeriveRequiresBounds(
+            request.name,
+            self.current_file,
+            request.offset,
+          ),
+        )
+      } else {
+        eq_offset = Some(request.offset)
+      }
+    } else if request.name == "Debug" {
+      debug_offset = Some(request.offset)
+    } else {
       self.diagnostics.push(
         UnknownDerivedTrait(request.name, self.current_file, request.offset),
       )
-    } else if generic {
-      self.diagnostics.push(
-        GenericDeriveRequiresBounds(
-          request.name,
-          self.current_file,
-          request.offset,
-        ),
-      )
-    } else {
-      eq_offset = Some(request.offset)
     }
   }
-  eq_offset
+  { eq: eq_offset, debug: debug_offset }
 }
 
 ///|
@@ -990,15 +1001,20 @@ fn CollectionBuilder::collect_struct(
   )
   self.collect_generic_parameters(declaration.id, value.type_parameters)
   self.collect_named_fields(declaration.id, None, value.fields, StructField)
-  match
-    self.collect_derive_requests(
-      value.type_parameters.length() > 0,
-      value.derives,
-    ) {
+  let derives = self.collect_derive_requests(
+    value.type_parameters.length() > 0,
+    value.derives,
+  )
+  match derives.eq {
     Some(offset) =>
       for implementation in @parser.derived_struct_eq_impls(value, offset) {
         self.collect_impl(implementation)
       }
+    None => ()
+  }
+  match derives.debug {
+    Some(offset) =>
+      self.collect_impl(@parser.derived_struct_debug_impl(value, offset))
     None => ()
   }
 }
@@ -1080,15 +1096,20 @@ fn CollectionBuilder::collect_enum(
       _ => ()
     }
   }
-  match
-    self.collect_derive_requests(
-      value.type_parameters.length() > 0,
-      value.derives,
-    ) {
+  let derives = self.collect_derive_requests(
+    value.type_parameters.length() > 0,
+    value.derives,
+  )
+  match derives.eq {
     Some(offset) =>
       for implementation in @parser.derived_enum_eq_impls(value, offset) {
         self.collect_impl(implementation)
       }
+    None => ()
+  }
+  match derives.debug {
+    Some(offset) =>
+      self.collect_impl(@parser.derived_enum_debug_impl(value, offset))
     None => ()
   }
 }

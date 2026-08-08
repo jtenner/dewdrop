@@ -1,0 +1,6 @@
+pub trait Debug {
+  fn debug(self) -> U32
+}
+
+builtin __dew_debug_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
+pub builtin debug<t: Debug>(value: t) -> U32 = "dew_debug_dispatch"

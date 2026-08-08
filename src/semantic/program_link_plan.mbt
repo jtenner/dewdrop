@@ -363,6 +363,15 @@ fn transparent_callback_parameter_count(
 }
 
 ///|
+fn program_callable_generic_parameters(callable : PlannedCallable) -> HirSpan {
+  if callable.owner_generic_parameters.length > 0 {
+    callable.owner_generic_parameters
+  } else {
+    callable.generic_parameters
+  }
+}
+
+///|
 fn generic_parameter_selector(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -371,7 +380,7 @@ fn generic_parameter_selector(
     Some(callable) => callable
     None => return -1
   }
-  if callable.generic_parameters.length == 0 {
+  if program_callable_generic_parameters(callable).length == 0 {
     return -1
   }
   let root_expression = match body.root {
@@ -574,7 +583,7 @@ fn program_link_validate_calls(
           let function_ = functions[function_index]
           let owner = lowering.modules[function_.module_index]
           let callable = owner.functions.callable_of(target).unwrap()
-          if callable.generic_parameters.length > 0 {
+          if program_callable_generic_parameters(callable).length > 0 {
             let mut specialized = false
             for candidate in functions {
               if candidate.declaration == target &&
@@ -1244,7 +1253,7 @@ fn materialize_program_generic_specialization(
     Some(callable) => callable
     None => return
   }
-  if callable.generic_parameters.length != request.length {
+  if program_callable_generic_parameters(callable).length != request.length {
     return
   }
   let shape_start = module_.specialization_shapes.length()
@@ -1265,7 +1274,7 @@ fn materialize_program_generic_specialization(
     let specialized = program_generic_parameter_shape(
       resolved,
       parameter.type_,
-      callable.generic_parameters,
+      program_callable_generic_parameters(callable),
       module_.specialization_shapes,
       specialization_shapes,
     )
@@ -1290,7 +1299,7 @@ fn materialize_program_generic_specialization(
   let specialized_result = program_generic_parameter_shape(
     resolved,
     callable.result_type,
-    callable.generic_parameters,
+    program_callable_generic_parameters(callable),
     module_.specialization_shapes,
     specialization_shapes,
   )
@@ -1402,11 +1411,11 @@ fn plan_program_wasmgc_fragments_for_root(
     }
     for callable in module_.functions.callables {
       if callable.visibility != Public ||
-        callable.generic_parameters.length == 0 {
+        program_callable_generic_parameters(callable).length == 0 {
         continue
       }
       let erased_shapes = Array::make(
-        callable.generic_parameters.length,
+        program_callable_generic_parameters(callable).length,
         RefPlannedValueShape,
       )
       materialize_program_generic_specialization(
@@ -1494,7 +1503,7 @@ fn plan_program_wasmgc_fragments_for_root(
             resolved_shapes.push(
               program_resolve_specialized_shape(
                 owner,
-                callable.generic_parameters,
+                program_callable_generic_parameters(callable),
                 fragments_.specialization_shapes,
                 function_.specialization_shapes,
                 owner.call_type_arguments[source_index],
@@ -1531,7 +1540,8 @@ fn plan_program_wasmgc_fragments_for_root(
         lowering.modules[module_index].functions.callable_of(
           function_.declaration,
         ) {
-        Some(callable) if callable.generic_parameters.length > 0 =>
+        Some(callable) if program_callable_generic_parameters(callable).length >
+          0 =>
           fragments_.functions[function_index] = { ..function_, elided: true }
         _ => ()
       }
@@ -2609,7 +2619,8 @@ pub fn link_program_wasmgc_fragments(
   }
   let root_function_count = functions.length()
   for callable in root_lowering.functions.callables {
-    if callable.visibility != Public || callable.generic_parameters.length == 0 {
+    if callable.visibility != Public ||
+      program_callable_generic_parameters(callable).length == 0 {
       continue
     }
     let mut fallback_index = -1
@@ -2617,7 +2628,7 @@ pub fn link_program_wasmgc_fragments(
       let candidate = functions[index]
       if candidate.declaration != callable.declaration ||
         candidate.specialization_shapes.length !=
-        callable.generic_parameters.length {
+        program_callable_generic_parameters(callable).length {
         continue
       }
       let candidate_module = fragments.modules[candidate.module_index]

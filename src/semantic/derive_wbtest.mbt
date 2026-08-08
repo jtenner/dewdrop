@@ -56,6 +56,22 @@ test "empty enums may derive equality without spurious flow diagnostics" {
 }
 
 ///|
+test "derive Debug supplies ambient debug call evidence" {
+  let program = collect_program_manifest(
+    2704UL,
+    ProgramManifest::new([
+      ManifestModule::new("derive.debug", [
+        ManifestFile::new(
+          "debug.dew", b"struct Point {\n  value: I32\n} derive(Debug)\nfn run() -> U32 {\n  debug(Point {\n    value: 1\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+}
+
+///|
 test "derive diagnostics reject unknown duplicate and unbounded generic requests" {
   let collected = collect_bytes(
     2701UL, b"struct Unknown {} derive(Display)\nstruct Duplicate {} derive(Eq, Eq)\nstruct Generic<t> {\n  value: t\n} derive(Eq)\n",

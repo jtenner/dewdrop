@@ -12,13 +12,13 @@ test "manifest ordered files share one module namespace" {
     ),
   ])
   let preamble_file_count = collected.files.length() - 2
-  assert_eq(preamble_file_count, 11)
+  assert_eq(preamble_file_count, 12)
   for index in 0..<preamble_file_count {
     assert_eq(collected.files[index], make_file_id(module_id, index))
   }
   assert_eq(collected.files[preamble_file_count], first_file)
   assert_eq(collected.files[preamble_file_count + 1], second_file)
-  assert_eq(collected.preamble_declaration_count, 1256)
+  assert_eq(collected.preamble_declaration_count, 1260)
   assert_eq(collected.diagnostics.length(), 0)
   let double = collected.lookup_value("double").unwrap()
   let run = collected.lookup_value("run").unwrap()
