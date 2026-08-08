@@ -12,20 +12,20 @@
   (type (;10;) (func (param f64) (result i32)))
   (type (;11;) (func (param eqref) (result i32)))
   (type (;12;) (func (param eqref) (result i32)))
-  (type (;13;) (func (result i32)))
-  (type (;14;) (func (param i32) (result i32)))
-  (type (;15;) (func (param i32) (result i32)))
-  (type (;16;) (func (param i32) (result i32)))
-  (type (;17;) (func (param i32) (result i32)))
-  (type (;18;) (func (param i64) (result i32)))
-  (type (;19;) (func (param i32) (result i32)))
-  (type (;20;) (func (param i32) (result i32)))
-  (type (;21;) (func (param i32) (result i32)))
-  (type (;22;) (func (param i64) (result i32)))
-  (type (;23;) (func (param f32) (result i32)))
-  (type (;24;) (func (param f64) (result i32)))
-  (type (;25;) (func (param eqref) (result i32)))
-  (type (;26;) (func (param eqref) (result i32)))
+  (type (;13;) (func))
+  (type (;14;) (func (param i32)))
+  (type (;15;) (func (param i32)))
+  (type (;16;) (func (param i32)))
+  (type (;17;) (func (param i32)))
+  (type (;18;) (func (param i64)))
+  (type (;19;) (func (param i32)))
+  (type (;20;) (func (param i32)))
+  (type (;21;) (func (param i32)))
+  (type (;22;) (func (param i64)))
+  (type (;23;) (func (param f32)))
+  (type (;24;) (func (param f64)))
+  (type (;25;) (func (param eqref)))
+  (type (;26;) (func (param eqref)))
   (type (;27;) (func (param i32 i32 i32 i32) (result i32)))
   (type (;28;) (func (param i32 eqref) (result i32)))
   (type (;29;) (struct (field i32) (field i32)))
@@ -35,14 +35,14 @@
   (type (;33;) (struct (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref)))
   (type (;34;) (struct (field (ref 29)) (field (ref 30))))
   (type (;35;) (struct (field eqref) (field eqref)))
-  (type (;36;) (func (param (ref 29)) (result i32)))
-  (type (;37;) (func (param (ref 30)) (result i32)))
-  (type (;38;) (func (param (ref 33)) (result i32)))
-  (type (;39;) (func (param (ref 34)) (result i32)))
-  (type (;40;) (func (param (ref 35)) (result i32)))
+  (type (;36;) (func (param (ref 29))))
+  (type (;37;) (func (param (ref 30))))
+  (type (;38;) (func (param (ref 33))))
+  (type (;39;) (func (param (ref 34))))
+  (type (;40;) (func (param (ref 35))))
   (type (;41;) (func))
   (type (;42;) (func (result i32)))
-  (type (;43;) (func (param (ref 33)) (result i32)))
+  (type (;43;) (func (param (ref 33))))
   (type (;44;) (array (mut v128)))
   (type (;45;) (struct (field (ref 44)) (field i32) (field i32)))
   (type (;46;) (struct (field (ref 44)) (field i32) (field i32)))
@@ -2272,7 +2272,7 @@
     local.set 5
     local.get 11
   )
-  (func (;14;) (type 13) (result i32)
+  (func (;14;) (type 13)
     i32.const 1
     v128.const i32x4 0x00002928 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2280,8 +2280,9 @@
     i32.const 2
     struct.new 46
     call 1
+    drop
   )
-  (func (;15;) (type 14) (param i32) (result i32)
+  (func (;15;) (type 14) (param i32)
     local.get 0
     if (result i32) ;; label = @1
       i32.const 1
@@ -2300,54 +2301,67 @@
       struct.new 46
       call 1
     end
+    drop
   )
-  (func (;16;) (type 15) (param i32) (result i32)
+  (func (;16;) (type 15) (param i32)
     local.get 0
     call 2
+    drop
   )
-  (func (;17;) (type 16) (param i32) (result i32)
+  (func (;17;) (type 16) (param i32)
     local.get 0
     call 3
+    drop
   )
-  (func (;18;) (type 17) (param i32) (result i32)
+  (func (;18;) (type 17) (param i32)
     local.get 0
     call 4
+    drop
   )
-  (func (;19;) (type 18) (param i64) (result i32)
+  (func (;19;) (type 18) (param i64)
     local.get 0
     call 5
+    drop
   )
-  (func (;20;) (type 19) (param i32) (result i32)
+  (func (;20;) (type 19) (param i32)
     local.get 0
     call 6
+    drop
   )
-  (func (;21;) (type 20) (param i32) (result i32)
+  (func (;21;) (type 20) (param i32)
     local.get 0
     call 7
+    drop
   )
-  (func (;22;) (type 21) (param i32) (result i32)
+  (func (;22;) (type 21) (param i32)
     local.get 0
     call 8
+    drop
   )
-  (func (;23;) (type 22) (param i64) (result i32)
+  (func (;23;) (type 22) (param i64)
     local.get 0
     call 9
+    drop
   )
-  (func (;24;) (type 23) (param f32) (result i32)
+  (func (;24;) (type 23) (param f32)
     local.get 0
     call 10
+    drop
   )
-  (func (;25;) (type 24) (param f64) (result i32)
+  (func (;25;) (type 24) (param f64)
     local.get 0
     call 11
+    drop
   )
-  (func (;26;) (type 25) (param eqref) (result i32)
+  (func (;26;) (type 25) (param eqref)
     local.get 0
     call 12
+    drop
   )
-  (func (;27;) (type 26) (param eqref) (result i32)
+  (func (;27;) (type 26) (param eqref)
     local.get 0
     call 13
+    drop
   )
   (func (;28;) (type 28) (param i32 eqref) (result i32)
     (local (ref 46) (ref 44) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
@@ -2602,7 +2616,7 @@
     end
     local.get 6
   )
-  (func (;29;) (type 36) (param (ref 29)) (result i32)
+  (func (;29;) (type 36) (param (ref 29))
     i32.const 1
     v128.const i32x4 0x6e696f50 0x207b2074 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2622,7 +2636,6 @@
     local.get 0
     struct.get 29 0
     call 18
-    drop
     i32.const 1
     v128.const i32x4 0x3a79202c 0x00000020 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2634,7 +2647,6 @@
     local.get 0
     struct.get 29 1
     call 18
-    drop
     i32.const 1
     v128.const i32x4 0x00007d20 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2642,8 +2654,9 @@
     i32.const 2
     struct.new 46
     call 1
+    drop
   )
-  (func (;30;) (type 37) (param (ref 30)) (result i32)
+  (func (;30;) (type 37) (param (ref 30))
     (local i32 i32 i32 eqref i32)
     local.get 0
     local.set 4
@@ -2681,7 +2694,6 @@
           drop
           local.get 1
           call 18
-          drop
           i32.const 1
           v128.const i32x4 0x00000029 0x00000000 0x00000000 0x00000000
           array.new_fixed 44 1
@@ -2718,7 +2730,6 @@
         drop
         local.get 2
         call 18
-        drop
         i32.const 1
         v128.const i32x4 0x6361202c 0x65766974 0x0000203a 0x00000000
         array.new_fixed 44 1
@@ -2729,7 +2740,6 @@
         drop
         local.get 3
         call 15
-        drop
         i32.const 1
         v128.const i32x4 0x00007d20 0x00000000 0x00000000 0x00000000
         array.new_fixed 44 1
@@ -2743,8 +2753,9 @@
       unreachable
     end
     local.get 5
+    drop
   )
-  (func (;31;) (type 39) (param (ref 34)) (result i32)
+  (func (;31;) (type 39) (param (ref 34))
     i32.const 1
     v128.const i32x4 0x6e656353 0x207b2065 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2764,7 +2775,6 @@
     local.get 0
     struct.get 34 0
     call 29
-    drop
     i32.const 1
     v128.const i32x4 0x6863202c 0x6563696f 0x0000203a 0x00000000
     array.new_fixed 44 1
@@ -2776,7 +2786,6 @@
     local.get 0
     struct.get 34 1
     call 30
-    drop
     i32.const 1
     v128.const i32x4 0x00007d20 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2784,8 +2793,9 @@
     i32.const 2
     struct.new 46
     call 1
+    drop
   )
-  (func (;32;) (type 40) (param (ref 35)) (result i32)
+  (func (;32;) (type 40) (param (ref 35))
     i32.const 1
     v128.const i32x4 0x7373654d 0x20656761 0x0000207b 0x00000000
     array.new_fixed 44 1
@@ -2805,7 +2815,6 @@
     local.get 0
     struct.get 35 0
     call 26
-    drop
     i32.const 1
     v128.const i32x4 0x6164202c 0x203a6174 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2817,7 +2826,6 @@
     local.get 0
     struct.get 35 1
     call 27
-    drop
     i32.const 1
     v128.const i32x4 0x00007d20 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2825,6 +2833,7 @@
     i32.const 2
     struct.new 46
     call 1
+    drop
   )
   (func (;33;) (type 41))
   (func (;34;) (type 42) (result i32)
@@ -2848,7 +2857,6 @@
     local.set 2
     local.get 0
     call 29
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2861,7 +2869,6 @@
     i32.const 7
     struct.new 31
     call 30
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2872,7 +2879,6 @@
     drop
     local.get 1
     call 30
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2883,7 +2889,6 @@
     drop
     local.get 2
     call 35
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2902,7 +2907,6 @@
     struct.new 31
     struct.new 34
     call 31
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2913,7 +2917,6 @@
     drop
     i32.const 0
     call 18
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2927,7 +2930,6 @@
     i32.sub
     i32.extend8_s
     call 16
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2941,7 +2943,6 @@
     i32.sub
     i32.extend16_s
     call 17
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2954,7 +2955,6 @@
     i32.const -2147483648
     i32.sub
     call 18
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2967,7 +2967,6 @@
     i64.const -9223372036854775808
     i64.sub
     call 19
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2978,7 +2977,6 @@
     drop
     i32.const 255
     call 20
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -2989,7 +2987,6 @@
     drop
     i32.const 65535
     call 21
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3000,7 +2997,6 @@
     drop
     i32.const -1
     call 22
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3011,7 +3007,6 @@
     drop
     i64.const -1
     call 23
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3022,7 +3017,6 @@
     drop
     f32.const 0x1.8p+0 (;=1.5;)
     call 24
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3034,7 +3028,6 @@
     f32.const 0x0p+0 (;=0;)
     f32.neg
     call 24
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3045,7 +3038,6 @@
     drop
     f64.const 0x1.8p+0 (;=1.5;)
     call 25
-    drop
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3057,7 +3049,6 @@
     f64.const 0x0p+0 (;=0;)
     f64.neg
     call 25
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3068,7 +3059,6 @@
     drop
     call 33
     call 14
-    drop
     i32.const 1
     v128.const i32x4 0x0000007c 0x00000000 0x00000000 0x00000000
     array.new_fixed 44 1
@@ -3090,8 +3080,9 @@
     struct.new 46
     struct.new 35
     call 32
+    i32.const 0
   )
-  (func (;35;) (type 43) (param (ref 33)) (result i32)
+  (func (;35;) (type 43) (param (ref 33))
     i32.const 1
     v128.const i32x4 0x70617257 0x20726570 0x6176207b 0x2065756c
     v128.const i32x4 0x0000007d 0x00000000 0x00000000 0x00000000
@@ -3100,5 +3091,6 @@
     i32.const 17
     struct.new 46
     call 1
+    drop
   )
 )

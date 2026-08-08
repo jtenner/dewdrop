@@ -8,10 +8,10 @@ The ambient preamble defines:
 
 ```dew
 pub trait Debug {
-  fn debug(self) -> U32
+  fn debug(self) -> Unit
 }
 
-pub builtin debug<t: Debug>(value: t) -> U32 = "dew_debug_dispatch"
+pub builtin debug<t: Debug>(value: t) -> Unit = "dew_debug_dispatch"
 ```
 
 `debug(value)` is an inference-time facade. After ordinary call constraints settle, the compiler replaces it with the unique coherent instance method selected for the argument type. The facade itself is therefore not emitted as a generic runtime call and does not introduce a special aggregate backend path.
@@ -34,7 +34,7 @@ Derived output is deterministic and streaming:
 - `Bytes` writes `b"..."`, preserving printable ASCII and escaping all other bytes as lowercase `\\xNN`;
 - no newline is appended;
 - output goes to file descriptor 1 through bounded WASI writes;
-- the current `U32` result is the byte count returned by the final streaming write.
+- both the trait method and ambient `debug(value)` return `Unit`; internal byte counts are consumed at the preamble boundary.
 
 Generic derived nominals remain shape-only (`Wrapper { value }`) until generic body evidence can be frozen into runtime dictionaries or equivalent specialized dispatch. Lane formats, recursion limits, and non-WASI behavior remain follow-up work.
 
@@ -52,7 +52,7 @@ Native collection benchmarks on August 8, 2026:
 | 128 structs with `derive(Eq)` | 564.96 µs |
 | 128 structs with `derive(Debug)` | 551.30 µs |
 
-The comprehensive Debug runtime fixture is 3,104 WAT lines and 68,808 bytes. It runs with a three-byte simulated host write limit, so every formatter's partial-write loop is exercised under both Node and Wago. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
+The comprehensive Debug runtime fixture is 3,096 WAT lines and 68,222 bytes. It runs with a three-byte simulated host write limit, so every formatter's partial-write loop is exercised under both Node and Wago. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
 
 ## Validation
 

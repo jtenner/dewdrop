@@ -4,7 +4,7 @@ struct Container {
   value: Opaque
 } derive(Debug)
 
-pub fn main() -> U32 {
+pub fn main() -> Unit {
   debug(Container {
     value: Opaque {}
   })

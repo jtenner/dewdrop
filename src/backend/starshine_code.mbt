@@ -535,6 +535,8 @@ fn starshine_inline_builtin_instructions(
     }
   } else if name == b"dew_unreachable" {
     Ok([@lib.Instruction::unreachable_()])
+  } else if name == b"dew_debug_ignore" {
+    Ok([@lib.Instruction::drop()])
   } else if name == b"dew_reinterpret" {
     Ok([])
   } else if name == b"i32_add" {

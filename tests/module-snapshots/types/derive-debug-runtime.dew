@@ -90,4 +90,5 @@ pub fn main() -> U32 {
     text: "line\nquote: \" slash: \\ tab:\t λ"
     data: b"\x00A\xff\"\\\n"
   })
+  0u32
 }

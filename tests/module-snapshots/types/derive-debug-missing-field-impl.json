@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:5:10: error: NoMatchingMethod(4, 11, 62)\n  |\n5 | } derive(Debug)\n  |          ^"
+    "fixture.dew:5:10: error: NoMatchingMethod(4, 12, 62)\n  |\n5 | } derive(Debug)\n  |          ^"
   ],
   "warnings": [],
   "output": null

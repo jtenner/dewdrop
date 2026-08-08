@@ -202,6 +202,19 @@ fn derived_debug_impl(
   offset : UInt64,
 ) -> ImplDeclaration {
   let target = derived_nominal_type(name, parameters, offset)
+  let unit_body = {
+    items: [
+      ExpressionItem(
+        CallExpr(
+          NameExpr("__dew_debug_ignore", offset),
+          [BlockExpr(body)],
+          offset,
+        ),
+        offset,
+      ),
+    ],
+    offset,
+  }
   {
     foreign_: false,
     type_parameters: parameters,
@@ -215,8 +228,8 @@ fn derived_debug_impl(
         type_parameters: [],
         receiver: Some({ explicit_type: None, offset }),
         parameters: [],
-        return_type: NamedType("U32", offset),
-        body,
+        return_type: NamedType("Unit", offset),
+        body: unit_body,
         offset,
       },
     ],

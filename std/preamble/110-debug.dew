@@ -1,8 +1,9 @@
 pub trait Debug {
-  fn debug(self) -> U32
+  fn debug(self) -> Unit
 }
 
 builtin __dew_debug_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
+builtin __dew_debug_ignore(value: U32) -> Unit = "dew_debug_ignore"
 builtin __dew_debug_i8(value: I8) -> U32 = "dew_debug_i8"
 builtin __dew_debug_i16(value: I16) -> U32 = "dew_debug_i16"
 builtin __dew_debug_i32(value: I32) -> U32 = "dew_debug_i32"
@@ -15,92 +16,92 @@ builtin __dew_debug_f32(value: F32) -> U32 = "dew_debug_f32"
 builtin __dew_debug_f64(value: F64) -> U32 = "dew_debug_f64"
 builtin __dew_debug_string(value: String) -> U32 = "dew_debug_string"
 builtin __dew_debug_bytes(value: Bytes) -> U32 = "dew_debug_bytes"
-pub builtin debug<t: Debug>(value: t) -> U32 = "dew_debug_dispatch"
+pub builtin debug<t: Debug>(value: t) -> Unit = "dew_debug_dispatch"
 
 impl Debug for Unit {
-  fn debug(self) -> U32 {
-    __dew_debug_write(1u32, b"()")
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_write(1u32, b"()"))
   }
 }
 
 impl Debug for Bool {
-  fn debug(self) -> U32 {
-    if self {
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(if self {
       __dew_debug_write(1u32, b"true")
     } else {
       __dew_debug_write(1u32, b"false")
-    }
+    })
   }
 }
 
 impl Debug for I8 {
-  fn debug(self) -> U32 {
-    __dew_debug_i8(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_i8(self))
   }
 }
 
 impl Debug for I16 {
-  fn debug(self) -> U32 {
-    __dew_debug_i16(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_i16(self))
   }
 }
 
 impl Debug for I32 {
-  fn debug(self) -> U32 {
-    __dew_debug_i32(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_i32(self))
   }
 }
 
 impl Debug for I64 {
-  fn debug(self) -> U32 {
-    __dew_debug_i64(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_i64(self))
   }
 }
 
 impl Debug for U8 {
-  fn debug(self) -> U32 {
-    __dew_debug_u8(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_u8(self))
   }
 }
 
 impl Debug for U16 {
-  fn debug(self) -> U32 {
-    __dew_debug_u16(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_u16(self))
   }
 }
 
 impl Debug for U32 {
-  fn debug(self) -> U32 {
-    __dew_debug_u32(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_u32(self))
   }
 }
 
 impl Debug for U64 {
-  fn debug(self) -> U32 {
-    __dew_debug_u64(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_u64(self))
   }
 }
 
 impl Debug for F32 {
-  fn debug(self) -> U32 {
-    __dew_debug_f32(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_f32(self))
   }
 }
 
 impl Debug for F64 {
-  fn debug(self) -> U32 {
-    __dew_debug_f64(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_f64(self))
   }
 }
 
 impl Debug for String {
-  fn debug(self) -> U32 {
-    __dew_debug_string(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_string(self))
   }
 }
 
 impl Debug for Bytes {
-  fn debug(self) -> U32 {
-    __dew_debug_bytes(self)
+  fn debug(self) -> Unit {
+    __dew_debug_ignore(__dew_debug_bytes(self))
   }
 }
