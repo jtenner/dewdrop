@@ -1,33 +1,20 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 4, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 8, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
-1. Finish file-aware source provenance and deterministic diagnostics.
-2. Define generic bounds, trait obligations, coherence/orphan rules, and runtime trait values.
-3. Add constant-parameter `#annotations`, `#derive`, `Show`/`Debug`, and deterministic cleanup with `defer`/`using`.
-4. Complete the core collection families and iteration protocols.
-5. Build the deterministic optimization, workspace-cache, and parallel-compilation pipelines.
-6. Expand fixtures, measurements, resource budgets, fuzzing, package/release tooling, and the broader standard library.
+1. Define generic bounds, trait obligations, coherence/orphan rules, and runtime trait values.
+2. Add constant-parameter `#annotations`, `#derive`, `Show`/`Debug`, and deterministic cleanup with `defer`/`using`.
+3. Complete the core collection families and iteration protocols.
+4. Build the deterministic optimization, workspace-cache, and parallel-compilation pipelines.
+5. Expand fixtures, measurements, resource budgets, fuzzing, package/release tooling, and the broader standard library.
 
 ## Snapshots, diagnostics, and fixture suites
 
 - [ ] Continue adding successful, warning, compiler-failure, boundary, edge, and reduced-stress module snapshots beside each feature.
-- [ ] Connect ordered compiler warnings to stable rendering and compare them through the snapshot JSON oracle.
 - [ ] Add optimized WAT snapshots once optimization output is intentionally contractual.
 - [ ] Add reversed simulated job-order reproducibility snapshots.
-- [ ] Retain file identity for every HIR expression, pattern, block, arm, field, and type-syntax node needed by diagnostics.
-- [ ] Replace offset-only semantic diagnostics with stable source locations or body-relative provenance.
-- [ ] Add stable per-file byte-offset-to-line/column lookup.
-- [ ] Render source excerpts and carets.
-- [ ] Add secondary labels for duplicate declarations, type mismatches, implementation conflicts, and cross-file errors.
-- [ ] Preserve diagnostics after parser token eviction.
-- [ ] Sort diagnostics by module, manifest file order, byte offset, and deterministic rank.
-- [ ] Print stable file-aware CLI diagnostics with line/column, excerpts, and secondary labels.
-- [ ] Create `tests/compile-pass`.
-- [ ] Create `tests/compile-fail` with expected diagnostics.
-- [ ] Create `tests/run-pass` with expected output/results.
 - [ ] Add multi-module fixtures to the compile/run suites.
 - [ ] Add tests for every new import and module rule.
 - [ ] Add source-location assertions to all cross-file diagnostics.

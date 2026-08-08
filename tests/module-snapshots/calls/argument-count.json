@@ -1,6 +1,6 @@
 {
   "errors": [
-    "CallArgumentCountMismatch(5, 12884901888000, 2, 1, 85)"
+    "fixture.dew:6:6: error: CallArgumentCountMismatch(5, 12884901888000, 2, 1, 85)\n  |\n6 |   add(1)\n  |      ^"
   ],
   "warnings": [],
   "output": null

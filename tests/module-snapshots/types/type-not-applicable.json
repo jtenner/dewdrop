@@ -1,6 +1,6 @@
 {
   "errors": [
-    "TypeArityMismatch(42, 0, 1, 12884901888001, 47)"
+    "fixture.dew:5:21: error: TypeArityMismatch(42, 0, 1, 12884901888001, 47)\n  |\n5 | fn read(point: Point<I32>) -> I32 {\n  |                     ^"
   ],
   "warnings": [],
   "output": null

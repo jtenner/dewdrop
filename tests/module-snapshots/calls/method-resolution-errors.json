@@ -1,7 +1,7 @@
 {
   "errors": [
-    "NoMatchingMethod(3, 5, 150)",
-    "UnknownQualifiedMember(7, 12884901888000, 8, 171)"
+    "fixture.dew:13:13: error: NoMatchingMethod(3, 5, 150)\n  |\n13 |   value.read() + Counter::missing()\n  |             ^",
+    "fixture.dew:13:34: error: UnknownQualifiedMember(7, 12884901888000, 8, 171)\n  |\n13 |   value.read() + Counter::missing()\n  |                                  ^"
   ],
   "warnings": [],
   "output": null

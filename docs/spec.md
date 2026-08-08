@@ -35,8 +35,8 @@ raw file descriptor
 The compiler reads as directly as possible from a raw file descriptor to minimize abstraction overhead and memory use. A custom WTF-8 decoder exposes a forward-only iterator of decoded code points and tagged malformed-input sentinels.
 
 - Input is read one host operating-system page at a time. This buffer-size choice is provisional pending measurement.
-- The complete source text does not remain resident in memory.
-- Consumed input pages may be released once no active lexer state depends on them.
+- The streaming tokenizer does not require complete source text to remain resident; consumed descriptor pages may be released once no active lexer state depends on them.
+- The installed manifest compiler currently retains one immutable path/byte record per collected file for exact diagnostics after token eviction. Removing that retained copy requires a future reopen/source-provider contract rather than reconstructing source spelling from tokens.
 - The WTF-8 iterator must handle multi-byte sequences split across page boundaries.
 - File-descriptor input is the primary implementation path; portability abstractions are not an initial design priority.
 
@@ -141,18 +141,7 @@ Horizontal and other non-line whitespace is trivia. `//` consumes comment text b
 
 The `#|` scanner may consume a line ending while determining whether another marked line continues the string. If the following line is not a continuation, the tokenizer queues that consumed line ending and emits it immediately after the multiline-string token, preserving source order without rewinding.
 
-Source metadata uses the following provisional model:
-
-```dew
-Source {
-  line_breaks: Array[Offset]
-  tokens: Array[Token]
-}
-
-Token(TokenKind, Offset, Index)
-```
-
-A `Source` records line-break positions and a transient array of tokens.
+Source metadata uses stable file-local byte offsets and transient parser tokens. The semantic collector separately retains each file's logical path and immutable source bytes for diagnostics; it does not retain the token stream.
 
 - `Offset` is the token's absolute UTF-8 byte offset within one source file.
 - `FileId` is a stable packed module/file-local identity assigned from manifest order; it is stored separately and is never packed into `Offset`.
@@ -160,9 +149,7 @@ A `Source` records line-break positions and a transient array of tokens.
 - `Index` is the token's index in the active `Source.tokens` array.
 - A token index is valid only while that token remains in the active array. AST nodes must not retain an index after the corresponding token is evicted.
 
-Tokens may be evicted after their declaration has been converted into AST nodes, provided those AST nodes retain enough information to regenerate diagnostic source text. `Source.tokens` is therefore an active token window rather than a required full-file token archive.
-
-Because source pages are discarded, diagnostic source text is reconstructed from retained tokens, AST nodes, and synthetic recovery nodes. Exact preservation of original whitespace and spelling is not currently required.
+Tokens may be evicted after their declaration has been converted into AST/HIR nodes. HIR type syntax, lambda parameters, expressions, blocks, block items, object/pattern fields, patterns, and arms retain aligned `FileId` provenance, while source-local byte offsets remain in their compact nodes. Diagnostics recover exact source lines from the retained immutable file record, not from parser tokens. Byte offsets map deterministically to one-based line and byte-column values; final diagnostics sort by module order, manifest file order, byte offset, and deterministic rank.
 
 ### 3.3 Parser
 
@@ -651,7 +638,7 @@ Every module owns its own name interner and separate type, trait, and value name
 
 Declaration-level `TypeExpr` trees lower immediately into child-first flat HIR nodes and shared argument spans. Lowering is iterative and uses reusable builder-local scratch arrays. Callable signatures, field types, tuple variant payloads, alias targets, and impl trait/target types retain HIR IDs rather than recursive parser type trees.
 
-Module-level let initializers, top-level function blocks, and impl method blocks lower during the same collection pass into module-wide expression, block, pattern, object-field, and pattern-arm arenas. Every executable body receives a stable packed `BodyId`, records exact node spans for future body-local side tables, and is reachable from its owning declaration in constant time. Builtins and trait method signatures have no executable body.
+Module-level let initializers, top-level function blocks, and impl method blocks lower during the same collection pass into module-wide expression, block, pattern, object-field, and pattern-arm arenas. Parallel provenance arrays retain the exact `FileId` for every diagnostic-relevant HIR record without widening hot expression/pattern enum payloads. Every executable body receives a stable packed `BodyId`, records exact node spans for future body-local side tables, and is reachable from its owning declaration in constant time. Builtins and trait method signatures have no executable body.
 
 Body lowering is child-first and iterative. A reusable primitive task machine schedules expression, block, pattern, and arm visit/finish operations without recursive MoonBit calls or one retained child array per syntax node. Calls, tuple patterns, alternatives, and match/while arm lists use shared child arenas; blocks, objects, and struct patterns use contiguous record spans. Missing optional HIR values use `-1` sentinels in hot records.
 

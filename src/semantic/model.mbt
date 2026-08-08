@@ -233,6 +233,8 @@ pub struct CollectedModule {
   module_id : ModuleId
   preamble_declaration_count : Int
   files : Array[FileId]
+  file_paths : Array[String]
+  file_sources : Array[Bytes]
   test_files : Array[FileId]
   declaration_files : Array[FileId]
   body_files : Array[FileId]
@@ -254,20 +256,29 @@ pub struct CollectedModule {
   aliases : Array[CollectedAlias]
   impls : Array[CollectedImpl]
   type_syntax : Array[HirTypeSyntax]
+  type_syntax_files : Array[FileId]
   type_arguments : Array[HirTypeId]
   lambda_parameters : Array[HirLambdaParameter]
+  lambda_parameter_files : Array[FileId]
   lambdas : Array[HirLambda]
   bodies : Array[HirBody]
   body_by_declaration : Array[Int]
   expressions : Array[HirExpr]
+  expression_files : Array[FileId]
   expression_children : Array[ExprId]
   blocks : Array[HirBlock]
+  block_files : Array[FileId]
   block_items : Array[HirBlockItem]
+  block_item_files : Array[FileId]
   object_fields : Array[HirObjectField]
+  object_field_files : Array[FileId]
   patterns : Array[HirPattern]
+  pattern_files : Array[FileId]
   pattern_children : Array[PatternId]
   pattern_fields : Array[HirPatternField]
+  pattern_field_files : Array[FileId]
   pattern_arms : Array[HirPatternArm]
+  pattern_arm_files : Array[FileId]
   arm_children : Array[PatternArmId]
   diagnostics : Array[CollectionDiagnostic]
   name_lookup : Map[String, NameId]
@@ -275,6 +286,25 @@ pub struct CollectedModule {
   trait_bindings : Map[NameId, DeclId]
   value_bindings : Map[NameId, ValueBinding]
   value_binding_candidates : Array[ValueBindingCandidate]
+}
+
+///|
+pub fn CollectedModule::source_file(
+  self : CollectedModule,
+  file : FileId,
+) -> ProgramFile? {
+  for index, candidate in self.files {
+    if candidate == file {
+      return Some(
+        ProgramFile::named(
+          candidate,
+          self.file_paths[index],
+          self.file_sources[index],
+        ),
+      )
+    }
+  }
+  None
 }
 
 ///|
@@ -322,6 +352,86 @@ pub fn CollectedModule::declaration_location(
       })
     None => None
   }
+}
+
+///|
+pub fn CollectedModule::callable_return_location(
+  self : CollectedModule,
+  declaration : DeclId,
+) -> SourceLocation? {
+  for callable in self.callables {
+    if callable.declaration == declaration {
+      return self.type_syntax_location(callable.return_type)
+    }
+  }
+  None
+}
+
+///|
+pub fn CollectedModule::type_syntax_location(
+  self : CollectedModule,
+  syntax : HirTypeId,
+) -> SourceLocation? {
+  if syntax < 0 || syntax >= self.type_syntax.length() {
+    return None
+  }
+  Some({
+    file: self.type_syntax_files[syntax],
+    offset: self.type_syntax[syntax].offset(),
+  })
+}
+
+///|
+pub fn CollectedModule::expression_location(
+  self : CollectedModule,
+  expression : ExprId,
+) -> SourceLocation? {
+  if expression < 0 || expression >= self.expressions.length() {
+    return None
+  }
+  Some({
+    file: self.expression_files[expression],
+    offset: self.expressions[expression].offset(),
+  })
+}
+
+///|
+pub fn CollectedModule::pattern_location(
+  self : CollectedModule,
+  pattern : PatternId,
+) -> SourceLocation? {
+  if pattern < 0 || pattern >= self.patterns.length() {
+    return None
+  }
+  Some({
+    file: self.pattern_files[pattern],
+    offset: self.patterns[pattern].offset(),
+  })
+}
+
+///|
+pub fn CollectedModule::block_location(
+  self : CollectedModule,
+  block : BlockId,
+) -> SourceLocation? {
+  if block < 0 || block >= self.blocks.length() {
+    return None
+  }
+  Some({ file: self.block_files[block], offset: self.blocks[block].offset })
+}
+
+///|
+pub fn CollectedModule::pattern_arm_location(
+  self : CollectedModule,
+  arm : PatternArmId,
+) -> SourceLocation? {
+  if arm < 0 || arm >= self.pattern_arms.length() {
+    return None
+  }
+  Some({
+    file: self.pattern_arm_files[arm],
+    offset: self.pattern_arms[arm].offset,
+  })
 }
 
 ///|

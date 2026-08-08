@@ -13,50 +13,19 @@ fn dew_test_runtime_source() -> Bytes {
 fn report_dew_test_diagnostics(
   program : @semantic.CollectedProgram,
   analyzed : @semantic.AnalyzedProgramSemantics,
+  lowering : @semantic.PlannedProgramLowering,
   link : @semantic.PlannedProgramWasmGCLink,
 ) -> Bool {
   let mut has_errors = false
-  for diagnostic in program.diagnostics {
-    println(@debug.to_string(diagnostic))
-    has_errors = true
-  }
-  for module_ in program.modules {
-    for diagnostic in module_.diagnostics {
-      println(@debug.to_string(diagnostic))
-      has_errors = true
+  for
+    diagnostic in @semantic.collect_compiler_source_diagnostics(
+      program, analyzed, lowering, link,
+    ) {
+    println(@semantic.render_compiler_source_diagnostic(program, diagnostic))
+    match diagnostic.severity {
+      @semantic.CompilerError => has_errors = true
+      @semantic.CompilerWarning => ()
     }
-  }
-  for diagnostic in analyzed.frozen.graph.diagnostics {
-    println(@debug.to_string(diagnostic))
-    has_errors = true
-  }
-  for diagnostic in analyzed.frozen.import_diagnostics {
-    println(@debug.to_string(diagnostic))
-    has_errors = true
-  }
-  for interface_ in analyzed.frozen.interfaces {
-    for diagnostic in interface_.resolved_types.diagnostics {
-      println(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-  }
-  for module_ in analyzed.modules {
-    for diagnostic in module_.names.diagnostics {
-      println(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-    for diagnostic in module_.inferred.impl_index.diagnostics {
-      println(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-    for diagnostic in module_.inferred.diagnostics {
-      println(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-  }
-  for diagnostic in link.diagnostics {
-    println(@debug.to_string(diagnostic))
-    has_errors = true
   }
   has_errors
 }
@@ -221,7 +190,7 @@ fn main {
     root_module_index,
     @semantic.WasmGCPlanningOptions::test_mode(),
   )
-  if report_dew_test_diagnostics(program, analyzed, link) {
+  if report_dew_test_diagnostics(program, analyzed, lowering, link) {
     abort("Dew test source produced semantic diagnostics")
   }
   let binary = match @backend.emit_starshine_program_binary(lowering, link) {

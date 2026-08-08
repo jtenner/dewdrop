@@ -1,6 +1,6 @@
 {
   "errors": [
-    "InvalidCallTarget(2, 46)"
+    "fixture.dew:3:8: error: InvalidCallTarget(2, 46)\n  |\n3 |   value()\n  |        ^"
   ],
   "warnings": [],
   "output": null

@@ -1,0 +1,4 @@
+tests/compile-fail/unknown-value.dew:2:3: error: UnknownValueName(2, 0, 25)
+  |
+2 |   missing_value
+  |   ^

@@ -113,6 +113,7 @@ Dewdrop currently includes, among other things:
 - WASI Preview 1 standard input and output.
 - Source-level tests with deterministic compiler-produced metadata.
 - Deterministic WAT snapshots and Wasm execution tests.
+- File-aware deterministic diagnostics with line/column positions, excerpts, carets, and related-location labels.
 
 Not every familiar language feature exists yet. In particular, consult the roadmap rather than assuming planned features such as `#derive`, `defer`, iterators, growable arrays, formatting, HTTP, or cryptography have already been implemented.
 
@@ -676,7 +677,14 @@ Files do not create private namespaces. Multiple files assigned to one module co
 tools/dew check path/to/program.dew
 ```
 
-Checks the program without writing final output.
+Checks the program without writing final output. Compiler failures use stable logical paths, one-based byte line/column positions, source excerpts, carets, and related-location labels where available:
+
+```text
+path/to/program.dew:2:3: error: UnknownValueName(2, 0, 25)
+  |
+2 |   missing_value
+  |   ^
+```
 
 ### Build Wasm
 
@@ -827,7 +835,11 @@ Run the narrowest command that demonstrates the missing behavior. For one module
 tools/module-snapshots/run.sh --fixture feature/name
 ```
 
-For a MoonBit package, run the relevant target and package rather than the entire project when possible.
+For a MoonBit package, run the relevant target and package rather than the entire project when possible. End-to-end CLI behavior also has sorted initial suites under `tests/compile-pass`, `tests/compile-fail`, and `tests/run-pass`; run them with:
+
+```sh
+python3 tools/cli-fixtures.py
+```
 
 A failing test should be diagnostic. It should show the behavior that is wrong, not hide a crash or silently skip because an optional tool is absent.
 

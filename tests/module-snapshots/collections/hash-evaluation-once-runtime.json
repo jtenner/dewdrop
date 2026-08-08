@@ -1,18 +1,18 @@
 {
   "errors": [
-    "UnknownPatternConstructor(25, 0, 1374)",
-    "NoMatchingMethod(199, 10, 227)",
-    "NoMatchingMethod(198, 6, 244)",
-    "NoMatchingMethod(199, 25, 339)",
-    "NoMatchingMethod(198, 17, 360)",
-    "AmbiguousMethod(7, 45, 12884901888002, 18446462598732841485, 9, 659)",
-    "AmbiguousMethod(10, 45, 12884901888003, 18446462598732841486, 9, 659)",
-    "InvalidPatternConstructor(2, 1378)",
-    "UnresolvedLocalType(12884901888002, 4, 1379)",
-    "UnresolvedExpressionType(137, 1396)",
-    "NoMatchingMethod(39, 139, 1402)",
-    "AmbiguousMethod(7, 172, 12884901888002, 18446462598732841485, 9, 1678)",
-    "AmbiguousMethod(\n  10,\n  172,\n  12884901888003,\n  18446462598732841486,\n  9,\n  1678,\n)"
+    "fixture.dew:13:27: error: NoMatchingMethod(199, 10, 227)\n  |\n13 |     self.hash_calls[0u32] = self.hash_calls[0u32] + 1\n  |                           ^",
+    "fixture.dew:13:44: error: NoMatchingMethod(198, 6, 244)\n  |\n13 |     self.hash_calls[0u32] = self.hash_calls[0u32] + 1\n  |                                            ^",
+    "fixture.dew:17:31: error: NoMatchingMethod(199, 25, 339)\n  |\n17 |     self.equality_calls[0u32] = self.equality_calls[0u32] + 1\n  |                               ^",
+    "fixture.dew:17:52: error: NoMatchingMethod(198, 17, 360)\n  |\n17 |     self.equality_calls[0u32] = self.equality_calls[0u32] + 1\n  |                                                    ^",
+    "fixture.dew:31:27: error: AmbiguousMethod(7, 45, 12884901888002, 18446462598732841485, 9, 659)\n  |\n31 |   let map = Map::singleton(key, 10)\n  |                           ^",
+    "fixture.dew:31:27: error: AmbiguousMethod(10, 45, 12884901888003, 18446462598732841486, 9, 659)\n  |\n31 |   let map = Map::singleton(key, 10)\n  |                           ^",
+    "fixture.dew:51:5: error: UnknownPatternConstructor(25, 0, 1374)\n  |\n51 |     Some(value) => assert(value == 11, \"map safe get value\")\n  |     ^",
+    "fixture.dew:51:9: error: InvalidPatternConstructor(2, 1378)\n  |\n51 |     Some(value) => assert(value == 11, \"map safe get value\")\n  |         ^",
+    "fixture.dew:51:10: error: UnresolvedLocalType(12884901888002, 4, 1379)\n  |\n51 |     Some(value) => assert(value == 11, \"map safe get value\")\n  |          ^",
+    "fixture.dew:51:27: error: UnresolvedExpressionType(137, 1396)\n  |\n51 |     Some(value) => assert(value == 11, \"map safe get value\")\n  |                           ^",
+    "fixture.dew:51:33: error: NoMatchingMethod(39, 139, 1402)\n  |\n51 |     Some(value) => assert(value == 11, \"map safe get value\")\n  |                                 ^",
+    "fixture.dew:59:27: error: AmbiguousMethod(7, 172, 12884901888002, 18446462598732841485, 9, 1678)\n  |\n59 |   let set = Set::singleton(key)\n  |                           ^",
+    "fixture.dew:59:27: error: AmbiguousMethod(\n  10,\n  172,\n  12884901888003,\n  18446462598732841486,\n  9,\n  1678,\n)\n  |\n59 |   let set = Set::singleton(key)\n  |                           ^"
   ],
   "warnings": [],
   "output": null

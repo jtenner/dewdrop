@@ -1,7 +1,7 @@
 {
   "errors": [
-    "ImmutableAssignmentTarget(2, 50)",
-    "ImmutableAssignmentTarget(6, 105)"
+    "fixture.dew:2:9: error: ImmutableAssignmentTarget(2, 50)\n  |\n2 |   value = 2\n  |         ^",
+    "fixture.dew:7:9: error: ImmutableAssignmentTarget(6, 105)\n  |\n7 |   value = 2\n  |         ^"
   ],
   "warnings": [],
   "output": null

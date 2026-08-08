@@ -1,6 +1,6 @@
 {
   "errors": [
-    "BodyConstraintDiagnostic(\n  LocalTypeMismatch(\n    -4,\n    -5,\n    { kind: ReturnTypeConstraint, source: 0, offset: 0 },\n  ),\n)"
+    "fixture.dew:1:1: error: BodyConstraintDiagnostic(\n  LocalTypeMismatch(\n    -4,\n    -5,\n    { kind: ReturnTypeConstraint, source: 0, offset: 0 },\n  ),\n)\n  |\n1 | pub fn main() -> I32 {\n  | ^\n  = fixture.dew:1:18: declared return type is here"
   ],
   "warnings": [],
   "output": null

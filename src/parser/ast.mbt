@@ -154,3 +154,61 @@ pub enum ExpressionError {
   LexicalError(@tokenizer.LexError, UInt64)
   InvalidOperatorState(UInt64)
 } derive(Eq, Debug)
+
+///|
+fn optional_expression_token_offset(
+  token : @tokenizer.Token?,
+  fallback : UInt64,
+) -> UInt64 {
+  match token {
+    Some(value) => value.offset()
+    None => fallback
+  }
+}
+
+///|
+pub fn ExpressionError::offset(self : ExpressionError) -> UInt64 {
+  match self {
+    ExpectedValue(token)
+    | ExpectedCallDelimiter(token)
+    | ExpectedFieldName(token)
+    | ExpectedQualifiedName(token)
+    | ExpectedBlockBindingName(token)
+    | ExpectedBlockEqual(token) => optional_expression_token_offset(token, 0UL)
+    ExpectedRightBracket(token, fallback)
+    | ExpectedObjectField(token, fallback)
+    | ExpectedObjectColon(token, fallback)
+    | ExpectedObjectFieldNewline(token, fallback)
+    | ExpectedBlockNewline(token, fallback)
+    | ExpectedBlockItemNewline(token, fallback)
+    | ExpectedIfBody(token, fallback)
+    | ExpectedElseBranch(token, fallback)
+    | ExpectedMatchBody(token, fallback)
+    | ExpectedMatchBodyNewline(token, fallback)
+    | ExpectedMatchArmArrow(token, fallback)
+    | ExpectedMatchArmNewline(token, fallback)
+    | ExpectedWhileBody(token, fallback)
+    | ExpectedWhileBodyNewline(token, fallback)
+    | ExpectedWhileArmArrow(token, fallback)
+    | ExpectedWhileArmNewline(token, fallback)
+    | ExpectedBreakValue(token, fallback)
+    | ExpectedContinueValue(token, fallback)
+    | ExpectedLambdaSyntax(_, token, fallback) =>
+      optional_expression_token_offset(token, fallback)
+    ExpectedAssignmentTarget(token, _) => token.offset()
+    UnexpectedLambdaTypeCloser(offset, _)
+    | InvalidLambdaSyntax(offset)
+    | UnclosedObject(offset)
+    | UnclosedBlock(offset)
+    | UnclosedMatch(offset)
+    | UnclosedWhile(offset)
+    | ChainedComparison(offset)
+    | UnclosedGroup(offset)
+    | UnclosedCall(offset)
+    | UnclosedIndex(offset)
+    | MissingOperand(offset)
+    | LexicalError(_, offset)
+    | InvalidOperatorState(offset) => offset
+    MatchPatternError(error) => error.offset()
+  }
+}

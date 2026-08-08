@@ -1,6 +1,6 @@
 {
   "errors": [
-    "ParseDiagnostic(\n  12884901888256,\n  { severity: Error, error: ImportAfterDeclaration(30) },\n)"
+    "fixture.dew:5:1: error: ParseDiagnostic(\n  12884901888256,\n  { severity: Error, error: ImportAfterDeclaration(30) },\n)\n  |\n5 | open dew.std.wasi\n  | ^"
   ],
   "warnings": [],
   "output": null

@@ -1,6 +1,6 @@
 {
   "errors": [
-    "DuplicateName(\n  {\n    space: ModuleValue,\n    name: 0,\n    first: 12884901888000,\n    duplicate: 12884901888002,\n    first_file: 12884901888256,\n    duplicate_file: 12884901888257,\n    first_offset: 3,\n    duplicate_offset: 3,\n  },\n)"
+    "helper.dew:1:4: error: DuplicateName(\n  {\n    space: ModuleValue,\n    name: 0,\n    first: 12884901888000,\n    duplicate: 12884901888002,\n    first_file: 12884901888256,\n    duplicate_file: 12884901888257,\n    first_offset: 3,\n    duplicate_offset: 3,\n  },\n)\n  |\n1 | fn helper() -> I32 {\n  |    ^\n  = fixture.dew:1:4: first declaration is here"
   ],
   "warnings": [],
   "output": null

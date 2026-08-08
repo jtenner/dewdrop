@@ -1,6 +1,6 @@
 {
   "errors": [
-    "TestDeclarationOutsideTestFile(12884901888256, 0)"
+    "fixture.dew:1:1: error: TestDeclarationOutsideTestFile(12884901888256, 0)\n  |\n1 | test \"test in ordinary file\" {\n  | ^"
   ],
   "warnings": [],
   "output": null

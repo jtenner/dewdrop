@@ -30,6 +30,7 @@ node --check tools/dew-abi.mjs
 node --check tools/dew-wasm-consumer.mjs
 node --check tools/wasm-metrics.mjs
 python3 tools/dew_cli_test.py
+python3 tools/cli-fixtures.py
 
 targets=(native)
 if [[ $mode == "full" ]]; then
@@ -440,7 +441,10 @@ if tools/dew check tests/module-snapshots/names/unknown-value.dew > .tmp/dew-cli
   echo "expected dew check to reject an invalid source" >&2
   exit 1
 fi
-grep -q '^DEW_ERROR$' .tmp/dew-cli-error.txt
+grep -q '^tests/module-snapshots/names/unknown-value.dew:2:3: error: UnknownValueName' \
+  .tmp/dew-cli-error.txt
+grep -q '^2 |   missing_value$' .tmp/dew-cli-error.txt
+grep -q '^  |   \^$' .tmp/dew-cli-error.txt
 tools/dew test --module dew.std std/tests/core_test.dew
 tools/dew test --manifest tests/cli/test-package/dew.modules.json
 tools/dew test \

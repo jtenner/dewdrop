@@ -1,6 +1,6 @@
 {
   "errors": [
-    "EagerProgramInitializationCycle(12884901888000, 12889196855296)"
+    "cycle.dew:3:1: error: EagerProgramInitializationCycle(12884901888000, 12889196855296)\n  |\n3 | pub let second = first\n  | ^\n  = fixture.dew:3:1: cycle also includes this declaration"
   ],
   "warnings": [],
   "output": null

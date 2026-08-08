@@ -1,7 +1,7 @@
 {
   "errors": [
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: ExpectedDeclarationSyntax(\n      ImportAlias,\n      Some(Token(AtIdentifier(\"everything\"), 20, 7)),\n    ),\n  },\n)",
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: ExpectedDeclarationSyntax(\n      ImportAlias,\n      Some(Token(AtIdentifier(\"mapped\"), 52, 16)),\n    ),\n  },\n)"
+    "fixture.dew:1:21: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: ExpectedDeclarationSyntax(\n      ImportAlias,\n      Some(Token(AtIdentifier(\"everything\"), 20, 7)),\n    ),\n  },\n)\n  |\n1 | import dew.std.* as @everything\n  |                     ^",
+    "fixture.dew:2:21: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: ExpectedDeclarationSyntax(\n      ImportAlias,\n      Some(Token(AtIdentifier(\"mapped\"), 52, 16)),\n    ),\n  },\n)\n  |\n2 | open dew.std.map as @mapped\n  |                     ^"
   ],
   "warnings": [],
   "output": null

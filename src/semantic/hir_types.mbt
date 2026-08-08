@@ -21,6 +21,15 @@ pub enum HirTypeSyntax {
 } derive(Eq, Debug)
 
 ///|
+pub fn HirTypeSyntax::offset(self : HirTypeSyntax) -> UInt64 {
+  match self {
+    NamedTypeSyntax(_, offset)
+    | AppliedTypeSyntax(_, _, offset)
+    | FunctionTypeSyntax(_, _, offset) => offset
+  }
+}
+
+///|
 /// Lowers one recursive parser type into flat module-local arenas without
 /// recursive host-language calls. Child types are emitted before their parent.
 fn CollectionBuilder::lower_type(
@@ -47,6 +56,7 @@ fn CollectionBuilder::lower_type(
         @parser.NamedType(name, offset) => {
           let id = self.type_syntax.length()
           self.type_syntax.push(NamedTypeSyntax(self.intern(name), offset))
+          self.type_syntax_files.push(self.current_file)
           results.push(id)
         }
         @parser.AppliedType(base, arguments, _) => {
@@ -96,6 +106,7 @@ fn CollectionBuilder::lower_type(
               offset,
             ),
           )
+          self.type_syntax_files.push(self.current_file)
           results.truncate(result_start)
           results.push(id)
         }
@@ -113,6 +124,7 @@ fn CollectionBuilder::lower_type(
               offset,
             ),
           )
+          self.type_syntax_files.push(self.current_file)
           results.truncate(result_start)
           results.push(id)
         }

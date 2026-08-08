@@ -83,6 +83,7 @@ fn CollectionBuilder::emit_expr(
 ) -> ExprId {
   let id = self.expressions.length()
   self.expressions.push(expression)
+  self.expression_files.push(self.current_file)
   self.body_expr_results.push(id)
   id
 }
@@ -103,6 +104,7 @@ fn CollectionBuilder::record_lambda(
       type_: self.lower_type(parameter.type_),
       offset: parameter.offset,
     })
+    self.lambda_parameter_files.push(self.current_file)
   }
   self.lambda_parameter_spans.push({
     start: parameter_start,
@@ -124,6 +126,7 @@ fn CollectionBuilder::emit_pattern(
 ) -> PatternId {
   let id = self.patterns.length()
   self.patterns.push(pattern)
+  self.pattern_files.push(self.current_file)
   self.body_pattern_results.push(id)
   id
 }
@@ -273,6 +276,7 @@ fn CollectionBuilder::append_object_fields(
       value: self.body_expr_results[result_start + index],
       offset: field.offset,
     })
+    self.object_field_files.push(self.current_file)
   }
   { start, length: source.length() }
 }
@@ -464,6 +468,7 @@ fn CollectionBuilder::finish_block_source(
             offset,
           ),
         )
+        self.expression_files.push(self.current_file)
         self.block_items.push(HirExpressionItem(expression, offset))
         result_index += 2
       }
@@ -477,6 +482,7 @@ fn CollectionBuilder::finish_block_source(
             offset,
           ),
         )
+        self.expression_files.push(self.current_file)
         self.block_items.push(HirExpressionItem(expression, offset))
         result_index += 3
       }
@@ -487,6 +493,7 @@ fn CollectionBuilder::finish_block_source(
         result_index += 1
       }
     }
+    self.block_item_files.push(self.current_file)
   }
   self.body_expr_results.truncate(expr_start)
   let id = self.blocks.length()
@@ -494,6 +501,7 @@ fn CollectionBuilder::finish_block_source(
     items: { start: item_start, length: source.items.length() },
     offset: source.offset,
   })
+  self.block_files.push(self.current_file)
   self.body_block_results.push(id)
 }
 
@@ -590,6 +598,7 @@ fn CollectionBuilder::finish_pattern_source(
           pattern: self.body_pattern_results[first_start + index + 1],
           offset: field.offset,
         })
+        self.pattern_field_files.push(self.current_file)
       }
       let (has_rest, rest_offset) = match rest_offset {
         Some(value) => (true, value)
@@ -667,6 +676,7 @@ fn CollectionBuilder::finish_arm_source(
     body,
     offset: source.offset,
   })
+  self.pattern_arm_files.push(self.current_file)
   self.body_pattern_results.truncate(pattern_start)
   self.body_expr_results.truncate(expr_start)
   self.body_arm_results.push(id)

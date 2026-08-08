@@ -80,22 +80,35 @@ launchers without changing command semantics.
 
 ## Diagnostics and exits
 
-Compiler diagnostics currently retain the deterministic framed debug transport:
+`dew check`, `dew build`, and the test compiler render diagnostics with stable
+logical paths, one-based byte line/column positions, the owning source line, a
+caret, and deterministic secondary labels where related source locations exist.
+Diagnostics retain their current deterministic semantic `Debug` value as the
+message until stable human diagnostic codes and prose are defined. For example:
 
 ```text
-DEW_ERROR
-<deterministic debug representation>
-DEW_END
+tests/compile-fail/unknown-value.dew:2:3: error: UnknownValueName(2, 0, 25)
+  |
+2 |   missing_value
+  |   ^
 ```
+
+The compiler retains immutable path/source records independently from parser
+tokens, so parser-token eviction cannot erase later semantic excerpts. HIR
+expressions, patterns, blocks, block items, object/pattern fields, arms, lambda
+parameters, and type syntax retain aligned `FileId` provenance. Final diagnostics
+sort by module order, manifest file order, byte offset, and deterministic rank.
+Duplicate declarations/fields/tests, return-type mismatches, implementation
+conflicts, and cross-file initialization cycles add stable secondary labels.
+The snapshot compiler keeps its framed `DEW_ERROR`/`DEW_WARNING` transport so
+multiline rendered diagnostics remain one JSON string; the user CLI prints the
+rendered text directly.
 
 Exit status is:
 
 - `0` for successful checking or building;
 - `1` for compiler, link, validation, or emission diagnostics;
 - `2` for CLI usage, input I/O, or output I/O failures.
-
-File-aware line/column rendering, excerpts, carets, secondary labels, warning
-severity, and stable human diagnostic codes remain separate roadmap work.
 
 ## Validation
 
@@ -104,8 +117,9 @@ and explicit package roots, compiles the standard wildcard fixture, requires
 on-disk/generated/cache-miss/cache-hit providers to produce byte-identical Wasm,
 verifies miss/hit/disabled reporting, source-content invalidation, and
 fail-visible corruption, builds the multi-module linking fixture, verifies
-framed compiler failures, runs explicit and manifest test packages, and
-requires failed assertions to report their exact dynamic Unicode message
+file-aware compiler failures, runs the `compile-pass`, `compile-fail`, and
+`run-pass` CLI fixture directories, runs explicit and manifest test packages,
+and requires failed assertions to report their exact dynamic Unicode message
 without leaking a Python traceback.
 
 ## Next steps
@@ -115,7 +129,7 @@ without leaking a Python traceback.
 2. Measure cache-file I/O and representative external-package workloads, and
    add artifact-only interface recovery once verified cached artifacts can replace
    source recollection.
-3. Improve entry-point and host diagnostics as runtime semantics continue to
+3. Replace semantic `Debug` messages with stable human diagnostic codes and
+   prose without changing source ordering or labels.
+4. Improve entry-point and host diagnostics as runtime semantics continue to
    stabilize.
-4. Replace debug diagnostics with stable file-aware rendering and expose
-   deterministic `--emit` artifacts.

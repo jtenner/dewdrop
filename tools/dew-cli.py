@@ -656,7 +656,11 @@ def normalize_native_paths(
             normalized.extend((argument, str(working_path(Path(arguments[index + 1])))))
             index += 2
         elif explicit_sources and argument.endswith(".dew"):
-            normalized.append(str(working_path(Path(argument))))
+            source = working_path(Path(argument))
+            try:
+                normalized.append(source.relative_to(ROOT).as_posix())
+            except ValueError:
+                normalized.append(str(source))
             index += 1
         else:
             normalized.append(argument)

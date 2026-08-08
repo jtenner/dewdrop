@@ -1,6 +1,6 @@
 {
   "errors": [
-    "UnknownFieldForType(5, 12884901888000, 4, 92)"
+    "fixture.dew:9:8: error: UnknownFieldForType(5, 12884901888000, 4, 92)\n  |\n9 |   point.y\n  |        ^"
   ],
   "warnings": [],
   "output": null

@@ -57,6 +57,36 @@ pub enum PatternError {
 } derive(Eq, Debug)
 
 ///|
+fn optional_pattern_token_offset(
+  token : @tokenizer.Token?,
+  fallback : UInt64,
+) -> UInt64 {
+  match token {
+    Some(value) => value.offset()
+    None => fallback
+  }
+}
+
+///|
+pub fn PatternError::offset(self : PatternError) -> UInt64 {
+  match self {
+    ExpectedPattern(token) | ExpectedPatternProperty(token) =>
+      optional_pattern_token_offset(token, 0UL)
+    ExpectedPatternDelimiter(token, fallback)
+    | ExpectedPatternBodyNewline(token, fallback)
+    | ExpectedPatternField(token, fallback)
+    | ExpectedPatternFieldNewline(token, fallback) =>
+      optional_pattern_token_offset(token, fallback)
+    RestPatternNotAllowed(offset)
+    | DuplicateRestPattern(offset)
+    | UnclosedTuplePattern(offset)
+    | UnclosedStructPattern(offset)
+    | EmptyTuplePattern(offset)
+    | PatternLexicalError(_, offset) => offset
+  }
+}
+
+///|
 fn Parser::consume_pattern_right_paren(self : Parser) -> Bool {
   match self.peek_token() {
     Some(token) =>

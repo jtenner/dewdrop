@@ -1,7 +1,7 @@
 {
   "errors": [
-    "NumericLiteralOutOfRange(0, I16Type, 28)",
-    "NumericLiteralOutOfRange(1, I32Type, 68)"
+    "fixture.dew:2:3: error: NumericLiteralOutOfRange(0, I16Type, 28)\n  |\n2 |   32768i16\n  |   ^",
+    "fixture.dew:6:3: error: NumericLiteralOutOfRange(1, I32Type, 68)\n  |\n6 |   2147483648i32\n  |   ^"
   ],
   "warnings": [],
   "output": null

@@ -1,6 +1,6 @@
 {
   "errors": [
-    "NumericLiteralOutOfRange(0, I8Type, 24)"
+    "fixture.dew:2:3: error: NumericLiteralOutOfRange(0, I8Type, 24)\n  |\n2 |   128i8\n  |   ^"
   ],
   "warnings": [],
   "output": null

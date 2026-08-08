@@ -133,50 +133,33 @@ fn selected_standard_modules(
 fn CollectionBuilder::collect_standard_preamble(
   self : CollectionBuilder,
 ) -> Unit {
-  self.collect_file_events(
-    make_file_id(self.module_id, 0),
-    @parser.parse_bytes(standard_preamble_builtins_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 1),
-    @parser.parse_bytes(standard_preamble_traits_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 2),
-    @parser.parse_bytes(standard_preamble_i32_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 3),
-    @parser.parse_bytes(standard_preamble_packed_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 4),
-    @parser.parse_bytes(standard_numeric_builtins_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 5),
-    @parser.parse_bytes(standard_numeric_impls_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 6),
-    @parser.parse_bytes(standard_memory_preamble_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 7),
-    @parser.parse_bytes(standard_into_builtins_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 8),
-    @parser.parse_bytes(standard_into_impls_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 9),
-    @parser.parse_bytes(standard_swar_preamble_source()),
-  )
-  self.collect_file_events(
-    make_file_id(self.module_id, 10),
-    @parser.parse_bytes(standard_v128_preamble_source()),
-  )
+  let paths = [
+    "__dew_preamble_builtins.dew", "__dew_preamble_traits.dew", "__dew_preamble_i32.dew",
+    "__dew_preamble_packed.dew", "__dew_numeric_builtins.dew", "__dew_numeric_impls.dew",
+    "__dew_memory_preamble.dew", "__dew_into_builtins.dew", "__dew_into_impls.dew",
+    "__dew_swar_preamble.dew", "__dew_v128_preamble.dew",
+  ]
+  let sources = [
+    standard_preamble_builtins_source(),
+    standard_preamble_traits_source(),
+    standard_preamble_i32_source(),
+    standard_preamble_packed_source(),
+    standard_numeric_builtins_source(),
+    standard_numeric_impls_source(),
+    standard_memory_preamble_source(),
+    standard_into_builtins_source(),
+    standard_into_impls_source(),
+    standard_swar_preamble_source(),
+    standard_v128_preamble_source(),
+  ]
+  for index, source in sources {
+    self.collect_file_events(
+      make_file_id(self.module_id, index),
+      paths[index],
+      source,
+      @parser.parse_bytes(source),
+    )
+  }
   self.preamble_declaration_count = self.next_declaration_local
 }
 
@@ -203,7 +186,12 @@ fn collect_program_files_with_optional_preamble(
     if file.test_only {
       builder.test_files.push(file.id)
     }
-    builder.collect_file_events(file.id, @parser.parse_bytes(file.source))
+    builder.collect_file_events(
+      file.id,
+      file.path,
+      file.source,
+      @parser.parse_bytes(file.source),
+    )
   }
   builder.finish()
 }

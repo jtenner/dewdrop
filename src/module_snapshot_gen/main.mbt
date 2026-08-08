@@ -12,6 +12,13 @@ fn snapshot_error(message : String) -> Unit {
 }
 
 ///|
+fn snapshot_warning(message : String) -> Unit {
+  println("DEW_WARNING")
+  println(message)
+  println("DEW_END")
+}
+
+///|
 fn snapshot_read_file(path : String) -> Bytes {
   @fs.read_file_to_bytes(path) catch {
     error => {
@@ -101,47 +108,20 @@ fn main {
     @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   }
   let mut has_errors = false
-  for diagnostic in program.diagnostics {
-    snapshot_error(@debug.to_string(diagnostic))
-    has_errors = true
-  }
-  for module_ in program.modules {
-    for diagnostic in module_.diagnostics {
-      snapshot_error(@debug.to_string(diagnostic))
-      has_errors = true
+  for
+    diagnostic in @semantic.collect_compiler_source_diagnostics(
+      program, analyzed, lowering, link,
+    ) {
+    let rendered = @semantic.render_compiler_source_diagnostic(
+      program, diagnostic,
+    )
+    match diagnostic.severity {
+      @semantic.CompilerError => {
+        snapshot_error(rendered)
+        has_errors = true
+      }
+      @semantic.CompilerWarning => snapshot_warning(rendered)
     }
-  }
-  for diagnostic in analyzed.frozen.graph.diagnostics {
-    snapshot_error(@debug.to_string(diagnostic))
-    has_errors = true
-  }
-  for diagnostic in analyzed.frozen.import_diagnostics {
-    snapshot_error(@debug.to_string(diagnostic))
-    has_errors = true
-  }
-  for interface_ in analyzed.frozen.interfaces {
-    for diagnostic in interface_.resolved_types.diagnostics {
-      snapshot_error(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-  }
-  for module_ in analyzed.modules {
-    for diagnostic in module_.names.diagnostics {
-      snapshot_error(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-    for diagnostic in module_.inferred.impl_index.diagnostics {
-      snapshot_error(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-    for diagnostic in module_.inferred.diagnostics {
-      snapshot_error(@debug.to_string(diagnostic))
-      has_errors = true
-    }
-  }
-  for diagnostic in link.diagnostics {
-    snapshot_error(@debug.to_string(diagnostic))
-    has_errors = true
   }
   if has_errors {
     @sys.exit(1)

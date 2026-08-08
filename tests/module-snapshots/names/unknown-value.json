@@ -1,6 +1,6 @@
 {
   "errors": [
-    "UnknownValueName(2, 0, 25)"
+    "fixture.dew:2:3: error: UnknownValueName(2, 0, 25)\n  |\n2 |   missing_value\n  |   ^"
   ],
   "warnings": [],
   "output": null

@@ -1,6 +1,6 @@
 {
   "errors": [
-    "AliasCycle({ start: 0, length: 2 }, 0)"
+    "fixture.dew:1:1: error: AliasCycle({ start: 0, length: 2 }, 0)\n  |\n1 | type A = B\n  | ^"
   ],
   "warnings": [],
   "output": null

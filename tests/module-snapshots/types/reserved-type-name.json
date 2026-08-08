@@ -1,7 +1,7 @@
 {
   "errors": [
-    "ReservedTypeName(12884901888000, 0, 0)",
-    "ReservedTypeName(12884901888001, 1, 18)"
+    "fixture.dew:1:1: error: ReservedTypeName(12884901888000, 0, 0)\n  |\n1 | type String = I32\n  | ^",
+    "fixture.dew:2:1: error: ReservedTypeName(12884901888001, 1, 18)\n  |\n2 | struct I32 {}\n  | ^"
   ],
   "warnings": [],
   "output": null

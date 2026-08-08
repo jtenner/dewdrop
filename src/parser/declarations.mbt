@@ -203,6 +203,33 @@ pub enum DeclarationError {
 } derive(Eq, Debug)
 
 ///|
+pub fn DeclarationError::offset(self : DeclarationError) -> UInt64 {
+  match self {
+    ExpectedDeclarationSyntax(_, token) =>
+      match token {
+        Some(value) => value.offset()
+        None => 0UL
+      }
+    DeclarationLexicalError(_, offset)
+    | ImportAfterDeclaration(offset)
+    | ReceiverMustBeFirst(offset)
+    | InvalidReceiverType(_, offset)
+    | UnexpectedTypeCloser(offset)
+    | UnclosedTrait(offset)
+    | UnclosedFunction(offset)
+    | UnclosedImpl(offset)
+    | UnclosedStruct(offset)
+    | UnclosedEnum(offset)
+    | UnclosedTupleVariant(offset)
+    | UnclosedStructVariant(offset)
+    | EmptyTupleVariant(offset)
+    | PublicImplNotAllowed(offset)
+    | ForeignImplRequiresTrait(offset) => offset
+    DeclarationExpressionError(error) => error.offset()
+  }
+}
+
+///|
 fn Parser::declaration_error(
   self : Parser,
   expectation : DeclarationExpectation,

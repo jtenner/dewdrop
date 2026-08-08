@@ -1,8 +1,8 @@
 {
   "errors": [
-    "FunctionReferenceExpectedTypeRequired(0, 0, 300)",
-    "NoMatchingFunctionReference(0, 1, 356)",
-    "AmbiguousFunctionReference(\n  4,\n  2,\n  12884901888002,\n  12884901888003,\n  2,\n  408,\n)"
+    "fixture.dew:7:18: error: FunctionReferenceExpectedTypeRequired(0, 0, 300)\n  |\n7 |   let callback = choose\n  |                  ^",
+    "fixture.dew:11:3: error: NoMatchingFunctionReference(0, 1, 356)\n  |\n11 |   choose\n  |   ^",
+    "fixture.dew:15:3: error: AmbiguousFunctionReference(\n  4,\n  2,\n  12884901888002,\n  12884901888003,\n  2,\n  408,\n)\n  |\n15 |   duplicate\n  |   ^"
   ],
   "warnings": [],
   "output": null

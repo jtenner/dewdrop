@@ -1,6 +1,6 @@
 {
   "errors": [
-    "UnknownType(2, 12884901888000, 19)"
+    "fixture.dew:1:20: error: UnknownType(2, 12884901888000, 19)\n  |\n1 | pub fn main(value: MissingType) -> I32 {\n  |                    ^"
   ],
   "warnings": [],
   "output": null

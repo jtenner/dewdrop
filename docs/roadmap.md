@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 5, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
+> Living roadmap as of August 8, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
 
 ## Current baseline
 
@@ -107,8 +107,8 @@ mode remains available for compiler tests.
 - [x] Execute the complete immutable collection/interface/analysis/lowering/link DAG outside MoonBit test harnesses through `tools/dew`.
 - [x] Add deterministic `--emit hir`, `--emit lowering`, `--emit wat`, and `--emit wasm` outputs.
 - [x] Return deterministic nonzero status for CLI usage, I/O, compilation, linking, validation, emission, empty test filters, and test failures.
-- [ ] Print stable file-aware diagnostics with line/column, excerpts, and secondary labels.
-- [ ] Add initial `compile-pass`, `compile-fail`, and `run-pass` fixture directories.
+- [x] Print stable file-aware diagnostics with manifest-stable paths, byte-based line/column lookup, source excerpts, carets, and secondary labels.
+- [x] Add initial `compile-pass`, `compile-fail`, and `run-pass` fixture directories plus a deterministic CLI fixture runner in `tools/check.sh`.
 
 **Done when:** a checked-in multi-module example can be checked, built, tested,
 and executed from a Dew CLI with deterministic output and diagnostics.
@@ -170,7 +170,7 @@ erased fallback.
 
 - [ ] Expand generated lane tests from smoke coverage to every generated operation family.
 - [ ] Add retained-range, small-inline-string, hashing, ordering, and UTF-8 scalar-iteration measurements before extending the text ABI.
-- [ ] Add source provenance to every HIR node needed for user-facing diagnostics.
+- [x] Add source provenance to every HIR node needed for user-facing diagnostics.
 - [ ] Define explicit compiler resource budgets and diagnostic behavior before the later fuzzing phase. Deterministic static Wasm/WAT size, section/entity, adapter, materialized-specialization, call, allocation-site, cast/test, and local-access metrics now gate closure, mutable-cell, generic-adapter, recursive-helper, and imported-package workloads.
 - [ ] Track compile time, validation/encoding time, runtime time, allocations, and peak memory separately; static instruction-site budgets are implemented, while timing and peak-memory workloads remain.
 - [x] Re-run Wago Core 3 compatibility checks for `array<mut v128>`, erased generic enums, Dew text search, all compiler snapshots, and WASI host callbacks; the standalone CLI now supports explicit `--core 3` activation.
@@ -185,13 +185,13 @@ erased fallback.
 - [x] Add `SourceLocation(FileId, offset)`.
 - [x] Retain declaration and body file provenance.
 - [x] Retain file identity in parse and duplicate-name diagnostics.
-- [ ] Retain file identity for every HIR expression, pattern, block, arm, field, and type syntax node where needed.
-- [ ] Replace offset-only semantic diagnostics with source locations or body-relative provenance.
-- [ ] Add stable line/column lookup per file.
-- [ ] Add source excerpts and caret rendering.
-- [ ] Support secondary labels for duplicate declarations, type mismatches, and impl conflicts.
-- [ ] Preserve diagnostics after parser token eviction.
-- [ ] Sort diagnostics by module, file order, byte offset, and deterministic rank.
+- [x] Retain file identity for every HIR expression, pattern, block, arm, field, lambda parameter, and type-syntax node needed by diagnostics.
+- [x] Associate offset-bearing semantic diagnostics with stable source locations or their owning body/lambda provenance at the reporting boundary.
+- [x] Add stable byte-offset-to-line/column lookup per retained source file.
+- [x] Add source excerpts and caret rendering.
+- [x] Support secondary labels for duplicate declarations/fields/tests, return-type mismatches, implementation conflicts, and cross-file cycles.
+- [x] Preserve source-backed diagnostics after parser-token eviction by retaining immutable file path/source records independently of tokens.
+- [x] Sort diagnostics by module order, manifest file order, byte offset, and deterministic rank.
 
 ### Multi-file behavior
 
@@ -743,7 +743,7 @@ review.
 - [x] Store ordered compiler errors, ordered compiler warnings, and ordered stdout strings in fixture JSON.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
-- [ ] Compare ordered compiler warnings through the same JSON oracle once warnings exist.
+- [x] Compare ordered, source-rendered compiler warnings through the same JSON oracle; the empty-warning baseline remains contractual until warning producers land.
 - [x] Establish broad feature-oriented coverage with 216 fixtures: 184 compiled WAT/runtime snapshots and 32 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
@@ -761,9 +761,9 @@ review.
 
 ### Integration and conformance
 
-- [ ] Create `tests/compile-pass`.
-- [ ] Create `tests/compile-fail` with expected diagnostics.
-- [ ] Create `tests/run-pass` with expected output/results.
+- [x] Create `tests/compile-pass` and run it through the CLI fixture harness.
+- [x] Create `tests/compile-fail` with exact rendered diagnostics.
+- [x] Create `tests/run-pass` with exact runtime output/results.
 - [ ] Add multi-module fixtures.
 - [x] Add direct standard-library conformance tests for the implemented surface.
 - [x] Compare independent host expectations with Wasm execution through UTF, SWAR, and WASI differential harnesses.

@@ -1,9 +1,9 @@
 {
   "errors": [
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"129i8\"), 27)),\n  },\n)",
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"256u8\"), 62)),\n  },\n)",
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"65536u16\"), 99)),\n  },\n)",
-    "ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"4294967296u32\"), 139)),\n  },\n)"
+    "fixture.dew:2:4: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"129i8\"), 27)),\n  },\n)\n  |\n2 |   -129i8\n  |    ^",
+    "fixture.dew:6:3: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"256u8\"), 62)),\n  },\n)\n  |\n6 |   256u8\n  |   ^",
+    "fixture.dew:10:3: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"65536u16\"), 99)),\n  },\n)\n  |\n10 |   65536u16\n  |   ^",
+    "fixture.dew:14:3: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(LexicalError(InvalidInteger(\"4294967296u32\"), 139)),\n  },\n)\n  |\n14 |   4294967296u32\n  |   ^"
   ],
   "warnings": [],
   "output": null

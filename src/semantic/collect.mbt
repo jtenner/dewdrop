@@ -5,6 +5,8 @@ priv struct CollectionBuilder {
   mut current_file_test_only : Bool
   mut preamble_declaration_count : Int
   files : Array[FileId]
+  file_paths : Array[String]
+  file_sources : Array[Bytes]
   test_files : Array[FileId]
   declaration_files : Array[FileId]
   body_files : Array[FileId]
@@ -26,6 +28,7 @@ priv struct CollectionBuilder {
   aliases : Array[CollectedAlias]
   impls : Array[CollectedImpl]
   type_syntax : Array[HirTypeSyntax]
+  type_syntax_files : Array[FileId]
   type_arguments : Array[HirTypeId]
   type_source_scratch : Array[@parser.TypeExpr]
   type_state_scratch : Array[Int]
@@ -33,6 +36,7 @@ priv struct CollectionBuilder {
   type_result_scratch : Array[HirTypeId]
   type_list_scratch : Array[HirTypeId]
   lambda_parameters : Array[HirLambdaParameter]
+  lambda_parameter_files : Array[FileId]
   lambdas : Array[HirLambda]
   lambda_sources : Array[@parser.Block]
   lambda_parameter_spans : Array[HirSpan]
@@ -46,14 +50,21 @@ priv struct CollectionBuilder {
   bodies : Array[HirBody]
   body_by_declaration : Array[Int]
   expressions : Array[HirExpr]
+  expression_files : Array[FileId]
   expression_children : Array[ExprId]
   blocks : Array[HirBlock]
+  block_files : Array[FileId]
   block_items : Array[HirBlockItem]
+  block_item_files : Array[FileId]
   object_fields : Array[HirObjectField]
+  object_field_files : Array[FileId]
   patterns : Array[HirPattern]
+  pattern_files : Array[FileId]
   pattern_children : Array[PatternId]
   pattern_fields : Array[HirPatternField]
+  pattern_field_files : Array[FileId]
   pattern_arms : Array[HirPatternArm]
+  pattern_arm_files : Array[FileId]
   arm_children : Array[PatternArmId]
   body_task_kinds : Array[Int]
   body_task_sources : Array[Int]
@@ -87,6 +98,8 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     current_file_test_only: false,
     preamble_declaration_count: 0,
     files: [],
+    file_paths: [],
+    file_sources: [],
     test_files: [],
     declaration_files: [],
     body_files: [],
@@ -108,6 +121,7 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     aliases: [],
     impls: [],
     type_syntax: [],
+    type_syntax_files: [],
     type_arguments: [],
     type_source_scratch: [],
     type_state_scratch: [],
@@ -115,6 +129,7 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     type_result_scratch: [],
     type_list_scratch: [],
     lambda_parameters: [],
+    lambda_parameter_files: [],
     lambdas: [],
     lambda_sources: [],
     lambda_parameter_spans: [],
@@ -128,14 +143,21 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     bodies: [],
     body_by_declaration: [],
     expressions: [],
+    expression_files: [],
     expression_children: [],
     blocks: [],
+    block_files: [],
     block_items: [],
+    block_item_files: [],
     object_fields: [],
+    object_field_files: [],
     patterns: [],
+    pattern_files: [],
     pattern_children: [],
     pattern_fields: [],
+    pattern_field_files: [],
     pattern_arms: [],
+    pattern_arm_files: [],
     arm_children: [],
     body_task_kinds: [],
     body_task_sources: [],
@@ -1054,6 +1076,8 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     module_id: self.module_id,
     preamble_declaration_count: self.preamble_declaration_count,
     files: self.files,
+    file_paths: self.file_paths,
+    file_sources: self.file_sources,
     test_files: self.test_files,
     declaration_files: self.declaration_files,
     body_files: self.body_files,
@@ -1075,20 +1099,29 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     aliases: self.aliases,
     impls: self.impls,
     type_syntax: self.type_syntax,
+    type_syntax_files: self.type_syntax_files,
     type_arguments: self.type_arguments,
     lambda_parameters: self.lambda_parameters,
+    lambda_parameter_files: self.lambda_parameter_files,
     lambdas: self.lambdas,
     bodies: self.bodies,
     body_by_declaration: self.body_by_declaration,
     expressions: self.expressions,
+    expression_files: self.expression_files,
     expression_children: self.expression_children,
     blocks: self.blocks,
+    block_files: self.block_files,
     block_items: self.block_items,
+    block_item_files: self.block_item_files,
     object_fields: self.object_fields,
+    object_field_files: self.object_field_files,
     patterns: self.patterns,
+    pattern_files: self.pattern_files,
     pattern_children: self.pattern_children,
     pattern_fields: self.pattern_fields,
+    pattern_field_files: self.pattern_field_files,
     pattern_arms: self.pattern_arms,
+    pattern_arm_files: self.pattern_arm_files,
     arm_children: self.arm_children,
     diagnostics: self.diagnostics,
     name_lookup: self.name_lookup,
@@ -1105,6 +1138,8 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
 fn CollectionBuilder::collect_file_events(
   self : CollectionBuilder,
   file : FileId,
+  path : String,
+  source : Bytes,
   events : Iter[@parser.ParseEvent],
 ) -> Unit {
   guard file_id_module(file) == self.module_id else {
@@ -1112,6 +1147,8 @@ fn CollectionBuilder::collect_file_events(
   }
   self.current_file = file
   self.files.push(file)
+  self.file_paths.push(path)
+  self.file_sources.push(source)
   while events.next() is Some(event) {
     match event {
       @parser.Declaration(declaration) => self.collect_declaration(declaration)
@@ -1127,7 +1164,7 @@ pub fn collect_module(
   events : Iter[@parser.ParseEvent],
 ) -> CollectedModule {
   let builder = CollectionBuilder::new(module_id)
-  builder.collect_file_events(make_file_id(module_id, 0), events)
+  builder.collect_file_events(make_file_id(module_id, 0), "", b"", events)
   builder.finish()
 }
 
@@ -1145,5 +1182,12 @@ pub fn collect_tokens(
 /// Tokenizes, parses, and collects one module without materializing the full
 /// parse-event stream.
 pub fn collect_bytes(module_id : ModuleId, source : Bytes) -> CollectedModule {
-  collect_module(module_id, @parser.parse_bytes(source))
+  let builder = CollectionBuilder::new(module_id)
+  builder.collect_file_events(
+    make_file_id(module_id, 0),
+    "",
+    source,
+    @parser.parse_bytes(source),
+  )
+  builder.finish()
 }

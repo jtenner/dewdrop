@@ -43,7 +43,7 @@ A failed compilation has compiler errors and no output module:
 ```json
 {
   "errors": [
-    "NumericLiteralOutOfRange(11872, I8Type, 24)"
+    "fixture.dew:2:3: error: NumericLiteralOutOfRange(0, I8Type, 24)\n  |\n2 |   128i8\n  |   ^"
   ],
   "warnings": [],
   "output": null
@@ -62,11 +62,12 @@ The return value of `main` is ignored. Fixtures that need an observable runtime
 result write it to stdout. For example, `text/concat` writes the concatenated
 string and verifies the exact text in its JSON output array.
 
-Compiler diagnostics use deterministic MoonBit `Debug` representations. Failed
-fixtures compile twice and must produce identical ordered diagnostics. Successful
-fixtures compile twice, must produce byte-identical Wasm, execute in both Node
-and Wago, produce identical normalized stdout/traps in both runtimes, and compare
-their sibling WAT.
+Compiler diagnostics use deterministic file-aware rendering around the current
+semantic `Debug` message: logical path, byte line/column, source excerpt, caret,
+and any secondary labels are contractual. Failed fixtures compile twice and must
+produce identical ordered diagnostics. Successful fixtures compile twice, must
+produce byte-identical Wasm, execute in both Node and Wago, produce identical
+normalized stdout/traps in both runtimes, and compare their sibling WAT.
 
 The Node and Wago fixture hosts provide equivalent bounded deterministic Preview
 1 `fd_write`/`fd_read` implementations. Writes to file descriptor 1 are
@@ -96,7 +97,8 @@ Supported fields are `stdin_hex`, `write_limit`, `read_limit`, `write_errno`,
 host manifest is required.
 
 Compiler diagnostics use a framed `DEW_ERROR`/`DEW_WARNING`/`DEW_END` protocol,
-so multiline deterministic `Debug` values are preserved as one JSON string.
+so multiline source-rendered values are preserved as one JSON string. Error and
+warning arrays are both compared in deterministic source order.
 
 ## Additional source conventions
 
