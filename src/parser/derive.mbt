@@ -120,17 +120,41 @@ fn derived_enum_eq_expression(
 }
 
 ///|
+fn derived_eq_type_parameters(
+  parameters : Array[TypeParameter],
+  offset : UInt64,
+) -> Array[TypeParameter] {
+  let result : Array[TypeParameter] = []
+  for parameter in parameters {
+    let bounds = parameter.bounds.copy()
+    let mut has_eq = false
+    for bound in bounds {
+      match bound {
+        NamedType("Eq", _) => has_eq = true
+        _ => ()
+      }
+    }
+    if !has_eq {
+      bounds.push(NamedType("Eq", offset))
+    }
+    result.push({ ..parameter, bounds, })
+  }
+  result
+}
+
+///|
 fn derived_comparison_impl(
   name : String,
+  parameters : Array[TypeParameter],
   trait_name : String,
   method_name : String,
   expression : Expr,
   offset : UInt64,
 ) -> ImplDeclaration {
-  let target = NamedType(name, offset)
+  let target = derived_nominal_type(name, parameters, offset)
   {
     foreign_: false,
-    type_parameters: [],
+    type_parameters: derived_eq_type_parameters(parameters, offset),
     trait_type: Some(NamedType(trait_name, offset)),
     target_type: target,
     methods: [
@@ -153,13 +177,15 @@ fn derived_comparison_impl(
 ///|
 fn derived_eq_impls(
   name : String,
+  parameters : Array[TypeParameter],
   expression : Expr,
   offset : UInt64,
 ) -> Array[ImplDeclaration] {
   [
-    derived_comparison_impl(name, "Eq", "eq", expression, offset),
+    derived_comparison_impl(name, parameters, "Eq", "eq", expression, offset),
     derived_comparison_impl(
       name,
+      parameters,
       "Ne",
       "ne",
       PrefixExpr(
@@ -513,6 +539,7 @@ pub fn derived_struct_eq_impls(
 ) -> Array[ImplDeclaration] {
   derived_eq_impls(
     value.name,
+    value.type_parameters,
     derived_struct_eq_expression(value.fields, offset),
     offset,
   )
@@ -525,6 +552,7 @@ pub fn derived_enum_eq_impls(
 ) -> Array[ImplDeclaration] {
   derived_eq_impls(
     value.name,
+    value.type_parameters,
     derived_enum_eq_expression(value.name, value.variants, offset),
     offset,
   )

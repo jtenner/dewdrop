@@ -65,15 +65,15 @@ prerequisite traversal at 64 levels. An implementation such as
 A 256-call release-native inference benchmark measured after evidence freezing:
 
 ```text
-unbounded generic calls       335.76 us
-one frozen bound per call     438.09 us
-recursive two-node evidence   655.63 us
+unbounded generic calls       324.95 us
+one frozen bound per call     452.58 us
+recursive two-node evidence   701.40 us
 ```
 
-The same-run deltas are approximately 0.40 us per direct evidence node and an
-additional 0.85 us per call for a generic implementation plus its prerequisite.
-The recursive workload freezes 512 evidence nodes, 256 child edges, and 256
-owner-carrier arguments. Empty-bound callables and implementations retain
+The same-run direct-bound delta is approximately 0.50 us per call. The
+recursive workload freezes 512 evidence nodes, 256 child edges, and 256
+owner-carrier arguments and costs approximately 1.47 us more per call than the
+unbounded workload. Empty-bound callables and implementations retain
 no-evidence fast paths. These measurements are development observations rather
 than regression budgets.
 
@@ -99,8 +99,8 @@ expression kinds rather than converting trait requirements into ordinary direct
 calls. This keeps signature-only trait declarations out of executable function
 selection until evidence propagation resolves them.
 
-A 256-operator release-native benchmark measured 299.69 us for concrete
-implementation selection and 213.68 us for direct symbolic-bound selection. The
+A 256-operator release-native benchmark measured 328.97 us for concrete
+implementation selection and 233.32 us for direct symbolic-bound selection. The
 symbolic path avoids implementation-bucket enumeration and candidate rollback;
 these are development observations rather than regression budgets.
 
@@ -121,13 +121,35 @@ backend-neutral lowering carries the frozen arenas unchanged. Generic-free
 bodies allocate no per-body evidence-span table until evidence is actually
 selected.
 
-## Current boundary
+## Executable static evidence
 
-Specialization identity and transitive materialization do not yet consume the
-frozen evidence forests. Symbolic planned calls therefore are not emitted until
-concrete evidence is propagated through specialization or dictionaries. Public
-interface fingerprints do not yet claim a stable generic-bound ABI. That is the
-next obligation-solving step.
+Closed generic calls now resolve every caller-bound node against the enclosing
+specialization and copy the resulting concrete forest into the callee
+specialization. Specialization identity includes canonical physical carriers,
+implementation identities, owner carriers, and ordered prerequisite trees.
+Consequently two source types sharing one Wasm carrier—for example `I32` and
+`U32`—materialize distinct specializations when they select different evidence,
+while calls with identical carrier and evidence still coalesce.
+
+The linker records an exact target for each call expression in each caller
+specialization. Symbolic method and operator expressions use their bound slot to
+select a concrete implementation node, map the trait requirement to that
+implementation's ordinary method, pass the node's owner carriers as method
+specialization arguments, and forward its prerequisite children as the method's
+own evidence roots. Signature-only trait requirements therefore never become
+executable direct calls. Reachability roots the selected implementation methods
+before fragment planning.
+
+A release-native link benchmark with 256 alternating calls, two source types
+sharing the `i32` carrier, two evidence-distinct `forward` specializations, and
+two evidence-distinct transitive `read` specializations measured 1.41 ms ±
+30.20 us. The executable runtime fixture is 327 WAT lines and 8,247 bytes; the
+nested bounded-generic derived-Eq fixture is 829 lines and 21,154 bytes. These
+are development observations rather than regression budgets.
+
+Dynamic trait values, escaping bounded generic function references, and other
+open-world boundaries still require a dictionary/trait-object ABI. Public
+interface fingerprints do not yet claim a stable dynamic generic-bound ABI.
 
 ## Validation
 
@@ -139,5 +161,7 @@ checking; local, transitive, operator, and imported generic-implementation
 prerequisites; symbolic generic-body operators, methods, applied trait arguments,
 implementation-owner bounds, nested obligations, recursive concrete evidence,
 caller-bound evidence, imported evidence, owner carrier/generic arguments,
-deterministic body-job rebasing, and lowering retention; marker traits; and
-exact applied-trait argument matching.
+deterministic body-job rebasing, lowering retention, evidence-distinct
+same-carrier specialization, transitive caller-bound forwarding, concrete
+symbolic-call resolution, and bounded generic derived equality; marker traits;
+and exact applied-trait argument matching.

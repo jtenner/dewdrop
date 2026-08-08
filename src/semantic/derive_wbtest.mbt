@@ -72,11 +72,11 @@ test "derive Debug supplies ambient debug call evidence" {
 }
 
 ///|
-test "derive diagnostics reject unknown duplicate and unbounded generic requests" {
+test "derive diagnostics reject unknown and duplicate requests while accepting generics" {
   let collected = collect_bytes(
     2701UL, b"struct Unknown {} derive(Display)\nstruct Duplicate {} derive(Eq, Eq)\nstruct Generic<t> {\n  value: t\n} derive(Eq)\n",
   )
-  assert_eq(collected.diagnostics.length(), 3)
+  assert_eq(collected.diagnostics.length(), 2)
   match collected.diagnostics[0] {
     UnknownDerivedTrait("Display", _, _) => ()
     _ => fail("expected unknown derived trait")
@@ -88,8 +88,9 @@ test "derive diagnostics reject unknown duplicate and unbounded generic requests
     }
     _ => fail("expected duplicate derived trait")
   }
-  match collected.diagnostics[2] {
-    GenericDeriveRequiresBounds("Eq", _, _) => ()
-    _ => fail("expected generic derive bound diagnostic")
-  }
+  assert_eq(collected.impls.length(), 4)
+  let generic_eq = collected.impls[2]
+  let parameters = collected.generic_parameters_of(generic_eq.declaration)
+  assert_eq(parameters.length, 1)
+  assert_eq(collected.generic_parameters[parameters.start].bounds.length, 1)
 }

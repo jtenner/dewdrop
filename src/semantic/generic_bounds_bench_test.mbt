@@ -130,3 +130,43 @@ test "bench recursive generic evidence trees n=256" (it : @bench.T) {
     it.keep(inferred.trait_evidence.length())
   })
 }
+
+///|
+fn executable_generic_evidence_benchmark_source(call_count : Int) -> Bytes {
+  let output = Buffer(size_hint=call_count * 30 + 768)
+  output.write_string_utf8(
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Value for U32 {\n  fn value(self) -> I32 {\n    2\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\nfn forward<t: Value>(value: t) -> I32 {\n  read(value)\n}\npub fn run() -> I32 {\n",
+  )
+  for index in 0..<call_count {
+    output.write_string_utf8("  let value_")
+    output.write_string_utf8(index.to_string())
+    if index % 2 == 0 {
+      output.write_string_utf8(" = forward(0)\n")
+    } else {
+      output.write_string_utf8(" = forward(0u32)\n")
+    }
+  }
+  output.write_string_utf8("  value_0\n}\n")
+  output.to_bytes()
+}
+
+///|
+test "bench executable generic evidence specialization n=256" (it : @bench.T) {
+  let program = collect_program_manifest(
+    2735UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.evidence", [
+        ManifestFile::new(
+          "evidence.dew",
+          executable_generic_evidence_benchmark_source(256),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  it.bench(fn() {
+    let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+    it.keep(link.materialized_specialization_count())
+  })
+}

@@ -144,7 +144,7 @@ direct typed references.
 
 ### 7. Define the executable generic ABI
 
-- [ ] Propagate selected executable evidence for parsed generic bounds through specialization; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, local/imported call checking, generic-body symbolic selection, recursive per-call evidence freezing, generic-implementation prerequisite checking, and cache V10 round trips are implemented.
+- [x] Propagate selected executable evidence for parsed generic bounds through closed-call specialization; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, local/imported call checking, generic-body symbolic selection, recursive per-call evidence freezing, evidence-aware specialization identity, generic-implementation prerequisite checking, and cache V10 round trips are implemented. Dynamic trait boundaries still require dictionaries.
 - [x] Solve call-site and generic-implementation prerequisite obligations using local and imported coherent evidence.
 - [x] Define shared physical-carrier specializations and one nullable-`eqref` fallback for each public generic exported by the root module.
 - [x] Emit exact-reference-to-erased callable adapters only when an escaping generic reference's concrete signature differs from its `eqref` fallback.
@@ -238,7 +238,7 @@ erased fallback.
 
 - [ ] Define `#annotation(...)` syntax with compile-time constant parameters, including the permitted constant types, name resolution, validation, retention, and interface serialization rules.
 - [ ] Expose frozen annotations to compiler features and future tooling without making runtime reflection ambient.
-- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic `derive(Eq)` and `derive(Debug)` expansion through ordinary coherent implementations; non-generic Debug recursively streams source-ordered fields/payloads and Bool/fixed-width integers through ambient `debug(value)`, while generic value evidence, typed lane formats, recursion limits, non-WASI behavior, `Show`, `Hash`, visibility, and cross-module ABI behavior remain.
+- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic `derive(Eq)` and `derive(Debug)` expansion through ordinary coherent implementations; bounded generic Eq executes through evidence-aware specialization, and non-generic Debug recursively streams source-ordered fields/payloads and Bool/fixed-width integers through ambient `debug(value)`, while generic Debug generation, typed lane formats, recursion limits, non-WASI behavior, `Show`, `Hash`, visibility, and cross-module ABI behavior remain.
 - [ ] Specify conflicts between derived and handwritten implementations and prevent generated evidence from bypassing coherence or orphan rules.
 
 ### Remaining generic work
@@ -248,6 +248,7 @@ erased fallback.
 - [x] Enforce local and imported generic-implementation prerequisites when selecting coherent evidence.
 - [x] Make generic bodies consume their declared symbolic evidence for operator and method selection.
 - [x] Freeze selected evidence per generic call.
+- [x] Resolve caller-bound evidence, include it in specialization identity, and execute symbolic method/operator calls through concrete implementation methods.
 - [ ] Define method-level generic syntax and shadowing.
 - [ ] Define explicit call-site type-argument syntax.
 - [ ] Improve ordinary overload specificity from generic-count tiers to structural containment.

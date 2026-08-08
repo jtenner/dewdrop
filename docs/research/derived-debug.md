@@ -38,7 +38,7 @@ Derived output is deterministic and streaming:
 - output goes to file descriptor 1 through bounded WASI writes;
 - both the trait method and ambient `debug(value)` return `Unit`; internal byte counts are consumed at the preamble boundary.
 
-Generic derived nominals remain shape-only (`Wrapper { value }`) until the now-frozen symbolic/concrete evidence trees are propagated through specialization or dictionaries. Typed lane formats, recursion limits, and non-WASI behavior remain follow-up work.
+Closed-call specialization now executes frozen symbolic/concrete evidence trees, including generic implementation prerequisites and symbolic method/operator calls. Generic derived Debug remains shape-only (`Wrapper { value }`) only because its parser-owned expansion still emits shape text instead of recursive field/payload calls; it can now be upgraded on the same static evidence path. Typed lane formats, recursion limits, dynamic dictionary boundaries, and non-WASI behavior remain follow-up work.
 
 ## Generic method specialization fix
 

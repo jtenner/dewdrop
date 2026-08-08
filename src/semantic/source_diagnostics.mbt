@@ -238,8 +238,7 @@ fn CollectionDiagnostic::source_parts(
     InvalidExpectedTestTrap(file, _, offset)
     | InvalidUtf8StringLiteral(file, offset)
     | TestDeclarationOutsideTestFile(file, offset)
-    | UnknownDerivedTrait(_, file, offset)
-    | GenericDeriveRequiresBounds(_, file, offset) =>
+    | UnknownDerivedTrait(_, file, offset) =>
       (CompilerError, Some({ file, offset }), secondary)
   }
 }

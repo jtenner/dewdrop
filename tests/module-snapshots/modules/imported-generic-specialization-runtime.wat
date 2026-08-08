@@ -1,7 +1,7 @@
 (module
   (type (;0;) (func (param i32 eqref eqref) (result eqref)))
-  (type (;1;) (func (param i32 i64 i64) (result i64)))
-  (type (;2;) (func (param i32 i32 i32) (result i32)))
+  (type (;1;) (func (param i32 i32 i32) (result i32)))
+  (type (;2;) (func (param i32 i64 i64) (result i64)))
   (type (;3;) (sub (struct (field funcref))))
   (type (;4;) (func (param i32 i64 i64) (result i64)))
   (type (;5;) (func (param eqref i32 i64 i64) (result i64)))
@@ -17,18 +17,18 @@
   (global (;0;) (mut eqref) ref.null eq)
   (export "main" (func 3))
   (export "__dew_init" (func 4))
-  (elem (;0;) declare func 0)
-  (func (;0;) (type 1) (param i32 i64 i64) (result i64)
+  (elem (;0;) declare func 1)
+  (func (;0;) (type 1) (param i32 i32 i32) (result i32)
     local.get 0
-    if (result i64) ;; label = @1
+    if (result i32) ;; label = @1
       local.get 1
     else
       local.get 2
     end
   )
-  (func (;1;) (type 2) (param i32 i32 i32) (result i32)
+  (func (;1;) (type 2) (param i32 i64 i64) (result i64)
     local.get 0
-    if (result i32) ;; label = @1
+    if (result i64) ;; label = @1
       local.get 1
     else
       local.get 2
@@ -42,7 +42,7 @@
     i32.const 1
     i32.const 42
     i32.const 7
-    call 1
+    call 0
     i32.const 42
     i32.eq
     v128.const i32x4 0x6f706d69 0x64657472 0x6e656720 0x63697265
@@ -100,7 +100,7 @@
     end
   )
   (func (;4;) (type 8)
-    ref.func 0
+    ref.func 1
     struct.new 3
     global.set 0
   )

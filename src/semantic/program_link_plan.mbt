@@ -13,6 +13,15 @@ pub enum ProgramWasmGCLinkDiagnostic {
 } derive(Eq, Debug)
 
 ///|
+pub struct PlannedProgramSpecializedCall {
+  caller_body : BodyId
+  caller_specialization_abi_key : String
+  expression : ExprId
+  target : DeclId
+  target_specialization_abi_key : String
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramWasmFunction {
   declaration : DeclId
   lambda : LambdaId
@@ -31,6 +40,7 @@ pub struct PlannedProgramWasmFunction {
   parameters : HirSpan
   results : HirSpan
   specialization_shapes : HirSpan
+  specialization_evidence : HirSpan
   specialization_abi_key : String
   erased_adapter_target : Int
   offset : UInt64
@@ -47,6 +57,7 @@ pub struct PlannedProgramWasmGCFragments {
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
   external_type_references : Array[PlannedProgramExternalTypeReference]
+  specialized_calls : Array[PlannedProgramSpecializedCall]
 }
 
 ///|
@@ -110,6 +121,7 @@ pub struct PlannedProgramWasmGCLink {
   program_physical_types : Array[PlannedProgramWasmPhysicalType]
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
+  specialized_call_lookup : Map[String, Int]
   initializers : Array[PlannedProgramModuleInitializer]
   global_lookup : Map[DeclId, Int]
   function_reference_singletons : Array[
@@ -124,6 +136,31 @@ pub struct PlannedProgramWasmGCLink {
   imported_function_count : Int
   defined_function_count : Int
   diagnostics : Array[ProgramWasmGCLinkDiagnostic]
+}
+
+///|
+fn program_specialized_call_key(
+  body : BodyId,
+  specialization_abi_key : String,
+  expression : ExprId,
+) -> String {
+  body.to_string() + ":" + specialization_abi_key + ":" + expression.to_string()
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::specialized_call_function(
+  self : PlannedProgramWasmGCLink,
+  body : BodyId,
+  specialization_abi_key : String,
+  expression : ExprId,
+) -> PlannedProgramWasmFunction? {
+  match
+    self.specialized_call_lookup.get(
+      program_specialized_call_key(body, specialization_abi_key, expression),
+    ) {
+    Some(index) => Some(self.functions[index])
+    None => None
+  }
 }
 
 ///|
@@ -566,10 +603,11 @@ fn program_link_validate_calls(
   modules : Array[PlannedModuleWasmGCFragments],
   functions : Array[PlannedProgramWasmFunction],
   lookup : Map[DeclId, Int],
+  specialized_calls : Array[PlannedProgramSpecializedCall],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
   for module_ in lowering.modules {
-    for expression in module_.expressions {
+    for expression_index, expression in module_.expressions {
       let (target, type_arguments) = match expression.kind {
         PlannedDirectCall(declaration, _, _, type_arguments)
         | PlannedOperatorCall(declaration, _, _, _, type_arguments)
@@ -585,6 +623,14 @@ fn program_link_validate_calls(
           let callable = owner.functions.callable_of(target).unwrap()
           if program_callable_generic_parameters(callable).length > 0 {
             let mut specialized = false
+            for call in specialized_calls {
+              if semantic_id_module(call.caller_body) == module_.module_id &&
+                call.expression == expression_index &&
+                call.target == target {
+                specialized = true
+                break
+              }
+            }
             for candidate in functions {
               if candidate.declaration == target &&
                 candidate.specialization_shapes.length > 0 &&
@@ -599,13 +645,24 @@ fn program_link_validate_calls(
               }
             }
             if !specialized {
-              diagnostics.push(
-                UnsupportedProgramGenericCall(
-                  module_.module_id,
-                  target,
-                  expression.offset,
-                ),
-              )
+              let mut symbolic_source = false
+              for index in 0..<type_arguments.length {
+                match
+                  module_.call_type_argument_shapes[type_arguments.start + index] {
+                  GenericPlannedValueShape | ErrorPlannedValueShape =>
+                    symbolic_source = true
+                  _ => ()
+                }
+              }
+              if !symbolic_source {
+                diagnostics.push(
+                  UnsupportedProgramGenericCall(
+                    module_.module_id,
+                    target,
+                    expression.offset,
+                  ),
+                )
+              }
             }
           }
         }
@@ -746,6 +803,29 @@ fn program_reachable_callable_roots(
         (!callable.is_test || emit_tests) {
         reachable[callable.declaration] = true
         work.push(callable.declaration)
+      }
+    }
+  }
+  for module_ in lowering.modules {
+    for evidence in module_.trait_evidence {
+      let implementation = match evidence.kind {
+        ConcreteInferredTraitEvidence(implementation, _) => implementation
+        BoundInferredTraitEvidence(_) => continue
+      }
+      let owner_index = match
+        module_lookup.get(semantic_id_module(implementation)) {
+        Some(value) => value
+        None => continue
+      }
+      for callable in lowering.modules[owner_index].functions.callables {
+        match callable.kind {
+          PlannedImplMethodCallable(owner, _) if owner == implementation =>
+            if !reachable.contains(callable.declaration) {
+              reachable[callable.declaration] = true
+              work.push(callable.declaration)
+            }
+          _ => ()
+        }
       }
     }
   }
@@ -1046,6 +1126,19 @@ fn program_reachable_callable_roots(
 }
 
 ///|
+priv struct ProgramTraitEvidenceRequest {
+  roots : Array[Int]
+  evidence : Array[PlannedSpecializationTraitEvidence]
+  children : Array[Int]
+  arguments : Array[PlannedValueShape]
+}
+
+///|
+fn empty_program_trait_evidence_request() -> ProgramTraitEvidenceRequest {
+  { roots: [], evidence: [], children: [], arguments: [] }
+}
+
+///|
 fn program_canonical_specialization_shape(
   shape : PlannedValueShape,
 ) -> PlannedValueShape {
@@ -1081,12 +1174,57 @@ fn program_specialization_shape_name(shape : PlannedValueShape) -> String {
 }
 
 ///|
+fn write_program_trait_evidence_key(
+  output : Buffer,
+  request : ProgramTraitEvidenceRequest,
+  node : Int,
+) -> Unit {
+  guard node >= 0 && node < request.evidence.length() else {
+    output.write_string_utf8("invalid")
+    return
+  }
+  let evidence = request.evidence[node]
+  match evidence.kind {
+    PlannedConcreteTraitEvidence(implementation, arguments) => {
+      output.write_string_utf8(implementation.to_string())
+      output.write_string_utf8("<")
+      for index in 0..<arguments.length {
+        if index > 0 {
+          output.write_string_utf8(",")
+        }
+        output.write_string_utf8(
+          program_specialization_shape_name(
+            request.arguments[arguments.start + index],
+          ),
+        )
+      }
+      output.write_string_utf8(">")
+    }
+  }
+  output.write_string_utf8("[")
+  for index in 0..<evidence.prerequisites.length {
+    if index > 0 {
+      output.write_string_utf8(",")
+    }
+    write_program_trait_evidence_key(
+      output,
+      request,
+      request.children[evidence.prerequisites.start + index],
+    )
+  }
+  output.write_string_utf8("]")
+}
+
+///|
 fn program_specialization_abi_key(
   declaration : DeclId,
   shapes : Array[PlannedValueShape],
   span : HirSpan,
+  evidence : ProgramTraitEvidenceRequest,
 ) -> String {
-  let output = Buffer(size_hint=32 + span.length * 8)
+  let output = Buffer(
+    size_hint=32 + span.length * 8 + evidence.evidence.length() * 24,
+  )
   output.write_string_utf8(declaration.to_string())
   output.write_string_utf8(":")
   for index in 0..<span.length {
@@ -1096,6 +1234,15 @@ fn program_specialization_abi_key(
     output.write_string_utf8(
       program_specialization_shape_name(shapes[span.start + index]),
     )
+  }
+  if evidence.roots.length() > 0 {
+    output.write_string_utf8("|e=")
+    for index, root in evidence.roots {
+      if index > 0 {
+        output.write_string_utf8(";")
+      }
+      write_program_trait_evidence_key(output, evidence, root)
+    }
   }
   @utf8.decode_lossy(output.to_bytes())
 }
@@ -1211,6 +1358,191 @@ fn program_resolve_specialized_shape(
 }
 
 ///|
+fn copy_program_specialization_evidence_node(
+  source : PlannedModuleWasmGCFragments,
+  source_node : Int,
+  request : ProgramTraitEvidenceRequest,
+) -> Int {
+  guard source_node >= 0 &&
+    source_node < source.specialization_trait_evidence.length() else {
+    return -1
+  }
+  let source_evidence = source.specialization_trait_evidence[source_node]
+  let kind = match source_evidence.kind {
+    PlannedConcreteTraitEvidence(implementation, arguments) => {
+      let argument_start = request.arguments.length()
+      for index in 0..<arguments.length {
+        request.arguments.push(
+          source.specialization_evidence_arguments[arguments.start + index],
+        )
+      }
+      PlannedConcreteTraitEvidence(implementation, {
+        start: argument_start,
+        length: arguments.length,
+      })
+    }
+  }
+  let child_start = request.children.length()
+  for index in 0..<source_evidence.prerequisites.length {
+    let child = copy_program_specialization_evidence_node(
+      source,
+      source.specialization_evidence_children[source_evidence.prerequisites.start +
+      index],
+      request,
+    )
+    if child < 0 {
+      return -1
+    }
+    request.children.push(child)
+  }
+  let node = request.evidence.length()
+  request.evidence.push({
+    kind,
+    prerequisites: {
+      start: child_start,
+      length: source_evidence.prerequisites.length,
+    },
+  })
+  node
+}
+
+///|
+fn resolve_program_lowering_evidence_node(
+  lowering : PlannedModuleLowering,
+  fragments : PlannedModuleWasmGCFragments,
+  caller : PlannedWasmFunctionFragment?,
+  source_node : Int,
+  request : ProgramTraitEvidenceRequest,
+) -> Int {
+  guard source_node >= 0 && source_node < lowering.trait_evidence.length() else {
+    return -1
+  }
+  let source = lowering.trait_evidence[source_node]
+  match source.kind {
+    BoundInferredTraitEvidence(slot) => {
+      let caller = match caller {
+        Some(value) => value
+        None => return -1
+      }
+      if slot < 0 || slot >= caller.specialization_evidence.length {
+        return -1
+      }
+      copy_program_specialization_evidence_node(
+        fragments,
+        fragments.specialization_evidence_roots[caller.specialization_evidence.start +
+        slot],
+        request,
+      )
+    }
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      let argument_start = request.arguments.length()
+      for index in 0..<arguments.length {
+        match lowering.trait_evidence_arguments[arguments.start + index] {
+          ShapeInferredTraitEvidenceArgument(shape) =>
+            request.arguments.push(
+              program_canonical_specialization_shape(shape),
+            )
+          GenericInferredTraitEvidenceArgument(parameter) => {
+            let caller = match caller {
+              Some(value) => value
+              None => return -1
+            }
+            if parameter < 0 || parameter >= caller.specialization_shapes.length {
+              return -1
+            }
+            request.arguments.push(
+              program_canonical_specialization_shape(
+                fragments.specialization_shapes[caller.specialization_shapes.start +
+                parameter],
+              ),
+            )
+          }
+        }
+      }
+      let child_start = request.children.length()
+      for index in 0..<source.prerequisites.length {
+        let child = resolve_program_lowering_evidence_node(
+          lowering,
+          fragments,
+          caller,
+          lowering.trait_evidence_children[source.prerequisites.start + index],
+          request,
+        )
+        if child < 0 {
+          return -1
+        }
+        request.children.push(child)
+      }
+      let node = request.evidence.length()
+      request.evidence.push({
+        kind: PlannedConcreteTraitEvidence(implementation, {
+          start: argument_start,
+          length: arguments.length,
+        }),
+        prerequisites: {
+          start: child_start,
+          length: source.prerequisites.length,
+        },
+      })
+      node
+    }
+  }
+}
+
+///|
+fn resolve_program_expression_evidence(
+  lowering : PlannedModuleLowering,
+  fragments : PlannedModuleWasmGCFragments,
+  caller : PlannedWasmFunctionFragment?,
+  expression : ExprId,
+) -> ProgramTraitEvidenceRequest? {
+  let request = empty_program_trait_evidence_request()
+  if expression < 0 || expression >= lowering.expression_evidence.length() {
+    return Some(request)
+  }
+  let roots = lowering.expression_evidence[expression]
+  for index in 0..<roots.length {
+    let root = resolve_program_lowering_evidence_node(
+      lowering,
+      fragments,
+      caller,
+      lowering.trait_evidence_roots[roots.start + index],
+      request,
+    )
+    if root < 0 {
+      return None
+    }
+    request.roots.push(root)
+  }
+  Some(request)
+}
+
+///|
+fn copy_program_evidence_prerequisites(
+  fragments : PlannedModuleWasmGCFragments,
+  root : Int,
+) -> ProgramTraitEvidenceRequest? {
+  guard root >= 0 && root < fragments.specialization_trait_evidence.length() else {
+    return None
+  }
+  let request = empty_program_trait_evidence_request()
+  let evidence = fragments.specialization_trait_evidence[root]
+  for index in 0..<evidence.prerequisites.length {
+    let child = copy_program_specialization_evidence_node(
+      fragments,
+      fragments.specialization_evidence_children[evidence.prerequisites.start +
+      index],
+      request,
+    )
+    if child < 0 {
+      return None
+    }
+    request.roots.push(child)
+  }
+  Some(request)
+}
+
+///|
 fn materialize_program_generic_specialization(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
@@ -1219,47 +1551,46 @@ fn materialize_program_generic_specialization(
   declaration : DeclId,
   request_shapes : Array[PlannedValueShape],
   request : HirSpan,
+  evidence : ProgramTraitEvidenceRequest,
   erased_fallback : Bool,
-) -> Unit {
+) -> String? {
   let owner_index = match module_lookup.get(semantic_id_module(declaration)) {
     Some(index) => index
-    None => return
+    None => return None
   }
   let module_ = modules[owner_index]
+  let specialization_abi_key = program_specialization_abi_key(
+    declaration, request_shapes, request, evidence,
+  )
   for function_index, function_ in module_.functions {
     if function_.declaration == declaration &&
       function_.specialization_shapes.length > 0 &&
-      program_specialization_shapes_equal(
-        module_.specialization_shapes,
-        function_.specialization_shapes,
-        request_shapes,
-        request,
-      ) {
+      function_.specialization_abi_key == specialization_abi_key {
       if erased_fallback && function_.visibility != Public {
         module_.functions[function_index] = { ..function_, visibility: Public }
         modules[owner_index] = module_
       }
-      return
+      return Some(specialization_abi_key)
     }
   }
   let base_index = module_.function_by_declaration[semantic_id_local(
       declaration,
     )]
   if base_index < 0 || base_index >= module_.functions.length() {
-    return
+    return None
   }
   let base = module_.functions[base_index]
   match base.kind {
     PlannedWasmDefinedFunction(_) => ()
-    _ => return
+    _ => return None
   }
   let callable = match
     lowering.modules[owner_index].functions.callable_of(declaration) {
     Some(callable) => callable
-    None => return
+    None => return None
   }
   if program_callable_generic_parameters(callable).length != request.length {
-    return
+    return None
   }
   let shape_start = module_.specialization_shapes.length()
   for index in 0..<request.length {
@@ -1270,6 +1601,41 @@ fn materialize_program_generic_specialization(
     )
   }
   let specialization_shapes = { start: shape_start, length: request.length }
+  let evidence_argument_start = module_.specialization_evidence_arguments.length()
+  for argument in evidence.arguments {
+    module_.specialization_evidence_arguments.push(
+      program_canonical_specialization_shape(argument),
+    )
+  }
+  let evidence_child_start = module_.specialization_evidence_children.length()
+  let evidence_node_start = module_.specialization_trait_evidence.length()
+  for child in evidence.children {
+    module_.specialization_evidence_children.push(evidence_node_start + child)
+  }
+  for node in evidence.evidence {
+    let kind = match node.kind {
+      PlannedConcreteTraitEvidence(implementation, arguments) =>
+        PlannedConcreteTraitEvidence(implementation, {
+          start: evidence_argument_start + arguments.start,
+          length: arguments.length,
+        })
+    }
+    module_.specialization_trait_evidence.push({
+      kind,
+      prerequisites: {
+        start: evidence_child_start + node.prerequisites.start,
+        length: node.prerequisites.length,
+      },
+    })
+  }
+  let evidence_root_start = module_.specialization_evidence_roots.length()
+  for root in evidence.roots {
+    module_.specialization_evidence_roots.push(evidence_node_start + root)
+  }
+  let specialization_evidence = {
+    start: evidence_root_start,
+    length: evidence.roots.length(),
+  }
   let resolved = analyzed.frozen.interfaces[owner_index].resolved_types
   let parameter_start = module_.function_value_types.length()
   let mut base_parameter_index = 0
@@ -1345,15 +1711,220 @@ fn materialize_program_generic_specialization(
       length: module_.function_value_types.length() - result_start,
     },
     specialization_shapes,
-    specialization_abi_key: program_specialization_abi_key(
-      declaration,
-      module_.specialization_shapes,
-      specialization_shapes,
-    ),
+    specialization_evidence,
+    specialization_abi_key,
   })
   modules[owner_index] = {
     ..module_,
     signature_type_count: module_.signature_type_count + 1,
+  }
+  Some(specialization_abi_key)
+}
+
+///|
+fn record_program_specialized_call(
+  calls : Array[PlannedProgramSpecializedCall],
+  call : PlannedProgramSpecializedCall,
+) -> Unit {
+  for existing in calls {
+    if existing.caller_body == call.caller_body &&
+      existing.caller_specialization_abi_key ==
+      call.caller_specialization_abi_key &&
+      existing.expression == call.expression {
+      return
+    }
+  }
+  calls.push(call)
+}
+
+///|
+fn program_impl_method_for_requirement(
+  lowering : PlannedProgramLowering,
+  module_lookup : Map[ModuleId, Int],
+  implementation : DeclId,
+  requirement : DeclId,
+) -> DeclId? {
+  let requirement_module = match
+    module_lookup.get(semantic_id_module(requirement)) {
+    Some(index) => index
+    None => return None
+  }
+  let requirement_callable = match
+    lowering.modules[requirement_module].functions.callable_of(requirement) {
+    Some(value) => value
+    None => return None
+  }
+  let implementation_module = match
+    module_lookup.get(semantic_id_module(implementation)) {
+    Some(index) => index
+    None => return None
+  }
+  for callable in lowering.modules[implementation_module].functions.callables {
+    match callable.kind {
+      PlannedImplMethodCallable(owner, _) if owner == implementation &&
+        callable.name == requirement_callable.name =>
+        return Some(callable.declaration)
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn program_call_target_and_arguments(
+  expression : PlannedExpression,
+) -> (DeclId, HirSpan)? {
+  match expression.kind {
+    PlannedDirectCall(target, _, _, arguments)
+    | PlannedOperatorCall(target, _, _, _, arguments)
+    | PlannedIndexCall(target, _, _, arguments)
+    | PlannedIndexSetCall(target, _, _, _, arguments) =>
+      Some((target, arguments))
+    _ => None
+  }
+}
+
+///|
+fn materialize_program_expression_call(
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  modules : Array[PlannedModuleWasmGCFragments],
+  module_lookup : Map[ModuleId, Int],
+  caller_module_index : Int,
+  caller : PlannedWasmFunctionFragment?,
+  caller_callable : PlannedCallable?,
+  body : BodyId,
+  expression : ExprId,
+  specialized_calls : Array[PlannedProgramSpecializedCall],
+) -> Unit {
+  let owner = lowering.modules[caller_module_index]
+  let source = owner.expressions[expression]
+  match program_call_target_and_arguments(source) {
+    Some((target, arguments)) if arguments.length > 0 => {
+      let request_evidence = match
+        resolve_program_expression_evidence(
+          owner,
+          modules[caller_module_index],
+          caller,
+          expression,
+        ) {
+        Some(value) => value
+        None => return
+      }
+      let request_shapes : Array[PlannedValueShape] = []
+      for argument_index in 0..<arguments.length {
+        let source_index = arguments.start + argument_index
+        let shape = match (caller, caller_callable) {
+          (Some(function_), Some(callable)) =>
+            program_resolve_specialized_shape(
+              owner,
+              program_callable_generic_parameters(callable),
+              modules[caller_module_index].specialization_shapes,
+              function_.specialization_shapes,
+              owner.call_type_arguments[source_index],
+              owner.call_type_argument_shapes[source_index],
+            )
+          _ => owner.call_type_argument_shapes[source_index]
+        }
+        request_shapes.push(shape)
+      }
+      match
+        materialize_program_generic_specialization(
+          analyzed,
+          lowering,
+          modules,
+          module_lookup,
+          target,
+          request_shapes,
+          { start: 0, length: request_shapes.length() },
+          request_evidence,
+          false,
+        ) {
+        Some(target_key) =>
+          record_program_specialized_call(specialized_calls, {
+            caller_body: body,
+            caller_specialization_abi_key: match caller {
+              Some(value) => value.specialization_abi_key
+              None => ""
+            },
+            expression,
+            target,
+            target_specialization_abi_key: target_key,
+          })
+        None => ()
+      }
+    }
+    _ =>
+      match source.kind {
+        PlannedBoundDirectCall(requirement, slot, _, _, _)
+        | PlannedBoundOperatorCall(requirement, slot, _, _, _, _) => {
+          let caller = match caller {
+            Some(value) => value
+            None => return
+          }
+          if slot < 0 || slot >= caller.specialization_evidence.length {
+            return
+          }
+          let fragments = modules[caller_module_index]
+          let root = fragments.specialization_evidence_roots[caller.specialization_evidence.start +
+            slot]
+          if root < 0 ||
+            root >= fragments.specialization_trait_evidence.length() {
+            return
+          }
+          let root_evidence = fragments.specialization_trait_evidence[root]
+          let (implementation, arguments) = match root_evidence.kind {
+            PlannedConcreteTraitEvidence(implementation, arguments) =>
+              (implementation, arguments)
+          }
+          let target = match
+            program_impl_method_for_requirement(
+              lowering, module_lookup, implementation, requirement,
+            ) {
+            Some(value) => value
+            None => return
+          }
+          let request_evidence = match
+            copy_program_evidence_prerequisites(fragments, root) {
+            Some(value) => value
+            None => return
+          }
+          let request_shapes : Array[PlannedValueShape] = []
+          for index in 0..<arguments.length {
+            request_shapes.push(
+              fragments.specialization_evidence_arguments[arguments.start +
+              index],
+            )
+          }
+          let target_key = if arguments.length > 0 {
+            match
+              materialize_program_generic_specialization(
+                analyzed,
+                lowering,
+                modules,
+                module_lookup,
+                target,
+                request_shapes,
+                { start: 0, length: request_shapes.length() },
+                request_evidence,
+                false,
+              ) {
+              Some(value) => value
+              None => return
+            }
+          } else {
+            ""
+          }
+          record_program_specialized_call(specialized_calls, {
+            caller_body: body,
+            caller_specialization_abi_key: caller.specialization_abi_key,
+            expression,
+            target,
+            target_specialization_abi_key: target_key,
+          })
+        }
+        _ => ()
+      }
   }
 }
 
@@ -1410,6 +1981,7 @@ fn plan_program_wasmgc_fragments_for_root(
   for module_index, module_ in modules {
     specialization_module_lookup[module_.module_id] = module_index
   }
+  let specialized_calls : Array[PlannedProgramSpecializedCall] = []
   for module_index, module_ in lowering.modules {
     if module_index != erased_fallback_module_index {
       continue
@@ -1423,47 +1995,74 @@ fn plan_program_wasmgc_fragments_for_root(
         program_callable_generic_parameters(callable).length,
         RefPlannedValueShape,
       )
-      materialize_program_generic_specialization(
-        analyzed,
-        lowering,
-        modules,
-        specialization_module_lookup,
-        callable.declaration,
-        erased_shapes,
-        { start: 0, length: erased_shapes.length() },
-        true,
+      ignore(
+        materialize_program_generic_specialization(
+          analyzed,
+          lowering,
+          modules,
+          specialization_module_lookup,
+          callable.declaration,
+          erased_shapes,
+          { start: 0, length: erased_shapes.length() },
+          empty_program_trait_evidence_request(),
+          true,
+        ),
       )
     }
   }
   for module_index, module_ in lowering.modules {
+    let generic_bodies : Map[BodyId, Bool] = Map::default()
+    for callable in module_.functions.callables {
+      if program_callable_generic_parameters(callable).length == 0 {
+        continue
+      }
+      match callable.kind {
+        PlannedFunctionCallable(body)
+        | PlannedImplMethodCallable(_, Some(body)) =>
+          generic_bodies[body] = true
+        _ => ()
+      }
+    }
+    for body in module_.bodies {
+      if generic_bodies.contains(body.body) {
+        continue
+      }
+      for
+        expression in body.expressions.start..<(body.expressions.start +
+        body.expressions.length) {
+        materialize_program_expression_call(
+          analyzed,
+          lowering,
+          modules,
+          specialization_module_lookup,
+          module_index,
+          None,
+          None,
+          body.body,
+          expression,
+          specialized_calls,
+        )
+      }
+    }
     for expression in module_.expressions {
       match expression.kind {
-        PlannedDirectCall(declaration, _, _, arguments) if arguments.length > 0 =>
-          materialize_program_generic_specialization(
-            analyzed,
-            lowering,
-            modules,
-            specialization_module_lookup,
-            declaration,
-            module_.call_type_argument_shapes,
-            arguments,
-            false,
-          )
         PlannedFunctionReference(declaration, arguments) if arguments.length > 0 =>
-          materialize_program_generic_specialization(
-            analyzed,
-            lowering,
-            modules,
-            specialization_module_lookup,
-            declaration,
-            module_.expression_type_argument_shapes,
-            arguments,
-            false,
+          ignore(
+            materialize_program_generic_specialization(
+              analyzed,
+              lowering,
+              modules,
+              specialization_module_lookup,
+              declaration,
+              module_.expression_type_argument_shapes,
+              arguments,
+              empty_program_trait_evidence_request(),
+              false,
+            ),
           )
         _ => ()
       }
     }
-    ignore(module_index)
   }
   let mut specialization_changed = true
   while specialization_changed {
@@ -1494,37 +2093,19 @@ fn plan_program_wasmgc_fragments_for_root(
         }
         let body = owner.bodies[body_index]
         for
-          expression_index in body.expressions.start..<(body.expressions.start +
+          expression in body.expressions.start..<(body.expressions.start +
           body.expressions.length) {
-          let (target, arguments) = match
-            owner.expressions[expression_index].kind {
-            PlannedDirectCall(target, _, _, arguments) if arguments.length > 0 =>
-              (target, arguments)
-            _ => continue
-          }
-          let resolved_shapes : Array[PlannedValueShape] = []
-          for argument_index in 0..<arguments.length {
-            let source_index = arguments.start + argument_index
-            resolved_shapes.push(
-              program_resolve_specialized_shape(
-                owner,
-                program_callable_generic_parameters(callable),
-                fragments_.specialization_shapes,
-                function_.specialization_shapes,
-                owner.call_type_arguments[source_index],
-                owner.call_type_argument_shapes[source_index],
-              ),
-            )
-          }
-          materialize_program_generic_specialization(
+          materialize_program_expression_call(
             analyzed,
             lowering,
             modules,
             specialization_module_lookup,
-            target,
-            resolved_shapes,
-            { start: 0, length: resolved_shapes.length() },
-            false,
+            owner_index,
+            Some(function_),
+            Some(callable),
+            body_id,
+            expression,
+            specialized_calls,
           )
         }
       }
@@ -1581,7 +2162,12 @@ fn plan_program_wasmgc_fragments_for_root(
       }
     }
   }
-  { graph: lowering.graph, modules, external_type_references }
+  {
+    graph: lowering.graph,
+    modules,
+    external_type_references,
+    specialized_calls,
+  }
 }
 
 ///|
@@ -2582,6 +3168,7 @@ pub fn link_program_wasmgc_fragments(
           parameters: function_.parameters,
           results: function_.results,
           specialization_shapes: function_.specialization_shapes,
+          specialization_evidence: function_.specialization_evidence,
           specialization_abi_key: function_.specialization_abi_key,
           erased_adapter_target: -1,
           offset: function_.offset,
@@ -2716,6 +3303,7 @@ pub fn link_program_wasmgc_fragments(
         parameters: specialization.parameters,
         results: specialization.results,
         specialization_shapes: specialization.specialization_shapes,
+        specialization_evidence: specialization.specialization_evidence,
         specialization_abi_key: specialization.specialization_abi_key,
         erased_adapter_target: fallback.function_index,
         offset: callable.offset,
@@ -2893,6 +3481,7 @@ pub fn link_program_wasmgc_fragments(
                         parameters: source.parameters,
                         results: source.results,
                         specialization_shapes: { start: 0, length: 0 },
+                        specialization_evidence: { start: 0, length: 0 },
                         specialization_abi_key: "",
                         erased_adapter_target: function_.function_index,
                         offset: expression.offset,
@@ -2966,8 +3555,34 @@ pub fn link_program_wasmgc_fragments(
     fragments.modules,
     functions,
     function_lookup,
+    fragments.specialized_calls,
     diagnostics,
   )
+  let specialized_call_lookup : Map[String, Int] = Map::default()
+  for call in fragments.specialized_calls {
+    let mut target_index = -1
+    if call.target_specialization_abi_key.length() == 0 {
+      match function_lookup.get(call.target) {
+        Some(index) => target_index = index
+        None => ()
+      }
+    } else {
+      for index, function_ in functions {
+        if function_.declaration == call.target &&
+          function_.specialization_abi_key == call.target_specialization_abi_key {
+          target_index = index
+          break
+        }
+      }
+    }
+    if target_index >= 0 {
+      specialized_call_lookup[program_specialized_call_key(
+        call.caller_body,
+        call.caller_specialization_abi_key,
+        call.expression,
+      )] = target_index
+    }
+  }
   {
     root_module_index,
     graph: lowering.graph,
@@ -2980,6 +3595,7 @@ pub fn link_program_wasmgc_fragments(
     program_physical_types,
     functions,
     function_lookup,
+    specialized_call_lookup,
     initializers,
     global_lookup,
     function_reference_singletons,

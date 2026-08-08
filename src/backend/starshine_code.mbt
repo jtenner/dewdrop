@@ -29,6 +29,7 @@ priv struct StarshineGenericSpecialization {
   generic_parameters : @semantic.HirSpan
   shapes : Array[@semantic.PlannedValueShape]
   specialization_shapes : @semantic.HirSpan
+  specialization_abi_key : String
 }
 
 ///|
@@ -67,6 +68,17 @@ priv struct StarshineProgramCallbackWrapper {
 priv struct StarshineProgramAdapterHelperPlan {
   helpers : Array[StarshineProgramAdapterHelper]
   wrappers : Array[StarshineProgramCallbackWrapper]
+}
+
+///|
+fn starshine_callable_generic_parameters(
+  callable : @semantic.PlannedCallable,
+) -> @semantic.HirSpan {
+  if callable.owner_generic_parameters.length > 0 {
+    callable.owner_generic_parameters
+  } else {
+    callable.generic_parameters
+  }
 }
 
 ///|
@@ -126,7 +138,13 @@ priv enum StarshineEmitTask {
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineLocalSet(Int, Int, @semantic.ExprId)
   FinishStarshineCaptureSet(Int, Int)
-  FinishStarshineCall(@semantic.DeclId, Int, Int, @semantic.HirSpan)
+  FinishStarshineCall(
+    @semantic.DeclId,
+    @semantic.ExprId,
+    Int,
+    Int,
+    @semantic.HirSpan
+  )
   FinishStarshineParameterSelect(Int, Int)
   FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
@@ -664,6 +682,8 @@ fn starshine_finish_program_call(
   lowering : @semantic.PlannedModuleLowering?,
   planned : @semantic.PlannedProgramWasmGCLink,
   caller : @semantic.PlannedModuleWasmGCFragments,
+  body : @semantic.BodyId,
+  expression : @semantic.ExprId,
   declaration : @semantic.DeclId,
   type_arguments : @semantic.HirSpan?,
   generic_specialization : StarshineGenericSpecialization?,
@@ -681,33 +701,45 @@ fn starshine_finish_program_call(
   let test_assert_function_index = starshine_program_module_runtime_function_index(
     planned, caller_module_index, b"dew_test_assert",
   )
-  let function_ = match type_arguments {
-    Some(arguments) if arguments.length > 0 => {
-      let caller_lowering = lowering.unwrap()
-      let resolved_shapes : Array[@semantic.PlannedValueShape] = []
-      for index in 0..<arguments.length {
-        let source_index = arguments.start + index
-        resolved_shapes.push(
-          starshine_specialized_shape(
-            caller_lowering,
-            generic_specialization,
-            caller_lowering.call_type_arguments[source_index],
-            caller_lowering.call_type_argument_shapes[source_index],
-          ),
-        )
-      }
-      match
-        planned.specialized_function_of_exact_shapes(
-          declaration, resolved_shapes,
-        ) {
-        Some(function_) => function_
-        None => return Err(MissingFunction(declaration))
-      }
-    }
-    _ =>
-      match planned.function_of(declaration) {
-        Some(function_) => function_
-        None => return Err(MissingFunction(declaration))
+  let preselected = planned.specialized_call_function(
+    body,
+    match generic_specialization {
+      Some(value) => value.specialization_abi_key
+      None => ""
+    },
+    expression,
+  )
+  let function_ = match preselected {
+    Some(function_) => function_
+    None =>
+      match type_arguments {
+        Some(arguments) if arguments.length > 0 => {
+          let caller_lowering = lowering.unwrap()
+          let resolved_shapes : Array[@semantic.PlannedValueShape] = []
+          for index in 0..<arguments.length {
+            let source_index = arguments.start + index
+            resolved_shapes.push(
+              starshine_specialized_shape(
+                caller_lowering,
+                generic_specialization,
+                caller_lowering.call_type_arguments[source_index],
+                caller_lowering.call_type_argument_shapes[source_index],
+              ),
+            )
+          }
+          match
+            planned.specialized_function_of_exact_shapes(
+              declaration, resolved_shapes,
+            ) {
+            Some(function_) => function_
+            None => return Err(MissingFunction(declaration))
+          }
+        }
+        _ =>
+          match planned.function_of(declaration) {
+            Some(function_) => function_
+            None => return Err(MissingFunction(declaration))
+          }
       }
   }
   if function_.direct_builtin.length() > 0 {
@@ -2882,6 +2914,8 @@ fn starshine_map_call(
         None,
         link,
         planned,
+        0UL,
+        -1,
         declaration,
         None,
         None,
@@ -3911,6 +3945,37 @@ fn starshine_emit_body_instructions(
             tasks.push(
               FinishStarshineCall(
                 declaration,
+                expression,
+                arguments.length + receiver_count,
+                conversion_scratch_index,
+                type_arguments,
+              ),
+            )
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
+            if receiver >= 0 {
+              tasks.push(EmitStarshineExpression(receiver))
+            }
+          }
+          @semantic.PlannedBoundDirectCall(
+            requirement,
+            _,
+            receiver,
+            arguments,
+            type_arguments
+          ) => {
+            let receiver_count = if receiver >= 0 { 1 } else { 0 }
+            tasks.push(
+              FinishStarshineCall(
+                requirement,
+                expression,
                 arguments.length + receiver_count,
                 conversion_scratch_index,
                 type_arguments,
@@ -3938,7 +4003,23 @@ fn starshine_emit_body_instructions(
           ) => {
             tasks.push(
               FinishStarshineCall(
-                declaration, 2, conversion_scratch_index, type_arguments,
+                declaration, expression, 2, conversion_scratch_index, type_arguments,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(right))
+            tasks.push(EmitStarshineExpression(left))
+          }
+          @semantic.PlannedBoundOperatorCall(
+            requirement,
+            _,
+            _,
+            left,
+            right,
+            type_arguments
+          ) => {
+            tasks.push(
+              FinishStarshineCall(
+                requirement, expression, 2, conversion_scratch_index, type_arguments,
               ),
             )
             tasks.push(EmitStarshineExpression(right))
@@ -3947,7 +4028,7 @@ fn starshine_emit_body_instructions(
           @semantic.PlannedIndexCall(declaration, base, index, type_arguments) => {
             tasks.push(
               FinishStarshineCall(
-                declaration, 2, conversion_scratch_index, type_arguments,
+                declaration, expression, 2, conversion_scratch_index, type_arguments,
               ),
             )
             tasks.push(EmitStarshineExpression(index))
@@ -3962,7 +4043,7 @@ fn starshine_emit_body_instructions(
           ) => {
             tasks.push(
               FinishStarshineCall(
-                declaration, 3, conversion_scratch_index, type_arguments,
+                declaration, expression, 3, conversion_scratch_index, type_arguments,
               ),
             )
             tasks.push(EmitStarshineExpression(value))
@@ -4641,9 +4722,7 @@ fn starshine_emit_body_instructions(
               None => return Err(UnsupportedExpression(body.body, expression))
             }
           @semantic.PlannedPoisonExpression
-          | @semantic.PlannedConsumedExpression
-          | @semantic.PlannedBoundOperatorCall(_, _, _, _, _, _)
-          | @semantic.PlannedBoundDirectCall(_, _, _, _, _) =>
+          | @semantic.PlannedConsumedExpression =>
             return Err(UnsupportedExpression(body.body, expression))
         }
       }
@@ -6281,7 +6360,13 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineCall(declaration, count, scratch_index, type_arguments) => {
+      FinishStarshineCall(
+        declaration,
+        expression,
+        count,
+        scratch_index,
+        type_arguments
+      ) => {
         let fragments = pop_starshine_fragments(results, count)
         let emitted = match program {
           Some(link) =>
@@ -6289,6 +6374,8 @@ fn starshine_emit_body_instructions(
               Some(lowering),
               link,
               planned,
+              body.body,
+              expression,
               declaration,
               Some(type_arguments),
               generic_specialization,
@@ -8028,9 +8115,10 @@ fn starshine_program_function_specialization(
   callable : @semantic.PlannedCallable,
 ) -> StarshineGenericSpecialization {
   {
-    generic_parameters: callable.generic_parameters,
+    generic_parameters: starshine_callable_generic_parameters(callable),
     shapes: fragments.specialization_shapes,
     specialization_shapes: function_.specialization_shapes,
+    specialization_abi_key: function_.specialization_abi_key,
   }
 }
 
@@ -9038,9 +9126,10 @@ fn emit_starshine_program_function_body(
       .callable_of(function_.declaration)
       .unwrap()
     Some({
-      generic_parameters: callable.generic_parameters,
+      generic_parameters: starshine_callable_generic_parameters(callable),
       shapes: module_fragments.specialization_shapes,
       specialization_shapes: function_.specialization_shapes,
+      specialization_abi_key: function_.specialization_abi_key,
     })
   } else {
     None

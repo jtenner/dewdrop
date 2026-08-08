@@ -1,0 +1,61 @@
+open dew.std.wasi
+
+struct Pair<t> {
+  left: t
+  right: t
+} derive(Eq)
+
+enum Maybe<t> {
+  None
+  Some(t)
+  Named {
+    value: t
+  }
+} derive(Eq)
+
+struct Nested<t> {
+  pair: Pair<t>
+  maybe: Maybe<t>
+} derive(Eq)
+
+pub fn main() -> U32 {
+  let pairs = Pair {
+    left: 3
+    right: 4
+  } == Pair {
+    left: 3
+    right: 4
+  } && Pair {
+    left: true
+    right: false
+  } != Pair {
+    left: true
+    right: true
+  }
+  let variants = Maybe::Some(7) == Maybe::Some(7) &&
+    Maybe::Some(7) != Maybe::Some(8) &&
+    Maybe::None != Maybe::Some(0) &&
+    Maybe::Named {
+      value: true
+    } == Maybe::Named {
+      value: true
+    }
+  let nested = Nested {
+    pair: Pair {
+      left: 9
+      right: 10
+    }
+    maybe: Maybe::Some(11)
+  } == Nested {
+    pair: Pair {
+      left: 9
+      right: 10
+    }
+    maybe: Maybe::Some(11)
+  }
+  if pairs && variants && nested {
+    wasi_fd_write(1u32, b"derive:eq:generic")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

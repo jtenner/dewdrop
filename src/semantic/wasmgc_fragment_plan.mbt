@@ -144,6 +144,17 @@ pub enum PlannedWasmFunctionKind {
 } derive(Eq, Debug)
 
 ///|
+pub enum PlannedSpecializationTraitEvidenceKind {
+  PlannedConcreteTraitEvidence(DeclId, HirSpan)
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedSpecializationTraitEvidence {
+  kind : PlannedSpecializationTraitEvidenceKind
+  prerequisites : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedWasmFunctionFragment {
   declaration : DeclId
   lambda : LambdaId
@@ -160,6 +171,7 @@ pub struct PlannedWasmFunctionFragment {
   parameters : HirSpan
   results : HirSpan
   specialization_shapes : HirSpan
+  specialization_evidence : HirSpan
   specialization_abi_key : String
   offset : UInt64
 } derive(Eq, Debug)
@@ -200,6 +212,10 @@ pub struct PlannedModuleWasmGCFragments {
   lambda_function_indices : Array[Int]
   function_value_types : Array[PlannedWasmValueType]
   specialization_shapes : Array[PlannedValueShape]
+  specialization_evidence_roots : Array[Int]
+  specialization_trait_evidence : Array[PlannedSpecializationTraitEvidence]
+  specialization_evidence_children : Array[Int]
+  specialization_evidence_arguments : Array[PlannedValueShape]
   signature_type_count : Int
   imported_function_count : Int
   defined_function_count : Int
@@ -2517,6 +2533,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       parameters,
       results,
       specialization_shapes: { start: 0, length: 0 },
+      specialization_evidence: { start: 0, length: 0 },
       specialization_abi_key: "",
       offset: callable.offset,
     })
@@ -2557,6 +2574,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       parameters: function_type.parameters,
       results: function_type.results,
       specialization_shapes: { start: 0, length: 0 },
+      specialization_evidence: { start: 0, length: 0 },
       specialization_abi_key: "",
       offset: match lambda.root {
         BlockBodyRoot(block) => lowering.blocks[block].offset
@@ -2848,6 +2866,10 @@ fn plan_module_wasmgc_fragments_in_orders(
     lambda_function_indices,
     function_value_types,
     specialization_shapes: [],
+    specialization_evidence_roots: [],
+    specialization_trait_evidence: [],
+    specialization_evidence_children: [],
+    specialization_evidence_arguments: [],
     signature_type_count: next_signature_type - physical_types.length(),
     imported_function_count,
     defined_function_count,

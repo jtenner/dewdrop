@@ -720,3 +720,58 @@ test "program link plans deterministic named function singleton globals" {
   assert_true(link.initializer_type_index >= 0)
   assert_true(link.startup_function_index >= 0)
 }
+
+///|
+test "program specializations distinguish and forward trait evidence" {
+  let program = collect_program_manifest(
+    2262UL,
+    ProgramManifest::new([
+      ManifestModule::new("evidence.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Value for U32 {\n  fn value(self) -> I32 {\n    2\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\nfn forward<t: Value>(value: t) -> I32 {\n  read(value)\n}\npub fn signed() -> I32 {\n  forward(0)\n}\npub fn unsigned() -> I32 {\n  forward(0u32)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let module_ = program.modules[0]
+  let read = module_.lookup_value("read").unwrap()
+  let forward = module_.lookup_value("forward").unwrap()
+  let forward_body = module_.body_of(forward).unwrap()
+  let forwarded_call = body_calls(module_, forward_body)[0]
+  let read_keys : Array[String] = []
+  let forwarded_keys : Array[String] = []
+  for function_ in link.functions {
+    if function_.declaration == read &&
+      function_.specialization_shapes.length > 0 &&
+      !function_.elided {
+      assert_eq(function_.specialization_evidence.length, 1)
+      read_keys.push(function_.specialization_abi_key)
+    }
+    if function_.declaration == forward &&
+      function_.specialization_shapes.length > 0 &&
+      !function_.elided {
+      assert_eq(function_.specialization_evidence.length, 1)
+      let target = link
+        .specialized_call_function(
+          forward_body.id,
+          function_.specialization_abi_key,
+          forwarded_call,
+        )
+        .unwrap()
+      assert_eq(target.declaration, read)
+      forwarded_keys.push(target.specialization_abi_key)
+    }
+  }
+  assert_eq(read_keys.length(), 2)
+  assert_true(read_keys[0] != read_keys[1])
+  assert_eq(forwarded_keys.length(), 2)
+  assert_true(forwarded_keys[0] != forwarded_keys[1])
+  assert_true(
+    (forwarded_keys[0] == read_keys[0] && forwarded_keys[1] == read_keys[1]) ||
+    (forwarded_keys[0] == read_keys[1] && forwarded_keys[1] == read_keys[0]),
+  )
+}

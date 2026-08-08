@@ -1,0 +1,16 @@
+struct Missing {}
+
+struct Pair<t> {
+  left: t
+  right: t
+} derive(Eq)
+
+pub fn main() -> Bool {
+  Pair {
+    left: Missing {}
+    right: Missing {}
+  } == Pair {
+    left: Missing {}
+    right: Missing {}
+  }
+}

@@ -1,0 +1,34 @@
+open dew.std.wasi
+
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    1
+  }
+}
+
+impl Value for U32 {
+  fn value(self) -> I32 {
+    2
+  }
+}
+
+fn read<t: Value>(value: t) -> I32 {
+  value.value()
+}
+
+fn forward<t: Value>(value: t) -> I32 {
+  read(value)
+}
+
+pub fn main() -> U32 {
+  let result = forward(0) + forward(0u32)
+  if result == 3 {
+    wasi_fd_write(1u32, b"generic:evidence")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

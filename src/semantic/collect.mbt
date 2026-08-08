@@ -913,7 +913,6 @@ priv struct CollectedDeriveOffsets {
 ///|
 fn CollectionBuilder::collect_derive_requests(
   self : CollectionBuilder,
-  generic : Bool,
   requests : Array[@parser.DeriveRequest],
 ) -> CollectedDeriveOffsets {
   if requests.length() == 0 {
@@ -959,17 +958,7 @@ fn CollectionBuilder::collect_derive_requests(
         }
     }
     if request.name == "Eq" {
-      if generic {
-        self.diagnostics.push(
-          GenericDeriveRequiresBounds(
-            request.name,
-            self.current_file,
-            request.offset,
-          ),
-        )
-      } else {
-        eq_offset = Some(request.offset)
-      }
+      eq_offset = Some(request.offset)
     } else if request.name == "Debug" {
       debug_offset = Some(request.offset)
     } else {
@@ -1001,10 +990,7 @@ fn CollectionBuilder::collect_struct(
   )
   self.collect_generic_parameters(declaration.id, value.type_parameters)
   self.collect_named_fields(declaration.id, None, value.fields, StructField)
-  let derives = self.collect_derive_requests(
-    value.type_parameters.length() > 0,
-    value.derives,
-  )
+  let derives = self.collect_derive_requests(value.derives)
   match derives.eq {
     Some(offset) =>
       for implementation in @parser.derived_struct_eq_impls(value, offset) {
@@ -1096,10 +1082,7 @@ fn CollectionBuilder::collect_enum(
       _ => ()
     }
   }
-  let derives = self.collect_derive_requests(
-    value.type_parameters.length() > 0,
-    value.derives,
-  )
+  let derives = self.collect_derive_requests(value.derives)
   match derives.eq {
     Some(offset) =>
       for implementation in @parser.derived_enum_eq_impls(value, offset) {
