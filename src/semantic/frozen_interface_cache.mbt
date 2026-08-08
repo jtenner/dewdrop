@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V9\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V10\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -395,6 +395,7 @@ fn cache_write_interface(
   cache_write_int(output, interface_.implementations.length())
   for implementation in interface_.implementations {
     cache_write_u64(output, implementation.declaration)
+    cache_write_span(output, implementation.generic_parameters)
     cache_write_int(output, implementation.trait_type)
     cache_write_int(output, implementation.target_type)
     cache_write_location(output, implementation.location)
@@ -868,6 +869,7 @@ fn FrozenInterfaceCacheReader::read_interface(
   for _ in 0..<implementation_count {
     implementations.push({
       declaration: self.read_u64(),
+      generic_parameters: self.read_span(),
       trait_type: self.read_int(),
       target_type: self.read_int(),
       location: self.read_location(),

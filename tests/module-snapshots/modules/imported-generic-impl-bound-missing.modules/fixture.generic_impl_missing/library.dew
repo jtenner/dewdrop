@@ -1,0 +1,17 @@
+pub trait Marker {}
+
+pub trait Value {
+  fn value(self) -> I32
+}
+
+pub struct No {}
+
+pub struct Box<t> {
+  value: t
+}
+
+impl<t: Marker> Value for Box<t> {
+  fn value(self) -> I32 {
+    42
+  }
+}

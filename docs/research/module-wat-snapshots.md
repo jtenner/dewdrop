@@ -171,7 +171,7 @@ layout.
 
 ## Current coverage and observation
 
-The suite now contains 221 fixtures: 186 compiled WAT/runtime snapshots and 35
+The suite now contains 223 fixtures: 187 compiled WAT/runtime snapshots and 36
 compiler-error snapshots. On August 8, 2026, the full suite passes identically
 in Node and Wago Core 3, including deep and wide functional loops, module
 initialization, imported values, imported method/operator dispatch, collection
@@ -188,7 +188,7 @@ functions           16         13                 3                0
 generics             9          8                 1                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             21         17                 4                0
+modules             23         18                 5                0
 names                3          0                 3                0
 numeric             34         30                 4                1
 reachability         1          1                 0                0
@@ -198,11 +198,11 @@ text                 27         27                 0                4
 types                9          2                 7                0
 wasi                 16         16                 0                5
 
-total               221        186                35               15
-nonempty stdout fixtures       103
+total               223        187                36               15
+nonempty stdout fixtures       104
 WAT/no-trap-only fixtures       68
-checked-in WAT lines       109,334
-checked-in WAT bytes      3,087,206
+checked-in WAT lines       109,645
+checked-in WAT bytes      3,095,233
 ```
 
 Successful runtime coverage includes recursive and nested calls, scalar,
@@ -240,8 +240,8 @@ The import prepass now selects independently collected compiler-owned standard
 modules and user modules consume only their frozen interfaces. Whole-program
 reachability removes elided signature slots, dead external type references,
 unused standard nominal layouts, and unreachable runtime functions before final
-indices. Across 185 compiled fixtures, checked-in WAT is now 106,002 lines and
-3,014,425 bytes, down from the original 431,150 lines and 21,839,923 bytes while
+indices. Across 187 compiled fixtures, checked-in WAT is now 109,645 lines and
+3,095,233 bytes, down from the original 431,150 lines and 21,839,923 bytes while
 retaining deterministic diagnostics and runtime behavior. The generic fixture
 covers ambient `Option`/`Result` construction and pattern matching across scalar
 and reference carriers.

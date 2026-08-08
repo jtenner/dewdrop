@@ -127,7 +127,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 221 fixtures:
+The suite contains 223 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -139,7 +139,7 @@ functions           16         13                 3                0
 generics             9          8                 1                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             21         17                 4                0
+modules             23         18                 5                0
 names                3          0                 3                0
 numeric             34         30                 4                1
 reachability         1          1                 0                0
@@ -149,10 +149,10 @@ text                 27         27                 0                4
 types                9          2                 7                0
 wasi                 16         16                 0                5
 
-total               221        186               35               15
+total               223        187               36               15
 ```
 
-One hundred three compiled fixtures assert nonempty stdout, fifteen assert normalized
+One hundred four compiled fixtures assert nonempty stdout, fifteen assert normalized
 runtime traps, and sixty-eight intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.

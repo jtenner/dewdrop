@@ -1207,6 +1207,7 @@ pub struct FrozenInterfaceCallable {
 ///|
 pub struct FrozenInterfaceImplementation {
   declaration : DeclId
+  generic_parameters : HirSpan
   trait_type : ResolvedTypeId
   target_type : ResolvedTypeId
   location : SourceLocation
@@ -2145,6 +2146,9 @@ pub fn freeze_module_interface(
     }
     implementations.push({
       declaration: implementation.declaration,
+      generic_parameters: collected.generic_parameters_of(
+        implementation.declaration,
+      ),
       trait_type: resolved.impl_trait_types[implementation_index],
       target_type: resolved.impl_target_types[implementation_index],
       location: collected

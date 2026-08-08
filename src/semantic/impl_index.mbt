@@ -1560,6 +1560,66 @@ pub fn build_module_impl_index(
 }
 
 ///|
+fn rebuild_impl_buckets(index : ModuleImplIndex) -> Unit {
+  let bucket_lookup : Map[(Int, UInt64, Int, UInt64), Int] = Map::default()
+  let bucket_kinds : Array[ImplBucketKind] = []
+  let bucket_heads : Array[ImplTargetHead] = []
+  let bucket_counts : Array[Int] = []
+  for implementation_index, implementation in index.implementations {
+    if !implementation.valid {
+      continue
+    }
+    let (head_kind, head_id) = impl_head_key(implementation.target_head)
+    let (bucket_kind, trait_id) = match implementation.kind {
+      InherentIndexedImpl => (0, 0UL)
+      TraitIndexedImpl(trait_declaration) => (1, trait_declaration)
+    }
+    let key = (bucket_kind, trait_id, head_kind, head_id)
+    let bucket = bucket_lookup
+      .get(key)
+      .unwrap_or_else(fn() {
+        let created = bucket_kinds.length()
+        bucket_lookup[key] = created
+        bucket_kinds.push(
+          match implementation.kind {
+            InherentIndexedImpl => InherentImplBucket
+            TraitIndexedImpl(trait_declaration) =>
+              TraitImplBucket(trait_declaration)
+          },
+        )
+        bucket_heads.push(implementation.target_head)
+        bucket_counts.push(0)
+        created
+      })
+    bucket_counts[bucket] += 1
+    index.implementations[implementation_index] = { ..implementation, bucket, }
+  }
+  index.buckets.clear()
+  index.bucket_implementations.clear()
+  let cursors : Array[Int] = []
+  let mut start = 0
+  for bucket in 0..<bucket_kinds.length() {
+    index.buckets.push({
+      kind: bucket_kinds[bucket],
+      target_head: bucket_heads[bucket],
+      implementations: { start, length: bucket_counts[bucket] },
+    })
+    cursors.push(start)
+    for _ in 0..<bucket_counts[bucket] {
+      index.bucket_implementations.push(-1)
+    }
+    start += bucket_counts[bucket]
+  }
+  for implementation_index, implementation in index.implementations {
+    if implementation.bucket >= 0 {
+      let cursor = cursors[implementation.bucket]
+      index.bucket_implementations[cursor] = implementation_index
+      cursors[implementation.bucket] = cursor + 1
+    }
+  }
+}
+
+///|
 /// Extends the validated local implementation index with immutable evidence
 /// frozen by imported modules. Imported evidence is already coherence-checked
 /// by its owner; the consumer only builds deterministic dispatch entries.
@@ -1735,6 +1795,7 @@ pub fn build_module_impl_index_with_imports(
       specificity: specificity[implementation_index],
     }
   }
+  rebuild_impl_buckets(index)
   let retained_methods : Array[IndexedMethodDispatch] = []
   for dispatch in index.method_dispatch {
     if index.implementations[dispatch.implementation].coherent {

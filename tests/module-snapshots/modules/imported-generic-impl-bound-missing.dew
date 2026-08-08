@@ -1,0 +1,5 @@
+open fixture.generic_impl_missing
+
+fn rejected(value: Box<No>) -> I32 {
+  value.value()
+}

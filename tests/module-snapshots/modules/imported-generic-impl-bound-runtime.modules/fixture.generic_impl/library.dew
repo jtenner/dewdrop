@@ -1,0 +1,25 @@
+pub trait Marker {}
+
+pub trait Value {
+  fn value(self) -> I32
+}
+
+pub struct Yes {}
+
+pub struct Box<t> {
+  value: t
+}
+
+impl Marker for Yes {}
+
+impl<t: Marker> Value for Box<t> {
+  fn value(self) -> I32 {
+    42
+  }
+}
+
+pub fn yes_box() -> Box<Yes> {
+  Box {
+    value: Yes {}
+  }
+}

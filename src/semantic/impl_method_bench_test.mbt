@@ -58,6 +58,21 @@ fn trait_method_calls_source(call_count : Int, generic : Bool) -> Bytes {
 }
 
 ///|
+fn bounded_trait_method_calls_source(call_count : Int) -> Bytes {
+  let output = Buffer(size_hint=call_count * 48 + 352)
+  output.write_string_utf8(
+    "trait Marker {}\ntrait Read<t> {\n  fn read(self) -> t\n}\nstruct Box<a> {\n  value: a\n}\nimpl Marker for I32 {}\nimpl<a: Marker> Read<a> for Box<a> {\n  fn read(self) -> a {\n    self.value\n  }\n}\nfn use(value: Box<I32>) -> I32 {\n",
+  )
+  for index in 0..<call_count {
+    output.write_string_utf8("  let value_")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(" = value.read()\n")
+  }
+  output.write_string_utf8("  value_0\n}\n")
+  output.to_bytes()
+}
+
+///|
 fn qualified_method_calls_source(call_count : Int, trait_ : Bool) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 256)
   if trait_ {
@@ -145,6 +160,17 @@ test "bench trait method calls n=256" (it : @bench.T) {
 ///|
 test "bench generic trait method calls n=256" (it : @bench.T) {
   let collected = collect_bytes(1UL, trait_method_calls_source(256, true))
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  it.bench(fn() {
+    let inferred = infer_module_bodies(collected, resolved, names)
+    it.keep(inferred.call_type_arguments.length())
+  })
+}
+
+///|
+test "bench bounded generic trait method calls n=256" (it : @bench.T) {
+  let collected = collect_bytes(1UL, bounded_trait_method_calls_source(256))
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
   it.bench(fn() {

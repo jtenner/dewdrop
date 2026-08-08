@@ -3904,20 +3904,33 @@ fn BasicBodyInferencer::collect_method_candidates(
 }
 
 ///|
+fn BasicBodyInferencer::implementation_generic_parameters(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+) -> HirSpan {
+  if semantic_id_module(declaration) == self.collected.module_id {
+    return self.collected.generic_parameters_of(declaration)
+  }
+  match self.imports {
+    Some(imports) =>
+      match imports.implementation(declaration) {
+        Some(implementation) => implementation.generic_parameters
+        None => { start: 0, length: 0 }
+      }
+    None => { start: 0, length: 0 }
+  }
+}
+
+///|
 fn BasicBodyInferencer::begin_method_candidate(
   self : BasicBodyInferencer,
   implementation_index : Int,
   declaration : DeclId,
 ) -> BodyTypeId {
   let implementation = self.impl_index.implementations[implementation_index]
-  self.call_scratch.instantiation_generics = if semantic_id_module(
-      implementation.declaration,
-    ) ==
-    self.collected.module_id {
-    self.collected.generic_parameters_of(implementation.declaration)
-  } else {
-    { start: 0, length: 0 }
-  }
+  self.call_scratch.instantiation_generics = self.implementation_generic_parameters(
+    implementation.declaration,
+  )
   self.call_scratch.instantiation_method_generics = if semantic_id_module(
       declaration,
     ) ==
@@ -3994,6 +4007,11 @@ fn BasicBodyInferencer::try_method_candidate(
       self.expression_type(expression),
       self.instantiate_signature_type(self.call_result_type(declaration)),
       origin,
+    )
+  }
+  if viable {
+    viable = self.impl_candidate_bounds_satisfied(
+      implementation_index, origin, 0,
     )
   }
   self.solver.rollback(snapshot)
@@ -4115,6 +4133,11 @@ fn BasicBodyInferencer::try_operator_candidate(
       origin,
     )
   }
+  if viable {
+    viable = self.impl_candidate_bounds_satisfied(
+      implementation_index, origin, 0,
+    )
+  }
   self.solver.rollback(snapshot)
   viable
 }
@@ -4211,6 +4234,11 @@ fn BasicBodyInferencer::try_index_candidate(
       self.expression_type(expression),
       self.instantiate_signature_type(self.call_result_type(declaration)),
       origin,
+    )
+  }
+  if viable {
+    viable = self.impl_candidate_bounds_satisfied(
+      implementation_index, origin, 0,
     )
   }
   self.solver.rollback(snapshot)
@@ -4441,6 +4469,11 @@ fn BasicBodyInferencer::select_map_trait_evidence(
         result_type,
         self.instantiate_signature_type(self.call_result_type(declaration)),
         origin,
+      )
+    }
+    if viable {
+      viable = self.impl_candidate_bounds_satisfied(
+        implementation_index, origin, 0,
       )
     }
     self.solver.rollback(snapshot)
@@ -4875,6 +4908,11 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
       self.expression_type(expression),
       self.instantiate_signature_type(self.call_result_type(declaration)),
       origin,
+    )
+  }
+  if viable {
+    viable = self.impl_candidate_bounds_satisfied(
+      implementation_index, origin, 0,
     )
   }
   self.solver.rollback(snapshot)
@@ -5607,14 +5645,9 @@ fn BasicBodyInferencer::begin_obligation_impl_candidate(
   implementation_index : Int,
 ) -> (BodyTypeId, BodyTypeId) {
   let implementation = self.impl_index.implementations[implementation_index]
-  self.call_scratch.instantiation_generics = if semantic_id_module(
-      implementation.declaration,
-    ) ==
-    self.collected.module_id {
-    self.collected.generic_parameters_of(implementation.declaration)
-  } else {
-    { start: 0, length: 0 }
-  }
+  self.call_scratch.instantiation_generics = self.implementation_generic_parameters(
+    implementation.declaration,
+  )
   self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
   self.call_scratch.candidate_type_arguments.clear()
   for _ in 0..<self.call_scratch.instantiation_generics.length {
@@ -5632,13 +5665,109 @@ fn BasicBodyInferencer::begin_obligation_impl_candidate(
 }
 
 ///|
-fn BasicBodyInferencer::trait_obligation_satisfied(
+fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
+  self : BasicBodyInferencer,
+  implementation_index : Int,
+  origin : TypeConstraintOrigin,
+  depth : Int,
+) -> Bool {
+  if depth >= 64 {
+    return false
+  }
+  let implementation = self.impl_index.implementations[implementation_index]
+  let local_impl = semantic_id_module(implementation.declaration) ==
+    self.collected.module_id
+  let imported = if local_impl {
+    None
+  } else {
+    match self.imports {
+      Some(imports) => imports.implementation(implementation.declaration)
+      None => None
+    }
+  }
+  let generics = self.implementation_generic_parameters(
+    implementation.declaration,
+  )
+  if generics.length == 0 {
+    return true
+  }
+  let mut requirement_count = 0
+  for generic_offset in 0..<generics.length {
+    if local_impl {
+      requirement_count += self.collected.generic_parameters[generics.start +
+        generic_offset].bounds.length
+    } else {
+      let imported_impl = imported.unwrap()
+      let imports = self.imports.unwrap()
+      requirement_count += imports.generic_parameter_bounds[imported_impl.generic_bounds.start +
+        generic_offset].length
+    }
+  }
+  if requirement_count == 0 {
+    return true
+  }
+  let targets : Array[BodyTypeId] = []
+  let bounds : Array[BodyTypeId] = []
+  let traits : Array[DeclId] = []
+  for generic_offset in 0..<generics.length {
+    let (parameter_bounds, bound_types) = if local_impl {
+      (
+        self.collected.generic_parameters[generics.start + generic_offset].bounds,
+        self.resolved.generic_bound_types,
+      )
+    } else {
+      let imported_impl = imported.unwrap()
+      let imports = self.imports.unwrap()
+      (
+        imports.generic_parameter_bounds[imported_impl.generic_bounds.start +
+        generic_offset],
+        imports.generic_bound_types,
+      )
+    }
+    for
+      bound_offset in parameter_bounds.start..<(parameter_bounds.start +
+      parameter_bounds.length) {
+      let resolved_bound = bound_types[bound_offset]
+      let trait_declaration = match self.resolved.types[resolved_bound] {
+        TraitType(value) => value
+        AppliedType(base, _) =>
+          match self.resolved.types[base] {
+            TraitType(value) => value
+            _ => continue
+          }
+        _ => continue
+      }
+      targets.push(self.call_scratch.candidate_type_arguments[generic_offset])
+      bounds.push(self.instantiate_signature_type(resolved_bound))
+      traits.push(trait_declaration)
+    }
+  }
+  for index in 0..<targets.length() {
+    if !self.trait_obligation_satisfied_at_depth(
+        targets[index],
+        bounds[index],
+        traits[index],
+        origin,
+        depth + 1,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
   self : BasicBodyInferencer,
   target : BodyTypeId,
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
+  depth : Int,
 ) -> Bool {
+  if depth >= 64 {
+    return false
+  }
   let head = match self.body_impl_target_head(target) {
     Some(value) => value
     None => return false
@@ -5662,8 +5791,13 @@ fn BasicBodyInferencer::trait_obligation_satisfied(
       let (candidate_target, candidate_trait) = self.begin_obligation_impl_candidate(
         implementation_index,
       )
-      let viable = self.solver.unify(target, candidate_target, origin) &&
+      let mut viable = self.solver.unify(target, candidate_target, origin) &&
         self.solver.unify(bound, candidate_trait, origin)
+      if viable {
+        viable = self.impl_candidate_bounds_satisfied(
+          implementation_index, origin, depth,
+        )
+      }
       self.solver.rollback(snapshot)
       if viable {
         return true
@@ -5671,6 +5805,19 @@ fn BasicBodyInferencer::trait_obligation_satisfied(
     }
   }
   false
+}
+
+///|
+fn BasicBodyInferencer::trait_obligation_satisfied(
+  self : BasicBodyInferencer,
+  target : BodyTypeId,
+  bound : BodyTypeId,
+  trait_declaration : DeclId,
+  origin : TypeConstraintOrigin,
+) -> Bool {
+  self.trait_obligation_satisfied_at_depth(
+    target, bound, trait_declaration, origin, 0,
+  )
 }
 
 ///|

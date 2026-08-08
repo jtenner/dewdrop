@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:4:14: error: NoMatchingMethod(1, 2, 85)\n  |\n4 |   value.value()\n  |              ^"
+  ],
+  "warnings": [],
+  "output": null
+}

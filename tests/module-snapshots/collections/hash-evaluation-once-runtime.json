@@ -1,9 +1,5 @@
 {
   "errors": [
-    "fixture.dew:13:27: error: NoMatchingMethod(200, 10, 227)\n  |\n13 |     self.hash_calls[0u32] = self.hash_calls[0u32] + 1\n  |                           ^",
-    "fixture.dew:13:44: error: NoMatchingMethod(199, 6, 244)\n  |\n13 |     self.hash_calls[0u32] = self.hash_calls[0u32] + 1\n  |                                            ^",
-    "fixture.dew:17:31: error: NoMatchingMethod(200, 25, 339)\n  |\n17 |     self.equality_calls[0u32] = self.equality_calls[0u32] + 1\n  |                               ^",
-    "fixture.dew:17:52: error: NoMatchingMethod(199, 17, 360)\n  |\n17 |     self.equality_calls[0u32] = self.equality_calls[0u32] + 1\n  |                                                    ^",
     "fixture.dew:31:27: error: AmbiguousMethod(7, 45, 12884901888002, 18446462598732841489, 9, 659)\n  |\n31 |   let map = Map::singleton(key, 10)\n  |                           ^",
     "fixture.dew:31:27: error: AmbiguousMethod(10, 45, 12884901888003, 18446462598732841490, 9, 659)\n  |\n31 |   let map = Map::singleton(key, 10)\n  |                           ^",
     "fixture.dew:51:5: error: UnknownPatternConstructor(25, 0, 1374)\n  |\n51 |     Some(value) => assert(value == 11, \"map safe get value\")\n  |     ^",

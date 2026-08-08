@@ -38,8 +38,10 @@ used by implementation heads. Resolved bounds are aligned in
 
 The private frozen-interface payload first advanced from V7 to V8 for aligned
 `generic_bound_types`, then to V9 when imported call checking required one bound
-span per frozen generic parameter. The outer persistent envelope and filenames
-advance with it to `v9-<fingerprint>.dwi`; older artifacts are ignored by
+span per frozen generic parameter. V10 adds the owner generic-parameter span to
+every frozen implementation so imported generic evidence can instantiate and
+enforce its own prerequisites. The outer persistent envelope and filenames
+advance with it to `v10-<fingerprint>.dwi`; older artifacts are ignored by
 construction rather than decoded under a newer layout.
 
 ## Call-site obligation checking
@@ -52,17 +54,31 @@ Failures produce `UnsatisfiedTraitObligation` at the call argument. Imported
 interfaces retain one bound span per generic parameter, and import translation
 maps bound types into the consumer's resolved arena before checking evidence.
 
+Generic implementation candidates now enforce their own ordered prerequisites
+before they can satisfy method, operator, indexing, map/set, or generic-call
+evidence. The same recursive check applies to local and imported implementations,
+rebuilds imported trait-obligation buckets in the consumer index, and caps nested
+prerequisite traversal at 64 levels. An implementation such as
+`impl<t: Marker> Value for Box<t>` therefore cannot provide `Value` for
+`Box<No>` merely because its target head unifies.
+
 A 256-call release-native inference benchmark measured:
 
 ```text
-unbounded generic calls     305.61 us
-one bound per generic call  369.90 us
+unbounded generic calls     342.21 us
+one bound per generic call  415.47 us
 ```
 
-The approximately 0.25 us per-call validation cost in this deliberately dense
+The approximately 0.29 us per-call validation cost in this deliberately dense
 workload includes coherent bucket lookup, trial unification of target and trait
 application, and rollback. Empty-bound callables take the existing fast path.
-These measurements are development observations rather than regression budgets.
+
+A parallel 256-call generic-method benchmark measured 657.64 us for an
+unbounded generic implementation and 725.18 us when its inferred owner argument
+had one prerequisite, approximately 0.26 us per candidate selection. Generic
+implementations with no prerequisites return through a dedicated no-allocation
+fast path. These measurements are development observations rather than
+regression budgets.
 
 ## Current boundary
 
@@ -75,6 +91,7 @@ stable generic-bound ABI. Those are the next obligation-solving steps.
 
 Tests cover function, builtin, and trait declarations; ordered multi-bound
 parsing; nested applied bounds adjacent to the outer `>`; unbounded parameters;
-flat HIR retention; trait-namespace resolution; byte-identical V9
-frozen-interface serialization/deserialization; local and imported bound
-checking; marker traits; and exact applied-trait argument matching.
+flat HIR retention; trait-namespace resolution; byte-identical V10
+frozen-interface serialization/deserialization; local and imported call-bound
+checking; local, transitive, operator, and imported generic-implementation
+prerequisites; marker traits; and exact applied-trait argument matching.
