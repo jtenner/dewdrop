@@ -899,22 +899,53 @@ fn CollectionBuilder::collect_derive_requests(
   self : CollectionBuilder,
   generic : Bool,
   requests : Array[@parser.DeriveRequest],
-  eq_impls : Array[@parser.ImplDeclaration],
-) -> Unit {
-  let seen : Map[String, Bool] = Map::default()
-  for request in requests {
-    if seen.contains(request.name) {
-      self.diagnostics.push(
-        UnknownDerivedTrait(
-          "duplicate " + request.name,
-          self.current_file,
-          request.offset,
-        ),
-      )
-      continue
+) -> UInt64? {
+  if requests.length() == 0 {
+    return None
+  }
+  let seen : Map[String, UInt64]? = if requests.length() > 8 {
+    Some(Map::default())
+  } else {
+    None
+  }
+  let mut eq_offset : UInt64? = None
+  for index, request in requests {
+    let first_offset = match seen {
+      Some(table) => table.get(request.name)
+      None => {
+        let mut found = None
+        for previous in 0..<index {
+          if requests[previous].name == request.name {
+            found = Some(requests[previous].offset)
+            break
+          }
+        }
+        found
+      }
     }
-    seen[request.name] = true
-    if generic {
+    match first_offset {
+      Some(first) => {
+        self.diagnostics.push(
+          DuplicateDerivedTrait(
+            request.name,
+            self.current_file,
+            first,
+            request.offset,
+          ),
+        )
+        continue
+      }
+      None =>
+        match seen {
+          Some(table) => table[request.name] = request.offset
+          None => ()
+        }
+    }
+    if request.name != "Eq" {
+      self.diagnostics.push(
+        UnknownDerivedTrait(request.name, self.current_file, request.offset),
+      )
+    } else if generic {
       self.diagnostics.push(
         GenericDeriveRequiresBounds(
           request.name,
@@ -922,16 +953,11 @@ fn CollectionBuilder::collect_derive_requests(
           request.offset,
         ),
       )
-    } else if request.name == "Eq" {
-      for implementation in eq_impls {
-        self.collect_impl(implementation)
-      }
     } else {
-      self.diagnostics.push(
-        UnknownDerivedTrait(request.name, self.current_file, request.offset),
-      )
+      eq_offset = Some(request.offset)
     }
   }
+  eq_offset
 }
 
 ///|
@@ -954,11 +980,17 @@ fn CollectionBuilder::collect_struct(
   )
   self.collect_generic_parameters(declaration.id, value.type_parameters)
   self.collect_named_fields(declaration.id, None, value.fields, StructField)
-  self.collect_derive_requests(
-    value.type_parameters.length() > 0,
-    value.derives,
-    @parser.derived_struct_eq_impls(value),
-  )
+  match
+    self.collect_derive_requests(
+      value.type_parameters.length() > 0,
+      value.derives,
+    ) {
+    Some(offset) =>
+      for implementation in @parser.derived_struct_eq_impls(value, offset) {
+        self.collect_impl(implementation)
+      }
+    None => ()
+  }
 }
 
 ///|
@@ -1038,11 +1070,17 @@ fn CollectionBuilder::collect_enum(
       _ => ()
     }
   }
-  self.collect_derive_requests(
-    value.type_parameters.length() > 0,
-    value.derives,
-    @parser.derived_enum_eq_impls(value),
-  )
+  match
+    self.collect_derive_requests(
+      value.type_parameters.length() > 0,
+      value.derives,
+    ) {
+    Some(offset) =>
+      for implementation in @parser.derived_enum_eq_impls(value, offset) {
+        self.collect_impl(implementation)
+      }
+    None => ()
+  }
 }
 
 ///|

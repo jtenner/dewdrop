@@ -305,25 +305,9 @@
     end
   )
   (func (;4;) (type 8) (param (ref 3) (ref 3)) (result i32)
-    i32.const 1
-    if (result i32) ;; label = @1
-      local.get 0
-      struct.get 3 0
-      local.get 1
-      struct.get 3 0
-      i32.eq
-    else
-      i32.const 0
-    end
-    if (result i32) ;; label = @1
-      local.get 0
-      struct.get 3 1
-      local.get 1
-      struct.get 3 1
-      i32.eq
-    else
-      i32.const 0
-    end
+    local.get 0
+    local.get 1
+    call 3
     i32.eqz
   )
   (func (;5;) (type 9) (param (ref 4) (ref 4)) (result i32)
@@ -465,142 +449,9 @@
     local.get 15
   )
   (func (;6;) (type 10) (param (ref 4) (ref 4)) (result i32)
-    (local i32 i32 i32 i32 i32 i32 eqref i32 eqref i32 eqref i32 eqref i32)
     local.get 0
-    local.set 14
-    block ;; label = @1
-      block ;; label = @2
-        block ;; label = @3
-          block ;; label = @4
-            block ;; label = @5
-              local.get 14
-              ref.cast (ref 4)
-              struct.get 4 0
-              br_table 0 (;@5;) 1 (;@4;) 2 (;@3;) 3 (;@2;)
-            end
-            local.get 1
-            local.set 8
-            block ;; label = @5
-              local.get 8
-              ref.cast (ref 4)
-              struct.get 4 0
-              i32.const 0
-              i32.eq
-              if ;; label = @6
-                i32.const 1
-                local.set 9
-                br 1 (;@5;)
-              end
-              i32.const 1
-              if ;; label = @6
-                i32.const 0
-                local.set 9
-                br 1 (;@5;)
-              end
-              unreachable
-            end
-            local.get 9
-            local.set 15
-            br 3 (;@1;)
-          end
-          local.get 14
-          ref.cast (ref 5)
-          struct.get 5 1
-          local.set 2
-          local.get 1
-          local.set 10
-          block ;; label = @4
-            local.get 10
-            ref.cast (ref 4)
-            struct.get 4 0
-            i32.const 1
-            i32.eq
-            if ;; label = @5
-              local.get 10
-              ref.cast (ref 5)
-              struct.get 5 1
-              local.set 3
-              i32.const 1
-              if (result i32) ;; label = @6
-                local.get 2
-                local.get 3
-                i32.eq
-              else
-                i32.const 0
-              end
-              local.set 11
-              br 1 (;@4;)
-            end
-            i32.const 1
-            if ;; label = @5
-              i32.const 0
-              local.set 11
-              br 1 (;@4;)
-            end
-            unreachable
-          end
-          local.get 11
-          local.set 15
-          br 2 (;@1;)
-        end
-        local.get 14
-        ref.cast (ref 6)
-        struct.get 6 1
-        local.set 4
-        local.get 14
-        ref.cast (ref 6)
-        struct.get 6 2
-        local.set 5
-        local.get 1
-        local.set 12
-        block ;; label = @3
-          local.get 12
-          ref.cast (ref 4)
-          struct.get 4 0
-          i32.const 2
-          i32.eq
-          if ;; label = @4
-            local.get 12
-            ref.cast (ref 6)
-            struct.get 6 1
-            local.set 6
-            local.get 12
-            ref.cast (ref 6)
-            struct.get 6 2
-            local.set 7
-            i32.const 1
-            if (result i32) ;; label = @5
-              local.get 4
-              local.get 6
-              i32.eq
-            else
-              i32.const 0
-            end
-            if (result i32) ;; label = @5
-              local.get 5
-              local.get 7
-              call 1
-            else
-              i32.const 0
-            end
-            local.set 13
-            br 1 (;@3;)
-          end
-          i32.const 1
-          if ;; label = @4
-            i32.const 0
-            local.set 13
-            br 1 (;@3;)
-          end
-          unreachable
-        end
-        local.get 13
-        local.set 15
-        br 1 (;@1;)
-      end
-      unreachable
-    end
-    local.get 15
+    local.get 1
+    call 5
     i32.eqz
   )
   (func (;7;) (type 11) (result i32)

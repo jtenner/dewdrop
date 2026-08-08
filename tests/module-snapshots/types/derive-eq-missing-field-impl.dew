@@ -1,0 +1,9 @@
+struct Inner {}
+
+struct Outer {
+  value: Inner
+} derive(Eq)
+
+pub fn main() -> I32 {
+  0
+}

@@ -202,6 +202,7 @@ pub enum CollectionDiagnostic {
   InvalidUtf8StringLiteral(FileId, UInt64)
   TestDeclarationOutsideTestFile(FileId, UInt64)
   UnknownDerivedTrait(String, FileId, UInt64)
+  DuplicateDerivedTrait(String, FileId, UInt64, UInt64)
   GenericDeriveRequiresBounds(String, FileId, UInt64)
 } derive(Eq, Debug)
 

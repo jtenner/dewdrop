@@ -228,6 +228,13 @@ fn CollectionDiagnostic::source_parts(
         secondary,
       )
     }
+    DuplicateDerivedTrait(_, file, first_offset, duplicate_offset) => {
+      secondary.push({
+        location: { file, offset: first_offset },
+        message: "first derive request is here",
+      })
+      (CompilerError, Some({ file, offset: duplicate_offset }), secondary)
+    }
     InvalidExpectedTestTrap(file, _, offset)
     | InvalidUtf8StringLiteral(file, offset)
     | TestDeclarationOutsideTestFile(file, offset)

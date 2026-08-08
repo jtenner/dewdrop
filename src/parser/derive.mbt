@@ -162,7 +162,16 @@ fn derived_eq_impls(
       name,
       "Ne",
       "ne",
-      PrefixExpr(LogicalNot, expression, offset),
+      PrefixExpr(
+        LogicalNot,
+        BinaryExpr(
+          Equal,
+          NameExpr("self", offset),
+          NameExpr("right", offset),
+          offset,
+        ),
+        offset,
+      ),
       offset,
     ),
   ]
@@ -171,19 +180,23 @@ fn derived_eq_impls(
 ///|
 pub fn derived_struct_eq_impls(
   value : StructDeclaration,
+  offset : UInt64,
 ) -> Array[ImplDeclaration] {
   derived_eq_impls(
     value.name,
-    derived_struct_eq_expression(value.fields, value.offset),
-    value.offset,
+    derived_struct_eq_expression(value.fields, offset),
+    offset,
   )
 }
 
 ///|
-pub fn derived_enum_eq_impls(value : EnumDeclaration) -> Array[ImplDeclaration] {
+pub fn derived_enum_eq_impls(
+  value : EnumDeclaration,
+  offset : UInt64,
+) -> Array[ImplDeclaration] {
   derived_eq_impls(
     value.name,
-    derived_enum_eq_expression(value.name, value.variants, value.offset),
-    value.offset,
+    derived_enum_eq_expression(value.name, value.variants, offset),
+    offset,
   )
 }

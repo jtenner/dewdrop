@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:5:10: error: NoMatchingMethod(4, 5, 56)\n  |\n5 | } derive(Eq)\n  |          ^"
+  ],
+  "warnings": [],
+  "output": null
+}

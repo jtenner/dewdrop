@@ -14,7 +14,45 @@ test "derive Eq synthesizes coherent Eq and Ne implementations" {
       implementation.target_head,
       NominalImplTargetHead(collected.lookup_type("Pair").unwrap()),
     )
+    match collected.declaration(implementation.declaration) {
+      Some(TopLevelReference(declaration)) =>
+        assert_eq(declaration.offset, 144UL)
+      _ => fail("expected derived implementation declaration")
+    }
+    let derived_method = index.methods[implementation.methods.start]
+    match collected.declaration(derived_method.declaration) {
+      Some(MethodReference(declaration)) => assert_eq(declaration.offset, 144UL)
+      _ => fail("expected derived method declaration")
+    }
   }
+}
+
+///|
+test "ordinary nominal collection creates no synthetic derive work" {
+  let collected = collect_bytes(
+    2702UL, b"struct Plain {\n  value: I32\n}\nenum Choice {\n  None\n  Some(I32)\n}\n",
+  )
+  assert_eq(collected.impls.length(), 0)
+  assert_eq(collected.methods.length(), 0)
+  assert_eq(collected.bodies.length(), 0)
+}
+
+///|
+test "empty enums may derive equality without spurious flow diagnostics" {
+  let program = collect_program_manifest(
+    2703UL,
+    ProgramManifest::new([
+      ManifestModule::new("derive.empty", [
+        ManifestFile::new(
+          "empty.dew", b"enum Abyss {} derive(Eq)\npub fn main() -> I32 {\n  0\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(program.diagnostics.length(), 0)
+  assert_eq(program.modules[0].diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
 }
 
 ///|
@@ -28,7 +66,10 @@ test "derive diagnostics reject unknown duplicate and unbounded generic requests
     _ => fail("expected unknown derived trait")
   }
   match collected.diagnostics[1] {
-    UnknownDerivedTrait("duplicate Eq", _, _) => ()
+    DuplicateDerivedTrait("Eq", _, first_offset, duplicate_offset) => {
+      assert_eq(first_offset, 61UL)
+      assert_eq(duplicate_offset, 65UL)
+    }
     _ => fail("expected duplicate derived trait")
   }
   match collected.diagnostics[2] {
