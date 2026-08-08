@@ -7,7 +7,7 @@
       "source": "file:dependency",
       "path": "dependency",
       "integrity": "sha256-161f93e295328f04102eba2f56f57fca5bbd5ade0a034b07dae3b18cea708b25",
-      "interface": "6e5507835b77134269190a1d171833ca9658e201d58cbc17c4f95d5f73060b1b"
+      "interface": "62995ab5892f6ca797d0ebb093ede3385d0a63d05ef1b1bca4273af2a051f09e"
     }
   ]
 }

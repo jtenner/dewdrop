@@ -25,10 +25,26 @@ test "public generic enums preserve unit and tuple variants" {
           UnitVariant("None", 23UL),
           TupleVariant("Some", [NamedType("t", 35UL)], 30UL),
         ],
+        derives: [],
         offset: 0UL,
       }),
     ),
   )
+}
+
+///|
+test "enum declarations retain postfix derive requests" {
+  match
+    Parser::from_bytes(
+      b"enum Choice {\n  No\n  Yes(I32)\n} derive(Eq, Debug)\n",
+    ).parse_declaration() {
+    Ok(Enum(declaration)) =>
+      assert_eq(declaration.derives, [
+        { name: "Eq", offset: 39UL },
+        { name: "Debug", offset: 43UL },
+      ])
+    _ => fail("expected derived enum declaration")
+  }
 }
 
 ///|

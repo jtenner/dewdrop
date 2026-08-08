@@ -25,10 +25,26 @@ test "public generic structs preserve ordered fields" {
           { name: "x", type_: NamedType("t", 27UL), offset: 24UL },
           { name: "y", type_: NamedType("t", 34UL), offset: 31UL },
         ],
+        derives: [],
         offset: 0UL,
       }),
     ),
   )
+}
+
+///|
+test "struct declarations retain postfix derive requests" {
+  match
+    Parser::from_bytes(
+      b"struct Pair {\n  left: I32\n  right: I32\n} derive(Eq, Debug)\n",
+    ).parse_declaration() {
+    Ok(Struct(declaration)) =>
+      assert_eq(declaration.derives, [
+        { name: "Eq", offset: 48UL },
+        { name: "Debug", offset: 52UL },
+      ])
+    _ => fail("expected derived struct declaration")
+  }
 }
 
 ///|

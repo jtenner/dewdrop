@@ -328,10 +328,11 @@ Struct declarations use the grammar:
 
 ```text
 struct-declaration = "pub"? "struct" identifier type-parameters?
-                     struct-body line-end
+                     struct-body derive-clause? line-end
 struct-body        = "{" "}"
                    | "{" newline newline* struct-field* "}"
 struct-field       = identifier ":" type newline
+derive-clause      = "derive" "(" identifier ("," identifier)* ","? ")"
 ```
 
 ```dew
@@ -347,7 +348,7 @@ struct Cache<t> {
 
 A bare struct is module-visible; `pub struct` exports it. Fields do not have separate visibility modifiers. Fields are newline-delimited rather than comma-delimited, and every non-empty field requires a newline, including the final field before `}`. Blank lines and comments are accepted between fields, and compact `{}` is an empty struct.
 
-The AST retains ordered fields and their recursively parsed types. Duplicate fields, unknown types, generic arity, recursive-layout legality, and visibility leakage are semantic errors. Inline object expressions use the same field-name/newline shape, allowing later contextual typing against struct declarations.
+The AST retains ordered fields, recursively parsed types, and ordered postfix derive requests. `derive(Eq)` on a non-generic struct synthesizes coherent `Eq` and `Ne` implementations in declaration order; equality compares fields in source order with short-circuiting, and an empty struct compares equal to every value of the same type. Unknown, duplicate, and currently unbounded generic derive requests are diagnosed at the request location. Duplicate fields, unknown types, generic arity, recursive-layout legality, and visibility leakage are semantic errors. Inline object expressions use the same field-name/newline shape, allowing later contextual typing against struct declarations.
 
 Struct benchmarks live in `src/parser/struct_declaration_bench_test.mbt`; measurements and parser details are recorded in `docs/research/struct-declaration-parsing.md`.
 
@@ -357,7 +358,7 @@ Enum declarations use the grammar:
 
 ```text
 enum-declaration = "pub"? "enum" identifier type-parameters?
-                   enum-body line-end
+                   enum-body derive-clause? line-end
 enum-body        = "{" "}"
                  | "{" newline newline* enum-variant* "}"
 enum-variant     = identifier newline
@@ -382,7 +383,7 @@ pub enum Message<t> {
 
 Enums support unit, tuple-like, and struct-like variants. Variants are newline-delimited; commas are reserved for tuple payload type lists. Empty tuple payloads are rejected in favor of the unit spelling, while compact empty struct-like payloads remain a distinct accepted form. Tuple payload lists allow newlines and exactly one trailing comma.
 
-The AST uses one tagged `EnumVariant` node per variant rather than allocating a separate payload wrapper. Struct-like variants reuse `StructField`, and all payload types use the recursive applied-type parser. Variants and fields do not have separate visibility modifiers.
+The AST uses one tagged `EnumVariant` node per variant rather than allocating a separate payload wrapper. Struct-like variants reuse `StructField`, all payload types use the recursive applied-type parser, and ordered postfix derive requests are retained. `derive(Eq)` synthesizes `Eq` and `Ne`: variant tags must match, then tuple or named payloads compare in source order. Variants and fields do not have separate visibility modifiers.
 
 Enum benchmarks live in `src/parser/enum_declaration_bench_test.mbt`; measurements and parser details are recorded in `docs/research/enum-declaration-parsing.md`.
 

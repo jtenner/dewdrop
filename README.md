@@ -444,7 +444,9 @@ fn example() -> I32 {
 }
 ```
 
-Struct fields are newline-delimited rather than comma-delimited.
+Struct fields are newline-delimited rather than comma-delimited. A non-generic
+struct or enum may append `derive(Eq)` after its closing brace to receive
+source-ordered `==` and `!=` implementations.
 
 ### Enums and pattern matching
 

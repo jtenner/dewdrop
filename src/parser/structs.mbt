@@ -12,6 +12,7 @@ pub struct StructDeclaration {
   name_offset : UInt64
   type_parameters : Array[TypeParameter]
   fields : Array[StructField]
+  derives : Array[DeriveRequest]
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -112,6 +113,10 @@ fn Parser::parse_struct_after_keyword(
     Ok(value) => value
     Err(error) => return Err(error.inside_brace())
   }
+  let derives = match self.parse_optional_derive_requests() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   match self.finish_declaration_line() {
     Ok(_) => ()
     Err(error) => return Err(error)
@@ -122,6 +127,7 @@ fn Parser::parse_struct_after_keyword(
     name_offset,
     type_parameters,
     fields,
+    derives,
     offset: declaration_offset,
   })
 }

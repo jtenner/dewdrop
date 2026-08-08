@@ -895,6 +895,46 @@ fn CollectionBuilder::collect_impl(
 }
 
 ///|
+fn CollectionBuilder::collect_derive_requests(
+  self : CollectionBuilder,
+  generic : Bool,
+  requests : Array[@parser.DeriveRequest],
+  eq_impls : Array[@parser.ImplDeclaration],
+) -> Unit {
+  let seen : Map[String, Bool] = Map::default()
+  for request in requests {
+    if seen.contains(request.name) {
+      self.diagnostics.push(
+        UnknownDerivedTrait(
+          "duplicate " + request.name,
+          self.current_file,
+          request.offset,
+        ),
+      )
+      continue
+    }
+    seen[request.name] = true
+    if generic {
+      self.diagnostics.push(
+        GenericDeriveRequiresBounds(
+          request.name,
+          self.current_file,
+          request.offset,
+        ),
+      )
+    } else if request.name == "Eq" {
+      for implementation in eq_impls {
+        self.collect_impl(implementation)
+      }
+    } else {
+      self.diagnostics.push(
+        UnknownDerivedTrait(request.name, self.current_file, request.offset),
+      )
+    }
+  }
+}
+
+///|
 fn CollectionBuilder::collect_struct(
   self : CollectionBuilder,
   value : @parser.StructDeclaration,
@@ -914,6 +954,11 @@ fn CollectionBuilder::collect_struct(
   )
   self.collect_generic_parameters(declaration.id, value.type_parameters)
   self.collect_named_fields(declaration.id, None, value.fields, StructField)
+  self.collect_derive_requests(
+    value.type_parameters.length() > 0,
+    value.derives,
+    @parser.derived_struct_eq_impls(value),
+  )
 }
 
 ///|
@@ -993,6 +1038,11 @@ fn CollectionBuilder::collect_enum(
       _ => ()
     }
   }
+  self.collect_derive_requests(
+    value.type_parameters.length() > 0,
+    value.derives,
+    @parser.derived_enum_eq_impls(value),
+  )
 }
 
 ///|

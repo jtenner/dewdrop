@@ -1,3 +1,22 @@
+impl Eq for Bool {
+  fn eq(self, right: Bool) -> Bool {
+    if self {
+      right
+    } else {
+      !right
+    }
+  }
+}
+impl Ne for Bool {
+  fn ne(self, right: Bool) -> Bool {
+    if self {
+      !right
+    } else {
+      right
+    }
+  }
+}
+
 impl BitOr for I8 {
   fn bit_or(self, right: I8) -> I8 {
     i8_or(self, right)

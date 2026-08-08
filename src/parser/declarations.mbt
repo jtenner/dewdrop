@@ -31,6 +31,13 @@ pub struct TypeParameter {
 } derive(Eq, Debug)
 
 ///|
+/// One trait requested by a postfix `derive(...)` clause.
+pub struct DeriveRequest {
+  name : String
+  offset : UInt64
+} derive(Eq, Debug)
+
+///|
 pub struct FnParameter {
   name : String
   type_ : TypeExpr
@@ -168,6 +175,8 @@ pub enum DeclarationExpectation {
   TraitBodyNewline
   TypeParameter
   TypeParameterSeparatorOrClose
+  DeriveName
+  DeriveSeparatorOrClose
   TypeArgumentSeparatorOrClose
   LeftParen
   LeftBrace
@@ -248,6 +257,47 @@ fn Parser::declaration_error(
           )
       }
     None => declaration_failure(ExpectedDeclarationSyntax(expectation, None))
+  }
+}
+
+///|
+fn Parser::parse_optional_derive_requests(
+  self : Parser,
+) -> Result[Array[DeriveRequest], RecoveryFailure] {
+  let requests : Array[DeriveRequest] = []
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Identifier("derive") => self.consume_lookahead()
+        _ => return Ok(requests)
+      }
+    None => return Ok(requests)
+  }
+  guard self.consume_left_paren() else {
+    return Err(self.declaration_error(LeftParen))
+  }
+  self.skip_newlines()
+  while true {
+    let (name, offset) = match self.parse_identifier(DeriveName) {
+      Ok(value) => value
+      Err(error) => return Err(error.inside_parenthesis())
+    }
+    requests.push({ name, offset })
+    self.skip_newlines()
+    if self.consume_right_paren_for_declaration() {
+      return Ok(requests)
+    }
+    guard self.consume_comma() else {
+      return Err(
+        self.declaration_error(DeriveSeparatorOrClose).inside_parenthesis(),
+      )
+    }
+    self.skip_newlines()
+    if self.consume_right_paren_for_declaration() {
+      return Ok(requests)
+    }
+  } nobreak {
+    abort("unreachable derive request parser termination")
   }
 }
 
@@ -525,7 +575,7 @@ fn Parser::parse_type_parameters(
   let parameters : Array[TypeParameter] = []
   self.skip_newlines()
   while true {
-    let parameter = match self.parse_identifier(TypeParameter) {
+    let parameter : TypeParameter = match self.parse_identifier(TypeParameter) {
       Ok((name, offset)) => { name, offset }
       Err(error) => return Err(error)
     }

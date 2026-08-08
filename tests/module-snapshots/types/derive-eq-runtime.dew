@@ -1,0 +1,53 @@
+open dew.std.wasi
+
+struct Point {
+  x: I32
+  y: I32
+} derive(Eq)
+
+enum Choice {
+  None
+  Number(I32)
+  Named {
+    label: I32
+    active: Bool
+  }
+} derive(Eq)
+
+pub fn main() -> U32 {
+  let points = Point {
+    x: 3
+    y: 4
+  } == Point {
+    x: 3
+    y: 4
+  } && Point {
+    x: 3
+    y: 4
+  } != Point {
+    x: 4
+    y: 3
+  }
+  let choices = Choice::None == Choice::None &&
+    Choice::None != Choice::Number(0) &&
+    Choice::Number(7) == Choice::Number(7) &&
+    Choice::Number(7) != Choice::Number(8) &&
+    Choice::Named {
+      label: 9
+      active: true
+    } == Choice::Named {
+      label: 9
+      active: true
+    } && Choice::Named {
+      label: 9
+      active: true
+    } != Choice::Named {
+      label: 9
+      active: false
+    }
+  if points && choices {
+    wasi_fd_write(1u32, b"derive:eq")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}
