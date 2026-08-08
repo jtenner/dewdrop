@@ -6,9 +6,12 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import os
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +45,28 @@ def check_wasm_tools_version() -> None:
             f"  actual:   {actual}\n"
             "Update the pin and snapshots intentionally."
         )
+
+
+def build_snapshot_compiler() -> Path:
+    run(["moon", "build", "--target", "native", "--release", "src/module_snapshot_gen"])
+    module_name = None
+    for line in (ROOT / "moon.mod").read_text(encoding="utf-8").splitlines():
+        if line.startswith("name = "):
+            module_name = json.loads(line.removeprefix("name = "))
+            break
+    if not isinstance(module_name, str) or not module_name:
+        raise SnapshotError("moon.mod does not contain a valid module name")
+    compiler = (
+        ROOT
+        / "_build/native/release/build"
+        / module_name
+        / "module_snapshot_gen/module_snapshot_gen.exe"
+    )
+    if not compiler.is_file():
+        raise SnapshotError(
+            f"native snapshot compiler was not built at {compiler.relative_to(ROOT)}"
+        )
+    return compiler
 
 
 HOST_KEYS = {
@@ -204,15 +229,14 @@ def fixture_sources(source: Path) -> list[tuple[str, str, Path]]:
     return sources
 
 
-def compile_fixture(source: Path, output: Path) -> tuple[bool, list[str], list[str]]:
+def compile_fixture(
+    compiler: Path,
+    source: Path,
+    output: Path,
+    cache_dir: Path,
+) -> tuple[bool, list[str], list[str]]:
     command = [
-        "moon",
-        "run",
-        "--target",
-        "native",
-        "--release",
-        "src/module_snapshot_gen",
-        "--",
+        str(compiler),
         str(output),
         fixture_mode(source),
     ]
@@ -221,6 +245,7 @@ def compile_fixture(source: Path, output: Path) -> tuple[bool, list[str], list[s
     process = subprocess.run(
         command,
         cwd=ROOT,
+        env={**os.environ, "DEW_CACHE_DIR": str(cache_dir)},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -326,19 +351,17 @@ def render_wat(binary: Path, output: Path) -> None:
     ])
 
 
-def compare_wat(expected: Path, actual: Path, update: bool) -> bool:
+def compare_wat(expected: Path, actual: Path, update: bool) -> tuple[bool, str | None]:
     if update:
         expected.write_bytes(actual.read_bytes())
-        print(f"updated {expected.relative_to(ROOT)}")
-        return True
+        return True, f"updated {expected.relative_to(ROOT)}"
     if not expected.is_file():
-        print(f"missing {expected.relative_to(ROOT)}; run with --update", file=sys.stderr)
-        return False
+        return False, f"missing {expected.relative_to(ROOT)}; run with --update"
     expected_lines = expected.read_text(encoding="utf-8").splitlines(keepends=True)
     actual_lines = actual.read_text(encoding="utf-8").splitlines(keepends=True)
     if expected_lines == actual_lines:
-        return True
-    sys.stderr.writelines(
+        return True, None
+    return False, "".join(
         difflib.unified_diff(
             expected_lines,
             actual_lines,
@@ -346,7 +369,6 @@ def compare_wat(expected: Path, actual: Path, update: bool) -> bool:
             tofile=f"{actual.stem}.actual.wat",
         )
     )
-    return False
 
 
 def fixture_name(source: Path) -> str:
@@ -369,6 +391,127 @@ def fixture_paths(selected: list[str]) -> list[Path]:
     return [fixture for fixture in fixtures if fixture_name(fixture) in names]
 
 
+@dataclass(frozen=True)
+class FixtureResult:
+    stdout: tuple[str, ...]
+    stderr: tuple[str, ...]
+    failed: bool
+
+
+def process_fixture(
+    source: Path,
+    temp: Path,
+    compiler: Path,
+    wago_runner: Path,
+    runtimes: list[str],
+    no_repro_check: bool,
+    update: bool,
+) -> FixtureResult:
+    name = fixture_name(source)
+    stdout = [f"checking {name}"]
+    stderr: list[str] = []
+
+    def failure(message: str) -> FixtureResult:
+        stderr.append(f"{name}: {message}")
+        return FixtureResult(tuple(stdout), tuple(stderr), True)
+
+    temporary_name = name.replace("/", "__")
+    expected = load_expectation(source)
+    first = temp / f"{temporary_name}.wasm"
+    second = temp / f"{temporary_name}.repeat.wasm"
+    actual_wat = temp / f"{temporary_name}.wat"
+    cache_dir = temp / f"{temporary_name}.cache"
+    try:
+        compiled, errors, warnings = compile_fixture(
+            compiler, source, first, cache_dir
+        )
+        if not no_repro_check:
+            repeated, repeated_errors, repeated_warnings = compile_fixture(
+                compiler, source, second, cache_dir
+            )
+            if repeated != compiled or repeated_errors != errors or repeated_warnings != warnings:
+                raise SnapshotError("repeated compilation changed diagnostics or success state")
+            if compiled and first.read_bytes() != second.read_bytes():
+                raise SnapshotError("repeated compilation changed Wasm bytes")
+    except SnapshotError as error:
+        return failure(str(error))
+
+    host = expected.get("host", {})
+    if compiled:
+        try:
+            runtime_outputs: dict[str, Any] = {}
+            if "node" in runtimes:
+                runtime_outputs["node"] = run_main_node(first, host, fixture_mode(source))
+            if "wago" in runtimes:
+                runtime_outputs["wago"] = run_main_wago(
+                    wago_runner, first, host, fixture_mode(source)
+                )
+            if len(
+                set(json.dumps(value, sort_keys=True) for value in runtime_outputs.values())
+            ) != 1:
+                raise SnapshotError(f"Node/Wago output mismatch: {runtime_outputs!r}")
+            output = runtime_outputs[runtimes[0]]
+        except SnapshotError as error:
+            return failure(str(error))
+    else:
+        output = None
+
+    if update:
+        updated = {"errors": errors, "warnings": warnings, "output": output}
+        if host:
+            updated["host"] = host
+        expected = updated
+        write_expectation(source, expected)
+        stdout.append(f"updated {expectation_path(source).relative_to(ROOT)}")
+    elif errors != expected["errors"] or warnings != expected["warnings"] or output != expected["output"]:
+        return failure(
+            f"expected diagnostics/output {expected!r}, got "
+            f"{{'errors': {errors!r}, 'warnings': {warnings!r}, 'output': {output!r}}}"
+        )
+
+    expected_wat = source.with_suffix(".wat")
+    if not compiled:
+        if update and expected_wat.exists():
+            expected_wat.unlink()
+            stdout.append(f"removed {expected_wat.relative_to(ROOT)}")
+        elif not update and expected_wat.exists():
+            return failure("failed compilation must not have a WAT snapshot")
+        stdout.append(f"ok {name}")
+        return FixtureResult(tuple(stdout), tuple(stderr), False)
+
+    render_wat(first, actual_wat)
+    matched, comparison = compare_wat(expected_wat, actual_wat, update)
+    if comparison is not None:
+        if matched:
+            stdout.append(comparison)
+        else:
+            stderr.append(comparison)
+    if not matched:
+        return FixtureResult(tuple(stdout), tuple(stderr), True)
+    stdout.append(f"ok {name}")
+    return FixtureResult(tuple(stdout), tuple(stderr), False)
+
+
+def emit_result(result: FixtureResult) -> None:
+    for message in result.stdout:
+        print(message)
+    for message in result.stderr:
+        print(message, file=sys.stderr, end="" if message.endswith("\n") else "\n")
+
+
+def default_snapshot_jobs() -> int:
+    configured = os.environ.get("DEW_SNAPSHOT_JOBS")
+    if configured is None:
+        return min(8, os.cpu_count() or 1)
+    try:
+        jobs = int(configured)
+    except ValueError as error:
+        raise SnapshotError("DEW_SNAPSHOT_JOBS must be a positive integer") from error
+    if jobs <= 0:
+        raise SnapshotError("DEW_SNAPSHOT_JOBS must be a positive integer")
+    return jobs
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true", help="replace expected diagnostics, output, and WAT")
@@ -376,12 +519,20 @@ def main() -> int:
     parser.add_argument("--list", action="store_true", help="list fixture names")
     parser.add_argument("--no-repro-check", action="store_true", help="compile only once")
     parser.add_argument(
+        "--jobs",
+        type=int,
+        default=default_snapshot_jobs(),
+        help="fixtures to run concurrently (default: min(8, CPU count); DEW_SNAPSHOT_JOBS overrides)",
+    )
+    parser.add_argument(
         "--runtime",
         action="append",
         choices=("node", "wago"),
         help="runtime to execute; repeat to select both (default: node and wago)",
     )
     args = parser.parse_args()
+    if args.jobs <= 0:
+        parser.error("--jobs must be a positive integer")
     runtimes = args.runtime or ["node", "wago"]
     if len(set(runtimes)) != len(runtimes):
         raise SnapshotError("each --runtime may be supplied only once")
@@ -394,6 +545,7 @@ def main() -> int:
     if not fixtures:
         raise SnapshotError("no <feature>/<test>.dew fixtures found")
     check_wasm_tools_version()
+    compiler = build_snapshot_compiler()
 
     failures = 0
     with tempfile.TemporaryDirectory(prefix="dew-module-snapshots-") as temporary:
@@ -401,84 +553,22 @@ def main() -> int:
         wago_runner = temp / "wago-snapshot-runner"
         if "wago" in runtimes:
             build_wago_runner(wago_runner)
-        for source in fixtures:
-            name = fixture_name(source)
-            temporary_name = name.replace("/", "__")
-            print(f"checking {name}", flush=True)
-            expected = load_expectation(source)
-            first = temp / f"{temporary_name}.wasm"
-            second = temp / f"{temporary_name}.repeat.wasm"
-            actual_wat = temp / f"{temporary_name}.wat"
-            try:
-                compiled, errors, warnings = compile_fixture(source, first)
-                if not args.no_repro_check:
-                    repeated, repeated_errors, repeated_warnings = compile_fixture(source, second)
-                    if repeated != compiled or repeated_errors != errors or repeated_warnings != warnings:
-                        raise SnapshotError("repeated compilation changed diagnostics or success state")
-                    if compiled and first.read_bytes() != second.read_bytes():
-                        raise SnapshotError("repeated compilation changed Wasm bytes")
-            except SnapshotError as error:
-                print(f"{name}: {error}", file=sys.stderr)
-                failures += 1
-                continue
-
-            host = expected.get("host", {})
-            if compiled:
-                try:
-                    runtime_outputs: dict[str, Any] = {}
-                    if "node" in runtimes:
-                        runtime_outputs["node"] = run_main_node(
-                            first, host, fixture_mode(source)
-                        )
-                    if "wago" in runtimes:
-                        runtime_outputs["wago"] = run_main_wago(
-                            wago_runner, first, host, fixture_mode(source)
-                        )
-                    if len(set(json.dumps(value, sort_keys=True) for value in runtime_outputs.values())) != 1:
-                        raise SnapshotError(
-                            f"Node/Wago output mismatch: {runtime_outputs!r}"
-                        )
-                    output = runtime_outputs[runtimes[0]]
-                except SnapshotError as error:
-                    print(f"{name}: {error}", file=sys.stderr)
-                    failures += 1
-                    continue
-            else:
-                output = None
-
-            if args.update:
-                updated = {"errors": errors, "warnings": warnings, "output": output}
-                if host:
-                    updated["host"] = host
-                expected = updated
-                write_expectation(source, expected)
-                print(f"updated {expectation_path(source).relative_to(ROOT)}")
-            elif errors != expected["errors"] or warnings != expected["warnings"] or output != expected["output"]:
-                print(
-                    f"{name}: expected diagnostics/output {expected!r}, got "
-                    f"{{'errors': {errors!r}, 'warnings': {warnings!r}, 'output': {output!r}}}",
-                    file=sys.stderr,
-                )
-                failures += 1
-                continue
-
-            expected_wat = source.with_suffix(".wat")
-            if not compiled:
-                if args.update and expected_wat.exists():
-                    expected_wat.unlink()
-                    print(f"removed {expected_wat.relative_to(ROOT)}")
-                elif not args.update and expected_wat.exists():
-                    print(f"{name}: failed compilation must not have a WAT snapshot", file=sys.stderr)
-                    failures += 1
-                    continue
-                print(f"ok {name}")
-                continue
-
-            render_wat(first, actual_wat)
-            if not compare_wat(expected_wat, actual_wat, args.update):
-                failures += 1
-                continue
-            print(f"ok {name}")
+        with ThreadPoolExecutor(max_workers=args.jobs) as executor:
+            results = executor.map(
+                lambda source: process_fixture(
+                    source,
+                    temp,
+                    compiler,
+                    wago_runner,
+                    runtimes,
+                    args.no_repro_check,
+                    args.update,
+                ),
+                fixtures,
+            )
+            for result in results:
+                emit_result(result)
+                failures += int(result.failed)
 
     if failures:
         print(f"module snapshots failed: {failures} fixture(s)", file=sys.stderr)

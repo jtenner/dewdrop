@@ -78,10 +78,10 @@ DEW_INTERNAL <harness failure>
 ```
 
 Framing preserves a multiline diagnostic as one ordered JSON string rather than
-silently truncating it at the first line. Compiler diagnostic enums derive
-`Debug`, so the current implementation uses `@debug.to_string` as the exact
-snapshot spelling. A future user-facing renderer can intentionally replace these
-strings and refresh the fixtures in one reviewable change.
+silently truncating it at the first line. The current snapshot spelling is the
+same deterministic source renderer used by the CLI: manifest-stable logical
+path, byte-based line/column, severity, semantic `Debug` message, source excerpt,
+caret, and any secondary labels.
 
 Internal harness failures are never accepted as expected compiler errors.
 
@@ -143,6 +143,15 @@ Wasm and identical Node/Wago runtime observations. Failed fixtures must produce
 identical ordered diagnostics and the same success/failure state. `--runtime`
 may select one engine for focused debugging, but ordinary and full-project runs
 execute both.
+
+The runner builds the native snapshot compiler once and invokes that executable
+directly for every compilation. Independent fixtures run concurrently with one
+temporary interface-cache directory per fixture, preventing concurrent cache
+writers or an inherited `DEW_CACHE_DIR` from affecting another fixture. The
+default worker count is the smaller of eight and the host CPU count. Results are
+buffered and emitted in sorted fixture order, so concurrency does not change
+visible output or failure ordering. `--jobs 1` restores serial fixture execution,
+and `DEW_SNAPSHOT_JOBS` changes the default.
 
 Generated Wasm and actual WAT remain temporary. `--update` refreshes diagnostics,
 stdout output, and WAT, or removes stale WAT after an expected compilation
@@ -243,10 +252,28 @@ loads the import-selected source subset from the resolved on-disk `dew.std`
 package. Persistent content-addressed frozen-interface caching now covers
 compiler-owned standard modules and verified versioned external dependencies.
 
+## Runner performance
+
+On August 8, 2026, on the 16-logical-CPU development host, the complete 216-fixture
+Node/Wago suite measured:
+
+```text
+previous moon run per compilation       36.206 s
+one prebuilt compiler, serial jobs       25.377 s
+one prebuilt compiler, eight jobs         6.021 s
+```
+
+The prebuilt parallel runner reduced this stage's wall time by about 83% while
+retaining duplicate compilation, byte-for-byte reproducibility checks, both
+runtimes, Wasm validation, WAT comparison, and deterministic result ordering.
+These are host-specific development measurements rather than contractual
+resource budgets.
+
 ## Commands
 
 ```text
 tools/module-snapshots/run.sh
+tools/module-snapshots/run.sh --jobs 1
 tools/module-snapshots/run.sh --fixture text/concat
 tools/module-snapshots/run.sh --update
 ```

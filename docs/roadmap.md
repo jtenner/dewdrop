@@ -581,6 +581,7 @@ count = count + 1
 - [x] Track native, WasmGC, JavaScript, classic Wasm, and Node integration runners.
 - [x] Add multi-file/module graph, import-resolution, and static-link benchmarks.
 - [x] Add release-mode phase-only standard-interface cache benchmarks separating serialization (2.89 ms), decoding (3.09 ms), cached injection (1.77 ms), and fresh freezing (5.31 ms) on the all-standard wildcard workload.
+- [x] Parallelize independent full-check MoonBit target suites through isolated persistent target directories, prebuild and parallelize snapshot compilation with deterministic buffered output, and run the large UTF parity generator in release mode without reducing validation coverage.
 - [ ] Add cache-file I/O/checksum timings, allocation/peak-memory measurements, and representative external-package workloads before treating cache hits as an end-to-end performance win.
 - [ ] Track allocations and peak memory, not only wall time.
 - [ ] Establish regression thresholds for hot workloads.

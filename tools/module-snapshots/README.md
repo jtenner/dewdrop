@@ -157,7 +157,7 @@ runtime traps, and sixty-eight intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 5, 2026, all 184 compiled fixtures pass in both Node and Wago, including cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, every fixed-width numeric literal-pattern carrier, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, narrow fixed-array carriers, and direct/control-flow/matched nominal locals passed to typed functions.
+As of August 8, 2026, all 184 compiled fixtures pass in both Node and Wago, including cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, every fixed-width numeric literal-pattern carrier, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, narrow fixed-array carriers, and direct/control-flow/matched nominal locals passed to typed functions.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,
 literal and enum matching, aggregate construction and extraction, scalar numeric
@@ -183,7 +183,13 @@ unit tests and does not run snapshots.
 tools/check.sh
 
 # Run every snapshot recursively in Node and Wago (the default).
+# The native compiler is built once and up to min(8, CPU count) fixtures run concurrently.
 tools/module-snapshots/run.sh
+
+# Force serial execution or choose an explicit worker count.
+tools/module-snapshots/run.sh --jobs 1
+tools/module-snapshots/run.sh --jobs 4
+DEW_SNAPSHOT_JOBS=4 tools/module-snapshots/run.sh
 
 # Run only one runtime while debugging an engine-specific failure.
 tools/module-snapshots/run.sh --runtime node
@@ -202,8 +208,11 @@ tools/module-snapshots/run.sh --update
 tools/module-snapshots/run.sh --list
 ```
 
-Ordinary runs never modify snapshots. Generated Wasm, the Wago runner binary,
-and actual WAT files remain temporary. The runner's Go module resolves the
-sibling Wago checkout through `tools/module-snapshots/wago-runner/go.mod`. The
-exact `wasm-tools` version is pinned in
-`tools/module-snapshots/WASM_TOOLS_VERSION`.
+Ordinary runs never modify snapshots. Generated Wasm, per-fixture interface
+caches, the Wago runner binary, and actual WAT files remain temporary. Isolated
+fixture caches prevent concurrent writers and inherited cache configuration from
+cross-contaminating the suite. Concurrent results are buffered and printed in
+sorted fixture order, preserving deterministic visible output and failure
+ordering. The runner's Go module resolves the sibling Wago checkout
+through `tools/module-snapshots/wago-runner/go.mod`. The exact `wasm-tools`
+version is pinned in `tools/module-snapshots/WASM_TOOLS_VERSION`.

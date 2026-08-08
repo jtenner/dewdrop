@@ -32,14 +32,52 @@ node --check tools/wasm-metrics.mjs
 python3 tools/dew_cli_test.py
 python3 tools/cli-fixtures.py
 
-targets=(native)
-if [[ $mode == "full" ]]; then
-  targets+=(wasm-gc js wasm)
+if [[ $mode == "quick" ]]; then
+  echo "== Dew tests: native =="
+  moon test --target native src/tokenizer src/parser src/semantic src/backend
+else
+  targets=(native wasm-gc js wasm)
+  processors=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')
+  if [[ ! $processors =~ ^[1-9][0-9]*$ ]]; then
+    processors=1
+  fi
+  target_jobs=${DEW_CHECK_TARGET_JOBS:-$processors}
+  if [[ ! $target_jobs =~ ^[1-9][0-9]*$ ]]; then
+    echo "DEW_CHECK_TARGET_JOBS must be a positive integer" >&2
+    exit 2
+  fi
+  if ((target_jobs > ${#targets[@]})); then
+    target_jobs=${#targets[@]}
+  fi
+  test_root=.tmp/dew-check-moon-targets
+  mkdir -p "$test_root/logs"
+  echo "== Dew tests: native, wasm-gc, js, wasm ($target_jobs concurrent targets) =="
+  test_failure=0
+  for ((start = 0; start < ${#targets[@]}; start += target_jobs)); do
+    pids=()
+    for ((index = start; index < start + target_jobs && index < ${#targets[@]}; index++)); do
+      target=${targets[index]}
+      moon test --frozen \
+        --target "$target" \
+        --target-dir "$test_root/$target" \
+        src/tokenizer src/parser src/semantic src/backend \
+        > "$test_root/logs/$target.txt" 2>&1 &
+      pids+=("$!")
+    done
+    for pid in "${pids[@]}"; do
+      if ! wait "$pid"; then
+        test_failure=1
+      fi
+    done
+  done
+  for target in "${targets[@]}"; do
+    echo "-- $target --"
+    cat "$test_root/logs/$target.txt"
+  done
+  if ((test_failure != 0)); then
+    exit 1
+  fi
 fi
-for target in "${targets[@]}"; do
-  echo "== Dew tests: $target =="
-  moon test --target "$target" src/tokenizer src/parser src/semantic src/backend
-done
 
 if [[ $mode == "quick" ]]; then
   echo "quick Dew validation passed"

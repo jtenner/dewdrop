@@ -213,7 +213,7 @@ The complete suite is:
 tools/check.sh
 ```
 
-The complete suite is much larger. It exercises native MoonBit, WasmGC, JavaScript, classic Wasm, standard-library tests, differential UTF/SWAR/WASI checks, Starshine validation, Node execution, and Wago snapshot execution.
+The complete suite is much larger. It exercises native MoonBit, WasmGC, JavaScript, classic Wasm, standard-library tests, differential UTF/SWAR/WASI checks, Starshine validation, Node execution, and Wago snapshot execution. Full validation runs the four MoonBit target suites concurrently in isolated persistent target directories, uses a release native UTF parity generator, and builds the snapshot compiler once before running independent fixtures concurrently. Logs remain deterministic. Set `DEW_CHECK_TARGET_JOBS=1` and `DEW_SNAPSHOT_JOBS=1` to force serial target and fixture execution.
 
 ### 4. Write your first Dew program
 
