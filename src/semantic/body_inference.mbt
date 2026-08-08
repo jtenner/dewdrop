@@ -169,6 +169,7 @@ pub enum InferredCallTarget {
   NoInferredCallTarget
   ErrorInferredCallTarget
   SelectedInferredCallTarget(DeclId, HirSpan)
+  SelectedBoundInferredCallTarget(DeclId, Int, HirSpan)
   SelectedFunctionValueCallTarget(ExprId)
 } derive(Eq, Debug)
 

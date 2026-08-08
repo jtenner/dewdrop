@@ -33,6 +33,145 @@ test "collection retains ordered generic trait-bound syntax" {
 }
 
 ///|
+test "generic bodies select declared operator evidence symbolically" {
+  let collected = collect_bytes(
+    2728UL, b"trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nfn equal<t: Eq>(left: t, right: t) -> Bool {\n  left == right\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let body = collected
+    .body_of(collected.lookup_value("equal").unwrap())
+    .unwrap()
+  let mut selected = false
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match collected.expressions[expression] {
+      HirBinaryExpr(_, _, _, _) =>
+        match inferred.operator_targets[expression] {
+          SelectedBoundInferredCallTarget(requirement, evidence, arguments) => {
+            assert_eq(requirement, collected.methods[0].id)
+            assert_eq(evidence, 0)
+            assert_eq(arguments.length, 0)
+            selected = true
+          }
+          _ => fail("expected symbolic generic operator evidence")
+        }
+      _ => ()
+    }
+  }
+  assert_true(selected)
+}
+
+///|
+test "generic bodies select declared method evidence symbolically" {
+  let collected = collect_bytes(
+    2729UL, b"trait Value {\n  fn value(self) -> I32\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let body = collected.body_of(collected.lookup_value("read").unwrap()).unwrap()
+  let calls = body_calls(collected, body)
+  assert_eq(calls.length(), 1)
+  match inferred.call_targets[calls[0]] {
+    SelectedBoundInferredCallTarget(requirement, evidence, arguments) => {
+      assert_eq(requirement, collected.methods[0].id)
+      assert_eq(evidence, 0)
+      assert_eq(arguments.length, 0)
+    }
+    _ => fail("expected symbolic generic method evidence")
+  }
+}
+
+///|
+test "generic bodies instantiate applied bound method arguments" {
+  let collected = collect_bytes(
+    2732UL, b"trait Convert<u> {\n  fn convert(self, value: u) -> u\n}\nfn convert_i32<t: Convert<I32>>(target: t, value: I32) -> I32 {\n  target.convert(value)\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let body = collected
+    .body_of(collected.lookup_value("convert_i32").unwrap())
+    .unwrap()
+  let calls = body_calls(collected, body)
+  assert_eq(calls.length(), 1)
+  match inferred.call_targets[calls[0]] {
+    SelectedBoundInferredCallTarget(requirement, evidence, arguments) => {
+      assert_eq(requirement, collected.methods[0].id)
+      assert_eq(evidence, 0)
+      assert_eq(arguments.length, 1)
+      assert_call_primitive(
+        inferred,
+        resolved,
+        inferred.call_type_arguments[arguments.start],
+        I32Type,
+      )
+    }
+    _ => fail("expected applied symbolic method evidence")
+  }
+}
+
+///|
+test "generic implementation bodies consume owner bound evidence" {
+  let collected = collect_bytes(
+    2733UL, b"trait Value {\n  fn value(self) -> I32\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  item: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.item.value()\n  }\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let body = collected.bodies[0]
+  let calls = body_calls(collected, body)
+  assert_eq(calls.length(), 1)
+  match inferred.call_targets[calls[0]] {
+    SelectedBoundInferredCallTarget(requirement, evidence, _) => {
+      assert_eq(requirement, collected.methods[0].id)
+      assert_eq(evidence, 0)
+    }
+    _ => fail("expected implementation-owner symbolic method evidence")
+  }
+}
+
+///|
+test "generic bodies use declared bounds for nested obligations" {
+  let collected = collect_bytes(
+    2730UL, b"trait Marker {}\nfn require<t: Marker>(value: t) -> t {\n  value\n}\nfn forward<t: Marker>(value: t) -> t {\n  require(value)\n}\nfn rejected<t>(value: t) -> t {\n  require(value)\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 1)
+  match inferred.diagnostics[0] {
+    UnsatisfiedTraitObligation(callable, _, trait_, _, _) => {
+      assert_eq(callable, collected.lookup_value("require").unwrap())
+      assert_eq(trait_, collected.lookup_trait("Marker").unwrap())
+    }
+    _ => fail("expected only the unbounded nested obligation to fail")
+  }
+}
+
+///|
+test "generic bodies use declared bounds for implementation prerequisites" {
+  let collected = collect_bytes(
+    2731UL, b"trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Eq> Eq for Box<t> {\n  fn eq(self, right: Box<t>) -> Bool {\n    true\n  }\n}\nfn equal_boxes<t: Eq>(left: Box<t>, right: Box<t>) -> Bool {\n  left == right\n}\nfn rejected<t>(left: Box<t>, right: Box<t>) -> Bool {\n  left == right\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 1)
+  match inferred.diagnostics[0] {
+    NoMatchingMethod(name, _, _) => assert_eq(collected.names[name], "eq")
+    _ => fail("expected only the unbounded implementation prerequisite to fail")
+  }
+}
+
+///|
 test "generic calls require local coherent trait evidence" {
   let accepted = collect_bytes(
     2721UL, b"trait Marker {}\nstruct Yes {}\nimpl Marker for Yes {}\nfn keep<t: Marker>(value: t) -> t {\n  value\n}\nfn accepted() -> Yes {\n  keep(Yes {})\n}\n",

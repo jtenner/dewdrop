@@ -65,8 +65,8 @@ prerequisite traversal at 64 levels. An implementation such as
 A 256-call release-native inference benchmark measured:
 
 ```text
-unbounded generic calls     342.21 us
-one bound per generic call  415.47 us
+unbounded generic calls     298.20 us
+one bound per generic call  371.62 us
 ```
 
 The approximately 0.29 us per-call validation cost in this deliberately dense
@@ -80,12 +80,34 @@ implementations with no prerequisites return through a dedicated no-allocation
 fast path. These measurements are development observations rather than
 regression budgets.
 
+## Generic-body symbolic selection
+
+A generic body now treats each source-ordered bound as a symbolic evidence slot.
+Direct operators and instance methods on a rigid generic parameter select the
+matching trait requirement, instantiate `Self` plus applied trait arguments,
+and retain `SelectedBoundInferredCallTarget(requirement, evidence, arguments)`.
+Implementation methods use their owner implementation's bounds in the same way.
+Nested generic-call obligations and generic implementation prerequisites may be
+satisfied by those declared symbolic bounds without pretending that a concrete
+implementation has already been chosen.
+
+Lowering preserves symbolic method and operator calls as dedicated planned
+expression kinds rather than converting trait requirements into ordinary direct
+calls. This keeps signature-only trait declarations out of executable function
+selection until evidence propagation resolves them.
+
+A 256-operator release-native benchmark measured 285.06 us for concrete
+implementation selection and 205.47 us for direct symbolic-bound selection. The
+symbolic path avoids implementation-bucket enumeration and candidate rollback;
+these are development observations rather than regression budgets.
+
 ## Current boundary
 
-Generic body operator/method selection does not yet consume bound evidence, and
-selected call-site evidence is validated but not yet frozen into lowering as a
-dictionary/evidence record. Public interface fingerprints do not yet claim a
-stable generic-bound ABI. Those are the next obligation-solving steps.
+Selected call-site evidence is validated but not yet frozen into lowering as a
+specialization evidence record. Symbolic planned calls therefore are not emitted
+until concrete evidence is propagated through specialization or dictionaries.
+Public interface fingerprints do not yet claim a stable generic-bound ABI. That
+is the next obligation-solving step.
 
 ## Validation
 
@@ -94,4 +116,6 @@ parsing; nested applied bounds adjacent to the outer `>`; unbounded parameters;
 flat HIR retention; trait-namespace resolution; byte-identical V10
 frozen-interface serialization/deserialization; local and imported call-bound
 checking; local, transitive, operator, and imported generic-implementation
-prerequisites; marker traits; and exact applied-trait argument matching.
+prerequisites; symbolic generic-body operators, methods, applied trait arguments,
+implementation-owner bounds, and nested obligations; marker traits; and exact
+applied-trait argument matching.

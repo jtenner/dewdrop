@@ -3842,6 +3842,224 @@ fn BasicBodyInferencer::call_has_object_argument(
 }
 
 ///|
+priv struct DeclaredBodyTraitEvidence {
+  bound_type : ResolvedTypeId
+  trait_declaration : DeclId
+  requirement : DeclId
+  evidence_index : Int
+}
+
+///|
+fn BasicBodyInferencer::body_generic_parameters(
+  self : BasicBodyInferencer,
+) -> HirSpan {
+  match self.collected.declaration(self.body.declaration) {
+    Some(MethodReference(method_info)) if method_info.kind == ImplMethodDecl =>
+      self.collected.generic_parameters_of(method_info.parent)
+    _ => self.collected.generic_parameters_of(self.body.declaration)
+  }
+}
+
+///|
+fn BasicBodyInferencer::direct_body_generic_parameter(
+  self : BasicBodyInferencer,
+  type_ : BodyTypeId,
+) -> GenericParameterId? {
+  let representative = self.solver.representative_type(type_)
+  match self.solver.type_term(representative) {
+    BodyResolvedType(resolved_type) =>
+      match self.resolved.types[resolved_type] {
+        GenericParameterType(parameter) => Some(parameter)
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn BasicBodyInferencer::resolved_bound_trait(
+  self : BasicBodyInferencer,
+  bound_type : ResolvedTypeId,
+) -> DeclId? {
+  match self.resolved.types[bound_type] {
+    TraitType(declaration) => Some(declaration)
+    AppliedType(base, _) =>
+      match self.resolved.types[base] {
+        TraitType(declaration) => Some(declaration)
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn BasicBodyInferencer::trait_requirement_named(
+  self : BasicBodyInferencer,
+  trait_declaration : DeclId,
+  name : NameId,
+) -> DeclId? {
+  let name_string = self.collected.name(name)
+  if semantic_id_module(trait_declaration) == self.collected.module_id {
+    for method_info in self.collected.methods {
+      if method_info.kind == TraitMethodDecl &&
+        method_info.parent == trait_declaration &&
+        self.collected.name(method_info.name) == name_string {
+        return Some(method_info.id)
+      }
+    }
+    return None
+  }
+  match self.imports {
+    Some(imports) =>
+      for interface_index in imports.scope.imported_interfaces {
+        let interface_ = imports.scope.interfaces[interface_index].unwrap()
+        for callable in interface_.callables {
+          match callable.kind {
+            FrozenTraitCallable(owner) if owner == trait_declaration &&
+              callable.name == name_string => return Some(callable.declaration)
+            _ => ()
+          }
+        }
+      }
+    None => ()
+  }
+  None
+}
+
+///|
+fn BasicBodyInferencer::declared_body_trait_evidence(
+  self : BasicBodyInferencer,
+  target_type : BodyTypeId,
+  trait_filter : DeclId?,
+  method_name : NameId,
+) -> Array[DeclaredBodyTraitEvidence] {
+  let parameter = match self.direct_body_generic_parameter(target_type) {
+    Some(value) => value
+    None => return []
+  }
+  let generics = self.body_generic_parameters()
+  let mut evidence_index = 0
+  let evidence : Array[DeclaredBodyTraitEvidence] = []
+  for generic_offset in 0..<generics.length {
+    let generic = self.collected.generic_parameters[generics.start +
+      generic_offset]
+    for bound_offset in 0..<generic.bounds.length {
+      let bound_index = generic.bounds.start + bound_offset
+      if generic.id == parameter {
+        let bound_type = self.resolved.generic_bound_types[bound_index]
+        match self.resolved_bound_trait(bound_type) {
+          Some(trait_declaration) =>
+            if trait_filter is None ||
+              trait_filter.unwrap() == trait_declaration {
+              match
+                self.trait_requirement_named(trait_declaration, method_name) {
+                Some(requirement) =>
+                  evidence.push({
+                    bound_type,
+                    trait_declaration,
+                    requirement,
+                    evidence_index,
+                  })
+                None => ()
+              }
+            }
+          None => ()
+        }
+      }
+      evidence_index += 1
+    }
+  }
+  evidence
+}
+
+///|
+fn BasicBodyInferencer::begin_declared_body_trait_evidence(
+  self : BasicBodyInferencer,
+  evidence : DeclaredBodyTraitEvidence,
+  receiver_type : BodyTypeId,
+) -> Unit {
+  self.call_scratch.instantiation_generics = if semantic_id_module(
+      evidence.trait_declaration,
+    ) ==
+    self.collected.module_id {
+    self.collected.generic_parameters_of(evidence.trait_declaration)
+  } else {
+    match self.imports {
+      Some(imports) => imports.generic_parameters_of(evidence.trait_declaration)
+      None => { start: 0, length: 0 }
+    }
+  }
+  self.call_scratch.instantiation_method_generics = if semantic_id_module(
+      evidence.requirement,
+    ) ==
+    self.collected.module_id {
+    self.collected.generic_parameters_of(evidence.requirement)
+  } else {
+    { start: 0, length: self.call_generic_count(evidence.requirement) }
+  }
+  self.call_scratch.candidate_type_arguments.clear()
+  match self.resolved.types[evidence.bound_type] {
+    AppliedType(_, arguments) =>
+      for index in 0..<arguments.length {
+        self.call_scratch.candidate_type_arguments.push(
+          self.solver.resolved_type(
+            self.resolved.type_arguments[arguments.start + index],
+          ),
+        )
+      }
+    _ => ()
+  }
+  for _ in 0..<self.call_scratch.instantiation_method_generics.length {
+    self.call_scratch.candidate_type_arguments.push(
+      self.solver.fresh_variable(),
+    )
+  }
+  self.call_scratch.instantiation_self_owner = evidence.trait_declaration
+  self.call_scratch.instantiation_self_type = receiver_type
+  self.next_instantiation_generation()
+}
+
+///|
+fn BasicBodyInferencer::body_declared_trait_obligation_satisfied(
+  self : BasicBodyInferencer,
+  target : BodyTypeId,
+  bound : BodyTypeId,
+  trait_declaration : DeclId,
+  origin : TypeConstraintOrigin,
+) -> Bool {
+  let parameter = match self.direct_body_generic_parameter(target) {
+    Some(value) => value
+    None => return false
+  }
+  let generics = self.body_generic_parameters()
+  for generic_offset in 0..<generics.length {
+    let generic = self.collected.generic_parameters[generics.start +
+      generic_offset]
+    if generic.id != parameter {
+      continue
+    }
+    for bound_offset in 0..<generic.bounds.length {
+      let bound_type = self.resolved.generic_bound_types[generic.bounds.start +
+        bound_offset]
+      if self.resolved_bound_trait(bound_type) != Some(trait_declaration) {
+        continue
+      }
+      let snapshot = self.solver.snapshot()
+      let viable = self.solver.unify(
+        bound,
+        self.solver.resolved_type(bound_type),
+        origin,
+      )
+      self.solver.rollback(snapshot)
+      if viable {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
 fn BasicBodyInferencer::body_impl_target_head(
   self : BasicBodyInferencer,
   type_ : BodyTypeId,
@@ -4642,6 +4860,160 @@ fn index_trait(expression : HirExpr) -> (String, String)? {
 }
 
 ///|
+fn BasicBodyInferencer::select_declared_bound_operator(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  trait_declaration : DeclId,
+  method_name : NameId,
+  left : ExprId,
+  right : ExprId,
+  offset : UInt64,
+) -> Bool {
+  let evidence = self.declared_body_trait_evidence(
+    self.expression_type(left),
+    Some(trait_declaration),
+    method_name,
+  )
+  if evidence.length() == 0 {
+    return false
+  }
+  if evidence.length() > 1 {
+    self.operator_targets[self.expression_index(expression)] = ErrorInferredCallTarget
+    self.poison_expression(expression)
+    self.diagnose(
+      AmbiguousMethod(
+        method_name,
+        expression,
+        evidence[0].requirement,
+        evidence[1].requirement,
+        evidence.length(),
+        offset,
+      ),
+    )
+    return true
+  }
+  let selected = evidence[0]
+  let declaration = selected.requirement
+  if !self.callable_exists(declaration) ||
+    self.call_parameter_count(declaration) != 2 ||
+    !self.call_parameter_is_receiver(declaration, 0) {
+    self.operator_targets[self.expression_index(expression)] = ErrorInferredCallTarget
+    self.poison_expression(expression)
+    self.diagnose(NoMatchingMethod(method_name, expression, offset))
+    return true
+  }
+  let receiver_type = self.expression_type(left)
+  self.begin_declared_body_trait_evidence(selected, receiver_type)
+  let origin = operator_type_origin(expression, offset)
+  self.constrain(receiver_type, self.expression_type(right), origin)
+  self.constrain(
+    receiver_type,
+    self.instantiate_signature_type(self.call_parameter_type(declaration, 0)),
+    origin,
+  )
+  self.constrain_assignable(
+    self.expression_type(right),
+    self.instantiate_signature_type(self.call_parameter_type(declaration, 1)),
+    origin,
+  )
+  self.constrain_assignable(
+    self.instantiate_signature_type(self.call_result_type(declaration)),
+    self.expression_type(expression),
+    origin,
+  )
+  let start = self.call_type_arguments.length()
+  for type_ in self.call_scratch.candidate_type_arguments {
+    self.call_type_arguments.push(type_)
+  }
+  self.operator_targets[self.expression_index(expression)] = SelectedBoundInferredCallTarget(
+    declaration,
+    selected.evidence_index,
+    { start, length: self.call_scratch.candidate_type_arguments.length() },
+  )
+  true
+}
+
+///|
+fn BasicBodyInferencer::select_declared_bound_method(
+  self : BasicBodyInferencer,
+  call_slot : Int,
+  expression : ExprId,
+  receiver : ExprId,
+  name : NameId,
+  arguments : HirSpan,
+  offset : UInt64,
+) -> Bool {
+  let evidence = self.declared_body_trait_evidence(
+    self.expression_type(receiver),
+    None,
+    name,
+  )
+  if evidence.length() == 0 {
+    return false
+  }
+  if evidence.length() > 1 {
+    self.call_targets[call_slot] = ErrorInferredCallTarget
+    self.poison_expression(expression)
+    self.diagnose(
+      AmbiguousMethod(
+        name,
+        expression,
+        evidence[0].requirement,
+        evidence[1].requirement,
+        evidence.length(),
+        offset,
+      ),
+    )
+    return true
+  }
+  let selected = evidence[0]
+  let declaration = selected.requirement
+  if !self.callable_exists(declaration) ||
+    self.call_parameter_count(declaration) == 0 ||
+    !self.call_parameter_is_receiver(declaration, 0) ||
+    self.call_parameter_count(declaration) - 1 != arguments.length {
+    self.call_targets[call_slot] = ErrorInferredCallTarget
+    self.poison_expression(expression)
+    self.diagnose(NoMatchingMethod(name, expression, offset))
+    return true
+  }
+  let receiver_type = self.expression_type(receiver)
+  self.begin_declared_body_trait_evidence(selected, receiver_type)
+  let origin = call_type_origin(expression, offset)
+  self.constrain(
+    receiver_type,
+    self.instantiate_signature_type(self.call_parameter_type(declaration, 0)),
+    origin,
+  )
+  for index in 0..<arguments.length {
+    self.constrain_assignable(
+      self.expression_type(
+        self.collected.expression_children[arguments.start + index],
+      ),
+      self.instantiate_signature_type(
+        self.call_parameter_type(declaration, index + 1),
+      ),
+      origin,
+    )
+  }
+  self.constrain_assignable(
+    self.instantiate_signature_type(self.call_result_type(declaration)),
+    self.expression_type(expression),
+    origin,
+  )
+  let start = self.call_type_arguments.length()
+  for type_ in self.call_scratch.candidate_type_arguments {
+    self.call_type_arguments.push(type_)
+  }
+  self.call_targets[call_slot] = SelectedBoundInferredCallTarget(
+    declaration,
+    selected.evidence_index,
+    { start, length: self.call_scratch.candidate_type_arguments.length() },
+  )
+  true
+}
+
+///|
 fn BasicBodyInferencer::try_resolve_operator(
   self : BasicBodyInferencer,
   expression : ExprId,
@@ -4706,6 +5078,12 @@ fn BasicBodyInferencer::try_resolve_operator(
   }
   let trait_declaration = self.trait_declaration_named(trait_name).unwrap()
   let method_name = self.collected.find_name(method_name_string).unwrap()
+  if left >= 0 &&
+    self.select_declared_bound_operator(
+      expression, trait_declaration, method_name, left, right, offset,
+    ) {
+    return true
+  }
   if self.body_impl_target_head(self.expression_type(target_expression)) is None {
     return false
   }
@@ -5468,6 +5846,11 @@ fn BasicBodyInferencer::try_resolve_method_call(
     ) {
     return true
   }
+  if self.select_declared_bound_method(
+      call_slot, expression, receiver, name, arguments, offset,
+    ) {
+    return true
+  }
   if !self.collect_method_candidates(self.expression_type(receiver), name) {
     return false
   }
@@ -5767,6 +6150,11 @@ fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
 ) -> Bool {
   if depth >= 64 {
     return false
+  }
+  if self.body_declared_trait_obligation_satisfied(
+      target, bound, trait_declaration, origin,
+    ) {
+    return true
   }
   let head = match self.body_impl_target_head(target) {
     Some(value) => value
@@ -7250,7 +7638,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
   }
   for call_slot in 0..<self.call_targets.length() {
     match self.call_targets[call_slot] {
-      SelectedInferredCallTarget(_, arguments) =>
+      SelectedInferredCallTarget(_, arguments)
+      | SelectedBoundInferredCallTarget(_, _, arguments) =>
         for argument_index in 0..<arguments.length {
           let slot = arguments.start + argument_index
           let frozen = self.solver.zonk_type(self.call_type_arguments[slot])
@@ -7273,7 +7662,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
   }
   for expression_index in 0..<self.operator_targets.length() {
     match self.operator_targets[expression_index] {
-      SelectedInferredCallTarget(_, arguments) =>
+      SelectedInferredCallTarget(_, arguments)
+      | SelectedBoundInferredCallTarget(_, _, arguments) =>
         for argument_index in 0..<arguments.length {
           let slot = arguments.start + argument_index
           let frozen = self.solver.zonk_type(self.call_type_arguments[slot])
@@ -7297,7 +7687,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
   for targets in [self.map_hash_targets, self.map_eq_targets] {
     for expression_index in 0..<targets.length() {
       match targets[expression_index] {
-        SelectedInferredCallTarget(_, arguments) =>
+        SelectedInferredCallTarget(_, arguments)
+        | SelectedBoundInferredCallTarget(_, _, arguments) =>
           for argument_index in 0..<arguments.length {
             let slot = arguments.start + argument_index
             let frozen = self.solver.zonk_type(self.call_type_arguments[slot])
@@ -7856,6 +8247,29 @@ fn remap_job_type(type_ : BodyTypeId, type_start : Int) -> BodyTypeId {
 }
 
 ///|
+fn remap_job_call_target(
+  target : InferredCallTarget,
+  call_argument_start : Int,
+) -> InferredCallTarget {
+  match target {
+    SelectedInferredCallTarget(declaration, arguments) =>
+      SelectedInferredCallTarget(declaration, {
+        start: call_argument_start + arguments.start,
+        length: arguments.length,
+      })
+    SelectedBoundInferredCallTarget(declaration, evidence, arguments) =>
+      SelectedBoundInferredCallTarget(declaration, evidence, {
+        start: call_argument_start + arguments.start,
+        length: arguments.length,
+      })
+    SelectedFunctionValueCallTarget(expression) =>
+      SelectedFunctionValueCallTarget(expression)
+    NoInferredCallTarget => NoInferredCallTarget
+    ErrorInferredCallTarget => ErrorInferredCallTarget
+  }
+}
+
+///|
 fn remap_job_diagnostic(
   diagnostic : BodyInferenceDiagnostic,
   type_start : Int,
@@ -8308,53 +8722,25 @@ fn merge_body_inference_jobs(
     }
     for call_slot in 0..<job.call_expressions.length() {
       let expression = job.call_expressions[call_slot]
-      call_targets[expression] = match job.call_targets[call_slot] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
+      call_targets[expression] = remap_job_call_target(
+        job.call_targets[call_slot],
+        call_argument_start,
+      )
     }
     for index in 0..<body.expressions.length {
       let expression = body.expressions.start + index
-      operator_targets[expression] = match job.operator_targets[index] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
-      map_hash_targets[expression] = match job.map_hash_targets[index] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
-      map_eq_targets[expression] = match job.map_eq_targets[index] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
+      operator_targets[expression] = remap_job_call_target(
+        job.operator_targets[index],
+        call_argument_start,
+      )
+      map_hash_targets[expression] = remap_job_call_target(
+        job.map_hash_targets[index],
+        call_argument_start,
+      )
+      map_eq_targets[expression] = remap_job_call_target(
+        job.map_eq_targets[index],
+        call_argument_start,
+      )
     }
     let name_info = names.body(body.id).unwrap()
     for index in 0..<name_info.locals.length {
@@ -8520,53 +8906,25 @@ fn merge_body_inference_jobs(
     }
     for call_slot in 0..<job.call_expressions.length() {
       let expression = job.call_expressions[call_slot]
-      call_targets[expression] = match job.call_targets[call_slot] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
+      call_targets[expression] = remap_job_call_target(
+        job.call_targets[call_slot],
+        call_argument_start,
+      )
     }
     for index in 0..<lambda.body.expressions.length {
       let expression = lambda.body.expressions.start + index
-      operator_targets[expression] = match job.operator_targets[index] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
-      map_hash_targets[expression] = match job.map_hash_targets[index] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
-      map_eq_targets[expression] = match job.map_eq_targets[index] {
-        SelectedInferredCallTarget(declaration, arguments) =>
-          SelectedInferredCallTarget(declaration, {
-            start: call_argument_start + arguments.start,
-            length: arguments.length,
-          })
-        SelectedFunctionValueCallTarget(target) =>
-          SelectedFunctionValueCallTarget(target)
-        NoInferredCallTarget => NoInferredCallTarget
-        ErrorInferredCallTarget => ErrorInferredCallTarget
-      }
+      operator_targets[expression] = remap_job_call_target(
+        job.operator_targets[index],
+        call_argument_start,
+      )
+      map_hash_targets[expression] = remap_job_call_target(
+        job.map_hash_targets[index],
+        call_argument_start,
+      )
+      map_eq_targets[expression] = remap_job_call_target(
+        job.map_eq_targets[index],
+        call_argument_start,
+      )
     }
     let name_info = names.lambda(lambda.id).unwrap()
     for index in 0..<name_info.locals.length {

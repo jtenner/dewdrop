@@ -4641,7 +4641,9 @@ fn starshine_emit_body_instructions(
               None => return Err(UnsupportedExpression(body.body, expression))
             }
           @semantic.PlannedPoisonExpression
-          | @semantic.PlannedConsumedExpression =>
+          | @semantic.PlannedConsumedExpression
+          | @semantic.PlannedBoundOperatorCall(_, _, _, _, _, _)
+          | @semantic.PlannedBoundDirectCall(_, _, _, _, _) =>
             return Err(UnsupportedExpression(body.body, expression))
         }
       }

@@ -144,7 +144,7 @@ direct typed references.
 
 ### 7. Define the executable generic ABI
 
-- [ ] Freeze selected executable evidence for parsed generic bounds; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, local/imported call checking, generic-implementation prerequisite checking, and cache V10 round trips are implemented.
+- [ ] Freeze selected executable evidence for parsed generic bounds; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, local/imported call checking, generic-body symbolic selection, generic-implementation prerequisite checking, and cache V10 round trips are implemented.
 - [x] Solve call-site and generic-implementation prerequisite obligations using local and imported coherent evidence.
 - [x] Define shared physical-carrier specializations and one nullable-`eqref` fallback for each public generic exported by the root module.
 - [x] Emit exact-reference-to-erased callable adapters only when an escaping generic reference's concrete signature differs from its `eqref` fallback.
@@ -246,7 +246,7 @@ erased fallback.
 - [x] Parse and represent ordered generic bounds through `t: Trait + Trait`, flat HIR provenance, trait-namespace resolution, and private frozen-interface cache V10 serialization.
 - [x] Add trait obligations to generic signatures and enforce them at local and imported calls.
 - [x] Enforce local and imported generic-implementation prerequisites when selecting coherent evidence.
-- [ ] Make generic bodies consume their declared symbolic evidence for operator and method selection.
+- [x] Make generic bodies consume their declared symbolic evidence for operator and method selection.
 - [ ] Freeze selected evidence per generic call.
 - [ ] Define method-level generic syntax and shadowing.
 - [ ] Define explicit call-site type-argument syntax.

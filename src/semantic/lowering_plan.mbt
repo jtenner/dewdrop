@@ -58,6 +58,14 @@ pub enum PlannedExpressionKind {
   PlannedPrefixExpression(HirPrefixOperator, ExprId)
   PlannedBinaryExpression(HirBinaryOperator, ExprId, ExprId)
   PlannedOperatorCall(DeclId, HirBinaryOperator, ExprId, ExprId, HirSpan)
+  PlannedBoundOperatorCall(
+    DeclId,
+    Int,
+    HirBinaryOperator,
+    ExprId,
+    ExprId,
+    HirSpan
+  )
   PlannedIndexCall(DeclId, ExprId, ExprId, HirSpan)
   PlannedIndexSetCall(DeclId, ExprId, ExprId, ExprId, HirSpan)
   PlannedFixedArrayMake(ExprId, ExprId, PlannedValueShape)
@@ -122,6 +130,7 @@ pub enum PlannedExpressionKind {
   PlannedSetRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetClear(ExprId)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
+  PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
   PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
   PlannedFieldGet(FieldId, ExprId)
@@ -718,6 +727,10 @@ fn plan_expression_kind(
           PlannedOperatorCall(
             declaration, operator, left, right, type_arguments,
           )
+        SelectedBoundInferredCallTarget(requirement, evidence, type_arguments) =>
+          PlannedBoundOperatorCall(
+            requirement, evidence, operator, left, right, type_arguments,
+          )
         NoInferredCallTarget => PlannedBinaryExpression(operator, left, right)
         ErrorInferredCallTarget | SelectedFunctionValueCallTarget(_) =>
           PlannedPoisonExpression
@@ -906,6 +919,14 @@ fn plan_expression_kind(
               }
           }
         }
+        SelectedBoundInferredCallTarget(requirement, evidence, type_arguments) =>
+          PlannedBoundDirectCall(
+            requirement,
+            evidence,
+            planned_call_receiver(collected, expression),
+            arguments,
+            type_arguments,
+          )
         SelectedFunctionValueCallTarget(target) =>
           PlannedFunctionValueCall(
             target,
@@ -964,6 +985,7 @@ fn plan_expression_kind(
           }
         NoInferredCallTarget
         | ErrorInferredCallTarget
+        | SelectedBoundInferredCallTarget(_, _, _)
         | SelectedFunctionValueCallTarget(_) => {
           diagnostics.push(UnsupportedIndexLowering(expression, offset))
           PlannedPoisonExpression
@@ -1014,6 +1036,7 @@ fn plan_expression_kind(
           }
         NoInferredCallTarget
         | ErrorInferredCallTarget
+        | SelectedBoundInferredCallTarget(_, _, _)
         | SelectedFunctionValueCallTarget(_) => {
           diagnostics.push(UnsupportedIndexLowering(expression, offset))
           PlannedPoisonExpression
