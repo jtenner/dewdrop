@@ -132,6 +132,7 @@ fn starshine_specialized_shape(
 ///|
 priv enum StarshineEmitTask {
   EmitStarshineExpression(@semantic.ExprId)
+  EmitStarshineRawExpression(@semantic.ExprId)
   EmitStarshineBlock(@semantic.BlockId)
   EmitStarshineEmpty
   EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
@@ -206,6 +207,8 @@ priv enum StarshineEmitTask {
     @semantic.PlannedValueShape
   )
   FinishStarshineLogical(@semantic.HirBinaryOperator)
+  FinishStarshineTraitObjectCoercion(@semantic.DeclId, Int)
+  FinishStarshineDynamicTraitCall(@semantic.DeclId, Int, Int, Int, Int)
 }
 
 ///|
@@ -309,6 +312,12 @@ fn starshine_default_storage_instructions(
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq()))]
     @semantic.WasmNullableFunctionRefStorage =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::func()))]
+    @semantic.WasmFunctionRefStorage(index) =>
+      [
+        @lib.Instruction::ref_null(
+          @lib.HeapType::new(@lib.TypeIdx::new(index.reinterpret_as_uint())),
+        ),
+      ]
   }
 }
 
@@ -660,7 +669,8 @@ fn starshine_finish_call(
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
-      | @semantic.PlannedWasmDefinedLambdaFunction(_) => {
+      | @semantic.PlannedWasmDefinedLambdaFunction(_)
+      | @semantic.PlannedWasmTraitAdapterFunction(_, _) => {
         if function_.function_index < 0 {
           return Err(MissingFunction(declaration))
         }
@@ -873,7 +883,8 @@ fn starshine_finish_program_call(
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
-      | @semantic.PlannedWasmDefinedLambdaFunction(_) => {
+      | @semantic.PlannedWasmDefinedLambdaFunction(_)
+      | @semantic.PlannedWasmTraitAdapterFunction(_, _) => {
         if function_.function_index < 0 {
           return Err(MissingFunction(declaration))
         }
@@ -2308,6 +2319,11 @@ fn starshine_body_locals(
             body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
+      @semantic.PlannedDynamicTraitCall(_, _, _, _, _, _) => {
+        match_local_indices[expression] = parameter_count +
+          body_local_types.length()
+        body_local_types.push(@lib.ValType::eqref_null())
+      }
       @semantic.PlannedMatchExpression(scrutinee, _) => {
         let scratch_type = match lowering.expressions[scrutinee].shape {
           @semantic.ErrorPlannedValueShape => Some(@lib.ValType::eqref_null())
@@ -3638,6 +3654,16 @@ fn starshine_emit_body_instructions(
     match tasks.pop().unwrap() {
       EmitStarshineExpression(expression) => {
         let source = lowering.expressions[expression]
+        match source.trait_object_coercion {
+          @semantic.SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+            tasks.push(FinishStarshineTraitObjectCoercion(trait_, evidence))
+            tasks.push(EmitStarshineRawExpression(expression))
+          }
+          _ => tasks.push(EmitStarshineRawExpression(expression))
+        }
+      }
+      EmitStarshineRawExpression(expression) => {
+        let source = lowering.expressions[expression]
         match source.kind {
           @semantic.PlannedI8Const(value) =>
             results.push([
@@ -3790,8 +3816,42 @@ fn starshine_emit_body_instructions(
               )
             }
           }
-          @semantic.PlannedDynamicTraitCall(_, _, _, _, _, _) =>
-            return Err(UnsupportedExpression(body.body, expression))
+          @semantic.PlannedDynamicTraitCall(
+            trait_,
+            requirement,
+            slot,
+            receiver,
+            arguments,
+            _
+          ) => {
+            let requirement_function = match planned.function_of(requirement) {
+              Some(value) if value.signature_type_index >= 0 => value
+              _ => return Err(SignatureOnlyCall(requirement))
+            }
+            let scratch = match_local_indices[expression]
+            if receiver < 0 || scratch < 0 {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            tasks.push(
+              FinishStarshineDynamicTraitCall(
+                trait_,
+                slot,
+                scratch,
+                requirement_function.signature_type_index,
+                arguments.length,
+              ),
+            )
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
+            tasks.push(EmitStarshineExpression(receiver))
+          }
           @semantic.PlannedFunctionValueCall(target, arguments, function_type) => {
             if function_type < 0 ||
               function_type >= planned.function_type_by_resolved.length() {
@@ -7076,6 +7136,163 @@ fn starshine_emit_body_instructions(
             return Err(UnsupportedExpression(body.body, body.expressions.start))
         }
       }
+      FinishStarshineTraitObjectCoercion(trait_, evidence) => {
+        let implementation = if evidence >= 0 &&
+          evidence < lowering.trait_evidence.length() {
+          match lowering.trait_evidence[evidence].kind {
+            @semantic.ConcreteInferredTraitEvidence(value, _) => value
+            @semantic.BoundInferredTraitEvidence(_) => 0UL
+          }
+        } else {
+          0UL
+        }
+        let mut dictionary = None
+        let mut dictionary_index = -1
+        for index, candidate in planned.trait_dictionaries {
+          if candidate.trait_declaration == trait_ &&
+            candidate.implementation == implementation {
+            dictionary = Some(candidate)
+            dictionary_index = index
+            break
+          }
+        }
+        let dictionary = match dictionary {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -302))
+        }
+        let output = results.pop().unwrap()
+        let vtable_type = starshine_local_physical_type_index(
+          program,
+          program_module_index,
+          dictionary.vtable_type_index,
+        )
+        let dictionary_global = match program {
+          Some(link) =>
+            link.trait_dictionary_global(program_module_index, dictionary_index)
+          None => -1
+        }
+        if dictionary_global >= 0 {
+          output.push(
+            @lib.Instruction::global_get(
+              @lib.GlobalIdx::new(dictionary_global.reinterpret_as_uint()),
+            ),
+          )
+          output.push(starshine_match_cast(vtable_type))
+        } else {
+          for index in 0..<dictionary.methods.length {
+            let method_info = planned.trait_methods[dictionary.methods.start +
+              index]
+            let adapter = planned.functions[method_info.adapter_function]
+            let function_index = match program {
+              Some(link) =>
+                match link.function_of(adapter.declaration) {
+                  Some(value) => value.function_index
+                  None => -1
+                }
+              None => adapter.function_index
+            }
+            if function_index < 0 {
+              return Err(MissingFunction(adapter.declaration))
+            }
+            output.push(
+              @lib.Instruction::ref_func(
+                @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+              ),
+            )
+          }
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+            ),
+          )
+        }
+        let object_type = starshine_local_physical_type_index(
+          program,
+          program_module_index,
+          dictionary.object_type_index,
+        )
+        output.push(
+          @lib.Instruction::struct_new(
+            @lib.TypeIdx::new(object_type.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshineDynamicTraitCall(
+        trait_,
+        slot,
+        scratch,
+        signature_type,
+        argument_count
+      ) => {
+        let mut layout = None
+        for candidate in planned.trait_layouts {
+          if candidate.trait_declaration == trait_ {
+            layout = Some(candidate)
+            break
+          }
+        }
+        let layout = match layout {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -303))
+        }
+        let fragments = pop_starshine_fragments(results, argument_count + 1)
+        let output = fragments[0]
+        let object_type = starshine_local_physical_type_index(
+          program,
+          program_module_index,
+          layout.object_type_index,
+        )
+        let vtable_type = starshine_local_physical_type_index(
+          program,
+          program_module_index,
+          layout.vtable_type_index,
+        )
+        output.push(
+          @lib.Instruction::local_tee(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(object_type))
+        output.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(object_type.reinterpret_as_uint()),
+            @lib.U32::new(0U),
+          ),
+        )
+        for index in 0..<argument_count {
+          append_starshine_instructions(output, fragments[index + 1])
+        }
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(object_type))
+        output.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(object_type.reinterpret_as_uint()),
+            @lib.U32::new(1U),
+          ),
+        )
+        output.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+            @lib.U32::new(slot.reinterpret_as_uint()),
+          ),
+        )
+        let emitted_signature = match program {
+          Some(link) =>
+            link.signature_type_index(program_module_index, signature_type)
+          None => signature_type
+        }
+        output.push(
+          @lib.Instruction::call_ref(
+            @lib.TypeIdx::new(emitted_signature.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
       FinishStarshineLogical(operator) => {
         let fragments = pop_starshine_fragments(results, 2)
         let output = fragments[0]
@@ -7453,6 +7670,65 @@ fn starshine_module_runtime_function_index(
 }
 
 ///|
+fn starshine_trait_adapter_nominal_declaration(
+  lowering : @semantic.PlannedModuleLowering,
+  implementation_method : @semantic.DeclId,
+) -> @semantic.DeclId? {
+  let callable = match lowering.functions.callable_of(implementation_method) {
+    Some(value) => value
+    None => return None
+  }
+  let mut type_ = callable.self_type
+  while type_ >= 0 && type_ < lowering.resolved_types.length() {
+    match lowering.resolved_types[type_] {
+      @semantic.NominalType(declaration) => return Some(declaration)
+      @semantic.AppliedType(base, _) => type_ = base
+      _ => return None
+    }
+  }
+  None
+}
+
+///|
+fn emit_starshine_trait_adapter_body(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  adapter : @semantic.PlannedWasmFunctionFragment,
+  implementation_method : @semantic.DeclId,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let implementation = match planned.function_of(implementation_method) {
+    Some(value) if value.function_index >= 0 => value
+    _ => return Err(MissingFunction(implementation_method))
+  }
+  let declaration = match
+    starshine_trait_adapter_nominal_declaration(lowering, implementation_method) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(0UL, 0))
+  }
+  let type_index = match planned.type_index_of(declaration) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(0UL, 0))
+  }
+  let instructions : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+    starshine_match_cast(type_index),
+  ]
+  for index in 1..<adapter.parameters.length {
+    instructions.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(index.reinterpret_as_uint()),
+      ),
+    )
+  }
+  instructions.push(
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(implementation.function_index.reinterpret_as_uint()),
+    ),
+  )
+  Ok(@lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions)))
+}
+
+///|
 pub fn emit_starshine_code_section(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -7471,6 +7747,16 @@ pub fn emit_starshine_code_section(
         if !function_.elided {
           match
             emit_starshine_lambda_body(lowering, planned, None, -1, lambda) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmTraitAdapterFunction(implementation_method, _) =>
+        if !function_.elided {
+          match
+            emit_starshine_trait_adapter_body(
+              lowering, planned, function_, implementation_method,
+            ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
           }
@@ -7575,6 +7861,13 @@ fn starshine_function_reference_element_section(
   planned : @semantic.PlannedModuleWasmGCFragments,
 ) -> @lib.ElemSec? {
   let referenced : Map[Int, Bool] = Map::default()
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmTraitAdapterFunction(_, _) if function_.function_index >=
+        0 => referenced[function_.function_index] = true
+      _ => ()
+    }
+  }
   for expression in lowering.expressions {
     match expression.kind {
       @semantic.PlannedFunctionReference(declaration, _) =>
@@ -7691,6 +7984,16 @@ fn starshine_program_storage_type(
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
     @semantic.WasmNullableFunctionRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::funcref())
+    @semantic.WasmFunctionRefStorage(index) =>
+      @lib.StorageType::val_type(
+        starshine_function_ref(
+          @lib.TypeIdx::new(
+            planned
+            .signature_type_index(module_index, index)
+            .reinterpret_as_uint(),
+          ),
+        ),
+      )
     @semantic.WasmNominalRefStorage(reference) =>
       @lib.StorageType::val_type(
         match reference {
@@ -7801,6 +8104,16 @@ fn starshine_program_group_storage_type(
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
     @semantic.WasmNullableFunctionRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::funcref())
+    @semantic.WasmFunctionRefStorage(index) =>
+      @lib.StorageType::val_type(
+        starshine_function_ref(
+          @lib.TypeIdx::new(
+            planned
+            .signature_type_index(node.module_index, index)
+            .reinterpret_as_uint(),
+          ),
+        ),
+      )
     @semantic.WasmNominalRefStorage(reference) => {
       let module_ = planned.modules[node.module_index]
       let physical = module_.physical_types[node.fragment_index]
@@ -7876,7 +8189,16 @@ fn starshine_program_group_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmTraitMethodSignatureType(requirement) =>
+      starshine_program_function_subtype(
+        planned,
+        node.module_index,
+        module_.function_of(requirement).unwrap(),
+      )
+    @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmTraitVTableType(_)
+    | @semantic.PlannedWasmTraitObjectType(_) =>
+      @lib.SubType::comp_type(composite)
   }
 }
 
@@ -7935,7 +8257,16 @@ fn starshine_program_physical_subtype(
         ],
         composite,
       )
-    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmTraitMethodSignatureType(requirement) =>
+      starshine_program_function_subtype(
+        planned,
+        module_index,
+        module_.function_of(requirement).unwrap(),
+      )
+    @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmTraitVTableType(_)
+    | @semantic.PlannedWasmTraitObjectType(_) =>
+      @lib.SubType::comp_type(composite)
   }
   (subtype, has_recursive_reference)
 }
@@ -9095,6 +9426,7 @@ fn emit_starshine_program_import_section(
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
+      | @semantic.PlannedWasmTraitAdapterFunction(_, _)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -9111,7 +9443,8 @@ fn emit_starshine_program_function_section(
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_) =>
+      | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
           signatures.push(
             @lib.TypeIdx::new(
@@ -9605,6 +9938,35 @@ fn emit_starshine_program_global_section(
       ),
     )
   }
+  for dictionary_global in planned.trait_dictionary_globals {
+    let dictionary = planned.modules[dictionary_global.module_index].trait_dictionaries[dictionary_global.dictionary_index]
+    let vtable_type = planned.physical_type_index(
+      dictionary_global.module_index,
+      dictionary.vtable_type_index,
+    )
+    globals.push(
+      @lib.Global::new(
+        @lib.GlobalType::new(
+          @lib.ValType::ref_type(
+            @lib.RefType::new(
+              true,
+              @lib.HeapType::new(
+                @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+              ),
+            ),
+          ),
+          true,
+        ),
+        @lib.Expr::new([
+          @lib.Instruction::ref_null(
+            @lib.HeapType::new(
+              @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+            ),
+          ),
+        ]),
+      ),
+    )
+  }
   @lib.GlobalSec::new(globals)
 }
 
@@ -9744,6 +10106,39 @@ fn starshine_program_startup_body(
         ),
       )
     }
+  }
+  for dictionary_global in planned.trait_dictionary_globals {
+    let module_ = planned.modules[dictionary_global.module_index]
+    let dictionary = module_.trait_dictionaries[dictionary_global.dictionary_index]
+    for index in 0..<dictionary.methods.length {
+      let method_info = module_.trait_methods[dictionary.methods.start + index]
+      let adapter = module_.functions[method_info.adapter_function]
+      match planned.function_of(adapter.declaration) {
+        Some(function_) if function_.function_index >= 0 =>
+          instructions.push(
+            @lib.Instruction::ref_func(
+              @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+            ),
+          )
+        _ => ()
+      }
+    }
+    let vtable_type = planned.physical_type_index(
+      dictionary_global.module_index,
+      dictionary.vtable_type_index,
+    )
+    instructions.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+      ),
+    )
+    instructions.push(
+      @lib.Instruction::global_set(
+        @lib.GlobalIdx::new(
+          dictionary_global.global_index.reinterpret_as_uint(),
+        ),
+      ),
+    )
   }
   for initializer in planned.initializers {
     if initializer.function_index >= 0 {
@@ -11288,6 +11683,48 @@ fn emit_starshine_program_adapter_helper_body(
 }
 
 ///|
+fn emit_starshine_program_trait_adapter_body(
+  lowering : @semantic.PlannedProgramLowering,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  adapter : @semantic.PlannedProgramWasmFunction,
+  implementation_method : @semantic.DeclId,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  let implementation = match planned.function_of(implementation_method) {
+    Some(value) if value.function_index >= 0 => value
+    _ => return Err(MissingFunction(implementation_method))
+  }
+  let module_lowering = lowering.modules[adapter.module_index]
+  let declaration = match
+    starshine_trait_adapter_nominal_declaration(
+      module_lowering, implementation_method,
+    ) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(0UL, 0))
+  }
+  let type_index = match planned.type_lookup.get(declaration) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(0UL, 0))
+  }
+  let instructions : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+    starshine_match_cast(type_index),
+  ]
+  for index in 1..<adapter.parameters.length {
+    instructions.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(index.reinterpret_as_uint()),
+      ),
+    )
+  }
+  instructions.push(
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(implementation.function_index.reinterpret_as_uint()),
+    ),
+  )
+  Ok(@lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions)))
+}
+
+///|
 fn emit_starshine_program_code_section(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -11315,6 +11752,16 @@ fn emit_starshine_program_code_section(
               Some(planned),
               function_.module_index,
               lambda,
+            ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmTraitAdapterFunction(implementation_method, _) =>
+        if !function_.elided {
+          match
+            emit_starshine_program_trait_adapter_body(
+              lowering, planned, function_, implementation_method,
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
@@ -11414,6 +11861,13 @@ fn starshine_program_function_reference_element_section(
   for wrapper in helper_plan.wrappers {
     referenced[wrapper.function_index] = true
   }
+  for function_ in planned.functions {
+    match function_.kind {
+      @semantic.PlannedWasmTraitAdapterFunction(_, _) if function_.function_index >=
+        0 => referenced[function_.function_index] = true
+      _ => ()
+    }
+  }
   for module_index, module_ in lowering.modules {
     for expression in module_.expressions {
       match expression.kind {
@@ -11485,7 +11939,8 @@ pub fn emit_starshine_program_module(
         None => ()
       }
       if planned.global_lookup.length() > 0 ||
-        planned.function_reference_singletons.length() > 0 {
+        planned.function_reference_singletons.length() > 0 ||
+        planned.trait_dictionary_globals.length() > 0 {
         module_ = module_.with_global_sec(
           emit_starshine_program_global_section(lowering, planned),
         )

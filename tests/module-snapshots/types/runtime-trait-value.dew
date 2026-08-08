@@ -1,0 +1,39 @@
+open dew.std.wasi
+
+trait Read {
+  fn read(self) -> I32
+  fn add(self, value: I32) -> I32
+}
+
+struct Item {
+  value: I32
+}
+
+impl Read for Item {
+  fn read(self) -> I32 {
+    self.value
+  }
+
+  fn add(self, value: I32) -> I32 {
+    self.value + value
+  }
+}
+
+fn invoke(value: Read) -> I32 {
+  value.add(value.read())
+}
+
+fn static_read(value: Item) -> I32 {
+  value.read()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(Item {
+    value: 21
+  }))
+  wasi_fd_write(1u32, b"|")
+  debug(static_read(Item {
+    value: 7
+  }))
+  wasi_fd_write(1u32, b"|trait:value")
+}

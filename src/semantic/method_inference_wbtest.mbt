@@ -273,6 +273,25 @@ test "runtime trait values retain coercion evidence and dynamic method slots" {
 }
 
 ///|
+test "runtime trait calls reject methods exposing Self outside the receiver" {
+  let (collected, _, _, inferred) = call_test_module(
+    717UL, b"trait Clone {\n  fn clone(self) -> Self\n}\nstruct Item {}\nimpl Clone for Item {\n  fn clone(self) -> Self {\n    self\n  }\n}\nfn invoke(value: Clone) -> Clone {\n  value.clone()\n}\n",
+  )
+  let calls = body_calls(collected, collected.bodies[1])
+  assert_eq(calls.length(), 1)
+  assert_eq(inferred.call_targets[calls[0]], ErrorInferredCallTarget)
+  let mut missing = 0
+  for diagnostic in inferred.diagnostics {
+    match diagnostic {
+      NoMatchingMethod(_, expression, _) if expression == calls[0] =>
+        missing += 1
+      _ => ()
+    }
+  }
+  assert_eq(missing, 1)
+}
+
+///|
 test "concrete trait calls remain statically selected without trait objects" {
   let (collected, _, _, inferred) = call_test_module(
     716UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Item) -> I32 {\n  value.read()\n}\n",

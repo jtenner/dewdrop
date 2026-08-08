@@ -947,7 +947,10 @@ fn plan_expression_kind(
             ),
           )
         SelectedDynamicTraitCallTarget(
-          trait_, requirement, slot, type_arguments,
+          trait_,
+          requirement,
+          slot,
+          type_arguments
         ) =>
           PlannedDynamicTraitCall(
             trait_,

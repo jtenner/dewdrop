@@ -775,3 +775,38 @@ test "program specializations distinguish and forward trait evidence" {
     (forwarded_keys[0] == read_keys[1] && forwarded_keys[1] == read_keys[0]),
   )
 }
+
+///|
+test "runtime trait link maps typed dictionary signatures" {
+  let program = collect_program_manifest(
+    2199UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_layouts.length(), 1)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 1)
+  for field in link.modules[0].fields {
+    match field.storage {
+      WasmFunctionRefStorage(local_signature) => {
+        let final_signature = link.signature_type_index(0, local_signature)
+        assert_true(final_signature >= 0)
+        assert_true(final_signature < link.type_count)
+      }
+      _ => ()
+    }
+  }
+  for function_ in link.functions {
+    if function_.signature_type_index >= 0 {
+      assert_true(function_.signature_type_index < link.type_count)
+    }
+  }
+}

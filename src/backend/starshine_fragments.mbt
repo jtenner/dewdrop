@@ -46,6 +46,10 @@ fn starshine_storage_type(
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
     @semantic.WasmNullableFunctionRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::funcref())
+    @semantic.WasmFunctionRefStorage(index) =>
+      @lib.StorageType::val_type(
+        starshine_function_ref(@lib.TypeIdx::new(index.reinterpret_as_uint())),
+      )
     @semantic.WasmNominalRefStorage(reference) =>
       @lib.StorageType::val_type(
         starshine_nominal_ref(starshine_type_index(reference)),
@@ -118,7 +122,15 @@ fn starshine_physical_subtype(
         [@lib.TypeIdx::new(planned.closure_type_index.reinterpret_as_uint())],
         composite,
       )
-    @semantic.PlannedWasmStructType(_) => @lib.SubType::comp_type(composite)
+    @semantic.PlannedWasmTraitMethodSignatureType(requirement) =>
+      starshine_function_subtype(
+        planned,
+        planned.function_of(requirement).unwrap(),
+      )
+    @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmTraitVTableType(_)
+    | @semantic.PlannedWasmTraitObjectType(_) =>
+      @lib.SubType::comp_type(composite)
   }
   (subtype, has_recursive_reference)
 }
@@ -432,6 +444,7 @@ pub fn emit_starshine_import_section(
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
+      | @semantic.PlannedWasmTraitAdapterFunction(_, _)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -450,7 +463,8 @@ pub fn emit_starshine_function_section(
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_) =>
+      | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
           signatures.push(
             @lib.TypeIdx::new(

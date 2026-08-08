@@ -62,10 +62,10 @@
 - [ ] Add cross-package orphan rules.
 - [ ] Define negative implementations only if required.
 - [ ] Define sealed traits only if required.
-- [ ] Define trait-object source syntax.
-- [ ] Define explicit or implicit boxing at erased trait boundaries.
-- [ ] Plan WasmGC trait-object layouts and typed function-reference dictionary slots.
-- [ ] Emit dictionary construction and `call_ref` dynamic dispatch.
+- [x] Define trait-object source syntax through bare trait value types.
+- [ ] Complete erased-boundary boxing; nominal reference coercion executes, while scalar/SIMD boxing remains.
+- [x] Plan WasmGC trait-object layouts and typed function-reference dictionary slots for nominal object-safe receivers.
+- [x] Emit shared local nominal dictionary construction and typed-field `call_ref` dynamic dispatch.
 - [ ] Define mutable boxed scalar receiver behavior.
 - [ ] Define trait-object identity and equality semantics.
 - [ ] Optimize non-escaping trait boxes.

@@ -18,6 +18,7 @@ pub enum PlannedWasmStorageType {
   WasmStringRefStorage
   WasmNullableEqRefStorage
   WasmNullableFunctionRefStorage
+  WasmFunctionRefStorage(Int)
   WasmNominalRefStorage(PlannedWasmTypeReference)
   WasmExternalNominalRefStorage(DeclId)
 } derive(Eq, Debug)
@@ -31,6 +32,9 @@ pub enum PlannedWasmFieldRole {
   WasmClosureEntryField
   WasmCaptureCellValueField(Int)
   WasmLambdaCaptureField(LambdaId, Int)
+  WasmTraitObjectReceiverField(DeclId)
+  WasmTraitObjectVTableField(DeclId)
+  WasmTraitMethodField(DeclId, DeclId, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -94,6 +98,9 @@ pub enum PlannedWasmPhysicalTypeKind {
   PlannedWasmClosureType
   PlannedWasmCaptureCellType(Int)
   PlannedWasmLambdaClosureType(LambdaId)
+  PlannedWasmTraitMethodSignatureType(DeclId)
+  PlannedWasmTraitVTableType(DeclId)
+  PlannedWasmTraitObjectType(DeclId)
 } derive(Eq, Debug)
 
 ///|
@@ -140,6 +147,7 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(BodyId)
   PlannedWasmDefinedLambdaFunction(LambdaId)
+  PlannedWasmTraitAdapterFunction(DeclId, DeclId)
   PlannedWasmSignatureOnlyFunction
 } derive(Eq, Debug)
 
@@ -177,6 +185,33 @@ pub struct PlannedWasmFunctionFragment {
 } derive(Eq, Debug)
 
 ///|
+pub struct PlannedWasmTraitMethod {
+  trait_declaration : DeclId
+  requirement : DeclId
+  implementation_method : DeclId
+  slot : Int
+  signature_type_index : Int
+  adapter_function : Int
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmTraitDictionary {
+  trait_declaration : DeclId
+  implementation : DeclId
+  vtable_type_index : Int
+  object_type_index : Int
+  methods : HirSpan
+} derive(Eq, Debug)
+
+///|
+pub struct PlannedWasmTraitLayout {
+  trait_declaration : DeclId
+  vtable_type_index : Int
+  object_type_index : Int
+  methods : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedWasmVariantField {
   role : PlannedWasmFieldRole
   physical_index : Int
@@ -207,6 +242,11 @@ pub struct PlannedModuleWasmGCFragments {
   closure_entry_type_by_resolved : Array[Int]
   lambda_entry_signature_indices : Array[Int]
   lambda_capture_parameter_indices : Array[Int]
+  trait_layouts : Array[PlannedWasmTraitLayout]
+  trait_layout_methods : Array[DeclId]
+  trait_method_signature_indices : Array[Int]
+  trait_dictionaries : Array[PlannedWasmTraitDictionary]
+  trait_methods : Array[PlannedWasmTraitMethod]
   functions : Array[PlannedWasmFunctionFragment]
   function_by_declaration : Array[Int]
   lambda_function_indices : Array[Int]
@@ -1008,8 +1048,11 @@ fn wasmgc_plan_physical_type_job(
     PlannedWasmEnumBaseType(_) => ()
     PlannedWasmClosureType
     | PlannedWasmCaptureCellType(_)
-    | PlannedWasmLambdaClosureType(_) =>
-      abort("synthetic closure type entered nominal dependency planning")
+    | PlannedWasmLambdaClosureType(_)
+    | PlannedWasmTraitMethodSignatureType(_)
+    | PlannedWasmTraitVTableType(_)
+    | PlannedWasmTraitObjectType(_) =>
+      abort("synthetic runtime type entered nominal dependency planning")
     PlannedWasmEnumSubtypeType(declaration, variant, _) => {
       let dependency = entity_by_declaration[semantic_id_local(declaration)]
       if dependency >= 0 && marks[dependency] != generation {
@@ -1312,8 +1355,11 @@ fn wasmgc_append_physical_type_fields(
       )
     PlannedWasmClosureType
     | PlannedWasmCaptureCellType(_)
-    | PlannedWasmLambdaClosureType(_) =>
-      abort("synthetic closure type entered nominal field planning")
+    | PlannedWasmLambdaClosureType(_)
+    | PlannedWasmTraitMethodSignatureType(_)
+    | PlannedWasmTraitVTableType(_)
+    | PlannedWasmTraitObjectType(_) =>
+      abort("synthetic runtime type entered nominal field planning")
     PlannedWasmEnumSubtypeType(_, variant, _) => {
       wasmgc_append_field(
         target,
@@ -1401,6 +1447,7 @@ fn wasmgc_capture_value_type(
     WasmStringRefStorage
     | WasmNullableEqRefStorage
     | WasmNullableFunctionRefStorage
+    | WasmFunctionRefStorage(_)
     | WasmNominalRefStorage(_)
     | WasmExternalNominalRefStorage(_) => WasmNullableEqRefValue
   }
@@ -1910,6 +1957,89 @@ fn wasmgc_lambda_declaration(module_id : ModuleId, lambda : LambdaId) -> DeclId 
 }
 
 ///|
+fn wasmgc_trait_adapter_declaration(
+  module_id : ModuleId,
+  adapter : Int,
+) -> DeclId {
+  make_semantic_id(module_id, 0x71000000 + adapter)
+}
+
+///|
+fn wasmgc_runtime_trait_declarations(
+  lowering : PlannedModuleLowering,
+) -> Array[DeclId] {
+  let seen : Map[DeclId, Bool] = Map::default()
+  let traits : Array[DeclId] = []
+  for expression in lowering.expressions {
+    let trait_ = match expression.trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(value, _) => value
+      _ =>
+        match expression.kind {
+          PlannedDynamicTraitCall(value, _, _, _, _, _) => value
+          _ => 0UL
+        }
+    }
+    if trait_ != 0UL && !seen.contains(trait_) {
+      seen[trait_] = true
+      traits.push(trait_)
+    }
+  }
+  traits
+}
+
+///|
+fn wasmgc_trait_evidence_implementation(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+) -> DeclId? {
+  if evidence < 0 || evidence >= lowering.trait_evidence.length() {
+    return None
+  }
+  match lowering.trait_evidence[evidence].kind {
+    ConcreteInferredTraitEvidence(implementation, _) => Some(implementation)
+    BoundInferredTraitEvidence(_) => None
+  }
+}
+
+///|
+fn wasmgc_trait_requirements(
+  functions : PlannedModuleFunctions,
+  trait_declaration : DeclId,
+) -> Array[DeclId] {
+  let requirements : Array[DeclId] = []
+  for callable in functions.callables {
+    match callable.kind {
+      PlannedTraitMethodCallable(owner) if owner == trait_declaration &&
+        callable.has_receiver => requirements.push(callable.declaration)
+      _ => ()
+    }
+  }
+  requirements
+}
+
+///|
+fn wasmgc_trait_implementation_method(
+  functions : PlannedModuleFunctions,
+  implementation : DeclId,
+  requirement : DeclId,
+) -> DeclId? {
+  let requirement_callable = match functions.callable_of(requirement) {
+    Some(value) => value
+    None => return None
+  }
+  for callable in functions.callables {
+    match callable.kind {
+      PlannedImplMethodCallable(owner, _) if owner == implementation &&
+        callable.has_receiver &&
+        callable.name == requirement_callable.name =>
+        return Some(callable.declaration)
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn plan_module_wasmgc_fragments_in_orders(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
@@ -1924,6 +2054,13 @@ fn plan_module_wasmgc_fragments_in_orders(
   }
   let layouts = lowering.type_layouts
   let functions = lowering.functions
+  let runtime_traits = wasmgc_runtime_trait_declarations(lowering)
+  let runtime_requirements : Map[DeclId, Bool] = Map::default()
+  for trait_declaration in runtime_traits {
+    for requirement in wasmgc_trait_requirements(functions, trait_declaration) {
+      runtime_requirements[requirement] = true
+    }
+  }
   let closure_abi = wasmgc_module_uses_closure_abi(resolved, lowering)
   let reachable_functions = wasmgc_reachable_defined_functions(
     lowering,
@@ -1992,8 +2129,11 @@ fn plan_module_wasmgc_fragments_in_orders(
           payload_type_index_by_variant[semantic_id_local(variant)] = next_type_index
         PlannedWasmClosureType
         | PlannedWasmCaptureCellType(_)
-        | PlannedWasmLambdaClosureType(_) =>
-          abort("synthetic closure type entered nominal index planning")
+        | PlannedWasmLambdaClosureType(_)
+        | PlannedWasmTraitMethodSignatureType(_)
+        | PlannedWasmTraitVTableType(_)
+        | PlannedWasmTraitObjectType(_) =>
+          abort("synthetic runtime type entered nominal index planning")
       }
       next_type_index += 1
     }
@@ -2156,6 +2296,69 @@ fn plan_module_wasmgc_fragments_in_orders(
         first_type_index: type_index,
       })
     }
+  }
+  let trait_layouts : Array[PlannedWasmTraitLayout] = []
+  let trait_layout_methods : Array[DeclId] = []
+  let trait_method_signature_indices : Array[Int] = []
+  let runtime_requirement_signatures : Map[DeclId, Int] = Map::default()
+  for trait_declaration in runtime_traits {
+    let method_start = trait_layout_methods.length()
+    for requirement in wasmgc_trait_requirements(functions, trait_declaration) {
+      let signature_type_index = next_type_index
+      next_type_index += 1
+      trait_layout_methods.push(requirement)
+      trait_method_signature_indices.push(signature_type_index)
+      runtime_requirement_signatures[requirement] = signature_type_index
+      let signature_physical = physical_types.length()
+      physical_types.push({
+        kind: PlannedWasmTraitMethodSignatureType(requirement),
+        type_index: signature_type_index,
+        group_index: type_groups.length(),
+        fields: { start: 0, length: 0 },
+        offset: functions.callable_of(requirement).unwrap().offset,
+      })
+      type_groups.push({
+        types: { start: signature_physical, length: 1 },
+        first_type_index: signature_type_index,
+      })
+    }
+    let vtable_type_index = next_type_index
+    next_type_index += 1
+    let object_type_index = next_type_index
+    next_type_index += 1
+    let vtable_physical = physical_types.length()
+    physical_types.push({
+      kind: PlannedWasmTraitVTableType(trait_declaration),
+      type_index: vtable_type_index,
+      group_index: type_groups.length(),
+      fields: { start: 0, length: 0 },
+      offset: 0UL,
+    })
+    type_groups.push({
+      types: { start: vtable_physical, length: 1 },
+      first_type_index: vtable_type_index,
+    })
+    let object_physical = physical_types.length()
+    physical_types.push({
+      kind: PlannedWasmTraitObjectType(trait_declaration),
+      type_index: object_type_index,
+      group_index: type_groups.length(),
+      fields: { start: 0, length: 0 },
+      offset: 0UL,
+    })
+    type_groups.push({
+      types: { start: object_physical, length: 1 },
+      first_type_index: object_type_index,
+    })
+    trait_layouts.push({
+      trait_declaration,
+      vtable_type_index,
+      object_type_index,
+      methods: {
+        start: method_start,
+        length: trait_layout_methods.length() - method_start,
+      },
+    })
   }
   let function_type_by_resolved = Array::make(resolved.types.length(), -1)
   let required_function_types = Array::make(resolved.types.length(), false)
@@ -2447,8 +2650,9 @@ fn plan_module_wasmgc_fragments_in_orders(
         }
       PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
         ()
-      PlannedWasmDefinedLambdaFunction(_) =>
-        abort("lambda function appeared in callable fragment job")
+      PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmTraitAdapterFunction(_, _) =>
+        abort("synthetic function appeared in callable fragment job")
     }
   }
   let planned_functions : Array[PlannedWasmFunctionFragment] = []
@@ -2495,23 +2699,31 @@ fn plan_module_wasmgc_fragments_in_orders(
         }
       PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
         -1
-      PlannedWasmDefinedLambdaFunction(_) =>
-        abort("lambda function appeared in callable index assignment")
+      PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmTraitAdapterFunction(_, _) =>
+        abort("synthetic function appeared in callable index assignment")
     }
     let emits_signature = match job.kind {
       PlannedWasmImportedFunction(_)
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmRuntimeFunction(_) => !elided_functions[callable_index]
+      PlannedWasmSignatureOnlyFunction =>
+        runtime_requirements.contains(callable.declaration)
       _ => false
     }
     let signature_type_index = if emits_signature {
-      let canonical = function_type_by_resolved[resolved.callable_function_types[callable_index]]
-      if canonical >= 0 {
-        canonical
-      } else {
-        let index = next_signature_type
-        next_signature_type += 1
-        index
+      match runtime_requirement_signatures.get(callable.declaration) {
+        Some(index) => index
+        None => {
+          let canonical = function_type_by_resolved[resolved.callable_function_types[callable_index]]
+          if canonical >= 0 {
+            canonical
+          } else {
+            let index = next_signature_type
+            next_signature_type += 1
+            index
+          }
+        }
       }
     } else {
       -1
@@ -2582,6 +2794,162 @@ fn plan_module_wasmgc_fragments_in_orders(
           lowering.expressions[expression].offset
       },
     })
+  }
+  for layout in trait_layouts {
+    let vtable_field_start = fields.length()
+    for slot in 0..<layout.methods.length {
+      let requirement = trait_layout_methods[layout.methods.start + slot]
+      let callable_index = functions.callable_by_declaration[semantic_id_local(
+          requirement,
+        )]
+      fields.push({
+        role: WasmTraitMethodField(layout.trait_declaration, requirement, slot),
+        physical_index: slot,
+        storage: WasmFunctionRefStorage(
+          trait_method_signature_indices[layout.methods.start + slot],
+        ),
+        mutable_: false,
+        offset: functions.callables[callable_index].offset,
+      })
+    }
+    for index in 0..<physical_types.length() {
+      if physical_types[index].type_index == layout.vtable_type_index {
+        physical_types[index] = {
+          ..physical_types[index],
+          fields: {
+            start: vtable_field_start,
+            length: fields.length() - vtable_field_start,
+          },
+        }
+      }
+    }
+    let object_field_start = fields.length()
+    fields.push({
+      role: WasmTraitObjectReceiverField(layout.trait_declaration),
+      physical_index: 0,
+      storage: WasmNullableEqRefStorage,
+      mutable_: false,
+      offset: 0UL,
+    })
+    fields.push({
+      role: WasmTraitObjectVTableField(layout.trait_declaration),
+      physical_index: 1,
+      storage: WasmNominalRefStorage(
+        WasmModuleTypeReference(layout.vtable_type_index),
+      ),
+      mutable_: false,
+      offset: 0UL,
+    })
+    for index in 0..<physical_types.length() {
+      if physical_types[index].type_index == layout.object_type_index {
+        physical_types[index] = {
+          ..physical_types[index],
+          fields: { start: object_field_start, length: 2 },
+        }
+      }
+    }
+  }
+  let trait_dictionaries : Array[PlannedWasmTraitDictionary] = []
+  let trait_methods : Array[PlannedWasmTraitMethod] = []
+  let dictionary_keys : Map[String, Bool] = Map::default()
+  for expression in lowering.expressions {
+    let (trait_declaration, evidence) = match expression.trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(trait_, node) => (trait_, node)
+      _ => continue
+    }
+    let implementation = match
+      wasmgc_trait_evidence_implementation(lowering, evidence) {
+      Some(value) => value
+      None => continue
+    }
+    if semantic_id_module(implementation) != lowering.module_id {
+      continue
+    }
+    let key = trait_declaration.to_string() + ":" + implementation.to_string()
+    if dictionary_keys.contains(key) {
+      continue
+    }
+    dictionary_keys[key] = true
+    let mut selected_layout = None
+    for layout in trait_layouts {
+      if layout.trait_declaration == trait_declaration {
+        selected_layout = Some(layout)
+        break
+      }
+    }
+    let layout = match selected_layout {
+      Some(value) => value
+      None => continue
+    }
+    let method_start = trait_methods.length()
+    let mut complete = true
+    for slot in 0..<layout.methods.length {
+      let requirement = trait_layout_methods[layout.methods.start + slot]
+      let implementation_method = match
+        wasmgc_trait_implementation_method(
+          functions, implementation, requirement,
+        ) {
+        Some(value) => value
+        None => {
+          complete = false
+          break
+        }
+      }
+      let requirement_index = functions.callable_by_declaration[semantic_id_local(
+          requirement,
+        )]
+      let requirement_fragment = planned_functions[requirement_index]
+      let adapter_fragment = planned_functions.length()
+      planned_functions.push({
+        declaration: wasmgc_trait_adapter_declaration(
+          lowering.module_id,
+          trait_methods.length(),
+        ),
+        lambda: -1,
+        name: b"",
+        visibility: ModuleVisible,
+        is_test: false,
+        is_test_entry: false,
+        test_name: b"",
+        kind: PlannedWasmTraitAdapterFunction(
+          implementation_method, requirement,
+        ),
+        direct_builtin: b"",
+        elided: false,
+        signature_type_index: requirement_fragment.signature_type_index,
+        function_index: defined_index,
+        parameters: requirement_fragment.parameters,
+        results: requirement_fragment.results,
+        specialization_shapes: { start: 0, length: 0 },
+        specialization_evidence: { start: 0, length: 0 },
+        specialization_abi_key: "",
+        offset: expression.offset,
+      })
+      defined_index += 1
+      defined_function_count += 1
+      trait_methods.push({
+        trait_declaration,
+        requirement,
+        implementation_method,
+        slot,
+        signature_type_index: requirement_fragment.signature_type_index,
+        adapter_function: adapter_fragment,
+      })
+    }
+    if complete {
+      trait_dictionaries.push({
+        trait_declaration,
+        implementation,
+        vtable_type_index: layout.vtable_type_index,
+        object_type_index: layout.object_type_index,
+        methods: {
+          start: method_start,
+          length: trait_methods.length() - method_start,
+        },
+      })
+    } else {
+      trait_methods.truncate(method_start)
+    }
   }
   let variant_declarations = Array::make(layouts.variants.length(), 0UL)
   let variant_tags = Array::make(layouts.variants.length(), -1)
@@ -2861,6 +3229,11 @@ fn plan_module_wasmgc_fragments_in_orders(
     closure_entry_type_by_resolved,
     lambda_entry_signature_indices,
     lambda_capture_parameter_indices,
+    trait_layouts,
+    trait_layout_methods,
+    trait_method_signature_indices,
+    trait_dictionaries,
+    trait_methods,
     functions: planned_functions,
     function_by_declaration,
     lambda_function_indices,

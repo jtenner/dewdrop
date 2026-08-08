@@ -280,12 +280,12 @@ erased fallback.
 
 ### Runtime trait values
 
-- [ ] Define trait-object source syntax.
-- [ ] Define explicit or implicit boxing at erased trait boundaries.
-- [ ] Plan WasmGC trait object layouts.
-- [ ] Plan typed function-reference dictionary slots.
-- [ ] Emit dictionary construction.
-- [ ] Emit `call_ref` dynamic dispatch.
+- [x] Define trait-object source syntax: a bare trait in value position denotes an erased runtime trait value.
+- [ ] Define explicit or implicit boxing at erased trait boundaries; implicit nominal-reference coercion is implemented, while scalar/SIMD boxes remain.
+- [x] Plan WasmGC trait object layouts for nominal object-safe receivers.
+- [x] Plan typed function-reference dictionary slots in deterministic trait source order.
+- [x] Emit one shared local nominal dictionary per exact trait implementation.
+- [x] Emit typed-field `call_ref` dynamic dispatch with single receiver evaluation.
 - [ ] Define mutable boxed scalar receiver behavior.
 - [ ] Define trait-object identity and equality semantics.
 - [ ] Optimize non-escaping trait boxes.

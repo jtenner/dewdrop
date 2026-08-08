@@ -98,6 +98,13 @@ pub struct PlannedProgramWasmSignatureType {
 } derive(Eq, Debug)
 
 ///|
+pub struct PlannedProgramTraitDictionaryGlobal {
+  module_index : Int
+  dictionary_index : Int
+  global_index : Int
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramFunctionReferenceSingleton {
   module_index : Int
   declaration : DeclId
@@ -127,6 +134,7 @@ pub struct PlannedProgramWasmGCLink {
   function_reference_singletons : Array[
     PlannedProgramFunctionReferenceSingleton,
   ]
+  trait_dictionary_globals : Array[PlannedProgramTraitDictionaryGlobal]
   initializer_type_index : Int
   startup_function_index : Int
   type_lookup : Map[DeclId, Int]
@@ -177,6 +185,21 @@ pub fn PlannedProgramWasmGCLink::materialized_specialization_count(
     }
   }
   count
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::trait_dictionary_global(
+  self : PlannedProgramWasmGCLink,
+  module_index : Int,
+  dictionary_index : Int,
+) -> Int {
+  for dictionary in self.trait_dictionary_globals {
+    if dictionary.module_index == module_index &&
+      dictionary.dictionary_index == dictionary_index {
+      return dictionary.global_index
+    }
+  }
+  -1
 }
 
 ///|
@@ -2714,7 +2737,10 @@ fn program_cross_module_type_groups(
         PlannedWasmEnumSubtypeType(_, _, _)
         | PlannedWasmClosureType
         | PlannedWasmCaptureCellType(_)
-        | PlannedWasmLambdaClosureType(_) => ()
+        | PlannedWasmLambdaClosureType(_)
+        | PlannedWasmTraitMethodSignatureType(_)
+        | PlannedWasmTraitVTableType(_)
+        | PlannedWasmTraitObjectType(_) => ()
       }
       physical_types.push(node)
     }
@@ -2771,7 +2797,10 @@ fn planned_program_local_nominal_declaration(
     PlannedWasmEnumSubtypeType(_, _, _)
     | PlannedWasmClosureType
     | PlannedWasmCaptureCellType(_)
-    | PlannedWasmLambdaClosureType(_) => None
+    | PlannedWasmLambdaClosureType(_)
+    | PlannedWasmTraitMethodSignatureType(_)
+    | PlannedWasmTraitVTableType(_)
+    | PlannedWasmTraitObjectType(_) => None
   }
 }
 
@@ -2964,7 +2993,10 @@ pub fn link_program_wasmgc_fragments(
           PlannedWasmEnumSubtypeType(_, _, _)
           | PlannedWasmClosureType
           | PlannedWasmCaptureCellType(_)
-          | PlannedWasmLambdaClosureType(_) => ()
+          | PlannedWasmLambdaClosureType(_)
+          | PlannedWasmTraitMethodSignatureType(_)
+          | PlannedWasmTraitVTableType(_)
+          | PlannedWasmTraitObjectType(_) => ()
         }
       }
       type_count += module_fragments.physical_types.length()
@@ -3030,7 +3062,10 @@ pub fn link_program_wasmgc_fragments(
             PlannedWasmEnumSubtypeType(_, _, _)
             | PlannedWasmClosureType
             | PlannedWasmCaptureCellType(_)
-            | PlannedWasmLambdaClosureType(_) => ()
+            | PlannedWasmLambdaClosureType(_)
+            | PlannedWasmTraitMethodSignatureType(_)
+            | PlannedWasmTraitVTableType(_)
+            | PlannedWasmTraitObjectType(_) => ()
           }
         }
         type_count += module_.physical_types.length()
@@ -3069,7 +3104,7 @@ pub fn link_program_wasmgc_fragments(
         module_signature_indices[module_index][local_signature] = representative_type_index
       }
       for function_index, function_ in module_.functions {
-        if function_.signature_type_index < 0 {
+        if function_.signature_type_index < module_.physical_types.length() {
           continue
         }
         let local_signature = function_.signature_type_index -
@@ -3134,7 +3169,10 @@ pub fn link_program_wasmgc_fragments(
           PlannedWasmEnumSubtypeType(_, _, _)
           | PlannedWasmClosureType
           | PlannedWasmCaptureCellType(_)
-          | PlannedWasmLambdaClosureType(_) => ()
+          | PlannedWasmLambdaClosureType(_)
+          | PlannedWasmTraitMethodSignatureType(_)
+          | PlannedWasmTraitVTableType(_)
+          | PlannedWasmTraitObjectType(_) => ()
         }
       }
       for fragment_index, function_ in module_fragments.functions {
@@ -3158,9 +3196,12 @@ pub fn link_program_wasmgc_fragments(
           kind: function_.kind,
           direct_builtin: function_.direct_builtin,
           elided: function_.elided,
-          signature_type_index: if function_.signature_type_index >= 0 {
+          signature_type_index: if function_.signature_type_index >=
+            module_fragments.physical_types.length() {
             module_signature_indices[module_index][function_.signature_type_index -
             module_fragments.physical_types.length()]
+          } else if function_.signature_type_index >= 0 {
+            module_type_indices[module_index][function_.signature_type_index]
           } else {
             -1
           },
@@ -3190,6 +3231,7 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmRuntimeFunction(_)
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmTraitAdapterFunction(_, _)
       | PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -3198,7 +3240,8 @@ pub fn link_program_wasmgc_fragments(
     match function_.kind {
       PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
-      | PlannedWasmRuntimeFunction(_) =>
+      | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
           function_.function_index = imported_function_count +
             defined_function_count
@@ -3517,6 +3560,17 @@ pub fn link_program_wasmgc_fragments(
       ignore(expression_index)
     }
   }
+  let trait_dictionary_globals : Array[PlannedProgramTraitDictionaryGlobal] = []
+  for module_index, module_ in fragments.modules {
+    for dictionary_index in 0..<module_.trait_dictionaries.length() {
+      trait_dictionary_globals.push({
+        module_index,
+        dictionary_index,
+        global_index,
+      })
+      global_index += 1
+    }
+  }
   let scheduled_initializers = program_schedule_initializers(
     lowering, initializer_candidates, diagnostics,
   )
@@ -3535,7 +3589,8 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let needs_startup = runtime_initializer_count > 0 ||
-    function_reference_singletons.length() > 0
+    function_reference_singletons.length() > 0 ||
+    trait_dictionary_globals.length() > 0
   let initializer_type_index = if needs_startup {
     let index = type_count
     type_count += 1
@@ -3599,6 +3654,7 @@ pub fn link_program_wasmgc_fragments(
     initializers,
     global_lookup,
     function_reference_singletons,
+    trait_dictionary_globals,
     initializer_type_index,
     startup_function_index,
     type_lookup,
