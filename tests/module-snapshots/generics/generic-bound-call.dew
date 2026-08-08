@@ -1,0 +1,18 @@
+trait Marker {}
+
+struct Allowed {}
+struct Denied {}
+
+impl Marker for Allowed {}
+
+fn keep<t: Marker>(value: t) -> t {
+  value
+}
+
+fn accepted() -> Allowed {
+  keep(Allowed {})
+}
+
+pub fn main() -> Denied {
+  keep(Denied {})
+}

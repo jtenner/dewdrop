@@ -36,20 +36,45 @@ used by implementation heads. Resolved bounds are aligned in
 
 ## Cache format
 
-The private frozen-interface payload and outer persistent cache envelope advance
-from V7 to V8. V8 serializes `generic_bound_types` immediately after generic
-parameter types. Cache filenames use `v8-<fingerprint>.dwi`; old artifacts are
-ignored by construction rather than decoded under the new layout.
+The private frozen-interface payload first advanced from V7 to V8 for aligned
+`generic_bound_types`, then to V9 when imported call checking required one bound
+span per frozen generic parameter. The outer persistent envelope and filenames
+advance with it to `v9-<fingerprint>.dwi`; older artifacts are ignored by
+construction rather than decoded under a newer layout.
+
+## Call-site obligation checking
+
+Local and imported generic calls now instantiate every declared bound with the
+inferred call type arguments and require one visible, valid, coherent
+implementation matching both the concrete target and the complete applied trait
+type. `Convert<I32>` evidence therefore does not satisfy `Convert<I64>`.
+Failures produce `UnsatisfiedTraitObligation` at the call argument. Imported
+interfaces retain one bound span per generic parameter, and import translation
+maps bound types into the consumer's resolved arena before checking evidence.
+
+A 256-call release-native inference benchmark measured:
+
+```text
+unbounded generic calls     305.61 us
+one bound per generic call  369.90 us
+```
+
+The approximately 0.25 us per-call validation cost in this deliberately dense
+workload includes coherent bucket lookup, trial unification of target and trait
+application, and rollback. Empty-bound callables take the existing fast path.
+These measurements are development observations rather than regression budgets.
 
 ## Current boundary
 
-This milestone freezes syntax and resolved trait identities only. Generic body
-operator/method selection does not yet consume bound evidence, call sites do not
-yet prove obligations, and public interface fingerprints do not yet claim a
+Generic body operator/method selection does not yet consume bound evidence, and
+selected call-site evidence is validated but not yet frozen into lowering as a
+dictionary/evidence record. Public interface fingerprints do not yet claim a
 stable generic-bound ABI. Those are the next obligation-solving steps.
 
 ## Validation
 
 Tests cover function, builtin, and trait declarations; ordered multi-bound
-parsing; unbounded parameters; flat HIR retention; trait-namespace resolution;
-and byte-identical V8 frozen-interface serialization/deserialization.
+parsing; nested applied bounds adjacent to the outer `>`; unbounded parameters;
+flat HIR retention; trait-namespace resolution; byte-identical V9
+frozen-interface serialization/deserialization; local and imported bound
+checking; marker traits; and exact applied-trait argument matching.

@@ -171,7 +171,7 @@ layout.
 
 ## Current coverage and observation
 
-The suite now contains 218 fixtures: 185 compiled WAT/runtime snapshots and 33
+The suite now contains 219 fixtures: 185 compiled WAT/runtime snapshots and 34
 compiler-error snapshots. On August 5, 2026, the full suite passes identically
 in Node and Wago Core 3, including deep and wide functional loops, module
 initialization, imported values, imported method/operator dispatch, collection
@@ -185,7 +185,7 @@ collections         15         10                 5                2
 control-flow       21         21                 0                1
 enums               11         11                 0                0
 functions           16         13                 3                0
-generics             8          8                 0                0
+generics             9          8                 1                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
 modules             21         17                 4                0
@@ -198,7 +198,7 @@ text                 27         27                 0                4
 types                7          1                 6                0
 wasi                 16         16                 0                5
 
-total               218        185                33               15
+total               219        185                34               15
 nonempty stdout fixtures       102
 WAT/no-trap-only fixtures       68
 checked-in WAT lines       106,002

@@ -5600,6 +5600,172 @@ fn BasicBodyInferencer::try_call_candidate(
 }
 
 ///|
+fn BasicBodyInferencer::begin_obligation_impl_candidate(
+  self : BasicBodyInferencer,
+  implementation_index : Int,
+) -> (BodyTypeId, BodyTypeId) {
+  let implementation = self.impl_index.implementations[implementation_index]
+  self.call_scratch.instantiation_generics = if semantic_id_module(
+      implementation.declaration,
+    ) ==
+    self.collected.module_id {
+    self.collected.generic_parameters_of(implementation.declaration)
+  } else {
+    { start: 0, length: 0 }
+  }
+  self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
+  self.call_scratch.candidate_type_arguments.clear()
+  for _ in 0..<self.call_scratch.instantiation_generics.length {
+    self.call_scratch.candidate_type_arguments.push(
+      self.solver.fresh_variable(),
+    )
+  }
+  self.call_scratch.instantiation_self_owner = implementation.declaration
+  self.call_scratch.instantiation_self_type = -1
+  self.next_instantiation_generation()
+  let target = self.instantiate_signature_type(implementation.target_type)
+  self.call_scratch.instantiation_self_type = target
+  let trait_type = self.instantiate_signature_type(implementation.trait_type)
+  (target, trait_type)
+}
+
+///|
+fn BasicBodyInferencer::trait_obligation_satisfied(
+  self : BasicBodyInferencer,
+  target : BodyTypeId,
+  bound : BodyTypeId,
+  trait_declaration : DeclId,
+  origin : TypeConstraintOrigin,
+) -> Bool {
+  let head = match self.body_impl_target_head(target) {
+    Some(value) => value
+    None => return false
+  }
+  for bucket in self.impl_index.buckets {
+    guard bucket.kind == TraitImplBucket(trait_declaration) &&
+      bucket.target_head == head else {
+      continue
+    }
+    for
+      offset in bucket.implementations.start..<(bucket.implementations.start +
+      bucket.implementations.length) {
+      let implementation_index = self.impl_index.bucket_implementations[offset]
+      let implementation = self.impl_index.implementations[implementation_index]
+      if !implementation.valid ||
+        !implementation.coherent ||
+        !self.implementation_visible(implementation_index) {
+        continue
+      }
+      let snapshot = self.solver.snapshot()
+      let (candidate_target, candidate_trait) = self.begin_obligation_impl_candidate(
+        implementation_index,
+      )
+      let viable = self.solver.unify(target, candidate_target, origin) &&
+        self.solver.unify(bound, candidate_trait, origin)
+      self.solver.rollback(snapshot)
+      if viable {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
+fn BasicBodyInferencer::validate_generic_parameter_obligations(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  declaration : DeclId,
+  type_arguments : HirSpan,
+  generic_offset : Int,
+  parameter : GenericParameterId,
+  bounds : HirSpan,
+  bound_types : Array[ResolvedTypeId],
+  offset : UInt64,
+) -> Unit {
+  let origin = call_type_origin(expression, offset)
+  for bound_offset in bounds.start..<(bounds.start + bounds.length) {
+    self.begin_call_candidate(declaration)
+    for index in 0..<type_arguments.length {
+      self.call_scratch.candidate_type_arguments[index] = self.call_type_arguments[type_arguments.start +
+        index]
+    }
+    let resolved_bound = bound_types[bound_offset]
+    let bound = self.instantiate_signature_type(resolved_bound)
+    let trait_declaration = match self.resolved.types[resolved_bound] {
+      TraitType(value) => value
+      AppliedType(base, _) =>
+        match self.resolved.types[base] {
+          TraitType(value) => value
+          _ => continue
+        }
+      _ => continue
+    }
+    if !self.trait_obligation_satisfied(
+        self.call_type_arguments[type_arguments.start + generic_offset],
+        bound,
+        trait_declaration,
+        origin,
+      ) {
+      self.diagnose(
+        UnsatisfiedTraitObligation(
+          declaration, parameter, trait_declaration, expression, offset,
+        ),
+      )
+    }
+  }
+}
+
+///|
+fn BasicBodyInferencer::validate_call_obligations(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  declaration : DeclId,
+  type_arguments : HirSpan,
+  offset : UInt64,
+) -> Unit {
+  if semantic_id_module(declaration) == self.collected.module_id {
+    let generics = self.collected.generic_parameters_of(declaration)
+    for generic_offset in 0..<generics.length {
+      let parameter = self.collected.generic_parameters[generics.start +
+        generic_offset]
+      self.validate_generic_parameter_obligations(
+        expression,
+        declaration,
+        type_arguments,
+        generic_offset,
+        parameter.id,
+        parameter.bounds,
+        self.resolved.generic_bound_types,
+        offset,
+      )
+    }
+    return
+  }
+  match self.imports {
+    Some(imports) =>
+      match imports.callable(declaration) {
+        Some(callable) =>
+          for generic_offset in 0..<callable.generic_bounds.length {
+            let parameter_index = callable.generic_bounds.start + generic_offset
+            self.validate_generic_parameter_obligations(
+              expression,
+              declaration,
+              type_arguments,
+              generic_offset,
+              imports.generic_parameter_ids[parameter_index],
+              imports.generic_parameter_bounds[parameter_index],
+              imports.generic_bound_types,
+              offset,
+            )
+          }
+        None => ()
+      }
+    None => ()
+  }
+}
+
+///|
 fn BasicBodyInferencer::select_call_candidate(
   self : BasicBodyInferencer,
   call_slot : Int,
@@ -5633,10 +5799,16 @@ fn BasicBodyInferencer::select_call_candidate(
   for type_ in self.call_scratch.candidate_type_arguments {
     self.call_type_arguments.push(type_)
   }
-  self.call_targets[call_slot] = SelectedInferredCallTarget(declaration, {
+  let type_arguments = {
     start,
     length: self.call_scratch.candidate_type_arguments.length(),
-  })
+  }
+  self.call_targets[call_slot] = SelectedInferredCallTarget(
+    declaration, type_arguments,
+  )
+  self.validate_call_obligations(
+    expression, declaration, type_arguments, offset,
+  )
 }
 
 ///|
@@ -6774,6 +6946,7 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     FunctionReferenceExpectedTypeRequired(_, _, _) => 41
     NoMatchingFunctionReference(_, _, _) => 42
     AmbiguousFunctionReference(_, _, _, _, _, _) => 43
+    UnsatisfiedTraitObligation(_, _, _, _, _) => 44
   }
 }
 

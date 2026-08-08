@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V8\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V9\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -326,6 +326,10 @@ fn cache_write_interface(
   match cache_write_resolved_types(output, interface_.resolved_types) {
     Err(error) => return Err(error)
     Ok(_) => ()
+  }
+  cache_write_int(output, interface_.generic_parameter_bounds.length())
+  for bounds in interface_.generic_parameter_bounds {
+    cache_write_span(output, bounds)
   }
   cache_write_int(output, interface_.declarations.length())
   for declaration in interface_.declarations {
@@ -780,6 +784,11 @@ fn FrozenInterfaceCacheReader::read_interface(
   let path = self.read_string()
   let preamble_declaration_count = self.read_int()
   let resolved_types = self.read_resolved_types()
+  let generic_bound_count = self.read_count(1, "generic parameter bound")
+  let generic_parameter_bounds : Array[HirSpan] = []
+  for _ in 0..<generic_bound_count {
+    generic_parameter_bounds.push(self.read_span())
+  }
   let declaration_count = self.read_count(1, "declaration")
   let declarations : Array[FrozenInterfaceDeclaration] = []
   for _ in 0..<declaration_count {
@@ -879,6 +888,7 @@ fn FrozenInterfaceCacheReader::read_interface(
     path,
     preamble_declaration_count,
     resolved_types,
+    generic_parameter_bounds,
     declarations,
     declaration_abi_fingerprints,
     fields,

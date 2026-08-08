@@ -1223,6 +1223,7 @@ pub struct FrozenModuleInterface {
   path : String
   preamble_declaration_count : Int
   resolved_types : ResolvedModuleTypes
+  generic_parameter_bounds : Array[HirSpan]
   declarations : Array[FrozenInterfaceDeclaration]
   declaration_abi_fingerprints : Array[String]
   fields : Array[FrozenInterfaceField]
@@ -2150,11 +2151,16 @@ pub fn freeze_module_interface(
       .unwrap(),
     })
   }
+  let generic_parameter_bounds : Array[HirSpan] = []
+  for parameter in collected.generic_parameters {
+    generic_parameter_bounds.push(parameter.bounds)
+  }
   {
     module_id: collected.module_id,
     path,
     preamble_declaration_count: collected.preamble_declaration_count,
     resolved_types: resolved,
+    generic_parameter_bounds,
     declarations,
     declaration_abi_fingerprints: [],
     fields,

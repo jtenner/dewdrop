@@ -571,25 +571,11 @@ fn Parser::consume_plus(self : Parser) -> Bool {
 }
 
 ///|
-fn Parser::consume_greater(self : Parser) -> Bool {
-  match self.peek_token() {
-    Some(token) =>
-      match token.kind() {
-        @tokenizer.Symbol(@tokenizer.Greater) => {
-          self.consume_lookahead()
-          true
-        }
-        _ => false
-      }
-    None => false
-  }
-}
-
-///|
 fn Parser::parse_type_parameters(
   self : Parser,
 ) -> Result[Array[TypeParameter], RecoveryFailure] {
   let parameters : Array[TypeParameter] = []
+  let closer_state : TypeCloserState = { pending: 0, offset: 0UL }
   self.skip_newlines()
   while true {
     let (name, offset) = match self.parse_identifier(TypeParameter) {
@@ -603,7 +589,7 @@ fn Parser::parse_type_parameters(
           @tokenizer.Symbol(@tokenizer.Colon) => {
             self.consume_lookahead()
             while true {
-              let bound = match self.parse_type() {
+              let bound = match self.parse_type_inner(closer_state) {
                 Ok(value) => value
                 Err(_) => return Err(self.declaration_error(TypeBound))
               }
@@ -618,14 +604,14 @@ fn Parser::parse_type_parameters(
       None => ()
     }
     parameters.push({ name, bounds, offset })
-    if self.consume_greater() {
+    if self.consume_type_greater(closer_state) {
       return Ok(parameters)
     }
     guard self.consume_comma() else {
       return Err(self.declaration_error(TypeParameterSeparatorOrClose))
     }
     self.skip_newlines()
-    if self.consume_greater() {
+    if self.consume_type_greater(closer_state) {
       return Ok(parameters)
     }
   } nobreak {

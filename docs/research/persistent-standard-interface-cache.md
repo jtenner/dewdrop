@@ -33,13 +33,14 @@ Generated `--bootstrap-std` providers are intentionally not cacheable. Bootstrap
 `serialize_frozen_interfaces` writes a private deterministic binary format beginning with:
 
 ```text
-DEW_FROZEN_INTERFACES_V8\0
+DEW_FROZEN_INTERFACES_V9\0
 ```
 
 It serializes diagnostics-free `FrozenModuleInterface` records, including:
 
 - stable module and declaration identities;
-- complete resolved-type arenas and applied-type spans;
+- complete resolved-type arenas, applied-type spans, resolved generic-bound types,
+  and one ordered bound span per generic parameter;
 - public declarations, aggregate fields, and variants;
 - callable kinds, parameters, result shapes, and receiver bits;
 - public implementation evidence;
@@ -52,7 +53,7 @@ No maps, addresses, filesystem paths, or worker-order values enter the artifact.
 The serialized payload is wrapped in a second cache-file envelope:
 
 ```text
-DEW_STD_INTERFACE_CACHE_V8\0
+DEW_STD_INTERFACE_CACHE_V9\0
 SHA-256(payload)
 payload
 ```
@@ -64,7 +65,7 @@ The envelope checksum catches corruption that might otherwise remain structurall
 The default location is:
 
 ```text
-.dew-cache/interfaces/v8-<bundle-fingerprint>.dwi
+.dew-cache/interfaces/v9-<bundle-fingerprint>.dwi
 ```
 
 The cache root may be changed with:
@@ -109,7 +110,7 @@ Permanent coverage includes:
 - explicit disabled mode;
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
-- versioned external package miss/hit behavior and `v8-*.dwi` filenames;
+- versioned external package miss/hit behavior and `v9-*.dwi` filenames;
 - fail-visible package identity, version, and integrity mismatches;
 - dependency integrity changes producing a distinct bundle key;
 - byte-identical Wasm between cache miss, cache hit, on-disk uncached, and generated bootstrap providers;

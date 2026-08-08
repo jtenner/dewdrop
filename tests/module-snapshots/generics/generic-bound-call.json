@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:17:7: error: UnsatisfiedTraitObligation(\n  12884901888004,\n  12884901888000,\n  12884901888000,\n  8,\n  209,\n)\n  |\n17 |   keep(Denied {})\n  |       ^"
+  ],
+  "warnings": [],
+  "output": null
+}

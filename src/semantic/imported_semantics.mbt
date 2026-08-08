@@ -27,6 +27,7 @@ pub struct ResolvedImportedVariant {
 pub struct ResolvedImportedCallable {
   declaration : DeclId
   generic_parameters : HirSpan
+  generic_bounds : HirSpan
   parameters : HirSpan
   result_type : ResolvedTypeId
   function_type : ResolvedTypeId
@@ -37,6 +38,9 @@ pub struct ResolvedModuleImports {
   module_id : ModuleId
   scope : ModuleImportScope
   callables : Array[ResolvedImportedCallable]
+  generic_parameter_ids : Array[GenericParameterId]
+  generic_parameter_bounds : Array[HirSpan]
+  generic_bound_types : Array[ResolvedTypeId]
   parameter_types : Array[ResolvedTypeId]
   parameter_receivers : Array[Bool]
   implementations : Array[ResolvedImportedImplementation]
@@ -456,6 +460,9 @@ pub fn resolve_module_imports(
   }
   let importer = InterfaceTypeImporter::new(resolved, scope.interfaces)
   let callables : Array[ResolvedImportedCallable] = []
+  let generic_parameter_ids : Array[GenericParameterId] = []
+  let generic_parameter_bounds : Array[HirSpan] = []
+  let generic_bound_types : Array[ResolvedTypeId] = []
   let parameter_types : Array[ResolvedTypeId] = []
   let parameter_receivers : Array[Bool] = []
   let implementations : Array[ResolvedImportedImplementation] = []
@@ -469,6 +476,31 @@ pub fn resolve_module_imports(
   for reference in scope.callable_references {
     let interface_ = scope.interfaces[reference.interface_index].unwrap()
     let callable = interface_.callables[reference.callable_index]
+    let generic_bound_start = generic_parameter_bounds.length()
+    for index in 0..<callable.generic_parameters.length {
+      let source_index = callable.generic_parameters.start + index
+      match
+        interface_.resolved_types.types[interface_.resolved_types.generic_parameter_types[source_index]] {
+        GenericParameterType(parameter) => generic_parameter_ids.push(parameter)
+        _ => generic_parameter_ids.push(0UL)
+      }
+      let source_bounds = interface_.generic_parameter_bounds[source_index]
+      let bound_start = generic_bound_types.length()
+      for
+        bound_index in source_bounds.start..<(source_bounds.start +
+        source_bounds.length) {
+        generic_bound_types.push(
+          importer.import_type(
+            reference.interface_index,
+            interface_.resolved_types.generic_bound_types[bound_index],
+          ),
+        )
+      }
+      generic_parameter_bounds.push({
+        start: bound_start,
+        length: generic_bound_types.length() - bound_start,
+      })
+    }
     let parameter_start = parameter_types.length()
     for index in 0..<callable.parameters.length {
       let parameter = interface_.parameters[callable.parameters.start + index]
@@ -481,6 +513,10 @@ pub fn resolve_module_imports(
     callables.push({
       declaration: callable.declaration,
       generic_parameters: callable.generic_parameters,
+      generic_bounds: {
+        start: generic_bound_start,
+        length: generic_parameter_bounds.length() - generic_bound_start,
+      },
       parameters: {
         start: parameter_start,
         length: parameter_types.length() - parameter_start,
@@ -502,6 +538,32 @@ pub fn resolve_module_imports(
       if callable_by_declaration.contains(callable.declaration) {
         continue
       }
+      let generic_bound_start = generic_parameter_bounds.length()
+      for index in 0..<callable.generic_parameters.length {
+        let source_index = callable.generic_parameters.start + index
+        match
+          interface_.resolved_types.types[interface_.resolved_types.generic_parameter_types[source_index]] {
+          GenericParameterType(parameter) =>
+            generic_parameter_ids.push(parameter)
+          _ => generic_parameter_ids.push(0UL)
+        }
+        let source_bounds = interface_.generic_parameter_bounds[source_index]
+        let bound_start = generic_bound_types.length()
+        for
+          bound_index in source_bounds.start..<(source_bounds.start +
+          source_bounds.length) {
+          generic_bound_types.push(
+            importer.import_type(
+              interface_index,
+              interface_.resolved_types.generic_bound_types[bound_index],
+            ),
+          )
+        }
+        generic_parameter_bounds.push({
+          start: bound_start,
+          length: generic_bound_types.length() - bound_start,
+        })
+      }
       let parameter_start = parameter_types.length()
       for index in 0..<callable.parameters.length {
         let parameter = interface_.parameters[callable.parameters.start + index]
@@ -514,6 +576,10 @@ pub fn resolve_module_imports(
       callables.push({
         declaration: callable.declaration,
         generic_parameters: callable.generic_parameters,
+        generic_bounds: {
+          start: generic_bound_start,
+          length: generic_parameter_bounds.length() - generic_bound_start,
+        },
         parameters: {
           start: parameter_start,
           length: parameter_types.length() - parameter_start,
@@ -612,6 +678,9 @@ pub fn resolve_module_imports(
     module_id: resolved.module_id,
     scope,
     callables,
+    generic_parameter_ids,
+    generic_parameter_bounds,
+    generic_bound_types,
     parameter_types,
     parameter_receivers,
     implementations,

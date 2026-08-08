@@ -366,6 +366,7 @@ fn BodyInferenceDiagnostic::primary_location(
     | UnknownImportedModuleMember(_, expression, offset)
     | NoMatchingMethod(_, expression, offset)
     | AmbiguousMethod(_, expression, _, _, _, offset)
+    | UnsatisfiedTraitObligation(_, _, _, expression, offset)
     | UnresolvedExpressionTypeArgument(expression, _, offset)
     | UnresolvedExpressionType(expression, offset) =>
       location_at(module_.expression_location(expression), offset)
