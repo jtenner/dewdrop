@@ -450,6 +450,9 @@ brace. Generated implementations visit fields and payloads in source order and
 require the corresponding trait evidence for every stored value. Generic owner
 parameters referenced by stored types receive conditional bounds and execute
 through static evidence specialization; phantom parameters remain unconstrained.
+Derived implementations use ordinary coherence and visibility rules, survive
+frozen cross-module interfaces, and conflict with handwritten evidence rather
+than silently overriding it.
 
 ### Enums and pattern matching
 

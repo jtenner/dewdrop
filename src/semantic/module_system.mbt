@@ -1424,20 +1424,57 @@ fn callable_abi_write_type(
 }
 
 ///|
+fn callable_abi_write_generic_bounds(
+  output : Buffer,
+  identities : Map[DeclId, CallableAbiDeclarationIdentity],
+  resolved : ResolvedModuleTypes,
+  generic_parameter_bounds : Array[HirSpan],
+  generic_parameters : HirSpan,
+) -> Unit {
+  callable_abi_write_int(output, generic_parameters.length)
+  for parameter_offset in 0..<generic_parameters.length {
+    let parameter_index = generic_parameters.start + parameter_offset
+    if parameter_index < 0 ||
+      parameter_index >= generic_parameter_bounds.length() {
+      callable_abi_write_int(output, 0)
+      continue
+    }
+    let bounds = generic_parameter_bounds[parameter_index]
+    callable_abi_write_int(output, bounds.length)
+    for bound_offset in 0..<bounds.length {
+      callable_abi_write_type(
+        output,
+        identities,
+        resolved,
+        resolved.generic_bound_types[bounds.start + bound_offset],
+        generic_parameters,
+      )
+    }
+  }
+}
+
+///|
 fn frozen_callable_abi_fingerprint(
   path : String,
   identities : Map[DeclId, CallableAbiDeclarationIdentity],
   resolved : ResolvedModuleTypes,
+  generic_parameter_bounds : Array[HirSpan],
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
 ) -> String {
   let output = Buffer()
-  output.write_bytes(b"DEW_CALLABLE_ABI_V2\x00")
+  output.write_bytes(b"DEW_CALLABLE_ABI_V3\x00")
   output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
   output.write_bytes(b"DEW_FLAT_CLOSURE_ABI_V1\x00")
   callable_abi_write_string(output, path)
   callable_abi_write_string(output, @utf8.decode_lossy(callable.name))
-  callable_abi_write_int(output, callable.generic_parameters.length)
+  callable_abi_write_generic_bounds(
+    output,
+    identities,
+    resolved,
+    generic_parameter_bounds,
+    callable.generic_parameters,
+  )
   callable_abi_write_int(output, callable.parameters.length)
   for index in 0..<callable.parameters.length {
     let parameter = functions.parameters[callable.parameters.start + index]
@@ -1509,7 +1546,7 @@ fn frozen_declaration_abi_fingerprint(
   declaration : FrozenInterfaceDeclaration,
 ) -> String {
   let output = Buffer()
-  output.write_bytes(b"DEW_NOMINAL_DECLARATION_ABI_V1\x00")
+  output.write_bytes(b"DEW_NOMINAL_DECLARATION_ABI_V2\x00")
   output.write_bytes(b"DEW_GENERIC_AGGREGATE_ABI_V1\x00")
   output.write_bytes(b"DEW_ENUM_SUBTYPE_ABI_V1\x00")
   output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
@@ -1520,7 +1557,13 @@ fn frozen_declaration_abi_fingerprint(
     output,
     frozen_abi_collected_kind_rank(declaration.source_kind),
   )
-  callable_abi_write_int(output, declaration.generic_parameter_count)
+  callable_abi_write_generic_bounds(
+    output,
+    identities,
+    interface_.resolved_types,
+    interface_.generic_parameter_bounds,
+    declaration.generic_parameters,
+  )
   callable_abi_write_type(
     output,
     identities,
@@ -1607,7 +1650,7 @@ fn frozen_interface_content_fingerprint(
   declaration_fingerprints : Array[String],
 ) -> String {
   let output = Buffer()
-  output.write_bytes(b"DEW_MODULE_INTERFACE_CONTENT_V1\x00")
+  output.write_bytes(b"DEW_MODULE_INTERFACE_CONTENT_V2\x00")
   callable_abi_write_string(output, interface_.path)
   callable_abi_write_int(output, interface_.declarations.length())
   for index, declaration in interface_.declarations {
@@ -1621,19 +1664,26 @@ fn frozen_interface_content_fingerprint(
   }
   callable_abi_write_int(output, interface_.implementations.length())
   for implementation in interface_.implementations {
+    callable_abi_write_generic_bounds(
+      output,
+      identities,
+      interface_.resolved_types,
+      interface_.generic_parameter_bounds,
+      implementation.generic_parameters,
+    )
     callable_abi_write_type(
       output,
       identities,
       interface_.resolved_types,
       implementation.trait_type,
-      { start: 0, length: 0 },
+      implementation.generic_parameters,
     )
     callable_abi_write_type(
       output,
       identities,
       interface_.resolved_types,
       implementation.target_type,
-      { start: 0, length: 0 },
+      implementation.generic_parameters,
     )
   }
   @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
@@ -2057,6 +2107,10 @@ pub fn freeze_module_interface(
       exported_implementations[implementation.declaration] = true
     }
   }
+  let generic_parameter_bounds : Array[HirSpan] = []
+  for parameter in collected.generic_parameters {
+    generic_parameter_bounds.push(parameter.bounds)
+  }
   let parameters : Array[FrozenInterfaceParameter] = []
   let callables : Array[FrozenInterfaceCallable] = []
   let callable_abi_identities = callable_abi_declaration_identities(
@@ -2134,7 +2188,8 @@ pub fn freeze_module_interface(
       result_type: callable.result_type,
       result_shape: callable.result_shape,
       abi_fingerprint: frozen_callable_abi_fingerprint(
-        path, callable_abi_identities, resolved, functions, callable,
+        path, callable_abi_identities, resolved, generic_parameter_bounds, functions,
+        callable,
       ),
       location: collected.declaration_location(callable.declaration).unwrap(),
     })
@@ -2155,10 +2210,6 @@ pub fn freeze_module_interface(
       .declaration_location(implementation.declaration)
       .unwrap(),
     })
-  }
-  let generic_parameter_bounds : Array[HirSpan] = []
-  for parameter in collected.generic_parameters {
-    generic_parameter_bounds.push(parameter.bounds)
   }
   {
     module_id: collected.module_id,

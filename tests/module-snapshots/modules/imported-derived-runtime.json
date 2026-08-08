@@ -1,0 +1,7 @@
+{
+  "errors": [],
+  "warnings": [],
+  "output": [
+    "Box { value: 42 }|Choice::Named { value: 9 }|modules:imported-derived"
+  ]
+}

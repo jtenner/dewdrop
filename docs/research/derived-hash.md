@@ -47,6 +47,22 @@ symbolic evidence selection, recursive evidence freezing, evidence-aware
 specialization, reachability, lowering, and WasmGC emission. There is no
 Map-specific or backend-only derived-hash path.
 
+## Coherence and cross-module execution
+
+Derived Hash is ordinary implementation evidence. Handwritten overlaps mark both
+implementations incoherent, generated methods are removed from dispatch, and the
+diagnostic labels the derive request and handwritten implementation according to
+source order. Private nominal heads do not export generated implementations or
+methods.
+
+Public generic Hash evidence retains its ordered owner prerequisites in frozen
+interfaces and cache files. Those bounds now participate in implementation and
+module-content fingerprints, using owner-relative generic ordinals rather than
+raw declaration IDs. Consumer-created imported generic values can therefore
+select and execute the provider's exact specialized `hash` and `hash_eq` methods;
+targeted nominal casts bridge only cross-module local/control-flow `eqref`
+arguments that feed exact provider parameters.
+
 ## Performance and size
 
 A release-native collection benchmark on August 8, 2026 measured 128 one-field
@@ -59,5 +75,7 @@ observations rather than regression budgets.
 Coverage includes generic and non-generic structs, unit/tuple/named enum
 variants, nested derived values, deterministic hash equality, unequal values,
 variant discrimination, field-referenced generic prerequisites, phantom
-parameters, missing concrete field evidence, deterministic WAT, and identical
-Node/Wago execution.
+parameters, missing concrete field evidence, imported generic execution,
+derived/handwritten coherence, private-evidence filtering, frozen-cache
+round-trips, bound-sensitive interface fingerprints, deterministic WAT, and
+identical Node/Wago execution.

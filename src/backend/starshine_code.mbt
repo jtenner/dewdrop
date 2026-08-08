@@ -678,6 +678,99 @@ fn starshine_finish_call(
 }
 
 ///|
+fn starshine_program_call_argument(
+  lowering : @semantic.PlannedModuleLowering,
+  expression : @semantic.ExprId,
+  parameter_index : Int,
+) -> @semantic.ExprId {
+  if expression < 0 ||
+    expression >= lowering.expressions.length() ||
+    parameter_index < 0 {
+    return -1
+  }
+  let receiver_argument = fn(
+    receiver : @semantic.ExprId,
+    arguments : @semantic.HirSpan,
+  ) {
+    if receiver >= 0 {
+      if parameter_index == 0 {
+        receiver
+      } else if parameter_index - 1 < arguments.length {
+        lowering.expression_children[arguments.start + parameter_index - 1]
+      } else {
+        -1
+      }
+    } else if parameter_index < arguments.length {
+      lowering.expression_children[arguments.start + parameter_index]
+    } else {
+      -1
+    }
+  }
+  match lowering.expressions[expression].kind {
+    @semantic.PlannedDirectCall(_, receiver, arguments, _)
+    | @semantic.PlannedBoundDirectCall(_, _, receiver, arguments, _) =>
+      receiver_argument(receiver, arguments)
+    @semantic.PlannedOperatorCall(_, _, left, right, _)
+    | @semantic.PlannedBoundOperatorCall(_, _, _, left, right, _) =>
+      if parameter_index == 0 {
+        left
+      } else if parameter_index == 1 {
+        right
+      } else {
+        -1
+      }
+    @semantic.PlannedIndexCall(_, base, index, _) =>
+      if parameter_index == 0 {
+        base
+      } else if parameter_index == 1 {
+        index
+      } else {
+        -1
+      }
+    @semantic.PlannedIndexSetCall(_, base, index, value, _) =>
+      if parameter_index == 0 {
+        base
+      } else if parameter_index == 1 {
+        index
+      } else if parameter_index == 2 {
+        value
+      } else {
+        -1
+      }
+    _ => -1
+  }
+}
+
+///|
+fn starshine_program_argument_needs_nominal_cast(
+  lowering : @semantic.PlannedModuleLowering?,
+  expression : @semantic.ExprId,
+  parameter_index : Int,
+) -> Bool {
+  let lowering = match lowering {
+    Some(value) => value
+    None => return false
+  }
+  let argument = starshine_program_call_argument(
+    lowering, expression, parameter_index,
+  )
+  if argument < 0 || argument >= lowering.expressions.length() {
+    return false
+  }
+  match lowering.expressions[argument].kind {
+    @semantic.PlannedLocalGet(_)
+    | @semantic.PlannedCaptureGet(_)
+    | @semantic.PlannedModuleValueGet(_, _)
+    | @semantic.PlannedBlockExpression(_)
+    | @semantic.PlannedIfExpression(_, _, _)
+    | @semantic.PlannedMatchExpression(_, _)
+    | @semantic.PlannedWhileExpression(_, _, _)
+    | @semantic.PlannedFieldGet(_, _) => true
+    _ => false
+  }
+}
+
+///|
 fn starshine_finish_program_call(
   lowering : @semantic.PlannedModuleLowering?,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -691,9 +784,6 @@ fn starshine_finish_program_call(
   scratch_index : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let output : Array[@lib.Instruction] = []
-  for fragment in fragments {
-    append_starshine_instructions(output, fragment)
-  }
   let caller_module_index = match planned.module_lookup.get(caller.module_id) {
     Some(index) => index
     None => abort("caller's module is not linked")
@@ -741,6 +831,23 @@ fn starshine_finish_program_call(
             None => return Err(MissingFunction(declaration))
           }
       }
+  }
+  if caller_module_index != function_.module_index &&
+    fragments.length() == function_.parameters.length {
+    for parameter_index, fragment in fragments {
+      append_starshine_instructions(output, fragment)
+      if starshine_program_argument_needs_nominal_cast(
+          lowering, expression, parameter_index,
+        ) {
+        starshine_append_program_argument_cast(
+          planned, function_, parameter_index, output,
+        )
+      }
+    }
+  } else {
+    for fragment in fragments {
+      append_starshine_instructions(output, fragment)
+    }
   }
   if function_.direct_builtin.length() > 0 {
     match
@@ -7029,6 +7136,35 @@ fn starshine_append_module_result_cast(
         }
       }
     None => ()
+  }
+}
+
+///|
+fn starshine_append_program_argument_cast(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  parameter_index : Int,
+  instructions : Array[@lib.Instruction],
+) -> Unit {
+  if parameter_index < 0 || parameter_index >= function_.parameters.length {
+    return
+  }
+  let fragments = planned.modules[function_.module_index]
+  let final_index = match
+    fragments.function_value_types[function_.parameters.start + parameter_index] {
+    @semantic.WasmNominalRefValue(index) =>
+      planned.physical_type_index(function_.module_index, index)
+    @semantic.WasmExternalNominalRefValue(declaration) =>
+      planned.type_lookup.get(declaration).unwrap()
+    _ => -1
+  }
+  if final_index >= 0 {
+    instructions.push(
+      @lib.Instruction::ref_cast(
+        false,
+        @lib.HeapType::new(@lib.TypeIdx::new(final_index.reinterpret_as_uint())),
+      ),
+    )
   }
 }
 

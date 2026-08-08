@@ -46,8 +46,6 @@
 - [ ] Specify permitted annotation constant types, name resolution, validation, retention, and frozen-interface serialization.
 - [ ] Expose frozen annotations to compiler features and tooling without ambient runtime reflection.
 - [ ] Add `#derive(...)` for easy system traits, initially `Eq`, `Debug`, `Show`, and `Hash`.
-- [ ] Make derivation deterministic across generic-bound propagation, field/variant ordering, generated identities, visibility, diagnostics, and cross-module ABI behavior.
-- [ ] Define conflicts between derived and handwritten implementations without bypassing coherence or orphan rules.
 
 ## Generics, traits, and dispatch
 

@@ -707,10 +707,14 @@ pub fn collect_compiler_source_diagnostics(
       let primary = match
         program.module_for_id(semantic_id_module(declaration)) {
         Some(owner) =>
-          location_at(
-            owner.declaration_location(declaration),
-            diagnostic.offset(),
-          )
+          if diagnostic.offset() == 0UL {
+            owner.declaration_location(declaration)
+          } else {
+            location_at(
+              owner.declaration_location(declaration),
+              diagnostic.offset(),
+            )
+          }
         None => collected.default_location(diagnostic.offset())
       }
       let secondary : Array[CompilerDiagnosticLabel] = []

@@ -1,0 +1,11 @@
+pub struct Box<t> {
+  value: t
+} derive(Eq, Debug, Hash)
+
+pub enum Choice<t> {
+  None
+  Some(t)
+  Named {
+    value: t
+  }
+} derive(Eq, Debug, Hash)

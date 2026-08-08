@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:6:8: error: NoMatchingMethod(3, 5, 80)\n  |\n6 |   debug(Box {\n  |        ^"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -39,6 +39,32 @@ test "frozen interfaces serialize and decode byte-identically" {
 }
 
 ///|
+test "frozen interface cache preserves derived implementation evidence" {
+  let program = collect_program_manifest(
+    7752UL,
+    ProgramManifest::new([
+      ManifestModule::new("cache.derived", [
+        ManifestFile::new(
+          "derived.dew", b"pub struct Box<t> {\n  value: t\n} derive(Eq, Debug, Hash)\n",
+        ),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  let encoded = serialize_frozen_interfaces(frozen.interfaces).unwrap()
+  let decoded = deserialize_frozen_interfaces(encoded).unwrap()
+  assert_eq(decoded, frozen.interfaces)
+  assert_eq(decoded[0].implementations.length(), 4)
+  for implementation in decoded[0].implementations {
+    assert_eq(implementation.generic_parameters.length, 1)
+    assert_eq(
+      decoded[0].generic_parameter_bounds[implementation.generic_parameters.start].length,
+      1,
+    )
+  }
+}
+
+///|
 test "frozen interface decoder rejects corruption and trailing bytes" {
   assert_true(deserialize_frozen_interfaces(b"bad") is Err(_))
   let oversized = Buffer()

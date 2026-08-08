@@ -62,6 +62,24 @@ the same variant. Different variants produce `false`; tuple and struct payloads
 compare in source order. This reuses ordinary enum pattern selection and payload
 extraction, so representation choices remain encapsulated by existing lowering.
 
+## Coherence and module boundaries
+
+Derived Eq and Ne implementations have no privileged coherence status. An exact
+or incomparable handwritten overlap marks both implementations incoherent and
+removes both from dispatch. Diagnostics use the later implementation as the
+primary location and label the other declaration; when a derive request is the
+later declaration, its exact trait-name offset remains primary. A conflict in
+any generated or handwritten Eq/Ne pair rejects the module rather than allowing
+a silently partial successful derive.
+
+Public derived evidence freezes like handwritten evidence. Its ordered owner
+bounds, trait/target types, method signatures, and derive-site locations survive
+interface serialization and cache decoding. Consumers recursively satisfy the
+imported prerequisites and materialize the provider-owned generic method. When a
+consumer-local or control-flow value uses the common `eqref` carrier but the
+provider specialization expects its exact nominal reference, the backend inserts
+a targeted cross-module `ref.cast` immediately before the call.
+
 ## Primitive support
 
 `Bool` now has ambient `Eq` and `Ne` implementations. This lets derived nominal
@@ -100,5 +118,8 @@ Coverage includes:
 - executable non-generic and bounded-generic struct equality and inequality;
 - executable non-generic and bounded-generic unit, tuple, and struct-payload enum equality and inequality;
 - nested generic derived nominals forwarding prerequisite evidence transitively;
+- imported generic derived equality and inequality over consumer-created values;
+- derived/handwritten conflicts in both declaration orders with both source locations;
+- frozen-interface/cache retention and bound-sensitive implementation fingerprints;
 - Boolean payload equality;
 - deterministic Node/Wago output and WAT snapshots.

@@ -1,0 +1,9 @@
+open fixture.derived_overlap
+
+impl Debug for Item {
+  fn debug(self) -> Unit {}
+}
+
+pub fn main() -> I32 {
+  0
+}

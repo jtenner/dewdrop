@@ -1,0 +1,31 @@
+open fixture.derived_traits
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  let first = Box {
+    value: 42
+  }
+  let same = Box {
+    value: 42
+  }
+  let different = Box {
+    value: 7
+  }
+  let choice = Choice::Named {
+    value: 9
+  }
+  let valid = first == same && first != different &&
+    first.hash_eq(same) && !first.hash_eq(different) &&
+    first.hash() == same.hash() &&
+    choice.hash_eq(Choice::Named {
+      value: 9
+    })
+  debug(first)
+  wasi_fd_write(1u32, b"|")
+  debug(choice)
+  if valid {
+    wasi_fd_write(1u32, b"|modules:imported-derived")
+  } else {
+    wasi_fd_write(1u32, b"|FAIL")
+  }
+}

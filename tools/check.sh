@@ -347,7 +347,7 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-aggregate-callback-consumer.wasm \
   run i32 \
   fixture.application \
-  6132bf2ed8a4dd875d52321e5ad4e8a7cfa8c1c3e7f13f1f74615aa2bb1d8706 \
+  b65a2eba67d1528ca602ff29e95a4be7bdd7e1d20ba285e09557594f97ef4b77 \
   > .tmp/dew-imported-package-consumer.json
 if node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \

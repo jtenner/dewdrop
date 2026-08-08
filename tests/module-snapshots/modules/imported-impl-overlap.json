@@ -1,6 +1,6 @@
 {
   "errors": [
-    "right.dew:1:1: error: OverlappingTraitImpl(\n  12897786789889,\n  12889196855296,\n  12893491822592,\n  NominalImplTargetHead(12897786789888),\n  0,\n)\n  |\n1 | open fixture.types\n  | ^\n  = left.dew:3:1: conflicting implementation is here"
+    "right.dew:3:1: error: OverlappingTraitImpl(\n  12897786789889,\n  12889196855296,\n  12893491822592,\n  NominalImplTargetHead(12897786789888),\n  0,\n)\n  |\n3 | impl Mark for Item {\n  | ^\n  = left.dew:3:1: conflicting implementation is here"
   ],
   "warnings": [],
   "output": null

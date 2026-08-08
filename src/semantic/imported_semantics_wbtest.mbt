@@ -327,6 +327,55 @@ test "imported implementation evidence is translated into consumer types" {
 }
 
 ///|
+test "imported generic derived evidence retains prerequisites and dispatch" {
+  let (_, frozen, imports, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn same(left: Box<I32>, right: Box<I32>) -> Bool {\n  left == right && left.hash_eq(right)\n}\npub fn write(value: Box<I32>) -> Unit {\n  debug(value)\n}\n",
+    b"pub struct Box<t> {\n  value: t\n} derive(Eq, Debug, Hash)\n",
+  )
+  assert_eq(frozen.import_diagnostics.length(), 0)
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let mut derived_implementations = 0
+  for implementation in imports.implementations {
+    if semantic_id_module(implementation.declaration) != 1801UL {
+      continue
+    }
+    derived_implementations += 1
+    assert_eq(implementation.generic_parameters.length, 1)
+    let bounds = imports.generic_parameter_bounds[implementation.generic_bounds.start]
+    assert_eq(bounds.length, 1)
+  }
+  assert_eq(derived_implementations, 4)
+}
+
+///|
+test "private derived evidence is not exported" {
+  let program = collect_program_manifest(
+    1843UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.consumer", [
+        ManifestFile::new(
+          "consumer.dew", b"open app.library\npub fn run() -> I32 {\n  1\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.library", [
+        ManifestFile::new(
+          "library.dew", b"struct Hidden<t> {\n  value: t\n} derive(Eq, Debug, Hash)\n",
+        ),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  assert_eq(frozen.interfaces[1].implementations.length(), 0)
+  for callable in frozen.interfaces[1].callables {
+    match callable.kind {
+      FrozenImplCallable(_) => fail("private derived method leaked")
+      _ => ()
+    }
+  }
+}
+
+///|
 test "implementation evidence over private local heads is not exported" {
   let program = collect_program_manifest(
     1842UL,

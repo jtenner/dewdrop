@@ -238,8 +238,8 @@ erased fallback.
 
 - [ ] Define `#annotation(...)` syntax with compile-time constant parameters, including the permitted constant types, name resolution, validation, retention, and interface serialization rules.
 - [ ] Expose frozen annotations to compiler features and future tooling without making runtime reflection ambient.
-- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic field- and payload-prerequisite-aware `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` through ordinary coherent implementations and evidence-aware generic specialization. Debug recursively streams generic and non-generic values; Hash emits deterministic source-ordered structural hashing and collision-safe equality. Typed lane formats, recursion limits, non-WASI behavior, `Show`, visibility, and cross-module ABI behavior remain.
-- [ ] Specify conflicts between derived and handwritten implementations and prevent generated evidence from bypassing coherence or orphan rules.
+- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic field- and payload-prerequisite-aware `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` through ordinary coherent implementations and evidence-aware generic specialization. Debug recursively streams generic and non-generic values; Hash emits deterministic source-ordered structural hashing and collision-safe equality. Generated evidence has frozen cross-module prerequisites and executable imported generic method ABIs. Typed lane formats, recursion limits, non-WASI behavior, `Show`, and final annotation syntax remain.
+- [x] Route conflicts between derived and handwritten implementations through ordinary local/imported coherence, preserve both source locations, and prevent generated evidence from bypassing evidence visibility or dispatch filtering.
 
 ### Remaining generic work
 
@@ -273,7 +273,7 @@ erased fallback.
 - [x] Merge owner-coherent imported impl evidence into method/operator dispatch and trait-obligation bucket indexes.
 - [x] Add public/private evidence visibility checks and keep `foreign impl` evidence module-local.
 - [x] Diagnose structural overlap between independently imported or local/imported evidence.
-- [ ] Add trait obligations on generic functions.
+- [x] Add trait obligations on generic functions.
 - [ ] Add cross-package orphan rules.
 - [ ] Define negative impls only if required.
 - [ ] Define sealed traits only if required.

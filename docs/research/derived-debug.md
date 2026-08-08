@@ -47,9 +47,11 @@ and closed-call specialization resolves that evidence to the exact formatter.
 Typed lane formats, recursion limits, dynamic dictionary boundaries, and
 non-WASI behavior remain follow-up work.
 
-## Generic method specialization fix
+## Generic method specialization and module boundaries
 
-A generic derived implementation owns the target type parameters while its method has no method-local parameters. Program linking previously selected the empty method-local span and could not materialize the derived method specialization. Callable generic selection now prefers owner implementation parameters, then falls back to method-local parameters. The runtime fixture exercises `Wrapper<I32>` to keep this ABI path covered.
+A generic derived implementation owns the target type parameters while its method has no method-local parameters. Program linking selects owner implementation parameters before method-local parameters. Public generated implementations and methods freeze with their derive-site locations and ordered prerequisites, so imported ambient Debug dispatch uses the same evidence tree as source-collected dispatch.
+
+Consumer-created imported generic nominals may be held in the common `eqref` local/control-flow carrier even though the provider-owned specialized Debug method expects the exact nominal reference. Cross-module call emission now inserts a targeted cast for those reference-producing arguments before invoking the exact provider specialization. Calls already producing exact imported references receive no redundant cast. Derived/handwritten Debug overlaps remain ordinary coherence errors with both declarations source-labeled.
 
 ## Performance and code size
 
@@ -66,4 +68,4 @@ The comprehensive Debug runtime fixture is 3,350 WAT lines and 73,116 bytes. It 
 
 ## Validation
 
-`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, recursive generic nominal specialization, Bool, Unit, every integer width at boundary values, exact floating-point and packed-carrier output, escaped String/Bytes output, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a concrete recursively formatted field has no visible coherent `Debug` implementation; `derive-debug-generic-missing.dew` pins rejection when a concrete generic argument cannot satisfy the generated prerequisite.
+`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, recursive generic nominal specialization, Bool, Unit, every integer width at boundary values, exact floating-point and packed-carrier output, escaped String/Bytes output, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a concrete recursively formatted field has no visible coherent `Debug` implementation; `derive-debug-generic-missing.dew` pins rejection when a concrete generic argument cannot satisfy the generated prerequisite. The imported-derived fixtures cover provider-owned generic Debug execution, missing consumer evidence, derived/handwritten overlap provenance, and frozen cross-module evidence.

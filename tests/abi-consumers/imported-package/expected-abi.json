@@ -8,23 +8,23 @@
     "callbackWrapper": 1
   },
   "path": "fixture.application",
-  "interfaceFingerprint": "6132bf2ed8a4dd875d52321e5ad4e8a7cfa8c1c3e7f13f1f74615aa2bb1d8706",
+  "interfaceFingerprint": "b65a2eba67d1528ca602ff29e95a4be7bdd7e1d20ba285e09557594f97ef4b77",
   "dependencies": [
     {
       "path": "dew.std.option",
-      "contentFingerprint": "1843d39839069a7dcf1858adad9cf73812a471f26e3dc423bf3915ffbadd56c3"
+      "contentFingerprint": "04c2a7190c8f95be045faa559d673441c10709257bbe2a36a3016795765eb2a6"
     },
     {
       "path": "dew.std.result",
-      "contentFingerprint": "b97a6fc7424649d8f8b97f51a38b2801b16a25242b1812aa2c667bcb5494143b"
+      "contentFingerprint": "b6e5ba067907d1928961487c27b8d35c8738d11f2a9ad58883dba702f74b0ec2"
     },
     {
       "path": "dew.std.preamble",
-      "contentFingerprint": "a09bd4707c3b890228f6472e0d024b328fb6a279d7a036edab02f84f107ed762"
+      "contentFingerprint": "68de99ab7634a121cdcd00be7e7869f730fad0c05cbe9975c43cb3974e0af4b8"
     },
     {
       "path": "fixture.package_callback",
-      "contentFingerprint": "34d596e5725ba20895a290fd8fcf8d9a442e7d4797fdbc0fafdaeadfc8fb27e4"
+      "contentFingerprint": "be257df9508ddfcea39e2e1a30c146a47626761329432fa9cff35eff9fbbab81"
     }
   ]
 }

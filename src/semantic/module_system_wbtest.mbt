@@ -543,6 +543,87 @@ test "nominal declaration ABI fingerprints are stable and content sensitive" {
 }
 
 ///|
+test "generic bounds participate in callable and implementation fingerprints" {
+  let freeze_callable = fn(seed : ModuleId, bound : String) -> String {
+    let source = Buffer()
+    source.write_string_utf8(
+      "pub trait First {}\npub trait Second {}\npub fn keep<t: ",
+    )
+    source.write_string_utf8(bound)
+    source.write_string_utf8(">(value: t) -> t {\n  value\n}\n")
+    let program = collect_program_manifest(
+      seed,
+      ProgramManifest::new([
+        ManifestModule::new("abi.bounds", [
+          ManifestFile::new("bounds.dew", source.to_bytes()),
+        ]),
+      ]),
+    )
+    freeze_program_interfaces(program).interfaces[0].callables_named("keep")[0].abi_fingerprint
+  }
+  assert_eq(freeze_callable(1665UL, "First"), freeze_callable(2665UL, "First"))
+  assert_true(
+    freeze_callable(1665UL, "First") != freeze_callable(1665UL, "Second"),
+  )
+
+  let freeze_implementation = fn(seed : ModuleId, bound : String) -> String {
+    let source = Buffer()
+    source.write_string_utf8(
+      "pub trait First {}\npub trait Second {}\npub trait Mark {}\npub struct Box<t> {\n  value: t\n}\nimpl<t: ",
+    )
+    source.write_string_utf8(bound)
+    source.write_string_utf8("> Mark for Box<t> {}\n")
+    let program = collect_program_manifest(
+      seed,
+      ProgramManifest::new([
+        ManifestModule::new("abi.impl_bounds", [
+          ManifestFile::new("bounds.dew", source.to_bytes()),
+        ]),
+      ]),
+    )
+    freeze_program_interfaces(program).interfaces[0].content_fingerprint
+  }
+  assert_eq(
+    freeze_implementation(1666UL, "First"),
+    freeze_implementation(2666UL, "First"),
+  )
+  assert_true(
+    freeze_implementation(1666UL, "First") !=
+    freeze_implementation(1666UL, "Second"),
+  )
+}
+
+///|
+test "frozen interfaces retain conditional derived evidence" {
+  let program = collect_program_manifest(
+    1667UL,
+    ProgramManifest::new([
+      ManifestModule::new("abi.derived", [
+        ManifestFile::new(
+          "derived.dew", b"pub struct Box<t> {\n  value: t\n} derive(Eq, Debug, Hash)\n",
+        ),
+      ]),
+    ]),
+  )
+  let interface_ = freeze_program_interfaces(program).interfaces[0]
+  assert_eq(interface_.implementations.length(), 4)
+  let mut method_count = 0
+  for implementation in interface_.implementations {
+    assert_eq(implementation.generic_parameters.length, 1)
+    let bounds = interface_.generic_parameter_bounds[implementation.generic_parameters.start]
+    assert_eq(bounds.length, 1)
+    for callable in interface_.callables {
+      match callable.kind {
+        FrozenImplCallable(owner) if owner == implementation.declaration =>
+          method_count += 1
+        _ => ()
+      }
+    }
+  }
+  assert_eq(method_count, 5)
+}
+
+///|
 test "module interface fingerprints ignore private implementation changes" {
   let freeze = fn(source : Bytes) -> String {
     let program = collect_program_manifest(

@@ -28,6 +28,62 @@ test "derive Eq synthesizes coherent Eq and Ne implementations" {
 }
 
 ///|
+test "derived and handwritten implementations conflict through ordinary coherence" {
+  let source = b"struct Item {} derive(Eq, Debug, Hash)\nimpl Eq for Item {\n  fn eq(self, right: Item) -> Bool {\n    true\n  }\n}\nimpl Ne for Item {\n  fn ne(self, right: Item) -> Bool {\n    false\n  }\n}\nimpl Debug for Item {\n  fn debug(self) -> Unit {}\n}\nimpl Hash for Item {\n  fn hash(self) -> U64 {\n    0u64\n  }\n  fn hash_eq(self, right: Item) -> Bool {\n    true\n  }\n}\n"
+  let collected = collect_program_bytes(2707UL, source)
+  let resolved = resolve_module_types(collected)
+  let index = build_module_impl_index(collected, resolved)
+  assert_eq(collected.diagnostics.length(), 0)
+  assert_eq(resolved.diagnostics.length(), 0)
+  let mut user_implementations = 0
+  for implementation in index.implementations {
+    if semantic_id_local(implementation.declaration) >=
+      collected.preamble_declaration_count {
+      user_implementations += 1
+      assert_false(implementation.coherent)
+    }
+  }
+  assert_eq(user_implementations, 8)
+  assert_eq(index.diagnostics.length(), 4)
+  for diagnostic in index.diagnostics {
+    match diagnostic {
+      OverlappingTraitImpl(_, first, second, _, offset) => {
+        let derived_offset = collected.declaration_location(first).unwrap().offset
+        assert_true(
+          derived_offset == 22UL ||
+          derived_offset == 26UL ||
+          derived_offset == 33UL,
+        )
+        assert_eq(
+          collected.declaration_location(second).unwrap().offset,
+          offset,
+        )
+      }
+      _ => fail("expected derived and handwritten overlap")
+    }
+  }
+}
+
+///|
+test "derive requests remain primary when declared after handwritten evidence" {
+  let collected = collect_program_bytes(
+    2708UL, b"impl Debug for Item {\n  fn debug(self) -> Unit {}\n}\nstruct Item {} derive(Debug)\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let index = build_module_impl_index(collected, resolved)
+  assert_eq(resolved.diagnostics.length(), 0)
+  assert_eq(index.diagnostics.length(), 1)
+  match index.diagnostics[0] {
+    OverlappingTraitImpl(_, first, second, _, offset) => {
+      assert_eq(collected.declaration_location(first).unwrap().offset, 0UL)
+      assert_eq(collected.declaration_location(second).unwrap().offset, 74UL)
+      assert_eq(offset, 74UL)
+    }
+    _ => fail("expected derive request overlap")
+  }
+}
+
+///|
 test "ordinary nominal collection creates no synthetic derive work" {
   let collected = collect_bytes(
     2702UL, b"struct Plain {\n  value: I32\n}\nenum Choice {\n  None\n  Some(I32)\n}\n",
