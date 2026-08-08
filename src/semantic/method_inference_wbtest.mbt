@@ -232,6 +232,64 @@ test "generic static methods infer impl arguments through Self" {
 }
 
 ///|
+test "runtime trait values retain coercion evidence and dynamic method slots" {
+  let (collected, _, _, inferred) = call_test_module(
+    715UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item {})\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let invoke_calls = body_calls(collected, collected.bodies[1])
+  assert_eq(invoke_calls.length(), 1)
+  match inferred.call_targets[invoke_calls[0]] {
+    SelectedDynamicTraitCallTarget(trait_, requirement, slot, arguments) => {
+      assert_eq(trait_, collected.declarations[0].id)
+      assert_eq(requirement, collected.methods[0].id)
+      assert_eq(slot, 0)
+      assert_eq(arguments.length, 0)
+    }
+    _ => fail("expected dynamic trait call target")
+  }
+  let use_calls = body_calls(collected, collected.bodies[2])
+  assert_eq(use_calls.length(), 1)
+  let call = use_calls[0]
+  let arguments = match collected.expressions[call] {
+    HirCallExpr(_, values, _) => values
+    _ => fail("expected function call")
+  }
+  let item = collected.expression_children[arguments.start]
+  match inferred.trait_object_coercions[item] {
+    SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+      assert_eq(trait_, collected.declarations[0].id)
+      match inferred.trait_evidence[evidence].kind {
+        ConcreteInferredTraitEvidence(implementation, arguments) => {
+          assert_eq(implementation, collected.impls[0].declaration)
+          assert_eq(arguments.length, 0)
+        }
+        _ => fail("expected concrete runtime trait evidence")
+      }
+    }
+    _ => fail("expected runtime trait object coercion")
+  }
+}
+
+///|
+test "concrete trait calls remain statically selected without trait objects" {
+  let (collected, _, _, inferred) = call_test_module(
+    716UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Item) -> I32 {\n  value.read()\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, _) =>
+      assert_eq(declaration, collected.methods[1].id)
+    _ => fail("expected static implementation method")
+  }
+  for coercion in inferred.trait_object_coercions {
+    assert_eq(coercion, NoInferredTraitObjectCoercion)
+  }
+}
+
+///|
 test "method inference is deterministic across body schedules" {
   let collected = collect_bytes(
     709UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn first(item: Item) -> I32 {\n  item.read()\n}\nfn second(item: Item) -> I32 {\n  item.read()\n}\n",

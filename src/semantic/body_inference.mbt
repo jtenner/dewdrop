@@ -170,7 +170,15 @@ pub enum InferredCallTarget {
   ErrorInferredCallTarget
   SelectedInferredCallTarget(DeclId, HirSpan)
   SelectedBoundInferredCallTarget(DeclId, Int, HirSpan)
+  SelectedDynamicTraitCallTarget(DeclId, DeclId, Int, HirSpan)
   SelectedFunctionValueCallTarget(ExprId)
+} derive(Eq, Debug)
+
+///|
+pub enum InferredTraitObjectCoercion {
+  NoInferredTraitObjectCoercion
+  ErrorInferredTraitObjectCoercion
+  SelectedInferredTraitObjectCoercion(DeclId, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -230,6 +238,7 @@ pub struct InferredModuleBodies {
   expression_selections : Array[InferredExpressionSelection]
   expression_type_arguments : Array[BodyTypeId]
   object_field_targets : Array[InferredObjectFieldTarget]
+  trait_object_coercions : Array[InferredTraitObjectCoercion]
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
   map_hash_targets : Array[InferredCallTarget]

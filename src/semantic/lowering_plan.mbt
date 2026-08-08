@@ -133,6 +133,7 @@ pub enum PlannedExpressionKind {
   PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
   PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
+  PlannedDynamicTraitCall(DeclId, DeclId, Int, ExprId, HirSpan, HirSpan)
   PlannedFieldGet(FieldId, ExprId)
 } derive(Eq, Debug)
 
@@ -141,6 +142,7 @@ pub struct PlannedExpression {
   type_ : BodyTypeId
   shape : PlannedValueShape
   flow : BodyFlowSummary
+  trait_object_coercion : InferredTraitObjectCoercion
   kind : PlannedExpressionKind
   offset : UInt64
 } derive(Eq, Debug)
@@ -359,6 +361,7 @@ fn planned_error_expression() -> PlannedExpression {
     type_: 0,
     shape: ErrorPlannedValueShape,
     flow: { outcomes: 0 },
+    trait_object_coercion: NoInferredTraitObjectCoercion,
     kind: PlannedPoisonExpression,
     offset: 0UL,
   }
@@ -737,8 +740,9 @@ fn plan_expression_kind(
             requirement, evidence, operator, left, right, type_arguments,
           )
         NoInferredCallTarget => PlannedBinaryExpression(operator, left, right)
-        ErrorInferredCallTarget | SelectedFunctionValueCallTarget(_) =>
-          PlannedPoisonExpression
+        ErrorInferredCallTarget
+        | SelectedDynamicTraitCallTarget(_, _, _, _)
+        | SelectedFunctionValueCallTarget(_) => PlannedPoisonExpression
       }
     HirCallExpr(_, arguments, _) =>
       match inferred.call_targets[expression] {
@@ -942,6 +946,17 @@ fn plan_expression_kind(
               inferred.expression_types[target],
             ),
           )
+        SelectedDynamicTraitCallTarget(
+          trait_, requirement, slot, type_arguments,
+        ) =>
+          PlannedDynamicTraitCall(
+            trait_,
+            requirement,
+            slot,
+            planned_call_receiver(collected, expression),
+            arguments,
+            type_arguments,
+          )
         NoInferredCallTarget | ErrorInferredCallTarget =>
           PlannedPoisonExpression
       }
@@ -991,6 +1006,7 @@ fn plan_expression_kind(
         NoInferredCallTarget
         | ErrorInferredCallTarget
         | SelectedBoundInferredCallTarget(_, _, _)
+        | SelectedDynamicTraitCallTarget(_, _, _, _)
         | SelectedFunctionValueCallTarget(_) => {
           diagnostics.push(UnsupportedIndexLowering(expression, offset))
           PlannedPoisonExpression
@@ -1042,6 +1058,7 @@ fn plan_expression_kind(
         NoInferredCallTarget
         | ErrorInferredCallTarget
         | SelectedBoundInferredCallTarget(_, _, _)
+        | SelectedDynamicTraitCallTarget(_, _, _, _)
         | SelectedFunctionValueCallTarget(_) => {
           diagnostics.push(UnsupportedIndexLowering(expression, offset))
           PlannedPoisonExpression
@@ -1078,6 +1095,7 @@ fn plan_body_lowering_job(
         inferred.expression_types[expression],
       ),
       flow: flows.expression_flows[expression],
+      trait_object_coercion: inferred.trait_object_coercions[expression],
       kind: plan_expression_kind(
         collected,
         resolved,

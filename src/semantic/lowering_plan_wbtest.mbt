@@ -65,6 +65,39 @@ test "lowering plans freeze exact direct and method call targets" {
 }
 
 ///|
+test "lowering freezes runtime trait coercions and dynamic slots" {
+  let (collected, _, _, _, _, planned) = lowering_test_module(
+    907UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item {})\n}\n",
+  )
+  assert_eq(planned.diagnostics.length(), 0)
+  let invoke_calls = body_calls(collected, collected.bodies[1])
+  match planned.expressions[invoke_calls[0]].kind {
+    PlannedDynamicTraitCall(trait_, requirement, slot, receiver, _, arguments) => {
+      assert_eq(trait_, collected.declarations[0].id)
+      assert_eq(requirement, collected.methods[0].id)
+      assert_eq(slot, 0)
+      assert_true(receiver >= 0)
+      assert_eq(arguments.length, 0)
+    }
+    _ => fail("expected planned dynamic trait call")
+  }
+  let use_calls = body_calls(collected, collected.bodies[2])
+  let call = use_calls[0]
+  let source_arguments = match collected.expressions[call] {
+    HirCallExpr(_, values, _) => values
+    _ => fail("expected call")
+  }
+  let item = collected.expression_children[source_arguments.start]
+  match planned.expressions[item].trait_object_coercion {
+    SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+      assert_eq(trait_, collected.declarations[0].id)
+      assert_true(evidence >= 0)
+    }
+    _ => fail("expected planned trait coercion")
+  }
+}
+
+///|
 test "lowering preserves instantiated generic aggregate callback signatures" {
   let (collected, resolved, _, _, _, planned) = lowering_test_module(
     906UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>) -> CallbackBox<t> {\n  value\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox {\n    callback: increment\n  })\n  let callback = box.callback\n  callback(41)\n}\n",

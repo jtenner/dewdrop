@@ -3790,6 +3790,8 @@ fn starshine_emit_body_instructions(
               )
             }
           }
+          @semantic.PlannedDynamicTraitCall(_, _, _, _, _, _) =>
+            return Err(UnsupportedExpression(body.body, expression))
           @semantic.PlannedFunctionValueCall(target, arguments, function_type) => {
             if function_type < 0 ||
               function_type >= planned.function_type_by_resolved.length() {
