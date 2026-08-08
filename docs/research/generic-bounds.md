@@ -62,23 +62,26 @@ prerequisite traversal at 64 levels. An implementation such as
 `impl<t: Marker> Value for Box<t>` therefore cannot provide `Value` for
 `Box<No>` merely because its target head unifies.
 
-A 256-call release-native inference benchmark measured:
+A 256-call release-native inference benchmark measured after evidence freezing:
 
 ```text
-unbounded generic calls     298.20 us
-one bound per generic call  371.62 us
+unbounded generic calls       335.76 us
+one frozen bound per call     438.09 us
+recursive two-node evidence   655.63 us
 ```
 
-The approximately 0.29 us per-call validation cost in this deliberately dense
-workload includes coherent bucket lookup, trial unification of target and trait
-application, and rollback. Empty-bound callables take the existing fast path.
+The same-run deltas are approximately 0.40 us per direct evidence node and an
+additional 0.85 us per call for a generic implementation plus its prerequisite.
+The recursive workload freezes 512 evidence nodes, 256 child edges, and 256
+owner-carrier arguments. Empty-bound callables and implementations retain
+no-evidence fast paths. These measurements are development observations rather
+than regression budgets.
 
-A parallel 256-call generic-method benchmark measured 657.64 us for an
-unbounded generic implementation and 725.18 us when its inferred owner argument
-had one prerequisite, approximately 0.26 us per candidate selection. Generic
-implementations with no prerequisites return through a dedicated no-allocation
-fast path. These measurements are development observations rather than
-regression budgets.
+A parallel 256-call generic-method benchmark measured 616.97 us for an
+unbounded generic implementation and 846.84 us when its inferred owner argument
+had one frozen prerequisite. The bounded path performs trial validation and then
+freezes the selected prerequisite forest; generic implementations with no
+prerequisites return through a dedicated no-evidence fast path.
 
 ## Generic-body symbolic selection
 
@@ -96,18 +99,35 @@ expression kinds rather than converting trait requirements into ordinary direct
 calls. This keeps signature-only trait declarations out of executable function
 selection until evidence propagation resolves them.
 
-A 256-operator release-native benchmark measured 285.06 us for concrete
-implementation selection and 205.47 us for direct symbolic-bound selection. The
+A 256-operator release-native benchmark measured 299.69 us for concrete
+implementation selection and 213.68 us for direct symbolic-bound selection. The
 symbolic path avoids implementation-bucket enumeration and candidate rollback;
 these are development observations rather than regression budgets.
 
+## Frozen call evidence
+
+Every generic call now retains an ordered recursive evidence forest. Concrete
+nodes name the selected implementation, point to ordered prerequisite children,
+and retain each owner generic argument as either a physical carrier or an
+enclosing generic-parameter ordinal. Symbolic nodes refer directly to the
+caller's source-ordered bound slot. This representation avoids retaining
+snapshot-local inference IDs, which are invalid after candidate rollback, while
+preserving the information needed to specialize generic implementation methods.
+
+Generic implementation method, operator, indexing, and collection-evidence
+selection retain their prerequisite roots on the owning expression. Body-job
+merging rebases node, child, root, and owner-argument arenas deterministically;
+backend-neutral lowering carries the frozen arenas unchanged. Generic-free
+bodies allocate no per-body evidence-span table until evidence is actually
+selected.
+
 ## Current boundary
 
-Selected call-site evidence is validated but not yet frozen into lowering as a
-specialization evidence record. Symbolic planned calls therefore are not emitted
-until concrete evidence is propagated through specialization or dictionaries.
-Public interface fingerprints do not yet claim a stable generic-bound ABI. That
-is the next obligation-solving step.
+Specialization identity and transitive materialization do not yet consume the
+frozen evidence forests. Symbolic planned calls therefore are not emitted until
+concrete evidence is propagated through specialization or dictionaries. Public
+interface fingerprints do not yet claim a stable generic-bound ABI. That is the
+next obligation-solving step.
 
 ## Validation
 
@@ -117,5 +137,7 @@ flat HIR retention; trait-namespace resolution; byte-identical V10
 frozen-interface serialization/deserialization; local and imported call-bound
 checking; local, transitive, operator, and imported generic-implementation
 prerequisites; symbolic generic-body operators, methods, applied trait arguments,
-implementation-owner bounds, and nested obligations; marker traits; and exact
-applied-trait argument matching.
+implementation-owner bounds, nested obligations, recursive concrete evidence,
+caller-bound evidence, imported evidence, owner carrier/generic arguments,
+deterministic body-job rebasing, and lowering retention; marker traits; and
+exact applied-trait argument matching.

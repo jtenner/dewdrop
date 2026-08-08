@@ -172,6 +172,150 @@ test "generic bodies use declared bounds for implementation prerequisites" {
 }
 
 ///|
+test "generic calls freeze recursive concrete and symbolic evidence" {
+  let collected = collect_bytes(
+    2734UL, b"trait Marker {}\ntrait Value {}\nstruct Yes {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {}\nimpl Marker for I32 {}\nimpl<t: Marker> Value for Box<t> {}\nfn require<t: Value>(value: t) -> t {\n  value\n}\nfn concrete(value: Box<Yes>) -> Box<Yes> {\n  require(value)\n}\nfn scalar(value: Box<I32>) -> Box<I32> {\n  require(value)\n}\nfn symbolic<t: Value>(value: t) -> t {\n  require(value)\n}\nfn generic_box<t: Marker>(value: Box<t>) -> Box<t> {\n  require(value)\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+
+  let concrete_body = collected
+    .body_of(collected.lookup_value("concrete").unwrap())
+    .unwrap()
+  let concrete_call = body_calls(collected, concrete_body)[0]
+  let concrete_span = inferred.expression_evidence[concrete_call]
+  assert_eq(concrete_span.length, 1)
+  let concrete_root = inferred.trait_evidence_roots[concrete_span.start]
+  let value_impl = collected.impls[2].declaration
+  match inferred.trait_evidence[concrete_root].kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, value_impl)
+      assert_eq(arguments.length, 1)
+      match inferred.trait_evidence_arguments[arguments.start] {
+        ShapeInferredTraitEvidenceArgument(shape) =>
+          assert_eq(shape, RefPlannedValueShape)
+        _ => fail("expected retained concrete evidence carrier")
+      }
+    }
+    _ => fail("expected concrete outer evidence")
+  }
+  let prerequisites = inferred.trait_evidence[concrete_root].prerequisites
+  assert_eq(prerequisites.length, 1)
+  let marker_node = inferred.trait_evidence_children[prerequisites.start]
+  match inferred.trait_evidence[marker_node].kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, collected.impls[0].declaration)
+      assert_eq(arguments.length, 0)
+    }
+    _ => fail("expected concrete prerequisite evidence")
+  }
+  assert_eq(inferred.trait_evidence[marker_node].prerequisites.length, 0)
+
+  let scalar_body = collected
+    .body_of(collected.lookup_value("scalar").unwrap())
+    .unwrap()
+  let scalar_call = body_calls(collected, scalar_body)[0]
+  let scalar_span = inferred.expression_evidence[scalar_call]
+  assert_eq(scalar_span.length, 1)
+  let scalar_root = inferred.trait_evidence_roots[scalar_span.start]
+  match inferred.trait_evidence[scalar_root].kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, value_impl)
+      assert_eq(arguments.length, 1)
+      match inferred.trait_evidence_arguments[arguments.start] {
+        ShapeInferredTraitEvidenceArgument(shape) =>
+          assert_eq(shape, I32PlannedValueShape)
+        _ => fail("expected retained scalar evidence carrier")
+      }
+    }
+    _ => fail("expected scalar concrete evidence")
+  }
+
+  let symbolic_body = collected
+    .body_of(collected.lookup_value("symbolic").unwrap())
+    .unwrap()
+  let symbolic_call = body_calls(collected, symbolic_body)[0]
+  let symbolic_span = inferred.expression_evidence[symbolic_call]
+  assert_eq(symbolic_span.length, 1)
+  let symbolic_root = inferred.trait_evidence_roots[symbolic_span.start]
+  match inferred.trait_evidence[symbolic_root].kind {
+    BoundInferredTraitEvidence(slot) => assert_eq(slot, 0)
+    _ => fail("expected caller-bound symbolic evidence")
+  }
+
+  let generic_box_body = collected
+    .body_of(collected.lookup_value("generic_box").unwrap())
+    .unwrap()
+  let generic_box_call = body_calls(collected, generic_box_body)[0]
+  let generic_box_span = inferred.expression_evidence[generic_box_call]
+  assert_eq(generic_box_span.length, 1)
+  let generic_box_root = inferred.trait_evidence_roots[generic_box_span.start]
+  let generic_box_evidence = inferred.trait_evidence[generic_box_root]
+  match generic_box_evidence.kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, value_impl)
+      assert_eq(arguments.length, 1)
+      match inferred.trait_evidence_arguments[arguments.start] {
+        GenericInferredTraitEvidenceArgument(index) => assert_eq(index, 0)
+        _ => fail("expected caller generic evidence argument")
+      }
+    }
+    _ => fail("expected generic implementation evidence")
+  }
+  assert_eq(generic_box_evidence.prerequisites.length, 1)
+  let generic_box_child = inferred.trait_evidence_children[generic_box_evidence.prerequisites.start]
+  match inferred.trait_evidence[generic_box_child].kind {
+    BoundInferredTraitEvidence(slot) => assert_eq(slot, 0)
+    _ => fail("expected generic implementation bound prerequisite")
+  }
+
+  let reverse = infer_module_bodies_in_order(collected, resolved, names, [
+    4, 3, 2, 1, 0,
+  ])
+  assert_eq(inferred, reverse)
+}
+
+///|
+test "generic method calls freeze implementation prerequisite evidence" {
+  let collected = collect_bytes(
+    2735UL, b"trait Marker {}\ntrait Value {\n  fn value(self) -> I32\n}\nstruct Yes {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {}\nimpl<t: Marker> Value for Box<t> {\n  fn value(self) -> I32 {\n    1\n  }\n}\nfn concrete(value: Box<Yes>) -> I32 {\n  value.value()\n}\nfn symbolic<t: Marker>(value: Box<t>) -> I32 {\n  value.value()\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+
+  let concrete_body = collected
+    .body_of(collected.lookup_value("concrete").unwrap())
+    .unwrap()
+  let concrete_call = body_calls(collected, concrete_body)[0]
+  let concrete_span = inferred.expression_evidence[concrete_call]
+  assert_eq(concrete_span.length, 1)
+  let concrete_node = inferred.trait_evidence_roots[concrete_span.start]
+  match inferred.trait_evidence[concrete_node].kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, collected.impls[0].declaration)
+      assert_eq(arguments.length, 0)
+    }
+    _ => fail("expected concrete method prerequisite")
+  }
+
+  let symbolic_body = collected
+    .body_of(collected.lookup_value("symbolic").unwrap())
+    .unwrap()
+  let symbolic_call = body_calls(collected, symbolic_body)[0]
+  let symbolic_span = inferred.expression_evidence[symbolic_call]
+  assert_eq(symbolic_span.length, 1)
+  let symbolic_node = inferred.trait_evidence_roots[symbolic_span.start]
+  match inferred.trait_evidence[symbolic_node].kind {
+    BoundInferredTraitEvidence(slot) => assert_eq(slot, 0)
+    _ => fail("expected symbolic method prerequisite")
+  }
+}
+
+///|
 test "generic calls require local coherent trait evidence" {
   let accepted = collect_bytes(
     2721UL, b"trait Marker {}\nstruct Yes {}\nimpl Marker for Yes {}\nfn keep<t: Marker>(value: t) -> t {\n  value\n}\nfn accepted() -> Yes {\n  keep(Yes {})\n}\n",
@@ -353,6 +497,71 @@ test "imported generic implementation bounds constrain visible evidence" {
       assert_eq(program.modules[0].names[name], "value")
     _ => fail("expected imported generic implementation bound failure")
   }
+}
+
+///|
+test "imported generic calls freeze recursive implementation evidence" {
+  let program = collect_program_manifest(
+    2736UL,
+    ProgramManifest::new([
+      ManifestModule::new("evidence.consumer", [
+        ManifestFile::new(
+          "consumer.dew", b"open evidence.library\nfn run(value: Box<Yes>) -> Box<Yes> {\n  require(value)\n}\n",
+        ),
+      ]),
+      ManifestModule::new("evidence.library", [
+        ManifestFile::new(
+          "library.dew", b"pub trait Marker {}\npub trait Value {}\npub struct Yes {}\npub struct Box<t> {\n  value: t\n}\nimpl Marker for Yes {}\nimpl<t: Marker> Value for Box<t> {}\npub fn require<t: Value>(value: t) -> t {\n  value\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let consumer = analyzed.modules[0]
+  assert_eq(consumer.inferred.diagnostics.length(), 0)
+  let body = program.modules[0]
+    .body_of(program.modules[0].lookup_value("run").unwrap())
+    .unwrap()
+  let call = body_calls(program.modules[0], body)[0]
+  let span = consumer.inferred.expression_evidence[call]
+  assert_eq(span.length, 1)
+  let root = consumer.inferred.trait_evidence_roots[span.start]
+  let root_evidence = consumer.inferred.trait_evidence[root]
+  match root_evidence.kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(arguments.length, 1)
+      assert_eq(
+        semantic_id_module(implementation),
+        program.modules[1].module_id,
+      )
+      let imported_impl = consumer.imports
+        .implementation(implementation)
+        .unwrap()
+      assert_eq(imported_impl.generic_parameters.length, 1)
+    }
+    _ => fail("expected imported concrete root evidence")
+  }
+  assert_eq(root_evidence.prerequisites.length, 1)
+  let child = consumer.inferred.trait_evidence_children[root_evidence.prerequisites.start]
+  match consumer.inferred.trait_evidence[child].kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(arguments.length, 0)
+      assert_eq(
+        semantic_id_module(implementation),
+        program.modules[1].module_id,
+      )
+      let imported_impl = consumer.imports
+        .implementation(implementation)
+        .unwrap()
+      assert_eq(imported_impl.generic_parameters.length, 0)
+    }
+    _ => fail("expected imported concrete prerequisite evidence")
+  }
+
+  let lowering = plan_program_lowering(program, analyzed)
+  assert_eq(lowering.modules[0].expression_evidence[call], span)
+  assert_eq(lowering.modules[0].trait_evidence_roots[span.start], root)
+  assert_eq(lowering.modules[0].trait_evidence[root], root_evidence)
 }
 
 ///|

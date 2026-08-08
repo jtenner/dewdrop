@@ -51,7 +51,7 @@
 
 ## Generics, traits, and dispatch
 
-- [ ] Freeze selected evidence for every generic call and propagate it through specialization or dictionaries.
+- [ ] Propagate frozen recursive call evidence through specialization or dictionaries.
 - [ ] Define method-level generic syntax and shadowing.
 - [ ] Define explicit call-site type-argument syntax.
 - [ ] Improve ordinary and generic overload specificity from generic-count tiers to structural match-set containment.

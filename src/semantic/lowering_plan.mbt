@@ -300,6 +300,11 @@ pub struct PlannedModuleLowering {
   expression_type_argument_shapes : Array[PlannedValueShape]
   call_type_arguments : Array[BodyTypeId]
   call_type_argument_shapes : Array[PlannedValueShape]
+  expression_evidence : Array[HirSpan]
+  trait_evidence_roots : Array[Int]
+  trait_evidence : Array[InferredTraitEvidence]
+  trait_evidence_children : Array[Int]
+  trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   pattern_type_arguments : Array[BodyTypeId]
   diagnostics : Array[LoweringPlanDiagnostic]
 } derive(Eq, Debug)
@@ -1733,6 +1738,11 @@ fn plan_module_lowering_in_order(
     call_type_argument_shapes: inferred.call_type_arguments.map(fn(type_) {
       planned_value_shape(resolved, inferred, type_)
     }),
+    expression_evidence: inferred.expression_evidence,
+    trait_evidence_roots: inferred.trait_evidence_roots,
+    trait_evidence: inferred.trait_evidence,
+    trait_evidence_children: inferred.trait_evidence_children,
+    trait_evidence_arguments: inferred.trait_evidence_arguments,
     pattern_type_arguments: inferred.pattern_type_arguments,
     diagnostics: [],
   }

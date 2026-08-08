@@ -174,6 +174,24 @@ pub enum InferredCallTarget {
 } derive(Eq, Debug)
 
 ///|
+pub enum InferredTraitEvidenceKind {
+  ConcreteInferredTraitEvidence(DeclId, HirSpan)
+  BoundInferredTraitEvidence(Int)
+} derive(Eq, Debug)
+
+///|
+pub enum InferredTraitEvidenceArgument {
+  ShapeInferredTraitEvidenceArgument(PlannedValueShape)
+  GenericInferredTraitEvidenceArgument(Int)
+} derive(Eq, Debug)
+
+///|
+pub struct InferredTraitEvidence {
+  kind : InferredTraitEvidenceKind
+  prerequisites : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct InferredBody {
   body : BodyId
   root_type : BodyTypeId
@@ -216,6 +234,11 @@ pub struct InferredModuleBodies {
   operator_targets : Array[InferredCallTarget]
   map_hash_targets : Array[InferredCallTarget]
   map_eq_targets : Array[InferredCallTarget]
+  expression_evidence : Array[HirSpan]
+  trait_evidence_roots : Array[Int]
+  trait_evidence : Array[InferredTraitEvidence]
+  trait_evidence_children : Array[Int]
+  trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
 } derive(Eq, Debug)

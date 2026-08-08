@@ -32,6 +32,9 @@ let empty_object_field_target_array : Array[InferredObjectFieldTarget] = []
 let empty_inference_bool_array : Array[Bool] = []
 
 ///|
+let empty_hir_span_array : Array[HirSpan] = []
+
+///|
 priv struct BodyInferenceJobResult {
   result_type : BodyTypeId
   types : Array[BodyTypeTerm]
@@ -53,6 +56,11 @@ priv struct BodyInferenceJobResult {
   operator_targets : Array[InferredCallTarget]
   map_hash_targets : Array[InferredCallTarget]
   map_eq_targets : Array[InferredCallTarget]
+  expression_evidence : Array[HirSpan]
+  trait_evidence_roots : Array[Int]
+  trait_evidence : Array[InferredTraitEvidence]
+  trait_evidence_children : Array[Int]
+  trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
 }
@@ -553,6 +561,11 @@ priv struct BasicBodyInferencer {
   operator_targets : Array[InferredCallTarget]
   map_hash_targets : Array[InferredCallTarget]
   map_eq_targets : Array[InferredCallTarget]
+  mut expression_evidence : Array[HirSpan]
+  trait_evidence_roots : Array[Int]
+  trait_evidence : Array[InferredTraitEvidence]
+  trait_evidence_children : Array[Int]
+  trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   call_scratch : CallInferenceScratch
   module_values : ModuleValueInferenceContext?
@@ -663,6 +676,11 @@ fn BasicBodyInferencer::new(
     operator_targets: Array::make(body.expressions.length, NoInferredCallTarget),
     map_hash_targets: Array::make(body.expressions.length, NoInferredCallTarget),
     map_eq_targets: Array::make(body.expressions.length, NoInferredCallTarget),
+    expression_evidence: empty_hir_span_array,
+    trait_evidence_roots: [],
+    trait_evidence: [],
+    trait_evidence_children: [],
+    trait_evidence_arguments: [],
     call_type_arguments: [],
     call_scratch,
     module_values,
@@ -4020,6 +4038,45 @@ fn BasicBodyInferencer::begin_declared_body_trait_evidence(
 }
 
 ///|
+fn BasicBodyInferencer::body_declared_trait_obligation_evidence(
+  self : BasicBodyInferencer,
+  target : BodyTypeId,
+  bound : BodyTypeId,
+  trait_declaration : DeclId,
+  origin : TypeConstraintOrigin,
+) -> Int? {
+  let parameter = match self.direct_body_generic_parameter(target) {
+    Some(value) => value
+    None => return None
+  }
+  let generics = self.body_generic_parameters()
+  let mut evidence_index = 0
+  for generic_offset in 0..<generics.length {
+    let generic = self.collected.generic_parameters[generics.start +
+      generic_offset]
+    for bound_offset in 0..<generic.bounds.length {
+      let bound_type = self.resolved.generic_bound_types[generic.bounds.start +
+        bound_offset]
+      if generic.id == parameter &&
+        self.resolved_bound_trait(bound_type) == Some(trait_declaration) {
+        let snapshot = self.solver.snapshot()
+        let viable = self.solver.unify(
+          bound,
+          self.solver.resolved_type(bound_type),
+          origin,
+        )
+        self.solver.rollback(snapshot)
+        if viable {
+          return Some(evidence_index)
+        }
+      }
+      evidence_index += 1
+    }
+  }
+  None
+}
+
+///|
 fn BasicBodyInferencer::body_declared_trait_obligation_satisfied(
   self : BasicBodyInferencer,
   target : BodyTypeId,
@@ -4027,36 +4084,10 @@ fn BasicBodyInferencer::body_declared_trait_obligation_satisfied(
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
 ) -> Bool {
-  let parameter = match self.direct_body_generic_parameter(target) {
-    Some(value) => value
-    None => return false
-  }
-  let generics = self.body_generic_parameters()
-  for generic_offset in 0..<generics.length {
-    let generic = self.collected.generic_parameters[generics.start +
-      generic_offset]
-    if generic.id != parameter {
-      continue
-    }
-    for bound_offset in 0..<generic.bounds.length {
-      let bound_type = self.resolved.generic_bound_types[generic.bounds.start +
-        bound_offset]
-      if self.resolved_bound_trait(bound_type) != Some(trait_declaration) {
-        continue
-      }
-      let snapshot = self.solver.snapshot()
-      let viable = self.solver.unify(
-        bound,
-        self.solver.resolved_type(bound_type),
-        origin,
-      )
-      self.solver.rollback(snapshot)
-      if viable {
-        return true
-      }
-    }
-  }
-  false
+  self.body_declared_trait_obligation_evidence(
+    target, bound, trait_declaration, origin,
+  )
+  is Some(_)
 }
 
 ///|
@@ -4279,6 +4310,9 @@ fn BasicBodyInferencer::select_method_candidate(
     start,
     length: self.call_scratch.candidate_type_arguments.length(),
   })
+  self.record_selected_impl_prerequisite_evidence(
+    expression, implementation_index, origin,
+  )
 }
 
 ///|
@@ -4401,6 +4435,9 @@ fn BasicBodyInferencer::select_operator_candidate(
     declaration,
     { start, length: self.call_scratch.candidate_type_arguments.length() },
   )
+  self.record_selected_impl_prerequisite_evidence(
+    expression, implementation_index, origin,
+  )
 }
 
 ///|
@@ -4508,6 +4545,9 @@ fn BasicBodyInferencer::select_index_candidate(
   self.operator_targets[self.expression_index(expression)] = SelectedInferredCallTarget(
     declaration,
     { start, length: self.call_scratch.candidate_type_arguments.length() },
+  )
+  self.record_selected_impl_prerequisite_evidence(
+    expression, implementation_index, origin,
   )
 }
 
@@ -4747,6 +4787,9 @@ fn BasicBodyInferencer::select_map_trait_evidence(
   for type_ in self.call_scratch.candidate_type_arguments {
     self.call_type_arguments.push(type_)
   }
+  self.record_selected_impl_prerequisite_evidence(
+    expression, selected_impl, origin,
+  )
   SelectedInferredCallTarget(selected_declaration, {
     start,
     length: self.call_scratch.candidate_type_arguments.length(),
@@ -6048,6 +6091,13 @@ fn BasicBodyInferencer::begin_obligation_impl_candidate(
 }
 
 ///|
+priv struct PendingImplTraitObligation {
+  target : BodyTypeId
+  bound : BodyTypeId
+  trait_declaration : DeclId
+}
+
+///|
 fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
   self : BasicBodyInferencer,
   implementation_index : Int,
@@ -6089,9 +6139,7 @@ fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
   if requirement_count == 0 {
     return true
   }
-  let targets : Array[BodyTypeId] = []
-  let bounds : Array[BodyTypeId] = []
-  let traits : Array[DeclId] = []
+  let obligations : Array[PendingImplTraitObligation] = []
   for generic_offset in 0..<generics.length {
     let (parameter_bounds, bound_types) = if local_impl {
       (
@@ -6120,16 +6168,18 @@ fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
           }
         _ => continue
       }
-      targets.push(self.call_scratch.candidate_type_arguments[generic_offset])
-      bounds.push(self.instantiate_signature_type(resolved_bound))
-      traits.push(trait_declaration)
+      obligations.push({
+        target: self.call_scratch.candidate_type_arguments[generic_offset],
+        bound: self.instantiate_signature_type(resolved_bound),
+        trait_declaration,
+      })
     }
   }
-  for index in 0..<targets.length() {
+  for obligation in obligations {
     if !self.trait_obligation_satisfied_at_depth(
-        targets[index],
-        bounds[index],
-        traits[index],
+        obligation.target,
+        obligation.bound,
+        obligation.trait_declaration,
         origin,
         depth + 1,
       ) {
@@ -6196,16 +6246,315 @@ fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
 }
 
 ///|
-fn BasicBodyInferencer::trait_obligation_satisfied(
+fn BasicBodyInferencer::select_impl_candidate_prerequisite_evidence_nodes(
+  self : BasicBodyInferencer,
+  implementation_index : Int,
+  origin : TypeConstraintOrigin,
+  depth : Int,
+) -> Array[Int]? {
+  if depth >= 64 {
+    return None
+  }
+  let implementation = self.impl_index.implementations[implementation_index]
+  let local_impl = semantic_id_module(implementation.declaration) ==
+    self.collected.module_id
+  let imported = if local_impl {
+    None
+  } else {
+    match self.imports {
+      Some(imports) => imports.implementation(implementation.declaration)
+      None => None
+    }
+  }
+  let generics = self.implementation_generic_parameters(
+    implementation.declaration,
+  )
+  if generics.length == 0 {
+    return Some([])
+  }
+  let mut requirement_count = 0
+  for generic_offset in 0..<generics.length {
+    if local_impl {
+      requirement_count += self.collected.generic_parameters[generics.start +
+        generic_offset].bounds.length
+    } else {
+      let imported_impl = imported.unwrap()
+      let imports = self.imports.unwrap()
+      requirement_count += imports.generic_parameter_bounds[imported_impl.generic_bounds.start +
+        generic_offset].length
+    }
+  }
+  if requirement_count == 0 {
+    return Some([])
+  }
+  let obligations : Array[PendingImplTraitObligation] = []
+  for generic_offset in 0..<generics.length {
+    let (parameter_bounds, bound_types) = if local_impl {
+      (
+        self.collected.generic_parameters[generics.start + generic_offset].bounds,
+        self.resolved.generic_bound_types,
+      )
+    } else {
+      let imported_impl = imported.unwrap()
+      let imports = self.imports.unwrap()
+      (
+        imports.generic_parameter_bounds[imported_impl.generic_bounds.start +
+        generic_offset],
+        imports.generic_bound_types,
+      )
+    }
+    for
+      bound_offset in parameter_bounds.start..<(parameter_bounds.start +
+      parameter_bounds.length) {
+      let resolved_bound = bound_types[bound_offset]
+      let trait_declaration = match self.resolved.types[resolved_bound] {
+        TraitType(value) => value
+        AppliedType(base, _) =>
+          match self.resolved.types[base] {
+            TraitType(value) => value
+            _ => continue
+          }
+        _ => continue
+      }
+      obligations.push({
+        target: self.call_scratch.candidate_type_arguments[generic_offset],
+        bound: self.instantiate_signature_type(resolved_bound),
+        trait_declaration,
+      })
+    }
+  }
+  let nodes : Array[Int] = []
+  for obligation in obligations {
+    match
+      self.select_trait_obligation_evidence_at_depth(
+        obligation.target,
+        obligation.bound,
+        obligation.trait_declaration,
+        origin,
+        depth + 1,
+      ) {
+      Some(node) => nodes.push(node)
+      None => return None
+    }
+  }
+  Some(nodes)
+}
+
+///|
+fn BasicBodyInferencer::trait_evidence_argument(
+  self : BasicBodyInferencer,
+  type_ : BodyTypeId,
+) -> InferredTraitEvidenceArgument? {
+  let representative = self.solver.representative_type(type_)
+  match self.solver.type_term(representative) {
+    BodyErrorType =>
+      Some(ShapeInferredTraitEvidenceArgument(ErrorPlannedValueShape))
+    BodyVariableType(_) => None
+    BodyFunctionType(_, _) =>
+      Some(ShapeInferredTraitEvidenceArgument(RefPlannedValueShape))
+    BodyAppliedType(_, _) =>
+      Some(ShapeInferredTraitEvidenceArgument(RefPlannedValueShape))
+    BodyResolvedType(resolved_type) =>
+      match self.resolved.types[resolved_type] {
+        GenericParameterType(parameter) => {
+          let generics = self.body_generic_parameters()
+          let parameter_index = semantic_id_local(parameter)
+          if parameter_index >= generics.start &&
+            parameter_index < generics.start + generics.length {
+            Some(
+              GenericInferredTraitEvidenceArgument(
+                parameter_index - generics.start,
+              ),
+            )
+          } else {
+            Some(ShapeInferredTraitEvidenceArgument(GenericPlannedValueShape))
+          }
+        }
+        _ =>
+          Some(
+            ShapeInferredTraitEvidenceArgument(
+              planned_resolved_value_shape(self.resolved, resolved_type),
+            ),
+          )
+      }
+  }
+}
+
+///|
+fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
   self : BasicBodyInferencer,
   target : BodyTypeId,
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
-) -> Bool {
-  self.trait_obligation_satisfied_at_depth(
+  depth : Int,
+) -> Int? {
+  if depth >= 64 {
+    return None
+  }
+  match
+    self.body_declared_trait_obligation_evidence(
+      target, bound, trait_declaration, origin,
+    ) {
+    Some(slot) => {
+      let node = self.trait_evidence.length()
+      self.trait_evidence.push({
+        kind: BoundInferredTraitEvidence(slot),
+        prerequisites: { start: 0, length: 0 },
+      })
+      return Some(node)
+    }
+    None => ()
+  }
+  let head = match self.body_impl_target_head(target) {
+    Some(value) => value
+    None => return None
+  }
+  for bucket in self.impl_index.buckets {
+    guard bucket.kind == TraitImplBucket(trait_declaration) &&
+      bucket.target_head == head else {
+      continue
+    }
+    for
+      offset in bucket.implementations.start..<(bucket.implementations.start +
+      bucket.implementations.length) {
+      let implementation_index = self.impl_index.bucket_implementations[offset]
+      let implementation = self.impl_index.implementations[implementation_index]
+      if !implementation.valid ||
+        !implementation.coherent ||
+        !self.implementation_visible(implementation_index) {
+        continue
+      }
+      let evidence_start = self.trait_evidence.length()
+      let child_start = self.trait_evidence_children.length()
+      let argument_start = self.trait_evidence_arguments.length()
+      let snapshot = self.solver.snapshot()
+      let (candidate_target, candidate_trait) = self.begin_obligation_impl_candidate(
+        implementation_index,
+      )
+      let viable = self.solver.unify(target, candidate_target, origin) &&
+        self.solver.unify(bound, candidate_trait, origin)
+      let candidate_arguments : Array[InferredTraitEvidenceArgument] = []
+      let mut arguments_complete = viable
+      if viable {
+        for type_ in self.call_scratch.candidate_type_arguments {
+          match self.trait_evidence_argument(type_) {
+            Some(argument) => candidate_arguments.push(argument)
+            None => arguments_complete = false
+          }
+        }
+      }
+      let prerequisites = if arguments_complete {
+        self.select_impl_candidate_prerequisite_evidence_nodes(
+          implementation_index, origin, depth,
+        )
+      } else {
+        None
+      }
+      self.solver.rollback(snapshot)
+      match prerequisites {
+        Some(nodes) => {
+          let prerequisite_start = self.trait_evidence_children.length()
+          for node in nodes {
+            self.trait_evidence_children.push(node)
+          }
+          for argument in candidate_arguments {
+            self.trait_evidence_arguments.push(argument)
+          }
+          let evidence = self.trait_evidence.length()
+          self.trait_evidence.push({
+            kind: ConcreteInferredTraitEvidence(implementation.declaration, {
+              start: argument_start,
+              length: self.trait_evidence_arguments.length() - argument_start,
+            }),
+            prerequisites: {
+              start: prerequisite_start,
+              length: self.trait_evidence_children.length() - prerequisite_start,
+            },
+          })
+          return Some(evidence)
+        }
+        None => {
+          self.trait_evidence.truncate(evidence_start)
+          self.trait_evidence_children.truncate(child_start)
+          self.trait_evidence_arguments.truncate(argument_start)
+        }
+      }
+    }
+  }
+  None
+}
+
+///|
+fn BasicBodyInferencer::select_trait_obligation_evidence(
+  self : BasicBodyInferencer,
+  target : BodyTypeId,
+  bound : BodyTypeId,
+  trait_declaration : DeclId,
+  origin : TypeConstraintOrigin,
+) -> Int? {
+  self.select_trait_obligation_evidence_at_depth(
     target, bound, trait_declaration, origin, 0,
   )
+}
+
+///|
+fn BasicBodyInferencer::ensure_expression_evidence(
+  self : BasicBodyInferencer,
+) -> Unit {
+  if self.expression_evidence.length() == 0 && self.body.expressions.length > 0 {
+    self.expression_evidence = Array::make(self.body.expressions.length, {
+      start: 0,
+      length: 0,
+    })
+  }
+}
+
+///|
+fn BasicBodyInferencer::append_expression_evidence_nodes(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  nodes : Array[Int],
+) -> Unit {
+  if nodes.length() == 0 {
+    return
+  }
+  self.ensure_expression_evidence()
+  let expression_index = self.expression_index(expression)
+  let existing = self.expression_evidence[expression_index]
+  if existing.length > 0 &&
+    existing.start + existing.length != self.trait_evidence_roots.length() {
+    abort("expression evidence roots are not contiguous")
+  }
+  let start = if existing.length > 0 {
+    existing.start
+  } else {
+    self.trait_evidence_roots.length()
+  }
+  for node in nodes {
+    self.trait_evidence_roots.push(node)
+  }
+  self.expression_evidence[expression_index] = {
+    start,
+    length: existing.length + nodes.length(),
+  }
+}
+
+///|
+fn BasicBodyInferencer::record_selected_impl_prerequisite_evidence(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  implementation_index : Int,
+  origin : TypeConstraintOrigin,
+) -> Unit {
+  match
+    self.select_impl_candidate_prerequisite_evidence_nodes(
+      implementation_index, origin, 0,
+    ) {
+    Some(nodes) => self.append_expression_evidence_nodes(expression, nodes)
+    None =>
+      abort("selected implementation prerequisites lost coherent evidence")
+  }
 }
 
 ///|
@@ -6238,17 +6587,20 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
         }
       _ => continue
     }
-    if !self.trait_obligation_satisfied(
+    match
+      self.select_trait_obligation_evidence(
         self.call_type_arguments[type_arguments.start + generic_offset],
         bound,
         trait_declaration,
         origin,
       ) {
-      self.diagnose(
-        UnsatisfiedTraitObligation(
-          declaration, parameter, trait_declaration, expression, offset,
-        ),
-      )
+      Some(evidence) => self.trait_evidence_roots.push(evidence)
+      None =>
+        self.diagnose(
+          UnsatisfiedTraitObligation(
+            declaration, parameter, trait_declaration, expression, offset,
+          ),
+        )
     }
   }
 }
@@ -6261,6 +6613,7 @@ fn BasicBodyInferencer::validate_call_obligations(
   type_arguments : HirSpan,
   offset : UInt64,
 ) -> Unit {
+  let evidence_start = self.trait_evidence_roots.length()
   if semantic_id_module(declaration) == self.collected.module_id {
     let generics = self.collected.generic_parameters_of(declaration)
     for generic_offset in 0..<generics.length {
@@ -6276,6 +6629,13 @@ fn BasicBodyInferencer::validate_call_obligations(
         self.resolved.generic_bound_types,
         offset,
       )
+    }
+    if self.trait_evidence_roots.length() > evidence_start {
+      self.ensure_expression_evidence()
+      self.expression_evidence[self.expression_index(expression)] = {
+        start: evidence_start,
+        length: self.trait_evidence_roots.length() - evidence_start,
+      }
     }
     return
   }
@@ -6299,6 +6659,13 @@ fn BasicBodyInferencer::validate_call_obligations(
         None => ()
       }
     None => ()
+  }
+  if self.trait_evidence_roots.length() > evidence_start {
+    self.ensure_expression_evidence()
+    self.expression_evidence[self.expression_index(expression)] = {
+      start: evidence_start,
+      length: self.trait_evidence_roots.length() - evidence_start,
+    }
   }
 }
 
@@ -8169,6 +8536,11 @@ fn BasicBodyInferencer::finish(
     operator_targets: self.operator_targets,
     map_hash_targets: self.map_hash_targets,
     map_eq_targets: self.map_eq_targets,
+    expression_evidence: self.expression_evidence,
+    trait_evidence_roots: self.trait_evidence_roots,
+    trait_evidence: self.trait_evidence,
+    trait_evidence_children: self.trait_evidence_children,
+    trait_evidence_arguments: self.trait_evidence_arguments,
     call_type_arguments: self.call_type_arguments,
     diagnostics: self.diagnostics,
   }
@@ -8266,6 +8638,59 @@ fn remap_job_call_target(
       SelectedFunctionValueCallTarget(expression)
     NoInferredCallTarget => NoInferredCallTarget
     ErrorInferredCallTarget => ErrorInferredCallTarget
+  }
+}
+
+///|
+fn merge_job_trait_evidence(
+  job : BodyInferenceJobResult,
+  expression_start : Int,
+  expression_length : Int,
+  expression_evidence : Array[HirSpan],
+  trait_evidence_roots : Array[Int],
+  trait_evidence : Array[InferredTraitEvidence],
+  trait_evidence_children : Array[Int],
+  trait_evidence_arguments : Array[InferredTraitEvidenceArgument],
+) -> Unit {
+  let evidence_start = trait_evidence.length()
+  let child_start = trait_evidence_children.length()
+  let root_start = trait_evidence_roots.length()
+  let evidence_argument_start = trait_evidence_arguments.length()
+  for argument in job.trait_evidence_arguments {
+    trait_evidence_arguments.push(argument)
+  }
+  for evidence in job.trait_evidence {
+    let kind = match evidence.kind {
+      ConcreteInferredTraitEvidence(declaration, arguments) =>
+        ConcreteInferredTraitEvidence(declaration, {
+          start: evidence_argument_start + arguments.start,
+          length: arguments.length,
+        })
+      BoundInferredTraitEvidence(slot) => BoundInferredTraitEvidence(slot)
+    }
+    trait_evidence.push({
+      kind,
+      prerequisites: {
+        start: child_start + evidence.prerequisites.start,
+        length: evidence.prerequisites.length,
+      },
+    })
+  }
+  for child in job.trait_evidence_children {
+    trait_evidence_children.push(evidence_start + child)
+  }
+  for root in job.trait_evidence_roots {
+    trait_evidence_roots.push(evidence_start + root)
+  }
+  if job.expression_evidence.length() == 0 {
+    return
+  }
+  for index in 0..<expression_length {
+    let span = job.expression_evidence[index]
+    expression_evidence[expression_start + index] = {
+      start: root_start + span.start,
+      length: span.length,
+    }
   }
 }
 
@@ -8618,6 +9043,11 @@ fn merge_body_inference_jobs(
     collected.expressions.length(),
     NoInferredCallTarget,
   )
+  let mut expression_evidence = empty_hir_span_array
+  let trait_evidence_roots : Array[Int] = []
+  let trait_evidence : Array[InferredTraitEvidence] = []
+  let trait_evidence_children : Array[Int] = []
+  let trait_evidence_arguments : Array[InferredTraitEvidenceArgument] = []
   let call_type_arguments : Array[BodyTypeId] = []
   let diagnostics : Array[BodyInferenceDiagnostic] = []
   for body_index, body in collected.bodies {
@@ -8720,6 +9150,22 @@ fn merge_body_inference_jobs(
     for index in 0..<body.object_fields.length {
       object_field_targets[body.object_fields.start + index] = job.object_field_targets[index]
     }
+    if job.expression_evidence.length() > 0 && expression_evidence.length() == 0 {
+      expression_evidence = Array::make(collected.expressions.length(), {
+        start: 0,
+        length: 0,
+      })
+    }
+    merge_job_trait_evidence(
+      job,
+      body.expressions.start,
+      body.expressions.length,
+      expression_evidence,
+      trait_evidence_roots,
+      trait_evidence,
+      trait_evidence_children,
+      trait_evidence_arguments,
+    )
     for call_slot in 0..<job.call_expressions.length() {
       let expression = job.call_expressions[call_slot]
       call_targets[expression] = remap_job_call_target(
@@ -8904,6 +9350,22 @@ fn merge_body_inference_jobs(
     for index in 0..<lambda.body.object_fields.length {
       object_field_targets[lambda.body.object_fields.start + index] = job.object_field_targets[index]
     }
+    if job.expression_evidence.length() > 0 && expression_evidence.length() == 0 {
+      expression_evidence = Array::make(collected.expressions.length(), {
+        start: 0,
+        length: 0,
+      })
+    }
+    merge_job_trait_evidence(
+      job,
+      lambda.body.expressions.start,
+      lambda.body.expressions.length,
+      expression_evidence,
+      trait_evidence_roots,
+      trait_evidence,
+      trait_evidence_children,
+      trait_evidence_arguments,
+    )
     for call_slot in 0..<job.call_expressions.length() {
       let expression = job.call_expressions[call_slot]
       call_targets[expression] = remap_job_call_target(
@@ -9018,6 +9480,11 @@ fn merge_body_inference_jobs(
     operator_targets,
     map_hash_targets,
     map_eq_targets,
+    expression_evidence,
+    trait_evidence_roots,
+    trait_evidence,
+    trait_evidence_children,
+    trait_evidence_arguments,
     call_type_arguments,
     diagnostics,
   }
