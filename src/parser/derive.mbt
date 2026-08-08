@@ -198,7 +198,7 @@ fn derived_nominal_type(
 fn derived_debug_impl(
   name : String,
   parameters : Array[TypeParameter],
-  expression : Expr,
+  body : Block,
   offset : UInt64,
 ) -> ImplDeclaration {
   let target = derived_nominal_type(name, parameters, offset)
@@ -216,24 +216,42 @@ fn derived_debug_impl(
         receiver: Some({ explicit_type: None, offset }),
         parameters: [],
         return_type: NamedType("U32", offset),
-        body: {
-          items: [
-            ExpressionItem(
-              CallExpr(
-                NameExpr("__dew_debug_write", offset),
-                [U32Expr(1UL, offset), expression],
-                offset,
-              ),
-              offset,
-            ),
-          ],
-          offset,
-        },
+        body,
         offset,
       },
     ],
     offset,
   }
+}
+
+///|
+fn derived_debug_utf8(value : String) -> Bytes {
+  let output = Buffer()
+  output.write_string_utf8(value)
+  output.to_bytes()
+}
+
+///|
+fn derived_debug_write(value : Bytes, offset : UInt64) -> Expr {
+  CallExpr(
+    NameExpr("__dew_debug_write", offset),
+    [U32Expr(1UL, offset), BytesExpr(value, offset)],
+    offset,
+  )
+}
+
+///|
+fn derived_debug_value(value : Expr, offset : UInt64) -> Expr {
+  CallExpr(NameExpr("debug", offset), [value], offset)
+}
+
+///|
+fn derived_debug_block(expressions : Array[Expr], offset : UInt64) -> Block {
+  let items : Array[BlockItem] = []
+  for expression in expressions {
+    items.push(ExpressionItem(expression, offset))
+  }
+  { items, offset }
 }
 
 ///|
@@ -256,26 +274,80 @@ fn derived_struct_debug_text(value : StructDeclaration) -> Bytes {
 }
 
 ///|
+fn derived_struct_debug_body(
+  value : StructDeclaration,
+  offset : UInt64,
+) -> Block {
+  if value.fields.length() == 0 {
+    return derived_debug_block(
+      [derived_debug_write(derived_debug_utf8(value.name + " {}"), offset)],
+      offset,
+    )
+  }
+  let expressions : Array[Expr] = [
+    derived_debug_write(derived_debug_utf8(value.name + " { "), offset),
+  ]
+  for index, field in value.fields {
+    let label = if index == 0 {
+      field.name + ": "
+    } else {
+      ", " + field.name + ": "
+    }
+    expressions.push(derived_debug_write(derived_debug_utf8(label), offset))
+    expressions.push(
+      derived_debug_value(
+        FieldExpr(NameExpr("self", offset), field.name, offset),
+        offset,
+      ),
+    )
+  }
+  expressions.push(derived_debug_write(b" }", offset))
+  derived_debug_block(expressions, offset)
+}
+
+///|
 fn derived_debug_variant_pattern(
   enum_name : String,
   variant : EnumVariant,
+  variant_index : Int,
   offset : UInt64,
-) -> Pattern {
+) -> (Pattern, Array[String]) {
   let base = QualifiedPattern(
     BindingPattern(enum_name, offset),
     variant.name(),
     offset,
   )
+  let names : Array[String] = []
   match variant {
-    UnitVariant(_, _) => base
+    UnitVariant(_, _) => (base, names)
     TupleVariant(_, types, _) => {
       let patterns : Array[Pattern] = []
-      for _ in types {
-        patterns.push(WildcardPattern(offset))
+      for index in 0..<types.length() {
+        let name = "derive_debug_" +
+          variant_index.to_string() +
+          "_" +
+          index.to_string()
+        names.push(name)
+        patterns.push(BindingPattern(name, offset))
       }
-      TuplePattern(base, patterns, offset)
+      (TuplePattern(base, patterns, offset), names)
     }
-    StructVariant(_, _, _) => StructPattern(base, [], Some(offset), offset)
+    StructVariant(_, fields, _) => {
+      let patterns : Array[PatternField] = []
+      for index, field in fields {
+        let name = "derive_debug_" +
+          variant_index.to_string() +
+          "_" +
+          index.to_string()
+        names.push(name)
+        patterns.push({
+          name: field.name,
+          pattern: BindingPattern(name, offset),
+          offset,
+        })
+      }
+      (StructPattern(base, patterns, None, offset), names)
+    }
   }
 }
 
@@ -318,16 +390,73 @@ fn derived_debug_variant_text(
 }
 
 ///|
+fn derived_debug_variant_body(
+  enum_name : String,
+  variant : EnumVariant,
+  names : Array[String],
+  offset : UInt64,
+) -> Block {
+  let prefix = enum_name + "::" + variant.name()
+  let expressions : Array[Expr] = []
+  match variant {
+    UnitVariant(_, _) =>
+      expressions.push(derived_debug_write(derived_debug_utf8(prefix), offset))
+    TupleVariant(_, types, _) => {
+      expressions.push(
+        derived_debug_write(derived_debug_utf8(prefix + "("), offset),
+      )
+      for index in 0..<types.length() {
+        if index > 0 {
+          expressions.push(derived_debug_write(b", ", offset))
+        }
+        expressions.push(
+          derived_debug_value(NameExpr(names[index], offset), offset),
+        )
+      }
+      expressions.push(derived_debug_write(b")", offset))
+    }
+    StructVariant(_, fields, _) =>
+      if fields.length() == 0 {
+        expressions.push(
+          derived_debug_write(derived_debug_utf8(prefix + " {}"), offset),
+        )
+      } else {
+        expressions.push(
+          derived_debug_write(derived_debug_utf8(prefix + " { "), offset),
+        )
+        for index, field in fields {
+          let label = if index == 0 {
+            field.name + ": "
+          } else {
+            ", " + field.name + ": "
+          }
+          expressions.push(
+            derived_debug_write(derived_debug_utf8(label), offset),
+          )
+          expressions.push(
+            derived_debug_value(NameExpr(names[index], offset), offset),
+          )
+        }
+        expressions.push(derived_debug_write(b" }", offset))
+      }
+  }
+  derived_debug_block(expressions, offset)
+}
+
+///|
 pub fn derived_struct_debug_impl(
   value : StructDeclaration,
   offset : UInt64,
 ) -> ImplDeclaration {
-  derived_debug_impl(
-    value.name,
-    value.type_parameters,
-    BytesExpr(derived_struct_debug_text(value), offset),
-    offset,
-  )
+  let body = if value.type_parameters.length() == 0 {
+    derived_struct_debug_body(value, offset)
+  } else {
+    derived_debug_block(
+      [derived_debug_write(derived_struct_debug_text(value), offset)],
+      offset,
+    )
+  }
+  derived_debug_impl(value.name, value.type_parameters, body, offset)
 }
 
 ///|
@@ -336,18 +465,30 @@ pub fn derived_enum_debug_impl(
   offset : UInt64,
 ) -> ImplDeclaration {
   let arms : Array[PatternArm] = []
-  for variant in value.variants {
-    arms.push({
-      pattern: derived_debug_variant_pattern(value.name, variant, offset),
-      guard_condition: None,
-      body: BytesExpr(derived_debug_variant_text(value.name, variant), offset),
+  for index, variant in value.variants {
+    let (pattern, names) = derived_debug_variant_pattern(
+      value.name,
+      variant,
+      index,
       offset,
-    })
+    )
+    let body = if value.type_parameters.length() == 0 {
+      BlockExpr(derived_debug_variant_body(value.name, variant, names, offset))
+    } else {
+      derived_debug_write(
+        derived_debug_variant_text(value.name, variant),
+        offset,
+      )
+    }
+    arms.push({ pattern, guard_condition: None, body, offset })
   }
   derived_debug_impl(
     value.name,
     value.type_parameters,
-    MatchExpr(NameExpr("self", offset), arms, offset),
+    derived_debug_block(
+      [MatchExpr(NameExpr("self", offset), arms, offset)],
+      offset,
+    ),
     offset,
   )
 }

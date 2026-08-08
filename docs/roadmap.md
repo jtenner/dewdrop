@@ -19,7 +19,7 @@ Dew currently has:
 - selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/semantic/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent V9 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 220 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 186 compiled WAT/runtime snapshots plus 34 compiler-error snapshots.
+- 221 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 186 compiled WAT/runtime snapshots plus 35 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -238,7 +238,7 @@ erased fallback.
 
 - [ ] Define `#annotation(...)` syntax with compile-time constant parameters, including the permitted constant types, name resolution, validation, retention, and interface serialization rules.
 - [ ] Expose frozen annotations to compiler features and future tooling without making runtime reflection ambient.
-- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic `derive(Eq)` and `derive(Debug)` expansion through ordinary coherent implementations; current Debug output writes stable nominal/variant shape through the ambient `debug(value)` dispatcher, while recursive value formatting, generic evidence propagation, `Show`, `Hash`, visibility, and cross-module ABI behavior remain.
+- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic `derive(Eq)` and `derive(Debug)` expansion through ordinary coherent implementations; non-generic Debug recursively streams source-ordered fields/payloads and Bool/fixed-width integers through ambient `debug(value)`, while generic value evidence, remaining primitive formats, `Show`, `Hash`, visibility, and cross-module ABI behavior remain.
 - [ ] Specify conflicts between derived and handwritten implementations and prevent generated evidence from bypassing coherence or orphan rules.
 
 ### Remaining generic work
@@ -745,7 +745,7 @@ review.
 - [x] Require `output: null` and no WAT for failed compilations; successful compilations execute `main` and compare sibling WAT.
 - [x] Render deterministic compiler error snapshots through MoonBit `Debug` representations.
 - [x] Compare ordered, source-rendered compiler warnings through the same JSON oracle; the empty-warning baseline remains contractual until warning producers land.
-- [x] Establish broad feature-oriented coverage with 220 fixtures: 186 compiled WAT/runtime snapshots and 34 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
+- [x] Establish broad feature-oriented coverage with 221 fixtures: 186 compiled WAT/runtime snapshots and 35 compiler-error snapshots; every compiled fixture requires identical Node/Wago Core 3 output and traps.
 - [ ] Continue growing successful, warning, compiler-failure, and edge cases beside the feature they exercise.
 - [x] Correct Bool literal-pattern match emission and intentionally transition its error snapshot to successful stdout plus WAT.
 - [x] Add byte-for-byte repeated-compilation reproducibility checks.

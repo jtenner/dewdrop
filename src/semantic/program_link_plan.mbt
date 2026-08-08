@@ -871,6 +871,11 @@ fn program_reachable_callable_roots(
                   lowering, b"dew_wasi_fd_write", reachable,
                 ) ||
                 runtime_changed
+            } else if wasmgc_builtin_is_debug_integer(name) {
+              runtime_changed = program_add_named_callable_root(
+                  lowering, b"wasi_snapshot_preview1.fd_write", reachable,
+                ) ||
+                runtime_changed
             } else if name == b"dew_wasi_fd_write" {
               runtime_changed = program_add_named_callable_root(
                   lowering, b"wasi_snapshot_preview1.fd_write", reachable,

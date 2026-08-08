@@ -22,6 +22,284 @@ fn wasi_scratch_capacity() -> Int {
 }
 
 ///|
+fn starshine_debug_write_scratch(
+  output : Array[@lib.Instruction],
+  start : Int,
+  length : Int,
+  written : Int,
+  host_written : Int,
+  fd_write_function_index : Int,
+) -> Unit {
+  output.push(text_i32(0))
+  output.push(@lib.Instruction::local_set(text_local(written)))
+  let write_loop : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(written)),
+    @lib.Instruction::local_get(text_local(length)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(1U)),
+    text_i32(wasi_iovec_address()),
+    @lib.Instruction::local_get(text_local(start)),
+    @lib.Instruction::local_get(text_local(written)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::i32_store(starshine_memory_argument(2U)),
+    text_i32(wasi_iovec_address() + 4),
+    @lib.Instruction::local_get(text_local(length)),
+    @lib.Instruction::local_get(text_local(written)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::i32_store(starshine_memory_argument(2U)),
+    text_i32(1),
+    text_i32(wasi_iovec_address()),
+    text_i32(1),
+    text_i32(wasi_result_address()),
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(fd_write_function_index.reinterpret_as_uint()),
+    ),
+    text_i32(0),
+    @lib.Instruction::i32_ne(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    text_i32(wasi_result_address()),
+    @lib.Instruction::i32_load(starshine_memory_argument(2U)),
+    @lib.Instruction::local_tee(text_local(host_written)),
+    @lib.Instruction::i32_eqz(),
+    @lib.Instruction::local_get(text_local(host_written)),
+    @lib.Instruction::local_get(text_local(length)),
+    @lib.Instruction::local_get(text_local(written)),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::i32_gt_u(),
+    @lib.Instruction::i32_or(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    @lib.Instruction::local_get(text_local(written)),
+    @lib.Instruction::local_get(text_local(host_written)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_set(text_local(written)),
+    @lib.Instruction::br(@lib.LabelIdx::new(0U)),
+  ]
+  output.push(
+    @lib.Instruction::block(
+      @lib.BlockType::void_(),
+      @lib.Expr::new([
+        @lib.Instruction::loop_(
+          @lib.BlockType::void_(),
+          @lib.Expr::new(write_loop),
+        ),
+      ]),
+    ),
+  )
+  output.push(@lib.Instruction::local_get(text_local(length)))
+}
+
+///|
+fn starshine_debug_i32_body(
+  width : Int,
+  signed : Bool,
+  fd_write_function_index : Int,
+) -> @lib.Func {
+  let cursor = 1
+  let magnitude = 2
+  let negative = 3
+  let length = 4
+  let written = 5
+  let host_written = 6
+  let end = wasi_scratch_address() + 32
+  let body : Array[@lib.Instruction] = []
+  if signed {
+    body.push(@lib.Instruction::local_get(text_local(0)))
+    if width == 8 {
+      body.push(@lib.Instruction::i32_extend8s())
+    } else if width == 16 {
+      body.push(@lib.Instruction::i32_extend16s())
+    }
+    body.push(@lib.Instruction::local_set(text_local(0)))
+  } else if width < 32 {
+    body.push(@lib.Instruction::local_get(text_local(0)))
+    body.push(text_i32(if width == 8 { 255 } else { 65535 }))
+    body.push(@lib.Instruction::i32_and())
+    body.push(@lib.Instruction::local_set(text_local(0)))
+  }
+  body.push(text_i32(end))
+  body.push(@lib.Instruction::local_set(text_local(cursor)))
+  if signed {
+    body.push(@lib.Instruction::local_get(text_local(0)))
+    body.push(text_i32(0))
+    body.push(@lib.Instruction::i32_lt_s())
+    body.push(@lib.Instruction::local_tee(text_local(negative)))
+    body.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::i32()),
+        [
+          text_i32(0),
+          @lib.Instruction::local_get(text_local(0)),
+          @lib.Instruction::i32_sub(),
+        ],
+        Some([@lib.Instruction::local_get(text_local(0))]),
+      ),
+    )
+  } else {
+    body.push(@lib.Instruction::local_get(text_local(0)))
+  }
+  body.push(@lib.Instruction::local_set(text_local(magnitude)))
+  let digits : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(cursor)),
+    text_i32(1),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::local_tee(text_local(cursor)),
+    @lib.Instruction::local_get(text_local(magnitude)),
+    text_i32(10),
+    @lib.Instruction::i32_rem_u(),
+    text_i32(48),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::i32_store8(starshine_memory_argument(0U)),
+    @lib.Instruction::local_get(text_local(magnitude)),
+    text_i32(10),
+    @lib.Instruction::i32_div_u(),
+    @lib.Instruction::local_tee(text_local(magnitude)),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(0U)),
+  ]
+  body.push(
+    @lib.Instruction::loop_(@lib.BlockType::void_(), @lib.Expr::new(digits)),
+  )
+  if signed {
+    body.push(@lib.Instruction::local_get(text_local(negative)))
+    body.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::void_(),
+        [
+          @lib.Instruction::local_get(text_local(cursor)),
+          text_i32(1),
+          @lib.Instruction::i32_sub(),
+          @lib.Instruction::local_tee(text_local(cursor)),
+          text_i32(45),
+          @lib.Instruction::i32_store8(starshine_memory_argument(0U)),
+        ],
+        None,
+      ),
+    )
+  }
+  body.push(text_i32(end))
+  body.push(@lib.Instruction::local_get(text_local(cursor)))
+  body.push(@lib.Instruction::i32_sub())
+  body.push(@lib.Instruction::local_set(text_local(length)))
+  starshine_debug_write_scratch(
+    body, cursor, length, written, host_written, fd_write_function_index,
+  )
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
+fn starshine_debug_i64_body(
+  signed : Bool,
+  fd_write_function_index : Int,
+) -> @lib.Func {
+  let cursor = 1
+  let magnitude = 2
+  let negative = 3
+  let length = 4
+  let written = 5
+  let host_written = 6
+  let end = wasi_scratch_address() + 32
+  let body : Array[@lib.Instruction] = [
+    text_i32(end),
+    @lib.Instruction::local_set(text_local(cursor)),
+  ]
+  if signed {
+    body.push(@lib.Instruction::local_get(text_local(0)))
+    body.push(@lib.Instruction::i64_const(@lib.I64::new(0L)))
+    body.push(@lib.Instruction::i64_lt_s())
+    body.push(@lib.Instruction::local_tee(text_local(negative)))
+    body.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::i64()),
+        [
+          @lib.Instruction::i64_const(@lib.I64::new(0L)),
+          @lib.Instruction::local_get(text_local(0)),
+          @lib.Instruction::i64_sub(),
+        ],
+        Some([@lib.Instruction::local_get(text_local(0))]),
+      ),
+    )
+  } else {
+    body.push(@lib.Instruction::local_get(text_local(0)))
+  }
+  body.push(@lib.Instruction::local_set(text_local(magnitude)))
+  let digits : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(cursor)),
+    text_i32(1),
+    @lib.Instruction::i32_sub(),
+    @lib.Instruction::local_tee(text_local(cursor)),
+    @lib.Instruction::local_get(text_local(magnitude)),
+    @lib.Instruction::i64_const(@lib.I64::new(10L)),
+    @lib.Instruction::i64_rem_u(),
+    @lib.Instruction::i32_wrap_i64(),
+    text_i32(48),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::i32_store8(starshine_memory_argument(0U)),
+    @lib.Instruction::local_get(text_local(magnitude)),
+    @lib.Instruction::i64_const(@lib.I64::new(10L)),
+    @lib.Instruction::i64_div_u(),
+    @lib.Instruction::local_tee(text_local(magnitude)),
+    @lib.Instruction::i64_const(@lib.I64::new(0L)),
+    @lib.Instruction::i64_ne(),
+    @lib.Instruction::br_if(@lib.LabelIdx::new(0U)),
+  ]
+  body.push(
+    @lib.Instruction::loop_(@lib.BlockType::void_(), @lib.Expr::new(digits)),
+  )
+  if signed {
+    body.push(@lib.Instruction::local_get(text_local(negative)))
+    body.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::void_(),
+        [
+          @lib.Instruction::local_get(text_local(cursor)),
+          text_i32(1),
+          @lib.Instruction::i32_sub(),
+          @lib.Instruction::local_tee(text_local(cursor)),
+          text_i32(45),
+          @lib.Instruction::i32_store8(starshine_memory_argument(0U)),
+        ],
+        None,
+      ),
+    )
+  }
+  body.push(text_i32(end))
+  body.push(@lib.Instruction::local_get(text_local(cursor)))
+  body.push(@lib.Instruction::i32_sub())
+  body.push(@lib.Instruction::local_set(text_local(length)))
+  starshine_debug_write_scratch(
+    body, cursor, length, written, host_written, fd_write_function_index,
+  )
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      @lib.ValType::i32(),
+      @lib.ValType::i64(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
 fn wasi_store_i32(
   output : Array[@lib.Instruction],
   address : Int,

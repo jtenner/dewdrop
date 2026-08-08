@@ -3,4 +3,70 @@ pub trait Debug {
 }
 
 builtin __dew_debug_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
+builtin __dew_debug_i8(value: I8) -> U32 = "dew_debug_i8"
+builtin __dew_debug_i16(value: I16) -> U32 = "dew_debug_i16"
+builtin __dew_debug_i32(value: I32) -> U32 = "dew_debug_i32"
+builtin __dew_debug_i64(value: I64) -> U32 = "dew_debug_i64"
+builtin __dew_debug_u8(value: U8) -> U32 = "dew_debug_u8"
+builtin __dew_debug_u16(value: U16) -> U32 = "dew_debug_u16"
+builtin __dew_debug_u32(value: U32) -> U32 = "dew_debug_u32"
+builtin __dew_debug_u64(value: U64) -> U32 = "dew_debug_u64"
 pub builtin debug<t: Debug>(value: t) -> U32 = "dew_debug_dispatch"
+
+impl Debug for Bool {
+  fn debug(self) -> U32 {
+    if self {
+      __dew_debug_write(1u32, b"true")
+    } else {
+      __dew_debug_write(1u32, b"false")
+    }
+  }
+}
+
+impl Debug for I8 {
+  fn debug(self) -> U32 {
+    __dew_debug_i8(self)
+  }
+}
+
+impl Debug for I16 {
+  fn debug(self) -> U32 {
+    __dew_debug_i16(self)
+  }
+}
+
+impl Debug for I32 {
+  fn debug(self) -> U32 {
+    __dew_debug_i32(self)
+  }
+}
+
+impl Debug for I64 {
+  fn debug(self) -> U32 {
+    __dew_debug_i64(self)
+  }
+}
+
+impl Debug for U8 {
+  fn debug(self) -> U32 {
+    __dew_debug_u8(self)
+  }
+}
+
+impl Debug for U16 {
+  fn debug(self) -> U32 {
+    __dew_debug_u16(self)
+  }
+}
+
+impl Debug for U32 {
+  fn debug(self) -> U32 {
+    __dew_debug_u32(self)
+  }
+}
+
+impl Debug for U64 {
+  fn debug(self) -> U32 {
+    __dew_debug_u64(self)
+  }
+}

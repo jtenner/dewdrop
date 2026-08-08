@@ -3192,6 +3192,22 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_text_affix_body(base, 2, 2, false))
   } else if name == b"dew_bytes_ends_with" {
     Some(starshine_text_affix_body(base, 2, 2, true))
+  } else if name == b"dew_debug_i8" {
+    Some(starshine_debug_i32_body(8, true, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_i16" {
+    Some(starshine_debug_i32_body(16, true, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_i32" {
+    Some(starshine_debug_i32_body(32, true, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_i64" {
+    Some(starshine_debug_i64_body(true, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_u8" {
+    Some(starshine_debug_i32_body(8, false, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_u16" {
+    Some(starshine_debug_i32_body(16, false, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_u32" {
+    Some(starshine_debug_i32_body(32, false, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_u64" {
+    Some(starshine_debug_i64_body(false, wasi_fd_write_function_index))
   } else if name == b"dew_wasi_fd_write" {
     Some(starshine_wasi_fd_write_body(base, wasi_fd_write_function_index))
   } else if name == b"dew_wasi_fd_read" {

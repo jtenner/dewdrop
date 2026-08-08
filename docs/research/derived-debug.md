@@ -18,23 +18,38 @@ pub builtin debug<t: Debug>(value: t) -> U32 = "dew_debug_dispatch"
 
 ## Current formatting contract
 
-The first implementation intentionally establishes deterministic streaming and dispatch before recursive formatting:
+Derived output is deterministic and streaming:
 
-- structs write `Type { field, ... }` in source field order;
+- non-generic structs write `Type { field: value, ... }` in source field order;
 - unit variants write `Type::Variant`;
-- tuple variants write `Type::Variant(_, ...)` in payload order;
-- struct variants write `Type::Variant { field, ... }` in source field order;
+- non-generic tuple variants write `Type::Variant(value, ...)` in payload order;
+- non-generic struct variants write `Type::Variant { field: value, ... }` in source field order;
+- nested non-generic derived values recurse through the same ordinary ambient dispatch;
 - empty structs and empty struct variants retain explicit braces;
+- `Bool` writes `true` or `false`;
+- all eight fixed-width integer types write exact decimal values, including signed minima and unsigned maxima;
 - no newline is appended;
-- output goes to file descriptor 1 through the existing bounded WASI `Bytes` writer;
-- the return value is the underlying `U32` WASI result.
+- output goes to file descriptor 1 through bounded WASI writes;
+- the current `U32` result is the byte count returned by the final streaming write.
 
-Recursive primitive and payload-value formatting remains follow-up work. Generic derived methods currently remain valid because this initial shape-only form does not require runtime dictionaries for their type parameters.
+Generic derived nominals remain shape-only (`Wrapper { value }`) until generic body evidence can be frozen into runtime dictionaries or equivalent specialized dispatch. Floating-point, text/bytes escaping, Unit, lanes, recursion limits, and non-WASI behavior remain follow-up work.
 
 ## Generic method specialization fix
 
 A generic derived implementation owns the target type parameters while its method has no method-local parameters. Program linking previously selected the empty method-local span and could not materialize the derived method specialization. Callable generic selection now prefers owner implementation parameters, then falls back to method-local parameters. The runtime fixture exercises `Wrapper<I32>` to keep this ABI path covered.
 
+## Performance and code size
+
+Native collection benchmarks on August 8, 2026:
+
+| workload | mean |
+|---|---:|
+| 512 structs without derives | 641.59 µs |
+| 128 structs with `derive(Eq)` | 564.96 µs |
+| 128 structs with `derive(Debug)` | 551.30 µs |
+
+The comprehensive Debug runtime fixture is 1,694 WAT lines and 36,702 bytes. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
+
 ## Validation
 
-`tests/module-snapshots/types/derive-debug-runtime.dew` covers structs, tuple and named enum variants, generic nominal specialization, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution.
+`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, generic nominal specialization, Bool, every integer width at boundary values, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a recursively formatted field has no visible coherent `Debug` implementation.

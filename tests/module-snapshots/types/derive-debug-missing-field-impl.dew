@@ -1,0 +1,11 @@
+struct Opaque {}
+
+struct Container {
+  value: Opaque
+} derive(Debug)
+
+pub fn main() -> U32 {
+  debug(Container {
+    value: Opaque {}
+  })
+}

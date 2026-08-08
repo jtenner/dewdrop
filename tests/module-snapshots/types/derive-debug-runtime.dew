@@ -18,6 +18,11 @@ struct Wrapper<t> {
   value: t
 } derive(Debug)
 
+struct Scene {
+  point: Point
+  choice: Choice
+} derive(Debug)
+
 pub fn main() -> U32 {
   let point = Point {
     x: 3
@@ -37,4 +42,30 @@ pub fn main() -> U32 {
   debug(named)
   wasi_fd_write(1u32, b"|")
   debug(wrapped)
+  wasi_fd_write(1u32, b"|")
+  debug(Scene {
+    point: Point {
+      x: -5
+      y: 6
+    }
+    choice: Choice::Number(8)
+  })
+  wasi_fd_write(1u32, b"|")
+  debug(0i32)
+  wasi_fd_write(1u32, b",")
+  debug(-128i8)
+  wasi_fd_write(1u32, b",")
+  debug(-32768i16)
+  wasi_fd_write(1u32, b",")
+  debug(-2147483648i32)
+  wasi_fd_write(1u32, b",")
+  debug(-9223372036854775808i64)
+  wasi_fd_write(1u32, b",")
+  debug(255u8)
+  wasi_fd_write(1u32, b",")
+  debug(65535u16)
+  wasi_fd_write(1u32, b",")
+  debug(4294967295u32)
+  wasi_fd_write(1u32, b",")
+  debug(18446744073709551615u64)
 }

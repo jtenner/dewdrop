@@ -127,7 +127,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 220 fixtures:
+The suite contains 221 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -146,10 +146,10 @@ reachability         1          1                 0                0
 structs             11          8                 3                0
 tests                4          2                 2                1
 text                 27         27                 0                4
-types                8          2                 6                0
+types                9          2                 7                0
 wasi                 16         16                 0                5
 
-total               220        186               34               15
+total               221        186               35               15
 ```
 
 One hundred three compiled fixtures assert nonempty stdout, fifteen assert normalized
