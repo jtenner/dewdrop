@@ -7671,19 +7671,15 @@ fn starshine_module_runtime_function_index(
 
 ///|
 fn starshine_trait_adapter_nominal_declaration(
-  lowering : @semantic.PlannedModuleLowering,
-  implementation_method : @semantic.DeclId,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  adapter : @semantic.DeclId,
 ) -> @semantic.DeclId? {
-  let callable = match lowering.functions.callable_of(implementation_method) {
-    Some(value) => value
-    None => return None
-  }
-  let mut type_ = callable.self_type
-  while type_ >= 0 && type_ < lowering.resolved_types.length() {
-    match lowering.resolved_types[type_] {
-      @semantic.NominalType(declaration) => return Some(declaration)
-      @semantic.AppliedType(base, _) => type_ = base
-      _ => return None
+  for method_info in planned.trait_methods {
+    if method_info.adapter_function >= 0 &&
+      method_info.adapter_function < planned.functions.length() &&
+      planned.functions[method_info.adapter_function].declaration == adapter &&
+      method_info.receiver_nominal != 0UL {
+      return Some(method_info.receiver_nominal)
     }
   }
   None
@@ -7691,7 +7687,6 @@ fn starshine_trait_adapter_nominal_declaration(
 
 ///|
 fn emit_starshine_trait_adapter_body(
-  lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   adapter : @semantic.PlannedWasmFunctionFragment,
   implementation_method : @semantic.DeclId,
@@ -7701,7 +7696,7 @@ fn emit_starshine_trait_adapter_body(
     _ => return Err(MissingFunction(implementation_method))
   }
   let declaration = match
-    starshine_trait_adapter_nominal_declaration(lowering, implementation_method) {
+    starshine_trait_adapter_nominal_declaration(planned, adapter.declaration) {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, 0))
   }
@@ -7755,7 +7750,7 @@ pub fn emit_starshine_code_section(
         if !function_.elided {
           match
             emit_starshine_trait_adapter_body(
-              lowering, planned, function_, implementation_method,
+              planned, function_, implementation_method,
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
@@ -11684,7 +11679,6 @@ fn emit_starshine_program_adapter_helper_body(
 
 ///|
 fn emit_starshine_program_trait_adapter_body(
-  lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   adapter : @semantic.PlannedProgramWasmFunction,
   implementation_method : @semantic.DeclId,
@@ -11693,10 +11687,11 @@ fn emit_starshine_program_trait_adapter_body(
     Some(value) if value.function_index >= 0 => value
     _ => return Err(MissingFunction(implementation_method))
   }
-  let module_lowering = lowering.modules[adapter.module_index]
+  let module_fragments = planned.modules[adapter.module_index]
   let declaration = match
     starshine_trait_adapter_nominal_declaration(
-      module_lowering, implementation_method,
+      module_fragments,
+      adapter.declaration,
     ) {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, 0))
@@ -11761,7 +11756,7 @@ fn emit_starshine_program_code_section(
         if !function_.elided {
           match
             emit_starshine_program_trait_adapter_body(
-              lowering, planned, function_, implementation_method,
+              planned, function_, implementation_method,
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)

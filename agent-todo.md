@@ -65,7 +65,7 @@
 - [x] Define trait-object source syntax through bare trait value types.
 - [ ] Complete erased-boundary boxing; nominal reference coercion executes, while scalar/SIMD boxing remains.
 - [x] Plan WasmGC trait-object layouts and typed function-reference dictionary slots for nominal object-safe receivers.
-- [x] Emit shared local nominal dictionary construction and typed-field `call_ref` dynamic dispatch.
+- [x] Emit shared local/imported nominal dictionary construction and typed-field `call_ref` dynamic dispatch.
 - [ ] Define mutable boxed scalar receiver behavior.
 - [ ] Define trait-object identity and equality semantics.
 - [ ] Optimize non-escaping trait boxes.

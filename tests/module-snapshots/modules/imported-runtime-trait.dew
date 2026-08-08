@@ -1,0 +1,11 @@
+open fixture.runtime_trait
+open dew.std.wasi
+
+fn invoke(value: Mark) -> I32 {
+  value.mark()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(item()))
+  wasi_fd_write(1u32, b"|trait:imported")
+}

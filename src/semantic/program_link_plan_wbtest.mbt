@@ -777,6 +777,94 @@ test "program specializations distinguish and forward trait evidence" {
 }
 
 ///|
+test "runtime trait link executes imported traits and implementations" {
+  let program = collect_program_manifest(
+    2198UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open fixture.library\nfn invoke(value: Mark) -> I32 {\n  value.mark()\n}\npub fn main() -> I32 {\n  invoke(item())\n}\n",
+        ),
+      ]),
+      ManifestModule::new("fixture.library", [
+        ManifestFile::new(
+          "library.dew", b"pub struct Item {\n  value: I32\n}\npub trait Mark {\n  fn mark(self) -> I32\n}\nimpl Mark for Item {\n  fn mark(self) -> I32 {\n    self.value + 1\n  }\n}\npub fn item() -> Item {\n  Item {\n    value: 41\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let consumer_index = program.module_index("app.main").unwrap()
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(
+    analyzed.modules[consumer_index].inferred.impl_index.diagnostics.length(),
+    0,
+  )
+  assert_eq(analyzed.modules[consumer_index].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let consumer = lowering.modules[consumer_index]
+  let consumer_module = program.modules[consumer_index]
+  let main = consumer_module.lookup_value("main").unwrap()
+  let main_body = consumer_module.body_of(main).unwrap()
+  let invoke = consumer_module.lookup_value("invoke").unwrap()
+  let mut invoke_calls = 0
+  for call in body_calls(consumer_module, main_body) {
+    match consumer.expressions[call].kind {
+      PlannedDirectCall(declaration, _, arguments, _) if declaration == invoke => {
+        assert_eq(arguments.length, 1)
+        invoke_calls += 1
+      }
+      _ => ()
+    }
+  }
+  assert_eq(invoke_calls, 1)
+  let mut trait_declaration = 0UL
+  let mut evidence_index = -1
+  for expression in consumer.expressions {
+    match expression.trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+        trait_declaration = trait_
+        evidence_index = evidence
+      }
+      _ => ()
+    }
+  }
+  assert_true(trait_declaration != 0UL)
+  let requirements = wasmgc_trait_requirements(
+    consumer.functions,
+    Some(analyzed.modules[consumer_index].imports),
+    trait_declaration,
+  )
+  assert_eq(requirements.length(), 1)
+  let implementation = wasmgc_trait_evidence_implementation(
+    consumer, evidence_index,
+  ).unwrap()
+  let implementation_method = wasmgc_trait_implementation_method(
+    consumer.functions,
+    Some(analyzed.modules[consumer_index].imports),
+    implementation,
+    requirements[0],
+  ).unwrap()
+  let (receiver_shape, receiver_nominal) = wasmgc_trait_implementation_receiver(
+    analyzed.frozen.interfaces[consumer_index].resolved_types,
+    consumer.functions,
+    Some(analyzed.modules[consumer_index].imports),
+    implementation,
+    implementation_method,
+  )
+  assert_eq(receiver_shape, RefPlannedValueShape)
+  assert_true(receiver_nominal != 0UL)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[consumer_index].trait_layouts.length(), 1)
+  assert_eq(link.modules[consumer_index].trait_layouts[0].methods.length, 1)
+  assert_eq(link.modules[consumer_index].trait_dictionaries.length(), 1)
+  assert_eq(
+    link.modules[consumer_index].trait_dictionaries[0].methods.length,
+    1,
+  )
+}
+
+///|
 test "runtime trait link maps typed dictionary signatures" {
   let program = collect_program_manifest(
     2199UL,

@@ -189,6 +189,8 @@ pub struct PlannedWasmTraitMethod {
   trait_declaration : DeclId
   requirement : DeclId
   implementation_method : DeclId
+  receiver_shape : PlannedValueShape
+  receiver_nominal : DeclId
   slot : Int
   signature_type_index : Int
   adapter_function : Int
@@ -376,19 +378,21 @@ pub fn PlannedModuleWasmGCFragments::function_of(
   self : PlannedModuleWasmGCFragments,
   declaration : DeclId,
 ) -> PlannedWasmFunctionFragment? {
-  if semantic_id_module(declaration) != self.module_id {
-    return None
+  if semantic_id_module(declaration) == self.module_id {
+    let local_index = semantic_id_local(declaration)
+    if local_index >= 0 && local_index < self.function_by_declaration.length() {
+      let index = self.function_by_declaration[local_index]
+      if index >= 0 {
+        return Some(self.functions[index])
+      }
+    }
   }
-  let local_index = semantic_id_local(declaration)
-  if local_index < 0 || local_index >= self.function_by_declaration.length() {
-    return None
+  for function_ in self.functions {
+    if function_.declaration == declaration {
+      return Some(function_)
+    }
   }
-  let index = self.function_by_declaration[local_index]
-  if index < 0 {
-    None
-  } else {
-    Some(self.functions[index])
-  }
+  None
 }
 
 ///|
@@ -2002,47 +2006,197 @@ fn wasmgc_trait_evidence_implementation(
 }
 
 ///|
-fn wasmgc_trait_requirements(
-  functions : PlannedModuleFunctions,
-  trait_declaration : DeclId,
-) -> Array[DeclId] {
-  let requirements : Array[DeclId] = []
-  for callable in functions.callables {
-    match callable.kind {
-      PlannedTraitMethodCallable(owner) if owner == trait_declaration &&
-        callable.has_receiver => requirements.push(callable.declaration)
-      _ => ()
-    }
-  }
-  requirements
-}
-
-///|
-fn wasmgc_trait_implementation_method(
-  functions : PlannedModuleFunctions,
-  implementation : DeclId,
-  requirement : DeclId,
-) -> DeclId? {
-  let requirement_callable = match functions.callable_of(requirement) {
-    Some(value) => value
-    None => return None
-  }
-  for callable in functions.callables {
-    match callable.kind {
-      PlannedImplMethodCallable(owner, _) if owner == implementation &&
-        callable.has_receiver &&
-        callable.name == requirement_callable.name =>
-        return Some(callable.declaration)
-      _ => ()
+fn wasmgc_imported_interface_callable(
+  imports : ResolvedModuleImports,
+  declaration : DeclId,
+) -> FrozenInterfaceCallable? {
+  for interface_index in imports.scope.imported_interfaces {
+    let interface_ = imports.scope.interfaces[interface_index].unwrap()
+    for callable in interface_.callables {
+      if callable.declaration == declaration {
+        return Some(callable)
+      }
     }
   }
   None
 }
 
 ///|
+fn wasmgc_trait_requirements(
+  functions : PlannedModuleFunctions,
+  imports : ResolvedModuleImports?,
+  trait_declaration : DeclId,
+) -> Array[DeclId] {
+  let requirements : Array[DeclId] = []
+  if semantic_id_module(trait_declaration) == functions.module_id {
+    for callable in functions.callables {
+      match callable.kind {
+        PlannedTraitMethodCallable(owner) if owner == trait_declaration &&
+          callable.has_receiver => requirements.push(callable.declaration)
+        _ => ()
+      }
+    }
+    return requirements
+  }
+  match imports {
+    Some(imports) =>
+      for interface_index in imports.scope.imported_interfaces {
+        let interface_ = imports.scope.interfaces[interface_index].unwrap()
+        for callable in interface_.callables {
+          match callable.kind {
+            FrozenTraitCallable(owner) if owner == trait_declaration => {
+              let imported = match imports.callable(callable.declaration) {
+                Some(value) => value
+                None => continue
+              }
+              if imported.parameters.length > 0 &&
+                imports.parameter_receivers[imported.parameters.start] {
+                requirements.push(callable.declaration)
+              }
+            }
+            _ => ()
+          }
+        }
+      }
+    None => ()
+  }
+  requirements
+}
+
+///|
+fn wasmgc_trait_requirement_offset(
+  functions : PlannedModuleFunctions,
+  imports : ResolvedModuleImports?,
+  requirement : DeclId,
+) -> UInt64 {
+  match functions.callable_of(requirement) {
+    Some(value) => value.offset
+    None =>
+      match imports {
+        Some(imports) =>
+          match wasmgc_imported_interface_callable(imports, requirement) {
+            Some(value) => value.location.offset
+            None => 0UL
+          }
+        None => 0UL
+      }
+  }
+}
+
+///|
+fn wasmgc_trait_requirement_name(
+  functions : PlannedModuleFunctions,
+  imports : ResolvedModuleImports?,
+  requirement : DeclId,
+) -> String? {
+  match functions.callable_of(requirement) {
+    Some(value) => Some(@utf8.decode_lossy(value.name))
+    None =>
+      match imports {
+        Some(imports) =>
+          match wasmgc_imported_interface_callable(imports, requirement) {
+            Some(value) => Some(value.name)
+            None => None
+          }
+        None => None
+      }
+  }
+}
+
+///|
+fn wasmgc_trait_implementation_method(
+  functions : PlannedModuleFunctions,
+  imports : ResolvedModuleImports?,
+  implementation : DeclId,
+  requirement : DeclId,
+) -> DeclId? {
+  let requirement_name = match
+    wasmgc_trait_requirement_name(functions, imports, requirement) {
+    Some(value) => value
+    None => return None
+  }
+  if semantic_id_module(implementation) == functions.module_id {
+    for callable in functions.callables {
+      match callable.kind {
+        PlannedImplMethodCallable(owner, _) if owner == implementation &&
+          callable.has_receiver &&
+          @utf8.decode_lossy(callable.name) == requirement_name =>
+          return Some(callable.declaration)
+        _ => ()
+      }
+    }
+    return None
+  }
+  match imports {
+    Some(imports) =>
+      for interface_index in imports.scope.imported_interfaces {
+        let interface_ = imports.scope.interfaces[interface_index].unwrap()
+        for callable in interface_.callables {
+          match callable.kind {
+            FrozenImplCallable(owner) if owner == implementation &&
+              callable.name == requirement_name =>
+              return Some(callable.declaration)
+            _ => ()
+          }
+        }
+      }
+    None => ()
+  }
+  None
+}
+
+///|
+fn wasmgc_nominal_type_declaration(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> DeclId {
+  let mut current = root
+  while current >= 0 && current < resolved.types.length() {
+    match resolved.types[current] {
+      NominalType(declaration) => return declaration
+      AppliedType(base, _) => current = base
+      _ => return 0UL
+    }
+  }
+  0UL
+}
+
+///|
+fn wasmgc_trait_implementation_receiver(
+  resolved : ResolvedModuleTypes,
+  functions : PlannedModuleFunctions,
+  imports : ResolvedModuleImports?,
+  implementation : DeclId,
+  implementation_method : DeclId,
+) -> (PlannedValueShape, DeclId) {
+  match functions.callable_of(implementation_method) {
+    Some(callable) =>
+      return (
+        callable.self_shape,
+        wasmgc_nominal_type_declaration(resolved, callable.self_type),
+      )
+    None => ()
+  }
+  match imports {
+    Some(imports) =>
+      match imports.implementation(implementation) {
+        Some(value) =>
+          return (
+            planned_resolved_value_shape(resolved, value.target_type),
+            wasmgc_nominal_type_declaration(resolved, value.target_type),
+          )
+        None => ()
+      }
+    None => ()
+  }
+  (ErrorPlannedValueShape, 0UL)
+}
+
+///|
 fn plan_module_wasmgc_fragments_in_orders(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
+  imports : ResolvedModuleImports?,
   options : WasmGCPlanningOptions,
   type_order : Array[Int],
   function_order : Array[Int],
@@ -2057,7 +2211,10 @@ fn plan_module_wasmgc_fragments_in_orders(
   let runtime_traits = wasmgc_runtime_trait_declarations(lowering)
   let runtime_requirements : Map[DeclId, Bool] = Map::default()
   for trait_declaration in runtime_traits {
-    for requirement in wasmgc_trait_requirements(functions, trait_declaration) {
+    for
+      requirement in wasmgc_trait_requirements(
+        functions, imports, trait_declaration,
+      ) {
       runtime_requirements[requirement] = true
     }
   }
@@ -2303,7 +2460,10 @@ fn plan_module_wasmgc_fragments_in_orders(
   let runtime_requirement_signatures : Map[DeclId, Int] = Map::default()
   for trait_declaration in runtime_traits {
     let method_start = trait_layout_methods.length()
-    for requirement in wasmgc_trait_requirements(functions, trait_declaration) {
+    for
+      requirement in wasmgc_trait_requirements(
+        functions, imports, trait_declaration,
+      ) {
       let signature_type_index = next_type_index
       next_type_index += 1
       trait_layout_methods.push(requirement)
@@ -2315,7 +2475,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         type_index: signature_type_index,
         group_index: type_groups.length(),
         fields: { start: 0, length: 0 },
-        offset: functions.callable_of(requirement).unwrap().offset,
+        offset: wasmgc_trait_requirement_offset(functions, imports, requirement),
       })
       type_groups.push({
         types: { start: signature_physical, length: 1 },
@@ -2795,13 +2955,86 @@ fn plan_module_wasmgc_fragments_in_orders(
       },
     })
   }
+  match imports {
+    Some(imports) =>
+      for layout in trait_layouts {
+        for slot in 0..<layout.methods.length {
+          let requirement = trait_layout_methods[layout.methods.start + slot]
+          if functions.callable_of(requirement) is Some(_) {
+            continue
+          }
+          let callable = match imports.callable(requirement) {
+            Some(value) => value
+            None => continue
+          }
+          let interface_callable = match
+            wasmgc_imported_interface_callable(imports, requirement) {
+            Some(value) => value
+            None => continue
+          }
+          let parameter_start = function_value_types.length()
+          for index in 0..<callable.parameters.length {
+            match
+              wasmgc_value_type(
+                resolved,
+                imports.parameter_types[callable.parameters.start + index],
+                -1,
+                type_index_by_declaration,
+                function_type_by_resolved,
+                closure_abi,
+              ) {
+              Some(value) => function_value_types.push(value)
+              None => ()
+            }
+          }
+          let parameters = {
+            start: parameter_start,
+            length: function_value_types.length() - parameter_start,
+          }
+          let result_start = function_value_types.length()
+          match
+            wasmgc_value_type(
+              resolved,
+              callable.result_type,
+              -1,
+              type_index_by_declaration,
+              function_type_by_resolved,
+              closure_abi,
+            ) {
+            Some(value) => function_value_types.push(value)
+            None => ()
+          }
+          planned_functions.push({
+            declaration: requirement,
+            lambda: -1,
+            name: b"",
+            visibility: ModuleVisible,
+            is_test: false,
+            is_test_entry: false,
+            test_name: b"",
+            kind: PlannedWasmSignatureOnlyFunction,
+            direct_builtin: b"",
+            elided: false,
+            signature_type_index: runtime_requirement_signatures[requirement],
+            function_index: -1,
+            parameters,
+            results: {
+              start: result_start,
+              length: function_value_types.length() - result_start,
+            },
+            specialization_shapes: { start: 0, length: 0 },
+            specialization_evidence: { start: 0, length: 0 },
+            specialization_abi_key: "",
+            offset: interface_callable.location.offset,
+          })
+        }
+      }
+    None => ()
+  }
   for layout in trait_layouts {
     let vtable_field_start = fields.length()
     for slot in 0..<layout.methods.length {
       let requirement = trait_layout_methods[layout.methods.start + slot]
-      let callable_index = functions.callable_by_declaration[semantic_id_local(
-          requirement,
-        )]
       fields.push({
         role: WasmTraitMethodField(layout.trait_declaration, requirement, slot),
         physical_index: slot,
@@ -2809,7 +3042,7 @@ fn plan_module_wasmgc_fragments_in_orders(
           trait_method_signature_indices[layout.methods.start + slot],
         ),
         mutable_: false,
-        offset: functions.callables[callable_index].offset,
+        offset: wasmgc_trait_requirement_offset(functions, imports, requirement),
       })
     }
     for index in 0..<physical_types.length() {
@@ -2862,9 +3095,6 @@ fn plan_module_wasmgc_fragments_in_orders(
       Some(value) => value
       None => continue
     }
-    if semantic_id_module(implementation) != lowering.module_id {
-      continue
-    }
     let key = trait_declaration.to_string() + ":" + implementation.to_string()
     if dictionary_keys.contains(key) {
       continue
@@ -2887,7 +3117,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       let requirement = trait_layout_methods[layout.methods.start + slot]
       let implementation_method = match
         wasmgc_trait_implementation_method(
-          functions, implementation, requirement,
+          functions, imports, implementation, requirement,
         ) {
         Some(value) => value
         None => {
@@ -2895,10 +3125,25 @@ fn plan_module_wasmgc_fragments_in_orders(
           break
         }
       }
-      let requirement_index = functions.callable_by_declaration[semantic_id_local(
-          requirement,
-        )]
+      let mut requirement_index = -1
+      for index, function_ in planned_functions {
+        if function_.declaration == requirement {
+          requirement_index = index
+          break
+        }
+      }
+      if requirement_index < 0 {
+        complete = false
+        break
+      }
       let requirement_fragment = planned_functions[requirement_index]
+      let (receiver_shape, receiver_nominal) = wasmgc_trait_implementation_receiver(
+        resolved, functions, imports, implementation, implementation_method,
+      )
+      if receiver_shape != RefPlannedValueShape || receiver_nominal == 0UL {
+        complete = false
+        break
+      }
       let adapter_fragment = planned_functions.length()
       planned_functions.push({
         declaration: wasmgc_trait_adapter_declaration(
@@ -2931,6 +3176,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         trait_declaration,
         requirement,
         implementation_method,
+        receiver_shape,
+        receiver_nominal,
         slot,
         signature_type_index: requirement_fragment.signature_type_index,
         adapter_function: adapter_fragment,
@@ -3257,6 +3504,7 @@ fn plan_module_wasmgc_fragments_in_orders(
 fn plan_module_wasmgc_fragments_with_options_and_roots(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
+  imports : ResolvedModuleImports?,
   options : WasmGCPlanningOptions,
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
@@ -3274,7 +3522,8 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
     function_order.push(index)
   }
   plan_module_wasmgc_fragments_in_orders(
-    resolved, lowering, options, type_order, function_order, program_roots, program_function_value_roots,
+    resolved, lowering, imports, options, type_order, function_order, program_roots,
+    program_function_value_roots,
   )
 }
 
@@ -3287,6 +3536,7 @@ pub fn plan_module_wasmgc_fragments_with_options(
   plan_module_wasmgc_fragments_with_options_and_roots(
     resolved,
     lowering,
+    None,
     options,
     Map::default(),
     Map::default(),

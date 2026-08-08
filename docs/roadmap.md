@@ -285,6 +285,7 @@ erased fallback.
 - [x] Plan WasmGC trait object layouts for nominal object-safe receivers.
 - [x] Plan typed function-reference dictionary slots in deterministic trait source order.
 - [x] Emit one shared local nominal dictionary per exact trait implementation.
+- [x] Reconstruct imported trait signatures and emit linked dictionaries/adapters for imported implementations and receiver nominals.
 - [x] Emit typed-field `call_ref` dynamic dispatch with single receiver evaluation.
 - [ ] Define mutable boxed scalar receiver behavior.
 - [ ] Define trait-object identity and equality semantics.

@@ -2,11 +2,11 @@
 
 ## Status
 
-Runtime trait values execute end to end for non-generic object-safe traits over nominal reference receivers. Bare trait names in value positions denote erased trait values. Concrete expressions crossing an expected trait boundary freeze exact coherent implementation evidence, construct a WasmGC trait object, and dispatch source-ordered methods through an immutable typed function-reference dictionary and `call_ref`.
+Runtime trait values execute end to end for non-generic object-safe traits over nominal reference receivers, including traits, implementations, methods, and concrete receiver types imported from another linked module. Bare trait names in value positions denote erased trait values. Concrete expressions crossing an expected trait boundary freeze exact coherent implementation evidence, construct a WasmGC trait object, and dispatch source-ordered methods through an immutable typed function-reference dictionary and `call_ref`.
 
 Static calls on concrete receivers retain the existing direct-call path and do not plan trait layouts, dictionaries, adapters, globals, or `call_ref` sites.
 
-Imported dictionaries, scalar/SIMD receiver boxes, generic prerequisite-bearing dictionaries, mutable scalar receiver semantics, trait-object identity/equality, and escape-based devirtualization remain subsequent milestones.
+Scalar/SIMD receiver boxes, generic prerequisite-bearing dictionaries, mutable scalar receiver semantics, trait-object identity/equality, and escape-based devirtualization remain subsequent milestones.
 
 ## Source and inference model
 
@@ -53,7 +53,7 @@ Method signature types are placed before the vtable in the Wasm type section, so
 
 Each demanded coherent `(trait, implementation)` pair receives one private dictionary global. Program startup initializes the dictionary exactly once from source-ordered adapter `ref.func` values. Every trait-object construction evaluates its concrete receiver once, loads the shared dictionary global, and allocates only the two-field trait-object envelope.
 
-Nominal receiver adapters have the erased requirement ABI, cast receiver parameter zero from `eqref` to the exact nominal implementation type, forward ordinary arguments, and directly call the implementation method. Adapter functions are rooted through a declarative element segment because trait-object construction uses `ref.func`; no runtime Wasm table is emitted.
+Nominal receiver adapters have the erased requirement ABI, cast receiver parameter zero from `eqref` to the exact nominal implementation type, forward ordinary arguments, and directly call the implementation method. Imported trait requirements are reconstructed from frozen callable metadata in the consumer's resolved arena, while imported implementation methods and receiver nominals retain their provider identities. Program linking maps the adapter's external cast and direct call to the provider's final type and function indices. Adapter functions are rooted through a declarative element segment because trait-object construction uses `ref.func`; no runtime Wasm table is emitted.
 
 A dynamic call evaluates the trait object once into an `eqref` scratch local, loads receiver field zero, evaluates ordinary arguments in source order, loads the exact typed method field through the vtable, and emits `call_ref` with the same method-signature type.
 
@@ -75,6 +75,7 @@ Coverage includes:
 - one shared dictionary global initialized with declarative `ref.func` adapters;
 - two dynamic `call_ref` sites over one trait object;
 - direct static trait dispatch with no dynamic machinery;
+- imported trait requirements, implementation methods, nominal receivers, dictionaries, and adapters;
 - identical runtime output and WAT under Node and Wago Core 3.
 
-The dynamic fixture prints `42|7|trait:value`; the paired static fixture prints `42|trait:static`.
+The local dynamic fixture prints `42|7|trait:value`; the paired static fixture prints `42|trait:static`; the imported dictionary fixture prints `42|trait:imported`.

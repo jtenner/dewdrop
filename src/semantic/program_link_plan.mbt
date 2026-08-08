@@ -1989,6 +1989,7 @@ fn plan_program_wasmgc_fragments_for_root(
         plan_module_wasmgc_fragments_with_options_and_roots(
           analyzed.frozen.interfaces[module_index].resolved_types,
           lowering.modules[module_index],
+          Some(analyzed.modules[module_index].imports),
           options,
           program_roots,
           program_function_value_roots,

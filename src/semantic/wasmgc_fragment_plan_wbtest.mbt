@@ -272,6 +272,7 @@ test "WasmGC fragment merge is independent of simulated job order" {
   let forward = plan_module_wasmgc_fragments_in_orders(
     resolved,
     lowering,
+    None,
     options,
     type_forward,
     function_forward,
@@ -281,6 +282,7 @@ test "WasmGC fragment merge is independent of simulated job order" {
   let reverse = plan_module_wasmgc_fragments_in_orders(
     resolved,
     lowering,
+    None,
     options,
     type_reverse,
     function_reverse,
