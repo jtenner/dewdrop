@@ -476,7 +476,7 @@ fn wasmgc_add_runtime_dependencies(
   let mut wasi_write = -1
   let mut wasi_read = -1
   let mut test_assert = -1
-  let debug_integers : Array[Int] = []
+  let debug_runtimes : Array[Int] = []
   let mut wasi_write_import = -1
   let mut wasi_read_import = -1
   for index, job in jobs {
@@ -494,8 +494,8 @@ fn wasmgc_add_runtime_dependencies(
           wasi_read = index
         } else if name == b"dew_test_assert" {
           test_assert = index
-        } else if wasmgc_builtin_is_debug_integer(name) {
-          debug_integers.push(index)
+        } else if wasmgc_builtin_is_debug_runtime(name) {
+          debug_runtimes.push(index)
         }
       PlannedWasmImportedFunction(name) =>
         if name == b"wasi_snapshot_preview1.fd_write" {
@@ -521,7 +521,7 @@ fn wasmgc_add_runtime_dependencies(
     reachable[wasi_write_import] = true
   }
   if wasi_write_import >= 0 {
-    for index in debug_integers {
+    for index in debug_runtimes {
       if reachable[index] {
         reachable[wasi_write_import] = true
         break
@@ -1580,7 +1580,7 @@ fn wasmgc_builtin_has_v128_memory_marker(name : Bytes) -> Bool {
 }
 
 ///|
-fn wasmgc_builtin_is_debug_integer(name : Bytes) -> Bool {
+fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
   name == b"dew_debug_i8" ||
   name == b"dew_debug_i16" ||
   name == b"dew_debug_i32" ||
@@ -1588,12 +1588,14 @@ fn wasmgc_builtin_is_debug_integer(name : Bytes) -> Bool {
   name == b"dew_debug_u8" ||
   name == b"dew_debug_u16" ||
   name == b"dew_debug_u32" ||
-  name == b"dew_debug_u64"
+  name == b"dew_debug_u64" ||
+  name == b"dew_debug_f32" ||
+  name == b"dew_debug_f64"
 }
 
 ///|
 fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
-  wasmgc_builtin_is_debug_integer(name) ||
+  wasmgc_builtin_is_debug_runtime(name) ||
   wasmgc_builtin_has_v128_memory_marker(name) ||
   name == b"dew_i8_load" ||
   name == b"dew_i8_store" ||
@@ -1630,7 +1632,7 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
 
 ///|
 fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
-  wasmgc_builtin_is_debug_integer(name) ||
+  wasmgc_builtin_is_debug_runtime(name) ||
   name == b"dew_string_byte_length" ||
   name == b"dew_string_as_bytes" ||
   name == b"dew_string_utf16_length" ||

@@ -3208,6 +3208,10 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_debug_i32_body(32, false, wasi_fd_write_function_index))
   } else if name == b"dew_debug_u64" {
     Some(starshine_debug_i64_body(false, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_f32" {
+    Some(starshine_debug_float_body(false, wasi_fd_write_function_index))
+  } else if name == b"dew_debug_f64" {
+    Some(starshine_debug_float_body(true, wasi_fd_write_function_index))
   } else if name == b"dew_wasi_fd_write" {
     Some(starshine_wasi_fd_write_body(base, wasi_fd_write_function_index))
   } else if name == b"dew_wasi_fd_read" {
