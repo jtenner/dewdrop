@@ -30,13 +30,13 @@ Derived output is deterministic and streaming:
 - all eight fixed-width integer types write exact decimal values, including signed minima and unsigned maxima;
 - `F32` and `F64` write exact lowercase IEEE-bit forms such as `f32(0x3fc00000)`, preserving signed zero and NaN payload identity;
 - `Unit` writes `()`;
-- `String` writes quoted valid UTF-8 bytes; quote, backslash, and control escaping remains pending;
-- `Bytes` writes `Bytes(len=N)` without decoding arbitrary byte content;
+- `String` writes quoted valid UTF-8, escaping quote, backslash, newline, carriage return, tab, remaining ASCII controls, and DEL;
+- `Bytes` writes `b"..."`, preserving printable ASCII and escaping all other bytes as lowercase `\\xNN`;
 - no newline is appended;
 - output goes to file descriptor 1 through bounded WASI writes;
 - the current `U32` result is the byte count returned by the final streaming write.
 
-Generic derived nominals remain shape-only (`Wrapper { value }`) until generic body evidence can be frozen into runtime dictionaries or equivalent specialized dispatch. Complete String escaping, Bytes content rendering, lanes, recursion limits, and non-WASI behavior remain follow-up work.
+Generic derived nominals remain shape-only (`Wrapper { value }`) until generic body evidence can be frozen into runtime dictionaries or equivalent specialized dispatch. Lane formats, recursion limits, and non-WASI behavior remain follow-up work.
 
 ## Generic method specialization fix
 
@@ -52,8 +52,8 @@ Native collection benchmarks on August 8, 2026:
 | 128 structs with `derive(Eq)` | 564.96 µs |
 | 128 structs with `derive(Debug)` | 551.30 µs |
 
-The comprehensive Debug runtime fixture is 2,134 WAT lines and 45,634 bytes. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
+The comprehensive Debug runtime fixture is 3,104 WAT lines and 68,808 bytes. It runs with a three-byte simulated host write limit, so every formatter's partial-write loop is exercised under both Node and Wago. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
 
 ## Validation
 
-`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, generic nominal specialization, Bool, Unit, every integer width at boundary values, exact floating-point bit output, String/Bytes output, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a recursively formatted field has no visible coherent `Debug` implementation.
+`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, generic nominal specialization, Bool, Unit, every integer width at boundary values, exact floating-point bit output, escaped String/Bytes output, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a recursively formatted field has no visible coherent `Debug` implementation.

@@ -13,8 +13,8 @@ builtin __dew_debug_u32(value: U32) -> U32 = "dew_debug_u32"
 builtin __dew_debug_u64(value: U64) -> U32 = "dew_debug_u64"
 builtin __dew_debug_f32(value: F32) -> U32 = "dew_debug_f32"
 builtin __dew_debug_f64(value: F64) -> U32 = "dew_debug_f64"
-builtin __dew_debug_string_bytes(value: String) -> Bytes = "dew_string_as_bytes"
-builtin __dew_debug_bytes_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
+builtin __dew_debug_string(value: String) -> U32 = "dew_debug_string"
+builtin __dew_debug_bytes(value: Bytes) -> U32 = "dew_debug_bytes"
 pub builtin debug<t: Debug>(value: t) -> U32 = "dew_debug_dispatch"
 
 impl Debug for Unit {
@@ -95,16 +95,12 @@ impl Debug for F64 {
 
 impl Debug for String {
   fn debug(self) -> U32 {
-    __dew_debug_write(1u32, b"\"")
-    __dew_debug_write(1u32, __dew_debug_string_bytes(self))
-    __dew_debug_write(1u32, b"\"")
+    __dew_debug_string(self)
   }
 }
 
 impl Debug for Bytes {
   fn debug(self) -> U32 {
-    __dew_debug_write(1u32, b"Bytes(len=")
-    debug(__dew_debug_bytes_length(self))
-    __dew_debug_write(1u32, b")")
+    __dew_debug_bytes(self)
   }
 }
