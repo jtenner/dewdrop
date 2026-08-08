@@ -1,0 +1,11 @@
+struct Missing {}
+
+struct Wrapper<t> {
+  value: t
+} derive(Debug)
+
+pub fn main() -> Unit {
+  debug(Wrapper {
+    value: Missing {}
+  })
+}

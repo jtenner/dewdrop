@@ -1,0 +1,9 @@
+struct Missing {}
+
+struct Wrapper {
+  value: Missing
+} derive(Hash)
+
+pub fn main() -> U64 {
+  0u64
+}

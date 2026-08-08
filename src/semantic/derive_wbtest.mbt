@@ -94,3 +94,64 @@ test "derive diagnostics reject unknown and duplicate requests while accepting g
   assert_eq(parameters.length, 1)
   assert_eq(collected.generic_parameters[parameters.start].bounds.length, 1)
 }
+
+///|
+test "derived field bounds support unconstrained owner parameters" {
+  let program = collect_program_manifest(
+    2706UL,
+    ProgramManifest::new([
+      ManifestModule::new("derive.selective", [
+        ManifestFile::new(
+          "selective.dew", b"struct Selected<a, b> {\n  value: a\n} derive(Eq)\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+}
+
+///|
+test "derive prerequisites follow fields and payloads" {
+  let collected = collect_bytes(
+    2705UL, b"struct Selected<a, b> {\n  value: a\n} derive(Eq, Debug, Hash)\nstruct Phantom<t> {} derive(Eq, Debug, Hash)\nenum Choice<a, b> {\n  Some(a)\n} derive(Eq, Debug, Hash)\nstruct Already<t: Eq + Debug + Hash> {\n  value: t\n} derive(Eq, Debug, Hash)\n",
+  )
+  assert_eq(collected.diagnostics.length(), 0)
+  assert_eq(collected.impls.length(), 16)
+  for implementation_index in 0..<4 {
+    let parameters = collected.generic_parameters_of(
+      collected.impls[implementation_index].declaration,
+    )
+    assert_eq(parameters.length, 2)
+    assert_eq(collected.generic_parameters[parameters.start].bounds.length, 1)
+    assert_eq(
+      collected.generic_parameters[parameters.start + 1].bounds.length,
+      0,
+    )
+  }
+  for implementation_index in 4..<8 {
+    let parameters = collected.generic_parameters_of(
+      collected.impls[implementation_index].declaration,
+    )
+    assert_eq(parameters.length, 1)
+    assert_eq(collected.generic_parameters[parameters.start].bounds.length, 0)
+  }
+  for implementation_index in 8..<12 {
+    let parameters = collected.generic_parameters_of(
+      collected.impls[implementation_index].declaration,
+    )
+    assert_eq(parameters.length, 2)
+    assert_eq(collected.generic_parameters[parameters.start].bounds.length, 1)
+    assert_eq(
+      collected.generic_parameters[parameters.start + 1].bounds.length,
+      0,
+    )
+  }
+  for implementation_index in 12..<16 {
+    let parameters = collected.generic_parameters_of(
+      collected.impls[implementation_index].declaration,
+    )
+    assert_eq(parameters.length, 1)
+    assert_eq(collected.generic_parameters[parameters.start].bounds.length, 3)
+  }
+}

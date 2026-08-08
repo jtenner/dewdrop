@@ -238,7 +238,7 @@ erased fallback.
 
 - [ ] Define `#annotation(...)` syntax with compile-time constant parameters, including the permitted constant types, name resolution, validation, retention, and interface serialization rules.
 - [ ] Expose frozen annotations to compiler features and future tooling without making runtime reflection ambient.
-- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic `derive(Eq)` and `derive(Debug)` expansion through ordinary coherent implementations; bounded generic Eq executes through evidence-aware specialization, and non-generic Debug recursively streams source-ordered fields/payloads and Bool/fixed-width integers through ambient `debug(value)`, while generic Debug generation, typed lane formats, recursion limits, non-WASI behavior, `Show`, `Hash`, visibility, and cross-module ABI behavior remain.
+- [ ] Complete postfix `derive(...)` for easy system traits. Structs/enums support deterministic field- and payload-prerequisite-aware `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` through ordinary coherent implementations and evidence-aware generic specialization. Debug recursively streams generic and non-generic values; Hash emits deterministic source-ordered structural hashing and collision-safe equality. Typed lane formats, recursion limits, non-WASI behavior, `Show`, visibility, and cross-module ABI behavior remain.
 - [ ] Specify conflicts between derived and handwritten implementations and prevent generated evidence from bypassing coherence or orphan rules.
 
 ### Remaining generic work

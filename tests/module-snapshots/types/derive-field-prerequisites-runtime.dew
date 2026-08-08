@@ -1,0 +1,36 @@
+open dew.std.wasi
+
+struct Missing {}
+
+struct Selected<a, b> {
+  value: a
+} derive(Eq, Debug, Hash)
+
+struct Phantom<t> {} derive(Eq, Debug, Hash)
+
+fn selected() -> Selected<I32, Missing> {
+  Selected {
+    value: 7
+  }
+}
+
+fn phantom() -> Phantom<Missing> {
+  Phantom {}
+}
+
+pub fn main() -> U32 {
+  let selected_ok = selected() == selected() &&
+    selected().hash_eq(selected()) &&
+    selected().hash() == selected().hash()
+  let phantom_ok = phantom() == phantom() &&
+    phantom().hash_eq(phantom()) &&
+    phantom().hash() == phantom().hash()
+  debug(selected())
+  wasi_fd_write(1u32, b"|")
+  debug(phantom())
+  if selected_ok && phantom_ok {
+    wasi_fd_write(1u32, b"|derive:field-prerequisites")
+  } else {
+    wasi_fd_write(1u32, b"|FAIL")
+  }
+}

@@ -6709,6 +6709,16 @@ fn BasicBodyInferencer::select_debug_dispatch(
   offset : UInt64,
 ) -> Unit {
   let name = self.collected.find_name("debug").unwrap()
+  if self.select_declared_bound_method(
+      call_slot,
+      expression,
+      receiver,
+      name,
+      { start: 0, length: 0 },
+      offset,
+    ) {
+    return
+  }
   if !self.collect_method_candidates(self.expression_type(receiver), name) {
     self.call_targets[call_slot] = ErrorInferredCallTarget
     self.diagnose(NoMatchingMethod(name, expression, offset))

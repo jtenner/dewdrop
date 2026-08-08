@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "fixture.dew:5:10: error: NoMatchingMethod(4, 4, 62)\n  |\n5 | } derive(Hash)\n  |          ^",
+    "fixture.dew:5:10: error: NoMatchingMethod(7, 14, 62)\n  |\n5 | } derive(Hash)\n  |          ^"
+  ],
+  "warnings": [],
+  "output": null
+}

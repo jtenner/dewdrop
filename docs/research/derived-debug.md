@@ -20,11 +20,11 @@ pub builtin debug<t: Debug>(value: t) -> Unit = "dew_debug_dispatch"
 
 Derived output is deterministic and streaming:
 
-- non-generic structs write `Type { field: value, ... }` in source field order;
+- structs write `Type { field: value, ... }` in source field order;
 - unit variants write `Type::Variant`;
-- non-generic tuple variants write `Type::Variant(value, ...)` in payload order;
-- non-generic struct variants write `Type::Variant { field: value, ... }` in source field order;
-- nested non-generic derived values recurse through the same ordinary ambient dispatch;
+- tuple variants write `Type::Variant(value, ...)` in payload order;
+- struct variants write `Type::Variant { field: value, ... }` in source field order;
+- nested generic and non-generic derived values recurse through the same ordinary ambient dispatch;
 - empty structs and empty struct variants retain explicit braces;
 - `Bool` writes `true` or `false`;
 - all eight fixed-width integer types write exact decimal values, including signed minima and unsigned maxima;
@@ -38,7 +38,14 @@ Derived output is deterministic and streaming:
 - output goes to file descriptor 1 through bounded WASI writes;
 - both the trait method and ambient `debug(value)` return `Unit`; internal byte counts are consumed at the preamble boundary.
 
-Closed-call specialization now executes frozen symbolic/concrete evidence trees, including generic implementation prerequisites and symbolic method/operator calls. Generic derived Debug remains shape-only (`Wrapper { value }`) only because its parser-owned expansion still emits shape text instead of recursive field/payload calls; it can now be upgraded on the same static evidence path. Typed lane formats, recursion limits, dynamic dictionary boundaries, and non-WASI behavior remain follow-up work.
+Generic derives add a `Debug` prerequisite to every owner parameter referenced by
+a field or payload type, preserve source bounds, avoid duplicate `Debug` bounds,
+and leave phantom parameters unconstrained. Concrete fields are validated by the
+ordinary generated formatter body. Ambient `debug(field)` now selects
+source-ordered symbolic body evidence before concrete implementation candidates,
+and closed-call specialization resolves that evidence to the exact formatter.
+Typed lane formats, recursion limits, dynamic dictionary boundaries, and
+non-WASI behavior remain follow-up work.
 
 ## Generic method specialization fix
 
@@ -50,12 +57,13 @@ Native collection benchmarks on August 8, 2026:
 
 | workload | mean |
 |---|---:|
-| 512 structs without derives | 641.59 µs |
-| 128 structs with `derive(Eq)` | 564.96 µs |
-| 128 structs with `derive(Debug)` | 551.30 µs |
+| 512 structs without derives | 658.17 µs |
+| 128 structs with `derive(Eq)` | 593.75 µs |
+| 128 structs with `derive(Debug)` | 645.71 µs |
+| 128 structs with `derive(Hash)` | 589.79 µs |
 
-The comprehensive Debug runtime fixture is 3,332 WAT lines and 72,781 bytes. It runs with a three-byte simulated host write limit, so every formatter's partial-write loop is exercised under both Node and Wago. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
+The comprehensive Debug runtime fixture is 3,350 WAT lines and 73,116 bytes. It runs with a three-byte simulated host write limit, so every formatter's partial-write loop is exercised under both Node and Wago. Its size intentionally includes all eight integer formatting routines because every width is reached by the boundary matrix; ordinary reachability keeps unused formatting routines and the WASI import out of modules that do not call them.
 
 ## Validation
 
-`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, generic nominal specialization, Bool, Unit, every integer width at boundary values, exact floating-point and packed-carrier output, escaped String/Bytes output, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a recursively formatted field has no visible coherent `Debug` implementation.
+`tests/module-snapshots/types/derive-debug-runtime.dew` covers recursive structs, tuple and named enum variants, recursive generic nominal specialization, Bool, Unit, every integer width at boundary values, exact floating-point and packed-carrier output, escaped String/Bytes output, ambient `debug(value)` dispatch, bounded stdout, deterministic WAT, and identical Node/Wago execution. `derive-debug-missing-field-impl.dew` pins the source-located failure when a concrete recursively formatted field has no visible coherent `Debug` implementation; `derive-debug-generic-missing.dew` pins rejection when a concrete generic argument cannot satisfy the generated prerequisite.

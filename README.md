@@ -445,9 +445,11 @@ fn example() -> I32 {
 ```
 
 Struct fields are newline-delimited rather than comma-delimited. A struct or
-enum may append `derive(Eq)` after its closing brace to receive source-ordered
-`==` and `!=` implementations. Generic derives are conditional on `Eq` evidence
-for every concrete type argument and execute through static specialization.
+enum may append `derive(Eq)`, `derive(Debug)`, or `derive(Hash)` after its closing
+brace. Generated implementations visit fields and payloads in source order and
+require the corresponding trait evidence for every stored value. Generic owner
+parameters referenced by stored types receive conditional bounds and execute
+through static evidence specialization; phantom parameters remain unconstrained.
 
 ### Enums and pattern matching
 

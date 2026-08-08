@@ -3320,11 +3320,29 @@
   )
   (func (;39;) (type 47) (param (ref 37))
     i32.const 1
-    v128.const i32x4 0x70617257 0x20726570 0x6176207b 0x2065756c
-    v128.const i32x4 0x0000007d 0x00000000 0x00000000 0x00000000
-    array.new_fixed 48 2
+    v128.const i32x4 0x70617257 0x20726570 0x0000207b 0x00000000
+    array.new_fixed 48 1
     i32.const 0
-    i32.const 17
+    i32.const 10
+    struct.new 50
+    call 1
+    drop
+    i32.const 1
+    v128.const i32x4 0x756c6176 0x00203a65 0x00000000 0x00000000
+    array.new_fixed 48 1
+    i32.const 0
+    i32.const 7
+    struct.new 50
+    call 1
+    drop
+    local.get 0
+    struct.get 37 0
+    call 19
+    i32.const 1
+    v128.const i32x4 0x00007d20 0x00000000 0x00000000 0x00000000
+    array.new_fixed 48 1
+    i32.const 0
+    i32.const 2
     struct.new 50
     call 1
     drop

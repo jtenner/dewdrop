@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:8:8: error: NoMatchingMethod(5, 24, 98)\n  |\n8 |   debug(Wrapper {\n  |        ^"
+  ],
+  "warnings": [],
+  "output": null
+}

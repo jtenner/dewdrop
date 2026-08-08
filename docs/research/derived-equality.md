@@ -20,11 +20,13 @@ The parser retains ordered `DeriveRequest` records with exact source offsets.
 The clause accepts comma-separated names and one trailing comma. Unknown names remain visible collection diagnostics rather than being ignored.
 Duplicate names use a dedicated diagnostic whose primary location is the repeated
 request and whose secondary label identifies the first request.
-For a generic nominal, expansion adds an `Eq` prerequisite to every generated
-implementation owner parameter while preserving any source-declared bounds. A
-parameter that already names `Eq` is not duplicated. The derive request itself
-therefore remains concise while the generated implementation is available only
-when every concrete owner argument supplies coherent equality evidence.
+For a generic nominal, expansion adds an `Eq` prerequisite to each generated
+implementation owner parameter that occurs anywhere in a field or variant
+payload type, while preserving source-declared bounds. A parameter that already
+names `Eq` is not duplicated, and an unused phantom parameter remains
+unconstrained. Concrete field types are validated by ordinary generated-body
+method selection. The derive request is therefore available exactly when its
+stored values supply coherent equality evidence.
 
 ## Expansion
 
@@ -36,9 +38,9 @@ constructors are read-only outside that package. A single `derive(Eq)` request s
 - `impl<t: Eq> Ne for Type<t>` with `ne(self, right) -> Bool` delegating once to
   the generated `Eq` implementation and negating that result.
 
-The generic form is repeated for every owner parameter and preserves additional
-source bounds. Non-generic declarations use the same factory with an empty owner
-parameter list.
+The generic form is applied to every field-referenced owner parameter and
+preserves additional source bounds. Non-generic declarations use the same
+factory with an empty owner parameter list.
 
 The generated declarations and every synthetic expression carry the exact
 `Eq` request offset, so missing field evidence and coherence conflicts point at
@@ -74,16 +76,14 @@ factory after finding one supported non-generic request. On August 8, 2026, the
 release native collection benchmarks measured:
 
 ```text
-512 one-field structs without derives     595.76 us
-128 one-field structs with derive(Eq)      515.80 us
+512 one-field structs without derives     658.17 us
+128 one-field structs with derive(Eq)      593.75 us
 ```
 
-The empty-request fast path avoids even a derive-name map allocation; in the
-measured run it reduced the no-derive workload from 609.82 us to 595.76 us
-(about 2.3%). The runtime fixture's WAT fell from 715 to 566 lines after changing generated
-`Ne` to call generated `Eq` instead of duplicating every field/variant comparison,
-a 20.8% reduction for that fixture. Measurements are development observations,
-not regression budgets.
+The empty-request fast path avoids even a derive-name map allocation. Generated
+`Ne` continues to call generated `Eq` rather than duplicating every
+field/variant comparison. Measurements are development observations, not
+regression budgets.
 
 ## Validation
 
@@ -92,7 +92,8 @@ Coverage includes:
 - parser retention for struct and enum derive clauses;
 - coherent synthetic Eq/Ne implementation indexing;
 - diagnostics for unknown and duplicate derives;
-- conditional generic Eq/Ne implementation prerequisites without duplicate `Eq` bounds;
+- field- and payload-referenced generic Eq/Ne prerequisites without duplicate `Eq` bounds;
+- unconstrained phantom owner parameters;
 - derive-site diagnostics when a field type or concrete generic argument has no matching equality evidence;
 - no synthetic impl/method/body records for ordinary nominal declarations;
 - empty-enum derivation without spurious analysis diagnostics;
