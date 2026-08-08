@@ -201,8 +201,8 @@ wasi                 16         16                 0                5
 total               221        186                35               15
 nonempty stdout fixtures       103
 WAT/no-trap-only fixtures       68
-checked-in WAT lines       109,098
-checked-in WAT bytes      3,082,647
+checked-in WAT lines       109,334
+checked-in WAT bytes      3,087,206
 ```
 
 Successful runtime coverage includes recursive and nested calls, scalar,

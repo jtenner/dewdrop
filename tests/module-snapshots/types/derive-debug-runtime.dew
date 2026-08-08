@@ -1,3 +1,4 @@
+open dew.std.i32x4
 open dew.std.wasi
 
 struct Point {
@@ -90,5 +91,11 @@ pub fn main() -> U32 {
     text: "line\nquote: \" slash: \\ tab:\t λ"
     data: b"\x00A\xff\"\\\n"
   })
+  wasi_fd_write(1u32, b"|")
+  debug(Swar32::from_bits(305419896u32))
+  wasi_fd_write(1u32, b",")
+  debug(Swar64::from_bits(81985529216486895u64))
+  wasi_fd_write(1u32, b",")
+  debug(i32x4_splat(305419896).to_v128())
   0u32
 }
