@@ -148,9 +148,9 @@ two evidence-distinct transitive `read` specializations measured 1.41 ms ±
 nested bounded-generic derived-Eq fixture is 829 lines and 21,154 bytes. These
 are development observations rather than regression budgets.
 
-Dynamic trait values, escaping bounded generic function references, and other
-open-world boundaries still require a dictionary/trait-object ABI. Public
-interface fingerprints do not yet claim a stable dynamic generic-bound ABI.
+Closed linked runtime-trait boundaries now resolve symbolic bound evidence into exact dictionaries or devirtualized direct calls. Escaping bounded generic function references and standalone external callers still require a stable runtime-evidence parameter ABI; public interface fingerprints do not yet claim that ABI.
+
+A nominal argument carried through an ordinary generic specialization uses the common `eqref` carrier inside the specialized body. Before any direct call whose frozen target parameter is an exact local or imported nominal reference, backend emission now applies the target's final `ref.cast` for every generic specialization, not only generic implementation-method specializations. Scalar targets remain unchanged because the cast helper emits nothing for non-nominal carriers. This makes `read(Item {})` through `fn read<t: Value>` validate identically to the direct nominal call.
 
 ## Validation
 
@@ -164,5 +164,6 @@ implementation-owner bounds, nested obligations, recursive concrete evidence,
 caller-bound evidence, imported evidence, owner carrier/generic arguments,
 deterministic body-job rebasing, lowering retention, evidence-distinct
 same-carrier specialization, transitive caller-bound forwarding, concrete
-symbolic-call resolution, and bounded generic derived equality; marker traits;
+symbolic-call resolution, nominal generic-parameter restoration before direct
+implementation calls, and bounded generic derived equality; marker traits;
 and exact applied-trait argument matching.

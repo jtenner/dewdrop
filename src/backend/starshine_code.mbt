@@ -31,7 +31,6 @@ priv struct StarshineGenericSpecialization {
   specialization_shapes : @semantic.HirSpan
   specialization_evidence : @semantic.HirSpan
   specialization_abi_key : String
-  implementation_method : Bool
 }
 
 ///|
@@ -826,12 +825,12 @@ fn starshine_program_parameter_is_external_nominal(
 }
 
 ///|
-fn starshine_program_is_trait_method_specialization(
+fn starshine_program_is_generic_specialization(
   _planned : @semantic.PlannedProgramWasmGCLink,
   specialization : StarshineGenericSpecialization?,
 ) -> Bool {
   match specialization {
-    Some(value) => value.implementation_method
+    Some(_) => true
     None => false
   }
 }
@@ -900,9 +899,7 @@ fn starshine_finish_program_call(
   }
   let cross_module_or_specialized = caller_module_index !=
     function_.module_index ||
-    starshine_program_is_trait_method_specialization(
-      planned, generic_specialization,
-    )
+    starshine_program_is_generic_specialization(planned, generic_specialization)
   if fragments.length() == function_.parameters.length {
     for parameter_index, fragment in fragments {
       append_starshine_instructions(output, fragment)
@@ -8703,10 +8700,6 @@ fn starshine_program_function_specialization(
     specialization_shapes: function_.specialization_shapes,
     specialization_evidence: function_.specialization_evidence,
     specialization_abi_key: function_.specialization_abi_key,
-    implementation_method: match callable.kind {
-      @semantic.PlannedImplMethodCallable(_, _) => true
-      _ => false
-    },
   }
 }
 
@@ -9721,10 +9714,6 @@ fn emit_starshine_program_function_body(
       specialization_shapes: function_.specialization_shapes,
       specialization_evidence: function_.specialization_evidence,
       specialization_abi_key: function_.specialization_abi_key,
-      implementation_method: match callable.kind {
-        @semantic.PlannedImplMethodCallable(_, _) => true
-        _ => false
-      },
     })
   } else {
     None

@@ -336,6 +336,7 @@
   (func (;3;) (type 13) (param (ref 2)) (result (ref 2))
     local.get 0
     struct.get 2 0
+    ref.cast (ref 1)
     call 2
     struct.new 2
     ref.cast (ref 2)
@@ -415,6 +416,7 @@
   (func (;5;) (type 15) (param (ref 2)) (result (ref 2))
     local.get 0
     struct.get 2 0
+    ref.cast (ref 1)
     call 4
     struct.new 2
     ref.cast (ref 2)
