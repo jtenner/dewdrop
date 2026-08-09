@@ -816,6 +816,140 @@ test "transparent runtime trait wrappers devirtualize exact call-site evidence" 
 }
 
 ///|
+test "exact runtime trait flows erase generic prerequisite forwarding chains" {
+  let program = collect_program_manifest(
+    21975UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn identity(value: Read) -> Read {\n  value\n}\nfn invoke(value: Read) -> I32 {\n  let selected = if true {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\nfn forward(value: Read) -> I32 {\n  invoke(identity(value))\n}\npub fn main() -> I32 {\n  let selected = identity(Box {\n    value: 42\n  })\n  forward(selected)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let module_ = lowering.modules[0]
+  let identity = program.modules[0].lookup_value("identity").unwrap()
+  let invoke = program.modules[0].lookup_value("invoke").unwrap()
+  let forward = program.modules[0].lookup_value("forward").unwrap()
+  assert_true(lowering.elided_trait_wrappers.contains(identity))
+  assert_true(lowering.elided_trait_wrappers.contains(invoke))
+  assert_true(lowering.elided_trait_wrappers.contains(forward))
+  for expression_index, expression in module_.expressions {
+    assert_eq(expression.trait_object_coercion, NoInferredTraitObjectCoercion)
+    match expression.kind {
+      PlannedDynamicTraitCall(_, _, _, _, _, _) =>
+        fail(
+          "exact forwarding chain retained dynamic dispatch at \{expression_index}",
+        )
+      _ => ()
+    }
+  }
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 0)
+  assert_eq(link.modules[0].trait_methods.length(), 0)
+  assert_eq(link.trait_dictionary_globals.length(), 0)
+  let mut adapters = 0
+  let mut wrappers = 0
+  for function_ in link.functions {
+    match function_.kind {
+      PlannedWasmTraitAdapterFunction(_, _) => adapters += 1
+      _ => ()
+    }
+    if (
+        function_.declaration == identity ||
+        function_.declaration == invoke ||
+        function_.declaration == forward
+      ) &&
+      !function_.elided {
+      wrappers += 1
+    }
+  }
+  assert_eq(adapters, 0)
+  assert_eq(wrappers, 0)
+  let repeated = plan_program_lowering(program, analyzed)
+  assert_eq(repeated.elided_trait_wrappers, lowering.elided_trait_wrappers)
+  assert_eq(
+    repeated.modules[0].call_type_arguments.length(),
+    lowering.modules[0].call_type_arguments.length(),
+  )
+  assert_eq(
+    repeated.modules[0].trait_evidence_roots.length(),
+    lowering.modules[0].trait_evidence_roots.length(),
+  )
+}
+
+///|
+test "runtime trait flow joins retain differing implementation evidence" {
+  let program = collect_program_manifest(
+    21976UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Left {}\nstruct Right {}\nimpl Read for Left {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Read for Right {\n  fn read(self) -> I32 {\n    2\n  }\n}\nfn invoke(flag: Bool, left: Read, right: Read) -> I32 {\n  let selected = if flag {\n    left\n  } else {\n    right\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(true, Left {}, Right {})\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let module_ = lowering.modules[0]
+  let mut dynamic_calls = 0
+  let mut coercions = 0
+  for expression in module_.expressions {
+    match expression.kind {
+      PlannedDynamicTraitCall(_, _, _, _, _, _) => dynamic_calls += 1
+      _ => ()
+    }
+    match expression.trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
+      _ => ()
+    }
+  }
+  assert_eq(dynamic_calls, 1)
+  assert_eq(coercions, 2)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 2)
+  assert_eq(link.modules[0].trait_methods.length(), 2)
+}
+
+///|
+test "runtime trait wrapper directization preserves condition evaluation" {
+  let program = collect_program_manifest(
+    21977UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn condition() -> Bool {\n  true\n}\nfn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let invoke = program.modules[0].lookup_value("invoke").unwrap()
+  assert_false(lowering.elided_trait_wrappers.contains(invoke))
+  let mut dynamic_calls = 0
+  let mut coercions = 0
+  for expression in lowering.modules[0].expressions {
+    match expression.kind {
+      PlannedDynamicTraitCall(_, _, _, _, _, _) => dynamic_calls += 1
+      _ => ()
+    }
+    match expression.trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
+      _ => ()
+    }
+  }
+  assert_eq(dynamic_calls, 1)
+  assert_eq(coercions, 1)
+}
+
+///|
 test "runtime trait link executes imported traits and implementations" {
   let program = collect_program_manifest(
     2198UL,

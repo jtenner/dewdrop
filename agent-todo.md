@@ -66,7 +66,7 @@
 - [x] Define mutable boxed scalar receiver behavior as trait-owned snapshot mutation without source writeback; current receivers remain immutable.
 - [x] Define trait-object identity and equality semantics with no ambient identity or universal erased equality.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site trait boxes and dictionaries.
-- [ ] Add general prerequisite-aware trait-object escape analysis, devirtualization, and dead-wrapper elimination.
+- [ ] Extend runtime-trait flow analysis to symbolic dictionary forwarding inside open generic bodies and broader effect/escape summaries across non-transparent public APIs.
 
 ## Deterministic cleanup and executable language surface
 

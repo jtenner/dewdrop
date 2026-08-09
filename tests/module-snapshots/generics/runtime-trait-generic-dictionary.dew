@@ -34,16 +34,33 @@ impl<t: Marker> Value for Box<t> {
   }
 }
 
-fn invoke(value: Value) -> I32 {
-  value.value()
+fn invoke(flag: Bool, left: Value, right: Value) -> I32 {
+  let selected = if flag {
+    left
+  } else {
+    right
+  }
+  selected.value()
 }
 
 pub fn main() -> U32 {
-  debug(invoke(Box {
-    value: Yes {}
-  }))
-  debug(invoke(Box {
-    value: Other {}
-  }))
+  debug(invoke(
+    true,
+    Box {
+      value: Yes {}
+    },
+    Box {
+      value: Other {}
+    },
+  ))
+  debug(invoke(
+    false,
+    Box {
+      value: Yes {}
+    },
+    Box {
+      value: Other {}
+    },
+  ))
   wasi_fd_write(1u32, b"|trait:generic-dictionary")
 }

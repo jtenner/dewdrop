@@ -429,7 +429,7 @@ fn wasmgc_reachable_defined_functions(
     if (
         program_roots.contains(callable.declaration) ||
         callable.visibility == Public ||
-        !callable.compiler_owned
+        (program_roots.length() == 0 && !callable.compiler_owned)
       ) &&
       (!callable.is_test || emit_tests) {
       reachable[callable_index] = true

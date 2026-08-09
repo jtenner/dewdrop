@@ -12,7 +12,7 @@
   (type (;10;) (func (param (ref 4)) (result i32)))
   (type (;11;) (func (param (ref 5)) (result i32)))
   (type (;12;) (func (param (ref 6)) (result i32)))
-  (type (;13;) (func (param eqref) (result i32)))
+  (type (;13;) (func (param i32 eqref eqref) (result i32)))
   (type (;14;) (func (result i32)))
   (type (;15;) (func (param (ref 6)) (result i32)))
   (type (;16;) (func (param (ref 6)) (result i32)))
@@ -393,19 +393,27 @@
   (func (;5;) (type 11) (param (ref 5)) (result i32)
     i32.const 7
   )
-  (func (;6;) (type 13) (param eqref) (result i32)
-    (local eqref)
+  (func (;6;) (type 13) (param i32 eqref eqref) (result i32)
+    (local eqref eqref)
     local.get 0
-    local.tee 1
+    if (result eqref) ;; label = @1
+      local.get 1
+    else
+      local.get 2
+    end
+    local.set 3
+    local.get 3
+    local.tee 4
     ref.cast (ref 9)
     struct.get 9 0
-    local.get 1
+    local.get 4
     ref.cast (ref 9)
     struct.get 9 1
     struct.get 8 0
     call_ref 7
   )
   (func (;7;) (type 14) (result i32)
+    i32.const 1
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -416,8 +424,29 @@
     global.get 0
     ref.cast (ref 8)
     struct.new 9
+    i32.const 0
+    i64.const 0
+    f32.const 0x0p+0 (;=0;)
+    f64.const 0x0p+0 (;=0;)
+    v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
+    struct.new 5
+    struct.new 6
+    global.get 1
+    ref.cast (ref 8)
+    struct.new 9
     call 6
     call 2
+    i32.const 0
+    i32.const 0
+    i64.const 0
+    f32.const 0x0p+0 (;=0;)
+    f64.const 0x0p+0 (;=0;)
+    v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
+    struct.new 4
+    struct.new 6
+    global.get 0
+    ref.cast (ref 8)
+    struct.new 9
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)

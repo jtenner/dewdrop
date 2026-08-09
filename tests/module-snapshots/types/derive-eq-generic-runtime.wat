@@ -528,7 +528,9 @@
   )
   (func (;5;) (type 16) (param (ref 3) (ref 3)) (result i32)
     local.get 0
+    ref.cast (ref 3)
     local.get 1
+    ref.cast (ref 3)
     call 10
     i32.eqz
   )
@@ -657,7 +659,9 @@
   )
   (func (;7;) (type 18) (param (ref 4) (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     local.get 1
+    ref.cast (ref 4)
     call 6
     i32.eqz
   )
@@ -789,8 +793,10 @@
     if (result i32) ;; label = @1
       local.get 0
       struct.get 7 0
+      ref.cast (ref 3)
       local.get 1
       struct.get 7 0
+      ref.cast (ref 3)
       call 4
     else
       i32.const 0
@@ -798,8 +804,10 @@
     if (result i32) ;; label = @1
       local.get 0
       struct.get 7 1
+      ref.cast (ref 4)
       local.get 1
       struct.get 7 1
+      ref.cast (ref 4)
       call 6
     else
       i32.const 0

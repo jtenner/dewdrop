@@ -30,6 +30,7 @@ priv struct StarshineGenericSpecialization {
   shapes : Array[@semantic.PlannedValueShape]
   specialization_shapes : @semantic.HirSpan
   specialization_abi_key : String
+  implementation_method : Bool
 }
 
 ///|
@@ -825,21 +826,13 @@ fn starshine_program_parameter_is_external_nominal(
 
 ///|
 fn starshine_program_is_trait_method_specialization(
-  planned : @semantic.PlannedProgramWasmGCLink,
+  _planned : @semantic.PlannedProgramWasmGCLink,
   specialization : StarshineGenericSpecialization?,
 ) -> Bool {
-  let key = match specialization {
-    Some(value) => value.specialization_abi_key
-    None => return false
+  match specialization {
+    Some(value) => value.implementation_method
+    None => false
   }
-  for module_ in planned.modules {
-    for method_info in module_.trait_methods {
-      if method_info.implementation_specialization_abi_key == key && key != "" {
-        return true
-      }
-    }
-  }
-  false
 }
 
 ///|
@@ -8691,6 +8684,10 @@ fn starshine_program_function_specialization(
     shapes: fragments.specialization_shapes,
     specialization_shapes: function_.specialization_shapes,
     specialization_abi_key: function_.specialization_abi_key,
+    implementation_method: match callable.kind {
+      @semantic.PlannedImplMethodCallable(_, _) => true
+      _ => false
+    },
   }
 }
 
@@ -9704,6 +9701,10 @@ fn emit_starshine_program_function_body(
       shapes: module_fragments.specialization_shapes,
       specialization_shapes: function_.specialization_shapes,
       specialization_abi_key: function_.specialization_abi_key,
+      implementation_method: match callable.kind {
+        @semantic.PlannedImplMethodCallable(_, _) => true
+        _ => false
+      },
     })
   } else {
     None

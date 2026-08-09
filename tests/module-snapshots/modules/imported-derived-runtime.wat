@@ -406,7 +406,9 @@
   )
   (func (;5;) (type 18) (param (ref 3) (ref 3)) (result i32)
     local.get 0
+    ref.cast (ref 3)
     local.get 1
+    ref.cast (ref 3)
     call 4
     i32.eqz
   )

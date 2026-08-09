@@ -1,0 +1,53 @@
+open dew.std.wasi
+
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+trait Read {
+  fn read(self) -> I32
+}
+
+struct Box<t> {
+  value: t
+}
+
+impl<t: Value> Read for Box<t> {
+  fn read(self) -> I32 {
+    self.value.value()
+  }
+}
+
+fn identity(value: Read) -> Read {
+  value
+}
+
+fn invoke(value: Read) -> I32 {
+  let selected = if true {
+    value
+  } else {
+    value
+  }
+  selected.read()
+}
+
+fn forward(value: Read) -> I32 {
+  invoke(identity(value))
+}
+
+pub fn main() -> U32 {
+  let selected = identity(Box {
+    value: 42
+  })
+  if forward(selected) == 42 {
+    wasi_fd_write(1u32, b"trait:flow-devirtualized")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

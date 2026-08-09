@@ -432,8 +432,10 @@
     if (result i32) ;; label = @1
       local.get 0
       struct.get 6 0
+      ref.cast (ref 2)
       local.get 1
       struct.get 6 0
+      ref.cast (ref 2)
       call 8
     else
       i32.const 0
@@ -441,8 +443,10 @@
     if (result i32) ;; label = @1
       local.get 0
       struct.get 6 1
+      ref.cast (ref 3)
       local.get 1
       struct.get 6 1
+      ref.cast (ref 3)
       call 7
     else
       i32.const 0
@@ -452,12 +456,14 @@
     i64.const -3750763034362895579
     local.get 0
     struct.get 6 0
+    ref.cast (ref 2)
     call 9
     i64.xor
     i64.const 1099511628211
     i64.mul
     local.get 0
     struct.get 6 1
+    ref.cast (ref 3)
     call 10
     i64.xor
     i64.const 1099511628211

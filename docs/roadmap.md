@@ -291,7 +291,8 @@ erased fallback.
 - [x] Define mutable boxed scalar receiver behavior: a future mutable receiver changes only the trait-owned snapshot box and never writes back to the conversion source; current receivers remain immutable.
 - [x] Define trait-object identity and equality semantics: ambient identity is unobservable and no universal erased-value equality exists; equality requires an explicitly object-safe operation.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site boxes, dictionaries, adapters, and `ref.func` roots.
-- [ ] Add general prerequisite-aware trait-object escape analysis, devirtualization, and dead-wrapper elimination.
+- [x] Add prerequisite-aware exact trait-object flow analysis through non-captured locals, same-evidence branches, transparent parameter returns, and effect-free forwarding chains; directize closed evidence, rewrite non-escaping carriers, and remove dead private wrappers plus unused runtime artifacts.
+- [ ] Extend runtime-trait flow analysis to symbolic dictionary forwarding inside open generic bodies and broader effect/escape summaries across non-transparent public APIs.
 
 ## Expressions and statements
 

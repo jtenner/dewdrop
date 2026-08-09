@@ -65,11 +65,19 @@ Trait-object reference identity is not a language-observable operation. Copying 
 
 Dictionary identity is an implementation detail and never defines value equality. Two trait values may share one dictionary while containing unrelated receivers.
 
-## Conservative devirtualization
+## Exact-flow devirtualization and escape analysis
 
-A non-generic forwarding function whose entire result is one dynamic call on parameter zero, with every remaining parameter forwarded once in source order, receives a transparent trait-call summary. A direct call passing exact concrete coercion evidence with no generic owner arguments or prerequisites is rewritten to the selected implementation method. The receiver's trait coercion is removed, preserving source argument order while eliminating the envelope, scalar box, dictionary global, adapter, and `ref.func` authorization from that call site.
+Program lowering now tracks erased trait values with a conservative four-state analysis: pending, unknown/escaping, exact concrete evidence, or a forwarded parameter slot. Exact values retain the trait declaration, recursive evidence key, original body type, physical carrier shape, and nominal head. The analysis propagates through immutable and mutable locals whose assignments all agree, expression blocks, `if`/`match` joins, and transparent parameter-return selectors. A join remains exact only when every incoming path has the same trait, implementation/evidence tree, carrier, and nominal head; differing evidence remains dynamically dispatched.
 
-The forwarding wrapper remains available with its dynamic `call_ref` body because the current reachability plan conservatively retains user callables. General interprocedural escape analysis, dead-wrapper elimination, prerequisite-aware devirtualization, and arbitrary trait-object flow remain future optimization work.
+A local is rewritten to its concrete representation only when every local read participates in an exact flow selected for directization, every assignment has the same exact evidence, and the local is not captured. This is the non-escaping classification. Other uses, captures, unknown assignments, symbolic generic evidence, and differing joins keep the trait-object representation. Rewriting updates the local and all demanded flow expressions together, so initializer evaluation timing, branch evaluation, and source argument order remain unchanged.
+
+Dynamic calls and transparent forwarding chains with closed recursive evidence are rewritten to the exact implementation method. Generic owner carriers and ordered prerequisite roots are transferred to the ordinary specialization request, so prerequisite-bearing implementations use the same evidence-aware method specialization as static generic calls. Transparent trait identity returns become parameter-select expressions that still evaluate every source argument in order. Wrapper summaries are accepted only when eliminating the wrapper cannot remove another call, mutation, loop, or other potentially effectful expression.
+
+Private identity, forwarding, and dynamic-call wrappers are removed when every remaining reference comes only from wrappers in the same dead chain. Their roots are consumed before fragment planning and they are omitted from program reachability. Consequently, unused trait-object layouts, envelopes, scalar/SIMD boxes, dictionaries, adapters, globals, declarative `ref.func` roots, and `call_ref` sites are never planned. Public wrappers and any unknown or escaping flows remain available with ordinary dynamic dispatch.
+
+## Optimization measurements
+
+A release-native 256-call stress body whose calls all carry the same closed prerequisite evidence lowers in `20.40 ms ± 2.08 ms`. The contractual forwarding-chain fixture was also compiled with the exact-flow pass temporarily replaced by the preceding committed planner. The emitted binary shrank from 1,491 to 1,326 bytes (11.1%), and printed WAT shrank from 9,856 to 8,009 bytes (18.7%). The baseline contained one dictionary global, one `ref.func`, one `call_ref`, and five `struct.new` sites; the optimized fixture contains none of the dynamic operations and only three unrelated application/runtime allocation sites. This removes one per-call trait envelope allocation plus the one-time dictionary construction site.
 
 ## Determinism and static fast path
 
@@ -92,7 +100,10 @@ Coverage includes:
 - direct static trait dispatch with no dynamic machinery;
 - imported trait requirements, implementation methods, nominal receivers, dictionaries, and adapters;
 - generic implementation dictionaries keyed by distinct prerequisite evidence trees;
-- conservative transparent-wrapper devirtualization with no call-site box or dictionary;
+- exact-flow devirtualization through locals, branches, parameters, returns, and private forwarding chains;
+- prerequisite-aware generic direct calls with ordered recursive evidence;
+- dead wrapper, envelope, scalar/SIMD box, dictionary, adapter, global, `ref.func`, and `call_ref` elimination;
+- conservative retention for differing evidence joins and potentially effectful wrapper conditions;
 - identical runtime output and WAT under Node and Wago Core 3.
 
-The local dynamic fixture prints `42|7|trait:value`; the paired nominal static fixture prints `42|trait:static`; the imported dictionary fixture prints `42|trait:imported`; the five-carrier scalar/SIMD fixture prints `12345|trait:scalars`; the paired scalar static fixture prints `42|trait:scalar-static` without boxes, dictionaries, `ref.func`, or `call_ref`; local and imported generic-evidence fixtures print `427|trait:generic-dictionary` and `427|trait:imported-generic`; and the transparent-wrapper fixture prints `427|trait:devirtualized` with no dictionary global, adapter, `ref.func`, or scalar box at either call site.
+The local dynamic fixture prints `42|7|trait:value`; the paired nominal static fixture prints `42|trait:static`; the imported dictionary fixture prints `42|trait:imported`; the five-carrier scalar/SIMD fixture prints `12345|trait:scalars`; the paired scalar static fixture prints `42|trait:scalar-static` without boxes, dictionaries, `ref.func`, or `call_ref`; local and imported generic-evidence fixtures print `427|trait:generic-dictionary` and `427|trait:imported-generic`; the scalar/nominal devirtualization fixture prints `427|trait:devirtualized`; and the prerequisite-bearing flow fixture prints `trait:flow-devirtualized`. Both devirtualization WAT contracts contain zero dictionary globals, adapters, scalar/SIMD boxes, `ref.func`, or `call_ref`; the flow fixture also omits all three private forwarding wrappers.

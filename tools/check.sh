@@ -542,4 +542,17 @@ tools/wasi-parity/run.sh
 echo "== deterministic module snapshots: Node + Wago Core 3 =="
 tools/module-snapshots/run.sh
 
+runtime_trait_flow_wat="tests/module-snapshots/generics/runtime-trait-flow-devirtualized.wat"
+for forbidden in call_ref ref.func '(global' '(table'; do
+  if grep -Fq "$forbidden" "$runtime_trait_flow_wat"; then
+    echo "runtime trait flow devirtualization retained forbidden WAT: $forbidden" >&2
+    exit 1
+  fi
+done
+runtime_trait_flow_allocations="$(grep -Fc 'struct.new' "$runtime_trait_flow_wat")"
+if [[ "$runtime_trait_flow_allocations" != "3" ]]; then
+  echo "runtime trait flow devirtualization allocation-site budget changed: $runtime_trait_flow_allocations" >&2
+  exit 1
+fi
+
 echo "full Dew validation passed"
