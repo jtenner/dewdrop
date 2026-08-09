@@ -31,6 +31,13 @@ remain visible, and output order does not depend on completion order.
 `tools/check.sh --quick` retains the ordinary single native test command and
 default MoonBit build directory for the smallest incremental loop.
 
+The JavaScript target runs through a private `node` shim that supplies an
+8,192-KiB stack by default. The 512-level nested-object parser/inference stress
+fixture otherwise exceeds Node 26's default JavaScript stack after the semantic
+package grew, despite retaining the same source workload. This changes only the
+validation host limit: the fixture depth and all assertions remain intact.
+`DEW_CHECK_NODE_STACK_SIZE` accepts a positive integer override.
+
 ## Prebuilt parallel snapshot runner
 
 The module-snapshot runner previously launched `moon run` for both compilations
