@@ -33,3 +33,82 @@ test "bench exact runtime trait flow lowering calls=256" (it : @bench.T) {
     it.keep(lowering.elided_trait_wrappers.length())
   })
 }
+
+///|
+fn open_generic_runtime_trait_benchmark_source(
+  call_count : Int,
+  dynamic : Bool,
+) -> Bytes {
+  let output = Buffer(size_hint=call_count * 72 + 512)
+  output.write_string_utf8(
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\n",
+  )
+  if dynamic {
+    output.write_string_utf8(
+      "fn erase<t: Value>(condition: Bool, value: t) -> Value {\n  if condition {\n    value\n  } else {\n    value\n  }\n}\n",
+    )
+  } else {
+    output.write_string_utf8(
+      "fn erase<t: Value>(value: t) -> Value {\n  value\n}\n",
+    )
+  }
+  output.write_string_utf8(
+    "fn invoke(value: Value) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n",
+  )
+  for index in 0..<call_count {
+    output.write_string_utf8("  let value_")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(" = invoke(erase(")
+    if dynamic {
+      output.write_string_utf8("true, ")
+    }
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8("))\n")
+  }
+  output.write_string_utf8("  value_")
+  output.write_string_utf8((call_count - 1).to_string())
+  output.write_string_utf8("\n}\n")
+  output.to_bytes()
+}
+
+///|
+test "bench closed open-generic trait erasure link calls=256" (it : @bench.T) {
+  let program = collect_program_manifest(
+    2276UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.open_generic_closed", [
+        ManifestFile::new(
+          "main.dew",
+          open_generic_runtime_trait_benchmark_source(256, false),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  it.bench(fn() {
+    let lowering = plan_program_lowering(program, analyzed)
+    let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+    it.keep(link.defined_function_count)
+  })
+}
+
+///|
+test "bench dynamic open-generic trait erasure link calls=256" (it : @bench.T) {
+  let program = collect_program_manifest(
+    2277UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.open_generic_dynamic", [
+        ManifestFile::new(
+          "main.dew",
+          open_generic_runtime_trait_benchmark_source(256, true),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  it.bench(fn() {
+    let lowering = plan_program_lowering(program, analyzed)
+    let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+    it.keep(link.trait_dictionary_globals.length())
+  })
+}

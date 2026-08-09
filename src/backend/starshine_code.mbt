@@ -29,6 +29,7 @@ priv struct StarshineGenericSpecialization {
   generic_parameters : @semantic.HirSpan
   shapes : Array[@semantic.PlannedValueShape]
   specialization_shapes : @semantic.HirSpan
+  specialization_evidence : @semantic.HirSpan
   specialization_abi_key : String
   implementation_method : Bool
 }
@@ -7207,18 +7208,35 @@ fn starshine_emit_body_instructions(
         }
       }
       FinishStarshineTraitObjectCoercion(trait_, evidence) => {
-        let implementation = if evidence >= 0 &&
-          evidence < lowering.trait_evidence.length() {
-          match lowering.trait_evidence[evidence].kind {
-            @semantic.ConcreteInferredTraitEvidence(value, _) => value
-            @semantic.BoundInferredTraitEvidence(_) => 0UL
+        let (implementation, evidence_key) = match generic_specialization {
+          Some(specialization) =>
+            match
+              @semantic.program_resolved_trait_evidence_identity(
+                lowering,
+                planned,
+                specialization.specialization_shapes,
+                specialization.specialization_evidence,
+                evidence,
+              ) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, -302))
+            }
+          None => {
+            let implementation = if evidence >= 0 &&
+              evidence < lowering.trait_evidence.length() {
+              match lowering.trait_evidence[evidence].kind {
+                @semantic.ConcreteInferredTraitEvidence(value, _) => value
+                @semantic.BoundInferredTraitEvidence(_) => 0UL
+              }
+            } else {
+              0UL
+            }
+            (
+              implementation,
+              @semantic.wasmgc_trait_evidence_key(lowering, evidence),
+            )
           }
-        } else {
-          0UL
         }
-        let evidence_key = @semantic.wasmgc_trait_evidence_key(
-          lowering, evidence,
-        )
         let mut dictionary = None
         let mut dictionary_index = -1
         for index, candidate in planned.trait_dictionaries {
@@ -8683,6 +8701,7 @@ fn starshine_program_function_specialization(
     generic_parameters: starshine_callable_generic_parameters(callable),
     shapes: fragments.specialization_shapes,
     specialization_shapes: function_.specialization_shapes,
+    specialization_evidence: function_.specialization_evidence,
     specialization_abi_key: function_.specialization_abi_key,
     implementation_method: match callable.kind {
       @semantic.PlannedImplMethodCallable(_, _) => true
@@ -9700,6 +9719,7 @@ fn emit_starshine_program_function_body(
       generic_parameters: starshine_callable_generic_parameters(callable),
       shapes: module_fragments.specialization_shapes,
       specialization_shapes: function_.specialization_shapes,
+      specialization_evidence: function_.specialization_evidence,
       specialization_abi_key: function_.specialization_abi_key,
       implementation_method: match callable.kind {
         @semantic.PlannedImplMethodCallable(_, _) => true

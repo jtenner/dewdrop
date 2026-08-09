@@ -127,7 +127,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 244 fixtures:
+The suite contains 249 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -136,10 +136,10 @@ collections         15         10                 5                2
 control-flow       21         21                 0                1
 enums               11         11                 0                0
 functions           16         13                 3                0
-generics            13         11                 2                0
+generics            17         14                 3                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             29         22                 7                0
+modules             30         23                 7                0
 names                3          0                 3                0
 numeric             34         30                 4                1
 reachability         1          1                 0                0
@@ -149,11 +149,11 @@ text                 27         27                 0                4
 types               20         10                10                0
 wasi                 16         16                 0                5
 
-total               244        202                42               15
+total               249        206                43               15
 ```
 
-One hundred nineteen compiled fixtures assert nonempty stdout, fifteen assert normalized
-runtime traps, and sixty-eight intentionally remain WAT/no-trap fixtures. The
+One hundred twenty-two compiled fixtures assert nonempty stdout, fifteen assert normalized
+runtime traps, and sixty-nine intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
@@ -168,8 +168,10 @@ over-report failures, normalized traps, same-module multi-file compilation,
 static multi-module linking, expected-type imported overload references,
 flattened local/imported closures, unboxed mutable locals, shared boxed mutable
 captures, explicit test-mode execution, invalid-UTF-8 handling traps,
-`to_string`/`view`/`byte_at` out-of-bounds traps, and literal-range diagnostic
-matrices.
+`to_string`/`view`/`byte_at` out-of-bounds traps, literal-range diagnostic
+matrices, closed symbolic generic trait erasure with zero dispatch artifacts,
+dynamic scalar/packed/SIMD symbolic erasure, recursive prerequisite dictionaries,
+and imported generic providers with canonical cross-module trait layouts.
 
 ## Commands
 

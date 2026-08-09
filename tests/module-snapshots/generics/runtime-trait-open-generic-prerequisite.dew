@@ -1,0 +1,44 @@
+open dew.std.wasi
+
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+trait Read {
+  fn read(self) -> I32
+}
+
+struct Box<t> {
+  value: t
+}
+
+impl<t: Value> Read for Box<t> {
+  fn read(self) -> I32 {
+    self.value.value()
+  }
+}
+
+fn choose<t: Read>(condition: Bool, value: t) -> Read {
+  if condition {
+    value
+  } else {
+    value
+  }
+}
+
+fn invoke(value: Read) -> I32 {
+  value.read()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(choose(true, Box {
+    value: 42
+  })))
+  wasi_fd_write(1u32, b"|trait:open-generic-prerequisite")
+}

@@ -1,0 +1,64 @@
+open dew.std.i32x4
+open dew.std.wasi
+
+trait Tag {
+  fn tag(self) -> I32
+}
+
+impl Tag for I32 {
+  fn tag(self) -> I32 {
+    self
+  }
+}
+
+impl Tag for U8 {
+  fn tag(self) -> I32 {
+    2
+  }
+}
+
+impl Tag for I64 {
+  fn tag(self) -> I32 {
+    3
+  }
+}
+
+impl Tag for F32 {
+  fn tag(self) -> I32 {
+    4
+  }
+}
+
+impl Tag for F64 {
+  fn tag(self) -> I32 {
+    5
+  }
+}
+
+impl Tag for I32x4 {
+  fn tag(self) -> I32 {
+    6
+  }
+}
+
+pub fn choose<t: Tag>(condition: Bool, value: t) -> Tag {
+  if condition {
+    value
+  } else {
+    value
+  }
+}
+
+fn invoke(value: Tag) -> I32 {
+  value.tag()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(choose(true, 1)))
+  debug(invoke(choose(true, 2u8)))
+  debug(invoke(choose(true, 3i64)))
+  debug(invoke(choose(true, 4.0f32)))
+  debug(invoke(choose(true, 5.0f64)))
+  debug(invoke(choose(true, i32x4_splat(6))))
+  wasi_fd_write(1u32, b"|trait:open-generic-dynamic")
+}

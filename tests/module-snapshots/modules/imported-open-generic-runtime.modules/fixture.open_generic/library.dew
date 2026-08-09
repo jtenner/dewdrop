@@ -1,0 +1,17 @@
+pub trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+pub fn choose<t: Value>(condition: Bool, value: t) -> Value {
+  if condition {
+    value
+  } else {
+    value
+  }
+}

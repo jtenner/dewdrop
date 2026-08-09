@@ -1,0 +1,57 @@
+open dew.std.wasi
+
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+trait Read {
+  fn read(self) -> I32
+}
+
+struct Box<t> {
+  value: t
+}
+
+struct Item {
+  value: I32
+}
+
+impl<t: Value> Read for Box<t> {
+  fn read(self) -> I32 {
+    self.value.value()
+  }
+}
+
+impl Read for Item {
+  fn read(self) -> I32 {
+    self.value
+  }
+}
+
+fn erase<t: Read>(value: t) -> Read {
+  return value
+}
+
+fn forward<t: Read>(value: t) -> Read {
+  erase(value)
+}
+
+fn invoke(value: Read) -> I32 {
+  value.read()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(forward(Box {
+    value: 40
+  })))
+  debug(invoke(erase(Item {
+    value: 2
+  })))
+  wasi_fd_write(1u32, b"|trait:open-generic-closed")
+}

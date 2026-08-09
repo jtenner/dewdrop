@@ -1,0 +1,17 @@
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+fn erase<t: Value>(value: t) -> Value {
+  value
+}
+
+pub fn main() -> Value {
+  erase(false)
+}

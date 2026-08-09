@@ -555,4 +555,51 @@ if [[ "$runtime_trait_flow_allocations" != "3" ]]; then
   exit 1
 fi
 
+open_generic_closed_wat="tests/module-snapshots/generics/runtime-trait-open-generic-closed.wat"
+for forbidden in call_ref ref.func '(global' '(table'; do
+  if grep -Fq "$forbidden" "$open_generic_closed_wat"; then
+    echo "closed open-generic trait erasure retained forbidden WAT: $forbidden" >&2
+    exit 1
+  fi
+done
+open_generic_closed_allocations="$(grep -Fc 'struct.new' "$open_generic_closed_wat")"
+if [[ "$open_generic_closed_allocations" != "3" ]]; then
+  echo "closed open-generic trait erasure allocation-site budget changed: $open_generic_closed_allocations" >&2
+  exit 1
+fi
+
+assert_wat_count() {
+  local wat="$1"
+  local pattern="$2"
+  local expected="$3"
+  local label="$4"
+  local actual
+  actual="$(grep -Fc "$pattern" "$wat" || true)"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "$label WAT count changed for $pattern: expected $expected, got $actual" >&2
+    exit 1
+  fi
+}
+
+open_generic_dynamic_wat="tests/module-snapshots/generics/runtime-trait-open-generic-dynamic.wat"
+assert_wat_count "$open_generic_dynamic_wat" call_ref 1 "dynamic open-generic trait erasure"
+assert_wat_count "$open_generic_dynamic_wat" ref.func 6 "dynamic open-generic trait erasure"
+assert_wat_count "$open_generic_dynamic_wat" '(global' 6 "dynamic open-generic trait erasure"
+assert_wat_count "$open_generic_dynamic_wat" '(table' 0 "dynamic open-generic trait erasure"
+assert_wat_count "$open_generic_dynamic_wat" struct.new 19 "dynamic open-generic trait erasure"
+
+open_generic_prerequisite_wat="tests/module-snapshots/generics/runtime-trait-open-generic-prerequisite.wat"
+assert_wat_count "$open_generic_prerequisite_wat" call_ref 1 "prerequisite open-generic trait erasure"
+assert_wat_count "$open_generic_prerequisite_wat" ref.func 1 "prerequisite open-generic trait erasure"
+assert_wat_count "$open_generic_prerequisite_wat" '(global' 1 "prerequisite open-generic trait erasure"
+assert_wat_count "$open_generic_prerequisite_wat" '(table' 0 "prerequisite open-generic trait erasure"
+assert_wat_count "$open_generic_prerequisite_wat" struct.new 4 "prerequisite open-generic trait erasure"
+
+imported_open_generic_wat="tests/module-snapshots/modules/imported-open-generic-runtime.wat"
+assert_wat_count "$imported_open_generic_wat" call_ref 1 "imported open-generic trait erasure"
+assert_wat_count "$imported_open_generic_wat" ref.func 1 "imported open-generic trait erasure"
+assert_wat_count "$imported_open_generic_wat" '(global' 1 "imported open-generic trait erasure"
+assert_wat_count "$imported_open_generic_wat" '(table' 0 "imported open-generic trait erasure"
+assert_wat_count "$imported_open_generic_wat" struct.new 3 "imported open-generic trait erasure"
+
 echo "full Dew validation passed"

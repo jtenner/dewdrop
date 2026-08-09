@@ -293,7 +293,8 @@ erased fallback.
 - [x] Define trait-object identity and equality semantics: ambient identity is unobservable and no universal erased-value equality exists; equality requires an explicitly object-safe operation.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site boxes, dictionaries, adapters, and `ref.func` roots.
 - [x] Add prerequisite-aware exact trait-object flow analysis through non-captured locals, same-evidence branches, transparent parameter returns, and effect-free forwarding chains; directize closed evidence, rewrite non-escaping carriers, and remove dead private wrappers plus unused runtime artifacts.
-- [ ] Extend runtime-trait flow analysis to symbolic dictionary forwarding inside open generic bodies and broader effect/escape summaries across non-transparent public APIs.
+- [x] Resolve symbolic runtime-trait evidence through closed generic specializations; directize transparent tail/explicit-return parameter selectors, materialize exact dynamic dictionaries with recursive prerequisites, support imported generic providers, and canonicalize shared cross-module trait layouts.
+- [ ] Define the standalone externally callable generic runtime-evidence ABI and broaden effect/escape summaries across non-transparent public APIs.
 
 ## Expressions and statements
 

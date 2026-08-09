@@ -777,6 +777,254 @@ test "program specializations distinguish and forward trait evidence" {
 }
 
 ///|
+test "closed generic trait coercion forwarding erases dynamic artifacts" {
+  let program = collect_program_manifest(
+    21965UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn erase<t: Value>(value: t) -> Value {\n  value\n}\nfn invoke(value: Value) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  invoke(erase(42))\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let erase = program.modules[0].lookup_value("erase").unwrap()
+  let erase_body = program.modules[0].body_of(erase).unwrap()
+  let mut bound_coercions = 0
+  for
+    expression in erase_body.expressions.start..<(erase_body.expressions.start +
+    erase_body.expressions.length) {
+    match lowering.modules[0].expressions[expression].trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(_, evidence) =>
+        match lowering.modules[0].trait_evidence[evidence].kind {
+          BoundInferredTraitEvidence(0) => bound_coercions += 1
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  assert_eq(bound_coercions, 1)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let mut erase_specializations = 0
+  for function_ in link.functions {
+    if function_.declaration == erase &&
+      function_.specialization_shapes.length > 0 &&
+      !function_.elided {
+      erase_specializations += 1
+    }
+  }
+  assert_eq(erase_specializations, 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 0)
+  assert_eq(link.modules[0].trait_methods.length(), 0)
+  assert_eq(link.trait_dictionary_globals.length(), 0)
+  let mut direct_impl_calls = 0
+  for expression in lowering.modules[0].expressions {
+    match expression.kind {
+      PlannedDirectCall(target, receiver, _, _) if receiver >= 0 =>
+        match lowering.modules[0].functions.callable_of(target) {
+          Some({ kind: PlannedImplMethodCallable(_, _), .. }) =>
+            direct_impl_calls += 1
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  assert_eq(direct_impl_calls, 1)
+}
+
+///|
+test "open generic trait branches materialize exact specialization dictionaries" {
+  let program = collect_program_manifest(
+    21966UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn choose<t: Value>(flag: Bool, value: t) -> Value {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Value) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  invoke(choose(true, 42))\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let choose = program.modules[0].lookup_value("choose").unwrap()
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let mut choose_specializations = 0
+  let mut evidence_free_public_fallbacks = 0
+  for function_ in link.functions {
+    if function_.declaration == choose &&
+      function_.specialization_shapes.length > 0 &&
+      !function_.elided {
+      assert_eq(function_.specialization_evidence.length, 1)
+      choose_specializations += 1
+    }
+    if function_.declaration == choose &&
+      function_.visibility == Public &&
+      function_.specialization_evidence.length == 0 &&
+      !function_.elided {
+      evidence_free_public_fallbacks += 1
+    }
+  }
+  assert_eq(choose_specializations, 1)
+  assert_eq(evidence_free_public_fallbacks, 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 1)
+  assert_eq(link.modules[0].trait_methods.length(), 1)
+  assert_eq(link.trait_dictionary_globals.length(), 1)
+  assert_eq(
+    link.modules[0].trait_dictionaries[0].implementation,
+    program.modules[0].impls[0].declaration,
+  )
+}
+
+///|
+test "open generic trait dictionaries preserve recursive prerequisite evidence" {
+  let program = collect_program_manifest(
+    21968UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn choose<t: Read>(flag: Bool, value: t) -> Read {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(choose(true, Box {\n    value: 42\n  }))\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 1)
+  assert_eq(link.modules[0].trait_methods.length(), 1)
+  assert_eq(link.trait_dictionary_globals.length(), 1)
+  let dictionary = link.modules[0].trait_dictionaries[0]
+  assert_eq(dictionary.implementation, program.modules[0].impls[1].declaration)
+  assert_true(dictionary.evidence_key.length() > 0)
+  assert_true(
+    dictionary.evidence_key.contains(
+      program.modules[0].impls[0].declaration.to_string(),
+    ),
+  )
+}
+
+///|
+test "imported open generic trait branches link exact dictionaries" {
+  let program = collect_program_manifest(
+    21969UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open app.provider\nfn invoke(value: Value) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  invoke(choose(true, 42))\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.provider", [
+        ManifestFile::new(
+          "provider.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn choose<t: Value>(flag: Bool, value: t) -> Value {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics.length(), 0)
+  }
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 0)
+  assert_eq(link.modules[1].trait_dictionaries.length(), 1)
+  assert_eq(link.modules[1].trait_methods.length(), 1)
+  assert_eq(link.trait_dictionary_globals.length(), 1)
+  let consumer_layout = link.modules[0].trait_layouts[0]
+  let provider_layout = link.modules[1].trait_layouts[0]
+  assert_eq(
+    link.physical_type_index(0, consumer_layout.vtable_type_index),
+    link.physical_type_index(1, provider_layout.vtable_type_index),
+  )
+  assert_eq(
+    link.physical_type_index(0, consumer_layout.object_type_index),
+    link.physical_type_index(1, provider_layout.object_type_index),
+  )
+  let choose = program.modules[1].lookup_value("choose").unwrap()
+  let mut specializations = 0
+  for function_ in link.functions {
+    if function_.declaration == choose &&
+      function_.specialization_shapes.length > 0 &&
+      !function_.elided {
+      specializations += 1
+    }
+  }
+  assert_eq(specializations, 1)
+}
+
+///|
+test "generic trait coercions accept nominal implementation evidence" {
+  let program = collect_program_manifest(
+    21967UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    42\n  }\n}\nfn erase<t: Value>(value: t) -> Value {\n  value\n}\npub fn main() -> Value {\n  erase(Item {})\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let resolved = analyzed.frozen.interfaces[0].resolved_types
+  let generic = program.modules[0].generic_parameters[0]
+  assert_eq(
+    resolved.types[resolved.generic_bound_types[generic.bounds.start]],
+    resolved.types[resolved.impl_trait_types[0]],
+  )
+  assert_eq(analyzed.modules[0].inferred.impl_index.diagnostics.length(), 0)
+  let implementation = program.modules[0].impls[0].declaration
+  let mut valid = false
+  for candidate in analyzed.modules[0].inferred.impl_index.implementations {
+    if candidate.declaration == implementation {
+      valid = candidate.valid && candidate.coherent
+      break
+    }
+  }
+  assert_true(valid)
+  let trait_declaration = program.modules[0].lookup_trait("Value").unwrap()
+  let item_declaration = program.modules[0].lookup_type("Item").unwrap()
+  let mut bucketed = false
+  for bucket in analyzed.modules[0].inferred.impl_index.buckets {
+    if bucket.kind == TraitImplBucket(trait_declaration) &&
+      bucket.target_head == NominalImplTargetHead(item_declaration) {
+      bucketed = bucket.implementations.length == 1
+      break
+    }
+  }
+  assert_true(bucketed)
+  let main = program.modules[0].lookup_value("main").unwrap()
+  let call = body_calls(
+      program.modules[0],
+      program.modules[0].body_of(main).unwrap(),
+    )[0]
+  match analyzed.modules[0].inferred.call_targets[call] {
+    SelectedInferredCallTarget(_, arguments) =>
+      match
+        analyzed.modules[0].inferred.type_term(
+          analyzed.modules[0].inferred.call_type_arguments[arguments.start],
+        ) {
+        BodyResolvedType(type_) =>
+          assert_eq(
+            resolved.types[type_],
+            NominalType(program.modules[0].lookup_type("Item").unwrap()),
+          )
+        _ => fail("expected resolved nominal generic call argument")
+      }
+    _ => fail("expected selected generic call")
+  }
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+}
+
+///|
 test "transparent runtime trait wrappers devirtualize exact call-site evidence" {
   let program = collect_program_manifest(
     2197UL,

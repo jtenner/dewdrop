@@ -273,6 +273,48 @@ test "runtime trait values retain coercion evidence and dynamic method slots" {
 }
 
 ///|
+test "generic trait values coerce at explicit and tail return boundaries" {
+  let (_, _, _, inferred) = call_test_module(
+    718UL, b"trait Read {\n  fn read(self) -> I32\n}\nfn explicit<t: Read>(value: t) -> Read {\n  return value\n}\nfn tail<t: Read>(value: t) -> Read {\n  value\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let mut bound_coercions = 0
+  for coercion in inferred.trait_object_coercions {
+    match coercion {
+      SelectedInferredTraitObjectCoercion(_, evidence) =>
+        match inferred.trait_evidence[evidence].kind {
+          BoundInferredTraitEvidence(_) => bound_coercions += 1
+          _ => fail("expected generic-bound runtime trait evidence")
+        }
+      _ => ()
+    }
+  }
+  assert_eq(bound_coercions, 2)
+}
+
+///|
+test "generic trait coercion evidence is deterministic across body schedules" {
+  let collected = collect_bytes(
+    719UL, b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn choose<t: Value>(flag: Bool, value: t) -> Value {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Value) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  invoke(choose(true, 42))\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let forward_order : Array[Int] = []
+  let reverse_order : Array[Int] = []
+  for index in 0..<collected.bodies.length() {
+    forward_order.push(index)
+    reverse_order.push(collected.bodies.length() - index - 1)
+  }
+  let forward = infer_module_bodies_in_order(
+    collected, resolved, names, forward_order,
+  )
+  let reverse = infer_module_bodies_in_order(
+    collected, resolved, names, reverse_order,
+  )
+  assert_eq(forward, reverse)
+}
+
+///|
 test "runtime trait calls reject methods exposing Self outside the receiver" {
   let (collected, _, _, inferred) = call_test_module(
     717UL, b"trait Clone {\n  fn clone(self) -> Self\n}\nstruct Item {}\nimpl Clone for Item {\n  fn clone(self) -> Self {\n    self\n  }\n}\nfn invoke(value: Clone) -> Clone {\n  value.clone()\n}\n",

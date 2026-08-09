@@ -1,0 +1,9 @@
+open fixture.open_generic
+
+fn invoke(value: Value) -> I32 {
+  value.value()
+}
+
+pub fn main() -> I32 {
+  invoke(choose(true, 42))
+}

@@ -559,6 +559,10 @@ priv struct BasicBodyInferencer {
   pending_trait_coercion_expressions : Array[ExprId]
   pending_trait_coercion_types : Array[BodyTypeId]
   pending_trait_coercion_origins : Array[TypeConstraintOrigin]
+  pending_call_obligation_expressions : Array[ExprId]
+  pending_call_obligation_declarations : Array[DeclId]
+  pending_call_obligation_type_arguments : Array[HirSpan]
+  pending_call_obligation_offsets : Array[UInt64]
   mut consumed_member_roots : Array[Bool]
   mut has_member_expressions : Bool
   call_expressions : Array[ExprId]
@@ -678,6 +682,10 @@ fn BasicBodyInferencer::new(
     pending_trait_coercion_expressions: [],
     pending_trait_coercion_types: [],
     pending_trait_coercion_origins: [],
+    pending_call_obligation_expressions: [],
+    pending_call_obligation_declarations: [],
+    pending_call_obligation_type_arguments: [],
+    pending_call_obligation_offsets: [],
     consumed_member_roots: empty_inference_bool_array,
     has_member_expressions: false,
     call_expressions: [],
@@ -6985,7 +6993,7 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
 }
 
 ///|
-fn BasicBodyInferencer::validate_call_obligations(
+fn BasicBodyInferencer::validate_call_obligations_now(
   self : BasicBodyInferencer,
   expression : ExprId,
   declaration : DeclId,
@@ -7046,6 +7054,30 @@ fn BasicBodyInferencer::validate_call_obligations(
       length: self.trait_evidence_roots.length() - evidence_start,
     }
   }
+}
+
+///|
+fn BasicBodyInferencer::validate_call_obligations(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  declaration : DeclId,
+  type_arguments : HirSpan,
+  offset : UInt64,
+) -> Unit {
+  for index in 0..<type_arguments.length {
+    if self.body_type_is_unresolved(
+        self.call_type_arguments[type_arguments.start + index],
+      ) {
+      self.pending_call_obligation_expressions.push(expression)
+      self.pending_call_obligation_declarations.push(declaration)
+      self.pending_call_obligation_type_arguments.push(type_arguments)
+      self.pending_call_obligation_offsets.push(offset)
+      return
+    }
+  }
+  self.validate_call_obligations_now(
+    expression, declaration, type_arguments, offset,
+  )
 }
 
 ///|
@@ -7879,8 +7911,8 @@ fn BasicBodyInferencer::constrain_block_items(
         if self.callable_index < 0 {
           self.diagnose(ReturnOutsideCallable(offset))
         } else if value >= 0 {
-          self.constrain_assignable(
-            self.expression_type(value),
+          self.constrain_expression_assignable(
+            value,
             self.declared_return_type,
             return_type_origin(value, offset),
           )
@@ -8287,16 +8319,43 @@ fn BasicBodyInferencer::constrain_expressions(
 
 ///|
 fn BasicBodyInferencer::constrain_root(self : BasicBodyInferencer) -> Unit {
+  let root_expression = match self.body.root {
+    ExpressionBodyRoot(expression) => Some(expression)
+    BlockBodyRoot(block) => {
+      let items = self.collected.blocks[block].items
+      if items.length == 0 {
+        None
+      } else {
+        match self.collected.block_items[items.start + items.length - 1] {
+          HirExpressionItem(expression, _) => Some(expression)
+          _ => None
+        }
+      }
+    }
+  }
   self.result_type = match self.body.root {
     ExpressionBodyRoot(expression) => self.expression_type(expression)
     BlockBodyRoot(block) => self.block_type(block)
   }
   if self.callable_index >= 0 {
-    self.constrain_assignable(
-      self.result_type,
-      self.declared_return_type,
-      return_type_origin(semantic_id_local(self.body.id), self.body.offset),
+    let origin = return_type_origin(
+      semantic_id_local(self.body.id),
+      self.body.offset,
     )
+    match root_expression {
+      Some(expression) =>
+        self.constrain_expression_assignable(
+          expression,
+          self.declared_return_type,
+          origin,
+        )
+      None =>
+        self.constrain_assignable(
+          self.result_type,
+          self.declared_return_type,
+          origin,
+        )
+    }
   } else if self.body.kind == ModuleLetBody {
     match self.module_values {
       Some(module_values) => {
@@ -8905,6 +8964,24 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
 }
 
 ///|
+fn BasicBodyInferencer::resolve_pending_call_obligations(
+  self : BasicBodyInferencer,
+) -> Unit {
+  for index in 0..<self.pending_call_obligation_expressions.length() {
+    self.validate_call_obligations_now(
+      self.pending_call_obligation_expressions[index],
+      self.pending_call_obligation_declarations[index],
+      self.pending_call_obligation_type_arguments[index],
+      self.pending_call_obligation_offsets[index],
+    )
+  }
+  self.pending_call_obligation_expressions.clear()
+  self.pending_call_obligation_declarations.clear()
+  self.pending_call_obligation_type_arguments.clear()
+  self.pending_call_obligation_offsets.clear()
+}
+
+///|
 fn BasicBodyInferencer::resolve_pending_trait_object_coercions(
   self : BasicBodyInferencer,
 ) -> Unit {
@@ -8925,6 +9002,7 @@ fn BasicBodyInferencer::finish(
   self : BasicBodyInferencer,
 ) -> BodyInferenceJobResult {
   self.resolve_pending_trait_object_coercions()
+  self.resolve_pending_call_obligations()
   self.solver_diagnostic_end = self.solver.diagnostics.length()
   self.finalize_types()
   self.compact_results()
