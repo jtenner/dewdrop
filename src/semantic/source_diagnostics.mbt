@@ -434,6 +434,7 @@ fn ImplIndexDiagnostic::primary_declaration(
   match self {
     InvalidImplTraitHead(declaration, _)
     | InvalidImplTargetHead(declaration, _)
+    | OrphanTraitImpl(declaration, _, _, _)
     | UnknownTraitImplMethod(declaration, _, _)
     | MissingTraitMethod(declaration, _, _)
     | DuplicateTraitImplMethod(declaration, _, _, _)
@@ -452,10 +453,32 @@ fn ImplIndexDiagnostic::secondary_declarations(
   self : ImplIndexDiagnostic,
 ) -> Array[DeclId] {
   match self {
+    OrphanTraitImpl(_, trait_declaration, target_head, _) =>
+      match target_head {
+        NominalImplTargetHead(target_declaration) =>
+          [trait_declaration, target_declaration]
+        _ => [trait_declaration]
+      }
     OverlappingTraitImpl(_, first, second, _, _) => [first, second]
     DuplicateTraitImplMethod(_, first, second, _) => [first, second]
     DuplicateInherentMethod(_, first, second, _) => [first, second]
     _ => []
+  }
+}
+
+///|
+fn ImplIndexDiagnostic::secondary_declaration_message(
+  self : ImplIndexDiagnostic,
+  declaration : DeclId,
+) -> String {
+  match self {
+    OrphanTraitImpl(_, trait_declaration, _, _) =>
+      if declaration == trait_declaration {
+        "foreign trait is declared here"
+      } else {
+        "foreign target type is declared here"
+      }
+    _ => "conflicting implementation is here"
   }
 }
 
@@ -722,7 +745,9 @@ pub fn collect_compiler_source_diagnostics(
         if candidate != declaration {
           match
             compiler_label_for_declaration(
-              program, candidate, "conflicting implementation is here",
+              program,
+              candidate,
+              diagnostic.secondary_declaration_message(candidate),
             ) {
             Some(label) => secondary.push(label)
             None => ()

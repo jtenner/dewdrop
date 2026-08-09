@@ -40,9 +40,10 @@ The private frozen-interface payload first advanced from V7 to V8 for aligned
 `generic_bound_types`, then to V9 when imported call checking required one bound
 span per frozen generic parameter. V10 adds the owner generic-parameter span to
 every frozen implementation so imported generic evidence can instantiate and
-enforce its own prerequisites. The outer persistent envelope and filenames
-advance with it to `v10-<fingerprint>.dwi`; older artifacts are ignored by
-construction rather than decoded under a newer layout.
+enforce its own prerequisites. V11 retains that layout while adding package-
+ownership validation for frozen implementation evidence. The outer persistent
+envelope and filenames now use `v11-<fingerprint>.dwi`; older artifacts are
+ignored by construction rather than decoded under a newer policy.
 
 ## Call-site obligation checking
 
@@ -155,7 +156,7 @@ interface fingerprints do not yet claim a stable dynamic generic-bound ABI.
 
 Tests cover function, builtin, and trait declarations; ordered multi-bound
 parsing; nested applied bounds adjacent to the outer `>`; unbounded parameters;
-flat HIR retention; trait-namespace resolution; byte-identical V10
+flat HIR retention; trait-namespace resolution; byte-identical V11
 frozen-interface serialization/deserialization; local and imported call-bound
 checking; local, transitive, operator, and imported generic-implementation
 prerequisites; symbolic generic-body operators, methods, applied trait arguments,

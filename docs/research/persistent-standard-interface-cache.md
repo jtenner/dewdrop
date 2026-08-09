@@ -33,7 +33,7 @@ Generated `--bootstrap-std` providers are intentionally not cacheable. Bootstrap
 `serialize_frozen_interfaces` writes a private deterministic binary format beginning with:
 
 ```text
-DEW_FROZEN_INTERFACES_V10\0
+DEW_FROZEN_INTERFACES_V11\0
 ```
 
 It serializes diagnostics-free `FrozenModuleInterface` records, including:
@@ -49,12 +49,12 @@ It serializes diagnostics-free `FrozenModuleInterface` records, including:
 - module content/transitive interface fingerprints and direct dependency records;
 - source locations and preamble declaration counts.
 
-No maps, addresses, filesystem paths, or worker-order values enter the artifact. Arrays remain in their existing frozen semantic order. Decoding checks the version, every byte range, bounded collection counts, enum tags, Booleans, UTF-8 strings, trailing bytes, module identities, duplicate modules, and the exact expected standard-module count.
+No maps, addresses, filesystem paths, or worker-order values enter the artifact. Arrays remain in their existing frozen semantic order. Decoding checks the version, every byte range, bounded collection counts, enum tags, Booleans, UTF-8 strings, trailing bytes, module identities, duplicate modules, package ownership of every frozen implementation, and the exact expected standard-module count.
 
 The serialized payload is wrapped in a second cache-file envelope:
 
 ```text
-DEW_STD_INTERFACE_CACHE_V10\0
+DEW_STD_INTERFACE_CACHE_V11\0
 SHA-256(payload)
 payload
 ```
@@ -66,7 +66,7 @@ The envelope checksum catches corruption that might otherwise remain structurall
 The default location is:
 
 ```text
-.dew-cache/interfaces/v10-<bundle-fingerprint>.dwi
+.dew-cache/interfaces/v11-<bundle-fingerprint>.dwi
 ```
 
 The cache root may be changed with:
@@ -111,7 +111,8 @@ Permanent coverage includes:
 - explicit disabled mode;
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
-- versioned external package miss/hit behavior and `v10-*.dwi` filenames;
+- versioned external package miss/hit behavior and `v11-*.dwi` filenames;
+- rejection of injected ordinary orphan evidence before a cache hit can expose it;
 - fail-visible package identity, version, and integrity mismatches;
 - dependency integrity changes producing a distinct bundle key;
 - byte-identical Wasm between cache miss, cache hit, on-disk uncached, and generated bootstrap providers;

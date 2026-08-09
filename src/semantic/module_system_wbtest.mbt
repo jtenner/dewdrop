@@ -426,7 +426,7 @@ test "imported public types and traits resolve in consumer signatures" {
     ProgramManifest::new([
       ManifestModule::new("app.consumer", [
         ManifestFile::new(
-          "consumer.dew", b"open app.library\npub fn keep(value: Item<I32>) -> Item<I32> {\n  value\n}\nimpl Show for Item<I32> {\n  fn show(self) -> I32 {\n    1\n  }\n}\n",
+          "consumer.dew", b"open app.library\npub struct Local {}\npub fn keep(value: Item<I32>) -> Item<I32> {\n  value\n}\nimpl Show for Local {\n  fn show(self) -> I32 {\n    1\n  }\n}\n",
         ),
       ]),
       ManifestModule::new("app.library", [

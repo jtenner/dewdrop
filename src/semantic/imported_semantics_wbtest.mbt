@@ -639,48 +639,202 @@ test "program semantic analysis retains manifest order and external calls" {
 }
 
 ///|
-test "independently imported implementation overlaps are incoherent" {
+test "ordinary orphan implementations are rejected before export" {
   let program = collect_program_manifest(
     1850UL,
     ProgramManifest::new([
-      ManifestModule::new("app.consumer", [
+      ManifestModule::new("app.orphan", [
         ManifestFile::new(
-          "consumer.dew", b"open app.types\nopen app.left\nopen app.right\npub fn run() -> I32 {\n  1\n}\n",
+          "orphan.dew", b"open app.traits\nopen app.types\nimpl<a> Read for Pair<a, I32> {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.traits", [
+        ManifestFile::new(
+          "traits.dew", b"pub trait Read {\n  fn read(self) -> I32\n}\n",
         ),
       ]),
       ManifestModule::new("app.types", [
+        ManifestFile::new("types.dew", b"pub struct Pair<a, b> {}\n"),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let index = analyzed.modules[0].inferred.impl_index
+  assert_eq(index.diagnostics.length(), 1)
+  match index.diagnostics[0] {
+    OrphanTraitImpl(implementation, trait_, target, offset) => {
+      assert_eq(implementation, program.modules[0].impls[0].declaration)
+      assert_eq(semantic_id_module(trait_), 1851UL)
+      match target {
+        NominalImplTargetHead(declaration) =>
+          assert_eq(semantic_id_module(declaration), 1852UL)
+        _ => fail("expected imported nominal orphan target")
+      }
+      assert_eq(offset, 31UL)
+    }
+    _ => fail("expected ordinary orphan implementation diagnostic")
+  }
+  let orphan = index
+    .implementation(program.modules[0].impls[0].declaration)
+    .unwrap()
+  assert_false(orphan.valid)
+  assert_false(orphan.coherent)
+  assert_eq(analyzed.frozen.interfaces[0].implementations.length(), 0)
+}
+
+///|
+test "orphan ownership is independent of manifest module order" {
+  let check = fn(reverse : Bool) raise {
+    let orphan = ManifestModule::new("app.orphan", [
+      ManifestFile::new(
+        "orphan.dew", b"open app.traits\nopen app.types\nimpl Read for Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+      ),
+    ])
+    let traits = ManifestModule::new("app.traits", [
+      ManifestFile::new(
+        "traits.dew", b"pub trait Read {\n  fn read(self) -> I32\n}\n",
+      ),
+    ])
+    let types = ManifestModule::new("app.types", [
+      ManifestFile::new("types.dew", b"pub struct Item {}\n"),
+    ])
+    let program = collect_program_manifest(
+      1855UL,
+      ProgramManifest::new(
+        if reverse {
+          [types, traits, orphan]
+        } else {
+          [orphan, traits, types]
+        },
+      ),
+    )
+    let analyzed = analyze_program_semantics(program)
+    let orphan_index = program.module_index("app.orphan").unwrap()
+    let trait_index = program.module_index("app.traits").unwrap()
+    let type_index = program.module_index("app.types").unwrap()
+    let diagnostics = analyzed.modules[orphan_index].inferred.impl_index.diagnostics
+    assert_eq(diagnostics.length(), 1)
+    match diagnostics[0] {
+      OrphanTraitImpl(_, trait_declaration, target, _) => {
+        assert_eq(
+          semantic_id_module(trait_declaration),
+          program.modules[trait_index].module_id,
+        )
+        match target {
+          NominalImplTargetHead(target_declaration) =>
+            assert_eq(
+              semantic_id_module(target_declaration),
+              program.modules[type_index].module_id,
+            )
+          _ => fail("expected manifest-order nominal target")
+        }
+      }
+      _ => fail("expected manifest-order orphan diagnostic")
+    }
+  }
+  check(false)
+  check(true)
+}
+
+///|
+test "foreign orphan implementations remain module-local evidence" {
+  let program = collect_program_manifest(
+    1860UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.foreign", [
         ManifestFile::new(
-          "types.dew", b"pub struct Pair<a, b> {}\npub trait Read {\n  fn read(self) -> I32\n}\n",
+          "foreign.dew", b"open app.traits\nopen app.types\nforeign impl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn run(value: Item) -> I32 {\n  value.read()\n}\n",
         ),
       ]),
-      ManifestModule::new("app.left", [
+      ManifestModule::new("app.traits", [
         ManifestFile::new(
-          "left.dew", b"open app.types\nimpl<a> Read for Pair<a, I32> {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+          "traits.dew", b"pub trait Read {\n  fn read(self) -> I32\n}\n",
         ),
       ]),
-      ManifestModule::new("app.right", [
+      ManifestModule::new("app.types", [
+        ManifestFile::new("types.dew", b"pub struct Item {}\n"),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.impl_index.diagnostics.length(), 0)
+  assert_true(
+    analyzed.modules[0].inferred.impl_index
+    .implementation(program.modules[0].impls[0].declaration)
+    .unwrap().coherent,
+  )
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  assert_eq(analyzed.frozen.interfaces[0].implementations.length(), 0)
+}
+
+///|
+test "trait or nominal package ownership permits ordinary implementations" {
+  let program = collect_program_manifest(
+    1870UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.owner", [
         ManifestFile::new(
-          "right.dew", b"open app.types\nimpl<b> Read for Pair<Bool, b> {\n  fn read(self) -> I32 {\n    2\n  }\n}\n",
+          "owner.dew", b"open app.library\npub trait LocalRead {\n  fn local_read(self) -> I32\n}\npub struct Local {}\nimpl LocalRead for Foreign {\n  fn local_read(self) -> I32 {\n    1\n  }\n}\nimpl ForeignRead for Local {\n  fn foreign_read(self) -> I32 {\n    2\n  }\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.library", [
+        ManifestFile::new(
+          "library.dew", b"pub trait ForeignRead {\n  fn foreign_read(self) -> I32\n}\npub struct Foreign {}\n",
         ),
       ]),
     ]),
   )
   let analyzed = analyze_program_semantics(program)
   let index = analyzed.modules[0].inferred.impl_index
-  let mut overlaps = 0
-  for diagnostic in index.diagnostics {
-    match diagnostic {
-      OverlappingTraitImpl(_, _, _, _, _) => overlaps += 1
-      _ => ()
-    }
+  assert_eq(index.diagnostics.length(), 0)
+  let local_impl_start = program.modules[0].impls.length() - 2
+  assert_true(
+    index
+    .implementation(program.modules[0].impls[local_impl_start].declaration)
+    .unwrap().coherent,
+  )
+  assert_true(
+    index
+    .implementation(program.modules[0].impls[local_impl_start + 1].declaration)
+    .unwrap().coherent,
+  )
+  assert_eq(analyzed.frozen.interfaces[0].implementations.length(), 2)
+}
+
+///|
+test "external traits on primitives require foreign implementation syntax" {
+  let program = collect_program_manifest(
+    1880UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.primitive", [
+        ManifestFile::new(
+          "primitive.dew", b"open app.traits\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nforeign impl Read for I64 {\n  fn read(self) -> I32 {\n    64\n  }\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.traits", [
+        ManifestFile::new(
+          "traits.dew", b"pub trait Read {\n  fn read(self) -> I32\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let index = analyzed.modules[0].inferred.impl_index
+  assert_eq(index.diagnostics.length(), 1)
+  match index.diagnostics[0] {
+    OrphanTraitImpl(_, _, PrimitiveImplTargetHead(I32Type), _) => ()
+    _ => fail("expected primitive orphan implementation diagnostic")
   }
-  assert_eq(overlaps, 1)
-  let mut coherent_imports = 0
-  for implementation in index.implementations {
-    let owner = semantic_id_module(implementation.declaration)
-    if (owner == 1852UL || owner == 1853UL) && implementation.coherent {
-      coherent_imports += 1
-    }
-  }
-  assert_eq(coherent_imports, 0)
+  let local_impl_start = program.modules[0].impls.length() - 2
+  assert_false(
+    index
+    .implementation(program.modules[0].impls[local_impl_start].declaration)
+    .unwrap().valid,
+  )
+  assert_true(
+    index
+    .implementation(program.modules[0].impls[local_impl_start + 1].declaration)
+    .unwrap().coherent,
+  )
+  assert_eq(analyzed.frozen.interfaces[0].implementations.length(), 0)
 }

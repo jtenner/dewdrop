@@ -781,6 +781,49 @@ fn starshine_program_argument_needs_nominal_cast(
 }
 
 ///|
+fn starshine_program_local_external_argument_needs_nominal_cast(
+  lowering : @semantic.PlannedModuleLowering?,
+  expression : @semantic.ExprId,
+  parameter_index : Int,
+) -> Bool {
+  let lowering = match lowering {
+    Some(value) => value
+    None => return false
+  }
+  let argument = starshine_program_call_argument(
+    lowering, expression, parameter_index,
+  )
+  if argument < 0 || argument >= lowering.expressions.length() {
+    return false
+  }
+  match lowering.expressions[argument].kind {
+    @semantic.PlannedLocalGet(_)
+    | @semantic.PlannedBlockExpression(_)
+    | @semantic.PlannedIfExpression(_, _, _)
+    | @semantic.PlannedMatchExpression(_, _)
+    | @semantic.PlannedWhileExpression(_, _, _) => true
+    _ => false
+  }
+}
+
+///|
+fn starshine_program_parameter_is_external_nominal(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  parameter_index : Int,
+) -> Bool {
+  if parameter_index < 0 || parameter_index >= function_.parameters.length {
+    return false
+  }
+  let fragments = planned.modules[function_.module_index]
+  match
+    fragments.function_value_types[function_.parameters.start + parameter_index] {
+    @semantic.WasmExternalNominalRefValue(_) => true
+    _ => false
+  }
+}
+
+///|
 fn starshine_program_is_trait_method_specialization(
   planned : @semantic.PlannedProgramWasmGCLink,
   specialization : StarshineGenericSpecialization?,
@@ -861,18 +904,28 @@ fn starshine_finish_program_call(
           }
       }
   }
-  if (
-      caller_module_index != function_.module_index ||
-      starshine_program_is_trait_method_specialization(
-        planned, generic_specialization,
-      )
-    ) &&
-    fragments.length() == function_.parameters.length {
+  let cross_module_or_specialized = caller_module_index !=
+    function_.module_index ||
+    starshine_program_is_trait_method_specialization(
+      planned, generic_specialization,
+    )
+  if fragments.length() == function_.parameters.length {
     for parameter_index, fragment in fragments {
       append_starshine_instructions(output, fragment)
-      if starshine_program_argument_needs_nominal_cast(
+      let needs_cast = if cross_module_or_specialized {
+        starshine_program_argument_needs_nominal_cast(
           lowering, expression, parameter_index,
+        )
+      } else if starshine_program_parameter_is_external_nominal(
+          planned, function_, parameter_index,
         ) {
+        starshine_program_local_external_argument_needs_nominal_cast(
+          lowering, expression, parameter_index,
+        )
+      } else {
+        false
+      }
+      if needs_cast {
         starshine_append_program_argument_cast(
           planned, function_, parameter_index, output,
         )

@@ -1,0 +1,37 @@
+open fixture.traits
+open fixture.types
+open dew.std.wasi
+
+pub struct Local {}
+
+pub trait LocalMark {
+  fn local_mark(self) -> I32
+}
+
+impl Mark for Local {
+  fn mark(self) -> I32 {
+    3
+  }
+}
+
+impl LocalMark for Item {
+  fn local_mark(self) -> I32 {
+    4
+  }
+}
+
+foreign impl Mark for Item {
+  fn mark(self) -> I32 {
+    5
+  }
+}
+
+pub fn main() -> U32 {
+  let local = Local {}
+  let item = Item {}
+  if local.mark() * 100 + item.local_mark() * 10 + item.mark() == 345 {
+    wasi_fd_write(1u32, b"trait:package-ownership")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

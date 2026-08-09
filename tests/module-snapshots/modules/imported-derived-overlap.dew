@@ -1,6 +1,6 @@
 open fixture.derived_overlap
 
-impl Debug for Item {
+foreign impl Debug for Item {
   fn debug(self) -> Unit {}
 }
 

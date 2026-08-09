@@ -1941,6 +1941,35 @@ fn frozen_declaration_kind(
 }
 
 ///|
+fn frozen_interface_implementations_are_package_owned(
+  interface_ : FrozenModuleInterface,
+) -> Bool {
+  for implementation in interface_.implementations {
+    if implementation.trait_type < 0 {
+      continue
+    }
+    let (trait_head, _) = resolved_impl_trait_head(
+      interface_.resolved_types,
+      implementation.trait_type,
+    )
+    let (target_head, _) = resolved_impl_target_head(
+      interface_.resolved_types,
+      implementation.target_type,
+    )
+    match trait_head {
+      Some(trait_declaration) if target_head != ErrorImplTargetHead &&
+        !trait_impl_is_package_owned(
+          interface_.module_id,
+          trait_declaration,
+          target_head,
+        ) => return false
+      _ => ()
+    }
+  }
+  true
+}
+
+///|
 fn frozen_impl_type_is_visible(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
@@ -2093,12 +2122,28 @@ pub fn freeze_module_interface(
       collected.preamble_declaration_count {
       continue
     }
+    let trait_type = resolved.impl_trait_types[implementation_index]
+    if trait_type >= 0 {
+      let (trait_head, _) = resolved_impl_trait_head(resolved, trait_type)
+      let (target_head, _) = resolved_impl_target_head(
+        resolved,
+        resolved.impl_target_types[implementation_index],
+      )
+      match trait_head {
+        Some(trait_declaration) if target_head != ErrorImplTargetHead &&
+          !trait_impl_is_package_owned(
+            collected.module_id,
+            trait_declaration,
+            target_head,
+          ) => continue
+        _ => ()
+      }
+    }
     let target_visible = frozen_impl_type_is_visible(
       resolved,
       resolved.impl_target_types[implementation_index],
       evidence_visible_declarations,
     )
-    let trait_type = resolved.impl_trait_types[implementation_index]
     let trait_visible = trait_type < 0 ||
       frozen_impl_type_is_visible(
         resolved, trait_type, evidence_visible_declarations,

@@ -122,7 +122,7 @@ identical dependency is materialized does not change package source identity.
 
 The persistent interface-cache key separately hashes every resolved dependency's
 name, exact version, source, package integrity, and expected interface fingerprint.
-Changing lock resolution or dependency content therefore creates a different V10
+Changing lock resolution or dependency content therefore creates a different V11
 cache artifact.
 
 ## Explicit module manifests

@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V10\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V11\x00"
 
 ///|
 fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
@@ -927,7 +927,14 @@ pub fn deserialize_frozen_interfaces(
   let count = reader.read_count(1, "interface")
   let interfaces : Array[FrozenModuleInterface] = []
   for _ in 0..<count {
-    interfaces.push(reader.read_interface())
+    let interface_ = reader.read_interface()
+    if reader.error is None &&
+      !frozen_interface_implementations_are_package_owned(interface_) {
+      return Err(
+        "frozen-interface cache contains orphan implementation evidence",
+      )
+    }
+    interfaces.push(interface_)
   }
   match reader.error {
     Some(error) => Err(error)

@@ -59,6 +59,26 @@ pub type NameId = Int
 let semantic_id_mask : UInt64 = 0xffffffffUL
 
 ///|
+let standard_library_module_base : ModuleId = 0xffff0000UL
+
+///|
+fn semantic_module_is_standard_package(module_id : ModuleId) -> Bool {
+  module_id >= standard_library_module_base && module_id <= semantic_id_mask
+}
+
+///|
+/// Package manifests currently contribute exactly one ordinary module. The
+/// compiler-owned standard library is the sole multi-module package and uses
+/// one reserved module-ID range.
+fn semantic_modules_share_package(left : ModuleId, right : ModuleId) -> Bool {
+  left == right ||
+  (
+    semantic_module_is_standard_package(left) &&
+    semantic_module_is_standard_package(right)
+  )
+}
+
+///|
 fn make_semantic_id(module_id : ModuleId, local_index : Int) -> UInt64 {
   guard module_id <= semantic_id_mask else {
     abort("semantic module ID exceeds 32 bits")

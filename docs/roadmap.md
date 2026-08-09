@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 8, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
+> Living roadmap as of August 9, 2026. Ordering is directional rather than contractual. Items may move as implementation and benchmarks expose better boundaries. `agent-todo.md` is the execution-only view of every unchecked item in this document; completed work remains recorded here but must not remain in that backlog.
 
 ## Current baseline
 
@@ -18,8 +18,8 @@ Dew currently has:
 - first-class `_test.dew` semantics, frozen test metadata, test-mode exports, 198 direct standard tests, and independent UTF/SWAR/WASI differential harnesses;
 - selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/semantic/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
-- a SHA-256 content-addressed persistent V10 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
-- 223 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 187 compiled WAT/runtime snapshots plus 36 compiler-error snapshots.
+- a SHA-256 content-addressed persistent V11 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
+- 243 deterministic compiler fixtures organized by language/runtime feature across calls, collections, control flow, enums, functions, generics, lanes, memory, modules, names, numeric operations, reachability, structs, tests, text, types, and WASI: 201 compiled WAT/runtime snapshots plus 42 compiler-error snapshots.
 
 ## Immediate execution queue
 
@@ -91,7 +91,7 @@ runtime artifacts.
 - [x] Elide dead imported signatures, external type references, callables, and nominal layouts before final program indexing.
 - [x] Make installed/on-disk import-selected standard sources the default driver provider and require byte identity with generated bootstrap sources.
 - [x] Add a persistent SHA-256 content-addressed frozen-interface cache for compiler-owned standard modules, including deterministic private serialization, cache-hit injection, checksum/identity validation, and fail-visible corruption handling.
-- [x] Extend persistent interface caching to versioned external user packages with dependency closure keys and V10 artifacts; source recollection and generated bootstrap removal remain deferred until installed artifact provenance is reliable.
+- [x] Extend persistent interface caching to versioned external user packages with dependency closure keys and V11 artifacts; source recollection and generated bootstrap removal remain deferred until installed artifact provenance is reliable.
 
 **Done when:** installed package lookup can replace generated bootstrap byte
 providers without changing frozen interfaces or Wasm bytes, an ordinary module
@@ -144,7 +144,7 @@ direct typed references.
 
 ### 7. Define the executable generic ABI
 
-- [x] Propagate selected executable evidence for parsed generic bounds through closed-call specialization; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, local/imported call checking, generic-body symbolic selection, recursive per-call evidence freezing, evidence-aware specialization identity, generic-implementation prerequisite checking, and cache V10 round trips are implemented. Dynamic trait boundaries still require dictionaries.
+- [x] Propagate selected executable evidence for parsed generic bounds through closed-call specialization; ordered `t: Trait + Trait` syntax, HIR retention, trait-namespace resolution, local/imported call checking, generic-body symbolic selection, recursive per-call evidence freezing, evidence-aware specialization identity, generic-implementation prerequisite checking, and cache V11 round trips are implemented. Dynamic trait boundaries still require dictionaries.
 - [x] Solve call-site and generic-implementation prerequisite obligations using local and imported coherent evidence.
 - [x] Define shared physical-carrier specializations and one nullable-`eqref` fallback for each public generic exported by the root module.
 - [x] Emit exact-reference-to-erased callable adapters only when an escaping generic reference's concrete signature differs from its `eqref` fallback.
@@ -158,7 +158,7 @@ direct typed references.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
 - [x] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct leaves and nested generic struct/enum graphs clone across erased boundaries with exact variant subtype reconstruction, lazy scalar box/unbox conversion, and deterministic recursive helpers at cyclic nominal edges. Structural callbacks use deterministic flattened closure subtypes that capture the source closure once, recursively wrap nested callback parameters/results, convert scalar leaves, populate function-valued struct/enum payload fields during nominal reconstruction, and dispatch through the source direct or environment-first signature. Instantiated generic aggregate fields and enum pattern bindings retain concrete structural signatures and execute through the ordinary function-value call path.
-- [x] Complete the implemented ABI/interface compatibility layer: V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V10 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, and imported generic boundaries.
+- [x] Complete the implemented ABI/interface compatibility layer: V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V11 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, and imported generic boundaries.
 - [ ] Add installed artifact-only interface recovery so versioned dependencies can compile from verified cached artifacts without recollecting source.
 - [ ] Define and implement trait objects, dictionaries, and `call_ref` dispatch after static generic execution is stable.
 
@@ -217,8 +217,8 @@ erased fallback.
 - [ ] Define selective imports, if desired.
 - [ ] Define re-exports.
 - [ ] Define package visibility if module visibility is not sufficient.
-- [ ] Specify orphan/foreign impl visibility across modules.
-- [ ] Prevent private foreign evidence from leaking into public signatures.
+- [x] Specify package ownership for ordinary trait implementations and keep explicit `foreign impl` evidence private to its exact declaring module.
+- [x] Prevent private foreign evidence from leaking into public signatures or frozen interfaces.
 - [ ] Define canonical standard operator trait identities across imports.
 - [ ] Diagnose local declarations that conflict with canonical ambient traits.
 - [ ] Decide default-preamble opt-out syntax.
@@ -243,7 +243,7 @@ erased fallback.
 
 ### Remaining generic work
 
-- [x] Parse and represent ordered generic bounds through `t: Trait + Trait`, flat HIR provenance, trait-namespace resolution, and private frozen-interface cache V10 serialization.
+- [x] Parse and represent ordered generic bounds through `t: Trait + Trait`, flat HIR provenance, trait-namespace resolution, and private frozen-interface cache V11 serialization.
 - [x] Add trait obligations to generic signatures and enforce them at local and imported calls.
 - [x] Enforce local and imported generic-implementation prerequisites when selecting coherent evidence.
 - [x] Make generic bodies consume their declared symbolic evidence for operator and method selection.
@@ -274,7 +274,7 @@ erased fallback.
 - [x] Add public/private evidence visibility checks and keep `foreign impl` evidence module-local.
 - [x] Diagnose structural overlap between independently imported or local/imported evidence.
 - [x] Add trait obligations on generic functions.
-- [ ] Add cross-package orphan rules.
+- [x] Enforce cross-package orphan rules for ordinary local, generic, derived, imported, and cache-backed trait evidence.
 - [ ] Define negative impls only if required.
 - [ ] Define sealed traits only if required.
 

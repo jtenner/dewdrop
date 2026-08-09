@@ -68,6 +68,7 @@ pub struct IndexedTraitMethodDispatch {
 pub enum ImplIndexDiagnostic {
   InvalidImplTraitHead(DeclId, UInt64)
   InvalidImplTargetHead(DeclId, UInt64)
+  OrphanTraitImpl(DeclId, DeclId, ImplTargetHead, UInt64)
   OverlappingTraitImpl(DeclId, DeclId, DeclId, ImplTargetHead, UInt64)
   UnknownTraitImplMethod(DeclId, DeclId, UInt64)
   MissingTraitMethod(DeclId, DeclId, UInt64)
@@ -85,6 +86,7 @@ pub fn ImplIndexDiagnostic::offset(self : ImplIndexDiagnostic) -> UInt64 {
   match self {
     InvalidImplTraitHead(_, offset)
     | InvalidImplTargetHead(_, offset)
+    | OrphanTraitImpl(_, _, _, offset)
     | OverlappingTraitImpl(_, _, _, _, offset)
     | UnknownTraitImplMethod(_, _, offset)
     | MissingTraitMethod(_, _, offset)
@@ -188,6 +190,26 @@ fn impl_head_key(head : ImplTargetHead) -> (Int, UInt64) {
     ErrorImplTargetHead => (-1, 0UL)
     PrimitiveImplTargetHead(primitive) => (0, impl_primitive_key(primitive))
     NominalImplTargetHead(declaration) => (1, declaration)
+  }
+}
+
+///|
+fn trait_impl_is_package_owned(
+  owner : ModuleId,
+  trait_declaration : DeclId,
+  target_head : ImplTargetHead,
+) -> Bool {
+  if semantic_modules_share_package(
+      owner,
+      semantic_id_module(trait_declaration),
+    ) {
+    return true
+  }
+  match target_head {
+    NominalImplTargetHead(declaration) =>
+      semantic_modules_share_package(owner, semantic_id_module(declaration))
+    PrimitiveImplTargetHead(_) => semantic_module_is_standard_package(owner)
+    ErrorImplTargetHead => true
   }
 }
 
@@ -449,16 +471,17 @@ fn impl_diagnostic_rank(diagnostic : ImplIndexDiagnostic) -> Int {
   match diagnostic {
     InvalidImplTraitHead(_, _) => 0
     InvalidImplTargetHead(_, _) => 1
-    OverlappingTraitImpl(_, _, _, _, _) => 2
-    UnknownTraitImplMethod(_, _, _) => 3
-    MissingTraitMethod(_, _, _) => 4
-    DuplicateTraitImplMethod(_, _, _, _) => 5
-    TraitMethodReceiverMismatch(_, _, _) => 6
-    TraitMethodParameterCountMismatch(_, _, _, _, _) => 7
-    TraitMethodGenericParameterCountMismatch(_, _, _, _, _) => 8
-    TraitMethodParameterTypeMismatch(_, _, _, _) => 9
-    TraitMethodReturnTypeMismatch(_, _, _) => 10
-    DuplicateInherentMethod(_, _, _, _) => 11
+    OrphanTraitImpl(_, _, _, _) => 2
+    OverlappingTraitImpl(_, _, _, _, _) => 3
+    UnknownTraitImplMethod(_, _, _) => 4
+    MissingTraitMethod(_, _, _) => 5
+    DuplicateTraitImplMethod(_, _, _, _) => 6
+    TraitMethodReceiverMismatch(_, _, _) => 7
+    TraitMethodParameterCountMismatch(_, _, _, _, _) => 8
+    TraitMethodGenericParameterCountMismatch(_, _, _, _, _) => 9
+    TraitMethodParameterTypeMismatch(_, _, _, _) => 10
+    TraitMethodReturnTypeMismatch(_, _, _) => 11
+    DuplicateInherentMethod(_, _, _, _) => 12
   }
 }
 
@@ -1265,6 +1288,26 @@ fn build_module_impl_index_internal(
         }
       }
     }
+    match kind {
+      TraitIndexedImpl(trait_declaration) if valid &&
+        !implementation.foreign_ &&
+        !trait_impl_is_package_owned(
+          collected.module_id,
+          trait_declaration,
+          target_head,
+        ) => {
+        valid = false
+        diagnostics.push(
+          OrphanTraitImpl(
+            implementation.declaration,
+            trait_declaration,
+            target_head,
+            offset,
+          ),
+        )
+      }
+      _ => ()
+    }
     implementations.push({
       declaration: implementation.declaration,
       kind,
@@ -1736,12 +1779,18 @@ pub fn build_module_impl_index_with_imports(
   let pattern_scratch = ImplPatternScratch::new(resolved)
   for right_index in local_implementation_count..<index.implementations.length() {
     let right = index.implementations[right_index]
+    if !right.valid || !right.coherent {
+      continue
+    }
     let right_trait = match right.kind {
       TraitIndexedImpl(declaration) => declaration
       InherentIndexedImpl => continue
     }
     for left_index in 0..<right_index {
       let left = index.implementations[left_index]
+      if !left.valid || !left.coherent {
+        continue
+      }
       let left_trait = match left.kind {
         TraitIndexedImpl(declaration) => declaration
         InherentIndexedImpl => continue

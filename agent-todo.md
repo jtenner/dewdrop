@@ -30,8 +30,6 @@
 - [ ] Decide and define selective imports.
 - [ ] Define re-exports.
 - [ ] Define package visibility if module visibility is insufficient.
-- [ ] Specify orphan and foreign-implementation visibility across modules and packages.
-- [ ] Prevent private foreign evidence from leaking into public signatures.
 - [ ] Define canonical standard operator-trait identities across imports.
 - [ ] Diagnose local declarations that conflict with canonical ambient traits.
 - [ ] Decide default-preamble opt-out syntax.
@@ -59,7 +57,6 @@
 - [ ] Define higher-kinded types only if concrete library requirements justify them.
 - [ ] Define variance only if subtyping or mutable generic references expose a need.
 - [ ] Keep inference variables out of frozen module type interners.
-- [ ] Add cross-package orphan rules.
 - [ ] Define negative implementations only if required.
 - [ ] Define sealed traits only if required.
 - [x] Define trait-object source syntax through bare trait value types.

@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "left.dew:3:1: error: OrphanTraitImpl(\n  12889196855296,\n  12897786789889,\n  NominalImplTargetHead(12897786789888),\n  20,\n)\n  |\n3 | impl Mark for Item {\n  | ^\n  = types.dew:3:1: foreign trait is declared here\n  = types.dew:1:1: foreign target type is declared here",
+    "right.dew:3:1: error: OrphanTraitImpl(\n  12893491822592,\n  12897786789889,\n  NominalImplTargetHead(12897786789888),\n  20,\n)\n  |\n3 | impl Mark for Item {\n  | ^\n  = types.dew:3:1: foreign trait is declared here\n  = types.dew:1:1: foreign target type is declared here"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -491,7 +491,7 @@ This is safer than inventing a special number such as `-1` to mean â€œmissing.â€
 
 ### Traits and implementations
 
-A trait describes behavior a type can provide. An implementation connects that behavior to a type. Dew uses trait evidence for operators, methods, generic APIs, hashing, indexing, and other static dispatch.
+A trait describes behavior a type can provide. An implementation connects that behavior to a type. Dew uses trait evidence for operators, methods, generic APIs, hashing, indexing, and other static dispatch. An ordinary trait implementation must be owned by its package through either the trait declaration or the target's nominal head; primitive targets belong to `dew.std`. Explicit `foreign impl` supplies private module-local evidence when neither side is owned and is never exported.
 
 A bare trait name in a value position denotes an erased runtime trait value. Passing a nominal reference value to an expected trait type constructs a small WasmGC envelope containing the erased receiver and a shared immutable typed-function-reference dictionary. Scalar, packed, and SIMD values receive one carrier-specific snapshot box only at that erased boundary. Calls load the source-ordered method slot and use `call_ref`; calls whose concrete implementation is statically known remain direct and allocate nothing for dispatch. Linked imported traits and implementations use the same representation. Closed generic implementations materialize exact dictionaries and method specializations keyed by ordered prerequisite evidence. Transparent non-generic forwarding wrappers are conservatively devirtualized at exact call sites. Symbolic erasure inside an open generic body and general escape analysis remain provisional work.
 

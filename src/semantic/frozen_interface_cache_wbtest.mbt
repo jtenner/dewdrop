@@ -65,6 +65,49 @@ test "frozen interface cache preserves derived implementation evidence" {
 }
 
 ///|
+test "frozen interface decoder rejects orphan implementation evidence" {
+  let program = collect_program_manifest(
+    7753UL,
+    ProgramManifest::new([
+      ManifestModule::new("cache.orphan", [
+        ManifestFile::new(
+          "orphan.dew", b"open cache.traits\nopen cache.types\nimpl Read for Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+        ),
+      ]),
+      ManifestModule::new("cache.traits", [
+        ManifestFile::new(
+          "traits.dew", b"pub trait Read {\n  fn read(self) -> I32\n}\n",
+        ),
+      ]),
+      ManifestModule::new("cache.types", [
+        ManifestFile::new("types.dew", b"pub struct Item {}\n"),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  assert_eq(frozen.interfaces[0].implementations.length(), 0)
+  let collected = program.modules[0]
+  let implementation_index = collected.impls.length() - 1
+  let implementation = collected.impls[implementation_index]
+  frozen.interfaces[0].implementations.push({
+    declaration: implementation.declaration,
+    generic_parameters: collected.generic_parameters_of(
+      implementation.declaration,
+    ),
+    trait_type: frozen.interfaces[0].resolved_types.impl_trait_types[implementation_index],
+    target_type: frozen.interfaces[0].resolved_types.impl_target_types[implementation_index],
+    location: collected
+    .declaration_location(implementation.declaration)
+    .unwrap(),
+  })
+  let encoded = serialize_frozen_interfaces(frozen.interfaces).unwrap()
+  assert_eq(
+    deserialize_frozen_interfaces(encoded),
+    Err("frozen-interface cache contains orphan implementation evidence"),
+  )
+}
+
+///|
 test "frozen interface decoder rejects corruption and trailing bytes" {
   assert_true(deserialize_frozen_interfaces(b"bad") is Err(_))
   let oversized = Buffer()
