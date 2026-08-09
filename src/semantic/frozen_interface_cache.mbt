@@ -928,11 +928,11 @@ pub fn deserialize_frozen_interfaces(
   let interfaces : Array[FrozenModuleInterface] = []
   for _ in 0..<count {
     let interface_ = reader.read_interface()
-    if reader.error is None &&
-      !frozen_interface_implementations_are_package_owned(interface_) {
-      return Err(
-        "frozen-interface cache contains orphan implementation evidence",
-      )
+    if reader.error is None {
+      match frozen_interface_implementation_evidence_error(interface_) {
+        Some(error) => return Err(error)
+        None => ()
+      }
     }
     interfaces.push(interface_)
   }

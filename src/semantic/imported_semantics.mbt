@@ -618,6 +618,7 @@ pub fn resolve_module_imports(
         )
       }
     }
+    let mut field_cursor = 0
     let mut variant_cursor = 0
     for declaration in interface_.declarations {
       if declaration.source_kind != StructDecl &&
@@ -625,16 +626,18 @@ pub fn resolve_module_imports(
         continue
       }
       let start = fields.length()
-      for field in interface_.fields {
-        if field.declaration == declaration.declaration {
-          fields.push({
-            field: field.field,
-            declaration: field.declaration,
-            variant: field.variant,
-            name: field.name,
-            type_: importer.import_type(interface_index, field.type_),
-          })
-        }
+      while field_cursor < interface_.fields.length() &&
+            interface_.fields[field_cursor].declaration ==
+            declaration.declaration {
+        let field = interface_.fields[field_cursor]
+        fields.push({
+          field: field.field,
+          declaration: field.declaration,
+          variant: field.variant,
+          name: field.name,
+          type_: importer.import_type(interface_index, field.type_),
+        })
+        field_cursor += 1
       }
       field_spans[declaration.declaration] = {
         start,

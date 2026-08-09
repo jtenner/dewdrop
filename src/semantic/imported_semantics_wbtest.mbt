@@ -289,6 +289,25 @@ test "local value declarations shadow imported public values" {
 }
 
 ///|
+test "imported aggregate field cursor preserves declaration grouping" {
+  let (_, frozen, imports, _, _) = imported_semantic_program(
+    b"open app.library\npub fn run() -> I32 {\n  1\n}\n", b"pub struct First {\n  first: I32\n}\nstruct Hidden {\n  hidden: I32\n}\npub fn divider() -> I32 {\n  0\n}\npub struct Second {\n  second: I64\n}\n",
+  )
+  let first = frozen.interfaces[1]
+    .declaration_named("First", FrozenTypeDeclaration)
+    .unwrap()
+  let second = frozen.interfaces[1]
+    .declaration_named("Second", FrozenTypeDeclaration)
+    .unwrap()
+  let first_fields = imports.fields_of(first)
+  let second_fields = imports.fields_of(second)
+  assert_eq(first_fields.length(), 1)
+  assert_eq(first_fields[0].name, "first")
+  assert_eq(second_fields.length(), 1)
+  assert_eq(second_fields[0].name, "second")
+}
+
+///|
 test "imported implementation evidence is translated into consumer types" {
   let (_, frozen, imports, _, _) = imported_semantic_program(
     b"open app.library\npub fn run() -> I32 {\n  1\n}\n", b"pub struct Item {}\npub trait Mark {\n  fn mark(self) -> I32\n}\nimpl Mark for Item {\n  fn mark(self) -> I32 {\n    1\n  }\n}\n",
@@ -799,6 +818,44 @@ test "trait or nominal package ownership permits ordinary implementations" {
     .unwrap().coherent,
   )
   assert_eq(analyzed.frozen.interfaces[0].implementations.length(), 2)
+}
+
+///|
+test "compiler preamble traits remain standard-owned in ordinary modules" {
+  let program = collect_program_manifest(
+    1859UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open app.types\nimpl Eq for Item {\n  fn eq(self, right: Self) -> Bool {\n    true\n  }\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.types", [
+        ManifestFile::new("types.dew", b"pub struct Item {}\n"),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let diagnostics = analyzed.modules[0].inferred.impl_index.diagnostics
+  assert_eq(diagnostics.length(), 1)
+  match diagnostics[0] {
+    OrphanTraitImpl(_, trait_declaration, target, _) => {
+      assert_true(
+        semantic_module_is_standard_package(
+          semantic_id_module(trait_declaration),
+        ),
+      )
+      match target {
+        NominalImplTargetHead(target_declaration) =>
+          assert_eq(
+            semantic_id_module(target_declaration),
+            program.modules[1].module_id,
+          )
+        _ => fail("expected imported nominal target")
+      }
+    }
+    _ => fail("expected preamble-trait orphan diagnostic")
+  }
 }
 
 ///|

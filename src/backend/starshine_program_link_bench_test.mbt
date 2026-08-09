@@ -29,6 +29,30 @@ fn backend_link_chain_manifest(module_count : Int) -> @semantic.ProgramManifest 
 }
 
 ///|
+fn backend_generic_call_chain_source(call_count : Int) -> Bytes {
+  let source = Buffer(size_hint=call_count * 48 + 256)
+  source.write_string_utf8(
+    "fn identity<t>(value: t) -> t {\n  value\n}\nfn chain<t>(value: t) -> t {\n",
+  )
+  for index in 0..<call_count {
+    source.write_string_utf8("  let value_")
+    source.write_string_utf8(index.to_string())
+    source.write_string_utf8(" = identity(")
+    if index == 0 {
+      source.write_string_utf8("value")
+    } else {
+      source.write_string_utf8("value_")
+      source.write_string_utf8((index - 1).to_string())
+    }
+    source.write_string_utf8(")\n")
+  }
+  source.write_string_utf8("  value_")
+  source.write_string_utf8((call_count - 1).to_string())
+  source.write_string_utf8("\n}\npub fn main() -> I32 {\n  chain(1)\n}\n")
+  source.to_bytes()
+}
+
+///|
 test "bench program fragment planning modules=64" (it : @bench.T) {
   let program = @semantic.collect_program_manifest(
     8000UL,
@@ -66,6 +90,28 @@ test "bench program module emission modules=64" (it : @bench.T) {
   let analyzed = @semantic.analyze_program_semantics(program)
   let lowering = @semantic.plan_program_lowering(program, analyzed)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 63)
+  it.bench(fn() {
+    let module_ = emit_starshine_program_module(lowering, link).unwrap()
+    it.keep(module_)
+  })
+}
+
+///|
+test "bench generic call-chain module emission calls=4096" (it : @bench.T) {
+  let program = @semantic.collect_program_manifest(
+    8150UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("bench.generic", [
+        @semantic.ManifestFile::new(
+          "main.dew",
+          backend_generic_call_chain_source(4096),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   it.bench(fn() {
     let module_ = emit_starshine_program_module(lowering, link).unwrap()
     it.keep(module_)

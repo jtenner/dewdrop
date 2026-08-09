@@ -49,7 +49,7 @@ It serializes diagnostics-free `FrozenModuleInterface` records, including:
 - module content/transitive interface fingerprints and direct dependency records;
 - source locations and preamble declaration counts.
 
-No maps, addresses, filesystem paths, or worker-order values enter the artifact. Arrays remain in their existing frozen semantic order. Decoding checks the version, every byte range, bounded collection counts, enum tags, Booleans, UTF-8 strings, trailing bytes, module identities, duplicate modules, package ownership of every frozen implementation, and the exact expected standard-module count.
+No maps, addresses, filesystem paths, or worker-order values enter the artifact. Arrays remain in their existing frozen semantic order. Decoding checks the version, every byte range, bounded collection counts, enum tags, Booleans, UTF-8 strings, trailing bytes, module identities, duplicate modules, package ownership of every frozen implementation, and the exact expected standard-module count. Implementation ownership validation uses bounded type-head traversal and rejects out-of-range IDs, invalid applied-type spans, and cyclic heads with `Err` rather than indexing malformed cache data and aborting.
 
 The serialized payload is wrapped in a second cache-file envelope:
 
@@ -113,6 +113,7 @@ Permanent coverage includes:
 - source-content invalidation producing a second cache artifact;
 - versioned external package miss/hit behavior and `v11-*.dwi` filenames;
 - rejection of injected ordinary orphan evidence before a cache hit can expose it;
+- rejection of malformed implementation type IDs without a compiler process abort;
 - fail-visible package identity, version, and integrity mismatches;
 - dependency integrity changes producing a distinct bundle key;
 - byte-identical Wasm between cache miss, cache hit, on-disk uncached, and generated bootstrap providers;

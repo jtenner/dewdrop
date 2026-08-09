@@ -173,6 +173,51 @@ test "bench imported enum evidence enums=64 variants=8" (it : @bench.T) {
 }
 
 ///|
+fn imported_struct_benchmark_manifest(
+  struct_count : Int,
+  fields_per_struct : Int,
+) -> ProgramManifest {
+  let library = Buffer(size_hint=struct_count * fields_per_struct * 24)
+  for struct_index in 0..<struct_count {
+    library.write_string_utf8("pub struct Imported_")
+    library.write_string_utf8(struct_index.to_string())
+    library.write_string_utf8(" {\n")
+    for field_index in 0..<fields_per_struct {
+      library.write_string_utf8("  field_")
+      library.write_string_utf8(field_index.to_string())
+      library.write_string_utf8(": I32\n")
+    }
+    library.write_string_utf8("}\n")
+  }
+  ProgramManifest::new([
+    ManifestModule::new("bench.consumer", [
+      ManifestFile::new(
+        "consumer.dew", b"open bench.struct_library\npub fn run() -> I32 {\n  1\n}\n",
+      ),
+    ]),
+    ManifestModule::new("bench.struct_library", [
+      ManifestFile::new("library.dew", library.to_bytes()),
+    ]),
+  ])
+}
+
+///|
+test "bench imported struct evidence structs=1024 fields=8" (it : @bench.T) {
+  let program = collect_program_manifest(
+    6975UL,
+    imported_struct_benchmark_manifest(1024, 8),
+  )
+  let frozen = freeze_program_interfaces(program)
+  let collected = program.modules[0]
+  let scope = frozen.import_scopes[0]
+  let resolved = resolve_module_types_with_imports(collected, scope)
+  it.bench(fn() {
+    let imports = resolve_module_imports(resolved, scope)
+    it.keep(imports.fields.length())
+  })
+}
+
+///|
 test "bench imported semantic pipeline calls=128" (it : @bench.T) {
   let program = collect_program_manifest(
     7000UL,

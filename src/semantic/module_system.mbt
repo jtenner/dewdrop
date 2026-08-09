@@ -1941,32 +1941,130 @@ fn frozen_declaration_kind(
 }
 
 ///|
-fn frozen_interface_implementations_are_package_owned(
-  interface_ : FrozenModuleInterface,
+fn frozen_interface_type_span_is_valid(
+  values : Array[ResolvedTypeId],
+  span : HirSpan,
 ) -> Bool {
+  span.start >= 0 &&
+  span.length >= 0 &&
+  span.start <= values.length() &&
+  span.length <= values.length() - span.start
+}
+
+///|
+fn frozen_interface_impl_trait_head(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> DeclId? {
+  let mut type_ = root
+  let mut remaining = resolved.types.length() + 1
+  while remaining > 0 {
+    if type_ < 0 || type_ >= resolved.types.length() {
+      return None
+    }
+    remaining -= 1
+    match resolved.types[type_] {
+      TraitType(declaration) => return Some(declaration)
+      AppliedType(base, arguments) => {
+        if !frozen_interface_type_span_is_valid(
+            resolved.type_arguments,
+            arguments,
+          ) {
+          return None
+        }
+        type_ = base
+      }
+      _ => return None
+    }
+  }
+  None
+}
+
+///|
+fn frozen_interface_impl_target_head(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> ImplTargetHead? {
+  let mut type_ = root
+  let mut remaining = resolved.types.length() + 1
+  while remaining > 0 {
+    if type_ < 0 || type_ >= resolved.types.length() {
+      return None
+    }
+    remaining -= 1
+    match resolved.types[type_] {
+      PrimitiveType(primitive) =>
+        return Some(PrimitiveImplTargetHead(primitive))
+      NominalType(declaration) =>
+        return Some(NominalImplTargetHead(declaration))
+      AppliedType(base, arguments) => {
+        if !frozen_interface_type_span_is_valid(
+            resolved.type_arguments,
+            arguments,
+          ) {
+          return None
+        }
+        type_ = base
+      }
+      _ => return None
+    }
+  }
+  None
+}
+
+///|
+fn frozen_interface_implementation_evidence_error(
+  interface_ : FrozenModuleInterface,
+) -> String? {
   for implementation in interface_.implementations {
     if implementation.trait_type < 0 {
       continue
     }
-    let (trait_head, _) = resolved_impl_trait_head(
-      interface_.resolved_types,
-      implementation.trait_type,
-    )
-    let (target_head, _) = resolved_impl_target_head(
-      interface_.resolved_types,
-      implementation.target_type,
-    )
-    match trait_head {
-      Some(trait_declaration) if target_head != ErrorImplTargetHead &&
-        !trait_impl_is_package_owned(
-          interface_.module_id,
-          trait_declaration,
-          target_head,
-        ) => return false
-      _ => ()
+    if semantic_id_module(implementation.declaration) != interface_.module_id ||
+      implementation.generic_parameters.start < 0 ||
+      implementation.generic_parameters.length < 0 ||
+      implementation.generic_parameters.start >
+      interface_.generic_parameter_bounds.length() ||
+      implementation.generic_parameters.length >
+      interface_.generic_parameter_bounds.length() -
+      implementation.generic_parameters.start {
+      return Some(
+        "frozen-interface cache contains invalid implementation evidence",
+      )
+    }
+    let target_head = match
+      frozen_interface_impl_target_head(
+        interface_.resolved_types,
+        implementation.target_type,
+      ) {
+      Some(value) => value
+      None =>
+        return Some(
+          "frozen-interface cache contains invalid implementation evidence",
+        )
+    }
+    let trait_declaration = match
+      frozen_interface_impl_trait_head(
+        interface_.resolved_types,
+        implementation.trait_type,
+      ) {
+      Some(value) => value
+      None =>
+        return Some(
+          "frozen-interface cache contains invalid implementation evidence",
+        )
+    }
+    if !trait_impl_is_package_owned(
+        interface_.module_id,
+        trait_declaration,
+        target_head,
+      ) {
+      return Some(
+        "frozen-interface cache contains orphan implementation evidence",
+      )
     }
   }
-  true
+  None
 }
 
 ///|

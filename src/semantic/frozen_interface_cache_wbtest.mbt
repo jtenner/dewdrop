@@ -108,6 +108,63 @@ test "frozen interface decoder rejects orphan implementation evidence" {
 }
 
 ///|
+test "frozen interface decoder rejects invalid implementation type IDs" {
+  let program = collect_program_manifest(
+    7754UL,
+    ProgramManifest::new([
+      ManifestModule::new("cache.invalid_impl", [
+        ManifestFile::new("main.dew", b"pub fn main() -> I32 {\n  1\n}\n"),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  let declaration = frozen.interfaces[0].declarations[0]
+  let invalid_type = frozen.interfaces[0].resolved_types.types.length()
+  frozen.interfaces[0].implementations.push({
+    declaration: declaration.declaration,
+    generic_parameters: { start: 0, length: 0 },
+    trait_type: invalid_type,
+    target_type: invalid_type,
+    location: declaration.location,
+  })
+  let encoded = serialize_frozen_interfaces(frozen.interfaces).unwrap()
+  assert_eq(
+    deserialize_frozen_interfaces(encoded),
+    Err("frozen-interface cache contains invalid implementation evidence"),
+  )
+}
+
+///|
+test "frozen interface decoder rejects cyclic implementation heads" {
+  let program = collect_program_manifest(
+    7755UL,
+    ProgramManifest::new([
+      ManifestModule::new("cache.cyclic_impl", [
+        ManifestFile::new("main.dew", b"pub fn main() -> I32 {\n  1\n}\n"),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  let declaration = frozen.interfaces[0].declarations[0]
+  let cyclic_type = frozen.interfaces[0].resolved_types.types.length()
+  frozen.interfaces[0].resolved_types.types.push(
+    AppliedType(cyclic_type, { start: 0, length: 0 }),
+  )
+  frozen.interfaces[0].implementations.push({
+    declaration: declaration.declaration,
+    generic_parameters: { start: 0, length: 0 },
+    trait_type: cyclic_type,
+    target_type: cyclic_type,
+    location: declaration.location,
+  })
+  let encoded = serialize_frozen_interfaces(frozen.interfaces).unwrap()
+  assert_eq(
+    deserialize_frozen_interfaces(encoded),
+    Err("frozen-interface cache contains invalid implementation evidence"),
+  )
+}
+
+///|
 test "frozen interface decoder rejects corruption and trailing bytes" {
   assert_true(deserialize_frozen_interfaces(b"bad") is Err(_))
   let oversized = Buffer()

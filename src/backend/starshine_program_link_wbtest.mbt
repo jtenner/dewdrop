@@ -717,6 +717,33 @@ test "local implementation methods cast imported nominal arguments" {
 }
 
 ///|
+test "local implementation methods accept imported nominal aggregate fields" {
+  let program = @semantic.collect_program_manifest(
+    2476UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open app.types\npub trait Read {\n  fn read(self) -> I32\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nstruct Holder {\n  item: Item\n}\npub fn main() -> I32 {\n  let holder = Holder { item: Item {} }\n  let item = Item {}\n  let callback = fn() -> I32 {\n    item.read()\n  }\n  holder.item.read() + callback()\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.types", [
+        @semantic.ManifestFile::new("types.dew", b"pub struct Item {}\n"),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.impl_index.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_true(
+    emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
+  )
+}
+
+///|
 test "program emitter includes unreferenced aggregate type groups" {
   let program = @semantic.collect_program_manifest(
     2500UL,

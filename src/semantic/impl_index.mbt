@@ -1677,6 +1677,20 @@ pub fn build_module_impl_index_with_imports(
     Some(imports),
   )
   let local_implementation_count = index.implementations.length()
+  let imported_impl_callables : Map[DeclId, Array[FrozenInterfaceCallable]] = Map::default()
+  for interface_index in imports.scope.imported_interfaces {
+    let interface_ = imports.scope.interfaces[interface_index].unwrap()
+    for callable in interface_.callables {
+      let owner = match callable.kind {
+        FrozenImplCallable(owner) => owner
+        _ => continue
+      }
+      match imported_impl_callables.get(owner) {
+        Some(methods) => methods.push(callable)
+        None => imported_impl_callables[owner] = [callable]
+      }
+    }
+  }
   for imported in imports.implementations {
     let (target_head, poisoned) = resolved_impl_target_head(
       resolved,
@@ -1698,61 +1712,55 @@ pub fn build_module_impl_index_with_imports(
     }
     let method_start = index.methods.length()
     let implementation_index = index.implementations.length()
-    for interface_index in imports.scope.imported_interfaces {
-      let interface_ = imports.scope.interfaces[interface_index].unwrap()
-      for callable in interface_.callables {
-        let owner = match callable.kind {
-          FrozenImplCallable(owner) => owner
-          _ => continue
-        }
-        if owner != imported.declaration {
-          continue
-        }
-        let resolved_callable = match imports.callable(callable.declaration) {
-          Some(value) => value
-          None => continue
-        }
-        let instance = resolved_callable.parameters.length > 0 &&
-          imports.parameter_receivers[resolved_callable.parameters.start]
-        let method_index = index.methods.length()
-        index.methods.push({
-          declaration: callable.declaration,
-          requirement: None,
-          instance,
-        })
-        let name = match collected.find_name(callable.name) {
-          Some(existing) => existing
-          None => {
-            let created = collected.names.length()
-            collected.names.push(callable.name)
-            collected.name_lookup[callable.name] = created
-            created
+    match imported_impl_callables.get(imported.declaration) {
+      Some(callables) =>
+        for callable in callables {
+          let resolved_callable = match imports.callable(callable.declaration) {
+            Some(value) => value
+            None => continue
+          }
+          let instance = resolved_callable.parameters.length > 0 &&
+            imports.parameter_receivers[resolved_callable.parameters.start]
+          let method_index = index.methods.length()
+          index.methods.push({
+            declaration: callable.declaration,
+            requirement: None,
+            instance,
+          })
+          let name = match collected.find_name(callable.name) {
+            Some(existing) => existing
+            None => {
+              let created = collected.names.length()
+              collected.names.push(callable.name)
+              collected.name_lookup[callable.name] = created
+              created
+            }
+          }
+          let inherent = match kind {
+            InherentIndexedImpl => true
+            TraitIndexedImpl(_) => false
+          }
+          index.method_dispatch.push({
+            target_head,
+            name,
+            inherent,
+            instance,
+            implementation: implementation_index,
+            method_index,
+          })
+          match kind {
+            TraitIndexedImpl(trait_declaration) =>
+              index.trait_method_dispatch.push({
+                trait_declaration,
+                name,
+                instance,
+                implementation: implementation_index,
+                method_index,
+              })
+            InherentIndexedImpl => ()
           }
         }
-        let inherent = match kind {
-          InherentIndexedImpl => true
-          TraitIndexedImpl(_) => false
-        }
-        index.method_dispatch.push({
-          target_head,
-          name,
-          inherent,
-          instance,
-          implementation: implementation_index,
-          method_index,
-        })
-        match kind {
-          TraitIndexedImpl(trait_declaration) =>
-            index.trait_method_dispatch.push({
-              trait_declaration,
-              name,
-              instance,
-              implementation: implementation_index,
-              method_index,
-            })
-          InherentIndexedImpl => ()
-        }
-      }
+      None => ()
     }
     index.implementations.push({
       declaration: imported.declaration,
@@ -1770,6 +1778,7 @@ pub fn build_module_impl_index_with_imports(
       specificity: 0,
     })
   }
+  rebuild_impl_buckets(index)
   let coherence : Array[Bool] = []
   let specificity : Array[Int] = []
   for implementation in index.implementations {
@@ -1786,16 +1795,15 @@ pub fn build_module_impl_index_with_imports(
       TraitIndexedImpl(declaration) => declaration
       InherentIndexedImpl => continue
     }
-    for left_index in 0..<right_index {
+    let bucket = index.buckets[right.bucket]
+    for candidate_offset in 0..<bucket.implementations.length {
+      let left_index = index.bucket_implementations[bucket.implementations.start +
+        candidate_offset]
+      if left_index >= right_index {
+        break
+      }
       let left = index.implementations[left_index]
       if !left.valid || !left.coherent {
-        continue
-      }
-      let left_trait = match left.kind {
-        TraitIndexedImpl(declaration) => declaration
-        InherentIndexedImpl => continue
-      }
-      if left_trait != right_trait || left.target_head != right.target_head {
         continue
       }
       let identical = left.trait_type == right.trait_type &&
@@ -1844,7 +1852,6 @@ pub fn build_module_impl_index_with_imports(
       specificity: specificity[implementation_index],
     }
   }
-  rebuild_impl_buckets(index)
   let retained_methods : Array[IndexedMethodDispatch] = []
   for dispatch in index.method_dispatch {
     if index.implementations[dispatch.implementation].coherent {

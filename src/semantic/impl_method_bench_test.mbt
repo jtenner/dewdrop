@@ -100,6 +100,22 @@ fn qualified_method_calls_source(call_count : Int, trait_ : Bool) -> Bytes {
 }
 
 ///|
+fn imported_impl_library_source(implementation_count : Int) -> Bytes {
+  let output = Buffer(size_hint=implementation_count * 144 + 128)
+  output.write_string_utf8("pub trait Value {\n  fn value(self) -> I32\n}\n")
+  for index in 0..<implementation_count {
+    output.write_string_utf8("pub struct Item")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(" {}\nimpl Value for Item")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(" {\n  fn value(self) -> I32 {\n    ")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8("\n  }\n}\n")
+  }
+  output.to_bytes()
+}
+
+///|
 fn overlapping_impl_source(implementation_count : Int) -> Bytes {
   let output = Buffer(size_hint=implementation_count * 96 + 128)
   output.write_string_utf8(
@@ -132,6 +148,33 @@ test "bench impl index overlapping bucket n=256" (it : @bench.T) {
   it.bench(fn() {
     let index = build_module_impl_index(collected, resolved)
     it.keep(index.diagnostics.length())
+  })
+}
+
+///|
+test "bench imported impl index distinct heads n=512" (it : @bench.T) {
+  let program = collect_program_manifest(
+    7700UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.consumer", [
+        ManifestFile::new(
+          "consumer.dew", b"open bench.library\nfn read(value: Item0) -> I32 {\n  value.value()\n}\n",
+        ),
+      ]),
+      ManifestModule::new("bench.library", [
+        ManifestFile::new("library.dew", imported_impl_library_source(512)),
+      ]),
+    ]),
+  )
+  let frozen = freeze_program_interfaces(program)
+  let collected = program.modules[0]
+  let resolved = frozen.interfaces[0].resolved_types
+  let imports = resolve_module_imports(resolved, frozen.import_scopes[0])
+  it.bench(fn() {
+    let index = build_module_impl_index_with_imports(
+      collected, resolved, imports,
+    )
+    it.keep(index.implementations.length())
   })
 }
 
