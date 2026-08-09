@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:18:9: error: BodyConstraintDiagnostic(\n  LocalTypeMismatch(\n    3,\n    -47,\n    { kind: CallTypeConstraint, source: 9, offset: 253 },\n  ),\n)\n  |\n18 |   invoke(Box {\n  |         ^"
+  ],
+  "warnings": [],
+  "output": null
+}

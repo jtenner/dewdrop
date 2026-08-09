@@ -1,0 +1,21 @@
+trait Marker {}
+trait Value {
+  fn value(self) -> I32
+}
+struct No {}
+struct Box<t> {
+  value: t
+}
+impl<t: Marker> Value for Box<t> {
+  fn value(self) -> I32 {
+    1
+  }
+}
+fn invoke(value: Value) -> I32 {
+  value.value()
+}
+pub fn main() -> I32 {
+  invoke(Box {
+    value: No {}
+  })
+}

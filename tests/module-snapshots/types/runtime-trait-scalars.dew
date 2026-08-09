@@ -36,7 +36,7 @@ impl Tag for I32x4 {
 }
 
 fn invoke(value: Tag) -> I32 {
-  value.tag()
+  value.tag() + 0
 }
 
 pub fn main() -> U32 {

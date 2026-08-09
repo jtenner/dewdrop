@@ -1,0 +1,12 @@
+open fixture.runtime_trait_generic
+open dew.std.wasi
+
+fn invoke(value: Value) -> I32 {
+  value.value() + 0
+}
+
+pub fn main() -> U32 {
+  debug(invoke(yes_box()))
+  debug(invoke(other_box()))
+  wasi_fd_write(1u32, b"|trait:imported-generic")
+}

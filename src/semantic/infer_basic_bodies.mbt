@@ -8925,6 +8925,7 @@ fn BasicBodyInferencer::finish(
   self : BasicBodyInferencer,
 ) -> BodyInferenceJobResult {
   self.resolve_pending_trait_object_coercions()
+  self.solver_diagnostic_end = self.solver.diagnostics.length()
   self.finalize_types()
   self.compact_results()
   {

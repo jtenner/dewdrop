@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 8, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 9, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
@@ -65,10 +65,11 @@
 - [x] Define trait-object source syntax through bare trait value types.
 - [x] Complete erased-boundary boxing for nominal references and scalar/packed/SIMD carrier snapshots.
 - [x] Plan WasmGC trait-object layouts and typed function-reference dictionary slots for nominal object-safe receivers.
-- [x] Emit shared local/imported nominal dictionary construction and typed-field `call_ref` dynamic dispatch.
+- [x] Emit shared local/imported dictionaries, including closed generic implementation specializations keyed by ordered prerequisite evidence, and typed-field `call_ref` dispatch.
 - [x] Define mutable boxed scalar receiver behavior as trait-owned snapshot mutation without source writeback; current receivers remain immutable.
 - [x] Define trait-object identity and equality semantics with no ambient identity or universal erased equality.
-- [ ] Optimize non-escaping trait boxes.
+- [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site trait boxes and dictionaries.
+- [ ] Add general prerequisite-aware trait-object escape analysis, devirtualization, and dead-wrapper elimination.
 
 ## Deterministic cleanup and executable language surface
 

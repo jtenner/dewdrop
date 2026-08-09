@@ -777,13 +777,52 @@ test "program specializations distinguish and forward trait evidence" {
 }
 
 ///|
+test "transparent runtime trait wrappers devirtualize exact call-site evidence" {
+  let program = collect_program_manifest(
+    2197UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {\n  value: I32\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(Item {\n    value: 35\n  }) + invoke(7)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let module_ = lowering.modules[0]
+  let collected = program.modules[0]
+  let body = collected.body_of(collected.lookup_value("main").unwrap()).unwrap()
+  let mut direct_impl_calls = 0
+  for call in body_calls(collected, body) {
+    match module_.expressions[call].kind {
+      PlannedDirectCall(target, receiver, _, _) if receiver >= 0 =>
+        match module_.functions.callable_of(target) {
+          Some({ kind: PlannedImplMethodCallable(_, _), .. }) =>
+            direct_impl_calls += 1
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  assert_eq(direct_impl_calls, 2)
+  for expression in module_.expressions {
+    assert_eq(expression.trait_object_coercion, NoInferredTraitObjectCoercion)
+  }
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 0)
+  assert_eq(link.trait_dictionary_globals.length(), 0)
+}
+
+///|
 test "runtime trait link executes imported traits and implementations" {
   let program = collect_program_manifest(
     2198UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"open fixture.library\nfn invoke(value: Mark) -> I32 {\n  value.mark()\n}\npub fn main() -> I32 {\n  invoke(item())\n}\n",
+          "main.dew", b"open fixture.library\nfn invoke(value: Mark) -> I32 {\n  value.mark() + 0\n}\npub fn main() -> I32 {\n  invoke(item())\n}\n",
         ),
       ]),
       ManifestModule::new("fixture.library", [
@@ -865,13 +904,47 @@ test "runtime trait link executes imported traits and implementations" {
 }
 
 ///|
+test "runtime trait dictionaries distinguish generic prerequisite evidence" {
+  let program = collect_program_manifest(
+    21985UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Marker {\n  fn marker(self) -> I32\n}\ntrait Value {\n  fn value(self) -> I32\n}\nstruct Yes {}\nstruct Other {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {\n  fn marker(self) -> I32 {\n    42\n  }\n}\nimpl Marker for Other {\n  fn marker(self) -> I32 {\n    7\n  }\n}\nimpl<t: Marker> Value for Box<t> {\n  fn value(self) -> I32 {\n    self.value.marker()\n  }\n}\nfn invoke(value: Value) -> I32 {\n  value.value() + 0\n}\npub fn main() -> I32 {\n  invoke(Box {\n    value: Yes {}\n  }) + invoke(Box {\n    value: Other {}\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 2)
+  assert_true(
+    link.modules[0].trait_dictionaries[0].evidence_key !=
+    link.modules[0].trait_dictionaries[1].evidence_key,
+  )
+  assert_eq(link.modules[0].trait_methods.length(), 2)
+  assert_true(
+    link.modules[0].trait_methods[0].implementation_specialization_abi_key != "",
+  )
+  assert_true(
+    link.modules[0].trait_methods[1].implementation_specialization_abi_key != "",
+  )
+  assert_true(
+    link.modules[0].trait_methods[0].implementation_specialization_abi_key !=
+    link.modules[0].trait_methods[1].implementation_specialization_abi_key,
+  )
+}
+
+///|
 test "runtime trait link maps typed dictionary signatures" {
   let program = collect_program_manifest(
     2199UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read() + 0\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
         ),
       ]),
     ]),

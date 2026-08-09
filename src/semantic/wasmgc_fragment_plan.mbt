@@ -191,6 +191,7 @@ pub struct PlannedWasmTraitMethod {
   implementation_method : DeclId
   receiver_shape : PlannedValueShape
   receiver_nominal : DeclId
+  implementation_specialization_abi_key : String
   slot : Int
   signature_type_index : Int
   adapter_function : Int
@@ -200,6 +201,8 @@ pub struct PlannedWasmTraitMethod {
 pub struct PlannedWasmTraitDictionary {
   trait_declaration : DeclId
   implementation : DeclId
+  evidence : Int
+  evidence_key : String
   vtable_type_index : Int
   object_type_index : Int
   methods : HirSpan
@@ -1992,6 +1995,95 @@ fn wasmgc_runtime_trait_declarations(
 }
 
 ///|
+fn wasmgc_trait_evidence_shape_code(shape : PlannedValueShape) -> Int {
+  match shape {
+    ErrorPlannedValueShape => 0
+    UnitPlannedValueShape => 1
+    I8PlannedValueShape => 2
+    I16PlannedValueShape => 3
+    I32PlannedValueShape => 4
+    I64PlannedValueShape => 5
+    U8PlannedValueShape => 6
+    U16PlannedValueShape => 7
+    U32PlannedValueShape => 8
+    U64PlannedValueShape => 9
+    F32PlannedValueShape => 10
+    F64PlannedValueShape => 11
+    Swar32PlannedValueShape => 12
+    Swar64PlannedValueShape => 13
+    V128PlannedValueShape => 14
+    RefPlannedValueShape => 15
+    GenericPlannedValueShape => 16
+    NeverPlannedValueShape => 17
+  }
+}
+
+///|
+fn append_wasmgc_trait_evidence_key(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+  depth : Int,
+  output : Buffer,
+) -> Unit {
+  if depth >= 64 || evidence < 0 || evidence >= lowering.trait_evidence.length() {
+    output.write_string_utf8("!")
+    return
+  }
+  match lowering.trait_evidence[evidence].kind {
+    BoundInferredTraitEvidence(slot) => {
+      output.write_string_utf8("b")
+      output.write_string_utf8(slot.to_string())
+    }
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      output.write_string_utf8("i")
+      output.write_string_utf8(implementation.to_string())
+      output.write_string_utf8("[")
+      for index in 0..<arguments.length {
+        if index > 0 {
+          output.write_string_utf8(",")
+        }
+        match lowering.trait_evidence_arguments[arguments.start + index] {
+          ShapeInferredTraitEvidenceArgument(shape) => {
+            output.write_string_utf8("s")
+            output.write_string_utf8(
+              wasmgc_trait_evidence_shape_code(shape).to_string(),
+            )
+          }
+          GenericInferredTraitEvidenceArgument(parameter) => {
+            output.write_string_utf8("g")
+            output.write_string_utf8(parameter.to_string())
+          }
+        }
+      }
+      output.write_string_utf8("]{")
+      let prerequisites = lowering.trait_evidence[evidence].prerequisites
+      for index in 0..<prerequisites.length {
+        if index > 0 {
+          output.write_string_utf8(",")
+        }
+        append_wasmgc_trait_evidence_key(
+          lowering,
+          lowering.trait_evidence_children[prerequisites.start + index],
+          depth + 1,
+          output,
+        )
+      }
+      output.write_string_utf8("}")
+    }
+  }
+}
+
+///|
+pub fn wasmgc_trait_evidence_key(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+) -> String {
+  let output = Buffer()
+  append_wasmgc_trait_evidence_key(lowering, evidence, 0, output)
+  @utf8.decode_lossy(output.to_bytes())
+}
+
+///|
 fn wasmgc_trait_evidence_implementation(
   lowering : PlannedModuleLowering,
   evidence : Int,
@@ -3113,7 +3205,8 @@ fn plan_module_wasmgc_fragments_in_orders(
       Some(value) => value
       None => continue
     }
-    let key = trait_declaration.to_string() + ":" + implementation.to_string()
+    let evidence_key = wasmgc_trait_evidence_key(lowering, evidence)
+    let key = trait_declaration.to_string() + ":" + evidence_key
     if dictionary_keys.contains(key) {
       continue
     }
@@ -3200,6 +3293,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         implementation_method,
         receiver_shape,
         receiver_nominal,
+        implementation_specialization_abi_key: "",
         slot,
         signature_type_index: requirement_fragment.signature_type_index,
         adapter_function: adapter_fragment,
@@ -3209,6 +3303,8 @@ fn plan_module_wasmgc_fragments_in_orders(
       trait_dictionaries.push({
         trait_declaration,
         implementation,
+        evidence,
+        evidence_key,
         vtable_type_index: layout.vtable_type_index,
         object_type_index: layout.object_type_index,
         methods: {

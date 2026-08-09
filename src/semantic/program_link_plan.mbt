@@ -566,6 +566,162 @@ fn directize_transparent_callback_calls(
 }
 
 ///|
+priv struct TransparentTraitCallSummary {
+  requirement : DeclId
+  parameter_count : Int
+}
+
+///|
+fn transparent_trait_call_summaries(
+  modules : Array[PlannedModuleLowering],
+) -> Map[DeclId, TransparentTraitCallSummary] {
+  let summaries : Map[DeclId, TransparentTraitCallSummary] = Map::default()
+  for module_ in modules {
+    for callable in module_.functions.callables {
+      if callable.generic_parameters.length > 0 ||
+        callable.owner_generic_parameters.length > 0 {
+        continue
+      }
+      let body_id = match callable.kind {
+        PlannedFunctionCallable(body) => body
+        _ => continue
+      }
+      let body_index = semantic_id_local(body_id)
+      if body_index < 0 || body_index >= module_.bodies.length() {
+        continue
+      }
+      let body = module_.bodies[body_index]
+      let expression = transparent_callback_root_expression(module_, body)
+      if expression < 0 {
+        continue
+      }
+      let (requirement, receiver, arguments) = match
+        module_.expressions[expression].kind {
+        PlannedDynamicTraitCall(_, requirement, _, receiver, arguments, _) =>
+          (requirement, receiver, arguments)
+        _ => continue
+      }
+      if callable.parameters.length != arguments.length + 1 {
+        continue
+      }
+      match module_.expressions[receiver].kind {
+        PlannedLocalGet(0) => ()
+        _ => continue
+      }
+      let mut transparent = true
+      for index in 0..<arguments.length {
+        let argument = module_.expression_children[arguments.start + index]
+        match module_.expressions[argument].kind {
+          PlannedLocalGet(local_id) if local_id == index + 1 => ()
+          _ => {
+            transparent = false
+            break
+          }
+        }
+      }
+      if transparent {
+        summaries[callable.declaration] = {
+          requirement,
+          parameter_count: callable.parameters.length,
+        }
+      }
+    }
+  }
+  summaries
+}
+
+///|
+fn directize_transparent_trait_calls(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  let summaries = transparent_trait_call_summaries(modules)
+  if summaries.length() == 0 {
+    return
+  }
+  let module_lookup : Map[ModuleId, Int] = Map::default()
+  for module_index, module_ in modules {
+    module_lookup[module_.module_id] = module_index
+  }
+  for module_ in modules {
+    for expression in 0..<module_.expressions.length() {
+      let (target, arguments, type_arguments) = match
+        module_.expressions[expression].kind {
+        PlannedDirectCall(target, -1, arguments, type_arguments) =>
+          (target, arguments, type_arguments)
+        _ => continue
+      }
+      if type_arguments.length > 0 {
+        continue
+      }
+      let summary = match summaries.get(target) {
+        Some(value) => value
+        None => continue
+      }
+      if arguments.length != summary.parameter_count || arguments.length == 0 {
+        continue
+      }
+      let receiver = module_.expression_children[arguments.start]
+      let evidence = match module_.expressions[receiver].trait_object_coercion {
+        SelectedInferredTraitObjectCoercion(_, evidence) => evidence
+        _ => continue
+      }
+      if evidence < 0 || evidence >= module_.trait_evidence.length() {
+        continue
+      }
+      let implementation = match module_.trait_evidence[evidence].kind {
+        ConcreteInferredTraitEvidence(implementation, owner_arguments) if owner_arguments.length ==
+          0 &&
+          module_.trait_evidence[evidence].prerequisites.length == 0 =>
+          implementation
+        _ => continue
+      }
+      let requirement_module = match
+        module_lookup.get(semantic_id_module(summary.requirement)) {
+        Some(value) => value
+        None => continue
+      }
+      let requirement_callable = match
+        modules[requirement_module].functions.callable_of(summary.requirement) {
+        Some(value) => value
+        None => continue
+      }
+      let implementation_module = match
+        module_lookup.get(semantic_id_module(implementation)) {
+        Some(value) => value
+        None => continue
+      }
+      let mut implementation_method = 0UL
+      for callable in modules[implementation_module].functions.callables {
+        match callable.kind {
+          PlannedImplMethodCallable(owner, _) if owner == implementation &&
+            callable.name == requirement_callable.name =>
+            implementation_method = callable.declaration
+          _ => ()
+        }
+      }
+      if implementation_method == 0UL {
+        continue
+      }
+      let receiver_source = module_.expressions[receiver]
+      module_.expressions[receiver] = {
+        ..receiver_source,
+        trait_object_coercion: NoInferredTraitObjectCoercion,
+      }
+      let source = module_.expressions[expression]
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedDirectCall(
+          implementation_method,
+          receiver,
+          { start: arguments.start + 1, length: arguments.length - 1 },
+          { start: 0, length: 0 },
+        ),
+      }
+    }
+  }
+}
+
+///|
 /// Runs backend-neutral module lowering jobs in dependency-SCC order. Final
 /// module slots remain in manifest order.
 pub fn plan_program_lowering(
@@ -617,6 +773,7 @@ pub fn plan_program_lowering(
   }
   directize_transparent_callback_calls(modules)
   directize_generic_parameter_selectors(modules)
+  directize_transparent_trait_calls(modules)
   { graph: analyzed.frozen.graph, modules }
 }
 
@@ -1952,6 +2109,105 @@ fn materialize_program_expression_call(
 }
 
 ///|
+fn program_trait_dictionary_evidence_request(
+  lowering : PlannedModuleLowering,
+  fragments : PlannedModuleWasmGCFragments,
+  root : Int,
+) -> ProgramTraitEvidenceRequest? {
+  guard root >= 0 && root < lowering.trait_evidence.length() else {
+    return None
+  }
+  let request = empty_program_trait_evidence_request()
+  let prerequisites = lowering.trait_evidence[root].prerequisites
+  for index in 0..<prerequisites.length {
+    let node = resolve_program_lowering_evidence_node(
+      lowering,
+      fragments,
+      None,
+      lowering.trait_evidence_children[prerequisites.start + index],
+      request,
+    )
+    if node < 0 {
+      return None
+    }
+    request.roots.push(node)
+  }
+  Some(request)
+}
+
+///|
+fn materialize_program_trait_dictionary_methods(
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  modules : Array[PlannedModuleWasmGCFragments],
+  module_lookup : Map[ModuleId, Int],
+) -> Unit {
+  for module_index, module_ in modules {
+    let owner = lowering.modules[module_index]
+    for dictionary in module_.trait_dictionaries {
+      if dictionary.evidence < 0 ||
+        dictionary.evidence >= owner.trait_evidence.length() {
+        continue
+      }
+      let arguments = match owner.trait_evidence[dictionary.evidence].kind {
+        ConcreteInferredTraitEvidence(_, arguments) => arguments
+        BoundInferredTraitEvidence(_) => continue
+      }
+      if arguments.length == 0 {
+        continue
+      }
+      let shapes : Array[PlannedValueShape] = []
+      let mut concrete = true
+      for index in 0..<arguments.length {
+        match owner.trait_evidence_arguments[arguments.start + index] {
+          ShapeInferredTraitEvidenceArgument(shape) =>
+            shapes.push(program_canonical_specialization_shape(shape))
+          GenericInferredTraitEvidenceArgument(_) => {
+            concrete = false
+            break
+          }
+        }
+      }
+      if !concrete {
+        continue
+      }
+      let evidence = match
+        program_trait_dictionary_evidence_request(
+          owner,
+          module_,
+          dictionary.evidence,
+        ) {
+        Some(value) => value
+        None => continue
+      }
+      for index in 0..<dictionary.methods.length {
+        let method_index = dictionary.methods.start + index
+        let method_info = module_.trait_methods[method_index]
+        let key = match
+          materialize_program_generic_specialization(
+            analyzed,
+            lowering,
+            modules,
+            module_lookup,
+            method_info.implementation_method,
+            shapes,
+            { start: 0, length: shapes.length() },
+            evidence,
+            false,
+          ) {
+          Some(value) => value
+          None => continue
+        }
+        module_.trait_methods[method_index] = {
+          ..method_info,
+          implementation_specialization_abi_key: key,
+        }
+      }
+    }
+  }
+}
+
+///|
 /// Runs module-local WasmGC fragment jobs in dependency-SCC order while
 /// retaining manifest-indexed outputs.
 fn plan_program_wasmgc_fragments_for_root(
@@ -2088,6 +2344,9 @@ fn plan_program_wasmgc_fragments_for_root(
       }
     }
   }
+  materialize_program_trait_dictionary_methods(
+    analyzed, lowering, modules, specialization_module_lookup,
+  )
   let mut specialization_changed = true
   while specialization_changed {
     let mut before = 0

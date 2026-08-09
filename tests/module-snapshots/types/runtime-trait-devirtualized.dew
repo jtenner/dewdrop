@@ -1,0 +1,33 @@
+open dew.std.wasi
+
+trait Read {
+  fn read(self) -> I32
+}
+
+struct Item {
+  value: I32
+}
+
+impl Read for Item {
+  fn read(self) -> I32 {
+    self.value
+  }
+}
+
+impl Read for I32 {
+  fn read(self) -> I32 {
+    self
+  }
+}
+
+fn invoke(value: Read) -> I32 {
+  value.read()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(Item {
+    value: 42
+  }))
+  debug(invoke(7))
+  wasi_fd_write(1u32, b"|trait:devirtualized")
+}

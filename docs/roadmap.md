@@ -286,10 +286,12 @@ erased fallback.
 - [x] Plan typed function-reference dictionary slots in deterministic trait source order.
 - [x] Emit one shared local nominal dictionary per exact trait implementation.
 - [x] Reconstruct imported trait signatures and emit linked dictionaries/adapters for imported implementations and receiver nominals.
+- [x] Materialize closed generic implementation dictionaries and method specializations keyed by ordered prerequisite evidence trees, including imported providers.
 - [x] Emit typed-field `call_ref` dynamic dispatch with single receiver evaluation.
 - [x] Define mutable boxed scalar receiver behavior: a future mutable receiver changes only the trait-owned snapshot box and never writes back to the conversion source; current receivers remain immutable.
 - [x] Define trait-object identity and equality semantics: ambient identity is unobservable and no universal erased-value equality exists; equality requires an explicitly object-safe operation.
-- [ ] Optimize non-escaping trait boxes.
+- [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site boxes, dictionaries, adapters, and `ref.func` roots.
+- [ ] Add general prerequisite-aware trait-object escape analysis, devirtualization, and dead-wrapper elimination.
 
 ## Expressions and statements
 

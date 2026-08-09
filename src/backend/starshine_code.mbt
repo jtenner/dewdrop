@@ -781,6 +781,25 @@ fn starshine_program_argument_needs_nominal_cast(
 }
 
 ///|
+fn starshine_program_is_trait_method_specialization(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  specialization : StarshineGenericSpecialization?,
+) -> Bool {
+  let key = match specialization {
+    Some(value) => value.specialization_abi_key
+    None => return false
+  }
+  for module_ in planned.modules {
+    for method_info in module_.trait_methods {
+      if method_info.implementation_specialization_abi_key == key && key != "" {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
 fn starshine_finish_program_call(
   lowering : @semantic.PlannedModuleLowering?,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -842,7 +861,12 @@ fn starshine_finish_program_call(
           }
       }
   }
-  if caller_module_index != function_.module_index &&
+  if (
+      caller_module_index != function_.module_index ||
+      starshine_program_is_trait_method_specialization(
+        planned, generic_specialization,
+      )
+    ) &&
     fragments.length() == function_.parameters.length {
     for parameter_index, fragment in fragments {
       append_starshine_instructions(output, fragment)
@@ -7146,11 +7170,15 @@ fn starshine_emit_body_instructions(
         } else {
           0UL
         }
+        let evidence_key = @semantic.wasmgc_trait_evidence_key(
+          lowering, evidence,
+        )
         let mut dictionary = None
         let mut dictionary_index = -1
         for index, candidate in planned.trait_dictionaries {
           if candidate.trait_declaration == trait_ &&
-            candidate.implementation == implementation {
+            candidate.implementation == implementation &&
+            candidate.evidence_key == evidence_key {
             dictionary = Some(candidate)
             dictionary_index = index
             break
@@ -11710,15 +11738,25 @@ fn emit_starshine_program_trait_adapter_body(
   adapter : @semantic.PlannedProgramWasmFunction,
   implementation_method : @semantic.DeclId,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
-  let implementation = match planned.function_of(implementation_method) {
-    Some(value) if value.function_index >= 0 => value
-    _ => return Err(MissingFunction(implementation_method))
-  }
   let module_fragments = planned.modules[adapter.module_index]
   let method_info = match
     starshine_trait_adapter_method(module_fragments, adapter.declaration) {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, 0))
+  }
+  let mut implementation = None
+  for function_ in planned.functions {
+    if function_.declaration == implementation_method &&
+      function_.specialization_abi_key ==
+      method_info.implementation_specialization_abi_key &&
+      function_.function_index >= 0 {
+      implementation = Some(function_)
+      break
+    }
+  }
+  let implementation = match implementation {
+    Some(value) => value
+    None => return Err(MissingFunction(implementation_method))
   }
   let instructions : Array[@lib.Instruction] = [
     @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),

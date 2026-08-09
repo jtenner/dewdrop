@@ -2,7 +2,7 @@ open fixture.runtime_trait
 open dew.std.wasi
 
 fn invoke(value: Mark) -> I32 {
-  value.mark()
+  value.mark() + 0
 }
 
 pub fn main() -> U32 {

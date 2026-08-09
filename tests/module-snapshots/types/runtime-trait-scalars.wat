@@ -418,6 +418,8 @@
     struct.get 6 1
     struct.get 5 0
     call_ref 4
+    i32.const 0
+    i32.add
   )
   (func (;10;) (type 13) (result i32)
     i32.const 1

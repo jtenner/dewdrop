@@ -1,0 +1,49 @@
+open dew.std.wasi
+
+trait Marker {
+  fn marker(self) -> I32
+}
+
+trait Value {
+  fn value(self) -> I32
+}
+
+struct Yes {}
+
+struct Other {}
+
+struct Box<t> {
+  value: t
+}
+
+impl Marker for Yes {
+  fn marker(self) -> I32 {
+    42
+  }
+}
+
+impl Marker for Other {
+  fn marker(self) -> I32 {
+    7
+  }
+}
+
+impl<t: Marker> Value for Box<t> {
+  fn value(self) -> I32 {
+    self.value.marker()
+  }
+}
+
+fn invoke(value: Value) -> I32 {
+  value.value()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(Box {
+    value: Yes {}
+  }))
+  debug(invoke(Box {
+    value: Other {}
+  }))
+  wasi_fd_write(1u32, b"|trait:generic-dictionary")
+}
