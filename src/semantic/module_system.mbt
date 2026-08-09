@@ -1462,7 +1462,7 @@ fn frozen_callable_abi_fingerprint(
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
 ) -> String {
-  let output = Buffer()
+  let output = Buffer(size_hint=256 + callable.parameters.length * 64)
   output.write_bytes(b"DEW_CALLABLE_ABI_V3\x00")
   output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
   output.write_bytes(b"DEW_FLAT_CLOSURE_ABI_V1\x00")
@@ -1545,7 +1545,7 @@ fn frozen_declaration_abi_fingerprint(
   identities : Map[DeclId, CallableAbiDeclarationIdentity],
   declaration : FrozenInterfaceDeclaration,
 ) -> String {
-  let output = Buffer()
+  let output = Buffer(size_hint=256)
   output.write_bytes(b"DEW_NOMINAL_DECLARATION_ABI_V2\x00")
   output.write_bytes(b"DEW_GENERIC_AGGREGATE_ABI_V1\x00")
   output.write_bytes(b"DEW_ENUM_SUBTYPE_ABI_V1\x00")
@@ -1649,7 +1649,12 @@ fn frozen_interface_content_fingerprint(
   identities : Map[DeclId, CallableAbiDeclarationIdentity],
   declaration_fingerprints : Array[String],
 ) -> String {
-  let output = Buffer()
+  let output = Buffer(
+    size_hint=128 +
+      interface_.declarations.length() * 96 +
+      interface_.callables.length() * 96 +
+      interface_.implementations.length() * 128,
+  )
   output.write_bytes(b"DEW_MODULE_INTERFACE_CONTENT_V2\x00")
   callable_abi_write_string(output, interface_.path)
   callable_abi_write_int(output, interface_.declarations.length())
@@ -1710,77 +1715,81 @@ fn frozen_interface_with_content_fingerprint(
 }
 
 ///|
-fn frozen_program_interface_fingerprint(
+fn frozen_program_interface_fingerprint_with_records(
   module_index : Int,
   graph : ModuleDependencyGraph,
-  interfaces : Array[FrozenModuleInterface],
+  record_order : Array[Int],
+  records : Array[String],
 ) -> String {
-  let reachable = Array::make(interfaces.length(), false)
+  let reachable = Array::make(records.length(), false)
   let pending : Array[Int] = [module_index]
+  let mut reachable_count = 0
   while pending.length() > 0 {
     let current = pending.pop().unwrap()
     if reachable[current] {
       continue
     }
     reachable[current] = true
+    reachable_count += 1
     let dependencies = graph.dependencies[current]
     for index in 0..<dependencies.length {
       pending.push(graph.dependency_modules[dependencies.start + index])
     }
   }
-  let records : Array[String] = []
-  for index, interface_ in interfaces {
-    if reachable[index] {
-      records.push(interface_.path + "\u0000" + interface_.content_fingerprint)
-    }
-  }
-  records.sort()
-  let output = Buffer()
+  let output = Buffer(size_hint=64 + reachable_count * 96)
   output.write_bytes(b"DEW_MODULE_INTERFACE_GRAPH_V1\x00")
-  for record in records {
-    callable_abi_write_string(output, record)
+  for index in record_order {
+    if reachable[index] {
+      callable_abi_write_string(output, records[index])
+    }
   }
   @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
 }
 
 ///|
-fn frozen_program_interfaces_with_fingerprints(
+/// Recomputes declaration, content, dependency, and transitive graph
+/// fingerprints for a manifest-indexed frozen interface set.
+pub fn frozen_program_interfaces_with_fingerprints(
   graph : ModuleDependencyGraph,
   initial : Array[FrozenModuleInterface],
 ) -> Array[FrozenModuleInterface] {
   let identities = frozen_interface_declaration_identities(initial)
   let content : Array[FrozenModuleInterface] = []
-  for interface_ in initial {
-    content.push(
-      frozen_interface_with_content_fingerprint(interface_, identities),
+  let records : Array[String] = []
+  let record_order : Array[Int] = []
+  for index, interface_ in initial {
+    let interface_ = frozen_interface_with_content_fingerprint(
+      interface_, identities,
     )
+    content.push(interface_)
+    records.push(interface_.path + "\u0000" + interface_.content_fingerprint)
+    record_order.push(index)
   }
+  record_order.sort_by(fn(left, right) { records[left].compare(records[right]) })
   let output : Array[FrozenModuleInterface] = []
   for module_index, interface_ in content {
-    let dependency_paths : Array[String] = []
+    let dependency_indices : Array[Int] = []
     let dependencies = graph.dependencies[module_index]
     for index in 0..<dependencies.length {
-      dependency_paths.push(
-        content[graph.dependency_modules[dependencies.start + index]].path,
+      dependency_indices.push(
+        graph.dependency_modules[dependencies.start + index],
       )
     }
-    dependency_paths.sort()
+    dependency_indices.sort_by(fn(left, right) {
+      content[left].path.compare(content[right].path)
+    })
     let frozen_dependencies : Array[FrozenInterfaceDependency] = []
-    for path in dependency_paths {
-      for dependency in content {
-        if dependency.path == path {
-          frozen_dependencies.push({
-            path,
-            content_fingerprint: dependency.content_fingerprint,
-          })
-          break
-        }
-      }
+    for dependency_index in dependency_indices {
+      let dependency = content[dependency_index]
+      frozen_dependencies.push({
+        path: dependency.path,
+        content_fingerprint: dependency.content_fingerprint,
+      })
     }
     output.push({
       ..interface_,
-      interface_fingerprint: frozen_program_interface_fingerprint(
-        module_index, graph, content,
+      interface_fingerprint: frozen_program_interface_fingerprint_with_records(
+        module_index, graph, record_order, records,
       ),
       dependencies: frozen_dependencies,
     })
@@ -2129,12 +2138,9 @@ pub fn freeze_module_interface(
     collected.module_id == functions.module_id else {
     abort("module interface inputs belong to different modules")
   }
-  let standard_module = path.has_prefix("dew.std.")
-  let publish_standard_top_level = standard_module &&
-    path != "dew.std.string" &&
-    path != "dew.std.string_builder" &&
-    path != "dew.std.bytes" &&
-    path != "dew.std.bytes_builder"
+  let publish_standard_top_level = frozen_module_publishes_standard_top_level(
+    path,
+  )
   let declarations : Array[FrozenInterfaceDeclaration] = []
   let exported_declarations : Map[DeclId, Bool] = Map::default()
   for declaration in collected.declarations {
@@ -3022,6 +3028,35 @@ pub struct FrozenProgramInterfaces {
 }
 
 ///|
+fn frozen_module_publishes_standard_top_level(path : String) -> Bool {
+  path.has_prefix("dew.std.") &&
+  path != "dew.std.string" &&
+  path != "dew.std.string_builder" &&
+  path != "dew.std.bytes" &&
+  path != "dew.std.bytes_builder"
+}
+
+///|
+fn frozen_module_requires_value_inference(
+  path : String,
+  collected : CollectedModule,
+) -> Bool {
+  let publish_standard_top_level = frozen_module_publishes_standard_top_level(
+    path,
+  )
+  for declaration in collected.declarations {
+    if declaration.kind == LetDecl &&
+      semantic_id_local(declaration.id) >= collected.preamble_declaration_count &&
+      (publish_standard_top_level || declaration.visibility == Public) &&
+      !collected.declaration_is_test_only(declaration.id) &&
+      declaration.has_name() {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn infer_frozen_module_values(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
@@ -3085,16 +3120,21 @@ pub fn freeze_program_interfaces_with_cached(
       if !cached_slots[module_index] {
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
-        let module_values = infer_frozen_module_values(
-          collected, resolved, imports,
-        )
+        let module_values = if frozen_module_requires_value_inference(
+            program.module_paths[module_index],
+            collected,
+          ) {
+          Some(infer_frozen_module_values(collected, resolved, imports))
+        } else {
+          None
+        }
         slots[module_index] = Some(
           freeze_module_interface(
             program.module_paths[module_index],
             collected,
             resolved,
             functions,
-            module_values=Some(module_values),
+            module_values~,
             imports=Some(imports),
           ),
         )
@@ -3122,16 +3162,21 @@ pub fn freeze_program_interfaces_with_cached(
       if repeat && !cached_slots[module_index] {
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
-        let module_values = infer_frozen_module_values(
-          collected, resolved, imports,
-        )
+        let module_values = if frozen_module_requires_value_inference(
+            program.module_paths[module_index],
+            collected,
+          ) {
+          Some(infer_frozen_module_values(collected, resolved, imports))
+        } else {
+          None
+        }
         slots[module_index] = Some(
           freeze_module_interface(
             program.module_paths[module_index],
             collected,
             resolved,
             functions,
-            module_values=Some(module_values),
+            module_values~,
             imports=Some(imports),
           ),
         )

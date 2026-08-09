@@ -95,7 +95,7 @@ Cache I/O errors are usage/input failures rather than silent fallback. Users can
 
 ## Integration
 
-`freeze_program_interfaces_with_cached` accepts manifest-indexed optional interface slots. It verifies each cached module ID and path before use. Cached interfaces are installed before SCC interface jobs, so dependent user modules can consume them through the ordinary immutable import-scope path. Uncached modules still run the existing two-pass SCC algorithm.
+`freeze_program_interfaces_with_cached` accepts manifest-indexed optional interface slots. It verifies each cached module ID and path before use. Cached interfaces are installed before SCC interface jobs, so dependent user modules can consume them through the ordinary immutable import-scope path. Uncached modules still run the existing two-pass SCC algorithm. Fresh modules without an exported top-level `let` skip interface-time body inference because only exported module-value semantic types are consumed by freezing; modules with exported values retain the ordinary inference path. Final ABI construction precomputes sorted content records once and reuses them for every transitive interface fingerprint without changing bytes or hashes.
 
 `analyze_program_semantics_with_cached_interfaces` then performs ordinary imported-type translation, body name resolution, and body inference from the mixed cached/fresh frozen graph. `analyze_program_with_standard_cache` owns lookup, cache-slot construction, analysis, and miss storage for CLI, test, snapshot, parity, and benchmark generators.
 

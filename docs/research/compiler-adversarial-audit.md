@@ -102,6 +102,6 @@ The implementation change was reverted. The 4,096-call benchmark remains to make
 1. Validate the complete frozen resolved-type graph in one bounded linear pass, then let individual cache consumers use unchecked arena access without repeating local guards.
 2. Replace temporary per-implementation callable arrays with compact owner spans if allocation profiling shows the map is material.
 3. Index imported declaration metadata used by `is_struct`, `is_enum`, and `generic_parameters_of`; those helpers still linearly scan imported declarations.
-4. Profile module-interface freezing on the existing 64-module/32-function benchmark, which remains much larger than graph construction and imported-signature resolution.
+4. Profile declaration fingerprint field/variant/requirement grouping on aggregate-heavy interfaces; function-heavy interface freezing now skips unnecessary body inference and reuses deterministic graph-fingerprint records as documented in `compiler-interface-freezing-performance.md`.
 5. Add randomized malformed V11 payload generation for type IDs, spans, declaration ownership, ordering, and cyclic structural recipes.
 6. Add explicit compiler work budgets for type-graph traversal, implementation overlap, and imported-interface cardinality so hostile source or cache input fails diagnostically rather than exhausting resources.

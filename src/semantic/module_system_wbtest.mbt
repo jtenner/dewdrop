@@ -420,6 +420,67 @@ test "program interfaces freeze in graph order and remain manifest indexed" {
 }
 
 ///|
+test "interface value inference is required only by exported lets" {
+  let function_only = collect_program_manifest(
+    1550UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.functions", [
+        ManifestFile::new(
+          "functions.dew", b"pub fn identity(value: I32) -> I32 {\n  value\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  assert_false(
+    frozen_module_requires_value_inference(
+      "app.functions",
+      function_only.modules[0],
+    ),
+  )
+  let private_value = collect_program_manifest(
+    1551UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.private_value", [
+        ManifestFile::new("private.dew", b"let hidden = 42\n"),
+      ]),
+    ]),
+  )
+  assert_false(
+    frozen_module_requires_value_inference(
+      "app.private_value",
+      private_value.modules[0],
+    ),
+  )
+  let public_value = collect_program_manifest(
+    1552UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.public_value", [
+        ManifestFile::new("public.dew", b"pub let answer = 42\n"),
+      ]),
+    ]),
+  )
+  assert_true(
+    frozen_module_requires_value_inference(
+      "app.public_value",
+      public_value.modules[0],
+    ),
+  )
+  let interface_ = freeze_program_interfaces(public_value).interfaces[0]
+  let mut answer_type = -1
+  for declaration in interface_.declarations {
+    if declaration.name == "answer" {
+      answer_type = declaration.semantic_type
+      break
+    }
+  }
+  assert_true(answer_type >= 0)
+  assert_eq(
+    interface_.resolved_types.types[answer_type],
+    PrimitiveType(I32Type),
+  )
+}
+
+///|
 test "imported public types and traits resolve in consumer signatures" {
   let program = collect_program_manifest(
     1600UL,

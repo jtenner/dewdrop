@@ -62,6 +62,22 @@ test "bench module full manifest pipeline modules=64 functions=32" (
 }
 
 ///|
+test "bench module interface fingerprint refresh modules=64 functions=32" (
+  it : @bench.T,
+) {
+  let frozen = freeze_program_interfaces(
+    collect_program_manifest(4050UL, module_system_benchmark_manifest(64, 32)),
+  )
+  it.bench(fn() {
+    let refreshed = frozen_program_interfaces_with_fingerprints(
+      frozen.graph,
+      frozen.interfaces,
+    )
+    it.keep(refreshed.length())
+  })
+}
+
+///|
 fn imported_call_benchmark_manifest(call_count : Int) -> ProgramManifest {
   let library = Buffer(size_hint=call_count * 64)
   let consumer = Buffer(size_hint=call_count * 48 + 64)

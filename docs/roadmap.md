@@ -82,6 +82,7 @@ runtime artifacts.
 - [x] Split text ownership into `std/string.dew`, `std/string_builder.dew`, `std/bytes.dew`, and `std/bytes_builder.dew` plus a private bootstrap text-runtime declaration file.
 - [x] Compile `std/preamble/*.dew`, ambient Option/Result, split text/bytes modules, WASI, and selected lane sources as independent compiler-owned modules.
 - [x] Collect and freeze each selected standard interface once per compilation session rather than once per user module.
+- [x] Skip interface-time body inference for modules without exported top-level values, and reuse deterministic ABI graph records and direct dependency indices across fingerprint construction.
 - [x] Add a deterministic import prepass that selects lane, split text/bytes, and WASI standard modules plus their private dependency closure.
 - [x] Resolve user modules only through the selected frozen standard interfaces; optional standard declarations no longer enter user declaration arenas.
 - [x] Model `dew.std.preamble`, `dew.std.option`, and `dew.std.result` as implicit canonical imports.
