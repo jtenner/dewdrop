@@ -1,0 +1,20 @@
+open dew.std.wasi
+
+trait Tag {
+  fn tag(self) -> I32
+}
+
+impl Tag for I64 {
+  fn tag(self) -> I32 {
+    42
+  }
+}
+
+fn static_tag(value: I64) -> I32 {
+  value.tag()
+}
+
+pub fn main() -> U32 {
+  debug(static_tag(42i64))
+  wasi_fd_write(1u32, b"|trait:scalar-static")
+}

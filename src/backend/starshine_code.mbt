@@ -7161,6 +7161,27 @@ fn starshine_emit_body_instructions(
           None => return Err(UnsupportedExpression(body.body, -302))
         }
         let output = results.pop().unwrap()
+        if dictionary.methods.length > 0 {
+          let receiver_shape = planned.trait_methods[dictionary.methods.start].receiver_shape
+          let box_slot = starshine_program_erased_adapter_shape_box_slot(
+            receiver_shape,
+          )
+          if box_slot >= 0 {
+            let box_type = match program {
+              Some(link) if box_slot < link.erased_box_type_indices.length() =>
+                link.erased_box_type_indices[box_slot]
+              _ => -1
+            }
+            if box_type < 0 {
+              return Err(UnsupportedExpression(body.body, -304))
+            }
+            output.push(
+              @lib.Instruction::struct_new(
+                @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+              ),
+            )
+          }
+        }
         let vtable_type = starshine_local_physical_type_index(
           program,
           program_module_index,
@@ -7670,16 +7691,15 @@ fn starshine_module_runtime_function_index(
 }
 
 ///|
-fn starshine_trait_adapter_nominal_declaration(
+fn starshine_trait_adapter_method(
   planned : @semantic.PlannedModuleWasmGCFragments,
   adapter : @semantic.DeclId,
-) -> @semantic.DeclId? {
+) -> @semantic.PlannedWasmTraitMethod? {
   for method_info in planned.trait_methods {
     if method_info.adapter_function >= 0 &&
       method_info.adapter_function < planned.functions.length() &&
-      planned.functions[method_info.adapter_function].declaration == adapter &&
-      method_info.receiver_nominal != 0UL {
-      return Some(method_info.receiver_nominal)
+      planned.functions[method_info.adapter_function].declaration == adapter {
+      return Some(method_info)
     }
   }
   None
@@ -7695,12 +7715,19 @@ fn emit_starshine_trait_adapter_body(
     Some(value) if value.function_index >= 0 => value
     _ => return Err(MissingFunction(implementation_method))
   }
-  let declaration = match
-    starshine_trait_adapter_nominal_declaration(planned, adapter.declaration) {
+  let method_info = match
+    starshine_trait_adapter_method(planned, adapter.declaration) {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, 0))
   }
-  let type_index = match planned.type_index_of(declaration) {
+  match method_info.receiver_shape {
+    @semantic.RefPlannedValueShape =>
+      if method_info.receiver_nominal == 0UL {
+        return Err(UnsupportedExpression(0UL, 0))
+      }
+    _ => return Err(UnsupportedExpression(0UL, 0))
+  }
+  let type_index = match planned.type_index_of(method_info.receiver_nominal) {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, 0))
   }
@@ -11688,22 +11715,43 @@ fn emit_starshine_program_trait_adapter_body(
     _ => return Err(MissingFunction(implementation_method))
   }
   let module_fragments = planned.modules[adapter.module_index]
-  let declaration = match
-    starshine_trait_adapter_nominal_declaration(
-      module_fragments,
-      adapter.declaration,
-    ) {
-    Some(value) => value
-    None => return Err(UnsupportedExpression(0UL, 0))
-  }
-  let type_index = match planned.type_lookup.get(declaration) {
+  let method_info = match
+    starshine_trait_adapter_method(module_fragments, adapter.declaration) {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, 0))
   }
   let instructions : Array[@lib.Instruction] = [
     @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
-    starshine_match_cast(type_index),
   ]
+  match method_info.receiver_shape {
+    @semantic.RefPlannedValueShape => {
+      let type_index = match
+        planned.type_lookup.get(method_info.receiver_nominal) {
+        Some(value) => value
+        None => return Err(UnsupportedExpression(0UL, 0))
+      }
+      instructions.push(starshine_match_cast(type_index))
+    }
+    _ => {
+      let box_slot = starshine_program_erased_adapter_shape_box_slot(
+        method_info.receiver_shape,
+      )
+      if box_slot < 0 || box_slot >= planned.erased_box_type_indices.length() {
+        return Err(UnsupportedExpression(0UL, 0))
+      }
+      let box_type = planned.erased_box_type_indices[box_slot]
+      if box_type < 0 {
+        return Err(UnsupportedExpression(0UL, 0))
+      }
+      instructions.push(starshine_match_cast(box_type))
+      instructions.push(
+        @lib.Instruction::struct_get(
+          @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+          @lib.U32::new(0U),
+        ),
+      )
+    }
+  }
   for index in 1..<adapter.parameters.length {
     instructions.push(
       @lib.Instruction::local_get(

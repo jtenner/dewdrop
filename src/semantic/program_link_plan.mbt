@@ -3123,6 +3123,14 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let erased_box_used = Array::make(5, false)
+  for module_ in fragments.modules {
+    for method_info in module_.trait_methods {
+      let slot = wasmgc_trait_receiver_box_slot(method_info.receiver_shape)
+      if slot >= 0 {
+        erased_box_used[slot] = true
+      }
+    }
+  }
   let root_lowering = lowering.modules[root_module_index]
   let root_fragments = fragments.modules[root_module_index]
   for function_ in root_fragments.functions {

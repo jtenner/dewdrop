@@ -101,7 +101,7 @@ Dewdrop currently includes, among other things:
 
 - Fixed-width signed, unsigned, and floating-point numbers.
 - Booleans, tuples, structs, enums, aliases, and pattern matching.
-- Traits, implementations, methods, static dispatch, and nominal runtime trait values using typed WasmGC dictionaries.
+- Traits, implementations, methods, static dispatch, and nominal/scalar/SIMD runtime trait values using typed WasmGC dictionaries.
 - Generic functions, structs, and enums using deterministic Wasm carrier specialization.
 - First-class functions and closures.
 - Immutable and mutable local variables, including captured mutable variables.
@@ -493,7 +493,7 @@ This is safer than inventing a special number such as `-1` to mean â€œmissing.â€
 
 A trait describes behavior a type can provide. An implementation connects that behavior to a type. Dew uses trait evidence for operators, methods, generic APIs, hashing, indexing, and other static dispatch.
 
-A bare trait name in a value position denotes an erased runtime trait value. Passing a nominal reference value to an expected trait type constructs a small WasmGC object containing the erased receiver and a shared immutable typed-function-reference dictionary. Calls on that value load the source-ordered method slot and use `call_ref`; calls whose concrete implementation is statically known remain direct and allocate nothing for dispatch. The initial dynamic surface accepts non-generic object-safe methods whose `Self` use is confined to the receiver. Imported dictionaries, scalar/SIMD boxes, and generic runtime dictionaries remain provisional work.
+A bare trait name in a value position denotes an erased runtime trait value. Passing a nominal reference value to an expected trait type constructs a small WasmGC envelope containing the erased receiver and a shared immutable typed-function-reference dictionary. Scalar, packed, and SIMD values receive one carrier-specific snapshot box only at that erased boundary. Calls load the source-ordered method slot and use `call_ref`; calls whose concrete implementation is statically known remain direct and allocate nothing for dispatch. Linked imported traits and implementations use the same representation. The current dynamic surface accepts non-generic object-safe methods whose `Self` use is confined to the receiver; generic prerequisite-bearing runtime dictionaries remain provisional work.
 
 Generic parameters accept ordered bounds such as `t: Eq + Debug`. The compiler retains and executes those trait identities through evidence-aware static specialization for closed calls; dictionaries are reserved for actual runtime trait-value boundaries.
 

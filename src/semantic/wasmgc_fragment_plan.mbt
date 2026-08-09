@@ -2162,6 +2162,24 @@ fn wasmgc_nominal_type_declaration(
 }
 
 ///|
+pub fn wasmgc_trait_receiver_box_slot(shape : PlannedValueShape) -> Int {
+  match shape {
+    I8PlannedValueShape
+    | I16PlannedValueShape
+    | I32PlannedValueShape
+    | U8PlannedValueShape
+    | U16PlannedValueShape
+    | U32PlannedValueShape
+    | Swar32PlannedValueShape => 0
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape => 1
+    F32PlannedValueShape => 2
+    F64PlannedValueShape => 3
+    V128PlannedValueShape => 4
+    _ => -1
+  }
+}
+
+///|
 fn wasmgc_trait_implementation_receiver(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
@@ -3140,7 +3158,11 @@ fn plan_module_wasmgc_fragments_in_orders(
       let (receiver_shape, receiver_nominal) = wasmgc_trait_implementation_receiver(
         resolved, functions, imports, implementation, implementation_method,
       )
-      if receiver_shape != RefPlannedValueShape || receiver_nominal == 0UL {
+      if (receiver_shape == RefPlannedValueShape && receiver_nominal == 0UL) ||
+        (
+          receiver_shape != RefPlannedValueShape &&
+          wasmgc_trait_receiver_box_slot(receiver_shape) < 0
+        ) {
         complete = false
         break
       }

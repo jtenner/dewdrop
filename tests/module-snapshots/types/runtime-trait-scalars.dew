@@ -1,0 +1,49 @@
+open dew.std.i32x4
+open dew.std.wasi
+
+trait Tag {
+  fn tag(self) -> I32
+}
+
+impl Tag for I32 {
+  fn tag(self) -> I32 {
+    self
+  }
+}
+
+impl Tag for I64 {
+  fn tag(self) -> I32 {
+    2
+  }
+}
+
+impl Tag for F32 {
+  fn tag(self) -> I32 {
+    3
+  }
+}
+
+impl Tag for F64 {
+  fn tag(self) -> I32 {
+    4
+  }
+}
+
+impl Tag for I32x4 {
+  fn tag(self) -> I32 {
+    5
+  }
+}
+
+fn invoke(value: Tag) -> I32 {
+  value.tag()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(1))
+  debug(invoke(2i64))
+  debug(invoke(3.0f32))
+  debug(invoke(4.0f64))
+  debug(invoke(i32x4_splat(5)))
+  wasi_fd_write(1u32, b"|trait:scalars")
+}
