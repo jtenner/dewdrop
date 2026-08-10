@@ -169,13 +169,13 @@
   - Relevant files: `src/semantic/standard_*_sources.mbt`,
     `src/semantic/standard_*_preamble.mbt`, and `src/standard_loader/`.
 
-- [ ] **Generalize the frozen-interface cache architecture.**
-  - [ ] Rename standard-only cache concepts now used for external dependencies.
-  - [ ] Separate cache envelope/I/O, cache-key provenance, cacheable-module
+- [x] **Generalize the frozen-interface cache architecture.**
+  - [x] Rename standard-only cache concepts now used for external dependencies.
+  - [x] Separate cache envelope/I/O, cache-key provenance, cacheable-module
         selection, and semantic analysis using cached slots.
-  - [ ] Replace expanding Boolean policy parameters with an explicit bundle
+  - [x] Replace expanding Boolean policy parameters with an explicit bundle
         policy.
-  - [ ] Prepare the substrate for later workspace-module and artifact-only
+  - [x] Prepare the substrate for later workspace-module and artifact-only
         interface caching without changing current corruption behavior.
   - Relevant file: `src/standard_loader/interface_cache.mbt`.
 

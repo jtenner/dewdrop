@@ -46,7 +46,7 @@ pub struct CompilerCompilation {
   analyzed : @semantic.AnalyzedProgramSemantics
   lowering : @semantic.PlannedProgramLowering
   link : @semantic.PlannedProgramWasmGCLink
-  cache_status : @standard_loader.StandardInterfaceCacheStatus
+  cache_status : @standard_loader.InterfaceBundleCacheStatus
 }
 
 ///|
@@ -62,7 +62,7 @@ pub fn compile_manifest(
     options.default_preamble,
   )
   let cached = match
-    @standard_loader.analyze_program_with_standard_cache(
+    @standard_loader.analyze_program_with_interface_bundle_cache(
       program,
       loaded,
       root_module_index=options.root_module_index,

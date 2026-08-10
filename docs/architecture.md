@@ -200,11 +200,14 @@ public declarations, types, callables, implementation evidence, dependencies,
 and deterministic fingerprints.
 
 The persistent cache stores checksummed serialized frozen-interface bundles.
-Corrupt, incompatible, or identity-mismatched artifacts fail visibly. Cache
-policy currently lives in `src/standard_loader/interface_cache.mbt`; it covers
-compiler-owned standard modules and verified external dependency interfaces.
-Future workspace caching should reuse a generalized bundle cache rather than add
-parallel formats.
+Corrupt, incompatible, or identity-mismatched artifacts fail visibly. The cache
+architecture is generalized around `InterfaceBundleCacheKey` and
+`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V11
+envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
+I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. The
+current policy selects compiler-owned standard modules and verified external
+dependencies; later workspace or artifact-only caching can extend policy without
+adding Boolean parameters or parallel formats.
 
 ## Program specialization and erased ABI
 
