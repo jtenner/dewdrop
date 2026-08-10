@@ -299,7 +299,7 @@ erased fallback.
 - [x] Forward runtime prerequisites through statically selected concrete generic implementation evidence and exact implementation-method specializations.
 - [x] Support escaping bounded function references/callbacks with immutable closure subtypes that capture source-ordered caller runtime dictionaries and invoke exact local/imported target specializations through environment-first trampolines.
 - [x] Support erased trait dictionaries whose immutable receiver capture carries source-ordered caller-local runtime prerequisites through exact local/imported adapters without changing the V1 vtable ABI.
-- [ ] Broaden effect/escape summaries across non-transparent public APIs.
+- [x] Broaden callback and runtime-trait effect/escape summaries across non-transparent public APIs: compute transitive total/discardable callable summaries, follow immutable callback aliases and forwarding chains across modules, directize exact internal calls while retaining public fallback bodies, and conservatively retain trapping, escaping, conditionally/multiply invoked, or unknown uses.
 
 ## Expressions and statements
 

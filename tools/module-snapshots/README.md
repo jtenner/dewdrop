@@ -127,7 +127,7 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 252 fixtures:
+The suite contains 253 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
@@ -139,7 +139,7 @@ functions           16         13                 3                0
 generics            19         16                 3                0
 lanes               11         11                 0                0
 memory               9          9                 0                1
-modules             31         24                 7                0
+modules             32         25                 7                0
 names                3          0                 3                0
 numeric             34         30                 4                1
 reachability         1          1                 0                0
@@ -149,15 +149,15 @@ text                 27         27                 0                4
 types               20         10                10                0
 wasi                 16         16                 0                5
 
-total               252        209                43               15
+total               253        210                43               15
 ```
 
 One hundred twenty-two compiled fixtures assert nonempty stdout, fifteen assert normalized
-runtime traps, and sixty-nine intentionally remain WAT/no-trap fixtures. The
+runtime traps, and seventy intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 10, 2026, all 209 compiled fixtures pass in Node; the paired Wago run is normally identical and remains required by `tools/check.sh`. Coverage includes cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, every fixed-width numeric literal-pattern carrier, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, narrow fixed-array carriers, exact prerequisite-bearing runtime-trait flow devirtualization, and direct/control-flow/matched nominal locals passed to typed functions.
+As of August 10, 2026, all 210 compiled fixtures pass in Node; the paired Wago run is normally identical and remains required by `tools/check.sh`. Coverage includes cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, every fixed-width numeric literal-pattern carrier, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, narrow fixed-array carriers, exact prerequisite-bearing runtime-trait flow devirtualization, and direct/control-flow/matched nominal locals passed to typed functions.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,
 literal and enum matching, aggregate construction and extraction, scalar numeric
@@ -171,7 +171,7 @@ captures, explicit test-mode execution, invalid-UTF-8 handling traps,
 `to_string`/`view`/`byte_at` out-of-bounds traps, literal-range diagnostic
 matrices, closed symbolic generic trait erasure with zero dispatch artifacts,
 dynamic scalar/packed/SIMD symbolic erasure, recursive prerequisite dictionaries,
-and imported generic providers with canonical cross-module trait layouts.
+imported generic providers with canonical cross-module trait layouts, and imported public callback/runtime-trait wrappers whose total preludes directize without removing their external fallback bodies.
 
 ## Commands
 

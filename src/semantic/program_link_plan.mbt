@@ -376,48 +376,406 @@ pub fn PlannedProgramWasmGCLink::physical_type_index(
 }
 
 ///|
+priv struct ProgramCallableEffectSummary {
+  discardable : Bool
+}
+
+///|
+fn program_effect_summary_block_is_discardable(
+  module_ : PlannedModuleLowering,
+  block : BlockId,
+  summaries : Map[DeclId, ProgramCallableEffectSummary],
+  depth : Int,
+) -> Bool {
+  if block < 0 ||
+    block >= module_.blocks.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return false
+  }
+  let items = module_.blocks[block].items
+  if items.start < 0 ||
+    items.start + items.length > module_.block_items.length() {
+    return false
+  }
+  for index in 0..<items.length {
+    let expression = match module_.block_items[items.start + index].kind {
+      PlannedLetItem(_, _, value)
+      | PlannedReturnItem(value)
+      | PlannedExpressionItem(value) => value
+      PlannedElidedLetItem(_) => continue
+    }
+    if !program_effect_summary_expression_is_discardable(
+        module_,
+        expression,
+        summaries,
+        depth + 1,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn program_effect_summary_arguments_are_discardable(
+  module_ : PlannedModuleLowering,
+  arguments : HirSpan,
+  summaries : Map[DeclId, ProgramCallableEffectSummary],
+  depth : Int,
+) -> Bool {
+  if arguments.start < 0 ||
+    arguments.start + arguments.length > module_.expression_children.length() {
+    return false
+  }
+  for index in 0..<arguments.length {
+    if !program_effect_summary_expression_is_discardable(
+        module_,
+        module_.expression_children[arguments.start + index],
+        summaries,
+        depth + 1,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn program_effect_summary_expression_is_discardable(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  summaries : Map[DeclId, ProgramCallableEffectSummary],
+  depth : Int,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return false
+  }
+  match module_.expressions[expression].kind {
+    PlannedConsumedExpression
+    | PlannedI8Const(_)
+    | PlannedI16Const(_)
+    | PlannedI32Const(_)
+    | PlannedI64Const(_)
+    | PlannedU8Const(_)
+    | PlannedU16Const(_)
+    | PlannedU32Const(_)
+    | PlannedU64Const(_)
+    | PlannedF32Const(_)
+    | PlannedF64Const(_)
+    | PlannedBoolConst(_)
+    | PlannedStringConst(_)
+    | PlannedBytesConst(_)
+    | PlannedLocalGet(_)
+    | PlannedCaptureGet(_) => true
+    PlannedBlockExpression(block) =>
+      program_effect_summary_block_is_discardable(
+        module_,
+        block,
+        summaries,
+        depth + 1,
+      )
+    PlannedIfExpression(condition, then_block, alternative) =>
+      program_effect_summary_expression_is_discardable(
+        module_,
+        condition,
+        summaries,
+        depth + 1,
+      ) &&
+      program_effect_summary_block_is_discardable(
+        module_,
+        then_block,
+        summaries,
+        depth + 1,
+      ) &&
+      program_effect_summary_expression_is_discardable(
+        module_,
+        alternative,
+        summaries,
+        depth + 1,
+      )
+    PlannedMatchExpression(value, arms) => {
+      if !program_effect_summary_expression_is_discardable(
+          module_,
+          value,
+          summaries,
+          depth + 1,
+        ) ||
+        arms.start < 0 ||
+        arms.start + arms.length > module_.pattern_arms.length() {
+        return false
+      }
+      for index in 0..<arms.length {
+        let arm = module_.pattern_arms[arms.start + index]
+        if (
+            arm.guard_condition >= 0 &&
+            !program_effect_summary_expression_is_discardable(
+              module_,
+              arm.guard_condition,
+              summaries,
+              depth + 1,
+            )
+          ) ||
+          !program_effect_summary_expression_is_discardable(
+            module_,
+            arm.body,
+            summaries,
+            depth + 1,
+          ) {
+          return false
+        }
+      }
+      true
+    }
+    PlannedDirectCall(target, receiver, arguments, _) => {
+      match summaries.get(target) {
+        Some({ discardable: true }) => ()
+        _ => return false
+      }
+      (
+        receiver < 0 ||
+        program_effect_summary_expression_is_discardable(
+          module_,
+          receiver,
+          summaries,
+          depth + 1,
+        )
+      ) &&
+      program_effect_summary_arguments_are_discardable(
+        module_,
+        arguments,
+        summaries,
+        depth + 1,
+      )
+    }
+    PlannedParameterSelect(arguments, _) =>
+      program_effect_summary_arguments_are_discardable(
+        module_,
+        arguments,
+        summaries,
+        depth + 1,
+      )
+    _ => false
+  }
+}
+
+///|
+fn program_callable_effect_summaries(
+  modules : Array[PlannedModuleLowering],
+) -> Map[DeclId, ProgramCallableEffectSummary] {
+  let summaries : Map[DeclId, ProgramCallableEffectSummary] = Map::default()
+  let mut changed = true
+  while changed {
+    changed = false
+    for module_ in modules {
+      for callable in module_.functions.callables {
+        if summaries.contains(callable.declaration) {
+          continue
+        }
+        let body_id = match callable.kind {
+          PlannedFunctionCallable(body)
+          | PlannedImplMethodCallable(_, Some(body)) => body
+          _ => continue
+        }
+        let body_index = semantic_id_local(body_id)
+        if body_index < 0 || body_index >= module_.bodies.length() {
+          continue
+        }
+        let body = module_.bodies[body_index]
+        let discardable = match body.root {
+          ExpressionBodyRoot(expression) =>
+            program_effect_summary_expression_is_discardable(
+              module_, expression, summaries, 0,
+            )
+          BlockBodyRoot(block) =>
+            program_effect_summary_block_is_discardable(
+              module_, block, summaries, 0,
+            )
+        }
+        if discardable {
+          summaries[callable.declaration] = { discardable: true }
+          changed = true
+        }
+      }
+    }
+  }
+  summaries
+}
+
+///|
 fn transparent_callback_root_expression(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
+  summaries : Map[DeclId, ProgramCallableEffectSummary],
 ) -> ExprId {
   match body.root {
     ExpressionBodyRoot(expression) => expression
     BlockBodyRoot(block) => {
-      let items = module_.blocks[block].items
-      if items.length == 1 {
-        return match module_.block_items[items.start].kind {
-          PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
-            expression
-          _ => -1
-        }
-      }
-      if items.length != 2 {
+      if block < 0 || block >= module_.blocks.length() {
         return -1
       }
-      let (local_id, initializer) = match
-        module_.block_items[items.start].kind {
-        PlannedLetItem(local_id, false, initializer) => (local_id, initializer)
-        _ => return -1
+      let items = module_.blocks[block].items
+      if items.length == 0 ||
+        items.start < 0 ||
+        items.start + items.length > module_.block_items.length() {
+        return -1
       }
-      let tail = match module_.block_items[items.start + 1].kind {
+      let tail = match
+        module_.block_items[items.start + items.length - 1].kind {
         PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
           expression
         _ => return -1
       }
-      match module_.expressions[tail].kind {
-        PlannedLocalGet(tail_local_id) if tail_local_id == local_id =>
-          initializer
-        _ => -1
+      let mut candidate = tail
+      let mut candidate_item = items.length - 1
+      if items.length >= 2 {
+        match module_.expressions[tail].kind {
+          PlannedLocalGet(tail_local_id) =>
+            match module_.block_items[items.start + items.length - 2].kind {
+              PlannedLetItem(local_id, false, initializer) if local_id ==
+                tail_local_id => {
+                candidate = initializer
+                candidate_item = items.length - 2
+              }
+              _ => ()
+            }
+          _ => ()
+        }
       }
+      for index in 0..<items.length {
+        if index == candidate_item || index == items.length - 1 {
+          continue
+        }
+        let expression = match module_.block_items[items.start + index].kind {
+          PlannedLetItem(_, _, value) | PlannedExpressionItem(value) => value
+          PlannedElidedLetItem(_) => continue
+          PlannedReturnItem(_) => return -1
+        }
+        if !program_effect_summary_expression_is_discardable(
+            module_, expression, summaries, 0,
+          ) {
+          return -1
+        }
+      }
+      candidate
     }
   }
 }
 
 ///|
-fn transparent_callback_parameter_count(
+priv struct TransparentCallbackCallSummary {
+  parameter_count : Int
+}
+
+///|
+fn transparent_callback_local_parameter(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
+  local_id : LocalId,
+  depth : Int,
 ) -> Int {
+  if local_id < 0 ||
+    local_id >= body.locals.length ||
+    depth > body.locals.length {
+    return -1
+  }
+  match module_.locals[body.locals.start + local_id].kind {
+    ParameterLocal => {
+      let mut parameter = 0
+      for index in 0..<local_id {
+        match module_.locals[body.locals.start + index].kind {
+          ParameterLocal => parameter += 1
+          _ => return -1
+        }
+      }
+      return parameter
+    }
+    _ => ()
+  }
+  if module_.locals[body.locals.start + local_id].mutable_ {
+    return -1
+  }
+  let mut initializer = -1
+  for
+    block_index in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+    if block_index < 0 || block_index >= module_.blocks.length() {
+      return -1
+    }
+    let items = module_.blocks[block_index].items
+    if items.start < 0 ||
+      items.start + items.length > module_.block_items.length() {
+      return -1
+    }
+    for index in 0..<items.length {
+      match module_.block_items[items.start + index].kind {
+        PlannedLetItem(candidate, false, value) if candidate == local_id => {
+          if initializer >= 0 {
+            return -1
+          }
+          initializer = value
+        }
+        _ => ()
+      }
+    }
+  }
+  if initializer < 0 || initializer >= module_.expressions.length() {
+    return -1
+  }
+  match module_.expressions[initializer].kind {
+    PlannedLocalGet(source) =>
+      transparent_callback_local_parameter(module_, body, source, depth + 1)
+    _ => -1
+  }
+}
+
+///|
+fn transparent_callback_expression_parameter(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  expression : ExprId,
+) -> Int {
+  if expression < 0 || expression >= module_.expressions.length() {
+    return -1
+  }
+  match module_.expressions[expression].kind {
+    PlannedLocalGet(local_id) =>
+      transparent_callback_local_parameter(module_, body, local_id, 0)
+    _ => -1
+  }
+}
+
+///|
+fn transparent_callback_arguments_match_parameters(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  arguments : HirSpan,
+  first_parameter : Int,
+) -> Bool {
+  if arguments.start < 0 ||
+    arguments.start + arguments.length > module_.expression_children.length() {
+    return false
+  }
+  for index in 0..<arguments.length {
+    if transparent_callback_expression_parameter(
+        module_,
+        body,
+        module_.expression_children[arguments.start + index],
+      ) !=
+      first_parameter + index {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn transparent_callback_call_summary(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  effects : Map[DeclId, ProgramCallableEffectSummary],
+  summaries : Map[DeclId, TransparentCallbackCallSummary],
+) -> TransparentCallbackCallSummary? {
   let mut parameter_count = 0
   for local_id in 0..<body.locals.length {
     match module_.locals[body.locals.start + local_id].kind {
@@ -426,31 +784,39 @@ fn transparent_callback_parameter_count(
     }
   }
   if parameter_count <= 0 {
-    return -1
+    return None
   }
-  let root_expression = transparent_callback_root_expression(module_, body)
+  let root_expression = transparent_callback_root_expression(
+    module_, body, effects,
+  )
   if root_expression < 0 {
-    return -1
+    return None
   }
-  let (target, arguments) = match module_.expressions[root_expression].kind {
-    PlannedFunctionValueCall(target, arguments, _) => (target, arguments)
-    _ => return -1
-  }
-  match module_.expressions[target].kind {
-    PlannedLocalGet(0) => ()
-    _ => return -1
-  }
-  if arguments.length != parameter_count - 1 {
-    return -1
-  }
-  for index in 0..<arguments.length {
-    let argument = module_.expression_children[arguments.start + index]
-    match module_.expressions[argument].kind {
-      PlannedLocalGet(local_id) if local_id == index + 1 => ()
-      _ => return -1
+  match module_.expressions[root_expression].kind {
+    PlannedFunctionValueCall(target, arguments, _) =>
+      if transparent_callback_expression_parameter(module_, body, target) != 0 ||
+        arguments.length != parameter_count - 1 ||
+        !transparent_callback_arguments_match_parameters(
+          module_, body, arguments, 1,
+        ) {
+        return None
+      }
+    PlannedDirectCall(target, receiver, arguments, _) if receiver < 0 => {
+      let target_summary = match summaries.get(target) {
+        Some(value) => value
+        None => return None
+      }
+      if target_summary.parameter_count != parameter_count ||
+        arguments.length != parameter_count ||
+        !transparent_callback_arguments_match_parameters(
+          module_, body, arguments, 0,
+        ) {
+        return None
+      }
     }
+    _ => return None
   }
-  parameter_count
+  Some({ parameter_count, })
 }
 
 ///|
@@ -711,13 +1077,25 @@ fn directize_generic_parameter_selectors(
 ///|
 fn directize_transparent_callback_calls(
   modules : Array[PlannedModuleLowering],
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Unit {
-  let summaries : Map[DeclId, Int] = Map::default()
-  for module_ in modules {
-    for body in module_.bodies {
-      let parameter_count = transparent_callback_parameter_count(module_, body)
-      if parameter_count > 0 {
-        summaries[body.declaration] = parameter_count
+  let summaries : Map[DeclId, TransparentCallbackCallSummary] = Map::default()
+  let mut changed = true
+  while changed {
+    changed = false
+    for module_ in modules {
+      for body in module_.bodies {
+        if summaries.contains(body.declaration) {
+          continue
+        }
+        match
+          transparent_callback_call_summary(module_, body, effects, summaries) {
+          Some(summary) => {
+            summaries[body.declaration] = summary
+            changed = true
+          }
+          None => ()
+        }
       }
     }
   }
@@ -730,7 +1108,7 @@ fn directize_transparent_callback_calls(
         _ => continue
       }
       let parameter_count = match summaries.get(declaration) {
-        Some(count) => count
+        Some(summary) => summary.parameter_count
         None => continue
       }
       if arguments.length != parameter_count {
@@ -1187,39 +1565,22 @@ fn runtime_trait_summary_body_is_transparent(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   root : ExprId,
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Bool {
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
-    match module_.expressions[expression].kind {
-      PlannedPoisonExpression
-      | PlannedFunctionValueCall(_, _, _)
-      | PlannedLambdaClosure(_, _)
-      | PlannedDirectLambdaCall(_, _, _)
-      | PlannedCaptureSet(_, _)
-      | PlannedWhileExpression(_, _, _)
-      | PlannedBreakExpression(_, _)
-      | PlannedContinueExpression(_, _)
-      | PlannedOperatorCall(_, _, _, _, _)
-      | PlannedBoundOperatorCall(_, _, _, _, _, _)
-      | PlannedIndexCall(_, _, _, _)
-      | PlannedIndexSetCall(_, _, _, _, _)
-      | PlannedFixedArraySet(_, _, _, _)
-      | PlannedFixedArraySetUnchecked(_, _, _, _)
-      | PlannedMapInsert(_, _, _, _, _, _, _)
-      | PlannedMapSet(_, _, _, _, _, _, _)
-      | PlannedMapRemove(_, _, _, _, _)
-      | PlannedMapClear(_)
-      | PlannedSetInsert(_, _, _, _, _)
-      | PlannedSetRemove(_, _, _, _, _)
-      | PlannedSetClear(_) => return false
-      PlannedDirectCall(_, _, _, _)
-      | PlannedBoundDirectCall(_, _, _, _, _)
-      | PlannedDynamicTraitCall(_, _, _, _, _, _) =>
-        if expression != root {
-          return false
-        }
-      _ => ()
+    if expression == root {
+      match module_.expressions[expression].kind {
+        PlannedDirectCall(_, _, _, _)
+        | PlannedDynamicTraitCall(_, _, _, _, _, _) => continue
+        _ => return false
+      }
+    }
+    if !program_effect_summary_expression_is_discardable(
+        module_, expression, effects, 0,
+      ) {
+      return false
     }
   }
   true
@@ -1229,6 +1590,7 @@ fn runtime_trait_summary_body_is_transparent(
 fn transparent_trait_call_summaries(
   modules : Array[PlannedModuleLowering],
   analyses : Map[BodyId, RuntimeTraitBodyAnalysis],
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Map[DeclId, TransparentTraitCallSummary] {
   let summaries : Map[DeclId, TransparentTraitCallSummary] = Map::default()
   let mut changed = true
@@ -1256,7 +1618,9 @@ fn transparent_trait_call_summaries(
         if expression < 0 {
           continue
         }
-        if !runtime_trait_summary_body_is_transparent(module_, body, expression) {
+        if !runtime_trait_summary_body_is_transparent(
+            module_, body, expression, effects,
+          ) {
           continue
         }
         let (requirement, parameter_count) = match
@@ -1882,8 +2246,11 @@ fn runtime_trait_type_is_trait(
 fn trait_parameter_selector(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Int {
-  let root_expression = transparent_callback_root_expression(module_, body)
+  let root_expression = transparent_callback_root_expression(
+    module_, body, effects,
+  )
   if root_expression < 0 {
     return -1
   }
@@ -1917,11 +2284,12 @@ fn trait_parameter_selector(
 ///|
 fn directize_trait_parameter_selectors(
   modules : Array[PlannedModuleLowering],
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Array[DeclId] {
   let selectors : Map[DeclId, Int] = Map::default()
   for module_ in modules {
     for body in module_.bodies {
-      let selected = trait_parameter_selector(module_, body)
+      let selected = trait_parameter_selector(module_, body, effects)
       if selected >= 0 {
         selectors[body.declaration] = selected
       }
@@ -2094,11 +2462,12 @@ fn prepare_program_runtime_trait_mutation(
 ///|
 fn directize_exact_runtime_trait_flows(
   modules : Array[PlannedModuleLowering],
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Array[DeclId] {
   prepare_program_runtime_trait_mutation(modules)
-  let selectors = directize_trait_parameter_selectors(modules)
+  let selectors = directize_trait_parameter_selectors(modules, effects)
   let analyses = runtime_trait_body_analyses(modules)
-  let summaries = transparent_trait_call_summaries(modules, analyses)
+  let summaries = transparent_trait_call_summaries(modules, analyses, effects)
   let module_lookup : Map[ModuleId, Int] = Map::default()
   for module_index, module_ in modules {
     module_lookup[module_.module_id] = module_index
@@ -2167,9 +2536,12 @@ pub fn plan_program_lowering(
   for slot in slots {
     modules.push(slot.unwrap())
   }
-  directize_transparent_callback_calls(modules)
+  let effects = program_callable_effect_summaries(modules)
+  directize_transparent_callback_calls(modules, effects)
   directize_generic_parameter_selectors(modules)
-  let elided_trait_wrappers = directize_exact_runtime_trait_flows(modules)
+  let elided_trait_wrappers = directize_exact_runtime_trait_flows(
+    modules, effects,
+  )
   { graph: analyzed.frozen.graph, modules, elided_trait_wrappers }
 }
 

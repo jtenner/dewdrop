@@ -652,6 +652,115 @@ test "program lowering directizes transparent callback wrappers" {
 }
 
 ///|
+test "public callback summaries discard only total effect-free preludes" {
+  let program = collect_program_manifest(
+    22801UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open app.library\nfn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn main() -> I32 {\n  apply(increment, 41)\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.library", [
+        ManifestFile::new(
+          "library.dew", b"pub fn marker() -> I32 {\n  token()\n}\npub fn token() -> I32 {\n  0\n}\npub fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  let ignored = marker()\n  let stored = callback\n  forward(stored, value)\n}\npub fn forward(callback: fn(I32) -> I32, value: I32) -> I32 {\n  let stored = callback\n  stored(value)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics.length(), 0)
+  }
+  let lowering = plan_program_lowering(program, analyzed)
+  let root = program.modules[0]
+  let main = root.lookup_value("main").unwrap()
+  let body = root.body_of(main).unwrap()
+  let call = body_calls(root, body)[0]
+  let increment = root.lookup_value("increment").unwrap()
+  match lowering.modules[0].expressions[call].kind {
+    PlannedDirectCall(declaration, _, arguments, _) => {
+      assert_eq(declaration, increment)
+      assert_eq(arguments.length, 1)
+    }
+    _ => fail("expected public callback summary directization")
+  }
+  let apply = program.modules[1].lookup_value("apply").unwrap()
+  let mut retained_public_apply = false
+  for function_ in plan_program_wasmgc_link(analyzed, lowering, 0).functions {
+    if function_.declaration == apply && !function_.elided {
+      retained_public_apply = true
+    }
+  }
+  assert_true(retained_public_apply)
+}
+
+///|
+test "public callback summaries retain trapping preludes" {
+  let program = collect_program_manifest(
+    22802UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn marker() -> I32 {\n  assert(false, \"observable callback prelude\")\n  0\n}\npub fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  let ignored = marker()\n  callback(value)\n}\npub fn main() -> I32 {\n  apply(increment, 41)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let collected = program.modules[0]
+  let main = collected.lookup_value("main").unwrap()
+  let body = collected.body_of(main).unwrap()
+  let apply = collected.lookup_value("apply").unwrap()
+  let mut retained_call = false
+  for call in body_calls(collected, body) {
+    match lowering.modules[0].expressions[call].kind {
+      PlannedDirectCall(target, _, _, _) if target == apply =>
+        retained_call = true
+      _ => ()
+    }
+  }
+  assert_true(retained_call)
+}
+
+///|
+test "public callback summaries retain escaping and multiply called values" {
+  let program = collect_program_manifest(
+    22803UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn escape(callback: fn(I32) -> I32) -> fn(I32) -> I32 {\n  callback\n}\npub fn twice(callback: fn(I32) -> I32, value: I32) -> I32 {\n  callback(value) + callback(value)\n}\npub fn main() -> I32 {\n  let stored = escape(increment)\n  stored(0) + twice(increment, 20)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let collected = program.modules[0]
+  let main = collected.lookup_value("main").unwrap()
+  let body = collected.body_of(main).unwrap()
+  let escape = collected.lookup_value("escape").unwrap()
+  let twice = collected.lookup_value("twice").unwrap()
+  let mut retained_escape = false
+  let mut retained_twice = false
+  for call in body_calls(collected, body) {
+    match lowering.modules[0].expressions[call].kind {
+      PlannedDirectCall(target, _, _, _) if target == escape =>
+        retained_escape = true
+      PlannedDirectCall(target, _, _, _) if target == twice =>
+        retained_twice = true
+      _ => ()
+    }
+  }
+  assert_true(retained_escape)
+  assert_true(retained_twice)
+}
+
+///|
 test "program link unifies closure bases and named singletons across modules" {
   let program = collect_program_manifest(
     2285UL,
@@ -1613,34 +1722,78 @@ test "runtime trait flow joins retain differing implementation evidence" {
 }
 
 ///|
-test "runtime trait wrapper directization preserves condition evaluation" {
+test "public runtime trait summaries discard total effect-free preludes" {
   let program = collect_program_manifest(
     21977UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn condition() -> Bool {\n  true\n}\nfn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn condition() -> Bool {\n  true\n}\npub fn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
         ),
       ]),
     ]),
   )
   let analyzed = analyze_program_semantics(program)
   let lowering = plan_program_lowering(program, analyzed)
-  let invoke = program.modules[0].lookup_value("invoke").unwrap()
+  let collected = program.modules[0]
+  let invoke = collected.lookup_value("invoke").unwrap()
   assert_false(lowering.elided_trait_wrappers.contains(invoke))
-  let mut dynamic_calls = 0
+  let main = collected.lookup_value("main").unwrap()
+  let body = collected.body_of(main).unwrap()
+  let call = body_calls(collected, body)[0]
+  match lowering.modules[0].expressions[call].kind {
+    PlannedDirectCall(target, receiver, _, _) if receiver >= 0 =>
+      match lowering.modules[0].functions.callable_of(target) {
+        Some({ kind: PlannedImplMethodCallable(_, _), .. }) => ()
+        _ => fail("expected exact public trait implementation call")
+      }
+    _ => fail("expected public trait summary directization")
+  }
   let mut coercions = 0
   for expression in lowering.modules[0].expressions {
-    match expression.kind {
-      PlannedDynamicTraitCall(_, _, _, _, _, _) => dynamic_calls += 1
-      _ => ()
-    }
     match expression.trait_object_coercion {
       SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
       _ => ()
     }
   }
-  assert_eq(dynamic_calls, 1)
+  assert_eq(coercions, 0)
+}
+
+///|
+test "public runtime trait summaries retain trapping preludes" {
+  let program = collect_program_manifest(
+    21978UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn condition() -> Bool {\n  assert(false, \"observable prelude\")\n  true\n}\npub fn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let collected = program.modules[0]
+  let main = collected.lookup_value("main").unwrap()
+  let body = collected.body_of(main).unwrap()
+  let invoke = collected.lookup_value("invoke").unwrap()
+  let mut retained_call = false
+  for call in body_calls(collected, body) {
+    match lowering.modules[0].expressions[call].kind {
+      PlannedDirectCall(target, _, _, _) if target == invoke =>
+        retained_call = true
+      _ => ()
+    }
+  }
+  assert_true(retained_call)
+  let mut coercions = 0
+  for expression in lowering.modules[0].expressions {
+    match expression.trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
+      _ => ()
+    }
+  }
   assert_eq(coercions, 1)
 }
 

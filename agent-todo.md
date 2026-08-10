@@ -71,7 +71,7 @@
 - [x] Forward runtime prerequisites through statically selected concrete generic implementation evidence.
 - [x] Support escaping bounded function references/callbacks with immutable evidence-capturing closure subtypes and exact specialized entry trampolines.
 - [x] Support erased trait dictionaries whose immutable receiver capture carries caller-local runtime prerequisites through exact adapters.
-- [ ] Broaden effect/escape summaries across non-transparent public APIs.
+- [x] Broaden callback and runtime-trait effect/escape summaries across non-transparent public APIs using transitive total/discardable-call summaries, immutable callback-alias forwarding, and conservative retention for trapping, escaping, or multiply invoked values.
 
 ## Deterministic cleanup and executable language surface
 

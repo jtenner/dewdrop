@@ -1,0 +1,49 @@
+pub trait Read {
+  fn read(self) -> I32
+}
+
+pub struct Item {
+  value: I32
+}
+
+impl Read for Item {
+  fn read(self) -> I32 {
+    self.value
+  }
+}
+
+pub fn condition() -> Bool {
+  token()
+}
+
+pub fn token() -> Bool {
+  true
+}
+
+pub fn invoke(value: Read) -> I32 {
+  let selected = if condition() {
+    value
+  } else {
+    value
+  }
+  selected.read()
+}
+
+pub fn marker() -> I32 {
+  zero()
+}
+
+pub fn zero() -> I32 {
+  0
+}
+
+pub fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  let ignored = marker()
+  let stored = callback
+  forward(stored, value)
+}
+
+pub fn forward(callback: fn(I32) -> I32, value: I32) -> I32 {
+  let stored = callback
+  stored(value)
+}

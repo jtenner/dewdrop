@@ -1,0 +1,14 @@
+open fixture.summary
+
+fn increment(value: I32) -> I32 {
+  value + 1
+}
+
+pub fn main() -> I32 {
+  let trait_result = invoke(Item {
+    value: 41
+  })
+  let callback_result = apply(increment, 0)
+  assert(trait_result + callback_result == 42, "public effect summary result")
+  0
+}

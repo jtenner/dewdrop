@@ -638,4 +638,10 @@ assert_wat_count "$imported_open_generic_wat" '(global' 1 "imported open-generic
 assert_wat_count "$imported_open_generic_wat" '(table' 0 "imported open-generic trait erasure"
 assert_wat_count "$imported_open_generic_wat" struct.new 3 "imported open-generic trait erasure"
 
+public_effect_summary_wat="tests/module-snapshots/modules/imported-public-effect-summary-runtime.wat"
+assert_wat_count "$public_effect_summary_wat" call_ref 3 "public effect-summary fallback surfaces"
+assert_wat_count "$public_effect_summary_wat" ref.func 0 "public effect-summary directized callers"
+assert_wat_count "$public_effect_summary_wat" '(global' 0 "public effect-summary directized callers"
+assert_wat_count "$public_effect_summary_wat" struct.new 2 "public effect-summary allocation sites"
+
 echo "full Dew validation passed"
