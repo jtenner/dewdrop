@@ -4,14 +4,9 @@
 
 ## Current priority order
 
-1. Close correctness gaps in the already-advertised language surface.
-2. Add installed artifact-only dependency interface recovery.
-3. Implement growable `Array` and explicit iterator protocols, then extend the remaining collection families.
-4. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
-5. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
-
-## Current-language correctness hardening
-
+1. Implement growable `Array` and explicit iterator protocols, then extend the remaining collection families.
+2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
+3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
 
@@ -36,7 +31,6 @@
 - [ ] Diagnose local declarations that conflict with canonical ambient traits.
 - [ ] Decide default-preamble opt-out syntax.
 - [ ] Add registry lookup, Git checkout, deterministic lockfile generation/update, and a content-addressed installed-package store.
-- [ ] Add installed artifact-only interface recovery so verified versioned dependencies no longer require source recollection.
 - [ ] Package `dew.std` with the compiler or as a versioned dependency.
 - [ ] Version the compiler and prelude ABI together initially.
 

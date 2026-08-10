@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -234,22 +236,326 @@ def _conventional_source_paths(
     return compile_files, hash_files
 
 
-def _package_integrity(package: PackageDefinition) -> str:
-    _, files = _conventional_source_paths(package, include_tests=True)
+def _package_integrity_records(
+    name: str,
+    version: str,
+    dependencies: tuple[DependencyRequest, ...],
+    files: list[tuple[str, bytes]],
+) -> str:
     digest = hashlib.sha256()
     digest.update(b"DEW_PACKAGE_INTEGRITY_V2\x00")
-    _write_hash_string(digest, package.name)
-    _write_hash_string(digest, package.version)
-    _write_hash_string(digest, _package_module_name(package.name))
-    for logical, source in files:
+    _write_hash_string(digest, name)
+    _write_hash_string(digest, version)
+    _write_hash_string(digest, _package_module_name(name))
+    for logical, data in files:
         _write_hash_string(digest, logical)
-        data = source.read_bytes()
         digest.update(len(data).to_bytes(4, "little"))
         digest.update(data)
-    for dependency in package.dependencies:
+    for dependency in dependencies:
         _write_hash_string(digest, dependency.name)
         _write_hash_string(digest, dependency.requirement)
     return f"sha256-{digest.hexdigest()}"
+
+
+def _package_integrity(package: PackageDefinition) -> str:
+    _, files = _conventional_source_paths(package, include_tests=True)
+    return _package_integrity_records(
+        package.name,
+        package.version,
+        package.dependencies,
+        [(logical, source.read_bytes()) for logical, source in files],
+    )
+
+
+_PACKAGE_ARTIFACT_MAGIC = b"DEW_PACKAGE_ARTIFACT_V1\x00"
+
+
+def _package_artifact_key(lock: LockedPackage) -> str:
+    digest = hashlib.sha256()
+    digest.update(b"DEW_PACKAGE_ARTIFACT_KEY_V1\x00")
+    for value in (
+        lock.name,
+        lock.version,
+        lock.source,
+        lock.integrity,
+        lock.interface_fingerprint,
+        _package_module_name(lock.name),
+    ):
+        _write_hash_string(digest, value)
+    return digest.hexdigest()
+
+
+def _package_cache_root() -> Path:
+    configured = Path(os.environ.get("DEW_CACHE_DIR", ".dew-cache"))
+    return (configured if configured.is_absolute() else ROOT / configured).resolve()
+
+
+def _package_artifact_path(lock: LockedPackage) -> Path:
+    return _package_cache_root() / "packages" / f"v1-{_package_artifact_key(lock)}.dpa"
+
+
+def _package_artifact_payload(package: PackageDefinition, lock: LockedPackage) -> bytes:
+    _, sources = _conventional_source_paths(package, include_tests=True)
+    files = []
+    for logical, source in sources:
+        data = source.read_bytes()
+        files.append(
+            {
+                "path": logical,
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "content": base64.b64encode(data).decode("ascii"),
+            }
+        )
+    payload = {
+        "artifactVersion": 1,
+        "name": lock.name,
+        "version": lock.version,
+        "source": lock.source,
+        "integrity": lock.integrity,
+        "interface": lock.interface_fingerprint,
+        "module": _package_module_name(lock.name),
+        "dependencies": [
+            {"name": dependency.name, "requirement": dependency.requirement}
+            for dependency in package.dependencies
+        ],
+        "files": files,
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def _decode_package_artifact(
+    lock: LockedPackage,
+    artifact: bytes,
+) -> tuple[tuple[DependencyRequest, ...], list[tuple[str, bytes]]]:
+    header_length = len(_PACKAGE_ARTIFACT_MAGIC)
+    if (
+        not artifact.startswith(_PACKAGE_ARTIFACT_MAGIC)
+        or len(artifact) < header_length + 65
+    ):
+        raise ManifestError("unsupported or truncated installed package artifact")
+    checksum = artifact[header_length : header_length + 64]
+    if artifact[header_length + 64 : header_length + 65] != b"\n":
+        raise ManifestError("malformed installed package artifact checksum")
+    payload = artifact[header_length + 65 :]
+    if checksum.decode("ascii", errors="ignore") != hashlib.sha256(payload).hexdigest():
+        raise ManifestError("installed package artifact checksum mismatch")
+    try:
+        raw = json.loads(payload.decode("utf-8"), object_pairs_hook=unique_object)
+    except (json.JSONDecodeError, UnicodeError, ManifestError) as error:
+        raise ManifestError(f"invalid installed package artifact: {error}") from error
+    if not isinstance(raw, dict):
+        raise ManifestError("installed package artifact root must be an object")
+    exact_keys(
+        raw,
+        {
+            "artifactVersion",
+            "name",
+            "version",
+            "source",
+            "integrity",
+            "interface",
+            "module",
+            "dependencies",
+            "files",
+        },
+        "installed package artifact",
+    )
+    expected = {
+        "artifactVersion": 1,
+        "name": lock.name,
+        "version": lock.version,
+        "source": lock.source,
+        "integrity": lock.integrity,
+        "interface": lock.interface_fingerprint,
+        "module": _package_module_name(lock.name),
+    }
+    for field, value in expected.items():
+        if raw[field] != value:
+            raise ManifestError(
+                f"installed package artifact {field} mismatch for {lock.name}"
+            )
+    raw_dependencies = raw["dependencies"]
+    if not isinstance(raw_dependencies, list):
+        raise ManifestError("installed package artifact dependencies must be an array")
+    dependencies: list[DependencyRequest] = []
+    previous_name = ""
+    for index, dependency in enumerate(raw_dependencies):
+        if not isinstance(dependency, dict):
+            raise ManifestError(
+                f"installed package artifact dependency {index} must be an object"
+            )
+        exact_keys(
+            dependency,
+            {"name", "requirement"},
+            f"installed package artifact dependency {index}",
+        )
+        name = dependency["name"]
+        requirement = dependency["requirement"]
+        if not isinstance(name, str) or not _PACKAGE_NAME.fullmatch(name):
+            raise ManifestError(f"invalid installed package artifact dependency name at {index}")
+        if not isinstance(requirement, str) or not requirement:
+            raise ManifestError(
+                f"invalid installed package artifact dependency requirement for {name}"
+            )
+        if name <= previous_name:
+            raise ManifestError(
+                "installed package artifact dependencies are not strictly ordered"
+            )
+        previous_name = name
+        dependencies.append(DependencyRequest(name, requirement))
+    raw_files = raw["files"]
+    if not isinstance(raw_files, list) or not raw_files:
+        raise ManifestError("installed package artifact files must be a nonempty array")
+    files: list[tuple[str, bytes]] = []
+    seen: set[str] = set()
+    previous_path = ""
+    for index, file in enumerate(raw_files):
+        if not isinstance(file, dict):
+            raise ManifestError(f"installed package artifact file {index} must be an object")
+        exact_keys(
+            file,
+            {"path", "sha256", "content"},
+            f"installed package artifact file {index}",
+        )
+        logical = file["path"]
+        checksum_hex = file["sha256"]
+        content = file["content"]
+        if not isinstance(logical, str) or not logical or logical in seen:
+            raise ManifestError(f"invalid installed package artifact path at {index}")
+        relative = Path(logical)
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or "\\" in logical
+            or not logical.endswith(".dew")
+        ):
+            raise ManifestError(f"unsafe installed package artifact path: {logical}")
+        if logical <= previous_path:
+            raise ManifestError("installed package artifact files are not strictly ordered")
+        previous_path = logical
+        seen.add(logical)
+        if not isinstance(checksum_hex, str) or not _FINGERPRINT.fullmatch(
+            checksum_hex
+        ):
+            raise ManifestError(
+                f"invalid installed package artifact checksum for {logical}"
+            )
+        if not isinstance(content, str):
+            raise ManifestError(f"invalid installed package artifact content for {logical}")
+        try:
+            data = base64.b64decode(content, validate=True)
+        except ValueError as error:
+            raise ManifestError(
+                f"invalid installed package artifact base64 for {logical}"
+            ) from error
+        if hashlib.sha256(data).hexdigest() != checksum_hex:
+            raise ManifestError(
+                f"installed package artifact file checksum mismatch for {logical}"
+            )
+        files.append((logical, data))
+    dependency_tuple = tuple(dependencies)
+    actual_integrity = _package_integrity_records(
+        lock.name, lock.version, dependency_tuple, files
+    )
+    if actual_integrity != lock.integrity:
+        raise ManifestError(
+            f"installed package artifact integrity mismatch for {lock.name}@{lock.version}: "
+            f"expected {lock.integrity}, got {actual_integrity}"
+        )
+    return dependency_tuple, files
+
+
+def _store_package_artifact(package: PackageDefinition, lock: LockedPackage) -> None:
+    path = _package_artifact_path(lock)
+    if path.exists():
+        return
+    payload = _package_artifact_payload(package, lock)
+    artifact = (
+        _PACKAGE_ARTIFACT_MAGIC
+        + hashlib.sha256(payload).hexdigest().encode("ascii")
+        + b"\n"
+        + payload
+    )
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary.write_bytes(artifact)
+        os.replace(temporary, path)
+    except OSError as error:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise ManifestError(
+            f"cannot write installed package artifact {path}: {error}"
+        ) from error
+
+
+def _restore_package_artifact(lock: LockedPackage) -> PackageDefinition:
+    path = _package_artifact_path(lock)
+    if not path.is_file():
+        raise ManifestError(
+            f"locked package source is unavailable and no installed artifact exists for "
+            f"{lock.name}@{lock.version}: {path}"
+        )
+    try:
+        dependencies, files = _decode_package_artifact(lock, path.read_bytes())
+    except OSError as error:
+        raise ManifestError(
+            f"cannot read installed package artifact {path}: {error}"
+        ) from error
+    package_root = lock.path.parent
+    try:
+        if package_root.exists() and any(package_root.iterdir()):
+            raise ManifestError(
+                f"cannot restore installed package artifact into nonempty path "
+                f"{package_root}"
+            )
+    except OSError as error:
+        raise ManifestError(
+            f"cannot inspect installed package path {package_root}: {error}"
+        ) from error
+    staging = package_root.with_name(
+        f".{package_root.name}.dew-artifact-{_package_artifact_key(lock)}"
+    )
+    try:
+        if package_root.exists():
+            package_root.rmdir()
+        if staging.exists():
+            shutil.rmtree(staging)
+        staging.mkdir(parents=True)
+        manifest = {
+            "name": lock.name,
+            "version": lock.version,
+            "dependencies": {
+                dependency.name: dependency.requirement for dependency in dependencies
+            },
+        }
+        (staging / "dew.json").write_text(
+            json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        for logical, data in files:
+            destination = staging / logical
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
+        os.replace(staging, package_root)
+    except OSError as error:
+        try:
+            if staging.exists():
+                shutil.rmtree(staging)
+        except OSError:
+            pass
+        raise ManifestError(
+            f"cannot restore installed package artifact for "
+            f"{lock.name}@{lock.version}: {error}"
+        ) from error
+    package = _load_package_definition(lock.path)
+    if _package_integrity(package) != lock.integrity:
+        raise ManifestError(
+            f"restored installed package artifact failed integrity for {lock.name}"
+        )
+    return package
 
 
 def _load_lockfile(path: Path, package_root: Path) -> dict[str, LockedPackage]:
@@ -289,7 +595,7 @@ def _load_lockfile(path: Path, package_root: Path) -> dict[str, LockedPackage]:
         if package_path.is_absolute():
             raise ManifestError(f"locked package {name} path must be relative")
         package_manifest = _workspace_path(package_root / package_path, f"locked package {name}")
-        if package_manifest.is_dir():
+        if package_manifest.is_dir() or package_manifest.name != "dew.json":
             package_manifest /= "dew.json"
         if not isinstance(integrity, str) or not _INTEGRITY.fullmatch(integrity):
             raise ManifestError(f"locked package {name} integrity must be sha256-<hex>")
@@ -409,17 +715,26 @@ def load_manifest(
                     f"locked version {dependency_lock.version} does not satisfy "
                     f"{dependency.name} {dependency.requirement}"
                 )
-            dependency_package = _load_package_definition(dependency_lock.path)
-            if dependency_package.name != dependency_lock.name or dependency_package.version != dependency_lock.version:
-                raise ManifestError(
-                    f"locked package identity mismatch for {dependency_lock.name}@{dependency_lock.version}"
-                )
-            actual_integrity = _package_integrity(dependency_package)
-            if actual_integrity != dependency_lock.integrity:
-                raise ManifestError(
-                    f"dependency integrity mismatch for {dependency_lock.name}@{dependency_lock.version}: "
-                    f"expected {dependency_lock.integrity}, got {actual_integrity}"
-                )
+            if dependency_lock.path.is_file():
+                dependency_package = _load_package_definition(dependency_lock.path)
+                if (
+                    dependency_package.name != dependency_lock.name
+                    or dependency_package.version != dependency_lock.version
+                ):
+                    raise ManifestError(
+                        f"locked package identity mismatch for "
+                        f"{dependency_lock.name}@{dependency_lock.version}"
+                    )
+                actual_integrity = _package_integrity(dependency_package)
+                if actual_integrity != dependency_lock.integrity:
+                    raise ManifestError(
+                        f"dependency integrity mismatch for "
+                        f"{dependency_lock.name}@{dependency_lock.version}: "
+                        f"expected {dependency_lock.integrity}, got {actual_integrity}"
+                    )
+                _store_package_artifact(dependency_package, dependency_lock)
+            else:
+                dependency_package = _restore_package_artifact(dependency_lock)
             visit(dependency_package, dependency_lock)
         visiting.remove(package.name)
         visited[package.name] = (package, lock)

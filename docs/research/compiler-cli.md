@@ -7,11 +7,13 @@ over explicitly ordered source paths and statically linked module groups. The
 explicit-file test command is driven by compiler-owned V3 metadata. The CLI
 resolves the compiler-owned `dew.std` package from ordered package roots, loads
 the exact import-selected source subset from disk, and reuses content-addressed
-persistent standard and versioned external dependency frozen interfaces. Human
-source excerpts, network package installation, and installed release binaries
-remain pending. Convention-discovered `dew.json` packages, exact `dew.lock`
-resolution, `run`, and explicit `dew.modules.json` compiler graphs are
-supported.
+persistent standard and versioned external dependency frozen interfaces. It
+also publishes verified installed-package capsules and can recover a removed
+locked dependency tree from those artifacts without changing emitted Wasm.
+Human source excerpts, network package installation, and installed release
+binaries remain pending. Convention-discovered `dew.json` packages, exact
+`dew.lock` resolution, `run`, and explicit `dew.modules.json` compiler graphs
+are supported.
 
 ## Commands
 
@@ -50,13 +52,19 @@ including `open dew.std.*`, remain available. `dew test` does not
 accept this option because its compiler-owned assertion runtime requires the
 standard test preamble.
 
-The default cache location is `.dew-cache/interfaces/`; `DEW_CACHE_DIR` changes
-the root, `--no-interface-cache` or `DEW_INTERFACE_CACHE=0` disables it, and
+The default cache locations are `.dew-cache/interfaces/` for frozen bundles and
+`.dew-cache/packages/` for installed package capsules; `DEW_CACHE_DIR` changes
+the shared root. `--no-interface-cache` or `DEW_INTERFACE_CACHE=0` disables
+frozen-interface reuse, and
 `--cache-report` prints `miss`, `hit`, or `disabled`. Keys are SHA-256 hashes of
 the exact ordered selected standard logical paths and source bytes plus a
 private compiler cache ABI marker. Cache payloads use deterministic semantic
 serialization and an envelope checksum. Corrupt or identity-mismatched cache
-artifacts fail visibly instead of silently recompiling. See
+artifacts fail visibly instead of silently recompiling. Package capsules bind
+exact lock provenance, dependency requests, ordered source payloads, per-file
+checksums, and an envelope checksum. Missing locked package trees are restored
+through a staged atomic rename; corrupt, mismatched, or unsafe capsules and
+nonempty partial destinations fail visibly. See
 `docs/research/persistent-standard-interface-cache.md`.
 
 `check` executes collection, frozen interfaces, module analysis, lowering, and
@@ -115,8 +123,9 @@ Exit status is:
 The full `tools/check.sh` workflow checks a valid scalar fixture through default
 and explicit package roots, compiles the standard wildcard fixture, requires
 on-disk/generated/cache-miss/cache-hit providers to produce byte-identical Wasm,
-verifies miss/hit/disabled reporting, source-content invalidation, and
-fail-visible corruption, builds the multi-module linking fixture, verifies
+verifies miss/hit/disabled reporting, source-content invalidation,
+fail-visible corruption, installed dependency removal/recovery, and
+byte-identical recovered Wasm, builds the multi-module linking fixture, verifies
 file-aware compiler failures, runs the `compile-pass`, `compile-fail`, and
 `run-pass` CLI fixture directories, runs explicit and manifest test packages,
 and requires failed assertions to report their exact dynamic Unicode message
@@ -124,11 +133,11 @@ without leaking a Python traceback.
 
 ## Next steps
 
-1. Add versioned external package identities, dependency integrity metadata,
-   and dependency-interface fingerprints without weakening manifest order.
-2. Measure cache-file I/O and representative external-package workloads, and
-   add artifact-only interface recovery once verified cached artifacts can replace
-   source recollection.
+1. Add registry lookup, Git checkout, and deterministic lockfile generation
+   without weakening exact installed-package provenance.
+2. Measure cache-file/package-capsule I/O and representative external-package
+   workloads; serialize collected bodies only if restoration-time syntax
+   collection is a measured bottleneck.
 3. Replace semantic `Debug` messages with stable human diagnostic codes and
    prose without changing source ordering or labels.
 4. Improve entry-point and host diagnostics as runtime semantics continue to

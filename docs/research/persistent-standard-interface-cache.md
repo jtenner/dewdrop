@@ -2,9 +2,9 @@
 
 ## Status
 
-Implemented for compiler-owned `dew.std.*` interfaces and source-bundled versioned external dependency packages. The cache key combines the exact ordered standard source subset with the resolved dependency package identity/version/integrity closure. A hit injects standard and non-root dependency interfaces while continuing to collect executable bodies and run body inference, lowering, reachability, linking, Starshine validation, and encoding normally.
+Implemented for compiler-owned `dew.std.*` interfaces and versioned external dependency packages. The cache key combines the exact ordered standard source subset with the resolved dependency package identity/version/integrity closure. A hit injects standard and non-root dependency interfaces while continuing to collect executable bodies and run body inference, lowering, reachability, linking, Starshine validation, and encoding normally.
 
-Root-package interfaces, body artifacts, layouts, lowering fragments, and emitted Wasm are not cached yet.
+Installed dependencies additionally receive content-addressed V1 package capsules. When a locked dependency tree is unavailable, the CLI verifies the capsule against the complete lock provenance and atomically restores its exact ordered package payload at the locked path before compilation. The ordinary interface-cache hit then avoids refreezing that dependency interface, while restored executable bodies keep static linking and emitted Wasm byte-identical. Root-package interfaces, collected-body artifacts, layouts, lowering fragments, and emitted Wasm are not cached yet.
 
 ## Content key
 
@@ -27,6 +27,8 @@ Source order comes from `required_standard_library_source_paths`; neither hashin
 For versioned external dependencies, `dew.json` records only package identity/version and semantic-version or Git dependency requests. Sibling `dew.lock` records each exact resolved name/version/source/materialized path, `sha256-<hex>` package source integrity, and expected 64-hex transitive interface fingerprint. Package integrity V2 hashes identity, derived module path, conventionally discovered source paths/bytes, and dependency requests independently of lockfile placement. After freezing or cache injection, the compiler compares each resolved dependency module's transitive interface fingerprint with the lock expectation before lowering or linking. The resolver validates the complete acyclic locked dependency closure before compilation and derives a domain-separated dependency-interface key from exact lock records, combined with the standard-source fingerprint.
 
 Generated `--bootstrap-std` providers are intentionally not cacheable. Bootstrap mode remains an independent comparison path.
+
+The package capsule key is independently domain-separated over exact locked package name, version, source, integrity, expected interface fingerprint, and derived module path. The integrity digest already commits to the ordered package source payload and dependency requests, so any package or transitive request change selects a different artifact.
 
 ## Artifact format
 
@@ -61,12 +63,24 @@ payload
 
 The envelope checksum catches corruption that might otherwise remain structurally decodable. Corrupt, truncated, unsupported, identity-mismatched, duplicate, or checksum-invalid artifacts fail visibly; they are never silently treated as misses.
 
+Installed package capsules use:
+
+```text
+DEW_PACKAGE_ARTIFACT_V1\0
+64 lowercase hexadecimal SHA-256 bytes
+newline
+canonical JSON payload
+```
+
+The payload binds artifact version, exact lock identity/version/source/integrity/interface fingerprint, derived module path, sorted dependency requests, and sorted conventional `.dew` files. Every file carries its logical relative path, SHA-256 digest, and base64 bytes. Recovery rejects duplicate or unordered entries, unsafe paths, malformed encodings, per-file checksum failures, envelope checksum failures, lock-provenance mismatches, and a recomputed package-integrity mismatch. Publication uses a same-directory temporary file plus atomic replacement. Recovery stages the complete package beside the locked destination and atomically renames it only after validation; a nonempty partial source tree fails visibly rather than being overwritten.
+
 ## Cache location and controls
 
-The default location is:
+The default locations are:
 
 ```text
 .dew-cache/interfaces/v11-<bundle-fingerprint>.dwi
+.dew-cache/packages/v1-<package-artifact-key>.dpa
 ```
 
 The cache root may be changed with:
@@ -112,6 +126,8 @@ Permanent coverage includes:
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
 - versioned external package miss/hit behavior and `v11-*.dwi` filenames;
+- installed package capsule publication, source-tree removal, verified atomic recovery, and byte-identical pre/post-recovery Wasm;
+- fail-visible corrupt package capsules and refusal to overwrite nonempty partial package trees;
 - rejection of injected ordinary orphan evidence before a cache hit can expose it;
 - rejection of malformed implementation type IDs without a compiler process abort;
 - fail-visible package identity, version, and integrity mismatches;
@@ -133,6 +149,6 @@ A complete hit currently pays decode plus cached graph/scope injection, about 37
 ## Remaining work
 
 1. Add cache-file I/O and checksum-only benchmarks, allocation counts, and representative larger external-package workloads.
-2. Load dependency interfaces without recollecting their source bodies once installed-package recovery and artifact provenance are reliable.
-3. Define atomic artifact publication when the filesystem abstraction exposes rename/replace semantics; current deterministic same-key writers produce identical bytes, and interrupted partial artifacts remain visible checksum failures.
-4. Extend caching to body, layout, fragment, and final Wasm artifacts only after their serialization schemas stabilize.
+2. Measure whether serializing collected dependency bodies is worth avoiding restoration-time syntax collection; package-tree lookup and interface refreezing are already removed from the recovery path.
+3. Define atomic frozen-interface artifact publication when the MoonBit filesystem abstraction exposes rename/replace semantics; Python-owned package capsules already publish and restore atomically.
+4. Extend caching to collected bodies, layouts, fragments, and final Wasm only after their serialization schemas stabilize.

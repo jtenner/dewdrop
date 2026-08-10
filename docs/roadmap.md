@@ -30,16 +30,11 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. close correctness gaps in the already-advertised language surface, especially
-   discarded non-Unit tails in Unit functions, string literal pattern emission,
-   local module-value cycle diagnostics, and explicit `Never`/drop coverage;
-2. add installed artifact-only interface recovery so verified dependencies no
-   longer require source recollection;
-3. implement growable `Array` and explicit iterator protocols before expanding
+1. implement growable `Array` and explicit iterator protocols before expanding
    the remaining collection families;
-4. take annotations/`Show` or deterministic cleanup as separate, bounded
+2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
-5. continue snapshots, measurements, resource budgets, optimization, packaging,
+3. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
 ### 0. Harden the advertised current language surface
@@ -120,7 +115,7 @@ runtime artifacts.
 - [x] Make installed/on-disk import-selected standard sources the default driver provider and require byte identity with generated bootstrap sources.
 - [x] Add a persistent SHA-256 content-addressed frozen-interface cache for compiler-owned standard modules, including deterministic private serialization, cache-hit injection, checksum/identity validation, and fail-visible corruption handling.
 - [x] Extend persistent interface caching to versioned external user packages with dependency closure keys and V11 artifacts; source recollection and generated bootstrap removal remain deferred until installed artifact provenance is reliable.
-- [ ] Add installed artifact-only interface recovery so versioned dependencies can compile from verified cached artifacts without recollecting source.
+- [x] Add installed artifact-only interface recovery so versioned dependencies can compile from verified cached artifacts without recollecting their original source tree. V1 content-addressed `.dpa` capsules bind exact lock identity, source, integrity, interface fingerprint, dependency requests, ordered source payloads, per-file checksums, and an envelope checksum; missing locked trees are restored atomically at their path so normal frozen-interface injection and static linking preserve byte-identical Wasm.
 
 **Done when:** installed package lookup can replace generated bootstrap byte
 providers without changing frozen interfaces or Wasm bytes, an ordinary module
@@ -878,12 +873,12 @@ remain easier to diagnose and maintain.
 
 1. **Module WAT snapshots — foundation complete and continuous:** canonical readable fixtures, warning transport, deterministic regeneration, repeated-compilation checks, and Node/Wago execution are implemented; keep growing edge and completion-order coverage.
 2. **Self-describing tests — complete:** compiler-emitted test metadata, stable identities, filtering, expected traps, and assertion reporting are implemented.
-3. **Selective standard packages and interface caching — mostly complete:** on-disk standard lookup and persistent content-addressed standard/external interface caching are implemented; artifact-only dependency recovery remains.
+3. **Selective standard packages and interface caching — complete for installed source capsules:** on-disk standard lookup, persistent content-addressed standard/external interface caching, and verified installed dependency recovery are implemented; body/layout/fragment artifacts remain later optimization work.
 4. **Compiler CLI — complete for the current product:** `check`, `build`, `test`, `run`, deterministic emit modes, file-aware diagnostics, and compile/run/multi-module fixtures are implemented.
 5. **Structured execution and linked module state — complete:** short-circuit logic, functional loops, nested/alternative patterns, globals, explicit host initialization, eager-cycle analysis, imported impl dispatch, and cross-module recursive type groups execute.
 6. **Executable generics and runtime traits — complete for the documented ABI:** bounds/obligations, evidence-aware specialization, erased fallbacks, recursive adapters, trait objects, typed dictionaries, runtime evidence, `call_ref`, imported providers, and compatibility negotiation execute.
-7. **Current-language correctness hardening — active:** fix discarded non-Unit Unit tails, string literal pattern emission, local module-value cycle diagnostics, and explicit `Never`/drop matrices before broadening syntax.
-8. **Artifact-only installed dependencies — next foundation milestone:** compile verified versioned dependencies from cached artifacts without recollecting source.
+7. **Current-language correctness hardening — complete for the audited gaps:** discarded non-Unit Unit tails, string literal pattern emission, stable local module-value cycle diagnostics, explicit `Never`/drop matrices, and the first ordinary warning producer are implemented.
+8. **Artifact-only installed dependencies — complete for V1 source capsules:** verified versioned dependencies compile after their locked source tree is removed, with byte-identical Wasm after atomic artifact restoration.
 9. **Core collections and iteration — next user-facing milestone:** growable Array first, then explicit iterator protocols, Map/Set iterators, and only then additional queue/tree/deque families justified by measured use cases.
 10. **Language ergonomics and cleanup:** annotations and `Show`, or deterministic `defer`/`using` through `Disposable`, should land as separate bounded milestones. Eq/Debug/Hash derivation and ambient Debug are already implemented.
 11. **Optimization and incremental compilation:** folding, inlining, escape analysis, workspace fingerprints/caches, and deterministic parallel scheduling.

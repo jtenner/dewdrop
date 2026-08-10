@@ -603,7 +603,7 @@ From the package directory, invoke the compiler without listing source files:
 /path/to/dewdrop/tools/dew test
 ```
 
-If the package has dependencies, `dew.json` records requested dependency versions while `dew.lock` records exact resolved versions, sources, materialized paths, SHA-256 integrity, and expected interface fingerprints. Registry lookup and automatic installation are still roadmap work, so the current compiler consumes dependencies that have already been materialized at their locked paths.
+If the package has dependencies, `dew.json` records requested dependency versions while `dew.lock` records exact resolved versions, sources, materialized paths, SHA-256 integrity, and expected interface fingerprints. A successful source-backed resolution publishes a verified content-addressed capsule under `.dew-cache/packages/`; if that locked dependency tree is later removed, the CLI can atomically restore it from the capsule and produce byte-identical Wasm. Registry lookup and first-time network installation remain roadmap work.
 
 You can compute a package's canonical integrity value with:
 

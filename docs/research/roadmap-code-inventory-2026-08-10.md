@@ -143,17 +143,22 @@ Confirmed in code:
 - cached-interface injection before ordinary semantic analysis;
 - file-aware diagnostics and cross-module fixtures.
 
-The remaining immediate-queue foundation gap is real:
+The immediate installed-artifact foundation gap is now closed for V1 package
+capsules:
 
-- dependency sources are still collected into the program before cached
-  interfaces are injected;
-- `analyze_program_with_interface_bundle_cache` accepts a fully collected
-  `CollectedProgram`, then fills cached interface slots;
-- there is no artifact-only manifest/module reconstruction path that can compile
-  a verified dependency when its source tree is unavailable.
+- every verified locked dependency publishes a content-addressed `.dpa` capsule
+  keyed by exact identity/version/source/integrity/interface provenance;
+- the capsule commits to sorted dependency requests and ordered conventional
+  source payloads through envelope, per-file, and recomputed package-integrity
+  checksums;
+- when the locked source tree is unavailable, the CLI validates the capsule,
+  stages the complete package, and atomically restores it at the same locked path;
+- the existing frozen-interface bundle is then injected normally, while restored
+  executable bodies preserve byte-identical static-link output.
 
-That makes **installed artifact-only interface recovery** the clearest next
-unfinished item in the roadmap's immediate execution queue.
+A later measured optimization may serialize collected bodies to avoid parsing
+restored payloads, but package-tree availability and interface refreezing no
+longer block verified dependency compilation.
 
 Still deferred beyond that:
 

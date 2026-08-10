@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import shutil
 import tempfile
 import unittest
 from contextlib import redirect_stderr
@@ -103,6 +104,55 @@ class VersionedManifestTests(unittest.TestCase):
                     manifest, include_tests=True
                 )
                 self.assertEqual(len(test_modules[0][1]), 1)
+
+    def test_restore_locked_dependency_from_installed_artifact(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root):
+                dependency, integrity = self.package(root)
+                manifest = self.root_package(root, dependency, integrity)
+                first = dew_cli.load_manifest(manifest)
+                artifacts = list((root / ".dew-cache" / "packages").glob("v1-*.dpa"))
+                self.assertEqual(len(artifacts), 1)
+                shutil.rmtree(dependency.parent)
+                second = dew_cli.load_manifest(manifest)
+                self.assertEqual(first, second)
+                self.assertTrue(dependency.is_file())
+                self.assertEqual(dew_cli.package_integrity(dependency), integrity)
+
+    def test_corrupt_installed_dependency_artifact_fails_visibly(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root):
+                dependency, integrity = self.package(root)
+                manifest = self.root_package(root, dependency, integrity)
+                dew_cli.load_manifest(manifest)
+                artifact = next((root / ".dew-cache" / "packages").glob("v1-*.dpa"))
+                artifact.write_bytes(b"corrupt")
+                shutil.rmtree(dependency.parent)
+                with self.assertRaisesRegex(
+                    dew_cli.ManifestError,
+                    "unsupported or truncated installed package artifact",
+                ):
+                    dew_cli.load_manifest(manifest)
+
+    def test_installed_artifact_does_not_overwrite_partial_dependency_tree(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root):
+                dependency, integrity = self.package(root)
+                manifest = self.root_package(root, dependency, integrity)
+                dew_cli.load_manifest(manifest)
+                shutil.rmtree(dependency.parent)
+                dependency.parent.mkdir()
+                partial = dependency.parent / "partial.txt"
+                partial.write_text("keep", encoding="utf-8")
+                with self.assertRaisesRegex(
+                    dew_cli.ManifestError,
+                    "cannot restore installed package artifact into nonempty path",
+                ):
+                    dew_cli.load_manifest(manifest)
+                self.assertEqual(partial.read_text(encoding="utf-8"), "keep")
 
     def test_reject_dependency_integrity_mismatch(self) -> None:
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:

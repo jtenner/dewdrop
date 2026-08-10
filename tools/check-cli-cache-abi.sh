@@ -197,6 +197,19 @@ grep -q '^standard interface cache: miss$' \
 grep -q '^standard interface cache: hit$' \
   .tmp/dew-external-package-cache-hit.txt
 test "$(find .tmp/dew-external-package-cache/interfaces -name 'v11-*.dwi' | wc -l)" -eq 1
+rm -rf .tmp/dew-artifact-only .tmp/dew-artifact-cache
+cp -R tests/abi-consumers/imported-package .tmp/dew-artifact-only
+DEW_CACHE_DIR=.tmp/dew-artifact-cache tools/dew build \
+  --manifest .tmp/dew-artifact-only/dew.json \
+  -o .tmp/dew-artifact-before.wasm
+artifact_file=$(find .tmp/dew-artifact-cache/packages -name 'v1-*.dpa')
+test -f "$artifact_file"
+rm -rf .tmp/dew-artifact-only/dependency
+DEW_CACHE_DIR=.tmp/dew-artifact-cache tools/dew build \
+  --manifest .tmp/dew-artifact-only/dew.json \
+  -o .tmp/dew-artifact-after.wasm
+cmp .tmp/dew-artifact-before.wasm .tmp/dew-artifact-after.wasm
+test -f .tmp/dew-artifact-only/dependency/callback.dew
 cp -R tests/abi-consumers/imported-package \
   .tmp/dew-versioned-package-invalid
 printf '\n' >> \
