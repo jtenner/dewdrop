@@ -16,6 +16,10 @@ pub fn boxed_read<t: Value>(value: t) -> I32 {
   consume_value(value)
 }
 
+pub fn nested_read<t: Value>(value: t) -> I32 {
+  consume_nested_value(value)
+}
+
 pub fn main() -> I32 {
   read(42)
 }

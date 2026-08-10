@@ -43,3 +43,29 @@ pub fn consume_value<t: Value>(value: t) -> I32 {
     value: value
   })
 }
+
+trait Inspect {
+  fn inspect(self) -> I32
+}
+
+struct Wrap<t> {
+  value: t
+}
+
+impl<t: Read> Inspect for Wrap<t> {
+  fn inspect(self) -> I32 {
+    self.value.read()
+  }
+}
+
+fn consume_inspect<t: Inspect>(value: t) -> I32 {
+  value.inspect()
+}
+
+pub fn consume_nested_value<t: Value>(value: t) -> I32 {
+  consume_inspect(Wrap {
+    value: Box {
+      value: value
+    }
+  })
+}

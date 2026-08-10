@@ -278,6 +278,57 @@ test "generic calls freeze recursive concrete and symbolic evidence" {
 }
 
 ///|
+test "recursive implementation evidence retains node-local arguments" {
+  let collected = collect_bytes(
+    2736UL, b"trait Value {}\ntrait Read {}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {}\ntrait Inspect {}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {}\nfn require<t: Inspect>(value: t) -> t {\n  value\n}\nfn nested<t: Value>(value: t) -> Wrap<Box<t>> {\n  require(Wrap {\n    value: Box {\n      value: value\n    }\n  })\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let names = resolve_module_names(collected)
+  let inferred = infer_module_bodies(collected, resolved, names)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let body = collected
+    .body_of(collected.lookup_value("nested").unwrap())
+    .unwrap()
+  let call = body_calls(collected, body)[0]
+  let span = inferred.expression_evidence[call]
+  assert_eq(span.length, 1)
+  let inspect_node = inferred.trait_evidence_roots[span.start]
+  let inspect_evidence = inferred.trait_evidence[inspect_node]
+  match inspect_evidence.kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, collected.impls[1].declaration)
+      assert_eq(arguments.length, 1)
+      match inferred.trait_evidence_arguments[arguments.start] {
+        ShapeInferredTraitEvidenceArgument(shape) =>
+          assert_eq(shape, RefPlannedValueShape)
+        _ => fail("expected applied Inspect owner argument")
+      }
+    }
+    _ => fail("expected concrete Inspect evidence")
+  }
+  assert_eq(inspect_evidence.prerequisites.length, 1)
+  let read_node = inferred.trait_evidence_children[inspect_evidence.prerequisites.start]
+  let read_evidence = inferred.trait_evidence[read_node]
+  match read_evidence.kind {
+    ConcreteInferredTraitEvidence(implementation, arguments) => {
+      assert_eq(implementation, collected.impls[0].declaration)
+      assert_eq(arguments.length, 1)
+      match inferred.trait_evidence_arguments[arguments.start] {
+        GenericInferredTraitEvidenceArgument(index) => assert_eq(index, 0)
+        _ => fail("expected caller generic Read owner argument")
+      }
+    }
+    _ => fail("expected concrete Read prerequisite evidence")
+  }
+  assert_eq(read_evidence.prerequisites.length, 1)
+  let value_node = inferred.trait_evidence_children[read_evidence.prerequisites.start]
+  match inferred.trait_evidence[value_node].kind {
+    BoundInferredTraitEvidence(slot) => assert_eq(slot, 0)
+    _ => fail("expected leaf caller Value evidence")
+  }
+}
+
+///|
 test "generic method calls freeze implementation prerequisite evidence" {
   let collected = collect_bytes(
     2735UL, b"trait Marker {}\ntrait Value {\n  fn value(self) -> I32\n}\nstruct Yes {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {}\nimpl<t: Marker> Value for Box<t> {\n  fn value(self) -> I32 {\n    1\n  }\n}\nfn concrete(value: Box<Yes>) -> I32 {\n  value.value()\n}\nfn symbolic<t: Marker>(value: Box<t>) -> I32 {\n  value.value()\n}\n",

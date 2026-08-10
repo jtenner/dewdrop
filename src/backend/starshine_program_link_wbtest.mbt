@@ -911,6 +911,30 @@ test "public runtime evidence forwards through imported recursive generics" {
 }
 
 ///|
+test "public runtime evidence forwards recursive static prerequisite trees" {
+  let program = @semantic.collect_program_manifest(
+    2483UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\nfn consume<t: Inspect>(value: t) -> I32 {\n  value.inspect()\n}\npub fn nested_read<t: Value>(value: t) -> I32 {\n  consume(Wrap {\n    value: Box {\n      value: value\n    }\n  })\n}\npub fn main() -> I32 {\n  nested_read(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_true(
+    emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
+  )
+}
+
+///|
 test "open generic prerequisite dictionaries emit valid adapters" {
   let program = @semantic.collect_program_manifest(
     2477UL,

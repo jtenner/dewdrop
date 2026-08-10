@@ -2989,7 +2989,7 @@ fn copy_program_specialization_evidence_node(
     PlannedRuntimeTraitEvidence(trait_, parameter) =>
       PlannedRuntimeTraitEvidence(trait_, parameter)
   }
-  let child_start = request.children.length()
+  let direct_children : Array[Int] = []
   for index in 0..<source_evidence.prerequisites.length {
     let child = copy_program_specialization_evidence_node(
       source,
@@ -3000,6 +3000,10 @@ fn copy_program_specialization_evidence_node(
     if child < 0 {
       return -1
     }
+    direct_children.push(child)
+  }
+  let child_start = request.children.length()
+  for child in direct_children {
     request.children.push(child)
   }
   let node = request.evidence.length()
@@ -3064,7 +3068,7 @@ fn resolve_program_lowering_evidence_node_with_specialization(
           }
         }
       }
-      let child_start = request.children.length()
+      let direct_children : Array[Int] = []
       for index in 0..<source.prerequisites.length {
         let child = resolve_program_lowering_evidence_node_with_specialization(
           lowering,
@@ -3078,6 +3082,10 @@ fn resolve_program_lowering_evidence_node_with_specialization(
         if child < 0 {
           return -1
         }
+        direct_children.push(child)
+      }
+      let child_start = request.children.length()
+      for child in direct_children {
         request.children.push(child)
       }
       let node = request.evidence.length()
@@ -3719,6 +3727,22 @@ fn materialize_program_expression_call(
             Some(value) => value
             None => return
           }
+          let target_module_index = match
+            module_lookup.get(semantic_id_module(target)) {
+            Some(value) => value
+            None => return
+          }
+          let target_callable = match
+            lowering.modules[target_module_index].functions.callable_of(target) {
+            Some(value) => value
+            None => return
+          }
+          let target_generic_count = program_callable_generic_parameters(
+              target_callable,
+            ).length
+          if arguments.length < target_generic_count {
+            return
+          }
           let request_evidence = match
             copy_program_evidence_prerequisites(fragments, root) {
             Some(value) => value
@@ -3735,17 +3759,17 @@ fn materialize_program_expression_call(
             }
           }
           let request_shapes : Array[PlannedValueShape] = []
-          for index in 0..<arguments.length {
+          for index in 0..<target_generic_count {
             request_shapes.push(
               fragments.specialization_evidence_arguments[arguments.start +
               index],
             )
           }
-          if arguments.length == 0 &&
+          if target_generic_count == 0 &&
             forwarded_runtime_evidence_parameters.length() > 0 {
             return
           }
-          let target_key = if arguments.length > 0 {
+          let target_key = if target_generic_count > 0 {
             match
               materialize_program_generic_specialization(
                 analyzed,
@@ -4607,9 +4631,6 @@ fn program_runtime_trait_evidence_is_forwardable(
   match node.kind {
     BoundInferredTraitEvidence(_) => node.prerequisites.length == 0
     ConcreteInferredTraitEvidence(_, _) => {
-      if depth > 0 && !runtime_trait_evidence_is_concrete(lowering, evidence, 0) {
-        return false
-      }
       for index in 0..<node.prerequisites.length {
         if !program_runtime_trait_evidence_is_forwardable(
             lowering,

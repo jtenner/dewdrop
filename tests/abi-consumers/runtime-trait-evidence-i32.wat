@@ -10,6 +10,7 @@
   (import "dew" "choose" (func $choose (type $choose-type)))
   (import "dew" "read" (func $read (type $read-type)))
   (import "dew" "boxed_read" (func $boxed-read (type $read-type)))
+  (import "dew" "nested_read" (func $nested-read (type $read-type)))
   (elem declare func $item-value)
 
   (func $item-value (type $value-method) (param eqref) (result i32)
@@ -18,7 +19,7 @@
     struct.get $item 0)
 
   (func (export "run") (type $run-type) (result i32)
-    (local (ref $object) (ref $vtable) (ref $item) i32 i32)
+    (local (ref $object) (ref $vtable) (ref $item) i32 i32 i32)
     i32.const 42
     struct.new $item
     local.set 2
@@ -33,6 +34,10 @@
     local.get 1
     call $boxed-read
     local.set 4
+    local.get 2
+    local.get 1
+    call $nested-read
+    local.set 5
     i32.const 1
     local.get 2
     local.get 1
@@ -48,5 +53,7 @@
     local.get 3
     i32.add
     local.get 4
+    i32.add
+    local.get 5
     i32.add)
 )

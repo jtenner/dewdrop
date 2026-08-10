@@ -6814,7 +6814,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
       }
       let evidence_start = self.trait_evidence.length()
       let child_start = self.trait_evidence_children.length()
-      let argument_start = self.trait_evidence_arguments.length()
+      let rollback_argument_start = self.trait_evidence_arguments.length()
       let snapshot = self.solver.snapshot()
       let (candidate_target, candidate_trait) = self.begin_obligation_impl_candidate(
         implementation_index,
@@ -6845,6 +6845,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
           for node in nodes {
             self.trait_evidence_children.push(node)
           }
+          let argument_start = self.trait_evidence_arguments.length()
           for argument in candidate_arguments {
             self.trait_evidence_arguments.push(argument)
           }
@@ -6852,7 +6853,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
           self.trait_evidence.push({
             kind: ConcreteInferredTraitEvidence(implementation.declaration, {
               start: argument_start,
-              length: self.trait_evidence_arguments.length() - argument_start,
+              length: candidate_arguments.length(),
             }),
             prerequisites: {
               start: prerequisite_start,
@@ -6864,7 +6865,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
         None => {
           self.trait_evidence.truncate(evidence_start)
           self.trait_evidence_children.truncate(child_start)
-          self.trait_evidence_arguments.truncate(argument_start)
+          self.trait_evidence_arguments.truncate(rollback_argument_start)
         }
       }
     }

@@ -1112,7 +1112,7 @@ test "external generic fallback forwards runtime prerequisites through static ev
 }
 
 ///|
-test "recursively captured prerequisite evidence fails before backend emission" {
+test "external generic fallback forwards recursive static prerequisite trees" {
   let program = collect_program_manifest(
     21974UL,
     ProgramManifest::new([
@@ -1126,15 +1126,28 @@ test "recursively captured prerequisite evidence fails before backend emission" 
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
   let lowering = plan_program_lowering(program, analyzed)
+  let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(link.diagnostics.length(), 1)
+  assert_eq(link.diagnostics.length(), 0)
   let consume = program.modules[0].lookup_value("consume_inspect").unwrap()
-  match link.diagnostics[0] {
-    UnsupportedProgramGenericCall(_, target, _) => assert_eq(target, consume)
-    _ => fail("expected unsupported recursive prerequisite call")
-  }
   let nested_read = program.modules[0].lookup_value("nested_read").unwrap()
+  let mut inspect_method = 0UL
+  let mut read_method = 0UL
+  for callable in lowering.modules[0].functions.callables {
+    match callable.kind {
+      PlannedImplMethodCallable(_, _) if callable.name == b"inspect" =>
+        inspect_method = callable.declaration
+      PlannedImplMethodCallable(_, _) if callable.name == b"read" =>
+        read_method = callable.declaration
+      _ => ()
+    }
+  }
+  assert_true(inspect_method > 0UL)
+  assert_true(read_method > 0UL)
   let mut public_fallbacks = 0
+  let mut consume_calls = 0
+  let mut inspect_calls = 0
+  let mut read_calls = 0
   for function_ in link.functions {
     if function_.declaration == nested_read &&
       function_.visibility == Public &&
@@ -1142,7 +1155,21 @@ test "recursively captured prerequisite evidence fails before backend emission" 
       public_fallbacks += 1
     }
   }
-  assert_eq(public_fallbacks, 0)
+  for call in fragments.specialized_calls {
+    if call.target == consume {
+      consume_calls += 1
+    }
+    if call.target == inspect_method {
+      inspect_calls += 1
+    }
+    if call.target == read_method {
+      read_calls += 1
+    }
+  }
+  assert_eq(public_fallbacks, 1)
+  assert_eq(consume_calls, 1)
+  assert_eq(inspect_calls, 1)
+  assert_eq(read_calls, 1)
 }
 
 ///|
