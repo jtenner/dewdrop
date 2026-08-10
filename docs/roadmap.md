@@ -47,7 +47,7 @@ order is now:
 - [x] Discard non-Unit tail expressions in Unit-returning functions and lambdas without constraining their value type to Unit or disrupting earlier method/operator inference.
 - [x] Emit exact UTF-8 string literal patterns through the shared text runtime equality helper, including empty, ASCII, Unicode, and fallback cases.
 - [x] Route local mutual and self module-value cycles to stable source-located eager-initialization diagnostics through the CLI, with related cycle-member labels and without duplicate inference fallout.
-- [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.
+- [x] Cover bare returns, non-tail drops, unreachable calls, and `Never` joins across i32, i64, f32, f64, v128, reference, and Unit stack shapes.
 - [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
 
 **Done when:** every syntax form accepted and typed by the advertised current
@@ -351,7 +351,7 @@ boundaries.
 - [x] Emit the currently supported immutable and mutable name-binding local-let forms, including carrier-typed locals and captured mutable cells.
 - [x] Emit valued and bare `return` forms.
 - [x] Emit drops for non-tail expressions across the currently supported single-value Wasm carrier shapes.
-- [ ] Expand explicit unreachable/`Never`, discarded Unit-tail, and supported-shape stack validation coverage; Unit-returning bodies now discard non-Unit tails after inference without changing their value type.
+- [x] Expand explicit unreachable/`Never`, discarded Unit-tail, bare-return, and supported-shape stack validation coverage across every current single-value carrier.
 
 ### Mutation
 

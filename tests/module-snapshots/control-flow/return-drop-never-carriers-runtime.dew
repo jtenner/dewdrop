@@ -1,0 +1,83 @@
+open dew.std.string
+
+fn choose_i32(stop: Bool) -> I32 {
+  if stop {
+    unreachable()
+  } else {
+    42
+  }
+}
+
+fn choose_i64(stop: Bool) -> I64 {
+  if stop {
+    unreachable()
+  } else {
+    42i64
+  }
+}
+
+fn choose_f32(stop: Bool) -> F32 {
+  if stop {
+    unreachable()
+  } else {
+    42.0f32
+  }
+}
+
+fn choose_f64(stop: Bool) -> F64 {
+  if stop {
+    unreachable()
+  } else {
+    42.0f64
+  }
+}
+
+fn choose_v128(stop: Bool) -> V128 {
+  if stop {
+    unreachable()
+  } else {
+    v128_splat_i32(42)
+  }
+}
+
+fn choose_ref(stop: Bool) -> String {
+  if stop {
+    unreachable()
+  } else {
+    "forty-two"
+  }
+}
+
+fn discard_every_carrier() -> Unit {
+  1
+  2i64
+  3.0f32
+  4.0f64
+  v128_splat_i32(5)
+  "discarded ref"
+  return
+}
+
+fn bare_return(stop_early: Bool) -> Unit {
+  if stop_early {
+    return
+  } else {}
+  7
+  return
+  unreachable()
+}
+
+pub fn main() -> Unit {
+  discard_every_carrier()
+  bare_return(true)
+  bare_return(false)
+  assert(choose_i32(false) == 42, "Never to i32 join")
+  assert(choose_i64(false) == 42i64, "Never to i64 join")
+  assert(choose_f32(false) == 42.0f32, "Never to f32 join")
+  assert(choose_f64(false) == 42.0f64, "Never to f64 join")
+  assert(
+    !v128_any_true(v128_xor(choose_v128(false), v128_splat_i32(42))),
+    "Never to v128 join"
+  )
+  assert(choose_ref(false).equals("forty-two"), "Never to ref join")
+}

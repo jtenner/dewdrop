@@ -184,6 +184,17 @@ let a = -128i8
 if widen(a) == -128 { ... }
 ```
 
+## Return, drop, and `Never` carrier coverage
+
+The August 10, 2026 hardening pass added
+`control-flow/return-drop-never-carriers-runtime`. It executes bare returns on
+both branches, emits non-tail drops for i32, i64, f32, f64, v128, reference,
+and Unit-shaped expressions, and validates `Never` joins against every current
+single-value carrier. The implementation also treats a selected `Never` call as
+bottom in an already-constrained context and schedules bare returns without a
+synthetic expression, avoiding both false type mismatches and negative
+expression indexing during optimization/emission.
+
 ## Related fixture notes
 
 - `numeric/literal-out-of-range` and

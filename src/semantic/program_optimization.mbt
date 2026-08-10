@@ -22,9 +22,8 @@ fn program_effect_summary_block_is_discardable(
   }
   for index in 0..<items.length {
     let expression = match module_.block_items[items.start + index].kind {
-      PlannedLetItem(_, _, value)
-      | PlannedReturnItem(value)
-      | PlannedExpressionItem(value) => value
+      PlannedLetItem(_, _, value) | PlannedExpressionItem(value) => value
+      PlannedReturnItem(value) => if value < 0 { continue } else { value }
       PlannedElidedLetItem(_) => continue
     }
     if !program_effect_summary_expression_is_discardable(
@@ -249,6 +248,9 @@ fn transparent_callback_root_expression(
         PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
           expression
         _ => return -1
+      }
+      if tail < 0 {
+        return -1
       }
       let mut candidate = tail
       let mut candidate_item = items.length - 1

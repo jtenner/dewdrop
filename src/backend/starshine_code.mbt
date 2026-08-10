@@ -5494,9 +5494,14 @@ fn starshine_emit_body_instructions(
           let item = lowering.block_items[source.items.start + index]
           match item.kind {
             @semantic.PlannedLetItem(_, _, expression)
-            | @semantic.PlannedReturnItem(expression)
             | @semantic.PlannedExpressionItem(expression) =>
               tasks.push(EmitStarshineExpression(expression))
+            @semantic.PlannedReturnItem(expression) =>
+              if expression < 0 {
+                tasks.push(EmitStarshineEmpty)
+              } else {
+                tasks.push(EmitStarshineExpression(expression))
+              }
             @semantic.PlannedElidedLetItem(_) => tasks.push(EmitStarshineEmpty)
           }
         }

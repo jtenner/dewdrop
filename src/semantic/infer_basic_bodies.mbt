@@ -946,6 +946,23 @@ fn BasicBodyInferencer::body_type_is_unresolved(
 }
 
 ///|
+fn BasicBodyInferencer::constrain_call_result(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  result : BodyTypeId,
+  origin : TypeConstraintOrigin,
+) -> Unit {
+  let expected = self.expression_type(expression)
+  if self.is_never_type(result) {
+    if self.body_type_is_unresolved(expected) {
+      self.constrain(expected, result, origin)
+    }
+  } else {
+    self.constrain(expected, result, origin)
+  }
+}
+
+///|
 fn BasicBodyInferencer::constrain_expression_assignable(
   self : BasicBodyInferencer,
   expression : ExprId,

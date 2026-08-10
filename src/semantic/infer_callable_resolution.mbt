@@ -354,7 +354,7 @@ fn BasicBodyInferencer::select_call_candidate(
       origin,
     )
   }
-  self.constrain(self.expression_type(expression), result_type, origin)
+  self.constrain_call_result(expression, result_type, origin)
   let type_arguments = {
     start,
     length: self.call_scratch.candidate_type_arguments.length(),
@@ -447,7 +447,7 @@ fn BasicBodyInferencer::select_function_value_call(
       origin,
     )
   }
-  self.constrain(self.expression_type(expression), signature.result, origin)
+  self.constrain_call_result(expression, signature.result, origin)
   self.call_targets[call_slot] = SelectedFunctionValueCallTarget(target)
   true
 }

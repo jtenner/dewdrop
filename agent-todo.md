@@ -12,7 +12,6 @@
 
 ## Current-language correctness hardening
 
-- [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.
 - [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
 
 ## Snapshots, diagnostics, and fixture suites
