@@ -92,6 +92,8 @@ The closed nominal/prerequisite snapshot emits 1,536 bytes of Wasm and 10,127 by
 
 A Node WasmGC runtime probe executed ten million loop iterations per sample. The direct baseline measured `3.950 ms ± 0.096 ms`; closed generic erasure measured `3.368 ms ± 0.157 ms` and emitted zero boxes/envelopes/dictionaries; the genuinely dynamic form measured `182.416 ms ± 24.656 ms`, intentionally paying one erased box/envelope construction and typed indirect dispatch per iteration. The runtime numbers are host-sensitive and are retained as directional evidence rather than a stable performance guarantee.
 
+Generic parameter-selector propagation originally recomputed every body summary and rescanned every expression until a fixed point. A forwarding chain of depth `D` therefore required up to `D` whole-program scans. The planner now builds one deterministic declaration-to-call-site index and one expression-to-root-body index, seeds direct selectors in module/body order, and processes newly discovered transitive selectors through a source-ordered worklist. Every candidate call is rewritten at most once, and malformed spans or indices are rejected locally rather than indexing an arena unchecked. The release-native depth-256 benchmark improved from `72.82 ms ± 21.88 ms` to `25.26 ms ± 2.43 ms`, approximately 65% faster, while a permanent depth-64 regression proves complete devirtualization with zero materialized generic functions or runtime-trait artifacts.
+
 ## Determinism and static fast path
 
 Trait layouts follow first source use and trait declaration method order. Dictionaries are keyed by exact trait and implementation declarations. Adapter, function, type, global, and element ordering is deterministic through the existing module and program planners.

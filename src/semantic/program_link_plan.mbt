@@ -440,6 +440,32 @@ priv struct GenericParameterSelector {
 }
 
 ///|
+fn generic_parameter_selector_root_expression(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+) -> ExprId {
+  match body.root {
+    BlockBodyRoot(block) => {
+      if block < 0 || block >= module_.blocks.length() {
+        return -1
+      }
+      let items = module_.blocks[block].items
+      if items.length != 1 ||
+        items.start < 0 ||
+        items.start >= module_.block_items.length() {
+        return -1
+      }
+      match module_.block_items[items.start].kind {
+        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
+          expression
+        _ => -1
+      }
+    }
+    ExpressionBodyRoot(expression) => expression
+  }
+}
+
+///|
 fn generic_parameter_selector(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -451,19 +477,11 @@ fn generic_parameter_selector(
   if program_callable_generic_parameters(callable).length == 0 {
     return None
   }
-  let root_expression = match body.root {
-    BlockBodyRoot(block) => {
-      let items = module_.blocks[block].items
-      if items.length != 1 {
-        return None
-      }
-      match module_.block_items[items.start].kind {
-        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
-          expression
-        _ => return None
-      }
-    }
-    ExpressionBodyRoot(expression) => expression
+  let root_expression = generic_parameter_selector_root_expression(
+    module_, body,
+  )
+  if root_expression < 0 || root_expression >= module_.expressions.length() {
+    return None
   }
   let (trait_declaration, evidence_slot) = match
     module_.expressions[root_expression].trait_object_coercion {
@@ -512,64 +530,143 @@ fn generic_parameter_selector(
 }
 
 ///|
+priv struct GenericParameterSelectorCallSite {
+  module_index : Int
+  expression : ExprId
+}
+
+///|
+fn rewrite_generic_parameter_selector_call(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  selector : GenericParameterSelector,
+) -> Bool {
+  if expression < 0 || expression >= module_.expressions.length() {
+    return false
+  }
+  let arguments = match module_.expressions[expression].kind {
+    PlannedDirectCall(_, receiver, arguments, type_arguments) if receiver < 0 &&
+      type_arguments.length > 0 => arguments
+    _ => return false
+  }
+  if selector.parameter < 0 ||
+    selector.parameter >= arguments.length ||
+    arguments.start < 0 ||
+    arguments.start + selector.parameter >= module_.expression_children.length() {
+    return false
+  }
+  let trait_object_coercion = if selector.evidence_slot >= 0 {
+    if expression >= module_.expression_evidence.length() {
+      return false
+    }
+    let roots = module_.expression_evidence[expression]
+    if selector.evidence_slot >= roots.length ||
+      roots.start < 0 ||
+      roots.start + selector.evidence_slot >=
+      module_.trait_evidence_roots.length() {
+      return false
+    }
+    SelectedInferredTraitObjectCoercion(
+      selector.trait_declaration,
+      module_.trait_evidence_roots[roots.start + selector.evidence_slot],
+    )
+  } else {
+    NoInferredTraitObjectCoercion
+  }
+  let selected_expression = module_.expression_children[arguments.start +
+    selector.parameter]
+  if selected_expression < 0 ||
+    selected_expression >= module_.expressions.length() {
+    return false
+  }
+  let selected = module_.expressions[selected_expression]
+  let source = module_.expressions[expression]
+  module_.expressions[expression] = {
+    ..source,
+    type_: selected.type_,
+    shape: selected.shape,
+    trait_object_coercion,
+    kind: PlannedParameterSelect(arguments, selector.parameter),
+  }
+  true
+}
+
+///|
 fn directize_generic_parameter_selectors(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
-  let mut changed = true
-  while changed {
-    changed = false
-    let selectors : Map[DeclId, GenericParameterSelector] = Map::default()
-    for module_ in modules {
-      for body in module_.bodies {
-        match generic_parameter_selector(module_, body) {
-          Some(selected) => selectors[body.declaration] = selected
-          None => ()
+  let selectors : Map[DeclId, GenericParameterSelector] = Map::default()
+  let uses : Map[DeclId, Array[GenericParameterSelectorCallSite]] = Map::default()
+  let root_bodies : Array[Array[Int]] = []
+  let pending : Array[DeclId] = []
+  for module_index, module_ in modules {
+    let roots = Array::make(module_.expressions.length(), -1)
+    for body_index, body in module_.bodies {
+      let root = generic_parameter_selector_root_expression(module_, body)
+      if root >= 0 && root < roots.length() {
+        roots[root] = body_index
+      }
+      match generic_parameter_selector(module_, body) {
+        Some(selected) => {
+          selectors[body.declaration] = selected
+          pending.push(body.declaration)
         }
+        None => ()
       }
     }
-    for module_ in modules {
-      for expression in 0..<module_.expressions.length() {
-        let (declaration, arguments, type_arguments) = match
-          module_.expressions[expression].kind {
-          PlannedDirectCall(declaration, receiver, arguments, type_arguments) if receiver <
-            0 &&
-            type_arguments.length > 0 =>
-            (declaration, arguments, type_arguments)
-          _ => continue
+    root_bodies.push(roots)
+    for expression in 0..<module_.expressions.length() {
+      let declaration = match module_.expressions[expression].kind {
+        PlannedDirectCall(declaration, receiver, _, type_arguments) if receiver <
+          0 &&
+          type_arguments.length > 0 => declaration
+        _ => continue
+      }
+      let site = { module_index, expression }
+      match uses.get(declaration) {
+        Some(sites) => sites.push(site)
+        None => uses[declaration] = [site]
+      }
+    }
+  }
+  let mut next = 0
+  while next < pending.length() {
+    let declaration = pending[next]
+    next += 1
+    let selector = match selectors.get(declaration) {
+      Some(value) => value
+      None => continue
+    }
+    let sites = match uses.get(declaration) {
+      Some(value) => value
+      None => continue
+    }
+    for site in sites {
+      if site.module_index < 0 || site.module_index >= modules.length() {
+        continue
+      }
+      let module_ = modules[site.module_index]
+      if !rewrite_generic_parameter_selector_call(
+          module_,
+          site.expression,
+          selector,
+        ) {
+        continue
+      }
+      let body_index = root_bodies[site.module_index][site.expression]
+      if body_index < 0 || body_index >= module_.bodies.length() {
+        continue
+      }
+      let body = module_.bodies[body_index]
+      if selectors.contains(body.declaration) {
+        continue
+      }
+      match generic_parameter_selector(module_, body) {
+        Some(selected) => {
+          selectors[body.declaration] = selected
+          pending.push(body.declaration)
         }
-        ignore(type_arguments)
-        let selector = match selectors.get(declaration) {
-          Some(value) if value.parameter < arguments.length => value
-          _ => continue
-        }
-        let trait_object_coercion = if selector.evidence_slot >= 0 {
-          if expression < 0 ||
-            expression >= module_.expression_evidence.length() {
-            continue
-          }
-          let roots = module_.expression_evidence[expression]
-          if selector.evidence_slot >= roots.length {
-            continue
-          }
-          SelectedInferredTraitObjectCoercion(
-            selector.trait_declaration,
-            module_.trait_evidence_roots[roots.start + selector.evidence_slot],
-          )
-        } else {
-          NoInferredTraitObjectCoercion
-        }
-        let selected_expression = module_.expression_children[arguments.start +
-          selector.parameter]
-        let selected = module_.expressions[selected_expression]
-        let source = module_.expressions[expression]
-        module_.expressions[expression] = {
-          ..source,
-          type_: selected.type_,
-          shape: selected.shape,
-          trait_object_coercion,
-          kind: PlannedParameterSelect(arguments, selector.parameter),
-        }
-        changed = true
+        None => ()
       }
     }
   }

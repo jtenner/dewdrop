@@ -112,3 +112,50 @@ test "bench dynamic open-generic trait erasure link calls=256" (it : @bench.T) {
     it.keep(link.trait_dictionary_globals.length())
   })
 }
+
+///|
+fn open_generic_selector_chain_benchmark_source(depth : Int) -> Bytes {
+  let output = Buffer(size_hint=depth * 96 + 512)
+  output.write_string_utf8(
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\n",
+  )
+  for index in 0..<depth {
+    output.write_string_utf8("fn select_")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8("<t: Value>(value: t) -> Value {\n  ")
+    if index == 0 {
+      output.write_string_utf8("value")
+    } else {
+      output.write_string_utf8("select_")
+      output.write_string_utf8((index - 1).to_string())
+      output.write_string_utf8("(value)")
+    }
+    output.write_string_utf8("\n}\n")
+  }
+  output.write_string_utf8(
+    "fn invoke(value: Value) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  invoke(select_",
+  )
+  output.write_string_utf8((depth - 1).to_string())
+  output.write_string_utf8("(42))\n}\n")
+  output.to_bytes()
+}
+
+///|
+test "bench open-generic selector propagation depth=256" (it : @bench.T) {
+  let program = collect_program_manifest(
+    2278UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.open_generic_selector_chain", [
+        ManifestFile::new(
+          "main.dew",
+          open_generic_selector_chain_benchmark_source(256),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  it.bench(fn() {
+    let lowering = plan_program_lowering(program, analyzed)
+    it.keep(lowering.elided_trait_wrappers.length())
+  })
+}
