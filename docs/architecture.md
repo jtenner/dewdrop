@@ -195,6 +195,16 @@ The owner of an arena must:
 Flat storage is a performance decision. Planned arena views should centralize
 validation and interpretation without changing the physical layout by default.
 
+### Body inference ownership
+
+`BasicBodyInferencer` remains the single owner of one solver and shared scratch
+arenas, while focused extension modules own pattern inference, member and
+constructor resolution, method/operator/index resolution, callable and overload
+selection, trait obligations/evidence, and result compaction. This avoids
+allocation-heavy collaborator objects while keeping expression traversal in the
+small orchestration core. The native basic-inference benchmark suite is the
+required performance check for changes to these boundaries.
+
 ## Standard source ownership
 
 Embedded bootstrap bytes live in the independent `src/standard_sources` package.

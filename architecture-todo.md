@@ -181,15 +181,15 @@
 
 ## Phase 5: simplify inference and arena contracts
 
-- [ ] **Decompose `BasicBodyInferencer` into focused collaborators.**
-  - [ ] Extract trait obligation solving and evidence construction first.
-  - [ ] Separate callable/overload resolution from expression traversal.
-  - [ ] Separate member, method, operator, and indexing resolution where their
+- [x] **Decompose `BasicBodyInferencer` into focused collaborators.**
+  - [x] Extract trait obligation solving and evidence construction first.
+  - [x] Separate callable/overload resolution from expression traversal.
+  - [x] Separate member, method, operator, and indexing resolution where their
         worklists and invariants are independent.
-  - [ ] Separate pattern inference and result compaction.
-  - [ ] Retain shared scratch arrays and one solver to avoid allocation-heavy
+  - [x] Separate pattern inference and result compaction.
+  - [x] Retain shared scratch arrays and one solver to avoid allocation-heavy
         object graphs.
-  - [ ] Benchmark every extraction against existing inference workloads.
+  - [x] Benchmark every extraction against existing inference workloads.
   - Relevant file: `src/semantic/infer_basic_bodies.mbt`.
 
 - [ ] **Encapsulate flat arena bundles while preserving flat storage.**
