@@ -94,10 +94,11 @@ physical linking: recursive type groups, initializers, indices, exports
 backend emission: Starshine module construction, validation, binary encoding
 ```
 
-Some currently separate boxes above still share implementation files. In
-particular, program optimization, specialization planning, and physical linking
-are concentrated in `src/semantic/program_link_plan.mbt`; the architecture TODO
-tracks their extraction into explicit concepts.
+Some separate boxes above still share implementation files. Program optimization
+now lives in `src/semantic/program_optimization.mbt` behind
+`optimize_program_lowering`; specialization planning and physical linking remain
+concentrated in `src/semantic/program_link_plan.mbt` and are tracked for later
+separation.
 
 ## Boundary and mutation policy
 
@@ -105,19 +106,20 @@ A public phase result should be treated as immutable by later phases. A phase ma
 use mutable scratch storage and may build its result incrementally before
 returning it.
 
-Current whole-program lowering performs interprocedural rewrites while building
-`PlannedProgramLowering`. Those rewrites copy the arrays they mutate, but their
-ownership is not yet visible as a separate phase. The intended boundary is:
+Whole-program lowering now has an explicit baseline and optimization boundary:
 
 ```text
-PlannedProgramLowering
-  -> program optimizer
-  -> optimized lowering plus optimization summaries
+plan_unoptimized_program_lowering
+  -> PlannedProgramLowering
+  -> optimize_program_lowering
+  -> optimized PlannedProgramLowering plus elision summaries
   -> specialization and physical linking
 ```
 
-Until that extraction lands, callers must not mutate returned lowering, frozen
-interfaces, analyzed semantics, fragment plans, or final link plans.
+The optimizer copies every arena it mutates, so the supplied unoptimized plan
+remains available for characterization and future baseline snapshots. Callers
+must not mutate returned lowering, frozen interfaces, analyzed semantics,
+fragment plans, or final link plans.
 
 ## Identity ownership
 

@@ -68,14 +68,14 @@
 
 ## Phase 2: make program optimization and linking explicit
 
-- [ ] **Create an explicit program-optimization phase.**
-  - [ ] Separate construction of module lowering from interprocedural rewriting.
-  - [ ] Extract callable effect summaries.
-  - [ ] Extract transparent callback directization.
-  - [ ] Extract generic parameter-selector rewriting.
-  - [ ] Extract runtime-trait flow directization and wrapper elision.
-  - [ ] Define a clear optimized-lowering result or equivalent phase boundary.
-  - [ ] Preserve a valid unoptimized path for future baseline/optimized snapshot
+- [x] **Create an explicit program-optimization phase.**
+  - [x] Separate construction of module lowering from interprocedural rewriting.
+  - [x] Extract callable effect summaries.
+  - [x] Extract transparent callback directization.
+  - [x] Extract generic parameter-selector rewriting.
+  - [x] Extract runtime-trait flow directization and wrapper elision.
+  - [x] Define a clear optimized-lowering result or equivalent phase boundary.
+  - [x] Preserve a valid unoptimized path for future baseline/optimized snapshot
         contracts.
   - Relevant file: `src/semantic/program_link_plan.mbt`, especially the work
     currently performed before and inside `plan_program_lowering`.
