@@ -274,10 +274,11 @@ wasm-tools print .tmp/dew-runtime-trait-evidence-provider.wasm \
 # `choose` needs one trait object; `read` forwards the supplied vtable through
 # an imported recursive chain. `boxed_read` allocates its source Box, while
 # `nested_read` allocates its source Box and Wrap; both forward the same evidence
-# through exact recursively nested concrete implementation prerequisites. Both
-# static aggregate paths reuse one evidence-identical `Read` specialization.
+# through exact recursively nested concrete implementation prerequisites. The
+# exported `reader` additionally allocates an evidence-capturing closure and
+# invokes its specialized target through the consumer-supplied dictionary.
 test "$(grep -c 'call_ref' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 2
-test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 4
+test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 6
 wasm-tools parse \
   tests/abi-consumers/runtime-trait-evidence-i32.wat \
   -o .tmp/dew-runtime-trait-evidence-consumer.wasm
@@ -285,7 +286,7 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-runtime-trait-evidence-provider.wasm \
   .tmp/dew-runtime-trait-evidence-consumer.wasm \
   run i32 > .tmp/dew-runtime-trait-evidence-consumer.json
-grep -q '"type":"i32","value":168' \
+grep -q '"type":"i32","value":210' \
   .tmp/dew-runtime-trait-evidence-consumer.json
 (
   cd tests/abi-consumers/imported-package

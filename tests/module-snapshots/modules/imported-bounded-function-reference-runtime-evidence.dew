@@ -1,0 +1,15 @@
+open fixture.callback_provider
+
+pub fn reader<t: Value>() -> fn(t) -> I32 {
+  read
+}
+
+fn invoke(callback: fn(I32) -> I32) -> I32 {
+  callback(42)
+}
+
+pub fn main() -> I32 {
+  let result = invoke(reader())
+  assert(result == 42, "imported captured callback result")
+  result
+}

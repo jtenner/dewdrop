@@ -66,9 +66,44 @@ priv struct StarshineProgramCallbackWrapper {
 }
 
 ///|
+priv struct StarshineProgramEvidenceClosure {
+  reference_index : Int
+  module_index : Int
+  entry_type_index : Int
+  closure_type_index : Int
+  function_index : Int
+  target_function_index : Int
+}
+
+///|
 priv struct StarshineProgramAdapterHelperPlan {
   helpers : Array[StarshineProgramAdapterHelper]
   wrappers : Array[StarshineProgramCallbackWrapper]
+  evidence_closures : Array[StarshineProgramEvidenceClosure]
+  evidence_error : StarshineCodeEmissionError?
+}
+
+///|
+fn starshine_program_evidence_closure(
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  planned : @semantic.PlannedProgramWasmGCLink,
+  body : @semantic.BodyId,
+  specialization_abi_key : String,
+  expression : @semantic.ExprId,
+) -> StarshineProgramEvidenceClosure? {
+  for closure in helper_plan.evidence_closures {
+    if closure.reference_index < 0 ||
+      closure.reference_index >= planned.evidence_function_references.length() {
+      continue
+    }
+    let reference = planned.evidence_function_references[closure.reference_index]
+    if reference.caller_body == body &&
+      reference.caller_specialization_abi_key == specialization_abi_key &&
+      reference.expression == expression {
+      return Some(closure)
+    }
+  }
+  None
 }
 
 ///|
@@ -3968,6 +4003,7 @@ fn starshine_emit_body_instructions(
   control_state_local_indices : Array[Int],
   control_result_local_indices : Array[Int],
   generic_specialization : StarshineGenericSpecialization?,
+  helper_plan : StarshineProgramAdapterHelperPlan?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let tasks : Array[StarshineEmitTask] = []
   let results : Array[Array[@lib.Instruction]] = []
@@ -4048,74 +4084,134 @@ fn starshine_emit_body_instructions(
               ),
             )
           @semantic.PlannedFunctionReference(declaration, type_arguments) => {
-            let singleton_global = match program {
-              Some(link) if type_arguments.length > 0 =>
-                link.specialized_function_reference_singleton_global(
-                  declaration,
-                  lowering.expression_type_argument_shapes,
-                  type_arguments,
-                  starshine_program_expression_function_type_index(
-                    lowering, planned, link, program_module_index, expression,
+            let evidence_closure = match (program, helper_plan) {
+              (Some(link), Some(helpers)) =>
+                starshine_program_evidence_closure(
+                  helpers,
+                  link,
+                  body.body,
+                  match generic_specialization {
+                    Some(value) => value.specialization_abi_key
+                    None => ""
+                  },
+                  expression,
+                )
+              _ => None
+            }
+            match evidence_closure {
+              Some(closure) => {
+                if closure.closure_type_index < 0 ||
+                  closure.function_index < 0 ||
+                  closure.reference_index < 0 {
+                  return Err(UnsupportedExpression(body.body, expression))
+                }
+                let link = program.unwrap()
+                let reference = link.evidence_function_references[closure.reference_index]
+                if reference.runtime_evidence_parameters.start < 0 ||
+                  reference.runtime_evidence_parameters.length < 0 ||
+                  reference.runtime_evidence_parameters.start +
+                  reference.runtime_evidence_parameters.length >
+                  link.evidence_function_reference_runtime_evidence_parameters.length() {
+                  return Err(UnsupportedExpression(body.body, expression))
+                }
+                let output : Array[@lib.Instruction] = [
+                  @lib.Instruction::ref_func(
+                    @lib.FuncIdx::new(
+                      closure.function_index.reinterpret_as_uint(),
+                    ),
+                  ),
+                ]
+                for index in 0..<reference.runtime_evidence_parameters.length {
+                  let parameter = link.evidence_function_reference_runtime_evidence_parameters[reference.runtime_evidence_parameters.start +
+                    index]
+                  output.push(
+                    @lib.Instruction::local_get(
+                      @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+                    ),
+                  )
+                }
+                output.push(
+                  @lib.Instruction::struct_new(
+                    @lib.TypeIdx::new(
+                      closure.closure_type_index.reinterpret_as_uint(),
+                    ),
                   ),
                 )
-              Some(link) =>
-                link.function_reference_singleton_global(
-                  program_module_index, declaration,
-                )
-              None => -1
-            }
-            let cache_local = function_reference_cache_indices[expression]
-            if singleton_global >= 0 {
-              results.push([
-                @lib.Instruction::global_get(
-                  @lib.GlobalIdx::new(singleton_global.reinterpret_as_uint()),
-                ),
-              ])
-            } else if cache_local >= 0 {
-              results.push([
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(cache_local.reinterpret_as_uint()),
-                ),
-              ])
-            } else {
-              let function_index = match program {
-                Some(link) if type_arguments.length > 0 =>
-                  match
-                    link.specialized_function_of(
+                results.push(output)
+              }
+              None => {
+                let singleton_global = match program {
+                  Some(link) if type_arguments.length > 0 =>
+                    link.specialized_function_reference_singleton_global(
                       declaration,
                       lowering.expression_type_argument_shapes,
                       type_arguments,
-                    ) {
-                    Some(function_) => function_.function_index
-                    None => return Err(MissingFunction(declaration))
+                      starshine_program_expression_function_type_index(
+                        lowering, planned, link, program_module_index, expression,
+                      ),
+                    )
+                  Some(link) =>
+                    link.function_reference_singleton_global(
+                      program_module_index, declaration,
+                    )
+                  None => -1
+                }
+                let cache_local = function_reference_cache_indices[expression]
+                if singleton_global >= 0 {
+                  results.push([
+                    @lib.Instruction::global_get(
+                      @lib.GlobalIdx::new(
+                        singleton_global.reinterpret_as_uint(),
+                      ),
+                    ),
+                  ])
+                } else if cache_local >= 0 {
+                  results.push([
+                    @lib.Instruction::local_get(
+                      @lib.LocalIdx::new(cache_local.reinterpret_as_uint()),
+                    ),
+                  ])
+                } else {
+                  let function_index = match program {
+                    Some(link) if type_arguments.length > 0 =>
+                      match
+                        link.specialized_function_of(
+                          declaration,
+                          lowering.expression_type_argument_shapes,
+                          type_arguments,
+                        ) {
+                        Some(function_) => function_.function_index
+                        None => return Err(MissingFunction(declaration))
+                      }
+                    _ =>
+                      match
+                        starshine_function_reference_index(
+                          planned, program, declaration,
+                        ) {
+                        Ok(index) => index
+                        Err(error) => return Err(error)
+                      }
                   }
-                _ =>
-                  match
-                    starshine_function_reference_index(
-                      planned, program, declaration,
-                    ) {
-                    Ok(index) => index
-                    Err(error) => return Err(error)
+                  let output : Array[@lib.Instruction] = [
+                    @lib.Instruction::ref_func(
+                      @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+                    ),
+                  ]
+                  if planned.closure_type_index >= 0 {
+                    let closure_type = starshine_local_physical_type_index(
+                      program,
+                      program_module_index,
+                      planned.closure_type_index,
+                    )
+                    output.push(
+                      @lib.Instruction::struct_new(
+                        @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
+                      ),
+                    )
                   }
+                  results.push(output)
+                }
               }
-              let output : Array[@lib.Instruction] = [
-                @lib.Instruction::ref_func(
-                  @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
-                ),
-              ]
-              if planned.closure_type_index >= 0 {
-                let closure_type = starshine_local_physical_type_index(
-                  program,
-                  program_module_index,
-                  planned.closure_type_index,
-                )
-                output.push(
-                  @lib.Instruction::struct_new(
-                    @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
-                  ),
-                )
-              }
-              results.push(output)
             }
           }
           @semantic.PlannedDirectLambdaCall(lambda, captures, arguments) => {
@@ -7861,6 +7957,7 @@ fn emit_starshine_lambda_body(
       control_state_local_indices,
       control_result_local_indices,
       None,
+      None,
     ) {
     Ok(instructions) => {
       let prefixed = match
@@ -7951,6 +8048,7 @@ fn emit_starshine_function_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
+      None,
       None,
     ) {
     Ok(instructions) => {
@@ -9314,6 +9412,8 @@ fn starshine_program_adapter_helper_plan(
 ) -> StarshineProgramAdapterHelperPlan {
   let helpers : Array[StarshineProgramAdapterHelper] = []
   let wrappers : Array[StarshineProgramCallbackWrapper] = []
+  let evidence_closures : Array[StarshineProgramEvidenceClosure] = []
+  let mut evidence_error : StarshineCodeEmissionError? = None
   for adapter_function, function_ in planned.functions {
     if function_.erased_adapter_target < 0 ||
       function_.specialization_shapes.length == 0 {
@@ -9393,7 +9493,184 @@ fn starshine_program_adapter_helper_plan(
     wrappers[index] = { ..wrapper, function_index: next_function_index }
     next_function_index += 1
   }
-  { helpers, wrappers }
+  for reference_index, reference in planned.evidence_function_references {
+    let module_index = match
+      planned.module_lookup.get(
+        @semantic.semantic_id_module(reference.caller_body),
+      ) {
+      Some(value) => value
+      None => {
+        match evidence_error {
+          None =>
+            evidence_error = Some(
+              UnsupportedExpression(reference.caller_body, reference.expression),
+            )
+          Some(_) => ()
+        }
+        continue
+      }
+    }
+    if module_index < 0 ||
+      module_index >= lowering.modules.length() ||
+      module_index >= planned.modules.length() ||
+      reference.runtime_evidence_parameters.start < 0 ||
+      reference.runtime_evidence_parameters.length < 0 ||
+      reference.runtime_evidence_parameters.start +
+      reference.runtime_evidence_parameters.length >
+      planned.evidence_function_reference_runtime_evidence_parameters.length() {
+      match evidence_error {
+        None =>
+          evidence_error = Some(
+            UnsupportedExpression(reference.caller_body, reference.expression),
+          )
+        Some(_) => ()
+      }
+      continue
+    }
+    let module_lowering = lowering.modules[module_index]
+    let module_fragments = planned.modules[module_index]
+    if reference.expression < 0 ||
+      reference.expression >= module_lowering.expressions.length() {
+      match evidence_error {
+        None =>
+          evidence_error = Some(
+            UnsupportedExpression(reference.caller_body, reference.expression),
+          )
+        Some(_) => ()
+      }
+      continue
+    }
+    let mut caller_function = None
+    let mut target_function = None
+    for function_ in planned.functions {
+      match function_.kind {
+        @semantic.PlannedWasmDefinedFunction(body) if body ==
+          reference.caller_body &&
+          function_.specialization_abi_key ==
+          reference.caller_specialization_abi_key &&
+          !function_.elided => caller_function = Some(function_)
+        _ => ()
+      }
+      if function_.declaration == reference.target &&
+        function_.specialization_abi_key ==
+        reference.target_specialization_abi_key &&
+        !function_.elided {
+        target_function = Some(function_)
+      }
+    }
+    let caller_function = match caller_function {
+      Some(value) => value
+      None => {
+        match evidence_error {
+          None =>
+            evidence_error = Some(
+              UnsupportedExpression(reference.caller_body, reference.expression),
+            )
+          Some(_) => ()
+        }
+        continue
+      }
+    }
+    let target_function = match target_function {
+      Some(value) => value
+      None => {
+        match evidence_error {
+          None => evidence_error = Some(MissingFunction(reference.target))
+          Some(_) => ()
+        }
+        continue
+      }
+    }
+    let source_type = module_lowering.expressions[reference.expression].type_
+    let resolved_type = if source_type < -1 {
+      -source_type - 2
+    } else if source_type >= 0 && source_type < module_lowering.types.length() {
+      match module_lowering.types[source_type] {
+        @semantic.BodyResolvedType(value) => value
+        _ => -1
+      }
+    } else {
+      -1
+    }
+    if resolved_type < 0 ||
+      resolved_type >= module_fragments.closure_entry_type_by_resolved.length() {
+      match evidence_error {
+        None =>
+          evidence_error = Some(
+            UnsupportedExpression(reference.caller_body, reference.expression),
+          )
+        Some(_) => ()
+      }
+      continue
+    }
+    let local_entry = module_fragments.closure_entry_type_by_resolved[resolved_type]
+    if local_entry < 0 {
+      match evidence_error {
+        None =>
+          evidence_error = Some(
+            UnsupportedExpression(reference.caller_body, reference.expression),
+          )
+        Some(_) => ()
+      }
+      continue
+    }
+    let mut entry_type_index = planned.signature_type_index(
+      module_index, local_entry,
+    )
+    if caller_function.specialization_shapes.length > 0 {
+      let callable = match
+        module_lowering.functions.callable_of(caller_function.declaration) {
+        Some(value) => value
+        None => {
+          match evidence_error {
+            None =>
+              evidence_error = Some(
+                UnsupportedExpression(
+                  reference.caller_body,
+                  reference.expression,
+                ),
+              )
+            Some(_) => ()
+          }
+          continue
+        }
+      }
+      let specialization : StarshineGenericSpecialization = {
+        generic_parameters: starshine_callable_generic_parameters(callable),
+        shapes: module_fragments.specialization_shapes,
+        specialization_shapes: caller_function.specialization_shapes,
+        specialization_evidence: caller_function.specialization_evidence,
+        specialization_abi_key: caller_function.specialization_abi_key,
+      }
+      match
+        starshine_program_specialized_closure_signatures(
+          module_lowering, planned, module_fragments, resolved_type, specialization,
+        ) {
+        Some((entry, _)) => entry_type_index = entry
+        None => ()
+      }
+    }
+    if entry_type_index < 0 || target_function.function_index < 0 {
+      match evidence_error {
+        None =>
+          evidence_error = Some(
+            UnsupportedExpression(reference.caller_body, reference.expression),
+          )
+        Some(_) => ()
+      }
+      continue
+    }
+    evidence_closures.push({
+      reference_index,
+      module_index,
+      entry_type_index,
+      closure_type_index: -1,
+      function_index: next_function_index,
+      target_function_index: target_function.function_index,
+    })
+    next_function_index += 1
+  }
+  { helpers, wrappers, evidence_closures, evidence_error }
 }
 
 ///|
@@ -9727,6 +10004,48 @@ fn emit_starshine_program_type_section(
     }
     helper_plan.wrappers[wrapper_index] = { ..wrapper, wrapper_type_index, }
   }
+  for closure_index in 0..<helper_plan.evidence_closures.length() {
+    let closure = helper_plan.evidence_closures[closure_index]
+    let module_ = planned.modules[closure.module_index]
+    let closure_base = planned.physical_type_index(
+      closure.module_index,
+      module_.closure_type_index,
+    )
+    if closure_base < 0 ||
+      closure.reference_index < 0 ||
+      closure.reference_index >= planned.evidence_function_references.length() {
+      continue
+    }
+    let reference = planned.evidence_function_references[closure.reference_index]
+    let fields : Array[@lib.FieldType] = [
+      @lib.FieldType::new(
+        @lib.StorageType::val_type(@lib.ValType::funcref()),
+        @lib.Mut::const_(),
+      ),
+    ]
+    for _ in 0..<reference.runtime_evidence_parameters.length {
+      fields.push(
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::eqref_null()),
+          @lib.Mut::const_(),
+        ),
+      )
+    }
+    let closure_type_index = rec_types.length()
+    rec_types.push(
+      @lib.RecType::new(
+        @lib.SubType::new(
+          true,
+          [@lib.TypeIdx::new(closure_base.reinterpret_as_uint())],
+          @lib.CompType::struct_(fields),
+        ),
+      ),
+    )
+    helper_plan.evidence_closures[closure_index] = {
+      ..closure,
+      closure_type_index,
+    }
+  }
   @lib.TypeSec::new(rec_types)
 }
 
@@ -9831,6 +10150,11 @@ fn emit_starshine_program_function_section(
     }
     signatures.push(@lib.TypeIdx::new(entry_type.reinterpret_as_uint()))
   }
+  for closure in helper_plan.evidence_closures {
+    signatures.push(
+      @lib.TypeIdx::new(closure.entry_type_index.reinterpret_as_uint()),
+    )
+  }
   @lib.FuncSec::new(signatures)
 }
 
@@ -9909,6 +10233,7 @@ fn emit_starshine_program_function_body(
   planned : @semantic.PlannedProgramWasmGCLink,
   function_ : @semantic.PlannedProgramWasmFunction,
   body_id : @semantic.BodyId,
+  helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let module_lowering = lowering.modules[function_.module_index]
   let module_fragments = planned.modules[function_.module_index]
@@ -10015,6 +10340,7 @@ fn emit_starshine_program_function_body(
       control_state_local_indices,
       control_result_local_indices,
       generic_specialization,
+      Some(helper_plan),
     ) {
     Ok(instructions) => {
       starshine_append_program_result_cast(planned, function_, instructions)
@@ -10394,6 +10720,7 @@ fn emit_starshine_program_initializer_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
+      None,
       None,
     ) {
     Ok(instructions) => {
@@ -12107,6 +12434,66 @@ fn emit_starshine_program_trait_adapter_body(
 }
 
 ///|
+fn emit_starshine_program_evidence_closure_body(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  closure : StarshineProgramEvidenceClosure,
+) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  if closure.reference_index < 0 ||
+    closure.reference_index >= planned.evidence_function_references.length() ||
+    closure.closure_type_index < 0 {
+    return Err(MissingFunction(0UL))
+  }
+  let reference = planned.evidence_function_references[closure.reference_index]
+  let mut target = None
+  for function_ in planned.functions {
+    if function_.function_index == closure.target_function_index {
+      target = Some(function_)
+      break
+    }
+  }
+  let target = match target {
+    Some(value) => value
+    None => return Err(MissingFunction(reference.target))
+  }
+  let evidence_count = reference.runtime_evidence_parameters.length
+  if evidence_count > target.parameters.length {
+    return Err(MissingFunction(reference.target))
+  }
+  let visible_count = target.parameters.length - evidence_count
+  let instructions : Array[@lib.Instruction] = []
+  for index in 0..<visible_count {
+    instructions.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new((index + 1).reinterpret_as_uint()),
+      ),
+    )
+  }
+  for index in 0..<evidence_count {
+    instructions.push(@lib.Instruction::local_get(@lib.LocalIdx::new(0U)))
+    instructions.push(
+      @lib.Instruction::ref_cast(
+        false,
+        @lib.HeapType::new(
+          @lib.TypeIdx::new(closure.closure_type_index.reinterpret_as_uint()),
+        ),
+      ),
+    )
+    instructions.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(closure.closure_type_index.reinterpret_as_uint()),
+        @lib.U32::new((index + 1).reinterpret_as_uint()),
+      ),
+    )
+  }
+  instructions.push(
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(closure.target_function_index.reinterpret_as_uint()),
+    ),
+  )
+  Ok(@lib.Func::new(@lib.Locals::from_types([]), @lib.Expr::new(instructions)))
+}
+
+///|
 fn emit_starshine_program_code_section(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -12119,7 +12506,7 @@ fn emit_starshine_program_code_section(
         if !function_.elided {
           match
             emit_starshine_program_function_body(
-              lowering, planned, function_, body,
+              lowering, planned, function_, body, helper_plan,
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
@@ -12225,6 +12612,12 @@ fn emit_starshine_program_code_section(
       Err(error) => return Err(error)
     }
   }
+  for closure in helper_plan.evidence_closures {
+    match emit_starshine_program_evidence_closure_body(planned, closure) {
+      Ok(body) => functions.push(body)
+      Err(error) => return Err(error)
+    }
+  }
   Ok(@lib.CodeSec::new(functions))
 }
 
@@ -12242,6 +12635,9 @@ fn starshine_program_function_reference_element_section(
   }
   for wrapper in helper_plan.wrappers {
     referenced[wrapper.function_index] = true
+  }
+  for closure in helper_plan.evidence_closures {
+    referenced[closure.function_index] = true
   }
   for function_ in planned.functions {
     match function_.kind {
@@ -12283,6 +12679,11 @@ fn starshine_program_function_reference_element_section(
       @lib.FuncIdx::new(wrapper.function_index.reinterpret_as_uint()),
     )
   }
+  for closure in helper_plan.evidence_closures {
+    functions.push(
+      @lib.FuncIdx::new(closure.function_index.reinterpret_as_uint()),
+    )
+  }
   Some(
     @lib.ElemSec::new([
       @lib.Elem::new(
@@ -12302,6 +12703,10 @@ pub fn emit_starshine_program_module(
     return Err(ProgramLinkDiagnostics(planned.diagnostics.length()))
   }
   let helper_plan = starshine_program_adapter_helper_plan(lowering, planned)
+  match helper_plan.evidence_error {
+    Some(error) => return Err(error)
+    None => ()
+  }
   let type_section = emit_starshine_program_type_section(planned, helper_plan)
   match emit_starshine_program_code_section(lowering, planned, helper_plan) {
     Ok(code) => {

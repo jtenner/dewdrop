@@ -8,6 +8,36 @@ impl Value for I32 {
   }
 }
 
+impl Value for Bool {
+  fn value(self) -> I32 {
+    if self {
+      1
+    } else {
+      0
+    }
+  }
+}
+
+trait OtherValue {
+  fn other_value(self) -> I32
+}
+
+impl OtherValue for I32 {
+  fn other_value(self) -> I32 {
+    self
+  }
+}
+
+struct Item {
+  value: I32
+}
+
+impl Value for Item {
+  fn value(self) -> I32 {
+    self.value
+  }
+}
+
 fn read<t: Value>(value: t) -> I32 {
   value.value()
 }
@@ -16,10 +46,36 @@ pub fn reader<t: Value>() -> fn(t) -> I32 {
   read
 }
 
+fn read_twice<t: Value + OtherValue>(value: t) -> I32 {
+  value.value() + value.other_value()
+}
+
+pub fn paired_reader<t: Value + OtherValue>() -> fn(t) -> I32 {
+  read_twice
+}
+
 fn invoke(callback: fn(I32) -> I32) -> I32 {
   callback(42)
 }
 
+fn invoke_item(callback: fn(Item) -> I32) -> I32 {
+  callback(Item {
+    value: 42
+  })
+}
+
+fn invoke_bool(callback: fn(Bool) -> I32) -> I32 {
+  callback(true)
+}
+
 pub fn main() -> I32 {
-  invoke(reader())
+  let result = invoke(reader())
+  assert(result == 42, "captured runtime evidence callback result")
+  let paired = invoke(paired_reader())
+  assert(paired == 84, "ordered multi-bound captured callback result")
+  let nominal = invoke_item(reader())
+  assert(nominal == 42, "nominal evidence-aware callback result")
+  let same_carrier = invoke_bool(reader())
+  assert(same_carrier == 1, "same-carrier evidence-aware callback result")
+  result + paired + nominal + same_carrier
 }

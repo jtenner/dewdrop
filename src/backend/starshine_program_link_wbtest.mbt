@@ -873,6 +873,109 @@ test "concrete bounded generic function references preserve evidence" {
   let lowering = @semantic.plan_program_lowering(program, analyzed)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.evidence_function_references.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_true(
+    emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
+  )
+}
+
+///|
+test "unbounded generic function references keep the singleton fast path" {
+  let program = @semantic.collect_program_manifest(
+    2487UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main() -> I32 {\n  let callback: fn(I32) -> I32 = reader()\n  callback(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.evidence_function_references.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
+test "escaping bounded function references capture runtime evidence" {
+  let program = @semantic.collect_program_manifest(
+    2485UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn reader<t: Value>() -> fn(t) -> I32 {\n  read\n}\nfn invoke(callback: fn(I32) -> I32) -> I32 {\n  callback(42)\n}\npub fn main() -> I32 {\n  invoke(reader())\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.evidence_function_references.length(), 2)
+  let mut captured = 0
+  for reference in link.evidence_function_references {
+    if reference.runtime_evidence_parameters.length > 0 {
+      captured += 1
+    }
+  }
+  assert_eq(captured, 1)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_true(
+    emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
+  )
+  while link.evidence_function_reference_runtime_evidence_parameters.length() >
+        0 {
+    ignore(link.evidence_function_reference_runtime_evidence_parameters.pop())
+  }
+  match emit_starshine_program_module(lowering, link) {
+    Err(UnsupportedExpression(_, _)) => ()
+    _ => fail("expected malformed evidence-capture span to fail visibly")
+  }
+}
+
+///|
+test "escaping bounded imported function references capture runtime evidence" {
+  let program = @semantic.collect_program_manifest(
+    2486UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.provider", [
+        @semantic.ManifestFile::new(
+          "provider.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open app.provider\npub fn reader<t: Value>() -> fn(t) -> I32 {\n  read\n}\nfn invoke(callback: fn(I32) -> I32) -> I32 {\n  callback(42)\n}\npub fn main() -> I32 {\n  let result = invoke(reader())\n  assert(result == 42, \"imported captured callback result\")\n  result\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics.length(), 0)
+  }
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 1)
+  assert_eq(link.diagnostics.length(), 0)
+  let read = program.modules[0].lookup_value("read").unwrap()
+  let mut captured = 0
+  for reference in link.evidence_function_references {
+    if reference.target == read &&
+      reference.runtime_evidence_parameters.length > 0 {
+      captured += 1
+    }
+  }
+  assert_eq(captured, 1)
   let module_ = emit_starshine_program_module(lowering, link).unwrap()
   assert_eq(@validate.validate_module(module_), Ok(()))
   assert_true(

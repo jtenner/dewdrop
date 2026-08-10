@@ -297,7 +297,9 @@ erased fallback.
 - [x] Define the V1 external runtime-evidence ABI for public generic bodies whose symbolic bounds are consumed by erased trait coercions or direct bound methods/operators; append source-ordered `eqref` vtable parameters and validate both static and erased dispatch through a structurally typed external Wasm consumer.
 - [x] Forward direct external runtime evidence through private, recursive, and imported generic call chains with contiguous callee hidden slots and call-site source-parameter forwarding.
 - [x] Forward runtime prerequisites through statically selected concrete generic implementation evidence and exact implementation-method specializations.
-- [ ] Support erased dictionaries that capture runtime prerequisites and escaping bounded function references/callbacks; then broaden effect/escape summaries across non-transparent public APIs.
+- [x] Support escaping bounded function references/callbacks with immutable closure subtypes that capture source-ordered caller runtime dictionaries and invoke exact local/imported target specializations through environment-first trampolines.
+- [ ] Support erased dictionaries that capture caller-local runtime prerequisites.
+- [ ] Broaden effect/escape summaries across non-transparent public APIs.
 
 ## Expressions and statements
 

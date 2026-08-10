@@ -119,6 +119,47 @@ test "bench generic call-chain module emission calls=4096" (it : @bench.T) {
 }
 
 ///|
+fn backend_evidence_closure_source(reference_count : Int) -> Bytes {
+  let source = Buffer(size_hint=reference_count * 72 + 320)
+  source.write_string_utf8(
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\n",
+  )
+  for index in 0..<reference_count {
+    source.write_string_utf8("pub fn reader_")
+    source.write_string_utf8(index.to_string())
+    source.write_string_utf8("<t: Value>() -> fn(t) -> I32 {\n  read\n}\n")
+  }
+  source.write_string_utf8("pub fn main() -> I32 {\n  0\n}\n")
+  source.to_bytes()
+}
+
+///|
+test "bench runtime-evidence closure binary emission references=256" (
+  it : @bench.T,
+) {
+  let program = @semantic.collect_program_manifest(
+    8175UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("bench.evidence_closures", [
+        @semantic.ManifestFile::new(
+          "main.dew",
+          backend_evidence_closure_source(256),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.evidence_function_references.length(), 256)
+  it.bench(fn() {
+    let bytes = emit_starshine_program_binary(lowering, link).unwrap()
+    it.keep(bytes.length())
+  })
+}
+
+///|
 test "bench program binary emission modules=64" (it : @bench.T) {
   let program = @semantic.collect_program_manifest(
     8200UL,

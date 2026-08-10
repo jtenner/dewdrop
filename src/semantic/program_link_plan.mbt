@@ -55,12 +55,24 @@ pub struct PlannedProgramExternalTypeReference {
 } derive(Eq, Debug)
 
 ///|
+pub struct PlannedProgramEvidenceFunctionReference {
+  caller_body : BodyId
+  caller_specialization_abi_key : String
+  expression : ExprId
+  target : DeclId
+  target_specialization_abi_key : String
+  runtime_evidence_parameters : HirSpan
+} derive(Eq, Debug)
+
+///|
 pub struct PlannedProgramWasmGCFragments {
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
   external_type_references : Array[PlannedProgramExternalTypeReference]
   specialized_calls : Array[PlannedProgramSpecializedCall]
   specialized_call_runtime_evidence_parameters : Array[Int]
+  evidence_function_references : Array[PlannedProgramEvidenceFunctionReference]
+  evidence_function_reference_runtime_evidence_parameters : Array[Int]
 }
 
 ///|
@@ -134,6 +146,8 @@ pub struct PlannedProgramWasmGCLink {
   specialized_call_lookup : Map[String, Int]
   specialized_call_runtime_evidence_lookup : Map[String, HirSpan]
   specialized_call_runtime_evidence_parameters : Array[Int]
+  evidence_function_references : Array[PlannedProgramEvidenceFunctionReference]
+  evidence_function_reference_runtime_evidence_parameters : Array[Int]
   initializers : Array[PlannedProgramModuleInitializer]
   global_lookup : Map[DeclId, Int]
   function_reference_singletons : Array[
@@ -2166,6 +2180,7 @@ fn program_link_validate_calls(
   functions : Array[PlannedProgramWasmFunction],
   lookup : Map[DeclId, Int],
   specialized_calls : Array[PlannedProgramSpecializedCall],
+  evidence_function_references : Array[PlannedProgramEvidenceFunctionReference],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
   for module_ in lowering.modules {
@@ -2222,14 +2237,26 @@ fn program_link_validate_calls(
                 }
               }
               if runtime_evidence {
-                diagnostics.push(
-                  UnsupportedProgramGenericCall(
-                    module_.module_id,
-                    target,
-                    expression.offset,
-                  ),
-                )
-                continue
+                let mut captured = false
+                for reference in evidence_function_references {
+                  if semantic_id_module(reference.caller_body) ==
+                    module_.module_id &&
+                    reference.expression == expression_index &&
+                    reference.runtime_evidence_parameters.length > 0 {
+                    captured = true
+                    break
+                  }
+                }
+                if !captured {
+                  diagnostics.push(
+                    UnsupportedProgramGenericCall(
+                      module_.module_id,
+                      target,
+                      expression.offset,
+                    ),
+                  )
+                  continue
+                }
               }
             }
             let mut specialized = false
@@ -3609,6 +3636,41 @@ fn record_program_specialized_call(
 }
 
 ///|
+fn record_program_evidence_function_reference(
+  references : Array[PlannedProgramEvidenceFunctionReference],
+  runtime_evidence_parameters : Array[Int],
+  caller_body : BodyId,
+  caller_specialization_abi_key : String,
+  expression : ExprId,
+  target : DeclId,
+  target_specialization_abi_key : String,
+  forwarded_runtime_evidence_parameters : Array[Int],
+) -> Unit {
+  for existing in references {
+    if existing.caller_body == caller_body &&
+      existing.caller_specialization_abi_key == caller_specialization_abi_key &&
+      existing.expression == expression {
+      return
+    }
+  }
+  let parameter_start = runtime_evidence_parameters.length()
+  for parameter in forwarded_runtime_evidence_parameters {
+    runtime_evidence_parameters.push(parameter)
+  }
+  references.push({
+    caller_body,
+    caller_specialization_abi_key,
+    expression,
+    target,
+    target_specialization_abi_key,
+    runtime_evidence_parameters: {
+      start: parameter_start,
+      length: forwarded_runtime_evidence_parameters.length(),
+    },
+  })
+}
+
+///|
 fn program_impl_method_for_requirement(
   lowering : PlannedProgramLowering,
   module_lookup : Map[ModuleId, Int],
@@ -3656,6 +3718,20 @@ fn program_call_target_and_arguments(
 }
 
 ///|
+fn program_evidence_target_and_arguments(
+  expression : PlannedExpression,
+) -> (DeclId, HirSpan)? {
+  match program_call_target_and_arguments(expression) {
+    Some(value) => Some(value)
+    None =>
+      match expression.kind {
+        PlannedFunctionReference(target, arguments) => Some((target, arguments))
+        _ => None
+      }
+  }
+}
+
+///|
 fn materialize_program_expression_call(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
@@ -3668,9 +3744,97 @@ fn materialize_program_expression_call(
   expression : ExprId,
   specialized_calls : Array[PlannedProgramSpecializedCall],
   specialized_call_runtime_evidence_parameters : Array[Int],
+  evidence_function_references : Array[PlannedProgramEvidenceFunctionReference],
+  evidence_function_reference_runtime_evidence_parameters : Array[Int],
 ) -> Unit {
   let owner = lowering.modules[caller_module_index]
   let source = owner.expressions[expression]
+  match source.kind {
+    PlannedFunctionReference(target, arguments) if arguments.length > 0 => {
+      if expression < 0 ||
+        expression >= owner.expression_evidence.length() ||
+        owner.expression_evidence[expression].length == 0 {
+        return
+      }
+      let request_evidence = match
+        resolve_program_expression_evidence(
+          owner,
+          modules[caller_module_index],
+          caller,
+          expression,
+        ) {
+        Some(value) => value
+        None => return
+      }
+      let forwarded_runtime_evidence_parameters = match
+        normalize_program_runtime_evidence_parameters(request_evidence) {
+        Some(value) => value
+        None => return
+      }
+      match caller {
+        Some(function_) =>
+          for parameter in forwarded_runtime_evidence_parameters {
+            if parameter < 0 || parameter >= function_.parameters.length {
+              return
+            }
+          }
+        None => if forwarded_runtime_evidence_parameters.length() > 0 { return }
+      }
+      let request_shapes : Array[PlannedValueShape] = []
+      for argument_index in 0..<arguments.length {
+        let source_index = arguments.start + argument_index
+        let shape = match (caller, caller_callable) {
+          (Some(function_), Some(callable)) =>
+            program_resolve_specialized_shape(
+              owner,
+              program_callable_generic_parameters(callable),
+              modules[caller_module_index].specialization_shapes,
+              function_.specialization_shapes,
+              owner.expression_type_arguments[source_index],
+              owner.expression_type_argument_shapes[source_index],
+            )
+          _ => owner.expression_type_argument_shapes[source_index]
+        }
+        request_shapes.push(shape)
+      }
+      let target_key = match
+        materialize_program_generic_specialization(
+          analyzed,
+          lowering,
+          modules,
+          module_lookup,
+          target,
+          request_shapes,
+          { start: 0, length: request_shapes.length() },
+          request_evidence,
+          false,
+        ) {
+        Some(value) => value
+        None => return
+      }
+      match caller {
+        Some(caller) if request_evidence.roots.length() > 0 &&
+          (
+            forwarded_runtime_evidence_parameters.length() > 0 ||
+            caller.specialization_abi_key != ""
+          ) =>
+          record_program_evidence_function_reference(
+            evidence_function_references,
+            evidence_function_reference_runtime_evidence_parameters,
+            body,
+            caller.specialization_abi_key,
+            expression,
+            target,
+            target_key,
+            forwarded_runtime_evidence_parameters,
+          )
+        None if forwarded_runtime_evidence_parameters.length() > 0 => return
+        _ => ()
+      }
+      return
+    }
+    _ => ()
+  }
   match program_call_target_and_arguments(source) {
     Some((target, arguments)) if arguments.length > 0 => {
       let request_evidence = match
@@ -4346,7 +4510,7 @@ fn program_collect_external_runtime_trait_uses(
       }
       _ => ()
     }
-    let call = program_call_target_and_arguments(
+    let call = program_evidence_target_and_arguments(
       module_.expressions[expression],
     )
     let target = match call {
@@ -4601,7 +4765,7 @@ fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
     if expression < 0 || expression >= module_.expression_evidence.length() {
       return false
     }
-    let call = program_call_target_and_arguments(
+    let call = program_evidence_target_and_arguments(
       module_.expressions[expression],
     )
     let roots = module_.expression_evidence[expression]
@@ -4717,7 +4881,7 @@ fn program_runtime_trait_fallback_evidence(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     let forwards_runtime_evidence = match
-      program_call_target_and_arguments(module_.expressions[expression]) {
+      program_evidence_target_and_arguments(module_.expressions[expression]) {
       Some((_, arguments)) => arguments.length > 0
       None => false
     }
@@ -4948,6 +5112,10 @@ fn plan_program_wasmgc_fragments_for_root(
   }
   let specialized_calls : Array[PlannedProgramSpecializedCall] = []
   let specialized_call_runtime_evidence_parameters : Array[Int] = []
+  let evidence_function_references : Array[
+    PlannedProgramEvidenceFunctionReference,
+  ] = []
+  let evidence_function_reference_runtime_evidence_parameters : Array[Int] = []
   for module_index, module_ in lowering.modules {
     if module_index != erased_fallback_module_index {
       continue
@@ -5013,25 +5181,36 @@ fn plan_program_wasmgc_fragments_for_root(
           expression,
           specialized_calls,
           specialized_call_runtime_evidence_parameters,
+          evidence_function_references,
+          evidence_function_reference_runtime_evidence_parameters,
         )
       }
     }
-    for expression in module_.expressions {
+    for expression_index, expression in module_.expressions {
       match expression.kind {
-        PlannedFunctionReference(declaration, arguments) if arguments.length > 0 =>
-          ignore(
-            materialize_program_generic_specialization(
-              analyzed,
-              lowering,
-              modules,
-              specialization_module_lookup,
-              declaration,
-              module_.expression_type_argument_shapes,
-              arguments,
-              empty_program_trait_evidence_request(),
-              false,
-            ),
-          )
+        PlannedFunctionReference(declaration, arguments) if arguments.length > 0 => {
+          let roots = if expression_index >= 0 &&
+            expression_index < module_.expression_evidence.length() {
+            module_.expression_evidence[expression_index]
+          } else {
+            { start: 0, length: 0 }
+          }
+          if roots.length == 0 {
+            ignore(
+              materialize_program_generic_specialization(
+                analyzed,
+                lowering,
+                modules,
+                specialization_module_lookup,
+                declaration,
+                module_.expression_type_argument_shapes,
+                arguments,
+                empty_program_trait_evidence_request(),
+                false,
+              ),
+            )
+          }
+        }
         _ => ()
       }
     }
@@ -5086,6 +5265,8 @@ fn plan_program_wasmgc_fragments_for_root(
             expression,
             specialized_calls,
             specialized_call_runtime_evidence_parameters,
+            evidence_function_references,
+            evidence_function_reference_runtime_evidence_parameters,
           )
         }
       }
@@ -5148,6 +5329,8 @@ fn plan_program_wasmgc_fragments_for_root(
     external_type_references,
     specialized_calls,
     specialized_call_runtime_evidence_parameters,
+    evidence_function_references,
+    evidence_function_reference_runtime_evidence_parameters,
   }
 }
 
@@ -6638,6 +6821,7 @@ pub fn link_program_wasmgc_fragments(
     functions,
     function_lookup,
     fragments.specialized_calls,
+    fragments.evidence_function_references,
     diagnostics,
   )
   let specialized_call_lookup : Map[String, Int] = Map::default()
@@ -6685,6 +6869,8 @@ pub fn link_program_wasmgc_fragments(
     specialized_call_lookup,
     specialized_call_runtime_evidence_lookup,
     specialized_call_runtime_evidence_parameters: fragments.specialized_call_runtime_evidence_parameters,
+    evidence_function_references: fragments.evidence_function_references,
+    evidence_function_reference_runtime_evidence_parameters: fragments.evidence_function_reference_runtime_evidence_parameters,
     initializers,
     global_lookup,
     function_reference_singletons,

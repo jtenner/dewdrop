@@ -1,0 +1,13 @@
+pub trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+pub fn read<t: Value>(value: t) -> I32 {
+  value.value()
+}

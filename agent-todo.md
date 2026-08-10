@@ -69,7 +69,9 @@
 - [x] Forward external runtime evidence through symbolic static bound calls and operators.
 - [x] Forward direct external runtime evidence through private, recursive, and imported generic call chains.
 - [x] Forward runtime prerequisites through statically selected concrete generic implementation evidence.
-- [ ] Support erased dictionaries that capture runtime prerequisites and escaping bounded function references/callbacks; then broaden effect/escape summaries across non-transparent public APIs.
+- [x] Support escaping bounded function references/callbacks with immutable evidence-capturing closure subtypes and exact specialized entry trampolines.
+- [ ] Support erased dictionaries that capture caller-local runtime prerequisites.
+- [ ] Broaden effect/escape summaries across non-transparent public APIs.
 
 ## Deterministic cleanup and executable language surface
 

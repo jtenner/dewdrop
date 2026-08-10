@@ -1207,7 +1207,7 @@ test "external generic fallback rejects erased concrete evidence with runtime pr
 }
 
 ///|
-test "bounded generic function references fail visibly before backend emission" {
+test "bounded generic function references capture caller runtime evidence" {
   let program = collect_program_manifest(
     21975UL,
     ProgramManifest::new([
@@ -1239,11 +1239,21 @@ test "bounded generic function references fail visibly before backend emission" 
   }
   assert_eq(bound_references, 1)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(link.diagnostics.length(), 1)
-  match link.diagnostics[0] {
-    UnsupportedProgramGenericCall(_, target, _) => assert_eq(target, read)
-    _ => fail("expected unsupported bounded function-reference diagnostic")
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.evidence_function_references.length(), 2)
+  let mut captured = 0
+  let mut closed = 0
+  for reference in link.evidence_function_references {
+    assert_eq(reference.target, read)
+    if reference.runtime_evidence_parameters.length == 1 {
+      captured += 1
+    } else {
+      assert_eq(reference.runtime_evidence_parameters.length, 0)
+      closed += 1
+    }
   }
+  assert_eq(captured, 1)
+  assert_eq(closed, 1)
 }
 
 ///|
