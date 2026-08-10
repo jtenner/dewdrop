@@ -216,7 +216,9 @@ lookup keys before ordinary code emission begins.
 - conversion from planned value/storage types to Starshine types;
 - instruction generation for lowered executable operations;
 - runtime helper bodies selected by semantic plans;
-- adapter, callback-wrapper, evidence-closure, and trait-adapter bodies;
+- adapter, callback-wrapper, evidence-closure, and trait-adapter bodies, with
+  program adapter planning and emission isolated in
+  `src/backend/starshine_program_adapters.mbt`;
 - deterministic section assembly;
 - Starshine validation and binary encoding;
 - compiler-owned Wasm custom sections.

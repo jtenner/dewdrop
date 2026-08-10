@@ -103,11 +103,11 @@
 
 ## Phase 3: reorganize backend emission
 
-- [ ] **Extract backend adapter compilation from ordinary instruction emission.**
-  - [ ] Move erased aggregate adapters into a cohesive planner/emitter.
-  - [ ] Move callback wrappers and recursive adapter helpers with them.
-  - [ ] Move runtime-evidence closures and captured trait dictionaries with them.
-  - [ ] Make ordinary body emission consume completed adapter plans rather than
+- [x] **Extract backend adapter compilation from ordinary instruction emission.**
+  - [x] Move erased aggregate adapters into a cohesive planner/emitter.
+  - [x] Move callback wrappers and recursive adapter helpers with them.
+  - [x] Move runtime-evidence closures and captured trait dictionaries with them.
+  - [x] Make ordinary body emission consume completed adapter plans rather than
         discovering adapter architecture while emitting instructions.
   - Relevant file: `src/backend/starshine_code.mbt`.
 
