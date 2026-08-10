@@ -44,7 +44,7 @@ order is now:
 
 ### 0. Harden the advertised current language surface
 
-- [ ] Fix discarded non-Unit tail expressions in Unit-returning functions so they do not disrupt earlier method/operator inference.
+- [x] Discard non-Unit tail expressions in Unit-returning functions and lambdas without constraining their value type to Unit or disrupting earlier method/operator inference.
 - [ ] Emit string literal patterns, or reject them before backend planning until executable semantics exist.
 - [ ] Route local module-value cycles to stable source-located eager-initialization diagnostics through the CLI.
 - [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.
@@ -351,7 +351,7 @@ boundaries.
 - [x] Emit the currently supported immutable and mutable name-binding local-let forms, including carrier-typed locals and captured mutable cells.
 - [x] Emit valued and bare `return` forms.
 - [x] Emit drops for non-tail expressions across the currently supported single-value Wasm carrier shapes.
-- [ ] Expand explicit unreachable/`Never`, discarded Unit-tail, and supported-shape stack validation coverage; fix the known Unit-function discarded-tail inference ordering gap.
+- [ ] Expand explicit unreachable/`Never`, discarded Unit-tail, and supported-shape stack validation coverage; Unit-returning bodies now discard non-Unit tails after inference without changing their value type.
 
 ### Mutation
 

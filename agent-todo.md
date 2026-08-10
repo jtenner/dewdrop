@@ -12,7 +12,6 @@
 
 ## Current-language correctness hardening
 
-- [ ] Fix discarded non-Unit tail expressions in Unit-returning functions so they do not disrupt earlier method/operator inference.
 - [ ] Emit string literal patterns, or reject them before backend planning until executable semantics exist.
 - [ ] Route local module-value cycles to stable source-located eager-initialization diagnostics through the CLI.
 - [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.

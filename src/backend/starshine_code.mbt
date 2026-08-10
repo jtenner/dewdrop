@@ -7867,7 +7867,16 @@ fn starshine_emit_body_instructions(
   if results.length() != 1 {
     Err(InvalidFunctionBody(body.body))
   } else {
-    Ok(results[0])
+    let output = results[0]
+    let discard_root = match body.result_shape {
+      @semantic.UnitPlannedValueShape =>
+        starshine_shape_value_type(body.root_shape) is Some(_)
+      _ => false
+    }
+    if discard_root {
+      output.push(@lib.Instruction::drop())
+    }
+    Ok(output)
   }
 }
 

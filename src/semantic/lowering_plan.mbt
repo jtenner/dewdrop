@@ -247,6 +247,7 @@ pub struct PlannedLambdaLowering {
   root : HirBodyRoot
   root_type : BodyTypeId
   root_shape : PlannedValueShape
+  result_shape : PlannedValueShape
   flow : BodyFlowSummary
   locals : HirSpan
   captures : HirSpan
@@ -265,6 +266,7 @@ pub struct PlannedBodyLowering {
   root : HirBodyRoot
   root_type : BodyTypeId
   root_shape : PlannedValueShape
+  result_shape : PlannedValueShape
   flow : BodyFlowSummary
   locals : HirSpan
   expressions : HirSpan
@@ -332,6 +334,7 @@ pub fn PlannedModuleLowering::lambda_body(
     root: source.root,
     root_type: source.root_type,
     root_shape: source.root_shape,
+    result_shape: source.result_shape,
     flow: source.flow,
     locals: source.locals,
     expressions: source.expressions,
@@ -1076,6 +1079,7 @@ fn plan_expression_kind(
 fn plan_body_lowering_job(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
+  functions : PlannedModuleFunctions,
   names : ResolvedModuleNames,
   inferred : InferredModuleBodies,
   flows : AnalyzedModuleFlows,
@@ -1210,6 +1214,15 @@ fn plan_body_lowering_job(
       names.body(body.id).unwrap().locals,
     )
   }
+  let root_shape = planned_value_shape(resolved, inferred, root_type)
+  let result_shape = if lambda >= 0 {
+    planned_resolved_value_shape(resolved, resolved.lambda_return_types[lambda])
+  } else {
+    match functions.callable_of(body.declaration) {
+      Some(callable) => callable.result_shape
+      None => root_shape
+    }
+  }
   {
     lambda,
     body: {
@@ -1218,7 +1231,8 @@ fn plan_body_lowering_job(
       kind: body.kind,
       root: body.root,
       root_type,
-      root_shape: planned_value_shape(resolved, inferred, root_type),
+      root_shape,
+      result_shape,
       flow: root_flow,
       locals: local_span,
       expressions: body.expressions,
@@ -1297,6 +1311,7 @@ fn copy_body_lowering_job(
       root: job.body.root,
       root_type: job.body.root_type,
       root_shape: job.body.root_shape,
+      result_shape: job.body.result_shape,
       flow: job.body.flow,
       locals: job.body.locals,
       captures: capture_span,
@@ -1314,6 +1329,7 @@ fn copy_body_lowering_job(
       root: job.body.root,
       root_type: job.body.root_type,
       root_shape: job.body.root_shape,
+      result_shape: job.body.result_shape,
       flow: job.body.flow,
       locals: job.body.locals,
       expressions: job.body.expressions,
@@ -1573,6 +1589,7 @@ fn plan_module_lowering_in_order(
       plan_body_lowering_job(
         collected,
         resolved,
+        functions,
         names,
         inferred,
         flows,
@@ -1590,6 +1607,7 @@ fn plan_module_lowering_in_order(
       plan_body_lowering_job(
         collected,
         resolved,
+        functions,
         names,
         inferred,
         flows,
@@ -1675,6 +1693,7 @@ fn plan_module_lowering_in_order(
       root: ExpressionBodyRoot(-1),
       root_type: 0,
       root_shape: ErrorPlannedValueShape,
+      result_shape: ErrorPlannedValueShape,
       flow: { outcomes: 0 },
       locals: { start: 0, length: 0 },
       expressions: { start: 0, length: 0 },
@@ -1692,6 +1711,7 @@ fn plan_module_lowering_in_order(
         root: BlockBodyRoot(collected.lambdas[info.lambda].body.root),
         root_type: 0,
         root_shape: ErrorPlannedValueShape,
+        result_shape: ErrorPlannedValueShape,
         flow: { outcomes: 0 },
         locals: info.locals,
         captures: info.captures,

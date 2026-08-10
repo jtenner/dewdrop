@@ -1,0 +1,23 @@
+open dew.std.string
+
+fn discard_method_result() -> Unit {
+  let text = "abc"
+  let index = text.find("b")
+  index
+}
+
+fn discard_operator_result() -> Unit {
+  let sum = 20 + 22
+  assert(sum == 42, "operator inference before discarded tail")
+  sum
+}
+
+pub fn main() -> Unit {
+  discard_method_result()
+  discard_operator_result()
+  let discard_lambda_result = fn() -> Unit {
+    let value = 42
+    value
+  }
+  discard_lambda_result()
+}

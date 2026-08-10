@@ -842,6 +842,19 @@ fn BasicBodyInferencer::constrain(
 }
 
 ///|
+fn BasicBodyInferencer::is_unit_type(
+  self : BasicBodyInferencer,
+  type_ : BodyTypeId,
+) -> Bool {
+  let representative = self.solver.representative_type(type_)
+  match self.solver.type_term(representative) {
+    BodyResolvedType(resolved_type) =>
+      resolved_type == self.resolved.primitive(UnitType)
+    _ => false
+  }
+}
+
+///|
 fn BasicBodyInferencer::is_never_type(
   self : BasicBodyInferencer,
   type_ : BodyTypeId,
@@ -2547,11 +2560,13 @@ fn BasicBodyInferencer::constrain_root(self : BasicBodyInferencer) -> Unit {
     )
     match root_expression {
       Some(expression) =>
-        self.constrain_expression_assignable(
-          expression,
-          self.declared_return_type,
-          origin,
-        )
+        if !self.is_unit_type(self.declared_return_type) {
+          self.constrain_expression_assignable(
+            expression,
+            self.declared_return_type,
+            origin,
+          )
+        }
       None =>
         self.constrain_assignable(
           self.result_type,

@@ -103,10 +103,16 @@ fn classify(text: String) -> I32 {
 
 ## 4. Non-Unit tail expression breaks resolution inside Unit functions
 
-Inside a function whose return type is `Unit`, a non-Unit tail expression
-(such as a method call or binary expression whose value is discarded) breaks
-operator/method resolution earlier in the same body. Ending the block with a
-`let` instead of the expression compiles cleanly:
+> FIXED (August 10, 2026): body inference no longer constrains a discarded tail
+> expression to `Unit` when the callable's declared result is `Unit`. Lowering
+> retains the tail's actual carrier and the backend emits one final `drop` for
+> functions and lambdas. The `functions/unit-discarded-tail-runtime` snapshot
+> covers method, operator, and lambda cases.
+
+Previously, inside a function whose return type was `Unit`, a non-Unit tail
+expression (such as a method call or binary expression whose value is discarded)
+broke operator/method resolution earlier in the same body. Ending the block with
+a `let` instead of the expression compiled cleanly:
 
 ```dew
 // FAILS: NoMatchingMethod on value.find("b")
