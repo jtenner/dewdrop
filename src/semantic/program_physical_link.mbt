@@ -130,7 +130,7 @@ fn program_initializer_dependencies(
   initializer : PlannedProgramModuleInitializer,
   initializer_lookup : Map[DeclId, Int],
 ) -> Array[Int] {
-  let module_lookup = lowering.module_lookup
+  let module_lookup = lowering.index.module_lookup
   let dependencies : Array[Int] = []
   let seen_dependencies : Map[Int, Bool] = Map::default()
   let seen_bodies : Map[BodyId, Bool] = Map::default()
@@ -396,7 +396,7 @@ fn program_physical_type_sccs(
 
 ///|
 fn program_cross_module_type_groups(
-  fragments : PlannedProgramWasmGCFragments,
+  fragments : PlannedProgramSpecializationPlan,
   module_lookup : Map[ModuleId, Int],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> (
@@ -763,15 +763,16 @@ fn planned_program_function_types_equal(
 /// module-local fragment plan. Module-local recursive groups remain intact
 /// unless physical dependencies form an SCC across module boundaries.
 pub fn link_program_wasmgc_fragments(
-  fragments : PlannedProgramWasmGCFragments,
+  fragments : PlannedProgramSpecializationPlan,
   lowering : PlannedProgramLowering,
   root_module_index : Int,
 ) -> PlannedProgramWasmGCLink {
   guard root_module_index >= 0 && root_module_index < lowering.modules.length() else {
     abort("program root module index is outside the manifest")
   }
-  guard fragments.modules.length() == lowering.modules.length() else {
-    abort("program link inputs have different module counts")
+  match validate_program_specialization_plan(fragments, lowering) {
+    Ok(_) => ()
+    Err(error) => abort(error)
   }
   let module_type_bases = Array::make(lowering.modules.length(), -1)
   let module_type_indices : Array[Array[Int]] = []
@@ -781,7 +782,7 @@ pub fn link_program_wasmgc_fragments(
   let functions : Array[PlannedProgramWasmFunction] = []
   let function_lookup : Map[DeclId, Int] = Map::default()
   let type_lookup : Map[DeclId, Int] = Map::default()
-  let module_lookup = lowering.module_lookup
+  let module_lookup = lowering.index.module_lookup
   let diagnostics : Array[ProgramWasmGCLinkDiagnostic] = []
   let test_ordinals : Map[DeclId, Int] = Map::default()
   let mut next_test_ordinal = 0
@@ -1466,8 +1467,11 @@ pub fn link_program_wasmgc_fragments(
     fragments.evidence_function_references,
     diagnostics,
   )
-  let specialized_call_lookup : Map[String, Int] = Map::default()
-  let specialized_call_runtime_evidence_lookup : Map[String, HirSpan] = Map::default()
+  let specialized_call_lookup : Map[ProgramSpecializedCallKey, Int] = Map::default()
+  let specialized_call_runtime_evidence_lookup : Map[
+    ProgramSpecializedCallKey,
+    HirSpan,
+  ] = Map::default()
   for call in fragments.specialized_calls {
     let mut target_index = -1
     if call.target_specialization_abi_key.length() == 0 {

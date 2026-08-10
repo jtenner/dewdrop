@@ -105,9 +105,9 @@ The whole-program stages now have explicit implementation owners:
 - `src/semantic/program_link_plan.mbt` retains shared program-plan data contracts,
   module-lowering orchestration, and cross-plan validation helpers.
 
-The specialization-to-linker handoff still exposes the broad
-`PlannedProgramWasmGCFragments` representation. Tightening and validating that
-handoff remains tracked in the temporary architecture TODO.
+Specialization produces the flat `PlannedProgramSpecializationPlan` handoff.
+The physical linker validates its module order, packed-identity owners,
+expression references, and evidence spans once before assigning final indices.
 
 ## Boundary and mutation policy
 
@@ -156,8 +156,12 @@ identity.
 
 ### Wasm identities
 
-`PlannedProgramLowering` owns the immutable `ModuleId`-to-manifest-index map used
-by optimization, specialization, initializer analysis, and physical linking.
+`PlannedProgramLowering` owns one immutable `ProgramIndex` used by optimization,
+specialization, initializer analysis, and physical linking. It stores the only
+`ModuleId`-to-manifest-index map and resolves declaration, body, implementation,
+type, and variant owners from their packed semantic identities without adding
+parallel owner maps. Specialized-call maps use a typed key rather than allocating
+concatenated lookup strings.
 Module fragment plans own module-local physical and signature indices. The final
 program link owns program-wide type, function, global, initializer, dictionary,
 and singleton indices. Backend emission consumes those frozen indices and must

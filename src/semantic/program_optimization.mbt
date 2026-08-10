@@ -2119,13 +2119,13 @@ pub fn optimize_program_lowering(
   directize_generic_parameter_selectors(modules)
   let elided_trait_wrappers = directize_exact_runtime_trait_flows(
     modules,
-    lowering.module_lookup,
+    lowering.index.module_lookup,
     effects,
   )
   {
     graph: lowering.graph,
     modules,
-    module_lookup: lowering.module_lookup,
+    index: lowering.index,
     elided_trait_wrappers,
   }
 }

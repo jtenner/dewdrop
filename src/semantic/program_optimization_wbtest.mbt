@@ -14,10 +14,10 @@ test "program optimization preserves its unoptimized input" {
   let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
   let optimized = optimize_program_lowering(unoptimized)
   assert_eq(
-    unoptimized.module_lookup.get(program.modules[0].module_id),
+    unoptimized.index.module_index(program.modules[0].module_id),
     Some(0),
   )
-  assert_eq(optimized.module_lookup.get(program.modules[0].module_id), Some(0))
+  assert_eq(optimized.index.module_index(program.modules[0].module_id), Some(0))
   let collected = program.modules[0]
   let apply = collected.lookup_value("apply").unwrap()
   let increment = collected.lookup_value("increment").unwrap()

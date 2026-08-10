@@ -1,8 +1,70 @@
 ///|
+pub struct ProgramIndex {
+  module_lookup : Map[ModuleId, Int]
+}
+
+///|
+fn build_program_index(modules : Array[PlannedModuleLowering]) -> ProgramIndex {
+  let module_lookup : Map[ModuleId, Int] = Map::default()
+  for module_index, module_ in modules {
+    if module_lookup.contains(module_.module_id) {
+      abort("duplicate module identity in program index")
+    }
+    module_lookup[module_.module_id] = module_index
+  }
+  { module_lookup, }
+}
+
+///|
+pub fn ProgramIndex::module_index(
+  self : ProgramIndex,
+  module_id : ModuleId,
+) -> Int? {
+  self.module_lookup.get(module_id)
+}
+
+///|
+pub fn ProgramIndex::declaration_owner(
+  self : ProgramIndex,
+  declaration : DeclId,
+) -> Int? {
+  self.module_index(semantic_id_module(declaration))
+}
+
+///|
+pub fn ProgramIndex::body_owner(self : ProgramIndex, body : BodyId) -> Int? {
+  self.module_index(semantic_id_module(body))
+}
+
+///|
+pub fn ProgramIndex::implementation_owner(
+  self : ProgramIndex,
+  implementation : DeclId,
+) -> Int? {
+  self.declaration_owner(implementation)
+}
+
+///|
+pub fn ProgramIndex::type_owner(
+  self : ProgramIndex,
+  declaration : DeclId,
+) -> Int? {
+  self.declaration_owner(declaration)
+}
+
+///|
+pub fn ProgramIndex::variant_owner(
+  self : ProgramIndex,
+  variant : VariantId,
+) -> Int? {
+  self.module_index(semantic_id_module(variant))
+}
+
+///|
 pub struct PlannedProgramLowering {
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleLowering]
-  module_lookup : Map[ModuleId, Int]
+  index : ProgramIndex
   elided_trait_wrappers : Array[DeclId]
 }
 
@@ -13,6 +75,13 @@ pub enum ProgramWasmGCLinkDiagnostic {
   MissingProgramFunction(ModuleId, DeclId, UInt64)
   EagerProgramInitializationCycle(DeclId, DeclId)
 } derive(Eq, Debug)
+
+///|
+pub struct ProgramSpecializedCallKey {
+  body : BodyId
+  specialization_abi_key : String
+  expression : ExprId
+} derive(Eq, Hash, Debug)
 
 ///|
 pub struct PlannedProgramSpecializedCall {
@@ -66,7 +135,7 @@ pub struct PlannedProgramEvidenceFunctionReference {
 } derive(Eq, Debug)
 
 ///|
-pub struct PlannedProgramWasmGCFragments {
+pub struct PlannedProgramSpecializationPlan {
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
   external_type_references : Array[PlannedProgramExternalTypeReference]
@@ -144,8 +213,11 @@ pub struct PlannedProgramWasmGCLink {
   program_physical_types : Array[PlannedProgramWasmPhysicalType]
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
-  specialized_call_lookup : Map[String, Int]
-  specialized_call_runtime_evidence_lookup : Map[String, HirSpan]
+  specialized_call_lookup : Map[ProgramSpecializedCallKey, Int]
+  specialized_call_runtime_evidence_lookup : Map[
+    ProgramSpecializedCallKey,
+    HirSpan,
+  ]
   specialized_call_runtime_evidence_parameters : Array[Int]
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference]
   evidence_function_reference_runtime_evidence_parameters : Array[Int]
@@ -171,8 +243,8 @@ fn program_specialized_call_key(
   body : BodyId,
   specialization_abi_key : String,
   expression : ExprId,
-) -> String {
-  body.to_string() + ":" + specialization_abi_key + ":" + expression.to_string()
+) -> ProgramSpecializedCallKey {
+  { body, specialization_abi_key, expression }
 }
 
 ///|
@@ -423,16 +495,13 @@ pub fn plan_unoptimized_program_lowering(
     }
   }
   let modules : Array[PlannedModuleLowering] = []
-  let module_lookup : Map[ModuleId, Int] = Map::default()
-  for module_index, slot in slots {
-    let module_ = slot.unwrap()
-    module_lookup[module_.module_id] = module_index
-    modules.push(module_)
+  for slot in slots {
+    modules.push(slot.unwrap())
   }
   {
     graph: analyzed.frozen.graph,
+    index: build_program_index(modules),
     modules,
-    module_lookup,
     elided_trait_wrappers: [],
   }
 }
@@ -600,7 +669,7 @@ fn program_link_validate_external_type(
 
 ///|
 fn program_link_validate_types(
-  fragments : PlannedProgramWasmGCFragments,
+  fragments : PlannedProgramSpecializationPlan,
   type_lookup : Map[DeclId, Int],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {

@@ -83,7 +83,7 @@ fn program_reachable_callable_roots(
   lowering : PlannedProgramLowering,
   emit_tests : Bool,
 ) -> Map[DeclId, Bool] {
-  let module_lookup = lowering.module_lookup
+  let module_lookup = lowering.index.module_lookup
   let reachable : Map[DeclId, Bool] = Map::default()
   let work : Array[DeclId] = []
   for module_ in lowering.modules {
@@ -2710,7 +2710,7 @@ fn plan_program_wasmgc_fragments_for_root(
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
   erased_fallback_module_index : Int,
-) -> PlannedProgramWasmGCFragments {
+) -> PlannedProgramSpecializationPlan {
   guard lowering.modules.length() == analyzed.modules.length() else {
     abort("program fragment inputs have different module counts")
   }
@@ -2718,7 +2718,7 @@ fn plan_program_wasmgc_fragments_for_root(
     lowering.modules.length(),
     None,
   )
-  let specialization_module_lookup = lowering.module_lookup
+  let specialization_module_lookup = lowering.index.module_lookup
   let external_evidence_support_states : Map[String, Int] = Map::default()
   let fallback_evidence_by_declaration : Map[
     DeclId,
@@ -3030,11 +3030,87 @@ fn plan_program_wasmgc_fragments_for_root(
 }
 
 ///|
+fn program_specialization_span_is_valid(span : HirSpan, length : Int) -> Bool {
+  span.start >= 0 &&
+  span.length >= 0 &&
+  span.start + span.length >= span.start &&
+  span.start + span.length <= length
+}
+
+///|
+/// Validates the compact specialization-to-linker handoff once, before the
+/// physical linker enters its index-assignment loops.
+pub fn validate_program_specialization_plan(
+  plan : PlannedProgramSpecializationPlan,
+  lowering : PlannedProgramLowering,
+) -> Result[Unit, String] {
+  if plan.modules.length() != lowering.modules.length() {
+    return Err("specialization plan module count does not match lowering")
+  }
+  for module_index, module_ in plan.modules {
+    if module_.module_id != lowering.modules[module_index].module_id {
+      return Err("specialization plan module order does not match lowering")
+    }
+  }
+  for reference in plan.external_type_references {
+    if reference.module_index < 0 ||
+      reference.module_index >= plan.modules.length() {
+      return Err("specialization plan external type has invalid module index")
+    }
+    if lowering.index.type_owner(reference.declaration) is None {
+      return Err(
+        "specialization plan external type has unknown declaration owner",
+      )
+    }
+  }
+  for call in plan.specialized_calls {
+    let caller_index = match lowering.index.body_owner(call.caller_body) {
+      Some(value) => value
+      None => return Err("specialization call has unknown caller body owner")
+    }
+    if call.expression < 0 ||
+      call.expression >= lowering.modules[caller_index].expressions.length() {
+      return Err("specialization call expression is outside its module arena")
+    }
+    if lowering.index.declaration_owner(call.target) is None {
+      return Err("specialization call target has unknown declaration owner")
+    }
+    if !program_specialization_span_is_valid(
+        call.runtime_evidence_parameters,
+        plan.specialized_call_runtime_evidence_parameters.length(),
+      ) {
+      return Err("specialization call evidence span is outside its arena")
+    }
+  }
+  for reference in plan.evidence_function_references {
+    let caller_index = match lowering.index.body_owner(reference.caller_body) {
+      Some(value) => value
+      None => return Err("evidence reference has unknown caller body owner")
+    }
+    if reference.expression < 0 ||
+      reference.expression >=
+      lowering.modules[caller_index].expressions.length() {
+      return Err("evidence reference expression is outside its module arena")
+    }
+    if lowering.index.declaration_owner(reference.target) is None {
+      return Err("evidence reference target has unknown declaration owner")
+    }
+    if !program_specialization_span_is_valid(
+        reference.runtime_evidence_parameters,
+        plan.evidence_function_reference_runtime_evidence_parameters.length(),
+      ) {
+      return Err("evidence reference span is outside its arena")
+    }
+  }
+  Ok(())
+}
+
+///|
 pub fn plan_program_wasmgc_fragments_with_options(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
-) -> PlannedProgramWasmGCFragments {
+) -> PlannedProgramSpecializationPlan {
   plan_program_wasmgc_fragments_for_root(analyzed, lowering, options, 0)
 }
 
@@ -3042,7 +3118,7 @@ pub fn plan_program_wasmgc_fragments_with_options(
 pub fn plan_program_wasmgc_fragments(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
-) -> PlannedProgramWasmGCFragments {
+) -> PlannedProgramSpecializationPlan {
   plan_program_wasmgc_fragments_with_options(
     analyzed,
     lowering,
