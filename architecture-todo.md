@@ -20,13 +20,13 @@
 
 ## Phase 1: establish boundaries and shared entry points
 
-- [ ] **Document the current compiler architecture and intended phase boundaries.**
-  - [ ] Add a concise package and compiler-phase diagram.
-  - [ ] Record ownership of IDs, flat arenas, frozen interfaces, standard-library
+- [x] **Document the current compiler architecture and intended phase boundaries.**
+  - [x] Add a concise package and compiler-phase diagram.
+  - [x] Record ownership of IDs, flat arenas, frozen interfaces, standard-library
         identities, caches, specialization plans, and backend plans.
-  - [ ] State which phase boundaries are immutable and which transformations are
+  - [x] State which phase boundaries are immutable and which transformations are
         intentionally in-place.
-  - [ ] Start a lightweight decision log for architecture choices that span more
+  - [x] Start a lightweight decision log for architecture choices that span more
         than one research note.
   - Relevant areas: `README.md`, `docs/research/`, `src/*/moon.pkg`.
 
