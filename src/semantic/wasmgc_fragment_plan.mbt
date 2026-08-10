@@ -674,7 +674,7 @@ fn wasmgc_variant_shapes_equal(
 }
 
 ///|
-pub fn wasmgc_physical_type_count_with_options(
+fn wasmgc_physical_type_count_with_options(
   layouts : PlannedModuleTypeLayouts,
   options : WasmGCPlanningOptions,
 ) -> Int {
@@ -685,14 +685,6 @@ pub fn wasmgc_physical_type_count_with_options(
     false,
   )
   sources.length()
-}
-
-///|
-pub fn wasmgc_physical_type_count(layouts : PlannedModuleTypeLayouts) -> Int {
-  wasmgc_physical_type_count_with_options(
-    layouts,
-    WasmGCPlanningOptions::optimized_subtype_families(),
-  )
 }
 
 ///|
@@ -2322,7 +2314,7 @@ fn wasmgc_nominal_type_declaration(
 }
 
 ///|
-pub fn wasmgc_trait_receiver_box_slot(shape : PlannedValueShape) -> Int {
+fn wasmgc_trait_receiver_box_slot(shape : PlannedValueShape) -> Int {
   match shape {
     I8PlannedValueShape
     | I16PlannedValueShape
@@ -3745,7 +3737,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
 }
 
 ///|
-pub fn plan_module_wasmgc_fragments_with_options(
+fn plan_module_wasmgc_fragments_with_options(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
   options : WasmGCPlanningOptions,

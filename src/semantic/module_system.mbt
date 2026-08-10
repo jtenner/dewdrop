@@ -2127,7 +2127,7 @@ fn frozen_impl_type_is_visible(
 /// Freezes one public module interface without retaining parser ASTs or
 /// executable body HIR. Resolved type IDs remain scoped by `module_id` and the
 /// included immutable resolved-type arena.
-pub fn freeze_module_interface(
+fn freeze_module_interface(
   path : String,
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
@@ -2864,7 +2864,7 @@ fn import_frozen_interface_into_scope(
 }
 
 ///|
-pub fn build_module_import_scope(
+fn build_module_import_scope(
   program : CollectedProgram,
   interfaces : Array[FrozenModuleInterface?],
   module_index : Int,

@@ -9477,7 +9477,7 @@ pub fn infer_module_values(
 }
 
 ///|
-pub fn infer_module_values_with_imports(
+fn infer_module_values_with_imports(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   imports : ResolvedModuleImports,

@@ -763,7 +763,7 @@ pub struct AnalyzedProgramSemantics {
 ///|
 /// Runs imported signature resolution, body name resolution, and body inference
 /// from one already-frozen interface graph.
-pub fn analyze_program_semantics_with_frozen(
+fn analyze_program_semantics_with_frozen(
   program : CollectedProgram,
   frozen : FrozenProgramInterfaces,
 ) -> AnalyzedProgramSemantics {

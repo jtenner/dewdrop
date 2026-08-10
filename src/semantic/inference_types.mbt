@@ -48,7 +48,7 @@ pub fn LocalInferenceDiagnostic::offset(
 }
 
 ///|
-pub fn expression_type_origin(
+fn expression_type_origin(
   source : Int,
   offset : UInt64,
 ) -> TypeConstraintOrigin {
@@ -56,36 +56,27 @@ pub fn expression_type_origin(
 }
 
 ///|
-pub fn pattern_type_origin(
-  source : Int,
-  offset : UInt64,
-) -> TypeConstraintOrigin {
+fn pattern_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
   { kind: PatternTypeConstraint, source, offset }
 }
 
 ///|
-pub fn local_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn local_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
   { kind: LocalTypeConstraint, source, offset }
 }
 
 ///|
-pub fn return_type_origin(
-  source : Int,
-  offset : UInt64,
-) -> TypeConstraintOrigin {
+fn return_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
   { kind: ReturnTypeConstraint, source, offset }
 }
 
 ///|
-pub fn call_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn call_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
   { kind: CallTypeConstraint, source, offset }
 }
 
 ///|
-pub fn operator_type_origin(
-  source : Int,
-  offset : UInt64,
-) -> TypeConstraintOrigin {
+fn operator_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
   { kind: OperatorTypeConstraint, source, offset }
 }
 

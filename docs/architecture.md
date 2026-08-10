@@ -47,7 +47,11 @@ src/backend <----------------------------+
 
 `src/compiler_driver` is the supported orchestration entry point for compiler
 executables. It owns the common collect, cached-analysis, lowering, linking,
-diagnostic collection, and raw binary emission sequence. Executables still
+diagnostic collection, and raw binary emission sequence. The semantic package's
+reviewable public contract is `src/semantic/pkg.generated.mbti`; the August 2026
+surface audit and package-splitting decision are recorded in
+[`research/semantic-public-surface-audit.md`](research/semantic-public-surface-audit.md).
+Executables still
 import lower packages for manifest construction, source-diagnostic rendering,
 custom-section policy, and specialized output framing while those responsibilities
 are migrated or intentionally retained.

@@ -9,18 +9,13 @@ pub type ModuleId = UInt64
 pub type FileId = UInt64
 
 ///|
-pub fn make_file_id(module_id : ModuleId, local_index : Int) -> FileId {
+fn make_file_id(module_id : ModuleId, local_index : Int) -> FileId {
   make_semantic_id(module_id, local_index)
 }
 
 ///|
-pub fn file_id_module(file : FileId) -> ModuleId {
+fn file_id_module(file : FileId) -> ModuleId {
   semantic_id_module(file)
-}
-
-///|
-pub fn file_id_local(file : FileId) -> Int {
-  semantic_id_local(file)
 }
 
 ///|

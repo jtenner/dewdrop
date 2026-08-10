@@ -221,7 +221,7 @@ fn collect_program_files_with_frozen_standard_imports(
 ///|
 /// Collects the compiler-owned `dew.std.preamble` module before one user
 /// file while preserving the user's original byte offsets.
-pub fn collect_bytes_with_standard_preamble(
+fn collect_bytes_with_standard_preamble(
   module_id : ModuleId,
   source : Bytes,
 ) -> CollectedModule {
@@ -238,19 +238,4 @@ pub fn collect_program_bytes(
   source : Bytes,
 ) -> CollectedModule {
   collect_bytes_with_standard_preamble(module_id, source)
-}
-
-///|
-/// Collects one synthetic `_test.dew` file for test runners and embedders.
-pub fn collect_program_test_bytes(
-  module_id : ModuleId,
-  source : Bytes,
-) -> CollectedModule {
-  collect_program_files(module_id, [
-    ProgramFile::named(
-      make_program_file_id(module_id, 0),
-      "input_test.dew",
-      source,
-    ),
-  ])
 }

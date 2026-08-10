@@ -10,6 +10,12 @@ import {
 }
 
 // Values
+pub fn append_wasm_abi_section(Bytes, @semantic.FrozenModuleInterface) -> Bytes
+
+pub fn append_wasm_custom_section(Bytes, String, Bytes) -> Bytes
+
+pub fn append_wasm_metrics_section(Bytes, Int) -> Bytes
+
 pub fn emit_starshine_binary(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[Bytes, StarshineBinaryEmissionError]
 
 pub fn emit_starshine_code_section(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[@lib.CodeSec, StarshineCodeEmissionError]

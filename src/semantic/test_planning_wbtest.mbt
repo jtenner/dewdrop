@@ -1,4 +1,18 @@
 ///|
+fn collect_program_test_bytes(
+  module_id : ModuleId,
+  source : Bytes,
+) -> CollectedModule {
+  collect_program_files(module_id, [
+    ProgramFile::named(
+      make_program_file_id(module_id, 0),
+      "input_test.dew",
+      source,
+    ),
+  ])
+}
+
+///|
 test "test exports use manifest ordinals instead of source offsets" {
   let module_id = 970UL
   let collected = collect_program_files(module_id, [

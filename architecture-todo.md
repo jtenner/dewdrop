@@ -134,14 +134,14 @@
 
 ## Phase 4: tighten semantic and standard-library ownership
 
-- [ ] **Audit and reduce the semantic package's public surface.**
-  - [ ] Identify public declarations used only by tests or by another semantic
+- [x] **Audit and reduce the semantic package's public surface.**
+  - [x] Identify public declarations used only by tests or by another semantic
         file in the same package.
-  - [ ] Identify the minimal data contracts needed by the backend, standard
+  - [x] Identify the minimal data contracts needed by the backend, standard
         loader, and compiler driver.
-  - [ ] Group model/IR, semantic analysis, and program planning behind clearer
+  - [x] Group model/IR, semantic analysis, and program planning behind clearer
         package or facade boundaries.
-  - [ ] Avoid package splitting that copies large arenas or adds unmeasured
+  - [x] Avoid package splitting that copies large arenas or adds unmeasured
         runtime/compiler overhead.
   - Relevant files: `src/semantic/pkg.generated.mbti`, `src/semantic/moon.pkg`,
     `src/backend/moon.pkg`, and `src/standard_loader/moon.pkg`.

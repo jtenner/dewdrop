@@ -254,7 +254,10 @@ test "WasmGC fragment merge is independent of simulated job order" {
   let (resolved, lowering) = wasmgc_test_inputs(
     975UL, b"struct Left {\n  right: Right\n}\nstruct Right {\n  left: Left\n}\nbuiltin host(value: I32) -> I32 = \"host\"\nfn first(value: I32) -> I32 {\n  host(value)\n}\nfn second(value: I64) -> I64 {\n  value\n}\n",
   )
-  let type_count = wasmgc_physical_type_count(lowering.type_layouts)
+  let type_count = wasmgc_physical_type_count_with_options(
+    lowering.type_layouts,
+    WasmGCPlanningOptions::optimized_subtype_families(),
+  )
   let type_forward : Array[Int] = []
   let type_reverse : Array[Int] = []
   for index in 0..<type_count {

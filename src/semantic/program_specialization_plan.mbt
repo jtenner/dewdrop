@@ -3040,7 +3040,7 @@ fn program_specialization_span_is_valid(span : HirSpan, length : Int) -> Bool {
 ///|
 /// Validates the compact specialization-to-linker handoff once, before the
 /// physical linker enters its index-assignment loops.
-pub fn validate_program_specialization_plan(
+fn validate_program_specialization_plan(
   plan : PlannedProgramSpecializationPlan,
   lowering : PlannedProgramLowering,
 ) -> Result[Unit, String] {

@@ -1337,7 +1337,7 @@ pub fn analyze_module_flows(
 }
 
 ///|
-pub fn analyze_module_flows_with_imports(
+fn analyze_module_flows_with_imports(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
