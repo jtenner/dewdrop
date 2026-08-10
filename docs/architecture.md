@@ -156,6 +156,8 @@ identity.
 
 ### Wasm identities
 
+`PlannedProgramLowering` owns the immutable `ModuleId`-to-manifest-index map used
+by optimization, specialization, initializer analysis, and physical linking.
 Module fragment plans own module-local physical and signature indices. The final
 program link owns program-wide type, function, global, initializer, dictionary,
 and singleton indices. Backend emission consumes those frozen indices and must

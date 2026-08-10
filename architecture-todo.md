@@ -92,11 +92,12 @@
 
 - [ ] **Create one immutable program index used by optimization and linking.**
   - [ ] Centralize module, declaration, body, implementation, type-owner, and
-        variant-owner lookup.
-  - [ ] Stop rebuilding `Map[ModuleId, Int]` throughout program planning.
+        variant-owner lookup. Module lookup is now stored once on
+        `PlannedProgramLowering`; the remaining indexes are still separate.
+  - [x] Stop rebuilding `Map[ModuleId, Int]` throughout program planning.
   - [ ] Replace concatenated specialization lookup strings with a canonical
         typed or packed key if benchmarks support it.
-  - [ ] Validate the index once before hot planning loops use it.
+  - [x] Validate the index once before hot planning loops use it.
   - Relevant files: `src/semantic/program_link_plan.mbt` and related program
     planning tests.
 

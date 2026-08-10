@@ -130,10 +130,7 @@ fn program_initializer_dependencies(
   initializer : PlannedProgramModuleInitializer,
   initializer_lookup : Map[DeclId, Int],
 ) -> Array[Int] {
-  let module_lookup : Map[ModuleId, Int] = Map::default()
-  for module_index, module_ in lowering.modules {
-    module_lookup[module_.module_id] = module_index
-  }
+  let module_lookup = lowering.module_lookup
   let dependencies : Array[Int] = []
   let seen_dependencies : Map[Int, Bool] = Map::default()
   let seen_bodies : Map[BodyId, Bool] = Map::default()
@@ -784,12 +781,11 @@ pub fn link_program_wasmgc_fragments(
   let functions : Array[PlannedProgramWasmFunction] = []
   let function_lookup : Map[DeclId, Int] = Map::default()
   let type_lookup : Map[DeclId, Int] = Map::default()
-  let module_lookup : Map[ModuleId, Int] = Map::default()
+  let module_lookup = lowering.module_lookup
   let diagnostics : Array[ProgramWasmGCLinkDiagnostic] = []
   let test_ordinals : Map[DeclId, Int] = Map::default()
   let mut next_test_ordinal = 0
-  for module_index, module_ in fragments.modules {
-    module_lookup[module_.module_id] = module_index
+  for module_ in fragments.modules {
     for function_ in module_.functions {
       if function_.is_test_entry {
         test_ordinals[function_.declaration] = next_test_ordinal

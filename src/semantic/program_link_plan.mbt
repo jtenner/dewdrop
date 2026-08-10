@@ -2,6 +2,7 @@
 pub struct PlannedProgramLowering {
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleLowering]
+  module_lookup : Map[ModuleId, Int]
   elided_trait_wrappers : Array[DeclId]
 }
 
@@ -422,10 +423,18 @@ pub fn plan_unoptimized_program_lowering(
     }
   }
   let modules : Array[PlannedModuleLowering] = []
-  for slot in slots {
-    modules.push(slot.unwrap())
+  let module_lookup : Map[ModuleId, Int] = Map::default()
+  for module_index, slot in slots {
+    let module_ = slot.unwrap()
+    module_lookup[module_.module_id] = module_index
+    modules.push(module_)
   }
-  { graph: analyzed.frozen.graph, modules, elided_trait_wrappers: [] }
+  {
+    graph: analyzed.frozen.graph,
+    modules,
+    module_lookup,
+    elided_trait_wrappers: [],
+  }
 }
 
 ///|

@@ -2086,15 +2086,12 @@ fn prepare_program_optimization_mutation(
 ///|
 fn directize_exact_runtime_trait_flows(
   modules : Array[PlannedModuleLowering],
+  module_lookup : Map[ModuleId, Int],
   effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Array[DeclId] {
   let selectors = directize_trait_parameter_selectors(modules, effects)
   let analyses = runtime_trait_body_analyses(modules)
   let summaries = transparent_trait_call_summaries(modules, analyses, effects)
-  let module_lookup : Map[ModuleId, Int] = Map::default()
-  for module_index, module_ in modules {
-    module_lookup[module_.module_id] = module_index
-  }
   for module_ in modules {
     for body in module_.bodies {
       match analyses.get(body.body) {
@@ -2121,7 +2118,14 @@ pub fn optimize_program_lowering(
   directize_transparent_callback_calls(modules, effects)
   directize_generic_parameter_selectors(modules)
   let elided_trait_wrappers = directize_exact_runtime_trait_flows(
-    modules, effects,
+    modules,
+    lowering.module_lookup,
+    effects,
   )
-  { graph: lowering.graph, modules, elided_trait_wrappers }
+  {
+    graph: lowering.graph,
+    modules,
+    module_lookup: lowering.module_lookup,
+    elided_trait_wrappers,
+  }
 }

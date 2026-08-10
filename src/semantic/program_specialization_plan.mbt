@@ -83,10 +83,7 @@ fn program_reachable_callable_roots(
   lowering : PlannedProgramLowering,
   emit_tests : Bool,
 ) -> Map[DeclId, Bool] {
-  let module_lookup : Map[ModuleId, Int] = Map::default()
-  for module_index, module_ in lowering.modules {
-    module_lookup[module_.module_id] = module_index
-  }
+  let module_lookup = lowering.module_lookup
   let reachable : Map[DeclId, Bool] = Map::default()
   let work : Array[DeclId] = []
   for module_ in lowering.modules {
@@ -2721,10 +2718,7 @@ fn plan_program_wasmgc_fragments_for_root(
     lowering.modules.length(),
     None,
   )
-  let specialization_module_lookup : Map[ModuleId, Int] = Map::default()
-  for module_index, module_ in lowering.modules {
-    specialization_module_lookup[module_.module_id] = module_index
-  }
+  let specialization_module_lookup = lowering.module_lookup
   let external_evidence_support_states : Map[String, Int] = Map::default()
   let fallback_evidence_by_declaration : Map[
     DeclId,
