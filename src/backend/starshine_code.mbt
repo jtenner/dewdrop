@@ -76,10 +76,18 @@ priv struct StarshineProgramEvidenceClosure {
 }
 
 ///|
+priv struct StarshineProgramCapturedTraitDictionary {
+  module_index : Int
+  dictionary_index : Int
+  capture_type_index : Int
+}
+
+///|
 priv struct StarshineProgramAdapterHelperPlan {
   helpers : Array[StarshineProgramAdapterHelper]
   wrappers : Array[StarshineProgramCallbackWrapper]
   evidence_closures : Array[StarshineProgramEvidenceClosure]
+  captured_trait_dictionaries : Array[StarshineProgramCapturedTraitDictionary]
   evidence_error : StarshineCodeEmissionError?
 }
 
@@ -101,6 +109,49 @@ fn starshine_program_evidence_closure(
       reference.caller_specialization_abi_key == specialization_abi_key &&
       reference.expression == expression {
       return Some(closure)
+    }
+  }
+  None
+}
+
+///|
+fn starshine_program_captured_trait_dictionary(
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  module_index : Int,
+  dictionary_index : Int,
+) -> StarshineProgramCapturedTraitDictionary? {
+  for captured in helper_plan.captured_trait_dictionaries {
+    if captured.module_index == module_index &&
+      captured.dictionary_index == dictionary_index {
+      return Some(captured)
+    }
+  }
+  None
+}
+
+///|
+fn starshine_program_captured_trait_dictionary_for_adapter(
+  planned : @semantic.PlannedProgramWasmGCLink,
+  helper_plan : StarshineProgramAdapterHelperPlan,
+  module_index : Int,
+  adapter : @semantic.DeclId,
+) -> StarshineProgramCapturedTraitDictionary? {
+  for captured in helper_plan.captured_trait_dictionaries {
+    if captured.module_index != module_index ||
+      captured.dictionary_index < 0 ||
+      captured.dictionary_index >=
+      planned.modules[module_index].trait_dictionaries.length() {
+      continue
+    }
+    let module_ = planned.modules[module_index]
+    let dictionary = module_.trait_dictionaries[captured.dictionary_index]
+    for index in 0..<dictionary.methods.length {
+      let method_info = module_.trait_methods[dictionary.methods.start + index]
+      if method_info.adapter_function >= 0 &&
+        method_info.adapter_function < module_.functions.length() &&
+        module_.functions[method_info.adapter_function].declaration == adapter {
+        return Some(captured)
+      }
     }
   }
   None
@@ -3803,6 +3854,7 @@ fn starshine_finish_trait_object_coercion(
   trait_ : @semantic.DeclId,
   evidence : Int,
   output : Array[@lib.Instruction],
+  helper_plan : StarshineProgramAdapterHelperPlan?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let runtime_evidence = match generic_specialization {
     Some(specialization) =>
@@ -3919,6 +3971,42 @@ fn starshine_finish_trait_object_coercion(
         ),
       )
     }
+  }
+  if dictionary.runtime_evidence_parameters.length > 0 {
+    let captured = match helper_plan {
+      Some(helpers) =>
+        starshine_program_captured_trait_dictionary(
+          helpers, program_module_index, dictionary_index,
+        )
+      None => None
+    }
+    let captured = match captured {
+      Some(value) if value.capture_type_index >= 0 => value
+      _ => return Err(UnsupportedExpression(body, -309))
+    }
+    if dictionary.runtime_evidence_parameters.start < 0 ||
+      dictionary.runtime_evidence_parameters.start +
+      dictionary.runtime_evidence_parameters.length >
+      planned.trait_dictionary_runtime_evidence_parameters.length() {
+      return Err(UnsupportedExpression(body, -310))
+    }
+    for index in 0..<dictionary.runtime_evidence_parameters.length {
+      let parameter = planned.trait_dictionary_runtime_evidence_parameters[dictionary.runtime_evidence_parameters.start +
+        index]
+      if parameter < 0 {
+        return Err(UnsupportedExpression(body, -311))
+      }
+      output.push(
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+        ),
+      )
+    }
+    output.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(captured.capture_type_index.reinterpret_as_uint()),
+      ),
+    )
   }
   let vtable_type = starshine_local_physical_type_index(
     program,
@@ -7599,6 +7687,7 @@ fn starshine_emit_body_instructions(
             trait_,
             evidence,
             output,
+            helper_plan,
           ) {
           Ok(value) => results.push(value)
           Err(error) => return Err(error)
@@ -9413,6 +9502,9 @@ fn starshine_program_adapter_helper_plan(
   let helpers : Array[StarshineProgramAdapterHelper] = []
   let wrappers : Array[StarshineProgramCallbackWrapper] = []
   let evidence_closures : Array[StarshineProgramEvidenceClosure] = []
+  let captured_trait_dictionaries : Array[
+    StarshineProgramCapturedTraitDictionary,
+  ] = []
   let mut evidence_error : StarshineCodeEmissionError? = None
   for adapter_function, function_ in planned.functions {
     if function_.erased_adapter_target < 0 ||
@@ -9492,6 +9584,31 @@ fn starshine_program_adapter_helper_plan(
     let wrapper = wrappers[index]
     wrappers[index] = { ..wrapper, function_index: next_function_index }
     next_function_index += 1
+  }
+  for module_index, module_ in planned.modules {
+    for dictionary_index, dictionary in module_.trait_dictionaries {
+      if !dictionary.runtime_materialized ||
+        dictionary.runtime_evidence_parameters.length == 0 {
+        continue
+      }
+      if dictionary.runtime_evidence_parameters.start < 0 ||
+        dictionary.runtime_evidence_parameters.length < 0 ||
+        dictionary.runtime_evidence_parameters.start +
+        dictionary.runtime_evidence_parameters.length >
+        module_.trait_dictionary_runtime_evidence_parameters.length() {
+        match evidence_error {
+          None =>
+            evidence_error = Some(MissingFunction(dictionary.implementation))
+          Some(_) => ()
+        }
+        continue
+      }
+      captured_trait_dictionaries.push({
+        module_index,
+        dictionary_index,
+        capture_type_index: -1,
+      })
+    }
   }
   for reference_index, reference in planned.evidence_function_references {
     let module_index = match
@@ -9670,7 +9787,13 @@ fn starshine_program_adapter_helper_plan(
     })
     next_function_index += 1
   }
-  { helpers, wrappers, evidence_closures, evidence_error }
+  {
+    helpers,
+    wrappers,
+    evidence_closures,
+    captured_trait_dictionaries,
+    evidence_error,
+  }
 }
 
 ///|
@@ -10003,6 +10126,36 @@ fn emit_starshine_program_type_section(
       )
     }
     helper_plan.wrappers[wrapper_index] = { ..wrapper, wrapper_type_index, }
+  }
+  for captured_index in 0..<helper_plan.captured_trait_dictionaries.length() {
+    let captured = helper_plan.captured_trait_dictionaries[captured_index]
+    if captured.module_index < 0 ||
+      captured.module_index >= planned.modules.length() ||
+      captured.dictionary_index < 0 ||
+      captured.dictionary_index >=
+      planned.modules[captured.module_index].trait_dictionaries.length() {
+      continue
+    }
+    let dictionary = planned.modules[captured.module_index].trait_dictionaries[captured.dictionary_index]
+    let fields : Array[@lib.FieldType] = []
+    for _ in 0..<(dictionary.runtime_evidence_parameters.length + 1) {
+      fields.push(
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::eqref_null()),
+          @lib.Mut::const_(),
+        ),
+      )
+    }
+    let capture_type_index = rec_types.length()
+    rec_types.push(
+      @lib.RecType::new(
+        @lib.SubType::new(true, [], @lib.CompType::struct_(fields)),
+      ),
+    )
+    helper_plan.captured_trait_dictionaries[captured_index] = {
+      ..captured,
+      capture_type_index,
+    }
   }
   for closure_index in 0..<helper_plan.evidence_closures.length() {
     let closure = helper_plan.evidence_closures[closure_index]
@@ -12365,6 +12518,7 @@ fn emit_starshine_program_trait_adapter_body(
   planned : @semantic.PlannedProgramWasmGCLink,
   adapter : @semantic.PlannedProgramWasmFunction,
   implementation_method : @semantic.DeclId,
+  helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let module_fragments = planned.modules[adapter.module_index]
   let method_info = match
@@ -12386,9 +12540,30 @@ fn emit_starshine_program_trait_adapter_body(
     Some(value) => value
     None => return Err(MissingFunction(implementation_method))
   }
+  let captured = starshine_program_captured_trait_dictionary_for_adapter(
+    planned,
+    helper_plan,
+    adapter.module_index,
+    adapter.declaration,
+  )
   let instructions : Array[@lib.Instruction] = [
     @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
   ]
+  match captured {
+    Some(value) => {
+      if value.capture_type_index < 0 {
+        return Err(UnsupportedExpression(0UL, 0))
+      }
+      instructions.push(starshine_match_cast(value.capture_type_index))
+      instructions.push(
+        @lib.Instruction::struct_get(
+          @lib.TypeIdx::new(value.capture_type_index.reinterpret_as_uint()),
+          @lib.U32::new(0U),
+        ),
+      )
+    }
+    None => ()
+  }
   match method_info.receiver_shape {
     @semantic.RefPlannedValueShape => {
       let type_index = match
@@ -12424,6 +12599,22 @@ fn emit_starshine_program_trait_adapter_body(
         @lib.LocalIdx::new(index.reinterpret_as_uint()),
       ),
     )
+  }
+  match captured {
+    Some(value) => {
+      let dictionary = planned.modules[value.module_index].trait_dictionaries[value.dictionary_index]
+      for index in 0..<dictionary.runtime_evidence_parameters.length {
+        instructions.push(@lib.Instruction::local_get(@lib.LocalIdx::new(0U)))
+        instructions.push(starshine_match_cast(value.capture_type_index))
+        instructions.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(value.capture_type_index.reinterpret_as_uint()),
+            @lib.U32::new((index + 1).reinterpret_as_uint()),
+          ),
+        )
+      }
+    }
+    None => ()
   }
   instructions.push(
     @lib.Instruction::call(
@@ -12530,7 +12721,7 @@ fn emit_starshine_program_code_section(
         if !function_.elided {
           match
             emit_starshine_program_trait_adapter_body(
-              planned, function_, implementation_method,
+              planned, function_, implementation_method, helper_plan,
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)

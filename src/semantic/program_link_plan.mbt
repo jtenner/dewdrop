@@ -4261,6 +4261,21 @@ fn materialize_program_specialization_trait_dictionaries(
       Some(value) => value
       None => continue
     }
+    let runtime_evidence_parameters = match
+      normalize_program_runtime_evidence_parameters(method_evidence) {
+      Some(value) => value
+      None => continue
+    }
+    let mut runtime_parameters_valid = true
+    for parameter in runtime_evidence_parameters {
+      if parameter < 0 || parameter >= caller.parameters.length {
+        runtime_parameters_valid = false
+        break
+      }
+    }
+    if !runtime_parameters_valid {
+      continue
+    }
     let function_start = module_.functions.length()
     let method_start = module_.trait_methods.length()
     let defined_start = added_defined_function_count
@@ -4371,6 +4386,10 @@ fn materialize_program_specialization_trait_dictionaries(
       })
     }
     if complete {
+      let runtime_parameter_start = module_.trait_dictionary_runtime_evidence_parameters.length()
+      for parameter in runtime_evidence_parameters {
+        module_.trait_dictionary_runtime_evidence_parameters.push(parameter)
+      }
       module_.trait_dictionaries.push({
         trait_declaration,
         implementation,
@@ -4382,6 +4401,11 @@ fn materialize_program_specialization_trait_dictionaries(
           start: method_start,
           length: module_.trait_methods.length() - method_start,
         },
+        runtime_evidence_parameters: {
+          start: runtime_parameter_start,
+          length: runtime_evidence_parameters.length(),
+        },
+        runtime_materialized: true,
       })
     } else {
       module_.functions.truncate(function_start)
@@ -4484,7 +4508,19 @@ fn program_collect_external_runtime_trait_uses(
               program_append_external_runtime_trait(
                 traits_by_module, seen_traits, module_index, trait_,
               )
-            ConcreteInferredTraitEvidence(_, _) => ()
+            ConcreteInferredTraitEvidence(_, _) =>
+              if !runtime_trait_evidence_is_concrete(module_, evidence, 0) &&
+                program_runtime_trait_evidence_is_forwardable(
+                  module_, evidence, 0,
+                ) {
+                program_append_external_runtime_trait(
+                  traits_by_module, seen_traits, module_index, trait_,
+                )
+                program_collect_external_runtime_evidence_implementation_uses(
+                  lowering, module_lookup, module_, evidence, 0, visited, traits_by_module,
+                  seen_traits,
+                )
+              }
           }
         }
       _ => ()
@@ -4786,23 +4822,29 @@ fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
       target_classes.push(class_)
     }
     if target_classes.length() > 0 {
-      let target = match call {
-        Some((value, arguments)) if arguments.length > 0 => value
-        _ => return false
-      }
-      let mut has_runtime = false
-      for class_ in target_classes {
-        match class_ {
-          ProgramExternalConcreteEvidence => ()
-          ProgramExternalDirectRuntimeEvidence
-          | ProgramExternalCapturedRuntimeEvidence => has_runtime = true
+      match call {
+        Some((target, arguments)) if arguments.length > 0 => {
+          let mut has_runtime = false
+          for class_ in target_classes {
+            match class_ {
+              ProgramExternalConcreteEvidence => ()
+              ProgramExternalDirectRuntimeEvidence
+              | ProgramExternalCapturedRuntimeEvidence => has_runtime = true
+            }
+          }
+          if has_runtime &&
+            !program_runtime_trait_callable_supports_external_evidence_for_classes(
+              lowering, module_lookup, target, target_classes, states,
+            ) {
+            return false
+          }
         }
-      }
-      if has_runtime &&
-        !program_runtime_trait_callable_supports_external_evidence_for_classes(
-          lowering, module_lookup, target, target_classes, states,
-        ) {
-        return false
+        None =>
+          match module_.expressions[expression].kind {
+            PlannedParameterSelect(_, _) => ()
+            _ => return false
+          }
+        _ => return false
       }
     }
     match module_.expressions[expression].trait_object_coercion {
@@ -4812,8 +4854,9 @@ fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
             module_, evidence, parameter_classes, 0,
           ) {
           Some(ProgramExternalConcreteEvidence)
-          | Some(ProgramExternalDirectRuntimeEvidence) => ()
-          Some(ProgramExternalCapturedRuntimeEvidence) | None => return false
+          | Some(ProgramExternalDirectRuntimeEvidence)
+          | Some(ProgramExternalCapturedRuntimeEvidence) => ()
+          None => return false
         }
       ErrorInferredTraitObjectCoercion => return false
       NoInferredTraitObjectCoercion => ()
@@ -4922,7 +4965,9 @@ fn program_runtime_trait_fallback_evidence(
               None => used_traits[slot] = trait_
             }
           ConcreteInferredTraitEvidence(_, _) =>
-            if !runtime_trait_evidence_is_concrete(module_, evidence, 0) {
+            if !program_runtime_trait_evidence_is_forwardable(
+                module_, evidence, 0,
+              ) {
               return None
             }
         }
@@ -6773,6 +6818,9 @@ pub fn link_program_wasmgc_fragments(
   let trait_dictionary_globals : Array[PlannedProgramTraitDictionaryGlobal] = []
   for module_index, module_ in fragments.modules {
     for dictionary_index in 0..<module_.trait_dictionaries.length() {
+      if !module_.trait_dictionaries[dictionary_index].runtime_materialized {
+        continue
+      }
       trait_dictionary_globals.push({
         module_index,
         dictionary_index,

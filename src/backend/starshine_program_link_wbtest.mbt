@@ -904,6 +904,94 @@ test "unbounded generic function references keep the singleton fast path" {
 }
 
 ///|
+test "erased trait dictionaries capture caller runtime prerequisites" {
+  let program = @semantic.collect_program_manifest(
+    2488UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn erase_read<t: Read>(value: t) -> Read {\n  value\n}\nfn helper<t: Value>(value: t) -> Read {\n  erase_read(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> Read {\n  helper(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  let result = invoke(outer(42))\n  assert(result == 42, \"captured erased dictionary result\")\n  result\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let mut target = 0UL
+  let mut target_key = ""
+  for module_fragments in link.modules {
+    for dictionary in module_fragments.trait_dictionaries {
+      if dictionary.runtime_evidence_parameters.length > 0 {
+        let method_info = module_fragments.trait_methods[dictionary.methods.start]
+        target = method_info.implementation_method
+        target_key = method_info.implementation_specialization_abi_key
+      }
+    }
+  }
+  assert_true(target > 0UL)
+  assert_true(target_key != "")
+  let mut targets = 0
+  for function_ in link.functions {
+    if function_.declaration == target &&
+      function_.specialization_abi_key == target_key &&
+      !function_.elided {
+      targets += 1
+    }
+  }
+  assert_eq(targets, 1)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  while link.modules[0].trait_dictionary_runtime_evidence_parameters.length() >
+        0 {
+    ignore(link.modules[0].trait_dictionary_runtime_evidence_parameters.pop())
+  }
+  match emit_starshine_program_module(lowering, link) {
+    Err(MissingFunction(_)) => ()
+    _ => fail("expected malformed captured dictionary span to fail visibly")
+  }
+}
+
+///|
+test "imported erased trait dictionaries capture caller runtime prerequisites" {
+  let program = @semantic.collect_program_manifest(
+    2489UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.provider", [
+        @semantic.ManifestFile::new(
+          "provider.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\npub fn erase<t: Value>(value: t) -> Read {\n  Box {\n    value: value\n  }\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open app.provider\npub fn outer<t: Value>(value: t) -> Read {\n  erase(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  let result = invoke(outer(42))\n  assert(result == 42, \"imported captured erased dictionary result\")\n  result\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics.length(), 0)
+  }
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 1)
+  assert_eq(link.diagnostics.length(), 0)
+  let mut captured = 0
+  for module_ in link.modules {
+    for dictionary in module_.trait_dictionaries {
+      if dictionary.runtime_evidence_parameters.length > 0 {
+        captured += 1
+      }
+    }
+  }
+  assert_eq(captured, 1)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "escaping bounded function references capture runtime evidence" {
   let program = @semantic.collect_program_manifest(
     2485UL,

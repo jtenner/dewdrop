@@ -202,6 +202,50 @@ test "bench external runtime-evidence recursive prerequisites calls=256" (
 }
 
 ///|
+fn external_runtime_trait_captured_dictionary_benchmark_source(
+  call_count : Int,
+) -> Bytes {
+  let output = Buffer(size_hint=call_count * 56 + 720)
+  output.write_string_utf8(
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\npub fn erase<t: Value>(value: t) -> Inspect {\n  Wrap {\n    value: Box {\n      value: value\n    }\n  }\n}\nfn invoke(value: Inspect) -> I32 {\n  value.inspect()\n}\npub fn main() -> I32 {\n",
+  )
+  for index in 0..<call_count {
+    output.write_string_utf8("  let value_")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(" = invoke(erase(")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8("))\n")
+  }
+  output.write_string_utf8("  value_")
+  output.write_string_utf8((call_count - 1).to_string())
+  output.write_string_utf8("\n}\n")
+  output.to_bytes()
+}
+
+///|
+test "bench external runtime-evidence captured dictionaries calls=256" (
+  it : @bench.T,
+) {
+  let program = collect_program_manifest(
+    2281UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.external_runtime_trait_captured", [
+        ManifestFile::new(
+          "main.dew",
+          external_runtime_trait_captured_dictionary_benchmark_source(256),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  it.bench(fn() {
+    let lowering = plan_program_lowering(program, analyzed)
+    let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+    it.keep(link.defined_function_count)
+  })
+}
+
+///|
 fn open_generic_selector_chain_benchmark_source(depth : Int) -> Bytes {
   let output = Buffer(size_hint=depth * 96 + 512)
   output.write_string_utf8(

@@ -1,0 +1,66 @@
+open dew.std.wasi
+
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+trait OtherValue {
+  fn other_value(self) -> I32
+}
+
+impl OtherValue for I32 {
+  fn other_value(self) -> I32 {
+    self
+  }
+}
+
+trait Read {
+  fn read(self) -> I32
+}
+
+struct Box<t> {
+  value: t
+}
+
+impl<t: Value + OtherValue> Read for Box<t> {
+  fn read(self) -> I32 {
+    self.value.value() + self.value.other_value()
+  }
+}
+
+trait Inspect {
+  fn inspect(self) -> I32
+}
+
+struct Wrap<t> {
+  value: t
+}
+
+impl<t: Read> Inspect for Wrap<t> {
+  fn inspect(self) -> I32 {
+    self.value.read()
+  }
+}
+
+pub fn erase_nested<t: Value + OtherValue>(value: t) -> Inspect {
+  Wrap {
+    value: Box {
+      value: value
+    }
+  }
+}
+
+fn invoke(value: Inspect) -> I32 {
+  value.inspect()
+}
+
+pub fn main() -> U32 {
+  debug(invoke(erase_nested(42)))
+  wasi_fd_write(1u32, b"|trait:captured-prerequisite")
+}

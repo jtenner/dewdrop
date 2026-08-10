@@ -207,6 +207,8 @@ pub struct PlannedWasmTraitDictionary {
   vtable_type_index : Int
   object_type_index : Int
   methods : HirSpan
+  runtime_evidence_parameters : HirSpan
+  runtime_materialized : Bool
 } derive(Eq, Debug)
 
 ///|
@@ -252,6 +254,7 @@ pub struct PlannedModuleWasmGCFragments {
   trait_layout_methods : Array[DeclId]
   trait_method_signature_indices : Array[Int]
   trait_dictionaries : Array[PlannedWasmTraitDictionary]
+  trait_dictionary_runtime_evidence_parameters : Array[Int]
   trait_methods : Array[PlannedWasmTraitMethod]
   functions : Array[PlannedWasmFunctionFragment]
   function_by_declaration : Array[Int]
@@ -2092,6 +2095,45 @@ pub fn wasmgc_trait_evidence_key(
 }
 
 ///|
+fn wasmgc_trait_evidence_runtime_materialized(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+  depth : Int,
+) -> Bool {
+  if evidence < 0 ||
+    evidence >= lowering.trait_evidence.length() ||
+    depth > lowering.trait_evidence.length() {
+    return false
+  }
+  let node = lowering.trait_evidence[evidence]
+  match node.kind {
+    BoundInferredTraitEvidence(_) => return false
+    ConcreteInferredTraitEvidence(_, arguments) =>
+      for index in 0..<arguments.length {
+        match lowering.trait_evidence_arguments[arguments.start + index] {
+          ShapeInferredTraitEvidenceArgument(_) => ()
+          GenericInferredTraitEvidenceArgument(_) => return false
+        }
+      }
+  }
+  if node.prerequisites.start < 0 ||
+    node.prerequisites.start + node.prerequisites.length >
+    lowering.trait_evidence_children.length() {
+    return false
+  }
+  for index in 0..<node.prerequisites.length {
+    if !wasmgc_trait_evidence_runtime_materialized(
+        lowering,
+        lowering.trait_evidence_children[node.prerequisites.start + index],
+        depth + 1,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn wasmgc_trait_evidence_implementation(
   lowering : PlannedModuleLowering,
   evidence : Int,
@@ -3217,6 +3259,9 @@ fn plan_module_wasmgc_fragments_in_orders(
       None => continue
     }
     let evidence_key = wasmgc_trait_evidence_key(lowering, evidence)
+    let runtime_materialized = wasmgc_trait_evidence_runtime_materialized(
+      lowering, evidence, 0,
+    )
     let key = trait_declaration.to_string() + ":" + evidence_key
     if dictionary_keys.contains(key) {
       continue
@@ -3270,34 +3315,39 @@ fn plan_module_wasmgc_fragments_in_orders(
         complete = false
         break
       }
-      let adapter_fragment = planned_functions.length()
-      planned_functions.push({
-        declaration: wasmgc_trait_adapter_declaration(
-          lowering.module_id,
-          trait_methods.length(),
-        ),
-        lambda: -1,
-        name: b"",
-        visibility: ModuleVisible,
-        is_test: false,
-        is_test_entry: false,
-        test_name: b"",
-        kind: PlannedWasmTraitAdapterFunction(
-          implementation_method, requirement,
-        ),
-        direct_builtin: b"",
-        elided: false,
-        signature_type_index: requirement_fragment.signature_type_index,
-        function_index: defined_index,
-        parameters: requirement_fragment.parameters,
-        results: requirement_fragment.results,
-        specialization_shapes: { start: 0, length: 0 },
-        specialization_evidence: { start: 0, length: 0 },
-        specialization_abi_key: "",
-        offset: expression.offset,
-      })
-      defined_index += 1
-      defined_function_count += 1
+      let adapter_fragment = if runtime_materialized {
+        let index = planned_functions.length()
+        planned_functions.push({
+          declaration: wasmgc_trait_adapter_declaration(
+            lowering.module_id,
+            trait_methods.length(),
+          ),
+          lambda: -1,
+          name: b"",
+          visibility: ModuleVisible,
+          is_test: false,
+          is_test_entry: false,
+          test_name: b"",
+          kind: PlannedWasmTraitAdapterFunction(
+            implementation_method, requirement,
+          ),
+          direct_builtin: b"",
+          elided: false,
+          signature_type_index: requirement_fragment.signature_type_index,
+          function_index: defined_index,
+          parameters: requirement_fragment.parameters,
+          results: requirement_fragment.results,
+          specialization_shapes: { start: 0, length: 0 },
+          specialization_evidence: { start: 0, length: 0 },
+          specialization_abi_key: "",
+          offset: expression.offset,
+        })
+        defined_index += 1
+        defined_function_count += 1
+        index
+      } else {
+        -1
+      }
       trait_methods.push({
         trait_declaration,
         requirement,
@@ -3322,6 +3372,8 @@ fn plan_module_wasmgc_fragments_in_orders(
           start: method_start,
           length: trait_methods.length() - method_start,
         },
+        runtime_evidence_parameters: { start: 0, length: 0 },
+        runtime_materialized,
       })
     } else {
       trait_methods.truncate(method_start)
@@ -3609,6 +3661,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     trait_layout_methods,
     trait_method_signature_indices,
     trait_dictionaries,
+    trait_dictionary_runtime_evidence_parameters: [],
     trait_methods,
     functions: planned_functions,
     function_by_declaration,

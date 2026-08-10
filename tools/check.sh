@@ -275,10 +275,14 @@ wasm-tools print .tmp/dew-runtime-trait-evidence-provider.wasm \
 # an imported recursive chain. `boxed_read` allocates its source Box, while
 # `nested_read` allocates its source Box and Wrap; both forward the same evidence
 # through exact recursively nested concrete implementation prerequisites. The
-# exported `reader` additionally allocates an evidence-capturing closure and
-# invokes its specialized target through the consumer-supplied dictionary.
-test "$(grep -c 'call_ref' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 2
-test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 6
+# exported `reader` additionally allocates an evidence-capturing closure. The
+# erased exports wrap receivers with one or two source-ordered caller dictionaries;
+# `erased_nested` then dispatches through two concrete prerequisite layers.
+test "$(grep -c 'call_ref' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 4
+test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 15
+test "$(grep -c 'struct (field eqref) (field eqref))' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
+test "$(grep -c 'struct (field eqref) (field eqref) (field eqref))' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
+test "$(grep -c 'global (;.*mut (ref null' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 2
 wasm-tools parse \
   tests/abi-consumers/runtime-trait-evidence-i32.wat \
   -o .tmp/dew-runtime-trait-evidence-consumer.wasm
@@ -286,7 +290,7 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-runtime-trait-evidence-provider.wasm \
   .tmp/dew-runtime-trait-evidence-consumer.wasm \
   run i32 > .tmp/dew-runtime-trait-evidence-consumer.json
-grep -q '"type":"i32","value":210' \
+grep -q '"type":"i32","value":673' \
   .tmp/dew-runtime-trait-evidence-consumer.json
 (
   cd tests/abi-consumers/imported-package

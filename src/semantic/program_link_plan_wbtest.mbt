@@ -1173,7 +1173,7 @@ test "external generic fallback forwards recursive static prerequisite trees" {
 }
 
 ///|
-test "external generic fallback rejects erased concrete evidence with runtime prerequisites" {
+test "external generic fallback captures erased concrete runtime prerequisites" {
   let program = collect_program_manifest(
     21973UL,
     ProgramManifest::new([
@@ -1187,9 +1187,81 @@ test "external generic fallback rejects erased concrete evidence with runtime pr
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
   let lowering = plan_program_lowering(program, analyzed)
+  let module_lookup : Map[ModuleId, Int] = Map::default()
+  module_lookup[lowering.modules[0].module_id] = 0
+  let outer = program.modules[0].lookup_value("outer").unwrap()
+  let helper = program.modules[0].lookup_value("helper").unwrap()
+  let erase_read = program.modules[0].lookup_value("erase_read").unwrap()
+  assert_true(
+    program_runtime_trait_callable_supports_external_evidence_for_classes(
+      lowering,
+      module_lookup,
+      erase_read,
+      [ProgramExternalCapturedRuntimeEvidence],
+      Map::default(),
+    ),
+  )
+  assert_true(
+    program_runtime_trait_callable_supports_external_evidence_for_classes(
+      lowering,
+      module_lookup,
+      helper,
+      [ProgramExternalDirectRuntimeEvidence],
+      Map::default(),
+    ),
+  )
+  assert_true(
+    program_runtime_trait_callable_supports_external_evidence_for_classes(
+      lowering,
+      module_lookup,
+      outer,
+      [ProgramExternalDirectRuntimeEvidence],
+      Map::default(),
+    ),
+  )
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
-  let outer = program.modules[0].lookup_value("outer").unwrap()
+  let mut captured_dictionaries = 0
+  let mut template_dictionaries = 0
+  let mut captured_methods = 0
+  let mut captured_method_target = 0UL
+  let mut captured_method_key = ""
+  for module_ in link.modules {
+    for dictionary in module_.trait_dictionaries {
+      if !dictionary.runtime_materialized {
+        template_dictionaries += 1
+      }
+      if dictionary.runtime_evidence_parameters.length > 0 {
+        assert_eq(dictionary.runtime_evidence_parameters.length, 1)
+        captured_dictionaries += 1
+        for index in 0..<dictionary.methods.length {
+          let method_info = module_.trait_methods[dictionary.methods.start +
+            index]
+          assert_true(method_info.implementation_specialization_abi_key != "")
+          captured_method_target = method_info.implementation_method
+          captured_method_key = method_info.implementation_specialization_abi_key
+          captured_methods += 1
+        }
+      }
+    }
+  }
+  assert_eq(captured_dictionaries, 1)
+  assert_eq(template_dictionaries, 1)
+  assert_eq(captured_methods, 1)
+  for dictionary_global in link.trait_dictionary_globals {
+    assert_true(
+      link.modules[dictionary_global.module_index].trait_dictionaries[dictionary_global.dictionary_index].runtime_materialized,
+    )
+  }
+  let mut captured_targets = 0
+  for function_ in link.functions {
+    if function_.declaration == captured_method_target &&
+      function_.specialization_abi_key == captured_method_key &&
+      !function_.elided {
+      captured_targets += 1
+    }
+  }
+  assert_eq(captured_targets, 1)
   let mut public_fallbacks = 0
   let mut closed = 0
   for function_ in link.functions {
@@ -1202,7 +1274,7 @@ test "external generic fallback rejects erased concrete evidence with runtime pr
       closed += 1
     }
   }
-  assert_eq(public_fallbacks, 0)
+  assert_eq(public_fallbacks, 1)
   assert_eq(closed, 1)
 }
 

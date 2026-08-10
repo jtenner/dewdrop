@@ -24,6 +24,14 @@ pub fn reader<t: Value>() -> fn(t) -> I32 {
   consume_nested_value
 }
 
+pub fn erased_nested<t: Value>(value: t) -> Inspect {
+  erase_nested_value(value)
+}
+
+pub fn erased_pair<t: Value + OtherValue>(value: t) -> PairInspect {
+  erase_pair_value(value)
+}
+
 pub fn main() -> I32 {
   read(42)
 }

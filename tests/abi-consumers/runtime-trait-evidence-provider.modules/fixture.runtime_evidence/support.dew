@@ -8,6 +8,16 @@ impl Value for I32 {
   }
 }
 
+pub trait OtherValue {
+  fn other_value(self) -> I32
+}
+
+impl OtherValue for I32 {
+  fn other_value(self) -> I32 {
+    self
+  }
+}
+
 fn finish_read<t: Value>(remaining: I32, prefix: I32, suffix: I32, value: t) -> I32 {
   if remaining > 0 {
     finish_read(remaining - 1, prefix, suffix, value)
@@ -20,7 +30,7 @@ pub fn forwarded_read<t: Value>(prefix: I32, value: t) -> I32 {
   finish_read(0, prefix, 0, value)
 }
 
-trait Read {
+pub trait Read {
   fn read(self) -> I32
 }
 
@@ -44,7 +54,7 @@ pub fn consume_value<t: Value>(value: t) -> I32 {
   })
 }
 
-trait Inspect {
+pub trait Inspect {
   fn inspect(self) -> I32
 }
 
@@ -68,4 +78,32 @@ pub fn consume_nested_value<t: Value>(value: t) -> I32 {
       value: value
     }
   })
+}
+
+pub fn erase_nested_value<t: Value>(value: t) -> Inspect {
+  Wrap {
+    value: Box {
+      value: value
+    }
+  }
+}
+
+pub trait PairInspect {
+  fn pair_inspect(self) -> I32
+}
+
+struct PairBox<t> {
+  value: t
+}
+
+impl<t: Value + OtherValue> PairInspect for PairBox<t> {
+  fn pair_inspect(self) -> I32 {
+    self.value.value() * 10 + self.value.other_value()
+  }
+}
+
+pub fn erase_pair_value<t: Value + OtherValue>(value: t) -> PairInspect {
+  PairBox {
+    value: value
+  }
 }
