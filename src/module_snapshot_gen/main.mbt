@@ -82,38 +82,24 @@ fn main {
       @standard_loader.StandardLibraryLoad::bootstrap()
     }
   }
-  let program = @semantic.collect_program_manifest_with_standard_sources(
-    3000UL,
-    manifest,
-    loaded.sources,
-    true,
-  )
-  let analyzed = match
-    @standard_loader.analyze_program_with_standard_cache(program, loaded) {
-    Ok(cached) => cached.analyzed
+  let options = if mode == "test" {
+    @compiler_driver.CompilerPipelineOptions::test_mode(3000UL, 0, true)
+  } else {
+    @compiler_driver.CompilerPipelineOptions::production(3000UL, 0, true)
+  }
+  let compiled = match
+    @compiler_driver.compile_manifest(manifest, loaded, options) {
+    Ok(compiled) => compiled
     Err(error) => {
       snapshot_fail(error)
       abort("unreachable cache failure")
     }
   }
-  let lowering = @semantic.plan_program_lowering(program, analyzed)
-  let link = if mode == "test" {
-    @semantic.plan_program_wasmgc_link_with_options(
-      analyzed,
-      lowering,
-      0,
-      @semantic.WasmGCPlanningOptions::test_mode(),
-    )
-  } else {
-    @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
-  }
   let mut has_errors = false
-  for
-    diagnostic in @semantic.collect_compiler_source_diagnostics(
-      program, analyzed, lowering, link,
-    ) {
+  for diagnostic in compiled.source_diagnostics() {
     let rendered = @semantic.render_compiler_source_diagnostic(
-      program, diagnostic,
+      compiled.program,
+      diagnostic,
     )
     match diagnostic.severity {
       @semantic.CompilerError => {
@@ -126,7 +112,7 @@ fn main {
   if has_errors {
     @sys.exit(1)
   }
-  let binary = match @backend.emit_starshine_program_binary(lowering, link) {
+  let binary = match compiled.emit_binary() {
     Ok(binary) => binary
     Err(error) => {
       snapshot_error(@debug.to_string(error))

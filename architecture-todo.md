@@ -30,13 +30,13 @@
         than one research note.
   - Relevant areas: `README.md`, `docs/research/`, `src/*/moon.pkg`.
 
-- [ ] **Add one compiler pipeline facade for tools and generators.**
-  - [ ] Define compile options, requested artifacts, diagnostics, cache status,
+- [x] **Add one compiler pipeline facade for tools and generators.**
+  - [x] Define compile options, requested artifacts, diagnostics, cache status,
         and test/production planning mode.
-  - [ ] Centralize collect → analyze → lower → link → emit sequencing.
-  - [ ] Make command executables responsible only for input parsing, output
+  - [x] Centralize collect → analyze → lower → link → emit sequencing.
+  - [x] Make command executables responsible only for input parsing, output
         framing, and process exit behavior.
-  - [ ] Migrate `dew_cli`, snapshot generation, test generation, string
+  - [x] Migrate `dew_cli`, snapshot generation, test generation, string
         benchmarks, and parity generators incrementally.
   - Relevant files: `src/dew_cli/main.mbt`, `src/module_snapshot_gen/main.mbt`,
     `src/dew_test_gen/main.mbt`, `src/string_bench_gen/main.mbt`,

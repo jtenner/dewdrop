@@ -262,25 +262,20 @@ fn main {
       }
     }
   }
-  let program = @semantic.collect_program_manifest_with_standard_sources(
-    4000UL,
-    manifest,
-    loaded.sources,
-    default_preamble,
-  )
-  let cached_analysis = match
-    @standard_loader.analyze_program_with_standard_cache(
-      program,
+  let compiled = match
+    @compiler_driver.compile_manifest(
+      manifest,
       loaded,
-      root_module_index~,
+      @compiler_driver.CompilerPipelineOptions::production(
+        4000UL, root_module_index, default_preamble,
+      ),
     ) {
-    Ok(cached) => cached
+    Ok(compiled) => compiled
     Err(error) => {
       cli_fail(error)
       abort("unreachable cache failure")
     }
   }
-  let analyzed = cached_analysis.analyzed
   for expected_index, dependency_path in dependency_interface_modules {
     let mut dependency_index = -1
     for candidate, path in module_names {
@@ -293,19 +288,20 @@ fn main {
       cli_fail("unavailable dependency interface module \{dependency_path}")
     }
     let expected = dependency_interface_fingerprints[expected_index]
-    let actual = analyzed.frozen.interfaces[dependency_index].interface_fingerprint
+    let actual = compiled.analyzed.frozen.interfaces[dependency_index].interface_fingerprint
     if actual != expected {
       cli_fail(
         "dependency interface mismatch for \{dependency_path}: expected \{expected}, got \{actual}",
       )
     }
   }
-  let cache_status = cached_analysis.status.label()
-  let lowering = @semantic.plan_program_lowering(program, analyzed)
-  let link = @semantic.plan_program_wasmgc_link(
-    analyzed, lowering, root_module_index,
-  )
-  if report_compilation_diagnostics(program, analyzed, lowering, link) {
+  let cache_status = compiled.cache_status.label()
+  if report_compilation_diagnostics(
+      compiled.program,
+      compiled.analyzed,
+      compiled.lowering,
+      compiled.link,
+    ) {
     @sys.exit(1)
   }
   if cache_report {
@@ -318,14 +314,17 @@ fn main {
     return
   }
   if emit == "hir" {
-    write_cli_output(output, render_program_hir(program))
+    write_cli_output(output, render_program_hir(compiled.program))
     return
   }
   if emit == "lowering" {
-    write_cli_output(output, render_program_lowering(program, lowering))
+    write_cli_output(
+      output,
+      render_program_lowering(compiled.program, compiled.lowering),
+    )
     return
   }
-  let encoded = match @backend.emit_starshine_program_binary(lowering, link) {
+  let encoded = match compiled.emit_binary() {
     Ok(binary) => binary
     Err(error) => {
       cli_error(@debug.to_string(error))
@@ -335,11 +334,11 @@ fn main {
   }
   let with_abi = @backend.append_wasm_abi_section(
     encoded,
-    analyzed.frozen.interfaces[root_module_index],
+    compiled.analyzed.frozen.interfaces[root_module_index],
   )
   let binary = @backend.append_wasm_metrics_section(
     with_abi,
-    link.materialized_specialization_count(),
+    compiled.link.materialized_specialization_count(),
   )
   write_cli_output(output, binary)
 }

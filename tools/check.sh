@@ -34,7 +34,8 @@ python3 tools/cli-fixtures.py
 
 if [[ $mode == "quick" ]]; then
   echo "== Dew tests: native =="
-  moon test --target native src/tokenizer src/parser src/semantic src/backend
+  moon test --target native \
+    src/tokenizer src/parser src/semantic src/backend src/compiler_driver
 else
   targets=(native wasm-gc js wasm)
   processors=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')
@@ -73,12 +74,14 @@ else
           --target "$target" \
           --target-dir "$test_root/$target" \
           src/tokenizer src/parser src/semantic src/backend \
+          src/compiler_driver \
           > "$test_root/logs/$target.txt" 2>&1 &
       else
         moon test --frozen \
           --target "$target" \
           --target-dir "$test_root/$target" \
           src/tokenizer src/parser src/semantic src/backend \
+          src/compiler_driver \
           > "$test_root/logs/$target.txt" 2>&1 &
       fi
       pids+=("$!")

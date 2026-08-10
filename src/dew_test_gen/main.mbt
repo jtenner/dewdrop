@@ -169,38 +169,36 @@ fn main {
       @standard_loader.StandardLibraryLoad::bootstrap()
     }
   }
-  let program = @semantic.collect_program_manifest_with_standard_sources(
-    2600UL,
-    manifest,
-    loaded.sources,
-    true,
-  )
-  let analyzed = match
-    @standard_loader.analyze_program_with_standard_cache(program, loaded) {
-    Ok(cached) => cached.analyzed
+  let compiled = match
+    @compiler_driver.compile_manifest(
+      manifest,
+      loaded,
+      @compiler_driver.CompilerPipelineOptions::test_mode(
+        2600UL, root_module_index, true,
+      ),
+    ) {
+    Ok(compiled) => compiled
     Err(error) => {
       dew_test_fail(error)
       abort("unreachable cache failure")
     }
   }
-  let lowering = @semantic.plan_program_lowering(program, analyzed)
-  let link = @semantic.plan_program_wasmgc_link_with_options(
-    analyzed,
-    lowering,
-    root_module_index,
-    @semantic.WasmGCPlanningOptions::test_mode(),
-  )
-  if report_dew_test_diagnostics(program, analyzed, lowering, link) {
+  if report_dew_test_diagnostics(
+      compiled.program,
+      compiled.analyzed,
+      compiled.lowering,
+      compiled.link,
+    ) {
     abort("Dew test source produced semantic diagnostics")
   }
-  let binary = match @backend.emit_starshine_program_binary(lowering, link) {
+  let binary = match compiled.emit_binary() {
     Ok(binary) => binary
     Err(error) => {
       dew_test_fail(@debug.to_string(error))
       b""
     }
   }
-  let metadata = build_dew_test_metadata(program, logical_names)
+  let metadata = build_dew_test_metadata(compiled.program, logical_names)
   let self_describing_binary = @backend.append_wasm_custom_section(
     binary, "dew.tests", metadata,
   )

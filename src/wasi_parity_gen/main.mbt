@@ -10,32 +10,15 @@ fn compile_wasi_parity(source : Bytes) -> Bytes {
     Ok(loaded) => loaded
     Err(error) => abort(error)
   }
-  let program = @semantic.collect_program_manifest_with_standard_sources(
-    2554UL,
+  let compiled = @compiler_driver.compile_manifest(
     manifest,
-    loaded.sources,
-    true,
-  )
-  let analyzed = match
-    @standard_loader.analyze_program_with_standard_cache(program, loaded) {
-    Ok(cached) => cached.analyzed
-    Err(error) => abort(error)
-  }
-  let lowering = @semantic.plan_program_lowering(program, analyzed)
-  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
-  let diagnostics = program.diagnostics.length() +
-    program.modules[0].diagnostics.length() +
-    analyzed.frozen.graph.diagnostics.length() +
-    analyzed.frozen.import_diagnostics.length() +
-    analyzed.frozen.interfaces[0].resolved_types.diagnostics.length() +
-    analyzed.modules[0].names.diagnostics.length() +
-    analyzed.modules[0].inferred.diagnostics.length() +
-    lowering.modules[0].diagnostics.length() +
-    link.diagnostics.length()
-  if diagnostics != 0 {
+    loaded,
+    @compiler_driver.CompilerPipelineOptions::production(2554UL, 0, true),
+  ).unwrap()
+  if compiled.source_diagnostics().length() != 0 {
     abort("WASI parity source produced semantic diagnostics")
   }
-  @backend.emit_starshine_program_binary(lowering, link).unwrap()
+  compiled.emit_binary().unwrap()
 }
 
 ///|

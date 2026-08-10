@@ -35,15 +35,22 @@ src/semantic <---------------- src/standard_loader
           |                              |
           v                              |
 src/backend <----------------------------+
-          |
-          v
-compiler executables and generators
+          |                              |
+          +-------------+----------------+
+                        |
+                        v
+              src/compiler_driver
+                        |
+                        v
+            compiler executables and generators
 ```
 
-The executable packages currently import `semantic`, `backend`, and
-`standard_loader` directly. A planned compiler-driver facade will give those
-executables one supported orchestration entry point while the lower packages
-retain focused white-box tests.
+`src/compiler_driver` is the supported orchestration entry point for compiler
+executables. It owns the common collect, cached-analysis, lowering, linking,
+diagnostic collection, and raw binary emission sequence. Executables still
+import lower packages for manifest construction, source-diagnostic rendering,
+custom-section policy, and specialized output framing while those responsibilities
+are migrated or intentionally retained.
 
 Starshine is a sibling MoonBit workspace package used only by `src/backend` to
 construct, validate, and encode WebAssembly.
@@ -213,9 +220,11 @@ compiler executable owns compilation. Their current internal protocol uses CLI
 arguments and environment variables; a versioned compile request is planned so
 that package/host policy and compiler orchestration remain separate.
 
-A compiler-driver facade inside MoonBit will own the common
+The MoonBit `compiler_driver` package owns the common
 collect/analyze/lower/link/emit sequence used by command, snapshot, test, parity,
-and benchmark executables.
+and benchmark executables. It returns the phase artifacts without hiding them so
+specialized tools can render diagnostics and append purpose-specific custom
+sections without rerunning compiler work.
 
 ## Validation contracts
 
