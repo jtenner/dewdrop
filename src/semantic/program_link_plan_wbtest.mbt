@@ -1207,6 +1207,46 @@ test "external generic fallback rejects erased concrete evidence with runtime pr
 }
 
 ///|
+test "bounded generic function references fail visibly before backend emission" {
+  let program = collect_program_manifest(
+    21975UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn reader<t: Value>() -> fn(t) -> I32 {\n  read\n}\nfn invoke(callback: fn(I32) -> I32) -> I32 {\n  callback(42)\n}\npub fn main() -> I32 {\n  invoke(reader())\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let read = program.modules[0].lookup_value("read").unwrap()
+  let mut bound_references = 0
+  for expression_index, expression in lowering.modules[0].expressions {
+    match expression.kind {
+      PlannedFunctionReference(target, _) if target == read => {
+        let roots = lowering.modules[0].expression_evidence[expression_index]
+        assert_eq(roots.length, 1)
+        let root = lowering.modules[0].trait_evidence_roots[roots.start]
+        match lowering.modules[0].trait_evidence[root].kind {
+          BoundInferredTraitEvidence(0) => bound_references += 1
+          _ => fail("expected caller-bound function-reference evidence")
+        }
+      }
+      _ => ()
+    }
+  }
+  assert_eq(bound_references, 1)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 1)
+  match link.diagnostics[0] {
+    UnsupportedProgramGenericCall(_, target, _) => assert_eq(target, read)
+    _ => fail("expected unsupported bounded function-reference diagnostic")
+  }
+}
+
+///|
 test "open generic trait dictionaries preserve recursive prerequisite evidence" {
   let program = collect_program_manifest(
     21968UL,

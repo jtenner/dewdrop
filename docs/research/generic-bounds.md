@@ -148,7 +148,7 @@ two evidence-distinct transitive `read` specializations measured 1.41 ms ±
 nested bounded-generic derived-Eq fixture is 829 lines and 21,154 bytes. These
 are development observations rather than regression budgets.
 
-Closed linked runtime-trait boundaries now resolve symbolic bound evidence into exact dictionaries or devirtualized direct calls. Escaping bounded generic function references and standalone external callers still require a stable runtime-evidence parameter ABI; public interface fingerprints do not yet claim that ABI.
+Closed linked runtime-trait boundaries resolve symbolic bound evidence into exact dictionaries or devirtualized direct calls, and public external callers use the versioned V1 runtime-evidence parameter ABI. Concrete bounded generic function references freeze exact evidence. Escaping references that would need caller-local runtime dictionaries are rejected with `UnsupportedProgramGenericCall` before backend emission until the closure ABI can capture that evidence.
 
 A nominal argument carried through an ordinary generic specialization uses the common `eqref` carrier inside the specialized body. Before any direct call whose frozen target parameter is an exact local or imported nominal reference, backend emission now applies the target's final `ref.cast` for every generic specialization, not only generic implementation-method specializations. Scalar targets remain unchanged because the cast helper emits nothing for non-nominal carriers. This makes `read(Item {})` through `fn read<t: Value>` validate identically to the direct nominal call.
 

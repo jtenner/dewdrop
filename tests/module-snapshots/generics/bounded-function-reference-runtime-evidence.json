@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:16:3: error: UnsupportedProgramGenericCall(3000, 12884901888004, 206)\n  |\n16 |   read\n  |   ^"
+  ],
+  "warnings": [],
+  "output": null
+}

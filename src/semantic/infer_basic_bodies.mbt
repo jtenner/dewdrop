@@ -1221,6 +1221,20 @@ fn BasicBodyInferencer::commit_function_reference(
     declaration,
     { start, length: self.call_scratch.candidate_type_arguments.length() },
   )
+  let obligation_start = self.call_type_arguments.length()
+  for type_ in self.call_scratch.candidate_type_arguments {
+    self.call_type_arguments.push(self.solver.representative_type(type_))
+  }
+  self.validate_call_obligations_now(
+    expression,
+    declaration,
+    {
+      start: obligation_start,
+      length: self.call_scratch.candidate_type_arguments.length(),
+    },
+    offset,
+  )
+  self.call_type_arguments.truncate(obligation_start)
 }
 
 ///|

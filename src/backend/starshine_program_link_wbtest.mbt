@@ -857,6 +857,30 @@ test "public generic evidence fallbacks dispatch bound operators" {
 }
 
 ///|
+test "concrete bounded generic function references preserve evidence" {
+  let program = @semantic.collect_program_manifest(
+    2484UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  let callback: fn(I32) -> I32 = read\n  callback(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_true(
+    emit_starshine_program_binary(lowering, link).unwrap().length() > 8,
+  )
+}
+
+///|
 test "public runtime evidence forwards through imported recursive generics" {
   let program = @semantic.collect_program_manifest(
     2482UL,

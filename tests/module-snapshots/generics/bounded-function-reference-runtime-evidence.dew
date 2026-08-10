@@ -1,0 +1,25 @@
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+fn read<t: Value>(value: t) -> I32 {
+  value.value()
+}
+
+pub fn reader<t: Value>() -> fn(t) -> I32 {
+  read
+}
+
+fn invoke(callback: fn(I32) -> I32) -> I32 {
+  callback(42)
+}
+
+pub fn main() -> I32 {
+  invoke(reader())
+}

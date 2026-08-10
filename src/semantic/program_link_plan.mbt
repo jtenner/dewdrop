@@ -2170,13 +2170,32 @@ fn program_link_validate_calls(
 ) -> Unit {
   for module_ in lowering.modules {
     for expression_index, expression in module_.expressions {
-      let (target, type_arguments) = match expression.kind {
+      let (target, type_arguments, function_reference) = match expression.kind {
         PlannedDirectCall(declaration, _, _, type_arguments)
         | PlannedOperatorCall(declaration, _, _, _, type_arguments)
         | PlannedIndexCall(declaration, _, _, type_arguments)
         | PlannedIndexSetCall(declaration, _, _, _, type_arguments) =>
-          (declaration, type_arguments)
+          (declaration, type_arguments, false)
+        PlannedFunctionReference(declaration, type_arguments) =>
+          (declaration, type_arguments, true)
         _ => continue
+      }
+      let type_argument_shapes = if function_reference {
+        module_.expression_type_argument_shapes
+      } else {
+        module_.call_type_argument_shapes
+      }
+      if type_arguments.start < 0 ||
+        type_arguments.start + type_arguments.length >
+        type_argument_shapes.length() {
+        diagnostics.push(
+          UnsupportedProgramGenericCall(
+            module_.module_id,
+            target,
+            expression.offset,
+          ),
+        )
+        continue
       }
       match lookup.get(target) {
         Some(function_index) => {
@@ -2184,6 +2203,35 @@ fn program_link_validate_calls(
           let owner = lowering.modules[function_.module_index]
           let callable = owner.functions.callable_of(target).unwrap()
           if program_callable_generic_parameters(callable).length > 0 {
+            if function_reference &&
+              expression_index >= 0 &&
+              expression_index < module_.expression_evidence.length() {
+              let roots = module_.expression_evidence[expression_index]
+              let mut runtime_evidence = false
+              if roots.start >= 0 &&
+                roots.start + roots.length <=
+                module_.trait_evidence_roots.length() {
+                for index in 0..<roots.length {
+                  if !runtime_trait_evidence_is_concrete(
+                      module_,
+                      module_.trait_evidence_roots[roots.start + index],
+                      0,
+                    ) {
+                    runtime_evidence = true
+                  }
+                }
+              }
+              if runtime_evidence {
+                diagnostics.push(
+                  UnsupportedProgramGenericCall(
+                    module_.module_id,
+                    target,
+                    expression.offset,
+                  ),
+                )
+                continue
+              }
+            }
             let mut specialized = false
             for call in specialized_calls {
               if semantic_id_module(call.caller_body) == module_.module_id &&
@@ -2199,7 +2247,7 @@ fn program_link_validate_calls(
                 program_specialization_shapes_equal(
                   modules[candidate.module_index].specialization_shapes,
                   candidate.specialization_shapes,
-                  module_.call_type_argument_shapes,
+                  type_argument_shapes,
                   type_arguments,
                 ) {
                 specialized = true
@@ -2209,8 +2257,7 @@ fn program_link_validate_calls(
             if !specialized {
               let mut symbolic_source = false
               for index in 0..<type_arguments.length {
-                match
-                  module_.call_type_argument_shapes[type_arguments.start + index] {
+                match type_argument_shapes[type_arguments.start + index] {
                   GenericPlannedValueShape | ErrorPlannedValueShape =>
                     symbolic_source = true
                   _ => ()
