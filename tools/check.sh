@@ -264,13 +264,15 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-eqref-consumer.wasm \
   run i32 > .tmp/dew-eqref-consumer.json
 grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
-tools/dew build \
-  tests/abi-consumers/runtime-trait-evidence-provider.dew \
+tools/dew build --root app.main \
+  --module app.main tests/abi-consumers/runtime-trait-evidence-provider.dew \
+  --module fixture.runtime_evidence \
+    tests/abi-consumers/runtime-trait-evidence-provider.modules/fixture.runtime_evidence/support.dew \
   -o .tmp/dew-runtime-trait-evidence-provider.wasm
 wasm-tools print .tmp/dew-runtime-trait-evidence-provider.wasm \
   > .tmp/dew-runtime-trait-evidence-provider.wat
-# `choose` needs one trait object; `read` must dispatch through the supplied
-# vtable directly without allocating a second envelope.
+# `choose` needs one trait object; `read` must forward the supplied vtable
+# through its imported recursive generic chain without allocating a second envelope.
 test "$(grep -c 'call_ref' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
 test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
 wasm-tools parse \

@@ -1,6 +1,4 @@
-pub trait Value {
-  fn value(self) -> I32
-}
+open fixture.runtime_evidence
 
 pub fn choose<t: Value>(condition: Bool, value: t) -> Value {
   if condition {
@@ -11,9 +9,9 @@ pub fn choose<t: Value>(condition: Bool, value: t) -> Value {
 }
 
 pub fn read<t: Value>(value: t) -> I32 {
-  value.value()
+  forwarded_read(0, value)
 }
 
 pub fn main() -> I32 {
-  0
+  read(42)
 }

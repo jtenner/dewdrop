@@ -857,14 +857,20 @@ fn starshine_finish_program_call(
   let test_assert_function_index = starshine_program_module_runtime_function_index(
     planned, caller_module_index, b"dew_test_assert",
   )
+  let caller_specialization_abi_key = match generic_specialization {
+    Some(value) => value.specialization_abi_key
+    None => ""
+  }
   let preselected = planned.specialized_call_function(
-    body,
-    match generic_specialization {
-      Some(value) => value.specialization_abi_key
-      None => ""
-    },
-    expression,
+    body, caller_specialization_abi_key, expression,
   )
+  let runtime_evidence = planned.specialized_call_runtime_evidence(
+    body, caller_specialization_abi_key, expression,
+  )
+  let runtime_evidence_length = match runtime_evidence {
+    Some(value) => value.length
+    None => 0
+  }
   let function_ = match preselected {
     Some(function_) => function_
     None =>
@@ -901,7 +907,7 @@ fn starshine_finish_program_call(
   let cross_module_or_specialized = caller_module_index !=
     function_.module_index ||
     starshine_program_is_generic_specialization(planned, generic_specialization)
-  if fragments.length() == function_.parameters.length {
+  if fragments.length() + runtime_evidence_length == function_.parameters.length {
     for parameter_index, fragment in fragments {
       append_starshine_instructions(output, fragment)
       let needs_cast = if cross_module_or_specialized {
@@ -927,6 +933,27 @@ fn starshine_finish_program_call(
     for fragment in fragments {
       append_starshine_instructions(output, fragment)
     }
+  }
+  match runtime_evidence {
+    Some(span) =>
+      for index in 0..<span.length {
+        let source_index = span.start + index
+        if source_index < 0 ||
+          source_index >=
+          planned.specialized_call_runtime_evidence_parameters.length() {
+          return Err(UnsupportedExpression(body, expression))
+        }
+        let parameter = planned.specialized_call_runtime_evidence_parameters[source_index]
+        if parameter < 0 {
+          return Err(UnsupportedExpression(body, expression))
+        }
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+          ),
+        )
+      }
+    None => ()
   }
   if function_.direct_builtin.length() > 0 {
     match

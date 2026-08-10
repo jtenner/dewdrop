@@ -119,7 +119,7 @@ fn external_runtime_trait_static_call_benchmark_source(
 ) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 384)
   output.write_string_utf8(
-    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n",
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn finish_read<t: Value>(prefix: I32, suffix: I32, value: t) -> I32 {\n  prefix + suffix + value.value()\n}\nfn forwarded_read<t: Value>(prefix: I32, value: t) -> I32 {\n  finish_read(prefix, 0, value)\n}\npub fn read<t: Value>(value: t) -> I32 {\n  forwarded_read(0, value)\n}\npub fn main() -> I32 {\n",
   )
   for index in 0..<call_count {
     output.write_string_utf8("  let value_")
@@ -135,7 +135,7 @@ fn external_runtime_trait_static_call_benchmark_source(
 }
 
 ///|
-test "bench external runtime-evidence bound calls=256" (it : @bench.T) {
+test "bench external runtime-evidence forwarding calls=256" (it : @bench.T) {
   let program = collect_program_manifest(
     2279UL,
     ProgramManifest::new([

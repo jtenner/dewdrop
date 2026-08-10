@@ -20,6 +20,7 @@ pub struct PlannedProgramSpecializedCall {
   expression : ExprId
   target : DeclId
   target_specialization_abi_key : String
+  runtime_evidence_parameters : HirSpan
 } derive(Eq, Debug)
 
 ///|
@@ -59,6 +60,7 @@ pub struct PlannedProgramWasmGCFragments {
   modules : Array[PlannedModuleWasmGCFragments]
   external_type_references : Array[PlannedProgramExternalTypeReference]
   specialized_calls : Array[PlannedProgramSpecializedCall]
+  specialized_call_runtime_evidence_parameters : Array[Int]
 }
 
 ///|
@@ -130,6 +132,8 @@ pub struct PlannedProgramWasmGCLink {
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
   specialized_call_lookup : Map[String, Int]
+  specialized_call_runtime_evidence_lookup : Map[String, HirSpan]
+  specialized_call_runtime_evidence_parameters : Array[Int]
   initializers : Array[PlannedProgramModuleInitializer]
   global_lookup : Map[DeclId, Int]
   function_reference_singletons : Array[
@@ -170,6 +174,18 @@ pub fn PlannedProgramWasmGCLink::specialized_call_function(
     Some(index) => Some(self.functions[index])
     None => None
   }
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::specialized_call_runtime_evidence(
+  self : PlannedProgramWasmGCLink,
+  body : BodyId,
+  specialization_abi_key : String,
+  expression : ExprId,
+) -> HirSpan? {
+  self.specialized_call_runtime_evidence_lookup.get(
+    program_specialized_call_key(body, specialization_abi_key, expression),
+  )
 }
 
 ///|
@@ -2773,6 +2789,38 @@ fn write_program_trait_evidence_key(
 }
 
 ///|
+fn normalize_program_runtime_evidence_parameters(
+  request : ProgramTraitEvidenceRequest,
+) -> Array[Int]? {
+  let parameter_slots : Map[Int, Int] = Map::default()
+  let parameters : Array[Int] = []
+  for index, node in request.evidence {
+    match node.kind {
+      PlannedRuntimeTraitEvidence(trait_, source_parameter) => {
+        if source_parameter < 0 {
+          return None
+        }
+        let slot = match parameter_slots.get(source_parameter) {
+          Some(value) => value
+          None => {
+            let value = parameters.length()
+            parameter_slots[source_parameter] = value
+            parameters.push(source_parameter)
+            value
+          }
+        }
+        request.evidence[index] = {
+          ..node,
+          kind: PlannedRuntimeTraitEvidence(trait_, slot),
+        }
+      }
+      PlannedConcreteTraitEvidence(_, _) => ()
+    }
+  }
+  Some(parameters)
+}
+
+///|
 fn program_specialization_abi_key(
   declaration : DeclId,
   shapes : Array[PlannedValueShape],
@@ -3473,17 +3521,36 @@ fn materialize_program_generic_specialization(
 ///|
 fn record_program_specialized_call(
   calls : Array[PlannedProgramSpecializedCall],
-  call : PlannedProgramSpecializedCall,
+  runtime_evidence_parameters : Array[Int],
+  caller_body : BodyId,
+  caller_specialization_abi_key : String,
+  expression : ExprId,
+  target : DeclId,
+  target_specialization_abi_key : String,
+  forwarded_runtime_evidence_parameters : Array[Int],
 ) -> Unit {
   for existing in calls {
-    if existing.caller_body == call.caller_body &&
-      existing.caller_specialization_abi_key ==
-      call.caller_specialization_abi_key &&
-      existing.expression == call.expression {
+    if existing.caller_body == caller_body &&
+      existing.caller_specialization_abi_key == caller_specialization_abi_key &&
+      existing.expression == expression {
       return
     }
   }
-  calls.push(call)
+  let parameter_start = runtime_evidence_parameters.length()
+  for parameter in forwarded_runtime_evidence_parameters {
+    runtime_evidence_parameters.push(parameter)
+  }
+  calls.push({
+    caller_body,
+    caller_specialization_abi_key,
+    expression,
+    target,
+    target_specialization_abi_key,
+    runtime_evidence_parameters: {
+      start: parameter_start,
+      length: forwarded_runtime_evidence_parameters.length(),
+    },
+  })
 }
 
 ///|
@@ -3545,6 +3612,7 @@ fn materialize_program_expression_call(
   body : BodyId,
   expression : ExprId,
   specialized_calls : Array[PlannedProgramSpecializedCall],
+  specialized_call_runtime_evidence_parameters : Array[Int],
 ) -> Unit {
   let owner = lowering.modules[caller_module_index]
   let source = owner.expressions[expression]
@@ -3559,6 +3627,20 @@ fn materialize_program_expression_call(
         ) {
         Some(value) => value
         None => return
+      }
+      let forwarded_runtime_evidence_parameters = match
+        normalize_program_runtime_evidence_parameters(request_evidence) {
+        Some(value) => value
+        None => return
+      }
+      match caller {
+        Some(function_) =>
+          for parameter in forwarded_runtime_evidence_parameters {
+            if parameter < 0 || parameter >= function_.parameters.length {
+              return
+            }
+          }
+        None => if forwarded_runtime_evidence_parameters.length() > 0 { return }
       }
       let request_shapes : Array[PlannedValueShape] = []
       for argument_index in 0..<arguments.length {
@@ -3590,16 +3672,19 @@ fn materialize_program_expression_call(
           false,
         ) {
         Some(target_key) =>
-          record_program_specialized_call(specialized_calls, {
-            caller_body: body,
-            caller_specialization_abi_key: match caller {
+          record_program_specialized_call(
+            specialized_calls,
+            specialized_call_runtime_evidence_parameters,
+            body,
+            match caller {
               Some(value) => value.specialization_abi_key
               None => ""
             },
             expression,
             target,
-            target_specialization_abi_key: target_key,
-          })
+            target_key,
+            forwarded_runtime_evidence_parameters,
+          )
         None => ()
       }
     }
@@ -3665,13 +3750,16 @@ fn materialize_program_expression_call(
           } else {
             ""
           }
-          record_program_specialized_call(specialized_calls, {
-            caller_body: body,
-            caller_specialization_abi_key: caller.specialization_abi_key,
+          record_program_specialized_call(
+            specialized_calls,
+            specialized_call_runtime_evidence_parameters,
+            body,
+            caller.specialization_abi_key,
             expression,
             target,
-            target_specialization_abi_key: target_key,
-          })
+            target_key,
+            [],
+          )
         }
         _ => ()
       }
@@ -4082,12 +4170,276 @@ fn program_resolved_trait_declaration(
 }
 
 ///|
+fn program_append_external_runtime_trait(
+  traits_by_module : Array[Array[DeclId]],
+  seen : Map[String, Bool],
+  module_index : Int,
+  trait_ : DeclId,
+) -> Unit {
+  if module_index < 0 ||
+    module_index >= traits_by_module.length() ||
+    trait_ == 0UL {
+    return
+  }
+  let key = module_index.to_string() + ":" + trait_.to_string()
+  if seen.contains(key) {
+    return
+  }
+  seen[key] = true
+  traits_by_module[module_index].push(trait_)
+}
+
+///|
+fn program_collect_external_runtime_trait_uses(
+  lowering : PlannedProgramLowering,
+  module_lookup : Map[ModuleId, Int],
+  declaration : DeclId,
+  visited : Map[DeclId, Bool],
+  traits_by_module : Array[Array[DeclId]],
+  seen_traits : Map[String, Bool],
+) -> Unit {
+  if visited.contains(declaration) {
+    return
+  }
+  visited[declaration] = true
+  let module_index = match module_lookup.get(semantic_id_module(declaration)) {
+    Some(value) => value
+    None => return
+  }
+  if module_index < 0 || module_index >= lowering.modules.length() {
+    return
+  }
+  let module_ = lowering.modules[module_index]
+  let callable = match module_.functions.callable_of(declaration) {
+    Some(value) => value
+    None => return
+  }
+  let body_id = match callable.kind {
+    PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
+      body
+    _ => return
+  }
+  let body_index = semantic_id_local(body_id)
+  if body_index < 0 || body_index >= module_.bodies.length() {
+    return
+  }
+  let body = module_.bodies[body_index]
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match module_.expressions[expression].trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+        if evidence >= 0 && evidence < module_.trait_evidence.length() {
+          match module_.trait_evidence[evidence].kind {
+            BoundInferredTraitEvidence(_) =>
+              program_append_external_runtime_trait(
+                traits_by_module, seen_traits, module_index, trait_,
+              )
+            ConcreteInferredTraitEvidence(_, _) => ()
+          }
+        }
+      _ => ()
+    }
+    match module_.expressions[expression].kind {
+      PlannedBoundDirectCall(requirement, _, _, _, _)
+      | PlannedBoundOperatorCall(requirement, _, _, _, _, _) => {
+        let requirement_module = match
+          module_lookup.get(semantic_id_module(requirement)) {
+          Some(value) => value
+          None => continue
+        }
+        match
+          lowering.modules[requirement_module].functions.callable_of(
+            requirement,
+          ) {
+          Some({ kind: PlannedTraitMethodCallable(trait_), .. }) =>
+            program_append_external_runtime_trait(
+              traits_by_module, seen_traits, module_index, trait_,
+            )
+          _ => ()
+        }
+      }
+      _ => ()
+    }
+    let call = program_call_target_and_arguments(
+      module_.expressions[expression],
+    )
+    let target = match call {
+      Some((target, arguments)) if arguments.length > 0 => target
+      _ => continue
+    }
+    if expression < 0 || expression >= module_.expression_evidence.length() {
+      continue
+    }
+    let roots = module_.expression_evidence[expression]
+    let mut forwards_bound = false
+    if roots.start >= 0 &&
+      roots.start + roots.length <= module_.trait_evidence_roots.length() {
+      for index in 0..<roots.length {
+        let root = module_.trait_evidence_roots[roots.start + index]
+        if program_runtime_trait_evidence_is_forwardable_bound(module_, root) {
+          forwards_bound = true
+          break
+        }
+      }
+    }
+    if forwards_bound {
+      program_collect_external_runtime_trait_uses(
+        lowering, module_lookup, target, visited, traits_by_module, seen_traits,
+      )
+    }
+  }
+}
+
+///|
+fn program_runtime_trait_callable_supports_external_evidence(
+  lowering : PlannedProgramLowering,
+  module_lookup : Map[ModuleId, Int],
+  declaration : DeclId,
+  states : Map[DeclId, Int],
+) -> Bool {
+  match states.get(declaration) {
+    Some(2) => return true
+    Some(3) => return false
+    Some(1) => return true
+    _ => ()
+  }
+  states[declaration] = 1
+  let supported = program_runtime_trait_callable_body_supports_external_evidence(
+    lowering, module_lookup, declaration, states,
+  )
+  states[declaration] = if supported { 2 } else { 3 }
+  supported
+}
+
+///|
+fn program_runtime_trait_callable_body_supports_external_evidence(
+  lowering : PlannedProgramLowering,
+  module_lookup : Map[ModuleId, Int],
+  declaration : DeclId,
+  states : Map[DeclId, Int],
+) -> Bool {
+  let module_index = match module_lookup.get(semantic_id_module(declaration)) {
+    Some(value) => value
+    None => return false
+  }
+  if module_index < 0 || module_index >= lowering.modules.length() {
+    return false
+  }
+  let module_ = lowering.modules[module_index]
+  let callable = match module_.functions.callable_of(declaration) {
+    Some(value) => value
+    None => return false
+  }
+  let body_id = match callable.kind {
+    PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
+      body
+    _ => return false
+  }
+  let body_index = semantic_id_local(body_id)
+  if body_index < 0 || body_index >= module_.bodies.length() {
+    return false
+  }
+  let body = module_.bodies[body_index]
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match module_.expressions[expression].kind {
+      PlannedBoundDirectCall(_, _, receiver, _, _) if receiver < 0 =>
+        return false
+      _ => ()
+    }
+    let call = program_call_target_and_arguments(
+      module_.expressions[expression],
+    )
+    let forwards_runtime_evidence = match call {
+      Some((_, arguments)) => arguments.length > 0
+      None => false
+    }
+    let mut forwards_bound = false
+    if expression < 0 || expression >= module_.expression_evidence.length() {
+      return false
+    }
+    let roots = module_.expression_evidence[expression]
+    if roots.start < 0 ||
+      roots.start + roots.length > module_.trait_evidence_roots.length() {
+      return false
+    }
+    for index in 0..<roots.length {
+      let root = module_.trait_evidence_roots[roots.start + index]
+      if runtime_trait_evidence_is_concrete(module_, root, 0) {
+        continue
+      }
+      if !forwards_runtime_evidence ||
+        !program_runtime_trait_evidence_is_forwardable_bound(module_, root) {
+        return false
+      }
+      forwards_bound = true
+    }
+    if forwards_bound {
+      let target = match call {
+        Some((value, _)) => value
+        None => return false
+      }
+      if !program_runtime_trait_callable_supports_external_evidence(
+          lowering, module_lookup, target, states,
+        ) {
+        return false
+      }
+    }
+    match module_.expressions[expression].trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(_, evidence) => {
+        if evidence < 0 || evidence >= module_.trait_evidence.length() {
+          return false
+        }
+        match module_.trait_evidence[evidence].kind {
+          BoundInferredTraitEvidence(_) => ()
+          ConcreteInferredTraitEvidence(_, _) =>
+            if !runtime_trait_evidence_is_concrete(module_, evidence, 0) {
+              return false
+            }
+        }
+      }
+      ErrorInferredTraitObjectCoercion => return false
+      NoInferredTraitObjectCoercion => ()
+    }
+  }
+  true
+}
+
+///|
+fn program_runtime_trait_evidence_is_forwardable_bound(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+) -> Bool {
+  if evidence < 0 || evidence >= lowering.trait_evidence.length() {
+    return false
+  }
+  let node = lowering.trait_evidence[evidence]
+  match node.kind {
+    BoundInferredTraitEvidence(_) => node.prerequisites.length == 0
+    ConcreteInferredTraitEvidence(_, _) => false
+  }
+}
+
+///|
 fn program_runtime_trait_fallback_evidence(
   analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  module_lookup : Map[ModuleId, Int],
+  support_states : Map[DeclId, Int],
   module_index : Int,
   module_ : PlannedModuleLowering,
   callable : PlannedCallable,
 ) -> ProgramTraitEvidenceRequest? {
+  if !program_runtime_trait_callable_supports_external_evidence(
+      lowering,
+      module_lookup,
+      callable.declaration,
+      support_states,
+    ) {
+    return None
+  }
   let body_id = match callable.kind {
     PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
       body
@@ -4102,6 +4454,11 @@ fn program_runtime_trait_fallback_evidence(
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
+    let forwards_runtime_evidence = match
+      program_call_target_and_arguments(module_.expressions[expression]) {
+      Some((_, arguments)) => arguments.length > 0
+      None => false
+    }
     match module_.expressions[expression].kind {
       PlannedBoundDirectCall(_, _, receiver, _, _) if receiver < 0 =>
         return None
@@ -4116,11 +4473,12 @@ fn program_runtime_trait_fallback_evidence(
         return None
       }
       for index in 0..<roots.length {
-        if !runtime_trait_evidence_is_concrete(
-            module_,
-            module_.trait_evidence_roots[roots.start + index],
-            0,
-          ) {
+        let root = module_.trait_evidence_roots[roots.start + index]
+        if runtime_trait_evidence_is_concrete(module_, root, 0) {
+          continue
+        }
+        if !forwards_runtime_evidence ||
+          !program_runtime_trait_evidence_is_forwardable_bound(module_, root) {
           return None
         }
       }
@@ -4223,19 +4581,24 @@ fn plan_program_wasmgc_fragments_for_root(
     lowering.modules.length(),
     None,
   )
+  let specialization_module_lookup : Map[ModuleId, Int] = Map::default()
+  for module_index, module_ in lowering.modules {
+    specialization_module_lookup[module_.module_id] = module_index
+  }
+  let external_evidence_support_states : Map[DeclId, Int] = Map::default()
   let fallback_evidence_by_declaration : Map[
     DeclId,
     ProgramTraitEvidenceRequest,
   ] = Map::default()
-  let extra_runtime_traits_by_module : Array[Array[DeclId]] = Array::make(
-    lowering.modules.length(),
-    [],
-  )
+  let extra_runtime_traits_by_module : Array[Array[DeclId]] = []
+  for _ in lowering.modules {
+    extra_runtime_traits_by_module.push([])
+  }
+  let collected_external_evidence_callables : Map[DeclId, Bool] = Map::default()
+  let collected_external_evidence_traits : Map[String, Bool] = Map::default()
   if erased_fallback_module_index >= 0 &&
     erased_fallback_module_index < lowering.modules.length() {
     let module_ = lowering.modules[erased_fallback_module_index]
-    let traits : Array[DeclId] = []
-    let seen_traits : Map[DeclId, Bool] = Map::default()
     for callable in module_.functions.callables {
       if callable.visibility != Public ||
         program_callable_generic_parameters(callable).length == 0 {
@@ -4243,27 +4606,35 @@ fn plan_program_wasmgc_fragments_for_root(
       }
       let evidence = match
         program_runtime_trait_fallback_evidence(
-          analyzed, erased_fallback_module_index, module_, callable,
+          analyzed, lowering, specialization_module_lookup, external_evidence_support_states,
+          erased_fallback_module_index, module_, callable,
         ) {
         Some(value) => value
         None => continue
       }
       fallback_evidence_by_declaration[callable.declaration] = evidence
+      program_collect_external_runtime_trait_uses(
+        lowering,
+        specialization_module_lookup,
+        callable.declaration,
+        collected_external_evidence_callables,
+        extra_runtime_traits_by_module,
+        collected_external_evidence_traits,
+      )
       for root in evidence.roots {
         if root < 0 || root >= evidence.evidence.length() {
           continue
         }
         match evidence.evidence[root].kind {
           PlannedRuntimeTraitEvidence(trait_, _) =>
-            if !seen_traits.contains(trait_) {
-              seen_traits[trait_] = true
-              traits.push(trait_)
-            }
+            program_append_external_runtime_trait(
+              extra_runtime_traits_by_module, collected_external_evidence_traits,
+              erased_fallback_module_index, trait_,
+            )
           PlannedConcreteTraitEvidence(_, _) => ()
         }
       }
     }
-    extra_runtime_traits_by_module[erased_fallback_module_index] = traits
   }
   let program_roots = program_reachable_callable_roots(
     analyzed,
@@ -4300,11 +4671,8 @@ fn plan_program_wasmgc_fragments_for_root(
   for slot in slots {
     modules.push(slot.unwrap())
   }
-  let specialization_module_lookup : Map[ModuleId, Int] = Map::default()
-  for module_index, module_ in modules {
-    specialization_module_lookup[module_.module_id] = module_index
-  }
   let specialized_calls : Array[PlannedProgramSpecializedCall] = []
+  let specialized_call_runtime_evidence_parameters : Array[Int] = []
   for module_index, module_ in lowering.modules {
     if module_index != erased_fallback_module_index {
       continue
@@ -4369,6 +4737,7 @@ fn plan_program_wasmgc_fragments_for_root(
           body.body,
           expression,
           specialized_calls,
+          specialized_call_runtime_evidence_parameters,
         )
       }
     }
@@ -4441,6 +4810,7 @@ fn plan_program_wasmgc_fragments_for_root(
             body_id,
             expression,
             specialized_calls,
+            specialized_call_runtime_evidence_parameters,
           )
         }
       }
@@ -4502,6 +4872,7 @@ fn plan_program_wasmgc_fragments_for_root(
     modules,
     external_type_references,
     specialized_calls,
+    specialized_call_runtime_evidence_parameters,
   }
 }
 
@@ -5995,6 +6366,7 @@ pub fn link_program_wasmgc_fragments(
     diagnostics,
   )
   let specialized_call_lookup : Map[String, Int] = Map::default()
+  let specialized_call_runtime_evidence_lookup : Map[String, HirSpan] = Map::default()
   for call in fragments.specialized_calls {
     let mut target_index = -1
     if call.target_specialization_abi_key.length() == 0 {
@@ -6012,11 +6384,15 @@ pub fn link_program_wasmgc_fragments(
       }
     }
     if target_index >= 0 {
-      specialized_call_lookup[program_specialized_call_key(
+      let key = program_specialized_call_key(
         call.caller_body,
         call.caller_specialization_abi_key,
         call.expression,
-      )] = target_index
+      )
+      specialized_call_lookup[key] = target_index
+      if call.runtime_evidence_parameters.length > 0 {
+        specialized_call_runtime_evidence_lookup[key] = call.runtime_evidence_parameters
+      }
     }
   }
   {
@@ -6032,6 +6408,8 @@ pub fn link_program_wasmgc_fragments(
     functions,
     function_lookup,
     specialized_call_lookup,
+    specialized_call_runtime_evidence_lookup,
+    specialized_call_runtime_evidence_parameters: fragments.specialized_call_runtime_evidence_parameters,
     initializers,
     global_lookup,
     function_reference_singletons,

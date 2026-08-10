@@ -1018,6 +1018,100 @@ test "public bound call fallbacks remain evidence carrying without scalar adapte
 }
 
 ///|
+test "public generic fallbacks forward runtime evidence through nested calls" {
+  let program = collect_program_manifest(
+    21971UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn finish_read<t: Value>(prefix: I32, suffix: I32, value: t) -> I32 {\n  prefix + suffix + value.value()\n}\nfn forwarded_read<t: Value>(prefix: I32, value: t) -> I32 {\n  finish_read(prefix, 0, value)\n}\npub fn read<t: Value>(value: t) -> I32 {\n  forwarded_read(0, value)\n}\npub fn main() -> I32 {\n  read(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
+  let forwarded = program.modules[0].lookup_value("forwarded_read").unwrap()
+  let finish = program.modules[0].lookup_value("finish_read").unwrap()
+  let mut forwarded_calls = 0
+  let mut finish_calls = 0
+  for call in fragments.specialized_calls {
+    if call.runtime_evidence_parameters.length != 1 {
+      continue
+    }
+    let parameter = fragments.specialized_call_runtime_evidence_parameters[call.runtime_evidence_parameters.start]
+    if call.target == forwarded {
+      assert_eq(parameter, 1)
+      forwarded_calls += 1
+    } else if call.target == finish {
+      assert_eq(parameter, 2)
+      finish_calls += 1
+    }
+  }
+  assert_eq(forwarded_calls, 1)
+  assert_eq(finish_calls, 1)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let mut forwarded_fallbacks = 0
+  let mut finish_fallbacks = 0
+  for function_ in link.functions {
+    if function_.specialization_evidence.length != 1 || function_.elided {
+      continue
+    }
+    let owner = link.modules[function_.module_index]
+    let root = owner.specialization_evidence_roots[function_.specialization_evidence.start]
+    match owner.specialization_trait_evidence[root].kind {
+      PlannedRuntimeTraitEvidence(_, _) =>
+        if function_.declaration == forwarded {
+          assert_eq(function_.parameters.length, 3)
+          forwarded_fallbacks += 1
+        } else if function_.declaration == finish {
+          assert_eq(function_.parameters.length, 4)
+          finish_fallbacks += 1
+        }
+      _ => ()
+    }
+  }
+  assert_eq(forwarded_fallbacks, 1)
+  assert_eq(finish_fallbacks, 1)
+}
+
+///|
+test "external generic fallback rejects runtime prerequisites inside concrete evidence" {
+  let program = collect_program_manifest(
+    21972UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\nfn helper<t: Value>(value: t) -> I32 {\n  consume(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> I32 {\n  helper(value)\n}\npub fn main() -> I32 {\n  outer(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let outer = program.modules[0].lookup_value("outer").unwrap()
+  let mut public_fallbacks = 0
+  let mut closed = 0
+  for function_ in link.functions {
+    if function_.declaration != outer || function_.elided {
+      continue
+    }
+    if function_.visibility == Public {
+      public_fallbacks += 1
+    } else if function_.specialization_shapes.length > 0 {
+      closed += 1
+    }
+  }
+  assert_eq(public_fallbacks, 0)
+  assert_eq(closed, 1)
+}
+
+///|
 test "open generic trait dictionaries preserve recursive prerequisite evidence" {
   let program = collect_program_manifest(
     21968UL,

@@ -1,0 +1,21 @@
+pub trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+fn finish_read<t: Value>(remaining: I32, prefix: I32, suffix: I32, value: t) -> I32 {
+  if remaining > 0 {
+    finish_read(remaining - 1, prefix, suffix, value)
+  } else {
+    prefix + suffix + value.value()
+  }
+}
+
+pub fn forwarded_read<t: Value>(prefix: I32, value: t) -> I32 {
+  finish_read(0, prefix, 0, value)
+}

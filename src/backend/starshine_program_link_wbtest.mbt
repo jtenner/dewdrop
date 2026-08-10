@@ -857,6 +857,60 @@ test "public generic evidence fallbacks dispatch bound operators" {
 }
 
 ///|
+test "public runtime evidence forwards through imported recursive generics" {
+  let program = @semantic.collect_program_manifest(
+    2482UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open app.provider\npub fn read<t: Value>(value: t) -> I32 {\n  forwarded_read(0, value)\n}\npub fn main() -> I32 {\n  read(42)\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.provider", [
+        @semantic.ManifestFile::new(
+          "provider.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn finish_read<t: Value>(remaining: I32, prefix: I32, value: t) -> I32 {\n  if remaining > 0 {\n    finish_read(remaining - 1, prefix, value)\n  } else {\n    prefix + value.value()\n  }\n}\npub fn forwarded_read<t: Value>(prefix: I32, value: t) -> I32 {\n  finish_read(0, prefix, value)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics.length(), 0)
+  }
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let read = program.modules[0].lookup_value("read").unwrap()
+  let forwarded = program.modules[1].lookup_value("forwarded_read").unwrap()
+  let finish = program.modules[1].lookup_value("finish_read").unwrap()
+  let mut runtime_functions = 0
+  for function_ in link.functions {
+    if function_.elided || function_.specialization_evidence.length != 1 {
+      continue
+    }
+    let fragments = link.modules[function_.module_index]
+    let root = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+    match fragments.specialization_trait_evidence[root].kind {
+      @semantic.PlannedRuntimeTraitEvidence(_, _) =>
+        if function_.declaration == read {
+          assert_eq(function_.parameters.length, 2)
+          runtime_functions += 1
+        } else if function_.declaration == forwarded {
+          assert_eq(function_.parameters.length, 3)
+          runtime_functions += 1
+        } else if function_.declaration == finish {
+          assert_eq(function_.parameters.length, 4)
+          runtime_functions += 1
+        }
+      _ => ()
+    }
+  }
+  assert_eq(runtime_functions, 3)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "open generic prerequisite dictionaries emit valid adapters" {
   let program = @semantic.collect_program_manifest(
     2477UL,
