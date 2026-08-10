@@ -905,6 +905,7 @@ tools/               compiler wrappers, generators, hosts, and test runners
 docs/spec.md         language and compiler specification
 docs/roadmap.md      completed history and planned work
 docs/architecture.md compiler phases, package ownership, and arena boundaries
+docs/compile-request.md versioned host/compiler request protocol
 docs/decisions/      accepted cross-cutting architecture decisions
 agent-todo.md        unfinished execution backlog only
 docs/research/       design notes, experiments, and measurements
@@ -951,6 +952,7 @@ These details are important for compiler and host authors. Beginners can safely 
 - [`docs/spec.md`](docs/spec.md) — detailed language and compiler specification.
 - [`docs/roadmap.md`](docs/roadmap.md) — implemented milestones and future plans.
 - [`docs/architecture.md`](docs/architecture.md) — compiler phases, package ownership, identities, arenas, and validation contracts.
+- [`docs/compile-request.md`](docs/compile-request.md) — versioned bootstrap-host/compiler request protocol.
 - [`docs/decisions/`](docs/decisions/) — accepted cross-cutting architecture decisions.
 - [`agent-todo.md`](agent-todo.md) — unfinished execution backlog.
 - [`docs/research/`](docs/research/) — design investigations and measurements.

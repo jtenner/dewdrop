@@ -127,7 +127,36 @@ fn print_usage() -> Unit {
 
 ///|
 fn main {
-  let args = @sys.get_cli_args()
+  let process_args = @sys.get_cli_args()
+  let args = if process_args.length() == 3 &&
+    process_args[1] == "--compile-request" {
+    let request = match parse_compile_request(cli_read_file(process_args[2])) {
+      Ok(value) => value
+      Err(error) => {
+        cli_fail(error)
+        abort("unreachable compile request failure")
+      }
+    }
+    @sys.set_env_var(
+      "DEW_INTERFACE_CACHE",
+      if request.interface_cache {
+        "1"
+      } else {
+        "0"
+      },
+    )
+    @sys.set_env_var(
+      "DEW_DEPENDENCY_INTERFACE_KEY",
+      request.dependency_cache_key,
+    )
+    let arguments : Array[String] = [process_args[0]]
+    for argument in request.cli_arguments() {
+      arguments.push(argument)
+    }
+    arguments
+  } else {
+    process_args
+  }
   if args.length() < 3 {
     print_usage()
     @sys.exit(2)

@@ -7,8 +7,10 @@ import hashlib
 import json
 import os
 import re
+import struct
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -586,21 +588,164 @@ def run_manifest_tests(
         wasm.unlink(missing_ok=True)
 
 
+def _compile_request_bytes(arguments: list[str]) -> bytes:
+    if not arguments or arguments[0] not in {"check", "build"}:
+        raise ManifestError("compile request command must be check or build")
+    command = 0 if arguments[0] == "check" else 1
+    emit = 0
+    output = ""
+    root_module = ""
+    module_name = "main"
+    files: list[str] = []
+    modules: list[tuple[str, list[str]]] = []
+    dependency_interfaces: list[tuple[str, str]] = []
+    default_preamble = True
+    interface_cache = True
+    cache_report = False
+    standard_policy = 1 if os.environ.get("DEW_BOOTSTRAP_STD") == "1" else 0
+    standard_root = "" if standard_policy == 1 else os.environ.get("DEW_STD_ROOT", ".")
+    dependency_cache_key = os.environ.get("DEW_DEPENDENCY_INTERFACE_KEY", "")
+
+    def flush_module() -> None:
+        nonlocal files
+        if files:
+            modules.append((module_name, files))
+            files = []
+
+    index = 1
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "--module":
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing value for --module")
+            flush_module()
+            module_name = arguments[index + 1]
+            index += 2
+        elif argument == "--dependency-interface":
+            if index + 2 >= len(arguments):
+                raise ManifestError("missing dependency interface expectation")
+            dependency_interfaces.append((arguments[index + 1], arguments[index + 2]))
+            index += 3
+        elif argument == "--root":
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing value for --root")
+            root_module = arguments[index + 1]
+            index += 2
+        elif argument == "--emit":
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing value for --emit")
+            value = arguments[index + 1]
+            if value not in {"wasm", "hir", "lowering"}:
+                raise ManifestError("compile request emit must be wasm, hir, or lowering")
+            emit = {"wasm": 0, "hir": 1, "lowering": 2}[value]
+            index += 2
+        elif argument == "--std-root":
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing value for --std-root")
+            standard_policy = 0
+            standard_root = arguments[index + 1]
+            index += 2
+        elif argument == "--bootstrap-std":
+            standard_policy = 1
+            standard_root = ""
+            index += 1
+        elif argument == "--no-default-preamble":
+            default_preamble = False
+            index += 1
+        elif argument == "--no-interface-cache":
+            interface_cache = False
+            index += 1
+        elif argument == "--cache-report":
+            cache_report = True
+            index += 1
+        elif argument in {"-o", "--output"}:
+            if index + 1 >= len(arguments):
+                raise ManifestError("missing output path")
+            output = arguments[index + 1]
+            index += 2
+        elif argument.startswith("-"):
+            raise ManifestError(f"unknown compiler request option: {argument}")
+        else:
+            files.append(argument)
+            index += 1
+    flush_module()
+    if not modules:
+        raise ManifestError("compile request requires at least one source file")
+    if command == 0 and output:
+        raise ManifestError("check does not accept an output path")
+    if command == 1 and not output:
+        raise ManifestError("build requires -o OUTPUT")
+
+    buffer = bytearray()
+
+    def write_u32(value: int) -> None:
+        buffer.extend(struct.pack("<I", value))
+
+    def write_bool(value: bool) -> None:
+        write_u32(1 if value else 0)
+
+    def write_string(value: str) -> None:
+        encoded = value.encode("utf-8")
+        write_u32(len(encoded))
+        buffer.extend(encoded)
+
+    write_u32(0x44574352)
+    write_u32(1)
+    write_u32(command)
+    write_u32(emit)
+    write_string(output)
+    write_string(root_module)
+    write_u32(len(modules))
+    for name, module_files in modules:
+        write_string(name)
+        write_u32(len(module_files))
+        for path in module_files:
+            write_string(path)
+    write_u32(len(dependency_interfaces))
+    for name, fingerprint in dependency_interfaces:
+        write_string(name)
+        write_string(fingerprint)
+    write_u32(standard_policy)
+    write_string(standard_root)
+    write_bool(default_preamble)
+    write_bool(interface_cache)
+    write_bool(cache_report)
+    write_u32(0)  # production build mode
+    write_string(dependency_cache_key)
+    return bytes(buffer)
+
+
 def moon_cli(arguments: list[str], *, check: bool = False) -> subprocess.CompletedProcess[bytes]:
-    return subprocess.run(
-        [
-            "moon",
-            "run",
-            "--target",
-            "native",
-            "--release",
-            "src/dew_cli",
-            "--",
-            *arguments,
-        ],
-        cwd=ROOT,
-        check=check,
-    )
+    temp = ROOT / ".tmp"
+    temp.mkdir(exist_ok=True)
+    request_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            prefix="dew-compile-request-",
+            suffix=".bin",
+            dir=temp,
+            delete=False,
+        ) as request:
+            request.write(_compile_request_bytes(arguments))
+            request_path = Path(request.name)
+        return subprocess.run(
+            [
+                "moon",
+                "run",
+                "--target",
+                "native",
+                "--release",
+                "src/dew_cli",
+                "--",
+                "--compile-request",
+                str(request_path),
+            ],
+            cwd=ROOT,
+            check=check,
+        )
+    finally:
+        if request_path is not None:
+            request_path.unlink(missing_ok=True)
 
 
 def take_emit(arguments: list[str]) -> tuple[str, list[str]]:
@@ -776,19 +921,9 @@ def main() -> None:
         forwarded = [command, *without_emit]
         if emit != "wasm":
             forwarded.extend(("--emit", emit))
-        os.execvp(
-            "moon",
-            [
-                "moon",
-                "run",
-                "--target",
-                "native",
-                "--release",
-                "src/dew_cli",
-                "--",
-                *forwarded,
-            ],
-        )
+        compiled = moon_cli(forwarded)
+        if compiled.returncode != 0:
+            raise SystemExit(compiled.returncode)
     except ManifestError as error:
         print(f"dew: {error}", file=sys.stderr)
         raise SystemExit(2) from error

@@ -202,6 +202,73 @@ class VersionedManifestTests(unittest.TestCase):
                 self.assertEqual(len(test_modules[0][1]), 2)
 
 
+class CompileRequestProtocolTests(unittest.TestCase):
+    def test_versioned_request_carries_ordered_inputs_and_policy(self) -> None:
+        environment = {
+            "DEW_BOOTSTRAP_STD": "1",
+            "DEW_DEPENDENCY_INTERFACE_KEY": "dependency-key",
+        }
+        with mock.patch.dict(os.environ, environment, clear=False):
+            encoded = dew_cli._compile_request_bytes(
+                [
+                    "build",
+                    "--root",
+                    "app.main",
+                    "--dependency-interface",
+                    "dep.value",
+                    "a" * 64,
+                    "--module",
+                    "dep.value",
+                    "dep.dew",
+                    "--module",
+                    "app.main",
+                    "main.dew",
+                    "--no-default-preamble",
+                    "--no-interface-cache",
+                    "--cache-report",
+                    "-o",
+                    "app.wasm",
+                ]
+            )
+
+        offset = 0
+
+        def read_u32() -> int:
+            nonlocal offset
+            value = __import__("struct").unpack_from("<I", encoded, offset)[0]
+            offset += 4
+            return value
+
+        def read_string() -> str:
+            nonlocal offset
+            length = read_u32()
+            value = encoded[offset : offset + length].decode("utf-8")
+            offset += length
+            return value
+
+        self.assertEqual(read_u32(), 0x44574352)
+        self.assertEqual(read_u32(), 1)
+        self.assertEqual(read_u32(), 1)
+        self.assertEqual(read_u32(), 0)
+        self.assertEqual(read_string(), "app.wasm")
+        self.assertEqual(read_string(), "app.main")
+        self.assertEqual(read_u32(), 2)
+        self.assertEqual((read_string(), read_u32(), read_string()), ("dep.value", 1, "dep.dew"))
+        self.assertEqual((read_string(), read_u32(), read_string()), ("app.main", 1, "main.dew"))
+        self.assertEqual(read_u32(), 1)
+        self.assertEqual((read_string(), read_string()), ("dep.value", "a" * 64))
+        self.assertEqual(read_u32(), 1)
+        self.assertEqual(read_string(), "")
+        self.assertEqual((read_u32(), read_u32(), read_u32()), (0, 0, 1))
+        self.assertEqual(read_u32(), 0)
+        self.assertEqual(read_string(), "dependency-key")
+        self.assertEqual(offset, len(encoded))
+
+    def test_request_rejects_unknown_internal_options(self) -> None:
+        with self.assertRaisesRegex(dew_cli.ManifestError, "unknown compiler request option"):
+            dew_cli._compile_request_bytes(["check", "--mystery", "main.dew"])
+
+
 class PackageRootTests(unittest.TestCase):
     def package(self, root: Path, nested: bool) -> Path:
         package = root / "dew.std" if nested else root

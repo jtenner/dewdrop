@@ -43,15 +43,15 @@
     `src/swar_parity_gen/main.mbt`, `src/utf_parity_gen/main.mbt`, and
     `src/wasi_parity_gen/main.mbt`.
 
-- [ ] **Formalize the Python-host/MoonBit-compiler protocol.**
-  - [ ] Replace repeated internal CLI arguments and environment-variable policy
+- [x] **Formalize the Python-host/MoonBit-compiler protocol.**
+  - [x] Replace repeated internal CLI arguments and environment-variable policy
         with one versioned compile request.
-  - [ ] Include ordered modules/files, the root module, dependency interface
+  - [x] Include ordered modules/files, the root module, dependency interface
         expectations, standard-library policy, cache policy, build mode, and
         requested outputs.
-  - [ ] Keep package resolution and host execution separate from compiler phase
+  - [x] Keep package resolution and host execution separate from compiler phase
         orchestration.
-  - [ ] Preserve a straightforward path from the Python bootstrap driver to
+  - [x] Preserve a straightforward path from the Python bootstrap driver to
         future Dew-native tooling.
   - Relevant files: `tools/dew-cli.py`, `tools/dew`, `src/dew_cli/main.mbt`, and
     `src/standard_loader/`.

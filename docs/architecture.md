@@ -233,9 +233,12 @@ identity assignment.
 
 The Python bootstrap driver owns package-manifest and lockfile parsing, package
 integrity checks, standard-package discovery, and host execution. The MoonBit
-compiler executable owns compilation. Their current internal protocol uses CLI
-arguments and environment variables; a versioned compile request is planned so
-that package/host policy and compiler orchestration remain separate.
+compiler executable owns compilation. `tools/dew` now sends one versioned binary
+compile request containing ordered source inputs, dependency expectations,
+standard-library/cache policy, build mode, and requested output. The protocol is
+documented in [`compile-request.md`](compile-request.md), keeping package and
+host policy separate from compiler orchestration and providing the same boundary
+for future Dew-native tooling.
 
 The MoonBit `compiler_driver` package owns the common
 collect/analyze/lower/link/emit sequence used by command, snapshot, test, parity,
