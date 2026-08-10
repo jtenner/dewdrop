@@ -248,10 +248,10 @@ also require deterministic erased fallbacks, adapter helpers, typed runtime
 trait dictionaries, or evidence-capturing closures.
 
 Semantic program planning owns the meaning and identity of those artifacts.
-Backend emission owns only their Starshine/Wasm realization. The intended
-specialization plan should therefore contain all required carrier shapes,
-evidence parameters, dictionary requirements, adapter relationships, and final
-lookup keys before ordinary code emission begins.
+Backend emission owns only their Starshine/Wasm realization. The validated
+specialization plan contains required carrier shapes, evidence parameters,
+dictionary requirements, adapter relationships, and typed lookup keys before
+ordinary code emission begins.
 
 ## Backend ownership
 
