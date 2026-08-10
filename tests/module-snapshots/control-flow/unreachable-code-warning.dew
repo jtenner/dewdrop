@@ -1,0 +1,4 @@
+pub fn main() -> Unit {
+  return
+  42
+}

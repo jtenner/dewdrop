@@ -303,7 +303,6 @@
     i32.const 7
     drop
     return
-    unreachable
   )
   (func (;10;) (type 10)
     call 8

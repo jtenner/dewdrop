@@ -64,7 +64,6 @@ fn bare_return(stop_early: Bool) -> Unit {
   } else {}
   7
   return
-  unreachable()
 }
 
 pub fn main() -> Unit {

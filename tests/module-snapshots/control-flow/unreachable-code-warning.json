@@ -1,0 +1,7 @@
+{
+  "errors": [],
+  "warnings": [
+    "fixture.dew:3:3: warning: UnreachableBlockItem(0, 1, 35)\n  |\n3 |   42\n  |   ^"
+  ],
+  "output": []
+}

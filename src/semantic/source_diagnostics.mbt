@@ -877,6 +877,23 @@ pub fn collect_compiler_source_diagnostics(
   }
   for module_index, planned in lowering.modules {
     let collected = program.modules[module_index]
+    for diagnostic in planned.flow_diagnostics {
+      match diagnostic {
+        UnreachableBlockItem(block, _, offset) => {
+          push_source_diagnostic(
+            diagnostics,
+            program,
+            CompilerWarning,
+            @debug.to_string(diagnostic),
+            location_at(collected.block_location(block), offset),
+            [],
+            rank,
+          )
+          rank += 1
+        }
+        _ => ()
+      }
+    }
     for diagnostic in planned.initialization.diagnostics {
       let primary = match diagnostic {
         EagerModuleInitializationCycle(span, offset) =>

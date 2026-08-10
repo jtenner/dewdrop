@@ -184,6 +184,13 @@ let a = -128i8
 if widen(a) == -128 { ... }
 ```
 
+## First ordinary compiler warning
+
+The compiler now transports `UnreachableBlockItem` flow findings as ordered,
+source-located warnings rather than silently discarding them or failing the
+build. `control-flow/unreachable-code-warning` compiles and executes while its
+JSON oracle locks in the warning severity, source excerpt, caret, and order.
+
 ## Return, drop, and `Never` carrier coverage
 
 The August 10, 2026 hardening pass added

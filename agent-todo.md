@@ -12,7 +12,6 @@
 
 ## Current-language correctness hardening
 
-- [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
 
 ## Snapshots, diagnostics, and fixture suites
 

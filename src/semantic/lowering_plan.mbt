@@ -310,6 +310,7 @@ pub struct PlannedModuleLowering {
   trait_evidence_children : Array[Int]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   pattern_type_arguments : Array[BodyTypeId]
+  flow_diagnostics : Array[BodyFlowDiagnostic]
   diagnostics : Array[LoweringPlanDiagnostic]
 } derive(Eq, Debug)
 
@@ -1787,6 +1788,7 @@ fn plan_module_lowering_in_order(
     trait_evidence_children: inferred.trait_evidence_children,
     trait_evidence_arguments: inferred.trait_evidence_arguments,
     pattern_type_arguments: inferred.pattern_type_arguments,
+    flow_diagnostics: flows.diagnostics,
     diagnostics: [],
   }
   for body_index in 0..<collected.bodies.length() {

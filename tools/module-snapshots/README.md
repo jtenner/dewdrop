@@ -127,13 +127,13 @@ adds test-only files and selects compiler test mode. The runner invokes emitted
 
 ## Current coverage
 
-The suite contains 257 fixtures:
+The suite contains 258 fixtures:
 
 ```text
 feature         total   compiled   compiler errors   expected traps
 calls                3          0                 3                0
 collections         15         10                 5                2
-control-flow       23         23                 0                1
+control-flow       24         24                 0                1
 enums               11         11                 0                0
 functions           17         14                 3                0
 generics            19         16                 3                0
@@ -149,15 +149,15 @@ text                 27         27                 0                4
 types               20         10                10                0
 wasi                 16         16                 0                5
 
-total               257        213                44               15
+total               258        214                44               15
 ```
 
 One hundred twenty-two compiled fixtures assert nonempty stdout, fifteen assert normalized
-runtime traps, and seventy-three intentionally remain WAT/no-trap fixtures. The
+runtime traps, and seventy-four intentionally remain WAT/no-trap fixtures. The
 silent fixtures preserve non-WASI reachability and physical-output coverage
 without forcing an observable-output import into every module.
 
-As of August 10, 2026, all 213 compiled fixtures pass in Node; the paired Wago run is normally identical and remains required by `tools/check.sh`. Coverage includes cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, every fixed-width numeric literal-pattern carrier, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, narrow fixed-array carriers, exact prerequisite-bearing runtime-trait flow devirtualization, and direct/control-flow/matched nominal locals passed to typed functions.
+As of August 10, 2026, all 214 compiled fixtures pass in Node; the paired Wago run is normally identical and remains required by `tools/check.sh`. Coverage includes cyclic nominal conversion helpers, recursive tuple/struct/nested enum erased adapters, nested generic struct erased adapters, carrier-specialized structural callback calls, boxed scalar erased-export adapters, root-exported erased generic fallbacks, exact nominal-reference adapters, generic structs, nested/multi-parameter generic ABI closure, generic control-flow specialization, escaping/imported generic references, module initialization, imported values, imported method/operator dispatch, cross-module recursive types, named function values, local/imported closures, every fixed-width numeric literal-pattern carrier, narrow enum carrier matching, signed-minimum narrow literals, unary operators, shift-width semantics, float specials, narrow fixed-array carriers, exact prerequisite-bearing runtime-trait flow devirtualization, and direct/control-flow/matched nominal locals passed to typed functions.
 
 Runtime fixtures cover recursive and nested control flow, evaluation order,
 literal and enum matching, aggregate construction and extraction, scalar numeric

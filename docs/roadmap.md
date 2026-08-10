@@ -48,7 +48,7 @@ order is now:
 - [x] Emit exact UTF-8 string literal patterns through the shared text runtime equality helper, including empty, ASCII, Unicode, and fallback cases.
 - [x] Route local mutual and self module-value cycles to stable source-located eager-initialization diagnostics through the CLI, with related cycle-member labels and without duplicate inference fallout.
 - [x] Cover bare returns, non-tail drops, unreachable calls, and `Never` joins across i32, i64, f32, f64, v128, reference, and Unit stack shapes.
-- [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
+- [x] Emit unreachable block items as ordinary source-located warnings and exercise the ordered warning JSON oracle with a compiled runtime fixture.
 
 **Done when:** every syntax form accepted and typed by the advertised current
 subset either executes deterministically or receives an intentional source-level
