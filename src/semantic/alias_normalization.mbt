@@ -47,6 +47,11 @@ fn TypeResolver::push_normalization_task(
   self.normalization_task_types.push(type_)
   self.normalization_task_states.push(state)
   self.normalization_result_starts.push(result_start)
+  assert_aligned_traversal_stacks(
+    self.normalization_task_types.length(),
+    self.normalization_task_states.length(),
+    self.normalization_result_starts.length(),
+  )
 }
 
 ///|
@@ -59,6 +64,11 @@ fn TypeResolver::push_substitution_task(
   self.substitution_task_types.push(type_)
   self.substitution_task_states.push(state)
   self.substitution_result_starts.push(result_start)
+  assert_aligned_traversal_stacks(
+    self.substitution_task_types.length(),
+    self.substitution_task_states.length(),
+    self.substitution_result_starts.length(),
+  )
 }
 
 ///|
@@ -99,11 +109,10 @@ fn TypeResolver::substitute_alias_target(
   alias_index : Int,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
-  self.substitution_generation += 1
-  if self.substitution_generation == 0 {
-    self.substitution_marks.fill(0)
-    self.substitution_generation = 1
-  }
+  self.substitution_generation = next_traversal_generation(
+    self.substitution_marks,
+    self.substitution_generation,
+  )
   self.ensure_substitution_slots()
   self.substitution_task_types.clear()
   self.substitution_task_states.clear()
@@ -175,11 +184,12 @@ fn TypeResolver::substitute_alias_target(
     } else if state == substitute_finish_application {
       let base = self.substitution_results[result_start]
       self.substitution_application_scratch.clear()
-      for index in (result_start + 1)..<self.substitution_results.length() {
-        self.substitution_application_scratch.push(
-          self.substitution_results[index],
-        )
-      }
+      append_int_result_range(
+        self.substitution_results,
+        result_start + 1,
+        self.substitution_results.length(),
+        self.substitution_application_scratch,
+      )
       let result = self.interner.intern_applied(
         base,
         self.substitution_application_scratch,
@@ -229,11 +239,10 @@ fn TypeResolver::substitute_imported_alias_target(
   target : ResolvedTypeId,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
-  self.substitution_generation += 1
-  if self.substitution_generation == 0 {
-    self.substitution_marks.fill(0)
-    self.substitution_generation = 1
-  }
+  self.substitution_generation = next_traversal_generation(
+    self.substitution_marks,
+    self.substitution_generation,
+  )
   self.ensure_substitution_slots()
   self.substitution_task_types.clear()
   self.substitution_task_states.clear()
@@ -301,11 +310,12 @@ fn TypeResolver::substitute_imported_alias_target(
     } else if state == substitute_finish_application {
       let base = self.substitution_results[result_start]
       self.substitution_application_scratch.clear()
-      for index in (result_start + 1)..<self.substitution_results.length() {
-        self.substitution_application_scratch.push(
-          self.substitution_results[index],
-        )
-      }
+      append_int_result_range(
+        self.substitution_results,
+        result_start + 1,
+        self.substitution_results.length(),
+        self.substitution_application_scratch,
+      )
       let result = self.interner.intern_applied(
         base,
         self.substitution_application_scratch,

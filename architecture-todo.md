@@ -192,25 +192,25 @@
   - [x] Benchmark every extraction against existing inference workloads.
   - Relevant file: `src/semantic/infer_basic_bodies.mbt`.
 
-- [ ] **Encapsulate flat arena bundles while preserving flat storage.**
-  - [ ] Introduce logical views for lowered bodies, types, call specialization,
+- [x] **Encapsulate flat arena bundles while preserving flat storage.**
+  - [x] Introduce logical views for lowered bodies, types, call specialization,
         trait evidence, program functions, and program types.
-  - [ ] Centralize span slicing, sentinel interpretation, and debug validation.
-  - [ ] Validate arena relationships at phase boundaries so hot loops can use
+  - [x] Centralize span slicing, sentinel interpretation, and debug validation.
+  - [x] Validate arena relationships at phase boundaries so hot loops can use
         direct indexed access safely.
-  - [ ] Avoid replacing compact IDs and arrays with allocation-heavy object
+  - [x] Avoid replacing compact IDs and arrays with allocation-heavy object
         graphs or pervasive boxed options.
   - Relevant files: `src/semantic/lowering_plan.mbt`,
     `src/semantic/wasmgc_fragment_plan.mbt`, and
     `src/semantic/program_link_plan.mbt`.
 
-- [ ] **Extract small reusable iterative traversal primitives.**
-  - [ ] Centralize aligned task/state/result-stack handling.
-  - [ ] Add debug assertions for parallel stack lengths and finish-state
+- [x] **Extract small reusable iterative traversal primitives.**
+  - [x] Centralize aligned task/state/result-stack handling.
+  - [x] Add debug assertions for parallel stack lengths and finish-state
         contracts.
-  - [ ] Share applied/function result assembly where representations match.
-  - [ ] Reuse generation-mark storage where it reduces repeated bookkeeping.
-  - [ ] Reject a universal callback-heavy visitor if benchmarks show overhead or
+  - [x] Share applied/function result assembly where representations match.
+  - [x] Reuse generation-mark storage where it reduces repeated bookkeeping.
+  - [x] Reject a universal callback-heavy visitor if benchmarks show overhead or
         if it hides phase-specific invariants.
   - Relevant files: `src/semantic/alias_normalization.mbt`,
     `src/semantic/infer_basic_bodies.mbt`, `src/semantic/impl_index.mbt`,

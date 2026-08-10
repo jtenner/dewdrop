@@ -351,6 +351,12 @@ fn InterfaceTypeImporter::push(
   self.task_types.push(type_)
   self.task_states.push(state)
   self.task_result_starts.push(result_start)
+  assert_aligned_traversal_stacks4(
+    self.task_interfaces.length(),
+    self.task_types.length(),
+    self.task_states.length(),
+    self.task_result_starts.length(),
+  )
 }
 
 ///|
@@ -427,9 +433,12 @@ fn InterfaceTypeImporter::import_type(
       }
       let imported_base = self.results[result_start]
       self.application_scratch.clear()
-      for index in 0..<arguments.length {
-        self.application_scratch.push(self.results[result_start + index + 1])
-      }
+      append_int_result_range(
+        self.results,
+        result_start + 1,
+        result_start + arguments.length + 1,
+        self.application_scratch,
+      )
       let imported = self.intern_applied(
         imported_base,
         self.application_scratch,
@@ -443,9 +452,12 @@ fn InterfaceTypeImporter::import_type(
         _ => abort("imported type finish task is not a function")
       }
       self.application_scratch.clear()
-      for index in 0..<parameters.length {
-        self.application_scratch.push(self.results[result_start + index])
-      }
+      append_int_result_range(
+        self.results,
+        result_start,
+        result_start + parameters.length,
+        self.application_scratch,
+      )
       let imported = self.intern_function(
         self.application_scratch,
         self.results[result_start + parameters.length],

@@ -192,8 +192,17 @@ The owner of an arena must:
 - expose logical views or query functions when another subsystem should not need
   the complete representation contract.
 
-Flat storage is a performance decision. Planned arena views should centralize
-validation and interpretation without changing the physical layout by default.
+Flat storage is a performance decision. `src/semantic/arena_views.mbt` provides
+zero-copy logical views for lowered bodies, resolved types, call specialization,
+trait evidence, and linked program functions. Shared span validation runs when
+module lowering and specialization plans cross phase boundaries; validated hot
+loops retain direct indexed access.
+
+Small iterative helpers centralize parallel-stack assertions, integer result-range
+assembly, and reusable generation marks across alias import/normalization and
+local unification. Dewdrop deliberately rejects a universal callback visitor:
+phase-specific task enums and direct loops remain visible, as confirmed by the
+native type-resolution and local-unification benchmarks.
 
 ### Body inference ownership
 

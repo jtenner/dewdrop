@@ -3051,6 +3051,10 @@ fn validate_program_specialization_plan(
     if module_.module_id != lowering.modules[module_index].module_id {
       return Err("specialization plan module order does not match lowering")
     }
+    match validate_module_wasmgc_arenas(module_) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
   }
   for reference in plan.external_type_references {
     if reference.module_index < 0 ||

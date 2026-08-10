@@ -892,11 +892,10 @@ pub fn LocalTypeSolver::commit(
 
 ///|
 fn LocalTypeSolver::next_zonk_generation(self : LocalTypeSolver) -> Unit {
-  self.zonk_generation += 1
-  if self.zonk_generation == 0 {
-    self.zonk_marks.fill(0)
-    self.zonk_generation = 1
-  }
+  self.zonk_generation = next_traversal_generation(
+    self.zonk_marks,
+    self.zonk_generation,
+  )
 }
 
 ///|
@@ -909,6 +908,11 @@ fn LocalTypeSolver::push_zonk_task(
   self.zonk_task_types.push(type_)
   self.zonk_task_states.push(state)
   self.zonk_result_starts.push(result_start)
+  assert_aligned_traversal_stacks(
+    self.zonk_task_types.length(),
+    self.zonk_task_states.length(),
+    self.zonk_result_starts.length(),
+  )
 }
 
 ///|

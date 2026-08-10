@@ -528,7 +528,12 @@ pub fn plan_unoptimized_program_lowering(
   }
   let modules : Array[PlannedModuleLowering] = []
   for slot in slots {
-    modules.push(slot.unwrap())
+    let module_ = slot.unwrap()
+    match validate_planned_module_lowering_arenas(module_) {
+      Ok(_) => ()
+      Err(error) => abort(error)
+    }
+    modules.push(module_)
   }
   {
     graph: analyzed.frozen.graph,
