@@ -89,8 +89,15 @@ above.
 
 ## 3. String literal patterns parse but are unsupported in the backend
 
-String literal patterns are accepted by the parser and survive semantic
-analysis, but code generation reports `UnsupportedExpression`:
+> FIXED (August 10, 2026): string literal patterns now construct the same flat
+> immutable runtime values as ordinary literals and compare exact logical UTF-8
+> bytes through the retained `dew_string_equals` runtime helper. Program
+> reachability treats that helper as an explicit compiler-generated dependency.
+> `control-flow/string-literal-match-runtime` covers empty, ASCII, Unicode, and
+> fallback matches in Node and Wago.
+
+Previously, string literal patterns were accepted by the parser and survived
+semantic analysis, but code generation reported `UnsupportedExpression`:
 
 ```dew
 fn classify(text: String) -> I32 {

@@ -1,0 +1,18 @@
+open dew.std.string
+
+fn classify(value: String) -> I32 {
+  match value {
+    "" => 0
+    "zero" => 1
+    "λ世界" => 2
+    _ => -1
+  }
+}
+
+pub fn main() -> U32 {
+  assert(classify("") == 0, "empty string pattern")
+  assert(classify("zero") == 1, "ASCII string pattern")
+  assert(classify("λ世界") == 2, "UTF-8 string pattern")
+  assert(classify("other") == -1, "string pattern fallback")
+  0u32
+}

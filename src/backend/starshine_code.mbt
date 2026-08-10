@@ -431,6 +431,18 @@ fn starshine_text_runtime_base_for_body(
 }
 
 ///|
+fn starshine_runtime_function_index_for_body(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  name : Bytes,
+) -> Int {
+  match program {
+    Some(link) => link.runtime_function_index(name)
+    None => planned.runtime_function_index(name)
+  }
+}
+
+///|
 fn starshine_text_constant_instructions(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
@@ -1462,6 +1474,8 @@ fn starshine_literal_pattern_value_instructions(
 ///|
 fn starshine_match_literal_condition(
   lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
   body : @semantic.PlannedBodyLowering,
   expression : @semantic.ExprId,
   value : Array[@lib.Instruction],
@@ -1469,12 +1483,31 @@ fn starshine_match_literal_condition(
   if expression < 0 || expression >= lowering.expressions.length() {
     return Err(UnsupportedExpression(body.body, expression))
   }
+  let condition = value.copy()
+  match lowering.expressions[expression].kind {
+    @semantic.PlannedStringConst(literal) => {
+      append_starshine_instructions(
+        condition,
+        starshine_text_constant_instructions(planned, program, literal, true),
+      )
+      let equals = starshine_runtime_function_index_for_body(
+        planned, program, b"dew_string_equals",
+      )
+      if equals < 0 {
+        return Err(UnsupportedExpression(body.body, expression))
+      }
+      condition.push(
+        @lib.Instruction::call(@lib.FuncIdx::new(equals.reinterpret_as_uint())),
+      )
+      return Ok(condition)
+    }
+    _ => ()
+  }
   let literal = match
     starshine_literal_pattern_value_instructions(lowering, expression) {
     Some(value) => value
     None => return Err(UnsupportedExpression(body.body, expression))
   }
-  let condition = value.copy()
   append_starshine_instructions(condition, literal)
   match lowering.expressions[expression].shape {
     @semantic.I8PlannedValueShape
@@ -1624,7 +1657,7 @@ fn starshine_general_match_pattern_instructions(
           @semantic.HirLiteralPattern(expression, _) => {
             match
               starshine_match_literal_condition(
-                lowering, body, expression, value,
+                lowering, planned, program, body, expression, value,
               ) {
               Ok(condition) => results.push(condition)
               Err(error) => return Err(error)
@@ -1934,9 +1967,14 @@ fn starshine_simple_match_pattern_instructions(
   match source.source {
     @semantic.HirLiteralPattern(expression, _) =>
       return match
-        starshine_match_literal_condition(lowering, body, expression, [
-          starshine_match_local_get(scratch_local),
-        ]) {
+        starshine_match_literal_condition(
+          lowering,
+          planned,
+          program,
+          body,
+          expression,
+          [starshine_match_local_get(scratch_local)],
+        ) {
         Ok(condition) => Ok((condition, bindings))
         Err(error) => Err(error)
       }
