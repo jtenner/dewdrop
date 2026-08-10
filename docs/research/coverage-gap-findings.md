@@ -114,7 +114,9 @@ fn classify(text: String) -> I32 {
 > expression to `Unit` when the callable's declared result is `Unit`. Lowering
 > retains the tail's actual carrier and the backend emits one final `drop` for
 > functions and lambdas. The `functions/unit-discarded-tail-runtime` snapshot
-> covers method, operator, and lambda cases.
+> covers method, operator, and lambda cases; `collections/map-missing-key-trap`
+> now reaches its intended runtime trap instead of retaining the obsolete
+> tail-to-Unit inference diagnostic.
 
 Previously, inside a function whose return type was `Unit`, a non-Unit tail
 expression (such as a method call or binary expression whose value is discarded)

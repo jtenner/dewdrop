@@ -1,7 +1,8 @@
 {
-  "errors": [
-    "fixture.dew:9:9: error: BodyConstraintDiagnostic(\n  LocalTypeMismatch(\n    -5,\n    -3,\n    { kind: OperatorTypeConstraint, source: 7, offset: 129 },\n  ),\n)\n  |\n9 |   values[1]\n  |         ^"
-  ],
+  "errors": [],
   "warnings": [],
-  "output": null
+  "output": {
+    "trap": "unreachable",
+    "stdout": []
+  }
 }
