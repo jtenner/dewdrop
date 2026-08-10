@@ -209,6 +209,7 @@ priv enum StarshineEmitTask {
   )
   FinishStarshineLogical(@semantic.HirBinaryOperator)
   FinishStarshineTraitObjectCoercion(@semantic.DeclId, Int)
+  FinishStarshineRuntimeBoundCall(@semantic.DeclId, Int, Int, Int, Int)
   FinishStarshineDynamicTraitCall(@semantic.DeclId, Int, Int, Int, Int)
 }
 
@@ -3685,6 +3686,51 @@ fn starshine_program_specialized_closure_signatures(
 }
 
 ///|
+fn starshine_runtime_bound_call_info(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  generic_specialization : StarshineGenericSpecialization?,
+  requirement : @semantic.DeclId,
+  evidence_slot : Int,
+) -> (@semantic.DeclId, Int, Int, Int)? {
+  let specialization = match generic_specialization {
+    Some(value) => value
+    None => return None
+  }
+  let (trait_, parameter) = match
+    @semantic.program_runtime_trait_evidence_slot_parameter(
+      planned,
+      specialization.specialization_evidence,
+      evidence_slot,
+    ) {
+    Some(value) => value
+    None => return None
+  }
+  let requirement_function = match planned.function_of(requirement) {
+    Some(value) if value.signature_type_index >= 0 => value
+    _ => return None
+  }
+  for layout in planned.trait_layouts {
+    if layout.trait_declaration != trait_ {
+      continue
+    }
+    for method_slot in 0..<layout.methods.length {
+      if planned.trait_layout_methods[layout.methods.start + method_slot] ==
+        requirement {
+        return Some(
+          (
+            trait_,
+            method_slot,
+            parameter,
+            requirement_function.signature_type_index,
+          ),
+        )
+      }
+    }
+  }
+  None
+}
+
+///|
 fn starshine_finish_trait_object_coercion(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -4388,21 +4434,37 @@ fn starshine_emit_body_instructions(
           }
           @semantic.PlannedBoundDirectCall(
             requirement,
-            _,
+            evidence_slot,
             receiver,
             arguments,
             type_arguments
           ) => {
             let receiver_count = if receiver >= 0 { 1 } else { 0 }
-            tasks.push(
-              FinishStarshineCall(
-                requirement,
-                expression,
-                arguments.length + receiver_count,
-                conversion_scratch_index,
-                type_arguments,
-              ),
-            )
+            match
+              starshine_runtime_bound_call_info(
+                planned, generic_specialization, requirement, evidence_slot,
+              ) {
+              Some((trait_, method_slot, parameter, signature)) =>
+                tasks.push(
+                  FinishStarshineRuntimeBoundCall(
+                    trait_,
+                    method_slot,
+                    parameter,
+                    signature,
+                    arguments.length + receiver_count,
+                  ),
+                )
+              None =>
+                tasks.push(
+                  FinishStarshineCall(
+                    requirement,
+                    expression,
+                    arguments.length + receiver_count,
+                    conversion_scratch_index,
+                    type_arguments,
+                  ),
+                )
+            }
             let mut index = arguments.length
             while index > 0 {
               index -= 1
@@ -4433,17 +4495,29 @@ fn starshine_emit_body_instructions(
           }
           @semantic.PlannedBoundOperatorCall(
             requirement,
-            _,
+            evidence_slot,
             _,
             left,
             right,
             type_arguments
           ) => {
-            tasks.push(
-              FinishStarshineCall(
-                requirement, expression, 2, conversion_scratch_index, type_arguments,
-              ),
-            )
+            match
+              starshine_runtime_bound_call_info(
+                planned, generic_specialization, requirement, evidence_slot,
+              ) {
+              Some((trait_, method_slot, parameter, signature)) =>
+                tasks.push(
+                  FinishStarshineRuntimeBoundCall(
+                    trait_, method_slot, parameter, signature, 2,
+                  ),
+                )
+              None =>
+                tasks.push(
+                  FinishStarshineCall(
+                    requirement, expression, 2, conversion_scratch_index, type_arguments,
+                  ),
+                )
+            }
             tasks.push(EmitStarshineExpression(right))
             tasks.push(EmitStarshineExpression(left))
           }
@@ -7406,6 +7480,64 @@ fn starshine_emit_body_instructions(
           Ok(value) => results.push(value)
           Err(error) => return Err(error)
         }
+      }
+      FinishStarshineRuntimeBoundCall(
+        trait_,
+        slot,
+        parameter,
+        signature_type,
+        argument_count
+      ) => {
+        if argument_count <= 0 || parameter < 0 {
+          return Err(UnsupportedExpression(body.body, -308))
+        }
+        let mut layout = None
+        for candidate in planned.trait_layouts {
+          if candidate.trait_declaration == trait_ {
+            layout = Some(candidate)
+            break
+          }
+        }
+        let layout = match layout {
+          Some(value) => value
+          None => return Err(UnsupportedExpression(body.body, -309))
+        }
+        if slot < 0 || slot >= layout.methods.length {
+          return Err(UnsupportedExpression(body.body, -310))
+        }
+        let fragments = pop_starshine_fragments(results, argument_count)
+        let output = fragments[0]
+        for index in 1..<fragments.length() {
+          append_starshine_instructions(output, fragments[index])
+        }
+        let vtable_type = starshine_local_physical_type_index(
+          program,
+          program_module_index,
+          layout.vtable_type_index,
+        )
+        output.push(
+          @lib.Instruction::local_get(
+            @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+          ),
+        )
+        output.push(starshine_match_cast(vtable_type))
+        output.push(
+          @lib.Instruction::struct_get(
+            @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+            @lib.U32::new(slot.reinterpret_as_uint()),
+          ),
+        )
+        let emitted_signature = match program {
+          Some(link) =>
+            link.signature_type_index(program_module_index, signature_type)
+          None => signature_type
+        }
+        output.push(
+          @lib.Instruction::call_ref(
+            @lib.TypeIdx::new(emitted_signature.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
       }
       FinishStarshineDynamicTraitCall(
         trait_,

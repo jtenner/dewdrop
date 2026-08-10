@@ -114,6 +114,48 @@ test "bench dynamic open-generic trait erasure link calls=256" (it : @bench.T) {
 }
 
 ///|
+fn external_runtime_trait_static_call_benchmark_source(
+  call_count : Int,
+) -> Bytes {
+  let output = Buffer(size_hint=call_count * 48 + 384)
+  output.write_string_utf8(
+    "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n",
+  )
+  for index in 0..<call_count {
+    output.write_string_utf8("  let value_")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(" = read(")
+    output.write_string_utf8(index.to_string())
+    output.write_string_utf8(")\n")
+  }
+  output.write_string_utf8("  value_")
+  output.write_string_utf8((call_count - 1).to_string())
+  output.write_string_utf8("\n}\n")
+  output.to_bytes()
+}
+
+///|
+test "bench external runtime-evidence bound calls=256" (it : @bench.T) {
+  let program = collect_program_manifest(
+    2279UL,
+    ProgramManifest::new([
+      ManifestModule::new("bench.external_runtime_trait_static", [
+        ManifestFile::new(
+          "main.dew",
+          external_runtime_trait_static_call_benchmark_source(256),
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  it.bench(fn() {
+    let lowering = plan_program_lowering(program, analyzed)
+    let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+    it.keep(link.defined_function_count)
+  })
+}
+
+///|
 fn open_generic_selector_chain_benchmark_source(depth : Int) -> Bytes {
   let output = Buffer(size_hint=depth * 96 + 512)
   output.write_string_utf8(

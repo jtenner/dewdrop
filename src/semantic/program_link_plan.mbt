@@ -3163,19 +3163,11 @@ pub fn program_resolved_trait_evidence_identity(
 }
 
 ///|
-pub fn program_runtime_trait_evidence_parameter(
-  lowering : PlannedModuleLowering,
+pub fn program_runtime_trait_evidence_slot_parameter(
   fragments : PlannedModuleWasmGCFragments,
   specialization_evidence : HirSpan,
-  source_node : Int,
+  slot : Int,
 ) -> (DeclId, Int)? {
-  if source_node < 0 || source_node >= lowering.trait_evidence.length() {
-    return None
-  }
-  let slot = match lowering.trait_evidence[source_node].kind {
-    BoundInferredTraitEvidence(value) => value
-    ConcreteInferredTraitEvidence(_, _) => return None
-  }
   if slot < 0 ||
     slot >= specialization_evidence.length ||
     specialization_evidence.start < 0 ||
@@ -3192,6 +3184,25 @@ pub fn program_runtime_trait_evidence_parameter(
     PlannedRuntimeTraitEvidence(trait_, parameter) => Some((trait_, parameter))
     PlannedConcreteTraitEvidence(_, _) => None
   }
+}
+
+///|
+pub fn program_runtime_trait_evidence_parameter(
+  lowering : PlannedModuleLowering,
+  fragments : PlannedModuleWasmGCFragments,
+  specialization_evidence : HirSpan,
+  source_node : Int,
+) -> (DeclId, Int)? {
+  if source_node < 0 || source_node >= lowering.trait_evidence.length() {
+    return None
+  }
+  let slot = match lowering.trait_evidence[source_node].kind {
+    BoundInferredTraitEvidence(value) => value
+    ConcreteInferredTraitEvidence(_, _) => return None
+  }
+  program_runtime_trait_evidence_slot_parameter(
+    fragments, specialization_evidence, slot,
+  )
 }
 
 ///|
@@ -4092,8 +4103,10 @@ fn program_runtime_trait_fallback_evidence(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match module_.expressions[expression].kind {
+      PlannedBoundDirectCall(_, _, receiver, _, _) if receiver < 0 =>
+        return None
       PlannedBoundDirectCall(_, _, _, _, _)
-      | PlannedBoundOperatorCall(_, _, _, _, _, _) => return None
+      | PlannedBoundOperatorCall(_, _, _, _, _, _) => ()
       _ => ()
     }
     if expression >= 0 && expression < module_.expression_evidence.length() {
@@ -4210,6 +4223,48 @@ fn plan_program_wasmgc_fragments_for_root(
     lowering.modules.length(),
     None,
   )
+  let fallback_evidence_by_declaration : Map[
+    DeclId,
+    ProgramTraitEvidenceRequest,
+  ] = Map::default()
+  let extra_runtime_traits_by_module : Array[Array[DeclId]] = Array::make(
+    lowering.modules.length(),
+    [],
+  )
+  if erased_fallback_module_index >= 0 &&
+    erased_fallback_module_index < lowering.modules.length() {
+    let module_ = lowering.modules[erased_fallback_module_index]
+    let traits : Array[DeclId] = []
+    let seen_traits : Map[DeclId, Bool] = Map::default()
+    for callable in module_.functions.callables {
+      if callable.visibility != Public ||
+        program_callable_generic_parameters(callable).length == 0 {
+        continue
+      }
+      let evidence = match
+        program_runtime_trait_fallback_evidence(
+          analyzed, erased_fallback_module_index, module_, callable,
+        ) {
+        Some(value) => value
+        None => continue
+      }
+      fallback_evidence_by_declaration[callable.declaration] = evidence
+      for root in evidence.roots {
+        if root < 0 || root >= evidence.evidence.length() {
+          continue
+        }
+        match evidence.evidence[root].kind {
+          PlannedRuntimeTraitEvidence(trait_, _) =>
+            if !seen_traits.contains(trait_) {
+              seen_traits[trait_] = true
+              traits.push(trait_)
+            }
+          PlannedConcreteTraitEvidence(_, _) => ()
+        }
+      }
+    }
+    extra_runtime_traits_by_module[erased_fallback_module_index] = traits
+  }
   let program_roots = program_reachable_callable_roots(
     analyzed,
     lowering,
@@ -4236,6 +4291,7 @@ fn plan_program_wasmgc_fragments_for_root(
           options,
           program_roots,
           program_function_value_roots,
+          extra_runtime_traits_by_module[module_index],
         ),
       )
     }
@@ -4259,9 +4315,7 @@ fn plan_program_wasmgc_fragments_for_root(
         continue
       }
       let evidence = match
-        program_runtime_trait_fallback_evidence(
-          analyzed, module_index, module_, callable,
-        ) {
+        fallback_evidence_by_declaration.get(callable.declaration) {
         Some(value) => value
         None => continue
       }

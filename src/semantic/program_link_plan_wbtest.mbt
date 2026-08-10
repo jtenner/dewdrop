@@ -969,7 +969,7 @@ test "open generic trait branches materialize exact specialization dictionaries"
 }
 
 ///|
-test "unsupported public bound calls do not reuse closed reference specializations as fallbacks" {
+test "public bound call fallbacks remain evidence carrying without scalar adapters" {
   let program = collect_program_manifest(
     21970UL,
     ProgramManifest::new([
@@ -998,6 +998,14 @@ test "unsupported public bound calls do not reuse closed reference specializatio
       closed += 1
     }
     if function_.visibility == Public {
+      assert_eq(function_.parameters.length, 2)
+      assert_eq(function_.specialization_evidence.length, 1)
+      let fragments = link.modules[function_.module_index]
+      let root = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+      match fragments.specialization_trait_evidence[root].kind {
+        PlannedRuntimeTraitEvidence(_, parameter) => assert_eq(parameter, 1)
+        _ => fail("expected runtime bound-call fallback evidence")
+      }
       public_fallbacks += 1
     }
     if function_.erased_adapter_target >= 0 {
@@ -1005,7 +1013,7 @@ test "unsupported public bound calls do not reuse closed reference specializatio
     }
   }
   assert_eq(closed, 2)
-  assert_eq(public_fallbacks, 0)
+  assert_eq(public_fallbacks, 1)
   assert_eq(public_adapters, 0)
 }
 

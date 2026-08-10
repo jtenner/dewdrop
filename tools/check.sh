@@ -267,6 +267,12 @@ grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
 tools/dew build \
   tests/abi-consumers/runtime-trait-evidence-provider.dew \
   -o .tmp/dew-runtime-trait-evidence-provider.wasm
+wasm-tools print .tmp/dew-runtime-trait-evidence-provider.wasm \
+  > .tmp/dew-runtime-trait-evidence-provider.wat
+# `choose` needs one trait object; `read` must dispatch through the supplied
+# vtable directly without allocating a second envelope.
+test "$(grep -c 'call_ref' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
+test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
 wasm-tools parse \
   tests/abi-consumers/runtime-trait-evidence-i32.wat \
   -o .tmp/dew-runtime-trait-evidence-consumer.wasm
@@ -274,7 +280,7 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-runtime-trait-evidence-provider.wasm \
   .tmp/dew-runtime-trait-evidence-consumer.wasm \
   run i32 > .tmp/dew-runtime-trait-evidence-consumer.json
-grep -q '"type":"i32","value":42' \
+grep -q '"type":"i32","value":84' \
   .tmp/dew-runtime-trait-evidence-consumer.json
 (
   cd tests/abi-consumers/imported-package

@@ -294,8 +294,8 @@ erased fallback.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site boxes, dictionaries, adapters, and `ref.func` roots.
 - [x] Add prerequisite-aware exact trait-object flow analysis through non-captured locals, same-evidence branches, transparent parameter returns, and effect-free forwarding chains; directize closed evidence, rewrite non-escaping carriers, and remove dead private wrappers plus unused runtime artifacts.
 - [x] Resolve symbolic runtime-trait evidence through closed generic specializations; directize transparent tail/explicit-return parameter selectors, materialize exact dynamic dictionaries with recursive prerequisites, support imported generic providers, and canonicalize shared cross-module trait layouts.
-- [x] Define the V1 external runtime-evidence ABI for public generic bodies whose symbolic bounds are consumed only by erased trait coercions; append source-ordered `eqref` vtable parameters and validate a structurally typed external Wasm consumer.
-- [ ] Forward external runtime evidence through symbolic static bound calls and nested generic obligations, then broaden effect/escape summaries across non-transparent public APIs.
+- [x] Define the V1 external runtime-evidence ABI for public generic bodies whose symbolic bounds are consumed by erased trait coercions or direct bound methods/operators; append source-ordered `eqref` vtable parameters and validate both static and erased dispatch through a structurally typed external Wasm consumer.
+- [ ] Forward external runtime evidence through nested generic obligations, then broaden effect/escape summaries across non-transparent public APIs.
 
 ## Expressions and statements
 

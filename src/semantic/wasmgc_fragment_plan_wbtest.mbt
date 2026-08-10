@@ -278,6 +278,7 @@ test "WasmGC fragment merge is independent of simulated job order" {
     function_forward,
     Map::default(),
     Map::default(),
+    [],
   )
   let reverse = plan_module_wasmgc_fragments_in_orders(
     resolved,
@@ -288,6 +289,7 @@ test "WasmGC fragment merge is independent of simulated job order" {
     function_reverse,
     Map::default(),
     Map::default(),
+    [],
   )
   assert_eq(forward, reverse)
 }

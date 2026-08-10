@@ -66,7 +66,8 @@
 - [x] Define mutable boxed scalar receiver behavior as trait-owned snapshot mutation without source writeback; current receivers remain immutable.
 - [x] Define trait-object identity and equality semantics with no ambient identity or universal erased equality.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site trait boxes and dictionaries.
-- [ ] Forward external runtime evidence through symbolic static bound calls and nested generic obligations, then broaden effect/escape summaries across non-transparent public APIs.
+- [x] Forward external runtime evidence through symbolic static bound calls and operators.
+- [ ] Forward external runtime evidence through nested generic obligations, then broaden effect/escape summaries across non-transparent public APIs.
 
 ## Deterministic cleanup and executable language surface
 

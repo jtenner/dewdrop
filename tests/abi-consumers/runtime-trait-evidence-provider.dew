@@ -10,6 +10,10 @@ pub fn choose<t: Value>(condition: Bool, value: t) -> Value {
   }
 }
 
+pub fn read<t: Value>(value: t) -> I32 {
+  value.value()
+}
+
 pub fn main() -> I32 {
   0
 }

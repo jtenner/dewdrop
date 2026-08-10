@@ -815,6 +815,48 @@ test "public generic evidence fallbacks retain source bound order" {
 }
 
 ///|
+test "public generic evidence fallbacks dispatch bound operators" {
+  let program = @semantic.collect_program_manifest(
+    2481UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"pub fn sum<t: Add>(left: t, right: t) -> t {\n  left + right\n}\npub fn main() -> I32 {\n  sum(20, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  assert_eq(program.diagnostics.length(), 0)
+  let analyzed = @semantic.analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let sum = program.modules[0].lookup_value("sum").unwrap()
+  let mut fallbacks = 0
+  for function_ in link.functions {
+    if function_.declaration != sum ||
+      function_.specialization_evidence.length != 1 ||
+      function_.elided {
+      continue
+    }
+    let fragments = link.modules[function_.module_index]
+    let root = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+    match fragments.specialization_trait_evidence[root].kind {
+      @semantic.PlannedRuntimeTraitEvidence(_, parameter) => {
+        assert_eq(parameter, 2)
+        assert_eq(function_.parameters.length, 3)
+        fallbacks += 1
+      }
+      _ => ()
+    }
+  }
+  assert_eq(fallbacks, 1)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "open generic prerequisite dictionaries emit valid adapters" {
   let program = @semantic.collect_program_manifest(
     2477UL,

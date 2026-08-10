@@ -1975,6 +1975,7 @@ fn wasmgc_trait_adapter_declaration(
 ///|
 fn wasmgc_runtime_trait_declarations(
   lowering : PlannedModuleLowering,
+  extra_runtime_traits : Array[DeclId],
 ) -> Array[DeclId] {
   let seen : Map[DeclId, Bool] = Map::default()
   let traits : Array[DeclId] = []
@@ -1987,6 +1988,12 @@ fn wasmgc_runtime_trait_declarations(
           _ => 0UL
         }
     }
+    if trait_ != 0UL && !seen.contains(trait_) {
+      seen[trait_] = true
+      traits.push(trait_)
+    }
+  }
+  for trait_ in extra_runtime_traits {
     if trait_ != 0UL && !seen.contains(trait_) {
       seen[trait_] = true
       traits.push(trait_)
@@ -2313,13 +2320,16 @@ fn plan_module_wasmgc_fragments_in_orders(
   function_order : Array[Int],
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
+  extra_runtime_traits : Array[DeclId],
 ) -> PlannedModuleWasmGCFragments {
   if resolved.module_id != lowering.module_id {
     abort("WasmGC fragment inputs belong to different modules")
   }
   let layouts = lowering.type_layouts
   let functions = lowering.functions
-  let runtime_traits = wasmgc_runtime_trait_declarations(lowering)
+  let runtime_traits = wasmgc_runtime_trait_declarations(
+    lowering, extra_runtime_traits,
+  )
   let runtime_requirements : Map[DeclId, Bool] = Map::default()
   for trait_declaration in runtime_traits {
     for
@@ -3627,6 +3637,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   options : WasmGCPlanningOptions,
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
+  extra_runtime_traits : Array[DeclId],
 ) -> PlannedModuleWasmGCFragments {
   let type_order : Array[Int] = []
   for
@@ -3642,7 +3653,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   }
   plan_module_wasmgc_fragments_in_orders(
     resolved, lowering, imports, options, type_order, function_order, program_roots,
-    program_function_value_roots,
+    program_function_value_roots, extra_runtime_traits,
   )
 }
 
@@ -3659,6 +3670,7 @@ pub fn plan_module_wasmgc_fragments_with_options(
     options,
     Map::default(),
     Map::default(),
+    [],
   )
 }
 
