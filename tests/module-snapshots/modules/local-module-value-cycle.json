@@ -1,0 +1,8 @@
+{
+  "errors": [
+    "fixture.dew:1:1: error: EagerModuleInitializationCycle({ start: 0, length: 2 }, 0)\n  |\n1 | let first = second\n  | ^\n  = fixture.dew:2:1: cycle member is initialized here",
+    "fixture.dew:3:1: error: EagerModuleInitializationCycle({ start: 2, length: 1 }, 38)\n  |\n3 | let self = self\n  | ^"
+  ],
+  "warnings": [],
+  "output": null
+}

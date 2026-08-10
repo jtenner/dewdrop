@@ -1,0 +1,7 @@
+let first = second
+let second = first
+let self = self
+
+pub fn main() -> I32 {
+  0
+}

@@ -12,7 +12,6 @@
 
 ## Current-language correctness hardening
 
-- [ ] Route local module-value cycles to stable source-located eager-initialization diagnostics through the CLI.
 - [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.
 - [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
 

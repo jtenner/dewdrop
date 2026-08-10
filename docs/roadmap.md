@@ -46,7 +46,7 @@ order is now:
 
 - [x] Discard non-Unit tail expressions in Unit-returning functions and lambdas without constraining their value type to Unit or disrupting earlier method/operator inference.
 - [x] Emit exact UTF-8 string literal patterns through the shared text runtime equality helper, including empty, ASCII, Unicode, and fallback cases.
-- [ ] Route local module-value cycles to stable source-located eager-initialization diagnostics through the CLI.
+- [x] Route local mutual and self module-value cycles to stable source-located eager-initialization diagnostics through the CLI, with related cycle-member labels and without duplicate inference fallout.
 - [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.
 - [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
 

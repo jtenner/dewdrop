@@ -141,9 +141,15 @@ issue; the same shape fails for user-defined methods and binary operators.
 
 ## 5. Local module-value cycles surface weak diagnostics via the CLI
 
-The white-box `EagerModuleInitializationCycle` diagnostic is asserted in
-`src/semantic/module_initialization_plan_wbtest.mbt` for local cycles, but via
-the CLI (`dew check`) those same sources never reach the initialization plan:
+> FIXED (August 10, 2026): source-diagnostic collection now gives eager-cycle
+> planning precedence for cyclic module-value bodies. It suppresses duplicate
+> and inference-cascade diagnostics for those declarations, reports mutual and
+> self cycles at their declaration offsets, and labels additional cycle members.
+> `modules/local-module-value-cycle` locks in the CLI-facing result.
+
+Previously, the white-box `EagerModuleInitializationCycle` diagnostic was
+asserted in `src/semantic/module_initialization_plan_wbtest.mbt` for local cycles,
+but the CLI (`dew check`) surfaced inference fallout first:
 
 - Direct references (`let first = second; let second = first`) report
   `UnresolvedModuleValue(17179869184000, 0)` — the offset appears to be a

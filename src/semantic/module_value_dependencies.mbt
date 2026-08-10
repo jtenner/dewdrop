@@ -95,6 +95,36 @@ fn module_let_dependency_index(
 }
 
 ///|
+fn module_value_scc_is_cyclic(
+  dependencies : ModuleValueDependencies,
+  let_indices : Array[Int],
+  scc : HirSpan,
+) -> Bool {
+  if scc.length > 1 {
+    return true
+  }
+  if scc.length == 0 {
+    return false
+  }
+  let declaration = dependencies.scc_declarations[scc.start]
+  let declaration_index = semantic_id_local(declaration)
+  if declaration_index < 0 || declaration_index >= let_indices.length() {
+    return false
+  }
+  let let_index = let_indices[declaration_index]
+  if let_index < 0 || let_index >= dependencies.let_dependencies.length() {
+    return false
+  }
+  let edges = dependencies.let_dependencies[let_index]
+  for edge in edges.start..<(edges.start + edges.length) {
+    if dependencies.dependency_declarations[edge] == declaration {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn find_module_value_sccs(
   collected : CollectedModule,
   let_indices : Array[Int],

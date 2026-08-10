@@ -87,36 +87,6 @@ fn module_initialization_scc_is_test_only(
 }
 
 ///|
-fn module_initialization_scc_is_cyclic(
-  dependencies : ModuleValueDependencies,
-  let_indices : Array[Int],
-  scc : HirSpan,
-) -> Bool {
-  if scc.length > 1 {
-    return true
-  }
-  if scc.length == 0 {
-    return false
-  }
-  let declaration = dependencies.scc_declarations[scc.start]
-  let declaration_index = semantic_id_local(declaration)
-  if declaration_index < 0 || declaration_index >= let_indices.length() {
-    return false
-  }
-  let let_index = let_indices[declaration_index]
-  if let_index < 0 || let_index >= dependencies.let_dependencies.length() {
-    return false
-  }
-  let edges = dependencies.let_dependencies[let_index]
-  for edge in edges.start..<(edges.start + edges.length) {
-    if dependencies.dependency_declarations[edge] == declaration {
-      return true
-    }
-  }
-  false
-}
-
-///|
 pub fn plan_module_initialization(
   collected : CollectedModule,
   inferred : InferredModuleValues,
@@ -145,11 +115,7 @@ pub fn plan_module_initialization(
   let diagnostics : Array[ModuleInitializationDiagnostic] = []
   for scc in inferred.dependencies.sccs {
     let step_index = steps.length()
-    if module_initialization_scc_is_cyclic(
-        inferred.dependencies,
-        let_indices,
-        scc,
-      ) {
+    if module_value_scc_is_cyclic(inferred.dependencies, let_indices, scc) {
       let cycle_start = cycle_declarations.length()
       let mut offset = 0xffffffffffffffffUL
       for member_index in scc.start..<(scc.start + scc.length) {

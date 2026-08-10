@@ -514,6 +514,28 @@ fn push_source_diagnostic(
 }
 
 ///|
+fn cyclic_module_value_declarations(
+  collected : CollectedModule,
+  inferred : InferredModuleValues,
+) -> Array[Bool] {
+  let cyclic = Array::make(collected.declaration_locations.length(), false)
+  let let_indices = module_let_indices_by_declaration(collected)
+  for scc in inferred.dependencies.sccs {
+    if !module_value_scc_is_cyclic(inferred.dependencies, let_indices, scc) {
+      continue
+    }
+    for index in scc.start..<(scc.start + scc.length) {
+      let declaration = inferred.dependencies.scc_declarations[index]
+      let declaration_index = semantic_id_local(declaration)
+      if declaration_index >= 0 && declaration_index < cyclic.length() {
+        cyclic[declaration_index] = true
+      }
+    }
+  }
+  cyclic
+}
+
+///|
 pub fn collect_compiler_source_diagnostics(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,
@@ -765,24 +787,22 @@ pub fn collect_compiler_source_diagnostics(
       )
       rank += 1
     }
-    for diagnostic in analyzed_module.inferred.module_values.diagnostics {
-      let file = if collected.files.length() > 0 {
-        collected.files[0]
-      } else {
-        0UL
-      }
-      push_source_diagnostic(
-        diagnostics,
-        program,
-        CompilerError,
-        @debug.to_string(diagnostic),
-        diagnostic.primary_location(collected, file),
-        diagnostic.secondary_labels(file),
-        rank,
-      )
-      rank += 1
-    }
+    let cyclic_values = cyclic_module_value_declarations(
+      collected,
+      analyzed_module.inferred.module_values,
+    )
     for body in analyzed_module.inferred.bodies {
+      let body_index = semantic_id_local(body.body)
+      if body_index >= 0 && body_index < collected.bodies.length() {
+        let declaration_index = semantic_id_local(
+          collected.bodies[body_index].declaration,
+        )
+        if declaration_index >= 0 &&
+          declaration_index < cyclic_values.length() &&
+          cyclic_values[declaration_index] {
+          continue
+        }
+      }
       let file = match collected.body_location(body.body) {
         Some(location) => location.file
         None =>
@@ -873,13 +893,34 @@ pub fn collect_compiler_source_diagnostics(
             collected.default_location(offset)
           }
       }
+      let secondary : Array[CompilerDiagnosticLabel] = []
+      match diagnostic {
+        EagerModuleInitializationCycle(span, _) =>
+          for index in 1..<span.length {
+            let member_index = span.start + index
+            if member_index >= 0 &&
+              member_index < planned.initialization.cycle_declarations.length() {
+              match
+                collected.declaration_location(
+                  planned.initialization.cycle_declarations[member_index],
+                ) {
+                Some(location) =>
+                  secondary.push({
+                    location,
+                    message: "cycle member is initialized here",
+                  })
+                None => ()
+              }
+            }
+          }
+      }
       push_source_diagnostic(
         diagnostics,
         program,
         CompilerError,
         @debug.to_string(diagnostic),
         primary,
-        [],
+        secondary,
         rank,
       )
       rank += 1
