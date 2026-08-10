@@ -219,8 +219,10 @@ lookup keys before ordinary code emission begins.
 - adapter, callback-wrapper, evidence-closure, and trait-adapter bodies, with
   program adapter planning and emission isolated in
   `src/backend/starshine_program_adapters.mbt`;
-- deterministic section assembly;
-- Starshine validation and binary encoding;
+- deterministic section assembly, isolated for single-module and linked-program
+  output in `starshine_module_assembly.mbt` and
+  `starshine_program_assembly.mbt`;
+- Starshine validation and binary encoding, owned by those assembly modules;
 - compiler-owned Wasm custom sections.
 
 It should not own source name resolution, trait selection, overload choice,

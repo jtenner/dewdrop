@@ -123,9 +123,9 @@
   - Relevant file: `src/backend/starshine_code.mbt`.
 
 - [ ] **Separate backend module assembly from instruction generation.**
-  - [ ] Isolate type, import, function, global, export, element, and code section
+  - [x] Isolate type, import, function, global, export, element, and code section
         assembly.
-  - [ ] Isolate validation and binary encoding from Starshine instruction
+  - [x] Isolate validation and binary encoding from Starshine instruction
         construction.
   - [ ] Keep deterministic index assignment in plans rather than rediscovering
         semantic relationships during assembly.
