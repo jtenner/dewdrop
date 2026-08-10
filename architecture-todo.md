@@ -56,12 +56,12 @@
   - Relevant files: `tools/dew-cli.py`, `tools/dew`, `src/dew_cli/main.mbt`, and
     `src/standard_loader/`.
 
-- [ ] **Add reusable compiler test builders.**
-  - [ ] Provide ordered single- and multi-module source builders.
-  - [ ] Provide stage-specific analyze, lower, link, emit, and diagnostic helpers.
-  - [ ] Keep semantic tests from requiring backend emission unless emission is
+- [x] **Add reusable compiler test builders.**
+  - [x] Provide ordered single- and multi-module source builders.
+  - [x] Provide stage-specific analyze, lower, link, emit, and diagnostic helpers.
+  - [x] Keep semantic tests from requiring backend emission unless emission is
         the behavior under test.
-  - [ ] Keep backend tests from manually reconstructing the complete compiler
+  - [x] Keep backend tests from manually reconstructing the complete compiler
         pipeline and diagnostic count.
   - Relevant files: `src/semantic/*_wbtest.mbt` and
     `src/backend/*_wbtest.mbt`.

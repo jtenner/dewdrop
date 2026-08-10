@@ -247,7 +247,11 @@ sections without rerunning compiler work.
 
 - `tools/check.sh --quick` is the focused formatting/generated/native loop.
 - `tools/check.sh` is the full deterministic validation entry point.
-- White-box MoonBit tests validate individual arenas and phase plans.
+- White-box MoonBit tests validate individual arenas and phase plans. Shared
+  test-only builders in `src/semantic/compiler_test_builders_wbtest.mbt` and
+  `src/backend/compiler_test_builders_wbtest.mbt` provide ordered sources and
+  stage-specific analyze/lower/link/emit helpers without changing production
+  package surfaces.
 - Module snapshots validate diagnostics, WAT, runtime output, and index order.
 - Performance budgets validate static generated-Wasm costs.
 - Differential suites validate UTF, SWAR, WASI, Node, and Wago behavior.
