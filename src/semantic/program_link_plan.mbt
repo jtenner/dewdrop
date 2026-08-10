@@ -533,6 +533,7 @@ fn generic_parameter_selector(
 priv struct GenericParameterSelectorCallSite {
   module_index : Int
   expression : ExprId
+  root_body : Int
 }
 
 ///|
@@ -597,13 +598,12 @@ fn directize_generic_parameter_selectors(
 ) -> Unit {
   let selectors : Map[DeclId, GenericParameterSelector] = Map::default()
   let uses : Map[DeclId, Array[GenericParameterSelectorCallSite]] = Map::default()
-  let root_bodies : Array[Array[Int]] = []
   let pending : Array[DeclId] = []
   for module_index, module_ in modules {
-    let roots = Array::make(module_.expressions.length(), -1)
+    let roots : Map[ExprId, Int] = Map::default()
     for body_index, body in module_.bodies {
       let root = generic_parameter_selector_root_expression(module_, body)
-      if root >= 0 && root < roots.length() {
+      if root >= 0 && root < module_.expressions.length() {
         roots[root] = body_index
       }
       match generic_parameter_selector(module_, body) {
@@ -614,7 +614,6 @@ fn directize_generic_parameter_selectors(
         None => ()
       }
     }
-    root_bodies.push(roots)
     for expression in 0..<module_.expressions.length() {
       let declaration = match module_.expressions[expression].kind {
         PlannedDirectCall(declaration, receiver, _, type_arguments) if receiver <
@@ -622,7 +621,14 @@ fn directize_generic_parameter_selectors(
           type_arguments.length > 0 => declaration
         _ => continue
       }
-      let site = { module_index, expression }
+      let site = {
+        module_index,
+        expression,
+        root_body: match roots.get(expression) {
+          Some(value) => value
+          None => -1
+        },
+      }
       match uses.get(declaration) {
         Some(sites) => sites.push(site)
         None => uses[declaration] = [site]
@@ -653,7 +659,7 @@ fn directize_generic_parameter_selectors(
         ) {
         continue
       }
-      let body_index = root_bodies[site.module_index][site.expression]
+      let body_index = site.root_body
       if body_index < 0 || body_index >= module_.bodies.length() {
         continue
       }
