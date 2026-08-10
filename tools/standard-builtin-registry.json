@@ -1,0 +1,69 @@
+{
+  "modules": {
+    "option": {"slot": 2, "path": "dew.std.option", "type": 0, "variants": {"none": 0, "some": 1}},
+    "fixed_array": {
+      "slot": 10,
+      "path": "dew.std.fixed_array",
+      "type": 0,
+      "methods": {"make": 8, "length": 9, "get": 10, "get_unchecked": 11, "set": 12, "set_unchecked": 13},
+      "index": 15,
+      "index_set": 17,
+      "operations": {
+        "FixedArrayMake": [1, 8],
+        "FixedArrayLength": [2, 9],
+        "FixedArrayGet": [3, 10],
+        "FixedArrayGetUnchecked": [4, 11, 15],
+        "FixedArraySet": [5, 12],
+        "FixedArraySetUnchecked": [6, 13, 17]
+      }
+    },
+    "map": {
+      "slot": 11,
+      "path": "dew.std.map",
+      "type": 0,
+      "methods": {"singleton": 9, "length": 10, "get": 11, "get_unchecked": 12, "insert": 13, "set": 14, "contains_key": 15, "empty": 16, "remove": 17, "clear": 18},
+      "index": 20,
+      "index_set": 22,
+      "operations": {
+        "MapSingleton": [1, 9],
+        "MapLength": [2, 10],
+        "MapGet": [3, 11],
+        "MapGetUnchecked": [4, 12, 20],
+        "MapInsert": [5, 13],
+        "MapSet": [6, 14, 22],
+        "MapContainsKey": [7, 15],
+        "MapEmpty": [16, 23],
+        "MapRemove": [17, 24],
+        "MapClear": [18, 25]
+      }
+    },
+    "set": {
+      "slot": 12,
+      "path": "dew.std.set",
+      "type": 0,
+      "methods": {"empty": 10, "singleton": 11, "length": 12, "is_empty": 13, "contains": 14, "insert": 15, "remove": 16, "clear": 17},
+      "operations": {
+        "SetEmpty": [1, 10],
+        "SetSingleton": [2, 11],
+        "SetLength": [3, 12],
+        "SetIsEmpty": [4, 13],
+        "SetContains": [5, 14],
+        "SetInsert": [6, 15],
+        "SetRemove": [7, 16],
+        "SetClear": [8, 17]
+      }
+    }
+  },
+  "lanes": [
+    {"slot": 16, "path": "dew.std.i8x4"}, {"slot": 17, "path": "dew.std.u8x4"},
+    {"slot": 18, "path": "dew.std.i16x2"}, {"slot": 19, "path": "dew.std.u16x2"},
+    {"slot": 20, "path": "dew.std.i8x8"}, {"slot": 21, "path": "dew.std.u8x8"},
+    {"slot": 22, "path": "dew.std.i16x4"}, {"slot": 23, "path": "dew.std.u16x4"},
+    {"slot": 24, "path": "dew.std.i32x2"}, {"slot": 25, "path": "dew.std.u32x2"},
+    {"slot": 26, "path": "dew.std.i8x16"}, {"slot": 27, "path": "dew.std.u8x16"},
+    {"slot": 28, "path": "dew.std.i16x8"}, {"slot": 29, "path": "dew.std.u16x8"},
+    {"slot": 30, "path": "dew.std.i32x4"}, {"slot": 31, "path": "dew.std.u32x4"},
+    {"slot": 32, "path": "dew.std.i64x2"}, {"slot": 33, "path": "dew.std.u64x2"},
+    {"slot": 34, "path": "dew.std.f32x4"}, {"slot": 35, "path": "dew.std.f64x2"}
+  ]
+}

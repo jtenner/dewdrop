@@ -6,7 +6,7 @@ test "set standard source has stable compiler-owned identities" {
     standard_library_program_files(
       module_id,
       "std/set.dew",
-      standard_set_source(),
+      @standard_sources.standard_set_source(),
       false,
       false,
     ),

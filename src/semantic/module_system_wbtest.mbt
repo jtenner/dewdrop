@@ -188,7 +188,10 @@ test "caller standard sources override bootstrap bytes without changing identiti
     1192UL,
     manifest,
     StandardLibrarySources::new([
-      ManifestFile::new("std/option.dew", standard_option_source()),
+      ManifestFile::new(
+        "std/option.dew",
+        @standard_sources.standard_option_source(),
+      ),
     ]),
     true,
   )

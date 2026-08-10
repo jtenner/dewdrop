@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "std"
-EMBEDDED = ROOT / "src" / "semantic" / "standard_lane_sources.mbt"
+EMBEDDED = ROOT / "src" / "standard_sources" / "standard_lane_sources.mbt"
 TYPED_PARITY = ROOT / "tools" / "swar-parity" / "typed_lane_parity.dew"
 V128_LANE_BACKEND = ROOT / "src" / "backend" / "starshine_v128_lane_builtins.mbt"
 V128_CROSS_BACKEND = ROOT / "src" / "backend" / "starshine_v128_cross_builtins.mbt"
@@ -869,7 +869,7 @@ def main() -> None:
     entries = ",\n    ".join(f'b{json.dumps(source)}' for _, source in generated)
     embedded = (
         "///|\n"
-        "fn standard_lane_sources() -> Array[Bytes] {\n"
+        "pub fn standard_lane_sources() -> Array[Bytes] {\n"
         f"  [\n    {entries},\n  ]\n"
         "}\n"
     )

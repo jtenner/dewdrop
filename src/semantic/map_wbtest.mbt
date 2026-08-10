@@ -6,7 +6,7 @@ test "map standard source has stable compiler-owned identities" {
     standard_library_program_files(
       module_id,
       "std/map.dew",
-      standard_map_source(),
+      @standard_sources.standard_map_source(),
       false,
       false,
     ),

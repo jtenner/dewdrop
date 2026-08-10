@@ -1,4 +1,12 @@
 ///|
+test "bootstrap and on-disk standard providers are byte identical" {
+  let bootstrap = bootstrap_standard_library_sources()
+  let on_disk = load(".").unwrap()
+  assert_eq(bootstrap.paths, on_disk.paths)
+  assert_eq(bootstrap.sources, on_disk.sources)
+}
+
+///|
 test "interface bundle envelope preserves payload and rejects corruption" {
   let payload = b"frozen interfaces"
   assert_eq(

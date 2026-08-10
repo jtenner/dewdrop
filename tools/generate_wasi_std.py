@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "std/wasi.dew"
-TARGET = ROOT / "src/semantic/standard_wasi_sources.mbt"
+TARGET = ROOT / "src/standard_sources/standard_wasi_sources.mbt"
 
 
 def moonbit_bytes_literal(data: bytes) -> str:
@@ -33,7 +33,7 @@ def rendered_source() -> str:
     literal = moonbit_bytes_literal(SOURCE.read_bytes())
     return (
         "///|\n"
-        "fn standard_wasi_source() -> Bytes {\n"
+        "pub fn standard_wasi_source() -> Bytes {\n"
         f"  {literal}\n"
         "}\n"
     )
@@ -49,7 +49,7 @@ def main() -> None:
     if args.check:
         if not TARGET.exists() or TARGET.read_text(encoding="utf-8") != rendered:
             raise SystemExit(
-                "src/semantic/standard_wasi_sources.mbt is stale; "
+                "src/standard_sources/standard_wasi_sources.mbt is stale; "
                 "run tools/generate_wasi_std.py"
             )
         print(f"checked {TARGET.relative_to(ROOT)}")

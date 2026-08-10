@@ -6,7 +6,7 @@ test "fixed array standard source has stable compiler-owned identities" {
     standard_library_program_files(
       module_id,
       "std/fixed_array.dew",
-      standard_fixed_array_source(),
+      @standard_sources.standard_fixed_array_source(),
       false,
       false,
     ),

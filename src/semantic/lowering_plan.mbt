@@ -803,7 +803,7 @@ fn plan_expression_kind(
             ErrorPlannedValueShape
           }
           match standard_fixed_array_operation(declaration) {
-            1 => {
+            FixedArrayMake => {
               let item = collected.expression_children[arguments.start + 1]
               PlannedFixedArrayMake(
                 collected.expression_children[arguments.start],
@@ -815,9 +815,9 @@ fn plan_expression_kind(
                 ),
               )
             }
-            2 => PlannedFixedArrayLength(base, element_shape)
-            3 => PlannedFixedArrayGet(base, key, element_shape)
-            4 =>
+            FixedArrayLength => PlannedFixedArrayLength(base, element_shape)
+            FixedArrayGet => PlannedFixedArrayGet(base, key, element_shape)
+            FixedArrayGetUnchecked =>
               PlannedFixedArrayGetUnchecked(
                 base,
                 key,
@@ -827,7 +827,7 @@ fn plan_expression_kind(
                   inferred.expression_types[expression],
                 ),
               )
-            5 =>
+            FixedArraySet =>
               PlannedFixedArraySet(
                 base,
                 key,
@@ -838,7 +838,7 @@ fn plan_expression_kind(
                   inferred.expression_types[value],
                 ),
               )
-            6 =>
+            FixedArraySetUnchecked =>
               PlannedFixedArraySetUnchecked(
                 base,
                 key,
@@ -851,7 +851,7 @@ fn plan_expression_kind(
               )
             _ =>
               match standard_map_operation(declaration) {
-                1 => {
+                MapSingleton => {
                   let map_key = collected.expression_children[arguments.start]
                   let map_value = collected.expression_children[arguments.start +
                     1]
@@ -860,66 +860,66 @@ fn plan_expression_kind(
                     eq_declaration,
                   )
                 }
-                2 => PlannedMapLength(base)
-                3 =>
+                MapLength => PlannedMapLength(base)
+                MapGet =>
                   PlannedMapGet(
                     base, key, key_shape, map_value_shape, hash_declaration, eq_declaration,
                   )
-                4 =>
+                MapGetUnchecked =>
                   PlannedMapGetUnchecked(
                     base, key, key_shape, map_value_shape, hash_declaration, eq_declaration,
                   )
-                5 =>
+                MapInsert =>
                   PlannedMapInsert(
                     base, key, value, key_shape, map_value_shape, hash_declaration,
                     eq_declaration,
                   )
-                6 =>
+                MapSet =>
                   PlannedMapSet(
                     base, key, value, key_shape, map_value_shape, hash_declaration,
                     eq_declaration,
                   )
-                7 =>
+                MapContainsKey =>
                   PlannedMapContainsKey(
                     base, key, key_shape, hash_declaration, eq_declaration,
                   )
-                8 =>
+                MapEmpty =>
                   PlannedMapEmpty(
                     key_shape, map_value_shape, hash_declaration, eq_declaration,
                   )
-                9 =>
+                MapRemove =>
                   PlannedMapRemove(
                     base, key, key_shape, hash_declaration, eq_declaration,
                   )
-                10 => PlannedMapClear(base)
+                MapClear => PlannedMapClear(base)
                 _ =>
                   match standard_set_operation(declaration) {
-                    1 =>
+                    SetEmpty =>
                       PlannedSetEmpty(
                         key_shape, hash_declaration, eq_declaration,
                       )
-                    2 =>
+                    SetSingleton =>
                       PlannedSetSingleton(
                         collected.expression_children[arguments.start],
                         key_shape,
                         hash_declaration,
                         eq_declaration,
                       )
-                    3 => PlannedSetLength(base)
-                    4 => PlannedSetIsEmpty(base)
-                    5 =>
+                    SetLength => PlannedSetLength(base)
+                    SetIsEmpty => PlannedSetIsEmpty(base)
+                    SetContains =>
                       PlannedSetContains(
                         base, key, key_shape, hash_declaration, eq_declaration,
                       )
-                    6 =>
+                    SetInsert =>
                       PlannedSetInsert(
                         base, key, key_shape, hash_declaration, eq_declaration,
                       )
-                    7 =>
+                    SetRemove =>
                       PlannedSetRemove(
                         base, key, key_shape, hash_declaration, eq_declaration,
                       )
-                    8 => PlannedSetClear(base)
+                    SetClear => PlannedSetClear(base)
                     _ =>
                       PlannedDirectCall(
                         declaration, receiver, arguments, type_arguments,
@@ -968,7 +968,8 @@ fn plan_expression_kind(
     HirIndexExpr(base, index, offset) =>
       match inferred.operator_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) =>
-          if standard_fixed_array_operation(declaration) == 4 {
+          if standard_fixed_array_operation(declaration) ==
+            FixedArrayGetUnchecked {
             PlannedFixedArrayGetUnchecked(
               base,
               index,
@@ -978,7 +979,7 @@ fn plan_expression_kind(
                 inferred.expression_types[expression],
               ),
             )
-          } else if standard_map_operation(declaration) == 4 {
+          } else if standard_map_operation(declaration) == MapGetUnchecked {
             let hash_declaration = match inferred.map_hash_targets[expression] {
               SelectedInferredCallTarget(selected, _) => selected
               _ => 0UL
@@ -1018,7 +1019,8 @@ fn plan_expression_kind(
     HirIndexSetExpr(base, index, value, offset) =>
       match inferred.operator_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) =>
-          if standard_fixed_array_operation(declaration) == 6 {
+          if standard_fixed_array_operation(declaration) ==
+            FixedArraySetUnchecked {
             PlannedFixedArraySetUnchecked(
               base,
               index,
@@ -1029,7 +1031,7 @@ fn plan_expression_kind(
                 inferred.expression_types[value],
               ),
             )
-          } else if standard_map_operation(declaration) == 6 {
+          } else if standard_map_operation(declaration) == MapSet {
             let hash_declaration = match inferred.map_hash_targets[expression] {
               SelectedInferredCallTarget(selected, _) => selected
               _ => 0UL

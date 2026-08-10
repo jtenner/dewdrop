@@ -1,4 +1,4 @@
 ///|
-fn standard_wasm_intrinsics_source() -> Bytes {
+pub fn standard_wasm_intrinsics_source() -> Bytes {
   b"pub builtin i64_trunc_i32(value: I64) -> I32 = \"dew_i64_into_i32\"\n"
 }

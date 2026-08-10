@@ -28,9 +28,9 @@ moonbit/core and moonbit/x
 src/tokenizer
           |
           v
-src/parser
-          |
-          v
+src/parser                    src/standard_sources
+          |                         |             |
+          v                         v             v
 src/semantic <---------------- src/standard_loader
           |                              |
           v                              |
@@ -148,15 +148,18 @@ fragment plans, or final link plans.
 
 ### Compiler-owned standard identities
 
-Compiler-owned `dew.std` modules use a reserved `ModuleId` range and currently
-have stable source-order declaration identities. Semantic selection, lowering,
-layout planning, and backend runtime emission depend on those identities.
+Compiler-owned `dew.std` modules use a reserved `ModuleId` range and stable
+source-order declaration identities. Semantic selection, lowering, layout
+planning, and backend runtime emission depend on those identities.
 
-The current manually maintained registry lives primarily in
-`src/semantic/module_system.mbt`. The intended owner is one generated and
-validated standard ABI registry shared by semantic planning and backend plans.
-Source-order changes must fail visibly rather than silently changing a builtin
-identity.
+`tools/standard-builtin-registry.json` is the canonical compiler identity table
+for Option, FixedArray, Map, Set, lane modules, collection methods, and index
+implementations. `tools/generate_standard_builtin_registry.py` generates
+`src/semantic/standard_builtin_registry.mbt`, including typed
+`StandardBuiltinOperation` cases instead of integer operation codes. White-box
+collection tests validate generated slots and ordinals against bootstrap source;
+generator and byte-identity checks fail when the JSON, `std/*.dew`, embedded
+sources, or compiler identities diverge.
 
 ### Wasm identities
 
@@ -191,6 +194,15 @@ The owner of an arena must:
 
 Flat storage is a performance decision. Planned arena views should centralize
 validation and interpretation without changing the physical layout by default.
+
+## Standard source ownership
+
+Embedded bootstrap bytes live in the independent `src/standard_sources` package.
+Its registry owns canonical source paths and path-to-byte lookup. Production
+loading and provenance remain in `src/standard_loader`, which constructs either
+on-disk or bootstrap `StandardLibrarySources`. Semantic collection consumes that
+ordered provider and does not contain generated standard assets. Tests compare
+every on-disk standard source byte-for-byte with the bootstrap provider.
 
 ## Frozen interfaces and caches
 

@@ -14,9 +14,9 @@ SOURCES = (
     ROOT / "std/bytes_builder.dew",
     ROOT / "std/bytes.dew",
 )
-TARGET = ROOT / "src/semantic/standard_text_sources.mbt"
-OPTION_RESULT_TARGET = ROOT / "src/semantic/standard_option_result_sources.mbt"
-OLD_TARGET = ROOT / "src/semantic/standard_string_preamble.mbt"
+TARGET = ROOT / "src/standard_sources/standard_text_sources.mbt"
+OPTION_RESULT_TARGET = ROOT / "src/standard_sources/standard_option_result_sources.mbt"
+OLD_TARGET = ROOT / "src/standard_sources/standard_string_preamble.mbt"
 
 
 def moonbit_bytes_literal(data: bytes) -> str:
@@ -45,7 +45,7 @@ def rendered_source() -> str:
     )
     return (
         "///|\n"
-        "fn standard_text_sources() -> Array[Bytes] {\n"
+        "pub fn standard_text_sources() -> Array[Bytes] {\n"
         "  [\n"
         f"    {literals},\n"
         "  ]\n"
@@ -58,11 +58,11 @@ def rendered_option_result_source() -> str:
     result = moonbit_bytes_literal(RESULT_SOURCE.read_bytes())
     return (
         "///|\n"
-        "fn standard_option_source() -> Bytes {\n"
+        "pub fn standard_option_source() -> Bytes {\n"
         f"  {option}\n"
         "}\n\n"
         "///|\n"
-        "fn standard_result_source() -> Bytes {\n"
+        "pub fn standard_result_source() -> Bytes {\n"
         f"  {result}\n"
         "}\n"
     )
@@ -79,17 +79,17 @@ def main() -> None:
     if args.check:
         if not TARGET.exists() or TARGET.read_text(encoding="utf-8") != rendered:
             raise SystemExit(
-                "src/semantic/standard_text_sources.mbt is stale; "
+                "src/standard_sources/standard_text_sources.mbt is stale; "
                 "run tools/generate_string_std.py"
             )
         if not OPTION_RESULT_TARGET.exists() or OPTION_RESULT_TARGET.read_text(encoding="utf-8") != option_result_rendered:
             raise SystemExit(
-                "src/semantic/standard_option_result_sources.mbt is stale; "
+                "src/standard_sources/standard_option_result_sources.mbt is stale; "
                 "run tools/generate_string_std.py"
             )
         if OLD_TARGET.exists():
             raise SystemExit(
-                "obsolete src/semantic/standard_string_preamble.mbt still exists"
+                "obsolete src/standard_sources/standard_string_preamble.mbt still exists"
             )
         print(
             f"checked {TARGET.relative_to(ROOT)} and "

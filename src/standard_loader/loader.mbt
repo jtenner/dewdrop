@@ -10,6 +10,19 @@ fn join_standard_path(root : String, logical : String) -> String {
 }
 
 ///|
+fn bootstrap_standard_library_sources() -> @semantic.StandardLibrarySources {
+  let files : Array[@semantic.ManifestFile] = []
+  for path in @standard_sources.standard_source_paths() {
+    let source = match @standard_sources.bootstrap_standard_source(path) {
+      Some(value) => value
+      None => abort("bootstrap standard source registry is incomplete")
+    }
+    files.push(@semantic.ManifestFile::new(path, source))
+  }
+  @semantic.StandardLibrarySources::new(files)
+}
+
+///|
 pub struct StandardLibraryLoad {
   sources : @semantic.StandardLibrarySources
   fingerprint : String
@@ -20,7 +33,7 @@ pub struct StandardLibraryLoad {
 ///|
 pub fn StandardLibraryLoad::bootstrap() -> StandardLibraryLoad {
   {
-    sources: @semantic.StandardLibrarySources::bootstrap(),
+    sources: bootstrap_standard_library_sources(),
     fingerprint: "",
     dependency_fingerprint: @sys.get_env_var("DEW_DEPENDENCY_INTERFACE_KEY").unwrap_or(
       "",
@@ -129,7 +142,7 @@ pub fn load_for_manifest_with_fingerprint(
 /// generated bootstrap providers for compiler/bootstrap tests.
 pub fn load_default() -> Result[@semantic.StandardLibrarySources, String] {
   if @sys.get_env_var("DEW_BOOTSTRAP_STD") == Some("1") {
-    return Ok(@semantic.StandardLibrarySources::bootstrap())
+    return Ok(bootstrap_standard_library_sources())
   }
   load(@sys.get_env_var("DEW_STD_ROOT").unwrap_or("."))
 }
@@ -140,7 +153,7 @@ pub fn load_default_for_manifest(
   default_preamble : Bool,
 ) -> Result[@semantic.StandardLibrarySources, String] {
   if @sys.get_env_var("DEW_BOOTSTRAP_STD") == Some("1") {
-    return Ok(@semantic.StandardLibrarySources::bootstrap())
+    return Ok(bootstrap_standard_library_sources())
   }
   load_for_manifest(
     @sys.get_env_var("DEW_STD_ROOT").unwrap_or("."),
@@ -156,7 +169,7 @@ pub fn load_default_for_manifest_with_fingerprint(
 ) -> Result[StandardLibraryLoad, String] {
   if @sys.get_env_var("DEW_BOOTSTRAP_STD") == Some("1") {
     return Ok({
-      sources: @semantic.StandardLibrarySources::bootstrap(),
+      sources: bootstrap_standard_library_sources(),
       fingerprint: "",
       dependency_fingerprint: @sys.get_env_var("DEW_DEPENDENCY_INTERFACE_KEY").unwrap_or(
         "",

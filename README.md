@@ -894,6 +894,7 @@ src/tokenizer/       raw source cursor, WTF-8 decoding, and streaming lexer
 src/parser/          forward-only parser and syntax events
 src/semantic/        collection, name resolution, inference, flow, layouts,
                      lowering, interface freezing, specialization, and linking
+src/standard_sources/ generated portable bootstrap source bytes and path registry
 src/standard_loader/ on-disk dew.std selection and the persistent interface cache
 src/backend/         deterministic Starshine/WasmGC planning and emission
 src/compiler_driver/ shared collect/analyze/lower/link/emit orchestration

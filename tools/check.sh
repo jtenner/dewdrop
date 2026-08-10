@@ -23,6 +23,7 @@ python3 tools/generate_wasm_intrinsics_std.py --check
 python3 tools/generate_fixed_array_std.py --check
 python3 tools/generate_map_std.py --check
 python3 tools/generate_set_std.py --check
+python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs
 node --check tools/dew-abi-metadata.mjs
@@ -35,7 +36,8 @@ python3 tools/cli-fixtures.py
 if [[ $mode == "quick" ]]; then
   echo "== Dew tests: native =="
   moon test --target native \
-    src/tokenizer src/parser src/semantic src/backend src/compiler_driver
+    src/tokenizer src/parser src/standard_sources src/semantic src/backend \
+    src/standard_loader src/compiler_driver
 else
   targets=(native wasm-gc js wasm)
   processors=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')
@@ -73,15 +75,15 @@ else
         PATH="$PWD/$node_stack_bin:$PATH" moon test --frozen \
           --target "$target" \
           --target-dir "$test_root/$target" \
-          src/tokenizer src/parser src/semantic src/backend \
-          src/compiler_driver \
+          src/tokenizer src/parser src/standard_sources src/semantic src/backend \
+          src/standard_loader src/compiler_driver \
           > "$test_root/logs/$target.txt" 2>&1 &
       else
         moon test --frozen \
           --target "$target" \
           --target-dir "$test_root/$target" \
-          src/tokenizer src/parser src/semantic src/backend \
-          src/compiler_driver \
+          src/tokenizer src/parser src/standard_sources src/semantic src/backend \
+          src/standard_loader src/compiler_driver \
           > "$test_root/logs/$target.txt" 2>&1 &
       fi
       pids+=("$!")

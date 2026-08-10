@@ -62,18 +62,29 @@ pub fn StandardLibrarySources::new(
 
 ///|
 pub fn StandardLibrarySources::bootstrap() -> StandardLibrarySources {
-  StandardLibrarySources::new([])
+  let files : Array[ManifestFile] = []
+  for path in @standard_sources.standard_source_paths() {
+    let source = match @standard_sources.bootstrap_standard_source(path) {
+      Some(value) => value
+      None => abort("bootstrap standard source registry is incomplete")
+    }
+    files.push(ManifestFile::new(path, source))
+  }
+  StandardLibrarySources::new(files)
 }
 
 ///|
-fn StandardLibrarySources::source_or(
+fn StandardLibrarySources::source(
   self : StandardLibrarySources,
   path : String,
-  fallback : Bytes,
 ) -> Bytes {
   match self.lookup.get(path) {
     Some(index) => self.sources[index]
-    None => fallback
+    None =>
+      match @standard_sources.bootstrap_standard_source(path) {
+        Some(source) => source
+        None => abort("standard source provider is missing \{path}")
+      }
   }
 }
 
@@ -121,215 +132,6 @@ fn standard_library_module_id(slot : Int) -> ModuleId {
 }
 
 ///|
-pub fn standard_fixed_array_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 0)
-}
-
-///|
-fn standard_fixed_array_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "make" => 8
-    "length" => 9
-    "get" => 10
-    "get_unchecked" => 11
-    "set" => 12
-    "set_unchecked" => 13
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(10), local_id)
-  }
-}
-
-///|
-fn standard_fixed_array_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 15)
-}
-
-///|
-fn standard_fixed_array_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 17)
-}
-
-///|
-fn standard_fixed_array_callable_local(declaration : DeclId) -> Int {
-  if semantic_id_module(declaration) == standard_library_module_id(10) {
-    semantic_id_local(declaration)
-  } else {
-    -1
-  }
-}
-
-///|
-fn standard_fixed_array_operation(declaration : DeclId) -> Int {
-  match standard_fixed_array_callable_local(declaration) {
-    1 | 8 => 1
-    2 | 9 => 2
-    3 | 10 => 3
-    4 | 11 | 15 => 4
-    5 | 12 => 5
-    6 | 13 | 17 => 6
-    _ => 0
-  }
-}
-
-///|
-pub fn standard_map_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 0)
-}
-
-///|
-fn standard_map_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "singleton" => 9
-    "length" => 10
-    "get" => 11
-    "get_unchecked" => 12
-    "insert" => 13
-    "set" => 14
-    "contains_key" => 15
-    "empty" => 16
-    "remove" => 17
-    "clear" => 18
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(11), local_id)
-  }
-}
-
-///|
-fn standard_map_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 20)
-}
-
-///|
-fn standard_map_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 22)
-}
-
-///|
-fn standard_map_callable_local(declaration : DeclId) -> Int {
-  if semantic_id_module(declaration) == standard_library_module_id(11) {
-    semantic_id_local(declaration)
-  } else {
-    -1
-  }
-}
-
-///|
-fn standard_map_operation(declaration : DeclId) -> Int {
-  match standard_map_callable_local(declaration) {
-    1 | 9 => 1
-    2 | 10 => 2
-    3 | 11 => 3
-    4 | 12 | 20 => 4
-    5 | 13 => 5
-    6 | 14 | 22 => 6
-    7 | 15 => 7
-    16 | 23 => 8
-    17 | 24 => 9
-    18 | 25 => 10
-    _ => 0
-  }
-}
-
-///|
-pub fn standard_set_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(12), 0)
-}
-
-///|
-fn standard_set_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "empty" => 10
-    "singleton" => 11
-    "length" => 12
-    "is_empty" => 13
-    "contains" => 14
-    "insert" => 15
-    "remove" => 16
-    "clear" => 17
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(12), local_id)
-  }
-}
-
-///|
-fn standard_set_callable_local(declaration : DeclId) -> Int {
-  if semantic_id_module(declaration) == standard_library_module_id(12) {
-    semantic_id_local(declaration)
-  } else {
-    -1
-  }
-}
-
-///|
-fn standard_set_operation(declaration : DeclId) -> Int {
-  match standard_set_callable_local(declaration) {
-    1 | 10 => 1
-    2 | 11 => 2
-    3 | 12 => 3
-    4 | 13 => 4
-    5 | 14 => 5
-    6 | 15 => 6
-    7 | 16 => 7
-    8 | 17 => 8
-    _ => 0
-  }
-}
-
-///|
-fn standard_option_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(2), 0)
-}
-
-///|
-pub fn standard_option_none_variant() -> VariantId {
-  make_semantic_id(standard_library_module_id(2), 0)
-}
-
-///|
-pub fn standard_option_some_variant() -> VariantId {
-  make_semantic_id(standard_library_module_id(2), 1)
-}
-
-///|
-fn standard_lane_module_path(index : Int) -> String {
-  match index {
-    0 => "dew.std.i8x4"
-    1 => "dew.std.u8x4"
-    2 => "dew.std.i16x2"
-    3 => "dew.std.u16x2"
-    4 => "dew.std.i8x8"
-    5 => "dew.std.u8x8"
-    6 => "dew.std.i16x4"
-    7 => "dew.std.u16x4"
-    8 => "dew.std.i32x2"
-    9 => "dew.std.u32x2"
-    10 => "dew.std.i8x16"
-    11 => "dew.std.u8x16"
-    12 => "dew.std.i16x8"
-    13 => "dew.std.u16x8"
-    14 => "dew.std.i32x4"
-    15 => "dew.std.u32x4"
-    16 => "dew.std.i64x2"
-    17 => "dew.std.u64x2"
-    18 => "dew.std.f32x4"
-    19 => "dew.std.f64x2"
-    _ => abort("unknown standard lane module slot")
-  }
-}
-
-///|
 fn standard_preamble_source_paths() -> Array[String] {
   [
     "std/preamble/00-builtins.dew", "std/preamble/10-traits.dew", "std/preamble/20-i32.dew",
@@ -344,25 +146,7 @@ fn standard_preamble_source_paths() -> Array[String] {
 /// enumeration. Callers resolve these paths beneath one selected `dew.std`
 /// package directory.
 pub fn standard_library_source_paths() -> Array[String] {
-  let paths = standard_preamble_source_paths()
-  paths.push("std/option.dew")
-  paths.push("std/result.dew")
-  paths.push("std/fixed_array.dew")
-  paths.push("std/map.dew")
-  paths.push("std/set.dew")
-  paths.push("std/text_runtime.dew")
-  paths.push("std/string.dew")
-  paths.push("std/string_builder.dew")
-  paths.push("std/bytes_builder.dew")
-  paths.push("std/bytes.dew")
-  paths.push("std/wasi.dew")
-  paths.push("std/wasm/intrinsics.dew")
-  for lane_index in 0..<20 {
-    paths.push(
-      "std/" + standard_lane_module_path(lane_index)[8:].to_owned() + ".dew",
-    )
-  }
-  paths
+  @standard_sources.standard_source_paths()
 }
 
 ///|
@@ -491,27 +275,13 @@ fn standard_preamble_program_files(
   standard_sources : StandardLibrarySources,
 ) -> Array[ProgramFile] {
   let paths = standard_preamble_source_paths()
-  let fallbacks = [
-    standard_preamble_builtins_source(),
-    standard_preamble_traits_source(),
-    standard_preamble_i32_source(),
-    standard_preamble_packed_source(),
-    standard_numeric_builtins_source(),
-    standard_numeric_impls_source(),
-    standard_memory_preamble_source(),
-    standard_into_builtins_source(),
-    standard_into_impls_source(),
-    standard_swar_preamble_source(),
-    standard_v128_preamble_source(),
-    standard_debug_preamble_source(),
-  ]
   let files : Array[ProgramFile] = []
   for index, path in paths {
     files.push(
       ProgramFile::named(
         make_program_file_id(module_id, index),
         path,
-        standard_sources.source_or(path, fallbacks[index]),
+        standard_sources.source(path),
       ),
     )
   }
@@ -650,7 +420,7 @@ pub fn collect_program_manifest_with_standard_sources(
       standard_library_program_files(
         option_module_id,
         "std/option.dew",
-        standard_sources.source_or("std/option.dew", standard_option_source()),
+        standard_sources.source("std/option.dew"),
         false,
         false,
       ),
@@ -666,7 +436,7 @@ pub fn collect_program_manifest_with_standard_sources(
       standard_library_program_files(
         result_module_id,
         "std/result.dew",
-        standard_sources.source_or("std/result.dew", standard_result_source()),
+        standard_sources.source("std/result.dew"),
         false,
         false,
       ),
@@ -683,10 +453,7 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/fixed_array.dew",
-          standard_sources.source_or(
-            "std/fixed_array.dew",
-            standard_fixed_array_source(),
-          ),
+          standard_sources.source("std/fixed_array.dew"),
           false,
           false,
         ),
@@ -704,7 +471,7 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/map.dew",
-          standard_sources.source_or("std/map.dew", standard_map_source()),
+          standard_sources.source("std/map.dew"),
           false,
           false,
         ),
@@ -722,14 +489,13 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/set.dew",
-          standard_sources.source_or("std/set.dew", standard_set_source()),
+          standard_sources.source("std/set.dew"),
           false,
           false,
         ),
       ),
     )
   }
-  let text_sources = standard_text_sources()
   if selected_text_mask != 0 {
     let module_id = standard_library_module_id(1)
     let module_index = modules.length()
@@ -741,7 +507,7 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/text_runtime.dew",
-          standard_sources.source_or("std/text_runtime.dew", text_sources[0]),
+          standard_sources.source("std/text_runtime.dew"),
           false,
           false,
         ),
@@ -753,7 +519,7 @@ pub fn collect_program_manifest_with_standard_sources(
     let text_files = [
       "std/string.dew", "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew",
     ]
-    for source_index in 1..<text_sources.length() {
+    for source_index in 1..<=5 {
       if (selected_text_mask & (1 << (source_index - 1))) == 0 {
         continue
       }
@@ -767,10 +533,7 @@ pub fn collect_program_manifest_with_standard_sources(
           standard_library_program_files(
             module_id,
             text_files[source_index - 1],
-            standard_sources.source_or(
-              text_files[source_index - 1],
-              text_sources[source_index],
-            ),
+            standard_sources.source(text_files[source_index - 1]),
             true,
             source_index == 1 || source_index == 4,
           ),
@@ -789,7 +552,7 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/wasi.dew",
-          standard_sources.source_or("std/wasi.dew", standard_wasi_source()),
+          standard_sources.source("std/wasi.dew"),
           false,
           false,
         ),
@@ -807,18 +570,14 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/wasm/intrinsics.dew",
-          standard_sources.source_or(
-            "std/wasm/intrinsics.dew",
-            standard_wasm_intrinsics_source(),
-          ),
+          standard_sources.source("std/wasm/intrinsics.dew"),
           false,
           false,
         ),
       ),
     )
   }
-  let lane_sources = standard_lane_sources()
-  for lane_index, lane_source in lane_sources {
+  for lane_index in 0..<20 {
     if (selected_lane_mask & (1 << lane_index)) == 0 {
       continue
     }
@@ -833,10 +592,7 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/" + path[8:].to_owned() + ".dew",
-          standard_sources.source_or(
-            "std/" + path[8:].to_owned() + ".dew",
-            lane_source,
-          ),
+          standard_sources.source("std/" + path[8:].to_owned() + ".dew"),
           false,
           false,
         ),

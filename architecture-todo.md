@@ -146,26 +146,26 @@
   - Relevant files: `src/semantic/pkg.generated.mbti`, `src/semantic/moon.pkg`,
     `src/backend/moon.pkg`, and `src/standard_loader/moon.pkg`.
 
-- [ ] **Generate a canonical standard-library identity and builtin registry.**
-  - [ ] Replace manually maintained module slots and declaration ordinals for
+- [x] **Generate a canonical standard-library identity and builtin registry.**
+  - [x] Replace manually maintained module slots and declaration ordinals for
         Option, FixedArray, Map, Set, lanes, methods, and index implementations.
-  - [ ] Replace integer builtin operation codes with typed operation kinds.
-  - [ ] Generate or validate the registry from one canonical declaration source.
-  - [ ] Fail visibly when `std/*.dew`, bootstrap mirrors, and compiler identities
+  - [x] Replace integer builtin operation codes with typed operation kinds.
+  - [x] Generate or validate the registry from one canonical declaration source.
+  - [x] Fail visibly when `std/*.dew`, bootstrap mirrors, and compiler identities
         diverge.
-  - [ ] Make future Array and collection additions extend the registry rather
+  - [x] Make future Array and collection additions extend the registry rather
         than add more hardcoded identity branches.
   - Relevant files: `src/semantic/module_system.mbt`,
     `src/semantic/infer_basic_bodies.mbt`, `src/semantic/lowering_plan.mbt`,
     `src/semantic/wasmgc_fragment_plan.mbt`, and
     `src/backend/starshine_code.mbt`.
 
-- [ ] **Move embedded bootstrap standard sources out of semantic analysis.**
-  - [ ] Give generated fallback source bytes a dedicated package or owner.
-  - [ ] Keep source loading and provenance in `standard_loader`.
-  - [ ] Make semantic collection consume an ordered source provider without
+- [x] **Move embedded bootstrap standard sources out of semantic analysis.**
+  - [x] Give generated fallback source bytes a dedicated package or owner.
+  - [x] Keep source loading and provenance in `standard_loader`.
+  - [x] Make semantic collection consume an ordered source provider without
         owning generated standard-library assets.
-  - [ ] Preserve byte-identity checks between on-disk and bootstrap providers.
+  - [x] Preserve byte-identity checks between on-disk and bootstrap providers.
   - Relevant files: `src/semantic/standard_*_sources.mbt`,
     `src/semantic/standard_*_preamble.mbt`, and `src/standard_loader/`.
 

@@ -1,5 +1,6 @@
 import {
   "jtenner/dewdrop/semantic",
+  "jtenner/dewdrop/standard_sources",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
   "moonbitlang/x/crypto",
