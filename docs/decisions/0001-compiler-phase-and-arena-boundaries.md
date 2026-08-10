@@ -55,7 +55,6 @@ blur their ownership.
 ## Evidence and related documents
 
 - [`../architecture.md`](../architecture.md)
-- [`../../architecture-todo.md`](../../architecture-todo.md)
 - [`../research/deterministic-performance-budgets.md`](../research/deterministic-performance-budgets.md)
 - [`../research/compiler-interface-freezing-performance.md`](../research/compiler-interface-freezing-performance.md)
 - [`../research/dewdrop-code-optimization-opportunities.md`](../research/dewdrop-code-optimization-opportunities.md)

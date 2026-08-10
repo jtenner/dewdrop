@@ -299,7 +299,13 @@ sections without rerunning compiler work.
 ## Validation contracts
 
 - `tools/check.sh --quick` is the focused formatting/generated/native loop.
-- `tools/check.sh` is the full deterministic validation entry point.
+- `tools/check.sh` is the deterministic top-level scheduler for the full profile.
+  It delegates generated checks, per-target MoonBit tests, CLI/cache/ABI checks,
+  and parity/snapshot suites to directly executable `tools/check-*.sh` runners.
+- `tests/architecture-cases.json` declaratively records provider artifacts,
+  performance budgets, optional consumers/invocations, expected values, and
+  required/forbidden WAT properties; `tools/check-architecture-cases.py` runs
+  those reviewable cases.
 - White-box MoonBit tests validate individual arenas and phase plans. Shared
   test-only builders in `src/semantic/compiler_test_builders_wbtest.mbt` and
   `src/backend/compiler_test_builders_wbtest.mbt` provide ordered sources and
