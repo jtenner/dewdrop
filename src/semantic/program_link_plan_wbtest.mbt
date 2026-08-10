@@ -1112,6 +1112,40 @@ test "external generic fallback forwards runtime prerequisites through static ev
 }
 
 ///|
+test "recursively captured prerequisite evidence fails before backend emission" {
+  let program = collect_program_manifest(
+    21974UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\nfn consume_inspect<t: Inspect>(value: t) -> I32 {\n  value.inspect()\n}\npub fn nested_read<t: Value>(value: t) -> I32 {\n  consume_inspect(Wrap {\n    value: Box {\n      value: value\n    }\n  })\n}\npub fn main() -> I32 {\n  42\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 1)
+  let consume = program.modules[0].lookup_value("consume_inspect").unwrap()
+  match link.diagnostics[0] {
+    UnsupportedProgramGenericCall(_, target, _) => assert_eq(target, consume)
+    _ => fail("expected unsupported recursive prerequisite call")
+  }
+  let nested_read = program.modules[0].lookup_value("nested_read").unwrap()
+  let mut public_fallbacks = 0
+  for function_ in link.functions {
+    if function_.declaration == nested_read &&
+      function_.visibility == Public &&
+      !function_.elided {
+      public_fallbacks += 1
+    }
+  }
+  assert_eq(public_fallbacks, 0)
+}
+
+///|
 test "external generic fallback rejects erased concrete evidence with runtime prerequisites" {
   let program = collect_program_manifest(
     21973UL,

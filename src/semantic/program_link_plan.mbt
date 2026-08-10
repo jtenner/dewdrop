@@ -4607,6 +4607,9 @@ fn program_runtime_trait_evidence_is_forwardable(
   match node.kind {
     BoundInferredTraitEvidence(_) => node.prerequisites.length == 0
     ConcreteInferredTraitEvidence(_, _) => {
+      if depth > 0 && !runtime_trait_evidence_is_concrete(lowering, evidence, 0) {
+        return false
+      }
       for index in 0..<node.prerequisites.length {
         if !program_runtime_trait_evidence_is_forwardable(
             lowering,
