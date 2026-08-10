@@ -3724,12 +3724,26 @@ fn materialize_program_expression_call(
             Some(value) => value
             None => return
           }
+          let forwarded_runtime_evidence_parameters = match
+            normalize_program_runtime_evidence_parameters(request_evidence) {
+            Some(value) => value
+            None => return
+          }
+          for parameter in forwarded_runtime_evidence_parameters {
+            if parameter < 0 || parameter >= caller.parameters.length {
+              return
+            }
+          }
           let request_shapes : Array[PlannedValueShape] = []
           for index in 0..<arguments.length {
             request_shapes.push(
               fragments.specialization_evidence_arguments[arguments.start +
               index],
             )
+          }
+          if arguments.length == 0 &&
+            forwarded_runtime_evidence_parameters.length() > 0 {
+            return
           }
           let target_key = if arguments.length > 0 {
             match
@@ -3758,7 +3772,7 @@ fn materialize_program_expression_call(
             expression,
             target,
             target_key,
-            [],
+            forwarded_runtime_evidence_parameters,
           )
         }
         _ => ()
@@ -4277,9 +4291,13 @@ fn program_collect_external_runtime_trait_uses(
       roots.start + roots.length <= module_.trait_evidence_roots.length() {
       for index in 0..<roots.length {
         let root = module_.trait_evidence_roots[roots.start + index]
-        if program_runtime_trait_evidence_is_forwardable_bound(module_, root) {
+        if !runtime_trait_evidence_is_concrete(module_, root, 0) &&
+          program_runtime_trait_evidence_is_forwardable(module_, root, 0) {
+          program_collect_external_runtime_evidence_implementation_uses(
+            lowering, module_lookup, module_, root, 0, visited, traits_by_module,
+            seen_traits,
+          )
           forwards_bound = true
-          break
         }
       }
     }
@@ -4292,32 +4310,186 @@ fn program_collect_external_runtime_trait_uses(
 }
 
 ///|
-fn program_runtime_trait_callable_supports_external_evidence(
+priv enum ProgramExternalRuntimeEvidenceClass {
+  ProgramExternalConcreteEvidence
+  ProgramExternalDirectRuntimeEvidence
+  ProgramExternalCapturedRuntimeEvidence
+}
+
+///|
+fn program_external_runtime_evidence_class(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
+  depth : Int,
+) -> ProgramExternalRuntimeEvidenceClass? {
+  if evidence < 0 ||
+    evidence >= lowering.trait_evidence.length() ||
+    depth > lowering.trait_evidence.length() {
+    return None
+  }
+  let node = lowering.trait_evidence[evidence]
+  match node.kind {
+    BoundInferredTraitEvidence(slot) => {
+      if slot < 0 ||
+        slot >= parameter_classes.length() ||
+        node.prerequisites.length > 0 {
+        return None
+      }
+      Some(parameter_classes[slot])
+    }
+    ConcreteInferredTraitEvidence(_, _) => {
+      if node.prerequisites.start < 0 ||
+        node.prerequisites.start + node.prerequisites.length >
+        lowering.trait_evidence_children.length() {
+        return None
+      }
+      let mut captured = false
+      for index in 0..<node.prerequisites.length {
+        let child = lowering.trait_evidence_children[node.prerequisites.start +
+          index]
+        match
+          program_external_runtime_evidence_class(
+            lowering,
+            child,
+            parameter_classes,
+            depth + 1,
+          ) {
+          Some(ProgramExternalConcreteEvidence) => ()
+          Some(ProgramExternalDirectRuntimeEvidence)
+          | Some(ProgramExternalCapturedRuntimeEvidence) => captured = true
+          None => return None
+        }
+      }
+      Some(
+        if captured {
+          ProgramExternalCapturedRuntimeEvidence
+        } else {
+          ProgramExternalConcreteEvidence
+        },
+      )
+    }
+  }
+}
+
+///|
+fn program_external_runtime_evidence_state_key(
+  declaration : DeclId,
+  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
+) -> String {
+  let output = Buffer()
+  output.write_string_utf8(declaration.to_string())
+  output.write_byte(58)
+  for class_ in parameter_classes {
+    output.write_byte(
+      match class_ {
+        ProgramExternalConcreteEvidence => 99
+        ProgramExternalDirectRuntimeEvidence => 114
+        ProgramExternalCapturedRuntimeEvidence => 112
+      },
+    )
+  }
+  @utf8.decode_lossy(output.to_bytes())
+}
+
+///|
+fn program_collect_external_runtime_evidence_implementation_uses(
+  lowering : PlannedProgramLowering,
+  module_lookup : Map[ModuleId, Int],
+  evidence_owner : PlannedModuleLowering,
+  evidence : Int,
+  depth : Int,
+  visited : Map[DeclId, Bool],
+  traits_by_module : Array[Array[DeclId]],
+  seen_traits : Map[String, Bool],
+) -> Unit {
+  if evidence < 0 ||
+    evidence >= evidence_owner.trait_evidence.length() ||
+    depth > evidence_owner.trait_evidence.length() {
+    return
+  }
+  let node = evidence_owner.trait_evidence[evidence]
+  match node.kind {
+    ConcreteInferredTraitEvidence(implementation, _) =>
+      if !runtime_trait_evidence_is_concrete(evidence_owner, evidence, 0) {
+        let implementation_module = match
+          module_lookup.get(semantic_id_module(implementation)) {
+          Some(value) => value
+          None => -1
+        }
+        if implementation_module >= 0 &&
+          implementation_module < lowering.modules.length() {
+          for
+            callable in lowering.modules[implementation_module].functions.callables {
+            match callable.kind {
+              PlannedImplMethodCallable(owner, Some(_)) if owner ==
+                implementation =>
+                program_collect_external_runtime_trait_uses(
+                  lowering,
+                  module_lookup,
+                  callable.declaration,
+                  visited,
+                  traits_by_module,
+                  seen_traits,
+                )
+              _ => ()
+            }
+          }
+        }
+      }
+    BoundInferredTraitEvidence(_) => ()
+  }
+  if node.prerequisites.start < 0 ||
+    node.prerequisites.start + node.prerequisites.length >
+    evidence_owner.trait_evidence_children.length() {
+    return
+  }
+  for index in 0..<node.prerequisites.length {
+    program_collect_external_runtime_evidence_implementation_uses(
+      lowering,
+      module_lookup,
+      evidence_owner,
+      evidence_owner.trait_evidence_children[node.prerequisites.start + index],
+      depth + 1,
+      visited,
+      traits_by_module,
+      seen_traits,
+    )
+  }
+}
+
+///|
+fn program_runtime_trait_callable_supports_external_evidence_for_classes(
   lowering : PlannedProgramLowering,
   module_lookup : Map[ModuleId, Int],
   declaration : DeclId,
-  states : Map[DeclId, Int],
+  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
+  states : Map[String, Int],
 ) -> Bool {
-  match states.get(declaration) {
+  let key = program_external_runtime_evidence_state_key(
+    declaration, parameter_classes,
+  )
+  match states.get(key) {
     Some(2) => return true
     Some(3) => return false
     Some(1) => return true
     _ => ()
   }
-  states[declaration] = 1
-  let supported = program_runtime_trait_callable_body_supports_external_evidence(
-    lowering, module_lookup, declaration, states,
+  states[key] = 1
+  let supported = program_runtime_trait_callable_body_supports_external_evidence_for_classes(
+    lowering, module_lookup, declaration, parameter_classes, states,
   )
-  states[declaration] = if supported { 2 } else { 3 }
+  states[key] = if supported { 2 } else { 3 }
   supported
 }
 
 ///|
-fn program_runtime_trait_callable_body_supports_external_evidence(
+fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
   lowering : PlannedProgramLowering,
   module_lookup : Map[ModuleId, Int],
   declaration : DeclId,
-  states : Map[DeclId, Int],
+  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
+  states : Map[String, Int],
 ) -> Bool {
   let module_index = match module_lookup.get(semantic_id_module(declaration)) {
     Some(value) => value
@@ -4345,61 +4517,69 @@ fn program_runtime_trait_callable_body_supports_external_evidence(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match module_.expressions[expression].kind {
-      PlannedBoundDirectCall(_, _, receiver, _, _) if receiver < 0 =>
-        return false
+      PlannedBoundDirectCall(_, slot, receiver, _, _) =>
+        if receiver < 0 || slot < 0 || slot >= parameter_classes.length() {
+          return false
+        }
+      PlannedBoundOperatorCall(_, slot, _, _, _, _) =>
+        if slot < 0 || slot >= parameter_classes.length() {
+          return false
+        }
       _ => ()
+    }
+    if expression < 0 || expression >= module_.expression_evidence.length() {
+      return false
     }
     let call = program_call_target_and_arguments(
       module_.expressions[expression],
     )
-    let forwards_runtime_evidence = match call {
-      Some((_, arguments)) => arguments.length > 0
-      None => false
-    }
-    let mut forwards_bound = false
-    if expression < 0 || expression >= module_.expression_evidence.length() {
-      return false
-    }
     let roots = module_.expression_evidence[expression]
     if roots.start < 0 ||
       roots.start + roots.length > module_.trait_evidence_roots.length() {
       return false
     }
+    let target_classes : Array[ProgramExternalRuntimeEvidenceClass] = []
     for index in 0..<roots.length {
       let root = module_.trait_evidence_roots[roots.start + index]
-      if runtime_trait_evidence_is_concrete(module_, root, 0) {
-        continue
-      }
-      if !forwards_runtime_evidence ||
-        !program_runtime_trait_evidence_is_forwardable_bound(module_, root) {
-        return false
-      }
-      forwards_bound = true
-    }
-    if forwards_bound {
-      let target = match call {
-        Some((value, _)) => value
+      let class_ = match
+        program_external_runtime_evidence_class(
+          module_, root, parameter_classes, 0,
+        ) {
+        Some(value) => value
         None => return false
       }
-      if !program_runtime_trait_callable_supports_external_evidence(
-          lowering, module_lookup, target, states,
+      target_classes.push(class_)
+    }
+    if target_classes.length() > 0 {
+      let target = match call {
+        Some((value, arguments)) if arguments.length > 0 => value
+        _ => return false
+      }
+      let mut has_runtime = false
+      for class_ in target_classes {
+        match class_ {
+          ProgramExternalConcreteEvidence => ()
+          ProgramExternalDirectRuntimeEvidence
+          | ProgramExternalCapturedRuntimeEvidence => has_runtime = true
+        }
+      }
+      if has_runtime &&
+        !program_runtime_trait_callable_supports_external_evidence_for_classes(
+          lowering, module_lookup, target, target_classes, states,
         ) {
         return false
       }
     }
     match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) => {
-        if evidence < 0 || evidence >= module_.trait_evidence.length() {
-          return false
+      SelectedInferredTraitObjectCoercion(_, evidence) =>
+        match
+          program_external_runtime_evidence_class(
+            module_, evidence, parameter_classes, 0,
+          ) {
+          Some(ProgramExternalConcreteEvidence)
+          | Some(ProgramExternalDirectRuntimeEvidence) => ()
+          Some(ProgramExternalCapturedRuntimeEvidence) | None => return false
         }
-        match module_.trait_evidence[evidence].kind {
-          BoundInferredTraitEvidence(_) => ()
-          ConcreteInferredTraitEvidence(_, _) =>
-            if !runtime_trait_evidence_is_concrete(module_, evidence, 0) {
-              return false
-            }
-        }
-      }
       ErrorInferredTraitObjectCoercion => return false
       NoInferredTraitObjectCoercion => ()
     }
@@ -4408,17 +4588,36 @@ fn program_runtime_trait_callable_body_supports_external_evidence(
 }
 
 ///|
-fn program_runtime_trait_evidence_is_forwardable_bound(
+fn program_runtime_trait_evidence_is_forwardable(
   lowering : PlannedModuleLowering,
   evidence : Int,
+  depth : Int,
 ) -> Bool {
-  if evidence < 0 || evidence >= lowering.trait_evidence.length() {
+  if evidence < 0 ||
+    evidence >= lowering.trait_evidence.length() ||
+    depth > lowering.trait_evidence.length() {
     return false
   }
   let node = lowering.trait_evidence[evidence]
+  if node.prerequisites.start < 0 ||
+    node.prerequisites.start + node.prerequisites.length >
+    lowering.trait_evidence_children.length() {
+    return false
+  }
   match node.kind {
     BoundInferredTraitEvidence(_) => node.prerequisites.length == 0
-    ConcreteInferredTraitEvidence(_, _) => false
+    ConcreteInferredTraitEvidence(_, _) => {
+      for index in 0..<node.prerequisites.length {
+        if !program_runtime_trait_evidence_is_forwardable(
+            lowering,
+            lowering.trait_evidence_children[node.prerequisites.start + index],
+            depth + 1,
+          ) {
+          return false
+        }
+      }
+      true
+    }
   }
 }
 
@@ -4427,19 +4626,11 @@ fn program_runtime_trait_fallback_evidence(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   module_lookup : Map[ModuleId, Int],
-  support_states : Map[DeclId, Int],
+  support_states : Map[String, Int],
   module_index : Int,
   module_ : PlannedModuleLowering,
   callable : PlannedCallable,
 ) -> ProgramTraitEvidenceRequest? {
-  if !program_runtime_trait_callable_supports_external_evidence(
-      lowering,
-      module_lookup,
-      callable.declaration,
-      support_states,
-    ) {
-    return None
-  }
   let body_id = match callable.kind {
     PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
       body
@@ -4478,7 +4669,7 @@ fn program_runtime_trait_fallback_evidence(
           continue
         }
         if !forwards_runtime_evidence ||
-          !program_runtime_trait_evidence_is_forwardable_bound(module_, root) {
+          !program_runtime_trait_evidence_is_forwardable(module_, root, 0) {
           return None
         }
       }
@@ -4562,6 +4753,19 @@ fn program_runtime_trait_fallback_evidence(
       return None
     }
   }
+  let parameter_classes = Array::make(
+    slot,
+    ProgramExternalDirectRuntimeEvidence,
+  )
+  if !program_runtime_trait_callable_supports_external_evidence_for_classes(
+      lowering,
+      module_lookup,
+      callable.declaration,
+      parameter_classes,
+      support_states,
+    ) {
+    return None
+  }
   Some(request)
 }
 
@@ -4585,7 +4789,7 @@ fn plan_program_wasmgc_fragments_for_root(
   for module_index, module_ in lowering.modules {
     specialization_module_lookup[module_.module_id] = module_index
   }
-  let external_evidence_support_states : Map[DeclId, Int] = Map::default()
+  let external_evidence_support_states : Map[String, Int] = Map::default()
   let fallback_evidence_by_declaration : Map[
     DeclId,
     ProgramTraitEvidenceRequest,

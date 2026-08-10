@@ -12,6 +12,10 @@ pub fn read<t: Value>(value: t) -> I32 {
   forwarded_read(0, value)
 }
 
+pub fn boxed_read<t: Value>(value: t) -> I32 {
+  consume_value(value)
+}
+
 pub fn main() -> I32 {
   read(42)
 }

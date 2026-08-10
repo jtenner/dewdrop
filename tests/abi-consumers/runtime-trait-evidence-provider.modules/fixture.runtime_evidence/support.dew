@@ -19,3 +19,27 @@ fn finish_read<t: Value>(remaining: I32, prefix: I32, suffix: I32, value: t) -> 
 pub fn forwarded_read<t: Value>(prefix: I32, value: t) -> I32 {
   finish_read(0, prefix, 0, value)
 }
+
+trait Read {
+  fn read(self) -> I32
+}
+
+struct Box<t> {
+  value: t
+}
+
+impl<t: Value> Read for Box<t> {
+  fn read(self) -> I32 {
+    self.value.value()
+  }
+}
+
+fn consume<t: Read>(value: t) -> I32 {
+  value.read()
+}
+
+pub fn consume_value<t: Value>(value: t) -> I32 {
+  consume(Box {
+    value: value
+  })
+}

@@ -68,7 +68,8 @@
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site trait boxes and dictionaries.
 - [x] Forward external runtime evidence through symbolic static bound calls and operators.
 - [x] Forward direct external runtime evidence through private, recursive, and imported generic call chains.
-- [ ] Support runtime prerequisites nested inside concrete evidence plus escaping bounded function references/callbacks, then broaden effect/escape summaries across non-transparent public APIs.
+- [x] Forward runtime prerequisites through statically selected concrete generic implementation evidence.
+- [ ] Support erased dictionaries that capture runtime prerequisites plus escaping bounded function references/callbacks, then broaden effect/escape summaries across non-transparent public APIs.
 
 ## Deterministic cleanup and executable language surface
 

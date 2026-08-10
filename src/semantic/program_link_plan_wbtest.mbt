@@ -1078,13 +1078,47 @@ test "public generic fallbacks forward runtime evidence through nested calls" {
 }
 
 ///|
-test "external generic fallback rejects runtime prerequisites inside concrete evidence" {
+test "external generic fallback forwards runtime prerequisites through static evidence" {
   let program = collect_program_manifest(
     21972UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
           "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\nfn helper<t: Value>(value: t) -> I32 {\n  consume(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> I32 {\n  helper(value)\n}\npub fn main() -> I32 {\n  outer(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let outer = program.modules[0].lookup_value("outer").unwrap()
+  let mut public_fallbacks = 0
+  let mut closed = 0
+  for function_ in link.functions {
+    if function_.declaration != outer || function_.elided {
+      continue
+    }
+    if function_.visibility == Public {
+      public_fallbacks += 1
+    } else if function_.specialization_shapes.length > 0 {
+      closed += 1
+    }
+  }
+  assert_eq(public_fallbacks, 1)
+  assert_eq(closed, 1)
+}
+
+///|
+test "external generic fallback rejects erased concrete evidence with runtime prerequisites" {
+  let program = collect_program_manifest(
+    21973UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn erase_read<t: Read>(value: t) -> Read {\n  value\n}\nfn helper<t: Value>(value: t) -> Read {\n  erase_read(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> Read {\n  helper(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(outer(42))\n}\n",
         ),
       ]),
     ]),
