@@ -3685,6 +3685,191 @@ fn starshine_program_specialized_closure_signatures(
 }
 
 ///|
+fn starshine_finish_trait_object_coercion(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  program_module_index : Int,
+  generic_specialization : StarshineGenericSpecialization?,
+  body : @semantic.BodyId,
+  trait_ : @semantic.DeclId,
+  evidence : Int,
+  output : Array[@lib.Instruction],
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let runtime_evidence = match generic_specialization {
+    Some(specialization) =>
+      @semantic.program_runtime_trait_evidence_parameter(
+        lowering,
+        planned,
+        specialization.specialization_evidence,
+        evidence,
+      )
+    None => None
+  }
+  match runtime_evidence {
+    Some((runtime_trait, parameter)) => {
+      if runtime_trait != trait_ || parameter < 0 {
+        return Err(UnsupportedExpression(body, -305))
+      }
+      let mut layout = None
+      for candidate in planned.trait_layouts {
+        if candidate.trait_declaration == trait_ {
+          layout = Some(candidate)
+          break
+        }
+      }
+      let layout = match layout {
+        Some(value) => value
+        None => return Err(UnsupportedExpression(body, -306))
+      }
+      let vtable_type = starshine_local_physical_type_index(
+        program,
+        program_module_index,
+        layout.vtable_type_index,
+      )
+      let object_type = starshine_local_physical_type_index(
+        program,
+        program_module_index,
+        layout.object_type_index,
+      )
+      if vtable_type < 0 || object_type < 0 {
+        return Err(UnsupportedExpression(body, -307))
+      }
+      output.push(
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(parameter.reinterpret_as_uint()),
+        ),
+      )
+      output.push(starshine_match_cast(vtable_type))
+      output.push(
+        @lib.Instruction::struct_new(
+          @lib.TypeIdx::new(object_type.reinterpret_as_uint()),
+        ),
+      )
+      return Ok(output)
+    }
+    None => ()
+  }
+  let (implementation, evidence_key) = match generic_specialization {
+    Some(specialization) =>
+      match
+        @semantic.program_resolved_trait_evidence_identity(
+          lowering,
+          planned,
+          specialization.specialization_shapes,
+          specialization.specialization_evidence,
+          evidence,
+        ) {
+        Some(value) => value
+        None => return Err(UnsupportedExpression(body, -302))
+      }
+    None => {
+      let implementation = if evidence >= 0 &&
+        evidence < lowering.trait_evidence.length() {
+        match lowering.trait_evidence[evidence].kind {
+          @semantic.ConcreteInferredTraitEvidence(value, _) => value
+          @semantic.BoundInferredTraitEvidence(_) => 0UL
+        }
+      } else {
+        0UL
+      }
+      (implementation, @semantic.wasmgc_trait_evidence_key(lowering, evidence))
+    }
+  }
+  let mut dictionary = None
+  let mut dictionary_index = -1
+  for index, candidate in planned.trait_dictionaries {
+    if candidate.trait_declaration == trait_ &&
+      candidate.implementation == implementation &&
+      candidate.evidence_key == evidence_key {
+      dictionary = Some(candidate)
+      dictionary_index = index
+      break
+    }
+  }
+  let dictionary = match dictionary {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(body, -302))
+  }
+  if dictionary.methods.length > 0 {
+    let receiver_shape = planned.trait_methods[dictionary.methods.start].receiver_shape
+    let box_slot = starshine_program_erased_adapter_shape_box_slot(
+      receiver_shape,
+    )
+    if box_slot >= 0 {
+      let box_type = match program {
+        Some(link) if box_slot < link.erased_box_type_indices.length() =>
+          link.erased_box_type_indices[box_slot]
+        _ => -1
+      }
+      if box_type < 0 {
+        return Err(UnsupportedExpression(body, -304))
+      }
+      output.push(
+        @lib.Instruction::struct_new(
+          @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+        ),
+      )
+    }
+  }
+  let vtable_type = starshine_local_physical_type_index(
+    program,
+    program_module_index,
+    dictionary.vtable_type_index,
+  )
+  let dictionary_global = match program {
+    Some(link) =>
+      link.trait_dictionary_global(program_module_index, dictionary_index)
+    None => -1
+  }
+  if dictionary_global >= 0 {
+    output.push(
+      @lib.Instruction::global_get(
+        @lib.GlobalIdx::new(dictionary_global.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_match_cast(vtable_type))
+  } else {
+    for index in 0..<dictionary.methods.length {
+      let method_info = planned.trait_methods[dictionary.methods.start + index]
+      let adapter = planned.functions[method_info.adapter_function]
+      let function_index = match program {
+        Some(link) =>
+          match link.function_of(adapter.declaration) {
+            Some(value) => value.function_index
+            None => -1
+          }
+        None => adapter.function_index
+      }
+      if function_index < 0 {
+        return Err(MissingFunction(adapter.declaration))
+      }
+      output.push(
+        @lib.Instruction::ref_func(
+          @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
+        ),
+      )
+    }
+    output.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
+      ),
+    )
+  }
+  let object_type = starshine_local_physical_type_index(
+    program,
+    program_module_index,
+    dictionary.object_type_index,
+  )
+  output.push(
+    @lib.Instruction::struct_new(
+      @lib.TypeIdx::new(object_type.reinterpret_as_uint()),
+    ),
+  )
+  Ok(output)
+}
+
+///|
 fn starshine_emit_body_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -7205,128 +7390,22 @@ fn starshine_emit_body_instructions(
         }
       }
       FinishStarshineTraitObjectCoercion(trait_, evidence) => {
-        let (implementation, evidence_key) = match generic_specialization {
-          Some(specialization) =>
-            match
-              @semantic.program_resolved_trait_evidence_identity(
-                lowering,
-                planned,
-                specialization.specialization_shapes,
-                specialization.specialization_evidence,
-                evidence,
-              ) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, -302))
-            }
-          None => {
-            let implementation = if evidence >= 0 &&
-              evidence < lowering.trait_evidence.length() {
-              match lowering.trait_evidence[evidence].kind {
-                @semantic.ConcreteInferredTraitEvidence(value, _) => value
-                @semantic.BoundInferredTraitEvidence(_) => 0UL
-              }
-            } else {
-              0UL
-            }
-            (
-              implementation,
-              @semantic.wasmgc_trait_evidence_key(lowering, evidence),
-            )
-          }
-        }
-        let mut dictionary = None
-        let mut dictionary_index = -1
-        for index, candidate in planned.trait_dictionaries {
-          if candidate.trait_declaration == trait_ &&
-            candidate.implementation == implementation &&
-            candidate.evidence_key == evidence_key {
-            dictionary = Some(candidate)
-            dictionary_index = index
-            break
-          }
-        }
-        let dictionary = match dictionary {
-          Some(value) => value
-          None => return Err(UnsupportedExpression(body.body, -302))
-        }
         let output = results.pop().unwrap()
-        if dictionary.methods.length > 0 {
-          let receiver_shape = planned.trait_methods[dictionary.methods.start].receiver_shape
-          let box_slot = starshine_program_erased_adapter_shape_box_slot(
-            receiver_shape,
-          )
-          if box_slot >= 0 {
-            let box_type = match program {
-              Some(link) if box_slot < link.erased_box_type_indices.length() =>
-                link.erased_box_type_indices[box_slot]
-              _ => -1
-            }
-            if box_type < 0 {
-              return Err(UnsupportedExpression(body.body, -304))
-            }
-            output.push(
-              @lib.Instruction::struct_new(
-                @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
-              ),
-            )
-          }
+        match
+          starshine_finish_trait_object_coercion(
+            lowering,
+            planned,
+            program,
+            program_module_index,
+            generic_specialization,
+            body.body,
+            trait_,
+            evidence,
+            output,
+          ) {
+          Ok(value) => results.push(value)
+          Err(error) => return Err(error)
         }
-        let vtable_type = starshine_local_physical_type_index(
-          program,
-          program_module_index,
-          dictionary.vtable_type_index,
-        )
-        let dictionary_global = match program {
-          Some(link) =>
-            link.trait_dictionary_global(program_module_index, dictionary_index)
-          None => -1
-        }
-        if dictionary_global >= 0 {
-          output.push(
-            @lib.Instruction::global_get(
-              @lib.GlobalIdx::new(dictionary_global.reinterpret_as_uint()),
-            ),
-          )
-          output.push(starshine_match_cast(vtable_type))
-        } else {
-          for index in 0..<dictionary.methods.length {
-            let method_info = planned.trait_methods[dictionary.methods.start +
-              index]
-            let adapter = planned.functions[method_info.adapter_function]
-            let function_index = match program {
-              Some(link) =>
-                match link.function_of(adapter.declaration) {
-                  Some(value) => value.function_index
-                  None => -1
-                }
-              None => adapter.function_index
-            }
-            if function_index < 0 {
-              return Err(MissingFunction(adapter.declaration))
-            }
-            output.push(
-              @lib.Instruction::ref_func(
-                @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
-              ),
-            )
-          }
-          output.push(
-            @lib.Instruction::struct_new(
-              @lib.TypeIdx::new(vtable_type.reinterpret_as_uint()),
-            ),
-          )
-        }
-        let object_type = starshine_local_physical_type_index(
-          program,
-          program_module_index,
-          dictionary.object_type_index,
-        )
-        output.push(
-          @lib.Instruction::struct_new(
-            @lib.TypeIdx::new(object_type.reinterpret_as_uint()),
-          ),
-        )
-        results.push(output)
       }
       FinishStarshineDynamicTraitCall(
         trait_,

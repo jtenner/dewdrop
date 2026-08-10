@@ -2750,6 +2750,13 @@ fn write_program_trait_evidence_key(
       }
       output.write_string_utf8(">")
     }
+    PlannedRuntimeTraitEvidence(trait_, parameter) => {
+      output.write_string_utf8("runtime<")
+      output.write_string_utf8(trait_.to_string())
+      output.write_string_utf8(",")
+      output.write_string_utf8(parameter.to_string())
+      output.write_string_utf8(">")
+    }
   }
   output.write_string_utf8("[")
   for index in 0..<evidence.prerequisites.length {
@@ -2931,6 +2938,8 @@ fn copy_program_specialization_evidence_node(
         length: arguments.length,
       })
     }
+    PlannedRuntimeTraitEvidence(trait_, parameter) =>
+      PlannedRuntimeTraitEvidence(trait_, parameter)
   }
   let child_start = request.children.length()
   for index in 0..<source_evidence.prerequisites.length {
@@ -3113,6 +3122,12 @@ fn append_program_trait_evidence_request_key(
       }
       output.write_string_utf8("}")
     }
+    PlannedRuntimeTraitEvidence(trait_, parameter) => {
+      output.write_string_utf8("r")
+      output.write_string_utf8(trait_.to_string())
+      output.write_string_utf8("@")
+      output.write_string_utf8(parameter.to_string())
+    }
   }
 }
 
@@ -3124,6 +3139,7 @@ fn program_trait_evidence_request_identity(
   guard root >= 0 && root < request.evidence.length() else { return None }
   let implementation = match request.evidence[root].kind {
     PlannedConcreteTraitEvidence(value, _) => value
+    PlannedRuntimeTraitEvidence(_, _) => return None
   }
   let output = Buffer()
   append_program_trait_evidence_request_key(request, root, 0, output)
@@ -3144,6 +3160,38 @@ pub fn program_resolved_trait_evidence_identity(
     request,
   )
   program_trait_evidence_request_identity(request, root)
+}
+
+///|
+pub fn program_runtime_trait_evidence_parameter(
+  lowering : PlannedModuleLowering,
+  fragments : PlannedModuleWasmGCFragments,
+  specialization_evidence : HirSpan,
+  source_node : Int,
+) -> (DeclId, Int)? {
+  if source_node < 0 || source_node >= lowering.trait_evidence.length() {
+    return None
+  }
+  let slot = match lowering.trait_evidence[source_node].kind {
+    BoundInferredTraitEvidence(value) => value
+    ConcreteInferredTraitEvidence(_, _) => return None
+  }
+  if slot < 0 ||
+    slot >= specialization_evidence.length ||
+    specialization_evidence.start < 0 ||
+    specialization_evidence.start + slot >=
+    fragments.specialization_evidence_roots.length() {
+    return None
+  }
+  let root = fragments.specialization_evidence_roots[specialization_evidence.start +
+    slot]
+  if root < 0 || root >= fragments.specialization_trait_evidence.length() {
+    return None
+  }
+  match fragments.specialization_trait_evidence[root].kind {
+    PlannedRuntimeTraitEvidence(trait_, parameter) => Some((trait_, parameter))
+    PlannedConcreteTraitEvidence(_, _) => None
+  }
 }
 
 ///|
@@ -3219,6 +3267,15 @@ fn materialize_program_generic_specialization(
   let specialization_abi_key = program_specialization_abi_key(
     declaration, request_shapes, request, evidence,
   )
+  let mut runtime_evidence_parameter_count = 0
+  for node in evidence.evidence {
+    match node.kind {
+      PlannedRuntimeTraitEvidence(_, parameter) if parameter >=
+        runtime_evidence_parameter_count =>
+        runtime_evidence_parameter_count = parameter + 1
+      _ => ()
+    }
+  }
   for function_index, function_ in module_.functions {
     if function_.declaration == declaration &&
       function_.specialization_shapes.length > 0 &&
@@ -3276,6 +3333,8 @@ fn materialize_program_generic_specialization(
           start: evidence_argument_start + arguments.start,
           length: arguments.length,
         })
+      PlannedRuntimeTraitEvidence(trait_, parameter) =>
+        PlannedRuntimeTraitEvidence(trait_, parameter)
     }
     module_.specialization_trait_evidence.push({
       kind,
@@ -3322,6 +3381,28 @@ fn materialize_program_generic_specialization(
       }
       base_parameter_index += 1
     }
+  }
+  let source_parameter_count = module_.function_value_types.length() -
+    parameter_start
+  for index in 0..<evidence.evidence.length() {
+    match
+      module_.specialization_trait_evidence[evidence_node_start + index].kind {
+      PlannedRuntimeTraitEvidence(trait_, parameter) => {
+        let source = module_.specialization_trait_evidence[evidence_node_start +
+          index]
+        module_.specialization_trait_evidence[evidence_node_start + index] = {
+          ..source,
+          kind: PlannedRuntimeTraitEvidence(
+            trait_,
+            source_parameter_count + parameter,
+          ),
+        }
+      }
+      _ => ()
+    }
+  }
+  for _ in 0..<runtime_evidence_parameter_count {
+    module_.function_value_types.push(WasmNullableEqRefValue)
   }
   let result_start = module_.function_value_types.length()
   let specialized_result = program_generic_parameter_shape(
@@ -3533,6 +3614,7 @@ fn materialize_program_expression_call(
           let (implementation, arguments) = match root_evidence.kind {
             PlannedConcreteTraitEvidence(implementation, arguments) =>
               (implementation, arguments)
+            PlannedRuntimeTraitEvidence(_, _) => return
           }
           let target = match
             program_impl_method_for_requirement(
@@ -3705,6 +3787,8 @@ fn copy_program_trait_evidence_request_node(
         length: arguments.length,
       })
     }
+    PlannedRuntimeTraitEvidence(trait_, parameter) =>
+      PlannedRuntimeTraitEvidence(trait_, parameter)
   }
   let child_start = target.children.length()
   for index in 0..<source_evidence.prerequisites.length {
@@ -3822,6 +3906,7 @@ fn materialize_program_specialization_trait_dictionaries(
     let root_evidence = evidence.evidence[root]
     let owner_arguments = match root_evidence.kind {
       PlannedConcreteTraitEvidence(_, arguments) => arguments
+      PlannedRuntimeTraitEvidence(_, _) => continue
     }
     let method_evidence = match
       program_trait_evidence_prerequisite_request(evidence, root) {
@@ -3965,32 +4050,148 @@ fn materialize_program_specialization_trait_dictionaries(
 }
 
 ///|
-fn program_callable_has_symbolic_trait_coercion(
+fn program_resolved_trait_declaration(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> DeclId? {
+  let mut type_ = root
+  let mut remaining = resolved.types.length() + 1
+  while remaining > 0 {
+    remaining -= 1
+    if type_ < 0 || type_ >= resolved.types.length() {
+      return None
+    }
+    match resolved.types[type_] {
+      TraitType(declaration) => return Some(declaration)
+      AppliedType(base, _) => type_ = base
+      _ => return None
+    }
+  }
+  None
+}
+
+///|
+fn program_runtime_trait_fallback_evidence(
+  analyzed : AnalyzedProgramSemantics,
+  module_index : Int,
   module_ : PlannedModuleLowering,
   callable : PlannedCallable,
-) -> Bool {
+) -> ProgramTraitEvidenceRequest? {
   let body_id = match callable.kind {
     PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
       body
-    _ => return false
+    _ => return None
   }
   let body_index = semantic_id_local(body_id)
   if body_index < 0 || body_index >= module_.bodies.length() {
-    return false
+    return None
   }
   let body = module_.bodies[body_index]
+  let used_traits : Map[Int, DeclId] = Map::default()
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
-    match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) =>
-        if !runtime_trait_evidence_is_concrete(module_, evidence, 0) {
-          return true
-        }
+    match module_.expressions[expression].kind {
+      PlannedBoundDirectCall(_, _, _, _, _)
+      | PlannedBoundOperatorCall(_, _, _, _, _, _) => return None
       _ => ()
     }
+    if expression >= 0 && expression < module_.expression_evidence.length() {
+      let roots = module_.expression_evidence[expression]
+      if roots.start < 0 ||
+        roots.start + roots.length > module_.trait_evidence_roots.length() {
+        return None
+      }
+      for index in 0..<roots.length {
+        if !runtime_trait_evidence_is_concrete(
+            module_,
+            module_.trait_evidence_roots[roots.start + index],
+            0,
+          ) {
+          return None
+        }
+      }
+    }
+    match module_.expressions[expression].trait_object_coercion {
+      SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+        if evidence < 0 || evidence >= module_.trait_evidence.length() {
+          return None
+        }
+        match module_.trait_evidence[evidence].kind {
+          BoundInferredTraitEvidence(slot) =>
+            match used_traits.get(slot) {
+              Some(existing) if existing != trait_ => return None
+              Some(_) => ()
+              None => used_traits[slot] = trait_
+            }
+          ConcreteInferredTraitEvidence(_, _) =>
+            if !runtime_trait_evidence_is_concrete(module_, evidence, 0) {
+              return None
+            }
+        }
+      }
+      ErrorInferredTraitObjectCoercion => return None
+      NoInferredTraitObjectCoercion => ()
+    }
   }
-  false
+  if module_index < 0 || module_index >= analyzed.frozen.interfaces.length() {
+    return None
+  }
+  let interface_ = analyzed.frozen.interfaces[module_index]
+  let mut frozen_callable = None
+  for candidate in interface_.callables {
+    if candidate.declaration == callable.declaration {
+      frozen_callable = Some(candidate)
+      break
+    }
+  }
+  let frozen_callable = match frozen_callable {
+    Some(value) => value
+    None => return None
+  }
+  let request = empty_program_trait_evidence_request()
+  let mut slot = 0
+  for generic_offset in 0..<frozen_callable.generic_parameters.length {
+    let parameter = frozen_callable.generic_parameters.start + generic_offset
+    if parameter < 0 ||
+      parameter >= interface_.generic_parameter_bounds.length() {
+      return None
+    }
+    let bounds = interface_.generic_parameter_bounds[parameter]
+    if bounds.start < 0 ||
+      bounds.start + bounds.length >
+      interface_.resolved_types.generic_bound_types.length() {
+      return None
+    }
+    for bound_offset in 0..<bounds.length {
+      let trait_ = match
+        program_resolved_trait_declaration(
+          interface_.resolved_types,
+          interface_.resolved_types.generic_bound_types[bounds.start +
+          bound_offset],
+        ) {
+        Some(value) => value
+        None => return None
+      }
+      match used_traits.get(slot) {
+        Some(expected) if expected != trait_ => return None
+        _ => ()
+      }
+      let node = request.evidence.length()
+      request.evidence.push({
+        kind: PlannedRuntimeTraitEvidence(trait_, slot),
+        prerequisites: { start: 0, length: 0 },
+      })
+      request.roots.push(node)
+      slot += 1
+    }
+  }
+  for used, _ in used_traits {
+    if used < 0 || used >= slot {
+      return None
+    }
+  }
+  Some(request)
 }
 
 ///|
@@ -4054,9 +4255,15 @@ fn plan_program_wasmgc_fragments_for_root(
     }
     for callable in module_.functions.callables {
       if callable.visibility != Public ||
-        program_callable_generic_parameters(callable).length == 0 ||
-        program_callable_has_symbolic_trait_coercion(module_, callable) {
+        program_callable_generic_parameters(callable).length == 0 {
         continue
+      }
+      let evidence = match
+        program_runtime_trait_fallback_evidence(
+          analyzed, module_index, module_, callable,
+        ) {
+        Some(value) => value
+        None => continue
       }
       let erased_shapes = Array::make(
         program_callable_generic_parameters(callable).length,
@@ -4071,7 +4278,7 @@ fn plan_program_wasmgc_fragments_for_root(
           callable.declaration,
           erased_shapes,
           { start: 0, length: erased_shapes.length() },
-          empty_program_trait_evidence_request(),
+          evidence,
           true,
         ),
       )
@@ -5381,6 +5588,7 @@ pub fn link_program_wasmgc_fragments(
     for index in 0..<root_function_count {
       let candidate = functions[index]
       if candidate.declaration != callable.declaration ||
+        candidate.visibility != Public ||
         candidate.specialization_shapes.length !=
         program_callable_generic_parameters(callable).length {
         continue

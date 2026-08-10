@@ -36,7 +36,7 @@ function moduleWithPayload(payload) {
 function payload(fingerprint = "0".repeat(64)) {
   return Uint8Array.from([
     ...encoder.encode("DWA1"),
-    1,
+    2,
     1,
     1,
     1,
@@ -73,6 +73,6 @@ test("reject incompatible provider fingerprints", () => {
 test("reject malformed and unsupported Dew ABI metadata", () => {
   assert.throws(() => decodeDewAbi(moduleWithPayload(Uint8Array.of(1, 2, 3))), /truncated/);
   const unsupported = payload();
-  unsupported[4] = 2;
+  unsupported[4] = 3;
   assert.throws(() => decodeDewAbi(moduleWithPayload(unsupported)), /unsupported language ABI/);
 });

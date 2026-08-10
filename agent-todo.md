@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 9, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 10, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
@@ -66,7 +66,7 @@
 - [x] Define mutable boxed scalar receiver behavior as trait-owned snapshot mutation without source writeback; current receivers remain immutable.
 - [x] Define trait-object identity and equality semantics with no ambient identity or universal erased equality.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site trait boxes and dictionaries.
-- [ ] Define the standalone externally callable generic runtime-evidence ABI and broaden effect/escape summaries across non-transparent public APIs.
+- [ ] Forward external runtime evidence through symbolic static bound calls and nested generic obligations, then broaden effect/escape summaries across non-transparent public APIs.
 
 ## Deterministic cleanup and executable language surface
 

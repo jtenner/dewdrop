@@ -61,8 +61,17 @@ export function decodeDewAbi(module) {
     box: input.readByte(),
     callbackWrapper: input.readByte(),
   };
+  const supportedVersions = {
+    language: 2,
+    closure: 1,
+    genericCarrier: 1,
+    box: 1,
+    callbackWrapper: 1,
+  };
   for (const [name, version] of Object.entries(versions)) {
-    if (version !== 1) fail(`unsupported ${name} ABI version ${version}`);
+    if (version !== supportedVersions[name]) {
+      fail(`unsupported ${name} ABI version ${version}`);
+    }
   }
   const path = input.readString("module path");
   if (!path) fail("module path is empty");

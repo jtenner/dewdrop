@@ -1463,9 +1463,10 @@ fn frozen_callable_abi_fingerprint(
   callable : PlannedCallable,
 ) -> String {
   let output = Buffer(size_hint=256 + callable.parameters.length * 64)
-  output.write_bytes(b"DEW_CALLABLE_ABI_V3\x00")
+  output.write_bytes(b"DEW_CALLABLE_ABI_V4\x00")
   output.write_bytes(b"DEW_ERASED_BOX_ABI_V1\x00")
   output.write_bytes(b"DEW_FLAT_CLOSURE_ABI_V1\x00")
+  output.write_bytes(b"DEW_RUNTIME_TRAIT_EVIDENCE_ABI_V1\x00")
   callable_abi_write_string(output, path)
   callable_abi_write_string(output, @utf8.decode_lossy(callable.name))
   callable_abi_write_generic_bounds(

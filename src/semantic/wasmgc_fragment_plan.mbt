@@ -154,6 +154,7 @@ pub enum PlannedWasmFunctionKind {
 ///|
 pub enum PlannedSpecializationTraitEvidenceKind {
   PlannedConcreteTraitEvidence(DeclId, HirSpan)
+  PlannedRuntimeTraitEvidence(DeclId, Int)
 } derive(Eq, Debug)
 
 ///|

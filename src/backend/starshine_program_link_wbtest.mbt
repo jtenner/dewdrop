@@ -768,6 +768,53 @@ test "generic bound calls cast specialized nominal parameters" {
 }
 
 ///|
+test "public generic evidence fallbacks retain source bound order" {
+  let program = @semantic.collect_program_manifest(
+    2480UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"trait First {}\ntrait Second {\n  fn second(self) -> I32\n}\nimpl First for I32 {}\nimpl Second for I32 {\n  fn second(self) -> I32 {\n    self\n  }\n}\npub fn erase<t: First + Second>(value: t) -> Second {\n  value\n}\nfn invoke(value: Second) -> I32 {\n  value.second()\n}\npub fn main() -> I32 {\n  invoke(erase(42))\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let erase = program.modules[0].lookup_value("erase").unwrap()
+  let mut fallbacks = 0
+  for function_ in link.functions {
+    if function_.declaration != erase ||
+      function_.specialization_evidence.length != 2 ||
+      function_.elided {
+      continue
+    }
+    let fragments = link.modules[function_.module_index]
+    let first_root = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+    match fragments.specialization_trait_evidence[first_root].kind {
+      @semantic.PlannedRuntimeTraitEvidence(_, _) => ()
+      _ => continue
+    }
+    assert_eq(function_.parameters.length, 3)
+    for slot in 0..<2 {
+      let root = fragments.specialization_evidence_roots[function_.specialization_evidence.start +
+        slot]
+      match fragments.specialization_trait_evidence[root].kind {
+        @semantic.PlannedRuntimeTraitEvidence(_, parameter) =>
+          assert_eq(parameter, slot + 1)
+        _ => fail("expected ordered runtime evidence parameter")
+      }
+    }
+    fallbacks += 1
+  }
+  assert_eq(fallbacks, 1)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "open generic prerequisite dictionaries emit valid adapters" {
   let program = @semantic.collect_program_manifest(
     2477UL,

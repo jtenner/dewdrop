@@ -264,6 +264,18 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-eqref-consumer.wasm \
   run i32 > .tmp/dew-eqref-consumer.json
 grep -q '"type":"i32","value":42' .tmp/dew-eqref-consumer.json
+tools/dew build \
+  tests/abi-consumers/runtime-trait-evidence-provider.dew \
+  -o .tmp/dew-runtime-trait-evidence-provider.wasm
+wasm-tools parse \
+  tests/abi-consumers/runtime-trait-evidence-i32.wat \
+  -o .tmp/dew-runtime-trait-evidence-consumer.wasm
+node tools/dew-wasm-consumer.mjs \
+  .tmp/dew-runtime-trait-evidence-provider.wasm \
+  .tmp/dew-runtime-trait-evidence-consumer.wasm \
+  run i32 > .tmp/dew-runtime-trait-evidence-consumer.json
+grep -q '"type":"i32","value":42' \
+  .tmp/dew-runtime-trait-evidence-consumer.json
 (
   cd tests/abi-consumers/imported-package
   ../../../tools/dew check
@@ -366,7 +378,7 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-aggregate-callback-consumer.wasm \
   run i32 \
   fixture.application \
-  b65a2eba67d1528ca602ff29e95a4be7bdd7e1d20ba285e09557594f97ef4b77 \
+  2d6ca221dd74885961196f8f323d0fd0dea60ec7025555cdce64d0bb136e0094 \
   > .tmp/dew-imported-package-consumer.json
 if node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \
@@ -586,7 +598,15 @@ assert_wat_count "$open_generic_dynamic_wat" call_ref 1 "dynamic open-generic tr
 assert_wat_count "$open_generic_dynamic_wat" ref.func 6 "dynamic open-generic trait erasure"
 assert_wat_count "$open_generic_dynamic_wat" '(global' 6 "dynamic open-generic trait erasure"
 assert_wat_count "$open_generic_dynamic_wat" '(table' 0 "dynamic open-generic trait erasure"
-assert_wat_count "$open_generic_dynamic_wat" struct.new 19 "dynamic open-generic trait erasure"
+assert_wat_count "$open_generic_dynamic_wat" struct.new 20 "dynamic open-generic trait erasure"
+if ! grep -Fq '(export "choose"' "$open_generic_dynamic_wat"; then
+  echo "dynamic open-generic trait erasure lost its public evidence ABI export" >&2
+  exit 1
+fi
+if ! grep -Fq '(param i32 eqref eqref) (result eqref)' "$open_generic_dynamic_wat"; then
+  echo "dynamic open-generic trait erasure evidence ABI signature changed" >&2
+  exit 1
+fi
 
 open_generic_prerequisite_wat="tests/module-snapshots/generics/runtime-trait-open-generic-prerequisite.wat"
 assert_wat_count "$open_generic_prerequisite_wat" call_ref 1 "prerequisite open-generic trait erasure"

@@ -159,7 +159,7 @@ direct typed references.
 - [x] Add root-exported erased callable fallbacks and exact nominal-reference adapters for specialization boundaries that cannot be statically closed.
 - [x] Extend erased adapters to direct scalar boundaries with deterministic WasmGC boxes.
 - [x] Add recursive representation adapters for generic occurrences nested inside aggregates and structural function signatures. Direct leaves and nested generic struct/enum graphs clone across erased boundaries with exact variant subtype reconstruction, lazy scalar box/unbox conversion, and deterministic recursive helpers at cyclic nominal edges. Structural callbacks use deterministic flattened closure subtypes that capture the source closure once, recursively wrap nested callback parameters/results, convert scalar leaves, populate function-valued struct/enum payload fields during nominal reconstruction, and dispatch through the source direct or environment-first signature. Instantiated generic aggregate fields and enum pattern bindings retain concrete structural signatures and execute through the ordinary function-value call path.
-- [x] Complete the implemented ABI/interface compatibility layer: V2 callable fingerprints plus content-sensitive V1 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V11 and ignore external `DeclId` assignment; versioned `dew.abi` Wasm negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, and imported generic boundaries.
+- [x] Complete the implemented ABI/interface compatibility layer: V4 callable fingerprints plus content-sensitive V2 nominal and transitive reachable-interface fingerprints persist through frozen-interface/cache V11 and ignore external `DeclId` assignment; language-version-2 `dew.abi` negotiation rejects incompatible providers; Node and in-Wasm consumers exercise scalar, exact-nominal, `v128`, aggregate, callback, runtime-trait-evidence, and imported generic boundaries.
 - [ ] Add installed artifact-only interface recovery so versioned dependencies can compile from verified cached artifacts without recollecting source.
 - [ ] Define and implement trait objects, dictionaries, and `call_ref` dispatch after static generic execution is stable.
 
@@ -294,7 +294,8 @@ erased fallback.
 - [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site boxes, dictionaries, adapters, and `ref.func` roots.
 - [x] Add prerequisite-aware exact trait-object flow analysis through non-captured locals, same-evidence branches, transparent parameter returns, and effect-free forwarding chains; directize closed evidence, rewrite non-escaping carriers, and remove dead private wrappers plus unused runtime artifacts.
 - [x] Resolve symbolic runtime-trait evidence through closed generic specializations; directize transparent tail/explicit-return parameter selectors, materialize exact dynamic dictionaries with recursive prerequisites, support imported generic providers, and canonicalize shared cross-module trait layouts.
-- [ ] Define the standalone externally callable generic runtime-evidence ABI and broaden effect/escape summaries across non-transparent public APIs.
+- [x] Define the V1 external runtime-evidence ABI for public generic bodies whose symbolic bounds are consumed only by erased trait coercions; append source-ordered `eqref` vtable parameters and validate a structurally typed external Wasm consumer.
+- [ ] Forward external runtime evidence through symbolic static bound calls and nested generic obligations, then broaden effect/escape summaries across non-transparent public APIs.
 
 ## Expressions and statements
 

@@ -45,7 +45,7 @@ fn open_generic_runtime_trait_benchmark_source(
   )
   if dynamic {
     output.write_string_utf8(
-      "fn erase<t: Value>(condition: Bool, value: t) -> Value {\n  if condition {\n    value\n  } else {\n    value\n  }\n}\n",
+      "pub fn erase<t: Value>(condition: Bool, value: t) -> Value {\n  if condition {\n    value\n  } else {\n    value\n  }\n}\n",
     )
   } else {
     output.write_string_utf8(

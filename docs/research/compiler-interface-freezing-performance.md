@@ -52,7 +52,7 @@ A temporary transitive-only probe fell from about 6.33 ms to 3.40 ms while valid
 
 The optimization preserves:
 
-- callable V3, nominal V2, module-content V2, and graph V1 fingerprint domains;
+- callable V4, nominal V2, module-content V2, and graph V1 fingerprint domains;
 - exact serialized bytes and SHA-256 results;
 - source order inside declarations, fields, variants, requirements, callables, and implementations;
 - lexical order for dependency records and reachable module records;

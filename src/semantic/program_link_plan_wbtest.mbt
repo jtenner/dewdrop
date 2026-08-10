@@ -920,12 +920,18 @@ test "open generic trait branches materialize exact specialization dictionaries"
   assert_eq(link.diagnostics.length(), 0)
   let mut choose_specializations = 0
   let mut evidence_free_public_fallbacks = 0
+  let mut runtime_evidence_public_fallbacks = 0
   for function_ in link.functions {
     if function_.declaration == choose &&
       function_.specialization_shapes.length > 0 &&
       !function_.elided {
       assert_eq(function_.specialization_evidence.length, 1)
-      choose_specializations += 1
+      let fragments = link.modules[function_.module_index]
+      let root = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+      match fragments.specialization_trait_evidence[root].kind {
+        PlannedConcreteTraitEvidence(_, _) => choose_specializations += 1
+        PlannedRuntimeTraitEvidence(_, _) => ()
+      }
     }
     if function_.declaration == choose &&
       function_.visibility == Public &&
@@ -933,9 +939,26 @@ test "open generic trait branches materialize exact specialization dictionaries"
       !function_.elided {
       evidence_free_public_fallbacks += 1
     }
+    if function_.declaration == choose &&
+      function_.visibility == Public &&
+      function_.specialization_evidence.length == 1 &&
+      !function_.elided {
+      assert_eq(function_.parameters.length, 3)
+      let fragments = link.modules[function_.module_index]
+      let root = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+      match fragments.specialization_trait_evidence[root].kind {
+        PlannedRuntimeTraitEvidence(trait_, parameter) => {
+          assert_eq(trait_, program.modules[0].lookup_trait("Value").unwrap())
+          assert_eq(parameter, 2)
+        }
+        _ => fail("expected runtime trait evidence fallback")
+      }
+      runtime_evidence_public_fallbacks += 1
+    }
   }
   assert_eq(choose_specializations, 1)
   assert_eq(evidence_free_public_fallbacks, 0)
+  assert_eq(runtime_evidence_public_fallbacks, 1)
   assert_eq(link.modules[0].trait_dictionaries.length(), 1)
   assert_eq(link.modules[0].trait_methods.length(), 1)
   assert_eq(link.trait_dictionary_globals.length(), 1)
@@ -943,6 +966,47 @@ test "open generic trait branches materialize exact specialization dictionaries"
     link.modules[0].trait_dictionaries[0].implementation,
     program.modules[0].impls[0].declaration,
   )
+}
+
+///|
+test "unsupported public bound calls do not reuse closed reference specializations as fallbacks" {
+  let program = collect_program_manifest(
+    21970UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    41\n  }\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  read(Item {}) + read(1)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let read = program.modules[0].lookup_value("read").unwrap()
+  let mut closed = 0
+  let mut public_fallbacks = 0
+  let mut public_adapters = 0
+  for function_ in link.functions {
+    if function_.declaration != read || function_.elided {
+      continue
+    }
+    if function_.specialization_shapes.length > 0 &&
+      function_.visibility == ModuleVisible {
+      closed += 1
+    }
+    if function_.visibility == Public {
+      public_fallbacks += 1
+    }
+    if function_.erased_adapter_target >= 0 {
+      public_adapters += 1
+    }
+  }
+  assert_eq(closed, 2)
+  assert_eq(public_fallbacks, 0)
+  assert_eq(public_adapters, 0)
 }
 
 ///|

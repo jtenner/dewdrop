@@ -6,7 +6,9 @@ Runtime trait values execute end to end for non-generic object-safe traits over 
 
 Static calls on concrete receivers retain the existing direct-call path and do not plan trait layouts, dictionaries, adapters, globals, or `call_ref` sites.
 
-Symbolic trait erasure inside generic bodies now executes for every closed linked specialization. Transparent parameter-return bodies, including explicit `return`, propagate the caller's exact evidence and concrete carrier so downstream exact flows remove the generic wrapper, envelope, box, dictionary, adapter, global, `ref.func`, and `call_ref`. Genuinely dynamic generic branches resolve the caller's bound slot through specialization evidence, reconstruct recursive prerequisites, and materialize one exact dictionary plus evidence-aware implementation-method specialization. This works for nominal, scalar, packed, SIMD, prerequisite-bearing, and imported-provider cases. A standalone externally callable generic ABI that accepts runtime evidence for callers outside the linked program remains pending. Mutable scalar and trait-object identity/equality semantics are defined below; no source operation exposes either capability yet.
+Symbolic trait erasure inside generic bodies now executes for every closed linked specialization. Transparent parameter-return bodies, including explicit `return`, propagate the caller's exact evidence and concrete carrier so downstream exact flows remove the generic wrapper, envelope, box, dictionary, adapter, global, `ref.func`, and `call_ref`. Genuinely dynamic generic branches resolve the caller's bound slot through specialization evidence, reconstruct recursive prerequisites, and materialize one exact dictionary plus evidence-aware implementation-method specialization. This works for nominal, scalar, packed, SIMD, prerequisite-bearing, and imported-provider cases.
+
+Public root generics whose symbolic bounds are used only at erased trait-object coercions now receive a runtime-evidence fallback ABI. Every generic carrier remains `eqref`, followed by one trailing `eqref` vtable parameter per declared bound in source order. External Wasm consumers can construct structurally equivalent typed vtables, pass arbitrary consumer-owned receiver objects, and dynamically invoke the returned trait value. Static symbolic bound calls and nested generic evidence forwarding at this external boundary remain pending. Mutable scalar and trait-object identity/equality semantics are defined below; no source operation exposes either capability yet.
 
 ## Source and inference model
 
@@ -61,6 +63,14 @@ When a generic specialization crosses an erased boundary, linker materialization
 
 A trait layout demanded independently by a provider generic body and a consumer dynamic call is canonicalized program-wide by trait and requirement declaration identity. Method signature, vtable, and object physical nodes therefore receive one final type index across modules rather than relying on engine-specific structural-type canonicalization. This preserves identical behavior under Node and Wago Core 3.
 
+## External runtime-evidence ABI
+
+The first external ABI tranche is intentionally narrow and explicit. A supported public root generic uses an all-reference carrier specialization. Its ordinary visible parameters come first; hidden evidence parameters follow in flattened generic-parameter/bound order. Each evidence parameter has the core Wasm type `eqref`, but the function body immediately casts it to the exact trait vtable type before constructing the erased trait object. Runtime specialization evidence records `(trait declaration, absolute parameter index)`, so backend emission never re-resolves a trait or guesses parameter order.
+
+For example, `pub fn choose<t: Value>(Bool, t) -> Value` exports `(i32, eqref, eqref) -> eqref`. A separate Wasm consumer may define a structurally equivalent `Value` method signature, vtable, object, and receiver type; place its own `ref.func` in the vtable; call `choose`; then cast and dispatch through the returned object. The permanent consumer returns `42` using a consumer-defined receiver and implementation function, proving that evidence is genuinely supplied across the module boundary rather than selected inside the provider.
+
+Fallback planning derives every declared bound from the frozen callable interface, includes the runtime evidence requirement in specialization identity, appends hidden parameters only after all source parameters, and rejects unsupported bodies before materialization. Bodies containing symbolic static bound calls or nested generic call obligations therefore retain no invalid evidence-free export. The callable fingerprint domain is V4 and the executable `dew.abi` language version is 2, preventing an older consumer from accepting the new hidden-parameter ABI under an unchanged compatibility identity.
+
 ## Mutation, identity, and equality semantics
 
 A scalar-to-trait conversion is a value snapshot. The box belongs to the resulting trait value and is never an alias back to the originating scalar local, parameter, field, or module value. Consequently, a future mutable receiver operation may mutate only that owned box; it must not write a changed scalar back through the conversion source. The current language has no mutable receiver form, so emitted carrier boxes remain immutable.
@@ -85,10 +95,10 @@ A release-native 256-call stress body whose calls all carry the same closed prer
 
 The symbolic-erasure tranche adds release-native 256-call link benchmarks:
 
-- closed generic erasure: `25.61 ms ± 7.90 ms`;
-- genuinely dynamic generic erasure: `27.23 ms ± 11.76 ms`.
+- closed generic erasure: `19.49 ms ± 2.63 ms`;
+- genuinely dynamic generic erasure plus its public V1 evidence fallback: `25.25 ms ± 1.72 ms`.
 
-The closed nominal/prerequisite snapshot emits 1,536 bytes of Wasm and 10,127 bytes of WAT with zero `call_ref`, `ref.func`, globals, tables, or dispatch allocation sites; its three `struct.new` operations are unrelated application/runtime values. The six-carrier dynamic snapshot emits 2,083 bytes of Wasm and 14,031 bytes of WAT with one shared `call_ref` site, six exact dictionaries/`ref.func` roots, no table, and 19 `struct.new` sites. The recursive-prerequisite dynamic snapshot emits 1,629 bytes of Wasm and 10,746 bytes of WAT with one dictionary, one `ref.func`, one `call_ref`, no table, and four `struct.new` sites.
+The closed nominal/prerequisite snapshot emits 1,536 bytes of Wasm and 10,127 bytes of WAT with zero `call_ref`, `ref.func`, globals, tables, or dispatch allocation sites; its three `struct.new` operations are unrelated application/runtime values. The six-carrier dynamic snapshot emits 2,125 bytes of Wasm and 14,350 bytes of WAT with one shared `call_ref` site, six exact dictionaries/`ref.func` roots, no table, and 20 `struct.new` sites; the additional construction site is the externally callable runtime-evidence fallback. The recursive-prerequisite dynamic snapshot emits 1,629 bytes of Wasm and 10,746 bytes of WAT with one dictionary, one `ref.func`, one `call_ref`, no table, and four `struct.new` sites.
 
 A Node WasmGC runtime probe executed ten million loop iterations per sample. The direct baseline measured `3.950 ms ± 0.096 ms`; closed generic erasure measured `3.368 ms ± 0.157 ms` and emitted zero boxes/envelopes/dictionaries; the genuinely dynamic form measured `182.416 ms ± 24.656 ms`, intentionally paying one erased box/envelope construction and typed indirect dispatch per iteration. The runtime numbers are host-sensitive and are retained as directional evidence rather than a stable performance guarantee.
 
@@ -120,6 +130,7 @@ Coverage includes:
 - dynamic symbolic generic erasure across nominal, scalar, packed, and SIMD carriers;
 - recursive prerequisite dictionary reconstruction inside a generic specialization;
 - imported public generic providers with canonical cross-module trait layouts;
+- a public root runtime-evidence export called by a structurally typed external Wasm consumer;
 - ordinary missing-evidence diagnostics at the closed call site;
 - identical inferred coercion/evidence arenas under forward and reversed body schedules;
 - prerequisite-aware generic direct calls with ordered recursive evidence;

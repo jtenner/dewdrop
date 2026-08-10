@@ -1,18 +1,18 @@
 {
   "schema": 1,
   "versions": {
-    "language": 1,
+    "language": 2,
     "closure": 1,
     "genericCarrier": 1,
     "box": 1,
     "callbackWrapper": 1
   },
   "path": "fixture.application",
-  "interfaceFingerprint": "b65a2eba67d1528ca602ff29e95a4be7bdd7e1d20ba285e09557594f97ef4b77",
+  "interfaceFingerprint": "2d6ca221dd74885961196f8f323d0fd0dea60ec7025555cdce64d0bb136e0094",
   "dependencies": [
     {
       "path": "dew.std.option",
-      "contentFingerprint": "04c2a7190c8f95be045faa559d673441c10709257bbe2a36a3016795765eb2a6"
+      "contentFingerprint": "b493f1a8f25d171980074187c5d5aa687f10c54ba0434cf9fdd448eadb7617f2"
     },
     {
       "path": "dew.std.result",
@@ -20,11 +20,11 @@
     },
     {
       "path": "dew.std.preamble",
-      "contentFingerprint": "68de99ab7634a121cdcd00be7e7869f730fad0c05cbe9975c43cb3974e0af4b8"
+      "contentFingerprint": "5fb0cc0669142f3583e154c39cdad29792e5a15caabaf2b0eaf797c0a3d8d146"
     },
     {
       "path": "fixture.package_callback",
-      "contentFingerprint": "be257df9508ddfcea39e2e1a30c146a47626761329432fa9cff35eff9fbbab81"
+      "contentFingerprint": "9a822885d6fec5bb3b4b002a34f3bd7317a805547eceaab4dfecde4b3166c493"
     }
   ]
 }
