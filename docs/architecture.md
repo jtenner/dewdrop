@@ -94,11 +94,20 @@ physical linking: recursive type groups, initializers, indices, exports
 backend emission: Starshine module construction, validation, binary encoding
 ```
 
-Some separate boxes above still share implementation files. Program optimization
-now lives in `src/semantic/program_optimization.mbt` behind
-`optimize_program_lowering`; specialization planning and physical linking remain
-concentrated in `src/semantic/program_link_plan.mbt` and are tracked for later
-separation.
+The whole-program stages now have explicit implementation owners:
+
+- `src/semantic/program_optimization.mbt` owns backend-neutral interprocedural
+  rewrites behind `optimize_program_lowering`;
+- `src/semantic/program_specialization_plan.mbt` owns reachability, generic
+  specialization, runtime evidence, trait dictionaries, and fragment planning;
+- `src/semantic/program_physical_link.mbt` owns recursive physical type groups,
+  initializers, final program indices, and link assembly;
+- `src/semantic/program_link_plan.mbt` retains shared program-plan data contracts,
+  module-lowering orchestration, and cross-plan validation helpers.
+
+The specialization-to-linker handoff still exposes the broad
+`PlannedProgramWasmGCFragments` representation. Tightening and validating that
+handoff remains tracked in the temporary architecture TODO.
 
 ## Boundary and mutation policy
 

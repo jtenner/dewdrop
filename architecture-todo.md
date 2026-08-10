@@ -81,11 +81,11 @@
     currently performed before and inside `plan_program_lowering`.
 
 - [ ] **Separate specialization and evidence planning from physical linking.**
-  - [ ] Give generic specialization identity and worklists one owner.
-  - [ ] Give runtime-evidence normalization and forwarding one owner.
-  - [ ] Give trait dictionary and evidence-closure materialization one owner.
+  - [x] Give generic specialization identity and worklists one owner.
+  - [x] Give runtime-evidence normalization and forwarding one owner.
+  - [x] Give trait dictionary and evidence-closure materialization one owner.
   - [ ] Produce a compact validated specialization plan for the linker.
-  - [ ] Keep recursive physical type groups, initializer scheduling, final
+  - [x] Keep recursive physical type groups, initializer scheduling, final
         function/global/type indices, and link diagnostics in the physical
         linker.
   - Relevant file: `src/semantic/program_link_plan.mbt`.
