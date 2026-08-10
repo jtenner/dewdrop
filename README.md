@@ -102,7 +102,10 @@ Dewdrop currently includes, among other things:
 - Fixed-width signed, unsigned, and floating-point numbers.
 - Booleans, tuples, structs, enums, aliases, and pattern matching.
 - Traits, implementations, methods, static dispatch, and nominal/scalar/SIMD runtime trait values using typed WasmGC dictionaries.
+- Generic bounds and recursive trait evidence across local, imported, callback, and erased runtime boundaries.
 - Generic functions, structs, and enums using deterministic Wasm carrier specialization.
+- Postfix `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` for structs and enums, including conditional generic prerequisites and imported execution.
+- Ambient deterministic `Debug` output through bounded WASI writes.
 - First-class functions and closures, including escaping bounded callbacks that capture runtime trait evidence.
 - Immutable and mutable local variables, including captured mutable variables.
 - Multi-file modules and statically linked multi-module programs.
@@ -115,7 +118,7 @@ Dewdrop currently includes, among other things:
 - Deterministic WAT snapshots and Wasm execution tests.
 - File-aware deterministic diagnostics with line/column positions, excerpts, carets, and related-location labels.
 
-Not every familiar language feature exists yet. In particular, consult the roadmap rather than assuming planned features such as `#derive`, `defer`, iterators, growable arrays, formatting, HTTP, or cryptography have already been implemented.
+Not every familiar language feature exists yet. In particular, consult the roadmap rather than assuming planned features such as general `#annotation(...)` metadata, `Show`, `defer`, iterators, growable arrays, formatting, HTTP, or cryptography have already been implemented. Postfix `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` are implemented; `Show` derivation and any future annotation-based spelling remain separate design work.
 
 ## How a Dew program runs
 

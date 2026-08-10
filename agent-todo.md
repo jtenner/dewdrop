@@ -4,18 +4,25 @@
 
 ## Current priority order
 
-1. Define generic bounds, trait obligations, coherence/orphan rules, and runtime trait values.
-2. Add constant-parameter `#annotations`, `#derive`, `Show`/`Debug`, and deterministic cleanup with `defer`/`using`.
-3. Complete the core collection families and iteration protocols.
-4. Build the deterministic optimization, workspace-cache, and parallel-compilation pipelines.
-5. Expand fixtures, measurements, resource budgets, fuzzing, package/release tooling, and the broader standard library.
+1. Close correctness gaps in the already-advertised language surface.
+2. Add installed artifact-only dependency interface recovery.
+3. Implement growable `Array` and explicit iterator protocols, then extend the remaining collection families.
+4. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
+5. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
+
+## Current-language correctness hardening
+
+- [ ] Fix discarded non-Unit tail expressions in Unit-returning functions so they do not disrupt earlier method/operator inference.
+- [ ] Emit string literal patterns, or reject them before backend planning until executable semantics exist.
+- [ ] Route local module-value cycles to stable source-located eager-initialization diagnostics through the CLI.
+- [ ] Expand explicit bare-return, non-tail-drop, unreachable, and `Never` execution/stack-shape matrices across supported carriers.
+- [ ] Add the first ordinary warning producer so the already-wired ordered warning JSON oracle is exercised.
 
 ## Snapshots, diagnostics, and fixture suites
 
 - [ ] Continue adding successful, warning, compiler-failure, boundary, edge, and reduced-stress module snapshots beside each feature.
 - [ ] Add optimized WAT snapshots once optimization output is intentionally contractual.
 - [ ] Add reversed simulated job-order reproducibility snapshots.
-- [ ] Add multi-module fixtures to the compile/run suites.
 - [ ] Add tests for every new import and module rule.
 - [ ] Add source-location assertions to all cross-file diagnostics.
 - [ ] Add malformed standard-library source tests.
@@ -43,11 +50,12 @@
 - [ ] Define `#annotation(...)` syntax with compile-time constant parameters.
 - [ ] Specify permitted annotation constant types, name resolution, validation, retention, and frozen-interface serialization.
 - [ ] Expose frozen annotations to compiler features and tooling without ambient runtime reflection.
-- [ ] Add `#derive(...)` for easy system traits, initially `Eq`, `Debug`, `Show`, and `Hash`.
+- [ ] Define how existing postfix `derive(Eq, Debug, Hash)` relates to future annotations without breaking its ordinary coherence, generic prerequisites, frozen interfaces, or imported execution.
+- [ ] Add derived `Show` only after the `Show` trait and builder contract are settled.
+- [ ] Finalize typed lane Debug formats, recursion/resource limits, and deterministic non-WASI behavior.
 
 ## Generics, traits, and dispatch
 
-- [x] Propagate frozen recursive call evidence through closed-call specialization; retain dictionaries for dynamic trait boundaries.
 - [ ] Define method-level generic syntax and shadowing.
 - [ ] Define explicit call-site type-argument syntax.
 - [ ] Improve ordinary and generic overload specificity from generic-count tiers to structural match-set containment.
@@ -59,19 +67,6 @@
 - [ ] Keep inference variables out of frozen module type interners.
 - [ ] Define negative implementations only if required.
 - [ ] Define sealed traits only if required.
-- [x] Define trait-object source syntax through bare trait value types.
-- [x] Complete erased-boundary boxing for nominal references and scalar/packed/SIMD carrier snapshots.
-- [x] Plan WasmGC trait-object layouts and typed function-reference dictionary slots for nominal object-safe receivers.
-- [x] Emit shared local/imported dictionaries, including closed generic implementation specializations keyed by ordered prerequisite evidence, and typed-field `call_ref` dispatch.
-- [x] Define mutable boxed scalar receiver behavior as trait-owned snapshot mutation without source writeback; current receivers remain immutable.
-- [x] Define trait-object identity and equality semantics with no ambient identity or universal erased equality.
-- [x] Directize exact non-generic calls through transparent trait forwarding wrappers, eliminating their call-site trait boxes and dictionaries.
-- [x] Forward external runtime evidence through symbolic static bound calls and operators.
-- [x] Forward direct external runtime evidence through private, recursive, and imported generic call chains.
-- [x] Forward runtime prerequisites through statically selected concrete generic implementation evidence.
-- [x] Support escaping bounded function references/callbacks with immutable evidence-capturing closure subtypes and exact specialized entry trampolines.
-- [x] Support erased trait dictionaries whose immutable receiver capture carries caller-local runtime prerequisites through exact adapters.
-- [x] Broaden callback and runtime-trait effect/escape summaries across non-transparent public APIs using transitive total/discardable-call summaries, immutable callback-alias forwarding, and conservative retention for trapping, escaping, or multiply invoked values.
 
 ## Deterministic cleanup and executable language surface
 
@@ -80,10 +75,6 @@
 - [ ] Add `using` for scoped `Disposable` values through the same cleanup plan.
 - [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control flow that cannot guarantee exactly-once disposal.
 - [ ] Add parser, HIR, flow, lowering, WAT snapshot, runtime, and cross-module tests for `defer`, `using`, and `Disposable`.
-- [ ] Emit every local-let form.
-- [ ] Emit every return form, including bare `return`.
-- [ ] Emit drops for all non-tail value shapes.
-- [ ] Validate unreachable and `Never` stack behavior.
 - [ ] Design optional arguments, including defaults, omission, overload resolution, evaluation order, and ABI effects.
 - [ ] Add separate checked, saturating, and explicitly named wrapping/truncating conversion families beyond `Into<T>`.
 - [ ] Decide whether reserved `loop` becomes a second loop form.
@@ -132,11 +123,10 @@
 
 ## `Show`, `Debug`, and output
 
-- [ ] Define `Show` and `Debug` system traits and their relationship to `StringBuilder`.
-- [ ] Define formatting stability, recursion/resource limits, and derived behavior for `Show` and `Debug`.
+- [ ] Define the `Show` system trait and its relationship to `StringBuilder` and the implemented ambient `Debug` trait.
+- [ ] Define `Show` formatting stability, recursion/resource limits, and derived behavior.
 - [ ] Add `show(value) -> String` using `Show` evidence.
-- [ ] Add `debug(value)` using `Debug` evidence and bounded WASI output.
-- [ ] Define deterministic `debug` behavior when WASI is unavailable.
+- [ ] Define typed lane Debug formatting, recursion/resource limits, and deterministic behavior when WASI is unavailable.
 
 ## Broader standard library
 
@@ -169,7 +159,6 @@
 - [ ] Add a deterministic Name section.
 - [ ] Add source maps or a custom diagnostic/source section.
 - [ ] Deduplicate equivalent ABI signatures.
-- [ ] Add loop, module-initialization, and dynamic-dispatch execution tests.
 - [ ] Track required WasmGC feature versions and runtime compatibility.
 - [ ] Define the Dew builtin-registry extension API.
 - [ ] Define Wasm import declaration syntax and ABI.
@@ -188,7 +177,6 @@
 - [ ] Add escape analysis for boxes, payloads, and trait objects.
 - [ ] Add scalar replacement of short-lived aggregates.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
-- [ ] Devirtualize trait-object calls when evidence becomes exact.
 - [ ] Specialize enum representations from frozen usage/layout data.
 - [ ] Consider profile-guided optimization only after deterministic baseline builds exist.
 - [ ] Define explicit compiler resource budgets and fail-visible diagnostic behavior.

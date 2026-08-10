@@ -28,6 +28,7 @@ Optional function arguments are not yet supported and remain a documented future
 Text, collection, byte, and Wasm APIs are split into focused `dew.std` modules:
 
 ```text
+dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.option          ambient generic Option<t>
 dew.std.result          ambient generic Result<t, e>
 dew.std.fixed_array     fixed-length mutable generic arrays
@@ -40,6 +41,8 @@ dew.std.bytes_builder   consuming BytesBuilder
 dew.std.wasi            Preview 1 Bytes I/O
 dew.std.wasm.intrinsics explicit compiler-known WebAssembly intrinsics
 ```
+
+The ambient `Debug` trait and `debug(value)` facade stream deterministic output through bounded partial-write-safe WASI stdout. Primitive implementations cover Unit, Bool, all fixed-width numeric types, String, Bytes, SWAR carriers, and V128. Structs and enums may use postfix `derive(Debug)`; `derive(Eq)` and `derive(Hash)` are also implemented with conditional generic prerequisites and ordinary coherence/import rules. `Show` and `show(value) -> String` remain future work.
 
 The ambient `Hash` trait provides `hash(self) -> U64` plus collision equality through `hash_eq(self, right) -> Bool`. A complete Hash implementation is sufficient for Map and Set key eligibility; a U64 alone cannot distinguish arbitrary collisions. `Map<key, value>` provides empty/singleton construction, safe optional lookup, trapping index lookup, insertion/replacement, Boolean collision-chain removal, alias-visible clear, membership, length, and indexed setting. `Set<key>` provides empty/singleton construction, length, emptiness, membership, idempotent Boolean insertion, collision-chain removal, and clear. Both use a deterministic separate-chaining runtime with sixteen initial buckets and measured load-1 geometric growth that relinks entries from stored hashes without user calls. Iteration remains follow-up work.
 
