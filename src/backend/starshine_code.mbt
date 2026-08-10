@@ -92,6 +92,16 @@ priv struct StarshineProgramAdapterHelperPlan {
 }
 
 ///|
+/// Static lookup context shared by single-module and linked-program expression
+/// emission. It deliberately contains data rather than callbacks so hot body
+/// loops keep direct branches and indexed access.
+priv struct StarshineExpressionEmissionContext {
+  program : @semantic.PlannedProgramWasmGCLink?
+  module_index : Int
+  helper_plan : StarshineProgramAdapterHelperPlan?
+}
+
+///|
 fn starshine_program_evidence_closure(
   helper_plan : StarshineProgramAdapterHelperPlan,
   planned : @semantic.PlannedProgramWasmGCLink,
@@ -726,8 +736,8 @@ fn starshine_finish_call(
   for fragment in fragments {
     append_starshine_instructions(output, fragment)
   }
-  let test_assert_function_index = starshine_module_runtime_function_index(
-    planned, b"dew_test_assert",
+  let test_assert_function_index = planned.runtime_function_index(
+    b"dew_test_assert",
   )
   let function_ = match planned.function_of(declaration) {
     Some(function_) => function_
@@ -940,8 +950,8 @@ fn starshine_finish_program_call(
     Some(index) => index
     None => abort("caller's module is not linked")
   }
-  let test_assert_function_index = starshine_program_module_runtime_function_index(
-    planned, caller_module_index, b"dew_test_assert",
+  let test_assert_function_index = planned.module_runtime_function_index(
+    caller_module_index, b"dew_test_assert",
   )
   let caller_specialization_abi_key = match generic_specialization {
     Some(value) => value.specialization_abi_key
@@ -4069,8 +4079,7 @@ fn starshine_finish_trait_object_coercion(
 fn starshine_emit_body_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
-  program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  context : StarshineExpressionEmissionContext,
   body : @semantic.PlannedBodyLowering,
   current_lambda : @semantic.LambdaId,
   local_indices : Array[Int],
@@ -4091,8 +4100,10 @@ fn starshine_emit_body_instructions(
   control_state_local_indices : Array[Int],
   control_result_local_indices : Array[Int],
   generic_specialization : StarshineGenericSpecialization?,
-  helper_plan : StarshineProgramAdapterHelperPlan?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let program = context.program
+  let program_module_index = context.module_index
+  let helper_plan = context.helper_plan
   let tasks : Array[StarshineEmitTask] = []
   let results : Array[Array[@lib.Instruction]] = []
   match body.root {
@@ -8024,8 +8035,7 @@ fn emit_starshine_lambda_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      program,
-      program_module_index,
+      { program, module_index: program_module_index, helper_plan: None },
       body,
       lambda,
       local_indices,
@@ -8045,7 +8055,6 @@ fn emit_starshine_lambda_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
-      None,
       None,
     ) {
     Ok(instructions) => {
@@ -8116,8 +8125,7 @@ fn emit_starshine_function_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      None,
-      -1,
+      { program: None, module_index: -1, helper_plan: None },
       body,
       -1,
       local_indices,
@@ -8137,7 +8145,6 @@ fn emit_starshine_function_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
-      None,
       None,
     ) {
     Ok(instructions) => {
@@ -8168,40 +8175,6 @@ fn emit_starshine_function_body(
     }
     Err(error) => Err(error)
   }
-}
-
-///|
-fn starshine_module_imported_function_index(
-  planned : @semantic.PlannedModuleWasmGCFragments,
-  name : Bytes,
-) -> Int {
-  for function_ in planned.functions {
-    match function_.kind {
-      @semantic.PlannedWasmImportedFunction(candidate) =>
-        if candidate == name && !function_.elided {
-          return function_.function_index
-        }
-      _ => ()
-    }
-  }
-  -1
-}
-
-///|
-fn starshine_module_runtime_function_index(
-  planned : @semantic.PlannedModuleWasmGCFragments,
-  name : Bytes,
-) -> Int {
-  for function_ in planned.functions {
-    match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(candidate) =>
-        if candidate == name && !function_.elided {
-          return function_.function_index
-        }
-      _ => ()
-    }
-  }
-  -1
 }
 
 ///|

@@ -111,23 +111,23 @@
         discovering adapter architecture while emitting instructions.
   - Relevant file: `src/backend/starshine_code.mbt`.
 
-- [ ] **Unify the shared core of single-module and linked-program emission.**
-  - [ ] Define the narrow operations expression emission needs for function,
+- [x] **Unify the shared core of single-module and linked-program emission.**
+  - [x] Define the narrow operations expression emission needs for function,
         type, runtime, module, and specialization lookup.
-  - [ ] Reuse instruction, pattern, local, capture, and call emission where the
+  - [x] Reuse instruction, pattern, local, capture, and call emission where the
         behavior is genuinely identical.
-  - [ ] Keep separate module/program assembly paths where unification would add
+  - [x] Keep separate module/program assembly paths where unification would add
         hot-path indirection or obscure index ownership.
-  - [ ] Consolidate duplicated section and runtime lookup behavior after the
+  - [x] Consolidate duplicated section and runtime lookup behavior after the
         shared context is proven by tests and benchmarks.
   - Relevant file: `src/backend/starshine_code.mbt`.
 
-- [ ] **Separate backend module assembly from instruction generation.**
+- [x] **Separate backend module assembly from instruction generation.**
   - [x] Isolate type, import, function, global, export, element, and code section
         assembly.
   - [x] Isolate validation and binary encoding from Starshine instruction
         construction.
-  - [ ] Keep deterministic index assignment in plans rather than rediscovering
+  - [x] Keep deterministic index assignment in plans rather than rediscovering
         semantic relationships during assembly.
   - Relevant files: `src/backend/starshine_code.mbt`,
     `src/backend/wasm_custom_sections.mbt`, and `src/backend/starshine_fragments.mbt`.

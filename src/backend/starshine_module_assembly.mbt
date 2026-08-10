@@ -36,12 +36,8 @@ pub fn emit_starshine_code_section(
           if name == b"dew_test_assert" {
             functions.push(
               starshine_test_assert_body(
-                starshine_module_runtime_function_index(
-                  planned, b"dew_string_as_bytes",
-                ),
-                starshine_module_runtime_function_index(
-                  planned, b"dew_wasi_fd_write",
-                ),
+                planned.runtime_function_index(b"dew_string_as_bytes"),
+                planned.runtime_function_index(b"dew_wasi_fd_write"),
               ),
             )
           } else {
@@ -49,14 +45,12 @@ pub fn emit_starshine_code_section(
               emit_starshine_text_runtime_function(
                 name,
                 starshine_text_runtime_base(planned),
-                starshine_module_runtime_function_index(
-                  planned, b"dew_bytes_is_valid_utf8",
+                planned.runtime_function_index(b"dew_bytes_is_valid_utf8"),
+                planned.imported_function_index(
+                  b"wasi_snapshot_preview1.fd_write",
                 ),
-                starshine_module_imported_function_index(
-                  planned, b"wasi_snapshot_preview1.fd_write",
-                ),
-                starshine_module_imported_function_index(
-                  planned, b"wasi_snapshot_preview1.fd_read",
+                planned.imported_function_index(
+                  b"wasi_snapshot_preview1.fd_read",
                 ),
               ) {
               Some(function_body) => functions.push(function_body)

@@ -570,8 +570,11 @@ fn emit_starshine_program_function_body(
     starshine_emit_body_instructions(
       module_lowering,
       module_fragments,
-      Some(planned),
-      function_.module_index,
+      {
+        program: Some(planned),
+        module_index: function_.module_index,
+        helper_plan: Some(helper_plan),
+      },
       body,
       -1,
       local_indices,
@@ -592,7 +595,6 @@ fn emit_starshine_program_function_body(
       control_state_local_indices,
       control_result_local_indices,
       generic_specialization,
-      Some(helper_plan),
     ) {
     Ok(instructions) => {
       starshine_append_program_result_cast(planned, function_, instructions)
@@ -618,61 +620,6 @@ fn emit_starshine_program_function_body(
     }
     Err(error) => Err(error)
   }
-}
-
-///|
-fn starshine_program_imported_function_index(
-  planned : @semantic.PlannedProgramWasmGCLink,
-  name : Bytes,
-) -> Int {
-  for function_ in planned.functions {
-    match function_.kind {
-      @semantic.PlannedWasmImportedFunction(candidate) =>
-        if candidate == name && !function_.elided {
-          return function_.function_index
-        }
-      _ => ()
-    }
-  }
-  -1
-}
-
-///|
-fn starshine_program_runtime_function_index(
-  planned : @semantic.PlannedProgramWasmGCLink,
-  name : Bytes,
-) -> Int {
-  for function_ in planned.functions {
-    match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(candidate) =>
-        if candidate == name && !function_.elided {
-          return function_.function_index
-        }
-      _ => ()
-    }
-  }
-  -1
-}
-
-///|
-fn starshine_program_module_runtime_function_index(
-  planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
-  name : Bytes,
-) -> Int {
-  for function_ in planned.functions {
-    if function_.module_index != module_index {
-      continue
-    }
-    match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(candidate) =>
-        if candidate == name && !function_.elided {
-          return function_.function_index
-        }
-      _ => ()
-    }
-  }
-  -1
 }
 
 ///|
@@ -951,8 +898,11 @@ fn emit_starshine_program_initializer_body(
     starshine_emit_body_instructions(
       module_lowering,
       module_fragments,
-      Some(planned),
-      initializer.module_index,
+      {
+        program: Some(planned),
+        module_index: initializer.module_index,
+        helper_plan: None,
+      },
       body,
       -1,
       local_indices,
@@ -972,7 +922,6 @@ fn emit_starshine_program_initializer_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
-      None,
       None,
     ) {
     Ok(instructions) => {
@@ -1138,12 +1087,8 @@ fn emit_starshine_program_code_section(
           } else if name == b"dew_test_assert" {
             functions.push(
               starshine_test_assert_body(
-                starshine_program_runtime_function_index(
-                  planned, b"dew_string_as_bytes",
-                ),
-                starshine_program_runtime_function_index(
-                  planned, b"dew_wasi_fd_write",
-                ),
+                planned.runtime_function_index(b"dew_string_as_bytes"),
+                planned.runtime_function_index(b"dew_wasi_fd_write"),
               ),
             )
           } else {
@@ -1151,14 +1096,12 @@ fn emit_starshine_program_code_section(
               emit_starshine_text_runtime_function(
                 name,
                 planned.type_count,
-                starshine_program_runtime_function_index(
-                  planned, b"dew_bytes_is_valid_utf8",
+                planned.runtime_function_index(b"dew_bytes_is_valid_utf8"),
+                planned.imported_function_index(
+                  b"wasi_snapshot_preview1.fd_write",
                 ),
-                starshine_program_imported_function_index(
-                  planned, b"wasi_snapshot_preview1.fd_write",
-                ),
-                starshine_program_imported_function_index(
-                  planned, b"wasi_snapshot_preview1.fd_read",
+                planned.imported_function_index(
+                  b"wasi_snapshot_preview1.fd_read",
                 ),
               ) {
               Some(function_body) => functions.push(function_body)

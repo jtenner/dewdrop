@@ -165,7 +165,9 @@ concatenated lookup strings.
 Module fragment plans own module-local physical and signature indices. The final
 program link owns program-wide type, function, global, initializer, dictionary,
 and singleton indices. Backend emission consumes those frozen indices and must
-not derive a competing order from map iteration.
+not derive a competing order from map iteration. Module and program plans also
+own direct imported/runtime function lookup maps, including per-module runtime
+lookups for linked output, so assembly does not rescan function classifications.
 
 ## Arena ownership
 
@@ -229,8 +231,14 @@ lookup keys before ordinary code emission begins.
 - Starshine validation and binary encoding, owned by those assembly modules;
 - compiler-owned Wasm custom sections.
 
-It should not own source name resolution, trait selection, overload choice,
-generic evidence discovery, package resolution, or standard declaration
+Single-module and linked-program bodies share one iterative expression, pattern,
+local, capture, and call emitter. A static `StarshineExpressionEmissionContext`
+supplies optional linked-program and adapter-plan data without callback-heavy
+hot-path indirection. Single-module and linked-program section assembly remain
+separate because their final index ownership differs.
+
+The backend should not own source name resolution, trait selection, overload
+choice, generic evidence discovery, package resolution, or standard declaration
 identity assignment.
 
 ## Driver and host ownership

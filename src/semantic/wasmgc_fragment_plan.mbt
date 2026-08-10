@@ -268,11 +268,29 @@ pub struct PlannedModuleWasmGCFragments {
   signature_type_count : Int
   imported_function_count : Int
   defined_function_count : Int
+  imported_function_indices : Map[Bytes, Int]
+  runtime_function_indices : Map[Bytes, Int]
   uses_text_runtime : Bool
   uses_fixed_array_runtime : Bool
   uses_map_runtime : Bool
   uses_linear_memory : Bool
 } derive(Eq, Debug)
+
+///|
+pub fn PlannedModuleWasmGCFragments::imported_function_index(
+  self : PlannedModuleWasmGCFragments,
+  name : Bytes,
+) -> Int {
+  self.imported_function_indices.get(name).unwrap_or(-1)
+}
+
+///|
+pub fn PlannedModuleWasmGCFragments::runtime_function_index(
+  self : PlannedModuleWasmGCFragments,
+  name : Bytes,
+) -> Int {
+  self.runtime_function_indices.get(name).unwrap_or(-1)
+}
 
 ///|
 pub fn PlannedModuleWasmGCFragments::type_index_of(
@@ -3634,6 +3652,20 @@ fn plan_module_wasmgc_fragments_in_orders(
       break
     }
   }
+  let imported_function_indices : Map[Bytes, Int] = Map::default()
+  let runtime_function_indices : Map[Bytes, Int] = Map::default()
+  for function_ in planned_functions {
+    if function_.elided || function_.function_index < 0 {
+      continue
+    }
+    match function_.kind {
+      PlannedWasmImportedFunction(name) =>
+        imported_function_indices[name] = function_.function_index
+      PlannedWasmRuntimeFunction(name) =>
+        runtime_function_indices[name] = function_.function_index
+      _ => ()
+    }
+  }
   {
     module_id: lowering.module_id,
     dense_enum_dispatch: options.dense_enum_dispatch,
@@ -3675,6 +3707,8 @@ fn plan_module_wasmgc_fragments_in_orders(
     signature_type_count: next_signature_type - physical_types.length(),
     imported_function_count,
     defined_function_count,
+    imported_function_indices,
+    runtime_function_indices,
     uses_text_runtime,
     uses_fixed_array_runtime,
     uses_map_runtime,

@@ -235,6 +235,9 @@ pub struct PlannedProgramWasmGCLink {
   type_count : Int
   imported_function_count : Int
   defined_function_count : Int
+  imported_function_indices : Map[Bytes, Int]
+  runtime_function_indices : Map[Bytes, Int]
+  module_runtime_function_indices : Array[Map[Bytes, Int]]
   diagnostics : Array[ProgramWasmGCLinkDiagnostic]
 }
 
@@ -245,6 +248,35 @@ fn program_specialized_call_key(
   expression : ExprId,
 ) -> ProgramSpecializedCallKey {
   { body, specialization_abi_key, expression }
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::imported_function_index(
+  self : PlannedProgramWasmGCLink,
+  name : Bytes,
+) -> Int {
+  self.imported_function_indices.get(name).unwrap_or(-1)
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::runtime_function_index(
+  self : PlannedProgramWasmGCLink,
+  name : Bytes,
+) -> Int {
+  self.runtime_function_indices.get(name).unwrap_or(-1)
+}
+
+///|
+pub fn PlannedProgramWasmGCLink::module_runtime_function_index(
+  self : PlannedProgramWasmGCLink,
+  module_index : Int,
+  name : Bytes,
+) -> Int {
+  if module_index < 0 ||
+    module_index >= self.module_runtime_function_indices.length() {
+    return -1
+  }
+  self.module_runtime_function_indices[module_index].get(name).unwrap_or(-1)
 }
 
 ///|
