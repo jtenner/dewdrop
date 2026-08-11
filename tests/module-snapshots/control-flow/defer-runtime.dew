@@ -1,0 +1,93 @@
+open dew.std.array
+
+fn record(state: Array<I32>, digit: I32) -> Unit {
+  array_set_unchecked(state, 0u32, array_get_unchecked(state, 0u32) * 10 + digit)
+}
+
+fn new_state() -> Array<I32> {
+  let state = array_with_capacity(1u32)
+  array_push(state, 0)
+  state
+}
+
+fn fallthrough_case(state: Array<I32>) -> I32 {
+  defer record(state, 2)
+  defer record(state, 3)
+  record(state, 1)
+  7
+}
+
+fn value_case(state: Array<I32>) -> I32 {
+  record(state, 4)
+  9
+}
+
+fn return_case(state: Array<I32>) -> I32 {
+  defer record(state, 5)
+  return value_case(state)
+}
+
+fn break_value(state: Array<I32>) -> I32 {
+  record(state, 7)
+  11
+}
+
+fn break_case(state: Array<I32>) -> I32 {
+  while 0 {
+    value => {
+      defer record(state, 6)
+      break break_value(state)
+    }
+  }
+}
+
+fn continue_case(state: Array<I32>) -> U32 {
+  while 0u32 {
+    current if current < 2u32 => {
+      defer record(state, 2)
+      record(state, 1)
+      continue current + 1u32
+    }
+    current => break current
+  }
+}
+
+fn nested_loop_case(state: Array<I32>) -> Unit {
+  defer record(state, 9)
+  let ignored = while 0 {
+    current => break current
+  }
+  record(state, 8)
+}
+
+fn capture_case(state: Array<I32>) -> Unit {
+  let mut digit = 1
+  defer record(state, digit)
+  digit = 4
+}
+
+pub fn main() -> Unit {
+  let fallthrough = new_state()
+  assert(fallthrough_case(fallthrough) == 7, "fallthrough result")
+  assert(array_get_unchecked(fallthrough, 0u32) == 132, "fallthrough LIFO")
+
+  let returned = new_state()
+  assert(return_case(returned) == 9, "return result")
+  assert(array_get_unchecked(returned, 0u32) == 45, "return evaluates value first")
+
+  let broken = new_state()
+  assert(break_case(broken) == 11, "break result")
+  assert(array_get_unchecked(broken, 0u32) == 76, "break cleanup")
+
+  let continued = new_state()
+  assert(continue_case(continued) == 2u32, "continue result")
+  assert(array_get_unchecked(continued, 0u32) == 1212, "continue cleanup")
+
+  let nested = new_state()
+  nested_loop_case(nested)
+  assert(array_get_unchecked(nested, 0u32) == 89, "nested loop does not exit scope")
+
+  let captured = new_state()
+  capture_case(captured)
+  assert(array_get_unchecked(captured, 0u32) == 4, "defer observes latest mutable capture")
+}

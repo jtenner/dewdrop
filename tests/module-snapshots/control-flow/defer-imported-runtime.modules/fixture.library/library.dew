@@ -1,0 +1,5 @@
+open dew.std.wasi
+
+pub fn cleanup() -> Unit {
+  let ignored = wasi_fd_write(1u32, b"imported-cleanup")
+}

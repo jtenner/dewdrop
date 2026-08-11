@@ -4782,6 +4782,18 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedLocalGet(local_id) => {
+            if local_id >= 0 &&
+              local_id < local_indices.length() &&
+              local_indices[local_id] < 0 {
+              let local_info = lowering.locals[body.locals.start + local_id]
+              match local_info.shape {
+                @semantic.UnitPlannedValueShape => {
+                  results.push([])
+                  continue
+                }
+                _ => ()
+              }
+            }
             if local_id < 0 ||
               local_id >= local_indices.length() ||
               local_indices[local_id] < 0 {
@@ -6451,6 +6463,15 @@ fn starshine_emit_body_instructions(
           append_starshine_instructions(output, fragments[index])
           match item.kind {
             @semantic.PlannedLetItem(local_id, _, expression) => {
+              if local_id >= 0 &&
+                local_id < local_indices.length() &&
+                local_indices[local_id] < 0 {
+                let local_info = lowering.locals[body.locals.start + local_id]
+                match local_info.shape {
+                  @semantic.UnitPlannedValueShape => continue
+                  _ => ()
+                }
+              }
               if local_id < 0 ||
                 local_id >= local_indices.length() ||
                 local_indices[local_id] < 0 {

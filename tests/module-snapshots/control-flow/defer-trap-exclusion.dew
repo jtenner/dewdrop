@@ -1,0 +1,10 @@
+open dew.std.wasi
+
+fn cleanup() -> Unit {
+  let ignored = wasi_fd_write(1u32, b"cleanup")
+}
+
+pub fn main() -> Unit {
+  defer cleanup()
+  unreachable()
+}

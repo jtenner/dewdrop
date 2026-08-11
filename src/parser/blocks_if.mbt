@@ -144,6 +144,7 @@ fn Parser::parse_block_after_left_brace(
   open_offset : UInt64,
 ) -> Result[Block, RecoveryFailure] {
   let items : Array[BlockItem] = []
+  let cleanups : Array[DeferredCleanup] = []
   if self.consume_right_brace() {
     return Ok({ items, offset: open_offset })
   }
@@ -155,13 +156,28 @@ fn Parser::parse_block_after_left_brace(
   self.skip_newlines()
   while true {
     if self.consume_right_brace() {
-      return Ok({ items, offset: open_offset })
+      return Ok(finalize_deferred_block(items, cleanups, open_offset))
     }
     let token = match self.peek_token() {
       Some(value) => value
       None => return Err(expression_failure(UnclosedBlock(open_offset)))
     }
     let offset = token.offset()
+    match token.kind() {
+      @tokenizer.Keyword(@tokenizer.Defer) => {
+        self.consume_lookahead()
+        match self.parse_block_defer_item(open_offset, offset) {
+          Ok((item, cleanup)) => {
+            items.push(item)
+            cleanups.push(cleanup)
+            self.skip_newlines()
+            continue
+          }
+          Err(error) => return Err(error)
+        }
+      }
+      _ => ()
+    }
     let item = match token.kind() {
       @tokenizer.Error(error) => {
         self.consume_lookahead()
@@ -223,7 +239,7 @@ fn Parser::parse_block_after_left_brace(
         }
       }
     }
-    items.push(item)
+    defer_transform_block_item(items, item, cleanups, 0)
     self.skip_newlines()
   } nobreak {
     abort("unreachable block parser termination")

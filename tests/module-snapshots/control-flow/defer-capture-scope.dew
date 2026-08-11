@@ -1,0 +1,6 @@
+fn use(value: I32) -> Unit {}
+
+pub fn main() -> Unit {
+  defer use(later)
+  let later = 1
+}

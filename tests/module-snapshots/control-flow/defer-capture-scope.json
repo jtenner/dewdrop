@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:4:13: error: UnknownValueName(6, 5, 67)\n  |\n4 |   defer use(later)\n  |             ^"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -17,6 +17,69 @@ fn nested_else_if_expression(depth : Int) -> Bytes {
 }
 
 ///|
+test "defer desugars normal scope exit in LIFO order" {
+  match
+    Parser::from_bytes(
+      b"fn run() -> I32 {\n  defer first()\n  defer second()\n  tail()\n}\n",
+    ).parse_declaration() {
+    Ok(Function(declaration)) => {
+      assert_eq(declaration.body.items.length(), 6)
+      assert_true(
+        declaration.body.items[0] is LetItem(_, _, _, LambdaExpr(_, _, _, _), _),
+      )
+      assert_true(
+        declaration.body.items[1] is LetItem(_, _, _, LambdaExpr(_, _, _, _), _),
+      )
+      assert_true(
+        declaration.body.items[2]
+        is LetItem(_, _, _, CallExpr(NameExpr("tail", _), [], _), _),
+      )
+      match declaration.body.items[3] {
+        ExpressionItem(CallExpr(NameExpr(name, _), [], _), _) =>
+          assert_true(name.contains("dew_defer_"))
+        _ => fail("expected second cleanup call")
+      }
+      match declaration.body.items[4] {
+        ExpressionItem(CallExpr(NameExpr(name, _), [], _), _) =>
+          assert_true(name.contains("dew_defer_"))
+        _ => fail("expected first cleanup call")
+      }
+      assert_true(
+        declaration.body.items[5] is ExpressionItem(NameExpr(_, _), _),
+      )
+    }
+    _ => fail("expected deferred function")
+  }
+}
+
+///|
+test "defer evaluates return values before cleanup" {
+  match
+    Parser::from_bytes(
+      b"fn run() -> I32 {\n  defer cleanup()\n  return value()\n}\n",
+    ).parse_declaration() {
+    Ok(Function(declaration)) => {
+      assert_eq(declaration.body.items.length(), 4)
+      assert_true(
+        declaration.body.items[0] is LetItem(_, _, _, LambdaExpr(_, _, _, _), _),
+      )
+      assert_true(
+        declaration.body.items[1]
+        is LetItem(_, _, _, CallExpr(NameExpr("value", _), [], _), _),
+      )
+      assert_true(
+        declaration.body.items[2]
+        is ExpressionItem(CallExpr(NameExpr(_, _), [], _), _),
+      )
+      assert_true(
+        declaration.body.items[3] is ReturnItem(Some(NameExpr(_, _)), _),
+      )
+    }
+    _ => fail("expected deferred return function")
+  }
+}
+
+///|
 test "if is condition desugars to a binding match" {
   match
     parse_test_expression(

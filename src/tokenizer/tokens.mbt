@@ -21,6 +21,7 @@ pub enum Keyword {
   While
   Loop
   Return
+  Defer
   Break
   Continue
   True
@@ -163,6 +164,7 @@ fn keyword_from_identifier(identifier : String) -> Keyword? {
     "while" => Some(While)
     "loop" => Some(Loop)
     "return" => Some(Return)
+    "defer" => Some(Defer)
     "break" => Some(Break)
     "continue" => Some(Continue)
     "true" => Some(True)
