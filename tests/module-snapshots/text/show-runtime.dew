@@ -16,11 +16,15 @@ impl Show for Pair {
   }
 }
 
+fn unit_value() -> Unit {
+}
+
 fn assert_show<t: Show>(value: t, expected: String) -> Unit {
   assert(show(value).equals(expected), "show output")
 }
 
 pub fn main() -> Unit {
+  assert_show(unit_value(), "()")
   assert_show(true, "true")
   assert_show(false, "false")
   assert_show(-128i8, "-128")

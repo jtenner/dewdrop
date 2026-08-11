@@ -51,6 +51,27 @@ test "wasm intrinsics are imported through an at alias" {
 }
 
 ///|
+test "generic Unit specialization omits carrier parameters consistently" {
+  let program = @semantic.collect_program_manifest(
+    2398UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open dew.std.show\nfn unit_value() -> Unit {\n}\npub fn run() -> String {\n  show(unit_value())\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(program.diagnostics.length(), 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "cross module GC-backed String call and UTF8 runtime validate" {
   let program = @semantic.collect_program_manifest(
     2399UL,

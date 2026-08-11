@@ -99,7 +99,7 @@
 
 ## `Show`, `Debug`, and output
 
-- [ ] Define Unit, float, byte, SWAR, and typed lane Show formats only when their stable textual policy is ready.
+- [ ] Define float, byte, SWAR, and typed lane Show formats only when their stable textual policy is ready.
 - [ ] Define typed lane Debug formatting, recursion/resource limits, and deterministic behavior when WASI is unavailable.
 
 ## Broader standard library

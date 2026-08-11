@@ -115,6 +115,12 @@ fn show_append_i64(formatter: ShowFormatter, value: I64) -> Unit {
   }
 }
 
+impl Show for Unit {
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    show_append_text(formatter, "()")
+  }
+}
+
 impl Show for Bool {
   fn append_show(self, formatter: ShowFormatter) -> Unit {
     if self {

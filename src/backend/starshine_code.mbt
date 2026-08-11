@@ -2484,21 +2484,32 @@ fn starshine_body_locals(
   for local_id in 0..<body.locals.length {
     let planned_local = lowering.locals[body.locals.start + local_id]
     match planned_local.kind {
-      @semantic.ParameterLocal =>
-        match
+      @semantic.ParameterLocal => {
+        let specialized_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          planned_local.type_,
+          planned_local.shape,
+        )
+        let parameter_type = if specialized_shape != planned_local.shape {
+          starshine_shape_value_type(specialized_shape)
+        } else {
           starshine_body_value_type(
             lowering,
             planned,
             program,
             planned_local.type_,
             planned_local.shape,
-          ) {
+          )
+        }
+        match parameter_type {
           Some(_) => {
             local_indices[local_id] = parameter_count
             parameter_count += 1
           }
           None => ()
         }
+      }
       @semantic.LetLocal | @semantic.PatternLocal => {
         if elided_locals[local_id] {
           continue
@@ -4780,7 +4791,13 @@ fn starshine_emit_body_instructions(
             }
             if local_indices[local_id] < 0 {
               let local_info = lowering.locals[body.locals.start + local_id]
-              match local_info.shape {
+              match
+                starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  local_info.type_,
+                  local_info.shape,
+                ) {
                 @semantic.UnitPlannedValueShape =>
                   tasks.push(EmitStarshineExpression(value))
                 _ => return Err(InvalidLocal(body.body, local_id))
@@ -4805,7 +4822,13 @@ fn starshine_emit_body_instructions(
               local_id < local_indices.length() &&
               local_indices[local_id] < 0 {
               let local_info = lowering.locals[body.locals.start + local_id]
-              match local_info.shape {
+              match
+                starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  local_info.type_,
+                  local_info.shape,
+                ) {
                 @semantic.UnitPlannedValueShape => {
                   results.push([])
                   continue

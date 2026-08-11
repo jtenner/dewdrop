@@ -645,7 +645,8 @@ count = count + 1
 - [x] Define the non-ambient `Show` trait, its `StringBuilder` append contract, its separation from ambient `Debug`, and initial stable Bool/integer/text formats.
 - [x] Define and implement stable aggregate-derived `Show` punctuation and generic prerequisite behavior.
 - [x] Enforce deterministic Show limits of 64 nested dispatch levels and 1,048,576 output bytes through opaque formatter helpers.
-- [ ] Define Unit, float, byte, SWAR, and typed lane Show formats only when their stable textual policy is ready.
+- [x] Define Unit Show as `()` and validate generic Unit evidence with carrier-elided parameters.
+- [ ] Define float, byte, SWAR, and typed lane Show formats only when their stable textual policy is ready.
 - [x] Add `show(value) -> String` and composition helpers using `Show` evidence.
 - [ ] Define deterministic Debug behavior when WASI is unavailable.
 - [x] Keep the minimal `Iter<t>` protocol ambient with `has_next` and trapping state-advancing `next`.
