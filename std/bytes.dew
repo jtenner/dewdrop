@@ -1,3 +1,12 @@
+impl Hash for Bytes {
+  fn hash(self) -> U64 {
+    bytes_hash(self)
+  }
+  fn hash_eq(self, right: Bytes) -> Bool {
+    bytes_equals(self, right)
+  }
+}
+
 impl Bytes {
   fn byte_length(self) -> U32 {
     bytes_byte_length(self)

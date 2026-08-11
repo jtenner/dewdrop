@@ -830,6 +830,8 @@ All current mutable collections use alias-visible reference semantics rather tha
 
 #### 3.13.2 Hash keys, maps, and sets
 
+String, StringView, and Bytes implement allocation-free 64-bit FNV-1a Hash over their logical bytes. The offset basis is 14695981039346656037 and the prime is 1099511628211; equal byte sequences share hashes across the three types, while `hash_eq` remains same-type.
+
 The ambient `Hash` trait requires `hash(self) -> U64` and `hash_eq(self, right: Self) -> Bool`. A complete Hash implementation is sufficient for map-key eligibility. Collision equality is part of Hash because a U64 hash alone cannot define arbitrary key identity and Dew does not yet support supertrait bounds. Implementations must guarantee that hash-equal keys produce the same U64 value.
 
 `dew.std.map` defines mutable reference-identity `Map<key, value>` with expected-context empty construction, inferred singleton construction, length, membership, safe `Option<value>` lookup, trapping unchecked/index lookup, insertion/replacement, indexed setting, Boolean removal, and clear. Insert and replacement return `Unit`; replacing an existing key preserves length. `remove` returns true only when it unlinks a present key. Clear replaces the bucket table and resets logical length, so aliases observe the mutation immediately.

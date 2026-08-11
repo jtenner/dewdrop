@@ -1779,6 +1779,89 @@ fn starshine_text_byte_at_body(base : Int, string_ : Bool) -> @lib.Func {
 }
 
 ///|
+fn starshine_text_hash_body(base : Int, type_offset : Int) -> @lib.Func {
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let value_type = @lib.TypeIdx::new((base + type_offset).reinterpret_as_uint())
+  let value_ref = 1
+  let chunks = 2
+  let physical_index = 3
+  let length = 4
+  let index = 5
+  let hash = 6
+  let body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(0)),
+    @lib.Instruction::ref_cast(false, @lib.HeapType::new(value_type)),
+    @lib.Instruction::local_set(text_local(value_ref)),
+    @lib.Instruction::local_get(text_local(value_ref)),
+    @lib.Instruction::struct_get(value_type, 0U),
+    @lib.Instruction::local_set(text_local(chunks)),
+    @lib.Instruction::local_get(text_local(value_ref)),
+    @lib.Instruction::struct_get(value_type, 1U),
+    @lib.Instruction::local_set(text_local(physical_index)),
+    @lib.Instruction::local_get(text_local(value_ref)),
+    @lib.Instruction::struct_get(value_type, 2U),
+    @lib.Instruction::local_set(text_local(length)),
+    text_i32(0),
+    @lib.Instruction::local_set(text_local(index)),
+    @lib.Instruction::i64_const(
+      @lib.I64::new(14695981039346656037UL.reinterpret_as_int64()),
+    ),
+    @lib.Instruction::local_set(text_local(hash)),
+  ]
+  let loop_body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(index)),
+    @lib.Instruction::local_get(text_local(length)),
+    @lib.Instruction::i32_ge_u(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [
+        @lib.Instruction::local_get(text_local(hash)),
+        @lib.Instruction::return_(),
+      ],
+      None,
+    ),
+    @lib.Instruction::local_get(text_local(hash)),
+  ]
+  for instruction in text_byte_at(array_type, chunks, physical_index, 0) {
+    loop_body.push(instruction)
+  }
+  for
+    instruction in [
+      @lib.Instruction::i64_extend_i32u(),
+      @lib.Instruction::i64_xor(),
+      @lib.Instruction::i64_const(@lib.I64::new(1099511628211L)),
+      @lib.Instruction::i64_mul(),
+      @lib.Instruction::local_set(text_local(hash)),
+      @lib.Instruction::local_get(text_local(physical_index)),
+      text_i32(1),
+      @lib.Instruction::i32_add(),
+      @lib.Instruction::local_set(text_local(physical_index)),
+      @lib.Instruction::local_get(text_local(index)),
+      text_i32(1),
+      @lib.Instruction::i32_add(),
+      @lib.Instruction::local_set(text_local(index)),
+      @lib.Instruction::br(@lib.LabelIdx::new(0U)),
+    ] {
+    loop_body.push(instruction)
+  }
+  body.push(
+    @lib.Instruction::loop_(@lib.BlockType::void_(), @lib.Expr::new(loop_body)),
+  )
+  body.push(@lib.Instruction::local_get(text_local(hash)))
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      text_runtime_ref(base + type_offset),
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i32(),
+      @lib.ValType::i64(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
 /// Construct a bounds-checked shared range over arbitrary Bytes.
 fn starshine_bytes_view_body(base : Int) -> @lib.Func {
   let bytes_type = @lib.TypeIdx::new((base + 2).reinterpret_as_uint())
@@ -3094,6 +3177,8 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_utf16_length_body(base))
   } else if name == b"dew_string_equals" {
     Some(starshine_text_equals_body(base, true))
+  } else if name == b"dew_string_hash" {
+    Some(starshine_text_hash_body(base, 1))
   } else if name == b"dew_string_byte_at" {
     Some(starshine_text_byte_at_body(base, true))
   } else if name == b"dew_string_view" {
@@ -3126,6 +3211,8 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_utf16_length_type_body(base, 3))
   } else if name == b"dew_string_view_equals" {
     Some(starshine_text_equals_type_body(base, 3))
+  } else if name == b"dew_string_view_hash" {
+    Some(starshine_text_hash_body(base, 3))
   } else if name == b"dew_string_view_view" {
     Some(starshine_string_view_body(base, 3))
   } else if name == b"dew_string_view_find" {
@@ -3178,6 +3265,8 @@ fn emit_starshine_text_runtime_function(
     }
   } else if name == b"dew_bytes_equals" {
     Some(starshine_text_equals_body(base, false))
+  } else if name == b"dew_bytes_hash" {
+    Some(starshine_text_hash_body(base, 2))
   } else if name == b"dew_bytes_byte_at" {
     Some(starshine_text_byte_at_body(base, false))
   } else if name == b"dew_bytes_view" {

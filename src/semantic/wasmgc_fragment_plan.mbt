@@ -1775,6 +1775,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_string_as_bytes" ||
   name == b"dew_string_utf16_length" ||
   name == b"dew_string_equals" ||
+  name == b"dew_string_hash" ||
   name == b"dew_string_byte_at" ||
   name == b"dew_string_view" ||
   name == b"dew_string_concat" ||
@@ -1791,6 +1792,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_string_view_as_bytes" ||
   name == b"dew_string_view_utf16_length" ||
   name == b"dew_string_view_equals" ||
+  name == b"dew_string_view_hash" ||
   name == b"dew_string_view_view" ||
   name == b"dew_string_view_find" ||
   name == b"dew_string_view_find_string" ||
@@ -1816,6 +1818,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_is_valid_utf8" ||
   name == b"dew_bytes_to_string" ||
   name == b"dew_bytes_equals" ||
+  name == b"dew_bytes_hash" ||
   name == b"dew_bytes_byte_at" ||
   name == b"dew_bytes_view" ||
   name == b"dew_bytes_concat" ||

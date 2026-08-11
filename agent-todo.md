@@ -81,7 +81,7 @@
 ## Text and primitive runtime hardening
 
 - [ ] Measure retained-range policy, small-inline strings, hashing, ordering, and UTF-8 scalar iteration before extending the text ABI.
-- [ ] Add String, StringView, and Bytes ordering, hashing, and code-point iteration.
+- [ ] Add String, StringView, and Bytes ordering plus code-point iteration.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [ ] Expand generated lane tests from smoke coverage to every generated operation family, including shuffle, saturation, narrowing, widening, masks, and lane-memory variants.
 - [ ] Complete native, WasmGC, JavaScript, classic Wasm, Node, and Wago execution and benchmark coverage for supported primitive/runtime features.
@@ -93,7 +93,6 @@
 - [x] Implement growable `dew.std.collections.deque` with O(1) amortized operations at both ends.
 - [ ] Specify and benchmark sequence/deque/measure use cases before implementing `dew.std.collections.finger_tree`.
 - [ ] Define and implement `dew.std.list` only if measured workloads justify a persistent list representation.
-- [ ] Add deterministic allocation-free `Hash` implementations for String, StringView, and Bytes after their cross-type equality contract is final.
 - [x] Define the public `dew.std.queue` API behind a representation-independent mutable interface.
 - [x] Implement queue enqueue, dequeue, peek, size, iteration, and empty-queue result semantics.
 - [x] Replace the measured O(n) contiguous dequeue baseline with circular-buffer storage; benchmark linked/persistent alternatives only if the ring representation misses its budgets.

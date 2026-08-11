@@ -17,7 +17,7 @@ Dew currently has:
 - strict-UTF-8 GC-owned `String`/`StringView`, arbitrary `Bytes`, consuming builders, strict shared/copied ranges, flat concatenation, and allocation-free matching;
 - bounded WASI Preview 1 `Bytes` I/O through the 65,520-byte data region of one reusable memory page, including partial writes and chunked reads;
 - exact callable reachability, compiler-owned import/runtime elision, frozen final indices, Starshine validation, and deterministic Starshine binary encoding;
-- first-class `_test.dew` semantics, frozen test metadata, test-mode exports, 198 direct standard tests, and independent UTF/SWAR/WASI differential harnesses;
+- first-class `_test.dew` semantics, frozen test metadata, test-mode exports, 201 direct standard tests, and independent UTF/SWAR/WASI differential harnesses;
 - selective on-disk standard-module loading as the default, with compiler-owned generated standard mirrors under `src/standard_sources/` retained only as portable bootstrap providers that must stay byte-identical to the on-disk sources;
 - passing native, classic Wasm, WasmGC, JavaScript, Node/Wago differential integration, and scoped generated-source validation suites;
 - a SHA-256 content-addressed persistent V11 cache for diagnostics-free compiler-owned standard and versioned external dependency interfaces, with deterministic encoding, package integrity, dependency closure keys, checksum validation, explicit disable/report controls, and fail-visible corruption handling;
@@ -480,7 +480,8 @@ count = count + 1
 - [x] Add exact allocation-free Bytes substring search with short-needle SIMD filtering and long-needle rolling fingerprints.
 - [x] Complete a text-runtime hardening sprint with 17,471 deterministic parity checks, deliberate hash collisions, boundary matrices, full builder-consumption traps, nominal ABI regressions, and 64 KiB stress.
 - [x] Add allocation-free String/StringView find, contains, prefix, and suffix matching across all String/View operand combinations.
-- [ ] Add ordering, hashing, and code-point iteration.
+- [x] Add deterministic allocation-free FNV-1a hashing for String, StringView, and Bytes logical byte ranges.
+- [ ] Add text ordering and code-point iteration.
 - [x] Add bounded linear-memory scratch lowering for WASI Bytes interfaces.
 
 ### Arrays, maps, queues, and collections
@@ -501,7 +502,7 @@ count = count + 1
 - [x] Implement `dew.std.set` over the same collision-safe Hash table with idempotent insertion, linked-chain removal, clear, membership, emptiness, and length.
 - [x] Add shared geometric Map/Set bucket growth with a measured maximum load factor of 1.0 and deterministic iterative rehashing that reuses stored hashes.
 - [x] Add Boolean Map removal and alias-visible O(1) clear using the proven Set chain-unlinking machinery.
-- [ ] Add deterministic allocation-free Hash implementations for String, StringView, and Bytes after finalizing their cross-type equality contract.
+- [x] Add deterministic allocation-free Hash implementations for String, StringView, and Bytes with same-byte cross-type hash parity and same-type equality.
 - [x] Implement `dew.std.queue` over growable circular-buffer storage with O(1) amortized enqueue/dequeue and stable FIFO iteration.
 - [x] Add ambient `Iter<t>` plus explicit Array, Map key/value/entry, and Set key iterator types while leaving hash traversal order unspecified.
 - [x] Define mutable alias, structural/replacement mutation, persistence, and iterator-invalidation rules.

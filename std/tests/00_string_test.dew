@@ -542,3 +542,23 @@ test "Bytes byte_at reads arbitrary bytes" {
   assert(b"\x00\xFF".byte_at(0u32) == 0u8, "wrong zero byte")
   assert(b"\x00\xFF".byte_at(1u32) == 255u8, "wrong high byte")
 }
+
+test "String Hash is deterministic FNV1a over UTF8 bytes" {
+  assert("".hash() == 14695981039346656037u64, "wrong empty String hash")
+  assert("dew".hash() == 14599028528254157231u64, "wrong ASCII String hash")
+  assert("λ".hash() == 780254166137709982u64, "wrong Unicode String hash")
+}
+
+test "StringView Hash uses its logical shared range" {
+  let view = "xdew!".view(1u32, 3u32)
+  assert(view.hash() == "dew".hash(), "StringView hash changed logical bytes")
+  assert(view.hash_eq("dew".view(0u32, 3u32)), "StringView hash equality failed")
+}
+
+test "Bytes Hash covers arbitrary bytes without UTF8 conversion" {
+  assert(
+    b"\x00\xFF\x01".hash() == 15475486627826480595u64,
+    "wrong arbitrary Bytes hash",
+  )
+  assert(b"dew".hash() == "dew".hash(), "equal byte sequences changed hash")
+}

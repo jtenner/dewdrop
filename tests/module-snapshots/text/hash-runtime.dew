@@ -1,0 +1,47 @@
+open dew.std.string
+open dew.std.bytes
+open dew.std.map
+open dew.std.set
+
+fn string_map() -> Map<String, I32> {
+  Map::empty()
+}
+
+fn view_map() -> Map<StringView, I32> {
+  Map::empty()
+}
+
+fn bytes_map() -> Map<Bytes, I32> {
+  Map::empty()
+}
+
+pub fn main() -> Unit {
+  assert("".hash() == 14695981039346656037u64, "empty FNV offset")
+  assert("dew".hash() == 14599028528254157231u64, "ASCII FNV")
+  assert("λ".hash() == 780254166137709982u64, "UTF-8 byte FNV")
+  assert(b"\x00\xFF\x01".hash() == 15475486627826480595u64, "arbitrary bytes FNV")
+
+  let source = "xdew!"
+  let first = source.view(1u32, 3u32)
+  let second = "dew".view(0u32, 3u32)
+  assert(first.hash() == "dew".hash(), "view and String byte parity")
+  assert(first.hash() == b"dew".hash(), "text and Bytes byte parity")
+  assert(first.hash_eq(second), "view hash equality")
+  assert(!first.hash_eq("dev".view(0u32, 3u32)), "view hash inequality")
+
+  let strings = string_map()
+  strings.insert("dew", 7)
+  strings.insert("λ", 8)
+  assert(strings["dew"] == 7, "String map lookup")
+  assert(strings["λ"] == 8, "Unicode String map lookup")
+
+  let views = view_map()
+  views.insert(first, 9)
+  assert(views[second] == 9, "StringView map lookup by equal range")
+
+  let byte_values = bytes_map()
+  byte_values.insert(b"\x00\xFF\x01", 10)
+  assert(byte_values[b"\x00\xFF\x01"] == 10, "Bytes map lookup")
+  let bytes_set = Set::singleton(b"dew")
+  assert(bytes_set.contains(b"dew"), "Bytes set membership")
+}
