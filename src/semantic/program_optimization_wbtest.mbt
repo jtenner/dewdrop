@@ -177,13 +177,13 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
 }
 
 ///|
-test "tail recursion marks only exact non-generic self calls in tail position" {
+test "tail recursion marks only exact non-generic scalar self calls in tail position" {
   let program = collect_program_manifest(
     22807UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"fn countdown(value: U32, total: U32) -> U32 {\n  if value == 0u32 {\n    total\n  } else {\n    countdown(value - 1u32, total + 1u32)\n  }\n}\nfn non_tail(value: U32) -> U32 {\n  if value == 0u32 {\n    0u32\n  } else {\n    1u32 + non_tail(value - 1u32)\n  }\n}\npub fn main() -> Unit {\n  assert(countdown(10u32, 0u32) == 10u32, \"tail\")\n  assert(non_tail(10u32) == 10u32, \"non-tail\")\n}\n",
+          "main.dew", b"fn countdown(value: U32, total: U32) -> U32 {\n  if value == 0u32 {\n    total\n  } else {\n    countdown(value - 1u32, total + 1u32)\n  }\n}\nfn non_tail(value: U32) -> U32 {\n  if value == 0u32 {\n    0u32\n  } else {\n    1u32 + non_tail(value - 1u32)\n  }\n}\nfn reference_tail(value: String, remaining: U32) -> String {\n  if remaining == 0u32 {\n    value\n  } else {\n    reference_tail(value, remaining - 1u32)\n  }\n}\npub fn main() -> Unit {\n  assert(countdown(10u32, 0u32) == 10u32, \"tail\")\n  assert(non_tail(10u32) == 10u32, \"non-tail\")\n}\n",
         ),
       ]),
     ]),
@@ -194,6 +194,7 @@ test "tail recursion marks only exact non-generic self calls in tail position" {
   let collected = program.modules[0]
   let countdown = collected.lookup_value("countdown").unwrap()
   let non_tail = collected.lookup_value("non_tail").unwrap()
+  let reference_tail = collected.lookup_value("reference_tail").unwrap()
   let countdown_calls = body_calls(
     collected,
     collected.body_of(countdown).unwrap(),
@@ -202,14 +203,23 @@ test "tail recursion marks only exact non-generic self calls in tail position" {
     collected,
     collected.body_of(non_tail).unwrap(),
   )
+  let reference_tail_calls = body_calls(
+    collected,
+    collected.body_of(reference_tail).unwrap(),
+  )
   assert_eq(countdown_calls.length(), 1)
   assert_eq(non_tail_calls.length(), 1)
+  assert_eq(reference_tail_calls.length(), 1)
   assert_true(
     optimized.modules[0].expressions[countdown_calls[0]].kind
     is PlannedTailCall(_, _, _, _),
   )
   assert_true(
     optimized.modules[0].expressions[non_tail_calls[0]].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+  assert_true(
+    optimized.modules[0].expressions[reference_tail_calls[0]].kind
     is PlannedDirectCall(_, _, _, _),
   )
   assert_true(

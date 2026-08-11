@@ -2820,6 +2820,35 @@ fn mark_tail_recursive_block(
 }
 
 ///|
+fn program_tail_scalar_shape(shape : PlannedValueShape) -> Bool {
+  match shape {
+    ErrorPlannedValueShape
+    | RefPlannedValueShape
+    | GenericPlannedValueShape => false
+    _ => true
+  }
+}
+
+///|
+fn program_tail_body_uses_scalar_carriers(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  callable : PlannedCallable,
+) -> Bool {
+  if !program_tail_scalar_shape(callable.result_shape) {
+    return false
+  }
+  for local_id in 0..<body.locals.length {
+    if !program_tail_scalar_shape(
+        module_.locals[body.locals.start + local_id].shape,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn mark_program_tail_recursion(modules : Array[PlannedModuleLowering]) -> Unit {
   for module_ in modules {
     for body in module_.bodies {
@@ -2828,7 +2857,8 @@ fn mark_program_tail_recursion(modules : Array[PlannedModuleLowering]) -> Unit {
         None => continue
       }
       if callable.has_receiver ||
-        program_callable_generic_parameters(callable).length > 0 {
+        program_callable_generic_parameters(callable).length > 0 ||
+        !program_tail_body_uses_scalar_carriers(module_, body, callable) {
         continue
       }
       match body.root {

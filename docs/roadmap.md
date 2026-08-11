@@ -611,7 +611,7 @@ count = count + 1
 - [x] Dead nominal/payload and compiler-runtime type elimination: frozen `uses_text_runtime` requirements prevent elided String signatures from retaining the V128 array and five text/bytes structs; the scalar smoke is 81 bytes and contains only its three function types.
 - [x] Add deterministic fixed-point constant folding for exact Bool and I32/U32/I64/U64 primitive operations after selection, preserving trapping/float cases.
 - [x] Add deterministic immutable-summary inlining for non-generic scalar parameter selectors and zero-argument scalar constants, preserving argument evaluation order.
-- [x] Add direct tail-recursion optimization with preserved argument order, deep stack-safety coverage, and visible non-tail calls.
+- [x] Add direct scalar-carrier tail-recursion optimization with preserved argument order, deep stack-safety coverage, visible non-tail/reference calls, and Node/Wago parity.
 - [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
 - [ ] Escape analysis for boxes, payloads, and trait objects.
 - [ ] Scalar replacement of short-lived aggregates.
