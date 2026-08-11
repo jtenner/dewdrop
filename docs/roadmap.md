@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. add measured escape analysis and scalar replacement for short-lived aggregates and boxes;
+1. extend measured escape analysis and scalar replacement to let-bound aggregates, boxes, payloads, and trait objects;
 2. continue snapshots, measurements, resource budgets, workspace caching, packaging,
    and release hardening throughout.
 
@@ -614,7 +614,8 @@ count = count + 1
 - [x] Add direct scalar-carrier tail-recursion optimization with preserved argument order, deep stack-safety coverage, visible non-tail/reference calls, and Node/Wago parity.
 - [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
 - [ ] Escape analysis for boxes, payloads, and trait objects.
-- [ ] Scalar replacement of short-lived aggregates.
+- [x] Scalar-replace supported field projections directly from fresh struct construction while evaluating every initializer once in source order.
+- [ ] Extend scalar replacement to proven nonescaping let-bound aggregates.
 - [x] Devirtualize trait-object calls when prerequisite-aware flow analysis proves exact evidence through locals, branches, parameter returns, and effect-free forwarding chains.
 - [ ] Enum representation specialization based on frozen usage/layout data.
 - [ ] Profile-guided optimization only after deterministic baseline builds exist.

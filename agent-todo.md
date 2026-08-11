@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Add measured escape analysis and scalar replacement for short-lived aggregates and boxes.
+1. Extend measured escape analysis and scalar replacement to let-bound aggregates, boxes, payloads, and trait objects.
 2. Build workspace-cache and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -145,7 +145,7 @@
 ## Optimization and performance discipline
 
 - [ ] Add escape analysis for boxes, payloads, and trait objects.
-- [ ] Add scalar replacement of short-lived aggregates.
+- [ ] Extend fresh-struct scalar replacement to proven nonescaping let-bound aggregates.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
 - [ ] Specialize enum representations from frozen usage/layout data.
 - [ ] Consider profile-guided optimization only after deterministic baseline builds exist.

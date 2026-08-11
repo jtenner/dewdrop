@@ -123,6 +123,55 @@ test "immutable call summaries inline selectors and constant functions" {
 }
 
 ///|
+test "scalar replacement selects fresh struct fields while preserving all inputs" {
+  let program = collect_program_manifest(
+    22809UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  Pair {\n    left: left\n    right: right\n  }.right\n}\npub fn main() -> I32 {\n  choose(1, 2)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let choose = collected.lookup_value("choose").unwrap()
+  let body = collected.body_of(choose).unwrap()
+  let mut field_get = -1
+  let mut struct_new = -1
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    match unoptimized.modules[0].expressions[expression].kind {
+      PlannedFieldGet(_, base) => {
+        field_get = expression
+        struct_new = base
+      }
+      _ => ()
+    }
+  }
+  assert_true(field_get >= 0)
+  assert_true(struct_new >= 0)
+  assert_true(
+    optimized.modules[0].expressions[field_get].kind
+    is PlannedParameterSelect(_, 1),
+  )
+  assert_true(
+    optimized.modules[0].expressions[struct_new].kind
+    is PlannedConsumedExpression,
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[field_get].kind
+    is PlannedFieldGet(_, _),
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[struct_new].kind
+    is PlannedStructNew(_, _, _),
+  )
+}
+
+///|
 test "common field extraction reuses immutable scalar loads only in the copy" {
   let program = collect_program_manifest(
     22808UL,

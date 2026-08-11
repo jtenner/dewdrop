@@ -2489,6 +2489,7 @@ fn prepare_program_optimization_mutation(
     modules[module_index] = {
       ..module_,
       expressions: module_.expressions.copy(),
+      expression_children: module_.expression_children.copy(),
       call_type_arguments: module_.call_type_arguments.copy(),
       call_type_argument_shapes: module_.call_type_argument_shapes.copy(),
       expression_evidence: evidence,
@@ -2735,6 +2736,85 @@ fn cse_program_field_extractions(
 }
 
 ///|
+fn program_scalar_replaceable_field_shape(
+  shape : PlannedValueShape,
+) -> Bool {
+  match shape {
+    I32PlannedValueShape
+    | U32PlannedValueShape
+    | I64PlannedValueShape
+    | U64PlannedValueShape
+    | F32PlannedValueShape
+    | F64PlannedValueShape
+    | Swar32PlannedValueShape
+    | Swar64PlannedValueShape
+    | V128PlannedValueShape => true
+    _ => false
+  }
+}
+
+///|
+fn scalar_replace_program_struct_field_reads(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    for expression in 0..<module_.expressions.length() {
+      let source = module_.expressions[expression]
+      if !program_scalar_replaceable_field_shape(source.shape) {
+        continue
+      }
+      let (field, base) = match source.kind {
+        PlannedFieldGet(field, base) => (field, base)
+        _ => continue
+      }
+      if base < 0 || base >= module_.expressions.length() ||
+        !(module_.expressions[base].trait_object_coercion is NoInferredTraitObjectCoercion) {
+        continue
+      }
+      let fields = match module_.expressions[base].kind {
+        PlannedStructNew(_, _, fields) => fields
+        _ => continue
+      }
+      if fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() {
+        continue
+      }
+      let start = module_.expression_children.length()
+      let mut selected = -1
+      for index in 0..<fields.length {
+        let object_field = module_.object_fields[fields.start + index]
+        module_.expression_children.push(object_field.value)
+        if object_field.field == field {
+          if selected >= 0 {
+            selected = -2
+          } else {
+            selected = index
+          }
+        }
+      }
+      if selected < 0 {
+        while module_.expression_children.length() > start {
+          ignore(module_.expression_children.pop())
+        }
+        continue
+      }
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedParameterSelect(
+          { start, length: fields.length },
+          selected,
+        ),
+      }
+      let base_source = module_.expressions[base]
+      module_.expressions[base] = {
+        ..base_source,
+        kind: PlannedConsumedExpression,
+      }
+    }
+  }
+}
+
+///|
 fn mark_tail_recursive_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -2896,6 +2976,7 @@ pub fn optimize_program_lowering(
     effects,
   )
   cse_program_field_extractions(modules)
+  scalar_replace_program_struct_field_reads(modules)
   mark_program_tail_recursion(modules)
   {
     graph: lowering.graph,

@@ -42,6 +42,7 @@
     {"label":"immutable summary inlining budget","wat":"tests/module-snapshots/optimization/inlining-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"call ":2,"array.new_default":2,"array.get":3,"array.set":3,"array.len":1,"struct.new":4,"struct.set":3}},
     {"label":"allocation-free text hash budget","wat":"tests/module-snapshots/text/hash-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":8,"array.new_fixed":30,"array.get":50,"array.set":9,"array.len":34,"struct.new":40,"struct.set":16,"i64.xor":3,"i64.mul":3}},
     {"label":"direct tail recursion budget","wat":"tests/module-snapshots/optimization/tail-recursion-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"return_call":1,"call ":4,"struct.new":2,"i32.add":2,"i32.sub":2}},
-    {"label":"immutable field common subexpression budget","wat":"tests/module-snapshots/optimization/common-subexpression-runtime.wat","forbidden":["call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.get":3,"local.get":7,"local.set":2,"struct.new":3}}
+    {"label":"immutable field common subexpression budget","wat":"tests/module-snapshots/optimization/common-subexpression-runtime.wat","forbidden":["call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.get":3,"local.get":7,"local.set":2,"struct.new":3}},
+    {"label":"fresh struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-runtime.wat","forbidden":["struct.new","struct.get","call_ref","ref.func","(global","(table"],"counts":{"local.get":2,"drop":1,"call ":1,"i32.const":2}}
   ]
 }

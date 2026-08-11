@@ -1,0 +1,15 @@
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn choose(left: I32, right: I32) -> I32 {
+  Pair {
+    left: left
+    right: right
+  }.right
+}
+
+pub fn main() -> I32 {
+  choose(7, 9)
+}
