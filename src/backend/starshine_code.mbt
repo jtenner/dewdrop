@@ -243,6 +243,13 @@ priv enum StarshineEmitTask {
     Int,
     @semantic.HirSpan
   )
+  FinishStarshineTailCall(
+    @semantic.DeclId,
+    @semantic.ExprId,
+    Int,
+    Int,
+    @semantic.HirSpan
+  )
   FinishStarshineParameterSelect(Int, Int)
   FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
@@ -762,6 +769,7 @@ fn starshine_finish_call(
   declaration : @semantic.DeclId,
   fragments : Array[Array[@lib.Instruction]],
   scratch_index : Int,
+  tail : Bool,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let output : Array[@lib.Instruction] = []
   for fragment in fragments {
@@ -803,11 +811,14 @@ fn starshine_finish_call(
         if function_.function_index < 0 {
           return Err(MissingFunction(declaration))
         }
-        output.push(
-          @lib.Instruction::call(
-            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
-          ),
+        let function_index = @lib.FuncIdx::new(
+          function_.function_index.reinterpret_as_uint(),
         )
+        if tail {
+          output.push(@lib.Instruction::return_call(function_index))
+        } else {
+          output.push(@lib.Instruction::call(function_index))
+        }
       }
       @semantic.PlannedWasmSignatureOnlyFunction =>
         return Err(SignatureOnlyCall(declaration))
@@ -847,6 +858,7 @@ fn starshine_program_call_argument(
   }
   match lowering.expressions[expression].kind {
     @semantic.PlannedDirectCall(_, receiver, arguments, _)
+    | @semantic.PlannedTailCall(_, receiver, arguments, _)
     | @semantic.PlannedBoundDirectCall(_, _, receiver, arguments, _) =>
       receiver_argument(receiver, arguments)
     @semantic.PlannedOperatorCall(_, _, left, right, _)
@@ -975,6 +987,7 @@ fn starshine_finish_program_call(
   generic_specialization : StarshineGenericSpecialization?,
   fragments : Array[Array[@lib.Instruction]],
   scratch_index : Int,
+  tail : Bool,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let output : Array[@lib.Instruction] = []
   let caller_module_index = match planned.module_lookup.get(caller.module_id) {
@@ -1111,11 +1124,14 @@ fn starshine_finish_program_call(
         if function_.function_index < 0 {
           return Err(MissingFunction(declaration))
         }
-        output.push(
-          @lib.Instruction::call(
-            @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
-          ),
+        let function_index = @lib.FuncIdx::new(
+          function_.function_index.reinterpret_as_uint(),
         )
+        if tail {
+          output.push(@lib.Instruction::return_call(function_index))
+        } else {
+          output.push(@lib.Instruction::call(function_index))
+        }
       }
       @semantic.PlannedWasmSignatureOnlyFunction =>
         return Err(SignatureOnlyCall(declaration))
@@ -3470,9 +3486,12 @@ fn starshine_map_call(
         None,
         arguments,
         scratch_index,
+        false,
       )
     None =>
-      starshine_finish_call(planned, declaration, arguments, scratch_index)
+      starshine_finish_call(
+        planned, declaration, arguments, scratch_index, false,
+      )
   }
 }
 
@@ -4880,6 +4899,35 @@ fn starshine_emit_body_instructions(
             let receiver_count = if receiver >= 0 { 1 } else { 0 }
             tasks.push(
               FinishStarshineCall(
+                declaration,
+                expression,
+                arguments.length + receiver_count,
+                conversion_scratch_index,
+                type_arguments,
+              ),
+            )
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[arguments.start + index],
+                ),
+              )
+            }
+            if receiver >= 0 {
+              tasks.push(EmitStarshineExpression(receiver))
+            }
+          }
+          @semantic.PlannedTailCall(
+            declaration,
+            receiver,
+            arguments,
+            type_arguments
+          ) => {
+            let receiver_count = if receiver >= 0 { 1 } else { 0 }
+            tasks.push(
+              FinishStarshineTailCall(
                 declaration,
                 expression,
                 arguments.length + receiver_count,
@@ -8088,10 +8136,44 @@ fn starshine_emit_body_instructions(
               generic_specialization,
               fragments,
               scratch_index,
+              false,
             )
           None =>
             starshine_finish_call(
-              planned, declaration, fragments, scratch_index,
+              planned, declaration, fragments, scratch_index, false,
+            )
+        }
+        match emitted {
+          Ok(output) => results.push(output)
+          Err(error) => return Err(error)
+        }
+      }
+      FinishStarshineTailCall(
+        declaration,
+        expression,
+        count,
+        scratch_index,
+        type_arguments
+      ) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let emitted = match program {
+          Some(link) =>
+            starshine_finish_program_call(
+              Some(lowering),
+              link,
+              planned,
+              body.body,
+              expression,
+              declaration,
+              Some(type_arguments),
+              generic_specialization,
+              fragments,
+              scratch_index,
+              true,
+            )
+          None =>
+            starshine_finish_call(
+              planned, declaration, fragments, scratch_index, true,
             )
         }
         match emitted {

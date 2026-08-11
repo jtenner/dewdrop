@@ -1,0 +1,20 @@
+fn countdown(value: U32, total: U32) -> U32 {
+  if value == 0u32 {
+    total
+  } else {
+    countdown(value - 1u32, total + 1u32)
+  }
+}
+
+fn non_tail(value: U32) -> U32 {
+  if value == 0u32 {
+    0u32
+  } else {
+    1u32 + non_tail(value - 1u32)
+  }
+}
+
+pub fn main() -> Unit {
+  assert(countdown(100000u32, 0u32) == 100000u32, "deep tail recursion")
+  assert(non_tail(32u32) == 32u32, "non-tail recursion")
+}

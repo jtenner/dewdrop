@@ -176,6 +176,7 @@ pub enum PlannedExpressionKind {
   PlannedSetIterHasNext(ExprId, PlannedValueShape)
   PlannedSetIterNext(ExprId, PlannedValueShape)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
+  PlannedTailCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
   PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)

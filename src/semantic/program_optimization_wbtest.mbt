@@ -123,6 +123,48 @@ test "immutable call summaries inline selectors and constant functions" {
 }
 
 ///|
+test "tail recursion marks only exact non-generic self calls in tail position" {
+  let program = collect_program_manifest(
+    22807UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn countdown(value: U32, total: U32) -> U32 {\n  if value == 0u32 {\n    total\n  } else {\n    countdown(value - 1u32, total + 1u32)\n  }\n}\nfn non_tail(value: U32) -> U32 {\n  if value == 0u32 {\n    0u32\n  } else {\n    1u32 + non_tail(value - 1u32)\n  }\n}\npub fn main() -> Unit {\n  assert(countdown(10u32, 0u32) == 10u32, \"tail\")\n  assert(non_tail(10u32) == 10u32, \"non-tail\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let countdown = collected.lookup_value("countdown").unwrap()
+  let non_tail = collected.lookup_value("non_tail").unwrap()
+  let countdown_calls = body_calls(
+    collected,
+    collected.body_of(countdown).unwrap(),
+  )
+  let non_tail_calls = body_calls(
+    collected,
+    collected.body_of(non_tail).unwrap(),
+  )
+  assert_eq(countdown_calls.length(), 1)
+  assert_eq(non_tail_calls.length(), 1)
+  assert_true(
+    optimized.modules[0].expressions[countdown_calls[0]].kind
+    is PlannedTailCall(_, _, _, _),
+  )
+  assert_true(
+    optimized.modules[0].expressions[non_tail_calls[0]].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[countdown_calls[0]].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+}
+
+///|
 test "program optimization preserves its unoptimized input" {
   let program = collect_program_manifest(
     22804UL,

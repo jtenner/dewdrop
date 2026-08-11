@@ -2521,6 +2521,118 @@ fn directize_exact_runtime_trait_flows(
 }
 
 ///|
+fn mark_tail_recursive_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  declaration : DeclId,
+  depth : Int,
+) -> Unit {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return
+  }
+  let source = module_.expressions[expression]
+  match source.kind {
+    PlannedDirectCall(target, receiver, arguments, type_arguments) if target ==
+      declaration &&
+      receiver < 0 &&
+      type_arguments.length == 0 =>
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedTailCall(target, receiver, arguments, type_arguments),
+      }
+    PlannedBlockExpression(block) =>
+      mark_tail_recursive_block(module_, block, declaration, depth + 1)
+    PlannedIfExpression(_, then_block, alternative) => {
+      mark_tail_recursive_block(module_, then_block, declaration, depth + 1)
+      mark_tail_recursive_expression(
+        module_,
+        alternative,
+        declaration,
+        depth + 1,
+      )
+    }
+    PlannedMatchExpression(_, arms) => {
+      if arms.start < 0 ||
+        arms.start + arms.length > module_.pattern_arms.length() {
+        return
+      }
+      for index in 0..<arms.length {
+        mark_tail_recursive_expression(
+          module_,
+          module_.pattern_arms[arms.start + index].body,
+          declaration,
+          depth + 1,
+        )
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn mark_tail_recursive_block(
+  module_ : PlannedModuleLowering,
+  block : BlockId,
+  declaration : DeclId,
+  depth : Int,
+) -> Unit {
+  if block < 0 ||
+    block >= module_.blocks.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return
+  }
+  let items = module_.blocks[block].items
+  if items.start < 0 ||
+    items.start + items.length > module_.block_items.length() {
+    return
+  }
+  for index in 0..<items.length {
+    match module_.block_items[items.start + index].kind {
+      PlannedReturnItem(value) if value >= 0 =>
+        mark_tail_recursive_expression(module_, value, declaration, depth + 1)
+      _ => ()
+    }
+  }
+  if items.length == 0 {
+    return
+  }
+  match module_.block_items[items.start + items.length - 1].kind {
+    PlannedExpressionItem(value) =>
+      mark_tail_recursive_expression(module_, value, declaration, depth + 1)
+    _ => ()
+  }
+}
+
+///|
+fn mark_program_tail_recursion(modules : Array[PlannedModuleLowering]) -> Unit {
+  for module_ in modules {
+    for body in module_.bodies {
+      let callable = match module_.functions.callable_of(body.declaration) {
+        Some(value) => value
+        None => continue
+      }
+      if callable.has_receiver ||
+        program_callable_generic_parameters(callable).length > 0 {
+        continue
+      }
+      match body.root {
+        ExpressionBodyRoot(expression) =>
+          mark_tail_recursive_expression(
+            module_,
+            expression,
+            body.declaration,
+            0,
+          )
+        BlockBodyRoot(block) =>
+          mark_tail_recursive_block(module_, block, body.declaration, 0)
+      }
+    }
+  }
+}
+
+///|
 /// Applies backend-neutral whole-program rewrites to a copied lowering plan.
 /// The input lowering and its mutable arenas remain unchanged.
 pub fn optimize_program_lowering(
@@ -2539,6 +2651,7 @@ pub fn optimize_program_lowering(
     lowering.index.module_lookup,
     effects,
   )
+  mark_program_tail_recursion(modules)
   {
     graph: lowering.graph,
     modules,

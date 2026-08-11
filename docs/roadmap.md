@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. add tail-recursion optimization where deterministic runtime support and measurements justify it;
+1. add effect-safe common-subexpression elimination and deeper extraction reuse;
 2. continue snapshots, measurements, resource budgets, workspace caching, packaging,
    and release hardening throughout.
 
@@ -431,7 +431,7 @@ count = count + 1
   - [x] Execute returned, nested, passed, module-level, and imported closures in Node.
   - [x] Box captured `let mut` bindings in shared carrier-specialized cells; closures capture and route the cell reference, while uncaptured mutation remains an unboxed Wasm local.
 - [x] Emit typed indirect calls for non-capturing function values.
-- [ ] Tail-call optimization if supported and measured.
+- [x] Emit Core 3 `return_call` for exact non-generic receiver-free self calls in structural tail position after Node/Wago validation and benchmark evidence.
 - [x] Cross-module direct calls and static imports.
 
 ### Indexing
@@ -611,7 +611,7 @@ count = count + 1
 - [x] Dead nominal/payload and compiler-runtime type elimination: frozen `uses_text_runtime` requirements prevent elided String signatures from retaining the V128 array and five text/bytes structs; the scalar smoke is 81 bytes and contains only its three function types.
 - [x] Add deterministic fixed-point constant folding for exact Bool and I32/U32/I64/U64 primitive operations after selection, preserving trapping/float cases.
 - [x] Add deterministic immutable-summary inlining for non-generic scalar parameter selectors and zero-argument scalar constants, preserving argument evaluation order.
-- [ ] Tail-recursion optimization.
+- [x] Add direct tail-recursion optimization with preserved argument order, deep stack-safety coverage, and visible non-tail calls.
 - [ ] Common subexpression elimination where allocation/effects permit.
 - [ ] Escape analysis for boxes, payloads, and trait objects.
 - [ ] Scalar replacement of short-lived aggregates.
