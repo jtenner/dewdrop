@@ -21,6 +21,7 @@ python3 tools/generate_priority_queue_std.py --check
 python3 tools/generate_red_black_tree_std.py --check
 python3 tools/generate_ordered_map_std.py --check
 python3 tools/generate_ordered_set_std.py --check
+python3 tools/generate_show_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs

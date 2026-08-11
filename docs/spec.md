@@ -798,6 +798,8 @@ Bodies without member syntax use shared empty member arrays, and selection stora
 
 `dew.std.collections.circular_buffer` defines bounded and growable mutable ring buffers over the six Array carrier families. Bounded push returns false when full. Growable push expands zero capacity to four and otherwise doubles while preserving logical FIFO order. Head and tail positions wrap modulo backing capacity; pop and peek return `Option::None` when empty; pop and clear release removed reference carriers; iteration is stable logical front-to-back.
 
+`dew.std.show` defines non-ambient `Show` evidence with `append_show(self, builder: StringBuilder) -> Unit`. `show(value)` constructs one builder and returns its finished String; composition helpers append nested shown values, text, or ASCII without intermediate strings. Show is side-effect free and distinct from ambient WASI-backed Debug. Initial stable formats cover Bool, signed/unsigned fixed-width integers, String, and StringView; floating-point, Unit, byte, SIMD, and derived aggregate formats remain intentionally undefined.
+
 `dew.std.collections.ordered_set` defines comparator-ordered sets with idempotent insertion, membership, removal, extrema, bounds, predecessor/successor, key iteration, and inclusive/exclusive ranges over the shared red-black tree core.
 
 `dew.std.collections.ordered_map` defines deterministic comparator-ordered maps with replacement, optional lookup, removal, extrema, bounds, predecessor/successor, entry iteration, and inclusive/exclusive ranges over the shared red-black tree core.

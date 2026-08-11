@@ -1,0 +1,143 @@
+open dew.std.string_builder
+
+pub trait Show {
+  fn append_show(self, builder: StringBuilder) -> Unit
+}
+
+pub fn show<t: Show>(value: t) -> String {
+  let builder = StringBuilder::new()
+  value.append_show(builder)
+  builder.finish()
+}
+
+pub fn show_append<t: Show>(builder: StringBuilder, value: t) -> Unit {
+  value.append_show(builder)
+}
+
+pub fn show_append_text(builder: StringBuilder, value: String) -> Unit {
+  builder.append(value)
+}
+
+pub fn show_append_ascii(builder: StringBuilder, value: U8) -> Unit {
+  builder.append_ascii(value)
+}
+
+fn show_u64_to_u8(value: U64) -> U8 {
+  value.into()
+}
+
+fn show_i8_to_i64(value: I8) -> I64 {
+  value.into()
+}
+
+fn show_i16_to_i64(value: I16) -> I64 {
+  value.into()
+}
+
+fn show_i32_to_i64(value: I32) -> I64 {
+  value.into()
+}
+
+fn show_u8_to_u64(value: U8) -> U64 {
+  value.into()
+}
+
+fn show_u16_to_u64(value: U16) -> U64 {
+  value.into()
+}
+
+fn show_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn show_i64_to_u64(value: I64) -> U64 {
+  value.into()
+}
+
+fn show_append_u64_digits(builder: StringBuilder, value: U64) -> Unit {
+  if value >= 10u64 {
+    show_append_u64_digits(builder, value / 10u64)
+  } else {
+  }
+  builder.append_ascii(show_u64_to_u8(value % 10u64) + 48u8)
+}
+
+fn show_append_i64(builder: StringBuilder, value: I64) -> Unit {
+  if value < 0i64 {
+    builder.append_ascii(45u8)
+    let magnitude = show_i64_to_u64(-(value + 1i64)) + 1u64
+    show_append_u64_digits(builder, magnitude)
+  } else {
+    show_append_u64_digits(builder, show_i64_to_u64(value))
+  }
+}
+
+impl Show for Bool {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    if self {
+      builder.append("true")
+    } else {
+      builder.append("false")
+    }
+  }
+}
+
+impl Show for I8 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_i64(builder, show_i8_to_i64(self))
+  }
+}
+
+impl Show for I16 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_i64(builder, show_i16_to_i64(self))
+  }
+}
+
+impl Show for I32 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_i64(builder, show_i32_to_i64(self))
+  }
+}
+
+impl Show for I64 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_i64(builder, self)
+  }
+}
+
+impl Show for U8 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_u64_digits(builder, show_u8_to_u64(self))
+  }
+}
+
+impl Show for U16 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_u64_digits(builder, show_u16_to_u64(self))
+  }
+}
+
+impl Show for U32 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_u64_digits(builder, show_u32_to_u64(self))
+  }
+}
+
+impl Show for U64 {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_u64_digits(builder, self)
+  }
+}
+
+impl Show for String {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    builder.append(self)
+  }
+}
+
+impl Show for StringView {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    builder.append_view(self)
+  }
+}

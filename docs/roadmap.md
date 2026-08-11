@@ -30,8 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. take annotations/`Show` or deterministic cleanup as separate, bounded
-   ergonomics milestones;
+1. finish bounded derived `Show` behavior, then take deterministic cleanup as a separate ergonomics milestone;
 2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
@@ -639,8 +638,9 @@ count = count + 1
 - [x] Ambient generic `Option<t>` and `Result<t, e>` through separate canonical `dew.std.option` and `dew.std.result` modules.
 - [x] Define the ambient `Debug` system trait, primitive implementations, deterministic source-order derived formatting, and bounded partial-write-safe WASI output.
 - [x] Add `debug(value)` using ordinary coherent `Debug` evidence and inference-time dispatch.
-- [ ] Define `Show`, its relationship to `StringBuilder`, formatting stability, recursion/resource limits, typed lane formatting, and derived behavior.
-- [ ] Add `show(value) -> String` using `Show` evidence.
+- [x] Define the non-ambient `Show` trait, its `StringBuilder` append contract, its separation from ambient `Debug`, and initial stable Bool/integer/text formats.
+- [ ] Define bounded recursion/output policy, typed lane/float formats, and aggregate-derived `Show` behavior.
+- [x] Add `show(value) -> String` and composition helpers using `Show` evidence.
 - [ ] Define deterministic Debug behavior when WASI is unavailable.
 - [x] Keep the minimal `Iter<t>` protocol ambient with `has_next` and trapping state-advancing `next`.
 - [ ] Keep the ambient surface intentionally small.

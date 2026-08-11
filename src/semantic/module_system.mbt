@@ -201,6 +201,7 @@ pub fn required_standard_library_source_paths(
   }
   let (
     text_mask,
+    include_show,
     include_wasi,
     include_wasm_intrinsics,
     include_fixed_array,
@@ -211,6 +212,7 @@ pub fn required_standard_library_source_paths(
     lane_mask,
   ) = selected_standard_modules(files)
   if text_mask != 0 ||
+    include_show ||
     include_wasi ||
     include_wasm_intrinsics ||
     include_fixed_array ||
@@ -278,6 +280,9 @@ pub fn required_standard_library_source_paths(
   }
   if (collection_mask & 512) != 0 {
     required.push("std/collections/ordered_set.dew")
+  }
+  if include_show {
+    required.push("std/show.dew")
   }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
@@ -375,6 +380,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let diagnostics : Array[ManifestDiagnostic] = []
   let first_module : Map[String, Int] = Map::default()
   let mut selected_text_mask = 0
+  let mut selected_show = false
   let mut selected_wasi = false
   let mut selected_wasm_intrinsics = false
   let mut selected_fixed_array = false
@@ -417,6 +423,7 @@ pub fn collect_program_manifest_with_standard_sources(
     }
     let (
       text_mask,
+      include_show,
       include_wasi,
       include_wasm_intrinsics,
       include_fixed_array,
@@ -427,6 +434,7 @@ pub fn collect_program_manifest_with_standard_sources(
       lane_mask,
     ) = selected_standard_modules(files)
     selected_text_mask = selected_text_mask | text_mask
+    selected_show = selected_show || include_show
     selected_wasi = selected_wasi || include_wasi
     selected_wasm_intrinsics = selected_wasm_intrinsics ||
       include_wasm_intrinsics
@@ -784,6 +792,24 @@ pub fn collect_program_manifest_with_standard_sources(
         ),
       )
     }
+  }
+  if selected_show {
+    let module_id = standard_library_module_id(44)
+    let module_index = modules.length()
+    first_module["dew.std.show"] = module_index
+    module_paths.push("dew.std.show")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/show.dew",
+          standard_sources.source("std/show.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
   }
   if selected_wasi {
     let module_id = standard_library_module_id(7)

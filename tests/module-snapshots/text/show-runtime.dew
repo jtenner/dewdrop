@@ -1,0 +1,40 @@
+open dew.std.show
+open dew.std.string
+
+struct Pair {
+  left: I32
+  right: U64
+}
+
+impl Show for Pair {
+  fn append_show(self, builder: StringBuilder) -> Unit {
+    show_append_ascii(builder, 40u8)
+    show_append(builder, self.left)
+    show_append_ascii(builder, 44u8)
+    show_append(builder, self.right)
+    show_append_ascii(builder, 41u8)
+  }
+}
+
+fn assert_show<t: Show>(value: t, expected: String) -> Unit {
+  assert(show(value).equals(expected), "show output")
+}
+
+pub fn main() -> Unit {
+  assert_show(true, "true")
+  assert_show(false, "false")
+  assert_show(-128i8, "-128")
+  assert_show(-32768i16, "-32768")
+  assert_show(-2147483648, "-2147483648")
+  assert_show(-9223372036854775808i64, "-9223372036854775808")
+  assert_show(255u8, "255")
+  assert_show(65535u16, "65535")
+  assert_show(4294967295u32, "4294967295")
+  assert_show(18446744073709551615u64, "18446744073709551615")
+  assert_show("dew", "dew")
+  assert_show("abcdef".view(1u32, 3u32), "bcd")
+  assert_show(Pair {
+    left: -42
+    right: 99u64
+  }, "(-42,99)")
+}

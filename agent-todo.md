@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
+1. Finish bounded derived `Show` behavior, then take deterministic cleanup as a separate ergonomics milestone.
 2. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -105,9 +105,7 @@
 
 ## `Show`, `Debug`, and output
 
-- [ ] Define the `Show` system trait and its relationship to `StringBuilder` and the implemented ambient `Debug` trait.
 - [ ] Define `Show` formatting stability, recursion/resource limits, and derived behavior.
-- [ ] Add `show(value) -> String` using `Show` evidence.
 - [ ] Define typed lane Debug formatting, recursion/resource limits, and deterministic behavior when WASI is unavailable.
 
 ## Broader standard library
