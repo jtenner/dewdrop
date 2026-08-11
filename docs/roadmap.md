@@ -190,7 +190,7 @@ boundaries.
 ### Continuous hardening and measurement
 
 - [ ] Expand generated lane tests from smoke coverage to every generated operation family.
-- [ ] Add retained-range, small-inline-string, hashing, ordering, and UTF-8 scalar-iteration measurements before extending the text ABI.
+- [ ] Add retained-range, small-inline-string, and UTF-8 scalar-iteration measurements before extending the text ABI; allocation-free hashing and explicit bytewise ordering are measured.
 - [x] Add source provenance to every HIR node needed for user-facing diagnostics.
 - [ ] Define explicit compiler resource budgets and diagnostic behavior before the later fuzzing phase. Deterministic static Wasm/WAT size, section/entity, adapter, materialized-specialization, call, allocation-site, cast/test, and local-access metrics now gate closure, mutable-cell, generic-adapter, recursive-helper, and imported-package workloads.
 - [ ] Track compile time, validation/encoding time, runtime time, allocations, and peak memory separately; static instruction-site budgets are implemented, while timing and peak-memory workloads remain.
@@ -481,7 +481,8 @@ count = count + 1
 - [x] Complete a text-runtime hardening sprint with 17,471 deterministic parity checks, deliberate hash collisions, boundary matrices, full builder-consumption traps, nominal ABI regressions, and 64 KiB stress.
 - [x] Add allocation-free String/StringView find, contains, prefix, and suffix matching across all String/View operand combinations.
 - [x] Add deterministic allocation-free FNV-1a hashing for String, StringView, and Bytes logical byte ranges.
-- [ ] Add text ordering and code-point iteration.
+- [x] Add explicit deterministic unsigned-byte lexicographic comparators for String, StringView, and Bytes, including prefix and Unicode coverage.
+- [ ] Add UTF-8 code-point iteration for String and StringView.
 - [x] Add bounded linear-memory scratch lowering for WASI Bytes interfaces.
 
 ### Arrays, maps, queues, and collections

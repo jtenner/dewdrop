@@ -1,0 +1,27 @@
+open dew.std.ordering
+open dew.std.string
+open dew.std.bytes
+
+pub fn main() -> Unit {
+  let strings = string_comparator()
+  assert(ordering_is_less(strings.compare("", "a")), "empty string")
+  assert(ordering_is_less(strings.compare("a", "aa")), "string prefix")
+  assert(ordering_is_less(strings.compare("é", "λ")), "unicode scalar order")
+  assert(ordering_is_equal(strings.compare("dew", "dew")), "string equal")
+  assert(ordering_is_greater(strings.compare("z", "a")), "string greater")
+
+  let views = string_view_comparator()
+  let source = "0alpha1beta2"
+  assert(ordering_is_less(views.compare(
+    source.view(1u32, 5u32),
+    source.view(7u32, 4u32)
+  )), "view order")
+  assert(ordering_is_equal(views.compare(
+    source.view(1u32, 5u32),
+    "alpha".view(0u32, 5u32)
+  )), "view equal")
+
+  let bytes = bytes_comparator()
+  assert(ordering_is_less(bytes.compare("a".as_bytes(), "aa".as_bytes())), "bytes prefix")
+  assert(ordering_is_greater(bytes.compare("z".as_bytes(), "a".as_bytes())), "bytes greater")
+}

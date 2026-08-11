@@ -1,3 +1,10 @@
+builtin ordering_string_byte_length(value: String) -> U32 = "dew_string_byte_length"
+builtin ordering_string_byte_at(value: String, index: U32) -> U8 = "dew_string_byte_at"
+builtin ordering_string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
+builtin ordering_string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
+builtin ordering_bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
+builtin ordering_bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
+
 pub enum Ordering {
   Less
   Equal
@@ -56,5 +63,137 @@ pub fn ordering_reverse(value: Ordering) -> Ordering {
     Ordering::Less => Ordering::Greater
     Ordering::Equal => Ordering::Equal
     Ordering::Greater => Ordering::Less
+  }
+}
+
+pub struct StringComparator {
+}
+
+pub struct StringViewComparator {
+}
+
+pub struct BytesComparator {
+}
+
+pub fn string_comparator() -> StringComparator {
+  StringComparator {
+  }
+}
+
+pub fn string_view_comparator() -> StringViewComparator {
+  StringViewComparator {
+  }
+}
+
+pub fn bytes_comparator() -> BytesComparator {
+  BytesComparator {
+  }
+}
+
+fn compare_string_bytes(left: String, right: String) -> Ordering {
+  let left_length = ordering_string_byte_length(left)
+  let right_length = ordering_string_byte_length(right)
+  let limit = if left_length < right_length {
+    left_length
+  } else {
+    right_length
+  }
+  while 0u32 {
+    index if index < limit => {
+      let left_byte = ordering_string_byte_at(left, index)
+      let right_byte = ordering_string_byte_at(right, index)
+      if left_byte < right_byte {
+        break Ordering::Less
+      } else if left_byte > right_byte {
+        break Ordering::Greater
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => if left_length < right_length {
+      break Ordering::Less
+    } else if left_length > right_length {
+      break Ordering::Greater
+    } else {
+      break Ordering::Equal
+    }
+  }
+}
+
+fn compare_string_view_bytes(left: StringView, right: StringView) -> Ordering {
+  let left_length = ordering_string_view_byte_length(left)
+  let right_length = ordering_string_view_byte_length(right)
+  let limit = if left_length < right_length {
+    left_length
+  } else {
+    right_length
+  }
+  while 0u32 {
+    index if index < limit => {
+      let left_byte = ordering_string_view_byte_at(left, index)
+      let right_byte = ordering_string_view_byte_at(right, index)
+      if left_byte < right_byte {
+        break Ordering::Less
+      } else if left_byte > right_byte {
+        break Ordering::Greater
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => if left_length < right_length {
+      break Ordering::Less
+    } else if left_length > right_length {
+      break Ordering::Greater
+    } else {
+      break Ordering::Equal
+    }
+  }
+}
+
+fn compare_bytes(left: Bytes, right: Bytes) -> Ordering {
+  let left_length = ordering_bytes_byte_length(left)
+  let right_length = ordering_bytes_byte_length(right)
+  let limit = if left_length < right_length {
+    left_length
+  } else {
+    right_length
+  }
+  while 0u32 {
+    index if index < limit => {
+      let left_byte = ordering_bytes_byte_at(left, index)
+      let right_byte = ordering_bytes_byte_at(right, index)
+      if left_byte < right_byte {
+        break Ordering::Less
+      } else if left_byte > right_byte {
+        break Ordering::Greater
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => if left_length < right_length {
+      break Ordering::Less
+    } else if left_length > right_length {
+      break Ordering::Greater
+    } else {
+      break Ordering::Equal
+    }
+  }
+}
+
+impl Comparator<String> for StringComparator {
+  fn compare(self, left: String, right: String) -> Ordering {
+    compare_string_bytes(left, right)
+  }
+}
+
+impl Comparator<StringView> for StringViewComparator {
+  fn compare(self, left: StringView, right: StringView) -> Ordering {
+    compare_string_view_bytes(left, right)
+  }
+}
+
+impl Comparator<Bytes> for BytesComparator {
+  fn compare(self, left: Bytes, right: Bytes) -> Ordering {
+    compare_bytes(left, right)
   }
 }

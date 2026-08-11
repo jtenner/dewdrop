@@ -79,8 +79,8 @@
 
 ## Text and primitive runtime hardening
 
-- [ ] Measure retained-range policy, small-inline strings, hashing, ordering, and UTF-8 scalar iteration before extending the text ABI.
-- [ ] Add String, StringView, and Bytes ordering plus code-point iteration.
+- [ ] Measure retained-range policy, small-inline strings, and UTF-8 scalar iteration before extending the text ABI.
+- [ ] Add UTF-8 code-point iteration for String and StringView.
 - [ ] Define string indexing units and malformed-WTF-8 runtime behavior.
 - [ ] Expand generated lane tests from smoke coverage to every generated operation family, including shuffle, saturation, narrowing, widening, masks, and lane-memory variants.
 - [ ] Complete native, WasmGC, JavaScript, classic Wasm, Node, and Wago execution and benchmark coverage for supported primitive/runtime features.
