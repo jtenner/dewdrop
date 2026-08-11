@@ -1,0 +1,24 @@
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn choose(flag: Bool, left: I32, right: I32) -> I32 {
+  let pair = if flag {
+    Pair {
+      left: left
+      right: right
+    }
+  } else {
+    Pair {
+      left: right
+      right: left
+    }
+  }
+  pair.right
+}
+
+pub fn main() -> Unit {
+  assert(choose(true, 20, 22) == 22, "then join")
+  assert(choose(false, 20, 22) == 20, "else join")
+}

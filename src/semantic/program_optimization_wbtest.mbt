@@ -243,6 +243,82 @@ test "adjacent nonescaping struct locals scalar replace" {
 }
 
 ///|
+test "sole-use struct fields scalar replace across fresh if joins" {
+  let program = collect_program_manifest(
+    22813UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn identity(pair: Pair) -> Pair {\n  pair\n}\nfn choose(flag: Bool, left: I32, right: I32) -> I32 {\n  let pair = if flag {\n    Pair {\n      left: left\n      right: right\n    }\n  } else {\n    Pair {\n      left: right\n      right: left\n    }\n  }\n  pair.right\n}\nfn escaping(flag: Bool, left: I32, right: I32) -> I32 {\n  let pair = if flag {\n    Pair {\n      left: left\n      right: right\n    }\n  } else {\n    identity(Pair {\n      left: right\n      right: left\n    })\n  }\n  pair.right\n}\npub fn main() -> I32 {\n  choose(true, 1, 2) + choose(false, 3, 4) + escaping(true, 5, 6)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let choose = collected.lookup_value("choose").unwrap()
+  let choose_source_body = collected.body_of(choose).unwrap()
+  let choose_body = optimized.modules[0].bodies[
+    semantic_id_local(choose_source_body.id)
+  ]
+  let choose_block = match choose_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected choose block")
+  }
+  let choose_items = optimized.modules[0].blocks[choose_block].items
+  let (local_id, initializer) = match
+    optimized.modules[0].block_items[choose_items.start].kind {
+    PlannedLetItem(local_id, false, initializer) => (local_id, initializer)
+    _ => abort("expected scalarized join local")
+  }
+  assert_true(
+    optimized.modules[0].expressions[initializer].kind
+    is PlannedIfExpression(_, _, _),
+  )
+  assert_eq(
+    optimized.modules[0].expressions[initializer].shape,
+    I32PlannedValueShape,
+  )
+  assert_eq(
+    optimized.modules[0].locals[choose_body.locals.start + local_id].shape,
+    I32PlannedValueShape,
+  )
+  let mut choose_field_gets = 0
+  let mut choose_struct_news = 0
+  let mut unoptimized_struct_news = 0
+  for expression in choose_source_body.expressions.start..<(choose_source_body.expressions.start + choose_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      choose_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      choose_struct_news += 1
+    }
+    if unoptimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      unoptimized_struct_news += 1
+    }
+  }
+  assert_eq(choose_field_gets, 0)
+  assert_eq(choose_struct_news, 0)
+  assert_eq(unoptimized_struct_news, 2)
+  let escaping = collected.lookup_value("escaping").unwrap()
+  let escaping_source_body = collected.body_of(escaping).unwrap()
+  let mut escaping_field_gets = 0
+  let mut escaping_struct_news = 0
+  for expression in escaping_source_body.expressions.start..<(escaping_source_body.expressions.start + escaping_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      escaping_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      escaping_struct_news += 1
+    }
+  }
+  assert_eq(escaping_field_gets, 1)
+  assert_eq(escaping_struct_news, 2)
+}
+
+///|
 test "ordered component aliases scalar replace distinct struct fields" {
   let program = collect_program_manifest(
     22812UL,

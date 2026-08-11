@@ -10,6 +10,8 @@ A further bounded case handles two or more reads of the same supported scalar fi
 
 Distinct scalar fields can also reuse locals already required by source. When a fresh aggregate declaration is followed immediately by exactly one immutable alias for each field in constructor order, the aggregate declaration is elided and each alias initializer is retargeted to the corresponding constructor initializer. This preserves constructor evaluation order without synthesizing locals or moving effects across user expressions. Reordered, missing, repeated, narrow/reference/generic, or non-field uses remain allocated until a broader component planner can prove equivalent storage and dominance.
 
+Sole-use projections now cross bounded `if` joins when every reachable branch recursively ends in fresh construction of the same struct field. The optimizer preflights the complete branch tree before mutation, then converts each constructor to a source-ordered selector and changes intervening block, `if`, and existing local carriers to the selected scalar. Branch conditions and nonselected branches remain untouched. A call-returned, coerced, escaping, or otherwise non-fresh branch rejects the entire rewrite without partial mutation.
+
 The initial shape set is I32/U32/I64/U64, F32/F64, Swar32/Swar64, and V128. Narrow integer fields remain unchanged because packed storage performs truncation/extension that direct selection must not bypass. Reference and generic fields remain unchanged until nominal cast, identity, and escape policies are explicit. Trait-coerced constructor bases, variants, captured/mutable locals, multiple uses, cross-block uses, effectful gaps, and escaping values are also excluded.
 
 The success snapshot uses a pure intervening local and contains no `struct.new` or `struct.get`. A separate trap snapshot gives the first field an `unreachable` trap and the selected second field an integer divide-by-zero trap; Node and Wago both observe `unreachable`, proving that scalar replacement preserves complete source-order initializer evaluation rather than evaluating only the selected field.
@@ -37,4 +39,13 @@ The runtime ratio was 1.0056x at this very small call boundary, effectively tied
 | constructor-order aliases | 0.0186 µs | 0 | 0 | 744 |
 | reverse-order aliases | 0.0186 µs | 1 | 32 | 1,106 |
 
-The measured ratio was 1.0005x, while ordered component reuse removed 362 Wasm bytes and every aggregate operation. Reordered or missing components and control-flow joins still require synthesized component-local planning and dominance-aware escape analysis.
+The measured ratio was 1.0005x, while ordered component reuse removed 362 Wasm bytes and every aggregate operation.
+
+`tools/benchmark-join-scalar-replacement.py` measured a fresh two-branch `if` against a baseline whose selected branch passes the aggregate through a reference-returning helper, over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
+
+| Form | Median | `struct.new` | `struct.get` | Wasm bytes |
+| --- | ---: | ---: | ---: | ---: |
+| fresh `if` join | 0.0142 µs | 0 | 0 | 458 |
+| retained branch | 0.0151 µs | 2 | 1 | 498 |
+
+The allocation-free join measured 0.9399x the retained runtime, about 6.0% faster, and removed 40 Wasm bytes. Match joins and reordered or missing components still require broader dominance-aware component planning.

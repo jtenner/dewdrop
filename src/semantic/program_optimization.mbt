@@ -2842,6 +2842,238 @@ fn program_local_get_count(
 }
 
 ///|
+fn program_scalar_replacement_block_tail(
+  module_ : PlannedModuleLowering,
+  block : BlockId,
+) -> ExprId {
+  if block < 0 || block >= module_.blocks.length() {
+    return -1
+  }
+  let items = module_.blocks[block].items
+  if items.length == 0 ||
+    items.start < 0 ||
+    items.start + items.length > module_.block_items.length() {
+    return -1
+  }
+  match module_.block_items[items.start + items.length - 1].kind {
+    PlannedExpressionItem(expression) => expression
+    _ => -1
+  }
+}
+
+///|
+fn program_can_scalarize_joined_struct_field(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  field : FieldId,
+  type_ : BodyTypeId,
+  shape : PlannedValueShape,
+  depth : Int,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() ||
+    !(module_.expressions[expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  match module_.expressions[expression].kind {
+    PlannedStructNew(_, _, fields) => {
+      if fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() {
+        return false
+      }
+      let mut selected = -1
+      for index in 0..<fields.length {
+        let object_field = module_.object_fields[fields.start + index]
+        if object_field.field == field {
+          if selected >= 0 {
+            return false
+          }
+          selected = object_field.value
+        }
+      }
+      selected >= 0 &&
+      selected < module_.expressions.length() &&
+      module_.expressions[selected].type_ == type_ &&
+      module_.expressions[selected].shape == shape
+    }
+    PlannedBlockExpression(block) => {
+      let tail = program_scalar_replacement_block_tail(module_, block)
+      program_can_scalarize_joined_struct_field(
+        module_, tail, field, type_, shape, depth + 1,
+      )
+    }
+    PlannedIfExpression(_, then_block, alternative) => {
+      let then_tail = program_scalar_replacement_block_tail(
+        module_, then_block,
+      )
+      program_can_scalarize_joined_struct_field(
+        module_, then_tail, field, type_, shape, depth + 1,
+      ) &&
+      program_can_scalarize_joined_struct_field(
+        module_, alternative, field, type_, shape, depth + 1,
+      )
+    }
+    _ => false
+  }
+}
+
+///|
+fn scalarize_joined_struct_field(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  field : FieldId,
+  type_ : BodyTypeId,
+  shape : PlannedValueShape,
+  depth : Int,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return false
+  }
+  let source = module_.expressions[expression]
+  match source.kind {
+    PlannedStructNew(_, _, fields) => {
+      let start = module_.expression_children.length()
+      let mut selected = -1
+      for index in 0..<fields.length {
+        let object_field = module_.object_fields[fields.start + index]
+        module_.expression_children.push(object_field.value)
+        if object_field.field == field {
+          selected = index
+        }
+      }
+      if selected < 0 {
+        return false
+      }
+      module_.expressions[expression] = {
+        ..source,
+        type_,
+        shape,
+        trait_object_coercion: NoInferredTraitObjectCoercion,
+        kind: PlannedParameterSelect(
+          { start, length: fields.length },
+          selected,
+        ),
+      }
+      true
+    }
+    PlannedBlockExpression(block) => {
+      let tail = program_scalar_replacement_block_tail(module_, block)
+      if !scalarize_joined_struct_field(
+          module_, tail, field, type_, shape, depth + 1,
+        ) {
+        return false
+      }
+      module_.expressions[expression] = {
+        ..source,
+        type_,
+        shape,
+        trait_object_coercion: NoInferredTraitObjectCoercion,
+      }
+      true
+    }
+    PlannedIfExpression(condition, then_block, alternative) => {
+      let then_tail = program_scalar_replacement_block_tail(
+        module_, then_block,
+      )
+      if !scalarize_joined_struct_field(
+          module_, then_tail, field, type_, shape, depth + 1,
+        ) ||
+        !scalarize_joined_struct_field(
+          module_, alternative, field, type_, shape, depth + 1,
+        ) {
+        return false
+      }
+      module_.expressions[expression] = {
+        ..source,
+        type_,
+        shape,
+        trait_object_coercion: NoInferredTraitObjectCoercion,
+        kind: PlannedIfExpression(condition, then_block, alternative),
+      }
+      true
+    }
+    _ => false
+  }
+}
+
+///|
+fn scalar_replace_joined_struct_field_local(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+  initializer : ExprId,
+) -> Bool {
+  if initializer < 0 ||
+    initializer >= module_.expressions.length() ||
+    !(module_.expressions[initializer].kind is PlannedIfExpression(_, _, _)) {
+    return false
+  }
+  let (use_count, only_use) = program_local_get_count(
+    module_, body, local_id,
+  )
+  if use_count != 1 || only_use < 0 {
+    return false
+  }
+  let mut field_expression = -1
+  let mut field : FieldId? = None
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match module_.expressions[expression].kind {
+      PlannedFieldGet(candidate, base) if base == only_use => {
+        if field_expression >= 0 {
+          return false
+        }
+        field_expression = expression
+        field = Some(candidate)
+      }
+      _ => ()
+    }
+  }
+  if field_expression < 0 ||
+    !program_scalar_replaceable_field_shape(
+      module_.expressions[field_expression].shape,
+    ) ||
+    !(module_.expressions[field_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  let field = match field {
+    Some(field) => field
+    None => return false
+  }
+  let field_source = module_.expressions[field_expression]
+  if !program_can_scalarize_joined_struct_field(
+      module_, initializer, field, field_source.type_, field_source.shape, 0,
+    ) ||
+    !scalarize_joined_struct_field(
+      module_, initializer, field, field_source.type_, field_source.shape, 0,
+    ) {
+    return false
+  }
+  let local_index = body.locals.start + local_id
+  let local_source = module_.locals[local_index]
+  module_.locals[local_index] = {
+    ..local_source,
+    type_: field_source.type_,
+    shape: field_source.shape,
+    nominal: 0UL,
+  }
+  let base_source = module_.expressions[only_use]
+  module_.expressions[only_use] = {
+    ..base_source,
+    kind: PlannedConsumedExpression,
+  }
+  module_.expressions[field_expression] = {
+    ..field_source,
+    kind: PlannedLocalGet(local_id),
+  }
+  true
+}
+
+///|
 fn scalar_replace_ordered_struct_component_aliases(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -3156,10 +3388,21 @@ fn scalar_replace_program_struct_field_reads(
               (local_id, initializer)
             _ => continue
           }
-          if initializer < 0 ||
-            initializer >= module_.expressions.length() ||
-            !(module_.expressions[initializer].kind is PlannedStructNew(_, _, _)) ||
+          if initializer < 0 || initializer >= module_.expressions.length() {
+            continue
+          }
+          let supported_initializer = match
+            module_.expressions[initializer].kind {
+            PlannedStructNew(_, _, _) | PlannedIfExpression(_, _, _) => true
+            _ => false
+          }
+          if !supported_initializer ||
             program_cse_local_is_captured(module_, body, local_id) {
+            continue
+          }
+          if scalar_replace_joined_struct_field_local(
+              module_, body, local_id, initializer,
+            ) {
             continue
           }
           if scalar_replace_ordered_struct_component_aliases(
