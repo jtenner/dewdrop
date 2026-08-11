@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. add effect-safe common-subexpression elimination and deeper extraction reuse;
+1. add measured escape analysis and scalar replacement for short-lived aggregates and boxes;
 2. continue snapshots, measurements, resource budgets, workspace caching, packaging,
    and release hardening throughout.
 
@@ -612,7 +612,7 @@ count = count + 1
 - [x] Add deterministic fixed-point constant folding for exact Bool and I32/U32/I64/U64 primitive operations after selection, preserving trapping/float cases.
 - [x] Add deterministic immutable-summary inlining for non-generic scalar parameter selectors and zero-argument scalar constants, preserving argument evaluation order.
 - [x] Add direct tail-recursion optimization with preserved argument order, deep stack-safety coverage, and visible non-tail calls.
-- [ ] Common subexpression elimination where allocation/effects permit.
+- [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
 - [ ] Escape analysis for boxes, payloads, and trait objects.
 - [ ] Scalar replacement of short-lived aggregates.
 - [x] Devirtualize trait-object calls when prerequisite-aware flow analysis proves exact evidence through locals, branches, parameter returns, and effect-free forwarding chains.

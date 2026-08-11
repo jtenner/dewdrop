@@ -123,6 +123,60 @@ test "immutable call summaries inline selectors and constant functions" {
 }
 
 ///|
+test "common field extraction reuses immutable scalar loads only in the copy" {
+  let program = collect_program_manifest(
+    22808UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Point {\n  x: I32\n}\nfn twice(point: Point) -> I32 {\n  let first = point.x\n  let second = point.x\n  first + second\n}\nfn mutable_twice(initial: Point) -> I32 {\n  let mut point = initial\n  let first = point.x\n  let second = point.x\n  first + second\n}\npub fn main() -> I32 {\n  twice(Point {\n    x: 21\n  }) + mutable_twice(Point {\n    x: 1\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let twice = collected.lookup_value("twice").unwrap()
+  let mutable_twice = collected.lookup_value("mutable_twice").unwrap()
+  let twice_body = collected.body_of(twice).unwrap()
+  let mutable_body = collected.body_of(mutable_twice).unwrap()
+  let mut optimized_field_gets = 0
+  let mut mutable_field_gets = 0
+  let mut unoptimized_field_gets = 0
+  for expression in twice_body.expressions.start..<(twice_body.expressions.start + twice_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      optimized_field_gets += 1
+    }
+    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      unoptimized_field_gets += 1
+    }
+  }
+  for expression in mutable_body.expressions.start..<(mutable_body.expressions.start + mutable_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      mutable_field_gets += 1
+    }
+  }
+  let planned_twice = optimized.modules[0].bodies[
+    semantic_id_local(twice_body.id)
+  ]
+  let mut elided_aliases = 0
+  for block in planned_twice.blocks.start..<(planned_twice.blocks.start + planned_twice.blocks.length) {
+    let items = optimized.modules[0].blocks[block].items
+    for index in 0..<items.length {
+      if optimized.modules[0].block_items[items.start + index].kind is PlannedElidedLetItem(_) {
+        elided_aliases += 1
+      }
+    }
+  }
+  assert_eq(optimized_field_gets, 1)
+  assert_eq(unoptimized_field_gets, 2)
+  assert_eq(mutable_field_gets, 2)
+  assert_eq(elided_aliases, 1)
+}
+
+///|
 test "tail recursion marks only exact non-generic self calls in tail position" {
   let program = collect_program_manifest(
     22807UL,

@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Add effect-safe common-subexpression elimination and deeper extraction reuse.
+1. Add measured escape analysis and scalar replacement for short-lived aggregates and boxes.
 2. Build workspace-cache and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -144,7 +144,6 @@
 
 ## Optimization and performance discipline
 
-- [ ] Add common-subexpression elimination where allocation and effects permit.
 - [ ] Add escape analysis for boxes, payloads, and trait objects.
 - [ ] Add scalar replacement of short-lived aggregates.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.

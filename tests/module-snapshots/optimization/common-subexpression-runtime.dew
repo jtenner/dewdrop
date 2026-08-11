@@ -1,0 +1,21 @@
+struct Pair {
+  value: I32
+}
+
+fn adjacent(pair: Pair) -> I32 {
+  pair.value + pair.value
+}
+
+fn separated(pair: Pair) -> I32 {
+  let first = pair.value
+  let second = pair.value
+  first + second
+}
+
+pub fn main() -> Unit {
+  let pair = Pair {
+    value: 21
+  }
+  assert(adjacent(pair) == 42, "adjacent field CSE")
+  assert(separated(pair) == 42, "separated field CSE")
+}

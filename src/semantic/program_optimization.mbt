@@ -2521,6 +2521,220 @@ fn directize_exact_runtime_trait_flows(
 }
 
 ///|
+fn program_cse_scalar_shape(shape : PlannedValueShape) -> Bool {
+  match shape {
+    ErrorPlannedValueShape
+    | UnitPlannedValueShape
+    | RefPlannedValueShape
+    | GenericPlannedValueShape
+    | NeverPlannedValueShape => false
+    _ => true
+  }
+}
+
+///|
+fn program_cse_field_key(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  expression : ExprId,
+) -> (FieldId, LocalId)? {
+  if expression < 0 || expression >= module_.expressions.length() {
+    return None
+  }
+  let source = module_.expressions[expression]
+  if !program_cse_scalar_shape(source.shape) ||
+    !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return None
+  }
+  let (field, base) = match source.kind {
+    PlannedFieldGet(field, base) => (field, base)
+    _ => return None
+  }
+  if base < 0 || base >= module_.expressions.length() {
+    return None
+  }
+  let local_id = match module_.expressions[base].kind {
+    PlannedLocalGet(local_id) => local_id
+    _ => return None
+  }
+  if local_id < 0 || local_id >= body.locals.length {
+    return None
+  }
+  let planned_local = module_.locals[body.locals.start + local_id]
+  if planned_local.mutable_ {
+    return None
+  }
+  Some((field, local_id))
+}
+
+///|
+fn program_cse_cached_field_local(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  expression : ExprId,
+  available : Map[(FieldId, LocalId), LocalId],
+) -> LocalId {
+  let key = match program_cse_field_key(module_, body, expression) {
+    Some(value) => value
+    None => return -1
+  }
+  let local_id = match available.get(key) {
+    Some(value) => value
+    None => return -1
+  }
+  if local_id < 0 || local_id >= body.locals.length {
+    return -1
+  }
+  let source = module_.expressions[expression]
+  let cached = module_.locals[body.locals.start + local_id]
+  if source.type_ != cached.type_ || source.shape != cached.shape {
+    return -1
+  }
+  local_id
+}
+
+///|
+fn program_cse_rewrite_field_from_local(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  expression : ExprId,
+  available : Map[(FieldId, LocalId), LocalId],
+) -> Bool {
+  let local_id = program_cse_cached_field_local(
+    module_, body, expression, available,
+  )
+  if local_id < 0 {
+    return false
+  }
+  let source = module_.expressions[expression]
+  module_.expressions[expression] = {
+    ..source,
+    kind: PlannedLocalGet(local_id),
+  }
+  true
+}
+
+///|
+fn program_cse_local_is_captured(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+) -> Bool {
+  for capture in module_.captures {
+    match capture.source {
+      BodyLocalCapture(source_body, source_local) if source_body == body.body &&
+        source_local == local_id => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn program_cse_elide_local_alias(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+  cached_local : LocalId,
+) -> Bool {
+  if local_id < 0 ||
+    local_id >= body.locals.length ||
+    cached_local < 0 ||
+    cached_local >= body.locals.length ||
+    module_.locals[body.locals.start + local_id].mutable_ ||
+    program_cse_local_is_captured(module_, body, local_id) {
+    return false
+  }
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    let source = module_.expressions[expression]
+    match source.kind {
+      PlannedLocalGet(source_local) if source_local == local_id =>
+        module_.expressions[expression] = {
+          ..source,
+          kind: PlannedLocalGet(cached_local),
+        }
+      _ => ()
+    }
+  }
+  true
+}
+
+///|
+fn cse_program_field_extractions(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    for body in module_.bodies {
+      for
+        block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+        if block < 0 || block >= module_.blocks.length() {
+          continue
+        }
+        let items = module_.blocks[block].items
+        if items.start < 0 ||
+          items.start + items.length > module_.block_items.length() {
+          continue
+        }
+        let available : Map[(FieldId, LocalId), LocalId] = Map::default()
+        for index in 0..<items.length {
+          match module_.block_items[items.start + index].kind {
+            PlannedLetItem(local_id, mutable_, value) => {
+              let cached_local = program_cse_cached_field_local(
+                module_, body, value, available,
+              )
+              if cached_local >= 0 {
+                if !mutable_ &&
+                  program_cse_elide_local_alias(
+                    module_, body, local_id, cached_local,
+                  ) {
+                  module_.block_items[items.start + index] = {
+                    ..module_.block_items[items.start + index],
+                    kind: PlannedElidedLetItem(local_id),
+                  }
+                  let source = module_.expressions[value]
+                  module_.expressions[value] = {
+                    ..source,
+                    kind: PlannedConsumedExpression,
+                  }
+                } else {
+                  let source = module_.expressions[value]
+                  module_.expressions[value] = {
+                    ..source,
+                    kind: PlannedLocalGet(cached_local),
+                  }
+                }
+                continue
+              }
+              if mutable_ {
+                continue
+              }
+              match program_cse_field_key(module_, body, value) {
+                Some(key) => available[key] = local_id
+                None => ()
+              }
+            }
+            PlannedReturnItem(value) | PlannedExpressionItem(value) =>
+              if value >= 0 {
+                ignore(
+                  program_cse_rewrite_field_from_local(
+                    module_,
+                    body,
+                    value,
+                    available,
+                  ),
+                )
+              }
+            PlannedElidedLetItem(_) => ()
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
 fn mark_tail_recursive_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -2651,6 +2865,7 @@ pub fn optimize_program_lowering(
     lowering.index.module_lookup,
     effects,
   )
+  cse_program_field_extractions(modules)
   mark_program_tail_recursion(modules)
   {
     graph: lowering.graph,
