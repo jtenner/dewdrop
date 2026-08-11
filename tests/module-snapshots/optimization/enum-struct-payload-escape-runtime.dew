@@ -1,0 +1,38 @@
+enum RecordMaybe {
+  Some {
+    left: I32
+    right: I32
+  }
+  None
+}
+
+fn project(left: I32, right: I32) -> I32 {
+  match (RecordMaybe::Some {
+    left: left
+    right: right
+  }) {
+    RecordMaybe::Some {
+      left
+      right
+    } => right
+    RecordMaybe::None => 0
+  }
+}
+
+fn project_local(left: I32, right: I32) -> I32 {
+  let wrapped = RecordMaybe::Some {
+    left: left
+    right: right
+  }
+  match wrapped {
+    RecordMaybe::Some {
+      left
+      right
+    } => right
+    RecordMaybe::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  project(1, 20) + project_local(2, 22)
+}

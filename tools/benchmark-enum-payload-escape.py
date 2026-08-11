@@ -39,6 +39,54 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+STRUCT = """enum RecordMaybe {
+  Some {
+    left: I32
+    right: I32
+  }
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  match (RecordMaybe::Some {
+    left: value + 1
+    right: value
+  }) {
+    RecordMaybe::Some {
+      left
+      right
+    } => right
+    RecordMaybe::None => 0
+  }
+}
+"""
+
+STRUCT_BASELINE = """enum RecordMaybe {
+  Some {
+    left: I32
+    right: I32
+  }
+  None
+}
+
+fn retain(value: RecordMaybe) -> RecordMaybe {
+  value
+}
+
+pub fn main(value: I32) -> I32 {
+  match retain(RecordMaybe::Some {
+    left: value + 1
+    right: value
+  }) {
+    RecordMaybe::Some {
+      left
+      right
+    } => right
+    RecordMaybe::None => 0
+  }
+}
+"""
+
 BASELINE = """enum Maybe {
   Some(I32)
   None
@@ -129,28 +177,45 @@ def main() -> None:
     TMP.mkdir(parents=True, exist_ok=True)
     optimized = build("optimized", OPTIMIZED)
     local = build("local", LOCAL)
+    struct = build("struct", STRUCT)
+    struct_baseline = build("struct-baseline", STRUCT_BASELINE)
     baseline = build("baseline", BASELINE)
-    raw = measure([optimized, local, baseline], args.samples, args.batch)
+    raw = measure(
+        [optimized, local, struct, baseline, struct_baseline],
+        args.samples,
+        args.batch,
+    )
     optimized_median = statistics.median(raw[str(optimized)])
     local_median = statistics.median(raw[str(local)])
+    struct_median = statistics.median(raw[str(struct)])
     baseline_median = statistics.median(raw[str(baseline)])
+    struct_baseline_median = statistics.median(raw[str(struct_baseline)])
     print(json.dumps({
         "samples": args.samples,
         "batch": args.batch,
         "optimized_median_us": round(optimized_median, 4),
         "local_median_us": round(local_median, 4),
+        "struct_median_us": round(struct_median, 4),
         "baseline_median_us": round(baseline_median, 4),
+        "struct_baseline_median_us": round(struct_baseline_median, 4),
         "direct_ratio": round(optimized_median / baseline_median, 4),
         "local_ratio": round(local_median / baseline_median, 4),
+        "struct_ratio": round(struct_median / struct_baseline_median, 4),
         "optimized_wasm_bytes": optimized.stat().st_size,
         "local_wasm_bytes": local.stat().st_size,
+        "struct_wasm_bytes": struct.stat().st_size,
         "baseline_wasm_bytes": baseline.stat().st_size,
+        "struct_baseline_wasm_bytes": struct_baseline.stat().st_size,
         "optimized_struct_new": wat_count(optimized, "struct.new"),
         "optimized_struct_get": wat_count(optimized, "struct.get"),
         "local_struct_new": wat_count(local, "struct.new"),
         "local_struct_get": wat_count(local, "struct.get"),
+        "struct_struct_new": wat_count(struct, "struct.new"),
+        "struct_struct_get": wat_count(struct, "struct.get"),
         "baseline_struct_new": wat_count(baseline, "struct.new"),
         "baseline_struct_get": wat_count(baseline, "struct.get"),
+        "struct_baseline_struct_new": wat_count(struct_baseline, "struct.new"),
+        "struct_baseline_struct_get": wat_count(struct_baseline, "struct.get"),
     }, indent=2, sort_keys=True))
 
 

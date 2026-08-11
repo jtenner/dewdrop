@@ -3479,6 +3479,19 @@ fn scalar_replace_program_struct_field_reads(
 }
 
 ///|
+fn program_variant_field_name(
+  module_ : PlannedModuleLowering,
+  field : FieldId,
+) -> String? {
+  for layout in module_.type_layouts.fields {
+    if layout.field == field {
+      return Some(layout.name)
+    }
+  }
+  None
+}
+
+///|
 fn scalar_replace_program_variant_payload_match(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -3498,17 +3511,7 @@ fn scalar_replace_program_variant_payload_match(
   if arms.length == 0 ||
     arms.start < 0 ||
     arms.start + arms.length > module_.pattern_arms.length() ||
-    !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
-    return false
-  }
-  let (variant, arguments) = match
-    module_.expressions[variant_expression].kind {
-    PlannedVariantTupleNew(variant, _, arguments) => (variant, arguments)
-    _ => return false
-  }
-  if arguments.length == 0 ||
-    arguments.start < 0 ||
-    arguments.start + arguments.length > module_.expression_children.length() ||
+    !(source.trait_object_coercion is NoInferredTraitObjectCoercion) ||
     !(module_.expressions[variant_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
     return false
   }
@@ -3521,59 +3524,134 @@ fn scalar_replace_program_variant_payload_match(
     return false
   }
   let root = module_.patterns[arm.pattern]
-  let children = match root.source {
-    HirTuplePattern(_, children, _) => children
-    _ => return false
-  }
   let selected_variant = match root.selected_constructor {
     VariantInferredPatternConstructor(selected, _) => selected
     _ => return false
-  }
-  if selected_variant != variant ||
-    children.length != arguments.length ||
-    children.start < 0 ||
-    children.start + children.length > module_.pattern_children.length() {
-    return false
   }
   let local_id = match module_.expressions[arm.body].kind {
     PlannedLocalGet(local_id) => local_id
     _ => return false
   }
   let mut selected = -1
-  for index in 0..<children.length {
-    let pattern = module_.pattern_children[children.start + index]
-    if pattern < 0 || pattern >= module_.patterns.length() {
-      selected = -2
-      break
-    }
-    match module_.patterns[pattern].reference {
-      PatternBindingReference(binding) if binding == local_id => {
-        if selected >= 0 {
-          selected = -2
-          break
-        }
-        selected = index
+  let mut payload = -1
+  let mut payload_count = 0
+  let mut selector = { start: -1, length: 0 }
+  let mut appended_selector = false
+  match (module_.expressions[variant_expression].kind, root.source) {
+    (
+      PlannedVariantTupleNew(variant, _, arguments),
+      HirTuplePattern(_, children, _),
+    ) => {
+      if selected_variant != variant ||
+        arguments.length == 0 ||
+        arguments.start < 0 ||
+        arguments.start + arguments.length > module_.expression_children.length() ||
+        children.length != arguments.length ||
+        children.start < 0 ||
+        children.start + children.length > module_.pattern_children.length() {
+        return false
       }
-      _ => ()
+      for index in 0..<children.length {
+        let pattern = module_.pattern_children[children.start + index]
+        if pattern < 0 || pattern >= module_.patterns.length() {
+          return false
+        }
+        match module_.patterns[pattern].reference {
+          PatternBindingReference(binding) if binding == local_id => {
+            if selected >= 0 {
+              return false
+            }
+            selected = index
+          }
+          _ => ()
+        }
+      }
+      if selected < 0 {
+        return false
+      }
+      payload = module_.expression_children[arguments.start + selected]
+      payload_count = arguments.length
+      selector = arguments
     }
+    (
+      PlannedVariantStructNew(variant, _, fields),
+      HirStructPattern(_, pattern_fields, _, _, _),
+    ) => {
+      if selected_variant != variant ||
+        fields.length == 0 ||
+        fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() ||
+        pattern_fields.start < 0 ||
+        pattern_fields.start + pattern_fields.length > module_.pattern_fields.length() {
+        return false
+      }
+      let mut selected_name : String? = None
+      for index in 0..<pattern_fields.length {
+        let pattern_field = module_.pattern_fields[pattern_fields.start + index]
+        if pattern_field.pattern < 0 ||
+          pattern_field.pattern >= module_.patterns.length() {
+          return false
+        }
+        match module_.patterns[pattern_field.pattern].reference {
+          PatternBindingReference(binding) if binding == local_id => {
+            if selected_name is Some(_) {
+              return false
+            }
+            selected_name = Some(pattern_field.name)
+          }
+          _ => ()
+        }
+      }
+      let selected_name = match selected_name {
+        Some(name) => name
+        None => return false
+      }
+      for index in 0..<fields.length {
+        let object_field = module_.object_fields[fields.start + index]
+        match program_variant_field_name(module_, object_field.field) {
+          Some(name) if name == selected_name => {
+            if selected >= 0 {
+              return false
+            }
+            selected = index
+            payload = object_field.value
+          }
+          _ => ()
+        }
+      }
+      if selected < 0 {
+        return false
+      }
+      payload_count = fields.length
+      let start = module_.expression_children.length()
+      for index in 0..<fields.length {
+        module_.expression_children.push(
+          module_.object_fields[fields.start + index].value,
+        )
+      }
+      selector = { start, length: fields.length }
+      appended_selector = true
+    }
+    _ => return false
   }
-  if selected < 0 {
-    return false
-  }
-  let payload = module_.expression_children[arguments.start + selected]
   if payload < 0 ||
     payload >= module_.expressions.length() ||
     module_.expressions[payload].type_ != source.type_ ||
     module_.expressions[payload].shape != source.shape ||
     (!program_scalar_replaceable_field_shape(source.shape) &&
-    !(arguments.length == 1 &&
+    !(payload_count == 1 &&
     ((source.shape is RefPlannedValueShape) ||
     (source.shape is GenericPlannedValueShape)))) {
+    if appended_selector {
+      while module_.expression_children.length() > selector.start {
+        ignore(module_.expression_children.pop())
+      }
+    }
     return false
   }
   module_.expressions[expression] = {
     ..source,
-    kind: PlannedParameterSelect(arguments, selected),
+    kind: PlannedParameterSelect(selector, selected),
   }
   let variant_source = module_.expressions[variant_expression]
   module_.expressions[variant_expression] = {
@@ -3596,7 +3674,8 @@ fn scalar_replace_program_variant_payload_reads(
       if scrutinee < 0 || scrutinee >= module_.expressions.length() {
         continue
       }
-      if module_.expressions[scrutinee].kind is PlannedVariantTupleNew(_, _, _) {
+      if module_.expressions[scrutinee].kind is PlannedVariantTupleNew(_, _, _) ||
+        module_.expressions[scrutinee].kind is PlannedVariantStructNew(_, _, _) {
         ignore(
           scalar_replace_program_variant_payload_match(
             module_, expression, scrutinee,
@@ -3624,7 +3703,8 @@ fn scalar_replace_program_variant_payload_reads(
           }
           if initializer < 0 ||
             initializer >= module_.expressions.length() ||
-            !(module_.expressions[initializer].kind is PlannedVariantTupleNew(_, _, _)) ||
+            (!(module_.expressions[initializer].kind is PlannedVariantTupleNew(_, _, _)) &&
+            !(module_.expressions[initializer].kind is PlannedVariantStructNew(_, _, _))) ||
             program_cse_local_is_captured(module_, body, local_id) {
             continue
           }
