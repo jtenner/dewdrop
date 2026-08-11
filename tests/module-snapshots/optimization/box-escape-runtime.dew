@@ -1,0 +1,30 @@
+struct Token {
+  value: I32
+}
+
+struct Box {
+  value: Token
+}
+
+struct GenericBox<t> {
+  value: t
+}
+
+fn unbox(value: Token) -> Token {
+  Box {
+    value: value
+  }.value
+}
+
+fn generic_unbox<t>(value: t) -> t {
+  GenericBox {
+    value: value
+  }.value
+}
+
+pub fn main() -> I32 {
+  let token = Token {
+    value: 21
+  }
+  unbox(token).value + generic_unbox(token).value
+}

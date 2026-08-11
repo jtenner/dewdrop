@@ -2767,9 +2767,6 @@ fn scalar_replace_program_struct_field_read(
     return false
   }
   let source = module_.expressions[expression]
-  if !program_scalar_replaceable_field_shape(source.shape) {
-    return false
-  }
   let field = match source.kind {
     PlannedFieldGet(field, _) => field
     _ => return false
@@ -2782,7 +2779,11 @@ fn scalar_replace_program_struct_field_read(
     _ => return false
   }
   if fields.start < 0 ||
-    fields.start + fields.length > module_.object_fields.length() {
+    fields.start + fields.length > module_.object_fields.length() ||
+    (!program_scalar_replaceable_field_shape(source.shape) &&
+    !(fields.length == 1 &&
+    ((source.shape is RefPlannedValueShape) ||
+    (source.shape is GenericPlannedValueShape)))) {
     return false
   }
   let start = module_.expression_children.length()

@@ -243,6 +243,64 @@ test "adjacent nonescaping struct locals scalar replace" {
 }
 
 ///|
+test "single-field reference and generic boxes scalar replace when nonescaping" {
+  let program = collect_program_manifest(
+    22814UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Box<t> {\n  value: t\n}\nfn unbox_text(value: String) -> String {\n  Box {\n    value: value\n  }.value\n}\nfn unbox<t>(value: t) -> t {\n  Box {\n    value: value\n  }.value\n}\nfn retain(value: Box<String>) -> Box<String> {\n  value\n}\nfn retained(value: String) -> String {\n  retain(Box {\n    value: value\n  }).value\n}\npub fn main() -> I32 {\n  let text = unbox_text(\"dew\")\n  unbox(42) + retained(text).byte_length().into()\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  for name in ["unbox_text", "unbox"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let source_body = collected.body_of(declaration).unwrap()
+    let mut optimized_fields = 0
+    let mut optimized_structs = 0
+    let mut parameter_selects = 0
+    let mut unoptimized_fields = 0
+    for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+      if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+        optimized_fields += 1
+      }
+      if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+        optimized_structs += 1
+      }
+      if optimized.modules[0].expressions[expression].kind is PlannedParameterSelect(_, 0) {
+        parameter_selects += 1
+      }
+      if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+        unoptimized_fields += 1
+      }
+    }
+    assert_eq(optimized_fields, 0)
+    assert_eq(optimized_structs, 0)
+    assert_eq(parameter_selects, 1)
+    assert_eq(unoptimized_fields, 1)
+  }
+  let retained = collected.lookup_value("retained").unwrap()
+  let retained_body = collected.body_of(retained).unwrap()
+  let mut retained_fields = 0
+  let mut retained_structs = 0
+  for expression in retained_body.expressions.start..<(retained_body.expressions.start + retained_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      retained_fields += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      retained_structs += 1
+    }
+  }
+  assert_eq(retained_fields, 1)
+  assert_eq(retained_structs, 1)
+}
+
+///|
 test "sole-use struct fields scalar replace across fresh if joins" {
   let program = collect_program_manifest(
     22813UL,
