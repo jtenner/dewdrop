@@ -5,9 +5,9 @@ pub fn standard_source_paths() -> Array[String] {
     "std/preamble/30-packed.dew", "std/preamble/40-numeric-builtins.dew", "std/preamble/50-numeric-impls.dew",
     "std/preamble/60-memory.dew", "std/preamble/70-into-builtins.dew", "std/preamble/80-into-impls.dew",
     "std/preamble/90-swar-core.dew", "std/preamble/100-v128.dew", "std/preamble/110-debug.dew",
-    "std/option.dew", "std/result.dew", "std/fixed_array.dew", "std/map.dew", "std/set.dew",
-    "std/text_runtime.dew", "std/string.dew", "std/string_builder.dew", "std/bytes_builder.dew",
-    "std/bytes.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/option.dew", "std/result.dew", "std/fixed_array.dew", "std/array.dew", "std/map.dew",
+    "std/set.dew", "std/text_runtime.dew", "std/string.dew", "std/string_builder.dew",
+    "std/bytes_builder.dew", "std/bytes.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
   ]
   for
     name in [
@@ -39,6 +39,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/option.dew" => Some(standard_option_source())
     "std/result.dew" => Some(standard_result_source())
     "std/fixed_array.dew" => Some(standard_fixed_array_source())
+    "std/array.dew" => Some(standard_array_source())
     "std/map.dew" => Some(standard_map_source())
     "std/set.dew" => Some(standard_set_source())
     "std/text_runtime.dew" => Some(standard_text_sources()[0])

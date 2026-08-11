@@ -1,10 +1,10 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 10, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 11, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
-1. Implement growable `Array` and explicit iterator protocols, then extend the remaining collection families.
+1. Extend the remaining measured collection families, beginning with circular buffers and stack/queue APIs.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
@@ -93,7 +93,6 @@
 
 ## Collections and iteration
 
-- [ ] Implement growable `dew.std.array` over the six physical carrier families, with logical length/capacity and cleared removed reference slots.
 - [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
 - [ ] Implement `dew.std.collections.stack` with explicit empty-pop and empty-peek result semantics.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and a defined min/max policy.
@@ -104,11 +103,8 @@
 - [ ] Define the public `dew.std.queue` API and choose a mutable ring buffer, persistent queue, or separate types.
 - [ ] Implement queue enqueue, dequeue, peek, size, iteration, and empty-queue result semantics.
 - [ ] Benchmark array-backed and linked queue representations.
-- [ ] Add explicit iterator types and iteration protocols.
-- [ ] Add Map key/value/entry and Set key iterators while leaving hash traversal order unspecified.
 - [ ] Define remaining collection mutation and persistence rules.
 - [ ] Benchmark WasmGC arrays and hash buckets against linked and tree representations.
-- [ ] Decide whether core iterator traits belong in the ambient preamble while keeping the ambient surface intentionally small.
 
 ## `Show`, `Debug`, and output
 

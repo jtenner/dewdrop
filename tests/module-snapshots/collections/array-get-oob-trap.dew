@@ -1,0 +1,10 @@
+open dew.std.array
+
+fn empty_i32_array() -> Array<I32> {
+  Array::new()
+}
+
+pub fn main() -> I32 {
+  let values = empty_i32_array()
+  values[0u32]
+}

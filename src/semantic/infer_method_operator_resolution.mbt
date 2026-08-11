@@ -776,8 +776,8 @@ fn BasicBodyInferencer::select_map_index(
 ///|
 fn index_trait(expression : HirExpr) -> (String, String)? {
   match expression {
-    HirIndexExpr(_, _, _) => Some(("Index", "index"))
-    HirIndexSetExpr(_, _, _, _) => Some(("IndexSet", "index_set"))
+    HirIndexExpr(_, _, _) => Some(("IndexedGet", "indexed_get"))
+    HirIndexSetExpr(_, _, _, _) => Some(("IndexedSet", "indexed_set"))
     _ => None
   }
 }

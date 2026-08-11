@@ -2,8 +2,8 @@
 test "standard preamble is a deterministic declaration prefix" {
   let source = b"pub fn identity(value: I32) -> I32 {\n  value\n}\n"
   let collected = collect_bytes_with_standard_preamble(995UL, source)
-  assert_eq(collected.preamble_declaration_count, 1308)
-  assert_eq(collected.declarations.length(), 811)
+  assert_eq(collected.preamble_declaration_count, 1311)
+  assert_eq(collected.declarations.length(), 812)
   assert_eq(collected.diagnostics.length(), 0)
   let identity = collected.lookup_value("identity").unwrap()
   assert_eq(semantic_id_local(identity), collected.preamble_declaration_count)
@@ -34,13 +34,14 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 44)
+  assert_eq(wildcard_paths.length(), 45)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
-  assert_eq(wildcard_paths[15], "std/map.dew")
-  assert_eq(wildcard_paths[16], "std/set.dew")
-  assert_eq(wildcard_paths[17], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[23], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[43], "std/f64x2.dew")
+  assert_eq(wildcard_paths[15], "std/array.dew")
+  assert_eq(wildcard_paths[16], "std/map.dew")
+  assert_eq(wildcard_paths[17], "std/set.dew")
+  assert_eq(wildcard_paths[18], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[24], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[44], "std/f64x2.dew")
 }
 
 ///|
@@ -53,7 +54,7 @@ test "standard import prepass selects split module bits" {
         b"open dew.std.string\nopen dew.std.bytes\nopen dew.std.wasi\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (9, true, false, false, false, false, 0),
+    (9, true, false, false, false, false, false, 0),
   )
 }
 
@@ -67,7 +68,7 @@ test "standard import prepass selects lane module bits" {
         b"open dew.std.i8x4\nopen dew.std.f64x2\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (0, false, false, false, false, false, 524289),
+    (0, false, false, false, false, false, false, 524289),
   )
 }
 
@@ -172,7 +173,7 @@ test "single-module phase helper never injects optional standard sources" {
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
   let inferred = infer_module_bodies(collected, resolved, names)
-  assert_eq(collected.preamble_declaration_count, 1308)
+  assert_eq(collected.preamble_declaration_count, 1311)
   assert_eq(inferred.diagnostics.length(), 1)
   match inferred.diagnostics[0] {
     NoMatchingMethod(_, _, _) => ()

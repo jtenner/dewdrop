@@ -8,6 +8,7 @@ python3 tools/generate_string_std.py --check
 python3 tools/generate_wasi_std.py --check
 python3 tools/generate_wasm_intrinsics_std.py --check
 python3 tools/generate_fixed_array_std.py --check
+python3 tools/generate_array_std.py --check
 python3 tools/generate_map_std.py --check
 python3 tools/generate_set_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check

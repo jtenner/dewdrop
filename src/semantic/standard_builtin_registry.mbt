@@ -9,6 +9,20 @@ enum StandardBuiltinOperation {
   FixedArrayGetUnchecked
   FixedArraySet
   FixedArraySetUnchecked
+  ArrayNew
+  ArrayWithCapacity
+  ArrayLength
+  ArrayCapacity
+  ArrayGet
+  ArrayGetUnchecked
+  ArraySet
+  ArraySetUnchecked
+  ArrayPush
+  ArrayPop
+  ArrayClear
+  ArrayIter
+  ArrayIterHasNext
+  ArrayIterNext
   MapSingleton
   MapLength
   MapGet
@@ -19,6 +33,17 @@ enum StandardBuiltinOperation {
   MapEmpty
   MapRemove
   MapClear
+  MapKeys
+  MapValues
+  MapEntries
+  MapKeyIterHasNext
+  MapKeyIterNext
+  MapValueIterHasNext
+  MapValueIterNext
+  MapEntryIterHasNext
+  MapEntryIterNext
+  MapEntryKey
+  MapEntryValue
   SetEmpty
   SetSingleton
   SetLength
@@ -27,6 +52,9 @@ enum StandardBuiltinOperation {
   SetInsert
   SetRemove
   SetClear
+  SetIter
+  SetIterHasNext
+  SetIterNext
 } derive(Eq, Debug)
 
 ///|
@@ -35,7 +63,7 @@ pub fn standard_fixed_array_type_declaration() -> DeclId {
 }
 
 ///|
-fn standard_fixed_array_method_declaration(name : String) -> DeclId {
+pub fn standard_fixed_array_method_declaration(name : String) -> DeclId {
   let local_id = match name {
     "make" => 8
     "length" => 9
@@ -53,12 +81,12 @@ fn standard_fixed_array_method_declaration(name : String) -> DeclId {
 }
 
 ///|
-fn standard_fixed_array_index_declaration() -> DeclId {
+pub fn standard_fixed_array_index_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(10), 15)
 }
 
 ///|
-fn standard_fixed_array_index_set_declaration() -> DeclId {
+pub fn standard_fixed_array_index_set_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(10), 17)
 }
 
@@ -81,12 +109,80 @@ fn standard_fixed_array_operation(
 }
 
 ///|
+pub fn standard_array_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 0)
+}
+
+///|
+pub fn standard_array_method_declaration(name : String) -> DeclId {
+  let local_id = match name {
+    "new" => 17
+    "with_capacity" => 18
+    "length" => 19
+    "capacity" => 20
+    "push" => 22
+    "pop" => 23
+    "get" => 24
+    "get_unchecked" => 25
+    "set" => 26
+    "set_unchecked" => 27
+    "clear" => 28
+    "iter" => 29
+    _ => -1
+  }
+  if local_id < 0 {
+    0UL
+  } else {
+    make_semantic_id(standard_library_module_id(13), local_id)
+  }
+}
+
+///|
+pub fn standard_array_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 1)
+}
+
+///|
+pub fn standard_array_index_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 31)
+}
+
+///|
+pub fn standard_array_index_set_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 33)
+}
+
+///|
+fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
+  if semantic_id_module(declaration) != standard_library_module_id(13) {
+    return NoStandardBuiltinOperation
+  }
+  match semantic_id_local(declaration) {
+    2 | 17 => ArrayNew
+    3 | 18 => ArrayWithCapacity
+    4 | 19 | 21 => ArrayLength
+    5 | 20 => ArrayCapacity
+    6 | 24 => ArrayGet
+    7 | 25 | 31 => ArrayGetUnchecked
+    8 | 26 => ArraySet
+    9 | 27 | 33 => ArraySetUnchecked
+    10 | 22 => ArrayPush
+    11 | 23 => ArrayPop
+    12 | 28 => ArrayClear
+    13 | 29 => ArrayIter
+    14 | 35 => ArrayIterHasNext
+    15 | 36 => ArrayIterNext
+    _ => NoStandardBuiltinOperation
+  }
+}
+
+///|
 pub fn standard_map_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(11), 0)
 }
 
 ///|
-fn standard_map_method_declaration(name : String) -> DeclId {
+pub fn standard_map_method_declaration(name : String) -> DeclId {
   let local_id = match name {
     "singleton" => 9
     "length" => 10
@@ -108,12 +204,32 @@ fn standard_map_method_declaration(name : String) -> DeclId {
 }
 
 ///|
-fn standard_map_index_declaration() -> DeclId {
+pub fn standard_map_entry_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(11), 26)
+}
+
+///|
+pub fn standard_map_key_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(11), 27)
+}
+
+///|
+pub fn standard_map_value_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(11), 28)
+}
+
+///|
+pub fn standard_map_entry_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(11), 29)
+}
+
+///|
+pub fn standard_map_index_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(11), 20)
 }
 
 ///|
-fn standard_map_index_set_declaration() -> DeclId {
+pub fn standard_map_index_set_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(11), 22)
 }
 
@@ -133,6 +249,17 @@ fn standard_map_operation(declaration : DeclId) -> StandardBuiltinOperation {
     16 | 23 => MapEmpty
     17 | 24 => MapRemove
     18 | 25 => MapClear
+    30 | 42 => MapKeys
+    31 | 43 => MapValues
+    32 | 44 => MapEntries
+    33 | 49 => MapKeyIterHasNext
+    34 | 50 => MapKeyIterNext
+    35 | 52 => MapValueIterHasNext
+    36 | 53 => MapValueIterNext
+    37 | 55 => MapEntryIterHasNext
+    38 | 56 => MapEntryIterNext
+    39 | 46 => MapEntryKey
+    40 | 47 => MapEntryValue
     _ => NoStandardBuiltinOperation
   }
 }
@@ -143,7 +270,7 @@ pub fn standard_set_type_declaration() -> DeclId {
 }
 
 ///|
-fn standard_set_method_declaration(name : String) -> DeclId {
+pub fn standard_set_method_declaration(name : String) -> DeclId {
   let local_id = match name {
     "empty" => 10
     "singleton" => 11
@@ -153,6 +280,7 @@ fn standard_set_method_declaration(name : String) -> DeclId {
     "insert" => 15
     "remove" => 16
     "clear" => 17
+    "iter" => 23
     _ => -1
   }
   if local_id < 0 {
@@ -160,6 +288,11 @@ fn standard_set_method_declaration(name : String) -> DeclId {
   } else {
     make_semantic_id(standard_library_module_id(12), local_id)
   }
+}
+
+///|
+pub fn standard_set_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(12), 18)
 }
 
 ///|
@@ -176,6 +309,9 @@ fn standard_set_operation(declaration : DeclId) -> StandardBuiltinOperation {
     6 | 15 => SetInsert
     7 | 16 => SetRemove
     8 | 17 => SetClear
+    19 | 23 => SetIter
+    20 | 25 => SetIterHasNext
+    21 | 26 => SetIterNext
     _ => NoStandardBuiltinOperation
   }
 }

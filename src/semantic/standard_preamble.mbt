@@ -35,11 +35,12 @@ pub fn make_program_file_id(
 ///|
 fn selected_standard_modules(
   files : Array[ProgramFile],
-) -> (Int, Bool, Bool, Bool, Bool, Bool, Int) {
+) -> (Int, Bool, Bool, Bool, Bool, Bool, Bool, Int) {
   let mut text_mask = 0
   let mut wasi = false
   let mut wasm_intrinsics = false
   let mut fixed_array = false
+  let mut array = false
   let mut map = false
   let mut set = false
   let mut lane_mask = 0
@@ -58,6 +59,7 @@ fn selected_standard_modules(
             lane_mask = 1048575
             wasm_intrinsics = true
             fixed_array = true
+            array = true
             map = true
             set = true
           } else if import_.path.length() == 4 &&
@@ -76,6 +78,7 @@ fn selected_standard_modules(
               "bytes" => text_mask = text_mask | 8
               "wasi" => wasi = true
               "fixed_array" => fixed_array = true
+              "array" => array = true
               "map" => map = true
               "set" => set = true
               "i8x4" => lane_mask = lane_mask | 1
@@ -106,7 +109,7 @@ fn selected_standard_modules(
       }
     }
   }
-  (text_mask, wasi, wasm_intrinsics, fixed_array, map, set, lane_mask)
+  (text_mask, wasi, wasm_intrinsics, fixed_array, array, map, set, lane_mask)
 }
 
 ///|

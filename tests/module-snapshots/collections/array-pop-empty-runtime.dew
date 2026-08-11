@@ -1,0 +1,12 @@
+open dew.std.array
+
+fn empty_i32_array() -> Array<I32> {
+  Array::new()
+}
+
+pub fn main() -> Unit {
+  match empty_i32_array().pop() {
+    Option::Some(_) => assert(false, "empty array pop unexpectedly present")
+    Option::None => {}
+  }
+}

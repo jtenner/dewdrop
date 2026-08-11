@@ -1,0 +1,9 @@
+open dew.std.map
+
+pub fn main() -> I32 {
+  Map::singleton(1, 10).keys().next()
+  Map::singleton(1, 10).keys().next()
+  let iter = Map::singleton(1, 10).keys()
+  iter.next()
+  iter.next()
+}

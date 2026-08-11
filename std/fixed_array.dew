@@ -28,14 +28,14 @@ impl<t> FixedArray<t> {
   }
 }
 
-impl<t> Index<U32, t> for FixedArray<t> {
-  fn index(self, key: U32) -> t {
-    fixed_array_get_unchecked(self, key)
+impl<t> IndexedGet<U32, t> for FixedArray<t> {
+  fn indexed_get(self, index: U32) -> t {
+    fixed_array_get_unchecked(self, index)
   }
 }
 
-impl<t> IndexSet<U32, t> for FixedArray<t> {
-  fn index_set(self, key: U32, value: t) -> Unit {
-    fixed_array_set_unchecked(self, key, value)
+impl<t> IndexedSet<U32, t> for FixedArray<t> {
+  fn indexed_set(self, index: U32, value: t) -> Unit {
+    fixed_array_set_unchecked(self, index, value)
   }
 }

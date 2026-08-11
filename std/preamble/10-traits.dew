@@ -50,12 +50,17 @@ pub trait Into<t> {
   fn into(self) -> t
 }
 
-pub trait Index<key, value> {
-  fn index(self, key: key) -> value
+pub trait IndexedGet<index, value> {
+  fn indexed_get(self, index: index) -> value
 }
 
-pub trait IndexSet<key, value> {
-  fn index_set(self, key: key, value: value) -> Unit
+pub trait IndexedSet<index, value> {
+  fn indexed_set(self, index: index, value: value) -> Unit
+}
+
+pub trait Iter<t> {
+  fn has_next(self) -> Bool
+  fn next(self) -> t
 }
 
 pub trait Hash {

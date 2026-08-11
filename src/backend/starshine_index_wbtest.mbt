@@ -2,7 +2,7 @@
 test "trait selected index get and set emit valid WasmGC" {
   let module_id = 2601UL
   let collected = @semantic.collect_program_bytes(
-    module_id, b"struct Box {\n  value: I32\n}\nimpl Index<U32, I32> for Box {\n  fn index(self, key: U32) -> I32 {\n    self.value\n  }\n}\nimpl IndexSet<U32, I32> for Box {\n  fn index_set(self, key: U32, value: I32) -> Unit {}\n}\npub fn read(box: Box, key: U32) -> I32 {\n  box[key]\n}\npub fn write(box: Box, key: U32, value: I32) -> Unit {\n  box[key] = value\n}\n",
+    module_id, b"struct Box {\n  value: I32\n}\nimpl IndexedGet<U32, I32> for Box {\n  fn indexed_get(self, key: U32) -> I32 {\n    self.value\n  }\n}\nimpl IndexedSet<U32, I32> for Box {\n  fn indexed_set(self, key: U32, value: I32) -> Unit {}\n}\npub fn read(box: Box, key: U32) -> I32 {\n  box[key]\n}\npub fn write(box: Box, key: U32, value: I32) -> Unit {\n  box[key] = value\n}\n",
   )
   let resolved = @semantic.resolve_module_types(collected)
   let names = @semantic.resolve_module_names(collected)

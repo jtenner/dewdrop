@@ -1,0 +1,80 @@
+pub struct Array<t> {}
+pub struct ArrayIter<t> {}
+
+pub builtin array_new<t>() -> Array<t> = "dew_array_new"
+pub builtin array_with_capacity<t>(capacity: U32) -> Array<t> = "dew_array_with_capacity"
+pub builtin array_length<t>(value: Array<t>) -> U32 = "dew_array_length"
+pub builtin array_capacity<t>(value: Array<t>) -> U32 = "dew_array_capacity"
+pub builtin array_get<t>(value: Array<t>, index: U32) -> Option<t> = "dew_array_get"
+pub builtin array_get_unchecked<t>(value: Array<t>, index: U32) -> t = "dew_array_get_unchecked"
+pub builtin array_set<t>(value: Array<t>, index: U32, item: t) -> Bool = "dew_array_set"
+pub builtin array_set_unchecked<t>(value: Array<t>, index: U32, item: t) -> Unit = "dew_array_set_unchecked"
+pub builtin array_push<t>(value: Array<t>, item: t) -> Unit = "dew_array_push"
+pub builtin array_pop<t>(value: Array<t>) -> Option<t> = "dew_array_pop"
+pub builtin array_clear<t>(value: Array<t>) -> Unit = "dew_array_clear"
+pub builtin array_iter<t>(value: Array<t>) -> ArrayIter<t> = "dew_array_iter"
+pub builtin array_iter_has_next<t>(value: ArrayIter<t>) -> Bool = "dew_array_iter_has_next"
+pub builtin array_iter_next<t>(value: ArrayIter<t>) -> t = "dew_array_iter_next"
+
+impl<t> Array<t> {
+  fn new() -> Array<t> {
+    array_new()
+  }
+  fn with_capacity(capacity: U32) -> Array<t> {
+    array_with_capacity(capacity)
+  }
+  fn length(self) -> U32 {
+    array_length(self)
+  }
+  fn capacity(self) -> U32 {
+    array_capacity(self)
+  }
+  fn is_empty(self) -> Bool {
+    array_length(self) == 0u32
+  }
+  fn push(self, value: t) -> Unit {
+    array_push(self, value)
+  }
+  fn pop(self) -> Option<t> {
+    array_pop(self)
+  }
+  fn get(self, index: U32) -> Option<t> {
+    array_get(self, index)
+  }
+  fn get_unchecked(self, index: U32) -> t {
+    array_get_unchecked(self, index)
+  }
+  fn set(self, index: U32, value: t) -> Bool {
+    array_set(self, index, value)
+  }
+  fn set_unchecked(self, index: U32, value: t) -> Unit {
+    array_set_unchecked(self, index, value)
+  }
+  fn clear(self) -> Unit {
+    array_clear(self)
+  }
+  fn iter(self) -> ArrayIter<t> {
+    array_iter(self)
+  }
+}
+
+impl<t> IndexedGet<U32, t> for Array<t> {
+  fn indexed_get(self, index: U32) -> t {
+    array_get_unchecked(self, index)
+  }
+}
+
+impl<t> IndexedSet<U32, t> for Array<t> {
+  fn indexed_set(self, index: U32, value: t) -> Unit {
+    array_set_unchecked(self, index, value)
+  }
+}
+
+impl<t> Iter<t> for ArrayIter<t> {
+  fn has_next(self) -> Bool {
+    array_iter_has_next(self)
+  }
+  fn next(self) -> t {
+    array_iter_next(self)
+  }
+}

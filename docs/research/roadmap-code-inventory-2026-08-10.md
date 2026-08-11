@@ -308,9 +308,11 @@ Corrupt, missing, mismatched, or incompatible artifacts must remain fail-visible
 ### 3. Start the next user-facing milestone with Array and iterators
 
 Implement growable `dew.std.array` over the six existing carrier families, then
-settle explicit iterator types/protocols and add Array/Map/Set iteration. This
-builds directly on FixedArray, existing carrier planning, mutable collection
-runtime machinery, generic specialization, and Index/IndexSet evidence.
+The growable Array and explicit iterator tranche landed on August 11, 2026,
+including Array/Map/Set iteration. It builds directly on FixedArray, existing
+carrier planning, mutable collection runtime machinery, generic specialization,
+and IndexedGet/IndexedSet evidence. The next collection tranche is circular
+buffers plus stack/queue APIs.
 
 ### 4. Then choose one ergonomics tranche
 

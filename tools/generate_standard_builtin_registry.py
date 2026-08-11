@@ -28,7 +28,7 @@ def rendered_source() -> str:
     modules = data["modules"]
     operation_names = [
         name
-        for module in ("fixed_array", "map", "set")
+        for module in ("fixed_array", "array", "map", "set")
         for name in modules[module]["operations"]
     ]
     lines = [
@@ -41,7 +41,7 @@ def rendered_source() -> str:
     lines.extend(f"  {name}" for name in operation_names)
     lines.extend(["} derive(Eq, Debug)", ""])
 
-    for module_name in ("fixed_array", "map", "set"):
+    for module_name in ("fixed_array", "array", "map", "set"):
         module = modules[module_name]
         prefix = f"standard_{module_name}"
         lines.extend(
@@ -52,7 +52,7 @@ def rendered_source() -> str:
                 "}",
                 "",
                 "///|",
-                f"fn {prefix}_method_declaration(name : String) -> DeclId {{",
+                f"pub fn {prefix}_method_declaration(name : String) -> DeclId {{",
                 "  let local_id = match name {",
             ]
         )
@@ -71,16 +71,36 @@ def rendered_source() -> str:
                 "",
             ]
         )
+        if "iterator_type" in module:
+            lines.extend(
+                [
+                    "///|",
+                    f"pub fn {prefix}_iterator_type_declaration() -> DeclId {{",
+                    f"  make_semantic_id(standard_library_module_id({module['slot']}), {module['iterator_type']})",
+                    "}",
+                    "",
+                ]
+            )
+        for opaque_name, opaque_local in module.get("opaque_types", {}).items():
+            lines.extend(
+                [
+                    "///|",
+                    f"pub fn {prefix}_{opaque_name}_type_declaration() -> DeclId {{",
+                    f"  make_semantic_id(standard_library_module_id({module['slot']}), {opaque_local})",
+                    "}",
+                    "",
+                ]
+            )
         if "index" in module:
             lines.extend(
                 [
                     "///|",
-                    f"fn {prefix}_index_declaration() -> DeclId {{",
+                    f"pub fn {prefix}_index_declaration() -> DeclId {{",
                     f"  make_semantic_id(standard_library_module_id({module['slot']}), {module['index']})",
                     "}",
                     "",
                     "///|",
-                    f"fn {prefix}_index_set_declaration() -> DeclId {{",
+                    f"pub fn {prefix}_index_set_declaration() -> DeclId {{",
                     f"  make_semantic_id(standard_library_module_id({module['slot']}), {module['index_set']})",
                     "}",
                     "",

@@ -18,7 +18,7 @@ test "manifest ordered files share one module namespace" {
   }
   assert_eq(collected.files[preamble_file_count], first_file)
   assert_eq(collected.files[preamble_file_count + 1], second_file)
-  assert_eq(collected.preamble_declaration_count, 1308)
+  assert_eq(collected.preamble_declaration_count, 1311)
   assert_eq(collected.diagnostics.length(), 0)
   let double = collected.lookup_value("double").unwrap()
   let run = collected.lookup_value("run").unwrap()

@@ -41,14 +41,14 @@ impl<key, value> Map<key, value> {
   }
 }
 
-impl<key, value> Index<key, value> for Map<key, value> {
-  fn index(self, key: key) -> value {
+impl<key, value> IndexedGet<key, value> for Map<key, value> {
+  fn indexed_get(self, key: key) -> value {
     map_get_unchecked(self, key)
   }
 }
 
-impl<key, value> IndexSet<key, value> for Map<key, value> {
-  fn index_set(self, key: key, value: value) -> Unit {
+impl<key, value> IndexedSet<key, value> for Map<key, value> {
+  fn indexed_set(self, key: key, value: value) -> Unit {
     map_set(self, key, value)
   }
 }
@@ -56,3 +56,68 @@ impl<key, value> IndexSet<key, value> for Map<key, value> {
 builtin map_empty<key, value>() -> Map<key, value> = "dew_map_empty"
 builtin map_remove<key, value>(map: Map<key, value>, key: key) -> Bool = "dew_map_remove"
 builtin map_clear<key, value>(map: Map<key, value>) -> Unit = "dew_map_clear"
+
+pub struct MapEntry<key, value> {}
+pub struct MapKeyIter<key, value> {}
+pub struct MapValueIter<key, value> {}
+pub struct MapEntryIter<key, value> {}
+
+builtin map_keys<key, value>(map: Map<key, value>) -> MapKeyIter<key, value> = "dew_map_keys"
+builtin map_values<key, value>(map: Map<key, value>) -> MapValueIter<key, value> = "dew_map_values"
+builtin map_entries<key, value>(map: Map<key, value>) -> MapEntryIter<key, value> = "dew_map_entries"
+builtin map_key_iter_has_next<key, value>(iter: MapKeyIter<key, value>) -> Bool = "dew_map_key_iter_has_next"
+builtin map_key_iter_next<key, value>(iter: MapKeyIter<key, value>) -> key = "dew_map_key_iter_next"
+builtin map_value_iter_has_next<key, value>(iter: MapValueIter<key, value>) -> Bool = "dew_map_value_iter_has_next"
+builtin map_value_iter_next<key, value>(iter: MapValueIter<key, value>) -> value = "dew_map_value_iter_next"
+builtin map_entry_iter_has_next<key, value>(iter: MapEntryIter<key, value>) -> Bool = "dew_map_entry_iter_has_next"
+builtin map_entry_iter_next<key, value>(iter: MapEntryIter<key, value>) -> MapEntry<key, value> = "dew_map_entry_iter_next"
+builtin map_entry_key<key, value>(entry: MapEntry<key, value>) -> key = "dew_map_entry_key"
+builtin map_entry_value<key, value>(entry: MapEntry<key, value>) -> value = "dew_map_entry_value"
+
+impl<key, value> Map<key, value> {
+  fn keys(self) -> MapKeyIter<key, value> {
+    map_keys(self)
+  }
+  fn values(self) -> MapValueIter<key, value> {
+    map_values(self)
+  }
+  fn entries(self) -> MapEntryIter<key, value> {
+    map_entries(self)
+  }
+}
+
+impl<key, value> MapEntry<key, value> {
+  fn key(self) -> key {
+    map_entry_key(self)
+  }
+  fn value(self) -> value {
+    map_entry_value(self)
+  }
+}
+
+impl<key, value> Iter<key> for MapKeyIter<key, value> {
+  fn has_next(self) -> Bool {
+    map_key_iter_has_next(self)
+  }
+  fn next(self) -> key {
+    map_key_iter_next(self)
+  }
+}
+
+impl<key, value> Iter<value> for MapValueIter<key, value> {
+  fn has_next(self) -> Bool {
+    map_value_iter_has_next(self)
+  }
+  fn next(self) -> value {
+    map_value_iter_next(self)
+  }
+}
+
+impl<key, value> Iter<MapEntry<key, value>> for MapEntryIter<key, value> {
+  fn has_next(self) -> Bool {
+    map_entry_iter_has_next(self)
+  }
+  fn next(self) -> MapEntry<key, value> {
+    map_entry_iter_next(self)
+  }
+}

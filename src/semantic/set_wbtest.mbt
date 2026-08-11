@@ -14,9 +14,13 @@ test "set standard source has stable compiler-owned identities" {
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(semantic_id_local(collected.lookup_type("Set").unwrap()), 0)
   assert_eq(semantic_id_local(collected.lookup_value("set_empty").unwrap()), 1)
-  assert_eq(collected.callables.length(), 16)
+  assert_eq(collected.callables.length(), 22)
   assert_eq(semantic_id_local(collected.callables[8].declaration), 10)
   assert_eq(semantic_id_local(collected.callables[15].declaration), 17)
+  assert_eq(semantic_id_local(collected.callables[16].declaration), 19)
+  assert_eq(semantic_id_local(collected.callables[18].declaration), 21)
+  assert_eq(semantic_id_local(collected.callables[19].declaration), 23)
+  assert_eq(semantic_id_local(collected.callables[21].declaration), 26)
 }
 
 ///|

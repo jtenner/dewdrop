@@ -204,6 +204,7 @@ pub fn required_standard_library_source_paths(
     include_wasi,
     include_wasm_intrinsics,
     include_fixed_array,
+    include_array,
     include_map,
     include_set,
     lane_mask,
@@ -212,6 +213,7 @@ pub fn required_standard_library_source_paths(
     include_wasi ||
     include_wasm_intrinsics ||
     include_fixed_array ||
+    include_array ||
     include_map ||
     include_set ||
     lane_mask != 0 {
@@ -233,10 +235,13 @@ pub fn required_standard_library_source_paths(
   if include_result {
     required.push("std/result.dew")
   }
-  if include_fixed_array {
+  if include_fixed_array || include_array {
     required.push("std/fixed_array.dew")
   }
-  if include_map {
+  if include_array {
+    required.push("std/array.dew")
+  }
+  if include_map || include_array {
     required.push("std/map.dew")
   }
   if include_set {
@@ -341,6 +346,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let mut selected_wasi = false
   let mut selected_wasm_intrinsics = false
   let mut selected_fixed_array = false
+  let mut selected_array = false
   let mut selected_map = false
   let mut selected_set = false
   let mut selected_lane_mask = 0
@@ -381,6 +387,7 @@ pub fn collect_program_manifest_with_standard_sources(
       include_wasi,
       include_wasm_intrinsics,
       include_fixed_array,
+      include_array,
       include_map,
       include_set,
       lane_mask,
@@ -389,8 +396,11 @@ pub fn collect_program_manifest_with_standard_sources(
     selected_wasi = selected_wasi || include_wasi
     selected_wasm_intrinsics = selected_wasm_intrinsics ||
       include_wasm_intrinsics
-    selected_fixed_array = selected_fixed_array || include_fixed_array
-    selected_map = selected_map || include_map
+    selected_fixed_array = selected_fixed_array ||
+      include_fixed_array ||
+      include_array
+    selected_array = selected_array || include_array
+    selected_map = selected_map || include_map || include_array
     selected_set = selected_set || include_set
     selected_lane_mask = selected_lane_mask | lane_mask
     modules.push(
@@ -472,6 +482,24 @@ pub fn collect_program_manifest_with_standard_sources(
           module_id,
           "std/map.dew",
           standard_sources.source("std/map.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
+  }
+  if selected_array {
+    let module_id = standard_library_module_id(13)
+    let module_index = modules.length()
+    first_module["dew.std.array"] = module_index
+    module_paths.push("dew.std.array")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/array.dew",
+          standard_sources.source("std/array.dew"),
           false,
           false,
         ),

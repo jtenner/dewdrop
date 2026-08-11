@@ -30,8 +30,9 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. implement growable `Array` and explicit iterator protocols before expanding
-   the remaining collection families;
+1. expand the remaining measured collection families, beginning with circular
+   buffers and stack/queue APIs now that growable `Array` and explicit iterator
+   protocols are complete;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
 3. continue snapshots, measurements, resource budgets, optimization, packaging,
@@ -435,7 +436,7 @@ count = count + 1
 
 ### Indexing
 
-- [x] Define ambient `Index<key, value>` and reference-free `IndexSet<key, value>` traits.
+- [x] Define ambient `IndexedGet<key, value>` and reference-free `IndexedSet<key, value>` traits.
 - [x] Select exact indexing and indexed-setting evidence during inference.
 - [x] Replace `UnsupportedIndexLowering` for trait-backed syntax and compiler-known FixedArray operations.
 - [x] Define FixedArray bounds behavior: optional `get`; trapping index get/set, `set`, and unchecked operations.
@@ -485,7 +486,7 @@ count = count + 1
 ### Arrays, maps, queues, and collections
 
 - [x] Implement carrier-specialized mutable `dew.std.fixed_array` with safe optional get, trapping index get/set, explicit unchecked operations, aliases, and zero-length behavior.
-- [ ] Implement growable `dew.std.array` over the same six physical carrier families.
+- [x] Implement growable `dew.std.array` over the same six physical carrier families, with deterministic capacity growth, alias-visible mutation, optional pop/get, Boolean safe set, trapping indexed access, and clearing of removed reference slots.
 - [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
 - [ ] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and min/max policy.
@@ -498,7 +499,7 @@ count = count + 1
 - [x] Add Boolean Map removal and alias-visible O(1) clear using the proven Set chain-unlinking machinery.
 - [ ] Add deterministic allocation-free Hash implementations for String, StringView, and Bytes after finalizing their cross-type equality contract.
 - [ ] Implement `dew.std.queue` interfaces and implementation.
-- [ ] Add explicit iterator types and iteration protocols, then Map key/value/entry and Set key iterators while leaving hash traversal order unspecified.
+- [x] Add ambient `Iter<t>` plus explicit Array, Map key/value/entry, and Set key iterator types while leaving hash traversal order unspecified.
 - [ ] Define remaining collection mutation and persistence rules.
 - [ ] Benchmark WasmGC arrays and hash buckets versus linked/tree representations.
 
@@ -637,7 +638,7 @@ count = count + 1
 - [ ] Define `Show`, its relationship to `StringBuilder`, formatting stability, recursion/resource limits, typed lane formatting, and derived behavior.
 - [ ] Add `show(value) -> String` using `Show` evidence.
 - [ ] Define deterministic Debug behavior when WASI is unavailable.
-- [ ] Core iterator traits if they are intended to be ambient.
+- [x] Keep the minimal `Iter<t>` protocol ambient with `has_next` and trapping state-advancing `next`.
 - [ ] Keep the ambient surface intentionally small.
 
 ### `dew.std.map`
@@ -651,7 +652,7 @@ count = count + 1
 - [x] Add geometric bucket growth with deterministic stored-hash rehashing and a measured maximum load factor of 1.0.
 - [x] Implement Boolean removal with deterministic head/middle/tail unlinking and logical-length updates.
 - [x] Implement alias-visible O(1) clear by replacing bucket storage and resetting logical length.
-- [ ] Add key/value/entry iterators after iterator types are available.
+- [x] Add allocation-free-per-element key/value/entry iterators with paired `MapEntry` access and unspecified traversal order.
 
 ### `dew.std.queue`
 
@@ -860,7 +861,7 @@ remain easier to diagnose and maintain.
 - [x] Imports and opens are contributed per source file to the owning module's shared import scope.
 - [ ] Whether local declarations may shadow ordinary imports.
 - [ ] Whether canonical preamble traits may be shadowed at all.
-- [x] `Option` and `Result` are ambient separate standard modules rather than declarations inside `dew.std.preamble`; iterator traits remain undecided.
+- [x] `Option` and `Result` are ambient separate standard modules rather than declarations inside `dew.std.preamble`; the minimal `Iter<t>` protocol is ambient.
 - [ ] Whether mutation is local-only or extends to aggregate fields and collections.
 - [x] Function values and closures are part of the first complete language release.
 - [ ] Whether associated types are required for collections/iterators.
@@ -879,7 +880,7 @@ remain easier to diagnose and maintain.
 6. **Executable generics and runtime traits — complete for the documented ABI:** bounds/obligations, evidence-aware specialization, erased fallbacks, recursive adapters, trait objects, typed dictionaries, runtime evidence, `call_ref`, imported providers, and compatibility negotiation execute.
 7. **Current-language correctness hardening — complete for the audited gaps:** discarded non-Unit Unit tails, string literal pattern emission, stable local module-value cycle diagnostics, explicit `Never`/drop matrices, and the first ordinary warning producer are implemented.
 8. **Artifact-only installed dependencies — complete for V1 source capsules:** verified versioned dependencies compile after their locked source tree is removed, with byte-identical Wasm after atomic artifact restoration.
-9. **Core collections and iteration — next user-facing milestone:** growable Array first, then explicit iterator protocols, Map/Set iterators, and only then additional queue/tree/deque families justified by measured use cases.
+9. **Core collections and iteration — Array/iterator tranche complete:** growable Array, ambient iteration, and Array/Map/Set iterators execute across all carriers; circular buffers, stacks, queues, heaps, and ordered trees are next and remain subject to measured representation choices.
 10. **Language ergonomics and cleanup:** annotations and `Show`, or deterministic `defer`/`using` through `Disposable`, should land as separate bounded milestones. Eq/Debug/Hash derivation and ambient Debug are already implemented.
 11. **Optimization and incremental compilation:** folding, inlining, escape analysis, workspace fingerprints/caches, and deterministic parallel scheduling.
 12. **Broader standard library:** structured data, cryptography boundaries, HTTP, and conformance/security hardening.

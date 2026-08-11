@@ -1,0 +1,59 @@
+(module
+  (type (;0;) (struct (field (mut eqref)) (field (mut i32)) (field (mut i32))))
+  (type (;1;) (func (result (ref 0))))
+  (type (;2;) (func (result i32)))
+  (type (;3;) (array (mut i32)))
+  (type (;4;) (array (mut i64)))
+  (type (;5;) (array (mut f32)))
+  (type (;6;) (array (mut f64)))
+  (type (;7;) (array (mut v128)))
+  (type (;8;) (array (mut eqref)))
+  (export "main" (func 1))
+  (func (;0;) (type 1) (result (ref 0))
+    i32.const 0
+    array.new_default 3
+    i32.const 0
+    i32.const 0
+    struct.new 0
+    ref.cast (ref 0)
+  )
+  (func (;1;) (type 2) (result i32)
+    (local eqref i32 eqref)
+    call 0
+    i32.const 0
+    i32.const 0
+    struct.new 0
+    local.set 0
+    local.get 0
+    ref.cast (ref 0)
+    struct.get 0 1
+    local.get 0
+    ref.cast (ref 0)
+    struct.get 0 0
+    ref.cast (ref 0)
+    struct.get 0 1
+    i32.lt_u
+    if ;; label = @1
+    else
+      unreachable
+    end
+    local.get 0
+    ref.cast (ref 0)
+    struct.get 0 1
+    local.set 1
+    local.get 0
+    ref.cast (ref 0)
+    struct.get 0 0
+    ref.cast (ref 0)
+    struct.get 0 0
+    ref.cast (ref 3)
+    local.get 1
+    array.get 3
+    local.get 0
+    ref.cast (ref 0)
+    local.get 1
+    i32.const 1
+    i32.add
+    struct.set 0 1
+  )
+)

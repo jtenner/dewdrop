@@ -1318,6 +1318,54 @@ fn wasmgc_append_physical_type_fields(
           WasmNullableEqRefStorage,
           source.offset,
         )
+      } else if declaration == standard_array_type_declaration() {
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmNullableEqRefStorage,
+          source.offset,
+        )
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmI32Storage,
+          source.offset,
+        )
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmI32Storage,
+          source.offset,
+        )
+      } else if declaration == standard_array_iterator_type_declaration() {
+        wasmgc_append_field(
+          target,
+          WasmStructField(declaration),
+          WasmNullableEqRefStorage,
+          source.offset,
+        )
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmI32Storage,
+          source.offset,
+        )
+      } else if declaration == standard_map_key_iterator_type_declaration() ||
+        declaration == standard_map_value_iterator_type_declaration() ||
+        declaration == standard_map_entry_iterator_type_declaration() ||
+        declaration == standard_set_iterator_type_declaration() {
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmNullableEqRefStorage,
+          source.offset,
+        )
+        wasmgc_append_mutable_field(
+          target,
+          WasmStructField(declaration),
+          WasmI32Storage,
+          source.offset,
+        )
       } else if declaration == standard_map_type_declaration() ||
         declaration == standard_set_type_declaration() {
         wasmgc_append_mutable_field(
@@ -1612,6 +1660,9 @@ fn wasmgc_value_type(
           return Some(WasmNullableEqRefValue)
         }
       NominalType(declaration) => {
+        if declaration == standard_map_entry_type_declaration() {
+          return Some(WasmNullableEqRefValue)
+        }
         if semantic_id_module(declaration) != resolved.module_id {
           return Some(WasmExternalNominalRefValue(declaration))
         }
@@ -3520,6 +3571,16 @@ fn plan_module_wasmgc_fragments_in_orders(
       match lowering.expressions[expression].kind {
         PlannedFixedArrayMake(_, _, _)
         | PlannedFixedArrayLength(_, _)
+        | PlannedArrayNew(_)
+        | PlannedArrayWithCapacity(_, _)
+        | PlannedArrayGet(_, _, _)
+        | PlannedArrayGetUnchecked(_, _, _)
+        | PlannedArraySet(_, _, _, _)
+        | PlannedArraySetUnchecked(_, _, _, _)
+        | PlannedArrayPush(_, _, _)
+        | PlannedArrayPop(_, _)
+        | PlannedArrayClear(_, _)
+        | PlannedArrayIterNext(_, _)
         | PlannedFixedArrayGet(_, _, _)
         | PlannedFixedArrayGetUnchecked(_, _, _)
         | PlannedFixedArraySet(_, _, _, _)
@@ -3562,6 +3623,15 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedMapContainsKey(_, _, _, _, _)
         | PlannedMapRemove(_, _, _, _, _)
         | PlannedMapClear(_)
+        | PlannedMapKeys(_, _, _)
+        | PlannedMapValues(_, _, _)
+        | PlannedMapEntries(_, _, _)
+        | PlannedMapIterHasNext(_, _, _, _)
+        | PlannedMapKeyIterNext(_, _, _)
+        | PlannedMapValueIterNext(_, _, _)
+        | PlannedMapEntryIterNext(_, _, _)
+        | PlannedMapEntryKey(_, _, _)
+        | PlannedMapEntryValue(_, _, _)
         | PlannedSetEmpty(_, _, _)
         | PlannedSetSingleton(_, _, _, _)
         | PlannedSetLength(_)
@@ -3569,7 +3639,10 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedSetContains(_, _, _, _, _)
         | PlannedSetInsert(_, _, _, _, _)
         | PlannedSetRemove(_, _, _, _, _)
-        | PlannedSetClear(_) => {
+        | PlannedSetClear(_)
+        | PlannedSetIter(_, _)
+        | PlannedSetIterHasNext(_, _)
+        | PlannedSetIterNext(_, _) => {
           uses_map_runtime = true
           break
         }

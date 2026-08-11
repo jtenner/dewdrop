@@ -1,0 +1,23 @@
+open dew.std.set
+
+fn empty_i32_set() -> Set<I32> {
+  Set::empty()
+}
+
+fn sum_keys(iter: SetIter<I32>, sum: I32) -> I32 {
+  if iter.has_next() {
+    sum_keys(iter, sum + iter.next())
+  } else {
+    sum
+  }
+}
+
+pub fn main() -> Unit {
+  let values = Set::singleton(1)
+  values.insert(17)
+  values.insert(33)
+  values.insert(2)
+  assert(sum_keys(values.iter(), 0) == 53, "set iterator visits every key")
+  let empty = empty_i32_set()
+  assert(!empty.iter().has_next(), "empty set iterator")
+}

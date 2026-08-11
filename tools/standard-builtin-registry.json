@@ -17,6 +17,31 @@
         "FixedArraySetUnchecked": [6, 13, 17]
       }
     },
+    "array": {
+      "slot": 13,
+      "path": "dew.std.array",
+      "type": 0,
+      "iterator_type": 1,
+      "methods": {"new": 17, "with_capacity": 18, "length": 19, "capacity": 20, "push": 22, "pop": 23, "get": 24, "get_unchecked": 25, "set": 26, "set_unchecked": 27, "clear": 28, "iter": 29},
+      "index": 31,
+      "index_set": 33,
+      "operations": {
+        "ArrayNew": [2, 17],
+        "ArrayWithCapacity": [3, 18],
+        "ArrayLength": [4, 19, 21],
+        "ArrayCapacity": [5, 20],
+        "ArrayGet": [6, 24],
+        "ArrayGetUnchecked": [7, 25, 31],
+        "ArraySet": [8, 26],
+        "ArraySetUnchecked": [9, 27, 33],
+        "ArrayPush": [10, 22],
+        "ArrayPop": [11, 23],
+        "ArrayClear": [12, 28],
+        "ArrayIter": [13, 29],
+        "ArrayIterHasNext": [14, 35],
+        "ArrayIterNext": [15, 36]
+      }
+    },
     "map": {
       "slot": 11,
       "path": "dew.std.map",
@@ -24,6 +49,7 @@
       "methods": {"singleton": 9, "length": 10, "get": 11, "get_unchecked": 12, "insert": 13, "set": 14, "contains_key": 15, "empty": 16, "remove": 17, "clear": 18},
       "index": 20,
       "index_set": 22,
+      "opaque_types": {"entry": 26, "key_iterator": 27, "value_iterator": 28, "entry_iterator": 29},
       "operations": {
         "MapSingleton": [1, 9],
         "MapLength": [2, 10],
@@ -34,14 +60,26 @@
         "MapContainsKey": [7, 15],
         "MapEmpty": [16, 23],
         "MapRemove": [17, 24],
-        "MapClear": [18, 25]
+        "MapClear": [18, 25],
+        "MapKeys": [30, 42],
+        "MapValues": [31, 43],
+        "MapEntries": [32, 44],
+        "MapKeyIterHasNext": [33, 49],
+        "MapKeyIterNext": [34, 50],
+        "MapValueIterHasNext": [35, 52],
+        "MapValueIterNext": [36, 53],
+        "MapEntryIterHasNext": [37, 55],
+        "MapEntryIterNext": [38, 56],
+        "MapEntryKey": [39, 46],
+        "MapEntryValue": [40, 47]
       }
     },
     "set": {
       "slot": 12,
       "path": "dew.std.set",
       "type": 0,
-      "methods": {"empty": 10, "singleton": 11, "length": 12, "is_empty": 13, "contains": 14, "insert": 15, "remove": 16, "clear": 17},
+      "methods": {"empty": 10, "singleton": 11, "length": 12, "is_empty": 13, "contains": 14, "insert": 15, "remove": 16, "clear": 17, "iter": 23},
+      "opaque_types": {"iterator": 18},
       "operations": {
         "SetEmpty": [1, 10],
         "SetSingleton": [2, 11],
@@ -50,7 +88,10 @@
         "SetContains": [5, 14],
         "SetInsert": [6, 15],
         "SetRemove": [7, 16],
-        "SetClear": [8, 17]
+        "SetClear": [8, 17],
+        "SetIter": [19, 23],
+        "SetIterHasNext": [20, 25],
+        "SetIterNext": [21, 26]
       }
     }
   },

@@ -35,3 +35,24 @@ impl<key> Set<key> {
     set_clear(self)
   }
 }
+
+pub struct SetIter<key> {}
+
+builtin set_iter<key>(set: Set<key>) -> SetIter<key> = "dew_set_iter"
+builtin set_iter_has_next<key>(iter: SetIter<key>) -> Bool = "dew_set_iter_has_next"
+builtin set_iter_next<key>(iter: SetIter<key>) -> key = "dew_set_iter_next"
+
+impl<key> Set<key> {
+  fn iter(self) -> SetIter<key> {
+    set_iter(self)
+  }
+}
+
+impl<key> Iter<key> for SetIter<key> {
+  fn has_next(self) -> Bool {
+    set_iter_has_next(self)
+  }
+  fn next(self) -> key {
+    set_iter_next(self)
+  }
+}

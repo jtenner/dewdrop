@@ -74,6 +74,20 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySet(ExprId, ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
+  PlannedArrayNew(PlannedValueShape)
+  PlannedArrayWithCapacity(ExprId, PlannedValueShape)
+  PlannedArrayLength(ExprId)
+  PlannedArrayCapacity(ExprId)
+  PlannedArrayGet(ExprId, ExprId, PlannedValueShape)
+  PlannedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
+  PlannedArraySet(ExprId, ExprId, ExprId, PlannedValueShape)
+  PlannedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
+  PlannedArrayPush(ExprId, ExprId, PlannedValueShape)
+  PlannedArrayPop(ExprId, PlannedValueShape)
+  PlannedArrayClear(ExprId, PlannedValueShape)
+  PlannedArrayIter(ExprId, PlannedValueShape)
+  PlannedArrayIterHasNext(ExprId)
+  PlannedArrayIterNext(ExprId, PlannedValueShape)
   PlannedMapSingleton(
     ExprId,
     ExprId,
@@ -121,6 +135,15 @@ pub enum PlannedExpressionKind {
   PlannedMapContainsKey(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedMapRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedMapClear(ExprId)
+  PlannedMapKeys(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapValues(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntries(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapIterHasNext(ExprId, Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapKeyIterNext(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapValueIterNext(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryIterNext(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryKey(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryValue(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedSetEmpty(PlannedValueShape, DeclId, DeclId)
   PlannedSetSingleton(ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetLength(ExprId)
@@ -129,6 +152,9 @@ pub enum PlannedExpressionKind {
   PlannedSetInsert(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetClear(ExprId)
+  PlannedSetIter(ExprId, PlannedValueShape)
+  PlannedSetIterHasNext(ExprId, PlannedValueShape)
+  PlannedSetIterNext(ExprId, PlannedValueShape)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
   PlannedParameterSelect(HirSpan, Int)
@@ -854,80 +880,170 @@ fn plan_expression_kind(
                 ),
               )
             _ =>
-              match standard_map_operation(declaration) {
-                MapSingleton => {
-                  let map_key = collected.expression_children[arguments.start]
-                  let map_value = collected.expression_children[arguments.start +
-                    1]
-                  PlannedMapSingleton(
-                    map_key, map_value, key_shape, map_value_shape, hash_declaration,
-                    eq_declaration,
+              match standard_array_operation(declaration) {
+                ArrayNew => PlannedArrayNew(element_shape)
+                ArrayWithCapacity =>
+                  PlannedArrayWithCapacity(base, element_shape)
+                ArrayLength => PlannedArrayLength(base)
+                ArrayCapacity => PlannedArrayCapacity(base)
+                ArrayGet => PlannedArrayGet(base, key, element_shape)
+                ArrayGetUnchecked =>
+                  PlannedArrayGetUnchecked(
+                    base,
+                    key,
+                    planned_value_shape(
+                      resolved,
+                      inferred,
+                      inferred.expression_types[expression],
+                    ),
                   )
-                }
-                MapLength => PlannedMapLength(base)
-                MapGet =>
-                  PlannedMapGet(
-                    base, key, key_shape, map_value_shape, hash_declaration, eq_declaration,
+                ArraySet =>
+                  PlannedArraySet(
+                    base,
+                    key,
+                    value,
+                    planned_value_shape(
+                      resolved,
+                      inferred,
+                      inferred.expression_types[value],
+                    ),
                   )
-                MapGetUnchecked =>
-                  PlannedMapGetUnchecked(
-                    base, key, key_shape, map_value_shape, hash_declaration, eq_declaration,
+                ArraySetUnchecked =>
+                  PlannedArraySetUnchecked(
+                    base,
+                    key,
+                    value,
+                    planned_value_shape(
+                      resolved,
+                      inferred,
+                      inferred.expression_types[value],
+                    ),
                   )
-                MapInsert =>
-                  PlannedMapInsert(
-                    base, key, value, key_shape, map_value_shape, hash_declaration,
-                    eq_declaration,
+                ArrayPush =>
+                  PlannedArrayPush(
+                    base,
+                    key,
+                    planned_value_shape(
+                      resolved,
+                      inferred,
+                      inferred.expression_types[key],
+                    ),
                   )
-                MapSet =>
-                  PlannedMapSet(
-                    base, key, value, key_shape, map_value_shape, hash_declaration,
-                    eq_declaration,
+                ArrayPop => PlannedArrayPop(base, element_shape)
+                ArrayClear => PlannedArrayClear(base, element_shape)
+                ArrayIter => PlannedArrayIter(base, element_shape)
+                ArrayIterHasNext => PlannedArrayIterHasNext(base)
+                ArrayIterNext =>
+                  PlannedArrayIterNext(
+                    base,
+                    planned_value_shape(
+                      resolved,
+                      inferred,
+                      inferred.expression_types[expression],
+                    ),
                   )
-                MapContainsKey =>
-                  PlannedMapContainsKey(
-                    base, key, key_shape, hash_declaration, eq_declaration,
-                  )
-                MapEmpty =>
-                  PlannedMapEmpty(
-                    key_shape, map_value_shape, hash_declaration, eq_declaration,
-                  )
-                MapRemove =>
-                  PlannedMapRemove(
-                    base, key, key_shape, hash_declaration, eq_declaration,
-                  )
-                MapClear => PlannedMapClear(base)
                 _ =>
-                  match standard_set_operation(declaration) {
-                    SetEmpty =>
-                      PlannedSetEmpty(
-                        key_shape, hash_declaration, eq_declaration,
-                      )
-                    SetSingleton =>
-                      PlannedSetSingleton(
-                        collected.expression_children[arguments.start],
-                        key_shape,
-                        hash_declaration,
+                  match standard_map_operation(declaration) {
+                    MapSingleton => {
+                      let map_key = collected.expression_children[arguments.start]
+                      let map_value = collected.expression_children[arguments.start +
+                        1]
+                      PlannedMapSingleton(
+                        map_key, map_value, key_shape, map_value_shape, hash_declaration,
                         eq_declaration,
                       )
-                    SetLength => PlannedSetLength(base)
-                    SetIsEmpty => PlannedSetIsEmpty(base)
-                    SetContains =>
-                      PlannedSetContains(
+                    }
+                    MapLength => PlannedMapLength(base)
+                    MapGet =>
+                      PlannedMapGet(
+                        base, key, key_shape, map_value_shape, hash_declaration,
+                        eq_declaration,
+                      )
+                    MapGetUnchecked =>
+                      PlannedMapGetUnchecked(
+                        base, key, key_shape, map_value_shape, hash_declaration,
+                        eq_declaration,
+                      )
+                    MapInsert =>
+                      PlannedMapInsert(
+                        base, key, value, key_shape, map_value_shape, hash_declaration,
+                        eq_declaration,
+                      )
+                    MapSet =>
+                      PlannedMapSet(
+                        base, key, value, key_shape, map_value_shape, hash_declaration,
+                        eq_declaration,
+                      )
+                    MapContainsKey =>
+                      PlannedMapContainsKey(
                         base, key, key_shape, hash_declaration, eq_declaration,
                       )
-                    SetInsert =>
-                      PlannedSetInsert(
+                    MapEmpty =>
+                      PlannedMapEmpty(
+                        key_shape, map_value_shape, hash_declaration, eq_declaration,
+                      )
+                    MapRemove =>
+                      PlannedMapRemove(
                         base, key, key_shape, hash_declaration, eq_declaration,
                       )
-                    SetRemove =>
-                      PlannedSetRemove(
-                        base, key, key_shape, hash_declaration, eq_declaration,
-                      )
-                    SetClear => PlannedSetClear(base)
+                    MapClear => PlannedMapClear(base)
+                    MapKeys => PlannedMapKeys(base, key_shape, map_value_shape)
+                    MapValues =>
+                      PlannedMapValues(base, key_shape, map_value_shape)
+                    MapEntries =>
+                      PlannedMapEntries(base, key_shape, map_value_shape)
+                    MapKeyIterHasNext =>
+                      PlannedMapIterHasNext(base, 1, key_shape, map_value_shape)
+                    MapValueIterHasNext =>
+                      PlannedMapIterHasNext(base, 2, key_shape, map_value_shape)
+                    MapEntryIterHasNext =>
+                      PlannedMapIterHasNext(base, 3, key_shape, map_value_shape)
+                    MapKeyIterNext =>
+                      PlannedMapKeyIterNext(base, key_shape, map_value_shape)
+                    MapValueIterNext =>
+                      PlannedMapValueIterNext(base, key_shape, map_value_shape)
+                    MapEntryIterNext =>
+                      PlannedMapEntryIterNext(base, key_shape, map_value_shape)
+                    MapEntryKey =>
+                      PlannedMapEntryKey(base, key_shape, map_value_shape)
+                    MapEntryValue =>
+                      PlannedMapEntryValue(base, key_shape, map_value_shape)
                     _ =>
-                      PlannedDirectCall(
-                        declaration, receiver, arguments, type_arguments,
-                      )
+                      match standard_set_operation(declaration) {
+                        SetEmpty =>
+                          PlannedSetEmpty(
+                            key_shape, hash_declaration, eq_declaration,
+                          )
+                        SetSingleton =>
+                          PlannedSetSingleton(
+                            collected.expression_children[arguments.start],
+                            key_shape,
+                            hash_declaration,
+                            eq_declaration,
+                          )
+                        SetLength => PlannedSetLength(base)
+                        SetIsEmpty => PlannedSetIsEmpty(base)
+                        SetContains =>
+                          PlannedSetContains(
+                            base, key, key_shape, hash_declaration, eq_declaration,
+                          )
+                        SetInsert =>
+                          PlannedSetInsert(
+                            base, key, key_shape, hash_declaration, eq_declaration,
+                          )
+                        SetRemove =>
+                          PlannedSetRemove(
+                            base, key, key_shape, hash_declaration, eq_declaration,
+                          )
+                        SetClear => PlannedSetClear(base)
+                        SetIter => PlannedSetIter(base, key_shape)
+                        SetIterHasNext => PlannedSetIterHasNext(base, key_shape)
+                        SetIterNext => PlannedSetIterNext(base, key_shape)
+                        _ =>
+                          PlannedDirectCall(
+                            declaration, receiver, arguments, type_arguments,
+                          )
+                      }
                   }
               }
           }
@@ -983,6 +1099,16 @@ fn plan_expression_kind(
                 inferred.expression_types[expression],
               ),
             )
+          } else if standard_array_operation(declaration) == ArrayGetUnchecked {
+            PlannedArrayGetUnchecked(
+              base,
+              index,
+              planned_value_shape(
+                resolved,
+                inferred,
+                inferred.expression_types[expression],
+              ),
+            )
           } else if standard_map_operation(declaration) == MapGetUnchecked {
             let hash_declaration = match inferred.map_hash_targets[expression] {
               SelectedInferredCallTarget(selected, _) => selected
@@ -1026,6 +1152,17 @@ fn plan_expression_kind(
           if standard_fixed_array_operation(declaration) ==
             FixedArraySetUnchecked {
             PlannedFixedArraySetUnchecked(
+              base,
+              index,
+              value,
+              planned_value_shape(
+                resolved,
+                inferred,
+                inferred.expression_types[value],
+              ),
+            )
+          } else if standard_array_operation(declaration) == ArraySetUnchecked {
+            PlannedArraySetUnchecked(
               base,
               index,
               value,

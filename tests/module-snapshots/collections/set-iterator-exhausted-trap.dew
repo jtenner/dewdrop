@@ -1,0 +1,7 @@
+open dew.std.set
+
+pub fn main() -> I32 {
+  let iter = Set::singleton(1).iter()
+  iter.next()
+  iter.next()
+}
