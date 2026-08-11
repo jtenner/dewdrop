@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Implement deterministic cleanup as the next separate ergonomics milestone.
+1. Implement `defer` over the completed `Disposable` foundation, then add `using`.
 2. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -57,7 +57,6 @@
 
 ## Deterministic cleanup and executable language surface
 
-- [ ] Add `dew.std.disposable.Disposable` with an explicit cleanup operation and defined ownership/error semantics.
 - [ ] Add `defer` with deterministic LIFO scope-exit behavior across fallthrough, `return`, `break`, and `continue`; define or explicitly exclude trap unwinding.
 - [ ] Add `using` for scoped `Disposable` values through the same cleanup plan.
 - [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control flow that cannot guarantee exactly-once disposal.

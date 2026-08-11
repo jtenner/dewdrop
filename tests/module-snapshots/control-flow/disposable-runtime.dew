@@ -1,0 +1,17 @@
+open dew.std.disposable
+
+struct Resource {
+  value: I32
+}
+
+impl Disposable for Resource {
+  fn dispose(self) -> Unit {
+    assert(self.value == 7, "explicit dispose dispatch")
+  }
+}
+
+pub fn main() -> Unit {
+  dispose(Resource {
+    value: 7
+  })
+}

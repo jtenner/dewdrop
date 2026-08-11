@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. implement deterministic cleanup as the next separate ergonomics milestone;
+1. implement `defer` over the completed `Disposable` foundation, then add `using`;
 2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
@@ -329,7 +329,7 @@ boundaries.
 
 - [x] Add Boolean `is` pattern-test expressions with exactly-once scrutinee evaluation, standalone match desugaring, and branch-local bindings for direct `if` conditions and `&&` guards.
 
-- [ ] Add `dew.std.disposable.Disposable` with an explicit cleanup operation and clear ownership/error semantics.
+- [x] Add non-ambient `dew.std.disposable.Disposable`, explicit generic disposal, Unit-only cleanup results, alias caveats, and initial no-trap-unwinding semantics.
 - [ ] Add `defer` for deterministic scope-exit cleanup, defining LIFO order across normal fallthrough, `return`, `break`, `continue`, and traps or explicitly documenting trap exclusions.
 - [ ] Add `using` for scoped `Disposable` values, lowering it through the same cleanup plan without hidden nondeterministic finalization.
 - [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control-flow cases that cannot satisfy exactly-once disposal.

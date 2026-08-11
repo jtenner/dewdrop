@@ -35,9 +35,10 @@ pub fn make_program_file_id(
 ///|
 fn selected_standard_modules(
   files : Array[ProgramFile],
-) -> (Int, Bool, Bool, Bool, Bool, Bool, Bool, Bool, Int, Int) {
+) -> (Int, Bool, Bool, Bool, Bool, Bool, Bool, Bool, Bool, Int, Int) {
   let mut text_mask = 0
   let mut show = false
+  let mut disposable = false
   let mut wasi = false
   let mut wasm_intrinsics = false
   let mut fixed_array = false
@@ -66,6 +67,7 @@ fn selected_standard_modules(
             set = true
             collection_mask = 1023
             show = true
+            disposable = true
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -104,6 +106,7 @@ fn selected_standard_modules(
                 show = true
                 text_mask = text_mask | 3
               }
+              "disposable" => disposable = true
               "queue" => collection_mask = collection_mask | 2
               "ordering" => collection_mask = collection_mask | 16
               "i8x4" => lane_mask = lane_mask | 1
@@ -135,8 +138,8 @@ fn selected_standard_modules(
     }
   }
   (
-    text_mask, show, wasi, wasm_intrinsics, fixed_array, array, map, set, collection_mask,
-    lane_mask,
+    text_mask, show, disposable, wasi, wasm_intrinsics, fixed_array, array, map,
+    set, collection_mask, lane_mask,
   )
 }
 

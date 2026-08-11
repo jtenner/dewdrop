@@ -1,0 +1,7 @@
+pub trait Disposable {
+  fn dispose(self) -> Unit
+}
+
+pub fn dispose<t: Disposable>(value: t) -> Unit {
+  value.dispose()
+}
