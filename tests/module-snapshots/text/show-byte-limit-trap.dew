@@ -1,0 +1,21 @@
+open dew.std.show
+
+struct Huge {}
+
+fn show_limit_unit() -> Unit {}
+
+impl Show for Huge {
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    while 0u32 {
+      index if index < 4097u32 => {
+        show_append_text(formatter, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+        continue index + 1u32
+      }
+      _ => break show_limit_unit()
+    }
+  }
+}
+
+pub fn main() -> Unit {
+  let ignored = show(Huge {})
+}

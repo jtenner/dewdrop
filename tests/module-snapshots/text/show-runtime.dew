@@ -7,12 +7,12 @@ struct Pair {
 }
 
 impl Show for Pair {
-  fn append_show(self, builder: StringBuilder) -> Unit {
-    show_append_ascii(builder, 40u8)
-    show_append(builder, self.left)
-    show_append_ascii(builder, 44u8)
-    show_append(builder, self.right)
-    show_append_ascii(builder, 41u8)
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    show_append_ascii(formatter, 40u8)
+    show_append(formatter, self.left)
+    show_append_ascii(formatter, 44u8)
+    show_append(formatter, self.right)
+    show_append_ascii(formatter, 41u8)
   }
 }
 

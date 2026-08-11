@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. settle remaining `Show` resource and primitive-format policies, then take deterministic cleanup as a separate ergonomics milestone;
+1. implement deterministic cleanup as the next separate ergonomics milestone;
 2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
@@ -641,7 +641,8 @@ count = count + 1
 - [x] Add `debug(value)` using ordinary coherent `Debug` evidence and inference-time dispatch.
 - [x] Define the non-ambient `Show` trait, its `StringBuilder` append contract, its separation from ambient `Debug`, and initial stable Bool/integer/text formats.
 - [x] Define and implement stable aggregate-derived `Show` punctuation and generic prerequisite behavior.
-- [ ] Define bounded recursion/output policy plus Unit, float, byte, SWAR, and typed lane formats.
+- [x] Enforce deterministic Show limits of 64 nested dispatch levels and 1,048,576 output bytes through opaque formatter helpers.
+- [ ] Define Unit, float, byte, SWAR, and typed lane Show formats only when their stable textual policy is ready.
 - [x] Add `show(value) -> String` and composition helpers using `Show` evidence.
 - [ ] Define deterministic Debug behavior when WASI is unavailable.
 - [x] Keep the minimal `Iter<t>` protocol ambient with `has_next` and trapping state-advancing `next`.

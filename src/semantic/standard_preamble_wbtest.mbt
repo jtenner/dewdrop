@@ -79,7 +79,7 @@ test "standard import prepass selects Show and builder dependency" {
         b"open dew.std.show\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (2, true, false, false, false, false, false, false, 0, 0),
+    (3, true, false, false, false, false, false, false, 0, 0),
   )
 }
 

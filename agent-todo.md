@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Settle remaining `Show` resource and primitive-format policies, then take deterministic cleanup as a separate ergonomics milestone.
+1. Implement deterministic cleanup as the next separate ergonomics milestone.
 2. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -104,7 +104,7 @@
 
 ## `Show`, `Debug`, and output
 
-- [ ] Define bounded Show recursion/output behavior plus Unit, float, byte, SWAR, and typed lane formats.
+- [ ] Define Unit, float, byte, SWAR, and typed lane Show formats only when their stable textual policy is ready.
 - [ ] Define typed lane Debug formatting, recursion/resource limits, and deterministic behavior when WASI is unavailable.
 
 ## Broader standard library

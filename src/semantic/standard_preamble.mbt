@@ -102,7 +102,7 @@ fn selected_standard_modules(
               "set" => set = true
               "show" => {
                 show = true
-                text_mask = text_mask | 2
+                text_mask = text_mask | 3
               }
               "queue" => collection_mask = collection_mask | 2
               "ordering" => collection_mask = collection_mask | 16

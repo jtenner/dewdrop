@@ -158,7 +158,7 @@ test "derive Show freezes field prerequisites and conflicts ordinarily" {
     ProgramManifest::new([
       ManifestModule::new("derive.show", [
         ManifestFile::new(
-          "show.dew", b"open dew.std.show\nstruct Box<t> {\n  value: t\n} derive(Show)\nstruct Conflict {\n  value: I32\n} derive(Show)\nimpl Show for Conflict {\n  fn append_show(self, builder: StringBuilder) -> Unit {\n    show_append(builder, self.value)\n  }\n}\n",
+          "show.dew", b"open dew.std.show\nstruct Box<t> {\n  value: t\n} derive(Show)\nstruct Conflict {\n  value: I32\n} derive(Show)\nimpl Show for Conflict {\n  fn append_show(self, formatter: ShowFormatter) -> Unit {\n    show_append(formatter, self.value)\n  }\n}\n",
         ),
       ]),
     ]),

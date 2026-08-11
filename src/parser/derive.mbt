@@ -679,7 +679,7 @@ fn derived_show_append_text(value : String, offset : UInt64) -> Expr {
   bytes.write_string_utf8(value)
   CallExpr(
     NameExpr("show_append_text", offset),
-    [NameExpr("builder", offset), StringExpr(bytes.to_bytes(), offset)],
+    [NameExpr("formatter", offset), StringExpr(bytes.to_bytes(), offset)],
     offset,
   )
 }
@@ -688,7 +688,7 @@ fn derived_show_append_text(value : String, offset : UInt64) -> Expr {
 fn derived_show_append_value(value : Expr, offset : UInt64) -> Expr {
   CallExpr(
     NameExpr("show_append", offset),
-    [NameExpr("builder", offset), value],
+    [NameExpr("formatter", offset), value],
     offset,
   )
 }
@@ -804,7 +804,11 @@ fn derived_show_impl(
         type_parameters: [],
         receiver: Some({ explicit_type: None, offset }),
         parameters: [
-          { name: "builder", type_: NamedType("StringBuilder", offset), offset },
+          {
+            name: "formatter",
+            type_: NamedType("ShowFormatter", offset),
+            offset,
+          },
         ],
         return_type: NamedType("Unit", offset),
         body,

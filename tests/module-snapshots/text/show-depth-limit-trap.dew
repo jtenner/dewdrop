@@ -1,0 +1,18 @@
+open dew.std.show
+
+enum Nest {
+  End
+  More(Nest)
+} derive(Show)
+
+fn make_nest(depth: U32) -> Nest {
+  if depth == 0u32 {
+    Nest::End
+  } else {
+    Nest::More(make_nest(depth - 1u32))
+  }
+}
+
+pub fn main() -> Unit {
+  let ignored = show(make_nest(65u32))
+}

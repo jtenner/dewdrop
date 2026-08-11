@@ -5,7 +5,7 @@ test "Show standard module has stable identity and generic evidence lowering" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.show\nstruct Point {\n  value: I32\n}\nimpl Show for Point {\n  fn append_show(self, builder: StringBuilder) -> Unit {\n    show_append_ascii(builder, 60u8)\n    show_append(builder, self.value)\n    show_append_ascii(builder, 62u8)\n  }\n}\nfn render<t: Show>(value: t) -> String {\n  show(value)\n}\npub fn run() -> String {\n  render(Point {\n    value: 7\n  })\n}\n",
+          "main.dew", b"open dew.std.show\nstruct Point {\n  value: I32\n}\nimpl Show for Point {\n  fn append_show(self, formatter: ShowFormatter) -> Unit {\n    show_append_ascii(formatter, 60u8)\n    show_append(formatter, self.value)\n    show_append_ascii(formatter, 62u8)\n  }\n}\nfn render<t: Show>(value: t) -> String {\n  show(value)\n}\npub fn run() -> String {\n  render(Point {\n    value: 7\n  })\n}\n",
         ),
       ]),
     ]),
@@ -14,6 +14,7 @@ test "Show standard module has stable identity and generic evidence lowering" {
   let module_index = program.module_index("dew.std.show").unwrap()
   let show_module = program.modules[module_index]
   assert_eq(show_module.diagnostics, [])
+  assert_true(show_module.lookup_type("ShowFormatter") is Some(_))
   let show_trait = show_module.lookup_trait("Show").unwrap()
   assert_eq(semantic_id_module(show_trait), standard_library_module_id(44))
   assert_true(show_module.lookup_value("show") is Some(_))
