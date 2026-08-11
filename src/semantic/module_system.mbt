@@ -207,6 +207,7 @@ pub fn required_standard_library_source_paths(
     include_array,
     include_map,
     include_set,
+    collection_mask,
     lane_mask,
   ) = selected_standard_modules(files)
   if text_mask != 0 ||
@@ -216,6 +217,7 @@ pub fn required_standard_library_source_paths(
     include_array ||
     include_map ||
     include_set ||
+    collection_mask != 0 ||
     lane_mask != 0 {
     include_preamble = true
     include_option = true
@@ -246,6 +248,9 @@ pub fn required_standard_library_source_paths(
   }
   if include_set {
     required.push("std/set.dew")
+  }
+  if (collection_mask & 1) != 0 {
+    required.push("std/collections/stack.dew")
   }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
@@ -349,6 +354,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let mut selected_array = false
   let mut selected_map = false
   let mut selected_set = false
+  let mut selected_collection_mask = 0
   let mut selected_lane_mask = 0
   for module_index, module_ in manifest.modules {
     if module_.path.length() == 0 {
@@ -390,6 +396,7 @@ pub fn collect_program_manifest_with_standard_sources(
       include_array,
       include_map,
       include_set,
+      collection_mask,
       lane_mask,
     ) = selected_standard_modules(files)
     selected_text_mask = selected_text_mask | text_mask
@@ -398,10 +405,12 @@ pub fn collect_program_manifest_with_standard_sources(
       include_wasm_intrinsics
     selected_fixed_array = selected_fixed_array ||
       include_fixed_array ||
-      include_array
-    selected_array = selected_array || include_array
+      include_array ||
+      collection_mask != 0
+    selected_array = selected_array || include_array || collection_mask != 0
     selected_map = selected_map || include_map || include_array
     selected_set = selected_set || include_set
+    selected_collection_mask = selected_collection_mask | collection_mask
     selected_lane_mask = selected_lane_mask | lane_mask
     modules.push(
       collect_program_files_with_frozen_standard_imports(
@@ -518,6 +527,24 @@ pub fn collect_program_manifest_with_standard_sources(
           module_id,
           "std/set.dew",
           standard_sources.source("std/set.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 1) != 0 {
+    let module_id = standard_library_module_id(14)
+    let module_index = modules.length()
+    first_module["dew.std.collections.stack"] = module_index
+    module_paths.push("dew.std.collections.stack")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/collections/stack.dew",
+          standard_sources.source("std/collections/stack.dew"),
           false,
           false,
         ),

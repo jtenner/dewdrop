@@ -35,7 +35,7 @@ pub fn make_program_file_id(
 ///|
 fn selected_standard_modules(
   files : Array[ProgramFile],
-) -> (Int, Bool, Bool, Bool, Bool, Bool, Bool, Int) {
+) -> (Int, Bool, Bool, Bool, Bool, Bool, Bool, Int, Int) {
   let mut text_mask = 0
   let mut wasi = false
   let mut wasm_intrinsics = false
@@ -43,6 +43,7 @@ fn selected_standard_modules(
   let mut array = false
   let mut map = false
   let mut set = false
+  let mut collection_mask = 0
   let mut lane_mask = 0
   for file in files {
     let events = @parser.parse_bytes(file.source)
@@ -62,6 +63,15 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
+            collection_mask = 1
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "collections" {
+            match import_.path[3] {
+              "stack" => collection_mask = collection_mask | 1
+              _ => ()
+            }
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -109,7 +119,10 @@ fn selected_standard_modules(
       }
     }
   }
-  (text_mask, wasi, wasm_intrinsics, fixed_array, array, map, set, lane_mask)
+  (
+    text_mask, wasi, wasm_intrinsics, fixed_array, array, map, set, collection_mask,
+    lane_mask,
+  )
 }
 
 ///|

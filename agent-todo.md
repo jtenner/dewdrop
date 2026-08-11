@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Extend the remaining measured collection families, beginning with circular buffers and stack/queue APIs.
+1. Extend the remaining measured collection families, beginning with circular buffers and queue APIs after the completed Stack tranche.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
@@ -94,7 +94,7 @@
 ## Collections and iteration
 
 - [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
-- [ ] Implement `dew.std.collections.stack` with explicit empty-pop and empty-peek result semantics.
+- [x] Implement `dew.std.collections.stack` with explicit empty-pop and empty-peek result semantics.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and a defined min/max policy.
 - [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
 - [ ] Specify and benchmark sequence/deque/measure use cases before implementing `dew.std.collections.finger_tree`.

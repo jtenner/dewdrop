@@ -373,6 +373,18 @@ fn starshine_finish_array(
     )
     return Ok(output)
   }
+  if operation == 16 {
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    output.push(@lib.Instruction::i32_eqz())
+    return Ok(output)
+  }
   let shape = match shape {
     Some(value) => value
     None => return Err(UnsupportedExpression(body_id, -403))
@@ -615,6 +627,57 @@ fn starshine_finish_array(
       ]) {
       Ok(_) => ()
       Err(_) => return Err(UnsupportedExpression(body_id, -406))
+    }
+    append_starshine_instructions(present, some)
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::eqref_null()),
+        empty,
+        Some(present),
+      ),
+    )
+  } else if operation == 17 {
+    if value_local < 0 {
+      return Err(UnsupportedExpression(body_id, -410))
+    }
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(@lib.Instruction::i32_eqz())
+    let empty : Array[@lib.Instruction] = []
+    match
+      starshine_array_append_option(empty, planned, program, shape, false, []) {
+      Ok(_) => ()
+      Err(_) => return Err(UnsupportedExpression(body_id, -410))
+    }
+    let present : Array[@lib.Instruction] = []
+    append_starshine_instructions(
+      present,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    present.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+    present.push(@lib.Instruction::i32_sub())
+    present.push(starshine_array_local_set(index_local))
+    append_starshine_instructions(
+      present,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    present.push(starshine_match_cast(array_type))
+    present.push(starshine_array_local_get(index_local))
+    present.push(
+      @lib.Instruction::array_get(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    present.push(starshine_array_local_set(value_local))
+    let some : Array[@lib.Instruction] = []
+    match
+      starshine_array_append_option(some, planned, program, shape, true, [
+        starshine_array_local_get(value_local),
+      ]) {
+      Ok(_) => ()
+      Err(_) => return Err(UnsupportedExpression(body_id, -410))
     }
     append_starshine_instructions(present, some)
     output.push(

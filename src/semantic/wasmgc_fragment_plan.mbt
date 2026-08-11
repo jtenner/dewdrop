@@ -3579,6 +3579,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedArraySetUnchecked(_, _, _, _)
         | PlannedArrayPush(_, _, _)
         | PlannedArrayPop(_, _)
+        | PlannedStackIsEmpty(_)
+        | PlannedStackPeek(_, _)
         | PlannedArrayClear(_, _)
         | PlannedArrayIterNext(_, _)
         | PlannedFixedArrayGet(_, _, _)

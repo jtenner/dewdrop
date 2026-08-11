@@ -23,6 +23,17 @@ enum StandardBuiltinOperation {
   ArrayIter
   ArrayIterHasNext
   ArrayIterNext
+  StackNew
+  StackWithCapacity
+  StackLength
+  StackIsEmpty
+  StackPush
+  StackPop
+  StackPeek
+  StackClear
+  StackIter
+  StackIterHasNext
+  StackIterNext
   MapSingleton
   MapLength
   MapGet
@@ -172,6 +183,44 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
     13 | 29 => ArrayIter
     14 | 35 => ArrayIterHasNext
     15 | 36 => ArrayIterNext
+    _ => NoStandardBuiltinOperation
+  }
+}
+
+///|
+pub fn standard_stack_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(14), 0)
+}
+
+///|
+pub fn standard_stack_method_declaration(name : String) -> DeclId {
+  let local_id = match name {
+    _ => -1
+  }
+  if local_id < 0 {
+    0UL
+  } else {
+    make_semantic_id(standard_library_module_id(14), local_id)
+  }
+}
+
+///|
+fn standard_stack_operation(declaration : DeclId) -> StandardBuiltinOperation {
+  if semantic_id_module(declaration) != standard_library_module_id(14) {
+    return NoStandardBuiltinOperation
+  }
+  match semantic_id_local(declaration) {
+    2 => StackNew
+    3 => StackWithCapacity
+    4 => StackLength
+    5 => StackIsEmpty
+    6 => StackPush
+    7 => StackPop
+    8 => StackPeek
+    9 => StackClear
+    10 => StackIter
+    11 => StackIterHasNext
+    12 => StackIterNext
     _ => NoStandardBuiltinOperation
   }
 }

@@ -28,7 +28,7 @@ def rendered_source() -> str:
     modules = data["modules"]
     operation_names = [
         name
-        for module in ("fixed_array", "array", "map", "set")
+        for module in ("fixed_array", "array", "stack", "map", "set")
         for name in modules[module]["operations"]
     ]
     lines = [
@@ -41,7 +41,7 @@ def rendered_source() -> str:
     lines.extend(f"  {name}" for name in operation_names)
     lines.extend(["} derive(Eq, Debug)", ""])
 
-    for module_name in ("fixed_array", "array", "map", "set"):
+    for module_name in ("fixed_array", "array", "stack", "map", "set"):
         module = modules[module_name]
         prefix = f"standard_{module_name}"
         lines.extend(

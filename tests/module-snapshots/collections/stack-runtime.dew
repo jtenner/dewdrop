@@ -1,0 +1,47 @@
+open dew.std.collections.stack
+
+fn empty_stack() -> Stack<I32> {
+  stack_new()
+}
+
+pub fn main() -> Unit {
+  let stack = empty_stack()
+  let alias = stack
+  assert(stack_is_empty(stack), "new stack is empty")
+  match stack_pop(stack) {
+    Option::Some(_) => assert(false, "empty pop")
+    Option::None => {}
+  }
+  match stack_peek(stack) {
+    Option::Some(_) => assert(false, "empty peek")
+    Option::None => {}
+  }
+  stack_push(stack, 11)
+  stack_push(alias, 22)
+  stack_push(stack, 33)
+  assert(stack_length(stack) == 3u32, "alias-visible pushes")
+  match stack_peek(stack) {
+    Option::Some(value) => assert(value == 33, "peek reads top")
+    Option::None => assert(false, "peek unexpectedly empty")
+  }
+  assert(stack_length(stack) == 3u32, "peek preserves length")
+  let iter = stack_iter(stack)
+  assert(stack_iter_has_next(iter), "iterator first item")
+  let first = stack_iter_next(iter)
+  assert(stack_iter_has_next(iter), "iterator second item")
+  let second = stack_iter_next(iter)
+  assert(stack_iter_has_next(iter), "iterator third item")
+  let third = stack_iter_next(iter)
+  assert(!stack_iter_has_next(iter), "iterator exhausted")
+  assert(first + second + third == 66, "iterator visits insertion order")
+  match stack_pop(stack) {
+    Option::Some(value) => assert(value == 33, "first pop is LIFO")
+    Option::None => assert(false, "first pop unexpectedly empty")
+  }
+  match stack_pop(stack) {
+    Option::Some(value) => assert(value == 22, "second pop is LIFO")
+    Option::None => assert(false, "second pop unexpectedly empty")
+  }
+  stack_clear(stack)
+  assert(stack_is_empty(stack), "clear empties stack")
+}

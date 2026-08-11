@@ -34,14 +34,15 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 45)
+  assert_eq(wildcard_paths.length(), 46)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
   assert_eq(wildcard_paths[17], "std/set.dew")
-  assert_eq(wildcard_paths[18], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[24], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[44], "std/f64x2.dew")
+  assert_eq(wildcard_paths[18], "std/collections/stack.dew")
+  assert_eq(wildcard_paths[19], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[25], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[45], "std/f64x2.dew")
 }
 
 ///|
@@ -54,7 +55,7 @@ test "standard import prepass selects split module bits" {
         b"open dew.std.string\nopen dew.std.bytes\nopen dew.std.wasi\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (9, true, false, false, false, false, false, 0),
+    (9, true, false, false, false, false, false, 0, 0),
   )
 }
 
@@ -68,7 +69,7 @@ test "standard import prepass selects lane module bits" {
         b"open dew.std.i8x4\nopen dew.std.f64x2\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (0, false, false, false, false, false, false, 524289),
+    (0, false, false, false, false, false, false, 0, 524289),
   )
 }
 

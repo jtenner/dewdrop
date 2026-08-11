@@ -31,7 +31,7 @@ milestones below are complete and retained as implementation history. The active
 order is now:
 
 1. expand the remaining measured collection families, beginning with circular
-   buffers and stack/queue APIs now that growable `Array` and explicit iterator
+   buffers and queue APIs now that growable `Array`, Stack, and explicit iterator
    protocols are complete;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
@@ -488,7 +488,7 @@ count = count + 1
 - [x] Implement carrier-specialized mutable `dew.std.fixed_array` with safe optional get, trapping index get/set, explicit unchecked operations, aliases, and zero-length behavior.
 - [x] Implement growable `dew.std.array` over the same six physical carrier families, with deterministic capacity growth, alias-visible mutation, optional pop/get, Boolean safe set, trapping indexed access, and clearing of removed reference slots.
 - [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
-- [ ] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
+- [x] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and min/max policy.
 - [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
 - [ ] Implement `dew.std.collections.finger_tree` only after sequence/deque/measure use cases and representation costs are specified and benchmarked.
@@ -668,7 +668,7 @@ count = count + 1
 - [x] `dew.std.fixed_array`
 - [ ] `dew.std.array`
 - [ ] `dew.std.collections.circular_buffer`
-- [ ] `dew.std.collections.stack`
+- [x] `dew.std.collections.stack`
 - [ ] `dew.std.collections.binary_heap`
 - [ ] `dew.std.collections.red_black_tree`
 - [ ] `dew.std.collections.finger_tree`
@@ -880,7 +880,7 @@ remain easier to diagnose and maintain.
 6. **Executable generics and runtime traits — complete for the documented ABI:** bounds/obligations, evidence-aware specialization, erased fallbacks, recursive adapters, trait objects, typed dictionaries, runtime evidence, `call_ref`, imported providers, and compatibility negotiation execute.
 7. **Current-language correctness hardening — complete for the audited gaps:** discarded non-Unit Unit tails, string literal pattern emission, stable local module-value cycle diagnostics, explicit `Never`/drop matrices, and the first ordinary warning producer are implemented.
 8. **Artifact-only installed dependencies — complete for V1 source capsules:** verified versioned dependencies compile after their locked source tree is removed, with byte-identical Wasm after atomic artifact restoration.
-9. **Core collections and iteration — Array/iterator tranche complete:** growable Array, ambient iteration, and Array/Map/Set iterators execute across all carriers; circular buffers, stacks, queues, heaps, and ordered trees are next and remain subject to measured representation choices.
+9. **Core collections and iteration — Array/iterator and Stack tranches complete:** growable Array, ambient iteration, Array/Map/Set iterators, and LIFO Stack operations execute; circular buffers, queues, heaps, and ordered trees are next and remain subject to measured representation choices.
 10. **Language ergonomics and cleanup:** annotations and `Show`, or deterministic `defer`/`using` through `Disposable`, should land as separate bounded milestones. Eq/Debug/Hash derivation and ambient Debug are already implemented.
 11. **Optimization and incremental compilation:** folding, inlining, escape analysis, workspace fingerprints/caches, and deterministic parallel scheduling.
 12. **Broader standard library:** structured data, cryptography boundaries, HTTP, and conformance/security hardening.
