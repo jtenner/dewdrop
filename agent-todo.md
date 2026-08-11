@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Rebase Queue on the completed circular-buffer runtime, then continue heaps and ordered trees.
+1. Extend the ring runtime with Deque operations, then implement ordering, heaps, and ordered trees.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
@@ -102,7 +102,7 @@
 - [ ] Add deterministic allocation-free `Hash` implementations for String, StringView, and Bytes after their cross-type equality contract is final.
 - [x] Define the public `dew.std.queue` API behind a representation-independent mutable interface.
 - [x] Implement queue enqueue, dequeue, peek, size, iteration, and empty-queue result semantics.
-- [ ] Replace the measured O(n) contiguous dequeue baseline with circular-buffer storage; benchmark linked/persistent alternatives only if the ring representation misses its budgets.
+- [x] Replace the measured O(n) contiguous dequeue baseline with circular-buffer storage; benchmark linked/persistent alternatives only if the ring representation misses its budgets.
 - [ ] Define remaining collection mutation and persistence rules.
 - [ ] Benchmark WasmGC arrays and hash buckets against linked and tree representations.
 

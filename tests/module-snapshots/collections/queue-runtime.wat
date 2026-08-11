@@ -18,15 +18,16 @@
   (type (;16;) (array (mut eqref)))
   (export "main" (func 1))
   (func (;0;) (type 3) (result (ref 2))
+    (local eqref i32 eqref)
     i32.const 0
     array.new_default 11
     i32.const 0
-    i32.const 0
+    i32.const -2147483648
     struct.new 2
     ref.cast (ref 2)
   )
   (func (;1;) (type 4)
-    (local eqref eqref i32 eqref i32 i32 i32 i32 i32 eqref i32 eqref i32 eqref i32 eqref i32 i32 i32 i32 eqref i32 eqref i32 i32 eqref)
+    (local eqref eqref i32 eqref i32 i32 i32 i32 i32 eqref i32 eqref i32 eqref i32 eqref i32 i32 i32 i32 eqref i32 i32 i32 i32 eqref i32 i32 eqref)
     call 0
     local.set 0
     local.get 0
@@ -59,50 +60,43 @@
       ref.cast (ref 2)
       struct.get 2 0
       ref.cast (ref 11)
-      i32.const 0
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       array.get 11
       local.set 12
-      i32.const 1
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          i32.const 1
-          i32.sub
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
+      local.get 9
+      ref.cast (ref 2)
       local.get 9
       ref.cast (ref 2)
       struct.get 2 1
       i32.const 1
       i32.sub
-      local.set 10
+      struct.set 2 1
       local.get 9
       ref.cast (ref 2)
-      local.get 10
-      struct.set 2 1
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const -2147483648
+      i32.and
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
+      i32.const 1
+      i32.add
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
+      array.len
+      i32.rem_u
+      i32.or
+      struct.set 2 2
       i32.const 1
       local.get 12
       i64.const 0
@@ -153,7 +147,11 @@
       ref.cast (ref 2)
       struct.get 2 0
       ref.cast (ref 11)
-      i32.const 0
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       array.get 11
       local.set 14
       i32.const 1
@@ -201,89 +199,148 @@
     struct.get 2 1
     local.get 9
     ref.cast (ref 2)
-    struct.get 2 2
+    struct.get 2 0
+    ref.cast (ref 11)
+    array.len
     i32.eq
-    if ;; label = @1
+    if (result i32) ;; label = @1
       local.get 9
       ref.cast (ref 2)
       struct.get 2 2
+      i32.const -2147483648
+      i32.and
       i32.eqz
       if (result i32) ;; label = @2
-        i32.const 4
+        i32.const 0
       else
         local.get 9
         ref.cast (ref 2)
+        struct.get 2 0
+        local.set 11
+        local.get 11
+        ref.cast (ref 11)
+        array.len
+        i32.eqz
+        if (result i32) ;; label = @3
+          i32.const 4
+        else
+          local.get 11
+          ref.cast (ref 11)
+          array.len
+          i32.const 2
+          i32.mul
+        end
+        local.set 10
+        local.get 9
+        ref.cast (ref 2)
+        local.get 10
+        array.new_default 11
+        struct.set 2 0
+        i32.const 0
+        local.set 10
+        block ;; label = @3
+          loop ;; label = @4
+            local.get 10
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 1
+            i32.ge_u
+            br_if 1 (;@3;)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 0
+            ref.cast (ref 11)
+            local.get 10
+            local.get 11
+            ref.cast (ref 11)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 2
+            i32.const 2147483647
+            i32.and
+            local.get 10
+            i32.add
+            local.get 11
+            ref.cast (ref 11)
+            array.len
+            i32.rem_u
+            array.get 11
+            array.set 11
+            local.get 10
+            i32.const 1
+            i32.add
+            local.set 10
+            br 0 (;@4;)
+          end
+        end
+        local.get 9
+        ref.cast (ref 2)
+        i32.const -2147483648
+        struct.set 2 2
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        local.get 9
+        ref.cast (ref 2)
         struct.get 2 2
-        i32.const 2
-        i32.mul
+        i32.const 2147483647
+        i32.and
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.add
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        array.len
+        i32.rem_u
+        local.get 16
+        array.set 11
+        local.get 9
+        ref.cast (ref 2)
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.const 1
+        i32.add
+        struct.set 2 1
+        i32.const 1
       end
-      local.set 10
-      local.get 10
+    else
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
       local.get 9
       ref.cast (ref 2)
       struct.get 2 2
-      i32.le_u
-      if ;; label = @2
-        unreachable
-      end
-      local.get 10
-      array.new_default 11
-      local.set 11
-      i32.const 0
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 11
-          ref.cast (ref 11)
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
+      i32.const 2147483647
+      i32.and
       local.get 9
       ref.cast (ref 2)
-      local.get 11
-      struct.set 2 0
+      struct.get 2 1
+      i32.add
       local.get 9
       ref.cast (ref 2)
-      local.get 11
+      struct.get 2 0
       ref.cast (ref 11)
       array.len
-      struct.set 2 2
+      i32.rem_u
+      local.get 16
+      array.set 11
+      local.get 9
+      ref.cast (ref 2)
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 1
+      i32.const 1
+      i32.add
+      struct.set 2 1
+      i32.const 1
     end
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 0
-    ref.cast (ref 11)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    local.get 16
-    array.set 11
-    local.get 9
-    ref.cast (ref 2)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    i32.const 1
-    i32.add
-    struct.set 2 1
+    drop
     local.get 1
     local.set 9
     i32.const 22
@@ -293,89 +350,148 @@
     struct.get 2 1
     local.get 9
     ref.cast (ref 2)
-    struct.get 2 2
+    struct.get 2 0
+    ref.cast (ref 11)
+    array.len
     i32.eq
-    if ;; label = @1
+    if (result i32) ;; label = @1
       local.get 9
       ref.cast (ref 2)
       struct.get 2 2
+      i32.const -2147483648
+      i32.and
       i32.eqz
       if (result i32) ;; label = @2
-        i32.const 4
+        i32.const 0
       else
         local.get 9
         ref.cast (ref 2)
+        struct.get 2 0
+        local.set 11
+        local.get 11
+        ref.cast (ref 11)
+        array.len
+        i32.eqz
+        if (result i32) ;; label = @3
+          i32.const 4
+        else
+          local.get 11
+          ref.cast (ref 11)
+          array.len
+          i32.const 2
+          i32.mul
+        end
+        local.set 10
+        local.get 9
+        ref.cast (ref 2)
+        local.get 10
+        array.new_default 11
+        struct.set 2 0
+        i32.const 0
+        local.set 10
+        block ;; label = @3
+          loop ;; label = @4
+            local.get 10
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 1
+            i32.ge_u
+            br_if 1 (;@3;)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 0
+            ref.cast (ref 11)
+            local.get 10
+            local.get 11
+            ref.cast (ref 11)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 2
+            i32.const 2147483647
+            i32.and
+            local.get 10
+            i32.add
+            local.get 11
+            ref.cast (ref 11)
+            array.len
+            i32.rem_u
+            array.get 11
+            array.set 11
+            local.get 10
+            i32.const 1
+            i32.add
+            local.set 10
+            br 0 (;@4;)
+          end
+        end
+        local.get 9
+        ref.cast (ref 2)
+        i32.const -2147483648
+        struct.set 2 2
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        local.get 9
+        ref.cast (ref 2)
         struct.get 2 2
-        i32.const 2
-        i32.mul
+        i32.const 2147483647
+        i32.and
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.add
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        array.len
+        i32.rem_u
+        local.get 17
+        array.set 11
+        local.get 9
+        ref.cast (ref 2)
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.const 1
+        i32.add
+        struct.set 2 1
+        i32.const 1
       end
-      local.set 10
-      local.get 10
+    else
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
       local.get 9
       ref.cast (ref 2)
       struct.get 2 2
-      i32.le_u
-      if ;; label = @2
-        unreachable
-      end
-      local.get 10
-      array.new_default 11
-      local.set 11
-      i32.const 0
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 11
-          ref.cast (ref 11)
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
+      i32.const 2147483647
+      i32.and
       local.get 9
       ref.cast (ref 2)
-      local.get 11
-      struct.set 2 0
+      struct.get 2 1
+      i32.add
       local.get 9
       ref.cast (ref 2)
-      local.get 11
+      struct.get 2 0
       ref.cast (ref 11)
       array.len
-      struct.set 2 2
+      i32.rem_u
+      local.get 17
+      array.set 11
+      local.get 9
+      ref.cast (ref 2)
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 1
+      i32.const 1
+      i32.add
+      struct.set 2 1
+      i32.const 1
     end
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 0
-    ref.cast (ref 11)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    local.get 17
-    array.set 11
-    local.get 9
-    ref.cast (ref 2)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    i32.const 1
-    i32.add
-    struct.set 2 1
+    drop
     local.get 0
     local.set 9
     i32.const 33
@@ -385,89 +501,148 @@
     struct.get 2 1
     local.get 9
     ref.cast (ref 2)
-    struct.get 2 2
+    struct.get 2 0
+    ref.cast (ref 11)
+    array.len
     i32.eq
-    if ;; label = @1
+    if (result i32) ;; label = @1
       local.get 9
       ref.cast (ref 2)
       struct.get 2 2
+      i32.const -2147483648
+      i32.and
       i32.eqz
       if (result i32) ;; label = @2
-        i32.const 4
+        i32.const 0
       else
         local.get 9
         ref.cast (ref 2)
+        struct.get 2 0
+        local.set 11
+        local.get 11
+        ref.cast (ref 11)
+        array.len
+        i32.eqz
+        if (result i32) ;; label = @3
+          i32.const 4
+        else
+          local.get 11
+          ref.cast (ref 11)
+          array.len
+          i32.const 2
+          i32.mul
+        end
+        local.set 10
+        local.get 9
+        ref.cast (ref 2)
+        local.get 10
+        array.new_default 11
+        struct.set 2 0
+        i32.const 0
+        local.set 10
+        block ;; label = @3
+          loop ;; label = @4
+            local.get 10
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 1
+            i32.ge_u
+            br_if 1 (;@3;)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 0
+            ref.cast (ref 11)
+            local.get 10
+            local.get 11
+            ref.cast (ref 11)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 2
+            i32.const 2147483647
+            i32.and
+            local.get 10
+            i32.add
+            local.get 11
+            ref.cast (ref 11)
+            array.len
+            i32.rem_u
+            array.get 11
+            array.set 11
+            local.get 10
+            i32.const 1
+            i32.add
+            local.set 10
+            br 0 (;@4;)
+          end
+        end
+        local.get 9
+        ref.cast (ref 2)
+        i32.const -2147483648
+        struct.set 2 2
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        local.get 9
+        ref.cast (ref 2)
         struct.get 2 2
-        i32.const 2
-        i32.mul
+        i32.const 2147483647
+        i32.and
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.add
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        array.len
+        i32.rem_u
+        local.get 18
+        array.set 11
+        local.get 9
+        ref.cast (ref 2)
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.const 1
+        i32.add
+        struct.set 2 1
+        i32.const 1
       end
-      local.set 10
-      local.get 10
+    else
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
       local.get 9
       ref.cast (ref 2)
       struct.get 2 2
-      i32.le_u
-      if ;; label = @2
-        unreachable
-      end
-      local.get 10
-      array.new_default 11
-      local.set 11
-      i32.const 0
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 11
-          ref.cast (ref 11)
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
+      i32.const 2147483647
+      i32.and
       local.get 9
       ref.cast (ref 2)
-      local.get 11
-      struct.set 2 0
+      struct.get 2 1
+      i32.add
       local.get 9
       ref.cast (ref 2)
-      local.get 11
+      struct.get 2 0
       ref.cast (ref 11)
       array.len
-      struct.set 2 2
+      i32.rem_u
+      local.get 18
+      array.set 11
+      local.get 9
+      ref.cast (ref 2)
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 1
+      i32.const 1
+      i32.add
+      struct.set 2 1
+      i32.const 1
     end
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 0
-    ref.cast (ref 11)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    local.get 18
-    array.set 11
-    local.get 9
-    ref.cast (ref 2)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    i32.const 1
-    i32.add
-    struct.set 2 1
+    drop
     local.get 0
     ref.cast (ref 2)
     struct.get 2 1
@@ -498,7 +673,11 @@
       ref.cast (ref 2)
       struct.get 2 0
       ref.cast (ref 11)
-      i32.const 0
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       array.get 11
       local.set 19
       i32.const 1
@@ -601,7 +780,23 @@
     ref.cast (ref 2)
     struct.get 2 0
     ref.cast (ref 11)
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 2)
+    struct.get 2 2
+    i32.const 2147483647
+    i32.and
     local.get 10
+    i32.add
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 11)
+    array.len
+    i32.rem_u
     array.get 11
     local.get 9
     ref.cast (ref 2)
@@ -635,7 +830,23 @@
     ref.cast (ref 2)
     struct.get 2 0
     ref.cast (ref 11)
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 2)
+    struct.get 2 2
+    i32.const 2147483647
+    i32.and
     local.get 10
+    i32.add
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 11)
+    array.len
+    i32.rem_u
     array.get 11
     local.get 9
     ref.cast (ref 2)
@@ -669,7 +880,23 @@
     ref.cast (ref 2)
     struct.get 2 0
     ref.cast (ref 11)
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 2)
+    struct.get 2 2
+    i32.const 2147483647
+    i32.and
     local.get 10
+    i32.add
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 2)
+    struct.get 2 0
+    ref.cast (ref 11)
+    array.len
+    i32.rem_u
     array.get 11
     local.get 9
     ref.cast (ref 2)
@@ -742,52 +969,45 @@
       ref.cast (ref 2)
       struct.get 2 0
       ref.cast (ref 11)
-      i32.const 0
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       array.get 11
-      local.set 21
-      i32.const 1
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          i32.const 1
-          i32.sub
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
+      local.set 24
+      local.get 9
+      ref.cast (ref 2)
       local.get 9
       ref.cast (ref 2)
       struct.get 2 1
       i32.const 1
       i32.sub
-      local.set 10
+      struct.set 2 1
       local.get 9
       ref.cast (ref 2)
-      local.get 10
-      struct.set 2 1
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const -2147483648
+      i32.and
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       i32.const 1
-      local.get 21
+      i32.add
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
+      array.len
+      i32.rem_u
+      i32.or
+      struct.set 2 2
+      i32.const 1
+      local.get 24
       i64.const 0
       f32.const 0x0p+0 (;=0;)
       f64.const 0x0p+0 (;=0;)
@@ -795,12 +1015,12 @@
       ref.null eq
       struct.new 1
     end
-    local.set 22
+    local.set 25
     block ;; label = @1
       block ;; label = @2
         block ;; label = @3
           block ;; label = @4
-            local.get 22
+            local.get 25
             ref.cast (ref 0)
             struct.get 0 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
@@ -819,7 +1039,7 @@
           end
           br 2 (;@1;)
         end
-        local.get 22
+        local.get 25
         ref.cast (ref 1)
         struct.get 1 1
         local.set 7
@@ -844,95 +1064,154 @@
     local.get 0
     local.set 9
     i32.const 44
-    local.set 23
+    local.set 26
     local.get 9
     ref.cast (ref 2)
     struct.get 2 1
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 2
-    i32.eq
-    if ;; label = @1
-      local.get 9
-      ref.cast (ref 2)
-      struct.get 2 2
-      i32.eqz
-      if (result i32) ;; label = @2
-        i32.const 4
-      else
-        local.get 9
-        ref.cast (ref 2)
-        struct.get 2 2
-        i32.const 2
-        i32.mul
-      end
-      local.set 10
-      local.get 10
-      local.get 9
-      ref.cast (ref 2)
-      struct.get 2 2
-      i32.le_u
-      if ;; label = @2
-        unreachable
-      end
-      local.get 10
-      array.new_default 11
-      local.set 11
-      i32.const 0
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 11
-          ref.cast (ref 11)
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
-      local.get 9
-      ref.cast (ref 2)
-      local.get 11
-      struct.set 2 0
-      local.get 9
-      ref.cast (ref 2)
-      local.get 11
-      ref.cast (ref 11)
-      array.len
-      struct.set 2 2
-    end
     local.get 9
     ref.cast (ref 2)
     struct.get 2 0
     ref.cast (ref 11)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    local.get 23
-    array.set 11
-    local.get 9
-    ref.cast (ref 2)
-    local.get 9
-    ref.cast (ref 2)
-    struct.get 2 1
-    i32.const 1
-    i32.add
-    struct.set 2 1
+    array.len
+    i32.eq
+    if (result i32) ;; label = @1
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const -2147483648
+      i32.and
+      i32.eqz
+      if (result i32) ;; label = @2
+        i32.const 0
+      else
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        local.set 11
+        local.get 11
+        ref.cast (ref 11)
+        array.len
+        i32.eqz
+        if (result i32) ;; label = @3
+          i32.const 4
+        else
+          local.get 11
+          ref.cast (ref 11)
+          array.len
+          i32.const 2
+          i32.mul
+        end
+        local.set 10
+        local.get 9
+        ref.cast (ref 2)
+        local.get 10
+        array.new_default 11
+        struct.set 2 0
+        i32.const 0
+        local.set 10
+        block ;; label = @3
+          loop ;; label = @4
+            local.get 10
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 1
+            i32.ge_u
+            br_if 1 (;@3;)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 0
+            ref.cast (ref 11)
+            local.get 10
+            local.get 11
+            ref.cast (ref 11)
+            local.get 9
+            ref.cast (ref 2)
+            struct.get 2 2
+            i32.const 2147483647
+            i32.and
+            local.get 10
+            i32.add
+            local.get 11
+            ref.cast (ref 11)
+            array.len
+            i32.rem_u
+            array.get 11
+            array.set 11
+            local.get 10
+            i32.const 1
+            i32.add
+            local.set 10
+            br 0 (;@4;)
+          end
+        end
+        local.get 9
+        ref.cast (ref 2)
+        i32.const -2147483648
+        struct.set 2 2
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 2
+        i32.const 2147483647
+        i32.and
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.add
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 0
+        ref.cast (ref 11)
+        array.len
+        i32.rem_u
+        local.get 26
+        array.set 11
+        local.get 9
+        ref.cast (ref 2)
+        local.get 9
+        ref.cast (ref 2)
+        struct.get 2 1
+        i32.const 1
+        i32.add
+        struct.set 2 1
+        i32.const 1
+      end
+    else
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 1
+      i32.add
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
+      array.len
+      i32.rem_u
+      local.get 26
+      array.set 11
+      local.get 9
+      ref.cast (ref 2)
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 1
+      i32.const 1
+      i32.add
+      struct.set 2 1
+      i32.const 1
+    end
+    drop
     local.get 0
     local.set 9
     local.get 9
@@ -947,52 +1226,45 @@
       ref.cast (ref 2)
       struct.get 2 0
       ref.cast (ref 11)
-      i32.const 0
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       array.get 11
-      local.set 24
-      i32.const 1
-      local.set 10
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 10
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          i32.const 1
-          i32.sub
-          local.get 9
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 11)
-          local.get 10
-          array.get 11
-          array.set 11
-          local.get 10
-          i32.const 1
-          i32.add
-          local.set 10
-          br 0 (;@3;)
-        end
-      end
+      local.set 27
+      local.get 9
+      ref.cast (ref 2)
       local.get 9
       ref.cast (ref 2)
       struct.get 2 1
       i32.const 1
       i32.sub
-      local.set 10
+      struct.set 2 1
       local.get 9
       ref.cast (ref 2)
-      local.get 10
-      struct.set 2 1
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const -2147483648
+      i32.and
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 2
+      i32.const 2147483647
+      i32.and
       i32.const 1
-      local.get 24
+      i32.add
+      local.get 9
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 11)
+      array.len
+      i32.rem_u
+      i32.or
+      struct.set 2 2
+      i32.const 1
+      local.get 27
       i64.const 0
       f32.const 0x0p+0 (;=0;)
       f64.const 0x0p+0 (;=0;)
@@ -1000,12 +1272,12 @@
       ref.null eq
       struct.new 1
     end
-    local.set 25
+    local.set 28
     block ;; label = @1
       block ;; label = @2
         block ;; label = @3
           block ;; label = @4
-            local.get 25
+            local.get 28
             ref.cast (ref 0)
             struct.get 0 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
@@ -1025,7 +1297,7 @@
           end
           br 2 (;@1;)
         end
-        local.get 25
+        local.get 28
         ref.cast (ref 1)
         struct.get 1 1
         local.set 8
@@ -1069,6 +1341,14 @@
     ref.cast (ref 2)
     i32.const 0
     struct.set 2 1
+    local.get 9
+    ref.cast (ref 2)
+    local.get 9
+    ref.cast (ref 2)
+    struct.get 2 2
+    i32.const -2147483648
+    i32.and
+    struct.set 2 2
     local.get 0
     ref.cast (ref 2)
     struct.get 2 1

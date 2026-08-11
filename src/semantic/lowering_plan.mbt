@@ -93,6 +93,8 @@ pub enum PlannedExpressionKind {
   PlannedQueueDequeue(ExprId, PlannedValueShape)
   PlannedQueuePeek(ExprId, PlannedValueShape)
   PlannedCircularBufferNew(ExprId, PlannedValueShape, Bool)
+  PlannedCircularBufferNewZero(PlannedValueShape)
+  PlannedQueueRingEnqueue(ExprId, ExprId, PlannedValueShape)
   PlannedCircularBufferCapacity(ExprId, PlannedValueShape)
   PlannedCircularBufferIsFull(ExprId, PlannedValueShape)
   PlannedCircularBufferPushBack(ExprId, ExprId, PlannedValueShape)
@@ -861,24 +863,33 @@ fn plan_expression_kind(
             StackIterNext => ArrayIterNext
             _ => standard_array_operation(declaration)
           }
-          let array_operation = match standard_queue_operation(declaration) {
-            QueueNew => ArrayNew
-            QueueWithCapacity => ArrayWithCapacity
-            QueueLength => ArrayLength
-            QueueIsEmpty => StackIsEmpty
-            QueueEnqueue => ArrayPush
-            QueueDequeue => QueueDequeue
-            QueuePeek => QueuePeek
-            QueueClear => ArrayClear
-            QueueIter => ArrayIter
-            QueueIterHasNext => ArrayIterHasNext
-            QueueIterNext => ArrayIterNext
-            _ => stack_or_array_operation
+          let array_operation = stack_or_array_operation
+          let ring_operation = match standard_queue_operation(declaration) {
+            QueueNew => QueueNew
+            QueueWithCapacity => CircularBufferGrowable
+            QueueLength => CircularBufferLength
+            QueueIsEmpty => CircularBufferIsEmpty
+            QueueEnqueue => QueueEnqueue
+            QueueDequeue => CircularBufferPopFront
+            QueuePeek => CircularBufferPeekFront
+            QueueClear => CircularBufferClear
+            QueueIter => CircularBufferIter
+            QueueIterHasNext => CircularBufferIterHasNext
+            QueueIterNext => CircularBufferIterNext
+            _ => standard_circular_buffer_operation(declaration)
           }
-          let circular_operation = standard_circular_buffer_operation(
-            declaration,
-          )
-          match circular_operation {
+          match ring_operation {
+            QueueNew => PlannedCircularBufferNewZero(element_shape)
+            QueueEnqueue =>
+              PlannedQueueRingEnqueue(
+                base,
+                key,
+                planned_value_shape(
+                  resolved,
+                  inferred,
+                  inferred.expression_types[key],
+                ),
+              )
             CircularBufferBounded =>
               PlannedCircularBufferNew(base, element_shape, false)
             CircularBufferGrowable =>

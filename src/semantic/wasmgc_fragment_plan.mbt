@@ -3584,6 +3584,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedQueueDequeue(_, _)
         | PlannedQueuePeek(_, _)
         | PlannedCircularBufferNew(_, _, _)
+        | PlannedCircularBufferNewZero(_)
+        | PlannedQueueRingEnqueue(_, _, _)
         | PlannedCircularBufferCapacity(_, _)
         | PlannedCircularBufferIsFull(_, _)
         | PlannedCircularBufferPushBack(_, _, _)

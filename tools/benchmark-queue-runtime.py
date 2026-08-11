@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark the contiguous FIFO queue baseline against LIFO Array removal."""
+"""Benchmark the ring-backed FIFO queue against LIFO Array removal."""
 
 from __future__ import annotations
 
@@ -107,7 +107,7 @@ def main() -> None:
         "samples": args.samples,
         "queue_drain_median_us": round(queue_us, 3),
         "stack_drain_median_us": round(stack_us, 3),
-        "contiguous_fifo_overhead_ratio": round(queue_us / stack_us, 4) if stack_us else None,
+        "ring_fifo_overhead_ratio": round(queue_us / stack_us, 4) if stack_us else None,
     }, indent=2, sort_keys=True))
 
 

@@ -2629,6 +2629,8 @@ fn starshine_body_locals(
       | @semantic.PlannedQueueDequeue(_, _)
       | @semantic.PlannedQueuePeek(_, _)
       | @semantic.PlannedCircularBufferNew(_, _, _)
+      | @semantic.PlannedCircularBufferNewZero(_)
+      | @semantic.PlannedQueueRingEnqueue(_, _, _)
       | @semantic.PlannedCircularBufferCapacity(_, _)
       | @semantic.PlannedCircularBufferIsFull(_, _)
       | @semantic.PlannedCircularBufferPushBack(_, _, _)
@@ -2661,6 +2663,7 @@ fn starshine_body_locals(
           | @semantic.PlannedQueueDequeue(_, shape)
           | @semantic.PlannedQueuePeek(_, shape)
           | @semantic.PlannedCircularBufferPushBack(_, _, shape)
+          | @semantic.PlannedQueueRingEnqueue(_, _, shape)
           | @semantic.PlannedCircularBufferPopFront(_, shape)
           | @semantic.PlannedCircularBufferPeekFront(_, shape)
           | @semantic.PlannedCircularBufferIterNext(_, shape) =>
@@ -5188,6 +5191,33 @@ fn starshine_emit_body_instructions(
               ),
             )
             tasks.push(EmitStarshineExpression(capacity))
+          }
+          @semantic.PlannedCircularBufferNewZero(shape) =>
+            tasks.push(
+              FinishStarshineArray(
+                33,
+                Some(shape),
+                0,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+          @semantic.PlannedQueueRingEnqueue(base, value, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                34,
+                Some(shape),
+                2,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedCircularBufferCapacity(base, shape) => {
             tasks.push(

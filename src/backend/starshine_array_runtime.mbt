@@ -432,8 +432,12 @@ fn starshine_finish_array(
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
     carrier
   let output : Array[@lib.Instruction] = []
-  if operation == 1 || operation == 2 || operation == 20 || operation == 21 {
-    let has_capacity = operation != 1
+  if operation == 1 ||
+    operation == 2 ||
+    operation == 20 ||
+    operation == 21 ||
+    operation == 33 {
+    let has_capacity = operation == 2 || operation == 20 || operation == 21
     if carrier < 0 || (has_capacity && index_local < 0) {
       return Err(UnsupportedExpression(body_id, -402))
     }
@@ -452,7 +456,7 @@ fn starshine_finish_array(
     output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
     if operation == 2 {
       output.push(starshine_array_local_get(index_local))
-    } else if operation == 21 {
+    } else if operation == 21 || operation == 33 {
       output.push(@lib.Instruction::i32_const(@lib.I32::new(-2147483648)))
     } else {
       output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
@@ -640,14 +644,18 @@ fn starshine_finish_array(
     append_starshine_instructions(output, fragments[1])
     output.push(starshine_array_local_set(index_local))
   }
-  if operation == 7 || operation == 8 || operation == 9 || operation == 26 {
+  if operation == 7 ||
+    operation == 8 ||
+    operation == 9 ||
+    operation == 26 ||
+    operation == 34 {
     if value_local < 0 {
       return Err(UnsupportedExpression(body_id, -404))
     }
     append_starshine_instructions(output, fragments[fragments.length() - 1])
     output.push(starshine_array_local_set(value_local))
   }
-  if operation == 26 {
+  if operation == 26 || operation == 34 {
     if value_local < 0 {
       return Err(UnsupportedExpression(body_id, -412))
     }
@@ -694,6 +702,9 @@ fn starshine_finish_array(
         Some(available),
       ),
     )
+    if operation == 34 {
+      output.push(@lib.Instruction::drop())
+    }
     return Ok(output)
   }
   if operation == 5 {

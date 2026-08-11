@@ -10,9 +10,9 @@ FIFO order is deterministic. Empty dequeue and peek return `Option::None`; alias
 
 ## Current representation
 
-The first executable representation is a contiguous Array queue. Enqueue appends geometrically. Peek reads index zero. Dequeue reads index zero, shifts the remaining live prefix left once, clears the dead reference slot when necessary, and decrements length. This keeps one allocation-free backing object and carrier-specialized storage, but dequeue is O(n).
+Queue now uses the growable circular-buffer runtime. Enqueue appends at the logical tail, dequeue advances the wrapped head, and peek reads the logical front. Growth normalizes the live ring into a doubled backing array. All three primary operations are O(1) amortized while preserving carrier-specialized storage and reference-slot clearing.
 
-The compiler maps most Queue builtins to existing Array plans. Dedicated `PlannedQueuePeek` and `PlannedQueueDequeue` operations emit front access and deterministic shifting. Standard module slot 15 owns stable Queue builtin identities.
+Queue retains its independent public API and standard module slot 15, while semantic lowering maps its operations to circular-buffer plans. This keeps the representation replaceable without source changes.
 
 ## Measurement
 
@@ -22,7 +22,7 @@ On August 11, 2026, `tools/benchmark-queue-runtime.py --count 128 --samples 100`
 - Array-backed LIFO enqueue-and-drain baseline: 2.735 microseconds;
 - FIFO overhead ratio: 11.7792x.
 
-The result rejects contiguous shifting as the final high-performance representation. The API is intentionally representation-independent so the next circular-buffer milestone can replace dequeue shifting with deterministic wraparound and amortized O(1) operations without changing callers.
+That result rejected contiguous shifting as the final representation. After rebasing on the ring runtime, the same 128-element benchmark measured 8.957 microseconds for Queue and 2.575 microseconds for the LIFO baseline, reducing the ratio to 3.4783x while changing dequeue from O(n) to O(1). The remaining ratio includes FIFO ring arithmetic and the benchmark's fully unrolled call surface.
 
 ## Validation
 
