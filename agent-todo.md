@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Harden cleanup diagnostics for direct double disposal and unsupported escapes.
+1. Continue ownership-aware cleanup hardening for alias-mediated disposal and escapes.
 2. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -57,7 +57,7 @@
 
 ## Deterministic cleanup and executable language surface
 
-- [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control flow that cannot guarantee exactly-once disposal.
+- [ ] Add ownership-aware alias-mediated disposal/escape diagnostics if affine tracking is adopted; asynchronous escape remains deferred because Dew has no async surface.
 - [ ] Add parser, HIR, flow, lowering, WAT snapshot, runtime, and cross-module tests for `defer`, `using`, and `Disposable`.
 - [ ] Design optional arguments, including defaults, omission, overload resolution, evaluation order, and ABI effects.
 - [ ] Add separate checked, saturating, and explicitly named wrapping/truncating conversion families beyond `Into<T>`.

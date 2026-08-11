@@ -252,6 +252,10 @@ fn Parser::parse_block_after_left_brace(
         }
       }
     }
+    match deferred_using_violation(item, cleanups) {
+      Some(error) => return Err(expression_failure(error))
+      None => ()
+    }
     defer_transform_block_item(items, item, cleanups, 0)
     self.skip_newlines()
   } nobreak {

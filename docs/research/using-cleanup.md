@@ -8,4 +8,4 @@ The binding remains usable until its scope exits. Disposal runs exactly once in 
 
 Using dispatches the selected `Disposable.dispose` method directly inside the compiler-owned cleanup closure. This supports local and imported evidence without a finalizer runtime, dynamic table, or `call_ref` in the measured closed cases.
 
-Current Dew references remain aliasable rather than affine. `using` guarantees one compiler-inserted disposal call for its lexical binding, but aliases are not invalidated automatically. Direct/manual double-disposal and escape diagnostics remain a separate semantic-hardening task; resource implementations should remain defensively idempotent where aliases are exposed until those diagnostics land.
+Current Dew references remain aliasable rather than affine. `using` guarantees one compiler-inserted disposal call for its lexical binding, and the parser now rejects direct `resource.dispose()`/`dispose(resource)` calls plus direct return of that binding. Lexical shadowing is respected. Alias-mediated disposal or escape is not yet ownership-tracked, so resource implementations should remain defensively idempotent where aliases are exposed.

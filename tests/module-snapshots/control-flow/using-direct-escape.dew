@@ -1,0 +1,14 @@
+open dew.std.disposable
+
+struct Resource {}
+
+impl Disposable for Resource {
+  fn dispose(self) -> Unit {}
+}
+
+fn escape() -> Resource {
+  using resource = Resource {}
+  return resource
+}
+
+pub fn main() -> Unit {}

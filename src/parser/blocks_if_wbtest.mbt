@@ -25,10 +25,18 @@ test "using desugars acquisition binding and automatic disposal" {
     Ok(Function(declaration)) => {
       assert_eq(declaration.body.items.length(), 5)
       match declaration.body.items[0] {
-        LetItem(false, "resource", _, CallExpr(NameExpr("acquire", _), [], _), _) => ()
+        LetItem(
+          false,
+          "resource",
+          _,
+          CallExpr(NameExpr("acquire", _), [], _),
+          _
+        ) => ()
         _ => fail("expected using acquisition binding")
       }
-      assert_true(declaration.body.items[1] is LetItem(_, _, _, LambdaExpr(_, _, _, _), _))
+      assert_true(
+        declaration.body.items[1] is LetItem(_, _, _, LambdaExpr(_, _, _, _), _),
+      )
       match declaration.body.items[3] {
         ExpressionItem(CallExpr(NameExpr(name, _), [], _), _) =>
           assert_true(name.contains("dew_defer_"))
@@ -36,6 +44,17 @@ test "using desugars acquisition binding and automatic disposal" {
       }
     }
     _ => fail("expected using function")
+  }
+}
+
+///|
+test "using diagnostics respect nested lexical shadowing" {
+  match
+    Parser::from_bytes(
+      b"fn run() -> Unit {\n  using resource = acquire()\n  if true {\n    let resource = acquire()\n    resource.dispose()\n  }\n}\n",
+    ).parse_declaration() {
+    Ok(Function(_)) => ()
+    _ => fail("expected shadowed manual disposal to remain independent")
   }
 }
 

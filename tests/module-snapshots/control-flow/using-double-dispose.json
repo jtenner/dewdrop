@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:11:19: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(UsingDoubleDispose(\"resource\", 182)),\n  },\n)\n  |\n11 |   resource.dispose()\n  |                   ^"
+  ],
+  "warnings": [],
+  "output": null
+}

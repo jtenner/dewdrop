@@ -181,6 +181,8 @@ pub enum ExpressionError {
   MissingOperand(UInt64)
   LexicalError(@tokenizer.LexError, UInt64)
   InvalidOperatorState(UInt64)
+  UsingDoubleDispose(String, UInt64)
+  UsingValueEscape(String, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -236,7 +238,9 @@ pub fn ExpressionError::offset(self : ExpressionError) -> UInt64 {
     | UnclosedIndex(offset)
     | MissingOperand(offset)
     | LexicalError(_, offset)
-    | InvalidOperatorState(offset) => offset
+    | InvalidOperatorState(offset)
+    | UsingDoubleDispose(_, offset)
+    | UsingValueEscape(_, offset) => offset
     MatchPatternError(error) => error.offset()
   }
 }

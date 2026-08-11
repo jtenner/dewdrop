@@ -2,6 +2,7 @@
 priv struct DeferredCleanup {
   name : String
   offset : UInt64
+  using_name : String?
 }
 
 ///|
@@ -334,14 +335,377 @@ fn finalize_deferred_block(
 }
 
 ///|
+fn deferred_pattern_binds_name(pattern : Pattern, name : String) -> Bool {
+  match pattern {
+    BindingPattern(bound, _) => bound == name
+    QualifiedPattern(base, _, _) => deferred_pattern_binds_name(base, name)
+    TuplePattern(base, items, _) => {
+      if deferred_pattern_binds_name(base, name) {
+        return true
+      }
+      for item in items {
+        if deferred_pattern_binds_name(item, name) {
+          return true
+        }
+      }
+      false
+    }
+    StructPattern(base, fields, _, _) => {
+      if deferred_pattern_binds_name(base, name) {
+        return true
+      }
+      for field in fields {
+        if deferred_pattern_binds_name(field.pattern, name) {
+          return true
+        }
+      }
+      false
+    }
+    AlternativePattern(first, alternatives, _) => {
+      if deferred_pattern_binds_name(first, name) {
+        return true
+      }
+      for alternative in alternatives {
+        if deferred_pattern_binds_name(alternative, name) {
+          return true
+        }
+      }
+      false
+    }
+    WildcardPattern(_) | RestPattern(_) | LiteralPattern(_, _) => false
+  }
+}
+
+///|
+fn deferred_block_dispose_offset(block : Block, name : String) -> UInt64? {
+  let mut shadowed = false
+  for item in block.items {
+    if shadowed {
+      continue
+    }
+    match item {
+      LetItem(_, bound, _, value, _) => {
+        match deferred_expression_dispose_offset(value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+        if bound == name {
+          shadowed = true
+        }
+      }
+      ReturnItem(Some(value), _) | ExpressionItem(value, _) =>
+        match deferred_expression_dispose_offset(value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      ReturnItem(None, _) => ()
+      AssignmentItem(target, value, _) | IndexSetItem(target, value, _) => {
+        match deferred_expression_dispose_offset(target, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+        match deferred_expression_dispose_offset(value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+    }
+  }
+  None
+}
+
+///|
+fn deferred_arm_dispose_offset(arm : PatternArm, name : String) -> UInt64? {
+  if deferred_pattern_binds_name(arm.pattern, name) {
+    return None
+  }
+  match arm.guard_condition {
+    Some(value) =>
+      match deferred_expression_dispose_offset(value, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+    None => ()
+  }
+  deferred_expression_dispose_offset(arm.body, name)
+}
+
+///|
+fn deferred_expression_dispose_offset(
+  expression : Expr,
+  name : String,
+) -> UInt64? {
+  match expression {
+    CallExpr(FieldExpr(NameExpr(receiver, _), "dispose", _), arguments, offset) => {
+      if receiver == name {
+        return Some(offset)
+      }
+      for argument in arguments {
+        match deferred_expression_dispose_offset(argument, name) {
+          Some(found) => return Some(found)
+          None => ()
+        }
+      }
+      None
+    }
+    CallExpr(NameExpr("dispose", _), arguments, offset) => {
+      match arguments {
+        [NameExpr(argument, _)] if argument == name => return Some(offset)
+        _ => ()
+      }
+      for argument in arguments {
+        match deferred_expression_dispose_offset(argument, name) {
+          Some(found) => return Some(found)
+          None => ()
+        }
+      }
+      None
+    }
+    LambdaExpr(parameters, _, body, _) => {
+      for parameter in parameters {
+        if parameter.name == name {
+          return None
+        }
+      }
+      deferred_block_dispose_offset(body, name)
+    }
+    ObjectExpr(fields, _) | ConstructExpr(_, fields, _) => {
+      match expression {
+        ConstructExpr(base, _, _) =>
+          match deferred_expression_dispose_offset(base, name) {
+            Some(offset) => return Some(offset)
+            None => ()
+          }
+        _ => ()
+      }
+      for field in fields {
+        match deferred_expression_dispose_offset(field.value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+      None
+    }
+    BlockExpr(block) => deferred_block_dispose_offset(block, name)
+    IfExpr(condition, then_block, alternative, _) => {
+      match deferred_expression_dispose_offset(condition, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      match deferred_block_dispose_offset(then_block, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      match alternative {
+        Some(value) => deferred_expression_dispose_offset(value, name)
+        None => None
+      }
+    }
+    MatchExpr(scrutinee, arms, _) | WhileExpr(scrutinee, arms, _) => {
+      match deferred_expression_dispose_offset(scrutinee, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      for arm in arms {
+        match deferred_arm_dispose_offset(arm, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+      None
+    }
+    IsExpr(scrutinee, _, _)
+    | PrefixExpr(_, scrutinee, _)
+    | FieldExpr(scrutinee, _, _)
+    | QualifiedExpr(scrutinee, _, _) =>
+      deferred_expression_dispose_offset(scrutinee, name)
+    BreakExpr(value, _) | ContinueExpr(value, _) =>
+      deferred_expression_dispose_offset(value, name)
+    BinaryExpr(_, left, right, _) | IndexExpr(left, right, _) =>
+      match deferred_expression_dispose_offset(left, name) {
+        Some(offset) => Some(offset)
+        None => deferred_expression_dispose_offset(right, name)
+      }
+    CallExpr(callee, arguments, _) => {
+      match deferred_expression_dispose_offset(callee, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      for argument in arguments {
+        match deferred_expression_dispose_offset(argument, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+      None
+    }
+    I8Expr(_, _)
+    | I16Expr(_, _)
+    | I32Expr(_, _)
+    | I64Expr(_, _)
+    | U8Expr(_, _)
+    | U16Expr(_, _)
+    | U32Expr(_, _)
+    | U64Expr(_, _)
+    | F32Expr(_, _)
+    | F64Expr(_, _)
+    | BoolExpr(_, _)
+    | StringExpr(_, _)
+    | BytesExpr(_, _)
+    | NameExpr(_, _)
+    | ImportAliasExpr(_, _) => None
+  }
+}
+
+///|
+fn deferred_block_escape_offset(block : Block, name : String) -> UInt64? {
+  let mut shadowed = false
+  for item in block.items {
+    if shadowed {
+      continue
+    }
+    match item {
+      LetItem(_, bound, _, value, _) => {
+        match deferred_expression_escape_offset(value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+        if bound == name {
+          shadowed = true
+        }
+      }
+      ReturnItem(Some(NameExpr(value, offset)), _) if value == name =>
+        return Some(offset)
+      ReturnItem(Some(value), _) | ExpressionItem(value, _) =>
+        match deferred_expression_escape_offset(value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      ReturnItem(None, _) => ()
+      AssignmentItem(target, value, _) | IndexSetItem(target, value, _) => {
+        match deferred_expression_escape_offset(target, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+        match deferred_expression_escape_offset(value, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+    }
+  }
+  None
+}
+
+///|
+fn deferred_expression_escape_offset(
+  expression : Expr,
+  name : String,
+) -> UInt64? {
+  match expression {
+    LambdaExpr(_, _, _, _) => None
+    BlockExpr(block) => deferred_block_escape_offset(block, name)
+    IfExpr(condition, then_block, alternative, _) => {
+      match deferred_expression_escape_offset(condition, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      match deferred_block_escape_offset(then_block, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      match alternative {
+        Some(value) => deferred_expression_escape_offset(value, name)
+        None => None
+      }
+    }
+    MatchExpr(scrutinee, arms, _) | WhileExpr(scrutinee, arms, _) => {
+      match deferred_expression_escape_offset(scrutinee, name) {
+        Some(offset) => return Some(offset)
+        None => ()
+      }
+      for arm in arms {
+        if deferred_pattern_binds_name(arm.pattern, name) {
+          continue
+        }
+        match deferred_expression_escape_offset(arm.body, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+      None
+    }
+    ObjectExpr(fields, _) | ConstructExpr(_, fields, _) => {
+      for field in fields {
+        match field.value {
+          NameExpr(value, offset) if value == name => return Some(offset)
+          _ => ()
+        }
+      }
+      None
+    }
+    _ => None
+  }
+}
+
+///|
+fn deferred_using_violation(
+  item : BlockItem,
+  cleanups : Array[DeferredCleanup],
+) -> ExpressionError? {
+  for cleanup in cleanups {
+    let name = match cleanup.using_name {
+      Some(value) => value
+      None => continue
+    }
+    let dispose_offset = match item {
+      LetItem(_, _, _, value, _)
+      | ReturnItem(Some(value), _)
+      | ExpressionItem(value, _) =>
+        deferred_expression_dispose_offset(value, name)
+      ReturnItem(None, _) => None
+      AssignmentItem(target, value, _) | IndexSetItem(target, value, _) =>
+        match deferred_expression_dispose_offset(target, name) {
+          Some(offset) => Some(offset)
+          None => deferred_expression_dispose_offset(value, name)
+        }
+    }
+    match dispose_offset {
+      Some(offset) => return Some(UsingDoubleDispose(name, offset))
+      None => ()
+    }
+    let escape_offset = match item {
+      ReturnItem(Some(NameExpr(value, offset)), _) if value == name =>
+        Some(offset)
+      ReturnItem(Some(value), _) | ExpressionItem(value, _) =>
+        deferred_expression_escape_offset(value, name)
+      LetItem(_, _, _, value, _) =>
+        deferred_expression_escape_offset(value, name)
+      ReturnItem(None, _) => None
+      AssignmentItem(target, value, _) | IndexSetItem(target, value, _) =>
+        match deferred_expression_escape_offset(target, name) {
+          Some(offset) => Some(offset)
+          None => deferred_expression_escape_offset(value, name)
+        }
+    }
+    match escape_offset {
+      Some(offset) => return Some(UsingValueEscape(name, offset))
+      None => ()
+    }
+  }
+  None
+}
+
+///|
 fn deferred_cleanup_registration(
   value : Expr,
   offset : UInt64,
+  using_name : String?,
 ) -> (BlockItem, DeferredCleanup) {
   let name = deferred_cleanup_name(offset)
   let body = { items: [ExpressionItem(value, offset)], offset }
   let lambda = LambdaExpr([], NamedType("Unit", offset), body, offset)
-  (LetItem(false, name, offset, lambda, offset), { name, offset })
+  (LetItem(false, name, offset, lambda, offset), { name, offset, using_name })
 }
 
 ///|
@@ -394,7 +758,9 @@ fn Parser::parse_block_using_items(
         using_offset,
       )
       let (registration, cleanup) = deferred_cleanup_registration(
-        disposal, using_offset,
+        disposal,
+        using_offset,
+        Some(name),
       )
       Ok((binding, registration, cleanup))
     }
@@ -413,6 +779,6 @@ fn Parser::parse_block_defer_item(
   }
   match self.finish_block_item_line(open_offset) {
     Err(error) => Err(error)
-    Ok(_) => Ok(deferred_cleanup_registration(value, defer_offset))
+    Ok(_) => Ok(deferred_cleanup_registration(value, defer_offset, None))
   }
 }

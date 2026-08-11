@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. harden cleanup diagnostics for direct double disposal and unsupported escapes;
+1. continue ownership-aware cleanup hardening for alias-mediated disposal and escapes;
 2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
@@ -332,7 +332,8 @@ boundaries.
 - [x] Add non-ambient `dew.std.disposable.Disposable`, explicit generic disposal, Unit-only cleanup results, alias caveats, and initial no-trap-unwinding semantics.
 - [x] Add `defer` with lexical registration, exactly-once LIFO cleanup across fallthrough, return, break, and continue, value-before-cleanup ordering, and explicit trap exclusion.
 - [x] Add immutable `using name = expression` acquisition with exactly-once direct Disposable cleanup through the shared defer plan and imported evidence.
-- [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control-flow cases that cannot satisfy exactly-once disposal.
+- [x] Diagnose later-scope defer captures, direct using double disposal, direct using return escape, missing Disposable evidence, and preserve nested lexical shadowing.
+- [ ] Add ownership-aware alias-mediated disposal/escape diagnostics if affine tracking is adopted; asynchronous escape remains deferred because Dew has no async surface.
 - [ ] Add parser, HIR, flow, lowering, WAT snapshot, runtime, and cross-module tests for `defer`, `using`, and `Disposable`.
 
 ### Scalar execution
