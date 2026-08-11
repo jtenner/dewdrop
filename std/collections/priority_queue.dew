@@ -1,0 +1,127 @@
+open dew.std.ordering
+open dew.std.collections.binary_heap
+
+pub struct PriorityItem<t, p> {
+  value: t
+  priority: p
+}
+
+struct PriorityItemComparator<t, p, c> {
+  comparator: c
+}
+
+impl<t, p, c: Comparator<p>> Comparator<PriorityItem<t, p>> for PriorityItemComparator<t, p, c> {
+  fn compare(
+    self,
+    left: PriorityItem<t, p>,
+    right: PriorityItem<t, p>,
+  ) -> Ordering {
+    self.comparator.compare(left.priority, right.priority)
+  }
+}
+
+pub struct PriorityQueue<t, p, c> {
+  heap: BinaryHeap<PriorityItem<t, p>, PriorityItemComparator<t, p, c>>
+}
+
+pub struct PriorityQueueIter<t, p> {
+  inner: BinaryHeapIter<PriorityItem<t, p>>
+}
+
+pub fn priority_queue_new<t, p, c: Comparator<p>>(
+  comparator: c,
+  order: HeapOrder,
+) -> PriorityQueue<t, p, c> {
+  PriorityQueue {
+    heap: binary_heap_new(PriorityItemComparator {
+      comparator: comparator
+    }, order)
+  }
+}
+
+pub fn priority_queue_with_capacity<t, p, c: Comparator<p>>(
+  comparator: c,
+  order: HeapOrder,
+  capacity: U32,
+) -> PriorityQueue<t, p, c> {
+  PriorityQueue {
+    heap: binary_heap_with_capacity(PriorityItemComparator {
+      comparator: comparator
+    }, order, capacity)
+  }
+}
+
+pub fn priority_queue_length<t, p, c>(
+  queue: PriorityQueue<t, p, c>,
+) -> U32 {
+  binary_heap_length(queue.heap)
+}
+
+pub fn priority_queue_capacity<t, p, c>(
+  queue: PriorityQueue<t, p, c>,
+) -> U32 {
+  binary_heap_capacity(queue.heap)
+}
+
+pub fn priority_queue_is_empty<t, p, c>(
+  queue: PriorityQueue<t, p, c>,
+) -> Bool {
+  binary_heap_is_empty(queue.heap)
+}
+
+pub fn priority_queue_enqueue<t, p, c: Comparator<p>>(
+  queue: PriorityQueue<t, p, c>,
+  value: t,
+  priority: p,
+) -> Unit {
+  binary_heap_push(queue.heap, PriorityItem {
+    value: value
+    priority: priority
+  })
+}
+
+pub fn priority_queue_peek<t, p, c>(
+  queue: PriorityQueue<t, p, c>,
+) -> Option<PriorityItem<t, p>> {
+  binary_heap_peek(queue.heap)
+}
+
+pub fn priority_queue_dequeue<t, p, c: Comparator<p>>(
+  queue: PriorityQueue<t, p, c>,
+) -> Option<PriorityItem<t, p>> {
+  binary_heap_pop(queue.heap)
+}
+
+pub fn priority_queue_clear<t, p, c>(
+  queue: PriorityQueue<t, p, c>,
+) -> Unit {
+  binary_heap_clear(queue.heap)
+}
+
+pub fn priority_item_value<t, p>(item: PriorityItem<t, p>) -> t {
+  item.value
+}
+
+pub fn priority_item_priority<t, p>(item: PriorityItem<t, p>) -> p {
+  item.priority
+}
+
+pub fn priority_queue_iter<t, p, c>(
+  queue: PriorityQueue<t, p, c>,
+) -> PriorityQueueIter<t, p> {
+  PriorityQueueIter {
+    inner: binary_heap_iter(queue.heap)
+  }
+}
+
+pub fn priority_queue_iter_has_next<t, p>(
+  iter: PriorityQueueIter<t, p>,
+) -> Bool {
+  binary_heap_iter_has_next(iter.inner)
+}
+
+pub fn priority_queue_iter_next<t, p>(
+  iter: PriorityQueueIter<t, p>,
+) -> PriorityItem<t, p> {
+  binary_heap_iter_next(iter.inner)
+}

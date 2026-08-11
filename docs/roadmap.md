@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. implement PriorityQueue over the completed BinaryHeap, then ordered trees;
+1. implement the red-black tree core, then ordered map/set and range APIs;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
 3. continue snapshots, measurements, resource budgets, optimization, packaging,
@@ -491,6 +491,7 @@ count = count + 1
 - [x] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
 - [x] Implement growable `dew.std.collections.deque` with operations at both ends and logical-order iteration.
 - [x] Implement `dew.std.collections.binary_heap` with retained deterministic comparator evidence, explicit min/max policy, Floyd heapification, and layout-order iteration.
+- [x] Implement `dew.std.collections.priority_queue` as a thin value/priority wrapper over BinaryHeap with retained comparator policy and unspecified equal-priority order.
 - [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
 - [ ] Implement `dew.std.collections.finger_tree` only after sequence/deque/measure use cases and representation costs are specified and benchmarked.
 - [ ] Define a standard persistent list representation only if measured workloads justify it.

@@ -1,0 +1,93 @@
+open dew.std.ordering
+open dew.std.collections.binary_heap
+open dew.std.collections.priority_queue
+
+struct Job {
+  id: I32
+}
+
+fn priority_test_unit() -> Unit {}
+
+fn take_value(
+  queue: PriorityQueue<I32, I32, NaturalComparator>,
+) -> I32 {
+  match priority_queue_dequeue(queue) {
+    Option::Some(item) => priority_item_value(item)
+    Option::None => -1
+  }
+}
+
+pub fn main() -> Unit {
+  let minimum = priority_queue_new(natural_comparator(), HeapOrder::Minimum)
+  assert(priority_queue_is_empty(minimum), "new queue empty")
+  assert(priority_queue_peek(minimum) is Option::None, "empty peek")
+  assert(priority_queue_dequeue(minimum) is Option::None, "empty dequeue")
+  priority_queue_enqueue(minimum, 50, 5)
+  priority_queue_enqueue(minimum, 10, 1)
+  priority_queue_enqueue(minimum, 30, 3)
+  priority_queue_enqueue(minimum, 31, 3)
+  let alias = minimum
+  priority_queue_enqueue(alias, 20, 2)
+  assert(priority_queue_length(minimum) == 5u32, "alias mutation")
+  match priority_queue_peek(minimum) {
+    Option::Some(item) => {
+      assert(priority_item_value(item) == 10, "peek value")
+      assert(priority_item_priority(item) == 1, "peek priority")
+    }
+    Option::None => assert(false, "peek missing")
+  }
+  assert(priority_queue_length(minimum) == 5u32, "peek non-mutating")
+  assert(take_value(minimum) == 10, "minimum first")
+  assert(take_value(minimum) == 20, "minimum second")
+  let equal_first = take_value(minimum)
+  let equal_second = take_value(minimum)
+  assert(
+    (equal_first == 30 && equal_second == 31) ||
+    (equal_first == 31 && equal_second == 30),
+    "equal priorities both retained",
+  )
+  assert(take_value(minimum) == 50, "minimum last")
+
+  let maximum = priority_queue_with_capacity(
+    natural_comparator(),
+    HeapOrder::Maximum,
+    2u32,
+  )
+  priority_queue_enqueue(maximum, 1, 1)
+  priority_queue_enqueue(maximum, 9, 9)
+  priority_queue_enqueue(maximum, 4, 4)
+  assert(take_value(maximum) == 9, "maximum first")
+  assert(take_value(maximum) == 4, "maximum second")
+  assert(take_value(maximum) == 1, "maximum last")
+
+  let jobs = priority_queue_new(natural_comparator(), HeapOrder::Minimum)
+  priority_queue_enqueue(jobs, Job {
+    id: 2
+  }, 2)
+  priority_queue_enqueue(jobs, Job {
+    id: 1
+  }, 1)
+  match priority_queue_dequeue(jobs) {
+    Option::Some(item) => assert(priority_item_value(item).id == 1, "reference value")
+    Option::None => assert(false, "job missing")
+  }
+
+  let layout = priority_queue_new(natural_comparator(), HeapOrder::Minimum)
+  priority_queue_enqueue(layout, 4, 4)
+  priority_queue_enqueue(layout, 1, 1)
+  priority_queue_enqueue(layout, 3, 3)
+  let iter = priority_queue_iter(layout)
+  let mut sum = 0
+  while 0u32 {
+    index if index < priority_queue_length(layout) => {
+      sum = sum + priority_item_value(priority_queue_iter_next(iter))
+      continue index + 1u32
+    }
+    _ => break priority_test_unit()
+  }
+  assert(sum == 8, "layout iterator")
+  let capacity = priority_queue_capacity(layout)
+  priority_queue_clear(layout)
+  assert(priority_queue_is_empty(layout), "clear empty")
+  assert(priority_queue_capacity(layout) == capacity, "clear capacity")
+}

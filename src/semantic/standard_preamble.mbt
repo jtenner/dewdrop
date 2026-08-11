@@ -63,7 +63,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 63
+            collection_mask = 127
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -73,6 +73,7 @@ fn selected_standard_modules(
               "circular_buffer" => collection_mask = collection_mask | 4
               "deque" => collection_mask = collection_mask | 12
               "binary_heap" => collection_mask = collection_mask | 48
+              "priority_queue" => collection_mask = collection_mask | 112
               _ => ()
             }
           } else if import_.path.length() == 4 &&

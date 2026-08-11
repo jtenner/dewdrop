@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Implement PriorityQueue over BinaryHeap, then ordered trees.
+1. Implement the red-black tree core, then ordered map/set and range APIs.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 

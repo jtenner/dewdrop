@@ -555,6 +555,74 @@ pub fn plan_program_lowering(
 }
 
 ///|
+fn program_link_type_is_symbolic(
+  module_ : PlannedModuleLowering,
+  type_ : BodyTypeId,
+) -> Bool {
+  let body_pending : Array[BodyTypeId] = [type_]
+  let resolved_pending : Array[ResolvedTypeId] = []
+  let mut visited = 0
+  let limit = module_.types.length() + module_.resolved_types.length() + 1
+  while (body_pending.length() > 0 || resolved_pending.length() > 0) &&
+        visited <= limit {
+    visited += 1
+    if body_pending.length() > 0 {
+      let current = body_pending.pop().unwrap()
+      if current < -1 {
+        resolved_pending.push(-current - 2)
+        continue
+      }
+      if current < 0 || current >= module_.types.length() {
+        return true
+      }
+      match module_.types[current] {
+        BodyResolvedType(value) => resolved_pending.push(value)
+        BodyVariableType(_) | BodyErrorType => return true
+        BodyAppliedType(base, arguments) => {
+          body_pending.push(base)
+          for index in 0..<arguments.length {
+            body_pending.push(module_.type_arguments[arguments.start + index])
+          }
+        }
+        BodyFunctionType(parameters, result) => {
+          body_pending.push(result)
+          for index in 0..<parameters.length {
+            body_pending.push(module_.type_arguments[parameters.start + index])
+          }
+        }
+      }
+      continue
+    }
+    let current = resolved_pending.pop().unwrap()
+    if current < 0 || current >= module_.resolved_types.length() {
+      return true
+    }
+    match module_.resolved_types[current] {
+      GenericParameterType(_) => return true
+      AppliedType(base, arguments) => {
+        resolved_pending.push(base)
+        for index in 0..<arguments.length {
+          resolved_pending.push(
+            module_.resolved_type_arguments[arguments.start + index],
+          )
+        }
+      }
+      FunctionType(parameters, result) => {
+        resolved_pending.push(result)
+        for index in 0..<parameters.length {
+          resolved_pending.push(
+            module_.resolved_type_arguments[parameters.start + index],
+          )
+        }
+      }
+      ErrorType => return true
+      PrimitiveType(_) | NominalType(_) | TraitType(_) | SelfType(_) => ()
+    }
+  }
+  false
+}
+
+///|
 fn program_link_validate_calls(
   lowering : PlannedProgramLowering,
   modules : Array[PlannedModuleWasmGCFragments],
@@ -580,6 +648,11 @@ fn program_link_validate_calls(
         module_.expression_type_argument_shapes
       } else {
         module_.call_type_argument_shapes
+      }
+      let type_argument_types = if function_reference {
+        module_.expression_type_arguments
+      } else {
+        module_.call_type_arguments
       }
       if type_arguments.start < 0 ||
         type_arguments.start + type_arguments.length >
@@ -665,10 +738,18 @@ fn program_link_validate_calls(
             if !specialized {
               let mut symbolic_source = false
               for index in 0..<type_arguments.length {
-                match type_argument_shapes[type_arguments.start + index] {
+                let source_index = type_arguments.start + index
+                match type_argument_shapes[source_index] {
                   GenericPlannedValueShape | ErrorPlannedValueShape =>
                     symbolic_source = true
-                  _ => ()
+                  _ =>
+                    if source_index < type_argument_types.length() &&
+                      program_link_type_is_symbolic(
+                        module_,
+                        type_argument_types[source_index],
+                      ) {
+                      symbolic_source = true
+                    }
                 }
               }
               if !symbolic_source {
