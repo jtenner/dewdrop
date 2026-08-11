@@ -2842,8 +2842,39 @@ fn program_local_get_count(
 }
 
 ///|
+fn program_struct_initializer_is_discardable(
+  module_ : PlannedModuleLowering,
+  initializer : ExprId,
+  effects : Map[DeclId, ProgramCallableEffectSummary],
+) -> Bool {
+  if initializer < 0 || initializer >= module_.expressions.length() {
+    return false
+  }
+  let fields = match module_.expressions[initializer].kind {
+    PlannedStructNew(_, _, fields) => fields
+    _ => return false
+  }
+  if fields.start < 0 ||
+    fields.start + fields.length > module_.object_fields.length() {
+    return false
+  }
+  for index in 0..<fields.length {
+    if !program_effect_summary_expression_is_discardable(
+        module_,
+        module_.object_fields[fields.start + index].value,
+        effects,
+        0,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn scalar_replace_program_struct_field_reads(
   modules : Array[PlannedModuleLowering],
+  effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Unit {
   for module_ in modules {
     for expression in 0..<module_.expressions.length() {
@@ -2881,37 +2912,53 @@ fn scalar_replace_program_struct_field_reads(
             program_cse_local_is_captured(module_, body, local_id) {
             continue
           }
-          let next_expression = match
-            module_.block_items[items.start + index + 1].kind {
-            PlannedLetItem(_, _, value)
-            | PlannedReturnItem(value)
-            | PlannedExpressionItem(value) => value
-            PlannedElidedLetItem(_) => continue
-          }
-          if next_expression < 0 ||
-            next_expression >= module_.expressions.length() {
-            continue
-          }
-          let field_base = match module_.expressions[next_expression].kind {
-            PlannedFieldGet(_, base) => base
-            _ => continue
-          }
-          if field_base < 0 || field_base >= module_.expressions.length() {
-            continue
-          }
-          match module_.expressions[field_base].kind {
-            PlannedLocalGet(source_local) if source_local == local_id => ()
-            _ => continue
-          }
           let (use_count, only_use) = program_local_get_count(
             module_, body, local_id,
           )
-          if use_count != 1 || only_use != field_base ||
+          if use_count != 1 || only_use < 0 {
+            continue
+          }
+          let initializer_is_discardable =
+            program_struct_initializer_is_discardable(
+              module_, initializer, effects,
+            )
+          let mut selected_expression = -1
+          for candidate in (index + 1)..<items.length {
+            let (candidate_expression, exits) = match
+              module_.block_items[items.start + candidate].kind {
+              PlannedLetItem(_, _, value) | PlannedExpressionItem(value) =>
+                (value, false)
+              PlannedReturnItem(value) => (value, true)
+              PlannedElidedLetItem(_) => continue
+            }
+            if candidate_expression < 0 ||
+              candidate_expression >= module_.expressions.length() {
+              break
+            }
+            let field_base = match
+              module_.expressions[candidate_expression].kind {
+              PlannedFieldGet(_, base) => base
+              _ => -1
+            }
+            if field_base == only_use {
+              selected_expression = candidate_expression
+              break
+            }
+            if exits ||
+              !initializer_is_discardable ||
+              !program_effect_summary_expression_is_discardable(
+                module_, candidate_expression, effects, 0,
+              ) {
+              break
+            }
+          }
+          if selected_expression < 0 ||
             !scalar_replace_program_struct_field_read(
-              module_, next_expression, initializer,
+              module_, selected_expression, initializer,
             ) {
             continue
           }
+          let field_base = only_use
           let local_source = module_.expressions[field_base]
           module_.expressions[field_base] = {
             ..local_source,
@@ -3089,7 +3136,7 @@ pub fn optimize_program_lowering(
     effects,
   )
   cse_program_field_extractions(modules)
-  scalar_replace_program_struct_field_reads(modules)
+  scalar_replace_program_struct_field_reads(modules, effects)
   mark_program_tail_recursion(modules)
   {
     graph: lowering.graph,

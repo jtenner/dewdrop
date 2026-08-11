@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark adjacent let-bound scalar replacement against an escaping helper."""
+"""Benchmark pure-gap sole-use scalar replacement against an escaping helper."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ TMP = ROOT / ".tmp" / "scalar-replacement-benchmark"
 
 def source(iterations: int, replaceable: bool) -> str:
     calculation = (
-        "let pair = Pair {\n    left: value\n    right: value + 1\n  }\n  pair.right"
+        "let pair = Pair {\n    left: value\n    right: value\n  }\n  let marker = 0\n  pair.right"
         if replaceable
-        else "read_right(Pair {\n    left: value\n    right: value + 1\n  })"
+        else "let marker = 0\n  read_right(Pair {\n    left: value\n    right: value\n  })"
     )
     return f"""struct Pair {{
   left: I32
@@ -124,21 +124,21 @@ def main() -> None:
     if args.iterations < 1 or args.samples < 1 or args.batch < 1:
         parser.error("iterations, samples, and batch must be positive")
     TMP.mkdir(parents=True, exist_ok=True)
-    optimized = build("adjacent-let", source(args.iterations, True))
+    optimized = build("pure-gap", source(args.iterations, True))
     baseline = build("escaping-helper", source(args.iterations, False))
-    raw = measure([optimized, baseline], args.iterations * 2, args.samples, args.batch)
+    raw = measure([optimized, baseline], args.iterations, args.samples, args.batch)
     optimized_us = statistics.median(raw[str(optimized)])
     baseline_us = statistics.median(raw[str(baseline)])
     print(json.dumps({
         "iterations": args.iterations,
         "samples": args.samples,
         "batch": args.batch,
-        "adjacent_let_median_us": round(optimized_us, 3),
+        "pure_gap_median_us": round(optimized_us, 3),
         "escaping_helper_median_us": round(baseline_us, 3),
-        "adjacent_to_escaping_ratio": round(optimized_us / baseline_us, 4),
-        "adjacent_let_wasm_bytes": optimized.stat().st_size,
+        "pure_gap_to_escaping_ratio": round(optimized_us / baseline_us, 4),
+        "pure_gap_wasm_bytes": optimized.stat().st_size,
         "escaping_helper_wasm_bytes": baseline.stat().st_size,
-        "adjacent_let_struct_news": instruction_count(optimized, "struct.new"),
+        "pure_gap_struct_news": instruction_count(optimized, "struct.new"),
         "escaping_helper_struct_news": instruction_count(baseline, "struct.new"),
     }, indent=2, sort_keys=True))
 

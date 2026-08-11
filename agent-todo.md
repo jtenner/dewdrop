@@ -145,7 +145,7 @@
 ## Optimization and performance discipline
 
 - [ ] Add escape analysis for boxes, payloads, and trait objects.
-- [ ] Extend adjacent sole-use scalar replacement to control-flow-proven nonescaping aggregates with non-adjacent or multiple field uses.
+- [ ] Extend pure-gap sole-use scalar replacement to control-flow joins and multiple field uses with component-local planning.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
 - [ ] Specialize enum representations from frozen usage/layout data.
 - [ ] Consider profile-guided optimization only after deterministic baseline builds exist.

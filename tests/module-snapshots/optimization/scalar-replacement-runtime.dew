@@ -8,6 +8,7 @@ fn choose(left: I32, right: I32) -> I32 {
     left: left
     right: right
   }
+  let marker = 0
   pair.right
 }
 

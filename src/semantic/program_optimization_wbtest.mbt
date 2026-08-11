@@ -178,7 +178,7 @@ test "adjacent nonescaping struct locals scalar replace" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.right\n}\nfn choose_gap(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let marker = 0\n  pair.right\n}\npub fn main() -> I32 {\n  choose(1, 2) + choose_gap(3, 4)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.right\n}\nfn choose_gap(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let marker = 0\n  pair.right\n}\nfn effect() -> I32 {\n  1 / 0\n}\nfn choose_effect(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let marker = effect()\n  pair.right\n}\npub fn main() -> I32 {\n  choose(1, 2) + choose_gap(3, 4)\n}\n",
         ),
       ]),
     ]),
@@ -224,6 +224,20 @@ test "adjacent nonescaping struct locals scalar replace" {
   let gap_items = optimized.modules[0].blocks[gap_block].items
   assert_true(
     optimized.modules[0].block_items[gap_items.start].kind
+    is PlannedElidedLetItem(_),
+  )
+  let choose_effect = collected.lookup_value("choose_effect").unwrap()
+  let effect_source_body = collected.body_of(choose_effect).unwrap()
+  let effect_body = optimized.modules[0].bodies[
+    semantic_id_local(effect_source_body.id)
+  ]
+  let effect_block = match effect_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected effect block body")
+  }
+  let effect_items = optimized.modules[0].blocks[effect_block].items
+  assert_true(
+    optimized.modules[0].block_items[effect_items.start].kind
     is PlannedLetItem(_, false, _),
   )
 }
