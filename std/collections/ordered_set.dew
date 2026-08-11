@@ -1,0 +1,132 @@
+open dew.std.ordering
+open dew.std.collections.red_black_tree
+
+pub struct OrderedSet<k, c> {
+  tree: RedBlackTree<k, Bool, c>
+}
+
+pub struct OrderedSetIter<k, c> {
+  inner: RedBlackTreeIter<k, Bool, c>
+}
+
+pub fn ordered_set_new<k, c: Comparator<k>>(
+  comparator: c,
+) -> OrderedSet<k, c> {
+  OrderedSet {
+    tree: red_black_tree_new(comparator)
+  }
+}
+
+pub fn ordered_set_length<k, c>(set: OrderedSet<k, c>) -> U32 {
+  red_black_tree_length(set.tree)
+}
+
+pub fn ordered_set_is_empty<k, c>(set: OrderedSet<k, c>) -> Bool {
+  red_black_tree_is_empty(set.tree)
+}
+
+pub fn ordered_set_insert<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Bool {
+  red_black_tree_insert(set.tree, key, true)
+}
+
+pub fn ordered_set_contains<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Bool {
+  red_black_tree_contains(set.tree, key)
+}
+
+pub fn ordered_set_remove<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Bool {
+  red_black_tree_remove(set.tree, key)
+}
+
+pub fn ordered_set_clear<k, c>(set: OrderedSet<k, c>) -> Unit {
+  red_black_tree_clear(set.tree)
+}
+
+fn ordered_set_entry_key<k>(entry: Option<TreeEntry<k, Bool>>) -> Option<k> {
+  match entry {
+    Option::Some(value) => Option::Some(tree_entry_key(value))
+    Option::None => Option::None
+  }
+}
+
+pub fn ordered_set_minimum<k, c>(set: OrderedSet<k, c>) -> Option<k> {
+  ordered_set_entry_key(red_black_tree_minimum(set.tree))
+}
+
+pub fn ordered_set_maximum<k, c>(set: OrderedSet<k, c>) -> Option<k> {
+  ordered_set_entry_key(red_black_tree_maximum(set.tree))
+}
+
+pub fn ordered_set_lower_bound<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Option<k> {
+  ordered_set_entry_key(red_black_tree_lower_bound(set.tree, key))
+}
+
+pub fn ordered_set_upper_bound<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Option<k> {
+  ordered_set_entry_key(red_black_tree_upper_bound(set.tree, key))
+}
+
+pub fn ordered_set_predecessor<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Option<k> {
+  ordered_set_entry_key(red_black_tree_predecessor(set.tree, key))
+}
+
+pub fn ordered_set_successor<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  key: k,
+) -> Option<k> {
+  ordered_set_entry_key(red_black_tree_successor(set.tree, key))
+}
+
+pub fn ordered_set_iter<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+) -> OrderedSetIter<k, c> {
+  OrderedSetIter {
+    inner: red_black_tree_iter(set.tree)
+  }
+}
+
+pub fn ordered_set_range<k, c: Comparator<k>>(
+  set: OrderedSet<k, c>,
+  lower: Option<k>,
+  lower_inclusive: Bool,
+  upper: Option<k>,
+  upper_inclusive: Bool,
+) -> OrderedSetIter<k, c> {
+  OrderedSetIter {
+    inner: red_black_tree_range(
+      set.tree,
+      lower,
+      lower_inclusive,
+      upper,
+      upper_inclusive,
+    )
+  }
+}
+
+pub fn ordered_set_iter_has_next<k, c: Comparator<k>>(
+  iter: OrderedSetIter<k, c>,
+) -> Bool {
+  red_black_tree_iter_has_next(iter.inner)
+}
+
+pub fn ordered_set_iter_next<k, c: Comparator<k>>(
+  iter: OrderedSetIter<k, c>,
+) -> k {
+  tree_entry_key(red_black_tree_iter_next(iter.inner))
+}

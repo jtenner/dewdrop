@@ -63,7 +63,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 511
+            collection_mask = 1023
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -76,6 +76,7 @@ fn selected_standard_modules(
               "priority_queue" => collection_mask = collection_mask | 112
               "red_black_tree" => collection_mask = collection_mask | 144
               "ordered_map" => collection_mask = collection_mask | 400
+              "ordered_set" => collection_mask = collection_mask | 656
               _ => ()
             }
           } else if import_.path.length() == 4 &&

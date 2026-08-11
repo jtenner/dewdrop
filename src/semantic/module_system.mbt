@@ -276,6 +276,9 @@ pub fn required_standard_library_source_paths(
   if (collection_mask & 256) != 0 {
     required.push("std/collections/ordered_map.dew")
   }
+  if (collection_mask & 512) != 0 {
+    required.push("std/collections/ordered_set.dew")
+  }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
     let text_files = [
@@ -713,6 +716,24 @@ pub fn collect_program_manifest_with_standard_sources(
           module_id,
           "std/collections/ordered_map.dew",
           standard_sources.source("std/collections/ordered_map.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 512) != 0 {
+    let module_id = standard_library_module_id(43)
+    let module_index = modules.length()
+    first_module["dew.std.collections.ordered_set"] = module_index
+    module_paths.push("dew.std.collections.ordered_set")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/collections/ordered_set.dew",
+          standard_sources.source("std/collections/ordered_set.dew"),
           false,
           false,
         ),

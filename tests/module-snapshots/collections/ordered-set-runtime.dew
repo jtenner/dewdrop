@@ -1,0 +1,72 @@
+open dew.std.ordering
+open dew.std.collections.ordered_set
+
+fn ordered_set_test_unit() -> Unit {}
+
+fn option_or(value: Option<I32>, fallback: I32) -> I32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => fallback
+  }
+}
+
+pub fn main() -> Unit {
+  let set = ordered_set_new(natural_comparator())
+  assert(ordered_set_is_empty(set), "new set empty")
+  assert(ordered_set_minimum(set) is Option::None, "empty minimum")
+  assert(!ordered_set_remove(set, 1), "empty remove")
+  assert(ordered_set_insert(set, 4), "insert four")
+  assert(ordered_set_insert(set, 1), "insert one")
+  assert(ordered_set_insert(set, 3), "insert three")
+  assert(ordered_set_insert(set, 2), "insert two")
+  assert(!ordered_set_insert(set, 3), "duplicate idempotent")
+  let alias = set
+  assert(ordered_set_insert(alias, 5), "alias insert")
+  assert(ordered_set_length(set) == 5u32, "alias length")
+  assert(ordered_set_contains(set, 3), "contains")
+  assert(!ordered_set_contains(set, 9), "missing contains")
+  assert(option_or(ordered_set_minimum(set), -1) == 1, "minimum")
+  assert(option_or(ordered_set_maximum(set), -1) == 5, "maximum")
+  assert(option_or(ordered_set_lower_bound(set, 3), -1) == 3, "lower bound")
+  assert(option_or(ordered_set_upper_bound(set, 3), -1) == 4, "upper bound")
+  assert(option_or(ordered_set_predecessor(set, 3), -1) == 2, "predecessor")
+  assert(option_or(ordered_set_successor(set, 3), -1) == 4, "successor")
+  assert(ordered_set_predecessor(set, 1) is Option::None, "no predecessor")
+  assert(ordered_set_successor(set, 5) is Option::None, "no successor")
+
+  let iter = ordered_set_iter(set)
+  let mut expected = 1
+  while true {
+    true if ordered_set_iter_has_next(iter) => {
+      assert(ordered_set_iter_next(iter) == expected, "set order")
+      expected = expected + 1
+      continue true
+    }
+    _ => break ordered_set_test_unit()
+  }
+  assert(expected == 6, "set iterator count")
+
+  let range = ordered_set_range(
+    set,
+    Option::Some(2),
+    true,
+    Option::Some(5),
+    false,
+  )
+  let mut range_expected = 2
+  while true {
+    true if ordered_set_iter_has_next(range) => {
+      assert(ordered_set_iter_next(range) == range_expected, "set range")
+      range_expected = range_expected + 1
+      continue true
+    }
+    _ => break ordered_set_test_unit()
+  }
+  assert(range_expected == 5, "set range boundaries")
+
+  assert(ordered_set_remove(set, 3), "remove existing")
+  assert(!ordered_set_contains(set, 3), "removed absent")
+  assert(!ordered_set_remove(set, 3), "remove idempotent")
+  ordered_set_clear(set)
+  assert(ordered_set_is_empty(set), "clear empty")
+}
