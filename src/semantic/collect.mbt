@@ -909,6 +909,7 @@ priv struct CollectedDeriveOffsets {
   eq : UInt64?
   debug : UInt64?
   hash : UInt64?
+  show : UInt64?
 }
 
 ///|
@@ -917,7 +918,7 @@ fn CollectionBuilder::collect_derive_requests(
   requests : Array[@parser.DeriveRequest],
 ) -> CollectedDeriveOffsets {
   if requests.length() == 0 {
-    return { eq: None, debug: None, hash: None }
+    return { eq: None, debug: None, hash: None, show: None }
   }
   let seen : Map[String, UInt64]? = if requests.length() > 8 {
     Some(Map::default())
@@ -927,6 +928,7 @@ fn CollectionBuilder::collect_derive_requests(
   let mut eq_offset : UInt64? = None
   let mut debug_offset : UInt64? = None
   let mut hash_offset : UInt64? = None
+  let mut show_offset : UInt64? = None
   for index, request in requests {
     let first_offset = match seen {
       Some(table) => table.get(request.name)
@@ -965,13 +967,15 @@ fn CollectionBuilder::collect_derive_requests(
       debug_offset = Some(request.offset)
     } else if request.name == "Hash" {
       hash_offset = Some(request.offset)
+    } else if request.name == "Show" {
+      show_offset = Some(request.offset)
     } else {
       self.diagnostics.push(
         UnknownDerivedTrait(request.name, self.current_file, request.offset),
       )
     }
   }
-  { eq: eq_offset, debug: debug_offset, hash: hash_offset }
+  { eq: eq_offset, debug: debug_offset, hash: hash_offset, show: show_offset }
 }
 
 ///|
@@ -1010,6 +1014,11 @@ fn CollectionBuilder::collect_struct(
   match derives.hash {
     Some(offset) =>
       self.collect_impl(@parser.derived_struct_hash_impl(value, offset))
+    None => ()
+  }
+  match derives.show {
+    Some(offset) =>
+      self.collect_impl(@parser.derived_struct_show_impl(value, offset))
     None => ()
   }
 }
@@ -1107,6 +1116,11 @@ fn CollectionBuilder::collect_enum(
   match derives.hash {
     Some(offset) =>
       self.collect_impl(@parser.derived_enum_hash_impl(value, offset))
+    None => ()
+  }
+  match derives.show {
+    Some(offset) =>
+      self.collect_impl(@parser.derived_enum_show_impl(value, offset))
     None => ()
   }
 }

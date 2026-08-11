@@ -27,6 +27,8 @@
     {"label":"red black tree structure-of-arrays budget","wat":"tests/module-snapshots/collections/red-black-tree-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":58,"array.get":59,"array.set":99,"array.len":45,"struct.new":72,"struct.set":142}},
     {"label":"ordered map tree wrapper budget","wat":"tests/module-snapshots/collections/ordered-map-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":18,"array.get":19,"array.set":27,"array.len":9,"struct.new":61,"struct.set":34}},
     {"label":"ordered set tree wrapper budget","wat":"tests/module-snapshots/collections/ordered-set-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":18,"array.get":19,"array.set":27,"array.len":9,"struct.new":64,"struct.set":34}},
-    {"label":"Show builder and integer formatting budget","wat":"tests/module-snapshots/text/show-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":4,"array.get":28,"array.set":12,"array.len":3,"struct.new":33,"struct.set":7}}
+    {"label":"Show builder and integer formatting budget","wat":"tests/module-snapshots/text/show-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":4,"array.get":28,"array.set":12,"array.len":3,"struct.new":33,"struct.set":7}},
+    {"label":"derived Show aggregate formatting budget","wat":"tests/module-snapshots/text/show-derived-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":3,"array.get":18,"array.set":7,"array.len":2,"struct.new":42,"struct.set":5}},
+    {"label":"imported derived Show budget","wat":"tests/module-snapshots/text/show-derived-imported-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":3,"array.get":18,"array.set":7,"array.len":2,"struct.new":8,"struct.set":5}}
   ]
 }

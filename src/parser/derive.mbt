@@ -674,6 +674,148 @@ fn derived_debug_variant_body(
 }
 
 ///|
+fn derived_show_append_text(value : String, offset : UInt64) -> Expr {
+  let bytes = Buffer()
+  bytes.write_string_utf8(value)
+  CallExpr(
+    NameExpr("show_append_text", offset),
+    [NameExpr("builder", offset), StringExpr(bytes.to_bytes(), offset)],
+    offset,
+  )
+}
+
+///|
+fn derived_show_append_value(value : Expr, offset : UInt64) -> Expr {
+  CallExpr(
+    NameExpr("show_append", offset),
+    [NameExpr("builder", offset), value],
+    offset,
+  )
+}
+
+///|
+fn derived_show_block(expressions : Array[Expr], offset : UInt64) -> Block {
+  let items : Array[BlockItem] = []
+  for expression in expressions {
+    items.push(ExpressionItem(expression, offset))
+  }
+  { items, offset }
+}
+
+///|
+fn derived_struct_show_body(
+  value : StructDeclaration,
+  offset : UInt64,
+) -> Block {
+  if value.fields.length() == 0 {
+    return derived_show_block(
+      [derived_show_append_text(value.name + " {}", offset)],
+      offset,
+    )
+  }
+  let expressions : Array[Expr] = [
+    derived_show_append_text(value.name + " { ", offset),
+  ]
+  for index, field in value.fields {
+    let label = if index == 0 {
+      field.name + ": "
+    } else {
+      ", " + field.name + ": "
+    }
+    expressions.push(derived_show_append_text(label, offset))
+    expressions.push(
+      derived_show_append_value(
+        FieldExpr(NameExpr("self", offset), field.name, offset),
+        offset,
+      ),
+    )
+  }
+  expressions.push(derived_show_append_text(" }", offset))
+  derived_show_block(expressions, offset)
+}
+
+///|
+fn derived_show_variant_body(
+  enum_name : String,
+  variant : EnumVariant,
+  names : Array[String],
+  offset : UInt64,
+) -> Block {
+  let prefix = enum_name + "::" + variant.name()
+  let expressions : Array[Expr] = []
+  match variant {
+    UnitVariant(_, _) =>
+      expressions.push(derived_show_append_text(prefix, offset))
+    TupleVariant(_, types, _) => {
+      expressions.push(derived_show_append_text(prefix + "(", offset))
+      for index in 0..<types.length() {
+        if index > 0 {
+          expressions.push(derived_show_append_text(", ", offset))
+        }
+        expressions.push(
+          derived_show_append_value(NameExpr(names[index], offset), offset),
+        )
+      }
+      expressions.push(derived_show_append_text(")", offset))
+    }
+    StructVariant(_, fields, _) =>
+      if fields.length() == 0 {
+        expressions.push(derived_show_append_text(prefix + " {}", offset))
+      } else {
+        expressions.push(derived_show_append_text(prefix + " { ", offset))
+        for index, field in fields {
+          let label = if index == 0 {
+            field.name + ": "
+          } else {
+            ", " + field.name + ": "
+          }
+          expressions.push(derived_show_append_text(label, offset))
+          expressions.push(
+            derived_show_append_value(NameExpr(names[index], offset), offset),
+          )
+        }
+        expressions.push(derived_show_append_text(" }", offset))
+      }
+  }
+  derived_show_block(expressions, offset)
+}
+
+///|
+fn derived_show_impl(
+  name : String,
+  parameters : Array[TypeParameter],
+  field_types : Array[TypeExpr],
+  body : Block,
+  offset : UInt64,
+) -> ImplDeclaration {
+  let target = derived_nominal_type(name, parameters, offset)
+  {
+    foreign_: false,
+    type_parameters: derived_trait_type_parameters(
+      parameters, field_types, "Show", offset,
+    ),
+    trait_type: Some(NamedType("Show", offset)),
+    target_type: target,
+    methods: [
+      {
+        visibility: ModuleVisible,
+        name: "append_show",
+        name_offset: offset,
+        type_parameters: [],
+        receiver: Some({ explicit_type: None, offset }),
+        parameters: [
+          { name: "builder", type_: NamedType("StringBuilder", offset), offset },
+        ],
+        return_type: NamedType("Unit", offset),
+        body,
+        offset,
+      },
+    ],
+    offset,
+  }
+}
+
+///|
 fn derived_struct_field_types(value : StructDeclaration) -> Array[TypeExpr] {
   let field_types : Array[TypeExpr] = []
   for field in value.fields {
@@ -738,6 +880,54 @@ pub fn derived_enum_debug_impl(
     value.type_parameters,
     derived_enum_field_types(value),
     derived_debug_block(
+      [MatchExpr(NameExpr("self", offset), arms, offset)],
+      offset,
+    ),
+    offset,
+  )
+}
+
+///|
+pub fn derived_struct_show_impl(
+  value : StructDeclaration,
+  offset : UInt64,
+) -> ImplDeclaration {
+  derived_show_impl(
+    value.name,
+    value.type_parameters,
+    derived_struct_field_types(value),
+    derived_struct_show_body(value, offset),
+    offset,
+  )
+}
+
+///|
+pub fn derived_enum_show_impl(
+  value : EnumDeclaration,
+  offset : UInt64,
+) -> ImplDeclaration {
+  let arms : Array[PatternArm] = []
+  for index, variant in value.variants {
+    let (pattern, names) = derived_debug_variant_pattern(
+      value.name,
+      variant,
+      index,
+      offset,
+    )
+    arms.push({
+      pattern,
+      guard_condition: None,
+      body: BlockExpr(
+        derived_show_variant_body(value.name, variant, names, offset),
+      ),
+      offset,
+    })
+  }
+  derived_show_impl(
+    value.name,
+    value.type_parameters,
+    derived_enum_field_types(value),
+    derived_show_block(
       [MatchExpr(NameExpr("self", offset), arms, offset)],
       offset,
     ),

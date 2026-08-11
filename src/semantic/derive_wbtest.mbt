@@ -152,6 +152,39 @@ test "derive diagnostics reject unknown and duplicate requests while accepting g
 }
 
 ///|
+test "derive Show freezes field prerequisites and conflicts ordinarily" {
+  let program = collect_program_manifest(
+    2709UL,
+    ProgramManifest::new([
+      ManifestModule::new("derive.show", [
+        ManifestFile::new(
+          "show.dew", b"open dew.std.show\nstruct Box<t> {\n  value: t\n} derive(Show)\nstruct Conflict {\n  value: I32\n} derive(Show)\nimpl Show for Conflict {\n  fn append_show(self, builder: StringBuilder) -> Unit {\n    show_append(builder, self.value)\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  assert_eq(program.diagnostics, [])
+  let module_ = program.modules[0]
+  assert_eq(module_.diagnostics, [])
+  assert_eq(module_.impls.length(), 3)
+  let generic_parameters = module_.generic_parameters_of(
+    module_.impls[0].declaration,
+  )
+  assert_eq(generic_parameters.length, 1)
+  assert_eq(
+    module_.generic_parameters[generic_parameters.start].bounds.length,
+    1,
+  )
+  let analyzed = analyze_program_semantics(program)
+  let diagnostics = analyzed.modules[0].inferred.impl_index.diagnostics
+  assert_eq(diagnostics.length(), 1)
+  match diagnostics[0] {
+    OverlappingTraitImpl(_, _, _, _, _) => ()
+    _ => fail("expected derived Show overlap")
+  }
+}
+
+///|
 test "derived field bounds support unconstrained owner parameters" {
   let program = collect_program_manifest(
     2706UL,

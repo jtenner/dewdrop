@@ -1,0 +1,11 @@
+open dew.std.show
+
+pub struct Box<t> {
+  value: t
+} derive(Show)
+
+pub fn box<t: Show>(value: t) -> Box<t> {
+  Box {
+    value: value
+  }
+}

@@ -1,0 +1,52 @@
+open dew.std.show
+open dew.std.string
+
+struct Empty {} derive(Show)
+
+struct Point {
+  x: I32
+  label: String
+} derive(Show)
+
+enum Choice<t> {
+  None
+  Some(t)
+  EmptyStruct {}
+  Pair {
+    left: t
+    right: t
+  }
+} derive(Show)
+
+struct Wrapper<t> {
+  value: t
+} derive(Show)
+
+fn no_choice() -> Choice<I32> {
+  Choice::None
+}
+
+fn empty_choice() -> Choice<I32> {
+  Choice::EmptyStruct {}
+}
+
+pub fn main() -> Unit {
+  assert(show(Empty {}).equals("Empty {}"), "empty struct")
+  assert(show(Point {
+    x: -7
+    label: "dew"
+  }).equals("Point { x: -7, label: dew }"), "struct show")
+  assert(show(no_choice()).equals("Choice::None"), "unit variant")
+  assert(show(Choice::Some(5)).equals("Choice::Some(5)"), "tuple variant")
+  assert(show(empty_choice()).equals("Choice::EmptyStruct {}"), "empty struct variant")
+  assert(show(Choice::Pair {
+    left: 1
+    right: 2
+  }).equals("Choice::Pair { left: 1, right: 2 }"), "struct variant")
+  assert(show(Wrapper {
+    value: Point {
+      x: 3
+      label: "nested"
+    }
+  }).equals("Wrapper { value: Point { x: 3, label: nested } }"), "generic nested")
+}

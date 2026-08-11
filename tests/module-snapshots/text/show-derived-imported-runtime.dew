@@ -1,0 +1,7 @@
+open fixture.library
+open dew.std.show
+open dew.std.string
+
+pub fn main() -> Unit {
+  assert(show(box(7)).equals("Box { value: 7 }"), "imported derived Show")
+}

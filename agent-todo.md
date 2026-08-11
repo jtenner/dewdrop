@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Finish bounded derived `Show` behavior, then take deterministic cleanup as a separate ergonomics milestone.
+1. Settle remaining `Show` resource and primitive-format policies, then take deterministic cleanup as a separate ergonomics milestone.
 2. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -39,7 +39,6 @@
 - [ ] Specify permitted annotation constant types, name resolution, validation, retention, and frozen-interface serialization.
 - [ ] Expose frozen annotations to compiler features and tooling without ambient runtime reflection.
 - [ ] Define how existing postfix `derive(Eq, Debug, Hash)` relates to future annotations without breaking its ordinary coherence, generic prerequisites, frozen interfaces, or imported execution.
-- [ ] Add derived `Show` only after the `Show` trait and builder contract are settled.
 - [ ] Finalize typed lane Debug formats, recursion/resource limits, and deterministic non-WASI behavior.
 
 ## Generics, traits, and dispatch
@@ -105,7 +104,7 @@
 
 ## `Show`, `Debug`, and output
 
-- [ ] Define `Show` formatting stability, recursion/resource limits, and derived behavior.
+- [ ] Define bounded Show recursion/output behavior plus Unit, float, byte, SWAR, and typed lane formats.
 - [ ] Define typed lane Debug formatting, recursion/resource limits, and deterministic behavior when WASI is unavailable.
 
 ## Broader standard library

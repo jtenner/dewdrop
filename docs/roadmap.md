@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. finish bounded derived `Show` behavior, then take deterministic cleanup as a separate ergonomics milestone;
+1. settle remaining `Show` resource and primitive-format policies, then take deterministic cleanup as a separate ergonomics milestone;
 2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
@@ -260,7 +260,8 @@ boundaries.
 - [ ] Define `#annotation(...)` syntax with compile-time constant parameters, including the permitted constant types, name resolution, validation, retention, and interface serialization rules.
 - [ ] Expose frozen annotations to compiler features and future tooling without making runtime reflection ambient.
 - [x] Implement postfix `derive(Eq)`, generated `Ne`, `derive(Debug)`, and `derive(Hash)` for structs and enums through ordinary coherent implementations and evidence-aware generic specialization. Generated evidence retains field/payload prerequisites, cross-module interfaces, cache round trips, imported execution, and derive-site diagnostics.
-- [ ] Extend derivation with `Show` only after its trait and builder contract are defined; settle typed lane Debug formats, recursion/resource limits, deterministic non-WASI behavior, and the relationship between postfix derive syntax and future annotations.
+- [x] Extend ordinary postfix derivation with coherent generic `Show` implementations and imported execution.
+- [ ] Settle typed lane Debug/Show formats, recursion/resource limits, deterministic non-WASI behavior, and the relationship between postfix derive syntax and future annotations.
 - [x] Route conflicts between derived and handwritten implementations through ordinary local/imported coherence, preserve both source locations, and prevent generated evidence from bypassing evidence visibility or dispatch filtering.
 
 ### Remaining generic work
@@ -639,7 +640,8 @@ count = count + 1
 - [x] Define the ambient `Debug` system trait, primitive implementations, deterministic source-order derived formatting, and bounded partial-write-safe WASI output.
 - [x] Add `debug(value)` using ordinary coherent `Debug` evidence and inference-time dispatch.
 - [x] Define the non-ambient `Show` trait, its `StringBuilder` append contract, its separation from ambient `Debug`, and initial stable Bool/integer/text formats.
-- [ ] Define bounded recursion/output policy, typed lane/float formats, and aggregate-derived `Show` behavior.
+- [x] Define and implement stable aggregate-derived `Show` punctuation and generic prerequisite behavior.
+- [ ] Define bounded recursion/output policy plus Unit, float, byte, SWAR, and typed lane formats.
 - [x] Add `show(value) -> String` and composition helpers using `Show` evidence.
 - [ ] Define deterministic Debug behavior when WASI is unavailable.
 - [x] Keep the minimal `Iter<t>` protocol ambient with `has_next` and trapping state-advancing `next`.
