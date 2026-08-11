@@ -255,67 +255,72 @@ fn Parser::consume_expression_left_brace(
 }
 
 ///|
+priv struct IsConditionParts {
+  scrutinee : Expr
+  pattern : Pattern
+  guard_condition : Expr?
+  offset : UInt64
+}
+
+///|
+fn split_is_condition(condition : Expr) -> IsConditionParts? {
+  match condition {
+    IsExpr(scrutinee, pattern, offset) =>
+      Some({ scrutinee, pattern, guard_condition: None, offset })
+    BinaryExpr(LogicalAnd, left, right, operator_offset) =>
+      match split_is_condition(left) {
+        Some(parts) => {
+          let guard_condition = match parts.guard_condition {
+            Some(existing) =>
+              Some(BinaryExpr(LogicalAnd, existing, right, operator_offset))
+            None => Some(right)
+          }
+          Some({
+            scrutinee: parts.scrutinee,
+            pattern: parts.pattern,
+            guard_condition,
+            offset: parts.offset,
+          })
+        }
+        None => None
+      }
+    _ => None
+  }
+}
+
+///|
 fn make_if_expression(
   condition : Expr,
   then_block : Block,
   alternative : Expr?,
   if_offset : UInt64,
 ) -> Expr {
-  match condition {
-    BinaryExpr(
-      LogicalAnd,
-      IsExpr(scrutinee, pattern, is_offset),
-      condition_guard,
-      _
-    ) => {
+  match split_is_condition(condition) {
+    Some(parts) => {
       let fallback = match alternative {
         Some(value) => value
         None => BlockExpr({ items: [], offset: if_offset })
       }
       MatchExpr(
-        scrutinee,
+        parts.scrutinee,
         [
           {
-            pattern,
-            guard_condition: Some(condition_guard),
+            pattern: parts.pattern,
+            guard_condition: parts.guard_condition,
             body: BlockExpr(then_block),
-            offset: pattern.offset(),
+            offset: parts.pattern.offset(),
           },
           {
-            pattern: WildcardPattern(is_offset),
+            pattern: WildcardPattern(parts.offset),
             guard_condition: None,
             body: fallback,
-            offset: is_offset,
+            offset: parts.offset,
           },
         ],
-        is_offset,
+        parts.offset,
       )
     }
-    IsExpr(scrutinee, pattern, is_offset) => {
-      let fallback = match alternative {
-        Some(value) => value
-        None => BlockExpr({ items: [], offset: if_offset })
-      }
-      MatchExpr(
-        scrutinee,
-        [
-          {
-            pattern,
-            guard_condition: None,
-            body: BlockExpr(then_block),
-            offset: pattern.offset(),
-          },
-          {
-            pattern: WildcardPattern(is_offset),
-            guard_condition: None,
-            body: fallback,
-            offset: is_offset,
-          },
-        ],
-        is_offset,
-      )
-    }
-    _ => IfExpr(condition, then_block, alternative, if_offset)
+    None => IfExpr(condition, then_block, alternative, if_offset)
   }
 }
 

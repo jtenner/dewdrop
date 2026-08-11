@@ -28,8 +28,8 @@ pub fn main() -> Unit {
     assert(false, "some value should match")
   }
 
-  if get_it(42) is Option::Some(bound) && bound == 43 {
-    assert(bound == 43, "binding enters conjunction guard")
+  if get_it(42) is Option::Some(bound) && bound > 0 && bound == 43 {
+    assert(bound == 43, "binding enters conjunction guard chain")
   } else {
     assert(false, "guarded pattern should match")
   }

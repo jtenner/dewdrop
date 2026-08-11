@@ -201,17 +201,25 @@
         struct.get 1 1
         local.set 2
         local.get 2
-        i32.const 43
-        i32.eq
+        i32.const 0
+        i32.gt_s
+        if (result i32) ;; label = @3
+          local.get 2
+          i32.const 43
+          i32.eq
+        else
+          i32.const 0
+        end
         if ;; label = @3
           local.get 2
           i32.const 43
           i32.eq
           v128.const i32x4 0x646e6962 0x20676e69 0x65746e65 0x63207372
           v128.const i32x4 0x756a6e6f 0x6974636e 0x67206e6f 0x64726175
-          array.new_fixed 8 2
+          v128.const i32x4 0x61686320 0x00006e69 0x00000000 0x00000000
+          array.new_fixed 8 3
           i32.const 0
-          i32.const 32
+          i32.const 38
           struct.new 9
           drop
           i32.eqz

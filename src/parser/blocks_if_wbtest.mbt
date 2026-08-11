@@ -45,6 +45,28 @@ test "if is condition desugars to a binding match" {
 }
 
 ///|
+test "if is bindings remain available through conjunction chains" {
+  match
+    parse_test_expression(
+      b"if get_it(42) is Option::Some(bound) && bound > 0 && bound < 100 {\n  bound\n}",
+    ) {
+    Ok(MatchExpr(_, [matched, _], _)) =>
+      match matched.guard_condition {
+        Some(
+          BinaryExpr(
+            LogicalAnd,
+            BinaryExpr(Greater, NameExpr("bound", _), _, _),
+            BinaryExpr(Less, NameExpr("bound", _), _, _),
+            _
+          )
+        ) => ()
+        _ => fail("expected complete conjunction chain in match guard")
+      }
+    _ => fail("expected conjunction chain to desugar through one match")
+  }
+}
+
+///|
 test "if without else retains a unit-capable optional branch" {
   match parse_test_expression(b"if ready {\n  run()\n}") {
     Ok(IfExpr(NameExpr("ready", _), block, None, 0UL)) => {
