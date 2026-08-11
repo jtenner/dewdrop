@@ -435,9 +435,7 @@
     i32.const 0
     i32.const 0
     struct.new 7
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 3
     i32.const 0
     call 4
@@ -507,13 +505,9 @@
       local.get 3
       call 29
       local.set 4
-      i32.const 0
-      i32.const 1
-      i32.sub
+      i32.const -1
       local.set 5
-      i32.const 0
-      i32.const 1
-      i32.sub
+      i32.const -1
       local.set 6
       local.get 0
       ref.cast (ref 9)
@@ -699,9 +693,7 @@
   )
   (func (;10;) (type 65) (param (ref 9) i32 i32) (result i32)
     (local i32 i32 eqref i32 eqref i32 eqref i32 eqref i32 i32 i32 i32 i32 i32 i32 i32 eqref)
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     local.set 3
     local.get 0
     ref.cast (ref 9)
@@ -1092,9 +1084,7 @@
     struct.set 7 1
     local.get 0
     struct.get 9 3
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     local.set 16
     local.set 7
     local.get 7
@@ -1187,9 +1177,7 @@
     struct.set 7 1
     local.get 0
     struct.get 9 4
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     local.set 17
     local.set 7
     local.get 7
@@ -1964,9 +1952,7 @@
     struct.set 7 1
     local.get 0
     ref.cast (ref 9)
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 41
     local.get 0
     ref.cast (ref 9)
@@ -2025,14 +2011,10 @@
       loop ;; label = @2
         block ;; label = @3
           local.get 4
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           i32.eq
           if ;; label = @4
-            i32.const 0
-            i32.const 1
-            i32.sub
+            i32.const -1
             local.set 5
             br 3 (;@1;)
             br 1 (;@3;)
@@ -2100,14 +2082,10 @@
       loop ;; label = @2
         block ;; label = @3
           local.get 4
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           i32.eq
           if ;; label = @4
-            i32.const 0
-            i32.const 1
-            i32.sub
+            i32.const -1
             local.set 5
             br 3 (;@1;)
             br 1 (;@3;)
@@ -2201,9 +2179,7 @@
     i32.const 0
     i32.lt_s
     if (result i32) ;; label = @1
-      i32.const 0
-      i32.const 1
-      i32.sub
+      i32.const -1
     else
       local.get 0
       struct.get 9 3
@@ -2233,9 +2209,7 @@
     i32.const 0
     i32.lt_s
     if (result i32) ;; label = @1
-      i32.const 0
-      i32.const 1
-      i32.sub
+      i32.const -1
     else
       local.get 0
       struct.get 9 4
@@ -2265,9 +2239,7 @@
     i32.const 0
     i32.lt_s
     if (result i32) ;; label = @1
-      i32.const 0
-      i32.const 1
-      i32.sub
+      i32.const -1
     else
       local.get 0
       struct.get 9 2
@@ -2677,9 +2649,7 @@
                     ref.cast (ref 9)
                     call 25
                     local.set 3
-                    i32.const 0
-                    i32.const 1
-                    i32.sub
+                    i32.const -1
                     local.set 4
                   end
                 else
@@ -2812,9 +2782,7 @@
                     ref.cast (ref 9)
                     call 25
                     local.set 3
-                    i32.const 0
-                    i32.const 1
-                    i32.sub
+                    i32.const -1
                     local.set 4
                   end
                 end
@@ -3092,14 +3060,10 @@
       loop ;; label = @2
         block ;; label = @3
           local.get 4
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           i32.eq
           if ;; label = @4
-            i32.const 0
-            i32.const 1
-            i32.sub
+            i32.const -1
             local.set 5
             br 3 (;@1;)
             br 1 (;@3;)
@@ -3137,9 +3101,7 @@
   )
   (func (;44;) (type 99) (param (ref 9) i32 i32) (result i32)
     (local i32 i32 eqref i32 i32)
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     local.set 3
     local.get 0
     ref.cast (ref 9)
@@ -3149,9 +3111,7 @@
       loop ;; label = @2
         block ;; label = @3
           local.get 6
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           i32.eq
           if ;; label = @4
             local.get 3
@@ -4007,9 +3967,7 @@
     local.get 0
     ref.cast (ref 107)
     call 54
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 71
     i32.const 1
     i32.eq
@@ -4026,9 +3984,7 @@
     local.get 0
     ref.cast (ref 107)
     call 59
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 71
     i32.const 5
     i32.eq
@@ -4046,9 +4002,7 @@
     ref.cast (ref 107)
     i32.const 3
     call 60
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 71
     i32.const 3
     i32.eq
@@ -4066,9 +4020,7 @@
     ref.cast (ref 107)
     i32.const 3
     call 61
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 71
     i32.const 4
     i32.eq
@@ -4086,9 +4038,7 @@
     ref.cast (ref 107)
     i32.const 3
     call 62
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 71
     i32.const 2
     i32.eq
@@ -4106,9 +4056,7 @@
     ref.cast (ref 107)
     i32.const 3
     call 63
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     call 71
     i32.const 4
     i32.eq

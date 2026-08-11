@@ -1786,9 +1786,7 @@
             struct.get 0 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           local.set 3
           br 2 (;@1;)
         end

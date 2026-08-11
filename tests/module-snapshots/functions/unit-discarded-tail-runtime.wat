@@ -626,9 +626,7 @@
   )
   (func (;4;) (type 5)
     (local i32)
-    i32.const 20
-    i32.const 22
-    i32.add
+    i32.const 42
     local.set 0
     local.get 0
     i32.const 42

@@ -279,15 +279,11 @@
     i64.const 64
     i64.shl
     local.set 2
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     i32.const 31
     i32.shr_s
     local.set 3
-    i64.const 0
-    i64.const 8
-    i64.sub
+    i64.const -8
     i64.const 3
     i64.shr_s
     local.set 4
@@ -310,18 +306,14 @@
     end
     if (result i32) ;; label = @1
       local.get 3
-      i32.const 0
-      i32.const 1
-      i32.sub
+      i32.const -1
       i32.eq
     else
       i32.const 0
     end
     if (result i32) ;; label = @1
       local.get 4
-      i64.const 0
-      i64.const 1
-      i64.sub
+      i64.const -1
       i64.eq
     else
       i32.const 0

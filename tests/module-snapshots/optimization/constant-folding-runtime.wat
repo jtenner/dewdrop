@@ -20,7 +20,7 @@
     i32.const 1
   )
   (func (;3;) (type 3)
-    call 0
+    i32.const -7
     i32.const -7
     i32.eq
     v128.const i32x4 0x646c6f66 0x61206465 0x68746972 0x6974656d
@@ -34,7 +34,7 @@
     if ;; label = @1
       unreachable
     end
-    call 1
+    i32.const 1
     v128.const i32x4 0x646c6f66 0x63206465 0x61706d6f 0x6f736972
     v128.const i32x4 0x0000006e 0x00000000 0x00000000 0x00000000
     array.new_fixed 4 2
@@ -46,7 +46,7 @@
     if ;; label = @1
       unreachable
     end
-    call 2
+    i32.const 1
     i32.const 1
     i32.eq
     v128.const i32x4 0x646c6f66 0x77206465 0x70706172 0x00676e69

@@ -250,9 +250,7 @@
       end
       i32.const 1
       if ;; label = @2
-        i32.const 0
-        i32.const 1
-        i32.sub
+        i32.const -1
         local.set 2
         br 1 (;@1;)
       end
@@ -323,9 +321,7 @@
     i32.const 5
     struct.new 4
     call 1
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     i32.eq
     v128.const i32x4 0x69727473 0x7020676e 0x65747461 0x66206e72
     v128.const i32x4 0x626c6c61 0x006b6361 0x00000000 0x00000000

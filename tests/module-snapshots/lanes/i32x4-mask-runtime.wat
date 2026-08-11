@@ -266,9 +266,7 @@
     local.get 6
   )
   (func (;2;) (type 2) (result i32)
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     i32x4.splat
     i32x4.bitmask
     i32.const 15

@@ -266,13 +266,7 @@
     local.get 6
   )
   (func (;2;) (type 2) (result i32)
-    i64.const 9223372036854775807
-    i64.const 7
-    i64.sub
-    i64.const 7
-    i64.add
-    i64.const 9223372036854775807
-    i64.eq
+    i32.const 1
     if (result i32) ;; label = @1
       i32.const 1
       v128.const i32x4 0x656d756e 0x3a636972 0x2d343669 0x74697261

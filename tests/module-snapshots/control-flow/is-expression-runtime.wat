@@ -267,9 +267,7 @@
       end
       i32.const 1
       if ;; label = @2
-        i32.const 0
-        i32.const 1
-        i32.sub
+        i32.const -1
         local.set 17
         br 1 (;@1;)
       end
@@ -278,9 +276,7 @@
     local.get 17
     local.set 4
     local.get 4
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     i32.eq
     v128.const i32x4 0x65736c65 0x61726220 0x2068636e 0x646e6168
     v128.const i32x4 0x2073656c 0x6d73696d 0x68637461 0x00000000

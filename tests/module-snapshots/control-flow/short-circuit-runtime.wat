@@ -395,11 +395,6 @@
       unreachable
     end
     i32.const 1
-    if (result i32) ;; label = @1
-      i32.const 1
-    else
-      i32.const 0
-    end
     v128.const i32x4 0x20646e61 0x756c6176 0x00000065 0x00000000
     array.new_fixed 7 1
     i32.const 0
@@ -410,13 +405,7 @@
     if ;; label = @1
       unreachable
     end
-    i32.const 0
-    if (result i32) ;; label = @1
-      i32.const 1
-    else
-      i32.const 0
-    end
-    i32.eqz
+    i32.const 1
     v128.const i32x4 0x7620726f 0x65756c61 0x00000000 0x00000000
     array.new_fixed 7 1
     i32.const 0

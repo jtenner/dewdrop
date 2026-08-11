@@ -16,11 +16,11 @@
   (type (;14;) (struct (field (mut (ref 9))) (field (mut i32)) (field (mut i32))))
   (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 4)))
   (memory (;0;) 1)
-  (global (;0;) (mut i32) i32.const 0)
+  (global (;0;) i32 i32.const 42)
   (global (;1;) (mut eqref) ref.null none)
   (global (;2;) (mut eqref) ref.null none)
   (export "main" (func 4))
-  (export "__dew_init" (func 8))
+  (export "__dew_init" (func 7))
   (export "memory" (memory 0))
   (func (;1;) (type 3) (param i32) (result (ref 2))
     local.get 0
@@ -343,19 +343,13 @@
     end
   )
   (func (;5;) (type 8)
-    i32.const 40
-    i32.const 2
-    i32.add
-    global.set 0
-  )
-  (func (;6;) (type 8)
     global.get 0
     i32.const 1
     i32.sub
     call 1
     global.set 1
   )
-  (func (;7;) (type 8)
+  (func (;6;) (type 8)
     i32.const 1
     global.get 0
     i64.const 0
@@ -366,9 +360,8 @@
     struct.new 1
     global.set 2
   )
-  (func (;8;) (type 8)
+  (func (;7;) (type 8)
     call 5
     call 6
-    call 7
   )
 )

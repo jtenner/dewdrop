@@ -1982,9 +1982,7 @@
     i32.add
     struct.set 2 1
     local.get 5
-    i64.const 0
-    i64.const 9223372036854775807
-    i64.sub
+    i64.const -9223372036854775807
     local.set 34
     local.set 11
     local.get 11
@@ -2124,9 +2122,7 @@
     ref.cast (ref 23)
     local.get 12
     array.get 23
-    i64.const 0
-    i64.const 9223372036854775807
-    i64.sub
+    i64.const -9223372036854775807
     i64.eq
     v128.const i32x4 0x61727261 0x36692079 0x72672034 0x6874776f
     array.new_fixed 16 1

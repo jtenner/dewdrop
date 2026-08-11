@@ -28,14 +28,14 @@
     struct.get 0 0
   )
   (func (;1;) (type 8) (result i32)
-    call 2
+    i32.const 1
   )
   (func (;2;) (type 9) (result i32)
     i32.const 1
   )
   (func (;3;) (type 10) (param eqref) (result i32)
     (local eqref eqref)
-    call 1
+    i32.const 1
     if (result eqref) ;; label = @1
       local.get 0
     else
@@ -53,14 +53,14 @@
     call_ref 2
   )
   (func (;4;) (type 11) (result i32)
-    call 5
+    i32.const 0
   )
   (func (;5;) (type 12) (result i32)
     i32.const 0
   )
   (func (;6;) (type 13) (param eqref i32) (result i32)
     (local i32 eqref)
-    call 4
+    i32.const 0
     local.set 2
     local.get 0
     local.set 3

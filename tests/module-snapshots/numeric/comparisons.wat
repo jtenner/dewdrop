@@ -3,15 +3,9 @@
   (export "main" (func 0))
   (func (;0;) (type 0) (result i32)
     (local i32 i32 i32)
-    i32.const 0
-    i32.const 4
-    i32.sub
-    i32.const 2
-    i32.lt_s
-    local.set 0
-    i32.const -1
     i32.const 1
-    i32.gt_u
+    local.set 0
+    i32.const 1
     local.set 1
     f64.const 0x1.2p+2 (;=4.5;)
     f64.const 0x1.2p+2 (;=4.5;)

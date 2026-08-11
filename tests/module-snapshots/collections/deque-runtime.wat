@@ -102,9 +102,7 @@
             struct.get 0 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           local.set 7
           br 2 (;@1;)
         end
@@ -182,9 +180,7 @@
             struct.get 0 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
-          i32.const 0
-          i32.const 1
-          i32.sub
+          i32.const -1
           local.set 7
           br 2 (;@1;)
         end
@@ -221,9 +217,7 @@
     local.get 0
     ref.cast (ref 2)
     call 1
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     i32.eq
     v128.const i32x4 0x74706d65 0x72662079 0x00746e6f 0x00000000
     array.new_fixed 7 1
@@ -238,9 +232,7 @@
     local.get 0
     ref.cast (ref 2)
     call 2
-    i32.const 0
-    i32.const 1
-    i32.sub
+    i32.const -1
     i32.eq
     v128.const i32x4 0x74706d65 0x61622079 0x00006b63 0x00000000
     array.new_fixed 7 1

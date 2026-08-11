@@ -642,11 +642,7 @@
               struct.get 3 0
               br_table 0 (;@5;) 1 (;@4;) 2 (;@3;) 3 (;@2;)
             end
-            i64.const -3750763034362895579
-            i64.const 0
-            i64.xor
-            i64.const 1099511628211
-            i64.mul
+            i64.const -5808590958014384161
             local.set 4
             br 3 (;@1;)
           end
@@ -654,11 +650,7 @@
           ref.cast (ref 4)
           struct.get 4 1
           local.set 1
-          i64.const -3750763034362895579
-          i64.const 1
-          i64.xor
-          i64.const 1099511628211
-          i64.mul
+          i64.const -5808592057526012372
           local.get 1
           i64.extend_i32_s
           i64.xor
@@ -671,11 +663,7 @@
         ref.cast (ref 5)
         struct.get 5 1
         local.set 2
-        i64.const -3750763034362895579
-        i64.const 2
-        i64.xor
-        i64.const 1099511628211
-        i64.mul
+        i64.const -5808588758991127739
         local.get 2
         i64.extend_i32_s
         i64.xor

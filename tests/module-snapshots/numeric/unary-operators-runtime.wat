@@ -267,9 +267,7 @@
   )
   (func (;2;) (type 2) (result i32)
     (local i32 i32 i32 f64 f32 i32 i32)
-    i32.const 0
-    i32.const 5
-    i32.sub
+    i32.const -5
     local.set 0
     i32.const 0
     local.get 0
@@ -283,22 +281,16 @@
     f32.const 0x1.8p+0 (;=1.5;)
     f32.neg
     local.set 4
-    i32.const 0
-    i32.eqz
-    local.set 5
     i32.const 1
-    i32.const 2
-    i32.lt_s
-    i32.eqz
+    local.set 5
+    i32.const 0
     local.set 6
     local.get 1
     i32.const 5
     i32.eq
     if (result i32) ;; label = @1
       local.get 2
-      i32.const 0
-      i32.const 5
-      i32.sub
+      i32.const -5
       i32.eq
     else
       i32.const 0

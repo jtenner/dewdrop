@@ -7,9 +7,7 @@
   )
   (func (;1;) (type 1) (result i64)
     (local i64 i64)
-    i64.const 9223372036854775807
-    i64.const 41
-    i64.sub
+    i64.const 9223372036854775766
     local.set 0
     i64.const 84
     i64.const 2

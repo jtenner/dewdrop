@@ -11,9 +11,7 @@
     end
   )
   (func (;1;) (type 1) (result i32)
-    i32.const 7
-    i32.const 3
-    i32.gt_s
+    i32.const 1
     i32.const 11
     i32.const 22
     call 0

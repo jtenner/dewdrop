@@ -266,13 +266,7 @@
     local.get 6
   )
   (func (;2;) (type 2) (result i32)
-    i32.const 20
-    i32.const 22
-    i32.add
-    i32.const 3
-    i32.mul
-    i32.const 84
-    i32.sub
+    i32.const 42
     i32.const 2
     i32.div_s
     i32.const 21

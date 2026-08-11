@@ -289,13 +289,7 @@
       i32.const 0
     end
     if (result i32) ;; label = @1
-      i32.const 0
-      i32.const -2147483648
-      i32.sub
-      i32.const 0
-      i32.const 2147483647
-      i32.sub
-      i32.lt_s
+      i32.const 1
     else
       i32.const 0
     end

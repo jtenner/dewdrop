@@ -298,9 +298,7 @@
     if ;; label = @1
       unreachable
     end
-    i64.const 0
-    i64.const 1
-    i64.sub
+    i64.const -1
     i64.const 2
     call 10
     call 1

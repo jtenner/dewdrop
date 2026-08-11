@@ -285,9 +285,7 @@
     i32.const 65000
     i32.store16
     i32.const 13
-    i32.const 0
-    i32.const 424242
-    i32.sub
+    i32.const -424242
     i32.store
     i32.const 19
     i32.const -294967296
@@ -320,9 +318,7 @@
           if (result i32) ;; label = @4
             i32.const 13
             i32.load
-            i32.const 0
-            i32.const 424242
-            i32.sub
+            i32.const -424242
             i32.eq
             if (result i32) ;; label = @5
               i32.const 19

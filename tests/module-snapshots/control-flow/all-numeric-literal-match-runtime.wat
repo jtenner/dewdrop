@@ -333,9 +333,7 @@
     local.set 1
     block ;; label = @1
       local.get 1
-      i32.const 0
       i32.const -2147483648
-      i32.sub
       i32.eq
       if ;; label = @2
         i32.const 1
@@ -358,9 +356,7 @@
     local.set 1
     block ;; label = @1
       local.get 1
-      i64.const 0
       i64.const -9223372036854775808
-      i64.sub
       i64.eq
       if ;; label = @2
         i32.const 1
@@ -532,17 +528,13 @@
       i32.const 0
     end
     if (result i32) ;; label = @1
-      i32.const 0
       i32.const -2147483648
-      i32.sub
       call 4
     else
       i32.const 0
     end
     if (result i32) ;; label = @1
-      i64.const 0
       i64.const -9223372036854775808
-      i64.sub
       call 5
     else
       i32.const 0

@@ -266,9 +266,7 @@
     local.get 6
   )
   (func (;2;) (type 2) (result i32)
-    i32.const -1
-    i32.const -2147483648
-    i32.gt_u
+    i32.const 1
     if (result i32) ;; label = @1
       i32.const 1
       v128.const i32x4 0x656d756e 0x3a636972 0x69736e75 0x64656e67

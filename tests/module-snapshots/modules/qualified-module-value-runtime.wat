@@ -2,32 +2,30 @@
   (type (;0;) (func (param i32 i32 i32 i32) (result i32)))
   (type (;1;) (func (param i32 eqref) (result i32)))
   (type (;2;) (func (result i32)))
-  (type (;3;) (func))
-  (type (;4;) (array (mut v128)))
-  (type (;5;) (struct (field (ref 4)) (field i32) (field i32)))
-  (type (;6;) (struct (field (ref 4)) (field i32) (field i32)))
-  (type (;7;) (struct (field (ref 4)) (field i32) (field i32)))
-  (type (;8;) (struct (field (mut (ref 4))) (field (mut i32)) (field (mut i32))))
-  (type (;9;) (struct (field (mut (ref 4))) (field (mut i32)) (field (mut i32))))
+  (type (;3;) (array (mut v128)))
+  (type (;4;) (struct (field (ref 3)) (field i32) (field i32)))
+  (type (;5;) (struct (field (ref 3)) (field i32) (field i32)))
+  (type (;6;) (struct (field (ref 3)) (field i32) (field i32)))
+  (type (;7;) (struct (field (mut (ref 3))) (field (mut i32)) (field (mut i32))))
+  (type (;8;) (struct (field (mut (ref 3))) (field (mut i32)) (field (mut i32))))
   (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 0)))
   (memory (;0;) 1)
-  (global (;0;) (mut i32) i32.const 0)
+  (global (;0;) i32 i32.const 42)
   (export "main" (func 2))
-  (export "__dew_init" (func 4))
   (export "memory" (memory 0))
   (func (;1;) (type 1) (param i32 eqref) (result i32)
-    (local (ref 6) (ref 4) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
+    (local (ref 5) (ref 3) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
     local.get 1
-    ref.cast (ref 6)
+    ref.cast (ref 5)
     local.set 2
     local.get 2
-    struct.get 6 0
+    struct.get 5 0
     local.set 3
     local.get 2
-    struct.get 6 1
+    struct.get 5 1
     local.set 4
     local.get 2
-    struct.get 6 2
+    struct.get 5 2
     local.set 5
     i32.const 0
     local.set 6
@@ -79,7 +77,7 @@
               local.get 9
               i32.const 4
               i32.shr_u
-              array.get 4
+              array.get 3
               v128.store
               i32.const 16
               local.get 8
@@ -92,7 +90,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 4
+              array.get 3
               v128.store
               i32.const 16
               local.get 8
@@ -105,7 +103,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 4
+              array.get 3
               v128.store
               i32.const 16
               local.get 8
@@ -118,7 +116,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 4
+              array.get 3
               v128.store
               local.get 8
               i32.const 64
@@ -141,14 +139,14 @@
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 4
+                array.get 3
                 local.set 11
               else
                 local.get 3
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 4
+                array.get 3
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -162,7 +160,7 @@
                 i32.shr_u
                 i32.const 1
                 i32.add
-                array.get 4
+                array.get 3
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -191,7 +189,7 @@
             local.get 9
             i32.const 4
             i32.shr_u
-            array.get 4
+            array.get 3
             local.get 9
             i32.const 15
             i32.and
@@ -276,28 +274,19 @@
       i32.const 1
       v128.const i32x4 0x75646f6d 0x3a73656c 0x6c617571 0x65696669
       v128.const i32x4 0x61762d64 0x2d65756c 0x00003234 0x00000000
-      array.new_fixed 4 2
+      array.new_fixed 3 2
       i32.const 0
       i32.const 26
-      struct.new 6
+      struct.new 5
       call 1
     else
       i32.const 1
       v128.const i32x4 0x4c494146 0x00000000 0x00000000 0x00000000
-      array.new_fixed 4 1
+      array.new_fixed 3 1
       i32.const 0
       i32.const 4
-      struct.new 6
+      struct.new 5
       call 1
     end
-  )
-  (func (;3;) (type 3)
-    i32.const 40
-    i32.const 2
-    i32.add
-    global.set 0
-  )
-  (func (;4;) (type 3)
-    call 3
   )
 )

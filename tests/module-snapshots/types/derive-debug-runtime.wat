@@ -3102,9 +3102,7 @@
     struct.new 50
     call 32
     drop
-    i32.const 0
-    i32.const 5
-    i32.sub
+    i32.const -5
     i32.const 6
     struct.new 33
     i32.const 1
@@ -3156,9 +3154,7 @@
     struct.new 50
     call 32
     drop
-    i32.const 0
     i32.const -2147483648
-    i32.sub
     call 19
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000
@@ -3168,9 +3164,7 @@
     struct.new 50
     call 32
     drop
-    i64.const 0
     i64.const -9223372036854775808
-    i64.sub
     call 20
     i32.const 1
     v128.const i32x4 0x0000002c 0x00000000 0x00000000 0x00000000

@@ -2481,9 +2481,7 @@
     if ;; label = @1
       unreachable
     end
-    i64.const 0
-    i64.const 1
-    i64.sub
+    i64.const -1
     local.set 30
     local.get 30
     local.set 7
@@ -2522,9 +2520,7 @@
     i32.const 1
     struct.new 1
     local.set 3
-    i64.const 0
-    i64.const 1
-    i64.sub
+    i64.const -1
     local.set 31
     local.get 31
     local.set 7
@@ -2805,9 +2801,7 @@
     if ;; label = @1
       unreachable
     end
-    i64.const 0
-    i64.const 1
-    i64.sub
+    i64.const -1
     local.set 33
     local.get 33
     local.set 7

@@ -275,9 +275,7 @@
     i32.add
     i32.extend8_s
     call 2
-    i32.const 0
-    i32.const 128
-    i32.sub
+    i32.const -128
     i32.eq
     if (result i32) ;; label = @1
       i32.const 1

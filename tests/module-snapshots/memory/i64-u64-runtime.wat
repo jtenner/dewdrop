@@ -267,18 +267,14 @@
   )
   (func (;2;) (type 2) (result i32)
     i32.const 7
-    i64.const 0
-    i64.const 9000000000000
-    i64.sub
+    i64.const -9000000000000
     i64.store
     i32.const 23
     i64.const -446744073709551616
     i64.store
     i32.const 7
     i64.load
-    i64.const 0
-    i64.const 9000000000000
-    i64.sub
+    i64.const -9000000000000
     i64.eq
     if (result i32) ;; label = @1
       i32.const 23

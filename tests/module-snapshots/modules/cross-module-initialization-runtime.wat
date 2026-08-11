@@ -274,7 +274,7 @@
     i32.const 42
   )
   (func (;3;) (type 3) (result i32)
-    call 2
+    i32.const 42
     i32.const 42
     i32.eq
     if (result i32) ;; label = @1
