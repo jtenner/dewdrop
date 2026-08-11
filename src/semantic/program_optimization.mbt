@@ -2060,6 +2060,258 @@ fn runtime_trait_elidable_wrappers(
 }
 
 ///|
+priv enum ProgramFoldConstant {
+  ProgramFoldBool(Bool)
+  ProgramFoldI32(UInt64)
+  ProgramFoldU32(UInt64)
+  ProgramFoldI64(UInt64)
+  ProgramFoldU64(UInt64)
+}
+
+///|
+fn program_fold_constant(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+) -> ProgramFoldConstant? {
+  if expression < 0 || expression >= module_.expressions.length() {
+    return None
+  }
+  match module_.expressions[expression].kind {
+    PlannedBoolConst(value) => Some(ProgramFoldBool(value))
+    PlannedI32Const(value) => Some(ProgramFoldI32(value & 0xFFFFFFFFUL))
+    PlannedU32Const(value) => Some(ProgramFoldU32(value & 0xFFFFFFFFUL))
+    PlannedI64Const(value) => Some(ProgramFoldI64(value))
+    PlannedU64Const(value) => Some(ProgramFoldU64(value))
+    _ => None
+  }
+}
+
+///|
+fn program_fold_kind(constant : ProgramFoldConstant) -> PlannedExpressionKind {
+  match constant {
+    ProgramFoldBool(value) => PlannedBoolConst(value)
+    ProgramFoldI32(value) => PlannedI32Const(value & 0xFFFFFFFFUL)
+    ProgramFoldU32(value) => PlannedU32Const(value & 0xFFFFFFFFUL)
+    ProgramFoldI64(value) => PlannedI64Const(value)
+    ProgramFoldU64(value) => PlannedU64Const(value)
+  }
+}
+
+///|
+fn program_fold_prefix(
+  operator : HirPrefixOperator,
+  value : ProgramFoldConstant,
+) -> ProgramFoldConstant? {
+  match (operator, value) {
+    (HirPositive, constant) => Some(constant)
+    (HirLogicalNot, ProgramFoldBool(value)) => Some(ProgramFoldBool(!value))
+    (HirNegative, ProgramFoldI32(value)) =>
+      Some(ProgramFoldI32((0UL - value) & 0xFFFFFFFFUL))
+    (HirNegative, ProgramFoldI64(value)) => Some(ProgramFoldI64(0UL - value))
+    _ => None
+  }
+}
+
+///|
+fn program_fold_bool_binary(
+  operator : HirBinaryOperator,
+  left : Bool,
+  right : Bool,
+) -> ProgramFoldConstant? {
+  match operator {
+    HirLogicalOr => Some(ProgramFoldBool(left || right))
+    HirLogicalAnd => Some(ProgramFoldBool(left && right))
+    HirEqual => Some(ProgramFoldBool(left == right))
+    HirNotEqual => Some(ProgramFoldBool(left != right))
+    _ => None
+  }
+}
+
+///|
+fn program_fold_i32_binary(
+  operator : HirBinaryOperator,
+  left : UInt64,
+  right : UInt64,
+) -> ProgramFoldConstant? {
+  let left_bits = left & 0xFFFFFFFFUL
+  let right_bits = right & 0xFFFFFFFFUL
+  match operator {
+    HirBitOr => Some(ProgramFoldI32(left_bits | right_bits))
+    HirBitXor => Some(ProgramFoldI32(left_bits ^ right_bits))
+    HirBitAnd => Some(ProgramFoldI32(left_bits & right_bits))
+    HirAdd => Some(ProgramFoldI32((left_bits + right_bits) & 0xFFFFFFFFUL))
+    HirSubtract => Some(ProgramFoldI32((left_bits - right_bits) & 0xFFFFFFFFUL))
+    HirMultiply => Some(ProgramFoldI32((left_bits * right_bits) & 0xFFFFFFFFUL))
+    HirEqual => Some(ProgramFoldBool(left_bits == right_bits))
+    HirNotEqual => Some(ProgramFoldBool(left_bits != right_bits))
+    HirLess => Some(ProgramFoldBool(left_bits.to_int() < right_bits.to_int()))
+    HirLessEqual =>
+      Some(ProgramFoldBool(left_bits.to_int() <= right_bits.to_int()))
+    HirGreater =>
+      Some(ProgramFoldBool(left_bits.to_int() > right_bits.to_int()))
+    HirGreaterEqual =>
+      Some(ProgramFoldBool(left_bits.to_int() >= right_bits.to_int()))
+    _ => None
+  }
+}
+
+///|
+fn program_fold_u32_binary(
+  operator : HirBinaryOperator,
+  left : UInt64,
+  right : UInt64,
+) -> ProgramFoldConstant? {
+  let left_bits = left & 0xFFFFFFFFUL
+  let right_bits = right & 0xFFFFFFFFUL
+  match operator {
+    HirBitOr => Some(ProgramFoldU32(left_bits | right_bits))
+    HirBitXor => Some(ProgramFoldU32(left_bits ^ right_bits))
+    HirBitAnd => Some(ProgramFoldU32(left_bits & right_bits))
+    HirAdd => Some(ProgramFoldU32((left_bits + right_bits) & 0xFFFFFFFFUL))
+    HirSubtract => Some(ProgramFoldU32((left_bits - right_bits) & 0xFFFFFFFFUL))
+    HirMultiply => Some(ProgramFoldU32((left_bits * right_bits) & 0xFFFFFFFFUL))
+    HirEqual => Some(ProgramFoldBool(left_bits == right_bits))
+    HirNotEqual => Some(ProgramFoldBool(left_bits != right_bits))
+    HirLess => Some(ProgramFoldBool(left_bits < right_bits))
+    HirLessEqual => Some(ProgramFoldBool(left_bits <= right_bits))
+    HirGreater => Some(ProgramFoldBool(left_bits > right_bits))
+    HirGreaterEqual => Some(ProgramFoldBool(left_bits >= right_bits))
+    _ => None
+  }
+}
+
+///|
+fn program_fold_i64_binary(
+  operator : HirBinaryOperator,
+  left : UInt64,
+  right : UInt64,
+) -> ProgramFoldConstant? {
+  match operator {
+    HirBitOr => Some(ProgramFoldI64(left | right))
+    HirBitXor => Some(ProgramFoldI64(left ^ right))
+    HirBitAnd => Some(ProgramFoldI64(left & right))
+    HirAdd => Some(ProgramFoldI64(left + right))
+    HirSubtract => Some(ProgramFoldI64(left - right))
+    HirMultiply => Some(ProgramFoldI64(left * right))
+    HirEqual => Some(ProgramFoldBool(left == right))
+    HirNotEqual => Some(ProgramFoldBool(left != right))
+    HirLess =>
+      Some(
+        ProgramFoldBool(
+          left.reinterpret_as_int64() < right.reinterpret_as_int64(),
+        ),
+      )
+    HirLessEqual =>
+      Some(
+        ProgramFoldBool(
+          left.reinterpret_as_int64() <= right.reinterpret_as_int64(),
+        ),
+      )
+    HirGreater =>
+      Some(
+        ProgramFoldBool(
+          left.reinterpret_as_int64() > right.reinterpret_as_int64(),
+        ),
+      )
+    HirGreaterEqual =>
+      Some(
+        ProgramFoldBool(
+          left.reinterpret_as_int64() >= right.reinterpret_as_int64(),
+        ),
+      )
+    _ => None
+  }
+}
+
+///|
+fn program_fold_u64_binary(
+  operator : HirBinaryOperator,
+  left : UInt64,
+  right : UInt64,
+) -> ProgramFoldConstant? {
+  match operator {
+    HirBitOr => Some(ProgramFoldU64(left | right))
+    HirBitXor => Some(ProgramFoldU64(left ^ right))
+    HirBitAnd => Some(ProgramFoldU64(left & right))
+    HirAdd => Some(ProgramFoldU64(left + right))
+    HirSubtract => Some(ProgramFoldU64(left - right))
+    HirMultiply => Some(ProgramFoldU64(left * right))
+    HirEqual => Some(ProgramFoldBool(left == right))
+    HirNotEqual => Some(ProgramFoldBool(left != right))
+    HirLess => Some(ProgramFoldBool(left < right))
+    HirLessEqual => Some(ProgramFoldBool(left <= right))
+    HirGreater => Some(ProgramFoldBool(left > right))
+    HirGreaterEqual => Some(ProgramFoldBool(left >= right))
+    _ => None
+  }
+}
+
+///|
+fn program_fold_binary(
+  operator : HirBinaryOperator,
+  left : ProgramFoldConstant,
+  right : ProgramFoldConstant,
+) -> ProgramFoldConstant? {
+  match (left, right) {
+    (ProgramFoldBool(left), ProgramFoldBool(right)) =>
+      program_fold_bool_binary(operator, left, right)
+    (ProgramFoldI32(left), ProgramFoldI32(right)) =>
+      program_fold_i32_binary(operator, left, right)
+    (ProgramFoldU32(left), ProgramFoldU32(right)) =>
+      program_fold_u32_binary(operator, left, right)
+    (ProgramFoldI64(left), ProgramFoldI64(right)) =>
+      program_fold_i64_binary(operator, left, right)
+    (ProgramFoldU64(left), ProgramFoldU64(right)) =>
+      program_fold_u64_binary(operator, left, right)
+    _ => None
+  }
+}
+
+///|
+fn fold_program_constants(modules : Array[PlannedModuleLowering]) -> Unit {
+  for module_ in modules {
+    let mut changed = true
+    let mut remaining = module_.expressions.length() + 1
+    while changed && remaining > 0 {
+      remaining -= 1
+      changed = false
+      for expression in 0..<module_.expressions.length() {
+        let folded = match module_.expressions[expression].kind {
+          PlannedPrefixExpression(operator, value) =>
+            match program_fold_constant(module_, value) {
+              Some(constant) => program_fold_prefix(operator, constant)
+              None => None
+            }
+          PlannedBinaryExpression(operator, left, right)
+          | PlannedOperatorCall(_, operator, left, right, _) =>
+            match
+              (
+                program_fold_constant(module_, left),
+                program_fold_constant(module_, right),
+              ) {
+              (Some(left), Some(right)) =>
+                program_fold_binary(operator, left, right)
+              _ => None
+            }
+          _ => None
+        }
+        match folded {
+          Some(constant) => {
+            let source = module_.expressions[expression]
+            let kind = program_fold_kind(constant)
+            if source.kind != kind {
+              module_.expressions[expression] = { ..source, kind, }
+              changed = true
+            }
+          }
+          None => ()
+        }
+      }
+    }
+  }
+}
+
+///|
 fn prepare_program_optimization_mutation(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -2116,6 +2368,7 @@ pub fn optimize_program_lowering(
 ) -> PlannedProgramLowering {
   let modules = lowering.modules.copy()
   prepare_program_optimization_mutation(modules)
+  fold_program_constants(modules)
   let effects = program_callable_effect_summaries(modules)
   directize_transparent_callback_calls(modules, effects)
   directize_generic_parameter_selectors(modules)

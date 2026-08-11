@@ -30,8 +30,8 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. continue ownership-aware cleanup hardening for alias-mediated disposal and escapes;
-2. continue snapshots, measurements, resource budgets, optimization, packaging,
+1. add deterministic inlining from immutable call-graph summaries;
+2. continue snapshots, measurements, resource budgets, workspace caching, packaging,
    and release hardening throughout.
 
 ### 0. Harden the advertised current language surface
@@ -67,7 +67,7 @@ diagnostic before backend planning.
 - [x] Add minimal `<test>.files/` and `<test>.modules/<dotted.module>/` conventions for multi-file and multi-module fixtures without putting module graphs into JSON.
 - [x] Keep generated `.wasm` temporary while committing the readable `.wat` expectations.
 - [x] Include the complete snapshot suite in `tools/check.sh`, the standard full-project validation entry point; retain `--quick` for formatter/generated/native checks.
-- [ ] Add separate optimized snapshots only after Dew has an optimization pipeline whose output is intentionally part of the contract.
+- [x] Add the first contractual optimized WAT snapshot for primitive constant folding; continue adding focused optimized snapshots with later passes.
 
 **Done when:** compiler-output changes produce reviewable WAT diffs, accidental ABI
 or index-order changes fail CI, and contributors can regenerate an intentional
@@ -608,7 +608,7 @@ count = count + 1
 - [x] Exact callable reachability and dead function elimination.
 - [x] Dead signature-type elimination, including removal of external type references contributed only by elided signatures.
 - [x] Dead nominal/payload and compiler-runtime type elimination: frozen `uses_text_runtime` requirements prevent elided String signatures from retaining the V128 array and five text/bytes structs; the scalar smoke is 81 bytes and contains only its three function types.
-- [ ] Constant folding after exact operation selection.
+- [x] Add deterministic fixed-point constant folding for exact Bool and I32/U32/I64/U64 primitive operations after selection, preserving trapping/float cases.
 - [ ] Inlining using immutable call graph summaries.
 - [ ] Tail-recursion optimization.
 - [ ] Common subexpression elimination where allocation/effects permit.

@@ -1,4 +1,77 @@
 ///|
+fn optimization_test_body_tail(
+  module_ : PlannedModuleLowering,
+  body_id : BodyId,
+) -> ExprId {
+  let body = module_.bodies[semantic_id_local(body_id)]
+  match body.root {
+    ExpressionBodyRoot(expression) => expression
+    BlockBodyRoot(block) => {
+      let items = module_.blocks[block].items
+      match module_.block_items[items.start + items.length - 1].kind {
+        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
+          expression
+        _ => abort("expected optimization test body tail")
+      }
+    }
+  }
+}
+
+///|
+test "constant folding rewrites exact primitive operations only in the copy" {
+  let program = collect_program_manifest(
+    22805UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn arithmetic() -> I32 {\n  -(1 + 2 * 3)\n}\nfn comparison() -> Bool {\n  (-5 < 2) && (3u64 * 4u64 == 12u64)\n}\nfn wrapping() -> U32 {\n  4294967295u32 + 2u32\n}\npub fn main() -> Unit {\n  assert(arithmetic() == -7, \"arithmetic\")\n  assert(comparison(), \"comparison\")\n  assert(wrapping() == 1u32, \"wrapping\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let arithmetic = optimization_test_body_tail(
+    unoptimized.modules[0],
+    collected.body_of(collected.lookup_value("arithmetic").unwrap()).unwrap().id,
+  )
+  let comparison = optimization_test_body_tail(
+    unoptimized.modules[0],
+    collected.body_of(collected.lookup_value("comparison").unwrap()).unwrap().id,
+  )
+  let wrapping = optimization_test_body_tail(
+    unoptimized.modules[0],
+    collected.body_of(collected.lookup_value("wrapping").unwrap()).unwrap().id,
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[arithmetic].kind
+    is PlannedPrefixExpression(_, _),
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[comparison].kind
+    is PlannedBinaryExpression(_, _, _),
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[wrapping].kind
+    is PlannedOperatorCall(_, _, _, _, _),
+  )
+  assert_eq(
+    optimized.modules[0].expressions[arithmetic].kind,
+    PlannedI32Const(4294967289UL),
+  )
+  assert_eq(
+    optimized.modules[0].expressions[comparison].kind,
+    PlannedBoolConst(true),
+  )
+  assert_eq(
+    optimized.modules[0].expressions[wrapping].kind,
+    PlannedU32Const(1UL),
+  )
+}
+
+///|
 test "program optimization preserves its unoptimized input" {
   let program = collect_program_manifest(
     22804UL,

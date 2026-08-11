@@ -1,0 +1,17 @@
+fn arithmetic() -> I32 {
+  -(1 + 2 * 3)
+}
+
+fn comparison() -> Bool {
+  (-5 < 2) && (3u64 * 4u64 == 12u64)
+}
+
+fn wrapping() -> U32 {
+  4294967295u32 + 2u32
+}
+
+pub fn main() -> Unit {
+  assert(arithmetic() == -7, "folded arithmetic")
+  assert(comparison(), "folded comparison")
+  assert(wrapping() == 1u32, "folded wrapping")
+}

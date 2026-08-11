@@ -4,13 +4,13 @@
 
 ## Current priority order
 
-1. Continue ownership-aware cleanup hardening for alias-mediated disposal and escapes.
-2. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
+1. Add deterministic inlining from immutable call-graph summaries.
+2. Build workspace-cache and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
 
 - [ ] Continue adding successful, warning, compiler-failure, boundary, edge, and reduced-stress module snapshots beside each feature.
-- [ ] Add optimized WAT snapshots once optimization output is intentionally contractual.
+- [ ] Continue optimized WAT snapshots beyond the constant-folding baseline as later passes become contractual.
 - [ ] Add reversed simulated job-order reproducibility snapshots.
 - [ ] Add tests for every new import and module rule.
 - [ ] Add source-location assertions to all cross-file diagnostics.
@@ -146,7 +146,6 @@
 
 ## Optimization and performance discipline
 
-- [ ] Add constant folding after exact operation selection.
 - [ ] Add inlining from immutable call-graph summaries.
 - [ ] Add tail-recursion optimization.
 - [ ] Add common-subexpression elimination where allocation and effects permit.
