@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. add deterministic inlining from immutable call-graph summaries;
+1. add tail-recursion optimization where deterministic runtime support and measurements justify it;
 2. continue snapshots, measurements, resource budgets, workspace caching, packaging,
    and release hardening throughout.
 
@@ -609,7 +609,7 @@ count = count + 1
 - [x] Dead signature-type elimination, including removal of external type references contributed only by elided signatures.
 - [x] Dead nominal/payload and compiler-runtime type elimination: frozen `uses_text_runtime` requirements prevent elided String signatures from retaining the V128 array and five text/bytes structs; the scalar smoke is 81 bytes and contains only its three function types.
 - [x] Add deterministic fixed-point constant folding for exact Bool and I32/U32/I64/U64 primitive operations after selection, preserving trapping/float cases.
-- [ ] Inlining using immutable call graph summaries.
+- [x] Add deterministic immutable-summary inlining for non-generic scalar parameter selectors and zero-argument scalar constants, preserving argument evaluation order.
 - [ ] Tail-recursion optimization.
 - [ ] Common subexpression elimination where allocation/effects permit.
 - [ ] Escape analysis for boxes, payloads, and trait objects.

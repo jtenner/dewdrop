@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Add deterministic inlining from immutable call-graph summaries.
+1. Add tail-recursion optimization where deterministic runtime support and measurements justify it.
 2. Build workspace-cache and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
@@ -146,7 +146,6 @@
 
 ## Optimization and performance discipline
 
-- [ ] Add inlining from immutable call-graph summaries.
 - [ ] Add tail-recursion optimization.
 - [ ] Add common-subexpression elimination where allocation and effects permit.
 - [ ] Add escape analysis for boxes, payloads, and trait objects.

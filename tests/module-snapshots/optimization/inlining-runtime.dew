@@ -1,0 +1,26 @@
+open dew.std.array
+
+fn record_value(state: Array<I32>, digit: I32, value: I32) -> I32 {
+  array_set_unchecked(state, 0u32, array_get_unchecked(state, 0u32) * 10 + digit)
+  value
+}
+
+fn second(left: I32, right: I32) -> I32 {
+  right
+}
+
+fn wrapper(left: I32, right: I32) -> I32 {
+  second(left, right)
+}
+
+fn answer() -> I32 {
+  6 * 7
+}
+
+pub fn main() -> Unit {
+  let state = array_with_capacity(1u32)
+  array_push(state, 0)
+  assert(wrapper(record_value(state, 1, 10), record_value(state, 2, 20)) == 20, "selector")
+  assert(array_get_unchecked(state, 0u32) == 12, "argument order")
+  assert(answer() == 42, "constant")
+}

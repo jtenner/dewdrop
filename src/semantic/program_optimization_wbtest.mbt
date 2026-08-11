@@ -72,6 +72,57 @@ test "constant folding rewrites exact primitive operations only in the copy" {
 }
 
 ///|
+test "immutable call summaries inline selectors and constant functions" {
+  let program = collect_program_manifest(
+    22806UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn second(left: I32, right: I32) -> I32 {\n  right\n}\nfn wrapper(left: I32, right: I32) -> I32 {\n  second(left, right)\n}\nfn answer() -> I32 {\n  6 * 7\n}\npub fn main() -> I32 {\n  wrapper(1, 2) + answer()\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let main = collected.lookup_value("main").unwrap()
+  let wrapper = collected.lookup_value("wrapper").unwrap()
+  let answer = collected.lookup_value("answer").unwrap()
+  let calls = body_calls(collected, collected.body_of(main).unwrap())
+  let mut wrapper_call = -1
+  let mut answer_call = -1
+  for call in calls {
+    match unoptimized.modules[0].expressions[call].kind {
+      PlannedDirectCall(target, _, _, _) if target == wrapper =>
+        wrapper_call = call
+      PlannedDirectCall(target, _, _, _) if target == answer =>
+        answer_call = call
+      _ => ()
+    }
+  }
+  assert_true(wrapper_call >= 0)
+  assert_true(answer_call >= 0)
+  assert_true(
+    optimized.modules[0].expressions[wrapper_call].kind
+    is PlannedParameterSelect(_, 1),
+  )
+  assert_eq(
+    optimized.modules[0].expressions[answer_call].kind,
+    PlannedI32Const(42UL),
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[wrapper_call].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[answer_call].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+}
+
+///|
 test "program optimization preserves its unoptimized input" {
   let program = collect_program_manifest(
     22804UL,

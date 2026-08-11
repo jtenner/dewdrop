@@ -360,14 +360,23 @@ fn transparent_callback_expression_parameter(
   body : PlannedBodyLowering,
   expression : ExprId,
 ) -> Int {
-  if expression < 0 || expression >= module_.expressions.length() {
-    return -1
+  let mut candidate = expression
+  let mut remaining = module_.expressions.length() + 1
+  while remaining > 0 {
+    remaining -= 1
+    if candidate < 0 || candidate >= module_.expressions.length() {
+      return -1
+    }
+    match module_.expressions[candidate].kind {
+      PlannedLocalGet(local_id) =>
+        return transparent_callback_local_parameter(module_, body, local_id, 0)
+      PlannedParameterSelect(arguments, selected) if selected >= 0 &&
+        selected < arguments.length =>
+        candidate = module_.expression_children[arguments.start + selected]
+      _ => return -1
+    }
   }
-  match module_.expressions[expression].kind {
-    PlannedLocalGet(local_id) =>
-      transparent_callback_local_parameter(module_, body, local_id, 0)
-    _ => -1
-  }
+  -1
 }
 
 ///|
@@ -2312,6 +2321,157 @@ fn fold_program_constants(modules : Array[PlannedModuleLowering]) -> Unit {
 }
 
 ///|
+priv enum ProgramInlineSummary {
+  ProgramInlineParameter(Int, Int)
+  ProgramInlineConstant(PlannedExpressionKind)
+}
+
+///|
+fn program_inline_scalar_shape(shape : PlannedValueShape) -> Bool {
+  match shape {
+    I32PlannedValueShape
+    | U32PlannedValueShape
+    | I64PlannedValueShape
+    | U64PlannedValueShape => true
+    _ => false
+  }
+}
+
+///|
+fn program_inline_scalar_constant(
+  kind : PlannedExpressionKind,
+) -> PlannedExpressionKind? {
+  match kind {
+    PlannedI32Const(_)
+    | PlannedU32Const(_)
+    | PlannedI64Const(_)
+    | PlannedU64Const(_)
+    | PlannedBoolConst(_) => Some(kind)
+    _ => None
+  }
+}
+
+///|
+fn program_inline_summary(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  effects : Map[DeclId, ProgramCallableEffectSummary],
+) -> ProgramInlineSummary? {
+  let callable = match module_.functions.callable_of(body.declaration) {
+    Some(value) if !value.has_receiver &&
+      program_callable_generic_parameters(value).length == 0 => value
+    _ => return None
+  }
+  let root = transparent_callback_root_expression(module_, body, effects)
+  if root < 0 || root >= module_.expressions.length() {
+    return None
+  }
+  let mut parameter_count = 0
+  for local_id in 0..<body.locals.length {
+    match module_.locals[body.locals.start + local_id].kind {
+      ParameterLocal => parameter_count += 1
+      _ => break
+    }
+  }
+  let selected = transparent_callback_expression_parameter(module_, body, root)
+  if selected >= 0 &&
+    program_inline_scalar_shape(module_.expressions[root].shape) {
+    return Some(ProgramInlineParameter(selected, parameter_count))
+  }
+  if parameter_count == 0 {
+    match program_inline_scalar_constant(module_.expressions[root].kind) {
+      Some(kind) => return Some(ProgramInlineConstant(kind))
+      None => ()
+    }
+  }
+  ignore(callable)
+  None
+}
+
+///|
+fn inline_program_calls_from_summaries(
+  modules : Array[PlannedModuleLowering],
+  effects : Map[DeclId, ProgramCallableEffectSummary],
+) -> Unit {
+  let summaries : Map[DeclId, ProgramInlineSummary] = Map::default()
+  let mut changed = true
+  let mut remaining = 1
+  for module_ in modules {
+    remaining += module_.expressions.length() + module_.bodies.length()
+  }
+  while changed && remaining > 0 {
+    remaining -= 1
+    changed = false
+    for module_ in modules {
+      for body in module_.bodies {
+        if summaries.contains(body.declaration) {
+          continue
+        }
+        match program_inline_summary(module_, body, effects) {
+          Some(summary) => {
+            summaries[body.declaration] = summary
+            changed = true
+          }
+          None => ()
+        }
+      }
+    }
+    for module_ in modules {
+      for expression in 0..<module_.expressions.length() {
+        let (declaration, arguments) = match
+          module_.expressions[expression].kind {
+          PlannedDirectCall(declaration, receiver, arguments, type_arguments) => {
+            if receiver >= 0 || type_arguments.length != 0 {
+              continue
+            }
+            (declaration, arguments)
+          }
+          _ => continue
+        }
+        let summary = match summaries.get(declaration) {
+          Some(value) => value
+          None => continue
+        }
+        let source = module_.expressions[expression]
+        match summary {
+          ProgramInlineParameter(selected, parameter_count) => {
+            if parameter_count != arguments.length ||
+              selected < 0 ||
+              selected >= arguments.length ||
+              arguments.start < 0 ||
+              arguments.start + selected >= module_.expression_children.length() {
+              continue
+            }
+            let selected_expression = module_.expression_children[arguments.start +
+              selected]
+            if selected_expression < 0 ||
+              selected_expression >= module_.expressions.length() {
+              continue
+            }
+            let selected_source = module_.expressions[selected_expression]
+            module_.expressions[expression] = {
+              ..source,
+              type_: selected_source.type_,
+              shape: selected_source.shape,
+              trait_object_coercion: selected_source.trait_object_coercion,
+              kind: PlannedParameterSelect(arguments, selected),
+            }
+            changed = true
+          }
+          ProgramInlineConstant(kind) => {
+            if arguments.length != 0 {
+              continue
+            }
+            module_.expressions[expression] = { ..source, kind, }
+            changed = true
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
 fn prepare_program_optimization_mutation(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -2369,6 +2529,8 @@ pub fn optimize_program_lowering(
   let modules = lowering.modules.copy()
   prepare_program_optimization_mutation(modules)
   fold_program_constants(modules)
+  let initial_effects = program_callable_effect_summaries(modules)
+  inline_program_calls_from_summaries(modules, initial_effects)
   let effects = program_callable_effect_summaries(modules)
   directize_transparent_callback_calls(modules, effects)
   directize_generic_parameter_selectors(modules)
