@@ -3581,6 +3581,8 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedArrayPop(_, _)
         | PlannedStackIsEmpty(_)
         | PlannedStackPeek(_, _)
+        | PlannedQueueDequeue(_, _)
+        | PlannedQueuePeek(_, _)
         | PlannedArrayClear(_, _)
         | PlannedArrayIterNext(_, _)
         | PlannedFixedArrayGet(_, _, _)

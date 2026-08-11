@@ -63,7 +63,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 1
+            collection_mask = 3
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -91,6 +91,7 @@ fn selected_standard_modules(
               "array" => array = true
               "map" => map = true
               "set" => set = true
+              "queue" => collection_mask = collection_mask | 2
               "i8x4" => lane_mask = lane_mask | 1
               "u8x4" => lane_mask = lane_mask | 2
               "i16x2" => lane_mask = lane_mask | 4

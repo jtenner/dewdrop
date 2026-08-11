@@ -12,6 +12,7 @@ python3 tools/generate_array_std.py --check
 python3 tools/generate_map_std.py --check
 python3 tools/generate_set_std.py --check
 python3 tools/generate_stack_std.py --check
+python3 tools/generate_queue_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs

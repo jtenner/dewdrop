@@ -2626,6 +2626,8 @@ fn starshine_body_locals(
       | @semantic.PlannedArrayPop(_, _)
       | @semantic.PlannedStackIsEmpty(_)
       | @semantic.PlannedStackPeek(_, _)
+      | @semantic.PlannedQueueDequeue(_, _)
+      | @semantic.PlannedQueuePeek(_, _)
       | @semantic.PlannedArrayClear(_, _)
       | @semantic.PlannedArrayIterNext(_, _) => {
         if fixed_array_ref_scratch_index < 0 {
@@ -2645,7 +2647,9 @@ fn starshine_body_locals(
           | @semantic.PlannedArraySetUnchecked(_, _, _, shape)
           | @semantic.PlannedArrayPush(_, _, shape)
           | @semantic.PlannedArrayPop(_, shape)
-          | @semantic.PlannedStackPeek(_, shape) =>
+          | @semantic.PlannedStackPeek(_, shape)
+          | @semantic.PlannedQueueDequeue(_, shape)
+          | @semantic.PlannedQueuePeek(_, shape) =>
             match starshine_shape_value_type(shape) {
               Some(type_) => {
                 map_value_local_indices[expression] = parameter_count +
@@ -5115,6 +5119,34 @@ fn starshine_emit_body_instructions(
             tasks.push(
               FinishStarshineArray(
                 17,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedQueueDequeue(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                19,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedQueuePeek(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                18,
                 Some(shape),
                 1,
                 fixed_array_ref_scratch_index,

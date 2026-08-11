@@ -1,0 +1,46 @@
+open dew.std.queue
+
+fn empty_queue() -> Queue<I32> {
+  queue_new()
+}
+
+pub fn main() -> Unit {
+  let queue = empty_queue()
+  let alias = queue
+  assert(queue_is_empty(queue), "new queue empty")
+  match queue_dequeue(queue) {
+    Option::Some(_) => assert(false, "empty dequeue")
+    Option::None => {}
+  }
+  match queue_peek(queue) {
+    Option::Some(_) => assert(false, "empty peek")
+    Option::None => {}
+  }
+  queue_enqueue(queue, 11)
+  queue_enqueue(alias, 22)
+  queue_enqueue(queue, 33)
+  assert(queue_length(queue) == 3u32, "alias-visible enqueue")
+  match queue_peek(queue) {
+    Option::Some(value) => assert(value == 11, "peek reads front")
+    Option::None => assert(false, "peek unexpectedly empty")
+  }
+  assert(queue_length(queue) == 3u32, "peek preserves length")
+  let iter = queue_iter(queue)
+  let first = queue_iter_next(iter)
+  let second = queue_iter_next(iter)
+  let third = queue_iter_next(iter)
+  assert(!queue_iter_has_next(iter), "iterator exhausted")
+  assert(first == 11 && second == 22 && third == 33, "iterator is FIFO")
+  match queue_dequeue(queue) {
+    Option::Some(value) => assert(value == 11, "first dequeue FIFO")
+    Option::None => assert(false, "first dequeue unexpectedly empty")
+  }
+  queue_enqueue(queue, 44)
+  match queue_dequeue(queue) {
+    Option::Some(value) => assert(value == 22, "second dequeue FIFO")
+    Option::None => assert(false, "second dequeue unexpectedly empty")
+  }
+  assert(queue_length(queue) == 2u32, "interleaved queue length")
+  queue_clear(queue)
+  assert(queue_is_empty(queue), "clear empties queue")
+}

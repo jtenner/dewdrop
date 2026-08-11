@@ -90,6 +90,8 @@ pub enum PlannedExpressionKind {
   PlannedArrayIterNext(ExprId, PlannedValueShape)
   PlannedStackIsEmpty(ExprId)
   PlannedStackPeek(ExprId, PlannedValueShape)
+  PlannedQueueDequeue(ExprId, PlannedValueShape)
+  PlannedQueuePeek(ExprId, PlannedValueShape)
   PlannedMapSingleton(
     ExprId,
     ExprId,
@@ -834,7 +836,8 @@ fn plan_expression_kind(
           } else {
             ErrorPlannedValueShape
           }
-          let array_operation = match standard_stack_operation(declaration) {
+          let stack_or_array_operation = match
+            standard_stack_operation(declaration) {
             StackNew => ArrayNew
             StackWithCapacity => ArrayWithCapacity
             StackLength => ArrayLength
@@ -847,6 +850,20 @@ fn plan_expression_kind(
             StackIterHasNext => ArrayIterHasNext
             StackIterNext => ArrayIterNext
             _ => standard_array_operation(declaration)
+          }
+          let array_operation = match standard_queue_operation(declaration) {
+            QueueNew => ArrayNew
+            QueueWithCapacity => ArrayWithCapacity
+            QueueLength => ArrayLength
+            QueueIsEmpty => StackIsEmpty
+            QueueEnqueue => ArrayPush
+            QueueDequeue => QueueDequeue
+            QueuePeek => QueuePeek
+            QueueClear => ArrayClear
+            QueueIter => ArrayIter
+            QueueIterHasNext => ArrayIterHasNext
+            QueueIterNext => ArrayIterNext
+            _ => stack_or_array_operation
           }
           match standard_fixed_array_operation(declaration) {
             FixedArrayMake => {
@@ -948,6 +965,8 @@ fn plan_expression_kind(
                   )
                 ArrayPop => PlannedArrayPop(base, element_shape)
                 StackPeek => PlannedStackPeek(base, element_shape)
+                QueueDequeue => PlannedQueueDequeue(base, element_shape)
+                QueuePeek => PlannedQueuePeek(base, element_shape)
                 ArrayClear => PlannedArrayClear(base, element_shape)
                 ArrayIter => PlannedArrayIter(base, element_shape)
                 ArrayIterHasNext => PlannedArrayIterHasNext(base)

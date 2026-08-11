@@ -30,9 +30,9 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. expand the remaining measured collection families, beginning with circular
-   buffers and queue APIs now that growable `Array`, Stack, and explicit iterator
-   protocols are complete;
+1. replace the measured contiguous Queue baseline with circular-buffer storage,
+   then continue heaps and ordered trees now that growable `Array`, Stack, Queue,
+   and explicit iterator protocols are complete;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
 3. continue snapshots, measurements, resource budgets, optimization, packaging,
@@ -498,7 +498,7 @@ count = count + 1
 - [x] Add shared geometric Map/Set bucket growth with a measured maximum load factor of 1.0 and deterministic iterative rehashing that reuses stored hashes.
 - [x] Add Boolean Map removal and alias-visible O(1) clear using the proven Set chain-unlinking machinery.
 - [ ] Add deterministic allocation-free Hash implementations for String, StringView, and Bytes after finalizing their cross-type equality contract.
-- [ ] Implement `dew.std.queue` interfaces and implementation.
+- [x] Implement the representation-independent `dew.std.queue` interface and executable contiguous baseline; replace O(n) dequeue with circular-buffer storage next.
 - [x] Add ambient `Iter<t>` plus explicit Array, Map key/value/entry, and Set key iterator types while leaving hash traversal order unspecified.
 - [ ] Define remaining collection mutation and persistence rules.
 - [ ] Benchmark WasmGC arrays and hash buckets versus linked/tree representations.
@@ -656,11 +656,11 @@ count = count + 1
 
 ### `dew.std.queue`
 
-- [ ] Define public queue API.
-- [ ] Choose mutable ring-buffer, persistent queue, or separate types.
-- [ ] Implement enqueue, dequeue, peek, size, and iteration.
-- [ ] Add empty-queue result semantics.
-- [ ] Benchmark array-backed and linked representations.
+- [x] Define the public mutable queue API.
+- [ ] Replace the measured contiguous baseline with the planned mutable ring-buffer representation.
+- [x] Implement enqueue, dequeue, peek, size, and iteration.
+- [x] Add empty-queue result semantics.
+- [x] Benchmark the contiguous FIFO baseline against carrier-equivalent LIFO removal; benchmark linked/persistent alternatives only if the ring representation misses budgets.
 
 ### Additional likely modules
 
@@ -880,7 +880,7 @@ remain easier to diagnose and maintain.
 6. **Executable generics and runtime traits — complete for the documented ABI:** bounds/obligations, evidence-aware specialization, erased fallbacks, recursive adapters, trait objects, typed dictionaries, runtime evidence, `call_ref`, imported providers, and compatibility negotiation execute.
 7. **Current-language correctness hardening — complete for the audited gaps:** discarded non-Unit Unit tails, string literal pattern emission, stable local module-value cycle diagnostics, explicit `Never`/drop matrices, and the first ordinary warning producer are implemented.
 8. **Artifact-only installed dependencies — complete for V1 source capsules:** verified versioned dependencies compile after their locked source tree is removed, with byte-identical Wasm after atomic artifact restoration.
-9. **Core collections and iteration — Array/iterator and Stack tranches complete:** growable Array, ambient iteration, Array/Map/Set iterators, and LIFO Stack operations execute; circular buffers, queues, heaps, and ordered trees are next and remain subject to measured representation choices.
+9. **Core collections and iteration — Array/iterator, Stack, and Queue API tranches complete:** growable Array, ambient iteration, explicit collection iterators, LIFO Stack, and FIFO Queue semantics execute; circular-buffer replacement, heaps, and ordered trees are next, with the contiguous Queue benchmark already rejecting O(n) shifting as the final representation.
 10. **Language ergonomics and cleanup:** annotations and `Show`, or deterministic `defer`/`using` through `Disposable`, should land as separate bounded milestones. Eq/Debug/Hash derivation and ambient Debug are already implemented.
 11. **Optimization and incremental compilation:** folding, inlining, escape analysis, workspace fingerprints/caches, and deterministic parallel scheduling.
 12. **Broader standard library:** structured data, cryptography boundaries, HTTP, and conformance/security hardening.

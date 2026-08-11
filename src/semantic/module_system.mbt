@@ -252,6 +252,9 @@ pub fn required_standard_library_source_paths(
   if (collection_mask & 1) != 0 {
     required.push("std/collections/stack.dew")
   }
+  if (collection_mask & 2) != 0 {
+    required.push("std/queue.dew")
+  }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
     let text_files = [
@@ -545,6 +548,24 @@ pub fn collect_program_manifest_with_standard_sources(
           module_id,
           "std/collections/stack.dew",
           standard_sources.source("std/collections/stack.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 2) != 0 {
+    let module_id = standard_library_module_id(15)
+    let module_index = modules.length()
+    first_module["dew.std.queue"] = module_index
+    module_paths.push("dew.std.queue")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/queue.dew",
+          standard_sources.source("std/queue.dew"),
           false,
           false,
         ),

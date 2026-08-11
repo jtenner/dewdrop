@@ -34,15 +34,16 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 46)
+  assert_eq(wildcard_paths.length(), 47)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
   assert_eq(wildcard_paths[17], "std/set.dew")
   assert_eq(wildcard_paths[18], "std/collections/stack.dew")
-  assert_eq(wildcard_paths[19], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[25], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[45], "std/f64x2.dew")
+  assert_eq(wildcard_paths[19], "std/queue.dew")
+  assert_eq(wildcard_paths[20], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[26], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[46], "std/f64x2.dew")
 }
 
 ///|

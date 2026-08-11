@@ -687,6 +687,139 @@ fn starshine_finish_array(
         Some(present),
       ),
     )
+  } else if operation == 18 || operation == 19 {
+    if value_local < 0 {
+      return Err(UnsupportedExpression(body_id, -411))
+    }
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(@lib.Instruction::i32_eqz())
+    let empty : Array[@lib.Instruction] = []
+    match
+      starshine_array_append_option(empty, planned, program, shape, false, []) {
+      Ok(_) => ()
+      Err(_) => return Err(UnsupportedExpression(body_id, -411))
+    }
+    let present : Array[@lib.Instruction] = []
+    append_starshine_instructions(
+      present,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    present.push(starshine_match_cast(array_type))
+    present.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    present.push(
+      @lib.Instruction::array_get(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    present.push(starshine_array_local_set(value_local))
+    if operation == 19 {
+      present.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+      present.push(starshine_array_local_set(index_local))
+      let shift : Array[@lib.Instruction] = []
+      shift.push(starshine_array_local_get(index_local))
+      append_starshine_instructions(
+        shift,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+      )
+      shift.push(@lib.Instruction::i32_ge_u())
+      shift.push(@lib.Instruction::br_if(@lib.LabelIdx::new(1U)))
+      append_starshine_instructions(
+        shift,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+      )
+      shift.push(starshine_match_cast(array_type))
+      shift.push(starshine_array_local_get(index_local))
+      shift.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+      shift.push(@lib.Instruction::i32_sub())
+      append_starshine_instructions(
+        shift,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+      )
+      shift.push(starshine_match_cast(array_type))
+      shift.push(starshine_array_local_get(index_local))
+      shift.push(
+        @lib.Instruction::array_get(
+          @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        ),
+      )
+      shift.push(
+        @lib.Instruction::array_set(
+          @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        ),
+      )
+      shift.push(starshine_array_local_get(index_local))
+      shift.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+      shift.push(@lib.Instruction::i32_add())
+      shift.push(starshine_array_local_set(index_local))
+      shift.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
+      present.push(
+        @lib.Instruction::block(
+          @lib.BlockType::void_(),
+          @lib.Expr::new([
+            @lib.Instruction::loop_(
+              @lib.BlockType::void_(),
+              @lib.Expr::new(shift),
+            ),
+          ]),
+        ),
+      )
+      append_starshine_instructions(
+        present,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+      )
+      present.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+      present.push(@lib.Instruction::i32_sub())
+      present.push(starshine_array_local_set(index_local))
+      let reference_shape = match shape {
+        @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape =>
+          true
+        _ => false
+      }
+      if reference_shape {
+        append_starshine_instructions(
+          present,
+          starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+        )
+        present.push(starshine_match_cast(array_type))
+        present.push(starshine_array_local_get(index_local))
+        present.push(
+          @lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq())),
+        )
+        present.push(
+          @lib.Instruction::array_set(
+            @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+          ),
+        )
+      }
+      present.push(starshine_array_local_get(wrapper_local))
+      present.push(starshine_match_cast(wrapper_type))
+      present.push(starshine_array_local_get(index_local))
+      present.push(
+        @lib.Instruction::struct_set(
+          @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+          @lib.U32::new(1U),
+        ),
+      )
+    }
+    let some : Array[@lib.Instruction] = []
+    match
+      starshine_array_append_option(some, planned, program, shape, true, [
+        starshine_array_local_get(value_local),
+      ]) {
+      Ok(_) => ()
+      Err(_) => return Err(UnsupportedExpression(body_id, -411))
+    }
+    append_starshine_instructions(present, some)
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::eqref_null()),
+        empty,
+        Some(present),
+      ),
+    )
   } else if operation == 11 {
     let reference_shape = match shape {
       @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape =>

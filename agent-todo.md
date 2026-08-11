@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Extend the remaining measured collection families, beginning with circular buffers and queue APIs after the completed Stack tranche.
+1. Replace the measured contiguous Queue baseline with circular-buffer storage, then continue heaps and ordered trees.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
@@ -100,9 +100,9 @@
 - [ ] Specify and benchmark sequence/deque/measure use cases before implementing `dew.std.collections.finger_tree`.
 - [ ] Define and implement `dew.std.list` only if measured workloads justify a persistent list representation.
 - [ ] Add deterministic allocation-free `Hash` implementations for String, StringView, and Bytes after their cross-type equality contract is final.
-- [ ] Define the public `dew.std.queue` API and choose a mutable ring buffer, persistent queue, or separate types.
-- [ ] Implement queue enqueue, dequeue, peek, size, iteration, and empty-queue result semantics.
-- [ ] Benchmark array-backed and linked queue representations.
+- [x] Define the public `dew.std.queue` API behind a representation-independent mutable interface.
+- [x] Implement queue enqueue, dequeue, peek, size, iteration, and empty-queue result semantics.
+- [ ] Replace the measured O(n) contiguous dequeue baseline with circular-buffer storage; benchmark linked/persistent alternatives only if the ring representation misses its budgets.
 - [ ] Define remaining collection mutation and persistence rules.
 - [ ] Benchmark WasmGC arrays and hash buckets against linked and tree representations.
 

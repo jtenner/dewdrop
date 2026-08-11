@@ -16,7 +16,7 @@ fn assert_standard_registry_declaration(
 test "generated standard builtin registry matches collected bootstrap declarations" {
   let source = Buffer()
   source.write_string_utf8(
-    "open dew.std.fixed_array\nopen dew.std.collections.stack\nopen dew.std.map\nopen dew.std.set\n",
+    "open dew.std.fixed_array\nopen dew.std.collections.stack\nopen dew.std.queue\nopen dew.std.map\nopen dew.std.set\n",
   )
   for index in 0..<20 {
     source.write_string_utf8("import ")
@@ -70,6 +70,18 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   assert_eq(
     standard_stack_operation(make_semantic_id(stack.module_id, 10)),
     StackIter,
+  )
+
+  let queue = program.modules[program.module_index("dew.std.queue").unwrap()]
+  assert_eq(queue.module_id, standard_library_module_id(15))
+  assert_standard_registry_declaration(queue, 0, "Queue")
+  assert_eq(
+    standard_queue_operation(make_semantic_id(queue.module_id, 2)),
+    QueueNew,
+  )
+  assert_eq(
+    standard_queue_operation(make_semantic_id(queue.module_id, 12)),
+    QueueIterNext,
   )
 
   let map = program.modules[program.module_index("dew.std.map").unwrap()]
