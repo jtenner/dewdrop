@@ -25,6 +25,19 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+ARM_ORDER = """enum Maybe {
+  Some(I32)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  match Maybe::Some(value) {
+    Maybe::None => 0
+    Maybe::Some(item) => item
+  }
+}
+"""
+
 LOCAL = """enum Maybe {
   Some(I32)
   None
@@ -176,16 +189,18 @@ def main() -> None:
         parser.error("samples and batch must be positive")
     TMP.mkdir(parents=True, exist_ok=True)
     optimized = build("optimized", OPTIMIZED)
+    arm_order = build("arm-order", ARM_ORDER)
     local = build("local", LOCAL)
     struct = build("struct", STRUCT)
     struct_baseline = build("struct-baseline", STRUCT_BASELINE)
     baseline = build("baseline", BASELINE)
     raw = measure(
-        [optimized, local, struct, baseline, struct_baseline],
+        [optimized, arm_order, local, struct, baseline, struct_baseline],
         args.samples,
         args.batch,
     )
     optimized_median = statistics.median(raw[str(optimized)])
+    arm_order_median = statistics.median(raw[str(arm_order)])
     local_median = statistics.median(raw[str(local)])
     struct_median = statistics.median(raw[str(struct)])
     baseline_median = statistics.median(raw[str(baseline)])
@@ -194,20 +209,25 @@ def main() -> None:
         "samples": args.samples,
         "batch": args.batch,
         "optimized_median_us": round(optimized_median, 4),
+        "arm_order_median_us": round(arm_order_median, 4),
         "local_median_us": round(local_median, 4),
         "struct_median_us": round(struct_median, 4),
         "baseline_median_us": round(baseline_median, 4),
         "struct_baseline_median_us": round(struct_baseline_median, 4),
         "direct_ratio": round(optimized_median / baseline_median, 4),
+        "arm_order_ratio": round(arm_order_median / baseline_median, 4),
         "local_ratio": round(local_median / baseline_median, 4),
         "struct_ratio": round(struct_median / struct_baseline_median, 4),
         "optimized_wasm_bytes": optimized.stat().st_size,
+        "arm_order_wasm_bytes": arm_order.stat().st_size,
         "local_wasm_bytes": local.stat().st_size,
         "struct_wasm_bytes": struct.stat().st_size,
         "baseline_wasm_bytes": baseline.stat().st_size,
         "struct_baseline_wasm_bytes": struct_baseline.stat().st_size,
         "optimized_struct_new": wat_count(optimized, "struct.new"),
         "optimized_struct_get": wat_count(optimized, "struct.get"),
+        "arm_order_struct_new": wat_count(arm_order, "struct.new"),
+        "arm_order_struct_get": wat_count(arm_order, "struct.get"),
         "local_struct_new": wat_count(local, "struct.new"),
         "local_struct_get": wat_count(local, "struct.get"),
         "struct_struct_new": wat_count(struct, "struct.new"),

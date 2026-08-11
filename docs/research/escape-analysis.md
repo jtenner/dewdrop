@@ -21,7 +21,7 @@ Wrapper elimination measured 0.9397x the retained runtime, about 6.0% faster, an
 
 ## Fresh tuple-variant payloads
 
-A match over direct fresh tuple-variant construction now eliminates the enum allocation and dispatch when its first arm is unguarded, matches the exact constructor, and directly returns one top-level payload binding. The match expression becomes a `PlannedParameterSelect` over the constructor arguments. Every payload argument still evaluates once in source order, the selected scalar/reference/generic carrier is forwarded directly, and all other arms remain unevaluated. The same proof follows an immutable uncaptured sole-use local when its only read is the match scrutinee: the constructor declaration and local read are elided without moving the selector from the original match location.
+A match over direct fresh tuple-variant construction now eliminates the enum allocation and dispatch when the selected arm is unguarded, matches the exact constructor, and directly returns one top-level payload binding. Preceding exact arms for different constructors are proven disjoint and skipped without evaluating their guards; wildcard, binding, alternative, unknown, or matching guarded arms remain barriers. The match expression becomes a `PlannedParameterSelect` over the constructor arguments. Every payload argument still evaluates once in source order, the selected scalar/reference/generic carrier is forwarded directly, and all other arms remain unevaluated. The same proof follows an immutable uncaptured sole-use local when its only read is the match scrutinee: the constructor declaration and local read are elided without moving the selector from the original match location.
 
 The success snapshots cover tuple scalar/reference payloads and direct plus let-bound struct-variant fields. Struct patterns resolve the returned top-level binding to the constructor field through frozen layout identity/name, then append every constructor initializer to the same source-ordered selector plan. Separate tuple and struct trap fixtures select the second binding but give the first payload an `unreachable` trap and the second an integer divide-by-zero trap; Node and Wago both observe `unreachable`, proving complete payload evaluation order. The success WAT contains no enum construction, constructor test, or payload extraction operation.
 
@@ -29,13 +29,14 @@ The success snapshots cover tuple scalar/reference payloads and direct plus let-
 
 | Form | Median | `struct.new` | `struct.get` | Wasm bytes |
 | --- | ---: | ---: | ---: | ---: |
-| direct tuple payload | 0.0177 µs | 0 | 0 | 440 |
-| immutable tuple local | 0.0171 µs | 0 | 0 | 440 |
-| retained tuple variant | 0.0189 µs | 1 | 2 | 522 |
-| direct struct field | 0.0185 µs | 0 | 0 | 448 |
-| retained struct variant | 0.0189 µs | 1 | 3 | 540 |
+| direct tuple payload | 0.0198 µs | 0 | 0 | 440 |
+| constructor-disjoint preceding arm | 0.0193 µs | 0 | 0 | 440 |
+| immutable tuple local | 0.0189 µs | 0 | 0 | 440 |
+| retained tuple variant | 0.0213 µs | 1 | 2 | 522 |
+| direct struct field | 0.0206 µs | 0 | 0 | 448 |
+| retained struct variant | 0.0217 µs | 1 | 3 | 540 |
 
-Direct and let-bound tuple elimination measured 0.9361x and 0.9044x the retained runtime; struct-field elimination measured 0.9789x. The optimized forms removed 82–92 Wasm bytes and every enum allocation/extraction operation.
+Direct, reordered-arm, and let-bound tuple elimination measured 0.9297x, 0.9063x, and 0.8871x the retained runtime; struct-field elimination measured 0.9494x. The optimized forms removed 82–92 Wasm bytes and every enum allocation/extraction operation.
 
 ## Exact trait-object flow audit
 
@@ -52,4 +53,4 @@ The exact erased path is byte-identical in size and has the same allocation/disp
 
 ## Remaining boundaries
 
-Nested bindings, guards, and broader arm-order proofs remain conservative.
+Nested and alternative bindings, matching-constructor guards, and wildcard/binding interception proofs remain conservative.

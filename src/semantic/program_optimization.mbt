@@ -3515,19 +3515,39 @@ fn scalar_replace_program_variant_payload_match(
     !(module_.expressions[variant_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
     return false
   }
-  let arm = module_.pattern_arms[arms.start]
-  if arm.guard_condition >= 0 ||
-    arm.pattern < 0 ||
-    arm.pattern >= module_.patterns.length() ||
-    arm.body < 0 ||
-    arm.body >= module_.expressions.length() {
-    return false
-  }
-  let root = module_.patterns[arm.pattern]
-  let selected_variant = match root.selected_constructor {
-    VariantInferredPatternConstructor(selected, _) => selected
+  let variant = match module_.expressions[variant_expression].kind {
+    PlannedVariantTupleNew(variant, _, _)
+    | PlannedVariantStructNew(variant, _, _) => variant
     _ => return false
   }
+  let mut selected_arm = -1
+  for index in 0..<arms.length {
+    let candidate = module_.pattern_arms[arms.start + index]
+    if candidate.pattern < 0 ||
+      candidate.pattern >= module_.patterns.length() ||
+      candidate.body < 0 ||
+      candidate.body >= module_.expressions.length() {
+      return false
+    }
+    match module_.patterns[candidate.pattern].selected_constructor {
+      VariantInferredPatternConstructor(candidate_variant, _) if
+        candidate_variant == variant => {
+        if candidate.guard_condition >= 0 {
+          return false
+        }
+        selected_arm = arms.start + index
+        break
+      }
+      VariantInferredPatternConstructor(_, _) => ()
+      _ => return false
+    }
+  }
+  if selected_arm < 0 {
+    return false
+  }
+  let arm = module_.pattern_arms[selected_arm]
+  let root = module_.patterns[arm.pattern]
+  let selected_variant = variant
   let local_id = match module_.expressions[arm.body].kind {
     PlannedLocalGet(local_id) => local_id
     _ => return false

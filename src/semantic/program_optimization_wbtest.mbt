@@ -249,7 +249,7 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"enum Maybe {\n  Some(I32)\n  None\n}\nstruct Token {\n  value: I32\n}\nenum TokenMaybe {\n  Some(Token)\n  None\n}\nenum RecordMaybe {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn project(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_ref(value: Token) -> Token {\n  match TokenMaybe::Some(value) {\n    TokenMaybe::Some(item) => item\n    TokenMaybe::None => Token {\n      value: 0\n    }\n  }\n}\nfn project_local(value: I32) -> I32 {\n  let maybe = Maybe::Some(value)\n  match maybe {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_struct(left: I32, right: I32) -> I32 {\n  match (RecordMaybe::Some {\n    left: left\n    right: right\n  }) {\n    RecordMaybe::Some {\n      left\n      right\n    } => right\n    RecordMaybe::None => 0\n  }\n}\nfn reordered(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\npub fn main() -> I32 {\n  project(5) + project_local(5) + project_struct(1, 10) + project_ref(Token {\n    value: 22\n  }).value + reordered(1)\n}\n",
+          "main.dew", b"enum Maybe {\n  Some(I32)\n  None\n}\nstruct Token {\n  value: I32\n}\nenum TokenMaybe {\n  Some(Token)\n  None\n}\nenum RecordMaybe {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn project(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_ref(value: Token) -> Token {\n  match TokenMaybe::Some(value) {\n    TokenMaybe::Some(item) => item\n    TokenMaybe::None => Token {\n      value: 0\n    }\n  }\n}\nfn project_local(value: I32) -> I32 {\n  let maybe = Maybe::Some(value)\n  match maybe {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_struct(left: I32, right: I32) -> I32 {\n  match (RecordMaybe::Some {\n    left: left\n    right: right\n  }) {\n    RecordMaybe::Some {\n      left\n      right\n    } => right\n    RecordMaybe::None => 0\n  }\n}\nfn reordered(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\nfn wildcard(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    _ => 0\n    Maybe::Some(item) => item\n  }\n}\npub fn main() -> I32 {\n  project(5) + project_local(5) + project_struct(1, 10) + project_ref(Token {\n    value: 22\n  }).value + reordered(1) + wildcard(1)\n}\n",
         ),
       ]),
     ]),
@@ -300,8 +300,22 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
       reordered_matches += 1
     }
   }
-  assert_eq(reordered_variants, 1)
-  assert_eq(reordered_matches, 1)
+  assert_eq(reordered_variants, 0)
+  assert_eq(reordered_matches, 0)
+  let wildcard = collected.lookup_value("wildcard").unwrap()
+  let wildcard_body = collected.body_of(wildcard).unwrap()
+  let mut wildcard_variants = 0
+  let mut wildcard_matches = 0
+  for expression in wildcard_body.expressions.start..<(wildcard_body.expressions.start + wildcard_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+      wildcard_variants += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+      wildcard_matches += 1
+    }
+  }
+  assert_eq(wildcard_variants, 1)
+  assert_eq(wildcard_matches, 1)
 }
 
 ///|
