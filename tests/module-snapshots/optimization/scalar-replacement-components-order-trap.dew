@@ -1,0 +1,22 @@
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  let pair = Pair {
+    left: trap_first()
+    right: trap_second()
+  }
+  let first = pair.left
+  let second = pair.right
+  first + second
+}

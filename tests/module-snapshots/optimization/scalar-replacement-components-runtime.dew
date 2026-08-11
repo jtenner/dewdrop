@@ -1,0 +1,18 @@
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn split(left: I32, right: I32) -> I32 {
+  let pair = Pair {
+    left: left
+    right: right
+  }
+  let first = pair.left
+  let second = pair.right
+  first + second
+}
+
+pub fn main() -> Unit {
+  assert(split(20, 22) == 42, "component aliases")
+}

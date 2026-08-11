@@ -243,6 +243,69 @@ test "adjacent nonescaping struct locals scalar replace" {
 }
 
 ///|
+test "ordered component aliases scalar replace distinct struct fields" {
+  let program = collect_program_manifest(
+    22812UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn split(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let first = pair.left\n  let second = pair.right\n  first + second\n}\nfn reversed(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let second = pair.right\n  let first = pair.left\n  first + second\n}\npub fn main() -> I32 {\n  split(1, 2) + reversed(3, 4)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let split = collected.lookup_value("split").unwrap()
+  let split_source_body = collected.body_of(split).unwrap()
+  let split_body = optimized.modules[0].bodies[
+    semantic_id_local(split_source_body.id)
+  ]
+  let split_block = match split_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected split block")
+  }
+  let split_items = optimized.modules[0].blocks[split_block].items
+  assert_true(
+    optimized.modules[0].block_items[split_items.start].kind
+    is PlannedElidedLetItem(_),
+  )
+  let mut split_field_gets = 0
+  let mut split_struct_news = 0
+  let mut unoptimized_field_gets = 0
+  for expression in split_source_body.expressions.start..<(split_source_body.expressions.start + split_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      split_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      split_struct_news += 1
+    }
+    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      unoptimized_field_gets += 1
+    }
+  }
+  assert_eq(split_field_gets, 0)
+  assert_eq(split_struct_news, 0)
+  assert_eq(unoptimized_field_gets, 2)
+  let reversed = collected.lookup_value("reversed").unwrap()
+  let reversed_source_body = collected.body_of(reversed).unwrap()
+  let mut reversed_field_gets = 0
+  let mut reversed_struct_news = 0
+  for expression in reversed_source_body.expressions.start..<(reversed_source_body.expressions.start + reversed_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      reversed_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      reversed_struct_news += 1
+    }
+  }
+  assert_eq(reversed_field_gets, 2)
+  assert_eq(reversed_struct_news, 1)
+}
+
+///|
 test "repeated same-field struct locals scalar replace into the existing local" {
   let program = collect_program_manifest(
     22811UL,

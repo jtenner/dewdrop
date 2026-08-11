@@ -46,6 +46,7 @@
     {"label":"direct tail recursion budget","wat":"tests/module-snapshots/optimization/tail-recursion-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"return_call":1,"call ":4,"struct.new":2,"i32.add":2,"i32.sub":2}},
     {"label":"immutable field common subexpression budget","wat":"tests/module-snapshots/optimization/common-subexpression-runtime.wat","forbidden":["call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.get":3,"local.get":7,"local.set":2,"struct.new":3}},
     {"label":"sole-use struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-runtime.wat","forbidden":["struct.new","struct.get","call_ref","ref.func","(global","(table"],"counts":{"local.get":2,"local.set":1,"drop":1,"call ":1,"i32.const":3}},
-    {"label":"repeated-field struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-repeated-runtime.wat","forbidden":["struct.get","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"local.get":5,"local.set":1,"drop":2,"i32.add":2}}
+    {"label":"repeated-field struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-repeated-runtime.wat","forbidden":["struct.get","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"local.get":5,"local.set":1,"drop":2,"i32.add":2}},
+    {"label":"ordered component struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-components-runtime.wat","forbidden":["struct.get","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"local.get":4,"local.set":2,"drop":1,"i32.add":1}}
   ]
 }

@@ -2842,6 +2842,116 @@ fn program_local_get_count(
 }
 
 ///|
+fn scalar_replace_ordered_struct_component_aliases(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  items : HirSpan,
+  item_index : Int,
+  local_id : LocalId,
+  initializer : ExprId,
+) -> Bool {
+  if initializer < 0 ||
+    initializer >= module_.expressions.length() ||
+    !(module_.expressions[initializer].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  let fields = match module_.expressions[initializer].kind {
+    PlannedStructNew(_, _, fields) => fields
+    _ => return false
+  }
+  if fields.length < 2 ||
+    fields.start < 0 ||
+    fields.start + fields.length > module_.object_fields.length() ||
+    item_index + fields.length >= items.length {
+    return false
+  }
+  let (use_count, _) = program_local_get_count(module_, body, local_id)
+  if use_count != fields.length {
+    return false
+  }
+  let field_gets : Array[ExprId] = []
+  let base_gets : Array[ExprId] = []
+  let component_locals : Array[LocalId] = []
+  for field_index in 0..<fields.length {
+    let object_field = module_.object_fields[fields.start + field_index]
+    let object_value = object_field.value
+    if object_value < 0 || object_value >= module_.expressions.length() {
+      return false
+    }
+    let (component_local, field_get) = match
+      module_.block_items[items.start + item_index + field_index + 1].kind {
+      PlannedLetItem(component_local, false, field_get) =>
+        (component_local, field_get)
+      _ => return false
+    }
+    if field_get < 0 || field_get >= module_.expressions.length() {
+      return false
+    }
+    let (field, base) = match module_.expressions[field_get].kind {
+      PlannedFieldGet(field, base) => (field, base)
+      _ => return false
+    }
+    if field != object_field.field ||
+      base < 0 ||
+      base >= module_.expressions.length() {
+      return false
+    }
+    let source_local = match module_.expressions[base].kind {
+      PlannedLocalGet(source_local) => source_local
+      _ => return false
+    }
+    if source_local != local_id ||
+      !program_scalar_replaceable_field_shape(
+        module_.expressions[field_get].shape,
+      ) ||
+      module_.expressions[object_value].shape !=
+      module_.expressions[field_get].shape ||
+      module_.expressions[object_value].type_ !=
+      module_.expressions[field_get].type_ ||
+      !(module_.expressions[field_get].trait_object_coercion is NoInferredTraitObjectCoercion) {
+      return false
+    }
+    component_locals.push(component_local)
+    field_gets.push(field_get)
+    base_gets.push(base)
+  }
+  let initializer_source = module_.expressions[initializer]
+  module_.expressions[initializer] = {
+    ..initializer_source,
+    kind: PlannedConsumedExpression,
+  }
+  module_.block_items[items.start + item_index] = {
+    ..module_.block_items[items.start + item_index],
+    kind: PlannedElidedLetItem(local_id),
+  }
+  for field_index in 0..<fields.length {
+    let object_value = module_.object_fields[fields.start + field_index].value
+    let alias_item = items.start + item_index + field_index + 1
+    module_.block_items[alias_item] = {
+      ..module_.block_items[alias_item],
+      kind: PlannedLetItem(
+        component_locals[field_index],
+        false,
+        object_value,
+      ),
+    }
+    let field_get = field_gets[field_index]
+    let field_source = module_.expressions[field_get]
+    module_.expressions[field_get] = {
+      ..field_source,
+      kind: PlannedConsumedExpression,
+    }
+    let base = base_gets[field_index]
+    let base_source = module_.expressions[base]
+    module_.expressions[base] = {
+      ..base_source,
+      kind: PlannedConsumedExpression,
+    }
+  }
+  true
+}
+
+///|
 fn scalar_replace_repeated_same_struct_field_local(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -3050,6 +3160,11 @@ fn scalar_replace_program_struct_field_reads(
             initializer >= module_.expressions.length() ||
             !(module_.expressions[initializer].kind is PlannedStructNew(_, _, _)) ||
             program_cse_local_is_captured(module_, body, local_id) {
+            continue
+          }
+          if scalar_replace_ordered_struct_component_aliases(
+              module_, body, items, index, local_id, initializer,
+            ) {
             continue
           }
           if scalar_replace_repeated_same_struct_field_local(
