@@ -112,7 +112,7 @@ test "dew std wildcard selects every public standard module deterministically" {
     ]),
   )
   assert_eq(program.diagnostics.length(), 0)
-  assert_eq(program.modules.length(), 39)
+  assert_eq(program.modules.length(), 40)
   assert_true(program.module_index("dew.std.string") is Some(_))
   assert_true(program.module_index("dew.std.array") is Some(_))
   assert_true(program.module_index("dew.std.map") is Some(_))
@@ -123,7 +123,7 @@ test "dew std wildcard selects every public standard module deterministically" {
   assert_true(program.module_index("dew.std.f64x2") is Some(_))
   let graph = build_module_dependency_graph(program)
   assert_eq(graph.diagnostics.length(), 0)
-  assert_eq(graph.dependencies[0].length, 37)
+  assert_eq(graph.dependencies[0].length, 38)
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics.length(), 0)
   assert_eq(analyzed.modules[0].names.diagnostics.length(), 0)

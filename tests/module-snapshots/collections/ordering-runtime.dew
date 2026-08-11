@@ -1,0 +1,16 @@
+open dew.std.ordering
+
+fn compare<t: Lt + Eq>(left: t, right: t) -> Ordering {
+  natural_comparator().compare(left, right)
+}
+
+pub fn main() -> Unit {
+  assert(ordering_is_less(compare(1, 2)), "less")
+  assert(ordering_is_equal(compare(7, 7)), "equal")
+  assert(ordering_is_greater(compare(9, 3)), "greater")
+  assert(ordering_is_greater(ordering_reverse(Ordering::Less)), "reverse less")
+  assert(ordering_is_equal(ordering_reverse(Ordering::Equal)), "reverse equal")
+  assert(ordering_is_less(ordering_reverse(Ordering::Greater)), "reverse greater")
+  assert(ordering_is_less(compare(-1i64, 2i64)), "i64 comparator")
+  assert(ordering_is_greater(compare(4.0f64, 3.0f64)), "f64 comparator")
+}

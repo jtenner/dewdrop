@@ -774,6 +774,8 @@ Bodies without member syntax use shared empty member arrays, and selection stora
 
 `dew.std.collections.circular_buffer` defines bounded and growable mutable ring buffers over the six Array carrier families. Bounded push returns false when full. Growable push expands zero capacity to four and otherwise doubles while preserving logical FIFO order. Head and tail positions wrap modulo backing capacity; pop and peek return `Option::None` when empty; pop and clear release removed reference carriers; iteration is stable logical front-to-back.
 
+`dew.std.ordering` defines `Ordering::{Less, Equal, Greater}` and explicit `Comparator<t>` evidence for heaps, trees, sorting, and binary search. `NaturalComparator` supports values with `Lt` and `Eq`; comparator implementations used by ordered collections must define a deterministic total order. Natural floating-point comparison is not a total NaN ordering.
+
 `dew.std.collections.deque` defines a growable double-ended queue over circular-buffer storage. Pushes at either end are O(1) amortized; pops and peeks are O(1); empty boundaries return `Option::None`; iteration remains logical front-to-back.
 
 `dew.std.queue` defines mutable FIFO `Queue<t>` with construction, exact reservation, enqueue, optional dequeue, optional non-mutating front peek, length, emptiness, clear, and explicit iterator functions. Empty dequeue and peek return `Option::None`; aliases observe mutation; iteration is stable front-to-back. Its implementation lowers onto growable circular-buffer storage, giving O(1) amortized enqueue/dequeue with deterministic wraparound.

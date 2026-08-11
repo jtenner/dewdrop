@@ -1,0 +1,60 @@
+pub enum Ordering {
+  Less
+  Equal
+  Greater
+}
+
+pub trait Comparator<t> {
+  fn compare(self, left: t, right: t) -> Ordering
+}
+
+pub struct NaturalComparator {}
+
+pub fn natural_comparator() -> NaturalComparator {
+  NaturalComparator {
+  }
+}
+
+impl<t: Lt + Eq> Comparator<t> for NaturalComparator {
+  fn compare(self, left: t, right: t) -> Ordering {
+    if left < right {
+      Ordering::Less
+    } else if left == right {
+      Ordering::Equal
+    } else {
+      Ordering::Greater
+    }
+  }
+}
+
+pub fn ordering_is_less(value: Ordering) -> Bool {
+  match value {
+    Ordering::Less => true
+    Ordering::Equal => false
+    Ordering::Greater => false
+  }
+}
+
+pub fn ordering_is_equal(value: Ordering) -> Bool {
+  match value {
+    Ordering::Less => false
+    Ordering::Equal => true
+    Ordering::Greater => false
+  }
+}
+
+pub fn ordering_is_greater(value: Ordering) -> Bool {
+  match value {
+    Ordering::Less => false
+    Ordering::Equal => false
+    Ordering::Greater => true
+  }
+}
+
+pub fn ordering_reverse(value: Ordering) -> Ordering {
+  match value {
+    Ordering::Less => Ordering::Greater
+    Ordering::Equal => Ordering::Equal
+    Ordering::Greater => Ordering::Less
+  }
+}

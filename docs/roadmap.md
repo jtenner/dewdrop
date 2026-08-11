@@ -30,8 +30,8 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. implement ordering/comparator foundations, then BinaryHeap, PriorityQueue,
-   and ordered trees now that the mutable ring collection family is complete;
+1. implement BinaryHeap and PriorityQueue over the completed comparator
+   foundation, then ordered trees;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
 3. continue snapshots, measurements, resource budgets, optimization, packaging,

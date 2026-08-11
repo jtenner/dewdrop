@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Implement ordering/comparator foundations, then BinaryHeap, PriorityQueue, and ordered trees.
+1. Implement BinaryHeap and PriorityQueue over the completed comparator foundation, then ordered trees.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
