@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from unittest import mock
@@ -382,6 +382,66 @@ class PackageRootTests(unittest.TestCase):
                     os.environ.pop("DEW_PACKAGE_ROOTS", None)
                 else:
                     os.environ["DEW_PACKAGE_ROOTS"] = previous
+
+
+class CleanCommandTests(unittest.TestCase):
+    def test_clean_removes_configured_cache(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            cache = root / "cache"
+            (cache / "interfaces").mkdir(parents=True)
+            (cache / "interfaces" / "entry.dwi").write_bytes(b"cached")
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.dict(
+                os.environ, {"DEW_CACHE_DIR": "cache"}, clear=False
+            ):
+                output = StringIO()
+                with redirect_stdout(output):
+                    dew_cli.run_clean([])
+                self.assertFalse(cache.exists())
+                self.assertIn("removed Dew cache", output.getvalue())
+
+    def test_clean_dry_run_preserves_cache(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            cache = root / "cache"
+            cache.mkdir()
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.dict(
+                os.environ, {"DEW_CACHE_DIR": "cache"}, clear=False
+            ):
+                output = StringIO()
+                with redirect_stdout(output):
+                    dew_cli.run_clean(["--dry-run"])
+                self.assertTrue(cache.is_dir())
+                self.assertIn("would remove Dew cache", output.getvalue())
+
+    def test_clean_refuses_project_root(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.object(
+                dew_cli, "WORKING_DIRECTORY", root
+            ), mock.patch.dict(
+                os.environ, {"DEW_CACHE_DIR": str(root)}, clear=False
+            ):
+                with self.assertRaisesRegex(
+                    dew_cli.ManifestError, "refusing to clean unsafe cache path"
+                ):
+                    dew_cli.run_clean([])
+
+    def test_clean_unlinks_cache_symlink_without_removing_target(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            target = root / "target"
+            target.mkdir()
+            (target / "keep").write_text("keep", encoding="utf-8")
+            cache = root / "cache-link"
+            cache.symlink_to(target, target_is_directory=True)
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.dict(
+                os.environ, {"DEW_CACHE_DIR": "cache-link"}, clear=False
+            ):
+                with redirect_stdout(StringIO()):
+                    dew_cli.run_clean([])
+                self.assertFalse(cache.exists())
+                self.assertTrue((target / "keep").is_file())
 
 
 if __name__ == "__main__":

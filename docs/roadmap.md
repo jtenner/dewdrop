@@ -721,7 +721,7 @@ count = count + 1
 - [x] `dew test`
 - [ ] `dew fmt`
 - [ ] `dew doc`
-- [ ] `dew clean`
+- [x] `dew clean` with idempotent configured-cache removal, dry-run reporting, symlink safety, and dangerous-root refusal.
 - [x] `--emit hir`
 - [x] `--emit lowering`
 - [x] `--emit wat`

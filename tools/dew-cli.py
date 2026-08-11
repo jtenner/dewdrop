@@ -285,9 +285,41 @@ def _package_artifact_key(lock: LockedPackage) -> str:
     return digest.hexdigest()
 
 
-def _package_cache_root() -> Path:
+def _configured_cache_path() -> Path:
     configured = Path(os.environ.get("DEW_CACHE_DIR", ".dew-cache"))
-    return (configured if configured.is_absolute() else ROOT / configured).resolve()
+    return configured if configured.is_absolute() else ROOT / configured
+
+
+def _package_cache_root() -> Path:
+    return _configured_cache_path().resolve()
+
+
+def run_clean(arguments: list[str]) -> None:
+    dry_run = False
+    for argument in arguments:
+        if argument == "--dry-run":
+            if dry_run:
+                raise ManifestError("--dry-run may be supplied only once")
+            dry_run = True
+        else:
+            raise ManifestError("usage: dew clean [--dry-run]")
+    cache = _configured_cache_path().absolute()
+    resolved = cache.resolve()
+    dangerous = {Path("/"), Path.home().resolve(), ROOT.resolve(), WORKING_DIRECTORY}
+    if resolved in dangerous:
+        raise ManifestError(f"refusing to clean unsafe cache path: {resolved}")
+    exists = cache.exists() or cache.is_symlink()
+    if not exists:
+        print(f"dew cache already clean: {cache}")
+        return
+    if dry_run:
+        print(f"would remove Dew cache: {cache}")
+        return
+    if cache.is_symlink() or cache.is_file():
+        cache.unlink()
+    else:
+        shutil.rmtree(cache)
+    print(f"removed Dew cache: {cache}")
 
 
 def _package_artifact_path(lock: LockedPackage) -> Path:
@@ -1184,6 +1216,9 @@ def main() -> None:
                 raise ManifestError("usage: dew package-integrity MANIFEST")
             package_path = working_path(Path(sys.argv[2]))
             print(package_integrity(package_path))
+            return
+        if command == "clean":
+            run_clean(sys.argv[2:])
             return
         configured = configure_standard_package(sys.argv[2:])
         manifest, remaining = manifest_argument(configured)

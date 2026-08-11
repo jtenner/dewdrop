@@ -175,7 +175,6 @@
 
 - [ ] Implement `dew fmt`.
 - [ ] Implement `dew doc`.
-- [ ] Implement `dew clean`.
 - [ ] Add phase timing and allocation reporting to the CLI.
 - [ ] Define canonical formatting rules.
 - [ ] Implement the formatter over parser ASTs or lossless syntax.

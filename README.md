@@ -724,6 +724,15 @@ tools/dew test path/to/program.dew path/to/program_test.dew
 
 Builds a self-describing test module and runs selected tests.
 
+### Clean compiler caches
+
+```sh
+tools/dew clean
+tools/dew clean --dry-run
+```
+
+Removes the configured `.dew-cache` interface and package artifacts. `--dry-run` prints the selected cache path without changing it.
+
 ### Emit compiler representations
 
 ```sh
