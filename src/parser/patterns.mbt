@@ -367,9 +367,10 @@ fn Parser::parse_pattern_base(
 }
 
 ///|
-fn Parser::parse_pattern_context(
+fn Parser::parse_pattern_context_with_stop(
   self : Parser,
   allow_rest : Bool,
+  stop_left_brace : Bool,
 ) -> Result[Pattern, RecoveryFailure] {
   let mut pattern = match self.parse_pattern_base(allow_rest) {
     Ok(value) => value
@@ -419,6 +420,8 @@ fn Parser::parse_pattern_context(
             }
             pattern = TuplePattern(pattern, arguments, open_offset)
           }
+          @tokenizer.Symbol(@tokenizer.LeftBrace) if stop_left_brace =>
+            return Ok(pattern)
           @tokenizer.Symbol(@tokenizer.LeftBrace) => {
             let open_offset = token.offset()
             self.consume_lookahead()
@@ -434,6 +437,14 @@ fn Parser::parse_pattern_context(
   } nobreak {
     abort("unreachable pattern parser termination")
   }
+}
+
+///|
+fn Parser::parse_pattern_context(
+  self : Parser,
+  allow_rest : Bool,
+) -> Result[Pattern, RecoveryFailure] {
+  self.parse_pattern_context_with_stop(allow_rest, false)
 }
 
 ///|

@@ -329,6 +329,8 @@ boundaries.
 
 ### Deterministic cleanup
 
+- [x] Add Boolean `is` pattern-test expressions with exactly-once scrutinee evaluation, standalone match desugaring, and branch-local bindings for direct `if` conditions and `&&` guards.
+
 - [ ] Add `dew.std.disposable.Disposable` with an explicit cleanup operation and clear ownership/error semantics.
 - [ ] Add `defer` for deterministic scope-exit cleanup, defining LIFO order across normal fallthrough, `return`, `break`, `continue`, and traps or explicitly documenting trap exclusions.
 - [ ] Add `using` for scoped `Disposable` values, lowering it through the same cleanup plan without hidden nondeterministic finalization.

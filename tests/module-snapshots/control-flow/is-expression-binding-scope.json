@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:5:10: error: UnknownValueName(4, 14, 134)\n  |\n5 |   assert(bound == 7, \"binding must not escape\")\n  |          ^"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -62,6 +62,7 @@ pub enum Expr {
   BlockExpr(Block)
   IfExpr(Expr, Block, Expr?, UInt64)
   MatchExpr(Expr, Array[PatternArm], UInt64)
+  IsExpr(Expr, Pattern, UInt64)
   WhileExpr(Expr, Array[PatternArm], UInt64)
   BreakExpr(Expr, UInt64)
   ContinueExpr(Expr, UInt64)
@@ -72,6 +73,32 @@ pub enum Expr {
   QualifiedExpr(Expr, String, UInt64)
   IndexExpr(Expr, Expr, UInt64)
 } derive(Eq, Debug)
+
+///|
+pub fn Expr::desugar_is(self : Expr) -> Expr {
+  match self {
+    IsExpr(scrutinee, pattern, offset) =>
+      MatchExpr(
+        scrutinee,
+        [
+          {
+            pattern,
+            guard_condition: None,
+            body: BoolExpr(true, offset),
+            offset: pattern.offset(),
+          },
+          {
+            pattern: WildcardPattern(offset),
+            guard_condition: None,
+            body: BoolExpr(false, offset),
+            offset,
+          },
+        ],
+        offset,
+      )
+    _ => self
+  }
+}
 
 ///|
 pub fn Expr::offset(self : Expr) -> UInt64 {
@@ -96,6 +123,7 @@ pub fn Expr::offset(self : Expr) -> UInt64 {
     | ConstructExpr(_, _, offset)
     | IfExpr(_, _, _, offset)
     | MatchExpr(_, _, offset)
+    | IsExpr(_, _, offset)
     | WhileExpr(_, _, offset)
     | BreakExpr(_, offset)
     | ContinueExpr(_, offset)

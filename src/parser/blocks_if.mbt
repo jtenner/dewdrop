@@ -255,6 +255,71 @@ fn Parser::consume_expression_left_brace(
 }
 
 ///|
+fn make_if_expression(
+  condition : Expr,
+  then_block : Block,
+  alternative : Expr?,
+  if_offset : UInt64,
+) -> Expr {
+  match condition {
+    BinaryExpr(
+      LogicalAnd,
+      IsExpr(scrutinee, pattern, is_offset),
+      condition_guard,
+      _
+    ) => {
+      let fallback = match alternative {
+        Some(value) => value
+        None => BlockExpr({ items: [], offset: if_offset })
+      }
+      MatchExpr(
+        scrutinee,
+        [
+          {
+            pattern,
+            guard_condition: Some(condition_guard),
+            body: BlockExpr(then_block),
+            offset: pattern.offset(),
+          },
+          {
+            pattern: WildcardPattern(is_offset),
+            guard_condition: None,
+            body: fallback,
+            offset: is_offset,
+          },
+        ],
+        is_offset,
+      )
+    }
+    IsExpr(scrutinee, pattern, is_offset) => {
+      let fallback = match alternative {
+        Some(value) => value
+        None => BlockExpr({ items: [], offset: if_offset })
+      }
+      MatchExpr(
+        scrutinee,
+        [
+          {
+            pattern,
+            guard_condition: None,
+            body: BlockExpr(then_block),
+            offset: pattern.offset(),
+          },
+          {
+            pattern: WildcardPattern(is_offset),
+            guard_condition: None,
+            body: fallback,
+            offset: is_offset,
+          },
+        ],
+        is_offset,
+      )
+    }
+    _ => IfExpr(condition, then_block, alternative, if_offset)
+  }
+}
+
+///|
 fn Parser::parse_if_expression(
   self : Parser,
   if_offset : UInt64,
@@ -275,9 +340,11 @@ fn Parser::parse_if_expression(
     Some(token) =>
       match token.kind() {
         @tokenizer.Keyword(@tokenizer.Else) => self.consume_lookahead()
-        _ => return Ok(IfExpr(condition, then_block, None, if_offset))
+        _ =>
+          return Ok(make_if_expression(condition, then_block, None, if_offset))
       }
-    None => return Ok(IfExpr(condition, then_block, None, if_offset))
+    None =>
+      return Ok(make_if_expression(condition, then_block, None, if_offset))
   }
   let next_if_offset = match self.peek_token() {
     Some(token) =>
@@ -291,7 +358,7 @@ fn Parser::parse_if_expression(
             Err(error) => return Err(error.inside_brace())
           }
           return Ok(
-            IfExpr(
+            make_if_expression(
               condition,
               then_block,
               Some(BlockExpr(else_block)),
@@ -391,7 +458,12 @@ fn Parser::parse_if_expression(
   while index > 0 {
     index -= 1
     branch = Some(
-      IfExpr(conditions[index], blocks[index], branch, offsets[index]),
+      make_if_expression(
+        conditions[index],
+        blocks[index],
+        branch,
+        offsets[index],
+      ),
     )
   }
   Ok(branch.unwrap())

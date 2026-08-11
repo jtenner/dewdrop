@@ -100,7 +100,7 @@ Dew is designed around these priorities, in order:
 Dewdrop currently includes, among other things:
 
 - Fixed-width signed, unsigned, and floating-point numbers.
-- Booleans, tuples, structs, enums, aliases, and pattern matching.
+- Booleans, tuples, structs, enums, aliases, pattern matching, and Boolean `value is Pattern(binding)` tests with branch-local bindings.
 - Traits, implementations, methods, static dispatch, and nominal/scalar/SIMD runtime trait values using typed WasmGC dictionaries.
 - Generic bounds and recursive trait evidence across local, imported, callback, and erased runtime boundaries.
 - Generic functions, structs, and enums using deterministic Wasm carrier specialization.

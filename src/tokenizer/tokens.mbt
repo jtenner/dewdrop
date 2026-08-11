@@ -17,6 +17,7 @@ pub enum Keyword {
   If
   Else
   Match
+  Is
   While
   Loop
   Return
@@ -158,6 +159,7 @@ fn keyword_from_identifier(identifier : String) -> Keyword? {
     "if" => Some(If)
     "else" => Some(Else)
     "match" => Some(Match)
+    "is" => Some(Is)
     "while" => Some(While)
     "loop" => Some(Loop)
     "return" => Some(Return)

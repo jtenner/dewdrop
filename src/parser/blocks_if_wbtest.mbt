@@ -17,6 +17,34 @@ fn nested_else_if_expression(depth : Int) -> Bytes {
 }
 
 ///|
+test "if is condition desugars to a binding match" {
+  match
+    parse_test_expression(
+      b"if get_it(42) is Option::Some(bound) {\n  bound\n} else {\n  0\n}",
+    ) {
+    Ok(
+      MatchExpr(CallExpr(NameExpr("get_it", _), [_], _), [matched, fallback], _)
+    ) => {
+      match matched.pattern {
+        TuplePattern(
+          QualifiedPattern(_, "Some", _),
+          [BindingPattern("bound", _)],
+          _
+        ) => ()
+        _ => fail("expected constructor binding pattern")
+      }
+      match matched.body {
+        BlockExpr(block) =>
+          assert_eq(block.tail_expression(), Some(NameExpr("bound", 41UL)))
+        _ => fail("expected true branch block")
+      }
+      assert_true(fallback.pattern is WildcardPattern(_))
+    }
+    _ => fail("expected if-is match desugaring")
+  }
+}
+
+///|
 test "if without else retains a unit-capable optional branch" {
   match parse_test_expression(b"if ready {\n  run()\n}") {
     Ok(IfExpr(NameExpr("ready", _), block, None, 0UL)) => {

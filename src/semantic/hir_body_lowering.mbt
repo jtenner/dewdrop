@@ -223,6 +223,10 @@ fn CollectionBuilder::visit_expr_source(
       self.schedule_block(block)
       self.schedule_expr(condition)
     }
+    @parser.IsExpr(_, _, _) => {
+      self.body_expr_sources[source_index] = source.desugar_is()
+      self.push_body_task(body_visit_expr, source_index, 0, 0)
+    }
     @parser.MatchExpr(scrutinee, arms, _)
     | @parser.WhileExpr(scrutinee, arms, _) => {
       let expr_start = self.body_expr_results.length()

@@ -338,6 +338,35 @@ fn push_binary_operator(
 }
 
 ///|
+fn reduce_for_is(
+  values : Array[Expr],
+  operator_codes : Array[Int],
+  operator_offsets : Array[UInt64],
+  offset : UInt64,
+) -> Result[Unit, RecoveryFailure] {
+  while operator_codes.length() > 0 {
+    let top_code = operator_codes[operator_codes.length() - 1]
+    if top_code == pending_group_code {
+      break
+    }
+    if top_code >= pending_binary_base {
+      let top_operator = binary_operator_from_code(top_code)
+      if is_comparison_operator(top_operator) {
+        return Err(expression_failure(ChainedComparison(offset)))
+      }
+      if binary_precedence(top_operator) < 8 {
+        break
+      }
+    }
+    match reduce_top(values, operator_codes, operator_offsets) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  }
+  Ok(())
+}
+
+///|
 fn end_group(
   values : Array[Expr],
   operator_codes : Array[Int],
@@ -896,6 +925,37 @@ fn Parser::parse_expression_context(
                     nested_groups,
                   ),
                 )
+              }
+              @tokenizer.Keyword(@tokenizer.Is) => {
+                self.consume_lookahead()
+                match
+                  reduce_for_is(
+                    values, operator_codes, operator_offsets, offset,
+                  ) {
+                  Ok(_) => ()
+                  Err(error) =>
+                    return Err(error.inside_parentheses_count(nested_groups))
+                }
+                let scrutinee = match pop_expression(values) {
+                  Some(value) => value
+                  None =>
+                    return Err(
+                      expression_failure(MissingOperand(offset)).inside_parentheses_count(
+                        nested_groups,
+                      ),
+                    )
+                }
+                let pattern = match
+                  self.parse_pattern_context_with_stop(
+                    false,
+                    expression_stops_at(stop_bits, expression_stop_left_brace) &&
+                    nested_groups == 0,
+                  ) {
+                  Ok(value) => value
+                  Err(error) =>
+                    return Err(error.inside_parentheses_count(nested_groups))
+                }
+                values.push(IsExpr(scrutinee, pattern, offset))
               }
               @tokenizer.Symbol(@tokenizer.LeftBrace) if expression_stops_at(
                   stop_bits, expression_stop_left_brace,

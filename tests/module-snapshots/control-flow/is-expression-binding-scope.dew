@@ -1,0 +1,6 @@
+pub fn main() -> Unit {
+  if Option::Some(7) is Option::Some(bound) {
+    assert(bound == 7, "bound in matching branch")
+  }
+  assert(bound == 7, "binding must not escape")
+}

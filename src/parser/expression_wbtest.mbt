@@ -74,6 +74,51 @@ test "exponentiation is right associative" {
 }
 
 ///|
+test "is parses a constructor pattern as a boolean expression" {
+  assert_eq(
+    parse_test_expression(b"value is Option::Some(bound)"),
+    Ok(
+      IsExpr(
+        NameExpr("value", 0UL),
+        TuplePattern(
+          QualifiedPattern(BindingPattern("Option", 9UL), "Some", 15UL),
+          [BindingPattern("bound", 22UL)],
+          21UL,
+        ),
+        6UL,
+      ),
+    ),
+  )
+}
+
+///|
+test "is binds more tightly than logical conjunction" {
+  match parse_test_expression(b"ready && value is Option::Some(bound)") {
+    Ok(
+      BinaryExpr(
+        LogicalAnd,
+        NameExpr("ready", _),
+        IsExpr(NameExpr("value", _), _, _),
+        _
+      )
+    ) => ()
+    _ => fail("expected is expression on the right of logical conjunction")
+  }
+}
+
+///|
+test "is reports missing and invalid patterns" {
+  assert_eq(
+    parse_test_expression(b"value is"),
+    Err(MatchPatternError(ExpectedPattern(None))),
+  )
+  assert_eq(
+    parse_test_expression(b"value is ..."),
+    Err(MatchPatternError(RestPatternNotAllowed(9UL))),
+  )
+}
+
+///|
 test "assignment is not an expression operator" {
   let parser = Parser::from_bytes(b"a = b")
   assert_eq(parser.parse_expression(), Ok(NameExpr("a", 0UL)))

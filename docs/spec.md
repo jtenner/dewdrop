@@ -524,6 +524,30 @@ Typing applies these rules after parsing:
 
 Implicit Unit is a semantic/lowering rule and does not require an allocated `UnitExpr` node.
 
+Pattern-test expressions use:
+
+```text
+is-expression = expression "is" pattern
+```
+
+```dew
+let present = get_it(42) is Option::Some(_)
+
+if get_it(42) is Option::Some(value) {
+  use(value)
+}
+
+if get_it(42) is Option::Some(value) && value > 0 {
+  use(value)
+}
+```
+
+An `is` expression evaluates its left operand exactly once, tests it against the pattern, and produces `Bool`. It has comparison-level precedence: arithmetic and postfix operations bind inside its scrutinee, while logical conjunction and disjunction bind outside it. As with other comparison operators, an ungrouped comparison may not be chained into the scrutinee.
+
+An `is` expression used directly as an if condition is lowered as a two-arm match. Bindings from the pattern are immutable and available only in the successful then block. When the direct condition is followed by `&&`, those bindings are also in scope in the conjunction's right-hand guard. They do not escape the successful branch and are not introduced by a standalone Boolean use such as `let present = value is Option::Some(_)`. A failed pattern selects the else branch, or implicit Unit when no else is present.
+
+The parser retains `IsExpr` long enough to establish this conditional binding scope. Standalone uses are deterministically desugared to an ordered match returning `true` or `false`, so executable lowering shares match semantics and introduces no second scrutinee evaluation. As with constructor-valued if conditions, a struct pattern in an if condition must be parenthesized so its `{ ... }` cannot be mistaken for the if body: `if (value is Point { x ... }) { ... }`.
+
 Match expressions use a separate pattern parser:
 
 ```text

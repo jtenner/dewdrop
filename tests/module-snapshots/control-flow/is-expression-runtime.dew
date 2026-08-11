@@ -1,0 +1,63 @@
+struct Point {
+  x: I32
+  y: I32
+}
+
+fn get_it(value: I32) -> Option<I32> {
+  if value == 42 {
+    Option::Some(value + 1)
+  } else {
+    Option::None
+  }
+}
+
+pub fn main() -> Unit {
+  assert(42 is 42, "literal pattern matches")
+  assert(!(42 is 41), "literal pattern rejects mismatch")
+  let point = Point {
+    x: 3
+    y: 4
+  }
+  assert(point is Point {
+    x: 3
+    ...
+  }, "standalone struct pattern")
+  if get_it(42) is Option::Some(bound) {
+    assert(bound == 43, "pattern binding enters true branch")
+  } else {
+    assert(false, "some value should match")
+  }
+
+  if get_it(42) is Option::Some(bound) && bound == 43 {
+    assert(bound == 43, "binding enters conjunction guard")
+  } else {
+    assert(false, "guarded pattern should match")
+  }
+
+  let missing = if get_it(0) is Option::Some(bound) {
+    bound
+  } else {
+    -1
+  }
+  assert(missing == -1, "else branch handles mismatch")
+  assert(get_it(42) is Option::Some(_), "is is a boolean expression")
+  assert(get_it(0) is Option::None, "unit variant pattern")
+  assert(!(get_it(0) is Option::Some(_)), "grouped is supports prefix operators")
+
+  let mut calls = 0
+  let next = fn() -> Option<I32> {
+    calls = calls + 1
+    Option::Some(calls)
+  }
+  if next() is Option::Some(value) {
+    assert(value == 1, "single evaluation preserves bound value")
+  }
+  assert(calls == 1, "is scrutinee evaluates exactly once")
+
+  if (point is Point {
+    y: bound
+    ...
+  }) {
+    assert(bound == 4, "grouped struct condition binds")
+  }
+}
