@@ -49,6 +49,7 @@
     {"label":"repeated-field struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-repeated-runtime.wat","forbidden":["struct.get","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"local.get":5,"local.set":1,"drop":2,"i32.add":2}},
     {"label":"ordered component struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-components-runtime.wat","forbidden":["struct.get","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"local.get":4,"local.set":2,"drop":1,"i32.add":1}},
     {"label":"if-join struct scalar replacement budget","wat":"tests/module-snapshots/optimization/scalar-replacement-join-runtime.wat","forbidden":["struct.get","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":2,"local.get":6,"local.set":1,"drop":4,"if":3,"else":1}},
-    {"label":"nonescaping box wrapper elimination budget","wat":"tests/module-snapshots/optimization/box-escape-runtime.wat","forbidden":["call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"struct.get":2,"local.get":4,"local.set":1,"i32.add":1}}
+    {"label":"nonescaping box wrapper elimination budget","wat":"tests/module-snapshots/optimization/box-escape-runtime.wat","forbidden":["call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"struct.get":2,"local.get":4,"local.set":1,"i32.add":1}},
+    {"label":"fresh enum payload escape elimination budget","wat":"tests/module-snapshots/optimization/enum-payload-escape-runtime.wat","forbidden":["ref.test","br_on_cast","call_ref","ref.func","(global","(table","local.tee"],"counts":{"struct.new":1,"struct.get":1,"ref.cast":1,"local.get":2,"i32.add":1}}
   ]
 }

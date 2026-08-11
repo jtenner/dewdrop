@@ -143,7 +143,7 @@
 
 ## Optimization and performance discipline
 
-- [ ] Add fresh enum-payload escape analysis; nonescaping singleton reference/generic boxes and exact-flow trait objects are eliminated.
+- [ ] Extend direct fresh tuple-variant payload elimination to let-bound, struct-variant, nested-pattern, guarded, and broader arm-order cases; boxes and exact-flow trait objects are eliminated.
 - [ ] Extend scalar replacement beyond fresh `if` joins and ordered one-to-one component aliases to match joins plus reordered/missing components with synthesized component-local planning.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
 - [ ] Specialize enum representations from frozen usage/layout data.

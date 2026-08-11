@@ -243,6 +243,64 @@ test "adjacent nonescaping struct locals scalar replace" {
 }
 
 ///|
+test "fresh tuple variant payload projections eliminate nonescaping enums" {
+  let program = collect_program_manifest(
+    22815UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32)\n  None\n}\nstruct Token {\n  value: I32\n}\nenum TokenMaybe {\n  Some(Token)\n  None\n}\nfn project(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_ref(value: Token) -> Token {\n  match TokenMaybe::Some(value) {\n    TokenMaybe::Some(item) => item\n    TokenMaybe::None => Token {\n      value: 0\n    }\n  }\n}\nfn reordered(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\npub fn main() -> I32 {\n  project(20) + project_ref(Token {\n    value: 22\n  }).value + reordered(1)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  for name in ["project", "project_ref"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let source_body = collected.body_of(declaration).unwrap()
+    let mut optimized_variants = 0
+    let mut optimized_matches = 0
+    let mut selects = 0
+    let mut unoptimized_variants = 0
+    for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+      if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+        optimized_variants += 1
+      }
+      if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+        optimized_matches += 1
+      }
+      if optimized.modules[0].expressions[expression].kind is PlannedParameterSelect(_, 0) {
+        selects += 1
+      }
+      if unoptimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+        unoptimized_variants += 1
+      }
+    }
+    assert_eq(optimized_variants, 0)
+    assert_eq(optimized_matches, 0)
+    assert_eq(selects, 1)
+    assert_eq(unoptimized_variants, 1)
+  }
+  let reordered = collected.lookup_value("reordered").unwrap()
+  let reordered_body = collected.body_of(reordered).unwrap()
+  let mut reordered_variants = 0
+  let mut reordered_matches = 0
+  for expression in reordered_body.expressions.start..<(reordered_body.expressions.start + reordered_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+      reordered_variants += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+      reordered_matches += 1
+    }
+  }
+  assert_eq(reordered_variants, 1)
+  assert_eq(reordered_matches, 1)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,

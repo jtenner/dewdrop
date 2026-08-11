@@ -1,0 +1,35 @@
+enum Maybe {
+  Some(I32)
+  None
+}
+
+struct Token {
+  value: I32
+}
+
+enum TokenMaybe {
+  Some(Token)
+  None
+}
+
+fn project(value: I32) -> I32 {
+  match Maybe::Some(value) {
+    Maybe::Some(item) => item
+    Maybe::None => 0
+  }
+}
+
+fn project_ref(value: Token) -> Token {
+  match TokenMaybe::Some(value) {
+    TokenMaybe::Some(item) => item
+    TokenMaybe::None => Token {
+      value: 0
+    }
+  }
+}
+
+pub fn main() -> I32 {
+  project(20) + project_ref(Token {
+    value: 22
+  }).value
+}

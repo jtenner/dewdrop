@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Benchmark direct fresh tuple-variant payload escape elimination."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import statistics
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+TMP = ROOT / ".tmp" / "enum-payload-escape-benchmark"
+
+OPTIMIZED = """enum Maybe {
+  Some(I32)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  match Maybe::Some(value) {
+    Maybe::Some(item) => item
+    Maybe::None => 0
+  }
+}
+"""
+
+BASELINE = """enum Maybe {
+  Some(I32)
+  None
+}
+
+fn retain(value: Maybe) -> Maybe {
+  value
+}
+
+pub fn main(value: I32) -> I32 {
+  match retain(Maybe::Some(value)) {
+    Maybe::Some(item) => item
+    Maybe::None => 0
+  }
+}
+"""
+
+
+def build(name: str, text: str) -> Path:
+    source = TMP / f"{name}.dew"
+    wasm = TMP / f"{name}.wasm"
+    source.write_text(text, encoding="utf-8")
+    subprocess.run(
+        [str(ROOT / "tools" / "dew"), "build", str(source), "-o", str(wasm)],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+    return wasm
+
+
+def measure(paths: list[Path], samples: int, batch: int) -> dict[str, list[float]]:
+    runner = r"""
+const fs = require('fs');
+const { performance } = require('perf_hooks');
+(async () => {
+  const samples = Number(process.argv[1]);
+  const batch = Number(process.argv[2]);
+  const paths = process.argv.slice(3);
+  const instances = [];
+  const report = {};
+  for (const path of paths) {
+    const { instance } = await WebAssembly.instantiate(fs.readFileSync(path), {});
+    for (let i = 0; i < 10000; i++) if (instance.exports.main(42) !== 42) throw new Error('bad result');
+    instances.push(instance);
+    report[path] = [];
+  }
+  for (let sample = 0; sample < samples; sample++) {
+    for (let offset = 0; offset < paths.length; offset++) {
+      const index = (sample + offset) % paths.length;
+      const start = performance.now();
+      for (let iteration = 0; iteration < batch; iteration++) {
+        if (instances[index].exports.main(42) !== 42) throw new Error('bad result');
+      }
+      report[paths[index]].push((performance.now() - start) * 1000 / batch);
+    }
+  }
+  process.stdout.write(JSON.stringify(report));
+})().catch(error => { console.error(error); process.exit(1); });
+"""
+    completed = subprocess.run(
+        ["node", "-e", runner, str(samples), str(batch), *(str(path) for path in paths)],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(completed.stdout)
+
+
+def wat_count(path: Path, instruction: str) -> int:
+    wat = subprocess.run(
+        ["wasm-tools", "print", str(path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return wat.count(instruction)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--samples", type=int, default=10000)
+    parser.add_argument("--batch", type=int, default=100)
+    args = parser.parse_args()
+    if args.samples < 1 or args.batch < 1:
+        parser.error("samples and batch must be positive")
+    TMP.mkdir(parents=True, exist_ok=True)
+    optimized = build("optimized", OPTIMIZED)
+    baseline = build("baseline", BASELINE)
+    raw = measure([optimized, baseline], args.samples, args.batch)
+    optimized_median = statistics.median(raw[str(optimized)])
+    baseline_median = statistics.median(raw[str(baseline)])
+    print(json.dumps({
+        "samples": args.samples,
+        "batch": args.batch,
+        "optimized_median_us": round(optimized_median, 4),
+        "baseline_median_us": round(baseline_median, 4),
+        "ratio": round(optimized_median / baseline_median, 4),
+        "optimized_wasm_bytes": optimized.stat().st_size,
+        "baseline_wasm_bytes": baseline.stat().st_size,
+        "optimized_struct_new": wat_count(optimized, "struct.new"),
+        "optimized_struct_get": wat_count(optimized, "struct.get"),
+        "baseline_struct_new": wat_count(baseline, "struct.new"),
+        "baseline_struct_get": wat_count(baseline, "struct.get"),
+    }, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

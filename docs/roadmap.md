@@ -614,7 +614,7 @@ count = count + 1
 - [x] Add deterministic immutable-summary inlining for non-generic scalar parameter selectors and zero-argument scalar constants, preserving argument evaluation order.
 - [x] Add direct scalar-carrier tail-recursion optimization with preserved argument order, deep stack-safety coverage, visible non-tail/reference calls, and Node/Wago parity.
 - [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
-- [ ] Add fresh enum-payload escape analysis; nonescaping singleton reference/generic boxes and exact-flow trait objects already eliminate their wrappers and dispatch artifacts.
+- [ ] Extend direct fresh tuple-variant payload elimination to let-bound, struct-variant, nested-pattern, guarded, and broader arm-order cases; nonescaping singleton boxes and exact-flow trait objects already eliminate wrappers and dispatch artifacts.
 - [x] Scalar-replace supported field projections from fresh construction and immutable uncaptured sole-use locals across total/discardable lexical gaps while evaluating every initializer once in source order.
 - [ ] Extend scalar replacement beyond fresh `if` joins to match joins and reordered/missing distinct-field uses with synthesized component-local planning; repeated reads reuse the aggregate local, while adjacent one-to-one aliases in constructor order reuse existing component locals.
 - [x] Devirtualize trait-object calls when prerequisite-aware flow analysis proves exact evidence through locals, branches, parameter returns, and effect-free forwarding chains.

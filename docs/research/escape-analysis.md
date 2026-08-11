@@ -19,6 +19,21 @@ The `optimization/box-escape-runtime` snapshot covers both a nominal reference b
 
 Wrapper elimination measured 0.9397x the retained runtime, about 6.0% faster, and removed one allocation, one field read, and 30 Wasm bytes.
 
+## Fresh tuple-variant payloads
+
+A match over direct fresh tuple-variant construction now eliminates the enum allocation and dispatch when its first arm is unguarded, matches the exact constructor, and directly returns one top-level payload binding. The match expression becomes a `PlannedParameterSelect` over the constructor arguments. Every payload argument still evaluates once in source order, the selected scalar/reference/generic carrier is forwarded directly, and all other arms remain unevaluated.
+
+The success snapshot covers scalar and nominal-reference payloads. A separate two-payload trap fixture selects the second binding but gives the first payload an `unreachable` trap and the second an integer divide-by-zero trap; Node and Wago both observe `unreachable`, proving complete payload evaluation order. The success WAT contains no enum construction, constructor test, or payload extraction operation.
+
+`tools/benchmark-enum-payload-escape.py` measured direct fresh projection against a variant passed through a reference-returning helper over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
+
+| Form | Median | `struct.new` | `struct.get` | Wasm bytes |
+| --- | ---: | ---: | ---: | ---: |
+| direct fresh payload | 0.0161 µs | 0 | 0 | 440 |
+| retained variant | 0.0180 µs | 1 | 2 | 522 |
+
+Payload elimination measured 0.8946x the retained runtime, about 10.5% faster, and removed 82 Wasm bytes.
+
 ## Remaining boundaries
 
-Fresh enum payload projection is the next allocation boundary. Exact-flow trait-object escape analysis already removes envelopes, scalar/SIMD boxes, dictionaries, adapters, globals, `ref.func`, and `call_ref` when every use remains exact and nonescaping; a separate audit and contractual benchmark will close that roadmap item explicitly.
+Let-bound variants, struct-variant payloads, nested bindings, guards, and broader arm-order proofs remain conservative. Exact-flow trait-object escape analysis already removes envelopes, scalar/SIMD boxes, dictionaries, adapters, globals, `ref.func`, and `call_ref` when every use remains exact and nonescaping; a separate audit and contractual benchmark will close that roadmap item explicitly.

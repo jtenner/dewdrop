@@ -3479,6 +3479,107 @@ fn scalar_replace_program_struct_field_reads(
 }
 
 ///|
+fn scalar_replace_program_variant_payload_reads(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    for expression in 0..<module_.expressions.length() {
+      let source = module_.expressions[expression]
+      let (scrutinee, arms) = match source.kind {
+        PlannedMatchExpression(scrutinee, arms) => (scrutinee, arms)
+        _ => continue
+      }
+      if scrutinee < 0 ||
+        scrutinee >= module_.expressions.length() ||
+        arms.length == 0 ||
+        arms.start < 0 ||
+        arms.start + arms.length > module_.pattern_arms.length() ||
+        !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
+        continue
+      }
+      let (variant, arguments) = match module_.expressions[scrutinee].kind {
+        PlannedVariantTupleNew(variant, _, arguments) => (variant, arguments)
+        _ => continue
+      }
+      if arguments.length == 0 ||
+        arguments.start < 0 ||
+        arguments.start + arguments.length > module_.expression_children.length() ||
+        !(module_.expressions[scrutinee].trait_object_coercion is NoInferredTraitObjectCoercion) {
+        continue
+      }
+      let arm = module_.pattern_arms[arms.start]
+      if arm.guard_condition >= 0 ||
+        arm.pattern < 0 ||
+        arm.pattern >= module_.patterns.length() ||
+        arm.body < 0 ||
+        arm.body >= module_.expressions.length() {
+        continue
+      }
+      let root = module_.patterns[arm.pattern]
+      let children = match root.source {
+        HirTuplePattern(_, children, _) => children
+        _ => continue
+      }
+      let selected_variant = match root.selected_constructor {
+        VariantInferredPatternConstructor(selected, _) => selected
+        _ => continue
+      }
+      if selected_variant != variant ||
+        children.length != arguments.length ||
+        children.start < 0 ||
+        children.start + children.length > module_.pattern_children.length() {
+        continue
+      }
+      let local_id = match module_.expressions[arm.body].kind {
+        PlannedLocalGet(local_id) => local_id
+        _ => continue
+      }
+      let mut selected = -1
+      for index in 0..<children.length {
+        let pattern = module_.pattern_children[children.start + index]
+        if pattern < 0 || pattern >= module_.patterns.length() {
+          selected = -2
+          break
+        }
+        match module_.patterns[pattern].reference {
+          PatternBindingReference(binding) if binding == local_id => {
+            if selected >= 0 {
+              selected = -2
+              break
+            }
+            selected = index
+          }
+          _ => ()
+        }
+      }
+      if selected < 0 {
+        continue
+      }
+      let payload = module_.expression_children[arguments.start + selected]
+      if payload < 0 ||
+        payload >= module_.expressions.length() ||
+        module_.expressions[payload].type_ != source.type_ ||
+        module_.expressions[payload].shape != source.shape ||
+        (!program_scalar_replaceable_field_shape(source.shape) &&
+        !(arguments.length == 1 &&
+        ((source.shape is RefPlannedValueShape) ||
+        (source.shape is GenericPlannedValueShape)))) {
+        continue
+      }
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedParameterSelect(arguments, selected),
+      }
+      let scrutinee_source = module_.expressions[scrutinee]
+      module_.expressions[scrutinee] = {
+        ..scrutinee_source,
+        kind: PlannedConsumedExpression,
+      }
+    }
+  }
+}
+
+///|
 fn mark_tail_recursive_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -3641,6 +3742,7 @@ pub fn optimize_program_lowering(
   )
   cse_program_field_extractions(modules)
   scalar_replace_program_struct_field_reads(modules, effects)
+  scalar_replace_program_variant_payload_reads(modules)
   mark_program_tail_recursion(modules)
   {
     graph: lowering.graph,
