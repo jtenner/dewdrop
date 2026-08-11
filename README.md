@@ -110,7 +110,7 @@ Dewdrop currently includes, among other things:
 - Immutable and mutable local variables, including captured mutable variables.
 - Multi-file modules and statically linked multi-module programs.
 - Strict UTF-8 `String` and `StringView` values.
-- Arbitrary `Bytes` values, consuming string/byte builders, deterministic allocation-free text hashing, and explicit lexicographic String/StringView/Bytes comparators.
+- Arbitrary `Bytes` values, consuming string/byte builders, deterministic allocation-free text hashing, explicit lexicographic String/StringView/Bytes comparators, and strict UTF-8 code-point iterators.
 - Explicit `Ordering`/`Comparator` evidence for deterministic ordered collections.
 - Carrier-specialized `FixedArray`, growable `Array`, bounded/growable circular buffers, comparator-driven `BinaryHeap`, `PriorityQueue`, red-black trees, ordered maps, ordered sets, and builder-backed Unit/primitive and derived `Show` formatting, and explicit `Disposable` cleanup evidence, and deterministic LIFO `defer`, scoped `using`, and fixed-point primitive constant folding and immutable-summary scalar inlining, Core 3 direct tail recursion, and immutable scalar-field common-subexpression elimination and fresh/pure-gap-sole-use struct scalar replacement, double-ended `Deque`, LIFO `Stack`, FIFO `Queue`, and mutable `Map` and `Set` collections with explicit iterators.
 - Native SIMD and allocation-free packed-lane operations.

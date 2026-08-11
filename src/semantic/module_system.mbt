@@ -299,6 +299,9 @@ pub fn required_standard_library_source_paths(
         required.push(path)
       }
     }
+    if (text_mask & 16) != 0 {
+      required.push("std/text.dew")
+    }
   }
   if include_wasi {
     required.push("std/wasi.dew")
@@ -779,7 +782,7 @@ pub fn collect_program_manifest_with_standard_sources(
     let text_files = [
       "std/string.dew", "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew",
     ]
-    for source_index in 1..<=5 {
+    for source_index in 1..<5 {
       if (selected_text_mask & (1 << (source_index - 1))) == 0 {
         continue
       }
@@ -800,6 +803,24 @@ pub fn collect_program_manifest_with_standard_sources(
         ),
       )
     }
+  }
+  if (selected_text_mask & 16) != 0 {
+    let module_id = standard_library_module_id(46)
+    let module_index = modules.length()
+    first_module["dew.std.text"] = module_index
+    module_paths.push("dew.std.text")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/text.dew",
+          standard_sources.source("std/text.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
   }
   if selected_show {
     let module_id = standard_library_module_id(44)

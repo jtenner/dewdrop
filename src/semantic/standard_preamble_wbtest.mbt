@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 57)
+  assert_eq(wildcard_paths.length(), 58)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -52,8 +52,9 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[28], "std/show.dew")
   assert_eq(wildcard_paths[29], "std/disposable.dew")
   assert_eq(wildcard_paths[30], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[36], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[56], "std/f64x2.dew")
+  assert_eq(wildcard_paths[35], "std/text.dew")
+  assert_eq(wildcard_paths[37], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[57], "std/f64x2.dew")
 }
 
 ///|
@@ -67,6 +68,20 @@ test "standard import prepass selects split module bits" {
       ),
     ]),
     (9, false, false, true, false, false, false, false, false, 0, 0),
+  )
+}
+
+///|
+test "standard import prepass selects text iteration dependencies" {
+  let module_id = 996UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.text\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (17, false, false, false, false, true, false, false, false, 0, 0),
   )
 }
 

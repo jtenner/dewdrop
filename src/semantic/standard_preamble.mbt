@@ -57,7 +57,7 @@ fn selected_standard_modules(
             import_.path.length() == 2 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {
-            text_mask = 15
+            text_mask = 31
             wasi = true
             lane_mask = 1048575
             wasm_intrinsics = true
@@ -97,6 +97,10 @@ fn selected_standard_modules(
               "string_builder" => text_mask = text_mask | 2
               "bytes_builder" => text_mask = text_mask | 4
               "bytes" => text_mask = text_mask | 8
+              "text" => {
+                text_mask = text_mask | 17
+                fixed_array = true
+              }
               "wasi" => wasi = true
               "fixed_array" => fixed_array = true
               "array" => array = true

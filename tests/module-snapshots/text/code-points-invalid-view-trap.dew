@@ -1,0 +1,6 @@
+open dew.std.string
+open dew.std.text
+
+pub fn main() -> U32 {
+  "é".view(1u32, 1u32).code_points().next()
+}
