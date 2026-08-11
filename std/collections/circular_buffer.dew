@@ -16,3 +16,6 @@ pub builtin circular_buffer_clear<t>(buffer: CircularBuffer<t>) -> Unit = "dew_c
 pub builtin circular_buffer_iter<t>(buffer: CircularBuffer<t>) -> CircularBufferIter<t> = "dew_circular_buffer_iter"
 pub builtin circular_buffer_iter_has_next<t>(iter: CircularBufferIter<t>) -> Bool = "dew_circular_buffer_iter_has_next"
 pub builtin circular_buffer_iter_next<t>(iter: CircularBufferIter<t>) -> t = "dew_circular_buffer_iter_next"
+pub builtin circular_buffer_push_front<t>(buffer: CircularBuffer<t>, value: t) -> Bool = "dew_circular_buffer_push_front"
+pub builtin circular_buffer_pop_back<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_pop_back"
+pub builtin circular_buffer_peek_back<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_peek_back"

@@ -95,6 +95,7 @@ pub enum PlannedExpressionKind {
   PlannedCircularBufferNew(ExprId, PlannedValueShape, Bool)
   PlannedCircularBufferNewZero(PlannedValueShape)
   PlannedQueueRingEnqueue(ExprId, ExprId, PlannedValueShape)
+  PlannedDequeRingPushFront(ExprId, ExprId, PlannedValueShape)
   PlannedCircularBufferCapacity(ExprId, PlannedValueShape)
   PlannedCircularBufferIsFull(ExprId, PlannedValueShape)
   PlannedCircularBufferPushBack(ExprId, ExprId, PlannedValueShape)
@@ -104,6 +105,9 @@ pub enum PlannedExpressionKind {
   PlannedCircularBufferIter(ExprId, PlannedValueShape)
   PlannedCircularBufferIterHasNext(ExprId)
   PlannedCircularBufferIterNext(ExprId, PlannedValueShape)
+  PlannedCircularBufferPushFront(ExprId, ExprId, PlannedValueShape)
+  PlannedCircularBufferPopBack(ExprId, PlannedValueShape)
+  PlannedCircularBufferPeekBack(ExprId, PlannedValueShape)
   PlannedMapSingleton(
     ExprId,
     ExprId,
@@ -864,7 +868,8 @@ fn plan_expression_kind(
             _ => standard_array_operation(declaration)
           }
           let array_operation = stack_or_array_operation
-          let ring_operation = match standard_queue_operation(declaration) {
+          let queue_or_circular_operation = match
+            standard_queue_operation(declaration) {
             QueueNew => QueueNew
             QueueWithCapacity => CircularBufferGrowable
             QueueLength => CircularBufferLength
@@ -878,10 +883,38 @@ fn plan_expression_kind(
             QueueIterNext => CircularBufferIterNext
             _ => standard_circular_buffer_operation(declaration)
           }
+          let ring_operation = match standard_deque_operation(declaration) {
+            DequeNew => QueueNew
+            DequeWithCapacity => CircularBufferGrowable
+            DequeLength => CircularBufferLength
+            DequeCapacity => CircularBufferCapacity
+            DequeIsEmpty => CircularBufferIsEmpty
+            DequePushFront => DequePushFront
+            DequePushBack => QueueEnqueue
+            DequePopFront => CircularBufferPopFront
+            DequePopBack => CircularBufferPopBack
+            DequePeekFront => CircularBufferPeekFront
+            DequePeekBack => CircularBufferPeekBack
+            DequeClear => CircularBufferClear
+            DequeIter => CircularBufferIter
+            DequeIterHasNext => CircularBufferIterHasNext
+            DequeIterNext => CircularBufferIterNext
+            _ => queue_or_circular_operation
+          }
           match ring_operation {
             QueueNew => PlannedCircularBufferNewZero(element_shape)
             QueueEnqueue =>
               PlannedQueueRingEnqueue(
+                base,
+                key,
+                planned_value_shape(
+                  resolved,
+                  inferred,
+                  inferred.expression_types[key],
+                ),
+              )
+            DequePushFront =>
+              PlannedDequeRingPushFront(
                 base,
                 key,
                 planned_value_shape(
@@ -927,6 +960,20 @@ fn plan_expression_kind(
                   inferred.expression_types[expression],
                 ),
               )
+            CircularBufferPushFront =>
+              PlannedCircularBufferPushFront(
+                base,
+                key,
+                planned_value_shape(
+                  resolved,
+                  inferred,
+                  inferred.expression_types[key],
+                ),
+              )
+            CircularBufferPopBack =>
+              PlannedCircularBufferPopBack(base, element_shape)
+            CircularBufferPeekBack =>
+              PlannedCircularBufferPeekBack(base, element_shape)
             _ =>
               match standard_fixed_array_operation(declaration) {
                 FixedArrayMake => {

@@ -258,6 +258,9 @@ pub fn required_standard_library_source_paths(
   if (collection_mask & 4) != 0 {
     required.push("std/collections/circular_buffer.dew")
   }
+  if (collection_mask & 8) != 0 {
+    required.push("std/collections/deque.dew")
+  }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
     let text_files = [
@@ -587,6 +590,24 @@ pub fn collect_program_manifest_with_standard_sources(
           module_id,
           "std/collections/circular_buffer.dew",
           standard_sources.source("std/collections/circular_buffer.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 8) != 0 {
+    let module_id = standard_library_module_id(37)
+    let module_index = modules.length()
+    first_module["dew.std.collections.deque"] = module_index
+    module_paths.push("dew.std.collections.deque")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/collections/deque.dew",
+          standard_sources.source("std/collections/deque.dew"),
           false,
           false,
         ),

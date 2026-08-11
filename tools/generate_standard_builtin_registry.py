@@ -29,7 +29,7 @@ def rendered_source() -> str:
     operation_names = [
         name
         for module in (
-            "fixed_array", "array", "stack", "queue", "circular_buffer", "map", "set"
+            "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
         )
         for name in modules[module]["operations"]
     ]
@@ -44,7 +44,7 @@ def rendered_source() -> str:
     lines.extend(["} derive(Eq, Debug)", ""])
 
     for module_name in (
-        "fixed_array", "array", "stack", "queue", "circular_buffer", "map", "set"
+        "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
     ):
         module = modules[module_name]
         prefix = f"standard_{module_name}"

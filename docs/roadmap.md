@@ -30,9 +30,8 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. extend the ring runtime with Deque operations, then continue ordering, heaps,
-   and ordered trees now that growable `Array`, Stack, Queue, circular buffers,
-   and explicit iterator protocols are complete;
+1. implement ordering/comparator foundations, then BinaryHeap, PriorityQueue,
+   and ordered trees now that the mutable ring collection family is complete;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
 3. continue snapshots, measurements, resource budgets, optimization, packaging,
@@ -489,6 +488,7 @@ count = count + 1
 - [x] Implement growable `dew.std.array` over the same six physical carrier families, with deterministic capacity growth, alias-visible mutation, optional pop/get, Boolean safe set, trapping indexed access, and clearing of removed reference slots.
 - [x] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
 - [x] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
+- [x] Implement growable `dew.std.collections.deque` with operations at both ends and logical-order iteration.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and min/max policy.
 - [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
 - [ ] Implement `dew.std.collections.finger_tree` only after sequence/deque/measure use cases and representation costs are specified and benchmarked.

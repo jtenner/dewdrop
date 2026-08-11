@@ -1,0 +1,20 @@
+open dew.std.collections.circular_buffer
+
+pub type Deque<t> = CircularBuffer<t>
+pub type DequeIter<t> = CircularBufferIter<t>
+
+pub builtin deque_new<t>() -> Deque<t> = "dew_deque_new"
+pub builtin deque_with_capacity<t>(capacity: U32) -> Deque<t> = "dew_deque_with_capacity"
+pub builtin deque_length<t>(deque: Deque<t>) -> U32 = "dew_deque_length"
+pub builtin deque_capacity<t>(deque: Deque<t>) -> U32 = "dew_deque_capacity"
+pub builtin deque_is_empty<t>(deque: Deque<t>) -> Bool = "dew_deque_is_empty"
+pub builtin deque_push_front<t>(deque: Deque<t>, value: t) -> Unit = "dew_deque_push_front"
+pub builtin deque_push_back<t>(deque: Deque<t>, value: t) -> Unit = "dew_deque_push_back"
+pub builtin deque_pop_front<t>(deque: Deque<t>) -> Option<t> = "dew_deque_pop_front"
+pub builtin deque_pop_back<t>(deque: Deque<t>) -> Option<t> = "dew_deque_pop_back"
+pub builtin deque_peek_front<t>(deque: Deque<t>) -> Option<t> = "dew_deque_peek_front"
+pub builtin deque_peek_back<t>(deque: Deque<t>) -> Option<t> = "dew_deque_peek_back"
+pub builtin deque_clear<t>(deque: Deque<t>) -> Unit = "dew_deque_clear"
+pub builtin deque_iter<t>(deque: Deque<t>) -> DequeIter<t> = "dew_deque_iter"
+pub builtin deque_iter_has_next<t>(iter: DequeIter<t>) -> Bool = "dew_deque_iter_has_next"
+pub builtin deque_iter_next<t>(iter: DequeIter<t>) -> t = "dew_deque_iter_next"

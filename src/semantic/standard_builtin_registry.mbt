@@ -58,6 +58,24 @@ enum StandardBuiltinOperation {
   CircularBufferIter
   CircularBufferIterHasNext
   CircularBufferIterNext
+  CircularBufferPushFront
+  CircularBufferPopBack
+  CircularBufferPeekBack
+  DequeNew
+  DequeWithCapacity
+  DequeLength
+  DequeCapacity
+  DequeIsEmpty
+  DequePushFront
+  DequePushBack
+  DequePopFront
+  DequePopBack
+  DequePeekFront
+  DequePeekBack
+  DequeClear
+  DequeIter
+  DequeIterHasNext
+  DequeIterNext
   MapSingleton
   MapLength
   MapGet
@@ -325,6 +343,51 @@ fn standard_circular_buffer_operation(
     12 => CircularBufferIter
     13 => CircularBufferIterHasNext
     14 => CircularBufferIterNext
+    15 => CircularBufferPushFront
+    16 => CircularBufferPopBack
+    17 => CircularBufferPeekBack
+    _ => NoStandardBuiltinOperation
+  }
+}
+
+///|
+pub fn standard_deque_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(37), 0)
+}
+
+///|
+pub fn standard_deque_method_declaration(name : String) -> DeclId {
+  let local_id = match name {
+    _ => -1
+  }
+  if local_id < 0 {
+    0UL
+  } else {
+    make_semantic_id(standard_library_module_id(37), local_id)
+  }
+}
+
+///|
+fn standard_deque_operation(declaration : DeclId) -> StandardBuiltinOperation {
+  if semantic_id_module(declaration) != standard_library_module_id(37) {
+    return NoStandardBuiltinOperation
+  }
+  match semantic_id_local(declaration) {
+    2 => DequeNew
+    3 => DequeWithCapacity
+    4 => DequeLength
+    5 => DequeCapacity
+    6 => DequeIsEmpty
+    7 => DequePushFront
+    8 => DequePushBack
+    9 => DequePopFront
+    10 => DequePopBack
+    11 => DequePeekFront
+    12 => DequePeekBack
+    13 => DequeClear
+    14 => DequeIter
+    15 => DequeIterHasNext
+    16 => DequeIterNext
     _ => NoStandardBuiltinOperation
   }
 }

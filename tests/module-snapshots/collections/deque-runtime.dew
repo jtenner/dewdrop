@@ -1,0 +1,56 @@
+open dew.std.collections.deque
+
+fn make() -> Deque<I32> {
+  deque_with_capacity(2u32)
+}
+
+fn front(value: Deque<I32>) -> I32 {
+  match deque_pop_front(value) {
+    Option::Some(item) => item
+    Option::None => -1
+  }
+}
+
+fn back(value: Deque<I32>) -> I32 {
+  match deque_pop_back(value) {
+    Option::Some(item) => item
+    Option::None => -1
+  }
+}
+
+pub fn main() -> Unit {
+  let value = make()
+  assert(deque_is_empty(value), "new deque empty")
+  assert(front(value) == -1, "empty front")
+  assert(back(value) == -1, "empty back")
+  deque_push_back(value, 2)
+  deque_push_front(value, 1)
+  deque_push_back(value, 3)
+  deque_push_front(value, 0)
+  assert(deque_capacity(value) == 4u32, "growth doubles")
+  match deque_peek_front(value) {
+    Option::Some(item) => assert(item == 0, "peek front")
+    Option::None => assert(false, "missing front")
+  }
+  match deque_peek_back(value) {
+    Option::Some(item) => assert(item == 3, "peek back")
+    Option::None => assert(false, "missing back")
+  }
+  let iter = deque_iter(value)
+  assert(deque_iter_next(iter) == 0, "iter zero")
+  assert(deque_iter_next(iter) == 1, "iter one")
+  assert(deque_iter_next(iter) == 2, "iter two")
+  assert(deque_iter_next(iter) == 3, "iter three")
+  assert(!deque_iter_has_next(iter), "iter exhausted")
+  assert(front(value) == 0, "pop front zero")
+  assert(back(value) == 3, "pop back three")
+  deque_push_front(value, 9)
+  deque_push_back(value, 8)
+  assert(front(value) == 9, "wrapped front")
+  assert(back(value) == 8, "wrapped back")
+  assert(front(value) == 1, "remaining front")
+  assert(back(value) == 2, "remaining back")
+  deque_clear(value)
+  assert(deque_is_empty(value), "clear empty")
+  assert(deque_capacity(value) == 4u32, "clear capacity")
+}

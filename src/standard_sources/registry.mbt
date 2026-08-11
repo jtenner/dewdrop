@@ -7,8 +7,8 @@ pub fn standard_source_paths() -> Array[String] {
     "std/preamble/90-swar-core.dew", "std/preamble/100-v128.dew", "std/preamble/110-debug.dew",
     "std/option.dew", "std/result.dew", "std/fixed_array.dew", "std/array.dew", "std/map.dew",
     "std/set.dew", "std/collections/stack.dew", "std/queue.dew", "std/collections/circular_buffer.dew",
-    "std/text_runtime.dew", "std/string.dew", "std/string_builder.dew", "std/bytes_builder.dew",
-    "std/bytes.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/collections/deque.dew", "std/text_runtime.dew", "std/string.dew", "std/string_builder.dew",
+    "std/bytes_builder.dew", "std/bytes.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
   ]
   for
     name in [
@@ -47,6 +47,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/queue.dew" => Some(standard_queue_source())
     "std/collections/circular_buffer.dew" =>
       Some(standard_circular_buffer_source())
+    "std/collections/deque.dew" => Some(standard_deque_source())
     "std/text_runtime.dew" => Some(standard_text_sources()[0])
     "std/string.dew" => Some(standard_text_sources()[1])
     "std/string_builder.dew" => Some(standard_text_sources()[2])

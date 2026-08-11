@@ -111,7 +111,7 @@ Dewdrop currently includes, among other things:
 - Multi-file modules and statically linked multi-module programs.
 - Strict UTF-8 `String` and `StringView` values.
 - Arbitrary `Bytes` values and consuming string/byte builders.
-- Carrier-specialized `FixedArray`, growable `Array`, bounded/growable circular buffers, LIFO `Stack`, FIFO `Queue`, and mutable `Map` and `Set` collections with explicit iterators.
+- Carrier-specialized `FixedArray`, growable `Array`, bounded/growable circular buffers, double-ended `Deque`, LIFO `Stack`, FIFO `Queue`, and mutable `Map` and `Set` collections with explicit iterators.
 - Native SIMD and allocation-free packed-lane operations.
 - WASI Preview 1 standard input and output.
 - Source-level tests with deterministic compiler-produced metadata.
