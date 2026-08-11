@@ -816,6 +816,8 @@ Bodies without member syntax use shared empty member arrays, and selection stora
 
 The ambient `Iter<t>` protocol has `has_next(self) -> Bool` and state-advancing `next(self) -> t`. Implementations are mutable reference-identity cursors. Calling `next` after exhaustion traps; callers that need a non-trapping boundary must check `has_next` first. Array and Stack iteration use stable index order over the live logical prefix. Hash collection iteration order is intentionally unspecified.
 
+All current mutable collections use alias-visible reference semantics rather than persistence or snapshot isolation. A mutation that changes membership, length, or traversal topology invalidates outstanding iterators; successful insertion/removal, push/pop, enqueue/dequeue, and clearing a nonempty collection are structural. Failed/no-op mutations and capacity-only reservation are nonstructural. Indexed replacement and replacement of an existing map/tree value preserve iterator validity; values not yet yielded are read when reached. Using an invalidated iterator has unspecified traversal results but remains WasmGC memory- and type-safe. Persistent collections, if added, use distinct nominal APIs.
+
 `IndexedSet` is distinct from a reference-returning `IndexMut` because Dew has no mutable-reference or borrow abstraction. Until associated types exist, the compiler must treat `(Self, key) -> value` as a functional dependency; complete cross-module enforcement remains pending. Implementation and validation details are recorded in `docs/research/fixed-array-indexing.md` and `docs/research/growable-array-iterators.md`.
 
 #### 3.13.2 Hash keys, maps, and sets

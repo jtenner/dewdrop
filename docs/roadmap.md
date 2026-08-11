@@ -30,10 +30,9 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. define remaining collection mutation/iterator-invalidation rules and measure ordered/hash collection workloads;
-2. take annotations/`Show` or deterministic cleanup as separate, bounded
+1. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
-3. continue snapshots, measurements, resource budgets, optimization, packaging,
+2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
 ### 0. Harden the advertised current language surface
@@ -504,8 +503,9 @@ count = count + 1
 - [ ] Add deterministic allocation-free Hash implementations for String, StringView, and Bytes after finalizing their cross-type equality contract.
 - [x] Implement `dew.std.queue` over growable circular-buffer storage with O(1) amortized enqueue/dequeue and stable FIFO iteration.
 - [x] Add ambient `Iter<t>` plus explicit Array, Map key/value/entry, and Set key iterator types while leaving hash traversal order unspecified.
-- [ ] Define remaining collection mutation and persistence rules.
-- [ ] Benchmark WasmGC arrays and hash buckets versus linked/tree representations.
+- [x] Define mutable alias, structural/replacement mutation, persistence, and iterator-invalidation rules.
+- [x] Benchmark WasmGC hash buckets against ordered red-black-tree wrappers.
+- [ ] Benchmark WasmGC arrays against linked representations only if measured sequence workloads justify adding one.
 
 ## Pattern matching and control flow
 
