@@ -627,7 +627,7 @@ count = count + 1
 - [x] Add multi-file/module graph, import-resolution, and static-link benchmarks.
 - [x] Add release-mode phase-only standard-interface cache benchmarks separating serialization (2.89 ms), decoding (3.09 ms), cached injection (1.77 ms), and fresh freezing (5.31 ms) on the all-standard wildcard workload.
 - [x] Parallelize independent full-check MoonBit target suites through isolated persistent target directories, prebuild and parallelize snapshot compilation with deterministic buffered output, and run the large UTF parity generator in release mode without reducing validation coverage.
-- [ ] Add cache-file I/O/checksum timings, allocation/peak-memory measurements, and representative external-package workloads before treating cache hits as an end-to-end performance win.
+- [ ] Extend verified whole-build cache I/O/checksum timings (68.026 ms hit versus 94.220 ms ordinary compile on the focused fixture) to allocation/peak-memory and representative external-package workloads.
 - [ ] Track allocations and peak memory, not only wall time.
 - [ ] Establish regression thresholds for hot workloads.
 
@@ -761,8 +761,8 @@ count = count + 1
 
 ## Incremental and parallel compilation
 
-- [ ] Fingerprint source files.
-- [ ] Cache parser events or compact syntax/HIR artifacts.
+- [x] Fingerprint complete build requests, compiler/standard sources, explicit source payloads, custom standard roots, and dependency-interface state; reuse verified Wasm/HIR/lowering output envelopes across destination paths.
+- [ ] Cache parser events or compact syntax/HIR artifacts per source file.
 - [x] Cache compiler-owned standard and versioned external dependency frozen interfaces.
 - [ ] Extend frozen-interface caching to ordinary workspace modules once source/artifact provenance and invalidation rules are stable.
 - [ ] Cache body inference by declaration/body fingerprint.

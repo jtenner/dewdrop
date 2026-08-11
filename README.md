@@ -281,7 +281,7 @@ Run that file with the included host:
 node tools/dew-run.mjs hello.wasm
 ```
 
-This separates compilation from execution. It is useful when testing a different runtime or embedding the module in another host program.
+This separates compilation from execution. It is useful when testing a different runtime or embedding the module in another host program. Successful Wasm, HIR, and lowering builds are stored as verified content-addressed entries under `.dew-cache/builds/`; an exact repeated request can restore the output without invoking the compiler. Use `--no-build-cache` to force compilation and `--cache-report` to report hit/miss keys.
 
 ### 8. Inspect the generated WebAssembly text
 
@@ -731,7 +731,7 @@ tools/dew clean
 tools/dew clean --dry-run
 ```
 
-Removes the configured `.dew-cache` interface and package artifacts. `--dry-run` prints the selected cache path without changing it.
+Removes the configured `.dew-cache` build, interface, and package artifacts. `--dry-run` prints the selected cache path without changing it.
 
 ### Emit compiler representations
 

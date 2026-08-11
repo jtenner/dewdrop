@@ -5,7 +5,7 @@
 ## Current priority order
 
 1. Extend measured escape analysis and scalar replacement to let-bound aggregates, boxes, payloads, and trait objects.
-2. Build workspace-cache and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
+2. Extend verified whole-build caching into per-file syntax/HIR reuse and deterministic parallel module scheduling while continuing fixtures, measurements, packaging, and release hardening.
 
 ## Snapshots, diagnostics, and fixture suites
 
@@ -154,12 +154,12 @@
 - [ ] Diagnose budget exhaustion without crashing.
 - [ ] Track compile, validation/encoding, and runtime time separately with warmup and variance reporting.
 - [ ] Track allocations and peak memory separately from wall time.
-- [ ] Measure cache-file I/O/checksum costs and representative external-package workloads before treating cache hits as an end-to-end win.
+- [ ] Extend verified whole-build cache I/O/checksum measurements to representative external-package workloads and track allocation/peak memory.
 - [ ] Establish regression thresholds for hot workloads.
 
 ## Incremental and parallel compilation
 
-- [ ] Fingerprint source files.
+- [x] Fingerprint complete build requests, compiler/standard sources, explicit source payloads, custom standard roots, and dependency-interface state for verified final-output reuse.
 - [ ] Cache parser events or compact syntax/HIR artifacts.
 - [ ] Extend frozen-interface caching to ordinary workspace modules after provenance and invalidation rules stabilize.
 - [ ] Cache body inference by declaration/body fingerprint.

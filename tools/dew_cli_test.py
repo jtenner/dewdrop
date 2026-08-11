@@ -384,6 +384,95 @@ class PackageRootTests(unittest.TestCase):
                     os.environ["DEW_PACKAGE_ROOTS"] = previous
 
 
+class BuildOutputCacheTests(unittest.TestCase):
+    def compiler_tree(self, root: Path) -> None:
+        (root / "src").mkdir(parents=True)
+        (root / "std").mkdir()
+        (root / "moon.mod").write_text("{}", encoding="utf-8")
+        (root / "src" / "compiler.mbt").write_text("fn compiler() {}", encoding="utf-8")
+        (root / "std" / "base.dew").write_text("pub fn base() -> Unit {}", encoding="utf-8")
+
+    def test_build_cache_key_tracks_sources_and_ignores_output(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            self.compiler_tree(root)
+            source = root / "main.dew"
+            source.write_text("pub fn main() -> I32 { 1 }", encoding="utf-8")
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.object(
+                dew_cli, "WORKING_DIRECTORY", root
+            ):
+                first = dew_cli._build_cache_key(
+                    ["build", "main.dew", "-o", "first.wasm"]
+                )
+                second = dew_cli._build_cache_key(
+                    ["build", "main.dew", "-o", "second.wasm"]
+                )
+                self.assertEqual(first, second)
+                source.write_text("pub fn main() -> I32 { 2 }", encoding="utf-8")
+                changed = dew_cli._build_cache_key(
+                    ["build", "main.dew", "-o", "second.wasm"]
+                )
+                self.assertNotEqual(first, changed)
+                (root / "src" / "compiler.mbt").write_text(
+                    "fn compiler() { let changed = 1 }", encoding="utf-8"
+                )
+                compiler_changed = dew_cli._build_cache_key(
+                    ["build", "main.dew", "-o", "second.wasm"]
+                )
+                self.assertNotEqual(changed, compiler_changed)
+
+    def test_build_cache_artifact_round_trip_and_corruption(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            artifact = Path(temporary) / "entry.dba"
+            payload = b"wasm"
+            artifact.write_bytes(
+                dew_cli._encode_build_cache_artifact("a" * 64, "wasm", payload)
+            )
+            self.assertEqual(
+                dew_cli._decode_build_cache_artifact(
+                    artifact, "a" * 64, "wasm"
+                ),
+                payload,
+            )
+            artifact.write_bytes(b"corrupt")
+            with self.assertRaisesRegex(
+                dew_cli.ManifestError, "corrupt build cache artifact"
+            ):
+                dew_cli._decode_build_cache_artifact(
+                    artifact, "a" * 64, "wasm"
+                )
+
+    def test_cached_build_restores_verified_output_without_compiling(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            self.compiler_tree(root)
+            (root / "main.dew").write_text(
+                "pub fn main() -> I32 { 42 }", encoding="utf-8"
+            )
+            output = root / "program.wasm"
+            arguments = ["build", "main.dew", "-o", str(output)]
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.object(
+                dew_cli, "WORKING_DIRECTORY", root
+            ), mock.patch.dict(
+                os.environ, {"DEW_CACHE_DIR": ".cache"}, clear=False
+            ):
+                def compile_once(_: list[str]) -> object:
+                    output.write_bytes(b"compiled wasm")
+                    return __import__("subprocess").CompletedProcess(arguments, 0)
+
+                with mock.patch.object(dew_cli, "moon_cli", side_effect=compile_once) as compile_mock:
+                    dew_cli.run_cached_build(arguments)
+                    self.assertEqual(compile_mock.call_count, 1)
+                output.unlink()
+                with mock.patch.object(dew_cli, "moon_cli") as compile_mock, redirect_stdout(
+                    StringIO()
+                ):
+                    result = dew_cli.run_cached_build(arguments)
+                    self.assertEqual(result.returncode, 0)
+                    self.assertEqual(compile_mock.call_count, 0)
+                self.assertEqual(output.read_bytes(), b"compiled wasm")
+
+
 class CleanCommandTests(unittest.TestCase):
     def test_clean_removes_configured_cache(self) -> None:
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:

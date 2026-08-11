@@ -294,6 +294,286 @@ def _package_cache_root() -> Path:
     return _configured_cache_path().resolve()
 
 
+_BUILD_CACHE_MAGIC = b"DEW_BUILD_OUTPUT_V1\x00"
+
+
+def _build_cache_compiler_roots() -> list[Path]:
+    roots = {ROOT.resolve()}
+    workspace = ROOT / "moon.work"
+    if workspace.is_file():
+        for member in re.findall(r'"([^"]+)"', workspace.read_text(encoding="utf-8")):
+            candidate = (ROOT / member).resolve()
+            if candidate.is_dir():
+                roots.add(candidate)
+    return sorted(roots, key=lambda path: path.as_posix())
+
+
+def _build_cache_compiler_files() -> list[Path]:
+    files: set[Path] = {Path(__file__).resolve()}
+    for compiler_root in _build_cache_compiler_roots():
+        for candidate in (
+            compiler_root / "moon.mod",
+            compiler_root / "moon.pkg",
+            compiler_root / "moon.work",
+            compiler_root / ".mooncakes" / ".moon-lock",
+        ):
+            if candidate.is_file():
+                files.add(candidate.resolve())
+        source_root = compiler_root / "src"
+        if source_root.is_dir():
+            for pattern in ("*.mbt", "moon.pkg"):
+                for candidate in source_root.rglob(pattern):
+                    if candidate.is_file():
+                        files.add(candidate.resolve())
+    for directory, pattern in (
+        (ROOT / "std", "*.dew"),
+        (ROOT / "tools", "dew-cli.py"),
+    ):
+        if not directory.is_dir():
+            continue
+        for candidate in directory.rglob(pattern):
+            if candidate.is_file():
+                files.add(candidate.resolve())
+    return sorted(files, key=lambda path: path.as_posix())
+
+
+def _build_cache_argument_path(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else ROOT / path
+
+
+def _build_cache_compiler_fingerprint() -> str:
+    files = _build_cache_compiler_files()
+    records: list[dict[str, object]] = []
+    for path in files:
+        stat = path.stat()
+        records.append(
+            {
+                "ctime_ns": stat.st_ctime_ns,
+                "mtime_ns": stat.st_mtime_ns,
+                "path": path.as_posix(),
+                "size": stat.st_size,
+            }
+        )
+    memo = _package_cache_root() / "compiler-fingerprint-v1.json"
+    if memo.is_file() and not memo.is_symlink():
+        try:
+            cached = json.loads(memo.read_text(encoding="utf-8"))
+            if (
+                isinstance(cached, dict)
+                and cached.get("version") == 1
+                and cached.get("files") == records
+                and isinstance(cached.get("fingerprint"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", cached["fingerprint"])
+            ):
+                return cached["fingerprint"]
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            pass
+    digest = hashlib.sha256()
+    digest.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_V1\x00")
+    for record, path in zip(records, files):
+        _write_hash_string(digest, str(record["path"]))
+        data = path.read_bytes()
+        digest.update(len(data).to_bytes(8, "little"))
+        digest.update(data)
+    fingerprint = digest.hexdigest()
+    _atomic_write(
+        memo,
+        json.dumps(
+            {"files": records, "fingerprint": fingerprint, "version": 1},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8"),
+    )
+    return fingerprint
+
+
+def _build_cache_key(arguments: list[str]) -> str | None:
+    digest = hashlib.sha256()
+    digest.update(b"DEW_BUILD_OUTPUT_KEY_V1\x00")
+    normalized: list[str] = []
+    source_paths: list[Path] = []
+    standard_roots: list[Path] = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument in {"-o", "--output"}:
+            if index + 1 >= len(arguments):
+                return None
+            index += 2
+            continue
+        if argument == "--cache-report":
+            index += 1
+            continue
+        normalized.append(argument)
+        if argument.endswith(".dew"):
+            source_paths.append(_build_cache_argument_path(argument))
+        if argument == "--std-root" and index + 1 < len(arguments):
+            standard_roots.append(
+                _build_cache_argument_path(arguments[index + 1])
+            )
+        index += 1
+    for argument in normalized:
+        _write_hash_string(digest, argument)
+    for name in (
+        "DEW_DEPENDENCY_INTERFACE_KEY",
+        "DEW_BOOTSTRAP_STD",
+        "DEW_PACKAGE_ROOTS",
+        "DEW_STD_ROOT",
+    ):
+        _write_hash_string(digest, name)
+        _write_hash_string(digest, os.environ.get(name, ""))
+    for source in source_paths:
+        if not source.is_file():
+            return None
+        _write_hash_string(digest, source.as_posix())
+        data = source.read_bytes()
+        digest.update(len(data).to_bytes(8, "little"))
+        digest.update(data)
+    for standard_root in standard_roots:
+        if not standard_root.is_dir():
+            return None
+        for source in sorted(standard_root.rglob("*.dew"), key=lambda path: path.as_posix()):
+            if not source.is_file():
+                continue
+            _write_hash_string(digest, source.relative_to(standard_root).as_posix())
+            data = source.read_bytes()
+            digest.update(len(data).to_bytes(8, "little"))
+            digest.update(data)
+    _write_hash_string(digest, _build_cache_compiler_fingerprint())
+    return digest.hexdigest()
+
+
+def _build_cache_emit(arguments: list[str]) -> str:
+    for index, argument in enumerate(arguments):
+        if argument == "--emit" and index + 1 < len(arguments):
+            return arguments[index + 1]
+    return "wasm"
+
+
+def _build_cache_artifact_path(key: str) -> Path:
+    return _package_cache_root() / "builds" / f"v1-{key}.dba"
+
+
+def _encode_build_cache_artifact(key: str, emit: str, payload: bytes) -> bytes:
+    header = json.dumps(
+        {
+            "emit": emit,
+            "key": key,
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "size": len(payload),
+            "version": 1,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return _BUILD_CACHE_MAGIC + struct.pack("<I", len(header)) + header + payload
+
+
+def _decode_build_cache_artifact(
+    artifact: Path, key: str, emit: str
+) -> bytes | None:
+    if not artifact.exists() and not artifact.is_symlink():
+        return None
+    if artifact.is_symlink() or not artifact.is_file():
+        raise ManifestError(f"corrupt build cache artifact: {artifact}")
+    try:
+        encoded = artifact.read_bytes()
+    except OSError as error:
+        raise ManifestError(f"cannot read build cache artifact: {artifact}") from error
+    prefix = len(_BUILD_CACHE_MAGIC)
+    if len(encoded) < prefix + 4 or encoded[:prefix] != _BUILD_CACHE_MAGIC:
+        raise ManifestError(f"corrupt build cache artifact: {artifact}")
+    header_length = struct.unpack_from("<I", encoded, prefix)[0]
+    header_start = prefix + 4
+    header_end = header_start + header_length
+    if header_length > 65536 or header_end > len(encoded):
+        raise ManifestError(f"corrupt build cache artifact: {artifact}")
+    try:
+        header = json.loads(encoded[header_start:header_end].decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ManifestError(f"corrupt build cache artifact: {artifact}") from error
+    if not isinstance(header, dict):
+        raise ManifestError(f"corrupt build cache artifact: {artifact}")
+    exact_keys(header, {"emit", "key", "sha256", "size", "version"}, "build cache")
+    payload = encoded[header_end:]
+    if (
+        header["version"] != 1
+        or header["key"] != key
+        or header["emit"] != emit
+        or header["size"] != len(payload)
+        or header["sha256"] != hashlib.sha256(payload).hexdigest()
+    ):
+        raise ManifestError(f"corrupt build cache artifact: {artifact}")
+    return payload
+
+
+def _atomic_write(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            prefix=f".{path.name}.", dir=path.parent, delete=False
+        ) as output:
+            output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+            temporary = Path(output.name)
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _publish_build_cache_artifact(
+    artifact: Path, key: str, emit: str, payload: bytes
+) -> None:
+    encoded = _encode_build_cache_artifact(key, emit, payload)
+    _atomic_write(artifact, encoded)
+
+
+def run_cached_build(arguments: list[str]) -> subprocess.CompletedProcess[bytes]:
+    output, _ = take_output(arguments[1:])
+    key = _build_cache_key(arguments)
+    if key is None:
+        return moon_cli(arguments)
+    emit = _build_cache_emit(arguments)
+    artifact = _build_cache_artifact_path(key)
+    cached = _decode_build_cache_artifact(artifact, key, emit)
+    report = "--cache-report" in arguments
+    if cached is not None:
+        _atomic_write(output, cached)
+        if report:
+            print(f"build output cache: hit {key}")
+        print(f"wrote {output} ({len(cached)} bytes)")
+        return subprocess.CompletedProcess(arguments, 0)
+    compiled = moon_cli(arguments)
+    if compiled.returncode != 0:
+        return compiled
+    if not output.is_file():
+        raise ManifestError(f"compiler did not write build output: {output}")
+    payload = output.read_bytes()
+    if _build_cache_key(arguments) == key:
+        _publish_build_cache_artifact(artifact, key, emit, payload)
+    if report:
+        print(f"build output cache: miss {key}")
+    return compiled
+
+
+def take_build_cache(arguments: list[str]) -> tuple[bool, list[str]]:
+    enabled = True
+    remaining: list[str] = []
+    for argument in arguments:
+        if argument == "--no-build-cache":
+            if not enabled:
+                raise ManifestError("--no-build-cache may be supplied only once")
+            enabled = False
+        else:
+            remaining.append(argument)
+    return enabled, remaining
+
+
 def run_clean(arguments: list[str]) -> None:
     dry_run = False
     for argument in arguments:
@@ -1262,6 +1542,11 @@ def main() -> None:
             run_compiled(remaining)
             return
         emit, without_emit = take_emit(remaining)
+        build_cache_enabled = True
+        if "--no-build-cache" in without_emit:
+            if command != "build":
+                raise ManifestError("--no-build-cache is supported only by dew build")
+            build_cache_enabled, without_emit = take_build_cache(without_emit)
         if command == "build" and emit == "wat":
             emit_wat(without_emit)
             return
@@ -1271,7 +1556,11 @@ def main() -> None:
         forwarded = [command, *without_emit]
         if emit != "wasm":
             forwarded.extend(("--emit", emit))
-        compiled = moon_cli(forwarded)
+        compiled = (
+            run_cached_build(forwarded)
+            if command == "build" and build_cache_enabled
+            else moon_cli(forwarded)
+        )
         if compiled.returncode != 0:
             raise SystemExit(compiled.returncode)
     except ManifestError as error:

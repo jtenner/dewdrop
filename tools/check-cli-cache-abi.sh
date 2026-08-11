@@ -60,6 +60,29 @@ if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
 fi
 grep -q 'corrupt frozen-interface cache' \
   .tmp/dew-interface-cache-corrupt.txt
+rm -rf .tmp/dew-build-output-cache
+DEW_CACHE_DIR=.tmp/dew-build-output-cache tools/dew build --cache-report \
+  tests/compile-pass/basic.dew -o .tmp/dew-build-output-first.wasm \
+  > .tmp/dew-build-output-first.txt
+DEW_CACHE_DIR=.tmp/dew-build-output-cache tools/dew build --cache-report \
+  tests/compile-pass/basic.dew -o .tmp/dew-build-output-second.wasm \
+  > .tmp/dew-build-output-second.txt
+grep -q '^build output cache: miss ' .tmp/dew-build-output-first.txt
+grep -q '^build output cache: hit ' .tmp/dew-build-output-second.txt
+cmp .tmp/dew-build-output-first.wasm .tmp/dew-build-output-second.wasm
+DEW_CACHE_DIR=.tmp/dew-build-output-cache tools/dew build --no-build-cache \
+  tests/compile-pass/basic.dew -o .tmp/dew-build-output-disabled.wasm
+cmp .tmp/dew-build-output-first.wasm .tmp/dew-build-output-disabled.wasm
+build_cache_file=$(find .tmp/dew-build-output-cache/builds -type f | head -n 1)
+printf 'corrupt' > "$build_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-build-output-cache tools/dew build \
+  tests/compile-pass/basic.dew -o .tmp/dew-build-output-corrupt.wasm \
+  > .tmp/dew-build-output-corrupt.txt 2>&1; then
+  echo "expected corrupt build-output cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt build cache artifact' .tmp/dew-build-output-corrupt.txt
+rm -rf .tmp/dew-build-output-cache
 rm -rf .tmp/dew-interface-cache .tmp/dew-cache-package-root \
   .tmp/dew-cache-invalidation
 mkdir -p .tmp/dew-cache-package-root/dew.std
