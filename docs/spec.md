@@ -798,6 +798,8 @@ Bodies without member syntax use shared empty member arrays, and selection stora
 
 `dew.std.collections.circular_buffer` defines bounded and growable mutable ring buffers over the six Array carrier families. Bounded push returns false when full. Growable push expands zero capacity to four and otherwise doubles while preserving logical FIFO order. Head and tail positions wrap modulo backing capacity; pop and peek return `Option::None` when empty; pop and clear release removed reference carriers; iteration is stable logical front-to-back.
 
+`dew.std.collections.ordered_map` defines deterministic comparator-ordered maps with replacement, optional lookup, removal, extrema, bounds, predecessor/successor, entry iteration, and inclusive/exclusive ranges over the shared red-black tree core.
+
 `dew.std.collections.red_black_tree` defines a mutable comparator-driven ordered tree with replacement, lookup, removal, extrema, predecessor/successor, lower/upper bounds, invariant checking, deterministic in-order traversal, and inclusive/exclusive range iterators.
 
 `dew.std.collections.priority_queue` defines `PriorityQueue<value, priority, comparator>` as a thin BinaryHeap wrapper. It retains comparator and min/max policy, keeps values paired with priorities, returns `Option::None` at empty boundaries, and leaves equal-priority order unspecified.

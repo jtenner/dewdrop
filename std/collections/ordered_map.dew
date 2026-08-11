@@ -1,0 +1,149 @@
+open dew.std.ordering
+open dew.std.collections.red_black_tree
+
+pub struct OrderedMap<k, v, c> {
+  tree: RedBlackTree<k, v, c>
+}
+
+pub type OrderedMapEntry<k, v> = TreeEntry<k, v>
+pub type OrderedMapIter<k, v, c> = RedBlackTreeIter<k, v, c>
+
+pub fn ordered_map_new<k, v, c: Comparator<k>>(
+  comparator: c,
+) -> OrderedMap<k, v, c> {
+  OrderedMap {
+    tree: red_black_tree_new(comparator)
+  }
+}
+
+pub fn ordered_map_length<k, v, c>(map: OrderedMap<k, v, c>) -> U32 {
+  red_black_tree_length(map.tree)
+}
+
+pub fn ordered_map_is_empty<k, v, c>(map: OrderedMap<k, v, c>) -> Bool {
+  red_black_tree_is_empty(map.tree)
+}
+
+pub fn ordered_map_insert<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+  value: v,
+) -> Bool {
+  red_black_tree_insert(map.tree, key, value)
+}
+
+pub fn ordered_map_set<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+  value: v,
+) -> Unit {
+  let inserted = red_black_tree_insert(map.tree, key, value)
+  let ignored = inserted
+}
+
+pub fn ordered_map_get<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Option<v> {
+  red_black_tree_get(map.tree, key)
+}
+
+pub fn ordered_map_contains_key<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Bool {
+  red_black_tree_contains(map.tree, key)
+}
+
+pub fn ordered_map_remove<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Bool {
+  red_black_tree_remove(map.tree, key)
+}
+
+pub fn ordered_map_clear<k, v, c>(map: OrderedMap<k, v, c>) -> Unit {
+  red_black_tree_clear(map.tree)
+}
+
+pub fn ordered_map_minimum<k, v, c>(
+  map: OrderedMap<k, v, c>,
+) -> Option<OrderedMapEntry<k, v>> {
+  red_black_tree_minimum(map.tree)
+}
+
+pub fn ordered_map_maximum<k, v, c>(
+  map: OrderedMap<k, v, c>,
+) -> Option<OrderedMapEntry<k, v>> {
+  red_black_tree_maximum(map.tree)
+}
+
+pub fn ordered_map_lower_bound<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Option<OrderedMapEntry<k, v>> {
+  red_black_tree_lower_bound(map.tree, key)
+}
+
+pub fn ordered_map_upper_bound<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Option<OrderedMapEntry<k, v>> {
+  red_black_tree_upper_bound(map.tree, key)
+}
+
+pub fn ordered_map_predecessor<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Option<OrderedMapEntry<k, v>> {
+  red_black_tree_predecessor(map.tree, key)
+}
+
+pub fn ordered_map_successor<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  key: k,
+) -> Option<OrderedMapEntry<k, v>> {
+  red_black_tree_successor(map.tree, key)
+}
+
+pub fn ordered_map_entry_key<k, v>(entry: OrderedMapEntry<k, v>) -> k {
+  tree_entry_key(entry)
+}
+
+pub fn ordered_map_entry_value<k, v>(entry: OrderedMapEntry<k, v>) -> v {
+  tree_entry_value(entry)
+}
+
+pub fn ordered_map_iter<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+) -> OrderedMapIter<k, v, c> {
+  red_black_tree_iter(map.tree)
+}
+
+pub fn ordered_map_range<k, v, c: Comparator<k>>(
+  map: OrderedMap<k, v, c>,
+  lower: Option<k>,
+  lower_inclusive: Bool,
+  upper: Option<k>,
+  upper_inclusive: Bool,
+) -> OrderedMapIter<k, v, c> {
+  red_black_tree_range(
+    map.tree,
+    lower,
+    lower_inclusive,
+    upper,
+    upper_inclusive,
+  )
+}
+
+pub fn ordered_map_iter_has_next<k, v, c: Comparator<k>>(
+  iter: OrderedMapIter<k, v, c>,
+) -> Bool {
+  red_black_tree_iter_has_next(iter)
+}
+
+pub fn ordered_map_iter_next<k, v, c: Comparator<k>>(
+  iter: OrderedMapIter<k, v, c>,
+) -> OrderedMapEntry<k, v> {
+  red_black_tree_iter_next(iter)
+}

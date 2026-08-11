@@ -1,0 +1,87 @@
+open dew.std.ordering
+open dew.std.collections.ordered_map
+
+fn ordered_map_test_unit() -> Unit {}
+
+fn get_or(
+  map: OrderedMap<I32, I32, NaturalComparator>,
+  key: I32,
+  fallback: I32,
+) -> I32 {
+  match ordered_map_get(map, key) {
+    Option::Some(value) => value
+    Option::None => fallback
+  }
+}
+
+fn entry_key_or(value: Option<OrderedMapEntry<I32, I32>>, fallback: I32) -> I32 {
+  match value {
+    Option::Some(entry) => ordered_map_entry_key(entry)
+    Option::None => fallback
+  }
+}
+
+pub fn main() -> Unit {
+  let map = ordered_map_new(natural_comparator())
+  assert(ordered_map_is_empty(map), "new map empty")
+  assert(ordered_map_get(map, 1) is Option::None, "empty get")
+  assert(!ordered_map_remove(map, 1), "empty remove")
+  assert(ordered_map_insert(map, 4, 40), "insert four")
+  assert(ordered_map_insert(map, 1, 10), "insert one")
+  assert(ordered_map_insert(map, 3, 30), "insert three")
+  assert(ordered_map_insert(map, 2, 20), "insert two")
+  assert(!ordered_map_insert(map, 3, 300), "replace reports false")
+  assert(get_or(map, 3, -1) == 300, "replace value")
+  ordered_map_set(map, 2, 200)
+  assert(get_or(map, 2, -1) == 200, "set value")
+  let alias = map
+  ordered_map_set(alias, 5, 50)
+  assert(ordered_map_length(map) == 5u32, "alias mutation")
+  assert(ordered_map_contains_key(map, 5), "contains key")
+  assert(entry_key_or(ordered_map_minimum(map), -1) == 1, "minimum")
+  assert(entry_key_or(ordered_map_maximum(map), -1) == 5, "maximum")
+  assert(entry_key_or(ordered_map_lower_bound(map, 3), -1) == 3, "lower bound")
+  assert(entry_key_or(ordered_map_upper_bound(map, 3), -1) == 4, "upper bound")
+  assert(entry_key_or(ordered_map_predecessor(map, 3), -1) == 2, "predecessor")
+  assert(entry_key_or(ordered_map_successor(map, 3), -1) == 4, "successor")
+
+  let iter = ordered_map_iter(map)
+  let mut expected = 1
+  let mut value_sum = 0
+  while true {
+    true if ordered_map_iter_has_next(iter) => {
+      let entry = ordered_map_iter_next(iter)
+      assert(ordered_map_entry_key(entry) == expected, "map order")
+      value_sum = value_sum + ordered_map_entry_value(entry)
+      expected = expected + 1
+      continue true
+    }
+    _ => break ordered_map_test_unit()
+  }
+  assert(expected == 6, "map iterator count")
+  assert(value_sum == 600, "map iterator values")
+
+  let range = ordered_map_range(
+    map,
+    Option::Some(2),
+    false,
+    Option::Some(5),
+    false,
+  )
+  let mut range_expected = 3
+  while true {
+    true if ordered_map_iter_has_next(range) => {
+      assert(ordered_map_entry_key(ordered_map_iter_next(range)) == range_expected, "map range")
+      range_expected = range_expected + 1
+      continue true
+    }
+    _ => break ordered_map_test_unit()
+  }
+  assert(range_expected == 5, "map range boundaries")
+
+  assert(ordered_map_remove(map, 3), "remove existing")
+  assert(!ordered_map_contains_key(map, 3), "removed absent")
+  assert(!ordered_map_remove(map, 3), "remove idempotent")
+  ordered_map_clear(map)
+  assert(ordered_map_is_empty(map), "clear empty")
+}
