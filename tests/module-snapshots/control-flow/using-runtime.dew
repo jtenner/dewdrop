@@ -1,0 +1,109 @@
+open dew.std.array
+open dew.std.disposable
+
+fn new_state() -> Array<I32> {
+  let value = array_with_capacity(1u32)
+  array_push(value, 0)
+  value
+}
+
+let state = new_state()
+
+fn reset() -> Unit {
+  array_set_unchecked(state, 0u32, 0)
+}
+
+fn record(digit: I32) -> Unit {
+  array_set_unchecked(state, 0u32, array_get_unchecked(state, 0u32) * 10 + digit)
+}
+
+fn recorded() -> I32 {
+  array_get_unchecked(state, 0u32)
+}
+
+struct Resource {
+  digit: I32
+}
+
+impl Disposable for Resource {
+  fn dispose(self) -> Unit {
+    record(self.digit)
+  }
+}
+
+fn acquire(digit: I32) -> Resource {
+  record(1)
+  Resource {
+    digit: digit
+  }
+}
+
+fn fallthrough_case() -> Unit {
+  using resource = acquire(3)
+  assert(resource.digit == 3, "using binding")
+  record(2)
+}
+
+fn value_case() -> I32 {
+  record(4)
+  9
+}
+
+fn return_case() -> I32 {
+  using resource = acquire(5)
+  return value_case()
+}
+
+fn break_value(resource: Resource) -> I32 {
+  record(7)
+  resource.digit + 5
+}
+
+fn break_case() -> I32 {
+  while 0 {
+    current => {
+      using resource = acquire(6)
+      break break_value(resource)
+    }
+  }
+}
+
+fn continue_case() -> U32 {
+  while 0u32 {
+    current if current < 2u32 => {
+      using resource = acquire(2)
+      record(8)
+      continue current + 1u32
+    }
+    current => break current
+  }
+}
+
+fn lifo_case() -> Unit {
+  using first = acquire(4)
+  using second = acquire(5)
+  assert(first.digit + second.digit == 9, "using values")
+  record(3)
+}
+
+pub fn main() -> Unit {
+  reset()
+  fallthrough_case()
+  assert(recorded() == 123, "using fallthrough")
+
+  reset()
+  assert(return_case() == 9, "using return value")
+  assert(recorded() == 145, "using return cleanup")
+
+  reset()
+  assert(break_case() == 11, "using break value")
+  assert(recorded() == 176, "using break cleanup")
+
+  reset()
+  assert(continue_case() == 2u32, "using continue value")
+  assert(recorded() == 182182, "using continue cleanup")
+
+  reset()
+  lifo_case()
+  assert(recorded() == 11354, "using LIFO cleanup")
+}

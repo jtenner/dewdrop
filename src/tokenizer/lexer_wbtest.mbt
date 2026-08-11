@@ -72,7 +72,7 @@ test "compound symbols use longest valid match" {
 test "keywords are separated from identifiers" {
   assert_eq(
     token_kinds(
-      b"fn test pub builtin foreign impl trait for enum struct type let mut if else match is while loop return defer break continue true false as in where open import export package global ordinary",
+      b"fn test pub builtin foreign impl trait for enum struct type let using mut if else match is while loop return defer break continue true false as in where open import export package global ordinary",
     ),
     [
       Keyword(Fn),
@@ -87,6 +87,7 @@ test "keywords are separated from identifiers" {
       Keyword(Struct),
       Keyword(Type),
       Keyword(Let),
+      Keyword(Using),
       Keyword(Mut),
       Keyword(If),
       Keyword(Else),

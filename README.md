@@ -112,7 +112,7 @@ Dewdrop currently includes, among other things:
 - Strict UTF-8 `String` and `StringView` values.
 - Arbitrary `Bytes` values and consuming string/byte builders.
 - Explicit `Ordering`/`Comparator` evidence for deterministic ordered collections.
-- Carrier-specialized `FixedArray`, growable `Array`, bounded/growable circular buffers, comparator-driven `BinaryHeap`, `PriorityQueue`, red-black trees, ordered maps, ordered sets, and builder-backed primitive and derived `Show` formatting, and explicit `Disposable` cleanup evidence, and deterministic LIFO `defer`, double-ended `Deque`, LIFO `Stack`, FIFO `Queue`, and mutable `Map` and `Set` collections with explicit iterators.
+- Carrier-specialized `FixedArray`, growable `Array`, bounded/growable circular buffers, comparator-driven `BinaryHeap`, `PriorityQueue`, red-black trees, ordered maps, ordered sets, and builder-backed primitive and derived `Show` formatting, and explicit `Disposable` cleanup evidence, and deterministic LIFO `defer` and scoped `using`, double-ended `Deque`, LIFO `Stack`, FIFO `Queue`, and mutable `Map` and `Set` collections with explicit iterators.
 - Native SIMD and allocation-free packed-lane operations.
 - WASI Preview 1 standard input and output.
 - Source-level tests with deterministic compiler-produced metadata.

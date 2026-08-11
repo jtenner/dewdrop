@@ -35,6 +35,8 @@
     {"label":"Disposable static dispatch budget","wat":"tests/module-snapshots/control-flow/disposable-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":0,"array.get":0,"array.set":0,"array.len":0,"struct.new":2,"struct.set":0}},
     {"label":"defer directized cleanup budget","wat":"tests/module-snapshots/control-flow/defer-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":2,"array.get":8,"array.set":3,"array.len":1,"struct.new":12,"struct.set":4}},
     {"label":"defer trap exclusion budget","wat":"tests/module-snapshots/control-flow/defer-trap-exclusion.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":0,"array.get":8,"array.set":0,"array.len":0,"struct.new":1,"struct.set":0}},
-    {"label":"imported defer cleanup budget","wat":"tests/module-snapshots/control-flow/defer-imported-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":0,"array.get":8,"array.set":0,"array.len":0,"struct.new":1,"struct.set":0}}
+    {"label":"imported defer cleanup budget","wat":"tests/module-snapshots/control-flow/defer-imported-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":0,"array.get":8,"array.set":0,"array.len":0,"struct.new":1,"struct.set":0}},
+    {"label":"using lexical disposal budget","wat":"tests/module-snapshots/control-flow/using-runtime.wat","forbidden":["call_ref","ref.func","(table"],"counts":{"array.new_default":2,"array.get":3,"array.set":4,"array.len":1,"struct.new":12,"struct.set":3,"(global":1}},
+    {"label":"imported using disposal budget","wat":"tests/module-snapshots/control-flow/using-imported-runtime.wat","forbidden":["call_ref","ref.func","(global","(table"],"counts":{"array.new_default":0,"array.get":8,"array.set":0,"array.len":0,"struct.new":3,"struct.set":0}}
   ]
 }

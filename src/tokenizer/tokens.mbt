@@ -13,6 +13,7 @@ pub enum Keyword {
   Struct
   Type
   Let
+  Using
   Mut
   If
   Else
@@ -156,6 +157,7 @@ fn keyword_from_identifier(identifier : String) -> Keyword? {
     "struct" => Some(Struct)
     "type" => Some(Type)
     "let" => Some(Let)
+    "using" => Some(Using)
     "mut" => Some(Mut)
     "if" => Some(If)
     "else" => Some(Else)

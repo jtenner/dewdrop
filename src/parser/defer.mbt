@@ -334,6 +334,74 @@ fn finalize_deferred_block(
 }
 
 ///|
+fn deferred_cleanup_registration(
+  value : Expr,
+  offset : UInt64,
+) -> (BlockItem, DeferredCleanup) {
+  let name = deferred_cleanup_name(offset)
+  let body = { items: [ExpressionItem(value, offset)], offset }
+  let lambda = LambdaExpr([], NamedType("Unit", offset), body, offset)
+  (LetItem(false, name, offset, lambda, offset), { name, offset })
+}
+
+///|
+fn Parser::parse_block_using_items(
+  self : Parser,
+  open_offset : UInt64,
+  using_offset : UInt64,
+) -> Result[(BlockItem, BlockItem, DeferredCleanup), RecoveryFailure] {
+  let (name, name_offset) = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Identifier(name) => {
+          self.consume_lookahead()
+          (name, token.offset())
+        }
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ =>
+          return Err(expression_failure(ExpectedBlockBindingName(Some(token))))
+      }
+    None => return Err(expression_failure(ExpectedBlockBindingName(None)))
+  }
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Equal) => self.consume_lookahead()
+        @tokenizer.Error(error) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return Err(expression_failure(LexicalError(error, offset)))
+        }
+        _ => return Err(expression_failure(ExpectedBlockEqual(Some(token))))
+      }
+    None => return Err(expression_failure(ExpectedBlockEqual(None)))
+  }
+  let value = match self.parse_expression_recoverable() {
+    Ok(expression) => expression
+    Err(error) => return Err(error)
+  }
+  match self.finish_block_item_line(open_offset) {
+    Err(error) => Err(error)
+    Ok(_) => {
+      let binding = LetItem(false, name, name_offset, value, using_offset)
+      let disposal = CallExpr(
+        FieldExpr(NameExpr(name, name_offset), "dispose", using_offset),
+        [],
+        using_offset,
+      )
+      let (registration, cleanup) = deferred_cleanup_registration(
+        disposal, using_offset,
+      )
+      Ok((binding, registration, cleanup))
+    }
+  }
+}
+
+///|
 fn Parser::parse_block_defer_item(
   self : Parser,
   open_offset : UInt64,
@@ -345,24 +413,6 @@ fn Parser::parse_block_defer_item(
   }
   match self.finish_block_item_line(open_offset) {
     Err(error) => Err(error)
-    Ok(_) => {
-      let name = deferred_cleanup_name(defer_offset)
-      let body = {
-        items: [ExpressionItem(value, defer_offset)],
-        offset: defer_offset,
-      }
-      let lambda = LambdaExpr(
-        [],
-        NamedType("Unit", defer_offset),
-        body,
-        defer_offset,
-      )
-      Ok(
-        (
-          LetItem(false, name, defer_offset, lambda, defer_offset),
-          { name, offset: defer_offset },
-        ),
-      )
-    }
+    Ok(_) => Ok(deferred_cleanup_registration(value, defer_offset))
   }
 }

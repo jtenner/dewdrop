@@ -164,6 +164,19 @@ fn Parser::parse_block_after_left_brace(
     }
     let offset = token.offset()
     match token.kind() {
+      @tokenizer.Keyword(@tokenizer.Using) => {
+        self.consume_lookahead()
+        match self.parse_block_using_items(open_offset, offset) {
+          Ok((binding, registration, cleanup)) => {
+            items.push(binding)
+            items.push(registration)
+            cleanups.push(cleanup)
+            self.skip_newlines()
+            continue
+          }
+          Err(error) => return Err(error)
+        }
+      }
       @tokenizer.Keyword(@tokenizer.Defer) => {
         self.consume_lookahead()
         match self.parse_block_defer_item(open_offset, offset) {

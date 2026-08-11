@@ -17,6 +17,29 @@ fn nested_else_if_expression(depth : Int) -> Bytes {
 }
 
 ///|
+test "using desugars acquisition binding and automatic disposal" {
+  match
+    Parser::from_bytes(
+      b"fn run() -> Unit {\n  using resource = acquire()\n  use(resource)\n}\n",
+    ).parse_declaration() {
+    Ok(Function(declaration)) => {
+      assert_eq(declaration.body.items.length(), 5)
+      match declaration.body.items[0] {
+        LetItem(false, "resource", _, CallExpr(NameExpr("acquire", _), [], _), _) => ()
+        _ => fail("expected using acquisition binding")
+      }
+      assert_true(declaration.body.items[1] is LetItem(_, _, _, LambdaExpr(_, _, _, _), _))
+      match declaration.body.items[3] {
+        ExpressionItem(CallExpr(NameExpr(name, _), [], _), _) =>
+          assert_true(name.contains("dew_defer_"))
+        _ => fail("expected automatic disposal call")
+      }
+    }
+    _ => fail("expected using function")
+  }
+}
+
+///|
 test "defer desugars normal scope exit in LIFO order" {
   match
     Parser::from_bytes(

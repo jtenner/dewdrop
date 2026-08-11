@@ -1,0 +1,7 @@
+open fixture.library
+open dew.std.disposable
+
+pub fn main() -> Unit {
+  using resource = acquire()
+  assert(resource.value == 7, "imported using value")
+}

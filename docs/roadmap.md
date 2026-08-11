@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. add `using` over the completed `Disposable` and `defer` cleanup foundation;
+1. harden cleanup diagnostics for direct double disposal and unsupported escapes;
 2. continue snapshots, measurements, resource budgets, optimization, packaging,
    and release hardening throughout.
 
@@ -331,7 +331,7 @@ boundaries.
 
 - [x] Add non-ambient `dew.std.disposable.Disposable`, explicit generic disposal, Unit-only cleanup results, alias caveats, and initial no-trap-unwinding semantics.
 - [x] Add `defer` with lexical registration, exactly-once LIFO cleanup across fallthrough, return, break, and continue, value-before-cleanup ordering, and explicit trap exclusion.
-- [ ] Add `using` for scoped `Disposable` values, lowering it through the same cleanup plan without hidden nondeterministic finalization.
+- [x] Add immutable `using name = expression` acquisition with exactly-once direct Disposable cleanup through the shared defer plan and imported evidence.
 - [ ] Diagnose invalid cleanup captures, double disposal, unsupported asynchronous escape, and control-flow cases that cannot satisfy exactly-once disposal.
 - [ ] Add parser, HIR, flow, lowering, WAT snapshot, runtime, and cross-module tests for `defer`, `using`, and `Disposable`.
 

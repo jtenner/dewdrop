@@ -1,0 +1,18 @@
+open dew.std.disposable
+open dew.std.wasi
+
+pub struct Resource {
+  value: I32
+}
+
+impl Disposable for Resource {
+  fn dispose(self) -> Unit {
+    let ignored = wasi_fd_write(1u32, b"imported-dispose")
+  }
+}
+
+pub fn acquire() -> Resource {
+  Resource {
+    value: 7
+  }
+}
