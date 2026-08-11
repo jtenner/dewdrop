@@ -1,0 +1,20 @@
+enum PairValue {
+  Pair(I32, I32)
+  None
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  let value = PairValue::Pair(trap_first(), trap_second())
+  match value {
+    PairValue::Pair(first, second) => second
+    PairValue::None => 0
+  }
+}

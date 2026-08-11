@@ -25,6 +25,20 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+LOCAL = """enum Maybe {
+  Some(I32)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  let wrapped = Maybe::Some(value)
+  match wrapped {
+    Maybe::Some(item) => item
+    Maybe::None => 0
+  }
+}
+"""
+
 BASELINE = """enum Maybe {
   Some(I32)
   None
@@ -114,20 +128,27 @@ def main() -> None:
         parser.error("samples and batch must be positive")
     TMP.mkdir(parents=True, exist_ok=True)
     optimized = build("optimized", OPTIMIZED)
+    local = build("local", LOCAL)
     baseline = build("baseline", BASELINE)
-    raw = measure([optimized, baseline], args.samples, args.batch)
+    raw = measure([optimized, local, baseline], args.samples, args.batch)
     optimized_median = statistics.median(raw[str(optimized)])
+    local_median = statistics.median(raw[str(local)])
     baseline_median = statistics.median(raw[str(baseline)])
     print(json.dumps({
         "samples": args.samples,
         "batch": args.batch,
         "optimized_median_us": round(optimized_median, 4),
+        "local_median_us": round(local_median, 4),
         "baseline_median_us": round(baseline_median, 4),
-        "ratio": round(optimized_median / baseline_median, 4),
+        "direct_ratio": round(optimized_median / baseline_median, 4),
+        "local_ratio": round(local_median / baseline_median, 4),
         "optimized_wasm_bytes": optimized.stat().st_size,
+        "local_wasm_bytes": local.stat().st_size,
         "baseline_wasm_bytes": baseline.stat().st_size,
         "optimized_struct_new": wat_count(optimized, "struct.new"),
         "optimized_struct_get": wat_count(optimized, "struct.get"),
+        "local_struct_new": wat_count(local, "struct.new"),
+        "local_struct_get": wat_count(local, "struct.get"),
         "baseline_struct_new": wat_count(baseline, "struct.new"),
         "baseline_struct_get": wat_count(baseline, "struct.get"),
     }, indent=2, sort_keys=True))

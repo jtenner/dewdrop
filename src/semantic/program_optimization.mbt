@@ -3479,101 +3479,192 @@ fn scalar_replace_program_struct_field_reads(
 }
 
 ///|
+fn scalar_replace_program_variant_payload_match(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  variant_expression : ExprId,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    variant_expression < 0 ||
+    variant_expression >= module_.expressions.length() {
+    return false
+  }
+  let source = module_.expressions[expression]
+  let arms = match source.kind {
+    PlannedMatchExpression(_, arms) => arms
+    _ => return false
+  }
+  if arms.length == 0 ||
+    arms.start < 0 ||
+    arms.start + arms.length > module_.pattern_arms.length() ||
+    !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  let (variant, arguments) = match
+    module_.expressions[variant_expression].kind {
+    PlannedVariantTupleNew(variant, _, arguments) => (variant, arguments)
+    _ => return false
+  }
+  if arguments.length == 0 ||
+    arguments.start < 0 ||
+    arguments.start + arguments.length > module_.expression_children.length() ||
+    !(module_.expressions[variant_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  let arm = module_.pattern_arms[arms.start]
+  if arm.guard_condition >= 0 ||
+    arm.pattern < 0 ||
+    arm.pattern >= module_.patterns.length() ||
+    arm.body < 0 ||
+    arm.body >= module_.expressions.length() {
+    return false
+  }
+  let root = module_.patterns[arm.pattern]
+  let children = match root.source {
+    HirTuplePattern(_, children, _) => children
+    _ => return false
+  }
+  let selected_variant = match root.selected_constructor {
+    VariantInferredPatternConstructor(selected, _) => selected
+    _ => return false
+  }
+  if selected_variant != variant ||
+    children.length != arguments.length ||
+    children.start < 0 ||
+    children.start + children.length > module_.pattern_children.length() {
+    return false
+  }
+  let local_id = match module_.expressions[arm.body].kind {
+    PlannedLocalGet(local_id) => local_id
+    _ => return false
+  }
+  let mut selected = -1
+  for index in 0..<children.length {
+    let pattern = module_.pattern_children[children.start + index]
+    if pattern < 0 || pattern >= module_.patterns.length() {
+      selected = -2
+      break
+    }
+    match module_.patterns[pattern].reference {
+      PatternBindingReference(binding) if binding == local_id => {
+        if selected >= 0 {
+          selected = -2
+          break
+        }
+        selected = index
+      }
+      _ => ()
+    }
+  }
+  if selected < 0 {
+    return false
+  }
+  let payload = module_.expression_children[arguments.start + selected]
+  if payload < 0 ||
+    payload >= module_.expressions.length() ||
+    module_.expressions[payload].type_ != source.type_ ||
+    module_.expressions[payload].shape != source.shape ||
+    (!program_scalar_replaceable_field_shape(source.shape) &&
+    !(arguments.length == 1 &&
+    ((source.shape is RefPlannedValueShape) ||
+    (source.shape is GenericPlannedValueShape)))) {
+    return false
+  }
+  module_.expressions[expression] = {
+    ..source,
+    kind: PlannedParameterSelect(arguments, selected),
+  }
+  let variant_source = module_.expressions[variant_expression]
+  module_.expressions[variant_expression] = {
+    ..variant_source,
+    kind: PlannedConsumedExpression,
+  }
+  true
+}
+
+///|
 fn scalar_replace_program_variant_payload_reads(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
   for module_ in modules {
     for expression in 0..<module_.expressions.length() {
-      let source = module_.expressions[expression]
-      let (scrutinee, arms) = match source.kind {
-        PlannedMatchExpression(scrutinee, arms) => (scrutinee, arms)
+      let scrutinee = match module_.expressions[expression].kind {
+        PlannedMatchExpression(scrutinee, _) => scrutinee
         _ => continue
       }
-      if scrutinee < 0 ||
-        scrutinee >= module_.expressions.length() ||
-        arms.length == 0 ||
-        arms.start < 0 ||
-        arms.start + arms.length > module_.pattern_arms.length() ||
-        !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
+      if scrutinee < 0 || scrutinee >= module_.expressions.length() {
         continue
       }
-      let (variant, arguments) = match module_.expressions[scrutinee].kind {
-        PlannedVariantTupleNew(variant, _, arguments) => (variant, arguments)
-        _ => continue
+      if module_.expressions[scrutinee].kind is PlannedVariantTupleNew(_, _, _) {
+        ignore(
+          scalar_replace_program_variant_payload_match(
+            module_, expression, scrutinee,
+          ),
+        )
       }
-      if arguments.length == 0 ||
-        arguments.start < 0 ||
-        arguments.start + arguments.length > module_.expression_children.length() ||
-        !(module_.expressions[scrutinee].trait_object_coercion is NoInferredTraitObjectCoercion) {
-        continue
-      }
-      let arm = module_.pattern_arms[arms.start]
-      if arm.guard_condition >= 0 ||
-        arm.pattern < 0 ||
-        arm.pattern >= module_.patterns.length() ||
-        arm.body < 0 ||
-        arm.body >= module_.expressions.length() {
-        continue
-      }
-      let root = module_.patterns[arm.pattern]
-      let children = match root.source {
-        HirTuplePattern(_, children, _) => children
-        _ => continue
-      }
-      let selected_variant = match root.selected_constructor {
-        VariantInferredPatternConstructor(selected, _) => selected
-        _ => continue
-      }
-      if selected_variant != variant ||
-        children.length != arguments.length ||
-        children.start < 0 ||
-        children.start + children.length > module_.pattern_children.length() {
-        continue
-      }
-      let local_id = match module_.expressions[arm.body].kind {
-        PlannedLocalGet(local_id) => local_id
-        _ => continue
-      }
-      let mut selected = -1
-      for index in 0..<children.length {
-        let pattern = module_.pattern_children[children.start + index]
-        if pattern < 0 || pattern >= module_.patterns.length() {
-          selected = -2
-          break
+    }
+    for body in module_.bodies {
+      for
+        block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+        if block < 0 || block >= module_.blocks.length() {
+          continue
         }
-        match module_.patterns[pattern].reference {
-          PatternBindingReference(binding) if binding == local_id => {
-            if selected >= 0 {
-              selected = -2
-              break
-            }
-            selected = index
+        let items = module_.blocks[block].items
+        if items.start < 0 ||
+          items.start + items.length > module_.block_items.length() {
+          continue
+        }
+        for index in 0..<items.length {
+          let (local_id, initializer) = match
+            module_.block_items[items.start + index].kind {
+            PlannedLetItem(local_id, false, initializer) =>
+              (local_id, initializer)
+            _ => continue
           }
-          _ => ()
+          if initializer < 0 ||
+            initializer >= module_.expressions.length() ||
+            !(module_.expressions[initializer].kind is PlannedVariantTupleNew(_, _, _)) ||
+            program_cse_local_is_captured(module_, body, local_id) {
+            continue
+          }
+          let (use_count, only_use) = program_local_get_count(
+            module_, body, local_id,
+          )
+          if use_count != 1 || only_use < 0 {
+            continue
+          }
+          let mut match_expression = -1
+          for
+            candidate in body.expressions.start..<(body.expressions.start +
+            body.expressions.length) {
+            match module_.expressions[candidate].kind {
+              PlannedMatchExpression(scrutinee, _) if scrutinee == only_use => {
+                if match_expression >= 0 {
+                  match_expression = -2
+                  break
+                }
+                match_expression = candidate
+              }
+              _ => ()
+            }
+          }
+          if match_expression < 0 ||
+            !scalar_replace_program_variant_payload_match(
+              module_, match_expression, initializer,
+            ) {
+            continue
+          }
+          let use_source = module_.expressions[only_use]
+          module_.expressions[only_use] = {
+            ..use_source,
+            kind: PlannedConsumedExpression,
+          }
+          module_.block_items[items.start + index] = {
+            ..module_.block_items[items.start + index],
+            kind: PlannedElidedLetItem(local_id),
+          }
         }
-      }
-      if selected < 0 {
-        continue
-      }
-      let payload = module_.expression_children[arguments.start + selected]
-      if payload < 0 ||
-        payload >= module_.expressions.length() ||
-        module_.expressions[payload].type_ != source.type_ ||
-        module_.expressions[payload].shape != source.shape ||
-        (!program_scalar_replaceable_field_shape(source.shape) &&
-        !(arguments.length == 1 &&
-        ((source.shape is RefPlannedValueShape) ||
-        (source.shape is GenericPlannedValueShape)))) {
-        continue
-      }
-      module_.expressions[expression] = {
-        ..source,
-        kind: PlannedParameterSelect(arguments, selected),
-      }
-      let scrutinee_source = module_.expressions[scrutinee]
-      module_.expressions[scrutinee] = {
-        ..scrutinee_source,
-        kind: PlannedConsumedExpression,
       }
     }
   }

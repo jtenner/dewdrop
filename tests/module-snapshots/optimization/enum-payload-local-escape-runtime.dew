@@ -1,0 +1,16 @@
+enum PairValue {
+  Pair(I32, I32)
+  None
+}
+
+fn project(left: I32, right: I32) -> I32 {
+  let value = PairValue::Pair(left, right)
+  match value {
+    PairValue::Pair(first, second) => second
+    PairValue::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  project(20, 22)
+}
