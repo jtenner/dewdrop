@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Implement the red-black tree core, then ordered map/set and range APIs.
+1. Implement ordered map/set wrappers and range APIs over the completed red-black tree core.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
@@ -96,7 +96,7 @@
 - [x] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
 - [x] Implement `dew.std.collections.stack` with explicit empty-pop and empty-peek result semantics.
 - [x] Implement growable `dew.std.collections.deque` with O(1) amortized operations at both ends.
-- [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
+- [ ] Implement ordered map/set wrappers and range APIs over the completed red-black tree core.
 - [ ] Specify and benchmark sequence/deque/measure use cases before implementing `dew.std.collections.finger_tree`.
 - [ ] Define and implement `dew.std.list` only if measured workloads justify a persistent list representation.
 - [ ] Add deterministic allocation-free `Hash` implementations for String, StringView, and Bytes after their cross-type equality contract is final.

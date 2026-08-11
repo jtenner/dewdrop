@@ -30,7 +30,7 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. implement the red-black tree core, then ordered map/set and range APIs;
+1. implement ordered map/set wrappers and their range APIs over the completed red-black tree core;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
 3. continue snapshots, measurements, resource budgets, optimization, packaging,
@@ -492,7 +492,8 @@ count = count + 1
 - [x] Implement growable `dew.std.collections.deque` with operations at both ends and logical-order iteration.
 - [x] Implement `dew.std.collections.binary_heap` with retained deterministic comparator evidence, explicit min/max policy, Floyd heapification, and layout-order iteration.
 - [x] Implement `dew.std.collections.priority_queue` as a thin value/priority wrapper over BinaryHeap with retained comparator policy and unspecified equal-priority order.
-- [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
+- [x] Implement `dew.std.collections.red_black_tree` with insertion/removal balancing, invariant checks, bounds, predecessor/successor, and deterministic range traversal.
+- [ ] Implement ordered map/set wrappers and range APIs over the shared red-black tree core.
 - [ ] Implement `dew.std.collections.finger_tree` only after sequence/deque/measure use cases and representation costs are specified and benchmarked.
 - [ ] Define a standard persistent list representation only if measured workloads justify it.
 - [x] Implement `dew.std.map` with ambient U64 Hash evidence, collision-safe equality, deterministic buckets, erased carriers, safe lookup, insertion/replacement, and index syntax.

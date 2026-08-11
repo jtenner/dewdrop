@@ -18,6 +18,7 @@ python3 tools/generate_deque_std.py --check
 python3 tools/generate_ordering_std.py --check
 python3 tools/generate_binary_heap_std.py --check
 python3 tools/generate_priority_queue_std.py --check
+python3 tools/generate_red_black_tree_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs

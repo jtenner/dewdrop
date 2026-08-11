@@ -270,6 +270,9 @@ pub fn required_standard_library_source_paths(
   if (collection_mask & 64) != 0 {
     required.push("std/collections/priority_queue.dew")
   }
+  if (collection_mask & 128) != 0 {
+    required.push("std/collections/red_black_tree.dew")
+  }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
     let text_files = [
@@ -671,6 +674,24 @@ pub fn collect_program_manifest_with_standard_sources(
           module_id,
           "std/collections/priority_queue.dew",
           standard_sources.source("std/collections/priority_queue.dew"),
+          false,
+          false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 128) != 0 {
+    let module_id = standard_library_module_id(41)
+    let module_index = modules.length()
+    first_module["dew.std.collections.red_black_tree"] = module_index
+    module_paths.push("dew.std.collections.red_black_tree")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id,
+          "std/collections/red_black_tree.dew",
+          standard_sources.source("std/collections/red_black_tree.dew"),
           false,
           false,
         ),

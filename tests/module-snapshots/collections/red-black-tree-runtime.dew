@@ -1,0 +1,153 @@
+open dew.std.array
+open dew.std.ordering
+open dew.std.collections.red_black_tree
+
+fn tree_test_unit() -> Unit {}
+
+fn entry_key_or(
+  value: Option<TreeEntry<I32, I32>>,
+  fallback: I32,
+) -> I32 {
+  match value {
+    Option::Some(entry) => tree_entry_key(entry)
+    Option::None => fallback
+  }
+}
+
+fn entry_value_or(
+  value: Option<TreeEntry<I32, I32>>,
+  fallback: I32,
+) -> I32 {
+  match value {
+    Option::Some(entry) => tree_entry_value(entry)
+    Option::None => fallback
+  }
+}
+
+fn get_or(
+  tree: RedBlackTree<I32, I32, NaturalComparator>,
+  key: I32,
+  fallback: I32,
+) -> I32 {
+  match red_black_tree_get(tree, key) {
+    Option::Some(value) => value
+    Option::None => fallback
+  }
+}
+
+pub fn main() -> Unit {
+  let tree = red_black_tree_new(natural_comparator())
+  assert(red_black_tree_is_empty(tree), "new tree empty")
+  assert(red_black_tree_validate(tree), "empty invariant")
+  assert(red_black_tree_minimum(tree) is Option::None, "empty minimum")
+  assert(red_black_tree_maximum(tree) is Option::None, "empty maximum")
+  assert(!red_black_tree_remove(tree, 1), "missing remove")
+
+  let insertion = array_new()
+  array_push(insertion, 11)
+  array_push(insertion, 2)
+  array_push(insertion, 14)
+  array_push(insertion, 1)
+  array_push(insertion, 7)
+  array_push(insertion, 15)
+  array_push(insertion, 5)
+  array_push(insertion, 8)
+  array_push(insertion, 4)
+  array_push(insertion, 13)
+  array_push(insertion, 12)
+  array_push(insertion, 3)
+  array_push(insertion, 6)
+  array_push(insertion, 9)
+  array_push(insertion, 10)
+  while 0u32 {
+    index if index < array_length(insertion) => {
+      let key = array_get_unchecked(insertion, index)
+      assert(red_black_tree_insert(tree, key, key * 10), "new insert")
+      assert(red_black_tree_validate(tree), "insert invariant")
+      continue index + 1u32
+    }
+    _ => break tree_test_unit()
+  }
+  assert(red_black_tree_length(tree) == 15u32, "insert length")
+  assert(!red_black_tree_insert(tree, 7, 701), "replacement reports false")
+  assert(red_black_tree_length(tree) == 15u32, "replacement length")
+  assert(get_or(tree, 7, -1) == 701, "replacement value")
+  assert(red_black_tree_contains(tree, 12), "contains")
+  assert(!red_black_tree_contains(tree, 99), "missing contains")
+  assert(entry_key_or(red_black_tree_minimum(tree), -1) == 1, "minimum")
+  assert(entry_key_or(red_black_tree_maximum(tree), -1) == 15, "maximum")
+  assert(entry_key_or(red_black_tree_lower_bound(tree, 7), -1) == 7, "lower exact")
+  assert(entry_key_or(red_black_tree_lower_bound(tree, 0), -1) == 1, "lower before")
+  assert(entry_key_or(red_black_tree_upper_bound(tree, 7), -1) == 8, "upper exact")
+  assert(entry_key_or(red_black_tree_predecessor(tree, 7), -1) == 6, "predecessor")
+  assert(entry_key_or(red_black_tree_successor(tree, 7), -1) == 8, "successor")
+  assert(red_black_tree_predecessor(tree, 1) is Option::None, "no predecessor")
+  assert(red_black_tree_successor(tree, 15) is Option::None, "no successor")
+
+  let iter = red_black_tree_iter(tree)
+  let mut expected = 1
+  while true {
+    true if red_black_tree_iter_has_next(iter) => {
+      let entry = red_black_tree_iter_next(iter)
+      assert(tree_entry_key(entry) == expected, "in-order traversal")
+      expected = expected + 1
+      continue true
+    }
+    _ => break tree_test_unit()
+  }
+  assert(expected == 16, "iterator count")
+
+  let range = red_black_tree_range(
+    tree,
+    Option::Some(4),
+    false,
+    Option::Some(9),
+    true,
+  )
+  let mut range_expected = 5
+  while true {
+    true if red_black_tree_iter_has_next(range) => {
+      assert(tree_entry_key(red_black_tree_iter_next(range)) == range_expected, "range order")
+      range_expected = range_expected + 1
+      continue true
+    }
+    _ => break tree_test_unit()
+  }
+  assert(range_expected == 10, "range boundaries")
+
+  let removals = array_new()
+  array_push(removals, 1)
+  array_push(removals, 14)
+  array_push(removals, 7)
+  array_push(removals, 11)
+  array_push(removals, 4)
+  array_push(removals, 8)
+  array_push(removals, 15)
+  array_push(removals, 2)
+  array_push(removals, 5)
+  array_push(removals, 3)
+  array_push(removals, 6)
+  array_push(removals, 9)
+  array_push(removals, 10)
+  array_push(removals, 12)
+  array_push(removals, 13)
+  while 0u32 {
+    index if index < array_length(removals) => {
+      let key = array_get_unchecked(removals, index)
+      assert(red_black_tree_remove(tree, key), "remove existing")
+      assert(!red_black_tree_contains(tree, key), "removed absent")
+      assert(red_black_tree_validate(tree), "remove invariant")
+      continue index + 1u32
+    }
+    _ => break tree_test_unit()
+  }
+  assert(red_black_tree_is_empty(tree), "drained tree")
+  assert(red_black_tree_length(tree) == 0u32, "drained length")
+
+  red_black_tree_insert(tree, 2, 20)
+  red_black_tree_insert(tree, 1, 10)
+  red_black_tree_insert(tree, 3, 30)
+  red_black_tree_clear(tree)
+  assert(red_black_tree_is_empty(tree), "clear empty")
+  assert(red_black_tree_validate(tree), "clear invariant")
+}

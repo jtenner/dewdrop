@@ -1,0 +1,891 @@
+open dew.std.array
+open dew.std.ordering
+
+pub struct TreeEntry<k, v> {
+  key: k
+  value: v
+}
+
+pub struct RedBlackTree<k, v, c> {
+  keys: Array<k>
+  values: Array<v>
+  parents: Array<I32>
+  lefts: Array<I32>
+  rights: Array<I32>
+  reds: Array<Bool>
+  active: Array<Bool>
+  root: Array<I32>
+  live: Array<U32>
+  comparator: c
+}
+
+pub struct RedBlackTreeIter<k, v, c> {
+  tree: RedBlackTree<k, v, c>
+  current: Array<I32>
+  upper: Option<k>
+  upper_inclusive: Bool
+}
+
+fn tree_unit() -> Unit {}
+
+fn tree_no_key<k>() -> Option<k> {
+  Option::None
+}
+
+fn tree_i32_box(value: I32) -> Array<I32> {
+  let result = array_with_capacity(1u32)
+  array_push(result, value)
+  result
+}
+
+fn tree_u32_box(value: U32) -> Array<U32> {
+  let result = array_with_capacity(1u32)
+  array_push(result, value)
+  result
+}
+
+fn tree_index(index: I32) -> U32 {
+  index.into()
+}
+
+fn tree_root<k, v, c>(tree: RedBlackTree<k, v, c>) -> I32 {
+  array_get_unchecked(tree.root, 0u32)
+}
+
+fn tree_set_root<k, v, c>(tree: RedBlackTree<k, v, c>, value: I32) -> Unit {
+  array_set_unchecked(tree.root, 0u32, value)
+}
+
+fn tree_live<k, v, c>(tree: RedBlackTree<k, v, c>) -> U32 {
+  array_get_unchecked(tree.live, 0u32)
+}
+
+fn tree_set_live<k, v, c>(tree: RedBlackTree<k, v, c>, value: U32) -> Unit {
+  array_set_unchecked(tree.live, 0u32, value)
+}
+
+fn tree_parent<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
+  if node < 0 {
+    -1
+  } else {
+    array_get_unchecked(tree.parents, tree_index(node))
+  }
+}
+
+fn tree_left<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
+  if node < 0 {
+    -1
+  } else {
+    array_get_unchecked(tree.lefts, tree_index(node))
+  }
+}
+
+fn tree_right<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
+  if node < 0 {
+    -1
+  } else {
+    array_get_unchecked(tree.rights, tree_index(node))
+  }
+}
+
+fn tree_is_red<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> Bool {
+  if node < 0 {
+    false
+  } else {
+    array_get_unchecked(tree.reds, tree_index(node))
+  }
+}
+
+fn tree_set_parent<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+  value: I32,
+) -> Unit {
+  if node >= 0 {
+    array_set_unchecked(tree.parents, tree_index(node), value)
+  } else {
+    tree_unit()
+  }
+}
+
+fn tree_set_left<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+  value: I32,
+) -> Unit {
+  if node >= 0 {
+    array_set_unchecked(tree.lefts, tree_index(node), value)
+  } else {
+    tree_unit()
+  }
+}
+
+fn tree_set_right<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+  value: I32,
+) -> Unit {
+  if node >= 0 {
+    array_set_unchecked(tree.rights, tree_index(node), value)
+  } else {
+    tree_unit()
+  }
+}
+
+fn tree_set_red<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+  value: Bool,
+) -> Unit {
+  if node >= 0 {
+    array_set_unchecked(tree.reds, tree_index(node), value)
+  } else {
+    tree_unit()
+  }
+}
+
+fn tree_key<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> k {
+  array_get_unchecked(tree.keys, tree_index(node))
+}
+
+fn tree_value<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> v {
+  array_get_unchecked(tree.values, tree_index(node))
+}
+
+fn tree_entry<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+) -> TreeEntry<k, v> {
+  TreeEntry {
+    key: tree_key(tree, node)
+    value: tree_value(tree, node)
+  }
+}
+
+pub fn red_black_tree_new<k, v, c: Comparator<k>>(
+  comparator: c,
+) -> RedBlackTree<k, v, c> {
+  RedBlackTree {
+    keys: array_new()
+    values: array_new()
+    parents: array_new()
+    lefts: array_new()
+    rights: array_new()
+    reds: array_new()
+    active: array_new()
+    root: tree_i32_box(-1)
+    live: tree_u32_box(0u32)
+    comparator: comparator
+  }
+}
+
+pub fn red_black_tree_length<k, v, c>(tree: RedBlackTree<k, v, c>) -> U32 {
+  tree_live(tree)
+}
+
+pub fn red_black_tree_is_empty<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+) -> Bool {
+  tree_live(tree) == 0u32
+}
+
+fn tree_compare_key<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+  node: I32,
+) -> Ordering {
+  tree.comparator.compare(key, tree_key(tree, node))
+}
+
+fn tree_find_index<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> I32 {
+  while tree_root(tree) {
+    -1 => break -1
+    node => {
+      match tree_compare_key(tree, key, node) {
+        Ordering::Less => continue tree_left(tree, node)
+        Ordering::Greater => continue tree_right(tree, node)
+        Ordering::Equal => break node
+      }
+    }
+  }
+}
+
+fn tree_minimum_index<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  start: I32,
+) -> I32 {
+  while start {
+    -1 => break -1
+    node => {
+      let left = tree_left(tree, node)
+      if left < 0 {
+        break node
+      } else {
+        continue left
+      }
+    }
+  }
+}
+
+fn tree_maximum_index<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  start: I32,
+) -> I32 {
+  while start {
+    -1 => break -1
+    node => {
+      let right = tree_right(tree, node)
+      if right < 0 {
+        break node
+      } else {
+        continue right
+      }
+    }
+  }
+}
+
+fn tree_successor_index<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+) -> I32 {
+  let right = tree_right(tree, node)
+  if right >= 0 {
+    tree_minimum_index(tree, right)
+  } else {
+    let mut current = node
+    let mut parent = tree_parent(tree, current)
+    while true {
+      true if parent >= 0 && current == tree_right(tree, parent) => {
+        current = parent
+        parent = tree_parent(tree, parent)
+        continue true
+      }
+      _ => break parent
+    }
+  }
+}
+
+fn tree_predecessor_index<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+) -> I32 {
+  let left = tree_left(tree, node)
+  if left >= 0 {
+    tree_maximum_index(tree, left)
+  } else {
+    let mut current = node
+    let mut parent = tree_parent(tree, current)
+    while true {
+      true if parent >= 0 && current == tree_left(tree, parent) => {
+        current = parent
+        parent = tree_parent(tree, parent)
+        continue true
+      }
+      _ => break parent
+    }
+  }
+}
+
+fn tree_left_rotate<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+) -> Unit {
+  let pivot = tree_right(tree, node)
+  let middle = tree_left(tree, pivot)
+  tree_set_right(tree, node, middle)
+  tree_set_parent(tree, middle, node)
+  let parent = tree_parent(tree, node)
+  tree_set_parent(tree, pivot, parent)
+  if parent < 0 {
+    tree_set_root(tree, pivot)
+  } else if node == tree_left(tree, parent) {
+    tree_set_left(tree, parent, pivot)
+  } else {
+    tree_set_right(tree, parent, pivot)
+  }
+  tree_set_left(tree, pivot, node)
+  tree_set_parent(tree, node, pivot)
+}
+
+fn tree_right_rotate<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  node: I32,
+) -> Unit {
+  let pivot = tree_left(tree, node)
+  let middle = tree_right(tree, pivot)
+  tree_set_left(tree, node, middle)
+  tree_set_parent(tree, middle, node)
+  let parent = tree_parent(tree, node)
+  tree_set_parent(tree, pivot, parent)
+  if parent < 0 {
+    tree_set_root(tree, pivot)
+  } else if node == tree_right(tree, parent) {
+    tree_set_right(tree, parent, pivot)
+  } else {
+    tree_set_left(tree, parent, pivot)
+  }
+  tree_set_right(tree, pivot, node)
+  tree_set_parent(tree, node, pivot)
+}
+
+fn tree_insert_fixup<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  inserted: I32,
+) -> Unit {
+  let mut node = inserted
+  while true {
+    true if tree_is_red(tree, tree_parent(tree, node)) => {
+      let parent = tree_parent(tree, node)
+      let grand = tree_parent(tree, parent)
+      if parent == tree_left(tree, grand) {
+        let uncle = tree_right(tree, grand)
+        if tree_is_red(tree, uncle) {
+          tree_set_red(tree, parent, false)
+          tree_set_red(tree, uncle, false)
+          tree_set_red(tree, grand, true)
+          node = grand
+        } else {
+          if node == tree_right(tree, parent) {
+            node = parent
+            tree_left_rotate(tree, node)
+          } else {
+            tree_unit()
+          }
+          let fixed_parent = tree_parent(tree, node)
+          let fixed_grand = tree_parent(tree, fixed_parent)
+          tree_set_red(tree, fixed_parent, false)
+          tree_set_red(tree, fixed_grand, true)
+          tree_right_rotate(tree, fixed_grand)
+        }
+      } else {
+        let uncle = tree_left(tree, grand)
+        if tree_is_red(tree, uncle) {
+          tree_set_red(tree, parent, false)
+          tree_set_red(tree, uncle, false)
+          tree_set_red(tree, grand, true)
+          node = grand
+        } else {
+          if node == tree_left(tree, parent) {
+            node = parent
+            tree_right_rotate(tree, node)
+          } else {
+            tree_unit()
+          }
+          let fixed_parent = tree_parent(tree, node)
+          let fixed_grand = tree_parent(tree, fixed_parent)
+          tree_set_red(tree, fixed_parent, false)
+          tree_set_red(tree, fixed_grand, true)
+          tree_left_rotate(tree, fixed_grand)
+        }
+      }
+      continue true
+    }
+    _ => break tree_unit()
+  }
+  tree_set_red(tree, tree_root(tree), false)
+}
+
+pub fn red_black_tree_insert<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+  value: v,
+) -> Bool {
+  let mut parent = -1
+  let mut current = tree_root(tree)
+  let mut relation = Ordering::Equal
+  while true {
+    true if current >= 0 => {
+      parent = current
+      relation = tree_compare_key(tree, key, current)
+      match relation {
+        Ordering::Less => {
+          current = tree_left(tree, current)
+          tree_unit()
+        }
+        Ordering::Greater => {
+          current = tree_right(tree, current)
+          tree_unit()
+        }
+        Ordering::Equal => {
+          array_set_unchecked(tree.values, tree_index(current), value)
+          return false
+        }
+      }
+      continue true
+    }
+    _ => break tree_unit()
+  }
+  let node = array_length(tree.keys).into()
+  array_push(tree.keys, key)
+  array_push(tree.values, value)
+  array_push(tree.parents, parent)
+  array_push(tree.lefts, -1)
+  array_push(tree.rights, -1)
+  array_push(tree.reds, true)
+  array_push(tree.active, true)
+  if parent < 0 {
+    tree_set_root(tree, node)
+  } else if relation is Ordering::Less {
+    tree_set_left(tree, parent, node)
+  } else {
+    tree_set_right(tree, parent, node)
+  }
+  tree_set_live(tree, tree_live(tree) + 1u32)
+  tree_insert_fixup(tree, node)
+  true
+}
+
+pub fn red_black_tree_get<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Option<v> {
+  let node = tree_find_index(tree, key)
+  if node < 0 {
+    Option::None
+  } else {
+    Option::Some(tree_value(tree, node))
+  }
+}
+
+pub fn red_black_tree_contains<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Bool {
+  tree_find_index(tree, key) >= 0
+}
+
+fn tree_transplant<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  removed: I32,
+  replacement: I32,
+) -> Unit {
+  let parent = tree_parent(tree, removed)
+  if parent < 0 {
+    tree_set_root(tree, replacement)
+  } else if removed == tree_left(tree, parent) {
+    tree_set_left(tree, parent, replacement)
+  } else {
+    tree_set_right(tree, parent, replacement)
+  }
+  tree_set_parent(tree, replacement, parent)
+}
+
+fn tree_delete_fixup<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+  start: I32,
+  start_parent: I32,
+) -> Unit {
+  let mut node = start
+  let mut parent_hint = start_parent
+  while true {
+    true if node != tree_root(tree) && !tree_is_red(tree, node) => {
+      let parent = if node >= 0 {
+        tree_parent(tree, node)
+      } else {
+        parent_hint
+      }
+      if parent < 0 {
+        node = tree_root(tree)
+      } else if node == tree_left(tree, parent) {
+        let mut sibling = tree_right(tree, parent)
+        if tree_is_red(tree, sibling) {
+          tree_set_red(tree, sibling, false)
+          tree_set_red(tree, parent, true)
+          tree_left_rotate(tree, parent)
+          sibling = tree_right(tree, parent)
+        } else {
+          tree_unit()
+        }
+        if !tree_is_red(tree, tree_left(tree, sibling)) &&
+          !tree_is_red(tree, tree_right(tree, sibling)) {
+          tree_set_red(tree, sibling, true)
+          node = parent
+          parent_hint = tree_parent(tree, node)
+        } else {
+          if !tree_is_red(tree, tree_right(tree, sibling)) {
+            tree_set_red(tree, tree_left(tree, sibling), false)
+            tree_set_red(tree, sibling, true)
+            tree_right_rotate(tree, sibling)
+            sibling = tree_right(tree, parent)
+          } else {
+            tree_unit()
+          }
+          tree_set_red(tree, sibling, tree_is_red(tree, parent))
+          tree_set_red(tree, parent, false)
+          tree_set_red(tree, tree_right(tree, sibling), false)
+          tree_left_rotate(tree, parent)
+          node = tree_root(tree)
+          parent_hint = -1
+        }
+      } else {
+        let mut sibling = tree_left(tree, parent)
+        if tree_is_red(tree, sibling) {
+          tree_set_red(tree, sibling, false)
+          tree_set_red(tree, parent, true)
+          tree_right_rotate(tree, parent)
+          sibling = tree_left(tree, parent)
+        } else {
+          tree_unit()
+        }
+        if !tree_is_red(tree, tree_right(tree, sibling)) &&
+          !tree_is_red(tree, tree_left(tree, sibling)) {
+          tree_set_red(tree, sibling, true)
+          node = parent
+          parent_hint = tree_parent(tree, node)
+        } else {
+          if !tree_is_red(tree, tree_left(tree, sibling)) {
+            tree_set_red(tree, tree_right(tree, sibling), false)
+            tree_set_red(tree, sibling, true)
+            tree_left_rotate(tree, sibling)
+            sibling = tree_left(tree, parent)
+          } else {
+            tree_unit()
+          }
+          tree_set_red(tree, sibling, tree_is_red(tree, parent))
+          tree_set_red(tree, parent, false)
+          tree_set_red(tree, tree_left(tree, sibling), false)
+          tree_right_rotate(tree, parent)
+          node = tree_root(tree)
+          parent_hint = -1
+        }
+      }
+      continue true
+    }
+    _ => break tree_unit()
+  }
+  tree_set_red(tree, node, false)
+}
+
+pub fn red_black_tree_remove<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Bool {
+  let removed = tree_find_index(tree, key)
+  if removed < 0 {
+    false
+  } else {
+    let mut moved = removed
+    let mut moved_was_red = tree_is_red(tree, moved)
+    let mut replacement = -1
+    let mut replacement_parent = -1
+    if tree_left(tree, removed) < 0 {
+      replacement = tree_right(tree, removed)
+      replacement_parent = tree_parent(tree, removed)
+      tree_transplant(tree, removed, replacement)
+    } else if tree_right(tree, removed) < 0 {
+      replacement = tree_left(tree, removed)
+      replacement_parent = tree_parent(tree, removed)
+      tree_transplant(tree, removed, replacement)
+    } else {
+      moved = tree_minimum_index(tree, tree_right(tree, removed))
+      moved_was_red = tree_is_red(tree, moved)
+      replacement = tree_right(tree, moved)
+      if tree_parent(tree, moved) == removed {
+        replacement_parent = moved
+        tree_set_parent(tree, replacement, moved)
+      } else {
+        replacement_parent = tree_parent(tree, moved)
+        tree_transplant(tree, moved, replacement)
+        tree_set_right(tree, moved, tree_right(tree, removed))
+        tree_set_parent(tree, tree_right(tree, moved), moved)
+      }
+      tree_transplant(tree, removed, moved)
+      tree_set_left(tree, moved, tree_left(tree, removed))
+      tree_set_parent(tree, tree_left(tree, moved), moved)
+      tree_set_red(tree, moved, tree_is_red(tree, removed))
+    }
+    array_set_unchecked(tree.active, tree_index(removed), false)
+    tree_set_live(tree, tree_live(tree) - 1u32)
+    if !moved_was_red {
+      tree_delete_fixup(tree, replacement, replacement_parent)
+    } else {
+      tree_unit()
+    }
+    true
+  }
+}
+
+pub fn red_black_tree_minimum<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+) -> Option<TreeEntry<k, v>> {
+  let node = tree_minimum_index(tree, tree_root(tree))
+  if node < 0 {
+    Option::None
+  } else {
+    Option::Some(tree_entry(tree, node))
+  }
+}
+
+pub fn red_black_tree_maximum<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+) -> Option<TreeEntry<k, v>> {
+  let node = tree_maximum_index(tree, tree_root(tree))
+  if node < 0 {
+    Option::None
+  } else {
+    Option::Some(tree_entry(tree, node))
+  }
+}
+
+fn tree_lower_bound_index<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+  inclusive: Bool,
+) -> I32 {
+  let mut candidate = -1
+  while tree_root(tree) {
+    -1 => break candidate
+    node => {
+      match tree_compare_key(tree, key, node) {
+        Ordering::Less => {
+          candidate = node
+          continue tree_left(tree, node)
+        }
+        Ordering::Equal => {
+          if inclusive {
+            break node
+          } else {
+            continue tree_right(tree, node)
+          }
+        }
+        Ordering::Greater => continue tree_right(tree, node)
+      }
+    }
+  }
+}
+
+pub fn red_black_tree_lower_bound<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Option<TreeEntry<k, v>> {
+  let node = tree_lower_bound_index(tree, key, true)
+  if node < 0 {
+    Option::None
+  } else {
+    Option::Some(tree_entry(tree, node))
+  }
+}
+
+pub fn red_black_tree_upper_bound<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Option<TreeEntry<k, v>> {
+  let node = tree_lower_bound_index(tree, key, false)
+  if node < 0 {
+    Option::None
+  } else {
+    Option::Some(tree_entry(tree, node))
+  }
+}
+
+pub fn red_black_tree_predecessor<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Option<TreeEntry<k, v>> {
+  let bound = tree_lower_bound_index(tree, key, true)
+  let node = if bound < 0 {
+    tree_maximum_index(tree, tree_root(tree))
+  } else {
+    match tree.comparator.compare(tree_key(tree, bound), key) {
+      Ordering::Less => bound
+      Ordering::Equal, Ordering::Greater => tree_predecessor_index(tree, bound)
+    }
+  }
+  if node < 0 {
+    Option::None
+  } else {
+    Option::Some(tree_entry(tree, node))
+  }
+}
+
+pub fn red_black_tree_successor<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  key: k,
+) -> Option<TreeEntry<k, v>> {
+  red_black_tree_upper_bound(tree, key)
+}
+
+pub fn tree_entry_key<k, v>(entry: TreeEntry<k, v>) -> k {
+  entry.key
+}
+
+pub fn tree_entry_value<k, v>(entry: TreeEntry<k, v>) -> v {
+  entry.value
+}
+
+pub fn red_black_tree_clear<k, v, c>(
+  tree: RedBlackTree<k, v, c>,
+) -> Unit {
+  array_clear(tree.keys)
+  array_clear(tree.values)
+  array_clear(tree.parents)
+  array_clear(tree.lefts)
+  array_clear(tree.rights)
+  array_clear(tree.reds)
+  array_clear(tree.active)
+  tree_set_root(tree, -1)
+  tree_set_live(tree, 0u32)
+}
+
+fn tree_iter_start<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  lower: Option<k>,
+  lower_inclusive: Bool,
+) -> I32 {
+  match lower {
+    Option::Some(key) => tree_lower_bound_index(tree, key, lower_inclusive)
+    Option::None => tree_minimum_index(tree, tree_root(tree))
+  }
+}
+
+pub fn red_black_tree_range<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+  lower: Option<k>,
+  lower_inclusive: Bool,
+  upper: Option<k>,
+  upper_inclusive: Bool,
+) -> RedBlackTreeIter<k, v, c> {
+  RedBlackTreeIter {
+    tree: tree
+    current: tree_i32_box(tree_iter_start(tree, lower, lower_inclusive))
+    upper: upper
+    upper_inclusive: upper_inclusive
+  }
+}
+
+pub fn red_black_tree_iter<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+) -> RedBlackTreeIter<k, v, c> {
+  red_black_tree_range(tree, Option::None, true, Option::None, true)
+}
+
+pub fn red_black_tree_iter_has_next<k, v, c: Comparator<k>>(
+  iter: RedBlackTreeIter<k, v, c>,
+) -> Bool {
+  let node = array_get_unchecked(iter.current, 0u32)
+  if node < 0 {
+    false
+  } else {
+    match iter.upper {
+      Option::None => true
+      Option::Some(upper) =>
+        match iter.tree.comparator.compare(tree_key(iter.tree, node), upper) {
+          Ordering::Less => true
+          Ordering::Equal => iter.upper_inclusive
+          Ordering::Greater => false
+        }
+    }
+  }
+}
+
+pub fn red_black_tree_iter_next<k, v, c: Comparator<k>>(
+  iter: RedBlackTreeIter<k, v, c>,
+) -> TreeEntry<k, v> {
+  if red_black_tree_iter_has_next(iter) {
+    let node = array_get_unchecked(iter.current, 0u32)
+    let result = tree_entry(iter.tree, node)
+    array_set_unchecked(
+      iter.current,
+      0u32,
+      tree_successor_index(iter.tree, node),
+    )
+    result
+  } else {
+    unreachable()
+  }
+}
+
+pub fn red_black_tree_validate<k, v, c: Comparator<k>>(
+  tree: RedBlackTree<k, v, c>,
+) -> Bool {
+  let root = tree_root(tree)
+  if root >= 0 && tree_is_red(tree, root) {
+    false
+  } else {
+    let nodes = array_new()
+    let blacks = array_new()
+    array_push(nodes, root)
+    array_push(blacks, 0u32)
+    let mut cursor = 0u32
+    let mut expected_black = 4294967295u32
+    let mut visited = 0u32
+    let mut valid = true
+    while true {
+      true if cursor < array_length(nodes) => {
+        let node = array_get_unchecked(nodes, cursor)
+        let black = array_get_unchecked(blacks, cursor)
+        cursor = cursor + 1u32
+        if node < 0 {
+          if expected_black == 4294967295u32 {
+            expected_black = black
+          } else if expected_black != black {
+            valid = false
+          } else {
+            tree_unit()
+          }
+        } else {
+          visited = visited + 1u32
+          let left = tree_left(tree, node)
+          let right = tree_right(tree, node)
+          if tree_is_red(tree, node) &&
+            (tree_is_red(tree, left) || tree_is_red(tree, right)) {
+            valid = false
+          } else {
+            tree_unit()
+          }
+          if left >= 0 && tree_parent(tree, left) != node {
+            valid = false
+          } else {
+            tree_unit()
+          }
+          if right >= 0 && tree_parent(tree, right) != node {
+            valid = false
+          } else {
+            tree_unit()
+          }
+          let next_black = black + if tree_is_red(tree, node) {
+            0u32
+          } else {
+            1u32
+          }
+          array_push(nodes, left)
+          array_push(blacks, next_black)
+          array_push(nodes, right)
+          array_push(blacks, next_black)
+        }
+        continue true
+      }
+      _ => break tree_unit()
+    }
+    if visited != tree_live(tree) {
+      valid = false
+    } else {
+      tree_unit()
+    }
+    let iter = red_black_tree_iter(tree)
+    let mut previous = tree_no_key()
+    while true {
+      true if red_black_tree_iter_has_next(iter) => {
+        let entry = red_black_tree_iter_next(iter)
+        match previous {
+          Option::Some(key) =>
+            match tree.comparator.compare(key, entry.key) {
+              Ordering::Less => tree_unit()
+              Ordering::Equal, Ordering::Greater => {
+                valid = false
+                tree_unit()
+              }
+            }
+          Option::None => tree_unit()
+        }
+        previous = Option::Some(entry.key)
+        continue true
+      }
+      _ => break tree_unit()
+    }
+    valid
+  }
+}
