@@ -172,6 +172,63 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
 }
 
 ///|
+test "adjacent nonescaping struct locals scalar replace" {
+  let program = collect_program_manifest(
+    22810UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.right\n}\nfn choose_gap(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let marker = 0\n  pair.right\n}\npub fn main() -> I32 {\n  choose(1, 2) + choose_gap(3, 4)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let choose = collected.lookup_value("choose").unwrap()
+  let source_body = collected.body_of(choose).unwrap()
+  let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+  let block = match body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected block body")
+  }
+  let items = optimized.modules[0].blocks[block].items
+  assert_true(
+    optimized.modules[0].block_items[items.start].kind
+    is PlannedElidedLetItem(_),
+  )
+  let field_expression = match
+    optimized.modules[0].block_items[items.start + 1].kind {
+    PlannedExpressionItem(value) => value
+    _ => abort("expected field expression")
+  }
+  assert_true(
+    optimized.modules[0].expressions[field_expression].kind
+    is PlannedParameterSelect(_, 1),
+  )
+  assert_true(
+    unoptimized.modules[0].block_items[items.start].kind
+    is PlannedLetItem(_, false, _),
+  )
+  let choose_gap = collected.lookup_value("choose_gap").unwrap()
+  let gap_source_body = collected.body_of(choose_gap).unwrap()
+  let gap_body = optimized.modules[0].bodies[
+    semantic_id_local(gap_source_body.id)
+  ]
+  let gap_block = match gap_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected gap block body")
+  }
+  let gap_items = optimized.modules[0].blocks[gap_block].items
+  assert_true(
+    optimized.modules[0].block_items[gap_items.start].kind
+    is PlannedLetItem(_, false, _),
+  )
+}
+
+///|
 test "common field extraction reuses immutable scalar loads only in the copy" {
   let program = collect_program_manifest(
     22808UL,

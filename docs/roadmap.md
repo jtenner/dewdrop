@@ -614,8 +614,8 @@ count = count + 1
 - [x] Add direct scalar-carrier tail-recursion optimization with preserved argument order, deep stack-safety coverage, visible non-tail/reference calls, and Node/Wago parity.
 - [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
 - [ ] Escape analysis for boxes, payloads, and trait objects.
-- [x] Scalar-replace supported field projections directly from fresh struct construction while evaluating every initializer once in source order.
-- [ ] Extend scalar replacement to proven nonescaping let-bound aggregates.
+- [x] Scalar-replace supported field projections from fresh construction and immutable uncaptured adjacent sole-use locals while evaluating every initializer once in source order.
+- [ ] Extend scalar replacement to control-flow-proven nonescaping aggregates with non-adjacent or multiple field uses.
 - [x] Devirtualize trait-object calls when prerequisite-aware flow analysis proves exact evidence through locals, branches, parameter returns, and effect-free forwarding chains.
 - [ ] Enum representation specialization based on frozen usage/layout data.
 - [ ] Profile-guided optimization only after deterministic baseline builds exist.

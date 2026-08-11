@@ -2489,6 +2489,7 @@ fn prepare_program_optimization_mutation(
     modules[module_index] = {
       ..module_,
       expressions: module_.expressions.copy(),
+      block_items: module_.block_items.copy(),
       expression_children: module_.expression_children.copy(),
       call_type_arguments: module_.call_type_arguments.copy(),
       call_type_argument_shapes: module_.call_type_argument_shapes.copy(),
@@ -2754,61 +2755,173 @@ fn program_scalar_replaceable_field_shape(
 }
 
 ///|
+fn scalar_replace_program_struct_field_read(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  struct_expression : ExprId,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    struct_expression < 0 ||
+    struct_expression >= module_.expressions.length() {
+    return false
+  }
+  let source = module_.expressions[expression]
+  if !program_scalar_replaceable_field_shape(source.shape) {
+    return false
+  }
+  let field = match source.kind {
+    PlannedFieldGet(field, _) => field
+    _ => return false
+  }
+  if !(module_.expressions[struct_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  let fields = match module_.expressions[struct_expression].kind {
+    PlannedStructNew(_, _, fields) => fields
+    _ => return false
+  }
+  if fields.start < 0 ||
+    fields.start + fields.length > module_.object_fields.length() {
+    return false
+  }
+  let start = module_.expression_children.length()
+  let mut selected = -1
+  for index in 0..<fields.length {
+    let object_field = module_.object_fields[fields.start + index]
+    module_.expression_children.push(object_field.value)
+    if object_field.field == field {
+      if selected >= 0 {
+        selected = -2
+      } else {
+        selected = index
+      }
+    }
+  }
+  if selected < 0 {
+    while module_.expression_children.length() > start {
+      ignore(module_.expression_children.pop())
+    }
+    return false
+  }
+  module_.expressions[expression] = {
+    ..source,
+    kind: PlannedParameterSelect(
+      { start, length: fields.length },
+      selected,
+    ),
+  }
+  let struct_source = module_.expressions[struct_expression]
+  module_.expressions[struct_expression] = {
+    ..struct_source,
+    kind: PlannedConsumedExpression,
+  }
+  true
+}
+
+///|
+fn program_local_get_count(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+) -> (Int, ExprId) {
+  let mut count = 0
+  let mut selected = -1
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match module_.expressions[expression].kind {
+      PlannedLocalGet(source_local) if source_local == local_id => {
+        count += 1
+        selected = expression
+      }
+      _ => ()
+    }
+  }
+  (count, selected)
+}
+
+///|
 fn scalar_replace_program_struct_field_reads(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
   for module_ in modules {
     for expression in 0..<module_.expressions.length() {
-      let source = module_.expressions[expression]
-      if !program_scalar_replaceable_field_shape(source.shape) {
-        continue
-      }
-      let (field, base) = match source.kind {
-        PlannedFieldGet(field, base) => (field, base)
+      let base = match module_.expressions[expression].kind {
+        PlannedFieldGet(_, base) => base
         _ => continue
       }
-      if base < 0 || base >= module_.expressions.length() ||
-        !(module_.expressions[base].trait_object_coercion is NoInferredTraitObjectCoercion) {
-        continue
-      }
-      let fields = match module_.expressions[base].kind {
-        PlannedStructNew(_, _, fields) => fields
-        _ => continue
-      }
-      if fields.start < 0 ||
-        fields.start + fields.length > module_.object_fields.length() {
-        continue
-      }
-      let start = module_.expression_children.length()
-      let mut selected = -1
-      for index in 0..<fields.length {
-        let object_field = module_.object_fields[fields.start + index]
-        module_.expression_children.push(object_field.value)
-        if object_field.field == field {
-          if selected >= 0 {
-            selected = -2
-          } else {
-            selected = index
+      ignore(
+        scalar_replace_program_struct_field_read(
+          module_, expression, base,
+        ),
+      )
+    }
+    for body in module_.bodies {
+      for
+        block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+        if block < 0 || block >= module_.blocks.length() {
+          continue
+        }
+        let items = module_.blocks[block].items
+        if items.start < 0 ||
+          items.start + items.length > module_.block_items.length() {
+          continue
+        }
+        for index in 0..<(items.length - 1) {
+          let (local_id, initializer) = match
+            module_.block_items[items.start + index].kind {
+            PlannedLetItem(local_id, false, initializer) =>
+              (local_id, initializer)
+            _ => continue
+          }
+          if initializer < 0 ||
+            initializer >= module_.expressions.length() ||
+            !(module_.expressions[initializer].kind is PlannedStructNew(_, _, _)) ||
+            program_cse_local_is_captured(module_, body, local_id) {
+            continue
+          }
+          let next_expression = match
+            module_.block_items[items.start + index + 1].kind {
+            PlannedLetItem(_, _, value)
+            | PlannedReturnItem(value)
+            | PlannedExpressionItem(value) => value
+            PlannedElidedLetItem(_) => continue
+          }
+          if next_expression < 0 ||
+            next_expression >= module_.expressions.length() {
+            continue
+          }
+          let field_base = match module_.expressions[next_expression].kind {
+            PlannedFieldGet(_, base) => base
+            _ => continue
+          }
+          if field_base < 0 || field_base >= module_.expressions.length() {
+            continue
+          }
+          match module_.expressions[field_base].kind {
+            PlannedLocalGet(source_local) if source_local == local_id => ()
+            _ => continue
+          }
+          let (use_count, only_use) = program_local_get_count(
+            module_, body, local_id,
+          )
+          if use_count != 1 || only_use != field_base ||
+            !scalar_replace_program_struct_field_read(
+              module_, next_expression, initializer,
+            ) {
+            continue
+          }
+          let local_source = module_.expressions[field_base]
+          module_.expressions[field_base] = {
+            ..local_source,
+            kind: PlannedConsumedExpression,
+          }
+          module_.block_items[items.start + index] = {
+            ..module_.block_items[items.start + index],
+            kind: PlannedElidedLetItem(local_id),
           }
         }
-      }
-      if selected < 0 {
-        while module_.expression_children.length() > start {
-          ignore(module_.expression_children.pop())
-        }
-        continue
-      }
-      module_.expressions[expression] = {
-        ..source,
-        kind: PlannedParameterSelect(
-          { start, length: fields.length },
-          selected,
-        ),
-      }
-      let base_source = module_.expressions[base]
-      module_.expressions[base] = {
-        ..base_source,
-        kind: PlannedConsumedExpression,
       }
     }
   }

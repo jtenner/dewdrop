@@ -4,10 +4,11 @@ struct Pair {
 }
 
 fn choose(left: I32, right: I32) -> I32 {
-  Pair {
+  let pair = Pair {
     left: left
     right: right
-  }.right
+  }
+  pair.right
 }
 
 pub fn main() -> I32 {
