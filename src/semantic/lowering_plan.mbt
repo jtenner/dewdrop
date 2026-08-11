@@ -74,18 +74,18 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySet(ExprId, ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
-  PlannedArrayNew(PlannedValueShape)
-  PlannedArrayWithCapacity(ExprId, PlannedValueShape)
+  PlannedArrayNew(BodyTypeId, PlannedValueShape)
+  PlannedArrayWithCapacity(ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayLength(ExprId)
   PlannedArrayCapacity(ExprId)
-  PlannedArrayGet(ExprId, ExprId, PlannedValueShape)
+  PlannedArrayGet(ExprId, ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedArraySet(ExprId, ExprId, ExprId, PlannedValueShape)
   PlannedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
   PlannedArrayPush(ExprId, ExprId, PlannedValueShape)
-  PlannedArrayPop(ExprId, PlannedValueShape)
-  PlannedArrayClear(ExprId, PlannedValueShape)
-  PlannedArrayIter(ExprId, PlannedValueShape)
+  PlannedArrayPop(ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayClear(ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayIter(ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayIterHasNext(ExprId)
   PlannedArrayIterNext(ExprId, PlannedValueShape)
   PlannedStackIsEmpty(ExprId)
@@ -817,6 +817,11 @@ fn plan_expression_kind(
           } else {
             -1
           }
+          let element_type = if type_arguments.length > 0 {
+            inferred.call_type_arguments[type_arguments.start]
+          } else {
+            -1
+          }
           let element_shape = if type_arguments.length > 0 {
             planned_value_shape(
               resolved,
@@ -1024,13 +1029,16 @@ fn plan_expression_kind(
                   )
                 _ =>
                   match array_operation {
-                    ArrayNew => PlannedArrayNew(element_shape)
+                    ArrayNew => PlannedArrayNew(element_type, element_shape)
                     ArrayWithCapacity =>
-                      PlannedArrayWithCapacity(base, element_shape)
+                      PlannedArrayWithCapacity(
+                        base, element_type, element_shape,
+                      )
                     ArrayLength => PlannedArrayLength(base)
                     StackIsEmpty => PlannedStackIsEmpty(base)
                     ArrayCapacity => PlannedArrayCapacity(base)
-                    ArrayGet => PlannedArrayGet(base, key, element_shape)
+                    ArrayGet =>
+                      PlannedArrayGet(base, key, element_type, element_shape)
                     ArrayGetUnchecked =>
                       PlannedArrayGetUnchecked(
                         base,
@@ -1073,12 +1081,15 @@ fn plan_expression_kind(
                           inferred.expression_types[key],
                         ),
                       )
-                    ArrayPop => PlannedArrayPop(base, element_shape)
+                    ArrayPop =>
+                      PlannedArrayPop(base, element_type, element_shape)
                     StackPeek => PlannedStackPeek(base, element_shape)
                     QueueDequeue => PlannedQueueDequeue(base, element_shape)
                     QueuePeek => PlannedQueuePeek(base, element_shape)
-                    ArrayClear => PlannedArrayClear(base, element_shape)
-                    ArrayIter => PlannedArrayIter(base, element_shape)
+                    ArrayClear =>
+                      PlannedArrayClear(base, element_type, element_shape)
+                    ArrayIter =>
+                      PlannedArrayIter(base, element_type, element_shape)
                     ArrayIterHasNext => PlannedArrayIterHasNext(base)
                     ArrayIterNext =>
                       PlannedArrayIterNext(

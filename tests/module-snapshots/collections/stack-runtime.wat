@@ -169,9 +169,9 @@
       unreachable
     end
     local.get 0
-    local.set 9
     i32.const 11
     local.set 16
+    local.set 9
     local.get 9
     ref.cast (ref 2)
     struct.get 2 1
@@ -261,9 +261,9 @@
     i32.add
     struct.set 2 1
     local.get 1
-    local.set 9
     i32.const 22
     local.set 17
+    local.set 9
     local.get 9
     ref.cast (ref 2)
     struct.get 2 1
@@ -353,9 +353,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 9
     i32.const 33
     local.set 18
+    local.set 9
     local.get 9
     ref.cast (ref 2)
     struct.get 2 1

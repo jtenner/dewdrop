@@ -1,0 +1,147 @@
+open dew.std.array
+open dew.std.ordering
+open dew.std.collections.binary_heap
+
+struct AbsComparator {}
+
+impl Comparator<I32> for AbsComparator {
+  fn compare(self, left: I32, right: I32) -> Ordering {
+    let left_abs = if left < 0 {
+      -left
+    } else {
+      left
+    }
+    let right_abs = if right < 0 {
+      -right
+    } else {
+      right
+    }
+    if left_abs < right_abs {
+      Ordering::Less
+    } else if left_abs > right_abs {
+      Ordering::Greater
+    } else {
+      natural_comparator().compare(left, right)
+    }
+  }
+}
+
+struct Entry {
+  priority: I32
+  value: I32
+}
+
+struct EntryComparator {}
+
+impl Comparator<Entry> for EntryComparator {
+  fn compare(self, left: Entry, right: Entry) -> Ordering {
+    natural_comparator().compare(left.priority, right.priority)
+  }
+}
+
+fn heap_test_unit() -> Unit {}
+
+fn pop_i32(heap: BinaryHeap<I32, NaturalComparator>) -> I32 {
+  match binary_heap_pop(heap) {
+    Option::Some(value) => value
+    Option::None => -999
+  }
+}
+
+pub fn main() -> Unit {
+  let minimum = binary_heap_new(natural_comparator(), HeapOrder::Minimum)
+  assert(binary_heap_is_empty(minimum), "new heap empty")
+  assert(binary_heap_capacity(minimum) == 0u32, "zero initial capacity")
+  assert(binary_heap_peek(minimum) is Option::None, "empty peek")
+  assert(binary_heap_pop(minimum) is Option::None, "empty pop")
+
+  binary_heap_push(minimum, 5)
+  binary_heap_push(minimum, 1)
+  binary_heap_push(minimum, 3)
+  binary_heap_push(minimum, 1)
+  binary_heap_push(minimum, 8)
+  let alias = minimum
+  binary_heap_push(alias, 2)
+  assert(binary_heap_length(minimum) == 6u32, "alias mutation visible")
+  match binary_heap_peek(minimum) {
+    Option::Some(value) => assert(value == 1, "minimum peek")
+    Option::None => assert(false, "minimum missing")
+  }
+  assert(pop_i32(minimum) == 1, "min first")
+  assert(pop_i32(minimum) == 1, "min duplicate")
+  assert(pop_i32(minimum) == 2, "min second")
+  assert(pop_i32(minimum) == 3, "min third")
+  assert(pop_i32(minimum) == 5, "min fifth")
+  assert(pop_i32(minimum) == 8, "min last")
+  assert(binary_heap_is_empty(minimum), "minimum drained")
+
+  let maximum = binary_heap_with_capacity(natural_comparator(), HeapOrder::Maximum, 2u32)
+  binary_heap_push(maximum, 4)
+  binary_heap_push(maximum, 9)
+  binary_heap_push(maximum, 2)
+  binary_heap_push(maximum, 7)
+  assert(pop_i32(maximum) == 9, "max first")
+  assert(pop_i32(maximum) == 7, "max second")
+  assert(pop_i32(maximum) == 4, "max third")
+  assert(pop_i32(maximum) == 2, "max last")
+
+  let source = array_new()
+  array_push(source, 6)
+  array_push(source, 2)
+  array_push(source, 7)
+  array_push(source, 1)
+  array_push(source, 5)
+  let built = binary_heap_from_array(natural_comparator(), HeapOrder::Minimum, source)
+  assert(array_length(source) == 5u32, "heapify copies source")
+  assert(pop_i32(built) == 1, "Floyd first")
+  assert(pop_i32(built) == 2, "Floyd second")
+  assert(pop_i32(built) == 5, "Floyd third")
+  assert(pop_i32(built) == 6, "Floyd fourth")
+  assert(pop_i32(built) == 7, "Floyd fifth")
+
+  let absolute = binary_heap_new(AbsComparator {}, HeapOrder::Minimum)
+  binary_heap_push(absolute, -9)
+  binary_heap_push(absolute, 2)
+  binary_heap_push(absolute, -1)
+  match binary_heap_pop(absolute) {
+    Option::Some(value) => assert(value == -1, "custom comparator")
+    Option::None => assert(false, "custom comparator missing")
+  }
+
+  let entries = binary_heap_new(EntryComparator {}, HeapOrder::Minimum)
+  binary_heap_push(entries, Entry {
+    priority: 3
+    value: 30
+  })
+  binary_heap_push(entries, Entry {
+    priority: 1
+    value: 10
+  })
+  binary_heap_push(entries, Entry {
+    priority: 2
+    value: 20
+  })
+  match binary_heap_pop(entries) {
+    Option::Some(entry) => assert(entry.value == 10, "reference carrier")
+    Option::None => assert(false, "entry missing")
+  }
+
+  let layout = binary_heap_new(natural_comparator(), HeapOrder::Minimum)
+  binary_heap_push(layout, 4)
+  binary_heap_push(layout, 1)
+  binary_heap_push(layout, 3)
+  let iter = binary_heap_iter(layout)
+  let mut sum = 0
+  while 0u32 {
+    index if index < binary_heap_length(layout) => {
+      sum = sum + binary_heap_iter_next(iter)
+      continue index + 1u32
+    }
+    _ => break heap_test_unit()
+  }
+  assert(sum == 8, "layout iterator yields every element")
+  let capacity = binary_heap_capacity(layout)
+  binary_heap_clear(layout)
+  assert(binary_heap_is_empty(layout), "clear empty")
+  assert(binary_heap_capacity(layout) == capacity, "clear preserves capacity")
+}

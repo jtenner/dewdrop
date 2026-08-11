@@ -1,0 +1,208 @@
+open dew.std.array
+open dew.std.ordering
+
+pub enum HeapOrder {
+  Minimum
+  Maximum
+}
+
+pub struct BinaryHeap<t, c> {
+  values: Array<t>
+  comparator: c
+  maximum: Bool
+}
+
+pub type BinaryHeapIter<t> = ArrayIter<t>
+
+fn heap_order_is_maximum(order: HeapOrder) -> Bool {
+  match order {
+    HeapOrder::Minimum => false
+    HeapOrder::Maximum => true
+  }
+}
+
+pub fn binary_heap_new<t, c: Comparator<t>>(
+  comparator: c,
+  order: HeapOrder,
+) -> BinaryHeap<t, c> {
+  BinaryHeap {
+    values: array_new()
+    comparator: comparator
+    maximum: heap_order_is_maximum(order)
+  }
+}
+
+pub fn binary_heap_with_capacity<t, c: Comparator<t>>(
+  comparator: c,
+  order: HeapOrder,
+  capacity: U32,
+) -> BinaryHeap<t, c> {
+  BinaryHeap {
+    values: array_with_capacity(capacity)
+    comparator: comparator
+    maximum: heap_order_is_maximum(order)
+  }
+}
+
+pub fn binary_heap_length<t, c>(heap: BinaryHeap<t, c>) -> U32 {
+  array_length(heap.values)
+}
+
+pub fn binary_heap_capacity<t, c>(heap: BinaryHeap<t, c>) -> U32 {
+  array_capacity(heap.values)
+}
+
+pub fn binary_heap_is_empty<t, c>(heap: BinaryHeap<t, c>) -> Bool {
+  array_length(heap.values) == 0u32
+}
+
+fn binary_heap_precedes<t, c: Comparator<t>>(
+  heap: BinaryHeap<t, c>,
+  left: t,
+  right: t,
+) -> Bool {
+  let ordering = heap.comparator.compare(left, right)
+  if heap.maximum {
+    ordering_is_greater(ordering)
+  } else {
+    ordering_is_less(ordering)
+  }
+}
+
+fn binary_heap_unit() -> Unit {}
+
+fn binary_heap_sift_up<t, c: Comparator<t>>(
+  heap: BinaryHeap<t, c>,
+  start: U32,
+) -> Unit {
+  while start {
+    0u32 => break binary_heap_unit()
+    index => {
+      let parent = (index - 1u32) / 2u32
+      let value = array_get_unchecked(heap.values, index)
+      let parent_value = array_get_unchecked(heap.values, parent)
+      if binary_heap_precedes(heap, value, parent_value) {
+        array_set_unchecked(heap.values, index, parent_value)
+        array_set_unchecked(heap.values, parent, value)
+        continue parent
+      } else {
+        break binary_heap_unit()
+      }
+    }
+  }
+}
+
+fn binary_heap_sift_down<t, c: Comparator<t>>(
+  heap: BinaryHeap<t, c>,
+  start: U32,
+) -> Unit {
+  while start {
+    index => {
+      let length = array_length(heap.values)
+      let left = index * 2u32 + 1u32
+      if left >= length {
+        break binary_heap_unit()
+      } else {
+        let right = left + 1u32
+        let child = if right < length && binary_heap_precedes(
+          heap,
+          array_get_unchecked(heap.values, right),
+          array_get_unchecked(heap.values, left),
+        ) {
+          right
+        } else {
+          left
+        }
+        let value = array_get_unchecked(heap.values, index)
+        let child_value = array_get_unchecked(heap.values, child)
+        if binary_heap_precedes(heap, child_value, value) {
+          array_set_unchecked(heap.values, index, child_value)
+          array_set_unchecked(heap.values, child, value)
+          continue child
+        } else {
+          break binary_heap_unit()
+        }
+      }
+    }
+  }
+}
+
+pub fn binary_heap_push<t, c: Comparator<t>>(
+  heap: BinaryHeap<t, c>,
+  value: t,
+) -> Unit {
+  array_push(heap.values, value)
+  binary_heap_sift_up(heap, array_length(heap.values) - 1u32)
+}
+
+pub fn binary_heap_peek<t, c>(heap: BinaryHeap<t, c>) -> Option<t> {
+  array_get(heap.values, 0u32)
+}
+
+pub fn binary_heap_pop<t, c: Comparator<t>>(
+  heap: BinaryHeap<t, c>,
+) -> Option<t> {
+  let length = array_length(heap.values)
+  if length == 0u32 {
+    Option::None
+  } else {
+    let root = array_get_unchecked(heap.values, 0u32)
+    let last = array_get_unchecked(heap.values, length - 1u32)
+    array_pop(heap.values)
+    if length > 1u32 {
+      array_set_unchecked(heap.values, 0u32, last)
+      binary_heap_sift_down(heap, 0u32)
+    } else {
+      binary_heap_unit()
+    }
+    Option::Some(root)
+  }
+}
+
+pub fn binary_heap_clear<t, c>(heap: BinaryHeap<t, c>) -> Unit {
+  array_clear(heap.values)
+}
+
+pub fn binary_heap_iter<t, c>(
+  heap: BinaryHeap<t, c>,
+) -> BinaryHeapIter<t> {
+  array_iter(heap.values)
+}
+
+pub fn binary_heap_iter_has_next<t>(iter: BinaryHeapIter<t>) -> Bool {
+  array_iter_has_next(iter)
+}
+
+pub fn binary_heap_iter_next<t>(iter: BinaryHeapIter<t>) -> t {
+  array_iter_next(iter)
+}
+
+pub fn binary_heap_from_array<t, c: Comparator<t>>(
+  comparator: c,
+  order: HeapOrder,
+  values: Array<t>,
+) -> BinaryHeap<t, c> {
+  let length = array_length(values)
+  let heap = binary_heap_with_capacity(comparator, order, length)
+  while 0u32 {
+    index if index < length => {
+      array_push(heap.values, array_get_unchecked(values, index))
+      continue index + 1u32
+    }
+    _ => break binary_heap_unit()
+  }
+  if length > 1u32 {
+    let start = length / 2u32
+    while start {
+      0u32 => break binary_heap_unit()
+      index => {
+        let parent = index - 1u32
+        binary_heap_sift_down(heap, parent)
+        continue parent
+      }
+    }
+  } else {
+    binary_heap_unit()
+  }
+  heap
+}

@@ -181,6 +181,7 @@
         local.get 10
         ref.cast (ref 5)
         struct.get 5 1
+        ref.cast (ref 0)
         local.set 3
         local.get 3
         struct.get 0 0
@@ -314,6 +315,7 @@
         local.get 4
         ref.cast (ref 5)
         struct.get 5 1
+        ref.cast (ref 0)
         local.set 3
         i32.const 3
         i32.const 0
@@ -394,6 +396,7 @@
         local.get 4
         ref.cast (ref 5)
         struct.get 5 1
+        ref.cast (ref 0)
         local.set 3
         i32.const 3
         local.get 3

@@ -253,9 +253,9 @@
       unreachable
     end
     local.get 0
-    local.set 4
     i32.const 2
     local.set 7
+    local.set 4
     local.get 4
     ref.cast (ref 2)
     struct.get 2 1
@@ -404,9 +404,9 @@
     end
     drop
     local.get 0
-    local.set 4
     i32.const 1
     local.set 8
+    local.set 4
     local.get 4
     ref.cast (ref 2)
     struct.get 2 1
@@ -591,9 +591,9 @@
     end
     drop
     local.get 0
-    local.set 4
     i32.const 3
     local.set 9
+    local.set 4
     local.get 4
     ref.cast (ref 2)
     struct.get 2 1
@@ -742,9 +742,9 @@
     end
     drop
     local.get 0
-    local.set 4
     i32.const 0
     local.set 10
+    local.set 4
     local.get 4
     ref.cast (ref 2)
     struct.get 2 1
@@ -1409,9 +1409,9 @@
       unreachable
     end
     local.get 0
-    local.set 4
     i32.const 9
     local.set 19
+    local.set 4
     local.get 4
     ref.cast (ref 2)
     struct.get 2 1
@@ -1596,9 +1596,9 @@
     end
     drop
     local.get 0
-    local.set 4
     i32.const 8
     local.set 20
+    local.set 4
     local.get 4
     ref.cast (ref 2)
     struct.get 2 1

@@ -494,6 +494,20 @@ fn emit_starshine_program_function_body(
     return Err(MissingBody(body_id))
   }
   let body = module_lowering.bodies[body_index]
+  let generic_specialization = if function_.specialization_shapes.length > 0 {
+    let callable = module_lowering.functions
+      .callable_of(function_.declaration)
+      .unwrap()
+    Some({
+      generic_parameters: starshine_callable_generic_parameters(callable),
+      shapes: module_fragments.specialization_shapes,
+      specialization_shapes: function_.specialization_shapes,
+      specialization_evidence: function_.specialization_evidence,
+      specialization_abi_key: function_.specialization_abi_key,
+    })
+  } else {
+    None
+  }
   let (
     local_indices,
     body_local_types,
@@ -516,23 +530,10 @@ fn emit_starshine_program_function_body(
     module_lowering,
     module_fragments,
     Some(planned),
+    generic_specialization,
     body,
     0,
   )
-  let generic_specialization = if function_.specialization_shapes.length > 0 {
-    let callable = module_lowering.functions
-      .callable_of(function_.declaration)
-      .unwrap()
-    Some({
-      generic_parameters: starshine_callable_generic_parameters(callable),
-      shapes: module_fragments.specialization_shapes,
-      specialization_shapes: function_.specialization_shapes,
-      specialization_evidence: function_.specialization_evidence,
-      specialization_abi_key: function_.specialization_abi_key,
-    })
-  } else {
-    None
-  }
   match generic_specialization {
     Some(specialization) =>
       for local_id in 0..<body.locals.length {
@@ -881,6 +882,7 @@ fn emit_starshine_program_initializer_body(
     module_lowering,
     module_fragments,
     Some(planned),
+    None,
     body,
     0,
   )

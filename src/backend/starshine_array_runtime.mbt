@@ -498,7 +498,15 @@ fn starshine_finish_array(
     Some(value) => value
     None => return Err(UnsupportedExpression(body_id, -401))
   }
-  let iterator_type = wrapper_type
+  let iterator_type = match
+    starshine_emitted_struct_type_index(
+      planned,
+      program,
+      @semantic.standard_array_iterator_type_declaration(),
+    ) {
+    Some(value) => value
+    None => wrapper_type
+  }
   let carrier = match shape {
     Some(value) => starshine_fixed_array_carrier(value)
     None => -1
@@ -559,7 +567,9 @@ fn starshine_finish_array(
     }
     append_starshine_instructions(output, fragments[0])
     output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-    output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    if iterator_type == wrapper_type {
+      output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    }
     output.push(
       @lib.Instruction::struct_new(
         @lib.TypeIdx::new(iterator_type.reinterpret_as_uint()),
@@ -689,8 +699,19 @@ fn starshine_finish_array(
   if carrier < 0 || wrapper_local < 0 || backing_local < 0 || index_local < 0 {
     return Err(UnsupportedExpression(body_id, -403))
   }
+  let defer_wrapper_store = operation == 5 ||
+    operation == 6 ||
+    operation == 7 ||
+    operation == 8 ||
+    operation == 9 ||
+    operation == 26 ||
+    operation == 34 ||
+    operation == 35 ||
+    operation == 38
   append_starshine_instructions(output, fragments[0])
-  output.push(starshine_array_local_set(wrapper_local))
+  if !defer_wrapper_store {
+    output.push(starshine_array_local_set(wrapper_local))
+  }
   if operation == 23 {
     append_starshine_instructions(
       output,
@@ -730,6 +751,9 @@ fn starshine_finish_array(
     }
     append_starshine_instructions(output, fragments[fragments.length() - 1])
     output.push(starshine_array_local_set(value_local))
+  }
+  if defer_wrapper_store {
+    output.push(starshine_array_local_set(wrapper_local))
   }
   if operation == 26 || operation == 34 || operation == 35 || operation == 38 {
     if value_local < 0 {

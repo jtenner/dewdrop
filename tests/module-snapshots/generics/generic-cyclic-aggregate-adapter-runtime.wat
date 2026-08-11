@@ -41,6 +41,7 @@
         local.get 3
         ref.cast (ref 1)
         struct.get 1 7
+        ref.cast (ref 0)
         local.set 2
         local.get 1
         local.get 2
@@ -124,6 +125,7 @@
         local.get 3
         ref.cast (ref 1)
         struct.get 1 7
+        ref.cast (ref 0)
         local.set 2
         i32.const 1
         i32.const 0
@@ -167,6 +169,7 @@
         local.get 3
         ref.cast (ref 1)
         struct.get 1 7
+        ref.cast (ref 0)
         local.set 2
         i32.const 1
         local.get 1

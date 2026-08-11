@@ -169,9 +169,9 @@
       unreachable
     end
     local.get 0
-    local.set 3
     i32.const 1
     local.set 6
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -329,9 +329,9 @@
       unreachable
     end
     local.get 0
-    local.set 3
     i32.const 2
     local.set 7
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -489,9 +489,9 @@
       unreachable
     end
     local.get 0
-    local.set 3
     i32.const 3
     local.set 8
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -670,9 +670,9 @@
       unreachable
     end
     local.get 0
-    local.set 3
     i32.const 4
     local.set 9
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -847,9 +847,9 @@
       unreachable
     end
     local.get 0
-    local.set 3
     i32.const 4
     local.set 10
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -1054,9 +1054,9 @@
     call 1
     local.set 1
     local.get 1
-    local.set 3
     i32.const 10
     local.set 11
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -1214,9 +1214,9 @@
       unreachable
     end
     local.get 1
-    local.set 3
     i32.const 20
     local.set 12
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -1389,9 +1389,9 @@
       unreachable
     end
     local.get 1
-    local.set 3
     i32.const 30
     local.set 13
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1
@@ -1549,9 +1549,9 @@
       unreachable
     end
     local.get 1
-    local.set 3
     i32.const 40
     local.set 14
+    local.set 3
     local.get 3
     ref.cast (ref 2)
     struct.get 2 1

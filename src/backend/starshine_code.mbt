@@ -1137,6 +1137,38 @@ fn starshine_emitted_type_index(
 }
 
 ///|
+fn starshine_emitted_struct_type_index(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  declaration : @semantic.DeclId,
+) -> Int? {
+  match starshine_emitted_type_index(planned, program, declaration) {
+    Some(value) => return Some(value)
+    None => ()
+  }
+  let link = match program {
+    Some(value) => value
+    None => return None
+  }
+  let owner_module = match
+    link.module_lookup.get(@semantic.semantic_id_module(declaration)) {
+    Some(value) => value
+    None => return None
+  }
+  let physical = match
+    starshine_struct_physical_type(link.modules[owner_module], declaration) {
+    Some(value) => value
+    None => return None
+  }
+  let index = link.physical_type_index(owner_module, physical.type_index)
+  if index >= 0 {
+    Some(index)
+  } else {
+    None
+  }
+}
+
+///|
 fn starshine_struct_physical_type(
   planned : @semantic.PlannedModuleWasmGCFragments,
   declaration : @semantic.DeclId,
@@ -2122,6 +2154,9 @@ fn starshine_simple_match_pattern_instructions(
             field.storage,
           ),
         )
+        starshine_append_precise_nominal_local_cast(
+          lowering, planned, program, body, local_id, -1, bindings,
+        )
         bindings.push(
           @lib.Instruction::local_set(
             @lib.LocalIdx::new(local_indices[local_id].reinterpret_as_uint()),
@@ -2190,6 +2225,9 @@ fn starshine_simple_match_pattern_instructions(
             field.physical_index,
             field.storage,
           ),
+        )
+        starshine_append_precise_nominal_local_cast(
+          lowering, planned, program, body, local_id, -1, bindings,
         )
         bindings.push(
           @lib.Instruction::local_set(
@@ -2391,6 +2429,7 @@ fn starshine_body_locals(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
+  generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.PlannedBodyLowering,
   leading_parameter_count : Int,
 ) -> (
@@ -2617,13 +2656,13 @@ fn starshine_body_locals(
             body_local_types.length()
           body_local_types.push(@lib.ValType::i32())
         }
-      @semantic.PlannedArrayWithCapacity(_, _)
-      | @semantic.PlannedArrayGet(_, _, _)
+      @semantic.PlannedArrayWithCapacity(_, _, _)
+      | @semantic.PlannedArrayGet(_, _, _, _)
       | @semantic.PlannedArrayGetUnchecked(_, _, _)
       | @semantic.PlannedArraySet(_, _, _, _)
       | @semantic.PlannedArraySetUnchecked(_, _, _, _)
       | @semantic.PlannedArrayPush(_, _, _)
-      | @semantic.PlannedArrayPop(_, _)
+      | @semantic.PlannedArrayPop(_, _, _)
       | @semantic.PlannedStackIsEmpty(_)
       | @semantic.PlannedStackPeek(_, _)
       | @semantic.PlannedQueueDequeue(_, _)
@@ -2644,7 +2683,7 @@ fn starshine_body_locals(
       | @semantic.PlannedCircularBufferPushFront(_, _, _)
       | @semantic.PlannedCircularBufferPopBack(_, _)
       | @semantic.PlannedCircularBufferPeekBack(_, _)
-      | @semantic.PlannedArrayClear(_, _)
+      | @semantic.PlannedArrayClear(_, _, _)
       | @semantic.PlannedArrayIterNext(_, _) => {
         if fixed_array_ref_scratch_index < 0 {
           fixed_array_ref_scratch_index = parameter_count +
@@ -2659,11 +2698,39 @@ fn starshine_body_locals(
           body_local_types.push(@lib.ValType::eqref_null())
         }
         match lowering.expressions[expression].kind {
-          @semantic.PlannedArraySet(_, _, _, shape)
-          | @semantic.PlannedArraySetUnchecked(_, _, _, shape)
-          | @semantic.PlannedArrayPush(_, _, shape)
-          | @semantic.PlannedArrayPop(_, shape)
-          | @semantic.PlannedStackPeek(_, shape)
+          @semantic.PlannedArraySet(_, _, value, shape)
+          | @semantic.PlannedArraySetUnchecked(_, _, value, shape)
+          | @semantic.PlannedArrayPush(_, value, shape) => {
+            let value_source = lowering.expressions[value]
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              value_source.type_,
+              shape,
+            )
+            match starshine_shape_value_type(element_shape) {
+              Some(type_) => {
+                map_value_local_indices[expression] = parameter_count +
+                  body_local_types.length()
+                body_local_types.push(type_)
+              }
+              None => ()
+            }
+          }
+          @semantic.PlannedArrayPop(_, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
+            match starshine_shape_value_type(element_shape) {
+              Some(type_) => {
+                map_value_local_indices[expression] = parameter_count +
+                  body_local_types.length()
+                body_local_types.push(type_)
+              }
+              None => ()
+            }
+          }
+          @semantic.PlannedStackPeek(_, shape)
           | @semantic.PlannedQueueDequeue(_, shape)
           | @semantic.PlannedQueuePeek(_, shape)
           | @semantic.PlannedCircularBufferPushBack(_, _, shape)
@@ -4981,11 +5048,14 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedArrayNew(shape) =>
+          @semantic.PlannedArrayNew(element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 1,
-                Some(shape),
+                Some(element_shape),
                 0,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -4993,11 +5063,15 @@ fn starshine_emit_body_instructions(
                 map_value_local_indices[expression],
               ),
             )
-          @semantic.PlannedArrayWithCapacity(capacity, shape) => {
+          }
+          @semantic.PlannedArrayWithCapacity(capacity, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 2,
-                Some(shape),
+                Some(element_shape),
                 1,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5035,11 +5109,14 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedArrayGet(base, index, shape) => {
+          @semantic.PlannedArrayGet(base, index, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 5,
-                Some(shape),
+                Some(element_shape),
                 2,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5051,10 +5128,16 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedArrayGetUnchecked(base, index, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              source.type_,
+              shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 6,
-                Some(shape),
+                Some(element_shape),
                 2,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5066,10 +5149,17 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedArraySet(base, index, value, shape) => {
+            let value_source = lowering.expressions[value]
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              value_source.type_,
+              shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 7,
-                Some(shape),
+                Some(element_shape),
                 3,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5082,10 +5172,17 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedArraySetUnchecked(base, index, value, shape) => {
+            let value_source = lowering.expressions[value]
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              value_source.type_,
+              shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 8,
-                Some(shape),
+                Some(element_shape),
                 3,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5098,10 +5195,17 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedArrayPush(base, value, shape) => {
+            let value_source = lowering.expressions[value]
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              value_source.type_,
+              shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 9,
-                Some(shape),
+                Some(element_shape),
                 2,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5112,11 +5216,14 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedArrayPop(base, shape) => {
+          @semantic.PlannedArrayPop(base, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 10,
-                Some(shape),
+                Some(element_shape),
                 1,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5412,11 +5519,14 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedArrayClear(base, shape) => {
+          @semantic.PlannedArrayClear(base, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 11,
-                Some(shape),
+                Some(element_shape),
                 1,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5426,11 +5536,14 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedArrayIter(base, shape) => {
+          @semantic.PlannedArrayIter(base, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 12,
-                Some(shape),
+                Some(element_shape),
                 1,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -5455,10 +5568,16 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedArrayIterNext(base, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              source.type_,
+              shape,
+            )
             tasks.push(
               FinishStarshineArray(
                 14,
-                Some(shape),
+                Some(element_shape),
                 1,
                 fixed_array_ref_scratch_index,
                 map_ref_scratch_index,
@@ -8875,6 +8994,7 @@ fn emit_starshine_lambda_body(
     lowering,
     planned,
     program,
+    None,
     body,
     starshine_lambda_leading_parameter_count(lowering, planned, lambda),
   )
@@ -8964,7 +9084,7 @@ fn emit_starshine_function_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
-  ) = starshine_body_locals(lowering, planned, None, body, 0)
+  ) = starshine_body_locals(lowering, planned, None, None, body, 0)
   let parameter_count = match planned.function_of(body.declaration) {
     Some(function_) => function_.parameters.length
     None => 0

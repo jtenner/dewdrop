@@ -103,11 +103,11 @@
     local.get 0
     local.set 2
     local.get 2
-    ref.cast (ref 2)
-    struct.get 2 1
+    ref.cast (ref 3)
+    struct.get 3 1
     local.get 2
-    ref.cast (ref 2)
-    struct.get 2 0
+    ref.cast (ref 3)
+    struct.get 3 0
     ref.cast (ref 2)
     struct.get 2 1
     i32.lt_u
@@ -118,11 +118,11 @@
       local.get 0
       local.set 2
       local.get 2
-      ref.cast (ref 2)
-      struct.get 2 1
+      ref.cast (ref 3)
+      struct.get 3 1
       local.get 2
-      ref.cast (ref 2)
-      struct.get 2 0
+      ref.cast (ref 3)
+      struct.get 3 0
       ref.cast (ref 2)
       struct.get 2 1
       i32.lt_u
@@ -131,23 +131,23 @@
         unreachable
       end
       local.get 2
-      ref.cast (ref 2)
-      struct.get 2 1
+      ref.cast (ref 3)
+      struct.get 3 1
       local.set 3
       local.get 2
-      ref.cast (ref 2)
-      struct.get 2 0
+      ref.cast (ref 3)
+      struct.get 3 0
       ref.cast (ref 2)
       struct.get 2 0
       ref.cast (ref 22)
       local.get 3
       array.get 22
       local.get 2
-      ref.cast (ref 2)
+      ref.cast (ref 3)
       local.get 3
       i32.const 1
       i32.add
-      struct.set 2 1
+      struct.set 3 1
       i32.add
       call 10
     else
@@ -205,9 +205,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 0
     local.set 14
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -297,9 +297,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 1
     local.set 15
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -389,9 +389,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 2
     local.set 16
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -481,9 +481,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 3
     local.set 17
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -573,9 +573,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 4
     local.set 18
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -665,9 +665,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 5
     local.set 19
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -757,9 +757,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 6
     local.set 20
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -849,9 +849,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 7
     local.set 21
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -941,9 +941,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 8
     local.set 22
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -1033,9 +1033,9 @@
     i32.add
     struct.set 2 1
     local.get 0
-    local.set 11
     i32.const 9
     local.set 23
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -1158,9 +1158,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 0
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1190,9 +1190,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 4
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1222,9 +1222,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 9
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1256,11 +1256,11 @@
     local.get 0
     local.set 1
     local.get 1
-    local.set 11
     i32.const 4
     local.set 12
     i32.const 40
     local.set 45
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1277,9 +1277,9 @@
     local.get 45
     array.set 22
     local.get 0
-    local.set 11
     i32.const 4
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1309,11 +1309,11 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 9
     local.set 12
     i32.const 90
     local.set 24
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1343,11 +1343,11 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 10
     local.set 12
     i32.const 100
     local.set 25
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1379,9 +1379,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 9
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1453,9 +1453,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 10
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1624,8 +1624,7 @@
     end
     local.get 0
     i32.const 0
-    i32.const 0
-    struct.new 2
+    struct.new 3
     local.set 4
     local.get 4
     ref.cast (ref 3)
@@ -1749,9 +1748,9 @@
       unreachable
     end
     local.get 0
-    local.set 11
     i32.const 77
     local.set 32
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -1841,9 +1840,9 @@
     i32.add
     struct.set 2 1
     local.get 1
-    local.set 11
     i32.const 0
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -1891,9 +1890,9 @@
       unreachable
     end
     local.get 5
-    local.set 11
     i64.const 9223372036854775807
     local.set 33
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -1983,11 +1982,11 @@
     i32.add
     struct.set 2 1
     local.get 5
-    local.set 11
     i64.const 0
     i64.const 9223372036854775807
     i64.sub
     local.set 34
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2077,9 +2076,9 @@
     i32.add
     struct.set 2 1
     local.get 5
-    local.set 11
     i32.const 0
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -2108,9 +2107,9 @@
       unreachable
     end
     local.get 5
-    local.set 11
     i32.const 1
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -2142,9 +2141,9 @@
     call 4
     local.set 6
     local.get 6
-    local.set 11
     f32.const 0x1.8p+0 (;=1.5;)
     local.set 35
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2234,9 +2233,9 @@
     i32.add
     struct.set 2 1
     local.get 6
-    local.set 11
     f32.const 0x1.4p+1 (;=2.5;)
     local.set 36
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2326,9 +2325,9 @@
     i32.add
     struct.set 2 1
     local.get 6
-    local.set 11
     i32.const 1
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -2359,9 +2358,9 @@
     call 5
     local.set 7
     local.get 7
-    local.set 11
     f64.const 0x1.8p+0 (;=1.5;)
     local.set 37
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2451,9 +2450,9 @@
     i32.add
     struct.set 2 1
     local.get 7
-    local.set 11
     f64.const 0x1.4p+1 (;=2.5;)
     local.set 38
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2543,9 +2542,9 @@
     i32.add
     struct.set 2 1
     local.get 7
-    local.set 11
     i32.const 1
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -2576,10 +2575,10 @@
     call 6
     local.set 8
     local.get 8
-    local.set 11
     i32.const 7
     i32x4.splat
     local.set 39
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2669,10 +2668,10 @@
     i32.add
     struct.set 2 1
     local.get 8
-    local.set 11
     i32.const 11
     i32x4.splat
     local.set 40
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2762,9 +2761,9 @@
     i32.add
     struct.set 2 1
     local.get 8
-    local.set 11
     i32.const 1
     local.set 12
+    local.set 11
     local.get 12
     local.get 11
     ref.cast (ref 2)
@@ -2796,13 +2795,13 @@
     call 7
     local.set 9
     local.get 9
-    local.set 11
     v128.const i32x4 0x73726966 0x00000074 0x00000000 0x00000000
     array.new_fixed 16 1
     i32.const 0
     i32.const 5
     struct.new 17
     local.set 41
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1
@@ -2892,13 +2891,13 @@
     i32.add
     struct.set 2 1
     local.get 9
-    local.set 11
     v128.const i32x4 0x6f636573 0x0000646e 0x00000000 0x00000000
     array.new_fixed 16 1
     i32.const 0
     i32.const 6
     struct.new 17
     local.set 42
+    local.set 11
     local.get 11
     ref.cast (ref 2)
     struct.get 2 1

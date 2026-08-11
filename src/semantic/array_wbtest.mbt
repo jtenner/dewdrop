@@ -47,12 +47,12 @@ test "array operations infer and lower through generic implementations" {
   let mut saw_pop = false
   for expression in lowering.modules[0].expressions {
     match expression.kind {
-      PlannedArrayNew(_) => saw_new = true
+      PlannedArrayNew(_, _) => saw_new = true
       PlannedArrayPush(_, _, _) => saw_push = true
       PlannedArraySetUnchecked(_, _, _, _) => saw_set = true
-      PlannedArrayIter(_, _) => saw_iter = true
+      PlannedArrayIter(_, _, _) => saw_iter = true
       PlannedArrayIterNext(_, _) => saw_next = true
-      PlannedArrayPop(_, _) => saw_pop = true
+      PlannedArrayPop(_, _, _) => saw_pop = true
       _ => ()
     }
   }
