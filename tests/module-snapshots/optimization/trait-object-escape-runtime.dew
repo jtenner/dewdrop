@@ -1,0 +1,21 @@
+trait Value {
+  fn value(self) -> I32
+}
+
+impl Value for I32 {
+  fn value(self) -> I32 {
+    self
+  }
+}
+
+fn identity(value: Value) -> Value {
+  value
+}
+
+fn invoke(value: Value) -> I32 {
+  value.value()
+}
+
+pub fn main() -> I32 {
+  invoke(identity(42))
+}

@@ -34,6 +34,19 @@ The success snapshot covers scalar and nominal-reference payloads. A separate tw
 
 Payload elimination measured 0.8946x the retained runtime, about 10.5% faster, and removed 82 Wasm bytes.
 
+## Exact trait-object flow audit
+
+The existing exact-flow analysis was promoted to an explicit optimization contract. `optimization/trait-object-escape-runtime` sends an `I32` through erased identity and invocation wrappers; the final 255-byte WAT contains only one scalar identity helper and its caller. It contains no struct allocation/access, cast/test, dictionary global, table, adapter root, `ref.func`, or `call_ref`. Node and Wago return the same value.
+
+`tools/benchmark-trait-object-escape.py` compares a nominal receiver passing through exact erased identity/invocation wrappers with direct static dispatch over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
+
+| Form | Median | `struct.new` | `call_ref` | `ref.func` | Wasm bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| exact erased flow | 0.0192 µs | 1 | 0 | 0 | 448 |
+| direct static flow | 0.0188 µs | 1 | 0 | 0 | 448 |
+
+The exact erased path is byte-identical in size and has the same allocation/dispatch instruction counts as direct static dispatch; the 1.0212x timing ratio is within the noise floor of this host-call-scale benchmark. Conflicting evidence joins, captures, unknown assignments/calls, and externally demanded fallback bodies continue to retain dynamic representation.
+
 ## Remaining boundaries
 
-Let-bound variants, struct-variant payloads, nested bindings, guards, and broader arm-order proofs remain conservative. Exact-flow trait-object escape analysis already removes envelopes, scalar/SIMD boxes, dictionaries, adapters, globals, `ref.func`, and `call_ref` when every use remains exact and nonescaping; a separate audit and contractual benchmark will close that roadmap item explicitly.
+Let-bound variants, struct-variant payloads, nested bindings, guards, and broader arm-order proofs remain conservative.
