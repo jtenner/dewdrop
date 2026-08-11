@@ -30,8 +30,8 @@ end-to-end product rather than add isolated builtins. Most numbered foundation
 milestones below are complete and retained as implementation history. The active
 order is now:
 
-1. replace the measured contiguous Queue baseline with circular-buffer storage,
-   then continue heaps and ordered trees now that growable `Array`, Stack, Queue,
+1. rebase Queue on the completed circular-buffer runtime, then continue heaps
+   and ordered trees now that growable `Array`, Stack, Queue, circular buffers,
    and explicit iterator protocols are complete;
 2. take annotations/`Show` or deterministic cleanup as separate, bounded
    ergonomics milestones;
@@ -487,7 +487,7 @@ count = count + 1
 
 - [x] Implement carrier-specialized mutable `dew.std.fixed_array` with safe optional get, trapping index get/set, explicit unchecked operations, aliases, and zero-length behavior.
 - [x] Implement growable `dew.std.array` over the same six physical carrier families, with deterministic capacity growth, alias-visible mutation, optional pop/get, Boolean safe set, trapping indexed access, and clearing of removed reference slots.
-- [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
+- [x] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
 - [x] Implement `dew.std.collections.stack` with explicit empty-pop/peek result semantics.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and min/max policy.
 - [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
@@ -667,7 +667,7 @@ count = count + 1
 - [ ] `dew.std.list`
 - [x] `dew.std.fixed_array`
 - [ ] `dew.std.array`
-- [ ] `dew.std.collections.circular_buffer`
+- [x] `dew.std.collections.circular_buffer`
 - [x] `dew.std.collections.stack`
 - [ ] `dew.std.collections.binary_heap`
 - [ ] `dew.std.collections.red_black_tree`

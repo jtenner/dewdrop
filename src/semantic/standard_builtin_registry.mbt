@@ -45,6 +45,19 @@ enum StandardBuiltinOperation {
   QueueIter
   QueueIterHasNext
   QueueIterNext
+  CircularBufferBounded
+  CircularBufferGrowable
+  CircularBufferLength
+  CircularBufferCapacity
+  CircularBufferIsEmpty
+  CircularBufferIsFull
+  CircularBufferPushBack
+  CircularBufferPopFront
+  CircularBufferPeekFront
+  CircularBufferClear
+  CircularBufferIter
+  CircularBufferIterHasNext
+  CircularBufferIterNext
   MapSingleton
   MapLength
   MapGet
@@ -270,6 +283,48 @@ fn standard_queue_operation(declaration : DeclId) -> StandardBuiltinOperation {
     10 => QueueIter
     11 => QueueIterHasNext
     12 => QueueIterNext
+    _ => NoStandardBuiltinOperation
+  }
+}
+
+///|
+pub fn standard_circular_buffer_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(36), 0)
+}
+
+///|
+pub fn standard_circular_buffer_method_declaration(name : String) -> DeclId {
+  let local_id = match name {
+    _ => -1
+  }
+  if local_id < 0 {
+    0UL
+  } else {
+    make_semantic_id(standard_library_module_id(36), local_id)
+  }
+}
+
+///|
+fn standard_circular_buffer_operation(
+  declaration : DeclId,
+) -> StandardBuiltinOperation {
+  if semantic_id_module(declaration) != standard_library_module_id(36) {
+    return NoStandardBuiltinOperation
+  }
+  match semantic_id_local(declaration) {
+    2 => CircularBufferBounded
+    3 => CircularBufferGrowable
+    4 => CircularBufferLength
+    5 => CircularBufferCapacity
+    6 => CircularBufferIsEmpty
+    7 => CircularBufferIsFull
+    8 => CircularBufferPushBack
+    9 => CircularBufferPopFront
+    10 => CircularBufferPeekFront
+    11 => CircularBufferClear
+    12 => CircularBufferIter
+    13 => CircularBufferIterHasNext
+    14 => CircularBufferIterNext
     _ => NoStandardBuiltinOperation
   }
 }

@@ -1,0 +1,18 @@
+open dew.std.array
+
+pub type CircularBuffer<t> = Array<t>
+pub type CircularBufferIter<t> = ArrayIter<t>
+
+pub builtin circular_buffer_bounded<t>(capacity: U32) -> CircularBuffer<t> = "dew_circular_buffer_bounded"
+pub builtin circular_buffer_growable<t>(capacity: U32) -> CircularBuffer<t> = "dew_circular_buffer_growable"
+pub builtin circular_buffer_length<t>(buffer: CircularBuffer<t>) -> U32 = "dew_circular_buffer_length"
+pub builtin circular_buffer_capacity<t>(buffer: CircularBuffer<t>) -> U32 = "dew_circular_buffer_capacity"
+pub builtin circular_buffer_is_empty<t>(buffer: CircularBuffer<t>) -> Bool = "dew_circular_buffer_is_empty"
+pub builtin circular_buffer_is_full<t>(buffer: CircularBuffer<t>) -> Bool = "dew_circular_buffer_is_full"
+pub builtin circular_buffer_push_back<t>(buffer: CircularBuffer<t>, value: t) -> Bool = "dew_circular_buffer_push_back"
+pub builtin circular_buffer_pop_front<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_pop_front"
+pub builtin circular_buffer_peek_front<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_peek_front"
+pub builtin circular_buffer_clear<t>(buffer: CircularBuffer<t>) -> Unit = "dew_circular_buffer_clear"
+pub builtin circular_buffer_iter<t>(buffer: CircularBuffer<t>) -> CircularBufferIter<t> = "dew_circular_buffer_iter"
+pub builtin circular_buffer_iter_has_next<t>(iter: CircularBufferIter<t>) -> Bool = "dew_circular_buffer_iter_has_next"
+pub builtin circular_buffer_iter_next<t>(iter: CircularBufferIter<t>) -> t = "dew_circular_buffer_iter_next"

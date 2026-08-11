@@ -1,0 +1,47 @@
+open dew.std.collections.circular_buffer
+
+fn bounded() -> CircularBuffer<I32> {
+  circular_buffer_bounded(3u32)
+}
+
+fn growable() -> CircularBuffer<I32> {
+  circular_buffer_growable(2u32)
+}
+
+fn pop(buffer: CircularBuffer<I32>) -> I32 {
+  match circular_buffer_pop_front(buffer) {
+    Option::Some(value) => value
+    Option::None => -1000
+  }
+}
+
+pub fn main() -> Unit {
+  let fixed = bounded()
+  assert(circular_buffer_capacity(fixed) == 3u32, "bounded capacity")
+  assert(circular_buffer_is_empty(fixed), "bounded empty")
+  assert(circular_buffer_push_back(fixed, 1), "fixed one")
+  assert(circular_buffer_push_back(fixed, 2), "fixed two")
+  assert(circular_buffer_push_back(fixed, 3), "fixed three")
+  assert(circular_buffer_is_full(fixed), "fixed full")
+  assert(!circular_buffer_push_back(fixed, 4), "fixed rejects full")
+  assert(pop(fixed) == 1, "fixed pop one")
+  assert(circular_buffer_push_back(fixed, 4), "fixed wraps")
+  assert(pop(fixed) == 2, "fixed pop two")
+  assert(pop(fixed) == 3, "fixed pop three")
+  assert(pop(fixed) == 4, "fixed pop four")
+  let grown = growable()
+  assert(circular_buffer_push_back(grown, 10), "grow one")
+  assert(circular_buffer_push_back(grown, 20), "grow two")
+  assert(pop(grown) == 10, "grow pop")
+  assert(circular_buffer_push_back(grown, 30), "grow wraps")
+  assert(circular_buffer_push_back(grown, 40), "grow reallocates")
+  assert(circular_buffer_capacity(grown) == 4u32, "growth doubles")
+  let iter = circular_buffer_iter(grown)
+  assert(circular_buffer_iter_next(iter) == 20, "iter first")
+  assert(circular_buffer_iter_next(iter) == 30, "iter second")
+  assert(circular_buffer_iter_next(iter) == 40, "iter third")
+  assert(!circular_buffer_iter_has_next(iter), "iter exhausted")
+  circular_buffer_clear(grown)
+  assert(circular_buffer_is_empty(grown), "clear empty")
+  assert(circular_buffer_capacity(grown) == 4u32, "clear preserves capacity")
+}

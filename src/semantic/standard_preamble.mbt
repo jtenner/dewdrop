@@ -63,13 +63,14 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 3
+            collection_mask = 7
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
             import_.path[2] == "collections" {
             match import_.path[3] {
               "stack" => collection_mask = collection_mask | 1
+              "circular_buffer" => collection_mask = collection_mask | 4
               _ => ()
             }
           } else if import_.path.length() == 4 &&

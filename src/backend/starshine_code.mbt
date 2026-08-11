@@ -2628,6 +2628,16 @@ fn starshine_body_locals(
       | @semantic.PlannedStackPeek(_, _)
       | @semantic.PlannedQueueDequeue(_, _)
       | @semantic.PlannedQueuePeek(_, _)
+      | @semantic.PlannedCircularBufferNew(_, _, _)
+      | @semantic.PlannedCircularBufferCapacity(_, _)
+      | @semantic.PlannedCircularBufferIsFull(_, _)
+      | @semantic.PlannedCircularBufferPushBack(_, _, _)
+      | @semantic.PlannedCircularBufferPopFront(_, _)
+      | @semantic.PlannedCircularBufferPeekFront(_, _)
+      | @semantic.PlannedCircularBufferClear(_, _)
+      | @semantic.PlannedCircularBufferIter(_, _)
+      | @semantic.PlannedCircularBufferIterHasNext(_)
+      | @semantic.PlannedCircularBufferIterNext(_, _)
       | @semantic.PlannedArrayClear(_, _)
       | @semantic.PlannedArrayIterNext(_, _) => {
         if fixed_array_ref_scratch_index < 0 {
@@ -2649,7 +2659,11 @@ fn starshine_body_locals(
           | @semantic.PlannedArrayPop(_, shape)
           | @semantic.PlannedStackPeek(_, shape)
           | @semantic.PlannedQueueDequeue(_, shape)
-          | @semantic.PlannedQueuePeek(_, shape) =>
+          | @semantic.PlannedQueuePeek(_, shape)
+          | @semantic.PlannedCircularBufferPushBack(_, _, shape)
+          | @semantic.PlannedCircularBufferPopFront(_, shape)
+          | @semantic.PlannedCircularBufferPeekFront(_, shape)
+          | @semantic.PlannedCircularBufferIterNext(_, shape) =>
             match starshine_shape_value_type(shape) {
               Some(type_) => {
                 map_value_local_indices[expression] = parameter_count +
@@ -5147,6 +5161,151 @@ fn starshine_emit_body_instructions(
             tasks.push(
               FinishStarshineArray(
                 18,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferNew(capacity, shape, growable) => {
+            tasks.push(
+              FinishStarshineArray(
+                if growable {
+                  21
+                } else {
+                  20
+                },
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(capacity))
+          }
+          @semantic.PlannedCircularBufferCapacity(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                23,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferIsFull(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                25,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferPushBack(base, value, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                26,
+                Some(shape),
+                2,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(value))
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferPopFront(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                27,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferPeekFront(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                28,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                map_value_local_indices[expression],
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferClear(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                29,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferIter(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                30,
+                Some(shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferIterHasNext(base) => {
+            tasks.push(
+              FinishStarshineArray(
+                31,
+                None,
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedCircularBufferIterNext(base, shape) => {
+            tasks.push(
+              FinishStarshineArray(
+                32,
                 Some(shape),
                 1,
                 fixed_array_ref_scratch_index,

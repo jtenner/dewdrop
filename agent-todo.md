@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Replace the measured contiguous Queue baseline with circular-buffer storage, then continue heaps and ordered trees.
+1. Rebase Queue on the completed circular-buffer runtime, then continue heaps and ordered trees.
 2. Take annotations/`Show` or deterministic cleanup as separate bounded ergonomics milestones.
 3. Build deterministic optimization, workspace-cache, and parallel-compilation pipelines while continuing fixtures, measurements, resource budgets, packaging, and release hardening.
 
@@ -93,7 +93,7 @@
 
 ## Collections and iteration
 
-- [ ] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
+- [x] Implement `dew.std.collections.circular_buffer` with bounded and growable modes, deterministic wraparound, and carrier-specialized storage.
 - [x] Implement `dew.std.collections.stack` with explicit empty-pop and empty-peek result semantics.
 - [ ] Implement `dew.std.collections.binary_heap` with deterministic comparator/ordering evidence and a defined min/max policy.
 - [ ] Implement `dew.std.collections.red_black_tree` with ordered map/set APIs, invariant checks, and deterministic traversal.
