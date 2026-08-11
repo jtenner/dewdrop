@@ -243,6 +243,78 @@ test "adjacent nonescaping struct locals scalar replace" {
 }
 
 ///|
+test "repeated same-field struct locals scalar replace into the existing local" {
+  let program = collect_program_manifest(
+    22811UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn repeated(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.right + pair.right + pair.right\n}\nfn mixed(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.left + pair.right\n}\npub fn main() -> I32 {\n  repeated(1, 2) + mixed(3, 4)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let repeated = collected.lookup_value("repeated").unwrap()
+  let repeated_source_body = collected.body_of(repeated).unwrap()
+  let repeated_body = optimized.modules[0].bodies[
+    semantic_id_local(repeated_source_body.id)
+  ]
+  let repeated_block = match repeated_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected repeated block")
+  }
+  let repeated_items = optimized.modules[0].blocks[repeated_block].items
+  let (local_id, initializer) = match
+    optimized.modules[0].block_items[repeated_items.start].kind {
+    PlannedLetItem(local_id, false, initializer) => (local_id, initializer)
+    _ => abort("expected retained scalar local")
+  }
+  assert_true(
+    optimized.modules[0].expressions[initializer].kind
+    is PlannedParameterSelect(_, 1),
+  )
+  assert_eq(
+    optimized.modules[0].locals[repeated_body.locals.start + local_id].shape,
+    I32PlannedValueShape,
+  )
+  let mut repeated_field_gets = 0
+  let mut repeated_struct_news = 0
+  let mut unoptimized_field_gets = 0
+  for expression in repeated_source_body.expressions.start..<(repeated_source_body.expressions.start + repeated_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      repeated_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      repeated_struct_news += 1
+    }
+    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      unoptimized_field_gets += 1
+    }
+  }
+  assert_eq(repeated_field_gets, 0)
+  assert_eq(repeated_struct_news, 0)
+  assert_eq(unoptimized_field_gets, 3)
+  let mixed = collected.lookup_value("mixed").unwrap()
+  let mixed_source_body = collected.body_of(mixed).unwrap()
+  let mut mixed_field_gets = 0
+  let mut mixed_struct_news = 0
+  for expression in mixed_source_body.expressions.start..<(mixed_source_body.expressions.start + mixed_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      mixed_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      mixed_struct_news += 1
+    }
+  }
+  assert_eq(mixed_field_gets, 2)
+  assert_eq(mixed_struct_news, 1)
+}
+
+///|
 test "common field extraction reuses immutable scalar loads only in the copy" {
   let program = collect_program_manifest(
     22808UL,

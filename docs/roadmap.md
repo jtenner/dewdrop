@@ -616,7 +616,7 @@ count = count + 1
 - [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
 - [ ] Escape analysis for boxes, payloads, and trait objects.
 - [x] Scalar-replace supported field projections from fresh construction and immutable uncaptured sole-use locals across total/discardable lexical gaps while evaluating every initializer once in source order.
-- [ ] Extend scalar replacement to control-flow joins and multiple field uses with component-local planning.
+- [ ] Extend scalar replacement to control-flow joins and distinct-field uses with component-local planning; repeated reads of one scalar field now reuse the aggregate's existing local and remove the allocation.
 - [x] Devirtualize trait-object calls when prerequisite-aware flow analysis proves exact evidence through locals, branches, parameter returns, and effect-free forwarding chains.
 - [ ] Enum representation specialization based on frozen usage/layout data.
 - [ ] Profile-guided optimization only after deterministic baseline builds exist.

@@ -2842,6 +2842,146 @@ fn program_local_get_count(
 }
 
 ///|
+fn scalar_replace_repeated_same_struct_field_local(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+  initializer : ExprId,
+) -> Bool {
+  if local_id < 0 ||
+    local_id >= body.locals.length ||
+    initializer < 0 ||
+    initializer >= module_.expressions.length() ||
+    !(module_.expressions[initializer].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  let fields = match module_.expressions[initializer].kind {
+    PlannedStructNew(_, _, fields) => fields
+    _ => return false
+  }
+  if fields.start < 0 ||
+    fields.start + fields.length > module_.object_fields.length() {
+    return false
+  }
+  let field_gets : Array[ExprId] = []
+  let base_gets : Array[ExprId] = []
+  let mut total_gets = 0
+  let mut selected_field : FieldId? = None
+  let mut selected_field_expression = -1
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if module_.expressions[expression].kind is PlannedLocalGet(source_local) &&
+      source_local == local_id {
+      total_gets += 1
+    }
+  }
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    let (field, base) = match module_.expressions[expression].kind {
+      PlannedFieldGet(field, base) => (field, base)
+      _ => continue
+    }
+    if base < body.expressions.start ||
+      base >= body.expressions.start + body.expressions.length {
+      continue
+    }
+    let source_local = match module_.expressions[base].kind {
+      PlannedLocalGet(source_local) => source_local
+      _ => continue
+    }
+    if source_local != local_id {
+      continue
+    }
+    for existing in base_gets {
+      if existing == base {
+        return false
+      }
+    }
+    if !program_scalar_replaceable_field_shape(
+        module_.expressions[expression].shape,
+      ) ||
+      !(module_.expressions[expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+      return false
+    }
+    match selected_field {
+      Some(selected) if selected != field => return false
+      Some(_) => ()
+      None => {
+        selected_field = Some(field)
+        selected_field_expression = expression
+      }
+    }
+    base_gets.push(base)
+    field_gets.push(expression)
+  }
+  if total_gets != field_gets.length() ||
+    field_gets.length() < 2 ||
+    selected_field_expression < 0 {
+    return false
+  }
+  let field = match selected_field {
+    Some(field) => field
+    None => return false
+  }
+  let start = module_.expression_children.length()
+  let mut selected = -1
+  for index in 0..<fields.length {
+    let object_field = module_.object_fields[fields.start + index]
+    module_.expression_children.push(object_field.value)
+    if object_field.field == field {
+      if selected >= 0 {
+        selected = -2
+      } else {
+        selected = index
+      }
+    }
+  }
+  if selected < 0 {
+    while module_.expression_children.length() > start {
+      ignore(module_.expression_children.pop())
+    }
+    return false
+  }
+  let initializer_source = module_.expressions[initializer]
+  let field_source = module_.expressions[selected_field_expression]
+  module_.expressions[initializer] = {
+    ..initializer_source,
+    type_: field_source.type_,
+    shape: field_source.shape,
+    trait_object_coercion: NoInferredTraitObjectCoercion,
+    kind: PlannedParameterSelect(
+      { start, length: fields.length },
+      selected,
+    ),
+  }
+  let local_index = body.locals.start + local_id
+  let local_source = module_.locals[local_index]
+  module_.locals[local_index] = {
+    ..local_source,
+    type_: field_source.type_,
+    shape: field_source.shape,
+    nominal: 0UL,
+  }
+  for index in 0..<field_gets.length() {
+    let base = base_gets[index]
+    let base_source = module_.expressions[base]
+    module_.expressions[base] = {
+      ..base_source,
+      kind: PlannedConsumedExpression,
+    }
+    let field_get = field_gets[index]
+    let source = module_.expressions[field_get]
+    module_.expressions[field_get] = {
+      ..source,
+      kind: PlannedLocalGet(local_id),
+    }
+  }
+  true
+}
+
+///|
 fn program_struct_initializer_is_discardable(
   module_ : PlannedModuleLowering,
   initializer : ExprId,
@@ -2910,6 +3050,11 @@ fn scalar_replace_program_struct_field_reads(
             initializer >= module_.expressions.length() ||
             !(module_.expressions[initializer].kind is PlannedStructNew(_, _, _)) ||
             program_cse_local_is_captured(module_, body, local_id) {
+            continue
+          }
+          if scalar_replace_repeated_same_struct_field_local(
+              module_, body, local_id, initializer,
+            ) {
             continue
           }
           let (use_count, only_use) = program_local_get_count(

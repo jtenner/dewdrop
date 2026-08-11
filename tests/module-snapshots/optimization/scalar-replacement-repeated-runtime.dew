@@ -1,0 +1,16 @@
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn repeated(left: I32, right: I32) -> I32 {
+  let pair = Pair {
+    left: left
+    right: right
+  }
+  pair.right + pair.right + pair.right
+}
+
+pub fn main() -> Unit {
+  assert(repeated(1, 2) == 6, "repeated field")
+}
