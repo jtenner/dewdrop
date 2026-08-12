@@ -4679,6 +4679,65 @@ fn program_guarded_variant_selector_is_stable(
 }
 
 ///|
+fn program_scalar_transform_binding_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  depth : Int,
+) -> ExprId {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth >= 64 {
+    return -2
+  }
+  match module_.expressions[expression].kind {
+    PlannedLocalGet(_) => expression
+    PlannedI32Const(_)
+    | PlannedU32Const(_)
+    | PlannedI64Const(_)
+    | PlannedU64Const(_)
+    | PlannedBoolConst(_) => -1
+    PlannedPrefixExpression(operator, operand) if
+      operator is HirPositive ||
+      operator is HirNegative ||
+      operator is HirLogicalNot =>
+      program_scalar_transform_binding_expression(
+        module_, operand, depth + 1,
+      )
+    PlannedOperatorCall(target, operator, left, right, _) if
+      semantic_id_module(target) == standard_library_module_id(0) &&
+      (operator is HirBitOr ||
+      operator is HirBitXor ||
+      operator is HirBitAnd ||
+      operator is HirEqual ||
+      operator is HirNotEqual ||
+      operator is HirLess ||
+      operator is HirLessEqual ||
+      operator is HirGreater ||
+      operator is HirGreaterEqual ||
+      operator is HirAdd ||
+      operator is HirSubtract ||
+      operator is HirMultiply) => {
+      let left_binding = program_scalar_transform_binding_expression(
+        module_, left, depth + 1,
+      )
+      let right_binding = program_scalar_transform_binding_expression(
+        module_, right, depth + 1,
+      )
+      if left_binding == -2 ||
+        right_binding == -2 ||
+        (left_binding >= 0 && right_binding >= 0) {
+        -2
+      } else if left_binding >= 0 {
+        left_binding
+      } else {
+        right_binding
+      }
+    }
+    _ => -2
+  }
+}
+
+///|
 fn scalar_replace_program_variant_payload_match(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -4767,9 +4826,18 @@ fn scalar_replace_program_variant_payload_match(
   }
   let root = module_.patterns[root_pattern]
   let selected_variant = variant
-  let local_id = match module_.expressions[arm.body].kind {
-    PlannedLocalGet(local_id) => local_id
-    _ => return false
+  let transform_binding_expression =
+    program_scalar_transform_binding_expression(module_, arm.body, 0)
+  if transform_binding_expression == -2 {
+    return false
+  }
+  let local_id = if transform_binding_expression >= 0 {
+    match module_.expressions[transform_binding_expression].kind {
+      PlannedLocalGet(local_id) => local_id
+      _ => return false
+    }
+  } else {
+    return false
   }
   let mut selected = -1
   let mut payload = -1
@@ -4910,9 +4978,27 @@ fn scalar_replace_program_variant_payload_match(
     }
     return false
   }
-  module_.expressions[expression] = {
-    ..source,
-    kind: PlannedParameterSelect(selector, selected),
+  let selected_payload_source = module_.expressions[payload]
+  if arm.body != transform_binding_expression {
+    module_.expressions[transform_binding_expression] = {
+      ..module_.expressions[transform_binding_expression],
+      type_: selected_payload_source.type_,
+      shape: selected_payload_source.shape,
+      kind: PlannedParameterSelect(selector, selected),
+    }
+    module_.expressions[expression] = {
+      ..source,
+      kind: module_.expressions[arm.body].kind,
+    }
+    module_.expressions[arm.body] = {
+      ..module_.expressions[arm.body],
+      kind: PlannedConsumedExpression,
+    }
+  } else {
+    module_.expressions[expression] = {
+      ..source,
+      kind: PlannedParameterSelect(selector, selected),
+    }
   }
   let variant_source = module_.expressions[variant_expression]
   module_.expressions[variant_expression] = {

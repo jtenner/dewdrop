@@ -695,6 +695,40 @@ test "payload-dependent pure guards collapse identical payload arms" {
 }
 
 ///|
+test "fresh payload bindings inline exact primitive scalar transforms" {
+  let program = collect_program_manifest(
+    22834UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn transformed(first: I32, second: I32) -> I32 {\n  match Maybe::Some(first, second) {\n    Maybe::Some(left, right) => -right + 1\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  transformed(1, -41)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let transformed = collected.lookup_value("transformed").unwrap()
+  let body = collected.body_of(transformed).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  let mut selects = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedVariantTupleNew(_, _, _) => variants += 1
+      PlannedMatchExpression(_, _) => matches += 1
+      PlannedParameterSelect(_, _) => selects += 1
+      _ => ()
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+  assert_eq(selects, 1)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,
