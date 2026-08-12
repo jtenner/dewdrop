@@ -52,6 +52,54 @@ pub fn main(value: I32) -> I32 {{
 """
 
 
+GENERIC_DIRECT = """struct Pair<t> {
+  first: t
+  second: t
+}
+
+fn selected<t>(first: t, second: t, choose_first: Bool) -> t {
+  let pair = Pair {
+    first: first
+    second: second
+  }
+  if choose_first {
+    pair.first
+  } else {
+    pair.second
+  }
+}
+
+pub fn main(value: I32) -> I32 {
+  selected(value, value + 1, false)
+}
+"""
+
+GENERIC_RETAINED = """struct Pair<t> {
+  first: t
+  second: t
+}
+
+fn retain<t>(value: Pair<t>) -> Pair<t> {
+  value
+}
+
+fn selected<t>(first: t, second: t, choose_first: Bool) -> t {
+  let pair = retain(Pair {
+    first: first
+    second: second
+  })
+  if choose_first {
+    pair.first
+  } else {
+    pair.second
+  }
+}
+
+pub fn main(value: I32) -> I32 {
+  selected(value, value + 1, false)
+}
+"""
+
 MIXED_DIRECT = """struct Triple {
   first: I32
   second: I32
@@ -227,6 +275,8 @@ def main() -> None:
     direct_retained = build(
         "direct-retained", source("direct-retained", args.fields),
     )
+    generic = build("generic", GENERIC_DIRECT)
+    generic_retained = build("generic-retained", GENERIC_RETAINED)
     mixed = build("mixed", MIXED_DIRECT)
     mixed_retained = build("mixed-retained", MIXED_RETAINED)
     reference = build("reference", REFERENCE_DIRECT)
@@ -243,6 +293,12 @@ def main() -> None:
             direct_retained,
         ],
         expected,
+        args.samples,
+        args.batch,
+    )
+    generic_raw = measure(
+        [generic, generic_retained],
+        8,
         args.samples,
         args.batch,
     )
@@ -264,6 +320,10 @@ def main() -> None:
     retained_median = statistics.median(raw[str(retained)])
     direct_median = statistics.median(raw[str(direct)])
     direct_retained_median = statistics.median(raw[str(direct_retained)])
+    generic_median = statistics.median(generic_raw[str(generic)])
+    generic_retained_median = statistics.median(
+        generic_raw[str(generic_retained)],
+    )
     mixed_median = statistics.median(mixed_raw[str(mixed)])
     mixed_retained_median = statistics.median(mixed_raw[str(mixed_retained)])
     reference_median = statistics.median(reference_raw[str(reference)])
@@ -280,6 +340,8 @@ def main() -> None:
         "retained_median_us": round(retained_median, 4),
         "direct_median_us": round(direct_median, 4),
         "direct_retained_median_us": round(direct_retained_median, 4),
+        "generic_median_us": round(generic_median, 4),
+        "generic_retained_median_us": round(generic_retained_median, 4),
         "mixed_median_us": round(mixed_median, 4),
         "mixed_retained_median_us": round(mixed_retained_median, 4),
         "reference_median_us": round(reference_median, 4),
@@ -288,6 +350,9 @@ def main() -> None:
         "reversed_ratio": round(reversed_median / retained_median, 4),
         "missing_ratio": round(missing_median / retained_median, 4),
         "direct_ratio": round(direct_median / direct_retained_median, 4),
+        "generic_ratio": round(
+            generic_median / generic_retained_median, 4,
+        ),
         "mixed_ratio": round(mixed_median / mixed_retained_median, 4),
         "reference_ratio": round(
             reference_median / reference_retained_median, 4,
@@ -298,6 +363,8 @@ def main() -> None:
         "retained_wasm_bytes": retained.stat().st_size,
         "direct_wasm_bytes": direct.stat().st_size,
         "direct_retained_wasm_bytes": direct_retained.stat().st_size,
+        "generic_wasm_bytes": generic.stat().st_size,
+        "generic_retained_wasm_bytes": generic_retained.stat().st_size,
         "mixed_wasm_bytes": mixed.stat().st_size,
         "mixed_retained_wasm_bytes": mixed_retained.stat().st_size,
         "reference_wasm_bytes": reference.stat().st_size,
@@ -314,6 +381,10 @@ def main() -> None:
         "direct_struct_get": wat_count(direct, "struct.get"),
         "direct_retained_struct_new": wat_count(direct_retained, "struct.new"),
         "direct_retained_struct_get": wat_count(direct_retained, "struct.get"),
+        "generic_struct_new": wat_count(generic, "struct.new"),
+        "generic_struct_get": wat_count(generic, "struct.get"),
+        "generic_retained_struct_new": wat_count(generic_retained, "struct.new"),
+        "generic_retained_struct_get": wat_count(generic_retained, "struct.get"),
         "mixed_struct_new": wat_count(mixed, "struct.new"),
         "mixed_struct_get": wat_count(mixed, "struct.get"),
         "mixed_retained_struct_new": wat_count(mixed_retained, "struct.new"),

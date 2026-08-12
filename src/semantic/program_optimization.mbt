@@ -3543,6 +3543,13 @@ fn scalar_replace_synthesized_struct_components(
             }
             _ => false
           }
+        } else if field_shape is GenericPlannedValueShape {
+          match module_.expressions[object_value].kind {
+            PlannedLocalGet(source_local) if
+              source_local >= 0 && source_local < body.locals.length =>
+              module_.locals[body.locals.start + source_local].shape is GenericPlannedValueShape
+            _ => false
+          }
         } else {
           false
         }

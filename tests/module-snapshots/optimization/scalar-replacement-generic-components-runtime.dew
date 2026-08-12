@@ -1,0 +1,20 @@
+struct Pair<t> {
+  first: t
+  second: t
+}
+
+fn selected<t>(first: t, second: t, choose_first: Bool) -> t {
+  let pair = Pair {
+    first: first
+    second: second
+  }
+  if choose_first {
+    pair.first
+  } else {
+    pair.second
+  }
+}
+
+pub fn main() -> I32 {
+  selected(20, 22, false)
+}
