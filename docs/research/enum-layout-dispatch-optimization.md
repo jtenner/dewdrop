@@ -13,7 +13,7 @@ Implemented optimizations include:
 - dense `br_table` dispatch for suitable unguarded matches;
 - a reusable Wago Wasm 3 benchmark harness.
 
-Generic specialization, nested/alternative pattern emission, and cache serialization are implemented by later phases. Deeper recursive partition refinement and measured enum representation specialization remain open roadmap work.
+Generic specialization, nested/alternative pattern emission, and cache serialization are implemented by later phases. A first measured representation specialization now maps proven private body-local unit-only enum values to scalar tags. Deeper recursive partition refinement and private parameter/result or scalar-payload specialization remain open roadmap work.
 
 ## Planning controls
 
@@ -272,7 +272,7 @@ Cold compile measurements were noisy but generally favored shared subtype module
 
 The following are not yet implemented:
 
-- scalar unboxed enum representations;
+- broader scalar enum parameters/results and scalar-payload representations beyond the implemented private body-local unit-only case;
 - generic specialization and erased adapters;
 - deeper recursive structural partition refinement;
 - nested and alternative pattern code generation;

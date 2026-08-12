@@ -388,12 +388,16 @@ fn program_reachable_callable_roots(
         match module_.patterns[pattern].selected_constructor {
           StructInferredPatternConstructor(declaration, _) =>
             reachable[declaration] = true
-          VariantInferredPatternConstructor(variant, _) =>
+          VariantInferredPatternConstructor(variant, _) => {
+            if module_.patterns[pattern].shape is I32PlannedValueShape {
+              continue
+            }
             match
               program_variant_declaration(lowering, module_lookup, variant) {
               Some(declaration) => reachable[declaration] = true
               None => ()
             }
+          }
           _ => ()
         }
       }

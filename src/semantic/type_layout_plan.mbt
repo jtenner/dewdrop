@@ -7,6 +7,7 @@ pub enum PlannedNominalLayoutKind {
 ///|
 pub struct PlannedNominalLayout {
   declaration : DeclId
+  visibility : SemanticVisibility
   generic_parameters : HirSpan
   test_only : Bool
   kind : PlannedNominalLayoutKind
@@ -247,6 +248,7 @@ pub fn plan_module_type_layouts(
         layout_by_declaration[semantic_id_local(declaration.id)] = index
         layouts.push({
           declaration: declaration.id,
+          visibility: declaration.visibility,
           generic_parameters: collected.generic_parameters_of(declaration.id),
           test_only: collected.declaration_is_test_only(declaration.id),
           kind,

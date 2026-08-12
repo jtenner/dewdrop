@@ -2128,6 +2128,115 @@ test "common field extraction reuses exact nested reference loads" {
 }
 
 ///|
+test "private unit enum locals specialize to scalar tags" {
+  let program = collect_program_manifest(
+    22841UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum State {\n  Left\n  Right\n}\nfn choose(flag: Bool) -> I32 {\n  let state = if flag {\n    State::Left\n  } else {\n    State::Right\n  }\n  match state {\n    State::Left => 1\n    State::Right => 2\n  }\n}\npub fn main() -> I32 {\n  choose(true) + choose(false)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let choose = collected.lookup_value("choose").unwrap()
+  let source_body = collected.body_of(choose).unwrap()
+  let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+  let block = match body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected choose block")
+  }
+  let items = optimized.modules[0].blocks[block].items
+  let state_local = match optimized.modules[0].block_items[items.start].kind {
+    PlannedLetItem(local_id, false, _) => local_id
+    _ => abort("expected state local")
+  }
+  assert_true(
+    optimized.modules[0].locals[body.locals.start + state_local].shape
+    is I32PlannedValueShape,
+  )
+  let mut optimized_units = 0
+  let mut optimized_tags = 0
+  let mut match_expression = -1
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedUnitVariant(_, _) => optimized_units += 1
+      PlannedI32Const(_) => optimized_tags += 1
+      PlannedMatchExpression(_, _) => match_expression = expression
+      _ => ()
+    }
+  }
+  assert_eq(optimized_units, 0)
+  assert_true(optimized_tags >= 2)
+  assert_true(match_expression >= 0)
+  let (_, arms) = match
+    optimized.modules[0].expressions[match_expression].kind {
+    PlannedMatchExpression(scrutinee, arms) => (scrutinee, arms)
+    _ => abort("expected match")
+  }
+  for index in 0..<arms.length {
+    let arm = optimized.modules[0].pattern_arms[optimized.modules[0].arm_children[arms.start +
+      index]]
+    assert_true(
+      optimized.modules[0].patterns[arm.pattern].shape is I32PlannedValueShape,
+    )
+  }
+  let unoptimized_body = unoptimized.modules[0].bodies[semantic_id_local(
+      source_body.id,
+    )]
+  assert_true(
+    unoptimized.modules[0].locals[unoptimized_body.locals.start + state_local].shape
+    is RefPlannedValueShape,
+  )
+}
+
+///|
+test "scalar unit enum specialization rejects public payload guarded and escaping locals" {
+  let program = collect_program_manifest(
+    22842UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"pub enum PublicState {\n  Left\n  Right\n}\nenum PayloadState {\n  Left\n  Right(I32)\n}\nenum PrivateState {\n  Left\n  Right\n}\nfn public_state(flag: Bool) -> I32 {\n  let state = if flag {\n    PublicState::Left\n  } else {\n    PublicState::Right\n  }\n  match state {\n    PublicState::Left => 1\n    PublicState::Right => 2\n  }\n}\nfn payload_state(flag: Bool) -> I32 {\n  let state = if flag {\n    PayloadState::Left\n  } else {\n    PayloadState::Right(1)\n  }\n  match state {\n    PayloadState::Left => 1\n    PayloadState::Right(value) => value\n  }\n}\nfn guarded_state(flag: Bool) -> I32 {\n  let state = if flag {\n    PrivateState::Left\n  } else {\n    PrivateState::Right\n  }\n  match state {\n    PrivateState::Left if flag => 1\n    PrivateState::Left => 2\n    PrivateState::Right => 3\n  }\n}\nfn escaping_state(flag: Bool) -> PrivateState {\n  let state = if flag {\n    PrivateState::Left\n  } else {\n    PrivateState::Right\n  }\n  state\n}\nfn captured_state(flag: Bool) -> I32 {\n  let state = if flag {\n    PrivateState::Left\n  } else {\n    PrivateState::Right\n  }\n  let read = fn() -> I32 {\n    match state {\n      PrivateState::Left => 1\n      PrivateState::Right => 2\n    }\n  }\n  read()\n}\npub fn main() -> I32 {\n  public_state(true) + payload_state(false) + guarded_state(true) +\n  match escaping_state(false) {\n    PrivateState::Left => 1\n    PrivateState::Right => 2\n  } + captured_state(true)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let optimized = optimize_program_lowering(
+    plan_unoptimized_program_lowering(program, analyzed),
+  )
+  let collected = program.modules[0]
+  for
+    name in [
+      "public_state", "payload_state", "guarded_state", "escaping_state", "captured_state",
+    ] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let source_body = collected.body_of(declaration).unwrap()
+    let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+    let block = match body.root {
+      BlockBodyRoot(block) => block
+      _ => abort("expected block")
+    }
+    let items = optimized.modules[0].blocks[block].items
+    let local_id = match optimized.modules[0].block_items[items.start].kind {
+      PlannedLetItem(local_id, false, _) => local_id
+      _ => abort("expected enum local")
+    }
+    assert_true(
+      optimized.modules[0].locals[body.locals.start + local_id].shape
+      is RefPlannedValueShape,
+    )
+  }
+}
+
+///|
 test "tail calls mark scalar direct calls across branch tails" {
   let program = collect_program_manifest(
     22840UL,

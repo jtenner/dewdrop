@@ -153,6 +153,15 @@ user-defined receiver-free non-generic scalar-only bodies; cross-function
 transfers are added only inside terminal `if` branches and match arms so root
 forwarding wrappers remain available to summary/directization passes.
 
+Private scalar unit-enum specialization is a copied-lowering, body-local proof.
+The type-layout plan freezes declaration visibility, generic arity, source-order
+variant tags, and payload shapes. Only module-visible non-generic unit-only enums
+qualify, and only when one immutable uncaptured local is initialized by proven
+constructor/`if` tails and every local read is an exact unguarded match
+scrutinee. The optimizer changes those local expression/pattern carriers to
+`I32`; specialization and fragment reachability then omit the otherwise-unused
+enum physical type. Public ABI shapes and all escaping values remain unchanged.
+
 ## Identity ownership
 
 ### Source and semantic IDs

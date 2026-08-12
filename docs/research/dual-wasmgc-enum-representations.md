@@ -138,7 +138,7 @@ Supported executable pattern forms include:
 - guards;
 - imported variants and fields.
 
-Nested destructuring and alternative-pattern code generation are implemented. Further representation specialization remains measurement-driven roadmap work.
+Nested destructuring and alternative-pattern code generation are implemented. A later bounded tranche now scalarizes proven private body-local unit-only enum values; broader parameter/result and payload representation specialization remains measurement-driven roadmap work.
 
 ## Deliberately unoptimized control flow
 

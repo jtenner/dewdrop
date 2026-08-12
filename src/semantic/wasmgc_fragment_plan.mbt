@@ -875,13 +875,17 @@ fn wasmgc_required_nominal_declarations(
       match lowering.patterns[pattern].selected_constructor {
         StructInferredPatternConstructor(declaration, _) =>
           required[declaration] = true
-        VariantInferredPatternConstructor(variant, _) =>
+        VariantInferredPatternConstructor(variant, _) => {
+          if lowering.patterns[pattern].shape is I32PlannedValueShape {
+            continue
+          }
           for candidate in layouts.variants {
             if candidate.variant == variant {
               required[candidate.declaration] = true
               break
             }
           }
+        }
         _ => ()
       }
     }

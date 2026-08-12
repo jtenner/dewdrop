@@ -1392,6 +1392,9 @@ fn starshine_append_precise_nominal_local_cast(
     return
   }
   let planned_local = lowering.locals[body.locals.start + local_id]
+  if !(planned_local.shape is @semantic.RefPlannedValueShape) {
+    return
+  }
   match
     starshine_precise_nominal_local_type_index(
       lowering, planned, program, planned_local,
@@ -2105,6 +2108,12 @@ fn starshine_simple_match_pattern_instructions(
     Some(value) => value
     None => return Err(UnsupportedExpression(body.body, pattern))
   }
+  if source.shape is @semantic.I32PlannedValueShape {
+    condition.push(starshine_match_local_get(scratch_local))
+    condition.push(@lib.Instruction::i32_const(@lib.I32::new(tag)))
+    condition.push(@lib.Instruction::i32_eq())
+    return Ok((condition, bindings))
+  }
   let base_type = match
     starshine_emitted_type_index(planned, program, declaration) {
     Some(value) => value
@@ -2520,6 +2529,8 @@ fn starshine_body_locals(
         )
         let local_type = if cell_slot >= 0 {
           Some(@lib.ValType::eqref_null())
+        } else if !(planned_local.shape is @semantic.RefPlannedValueShape) {
+          starshine_shape_value_type(planned_local.shape)
         } else {
           match
             starshine_precise_nominal_local_type_index(
@@ -8439,7 +8450,14 @@ fn starshine_emit_body_instructions(
         )
         let result_local = match_result_local_indices[expression]
         let dense_arm_by_tag = Array::make(arms.length, -1)
+        let scalar_scrutinee = match lowering.expressions[expression].kind {
+          @semantic.PlannedMatchExpression(scrutinee, _) =>
+            lowering.expressions[scrutinee].shape
+            is @semantic.I32PlannedValueShape
+          _ => false
+        }
         let mut dense_dispatch = planned.dense_enum_dispatch &&
+          !scalar_scrutinee &&
           guard_count == 0 &&
           arms.length > 1
         if dense_dispatch {

@@ -2472,6 +2472,334 @@ fn inline_program_calls_from_summaries(
 }
 
 ///|
+fn program_private_unit_enum_tag(
+  module_ : PlannedModuleLowering,
+  variant : VariantId,
+) -> Int {
+  let variant_index = semantic_id_local(variant)
+  if semantic_id_module(variant) != module_.module_id ||
+    variant_index < 0 ||
+    variant_index >= module_.type_layouts.variants.length() {
+    return -1
+  }
+  let source = module_.type_layouts.variants[variant_index]
+  if source.variant != variant ||
+    !(source.payload is PlannedUnitVariantLayout) ||
+    source.tag < 0 {
+    return -1
+  }
+  let layout = match module_.type_layouts.layout_of(source.declaration) {
+    Some(value) => value
+    None => return -1
+  }
+  if layout.visibility != ModuleVisible ||
+    layout.generic_parameters.length != 0 ||
+    layout.test_only {
+    return -1
+  }
+  match layout.kind {
+    PlannedEnumLayout(variants) => {
+      if variants.length < 2 ||
+        variants.start < 0 ||
+        variants.start + variants.length >
+        module_.type_layouts.variants.length() {
+        return -1
+      }
+      for index in 0..<variants.length {
+        if !(module_.type_layouts.variants[variants.start + index].payload
+          is PlannedUnitVariantLayout) {
+          return -1
+        }
+      }
+      source.tag
+    }
+    _ => -1
+  }
+}
+
+///|
+fn program_can_scalarize_private_unit_enum_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  declaration : DeclId,
+  depth : Int,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return false
+  }
+  let source = module_.expressions[expression]
+  match source.kind {
+    PlannedUnitVariant(variant, _) => {
+      let variant_index = semantic_id_local(variant)
+      if variant_index < 0 ||
+        variant_index >= module_.type_layouts.variants.length() ||
+        module_.type_layouts.variants[variant_index].declaration != declaration {
+        return false
+      }
+      let tag = program_private_unit_enum_tag(module_, variant)
+      if tag < 0 {
+        return false
+      }
+      true
+    }
+    PlannedBlockExpression(block) => {
+      let tail = program_scalar_replacement_block_tail(module_, block)
+      if tail < 0 ||
+        !program_can_scalarize_private_unit_enum_expression(
+          module_,
+          tail,
+          declaration,
+          depth + 1,
+        ) {
+        return false
+      }
+      true
+    }
+    PlannedIfExpression(_, then_block, alternative) => {
+      let then_tail = program_scalar_replacement_block_tail(module_, then_block)
+      if then_tail < 0 ||
+        !program_can_scalarize_private_unit_enum_expression(
+          module_,
+          then_tail,
+          declaration,
+          depth + 1,
+        ) ||
+        !program_can_scalarize_private_unit_enum_expression(
+          module_,
+          alternative,
+          declaration,
+          depth + 1,
+        ) {
+        return false
+      }
+      true
+    }
+    _ => false
+  }
+}
+
+///|
+fn scalarize_program_private_unit_enum_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  declaration : DeclId,
+  depth : Int,
+) -> Unit {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return
+  }
+  let source = module_.expressions[expression]
+  match source.kind {
+    PlannedUnitVariant(variant, _) => {
+      let variant_index = semantic_id_local(variant)
+      if variant_index < 0 ||
+        variant_index >= module_.type_layouts.variants.length() ||
+        module_.type_layouts.variants[variant_index].declaration != declaration {
+        return
+      }
+      let tag = program_private_unit_enum_tag(module_, variant)
+      if tag < 0 {
+        return
+      }
+      module_.expressions[expression] = {
+        ..source,
+        shape: I32PlannedValueShape,
+        kind: PlannedI32Const(tag.reinterpret_as_uint().to_uint64()),
+      }
+    }
+    PlannedBlockExpression(block) => {
+      let tail = program_scalar_replacement_block_tail(module_, block)
+      scalarize_program_private_unit_enum_expression(
+        module_,
+        tail,
+        declaration,
+        depth + 1,
+      )
+      module_.expressions[expression] = {
+        ..source,
+        shape: I32PlannedValueShape,
+      }
+    }
+    PlannedIfExpression(_, then_block, alternative) => {
+      let then_tail = program_scalar_replacement_block_tail(module_, then_block)
+      scalarize_program_private_unit_enum_expression(
+        module_,
+        then_tail,
+        declaration,
+        depth + 1,
+      )
+      scalarize_program_private_unit_enum_expression(
+        module_,
+        alternative,
+        declaration,
+        depth + 1,
+      )
+      module_.expressions[expression] = {
+        ..source,
+        shape: I32PlannedValueShape,
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn specialize_program_private_unit_enum_locals(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    for body in module_.bodies {
+      for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+        if block < 0 || block >= module_.blocks.length() {
+          continue
+        }
+        let items = module_.blocks[block].items
+        if items.start < 0 ||
+          items.start + items.length > module_.block_items.length() {
+          continue
+        }
+        for index in 0..<items.length {
+          let (local_id, initializer) = match
+            module_.block_items[items.start + index].kind {
+            PlannedLetItem(local_id, false, initializer) =>
+              (local_id, initializer)
+            _ => continue
+          }
+          if local_id < 0 ||
+            local_id >= body.locals.length ||
+            initializer < 0 ||
+            initializer >= module_.expressions.length() ||
+            program_cse_local_is_captured(module_, body, local_id) {
+            continue
+          }
+          let local_index = body.locals.start + local_id
+          let local_info = module_.locals[local_index]
+          if !(local_info.shape is RefPlannedValueShape) ||
+            local_info.nominal == 0UL ||
+            !program_can_scalarize_private_unit_enum_expression(
+              module_,
+              initializer,
+              local_info.nominal,
+              0,
+            ) {
+            continue
+          }
+          let mut supported = true
+          let mut matched_reads = 0
+          for
+            expression in body.expressions.start..<(body.expressions.start +
+            body.expressions.length) {
+            match module_.expressions[expression].kind {
+              PlannedMatchExpression(scrutinee, arms) => {
+                let uses_local = match module_.expressions[scrutinee].kind {
+                  PlannedLocalGet(source_local) => source_local == local_id
+                  _ => false
+                }
+                if !uses_local {
+                  continue
+                }
+                matched_reads += 1
+                if arms.start < 0 ||
+                  arms.start + arms.length > module_.arm_children.length() {
+                  supported = false
+                  break
+                }
+                for arm_offset in 0..<arms.length {
+                  let arm_index = module_.arm_children[arms.start + arm_offset]
+                  if arm_index < 0 || arm_index >= module_.pattern_arms.length() {
+                    supported = false
+                    break
+                  }
+                  let arm = module_.pattern_arms[arm_index]
+                  if arm.guard_condition >= 0 ||
+                    arm.pattern < 0 ||
+                    arm.pattern >= module_.patterns.length() {
+                    supported = false
+                    break
+                  }
+                  match module_.patterns[arm.pattern].selected_constructor {
+                    VariantInferredPatternConstructor(variant, _) => {
+                      let variant_index = semantic_id_local(variant)
+                      if variant_index < 0 ||
+                        variant_index >= module_.type_layouts.variants.length() ||
+                        module_.type_layouts.variants[variant_index].declaration !=
+                        local_info.nominal ||
+                        program_private_unit_enum_tag(module_, variant) < 0 {
+                        supported = false
+                        break
+                      }
+                    }
+                    _ => {
+                      supported = false
+                      break
+                    }
+                  }
+                }
+              }
+              _ => ()
+            }
+          }
+          let (local_reads, _) = program_local_get_count(
+            module_, body, local_id,
+          )
+          if !supported || matched_reads == 0 || matched_reads != local_reads {
+            continue
+          }
+          scalarize_program_private_unit_enum_expression(
+            module_,
+            initializer,
+            local_info.nominal,
+            0,
+          )
+          module_.locals[local_index] = {
+            ..local_info,
+            shape: I32PlannedValueShape,
+          }
+          for
+            expression in body.expressions.start..<(body.expressions.start +
+            body.expressions.length) {
+            let expression_source = module_.expressions[expression]
+            match expression_source.kind {
+              PlannedLocalGet(source_local) if source_local == local_id =>
+                module_.expressions[expression] = {
+                  ..expression_source,
+                  shape: I32PlannedValueShape,
+                }
+              PlannedMatchExpression(scrutinee, arms) => {
+                let uses_local = match module_.expressions[scrutinee].kind {
+                  PlannedLocalGet(source_local) => source_local == local_id
+                  _ => false
+                }
+                if !uses_local {
+                  continue
+                }
+                module_.expressions[scrutinee] = {
+                  ..module_.expressions[scrutinee],
+                  shape: I32PlannedValueShape,
+                }
+                for arm_offset in 0..<arms.length {
+                  let arm_index = module_.arm_children[arms.start + arm_offset]
+                  let pattern = module_.pattern_arms[arm_index].pattern
+                  module_.patterns[pattern] = {
+                    ..module_.patterns[pattern],
+                    shape: I32PlannedValueShape,
+                  }
+                }
+              }
+              _ => ()
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
 fn prepare_program_optimization_mutation(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -2493,6 +2821,7 @@ fn prepare_program_optimization_mutation(
       blocks: module_.blocks.copy(),
       expressions: module_.expressions.copy(),
       block_items: module_.block_items.copy(),
+      patterns: module_.patterns.copy(),
       pattern_arms: module_.pattern_arms.copy(),
       expression_children: module_.expression_children.copy(),
       arm_children: module_.arm_children.copy(),
@@ -6504,6 +6833,7 @@ pub fn optimize_program_lowering(
   let effects = program_callable_effect_summaries(modules)
   directize_transparent_callback_calls(modules, effects)
   directize_generic_parameter_selectors(modules)
+  specialize_program_private_unit_enum_locals(modules)
   coalesce_program_immutable_local_aliases(modules)
   let elided_trait_wrappers = directize_exact_runtime_trait_flows(
     modules,

@@ -1,0 +1,28 @@
+enum State {
+  Left
+  Center
+  Right
+}
+
+fn classify(flag: Bool) -> I32 {
+  let state = if flag {
+    State::Left
+  } else {
+    State::Right
+  }
+  let first = match state {
+    State::Left => 10
+    State::Center => 20
+    State::Right => 30
+  }
+  let second = match state {
+    State::Left => 1
+    State::Center => 2
+    State::Right => 3
+  }
+  first + second
+}
+
+pub fn main() -> I32 {
+  classify(true) + classify(false)
+}
