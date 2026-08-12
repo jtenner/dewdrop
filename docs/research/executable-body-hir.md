@@ -236,16 +236,10 @@ Release-mode benchmarks use pre-parsed collection, pre-tokenized parse-and-colle
 
 The native collect-only function workload lowers 256 function blocks containing 1,280 expressions in about 249 microseconds, slightly under one microsecond per complete function body including declaration identities, parameter/type collection, name interning, block items, and expression HIR.
 
-## Next steps
+## Current boundary
 
-Declaration-level type resolution, transparent alias normalization, and body-local name/control resolution are now implemented in `docs/research/declaration-type-resolution.md`, `docs/research/transparent-alias-normalization.md`, and `docs/research/body-name-resolution.md`. The next steps are:
-
-Body-local type terms, union-find unification, occurs checking, rollback snapshots, and zonking are now implemented in `docs/research/body-local-unification.md`. The remaining next steps are:
-
-Literal, local, block, return, `if`, and structural operator constraints are now generated as documented in `docs/research/basic-body-type-inference.md`. The remaining next steps are:
-
-Direct and generic calls plus rollback-based builtin overload selection are now implemented in `docs/research/direct-generic-overload-call-inference.md`. The remaining next steps are:
-
-Module-let dependency SCC inference is now implemented in `docs/research/module-value-scc-inference.md`. The remaining next steps are:
-
-Pattern/loop inference and structured flow are implemented, while objects, enum constructors, and fields are documented in `docs/research/object-constructor-field-inference.md`. The remaining next step is method and trait-obligation inference.
+The downstream milestones originally listed here are implemented: declaration and
+body resolution, inference, module-value SCCs, patterns and loops, members,
+methods, trait obligations, lowering, optimization, layouts, linking, and
+Starshine emission. This note remains the HIR construction and benchmark record;
+current priorities are in `docs/roadmap.md`.

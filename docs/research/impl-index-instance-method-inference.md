@@ -4,7 +4,7 @@
 
 Implemented for module-local inherent and trait implementations, structural overlap/disjointness, strict specialization, receiver-call syntax, `Type::method(...)`, `Trait::method(...)`, primitive and nominal static methods, generic impl substitution, method-local generics on impl members, deterministic selection, and frozen direct-call targets.
 
-Trait obligations in generic bodies, trait objects, dynamic dispatch, runtime layouts, and Starshine emission remain later phases. Backend-neutral lowering plans are implemented separately in `docs/research/deterministic-lowering-plans.md`.
+Generic-body trait obligations, trait objects, dynamic dispatch, runtime layouts, lowering, and Starshine emission are implemented by later phases. This note remains the impl-index and method-selection record.
 
 ## Frozen implementation index
 
@@ -88,9 +88,9 @@ Release benchmarks:
 
 Sorted dispatch originally reduced the representative native 256-inherent-method workload from about 1.08 ms to roughly 0.60 ms. Subsequent static/instance dispatch and scratch refinements retain that improvement while adding qualified calls and structural specialization.
 
-## Remaining work
+## Current boundary
 
-- Trait obligations and evidence parameters in generic bodies.
-- Runtime trait-object coercion and dynamic dictionary dispatch.
-- Cross-module imported and foreign evidence visibility.
-- Deterministic Starshine fragments emitted from the frozen lowering plans.
+Generic-body trait obligations, runtime trait values and dictionaries, imported
+and foreign evidence visibility, backend-neutral lowering, and deterministic
+Starshine emission are implemented by later phases. Structural generic overload
+specificity remains open in `docs/roadmap.md`.

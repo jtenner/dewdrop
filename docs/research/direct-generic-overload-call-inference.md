@@ -23,7 +23,7 @@ The implemented call layer supports:
 - ambiguity, no-match, invalid-target, and unresolved-generic diagnostics;
 - poison propagation without speculative diagnostic leakage.
 
-Nominal objects, fields, enum constructors, and receiver/type/trait-qualified method calls are now implemented. Callable local values, generic trait obligations, and dynamic trait calls remain later layers.
+Nominal objects, fields, enum constructors, callable local values, receiver/type/trait-qualified methods, generic trait obligations, and dynamic trait calls are implemented by this or later layers.
 
 The implementation extends:
 
@@ -79,7 +79,7 @@ If the binding has one callable declaration, the call is direct. This covers:
 
 A module let or another non-callable value produces `InvalidCallTarget`.
 
-Calls through local values are also invalid in the current language subset because Dew does not yet expose first-class function types. Calls whose target is a field or qualified expression remain unsupported rather than being interpreted as direct name calls.
+The initial direct-call layer rejected local function values and field/qualified call targets. Later phases now implement first-class function values, structural callbacks, methods, and qualified calls.
 
 ## Constraint ordering and expected types
 
@@ -403,26 +403,10 @@ Call inference tests cover:
 - 1,024-level iterative signature instantiation;
 - forward/reverse body-job determinism.
 
-## Current boundaries
+## Current boundary
 
-This layer does not yet support:
-
-- explicit call-site generic argument syntax;
-- first-class callable values;
-- field or method calls;
-- qualified static calls;
-- constructor or variant calls;
-- imported module callables;
-- full structural specificity between generic candidates;
-- trait-bound obligations;
-- default arguments or variadics;
-- cross-module imported callable and value types.
-
-## Next steps
-
-Module-let dependency SCC inference and frozen value imports are now implemented in `docs/research/module-value-scc-inference.md`. The remaining next steps are:
-
-1. Add expected-type-driven pattern and enum-variant inference.
-2. Infer match result and functional-loop state/result types.
-3. Add field, method, qualified-call, and operator obligations.
-4. Complete generic/generic structural specificity and trait-bound comparison.
+Expected-type enum/pattern inference, matches and functional loops, members,
+qualified calls, operator and trait obligations, imported callable/value types,
+and executable generic evidence are implemented by later phases. Full
+generic/generic structural match-set specificity, explicit type arguments, and
+optional arguments remain open in `docs/roadmap.md`.

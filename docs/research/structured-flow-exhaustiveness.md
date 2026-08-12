@@ -474,23 +474,10 @@ pub enum BodyFlowDiagnostic {
 }
 ```
 
-## Current boundaries
+## Current boundary
 
-The phase does not yet implement:
-
-- full Maranget-style pattern-matrix usefulness;
-- nested literal, tuple, and field witness construction;
-- redundant alternatives within one otherwise useful arm;
-- unreachable expression subtrees outside block-item sequencing;
-- interprocedural divergence inference beyond declared/inferred `Never`;
-- runtime decision-tree construction;
-- WasmGC branch, tag, cast, and payload-load lowering.
-
-## Next steps
-
-Objects, enum constructors, and nominal fields are now implemented in `docs/research/object-constructor-field-inference.md`. The remaining next steps are:
-
-1. Build method and trait obligations after impl coherence indexing.
-2. Define indexing through builtin/operator traits.
-3. Lower exhaustive pattern decisions into deterministic backend plans.
-4. Extend constructor-level coverage into a pattern-matrix usefulness algorithm when nested witnesses are required.
+Objects, methods, trait obligations, indexing, deterministic pattern lowering,
+and WasmGC branch/tag/cast/payload emission are implemented by later phases.
+Full nested pattern-matrix usefulness and witness construction remain open only
+when the current constructor-level analysis is insufficient; see
+`docs/roadmap.md`.

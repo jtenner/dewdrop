@@ -320,29 +320,9 @@ Release-mode benchmarks live in `src/semantic/local_unification_bench_test.mbt`.
 | mixed resolved application unifications, n=1024 | 264.51 us | 217.65 us | 640.91 us | 898.85 us |
 | zonk applications, depth=512 | 57.52 us | 58.35 us | 146.15 us | 197.98 us |
 
-## Current boundaries
+## Current boundary
 
-The engine does not yet generate constraints from HIR. It therefore does not yet assign final types to:
-
-- expressions;
-- locals;
-- patterns;
-- calls;
-- operators;
-- matches;
-- functional loops.
-
-Generic callable signatures and overloads are implemented by body inference, while flow summaries are produced by the later immutable phase in `docs/research/structured-flow-exhaustiveness.md`. Trait solving remains later work.
-
-## Next steps
-
-HIR-aligned expression, local, and block type tables plus literal, let, block, return, `if`, and structural operator constraints are now implemented in `docs/research/basic-body-type-inference.md`. The remaining next steps are:
-
-Direct generic instantiation and rollback-based builtin overload selection are now implemented in `docs/research/direct-generic-overload-call-inference.md`. The remaining next steps are:
-
-Module-let dependency SCC inference is now implemented in `docs/research/module-value-scc-inference.md`. The remaining next steps are:
-
-Pattern and functional-loop constraints are implemented in `docs/research/pattern-match-functional-loop-inference.md`; structured flow and coverage are implemented in `docs/research/structured-flow-exhaustiveness.md`. The remaining next steps are:
-
-1. Add field, method, qualified-call, operator-domain, and trait obligations after impl indexing.
-2. Complete structural specificity between generic candidates.
+The solver remains body-job-local and is consumed by the implemented expression,
+pattern, loop, member, method, indexing, overload, and trait-obligation phases.
+Full generic/generic structural overload specificity remains open and is tracked
+in `docs/roadmap.md`; other downstream compiler phases are implemented.

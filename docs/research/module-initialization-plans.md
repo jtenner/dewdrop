@@ -75,10 +75,10 @@ Release-mode measurements:
 | Plan 256 two-value cycles | 18.00 µs | 11.31 µs | 38.56 µs | 73.67 µs |
 | Full pipeline, 512-value chain | 1.43 ms | 1.06 ms | 2.65 ms | 4.82 ms |
 
-## Remaining work
+## Current boundary
 
-- Emit the acyclic steps into a deterministic Starshine module initializer.
-- Define imported-module initialization ordering.
-- Add lazy/static storage classes if Dew later introduces them.
-- Decide whether compile-time constants may bypass runtime storage.
-- Integrate host-provided builtin initialization and startup entry points.
+Deterministic Starshine initializers, cross-module dependency ordering, eager
+cycle diagnostics, imported module values, and explicit host `__dew_init`
+invocation are implemented. Compile-time constant expansion, optional lazy
+storage classes, and additional startup conventions remain design work in
+`docs/roadmap.md`.

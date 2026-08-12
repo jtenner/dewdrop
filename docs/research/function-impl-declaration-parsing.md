@@ -23,7 +23,7 @@ block-item           = "let" "mut"? identifier "=" expression newline
 
 Return types are mandatory, including `-> Unit`. A compact empty body is valid. Every non-empty body begins after a newline, and every body item has a terminating newline. End of input is an implicit line end only after the function's closing brace, not in place of a missing brace or body-item newline.
 
-Function bodies and control-flow branches now share `Block` and `BlockItem`. They retain ordered let, return, and expression items, and `Block::tail_expression` exposes a final expression item for later implicit-return analysis. `if` expressions may occur in any expression item; loops and pattern matching remain later additions.
+Function bodies and control-flow branches now share `Block` and `BlockItem`. They retain ordered let, return, and expression items, and `Block::tail_expression` exposes a final expression item for later implicit-return analysis. `if`, match, functional loops, returns, cleanup forms, and ordinary expressions now share the block representation; this note records the original declaration/block parser boundary.
 
 ## Receivers on ordinary functions
 

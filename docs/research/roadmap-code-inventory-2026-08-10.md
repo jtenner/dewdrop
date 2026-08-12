@@ -2,10 +2,16 @@
 
 ## Status
 
+> Historical audit. This document records the repository state observed on
+> August 10, 2026 and intentionally contains statements that later became
+> obsolete. It is not a current feature or priority source. Use
+> `docs/roadmap.md`, `agent-todo.md`, `docs/spec.md`, and the focused research
+> notes for current status.
+
 The truth-sync described by this audit was applied to `docs/roadmap.md`,
-`agent-todo.md`, and `README.md` on August 10, 2026. Statements below about stale
-summary text describe the pre-sync state retained here as the reason for the
-documentation changes.
+`agent-todo.md`, and `README.md` on August 10, 2026. A broader documentation
+reconciliation followed on August 12, 2026. Statements below about stale summary
+text describe the pre-sync state retained here as historical evidence.
 
 ## Scope
 

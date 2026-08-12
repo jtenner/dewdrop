@@ -22,7 +22,7 @@ The implemented constraint layer covers:
 - `Never` for break, continue, and guaranteed-return block tails;
 - one poison diagnostic boundary for unsupported expression forms.
 
-Direct functions and overloads are documented in `docs/research/direct-generic-overload-call-inference.md`; pattern and loop inference in `docs/research/pattern-match-functional-loop-inference.md`; nominal objects, enum constructors, and fields in `docs/research/object-constructor-field-inference.md`; and impl/method selection in `docs/research/impl-index-instance-method-inference.md`. Indexing and generic trait obligations remain later layers.
+Direct functions and overloads are documented in `docs/research/direct-generic-overload-call-inference.md`; pattern and loop inference in `docs/research/pattern-match-functional-loop-inference.md`; nominal objects, enum constructors, and fields in `docs/research/object-constructor-field-inference.md`; and impl/method selection in `docs/research/impl-index-instance-method-inference.md`. Indexing and generic trait obligations are implemented by later layers.
 
 The public entry point is:
 
@@ -410,20 +410,10 @@ Release-mode benchmarks live in `src/semantic/basic_body_inference_bench_test.mb
 - forward-versus-reverse body job order;
 - 1,024 nested logical prefixes.
 
-## Current boundaries
+## Current boundary
 
-This layer does not yet:
-
-- validate arithmetic or comparison operator domains;
-- infer indexing;
-- solve generic trait obligations or dynamic trait calls.
-
-Structured flow, constructor-level exhaustiveness, and unreachable block-item diagnostics are implemented by the later phase in `docs/research/structured-flow-exhaustiveness.md`.
-
-## Next steps
-
-Direct callable instantiation and rollback-based overload selection are complete in `docs/research/direct-generic-overload-call-inference.md`. The remaining next steps are:
-
-Module-let dependency SCCs and frozen value imports are now implemented in `docs/research/module-value-scc-inference.md`. The remaining next steps are:
-
-Pattern/loop inference, flow, objects, constructors, fields, impl coherence, qualified method calls, and backend-neutral lowering plans are implemented. Remaining work includes indexing/operator domains, generic trait obligations, trait objects, runtime layouts, and Starshine emission.
+This note records the initial body-inference layer. Operator domains, indexing,
+generic trait obligations, runtime trait values, structured flow, aggregates,
+method selection, lowering, optimization, layouts, linking, and Starshine
+emission are implemented by later phases. Remaining language and performance
+work is tracked in `docs/roadmap.md`.

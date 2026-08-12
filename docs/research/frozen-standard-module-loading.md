@@ -102,9 +102,11 @@ Whole-program planning now freezes cross-module roots before final indices:
 
 The previous `FindResult` nominal type and `dew.std.find_result` module were removed. Search APIs now return `Option<U32>`, while raw `0xffffffff` sentinels remain private runtime details.
 
-## Remaining work
+## Current boundary
 
-1. Add phase-only cache encode/decode/interface-resolution benchmarks and stable package ABI version release policy.
-2. Extend package roots and cache keys beyond compiler-owned `dew.std` to versioned external package identities, integrity metadata, and dependency-interface fingerprints without introducing filesystem enumeration.
-3. Remove generated bootstrap byte providers only after installed-source release layouts and cache recovery are independently reliable; retain an explicit no-default bootstrap mode for compiler tests.
-4. Extend the generic ABI from aggregate enums to generic functions, methods, and structs, then specialize hot generic sums by physical shape if measurements justify it.
+Phase-only cache benchmarks, versioned external dependency interfaces, integrity
+and transitive fingerprints, verified package capsules, installed-tree recovery,
+generic functions/methods/structs, and measured generic optimizations are
+implemented. Generated bootstrap providers remain intentionally available for
+portable bootstrap and byte-identity checks. Workspace/per-file caching and
+release packaging are tracked in `docs/roadmap.md`.

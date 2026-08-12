@@ -95,11 +95,9 @@ On July 30, 2026, the generated module:
 - instantiated in Node;
 - returned `fib(10) == 55` and `fib(15) == 610`.
 
-## Remaining work
+## Current boundary
 
-1. Extend `dew.std.preamble` to all initial homogeneous operators and primitive numeric types.
-2. Extend scalar emission to all integer widths, floating-point operations, comparisons, and conversions.
-3. Emit struct/enum construction, fields, match decisions, and functional loops.
-4. Emit module globals and the frozen eager initialization schedule.
-5. Add generic ABI specialization, erased scalar boxes, and trait dictionaries.
-6. Add dead signature-type elimination after callable reachability proves unused trait and wrapper signatures removable.
+The scalar, aggregate, control-flow, module-state, generic, closure, trait-object,
+dictionary, and dead-signature milestones originally listed here are implemented.
+This note remains the first executable trait-dispatch milestone record. Current
+backend and language priorities are tracked in `docs/roadmap.md`.

@@ -144,8 +144,10 @@ are the deterministic regression contract.
 
 - Add bulk reserve, shrink, extend, copy, fill, and slice APIs after their
   evaluation and overlap semantics are specified.
-- Add iterator invalidation or mutation-version rules if stable concurrent
-  mutation behavior becomes a product requirement.
-- Benchmark Array growth and hash traversal against circular buffers, linked
-  queues, and ordered tree representations before selecting later collection
-  layouts.
+- Extend bulk reserve, shrink, copy, fill, and slice APIs only after evaluation,
+  overlap, and alias semantics are specified.
+- Mutation-version invalidation rules are now specified and implemented for
+  Array and the other mutable collection iterators.
+- Circular-buffer queues, hash collections, heaps, and ordered-tree
+  representations are implemented and benchmarked; linked/persistent sequence
+  alternatives remain measurement-driven.

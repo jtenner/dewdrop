@@ -58,9 +58,10 @@ Release-mode measurements:
 | 1,024 mixed enum variants | 64.53 µs | 35.81 µs | 76.40 µs | 290.85 µs |
 | Collect, resolve, and layout 256 structs | 545.33 µs | 537.95 µs | 861.89 µs | 2.11 ms |
 
-## Remaining work
+## Current boundary
 
-1. Benchmark flat scalar-enum specialization against the optimized subtype baseline.
-2. Define generic ABI-shape specialization and erased fallback layouts.
-3. Add scalar boxes, trait-object dictionaries, and closures.
-4. Benchmark program-wide recursive physical SCC planning and define resource budgets.
+Generic carrier specialization, erased fallback layouts, scalar boxes, runtime
+trait dictionaries, closures, program-wide recursive physical SCC planning, and
+static architecture budgets are implemented. A measured first private scalar-enum
+representation specialization and compiler work budgets remain in
+`docs/roadmap.md`.

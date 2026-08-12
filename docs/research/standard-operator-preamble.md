@@ -135,14 +135,8 @@ The backend's selected operator targets point at the exact `dew.std.preamble` im
 
 ## Current boundary
 
-The initial implementation uses a per-program semantic prefix in the same collected module. This is intentionally smaller than a full cross-module standard-library interface and avoids introducing unstable cross-module evidence before Dew's module import ABI is specified.
-
-The preamble is reparsed for each program compilation. It is small and remains outside hot body inference, but a future package/module layer should cache a frozen `dew.std.preamble` interface under a reserved module identity and import its names and evidence without reparsing.
-
-## Next steps
-
-1. Add the remaining homogeneous numeric and comparison traits.
-2. Add signed, unsigned, and floating primitive implementations.
-3. Remove the raw primitive binary-typing fallback from production inference once every standard operator has preamble coverage.
-4. Add token/file-descriptor production entry points parallel to `collect_program_bytes`.
-5. Move `dew.std.preamble` to a cached frozen module interface when cross-module evidence import is implemented.
+The standard operator surface, primitive implementations, production trait-based
+selection, token/file compiler entry points, independently collected reserved
+standard modules, and persistent frozen-interface caching are implemented. This
+note remains the history of the initial preamble design; current standard-trait
+and overload work is tracked in `docs/roadmap.md`.

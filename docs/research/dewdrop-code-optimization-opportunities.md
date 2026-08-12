@@ -192,8 +192,7 @@ never clear a non-nullable local with an invalid null value.
 
 For a mutable aggregate with a proven unique reference, update fields in place
 instead of allocating a replacement object. This is not valid for immutable
-objects or values with reachable aliases. Functional-loop state is a likely
-future workload after loop emission is complete.
+objects or values with reachable aliases. Functional-loop state is now executable; further loop-state scalar replacement remains a possible measured workload.
 
 ### 20. Scalar unboxed enum representations
 

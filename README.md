@@ -104,7 +104,7 @@ Dewdrop currently includes, among other things:
 - Traits, implementations, methods, static dispatch, and nominal/scalar/SIMD runtime trait values using typed WasmGC dictionaries.
 - Generic bounds and recursive trait evidence across local, imported, callback, and erased runtime boundaries.
 - Generic functions, structs, and enums using deterministic Wasm carrier specialization.
-- Postfix `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` for structs and enums, including conditional generic prerequisites and imported execution.
+- Postfix `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, and `derive(Show)` for structs and enums, including conditional generic prerequisites and imported execution.
 - Ambient deterministic `Debug` output through bounded WASI writes.
 - First-class functions and closures, including escaping bounded callbacks that capture runtime trait evidence.
 - Immutable and mutable local variables, including captured mutable variables.
@@ -119,7 +119,7 @@ Dewdrop currently includes, among other things:
 - Deterministic WAT snapshots and Wasm execution tests.
 - File-aware deterministic diagnostics with line/column positions, excerpts, carets, and related-location labels.
 
-Not every familiar language feature exists yet. In particular, consult the roadmap rather than assuming planned features such as general `#annotation(...)` metadata, `Show`, `defer`, iterators, growable arrays, formatting, HTTP, or cryptography have already been implemented. Postfix `derive(Eq)`, `derive(Debug)`, and `derive(Hash)` are implemented; `Show` derivation and any future annotation-based spelling remain separate design work.
+Not every familiar language feature exists yet. General `#annotation(...)` metadata, a Dew source formatter, HTTP, cryptography, and several broader tooling/library milestones remain planned. Postfix `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, and `derive(Show)` are implemented, as are explicit `Show`, `Disposable`, `defer`, `using`, growable arrays, and collection iterators. Consult the roadmap for the current boundary.
 
 ## How a Dew program runs
 
@@ -449,7 +449,7 @@ fn example() -> I32 {
 ```
 
 Struct fields are newline-delimited rather than comma-delimited. A struct or
-enum may append `derive(Eq)`, `derive(Debug)`, or `derive(Hash)` after its closing
+enum may append `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, or `derive(Show)` after its closing
 brace. Generated implementations visit fields and payloads in source order and
 require the corresponding trait evidence for every stored value. Generic owner
 parameters referenced by stored types receive conditional bounds and execute

@@ -189,12 +189,11 @@ Fragment planning plus stable merge totals approximately 225.21 us, about 31.8% 
 
 The split also clarifies future parallelism: module-local fragment jobs can run independently, while only the small stable merge assigns final indices.
 
-## Next dependencies
+## Current follow-up boundary
 
-The next executable linker milestones are:
-
-1. diagnose structural overlap between independently imported or local/imported impl evidence;
-2. define generic scalar/aggregate specialization and erased fallback ABIs;
-3. add deterministic post-lowering optimization and optimized snapshots;
-5. emit imported module values and a cross-module initialization schedule;
-6. expose the program pipeline through the compiler driver.
+The milestones previously listed here are complete: imported/local coherence,
+generic carrier specialization and erased fallbacks, deterministic optimization,
+module-value initialization, and compiler-driver orchestration all execute. The
+remaining linker-facing work is tracked centrally in `docs/roadmap.md`: ABI
+signature deduplication, optional additional Wasm sections, incremental fragment
+reuse, deterministic parallel scheduling, and explicit external Wasm interop.

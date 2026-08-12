@@ -120,9 +120,10 @@ open dew.std.preamble
 
 The raw `collect_bytes` API remains useful as the no-default-preamble mode for compiler bootstrapping and focused tests.
 
-## Next steps
+## Current boundary
 
-1. Extend `@alias` qualification to types, traits, variants, patterns, static impls, and non-callable values.
-2. Add duplicate import/open/alias diagnostics with both source locations across files.
-3. Add file identity to deeper expression/pattern diagnostics where body provenance alone is insufficient.
-4. Continue replacing generated bootstrap source providers only after installed package and cache recovery are independently reliable.
+Non-callable imported values, deep file provenance, frozen standard interfaces,
+installed dependency capsules, and cache recovery are implemented. Remaining
+module work is `@alias` qualification in additional namespaces, duplicate
+import/open/alias diagnostics across files, selective imports, re-exports, and
+shadowing policy; see `docs/roadmap.md`.

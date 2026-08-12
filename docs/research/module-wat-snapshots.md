@@ -171,90 +171,30 @@ layout.
 
 ## Current coverage and observation
 
-The suite now contains 223 fixtures: 187 compiled WAT/runtime snapshots and 36
-compiler-error snapshots. On August 8, 2026, the full suite passes identically
-in Node and Wago Core 3, including deep and wide functional loops, module
-initialization, imported values, imported method/operator dispatch, collection
-growth, control-flow-initialized nominal locals, and cross-module recursive
-WasmGC types.
+Fixtures are discovered recursively from the checked-in tree, and the runner
+prints the authoritative totals. Counts are intentionally not duplicated here.
+Every successful fixture compiles twice to byte-identical Wasm, compares
+canonical WAT, and executes with identical normalized output or traps in Node
+and Wago Core 3. Failed fixtures produce deterministic ordered diagnostics and
+no WAT.
 
-```text
-feature         total   compiled   compiler errors   expected traps
-calls                3          0                 3                0
-collections         15         10                 5                2
-control-flow       21         21                 0                1
-enums               11         11                 0                0
-functions           16         13                 3                0
-generics             9          8                 1                0
-lanes               11         11                 0                0
-memory               9          9                 0                1
-modules             23         18                 5                0
-names                3          0                 3                0
-numeric             34         30                 4                1
-reachability         1          1                 0                0
-structs             11          8                 3                0
-tests                4          2                 2                1
-text                 27         27                 0                4
-types                9          2                 7                0
-wasi                 16         16                 0                5
+Coverage spans calls, collections, control flow, enums, functions, generics,
+lanes, memory, modules, names, numeric operations, optimization contracts,
+reachability, structs, tests, text, types, and WASI. Optimized fixtures lock in
+source order, exactly-once evaluation, trap order, allocation removal, local
+reuse, scalar replacement, enum-payload elimination, and exact trait-object
+directization.
 
-total               223        187                36               15
-nonempty stdout fixtures       104
-WAT/no-trap-only fixtures       68
-checked-in WAT lines       109,645
-checked-in WAT bytes      3,095,233
-```
-
-Successful runtime coverage includes recursive and nested calls, scalar,
-guarded-enum, Unit, nested, return-producing, eight-level deep, and 17-arm wide
-functional loops, evaluation order, Boolean and all fixed-width numeric literal
-matching (including signed-prefix minima and floats),
-guarded and dense enum dispatch,
-unit/tuple/struct payloads, nested and reordered aggregate construction, all
-scalar carrier widths, wrapping, conversion, comparison, floating arithmetic,
-native SIMD, SWAR saturation and population counts, unaligned scalar/vector
-memory, exact UTF-8 output, builders, shared/copied ranges, short and long
-search, non-stdout writes, complete and partial stdout writes, deterministic stdin,
-short reads, errno, zero-progress and over-report traps, the 65,521-byte staging
-boundary, a 100,000-byte multi-window write, same-module multi-file compilation,
-static imported-module linking, and explicit passing/failing test-mode execution.
-
-The 68 empty-output fixtures intentionally preserve compiler-output and no-trap
-coverage without forcing WASI reachability into every module. This is important
-for import, memory, helper, and dead-callable elimination snapshots.
-
-Compiler-error coverage includes unknown names and types, wrong call arity,
-invalid call targets, return mismatches, unknown and missing fields, duplicate
-declarations and construction fields, out-of-range numeric literals, and
-homogeneous operator mismatch. Multiline diagnostic structure is retained.
-
-Scalar literal-pattern emission is now complete. Match scratch locals use the
-scrutinee's physical scalar carrier instead of an unconditional nullable
-`eqref`; literal conditions share ordinary prefix emission and append
-carrier-specific equality instructions. `control-flow/bool-match` covers both
-Boolean cases, while `control-flow/all-numeric-literal-match-runtime` executes
-all ten fixed-width numeric types, signed minima, negative floats, and explicit
-unary `+`.
-
-The import prepass now selects independently collected compiler-owned standard
-modules and user modules consume only their frozen interfaces. Whole-program
-reachability removes elided signature slots, dead external type references,
-unused standard nominal layouts, and unreachable runtime functions before final
-indices. Across 187 compiled fixtures, checked-in WAT is now 109,645 lines and
-3,095,233 bytes, down from the original 431,150 lines and 21,839,923 bytes while
-retaining deterministic diagnostics and runtime behavior. The generic fixture
-covers ambient `Option`/`Result` construction and pattern matching across scalar
-and reference carriers.
-
-Generated byte tables remain a portable explicit bootstrap source provider and
-are never injected into user declaration arenas. Ordinary snapshot compilation
-loads the import-selected source subset from the resolved on-disk `dew.std`
-package. Persistent content-addressed frozen-interface caching now covers
-compiler-owned standard modules and verified versioned external dependencies.
+The import prepass selects independently collected compiler-owned standard
+modules, and whole-program reachability removes dead signatures, external type
+references, nominal layouts, and runtime functions before final indexing.
+Generated standard byte tables remain an explicit bootstrap provider; ordinary
+snapshot compilation loads the selected on-disk `dew.std` sources and may reuse
+verified persistent interface caches.
 
 ## Runner performance
 
-On August 8, 2026, on the 16-logical-CPU development host, the complete 216-fixture
+On August 8, 2026, on the 16-logical-CPU development host, the then-current
 Node/Wago suite measured:
 
 ```text

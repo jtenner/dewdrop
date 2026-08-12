@@ -26,7 +26,7 @@ The AST form is:
 ConstructExpr(target, fields, opening_brace_offset)
 ```
 
-Construction remains in binary-seeking mode, so calls, fields, indexes, qualifications, and infix operators may follow it. The parser accepts any expression-shaped target without semantic lookup. Nominal struct and struct-like enum validation is now implemented in `docs/research/object-constructor-field-inference.md`; methods and general static qualification remain later layers.
+Construction remains in binary-seeking mode, so calls, fields, indexes, qualifications, and infix operators may follow it. The parser accepts any expression-shaped target without semantic lookup. Nominal struct/enum validation, methods, and general static qualification are implemented by later semantic phases.
 
 `ObjectExpr` and `ConstructExpr` share one field-body parser. Field ordering, mandatory terminating newlines, blank lines, comments, nested values, and malformed-field diagnostics therefore remain identical.
 

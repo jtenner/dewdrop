@@ -98,9 +98,10 @@ Frozen exported callables carry V4 SHA-256 ABI fingerprints, public nominal decl
 
 `tools/dew-wasm-consumer.mjs PROVIDER_WASM CONSUMER_WASM EXPORT RESULT_TYPE [EXPECTED_PROVIDER_PATH EXPECTED_INTERFACE_FINGERPRINT]` validates the provider's required `dew.abi` record before instantiation, optionally enforces an exact module/interface identity, invokes exported `__dew_init` exactly once, and then instantiates a Wasm consumer with the provider exports under the `dew` import namespace. The focused `tests/abi-consumers/generic-aggregate-callback-i32.wat` and `generic-enum-callback-i32.wat` consumers define structurally equivalent aggregate, enum-subtype, and flattened-closure types. They construct direct `i32` callbacks, import `identity_box$dew$i32` or `identity_choice$dew$i32`, and call the callbacks returned by the static-to-erased-to-static adapter paths. `generic-eqref-identity.wat` constructs an exact nominal struct, invokes the public `(eqref) -> eqref` fallback, casts the result back to that struct, and reads its scalar field. `generic-v128-identity.wat` constructs a SIMD vector, invokes `identity$dew$v128`, and extracts lane zero after the adapter's box/fallback/unbox path. `runtime-trait-evidence-i32.wat` defines its own receiver, method, vtable, trait-object, and closure-base types. It supplies its vtables to direct static-bound, recursively prerequisite-bearing static, erased, callback-capture, and erased-dictionary-capture exports. One erased path captures a single consumer dictionary beneath two concrete implementation layers; another captures two ordered dictionaries and computes `value * 10 + other`, so reversing the fields changes the observable result. The consumer produces `673`, including `421` from that ordered two-dictionary path. The `tests/abi-consumers/imported-package` manifest builds a multi-module provider whose root adapter uses an imported generic callback aggregate; the existing aggregate consumer links against that provider without changing its structural import type. JavaScript observes only the final scalar result; all `eqref`, closure, trait dictionary, variant, and `v128` values remain inside Wasm.
 
-## Remaining work
+## Current boundary
 
-1. Remove unused signature, evidence-trampoline, and closure-entry types after directization and reachability pruning.
-2. Replace the unresolved raw-`DeclId` callable fallback where possible and define compatibility/version negotiation rules over module-interface fingerprints.
-3. Define recursive generic aggregate instantiation/layout sharing without weakening exact callback signatures.
-4. Stop recollecting dependency source bodies on cache hits only after installed artifact provenance and package recovery are reliable.
+Directization/reachability pruning, stable symbolic ABI identities and
+compatibility negotiation, recursive generic aggregate/callback conversion, and
+verified package recovery are implemented. Remaining ABI work is tracked in
+`docs/roadmap.md`: equivalent-signature deduplication, explicit Wasm/JavaScript
+interop, the supported runtime baseline, and incremental artifact reuse.

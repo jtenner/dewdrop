@@ -325,23 +325,9 @@ Release-mode benchmarks live in `src/semantic/type_resolution_bench_test.mbt`. T
 
 The function-signature workload resolves 256 generic functions, each containing two applied parameters and one applied return type. The alias workload resolves 256 generic aliases with nested applications and builds an acyclic dependency graph.
 
-## Current boundaries
+## Current boundary
 
-This phase resolves, canonicalizes, and transparently normalizes declaration signatures but does not yet:
-
-- check recursive struct or enum representation legality;
-- check public-signature visibility leakage;
-- collect imports or cross-module export interfaces;
-- resolve body names;
-- infer expression types;
-- solve trait obligations or impl coherence;
-- assign WasmGC layouts.
-
-## Next steps
-
-Body-local names, pattern binding contracts, and functional-loop controls are now resolved as documented in `docs/research/body-name-resolution.md`. The remaining next steps are:
-
-1. Detect recursive nominal layout SCCs separately from transparent alias cycles.
-2. Build module export/interface records from resolved public signatures and retained alias recipes.
-3. Generate expression and pattern constraints using the implemented body-local unification engine in `docs/research/body-local-unification.md`.
-4. Resolve trait obligations and method selection after impl indexing.
+This phase owns declaration-level type resolution and leaves body inference,
+interfaces, nominal-layout planning, trait evidence, lowering, optimization, and
+backend emission to later implemented phases. Remaining product work is tracked
+in `docs/roadmap.md`.

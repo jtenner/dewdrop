@@ -237,8 +237,10 @@ architecture is generalized around `InterfaceBundleCacheKey` and
 envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
 I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. The
 current policy selects compiler-owned standard modules and verified external
-dependencies; later workspace or artifact-only caching can extend policy without
-adding Boolean parameters or parallel formats.
+dependencies. Verified package capsules already provide artifact-assisted source
+tree recovery for missing locked dependencies; ordinary workspace-module and
+per-file syntax/HIR caching can extend the same policy boundary without adding
+Boolean parameters or parallel formats.
 
 ## Program specialization and erased ABI
 

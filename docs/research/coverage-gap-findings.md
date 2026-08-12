@@ -1,5 +1,9 @@
 # Coverage-gap findings (August 2026)
 
+> Historical audit log. Fixed findings remain here as regression history; this
+> file is not the current roadmap. Unfinished items are tracked in
+> `docs/roadmap.md` and `agent-todo.md`.
+
 While adding edge-case snapshot fixtures, several supported-looking features
 turned out to be partially unsupported. Each finding below was reduced to a
 minimal repro and confirmed against the current compiler. None of these are

@@ -81,7 +81,7 @@ The generated suite covers every currently public `dew.std.string` operation, as
 
 - Dynamic assertion messages use stdout by design. A test that deliberately writes unrelated stdout before an unexpected assertion currently contributes those bytes to the reported assertion output; a future framed test-output protocol may separate them if workloads require it.
 - Test bodies are analyzed in normal compilation but emitted only in explicit test mode.
-- Current frozen interfaces exclude test-only implementation evidence and initialization steps retain explicit `test_only` ownership. Future module-global/startup emission must filter those marked steps in production; module globals are not emitted yet.
+- Frozen interfaces exclude test-only implementation evidence, and production reachability/startup exclude test-only callables, nominal layouts, module values, and initialization steps.
 - The initial custom-section payload retains the textual V3 record encoding; a denser binary payload is unnecessary until measurements justify a version change.
 - Async tests, fixtures, parameterized tests, snapshots, coverage, and benchmark tests are deferred; metadata-driven filtering and expected traps are implemented.
 - **Optional arguments are a future language improvement.** They are not part of the initial test or assertion syntax; APIs must currently supply every declared argument explicitly.

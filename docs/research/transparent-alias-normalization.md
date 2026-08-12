@@ -268,23 +268,10 @@ Release-mode benchmarks are in `src/semantic/type_resolution_bench_test.mbt`. Ti
 | normalize instantiated generic alias chain, n=256 | 294.44 us | 334.53 us | 1.01 ms | 797.34 us |
 | full generic alias chain pipeline, n=256 | 811.70 us | 845.80 us | 1.63 ms | 2.28 ms |
 
-## Current boundaries
+## Current boundary
 
-Alias normalization does not yet:
-
-- resolve imported aliases across module interfaces;
-- check visibility leakage through public aliases;
-- diagnose recursive nominal struct or enum layouts;
-- choose runtime representations;
-- normalize body-local annotations, because those are not yet collected;
-- infer omitted expression or module-let types;
-- solve trait obligations.
-
-## Next steps
-
-Body-local symbols, pattern binding sets, name references, and functional-loop control targets are now implemented in `docs/research/body-name-resolution.md`. The remaining next steps are:
-
-1. Build immutable module export/interface records from normalized public signatures and retained alias recipes.
-2. Detect illegal recursive nominal layouts separately from transparent alias cycles.
-3. Generate expression and pattern constraints using the implemented body-local unification engine in `docs/research/body-local-unification.md`.
-4. Resolve trait obligations and method selection after impl indexing.
+This phase remains responsible only for transparent alias normalization. Imported
+interfaces, visibility checks, nominal-layout legality, module-value inference,
+trait obligations, runtime representation, and backend planning are implemented
+by later phases. Body-local type-annotation syntax remains a separate language
+design question. Current product work is tracked in `docs/roadmap.md`.

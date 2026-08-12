@@ -155,7 +155,7 @@ Arms are newline-delimited and require a newline before the enclosing `}`. Alter
 
 An optional `if` guard follows the complete alternative list. Its expression naturally terminates before `=>`, which is not an expression operator. `PatternArm.guard_condition` retains the guard. Semantic analysis must require a `Bool` guard and must evaluate it with the selected alternative's bindings in scope.
 
-All alternatives in one arm share the same guard and body. Name resolution and type checking must ensure that they bind exactly the same variable names and that each corresponding binding type unifies. The parser cannot enforce this correctly because it does not yet distinguish binding identifiers from qualified constructor paths.
+All alternatives in one arm share the same guard and body. Name resolution and type checking must ensure that they bind exactly the same variable names and that each corresponding binding type unifies. The parser cannot enforce this correctly; later name resolution and pattern inference now distinguish bindings from constructor paths and enforce the shared-binding contract.
 
 Because an arm is incomplete after `=>`, blank lines are soft before its body; both expression and block bodies may begin on a following line. Blank lines and comments are accepted. Compact and multiline empty matches are retained syntactically for later exhaustiveness diagnostics.
 

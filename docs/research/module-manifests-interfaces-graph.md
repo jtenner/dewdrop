@@ -115,7 +115,7 @@ The remaining boundaries are narrower than the initial implementation plan:
 
 - imported module aliases qualify function calls and non-callable public values; qualification of imported types, traits, variants, patterns, and static impls remains pending;
 - external selected calls are statically linked rather than exposed as separate Wasm imports;
-- registry/network package installation and installed artifact-only interface recovery remain pending; exact locked dependency resolution, integrity checks, interface fingerprints, and persistent external-interface caching are implemented.
+- registry/network package acquisition, Git checkout, and deterministic lockfile generation remain pending; exact locked dependency resolution, integrity checks, interface fingerprints, persistent external-interface caching, verified package capsules, and atomic restoration of missing locked source trees are implemented.
 
 Imported aggregate construction/access, implementation-evidence merging, module-value inference, and cross-module eager-initialization-cycle analysis now build on the frozen parser, identity, interface, and graph artifacts described above.
 

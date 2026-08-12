@@ -510,23 +510,9 @@ Coverage includes:
 - 512 nested generic payload levels;
 - 512 functional-loop arms.
 
-## Current boundaries
+## Current boundary
 
-This stage does not yet implement:
-
-- full nested pattern-matrix usefulness and witness construction;
-- recursive nominal layout validation;
-- method and trait-provided member inference;
-- full nested pattern-matrix usefulness and witnesses;
-- runtime representation selection for matched payloads;
-- lowering of selected variants into WasmGC tests and casts.
-
-## Next steps
-
-Structured flow summaries and constructor-level exhaustiveness/redundancy are now implemented in `docs/research/structured-flow-exhaustiveness.md`. The remaining next steps are:
-
-Objects, constructors, enum values, and fields are now implemented in `docs/research/object-constructor-field-inference.md`. The remaining next steps are:
-
-1. Add method and trait obligations after impl indexing.
-2. Lower typed patterns, matches, and functional loops into deterministic backend plans.
-3. Extend coverage to a full nested pattern-matrix algorithm when needed.
+Structured flow, aggregates, methods and trait obligations, deterministic match
+and functional-loop lowering, and WasmGC payload access are implemented. Full
+nested pattern-matrix usefulness/witness construction and deeper alternative
+extraction sharing remain open in `docs/roadmap.md`.

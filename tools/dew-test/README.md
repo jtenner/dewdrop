@@ -16,9 +16,9 @@ tools/dew-test/run.sh
 tools/dew test --module dew.std std/tests/core_test.dew
 tools/dew test --module dew.std --name "assertion trap can be expected" std/tests/core_test.dew
 tools/dew-test/run.sh --module dew.std
-tools/dew-test/run.sh --file std/tests/string_test.dew
+tools/dew-test/run.sh --file std/tests/00_string_test.dew
 tools/dew-test/run.sh --name "String byte_length counts UTF8 bytes"
-tools/dew-test/run.sh --filter "dew.std::std/tests/string_test.dew"
+tools/dew-test/run.sh --filter "dew.std::std/tests/00_string_test.dew"
 tools/dew-test/run.sh --list
 ```
 
@@ -78,4 +78,4 @@ standard test module twice and requires byte-identical self-describing Wasm.
 Production compiler CLI smoke tests require that ordinary binaries contain no
 `dew.tests` section.
 
-The suite currently has 198 passing tests covering core assertions and expected traps, every current string/bytes operation, all 100 ordered scalar `Into<T>` pairs, every scalar/SWAR/V128 typed memory carrier, all scalar arithmetic widths, narrow wrapping canonicalization, floating arithmetic, and splat/extract/replace/add smoke coverage for all 20 packed-lane semantic types. It should continue following AssemblyScript-style coverage: organize tests by standard module, test every public operation directly, include edge and cross-chunk cases, and add explicit trap coverage for checked operations.
+The runner prints the authoritative discovered test count; it is intentionally not duplicated here. Coverage includes core assertions and expected traps, text/bytes operations, all ordered scalar `Into<T>` pairs, scalar/SWAR/V128 typed memory carriers, arithmetic widths, narrow wrapping canonicalization, floating arithmetic, lane smoke coverage, and the implemented collection/formatting/cleanup surface. Continue following AssemblyScript-style coverage: organize tests by standard module, test every public operation directly, include edge and cross-chunk cases, and add explicit trap coverage for checked operations.

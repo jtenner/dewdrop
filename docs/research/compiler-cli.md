@@ -10,8 +10,9 @@ the exact import-selected source subset from disk, and reuses content-addressed
 persistent standard and versioned external dependency frozen interfaces. It
 also publishes verified installed-package capsules and can recover a removed
 locked dependency tree from those artifacts without changing emitted Wasm.
-Human source excerpts, network package installation, and installed release
-binaries remain pending. Convention-discovered `dew.json` packages, exact
+Network package acquisition and installed release binaries remain pending.
+Stable file-aware diagnostics already include source excerpts, carets, and
+secondary labels. Convention-discovered `dew.json` packages, exact
 `dew.lock` resolution, `run`, and explicit `dew.modules.json` compiler graphs
 are supported.
 

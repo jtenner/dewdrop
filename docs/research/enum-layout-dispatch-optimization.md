@@ -13,7 +13,7 @@ Implemented optimizations include:
 - dense `br_table` dispatch for suitable unguarded matches;
 - a reusable Wago Wasm 3 benchmark harness.
 
-Generic specialization, nested/alternative pattern emission, deeper recursive partition refinement, and cache serialization remain later phases.
+Generic specialization, nested/alternative pattern emission, and cache serialization are implemented by later phases. Deeper recursive partition refinement and measured enum representation specialization remain open roadmap work.
 
 ## Planning controls
 

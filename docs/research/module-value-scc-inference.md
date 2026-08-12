@@ -402,21 +402,9 @@ Coverage includes:
 - function references to applied module values;
 - forward/reverse body-job determinism.
 
-## Current boundaries
+## Current boundary
 
-This stage does not yet provide:
-
-- explicit module-let type annotations;
-- polymorphic module lets;
-- generalization of inferred module values;
-- constant evaluation;
-- cross-module imported value dependencies;
-- lazy or explicitly recursive value syntax;
-- exported interface publication rules for unresolved values;
-- assignment semantics for mutable module lets.
-
-Module lets remain monomorphic.
-
-## Next steps
-
-Pattern/loop inference, flow, objects/fields, methods, eager initialization-cycle diagnostics, type-layout recipes, and backend-neutral lowering plans are implemented. Remaining module-value work includes constant evaluation, imported-module ordering, optional lazy storage classes, and Starshine initializer emission.
+Cross-module value ordering, eager-cycle diagnostics, explicit initialization,
+imported module values, and Starshine initializer emission are implemented.
+Module lets remain monomorphic; constant evaluation and optional lazy storage
+classes remain separate design work tracked in `docs/roadmap.md`.

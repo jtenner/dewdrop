@@ -459,21 +459,10 @@ Release-mode measurements compare within each backend runner.
 | object overload calls, n=256 | 331.10 us | 279.26 us | 1.12 ms | 1.04 ms |
 | full pipeline fields, n=128 | 187.63 us | 183.73 us | 296.58 us | 568.37 us |
 
-## Current boundaries
+## Current boundary
 
-This object/field stage does not itself implement method selection; the subsequent impl-index phase now handles receiver, type-qualified, and trait-qualified static/instance calls. Remaining boundaries include:
-
-- trait-provided fields;
-- tuple indexing or collection indexing;
-- object structural types independent of an expected nominal struct;
-- direct access to enum variant-specific fields without pattern refinement;
-- explicit generic qualification syntax;
-- constructor visibility across modules;
-- layout offsets and WasmGC field operations;
-- pattern decision-tree lowering.
-
-## Next steps
-
-1. Define indexing through builtin/operator traits.
-2. Add generic trait obligations and evidence passing.
-3. Lower selected constructors, fields, and methods into deterministic WasmGC plans.
+Indexing, generic trait evidence, selected constructor/field/method lowering,
+WasmGC layout, and pattern decision emission are implemented by later phases.
+Still-deferred language questions include trait-provided fields, structural object
+types, direct variant-field refinement, explicit generic qualification, and
+aggregate field mutation. See `docs/roadmap.md`.

@@ -153,16 +153,12 @@ Release-mode benchmarks are in `src/semantic/collect_bench_test.mbt`. Times comp
 
 Reusable type and body traversal storage, small-scope duplicate scans, and consolidated value-binding metadata keep collection allocation-conscious. The native function workload lowers 256 complete bodies in about 249 microseconds.
 
-## Next steps
+## Current boundary
 
-Declaration-level type resolution, transparent alias normalization, and body-local name/control resolution are now implemented in `docs/research/declaration-type-resolution.md`, `docs/research/transparent-alias-normalization.md`, and `docs/research/body-name-resolution.md`. The next steps are:
-
-Body-local type terms, union-find unification, occurs checking, rollback snapshots, and zonking are now implemented in `docs/research/body-local-unification.md`. The remaining next steps are:
-
-Literal, local, block, return, `if`, and structural operator constraints are now generated as documented in `docs/research/basic-body-type-inference.md`. The remaining next steps are:
-
-Direct and generic calls plus rollback-based builtin overload selection are now implemented in `docs/research/direct-generic-overload-call-inference.md`. The remaining next steps are:
-
-Module-let dependency SCC inference is now implemented in `docs/research/module-value-scc-inference.md`. The remaining next steps are:
-
-Pattern/loop inference, structured flow, objects, enum constructors, fields, impl indexing, static/instance method selection, and backend-neutral lowering plans are implemented. Remaining next steps include indexing, generic trait obligations, trait objects, runtime layouts, and Starshine emission.
+The downstream stages that were originally listed as next steps are implemented:
+declaration/type resolution, aliases, body names and inference, module-value SCCs,
+patterns and functional loops, structured flow, aggregates, indexing, generic
+trait obligations, runtime trait values, lowering, optimization, WasmGC layout,
+linking, and Starshine emission. This note remains the implementation and
+benchmark record for declaration collection. Current product priorities are
+tracked in `docs/roadmap.md`.

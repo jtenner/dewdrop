@@ -138,7 +138,7 @@ Supported executable pattern forms include:
 - guards;
 - imported variants and fields.
 
-Nested destructuring and alternative-pattern code generation remain later extensions.
+Nested destructuring and alternative-pattern code generation are implemented. Further representation specialization remains measurement-driven roadmap work.
 
 ## Deliberately unoptimized control flow
 

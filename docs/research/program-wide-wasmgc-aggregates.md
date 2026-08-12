@@ -18,7 +18,7 @@ Implemented paths include:
 - deterministic physical SCC merging across module boundaries;
 - binary-encodable shared Wasm recursive groups.
 
-Generic aggregate specialization and erased fallback ABIs remain later phases. Enum construction, imported exhaustiveness, nested pattern matching, and mutable collection storage are now implemented elsewhere in the compiler.
+Generic aggregate specialization, erased fallback ABIs, enum construction, imported exhaustiveness, nested pattern matching, and mutable collection storage are implemented elsewhere in the compiler.
 
 ## Preserving external nominal identity
 

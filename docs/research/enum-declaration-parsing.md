@@ -99,4 +99,4 @@ The JavaScript and Wasm runners showed wider variance in several tokenization-he
 
 ## Deferred semantics
 
-This parser phase does not assign runtime tags or layouts. Duplicate names, generic arity, recursive representation legality, constructor visibility, constructor expressions, qualified variant syntax, pattern matching, exhaustiveness, and WasmGC lowering remain later semantic and expression milestones.
+This parser phase does not assign runtime tags or layouts. Duplicate names, generic arity, recursive representation legality, constructor expressions, qualified variant syntax, pattern matching, exhaustiveness, and WasmGC lowering are implemented by later semantic/backend phases; constructor visibility remains a language-policy question.

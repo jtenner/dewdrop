@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented for nominal WasmGC type groups, callable signature types, builtin imports, defined-function entries, scalar body instructions, public function exports, complete module construction, Starshine validation, and binary encoding. Globals, startup code, aggregate construction, match decision trees, and functional-loop instructions remain later emission stages.
+Implemented for nominal WasmGC type groups, callable signatures, imports, functions, globals, explicit initialization, aggregate construction, match/loop control flow, exports, complete module construction, Starshine validation, and binary encoding. Optional Start/Name/source sections and future representation-specific sections remain roadmap work.
 
 The implementation is split between:
 
@@ -169,13 +169,10 @@ Release-mode Starshine type-section construction from an already-frozen plan:
 
 The recursive-group workloads are faster than the equivalent singleton chain because they allocate and merge fewer group records. Starshine construction is cheaper than graph planning on native, WasmGC, and JavaScript; classic Wasm allocation overhead remains comparatively high.
 
-## Remaining work
+## Current boundary
 
-1. Extend body-local instruction emission beyond the current scalar Fibonacci subset.
-2. Emit builtin import adapters when declared and host ABI shapes differ.
-3. Emit enum/struct construction, tag tests, payload casts, and field reads.
-4. Add generic scalar boxes and shape-specialized generic alternatives.
-5. Emit module-value globals and the frozen eager initialization schedule.
-6. Add start, name, and custom diagnostic/source-map sections.
-7. Remove unreachable signature types after callable reachability is frozen.
-8. Extend `dew.std.preamble` across the remaining homogeneous operators and primitive types.
+The body, adapter, aggregate, control-flow, module-state, generic, trait, closure,
+reachability, standard-operator, and dead-signature milestones originally listed
+here are implemented. Remaining backend work is limited to roadmap items such as
+optional deterministic Name/source sections, ABI signature deduplication,
+incremental fragment reuse, resource budgets, and explicit external interop.

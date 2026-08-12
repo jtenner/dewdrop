@@ -396,27 +396,10 @@ Release-mode benchmarks live in `src/semantic/body_name_resolution_bench_test.mb
 | resolve sequential locals, n=512 | 62.35 us | 50.38 us | 100.80 us | 162.24 us |
 | resolve wide alternatives, fields=128 | 33.52 us | 23.83 us | 51.10 us | 89.03 us |
 
-## Current boundaries
+## Current boundary
 
-This phase does not yet:
-
-- resolve imports or module-qualified roots;
-- select one overload or enum variant;
-- resolve field, method, or qualified member properties;
-- check pattern constructor payload shape;
-- check corresponding alternative binding types;
-- infer local or expression types;
-- validate return placement;
-- perform type inference or flow analysis itself; those consume the frozen name/control result in later phases.
-
-## Next steps
-
-Body-local type terms, union-find unification, occurs checking, rollback snapshots, and zonking are now implemented in `docs/research/body-local-unification.md`. The remaining next steps are:
-
-HIR-aligned expression, local, and block type tables plus parameter, literal, let, block, return, `if`, and structural operator inference are now implemented in `docs/research/basic-body-type-inference.md`. The remaining next steps are:
-
-Direct and generic callable instantiation plus rollback-based builtin overload selection are now implemented in `docs/research/direct-generic-overload-call-inference.md`. The remaining next steps are:
-
-Module-let dependency SCC inference is now implemented in `docs/research/module-value-scc-inference.md`. The remaining next steps are:
-
-Pattern typing and loop state/results are implemented in `docs/research/pattern-match-functional-loop-inference.md`; structured flow and coverage are implemented in `docs/research/structured-flow-exhaustiveness.md`. The remaining next step is member, method, and trait-obligation resolution.
+This note records body-local name, scope, pattern-binding, and control-target
+resolution. Imported qualification, overload/variant selection, member and method
+resolution, pattern typing, inference, trait obligations, flow, and lowering are
+implemented by later phases described in the architecture and specification.
+Current product work is tracked in `docs/roadmap.md`.

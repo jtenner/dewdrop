@@ -31,22 +31,35 @@ Text, collection, byte, and Wasm APIs are split into focused `dew.std` modules:
 dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.option          ambient generic Option<t>
 dew.std.result          ambient generic Result<t, e>
-dew.std.fixed_array     fixed-length mutable generic arrays
-dew.std.map             mutable Hash-keyed generic maps
-dew.std.set             mutable Hash-keyed generic sets
-dew.std.string          String and StringView
-dew.std.string_builder  consuming StringBuilder
-dew.std.bytes           immutable Bytes ranges and search
-dew.std.bytes_builder   consuming BytesBuilder
-dew.std.wasi            Preview 1 Bytes I/O
-dew.std.wasm.intrinsics explicit compiler-known WebAssembly intrinsics
+dew.std.fixed_array                 fixed-length mutable generic arrays
+dew.std.array                       growable mutable generic arrays and iterators
+dew.std.map                         mutable Hash-keyed generic maps and iterators
+dew.std.set                         mutable Hash-keyed generic sets and iterators
+dew.std.queue                       mutable circular-buffer FIFO queue
+dew.std.ordering                    explicit Ordering and Comparator evidence
+dew.std.show                        deterministic side-effect-free formatting
+dew.std.disposable                  explicit cleanup evidence
+dew.std.collections.stack           mutable LIFO stack
+dew.std.collections.circular_buffer bounded/growable ring buffer
+dew.std.collections.deque           growable double-ended queue
+dew.std.collections.binary_heap     comparator-driven binary heap
+dew.std.collections.priority_queue  priority/value heap wrapper
+dew.std.collections.red_black_tree  ordered balanced-tree core
+dew.std.collections.ordered_map     comparator-ordered map
+dew.std.collections.ordered_set     comparator-ordered set
+dew.std.string                      String and StringView
+dew.std.string_builder              consuming StringBuilder
+dew.std.bytes                       immutable Bytes ranges and search
+dew.std.bytes_builder               consuming BytesBuilder
+dew.std.wasi                        Preview 1 Bytes I/O
+dew.std.wasm.intrinsics             explicit compiler-known WebAssembly intrinsics
 ```
 
-The ambient `Debug` trait and `debug(value)` facade stream deterministic output through bounded partial-write-safe WASI stdout. Primitive implementations cover Unit, Bool, all fixed-width numeric types, String, Bytes, SWAR carriers, and V128. Structs and enums may use postfix `derive(Debug)`; `derive(Eq)` and `derive(Hash)` are also implemented with conditional generic prerequisites and ordinary coherence/import rules. `Show` and `show(value) -> String` remain future work.
+The ambient `Debug` trait and `debug(value)` facade stream deterministic output through bounded partial-write-safe WASI stdout. Primitive implementations cover Unit, Bool, all fixed-width numeric types, String, Bytes, SWAR carriers, and V128. Structs and enums may use postfix `derive(Debug)`; `derive(Eq)`, `derive(Hash)`, and `derive(Show)` are also implemented with conditional generic prerequisites and ordinary coherence/import rules. `Show` remains non-ambient and side-effect free: `show(value) -> String` and builder-backed composition use explicit evidence with deterministic depth and byte limits.
 
-The ambient `Hash` trait provides `hash(self) -> U64` plus collision equality through `hash_eq(self, right) -> Bool`. A complete Hash implementation is sufficient for Map and Set key eligibility; a U64 alone cannot distinguish arbitrary collisions. `Map<key, value>` provides empty/singleton construction, safe optional lookup, trapping index lookup, insertion/replacement, Boolean collision-chain removal, alias-visible clear, membership, length, and indexed setting. `Set<key>` provides empty/singleton construction, length, emptiness, membership, idempotent Boolean insertion, collision-chain removal, and clear. Both use a deterministic separate-chaining runtime with sixteen initial buckets and measured load-1 geometric growth that relinks entries from stored hashes without user calls. Iteration remains follow-up work.
+The ambient `Hash` trait provides `hash(self) -> U64` plus collision equality through `hash_eq(self, right) -> Bool`. A complete Hash implementation is sufficient for Map and Set key eligibility; a U64 alone cannot distinguish arbitrary collisions. `Map<key, value>` provides empty/singleton construction, safe optional lookup, trapping index lookup, insertion/replacement, Boolean collision-chain removal, alias-visible clear, membership, length, and indexed setting. `Set<key>` provides empty/singleton construction, length, emptiness, membership, idempotent Boolean insertion, collision-chain removal, and clear. Both use a deterministic separate-chaining runtime with sixteen initial buckets and measured load-1 geometric growth that relinks entries from stored hashes without user calls. Map key/value/entry iterators and Set iterators are allocation-free per yielded element; hash traversal order remains intentionally unspecified.
 
-`FixedArray<t>` uses carrier-specialized unboxed WasmGC backing. `get(index)` returns `Option<t>`; index syntax, indexed setting, `set`, `get_unchecked`, and `set_unchecked` trap on out-of-bounds indices. `container[key]` and block-item-only `container[key] = value` select the ambient `Index<key, value>` and `IndexSet<key, value>` traits, so the syntax is not array-specific.
+`FixedArray<t>` uses carrier-specialized unboxed WasmGC backing. `get(index)` returns `Option<t>`; index syntax, indexed setting, `set`, `get_unchecked`, and `set_unchecked` trap on out-of-bounds indices. Growable `Array<t>` uses the same six carrier families, deterministic geometric capacity growth, alias-visible mutation, safe/trapping access, push/pop/clear, removed-reference clearing, and explicit iteration. `container[key]` and block-item-only `container[key] = value` select the ambient `IndexedGet<key, value>` and `IndexedSet<key, value>` traits, so the syntax is not array-specific.
 
 `BytesBuilder` remains the name of the one-shot, consuming construction type. A future `Buffer` would imply a reusable mutable/random-access abstraction and should be designed separately rather than aliasing the builder.
 

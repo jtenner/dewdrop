@@ -104,10 +104,10 @@ Release-mode measurements:
 
 The method workload is especially compact because selected call targets and type arguments are already frozen; planning performs no candidate search or unification. A reverse child-first pass simultaneously marks consumed roots and builds expression plans, avoiding a separate per-body scan.
 
-## Remaining work
+## Current boundary
 
-1. Extend the implemented scalar Starshine body emitter beyond constants, locals, direct calls, blocks, `if`, returns, and the initial `i32` builtins.
-2. Implement indexing trait selection before lowering index operations.
-3. Lower match and functional-loop plans into concrete decision trees and structured Wasm control flow.
-4. Emit module-value globals and the frozen eager initialization schedule.
-5. Add generic scalar boxing/specialization, trait-object dictionaries, closures, startup logic, and source/name sections.
+Indexing, complete scalar/aggregate/match/loop lowering, module globals and
+initialization, generic specialization and boxes, runtime trait dictionaries,
+closures, optimization, linking, and Starshine emission are implemented by later
+phases. Optional source/name sections and current optimization work are tracked in
+`docs/roadmap.md`.

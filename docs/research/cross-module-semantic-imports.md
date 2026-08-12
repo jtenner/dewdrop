@@ -16,7 +16,7 @@ manifest collection
   -> imported call inference
 ```
 
-Scalar direct-call backend linking is now implemented through the static program linker. Imported aggregate construction and imported impl dispatch remain later phases.
+Static program linking, imported aggregate construction, imported implementation dispatch, module values, generic specialization, and runtime trait evidence are implemented by later phases.
 
 ## Import scopes
 
