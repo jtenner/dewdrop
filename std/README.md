@@ -77,7 +77,7 @@ import dew.std.wasm.intrinsics as @wasm
 let narrowed = @wasm.i64_trunc_i32(value)
 ```
 
-The module currently contains the first migrated conversion. Complete generated parity with every backend-supported WebAssembly Core 3 intrinsic remains roadmap work.
+The module is generated from the compiler's backend inline-builtin surface. It exposes every currently source-addressable scalar, conversion, memory, packed-lane, and SIMD operation with a `wasm_`-prefixed public name, while retaining `i64_trunc_i32` as the first-published compatibility spelling. The generator fails when a backend inline builtin lacks a declaration, and the bootstrap source is generated from the same output. Reference, GC, table, and host-boundary operations remain absent until Dew exposes corresponding safe carrier types and signatures.
 
 All public standard modules may be selected explicitly:
 
@@ -160,6 +160,7 @@ After editing the text or WASI standard sources, regenerate their portable boots
 ```text
 python3 tools/generate_string_std.py
 python3 tools/generate_wasi_std.py
+python3 tools/generate_wasm_intrinsics_std.py
 ```
 
 Typed packed-lane modules are organized as one generated source file per public type:

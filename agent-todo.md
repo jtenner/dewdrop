@@ -81,8 +81,6 @@
 
 ## Standard library
 
-- [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported Core 3 operation.
-- [ ] Add generated declaration/backend intrinsic parity checks.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native JSON and TOML; add YAML only after both stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.

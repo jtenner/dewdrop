@@ -116,13 +116,14 @@ Dewdrop currently includes, among other things:
 - Explicit scalar `dew.std.math` policies for checked and wrapping integer arithmetic, exact float bits, deterministic NaN selection, signed zero, classification, rounding, and square root.
 - Portable `dew.std.io` Reader/Writer contracts, bounded transfer helpers, typed errors, and host-free in-memory byte streams, kept separate from WASI adapters.
 - `dew.std.testing` assertion helpers for Boolean, equality, ordering, Option, and Result checks above deterministic compiler-owned test metadata and trap handling.
+- Generated `dew.std.wasm.intrinsics` access to every backend inline scalar, conversion, memory, packed-lane, and SIMD operation, with declaration/backend parity checks.
 - Native SIMD and allocation-free packed-lane operations.
 - WASI Preview 1 standard input and output.
 - Source-level tests with deterministic compiler-produced metadata.
 - Deterministic WAT snapshots and Wasm execution tests.
 - File-aware deterministic diagnostics with line/column positions, excerpts, carets, and related-location labels.
 
-Not every familiar language feature exists yet. General `#annotation(...)` metadata, a Dew source formatter, HTTP, cryptography, and several broader tooling/library milestones remain planned. Postfix `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, and `derive(Show)` are implemented, as are explicit `Show`, `Disposable`, `defer`, `using`, growable arrays, collection iterators, iterator combinators, scalar math policies, portable byte I/O abstractions, and standard testing helpers. Consult the roadmap for the current boundary.
+Not every familiar language feature exists yet. General `#annotation(...)` metadata, a Dew source formatter, HTTP, cryptography, and several broader tooling/library milestones remain planned. Postfix `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, and `derive(Show)` are implemented, as are explicit `Show`, `Disposable`, `defer`, `using`, growable arrays, collection iterators, iterator combinators, scalar math policies, portable byte I/O abstractions, standard testing helpers, and generated WebAssembly intrinsic parity. Consult the roadmap for the current boundary.
 
 ## How a Dew program runs
 

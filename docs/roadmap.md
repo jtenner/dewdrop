@@ -122,8 +122,8 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [x] Implement `dew.std.math` with explicit overflow, trap, NaN, and signed-zero policies.
 - [x] Implement portable `dew.std.io` abstractions separately from WASI adapters.
 - [x] Implement `dew.std.testing` beyond compiler-owned assertion/test primitives.
-- [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported WebAssembly Core 3 scalar, reference, GC, memory, table, SIMD, conversion, control, and host-boundary operation.
-- [ ] Add generated declaration/backend parity checks so no source-addressable compiler builtin lives outside `dew.std.wasm.intrinsics`.
+- [x] Complete `dew.std.wasm.intrinsics` for every source-addressable compiler-supported WebAssembly Core 3 scalar, memory, SIMD, conversion, and control operation; keep reference/GC/table/host-boundary operations absent until Dew exposes corresponding safe carrier types and signatures.
+- [x] Add generated declaration/backend parity checks so every backend inline builtin has a source-addressable `dew.std.wasm.intrinsics` declaration.
 
 ### Measurement-driven collections
 

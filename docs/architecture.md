@@ -295,7 +295,11 @@ ordered provider and does not contain generated standard assets. Tests compare
 every on-disk standard source byte-for-byte with the bootstrap provider.
 Selective loading assigns each split module a stable registry slot and prepass bit;
 `dew.std.iter` is slot 47 and is embedded from `std/iter.dew` by its dedicated
-generator.
+generator. `dew.std.wasm.intrinsics` is generated from every `builtin` declaration
+whose external name is recognized by the complete backend inline-builtin
+dispatch. Public aliases use a `wasm_` prefix to remain safe under wildcard opens;
+the generator fails when a backend inline name has no Dew signature and emits the
+bootstrap bytes from the same canonical source.
 
 ## Frozen interfaces and caches
 
