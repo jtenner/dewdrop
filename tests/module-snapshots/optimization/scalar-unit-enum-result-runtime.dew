@@ -1,0 +1,26 @@
+enum State {
+  Left
+  Center
+  Right
+}
+
+fn choose(flag: Bool) -> State {
+  if flag {
+    State::Left
+  } else {
+    State::Right
+  }
+}
+
+pub fn main() -> Unit {
+  assert(match choose(true) {
+    State::Left => 10
+    State::Center => 20
+    State::Right => 30
+  } == 10, "scalar enum result left")
+  assert(match choose(false) {
+    State::Left => 1
+    State::Center => 2
+    State::Right => 3
+  } == 3, "scalar enum result right")
+}

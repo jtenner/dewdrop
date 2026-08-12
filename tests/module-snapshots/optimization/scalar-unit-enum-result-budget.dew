@@ -1,0 +1,25 @@
+enum State {
+  Left
+  Center
+  Right
+}
+
+fn choose(flag: Bool) -> State {
+  if flag {
+    State::Left
+  } else {
+    State::Right
+  }
+}
+
+pub fn main() -> I32 {
+  match choose(true) {
+    State::Left => 10
+    State::Center => 20
+    State::Right => 30
+  } + match choose(false) {
+    State::Left => 1
+    State::Center => 2
+    State::Right => 3
+  }
+}

@@ -317,13 +317,15 @@ fn program_reachable_callable_roots(
           )
         }
       }
-      ignore(
-        program_mark_resolved_nominal_roots(
-          resolved,
-          callable.result_type,
-          reachable,
-        ),
-      )
+      if callable.result_shape is RefPlannedValueShape {
+        ignore(
+          program_mark_resolved_nominal_roots(
+            resolved,
+            callable.result_type,
+            reachable,
+          ),
+        )
+      }
       if callable.has_receiver {
         ignore(
           program_mark_resolved_nominal_roots(

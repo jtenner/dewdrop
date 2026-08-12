@@ -829,7 +829,10 @@ fn wasmgc_required_nominal_declarations(
         wasmgc_mark_nominal_type(resolved, parameter.type_, required) |> ignore
       }
     }
-    wasmgc_mark_nominal_type(resolved, callable.result_type, required) |> ignore
+    if callable.result_shape is RefPlannedValueShape {
+      wasmgc_mark_nominal_type(resolved, callable.result_type, required)
+      |> ignore
+    }
     if callable.has_receiver {
       wasmgc_mark_nominal_type(resolved, callable.self_type, required) |> ignore
     }
@@ -1866,7 +1869,7 @@ fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
 }
 
 ///|
-fn wasmgc_callable_has_scalarized_parameter(
+fn wasmgc_callable_has_scalarized_signature(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
@@ -1879,7 +1882,9 @@ fn wasmgc_callable_has_scalarized_parameter(
       return true
     }
   }
-  false
+  callable.result_shape is I32PlannedValueShape &&
+  planned_resolved_value_shape(resolved, callable.result_type)
+  is RefPlannedValueShape
 }
 
 ///|
@@ -1912,17 +1917,21 @@ fn wasmgc_plan_function_job(
     }
   }
   let results : Array[PlannedWasmValueType] = []
-  match
-    wasmgc_value_type(
-      resolved,
-      callable.result_type,
-      callable.self_type,
-      type_index_by_declaration,
-      function_type_by_resolved,
-      closure_abi,
-    ) {
-    Some(value) => results.push(value)
-    None => ()
+  match callable.result_shape {
+    I32PlannedValueShape => results.push(WasmI32Value)
+    _ =>
+      match
+        wasmgc_value_type(
+          resolved,
+          callable.result_type,
+          callable.self_type,
+          type_index_by_declaration,
+          function_type_by_resolved,
+          closure_abi,
+        ) {
+        Some(value) => results.push(value)
+        None => ()
+      }
   }
   let kind = match callable.kind {
     PlannedBuiltinCallable(name) =>
@@ -3130,10 +3139,10 @@ fn plan_module_wasmgc_fragments_in_orders(
         None => {
           let source_function_type = resolved.callable_function_types[callable_index]
           let canonical = function_type_by_resolved[source_function_type]
-          let scalarized_parameter = wasmgc_callable_has_scalarized_parameter(
+          let scalarized_signature = wasmgc_callable_has_scalarized_signature(
             resolved, functions, callable,
           )
-          if canonical >= 0 && !scalarized_parameter {
+          if canonical >= 0 && !scalarized_signature {
             canonical
           } else {
             let index = next_signature_type

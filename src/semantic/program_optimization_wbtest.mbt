@@ -2243,6 +2243,76 @@ test "private unit enum parameters specialize with complete direct call evidence
 }
 
 ///|
+test "private unit enum results specialize with complete direct consumer evidence" {
+  let program = collect_program_manifest(
+    22845UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum State {\n  Left\n  Right\n}\nfn choose(flag: Bool) -> State {\n  if flag {\n    State::Left\n  } else {\n    State::Right\n  }\n}\npub fn main(flag: Bool) -> I32 {\n  match choose(flag) {\n    State::Left => 1\n    State::Right => 2\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let choose = collected.lookup_value("choose").unwrap()
+  let optimized_callable = optimized.modules[0].functions
+    .callable_of(choose)
+    .unwrap()
+  let unoptimized_callable = unoptimized.modules[0].functions
+    .callable_of(choose)
+    .unwrap()
+  assert_true(optimized_callable.result_shape is I32PlannedValueShape)
+  assert_true(unoptimized_callable.result_shape is RefPlannedValueShape)
+  let choose_body = optimized.modules[0].bodies[semantic_id_local(
+      collected.body_of(choose).unwrap().id,
+    )]
+  assert_true(choose_body.root_shape is I32PlannedValueShape)
+  assert_true(choose_body.result_shape is I32PlannedValueShape)
+  let main = collected.lookup_value("main").unwrap()
+  let calls = body_calls(collected, collected.body_of(main).unwrap())
+  assert_eq(calls.length(), 1)
+  assert_true(
+    optimized.modules[0].expressions[calls[0]].shape is I32PlannedValueShape,
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[calls[0]].shape is RefPlannedValueShape,
+  )
+}
+
+///|
+test "private unit enum result specialization rejects incomplete consumer evidence" {
+  let program = collect_program_manifest(
+    22846UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"pub enum PublicState {\n  Left\n  Right\n}\nenum State {\n  Left\n  Right\n}\nenum PayloadState {\n  Empty\n  Value(I32)\n}\nfn public_result(flag: Bool) -> PublicState {\n  if flag {\n    PublicState::Left\n  } else {\n    PublicState::Right\n  }\n}\nfn payload_result(flag: Bool) -> PayloadState {\n  if flag {\n    PayloadState::Empty\n  } else {\n    PayloadState::Value(2)\n  }\n}\nfn escaping_result(flag: Bool) -> State {\n  if flag {\n    State::Left\n  } else {\n    State::Right\n  }\n}\npub fn referenced_result(flag: Bool) -> State {\n  if flag {\n    State::Left\n  } else {\n    State::Right\n  }\n}\nfn accept(callback: fn(Bool) -> State, flag: Bool) -> State {\n  callback(flag)\n}\npub fn main(flag: Bool) -> I32 {\n  match public_result(flag) {\n    PublicState::Left => 1\n    PublicState::Right => 2\n  } + match payload_result(flag) {\n    PayloadState::Empty => 3\n    PayloadState::Value(value) => value\n  } + match {\n    let state = escaping_result(flag)\n    state\n  } {\n    State::Left => 4\n    State::Right => 5\n  } + match accept(referenced_result, flag) {\n    State::Left => 6\n    State::Right => 7\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let optimized = optimize_program_lowering(
+    plan_unoptimized_program_lowering(program, analyzed),
+  )
+  let collected = program.modules[0]
+  for
+    name in [
+      "public_result", "payload_result", "escaping_result", "referenced_result",
+    ] {
+    let declaration = collected.lookup_value(name).unwrap()
+    assert_true(
+      optimized.modules[0].functions.callable_of(declaration).unwrap().result_shape
+      is RefPlannedValueShape,
+    )
+  }
+}
+
+///|
 test "private unit enum parameter specialization rejects incomplete call evidence" {
   let program = collect_program_manifest(
     22844UL,

@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Evaluate bounded private enum result or scalar-payload specialization after direct parameter ABI specialization.
+1. Evaluate bounded private enum scalar-payload specialization after direct parameter/result ABI specialization.
 2. Add per-file incremental artifacts, workspace interface reuse, and deterministic parallel scheduling.
 3. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 4. Complete package acquisition and reproducible release infrastructure.
@@ -13,7 +13,7 @@
 
 ## Optimization
 
-- [ ] Evaluate private enum result or scalar-payload specialization with complete consumer/call-site ABI evidence.
+- [ ] Evaluate private enum scalar-payload specialization with complete payload/call-site ABI evidence.
 
 ## Incremental and parallel compilation
 

@@ -2648,6 +2648,43 @@ fn scalarize_program_private_unit_enum_expression(
 }
 
 ///|
+fn program_private_unit_enum_match_arms_are_exact(
+  module_ : PlannedModuleLowering,
+  arms : HirSpan,
+  declaration : DeclId,
+) -> Bool {
+  if arms.start < 0 || arms.start + arms.length > module_.arm_children.length() {
+    return false
+  }
+  for arm_offset in 0..<arms.length {
+    let arm_index = module_.arm_children[arms.start + arm_offset]
+    if arm_index < 0 || arm_index >= module_.pattern_arms.length() {
+      return false
+    }
+    let arm = module_.pattern_arms[arm_index]
+    if arm.guard_condition >= 0 ||
+      arm.pattern < 0 ||
+      arm.pattern >= module_.patterns.length() {
+      return false
+    }
+    match module_.patterns[arm.pattern].selected_constructor {
+      VariantInferredPatternConstructor(variant, _) => {
+        let variant_index = semantic_id_local(variant)
+        if variant_index < 0 ||
+          variant_index >= module_.type_layouts.variants.length() ||
+          module_.type_layouts.variants[variant_index].declaration !=
+          declaration ||
+          program_private_unit_enum_tag(module_, variant) < 0 {
+          return false
+        }
+      }
+      _ => return false
+    }
+  }
+  true
+}
+
+///|
 fn program_private_unit_enum_match_uses_local(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -2669,41 +2706,11 @@ fn program_private_unit_enum_match_uses_local(
           continue
         }
         matched_reads += 1
-        if arms.start < 0 ||
-          arms.start + arms.length > module_.arm_children.length() {
+        if !program_private_unit_enum_match_arms_are_exact(
+            module_, arms, declaration,
+          ) {
           supported = false
           break
-        }
-        for arm_offset in 0..<arms.length {
-          let arm_index = module_.arm_children[arms.start + arm_offset]
-          if arm_index < 0 || arm_index >= module_.pattern_arms.length() {
-            supported = false
-            break
-          }
-          let arm = module_.pattern_arms[arm_index]
-          if arm.guard_condition >= 0 ||
-            arm.pattern < 0 ||
-            arm.pattern >= module_.patterns.length() {
-            supported = false
-            break
-          }
-          match module_.patterns[arm.pattern].selected_constructor {
-            VariantInferredPatternConstructor(variant, _) => {
-              let variant_index = semantic_id_local(variant)
-              if variant_index < 0 ||
-                variant_index >= module_.type_layouts.variants.length() ||
-                module_.type_layouts.variants[variant_index].declaration !=
-                declaration ||
-                program_private_unit_enum_tag(module_, variant) < 0 {
-                supported = false
-                break
-              }
-            }
-            _ => {
-              supported = false
-              break
-            }
-          }
         }
       }
       _ => ()
@@ -2990,6 +2997,168 @@ fn specialize_program_private_unit_enum_parameters(
 }
 
 ///|
+fn program_private_unit_enum_body_result_expression(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+) -> ExprId {
+  match body.root {
+    ExpressionBodyRoot(expression) => expression
+    BlockBodyRoot(block) =>
+      program_scalar_replacement_block_tail(module_, block)
+  }
+}
+
+///|
+fn program_private_unit_enum_result_consumers(
+  modules : Array[PlannedModuleLowering],
+  declaration : DeclId,
+  enum_declaration : DeclId,
+) -> Array[(Int, ExprId, ExprId)]? {
+  let consumers : Array[(Int, ExprId, ExprId)] = []
+  for module_index, module_ in modules {
+    for expression in 0..<module_.expressions.length() {
+      match module_.expressions[expression].kind {
+        PlannedFunctionReference(target, _) if target == declaration =>
+          return None
+        PlannedBoundDirectCall(target, _, _, _, _)
+        | PlannedOperatorCall(target, _, _, _, _)
+        | PlannedIndexCall(target, _, _, _)
+        | PlannedIndexSetCall(target, _, _, _, _) if target == declaration =>
+          return None
+        PlannedDirectCall(target, receiver, _, type_arguments)
+        | PlannedTailCall(target, receiver, _, type_arguments) if target ==
+          declaration => {
+          if receiver >= 0 || type_arguments.length != 0 {
+            return None
+          }
+          let mut consumer = -1
+          for candidate in 0..<module_.expressions.length() {
+            match module_.expressions[candidate].kind {
+              PlannedMatchExpression(scrutinee, arms) if scrutinee == expression => {
+                if consumer >= 0 ||
+                  !program_private_unit_enum_match_arms_are_exact(
+                    module_, arms, enum_declaration,
+                  ) {
+                  return None
+                }
+                consumer = candidate
+              }
+              _ => ()
+            }
+          }
+          if consumer < 0 {
+            return None
+          }
+          consumers.push((module_index, expression, consumer))
+        }
+        _ => ()
+      }
+    }
+  }
+  if consumers.length() == 0 {
+    None
+  } else {
+    Some(consumers)
+  }
+}
+
+///|
+fn scalarize_program_private_unit_enum_match_scrutinee(
+  module_ : PlannedModuleLowering,
+  match_expression : ExprId,
+) -> Unit {
+  let (scrutinee, arms) = match module_.expressions[match_expression].kind {
+    PlannedMatchExpression(scrutinee, arms) => (scrutinee, arms)
+    _ => return
+  }
+  module_.expressions[scrutinee] = {
+    ..module_.expressions[scrutinee],
+    shape: I32PlannedValueShape,
+  }
+  for arm_offset in 0..<arms.length {
+    let arm_index = module_.arm_children[arms.start + arm_offset]
+    let pattern = module_.pattern_arms[arm_index].pattern
+    module_.patterns[pattern] = {
+      ..module_.patterns[pattern],
+      shape: I32PlannedValueShape,
+    }
+  }
+}
+
+///|
+fn specialize_program_private_unit_enum_results(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    for callable_index, callable in module_.functions.callables {
+      if callable.visibility != ModuleVisible ||
+        callable.compiler_owned ||
+        callable.is_test_entry ||
+        callable.has_receiver ||
+        program_callable_generic_parameters(callable).length != 0 ||
+        !(callable.result_shape is RefPlannedValueShape) {
+        continue
+      }
+      let enum_declaration = match
+        module_.resolved_types[callable.result_type] {
+        NominalType(declaration) => declaration
+        _ => continue
+      }
+      let body_id = match callable.kind {
+        PlannedFunctionCallable(body) => body
+        _ => continue
+      }
+      let body_index = semantic_id_local(body_id)
+      if body_index < 0 || body_index >= module_.bodies.length() {
+        continue
+      }
+      let body = module_.bodies[body_index]
+      let result = program_private_unit_enum_body_result_expression(
+        module_, body,
+      )
+      if result < 0 ||
+        !program_can_scalarize_private_unit_enum_expression(
+          module_, result, enum_declaration, 0,
+        ) {
+        continue
+      }
+      let consumers = match
+        program_private_unit_enum_result_consumers(
+          modules,
+          callable.declaration,
+          enum_declaration,
+        ) {
+        Some(value) => value
+        None => continue
+      }
+      scalarize_program_private_unit_enum_expression(
+        module_, result, enum_declaration, 0,
+      )
+      module_.bodies[body_index] = {
+        ..body,
+        root_shape: I32PlannedValueShape,
+        result_shape: I32PlannedValueShape,
+      }
+      module_.functions.callables[callable_index] = {
+        ..callable,
+        result_shape: I32PlannedValueShape,
+      }
+      for consumer in consumers {
+        let consumer_module = modules[consumer.0]
+        consumer_module.expressions[consumer.1] = {
+          ..consumer_module.expressions[consumer.1],
+          shape: I32PlannedValueShape,
+        }
+        scalarize_program_private_unit_enum_match_scrutinee(
+          consumer_module,
+          consumer.2,
+        )
+      }
+    }
+  }
+}
+
+///|
 fn prepare_program_optimization_mutation(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -3008,6 +3177,7 @@ fn prepare_program_optimization_mutation(
       ..module_,
       functions: {
         ..module_.functions,
+        callables: module_.functions.callables.copy(),
         parameters: module_.functions.parameters.copy(),
       },
       bodies: module_.bodies.copy(),
@@ -7029,6 +7199,7 @@ pub fn optimize_program_lowering(
   directize_generic_parameter_selectors(modules)
   specialize_program_private_unit_enum_locals(modules)
   specialize_program_private_unit_enum_parameters(modules)
+  specialize_program_private_unit_enum_results(modules)
   coalesce_program_immutable_local_aliases(modules)
   let elided_trait_wrappers = directize_exact_runtime_trait_flows(
     modules,

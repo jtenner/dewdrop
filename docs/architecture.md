@@ -170,13 +170,16 @@ every read is an exact unguarded match scrutinee. Parameter specialization adds 
 closed-call proof: a module-visible receiver-free non-generic function parameter
 must have the same match-only usage, no function reference, and only direct or
 tail call sites whose corresponding arguments are proven constructor/`if` trees
-for that enum. The optimizer changes accepted local, parameter, argument,
-expression, and pattern carriers to `I32`. Fragment planning emits a distinct
-private physical signature when the optimized parameter differs from its
-resolved source function type, and reachability omits the enum physical type
-when no retained value needs it. Public callables, payloads, results, methods,
-generics, captures, guarded matches, escaping uses, and incomplete call evidence
-remain reference-backed.
+for that enum. Result specialization requires a complete constructor/`if` result
+tree and every direct or tail call result to have exactly one direct unguarded
+exact-constructor match consumer. The optimizer changes accepted local,
+parameter, argument, result, call, scrutinee, and pattern carriers to `I32`.
+Fragment planning emits a distinct private physical signature when an optimized
+parameter or result differs from its resolved source function type, and
+reachability omits the enum physical type when no retained value needs it.
+Public callables, payloads, methods, generics, captures, guarded matches,
+escaping/stored results, function references, and incomplete call or consumer
+evidence remain reference-backed.
 
 ## Identity ownership
 

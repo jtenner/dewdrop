@@ -1,0 +1,23 @@
+enum State {
+  Left
+  Right
+}
+
+fn trap_condition() -> Bool {
+  unreachable()
+}
+
+fn choose() -> State {
+  if trap_condition() {
+    State::Left
+  } else {
+    State::Right
+  }
+}
+
+pub fn main() -> I32 {
+  match choose() {
+    State::Left => 1
+    State::Right => 2
+  }
+}

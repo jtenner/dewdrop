@@ -15,7 +15,7 @@ The proof requires:
 
 Preflight completes before mutation. The optimizer then rewrites all accepted argument trees to tags, changes the parameter/local/read/pattern carriers to `I32`, and leaves unrelated parameters and callable results unchanged. Fragment planning derives the private function's physical parameter from the optimized shape, emits a distinct physical signature when the resolved source function type still names the enum, and omits the enum type when no other reachable value needs it.
 
-Public functions, function references, methods, generic functions, payload-bearing enums, guarded/catchall/alternative parameter matches, captured parameters, escaping reads, cross-module call sites, and unsupported argument trees remain reference-backed. Results are deliberately unchanged; scalar result specialization still requires a separate consumer and return-path proof.
+Public functions, function references, methods, generic functions, payload-bearing enums, guarded/catchall/alternative parameter matches, captured parameters, escaping reads, cross-module call sites, and unsupported argument trees remain reference-backed. Private results are handled by the separate result-specialization tranche documented in `scalar-unit-enum-result-specialization.md`.
 
 `optimization/scalar-unit-enum-parameter-runtime` covers direct and conditional constructor arguments. `optimization/scalar-unit-enum-parameter-order-trap` confirms an argument condition still traps before call dispatch. `optimization/scalar-unit-enum-parameter-budget` has no enum struct type, construction, tag load, cast, reference test, table, indirect call, or `local.tee`.
 
@@ -23,4 +23,4 @@ Public functions, function references, methods, generic functions, payload-beari
 
 ## Remaining boundaries
 
-Private enum results need complete consumer propagation and must account for tail calls, branch joins, public export roots, function references, and result casts. Scalar payload enums need a tag-plus-payload or multi-value ABI plan with exactly-once payload evaluation. Both remain separate measured tranches.
+Scalar payload enums need a tag-plus-payload or multi-value ABI plan with exactly-once payload evaluation. Public/generic signatures and function-value boundaries still require adapters and ABI versioning.
