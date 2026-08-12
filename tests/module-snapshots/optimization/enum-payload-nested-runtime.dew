@@ -1,0 +1,26 @@
+struct Box {
+  left: I32
+  right: I32
+}
+
+enum Wrapped {
+  Some(Box)
+  None
+}
+
+fn nested(left: I32, right: I32) -> I32 {
+  match Wrapped::Some(Box {
+    left: left
+    right: right
+  }) {
+    Wrapped::Some(Box {
+      left
+      right
+    }) => right
+    Wrapped::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  nested(20, 22)
+}

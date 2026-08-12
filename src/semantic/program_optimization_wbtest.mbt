@@ -319,6 +319,43 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
 }
 
 ///|
+test "nested fresh enum payload patterns eliminate aggregate wrappers" {
+  let program = collect_program_manifest(
+    22817UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Box {\n  left: I32\n  right: I32\n}\nenum Wrapped {\n  Some(Box)\n  None\n}\nfn nested(left: I32, right: I32) -> I32 {\n  match Wrapped::Some(Box {\n    left: left\n    right: right\n  }) {\n    Wrapped::Some(Box {\n      left\n      right\n    }) => right\n    Wrapped::None => 0\n  }\n}\npub fn main() -> I32 {\n  nested(20, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let nested = collected.lookup_value("nested").unwrap()
+  let body = collected.body_of(nested).unwrap()
+  let mut optimized_structs = 0
+  let mut optimized_variants = 0
+  let mut optimized_matches = 0
+  let mut optimized_selects = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedStructNew(_, _, _) => optimized_structs += 1
+      PlannedVariantTupleNew(_, _, _) => optimized_variants += 1
+      PlannedMatchExpression(_, _) => optimized_matches += 1
+      PlannedParameterSelect(_, _) => optimized_selects += 1
+      _ => ()
+    }
+  }
+  assert_eq(optimized_structs, 0)
+  assert_eq(optimized_variants, 0)
+  assert_eq(optimized_matches, 0)
+  assert_eq(optimized_selects, 2)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,

@@ -100,6 +100,58 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+NESTED = """struct Box {
+  left: I32
+  right: I32
+}
+
+enum Wrapped {
+  Some(Box)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  match Wrapped::Some(Box {
+    left: value + 1
+    right: value
+  }) {
+    Wrapped::Some(Box {
+      left
+      right
+    }) => right
+    Wrapped::None => 0
+  }
+}
+"""
+
+NESTED_BASELINE = """struct Box {
+  left: I32
+  right: I32
+}
+
+enum Wrapped {
+  Some(Box)
+  None
+}
+
+fn retain(value: Wrapped) -> Wrapped {
+  value
+}
+
+pub fn main(value: I32) -> I32 {
+  match retain(Wrapped::Some(Box {
+    left: value + 1
+    right: value
+  })) {
+    Wrapped::Some(Box {
+      left
+      right
+    }) => right
+    Wrapped::None => 0
+  }
+}
+"""
+
 BASELINE = """enum Maybe {
   Some(I32)
   None
@@ -193,9 +245,20 @@ def main() -> None:
     local = build("local", LOCAL)
     struct = build("struct", STRUCT)
     struct_baseline = build("struct-baseline", STRUCT_BASELINE)
+    nested = build("nested", NESTED)
+    nested_baseline = build("nested-baseline", NESTED_BASELINE)
     baseline = build("baseline", BASELINE)
     raw = measure(
-        [optimized, arm_order, local, struct, baseline, struct_baseline],
+        [
+            optimized,
+            arm_order,
+            local,
+            struct,
+            nested,
+            baseline,
+            struct_baseline,
+            nested_baseline,
+        ],
         args.samples,
         args.batch,
     )
@@ -203,8 +266,10 @@ def main() -> None:
     arm_order_median = statistics.median(raw[str(arm_order)])
     local_median = statistics.median(raw[str(local)])
     struct_median = statistics.median(raw[str(struct)])
+    nested_median = statistics.median(raw[str(nested)])
     baseline_median = statistics.median(raw[str(baseline)])
     struct_baseline_median = statistics.median(raw[str(struct_baseline)])
+    nested_baseline_median = statistics.median(raw[str(nested_baseline)])
     print(json.dumps({
         "samples": args.samples,
         "batch": args.batch,
@@ -212,18 +277,23 @@ def main() -> None:
         "arm_order_median_us": round(arm_order_median, 4),
         "local_median_us": round(local_median, 4),
         "struct_median_us": round(struct_median, 4),
+        "nested_median_us": round(nested_median, 4),
         "baseline_median_us": round(baseline_median, 4),
         "struct_baseline_median_us": round(struct_baseline_median, 4),
+        "nested_baseline_median_us": round(nested_baseline_median, 4),
         "direct_ratio": round(optimized_median / baseline_median, 4),
         "arm_order_ratio": round(arm_order_median / baseline_median, 4),
         "local_ratio": round(local_median / baseline_median, 4),
         "struct_ratio": round(struct_median / struct_baseline_median, 4),
+        "nested_ratio": round(nested_median / nested_baseline_median, 4),
         "optimized_wasm_bytes": optimized.stat().st_size,
         "arm_order_wasm_bytes": arm_order.stat().st_size,
         "local_wasm_bytes": local.stat().st_size,
         "struct_wasm_bytes": struct.stat().st_size,
+        "nested_wasm_bytes": nested.stat().st_size,
         "baseline_wasm_bytes": baseline.stat().st_size,
         "struct_baseline_wasm_bytes": struct_baseline.stat().st_size,
+        "nested_baseline_wasm_bytes": nested_baseline.stat().st_size,
         "optimized_struct_new": wat_count(optimized, "struct.new"),
         "optimized_struct_get": wat_count(optimized, "struct.get"),
         "arm_order_struct_new": wat_count(arm_order, "struct.new"),
@@ -232,10 +302,14 @@ def main() -> None:
         "local_struct_get": wat_count(local, "struct.get"),
         "struct_struct_new": wat_count(struct, "struct.new"),
         "struct_struct_get": wat_count(struct, "struct.get"),
+        "nested_struct_new": wat_count(nested, "struct.new"),
+        "nested_struct_get": wat_count(nested, "struct.get"),
         "baseline_struct_new": wat_count(baseline, "struct.new"),
         "baseline_struct_get": wat_count(baseline, "struct.get"),
         "struct_baseline_struct_new": wat_count(struct_baseline, "struct.new"),
         "struct_baseline_struct_get": wat_count(struct_baseline, "struct.get"),
+        "nested_baseline_struct_new": wat_count(nested_baseline, "struct.new"),
+        "nested_baseline_struct_get": wat_count(nested_baseline, "struct.get"),
     }, indent=2, sort_keys=True))
 
 

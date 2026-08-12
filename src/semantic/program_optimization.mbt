@@ -3580,6 +3580,302 @@ fn program_variant_field_name(
 }
 
 ///|
+fn program_pattern_contains_binding(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  binding : LocalId,
+  depth : Int,
+) -> Bool {
+  if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
+    return false
+  }
+  if module_.patterns[pattern].reference is PatternBindingReference(candidate) {
+    return candidate == binding
+  }
+  match module_.patterns[pattern].source {
+    HirQualifiedPattern(base, _, _) =>
+      program_pattern_contains_binding(module_, base, binding, depth + 1)
+    HirTuplePattern(_, children, _) => {
+      if children.start < 0 ||
+        children.start + children.length > module_.pattern_children.length() {
+        return false
+      }
+      for index in 0..<children.length {
+        if program_pattern_contains_binding(
+            module_,
+            module_.pattern_children[children.start + index],
+            binding,
+            depth + 1,
+          ) {
+          return true
+        }
+      }
+      false
+    }
+    HirStructPattern(_, fields, _, _, _) => {
+      if fields.start < 0 ||
+        fields.start + fields.length > module_.pattern_fields.length() {
+        return false
+      }
+      for index in 0..<fields.length {
+        if program_pattern_contains_binding(
+            module_,
+            module_.pattern_fields[fields.start + index].pattern,
+            binding,
+            depth + 1,
+          ) {
+          return true
+        }
+      }
+      false
+    }
+    HirAlternativePattern(first, remaining, _) => {
+      if program_pattern_contains_binding(
+          module_, first, binding, depth + 1,
+        ) {
+        return true
+      }
+      if remaining.start < 0 ||
+        remaining.start + remaining.length > module_.pattern_children.length() {
+        return false
+      }
+      for index in 0..<remaining.length {
+        if program_pattern_contains_binding(
+            module_,
+            module_.pattern_children[remaining.start + index],
+            binding,
+            depth + 1,
+          ) {
+          return true
+        }
+      }
+      false
+    }
+    _ => false
+  }
+}
+
+///|
+fn program_can_scalarize_nested_pattern_binding(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  value : ExprId,
+  binding : LocalId,
+  target_type : BodyTypeId,
+  target_shape : PlannedValueShape,
+  depth : Int,
+) -> Bool {
+  if depth >= 64 ||
+    pattern < 0 ||
+    pattern >= module_.patterns.length() ||
+    value < 0 ||
+    value >= module_.expressions.length() ||
+    !(module_.expressions[value].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  if module_.patterns[pattern].reference is PatternBindingReference(candidate) {
+    return candidate == binding &&
+      module_.expressions[value].type_ == target_type &&
+      module_.expressions[value].shape == target_shape
+  }
+  match (module_.patterns[pattern].source, module_.expressions[value].kind) {
+    (
+      HirStructPattern(_, pattern_fields, _, _, _),
+      PlannedStructNew(_, _, object_fields),
+    ) => {
+      if pattern_fields.start < 0 ||
+        pattern_fields.start + pattern_fields.length >
+        module_.pattern_fields.length() ||
+        object_fields.start < 0 ||
+        object_fields.start + object_fields.length >
+        module_.object_fields.length() {
+        return false
+      }
+      let mut selected_pattern = -1
+      let mut selected_name : String? = None
+      for index in 0..<pattern_fields.length {
+        let candidate = module_.pattern_fields[
+          pattern_fields.start + index
+        ]
+        if program_pattern_contains_binding(
+            module_, candidate.pattern, binding, depth + 1,
+          ) {
+          if selected_pattern >= 0 {
+            return false
+          }
+          selected_pattern = candidate.pattern
+          selected_name = Some(candidate.name)
+        }
+      }
+      let selected_name = match selected_name {
+        Some(name) => name
+        None => return false
+      }
+      let mut selected_value = -1
+      for index in 0..<object_fields.length {
+        let candidate = module_.object_fields[object_fields.start + index]
+        match program_variant_field_name(module_, candidate.field) {
+          Some(name) if name == selected_name => {
+            if selected_value >= 0 {
+              return false
+            }
+            selected_value = candidate.value
+          }
+          _ => ()
+        }
+      }
+      selected_value >= 0 &&
+      program_can_scalarize_nested_pattern_binding(
+        module_,
+        selected_pattern,
+        selected_value,
+        binding,
+        target_type,
+        target_shape,
+        depth + 1,
+      )
+    }
+    (HirTuplePattern(_, children, _), PlannedStructNew(_, _, fields)) => {
+      if children.length != fields.length ||
+        children.start < 0 ||
+        children.start + children.length > module_.pattern_children.length() ||
+        fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() {
+        return false
+      }
+      let mut selected = -1
+      for index in 0..<children.length {
+        let child = module_.pattern_children[children.start + index]
+        if program_pattern_contains_binding(
+            module_, child, binding, depth + 1,
+          ) {
+          if selected >= 0 {
+            return false
+          }
+          selected = index
+        }
+      }
+      selected >= 0 &&
+      program_can_scalarize_nested_pattern_binding(
+        module_,
+        module_.pattern_children[children.start + selected],
+        module_.object_fields[fields.start + selected].value,
+        binding,
+        target_type,
+        target_shape,
+        depth + 1,
+      )
+    }
+    _ => false
+  }
+}
+
+///|
+fn scalarize_nested_pattern_binding(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  value : ExprId,
+  binding : LocalId,
+  target_type : BodyTypeId,
+  target_shape : PlannedValueShape,
+  depth : Int,
+) -> Bool {
+  if depth >= 64 ||
+    pattern < 0 ||
+    pattern >= module_.patterns.length() ||
+    value < 0 ||
+    value >= module_.expressions.length() {
+    return false
+  }
+  if module_.patterns[pattern].reference is PatternBindingReference(candidate) {
+    return candidate == binding
+  }
+  let mut selected = -1
+  let mut selected_pattern = -1
+  let mut selected_value = -1
+  let mut selector = { start: -1, length: 0 }
+  match (module_.patterns[pattern].source, module_.expressions[value].kind) {
+    (
+      HirStructPattern(_, pattern_fields, _, _, _),
+      PlannedStructNew(_, _, object_fields),
+    ) => {
+      let mut selected_name : String? = None
+      for index in 0..<pattern_fields.length {
+        let candidate = module_.pattern_fields[
+          pattern_fields.start + index
+        ]
+        if program_pattern_contains_binding(
+            module_, candidate.pattern, binding, depth + 1,
+          ) {
+          if selected >= 0 {
+            return false
+          }
+          selected_pattern = candidate.pattern
+          selected_name = Some(candidate.name)
+        }
+      }
+      let selected_name = match selected_name {
+        Some(name) => name
+        None => return false
+      }
+      let start = module_.expression_children.length()
+      for index in 0..<object_fields.length {
+        let candidate = module_.object_fields[object_fields.start + index]
+        module_.expression_children.push(candidate.value)
+        match program_variant_field_name(module_, candidate.field) {
+          Some(name) if name == selected_name => {
+            selected = index
+            selected_value = candidate.value
+          }
+          _ => ()
+        }
+      }
+      selector = { start, length: object_fields.length }
+    }
+    (HirTuplePattern(_, children, _), PlannedStructNew(_, _, fields)) => {
+      let start = module_.expression_children.length()
+      for index in 0..<fields.length {
+        let child = module_.pattern_children[children.start + index]
+        let candidate = module_.object_fields[fields.start + index].value
+        module_.expression_children.push(candidate)
+        if program_pattern_contains_binding(
+            module_, child, binding, depth + 1,
+          ) {
+          selected = index
+          selected_pattern = child
+          selected_value = candidate
+        }
+      }
+      selector = { start, length: fields.length }
+    }
+    _ => return false
+  }
+  if selected < 0 ||
+    !scalarize_nested_pattern_binding(
+      module_,
+      selected_pattern,
+      selected_value,
+      binding,
+      target_type,
+      target_shape,
+      depth + 1,
+    ) {
+    while module_.expression_children.length() > selector.start {
+      ignore(module_.expression_children.pop())
+    }
+    return false
+  }
+  let source = module_.expressions[value]
+  module_.expressions[value] = {
+    ..source,
+    type_: target_type,
+    shape: target_shape,
+    kind: PlannedParameterSelect(selector, selected),
+  }
+  true
+}
+
+///|
 fn scalar_replace_program_variant_payload_match(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -3642,6 +3938,7 @@ fn scalar_replace_program_variant_payload_match(
   }
   let mut selected = -1
   let mut payload = -1
+  let mut payload_pattern = -1
   let mut payload_count = 0
   let mut selector = { start: -1, length: 0 }
   let mut appended_selector = false
@@ -3664,14 +3961,14 @@ fn scalar_replace_program_variant_payload_match(
         if pattern < 0 || pattern >= module_.patterns.length() {
           return false
         }
-        match module_.patterns[pattern].reference {
-          PatternBindingReference(binding) if binding == local_id => {
-            if selected >= 0 {
-              return false
-            }
-            selected = index
+        if program_pattern_contains_binding(
+            module_, pattern, local_id, 0,
+          ) {
+          if selected >= 0 {
+            return false
           }
-          _ => ()
+          selected = index
+          payload_pattern = pattern
         }
       }
       if selected < 0 {
@@ -3700,14 +3997,14 @@ fn scalar_replace_program_variant_payload_match(
           pattern_field.pattern >= module_.patterns.length() {
           return false
         }
-        match module_.patterns[pattern_field.pattern].reference {
-          PatternBindingReference(binding) if binding == local_id => {
-            if selected_name is Some(_) {
-              return false
-            }
-            selected_name = Some(pattern_field.name)
+        if program_pattern_contains_binding(
+            module_, pattern_field.pattern, local_id, 0,
+          ) {
+          if selected_name is Some(_) {
+            return false
           }
-          _ => ()
+          selected_name = Some(pattern_field.name)
+          payload_pattern = pattern_field.pattern
         }
       }
       let selected_name = match selected_name {
@@ -3742,14 +4039,35 @@ fn scalar_replace_program_variant_payload_match(
     }
     _ => return false
   }
+  let direct_payload = payload_pattern >= 0 &&
+    module_.patterns[payload_pattern].reference is PatternBindingReference(binding) &&
+    binding == local_id
   if payload < 0 ||
     payload >= module_.expressions.length() ||
-    module_.expressions[payload].type_ != source.type_ ||
-    module_.expressions[payload].shape != source.shape ||
+    payload_pattern < 0 ||
     (!program_scalar_replaceable_field_shape(source.shape) &&
-    !(payload_count == 1 &&
+    !(direct_payload &&
+    payload_count == 1 &&
     ((source.shape is RefPlannedValueShape) ||
-    (source.shape is GenericPlannedValueShape)))) {
+    (source.shape is GenericPlannedValueShape)))) ||
+    !program_can_scalarize_nested_pattern_binding(
+      module_,
+      payload_pattern,
+      payload,
+      local_id,
+      source.type_,
+      source.shape,
+      0,
+    ) ||
+    !scalarize_nested_pattern_binding(
+      module_,
+      payload_pattern,
+      payload,
+      local_id,
+      source.type_,
+      source.shape,
+      0,
+    ) {
     if appended_selector {
       while module_.expression_children.length() > selector.start {
         ignore(module_.expression_children.pop())
