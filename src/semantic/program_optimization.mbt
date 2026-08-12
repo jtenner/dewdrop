@@ -3467,6 +3467,8 @@ fn scalar_replace_synthesized_struct_components(
       let field_indices : Array[Int] = []
       let first_field_get : Array[ExprId] = Array::make(fields.length, -1)
       let component_nominals : Array[DeclId] = Array::make(fields.length, 0UL)
+      let alias_locals : Array[LocalId] = Array::make(fields.length, -1)
+      let alias_items : Array[Int] = Array::make(fields.length, -1)
       let mut valid = true
       for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
         let source_local = match module_.expressions[expression].kind {
@@ -3557,6 +3559,8 @@ fn scalar_replace_synthesized_struct_components(
           valid = false
           break
         }
+        let mut alias_local = -1
+        let mut alias_item = -1
         for candidate_block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
           if candidate_block < 0 || candidate_block >= module_.blocks.length() {
             continue
@@ -3566,7 +3570,18 @@ fn scalar_replace_synthesized_struct_components(
             match module_.block_items[
               candidate_items.start + candidate_item
             ].kind {
-              PlannedLetItem(_, false, value) if value == selected_get => {
+              PlannedLetItem(candidate_local, false, value) if
+                value == selected_get => {
+                if candidate_block != block ||
+                  candidate_item <= item_index ||
+                  alias_local >= 0 {
+                  valid = false
+                  break
+                }
+                alias_local = candidate_local
+                alias_item = candidate_item
+              }
+              PlannedLetItem(_, true, value) if value == selected_get => {
                 valid = false
                 break
               }
@@ -3577,8 +3592,16 @@ fn scalar_replace_synthesized_struct_components(
             break
           }
         }
-        if !valid {
+        if !valid ||
+          (alias_local >= 0 &&
+          alias_locals[selected_index] >= 0 &&
+          alias_locals[selected_index] != alias_local) {
+          valid = false
           break
+        }
+        if alias_local >= 0 {
+          alias_locals[selected_index] = alias_local
+          alias_items[selected_index] = alias_item
         }
         field_gets.push(selected_get)
         base_gets.push(expression)
@@ -3592,12 +3615,16 @@ fn scalar_replace_synthesized_struct_components(
         continue
       }
       let mut selected_fields = 0
+      let mut synthesized_fields = 0
       for field_index in 0..<fields.length {
         if first_field_get[field_index] >= 0 {
           selected_fields += 1
+          if alias_locals[field_index] < 0 {
+            synthesized_fields += 1
+          }
         }
       }
-      if selected_fields < 2 {
+      if selected_fields < 2 || synthesized_fields == 0 {
         continue
       }
       let new_locals_start = module_.locals.length()
@@ -3606,8 +3633,11 @@ fn scalar_replace_synthesized_struct_components(
       }
       let component_locals : Array[LocalId] = Array::make(fields.length, -1)
       for field_index in 0..<fields.length {
+        if alias_locals[field_index] >= 0 {
+          component_locals[field_index] = alias_locals[field_index]
+        }
         let field_get = first_field_get[field_index]
-        if field_get < 0 {
+        if field_get < 0 || component_locals[field_index] >= 0 {
           continue
         }
         let field_source = module_.expressions[field_get]
@@ -3654,7 +3684,28 @@ fn scalar_replace_synthesized_struct_components(
         )
       }
       for index in (item_index + 1)..<items.length {
-        module_.block_items.push(module_.block_items[items.start + index])
+        let mut alias_local = -1
+        for field_index in 0..<fields.length {
+          if alias_items[field_index] == index {
+            alias_local = alias_locals[field_index]
+            break
+          }
+        }
+        module_.block_items.push(
+          if alias_local >= 0 {
+            {
+              ..module_.block_items[items.start + index],
+              kind: PlannedExpressionItem(
+                match module_.block_items[items.start + index].kind {
+                  PlannedLetItem(_, false, value) => value
+                  _ => -1
+                },
+              ),
+            }
+          } else {
+            module_.block_items[items.start + index]
+          },
+        )
       }
       let initializer_source = module_.expressions[initializer]
       module_.expressions[initializer] = {
@@ -3687,7 +3738,7 @@ fn scalar_replace_synthesized_struct_components(
         ..body,
         locals: {
           start: new_locals_start,
-          length: body.locals.length + selected_fields,
+          length: body.locals.length + synthesized_fields,
         },
       }
       return true

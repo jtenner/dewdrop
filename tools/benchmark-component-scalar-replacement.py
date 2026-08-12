@@ -52,6 +52,44 @@ pub fn main(value: I32) -> I32 {{
 """
 
 
+MIXED_DIRECT = """struct Triple {
+  first: I32
+  second: I32
+  third: I32
+}
+
+pub fn main(value: I32) -> I32 {
+  let triple = Triple {
+    first: value
+    second: 0
+    third: value + 1
+  }
+  let saved = triple.third
+  triple.first + saved
+}
+"""
+
+MIXED_RETAINED = """struct Triple {
+  first: I32
+  second: I32
+  third: I32
+}
+
+fn retain(value: Triple) -> Triple {
+  value
+}
+
+pub fn main(value: I32) -> I32 {
+  let triple = retain(Triple {
+    first: value
+    second: 0
+    third: value + 1
+  })
+  let saved = triple.third
+  triple.first + saved
+}
+"""
+
 REFERENCE_DIRECT = """struct Token {
   value: I32
 }
@@ -189,6 +227,8 @@ def main() -> None:
     direct_retained = build(
         "direct-retained", source("direct-retained", args.fields),
     )
+    mixed = build("mixed", MIXED_DIRECT)
+    mixed_retained = build("mixed-retained", MIXED_RETAINED)
     reference = build("reference", REFERENCE_DIRECT)
     reference_retained = build("reference-retained", REFERENCE_RETAINED)
     selected = list(range(0, args.fields, 2))
@@ -206,6 +246,12 @@ def main() -> None:
         args.samples,
         args.batch,
     )
+    mixed_raw = measure(
+        [mixed, mixed_retained],
+        15,
+        args.samples,
+        args.batch,
+    )
     reference_raw = measure(
         [reference, reference_retained],
         15,
@@ -218,6 +264,8 @@ def main() -> None:
     retained_median = statistics.median(raw[str(retained)])
     direct_median = statistics.median(raw[str(direct)])
     direct_retained_median = statistics.median(raw[str(direct_retained)])
+    mixed_median = statistics.median(mixed_raw[str(mixed)])
+    mixed_retained_median = statistics.median(mixed_raw[str(mixed_retained)])
     reference_median = statistics.median(reference_raw[str(reference)])
     reference_retained_median = statistics.median(
         reference_raw[str(reference_retained)],
@@ -232,12 +280,15 @@ def main() -> None:
         "retained_median_us": round(retained_median, 4),
         "direct_median_us": round(direct_median, 4),
         "direct_retained_median_us": round(direct_retained_median, 4),
+        "mixed_median_us": round(mixed_median, 4),
+        "mixed_retained_median_us": round(mixed_retained_median, 4),
         "reference_median_us": round(reference_median, 4),
         "reference_retained_median_us": round(reference_retained_median, 4),
         "ordered_ratio": round(ordered_median / retained_median, 4),
         "reversed_ratio": round(reversed_median / retained_median, 4),
         "missing_ratio": round(missing_median / retained_median, 4),
         "direct_ratio": round(direct_median / direct_retained_median, 4),
+        "mixed_ratio": round(mixed_median / mixed_retained_median, 4),
         "reference_ratio": round(
             reference_median / reference_retained_median, 4,
         ),
@@ -247,6 +298,8 @@ def main() -> None:
         "retained_wasm_bytes": retained.stat().st_size,
         "direct_wasm_bytes": direct.stat().st_size,
         "direct_retained_wasm_bytes": direct_retained.stat().st_size,
+        "mixed_wasm_bytes": mixed.stat().st_size,
+        "mixed_retained_wasm_bytes": mixed_retained.stat().st_size,
         "reference_wasm_bytes": reference.stat().st_size,
         "reference_retained_wasm_bytes": reference_retained.stat().st_size,
         "ordered_struct_new": wat_count(ordered, "struct.new"),
@@ -261,6 +314,10 @@ def main() -> None:
         "direct_struct_get": wat_count(direct, "struct.get"),
         "direct_retained_struct_new": wat_count(direct_retained, "struct.new"),
         "direct_retained_struct_get": wat_count(direct_retained, "struct.get"),
+        "mixed_struct_new": wat_count(mixed, "struct.new"),
+        "mixed_struct_get": wat_count(mixed, "struct.get"),
+        "mixed_retained_struct_new": wat_count(mixed_retained, "struct.new"),
+        "mixed_retained_struct_get": wat_count(mixed_retained, "struct.get"),
         "reference_struct_new": wat_count(reference, "struct.new"),
         "reference_struct_get": wat_count(reference, "struct.get"),
         "reference_retained_struct_new": wat_count(reference_retained, "struct.new"),

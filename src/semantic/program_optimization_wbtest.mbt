@@ -627,6 +627,44 @@ test "direct distinct struct reads synthesize component locals" {
 }
 
 ///|
+test "mixed source aliases and direct reads share component locals" {
+  let program = collect_program_manifest(
+    22825UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Triple {\n  first: I32\n  second: I32\n  third: I32\n}\nfn selected(first: I32, second: I32, third: I32) -> I32 {\n  let triple = Triple {\n    first: first\n    second: second\n    third: third\n  }\n  let saved = triple.third\n  triple.first + saved\n}\npub fn main() -> I32 {\n  selected(20, 1, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let selected = collected.lookup_value("selected").unwrap()
+  let source_body = collected.body_of(selected).unwrap()
+  let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+  let mut structs = 0
+  let mut fields = 0
+  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      structs += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      fields += 1
+    }
+  }
+  assert_eq(structs, 0)
+  assert_eq(fields, 0)
+  assert_eq(
+    body.locals.length,
+    unoptimized.modules[0].bodies[semantic_id_local(source_body.id)].locals.length +
+    1,
+  )
+}
+
+///|
 test "direct distinct reference fields synthesize nominal component locals" {
   let program = collect_program_manifest(
     22823UL,

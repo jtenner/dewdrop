@@ -1,0 +1,23 @@
+struct Triple {
+  first: I32
+  second: I32
+  third: I32
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  let triple = Triple {
+    first: 1
+    second: trap_first()
+    third: trap_second()
+  }
+  let saved = triple.third
+  triple.first + saved
+}

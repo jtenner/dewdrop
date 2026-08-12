@@ -1,0 +1,19 @@
+struct Triple {
+  first: I32
+  second: I32
+  third: I32
+}
+
+fn selected(first: I32, second: I32, third: I32) -> I32 {
+  let triple = Triple {
+    first: first
+    second: second
+    third: third
+  }
+  let saved = triple.third
+  triple.first + saved
+}
+
+pub fn main() -> I32 {
+  selected(20, 1, 22)
+}
