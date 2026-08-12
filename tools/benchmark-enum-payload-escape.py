@@ -130,6 +130,21 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+STABLE_GUARD = """enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  let flag = value > 0
+  match Maybe::Some(value + 1, value) {
+    Maybe::Some(first, second) if flag => second
+    Maybe::Some(first, second) => second
+    Maybe::None => 0
+  }
+}
+"""
+
 LOCAL = """enum Maybe {
   Some(I32)
   None
@@ -340,6 +355,7 @@ def main() -> None:
     catchall = build("catchall", CATCHALL)
     binding_forward = build("binding-forward", BINDING_FORWARD)
     binding_projection = build("binding-projection", BINDING_PROJECTION)
+    stable_guard = build("stable-guard", STABLE_GUARD)
     local = build("local", LOCAL)
     struct = build("struct", STRUCT)
     struct_baseline = build("struct-baseline", STRUCT_BASELINE)
@@ -356,6 +372,7 @@ def main() -> None:
             catchall,
             binding_forward,
             binding_projection,
+            stable_guard,
             local,
             struct,
             nested,
@@ -376,6 +393,7 @@ def main() -> None:
     binding_projection_median = statistics.median(
         raw[str(binding_projection)],
     )
+    stable_guard_median = statistics.median(raw[str(stable_guard)])
     local_median = statistics.median(raw[str(local)])
     struct_median = statistics.median(raw[str(struct)])
     nested_median = statistics.median(raw[str(nested)])
@@ -393,6 +411,7 @@ def main() -> None:
         "catchall_median_us": round(catchall_median, 4),
         "binding_forward_median_us": round(binding_forward_median, 4),
         "binding_projection_median_us": round(binding_projection_median, 4),
+        "stable_guard_median_us": round(stable_guard_median, 4),
         "local_median_us": round(local_median, 4),
         "struct_median_us": round(struct_median, 4),
         "nested_median_us": round(nested_median, 4),
@@ -409,6 +428,7 @@ def main() -> None:
         "binding_projection_ratio": round(
             binding_projection_median / baseline_median, 4,
         ),
+        "stable_guard_ratio": round(stable_guard_median / baseline_median, 4),
         "local_ratio": round(local_median / baseline_median, 4),
         "struct_ratio": round(struct_median / struct_baseline_median, 4),
         "nested_ratio": round(nested_median / nested_baseline_median, 4),
@@ -420,6 +440,7 @@ def main() -> None:
         "catchall_wasm_bytes": catchall.stat().st_size,
         "binding_forward_wasm_bytes": binding_forward.stat().st_size,
         "binding_projection_wasm_bytes": binding_projection.stat().st_size,
+        "stable_guard_wasm_bytes": stable_guard.stat().st_size,
         "local_wasm_bytes": local.stat().st_size,
         "struct_wasm_bytes": struct.stat().st_size,
         "nested_wasm_bytes": nested.stat().st_size,
@@ -442,6 +463,8 @@ def main() -> None:
         "binding_forward_struct_get": wat_count(binding_forward, "struct.get"),
         "binding_projection_struct_new": wat_count(binding_projection, "struct.new"),
         "binding_projection_struct_get": wat_count(binding_projection, "struct.get"),
+        "stable_guard_struct_new": wat_count(stable_guard, "struct.new"),
+        "stable_guard_struct_get": wat_count(stable_guard, "struct.get"),
         "local_struct_new": wat_count(local, "struct.new"),
         "local_struct_get": wat_count(local, "struct.get"),
         "struct_struct_new": wat_count(struct, "struct.new"),

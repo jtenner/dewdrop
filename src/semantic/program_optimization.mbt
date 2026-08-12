@@ -4475,6 +4475,188 @@ fn scalar_replace_known_variant_catchall(
 }
 
 ///|
+fn program_variant_direct_binding_selector(
+  module_ : PlannedModuleLowering,
+  arm : PlannedPatternArm,
+  variant_expression : ExprId,
+  variant : VariantId,
+) -> Int {
+  if arm.body < 0 ||
+    arm.body >= module_.expressions.length() ||
+    variant_expression < 0 ||
+    variant_expression >= module_.expressions.length() {
+    return -1
+  }
+  let binding = match module_.expressions[arm.body].kind {
+    PlannedLocalGet(local_id) => local_id
+    _ => return -1
+  }
+  let root_pattern = program_pattern_for_variant(
+    module_, arm.pattern, variant, 0,
+  )
+  if root_pattern < 0 {
+    return -1
+  }
+  match (
+    module_.expressions[variant_expression].kind,
+    module_.patterns[root_pattern].source,
+  ) {
+    (
+      PlannedVariantTupleNew(candidate_variant, _, arguments),
+      HirTuplePattern(_, children, _),
+    ) => {
+      if candidate_variant != variant ||
+        arguments.length != children.length ||
+        children.start < 0 ||
+        children.start + children.length > module_.pattern_children.length() {
+        return -1
+      }
+      let mut selected = -1
+      for index in 0..<children.length {
+        let pattern = module_.pattern_children[children.start + index]
+        if pattern < 0 || pattern >= module_.patterns.length() {
+          return -1
+        }
+        match module_.patterns[pattern].reference {
+          PatternBindingReference(candidate) if candidate == binding => {
+            if selected >= 0 {
+              return -1
+            }
+            selected = index
+          }
+          _ => ()
+        }
+      }
+      selected
+    }
+    (
+      PlannedVariantStructNew(candidate_variant, _, fields),
+      HirStructPattern(_, pattern_fields, _, _, _),
+    ) => {
+      if candidate_variant != variant ||
+        fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() ||
+        pattern_fields.start < 0 ||
+        pattern_fields.start + pattern_fields.length > module_.pattern_fields.length() {
+        return -1
+      }
+      let mut selected_name : String? = None
+      for index in 0..<pattern_fields.length {
+        let field = module_.pattern_fields[pattern_fields.start + index]
+        if field.pattern < 0 || field.pattern >= module_.patterns.length() {
+          return -1
+        }
+        match module_.patterns[field.pattern].reference {
+          PatternBindingReference(candidate) if candidate == binding => {
+            if selected_name is Some(_) {
+              return -1
+            }
+            selected_name = Some(field.name)
+          }
+          _ => ()
+        }
+      }
+      let selected_name = match selected_name {
+        Some(name) => name
+        None => return -1
+      }
+      let mut selected = -1
+      for index in 0..<fields.length {
+        match program_variant_field_name(
+          module_, module_.object_fields[fields.start + index].field,
+        ) {
+          Some(name) if name == selected_name => {
+            if selected >= 0 {
+              return -1
+            }
+            selected = index
+          }
+          _ => ()
+        }
+      }
+      selected
+    }
+    _ => -1
+  }
+}
+
+///|
+fn program_nonconstant_guard_is_discardable(
+  module_ : PlannedModuleLowering,
+  guard_expression : ExprId,
+) -> Bool {
+  if guard_expression < 0 ||
+    guard_expression >= module_.expressions.length() {
+    return false
+  }
+  match module_.expressions[guard_expression].kind {
+    PlannedLocalGet(_) | PlannedCaptureGet(_) => true
+    _ => false
+  }
+}
+
+///|
+fn program_guarded_variant_selector_is_stable(
+  module_ : PlannedModuleLowering,
+  arms : HirSpan,
+  guarded_index : Int,
+  variant_expression : ExprId,
+  variant : VariantId,
+) -> Bool {
+  if guarded_index < 0 || guarded_index >= arms.length {
+    return false
+  }
+  let guarded = module_.pattern_arms[arms.start + guarded_index]
+  if !program_nonconstant_guard_is_discardable(
+      module_, guarded.guard_condition,
+    ) {
+    return false
+  }
+  let selected = program_variant_direct_binding_selector(
+    module_, guarded, variant_expression, variant,
+  )
+  if selected < 0 {
+    return false
+  }
+  for index in (guarded_index + 1)..<arms.length {
+    let candidate = module_.pattern_arms[arms.start + index]
+    let relation = program_pattern_variant_relation(
+      module_, candidate.pattern, variant, 0,
+    )
+    if relation == 0 {
+      continue
+    }
+    if relation < 0 {
+      return false
+    }
+    if candidate.guard_condition >= 0 {
+      if candidate.guard_condition >= module_.expressions.length() {
+        return false
+      }
+      match module_.expressions[candidate.guard_condition].kind {
+        PlannedBoolConst(false) => continue
+        PlannedBoolConst(true) => ()
+        _ => {
+          if !program_nonconstant_guard_is_discardable(
+              module_, candidate.guard_condition,
+            ) ||
+            program_variant_direct_binding_selector(
+              module_, candidate, variant_expression, variant,
+            ) != selected {
+            return false
+          }
+          continue
+        }
+      }
+    }
+    return program_variant_direct_binding_selector(
+      module_, candidate, variant_expression, variant,
+    ) == selected
+  }
+  false
+}
+
+///|
 fn scalar_replace_program_variant_payload_match(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -4530,7 +4712,10 @@ fn scalar_replace_program_variant_payload_match(
       module_, candidate.pattern, variant, 0,
     ) {
       1 => {
-        if guard_constant < 0 {
+        if guard_constant < 0 &&
+          !program_guarded_variant_selector_is_stable(
+            module_, arms, index, variant_expression, variant,
+          ) {
           return false
         }
         selected_arm = arms.start + index
