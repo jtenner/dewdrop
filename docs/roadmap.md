@@ -75,6 +75,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [ ] Define explicit call-site type-argument syntax.
 - [ ] Improve overload specificity from generic-count tiers to structural match-set containment.
 - [ ] Keep inference variables out of frozen module type interners.
+- [ ] Fix generic value-returning match joins whose failing arm calls a `Never`-returning function, then add value-extracting testing helpers without backend carrier mismatches.
 - [ ] Decide whether associated types, associated constants, and supertraits belong in the first stable language edition.
 - [ ] Add negative or sealed implementations only if concrete coherence/library requirements justify them.
 - [ ] Define higher-kinded types or variance only if concrete library requirements justify them.
@@ -120,7 +121,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [x] Implement `dew.std.iter` combinators over the minimal ambient `Iter<t>` protocol with explicit allocation/consumption behavior.
 - [x] Implement `dew.std.math` with explicit overflow, trap, NaN, and signed-zero policies.
 - [x] Implement portable `dew.std.io` abstractions separately from WASI adapters.
-- [ ] Implement `dew.std.testing` beyond compiler-owned assertion/test primitives.
+- [x] Implement `dew.std.testing` beyond compiler-owned assertion/test primitives.
 - [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported WebAssembly Core 3 scalar, reference, GC, memory, table, SIMD, conversion, control, and host-boundary operation.
 - [ ] Add generated declaration/backend parity checks so no source-addressable compiler builtin lives outside `dew.std.wasm.intrinsics`.
 

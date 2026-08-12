@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 61)
+  assert_eq(wildcard_paths.length(), 62)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -54,10 +54,11 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[30], "std/iter.dew")
   assert_eq(wildcard_paths[31], "std/math.dew")
   assert_eq(wildcard_paths[32], "std/io.dew")
-  assert_eq(wildcard_paths[33], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[38], "std/text.dew")
-  assert_eq(wildcard_paths[40], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[60], "std/f64x2.dew")
+  assert_eq(wildcard_paths[33], "std/testing.dew")
+  assert_eq(wildcard_paths[34], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[39], "std/text.dew")
+  assert_eq(wildcard_paths[41], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[61], "std/f64x2.dew")
 }
 
 ///|
@@ -71,8 +72,8 @@ test "standard import prepass selects split module bits" {
       ),
     ]),
     (
-      9, false, false, false, false, true, false, false, false, false, false, 0,
-      0,
+      9, false, false, false, false, false, true, false, false, false, false, false,
+      0, 0,
     ),
   )
 }
@@ -88,8 +89,8 @@ test "standard import prepass selects scalar math dependencies" {
       ),
     ]),
     (
-      0, false, false, true, false, false, false, false, false, false, false, 0,
-      0,
+      0, false, false, true, false, false, false, false, false, false, false, false,
+      0, 0,
     ),
   )
 }
@@ -105,8 +106,25 @@ test "standard import prepass selects portable IO dependencies" {
       ),
     ]),
     (
-      12, false, false, false, true, false, false, true, false, false, false, 0,
-      0,
+      12, false, false, false, true, false, false, false, true, false, false, false,
+      0, 0,
+    ),
+  )
+}
+
+///|
+test "standard import prepass selects testing dependencies" {
+  let module_id = 1000UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.testing\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      0, false, false, false, false, true, false, false, false, false, false, false,
+      0, 0,
     ),
   )
 }
@@ -122,8 +140,8 @@ test "standard import prepass selects generic iterator dependencies" {
       ),
     ]),
     (
-      0, false, false, false, false, false, false, false, false, false, false, 1024,
-      0,
+      0, false, false, false, false, false, false, false, false, false, false, false,
+      1024, 0,
     ),
   )
 }
@@ -139,8 +157,8 @@ test "standard import prepass selects text iteration dependencies" {
       ),
     ]),
     (
-      17, false, false, false, false, false, false, true, false, false, false, 0,
-      0,
+      17, false, false, false, false, false, false, false, true, false, false, false,
+      0, 0,
     ),
   )
 }
@@ -156,8 +174,8 @@ test "standard import prepass selects Show and builder dependency" {
       ),
     ]),
     (
-      3, true, false, false, false, false, false, false, false, false, false, 0,
-      0,
+      3, true, false, false, false, false, false, false, false, false, false, false,
+      0, 0,
     ),
   )
 }
@@ -173,8 +191,8 @@ test "standard import prepass selects Disposable" {
       ),
     ]),
     (
-      0, false, true, false, false, false, false, false, false, false, false, 0,
-      0,
+      0, false, true, false, false, false, false, false, false, false, false, false,
+      0, 0,
     ),
   )
 }
@@ -190,8 +208,8 @@ test "standard import prepass selects lane module bits" {
       ),
     ]),
     (
-      0, false, false, false, false, false, false, false, false, false, false, 0,
-      524289,
+      0, false, false, false, false, false, false, false, false, false, false, false,
+      0, 524289,
     ),
   )
 }

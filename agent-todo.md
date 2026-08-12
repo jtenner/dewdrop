@@ -49,6 +49,7 @@
 - [ ] Define explicit call-site type arguments.
 - [ ] Implement structural match-set overload specificity.
 - [ ] Keep inference variables out of frozen module type interners.
+- [ ] Fix generic value-returning match joins with `Never` failure arms, then add testing value-extraction helpers.
 - [ ] Decide associated types, associated constants, and supertraits for the first stable edition.
 - [ ] Add negative/sealed implementations, higher-kinded types, or variance only when concrete requirements justify them.
 - [ ] Design optional arguments and their ABI/evaluation-order rules.
@@ -80,7 +81,6 @@
 
 ## Standard library
 
-- [ ] Implement `dew.std.testing` beyond compiler-owned primitives.
 - [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported Core 3 operation.
 - [ ] Add generated declaration/backend intrinsic parity checks.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.

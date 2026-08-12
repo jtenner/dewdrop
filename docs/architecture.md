@@ -221,7 +221,10 @@ mapped in `src/backend/starshine_numeric_builtins.mbt`, while the integer and
 floating policy layer remains generated Dew source. Portable `dew.std.io`
 contains only ordinary traits, control flow, FixedArray state, immutable Bytes,
 and BytesBuilder composition. Its architecture fixture rejects WASI imports and
-linear memory, keeping host adapters outside the portable module.
+linear memory, keeping host adapters outside the portable module. The
+`dew.std.testing` helper layer is likewise ordinary source: it delegates failure
+to the compiler-owned assertion builtin and does not own test metadata,
+reachability, or runtime normalization.
 `tools/generate_standard_builtin_registry.py` generates
 `src/semantic/standard_builtin_registry.mbt`, including typed
 `StandardBuiltinOperation` cases instead of integer operation codes. White-box

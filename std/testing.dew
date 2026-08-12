@@ -1,0 +1,63 @@
+pub fn fail(message: String) -> Unit {
+  assert(false, message)
+}
+
+pub fn assert_true(condition: Bool, message: String) -> Unit {
+  assert(condition, message)
+}
+
+pub fn assert_false(condition: Bool, message: String) -> Unit {
+  assert(!condition, message)
+}
+
+pub fn assert_equal<t: Eq>(actual: t, expected: t, message: String) -> Unit {
+  assert(actual == expected, message)
+}
+
+pub fn assert_not_equal<t: Eq>(actual: t, expected: t, message: String) -> Unit {
+  assert(!(actual == expected), message)
+}
+
+pub fn assert_less<t: Lt>(actual: t, expected: t, message: String) -> Unit {
+  assert(actual < expected, message)
+}
+
+pub fn assert_less_or_equal<t: Lte>(actual: t, expected: t, message: String) -> Unit {
+  assert(actual <= expected, message)
+}
+
+pub fn assert_greater<t: Gt>(actual: t, expected: t, message: String) -> Unit {
+  assert(actual > expected, message)
+}
+
+pub fn assert_greater_or_equal<t: Gte>(actual: t, expected: t, message: String) -> Unit {
+  assert(actual >= expected, message)
+}
+
+pub fn assert_option_some<t>(value: Option<t>, message: String) -> Unit {
+  match value {
+    Option::Some(_) => {}
+    Option::None => fail(message)
+  }
+}
+
+pub fn assert_option_none<t>(value: Option<t>, message: String) -> Unit {
+  match value {
+    Option::Some(_) => fail(message)
+    Option::None => {}
+  }
+}
+
+pub fn assert_result_ok<t, e>(value: Result<t, e>, message: String) -> Unit {
+  match value {
+    Result::Ok(_) => {}
+    Result::Err(_) => fail(message)
+  }
+}
+
+pub fn assert_result_err<t, e>(value: Result<t, e>, message: String) -> Unit {
+  match value {
+    Result::Ok(_) => fail(message)
+    Result::Err(_) => {}
+  }
+}

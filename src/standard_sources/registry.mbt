@@ -10,8 +10,9 @@ pub fn standard_source_paths() -> Array[String] {
     "std/collections/deque.dew", "std/ordering.dew", "std/collections/binary_heap.dew",
     "std/collections/priority_queue.dew", "std/collections/red_black_tree.dew", "std/collections/ordered_map.dew",
     "std/collections/ordered_set.dew", "std/show.dew", "std/disposable.dew", "std/iter.dew",
-    "std/math.dew", "std/io.dew", "std/text_runtime.dew", "std/string.dew", "std/string_builder.dew",
-    "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/math.dew", "std/io.dew", "std/testing.dew", "std/text_runtime.dew", "std/string.dew",
+    "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew",
+    "std/wasi.dew", "std/wasm/intrinsics.dew",
   ]
   for
     name in [
@@ -63,6 +64,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/disposable.dew" => Some(standard_disposable_source())
     "std/math.dew" => Some(standard_math_source())
     "std/io.dew" => Some(standard_io_source())
+    "std/testing.dew" => Some(standard_testing_source())
     "std/iter.dew" => Some(standard_iter_source())
     "std/text_runtime.dew" => Some(standard_text_sources()[0])
     "std/string.dew" => Some(standard_text_sources()[1])

@@ -1,0 +1,5 @@
+open dew.std.testing
+
+pub fn main() -> Unit {
+  assert_equal(1, 2, "testing mismatch")
+}

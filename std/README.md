@@ -32,6 +32,7 @@ dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.iter            eager consuming iterator combinators over Iter<t>
 dew.std.math            explicit checked/wrapping integer and IEEE float math
 dew.std.io              portable byte Reader/Writer contracts and in-memory streams
+dew.std.testing         explicit assertion helpers over compiler-owned test primitives
 dew.std.option          ambient generic Option<t>
 dew.std.result          ambient generic Result<t, e>
 dew.std.fixed_array                 fixed-length mutable generic arrays
@@ -143,6 +144,8 @@ let input = wasi_fd_read(0u32, 65536u32)
 ```
 
 WASI marshalling uses the 65,520 data bytes remaining in one reusable 64 KiB linear-memory page. Writes continue through valid partial host writes. Reads continue after full windows and stop at the requested limit, EOF, or a short read. Nonzero errno and invalid host progress trap; linear memory never owns the resulting Bytes. `Bytes.find` and `contains` specialize empty and one-byte needles, use SIMD candidate filtering for short needles, and rolling fingerprints with exact verification for long needles. `starts_with` and `ends_with` compare exact logical ranges without wrappers or copies. `StringBuilder` and `BytesBuilder` grow private GC storage geometrically, publish with `finish()`, and trap on later use. StringBuilder accepts String/StringView, checked ASCII bytes, Unicode scalar values, and strictly validated Bytes; BytesBuilder accepts arbitrary Bytes and individual U8 values.
+
+`dew.std.testing` adds explicit-message Boolean, equality, ordering, Option-shape, and Result-shape assertions. It delegates failure to the ambient compiler-owned `assert`, so test-mode dynamic messages and production zero-I/O traps remain unchanged. Test discovery, `_test.dew`, `expect_trap`, filters, and metadata remain compiler/tooling features rather than library APIs.
 
 `dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the separate Preview 1 adapter surface.
 

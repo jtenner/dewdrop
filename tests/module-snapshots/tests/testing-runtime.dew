@@ -1,0 +1,33 @@
+open dew.std.testing
+open dew.std.wasi
+
+fn none_i32() -> Option<I32> {
+  Option::None
+}
+
+fn ok_i32(value: I32) -> Result<I32, I32> {
+  Result::Ok(value)
+}
+
+fn err_i32(value: I32) -> Result<I32, I32> {
+  Result::Err(value)
+}
+
+pub fn main() -> U32 {
+  assert_true(true, "true helper")
+  assert_false(false, "false helper")
+  assert_equal(42, 42, "equal helper")
+  assert_not_equal(41, 42, "not equal helper")
+  assert_less(1, 2, "less helper")
+  assert_less_or_equal(2, 2, "lte helper")
+  assert_greater(3, 2, "greater helper")
+  assert_greater_or_equal(3, 3, "gte helper")
+  assert_option_some(Option::Some(7), "some helper")
+  let none = none_i32()
+  assert_option_none(none, "none helper")
+  let ok = ok_i32(7)
+  let err = err_i32(9)
+  assert_result_ok(ok, "ok helper")
+  assert_result_err(err, "err helper")
+  wasi_fd_write(1u32, b"testing:runtime")
+}

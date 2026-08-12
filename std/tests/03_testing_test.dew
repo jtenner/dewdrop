@@ -1,0 +1,35 @@
+open dew.std.testing
+
+test "testing boolean and comparison helpers accept valid conditions" {
+  assert_true(true, "assert_true")
+  assert_false(false, "assert_false")
+  assert_equal(42, 42, "assert_equal")
+  assert_not_equal(41, 42, "assert_not_equal")
+  assert_less(1, 2, "assert_less")
+  assert_less_or_equal(2, 2, "assert_less_or_equal")
+  assert_greater(3, 2, "assert_greater")
+  assert_greater_or_equal(3, 3, "assert_greater_or_equal")
+}
+
+fn testing_none() -> Option<I32> {
+  Option::None
+}
+
+fn testing_ok(value: I32) -> Result<I32, I32> {
+  Result::Ok(value)
+}
+
+fn testing_err(value: I32) -> Result<I32, I32> {
+  Result::Err(value)
+}
+
+test "testing option and result helpers accept expected variants" {
+  assert_option_some(Option::Some(7), "assert_option_some")
+  assert_option_none(testing_none(), "assert_option_none")
+  assert_result_ok(testing_ok(7), "assert_result_ok")
+  assert_result_err(testing_err(9), "assert_result_err")
+}
+
+test "testing fail preserves dynamic assertion transport" expect_trap "unreachable" {
+  fail("expected testing failure")
+}
