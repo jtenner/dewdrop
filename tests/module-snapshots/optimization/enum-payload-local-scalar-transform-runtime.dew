@@ -1,0 +1,16 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn transformed(first: I32, second: I32) -> I32 {
+  let value = Maybe::Some(first, second)
+  match value {
+    Maybe::Some(left, right) => -right + 1
+    Maybe::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  transformed(1, -41)
+}

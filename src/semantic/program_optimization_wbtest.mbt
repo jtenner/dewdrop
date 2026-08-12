@@ -761,6 +761,48 @@ test "struct variant fields inline exact primitive scalar transforms" {
 }
 
 ///|
+test "let-bound fresh payloads inline exact scalar transforms" {
+  let program = collect_program_manifest(
+    22836UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn transformed(first: I32, second: I32) -> I32 {\n  let value = Maybe::Some(first, second)\n  match value {\n    Maybe::Some(left, right) => -right + 1\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  transformed(1, -41)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let transformed = collected.lookup_value("transformed").unwrap()
+  let source_body = collected.body_of(transformed).unwrap()
+  let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+  let block = match body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected transform block")
+  }
+  let items = optimized.modules[0].blocks[block].items
+  assert_true(
+    optimized.modules[0].block_items[items.start].kind
+    is PlannedElidedLetItem(_),
+  )
+  let mut variants = 0
+  let mut matches = 0
+  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+      variants += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+      matches += 1
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,
