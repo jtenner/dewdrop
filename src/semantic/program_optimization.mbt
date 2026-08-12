@@ -3541,6 +3541,14 @@ fn scalar_replace_synthesized_struct_components(
               ].nominal
               component_nominal != 0UL
             }
+            PlannedStructNew(declaration, _, _) => {
+              component_nominal = declaration
+              declaration != 0UL
+            }
+            PlannedModuleValueGet(_, nominal) => {
+              component_nominal = nominal
+              nominal != 0UL
+            }
             _ => false
           }
         } else if field_shape is GenericPlannedValueShape {

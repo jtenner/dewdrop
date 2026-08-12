@@ -774,6 +774,44 @@ test "direct distinct generic fields synthesize erased component locals" {
 }
 
 ///|
+test "fresh nominal reference fields synthesize exact component locals" {
+  let program = collect_program_manifest(
+    22828UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\nfn selected(first: I32, second: I32) -> I32 {\n  let pair = Pair {\n    first: Token {\n      value: first\n    }\n    second: Token {\n      value: second\n    }\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(20, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let selected = collected.lookup_value("selected").unwrap()
+  let source_body = collected.body_of(selected).unwrap()
+  let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+  let mut structs = 0
+  let mut fields = 0
+  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      structs += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      fields += 1
+    }
+  }
+  assert_eq(structs, 2)
+  assert_eq(fields, 2)
+  assert_eq(
+    body.locals.length,
+    unoptimized.modules[0].bodies[semantic_id_local(source_body.id)].locals.length +
+    2,
+  )
+}
+
+///|
 test "sole-use struct fields scalar replace across fresh if joins" {
   let program = collect_program_manifest(
     22813UL,

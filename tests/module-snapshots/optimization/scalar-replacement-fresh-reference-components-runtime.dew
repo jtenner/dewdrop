@@ -1,0 +1,24 @@
+struct Token {
+  value: I32
+}
+
+struct Pair {
+  first: Token
+  second: Token
+}
+
+fn selected(first: I32, second: I32) -> I32 {
+  let pair = Pair {
+    first: Token {
+      value: first
+    }
+    second: Token {
+      value: second
+    }
+  }
+  pair.first.value + pair.second.value
+}
+
+pub fn main() -> I32 {
+  selected(20, 22)
+}

@@ -138,6 +138,62 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+FRESH_REFERENCE_DIRECT = """struct Token {
+  value: I32
+}
+
+struct Pair {
+  first: Token
+  second: Token
+}
+
+fn selected(first: I32, second: I32) -> I32 {
+  let pair = Pair {
+    first: Token {
+      value: first
+    }
+    second: Token {
+      value: second
+    }
+  }
+  pair.first.value + pair.second.value
+}
+
+pub fn main(value: I32) -> I32 {
+  selected(value, value + 1)
+}
+"""
+
+FRESH_REFERENCE_RETAINED = """struct Token {
+  value: I32
+}
+
+struct Pair {
+  first: Token
+  second: Token
+}
+
+fn retain(value: Pair) -> Pair {
+  value
+}
+
+fn selected(first: I32, second: I32) -> I32 {
+  let pair = retain(Pair {
+    first: Token {
+      value: first
+    }
+    second: Token {
+      value: second
+    }
+  })
+  pair.first.value + pair.second.value
+}
+
+pub fn main(value: I32) -> I32 {
+  selected(value, value + 1)
+}
+"""
+
 REFERENCE_DIRECT = """struct Token {
   value: I32
 }
@@ -279,6 +335,10 @@ def main() -> None:
     generic_retained = build("generic-retained", GENERIC_RETAINED)
     mixed = build("mixed", MIXED_DIRECT)
     mixed_retained = build("mixed-retained", MIXED_RETAINED)
+    fresh_reference = build("fresh-reference", FRESH_REFERENCE_DIRECT)
+    fresh_reference_retained = build(
+        "fresh-reference-retained", FRESH_REFERENCE_RETAINED,
+    )
     reference = build("reference", REFERENCE_DIRECT)
     reference_retained = build("reference-retained", REFERENCE_RETAINED)
     selected = list(range(0, args.fields, 2))
@@ -308,6 +368,12 @@ def main() -> None:
         args.samples,
         args.batch,
     )
+    fresh_reference_raw = measure(
+        [fresh_reference, fresh_reference_retained],
+        15,
+        args.samples,
+        args.batch,
+    )
     reference_raw = measure(
         [reference, reference_retained],
         15,
@@ -326,6 +392,12 @@ def main() -> None:
     )
     mixed_median = statistics.median(mixed_raw[str(mixed)])
     mixed_retained_median = statistics.median(mixed_raw[str(mixed_retained)])
+    fresh_reference_median = statistics.median(
+        fresh_reference_raw[str(fresh_reference)],
+    )
+    fresh_reference_retained_median = statistics.median(
+        fresh_reference_raw[str(fresh_reference_retained)],
+    )
     reference_median = statistics.median(reference_raw[str(reference)])
     reference_retained_median = statistics.median(
         reference_raw[str(reference_retained)],
@@ -344,6 +416,10 @@ def main() -> None:
         "generic_retained_median_us": round(generic_retained_median, 4),
         "mixed_median_us": round(mixed_median, 4),
         "mixed_retained_median_us": round(mixed_retained_median, 4),
+        "fresh_reference_median_us": round(fresh_reference_median, 4),
+        "fresh_reference_retained_median_us": round(
+            fresh_reference_retained_median, 4,
+        ),
         "reference_median_us": round(reference_median, 4),
         "reference_retained_median_us": round(reference_retained_median, 4),
         "ordered_ratio": round(ordered_median / retained_median, 4),
@@ -354,6 +430,9 @@ def main() -> None:
             generic_median / generic_retained_median, 4,
         ),
         "mixed_ratio": round(mixed_median / mixed_retained_median, 4),
+        "fresh_reference_ratio": round(
+            fresh_reference_median / fresh_reference_retained_median, 4,
+        ),
         "reference_ratio": round(
             reference_median / reference_retained_median, 4,
         ),
@@ -367,6 +446,8 @@ def main() -> None:
         "generic_retained_wasm_bytes": generic_retained.stat().st_size,
         "mixed_wasm_bytes": mixed.stat().st_size,
         "mixed_retained_wasm_bytes": mixed_retained.stat().st_size,
+        "fresh_reference_wasm_bytes": fresh_reference.stat().st_size,
+        "fresh_reference_retained_wasm_bytes": fresh_reference_retained.stat().st_size,
         "reference_wasm_bytes": reference.stat().st_size,
         "reference_retained_wasm_bytes": reference_retained.stat().st_size,
         "ordered_struct_new": wat_count(ordered, "struct.new"),
@@ -389,6 +470,10 @@ def main() -> None:
         "mixed_struct_get": wat_count(mixed, "struct.get"),
         "mixed_retained_struct_new": wat_count(mixed_retained, "struct.new"),
         "mixed_retained_struct_get": wat_count(mixed_retained, "struct.get"),
+        "fresh_reference_struct_new": wat_count(fresh_reference, "struct.new"),
+        "fresh_reference_struct_get": wat_count(fresh_reference, "struct.get"),
+        "fresh_reference_retained_struct_new": wat_count(fresh_reference_retained, "struct.new"),
+        "fresh_reference_retained_struct_get": wat_count(fresh_reference_retained, "struct.get"),
         "reference_struct_new": wat_count(reference, "struct.new"),
         "reference_struct_get": wat_count(reference, "struct.get"),
         "reference_retained_struct_new": wat_count(reference_retained, "struct.new"),
