@@ -6,7 +6,12 @@ test "array standard source has stable compiler-owned identities" {
     standard_library_program_files(
       module_id,
       "std/array.dew",
-      @standard_sources.standard_array_source(),
+      StandardLibrarySources::new([
+        ManifestFile::new(
+          "std/array.dew",
+          @standard_sources.standard_array_source(),
+        ),
+      ]),
       false,
       false,
     ),

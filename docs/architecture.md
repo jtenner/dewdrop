@@ -297,11 +297,20 @@ architecture is generalized around `InterfaceBundleCacheKey` and
 `InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V11
 envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
 I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. The
-current policy selects compiler-owned standard modules and verified external
-dependencies. Verified package capsules already provide artifact-assisted source
-tree recovery for missing locked dependencies; ordinary workspace-module and
-per-file syntax/HIR caching can extend the same policy boundary without adding
-Boolean parameters or parallel formats.
+current interface policy selects compiler-owned standard modules and verified
+external dependencies. Verified package capsules provide artifact-assisted
+source-tree recovery for missing locked dependencies.
+
+The earlier syntax boundary is now `parse_event_cache.mbt`. It prepares each
+workspace source before standard-module selection, prepares only the selected
+standard sources afterward, and attaches one immutable `ParseEvent` array to the
+file model. Import scanning and collection consume that same array in manifest
+order. `parse_event_cache_envelope.mbt` validates key/source provenance and the
+payload checksum; the native platform shim publishes through a flushed,
+POSIX-fsynced same-directory temporary file and atomic rename. Missing entries
+are misses, while malformed, incompatible, mismatched, or corrupt entries fail
+visibly. Ordinary workspace-interface, body, layout, and fragment caches remain
+future extensions over this source-provenance boundary.
 
 ## Program specialization and erased ABI
 

@@ -121,7 +121,7 @@ fn print_usage() -> Unit {
   println("  repeat --module NAME to begin another statically linked module")
   println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
-    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-interface-cache, --cache-report",
+    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --cache-report",
   )
 }
 
@@ -148,6 +148,14 @@ fn main {
     @sys.set_env_var(
       "DEW_DEPENDENCY_INTERFACE_KEY",
       request.dependency_cache_key,
+    )
+    @sys.set_env_var(
+      "DEW_PARSE_EVENT_CACHE",
+      if request.parse_event_cache {
+        "1"
+      } else {
+        "0"
+      },
     )
     let arguments : Array[String] = [process_args[0]]
     for argument in request.cli_arguments() {
@@ -229,6 +237,9 @@ fn main {
     } else if argument == "--no-default-preamble" {
       default_preamble = false
       index += 1
+    } else if argument == "--no-parse-event-cache" {
+      @sys.set_env_var("DEW_PARSE_EVENT_CACHE", "0")
+      index += 1
     } else if argument == "--no-interface-cache" {
       @sys.set_env_var("DEW_INTERFACE_CACHE", "0")
       index += 1
@@ -277,6 +288,15 @@ fn main {
     }
   }
   let manifest = @semantic.ProgramManifest::new(modules)
+  let prepared_manifest = match
+    @standard_loader.prepare_manifest_parse_event_cache(manifest) {
+    Ok(value) => value
+    Err(error) => {
+      cli_fail(error)
+      abort("unreachable parse-event cache failure")
+    }
+  }
+  let manifest = prepared_manifest.manifest
   let loaded = if bootstrap_standard_library {
     @standard_loader.StandardLibraryLoad::bootstrap()
   } else {
@@ -298,6 +318,7 @@ fn main {
       @compiler_driver.CompilerPipelineOptions::production(
         4000UL, root_module_index, default_preamble,
       ),
+      prior_parse_event_cache_status=prepared_manifest.status,
     ) {
     Ok(compiled) => compiled
     Err(error) => {
@@ -325,6 +346,7 @@ fn main {
     }
   }
   let cache_status = compiled.cache_status.label()
+  let parse_event_cache_status = compiled.parse_event_cache_status.label()
   if report_compilation_diagnostics(
       compiled.program,
       compiled.analyzed,
@@ -334,6 +356,7 @@ fn main {
     @sys.exit(1)
   }
   if cache_report {
+    println("parse event cache: \{parse_event_cache_status}")
     println("standard interface cache: \{cache_status}")
   }
   if command == "check" {

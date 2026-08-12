@@ -4,7 +4,7 @@ pub enum PrefixOperator {
   Positive
   Negative
   LogicalNot
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// Binary operators recognized by the initial Dew precedence table.
@@ -28,14 +28,14 @@ pub enum BinaryOperator {
   Divide
   Remainder
   Exponentiate
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct ObjectField {
   name : String
   value : Expr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// Expression nodes are one enum allocation each. Offsets identify the token
@@ -72,7 +72,7 @@ pub enum Expr {
   FieldExpr(Expr, String, UInt64)
   QualifiedExpr(Expr, String, UInt64)
   IndexExpr(Expr, Expr, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn Expr::desugar_is(self : Expr) -> Expr {
@@ -183,7 +183,7 @@ pub enum ExpressionError {
   InvalidOperatorState(UInt64)
   UsingDoubleDispose(String, UInt64)
   UsingValueEscape(String, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn optional_expression_token_offset(

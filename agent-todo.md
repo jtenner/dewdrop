@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Add per-file incremental artifacts, workspace interface reuse, and deterministic parallel scheduling.
+1. Extend workspace interface reuse and deterministic parallel scheduling over the completed per-file parser-event cache.
 2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 3. Complete package acquisition and reproducible release infrastructure.
 4. Complete foundational standard modules and Wasm intrinsic parity.
@@ -12,7 +12,6 @@
 
 ## Incremental and parallel compilation
 
-- [ ] Cache checksummed per-file parser events or compact lossless syntax/HIR artifacts.
 - [ ] Extend frozen-interface caching to ordinary workspace modules.
 - [ ] Cache body inference by declaration/body and relevant dependency/evidence fingerprints.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.

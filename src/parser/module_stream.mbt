@@ -4,7 +4,7 @@ pub enum DiagnosticSeverity {
   Warning
   Info
   Hint
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn DiagnosticSeverity::rank(self : DiagnosticSeverity) -> Int {
@@ -30,13 +30,13 @@ pub fn DiagnosticSeverity::from_rank(rank : Int) -> DiagnosticSeverity {
 pub struct ParseDiagnostic {
   severity : DiagnosticSeverity
   error : DeclarationError
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum ParseEvent {
   Declaration(Declaration)
   Diagnostic(ParseDiagnostic)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn token_starts_declaration(token : @tokenizer.Token) -> Bool {

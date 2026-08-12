@@ -47,6 +47,7 @@ pub struct CompilerCompilation {
   lowering : @semantic.PlannedProgramLowering
   link : @semantic.PlannedProgramWasmGCLink
   cache_status : @standard_loader.InterfaceBundleCacheStatus
+  parse_event_cache_status : @standard_loader.ParseEventCacheStatus
 }
 
 ///|
@@ -54,11 +55,25 @@ pub fn compile_manifest(
   manifest : @semantic.ProgramManifest,
   loaded : @standard_loader.StandardLibraryLoad,
   options : CompilerPipelineOptions,
+  prior_parse_event_cache_status? : @standard_loader.ParseEventCacheStatus = @standard_loader.ParseEventCacheWasUsed(
+    0, 0,
+  ),
 ) -> Result[CompilerCompilation, String] {
+  let prepared = match
+    @standard_loader.prepare_program_parse_event_cache(
+      manifest,
+      loaded,
+      options.default_preamble,
+      prior_status=prior_parse_event_cache_status,
+    ) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let manifest = prepared.manifest
   let program = @semantic.collect_program_manifest_with_standard_sources(
     options.module_id_base,
     manifest,
-    loaded.sources,
+    prepared.standard_sources,
     options.default_preamble,
   )
   let cached = match
@@ -87,7 +102,14 @@ pub fn compile_manifest(
         @semantic.WasmGCPlanningOptions::test_mode(),
       )
   }
-  Ok({ program, analyzed, lowering, link, cache_status: cached.status })
+  Ok({
+    program,
+    analyzed,
+    lowering,
+    link,
+    cache_status: cached.status,
+    parse_event_cache_status: prepared.status,
+  })
 }
 
 ///|

@@ -1227,6 +1227,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
     modules: list[tuple[str, list[str]]] = []
     dependency_interfaces: list[tuple[str, str]] = []
     default_preamble = True
+    parse_event_cache = True
     interface_cache = True
     cache_report = False
     standard_policy = 1 if os.environ.get("DEW_BOOTSTRAP_STD") == "1" else 0
@@ -1279,6 +1280,9 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         elif argument == "--no-default-preamble":
             default_preamble = False
             index += 1
+        elif argument == "--no-parse-event-cache":
+            parse_event_cache = False
+            index += 1
         elif argument == "--no-interface-cache":
             interface_cache = False
             index += 1
@@ -1317,7 +1321,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         buffer.extend(encoded)
 
     write_u32(0x44574352)
-    write_u32(1)
+    write_u32(2)
     write_u32(command)
     write_u32(emit)
     write_string(output)
@@ -1335,6 +1339,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
     write_u32(standard_policy)
     write_string(standard_root)
     write_bool(default_preamble)
+    write_bool(parse_event_cache)
     write_bool(interface_cache)
     write_bool(cache_report)
     write_u32(0)  # production build mode

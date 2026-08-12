@@ -2,7 +2,7 @@
 const COMPILE_REQUEST_MAGIC : UInt = 0x44574352U
 
 ///|
-const COMPILE_REQUEST_VERSION : UInt = 1U
+const COMPILE_REQUEST_VERSION : UInt = 2U
 
 ///|
 priv struct CompileRequestReader {
@@ -111,6 +111,7 @@ priv struct CompileRequest {
   standard_policy : Int
   standard_root : String
   default_preamble : Bool
+  parse_event_cache : Bool
   interface_cache : Bool
   cache_report : Bool
   build_mode : Int
@@ -161,6 +162,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
   }
   let standard_root = reader.read_string("standard-library root")
   let default_preamble = reader.read_bool("default preamble")
+  let parse_event_cache = reader.read_bool("parse event cache")
   let interface_cache = reader.read_bool("interface cache")
   let cache_report = reader.read_bool("cache report")
   let build_mode = reader.read_u32().reinterpret_as_int()
@@ -184,6 +186,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
         standard_policy,
         standard_root,
         default_preamble,
+        parse_event_cache,
         interface_cache,
         cache_report,
         build_mode,
@@ -214,6 +217,9 @@ fn CompileRequest::cli_arguments(self : CompileRequest) -> Array[String] {
   }
   if !self.default_preamble {
     arguments.push("--no-default-preamble")
+  }
+  if !self.parse_event_cache {
+    arguments.push("--no-parse-event-cache")
   }
   if !self.interface_cache {
     arguments.push("--no-interface-cache")

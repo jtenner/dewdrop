@@ -34,7 +34,7 @@ pub enum Keyword {
   Import
   Export
   Package
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// Punctuation and operators with fixed spellings.
@@ -74,7 +74,7 @@ pub enum Symbol {
   Bang
   Ampersand
   Pipe
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// Recoverable lexical failures.
@@ -86,7 +86,7 @@ pub enum LexError {
   InvalidEscape(UtfCodepoint)
   UnterminatedString
   SourceIo(Int)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// A decoded token payload.
@@ -113,11 +113,11 @@ pub enum TokenKind {
   BytesLiteral(Bytes)
   MultilineString(Bytes)
   Error(LexError)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// A token, its absolute UTF-8 byte offset, and its sequential token index.
-pub struct Token(TokenKind, ByteOffset, Int) derive(Eq, Debug)
+pub struct Token(TokenKind, ByteOffset, Int) derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn Token::new(kind : TokenKind, offset : ByteOffset, index : Int) -> Token {

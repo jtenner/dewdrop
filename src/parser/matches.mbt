@@ -4,7 +4,7 @@ pub struct PatternArm {
   guard_condition : Expr?
   body : Expr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn Parser::consume_match_left_brace(

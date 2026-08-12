@@ -3,7 +3,7 @@ pub enum EnumVariant {
   UnitVariant(String, UInt64)
   TupleVariant(String, Array[TypeExpr], UInt64)
   StructVariant(String, Array[StructField], UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn EnumVariant::name(self : EnumVariant) -> String {
@@ -32,7 +32,7 @@ pub struct EnumDeclaration {
   variants : Array[EnumVariant]
   derives : Array[DeriveRequest]
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn Parser::finish_enum_variant_line(

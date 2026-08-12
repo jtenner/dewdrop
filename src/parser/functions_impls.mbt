@@ -9,7 +9,7 @@ pub struct FunctionDeclaration {
   return_type : TypeExpr
   body : Block
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn FunctionDeclaration::has_receiver(self : FunctionDeclaration) -> Bool {
@@ -24,7 +24,7 @@ pub struct TestDeclaration {
   return_type : TypeExpr
   body : Block
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct ImplDeclaration {
@@ -34,7 +34,7 @@ pub struct ImplDeclaration {
   target_type : TypeExpr
   methods : Array[FunctionDeclaration]
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn Parser::parse_function_parameters(

@@ -6,7 +6,7 @@ pub struct TypeAliasDeclaration {
   type_parameters : Array[TypeParameter]
   target : TypeExpr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn Parser::parse_type_alias_after_keyword(

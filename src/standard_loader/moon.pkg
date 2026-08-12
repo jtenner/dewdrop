@@ -1,8 +1,18 @@
 import {
   "jtenner/dewdrop/semantic",
+  "jtenner/dewdrop/parser",
   "jtenner/dewdrop/standard_sources",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
   "moonbitlang/x/crypto",
   "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/utf8",
 }
+
+options(
+  targets: {
+    "parse_event_cache_platform_native.mbt": [ "native", "llvm" ],
+    "parse_event_cache_platform_stub.mbt": [ "wasm", "wasm-gc", "js" ],
+  },
+  "native-stub": [ "parse_event_cache_platform.c" ],
+)

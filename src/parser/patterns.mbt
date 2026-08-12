@@ -3,7 +3,7 @@ pub struct PatternField {
   name : String
   pattern : Pattern
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum Pattern {
@@ -15,7 +15,7 @@ pub enum Pattern {
   TuplePattern(Pattern, Array[Pattern], UInt64)
   StructPattern(Pattern, Array[PatternField], UInt64?, UInt64)
   AlternativePattern(Pattern, Array[Pattern], UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn Pattern::offset(self : Pattern) -> UInt64 {
@@ -54,7 +54,7 @@ pub enum PatternError {
   UnclosedStructPattern(UInt64)
   EmptyTuplePattern(UInt64)
   PatternLexicalError(@tokenizer.LexError, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn optional_pattern_token_offset(

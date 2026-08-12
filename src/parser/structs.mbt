@@ -3,7 +3,7 @@ pub struct StructField {
   name : String
   type_ : TypeExpr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct StructDeclaration {
@@ -14,7 +14,7 @@ pub struct StructDeclaration {
   fields : Array[StructField]
   derives : Array[DeriveRequest]
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn Parser::finish_struct_field_line(

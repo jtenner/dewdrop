@@ -13,14 +13,14 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
-- verified standard/external interface caches, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
+- checksummed per-file parser-event artifacts, verified standard/external interface caches, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
 
 ## Active priority order
 
-1. Add per-file incremental artifacts, workspace interface reuse, deterministic dependency invalidation, and deterministic parallel module/body scheduling.
+1. Extend workspace interface reuse, deterministic dependency invalidation, and deterministic parallel module/body scheduling over the completed per-file parser-event cache.
 2. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
 3. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
 4. Complete foundational standard modules and Wasm intrinsic parity.
@@ -34,7 +34,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ## Incremental and parallel compilation
 
-- [ ] Cache deterministic per-file parser events or compact lossless syntax/HIR artifacts with checksums, provenance, and fail-visible corruption handling.
+- [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
 - [ ] Extend frozen-interface caching to ordinary workspace modules after source and dependency provenance is explicit.
 - [ ] Cache body inference by declaration/body fingerprint and relevant imported interface/evidence fingerprints.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.

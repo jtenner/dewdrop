@@ -5,7 +5,7 @@ pub enum BlockItem {
   AssignmentItem(Expr, Expr, UInt64)
   IndexSetItem(Expr, Expr, UInt64)
   ExpressionItem(Expr, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn BlockItem::offset(self : BlockItem) -> UInt64 {
@@ -22,7 +22,7 @@ pub fn BlockItem::offset(self : BlockItem) -> UInt64 {
 pub struct Block {
   items : Array[BlockItem]
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn Block::tail_expression(self : Block) -> Expr? {

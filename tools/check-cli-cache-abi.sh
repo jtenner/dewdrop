@@ -41,6 +41,9 @@ DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --cache-report \
   > .tmp/dew-interface-cache-hit.txt
 grep -q '^standard interface cache: miss$' .tmp/dew-interface-cache-miss.txt
 grep -q '^standard interface cache: hit$' .tmp/dew-interface-cache-hit.txt
+grep -q '^parse event cache: hits 0, misses ' .tmp/dew-interface-cache-miss.txt
+grep -q '^parse event cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-interface-cache-hit.txt
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew build \
   tests/module-snapshots/numeric/scalar.dew -o .tmp/dew-cache-hit.wasm
 cmp .tmp/dew-std-disk.wasm .tmp/dew-cache-hit.wasm
@@ -50,6 +53,25 @@ DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
   > .tmp/dew-interface-cache-disabled.txt
 grep -q '^standard interface cache: disabled$' \
   .tmp/dew-interface-cache-disabled.txt
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+  --no-parse-event-cache --no-interface-cache --cache-report \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-parse-event-cache-disabled.txt
+grep -q '^parse event cache: disabled (parsed [1-9][0-9]*)$' \
+  .tmp/dew-parse-event-cache-disabled.txt
+parse_cache_file=$(find .tmp/dew-interface-cache/parse-events -type f | head -n 1)
+printf 'corrupt' > "$parse_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-parse-event-cache-corrupt.txt 2>&1; then
+  echo "expected corrupt parse-event cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt parse-event cache' \
+  .tmp/dew-parse-event-cache-corrupt.txt
+rm -rf .tmp/dew-interface-cache/parse-events
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+  tests/module-snapshots/numeric/scalar.dew > /dev/null
 cache_file=$(find .tmp/dew-interface-cache/interfaces -type f | head -n 1)
 printf 'corrupt' > "$cache_file"
 if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
@@ -98,6 +120,10 @@ DEW_CACHE_DIR=.tmp/dew-cache-invalidation tools/dew check --cache-report \
   > .tmp/dew-cache-content-changed.txt
 grep -q '^standard interface cache: miss$' .tmp/dew-cache-content-first.txt
 grep -q '^standard interface cache: miss$' .tmp/dew-cache-content-changed.txt
+grep -q '^parse event cache: hits 0, misses ' \
+  .tmp/dew-cache-content-first.txt
+grep -q '^parse event cache: hits [1-9][0-9]*, misses 1$' \
+  .tmp/dew-cache-content-changed.txt
 test "$(find .tmp/dew-cache-invalidation/interfaces -type f | wc -l)" -eq 2
 rm -rf .tmp/dew-interface-cache .tmp/dew-cache-package-root \
   .tmp/dew-cache-invalidation

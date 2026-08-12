@@ -1,4 +1,8 @@
 import {
   "jtenner/dewdrop/tokenizer",
   "moonbitlang/core/bench",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/strconv",
+  "moonbitlang/core/double",
 }

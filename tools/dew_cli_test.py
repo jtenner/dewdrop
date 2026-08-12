@@ -274,6 +274,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
                     "app.main",
                     "main.dew",
                     "--no-default-preamble",
+                    "--no-parse-event-cache",
                     "--no-interface-cache",
                     "--cache-report",
                     "-o",
@@ -297,7 +298,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
             return value
 
         self.assertEqual(read_u32(), 0x44574352)
-        self.assertEqual(read_u32(), 1)
+        self.assertEqual(read_u32(), 2)
         self.assertEqual(read_u32(), 1)
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "app.wasm")
@@ -309,7 +310,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
         self.assertEqual((read_string(), read_string()), ("dep.value", "a" * 64))
         self.assertEqual(read_u32(), 1)
         self.assertEqual(read_string(), "")
-        self.assertEqual((read_u32(), read_u32(), read_u32()), (0, 0, 1))
+        self.assertEqual((read_u32(), read_u32(), read_u32(), read_u32()), (0, 0, 0, 1))
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "dependency-key")
         self.assertEqual(offset, len(encoded))

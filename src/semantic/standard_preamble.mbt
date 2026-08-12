@@ -4,11 +4,12 @@ pub struct ProgramFile {
   path : String
   source : Bytes
   test_only : Bool
+  parse_events : Array[@parser.ParseEvent]?
 } derive(Eq, Debug)
 
 ///|
 pub fn ProgramFile::new(id : FileId, source : Bytes) -> ProgramFile {
-  { id, path: "", source, test_only: false }
+  { id, path: "", source, test_only: false, parse_events: None }
 }
 
 ///|
@@ -17,7 +18,32 @@ pub fn ProgramFile::named(
   path : String,
   source : Bytes,
 ) -> ProgramFile {
-  { id, path, source, test_only: path.has_suffix("_test.dew") }
+  {
+    id,
+    path,
+    source,
+    test_only: path.has_suffix("_test.dew"),
+    parse_events: None,
+  }
+}
+
+///|
+fn ProgramFile::from_manifest(id : FileId, file : ManifestFile) -> ProgramFile {
+  {
+    id,
+    path: file.path,
+    source: file.source,
+    test_only: file.path.has_suffix("_test.dew"),
+    parse_events: file.parse_events,
+  }
+}
+
+///|
+fn ProgramFile::events(self : ProgramFile) -> Iter[@parser.ParseEvent] {
+  match self.parse_events {
+    Some(events) => events.iter()
+    None => @parser.parse_bytes(self.source)
+  }
 }
 
 ///|
@@ -48,7 +74,7 @@ fn selected_standard_modules(
   let mut collection_mask = 0
   let mut lane_mask = 0
   for file in files {
-    let events = @parser.parse_bytes(file.source)
+    let events = file.events()
     let mut scanning = true
     while scanning {
       match events.next() {
@@ -205,12 +231,7 @@ fn collect_program_files_with_optional_preamble(
     if file.test_only {
       builder.test_files.push(file.id)
     }
-    builder.collect_file_events(
-      file.id,
-      file.path,
-      file.source,
-      @parser.parse_bytes(file.source),
-    )
+    builder.collect_file_events(file.id, file.path, file.source, file.events())
   }
   builder.finish()
 }

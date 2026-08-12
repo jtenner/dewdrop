@@ -2,11 +2,28 @@
 pub struct ManifestFile {
   path : String
   source : Bytes
+  parse_events : Array[@parser.ParseEvent]?
 } derive(Eq, Debug)
 
 ///|
 pub fn ManifestFile::new(path : String, source : Bytes) -> ManifestFile {
-  { path, source }
+  { path, source, parse_events: None }
+}
+
+///|
+pub fn ManifestFile::with_parse_events(
+  self : ManifestFile,
+  parse_events : Array[@parser.ParseEvent],
+) -> ManifestFile {
+  { ..self, parse_events: Some(parse_events) }
+}
+
+///|
+fn ManifestFile::events(self : ManifestFile) -> Iter[@parser.ParseEvent] {
+  match self.parse_events {
+    Some(events) => events.iter()
+    None => @parser.parse_bytes(self.source)
+  }
 }
 
 ///|
@@ -39,6 +56,7 @@ pub fn ProgramManifest::new(modules : Array[ManifestModule]) -> ProgramManifest 
 pub struct StandardLibrarySources {
   paths : Array[String]
   sources : Array[Bytes]
+  parse_events : Array[Array[@parser.ParseEvent]?]
   lookup : Map[String, Int]
 }
 
@@ -48,6 +66,7 @@ pub fn StandardLibrarySources::new(
 ) -> StandardLibrarySources {
   let paths : Array[String] = []
   let sources : Array[Bytes] = []
+  let parse_events : Array[Array[@parser.ParseEvent]?] = []
   let lookup : Map[String, Int] = Map::default()
   for file in files {
     guard !lookup.contains(file.path) else {
@@ -56,8 +75,9 @@ pub fn StandardLibrarySources::new(
     lookup[file.path] = paths.length()
     paths.push(file.path)
     sources.push(file.source)
+    parse_events.push(file.parse_events)
   }
-  { paths, sources, lookup }
+  { paths, sources, parse_events, lookup }
 }
 
 ///|
@@ -74,18 +94,34 @@ pub fn StandardLibrarySources::bootstrap() -> StandardLibrarySources {
 }
 
 ///|
-fn StandardLibrarySources::source(
+fn StandardLibrarySources::file(
   self : StandardLibrarySources,
   path : String,
-) -> Bytes {
+) -> ManifestFile {
   match self.lookup.get(path) {
-    Some(index) => self.sources[index]
+    Some(index) =>
+      {
+        path: self.paths[index],
+        source: self.sources[index],
+        parse_events: self.parse_events[index],
+      }
     None =>
       match @standard_sources.bootstrap_standard_source(path) {
-        Some(source) => source
+        Some(source) => ManifestFile::new(path, source)
         None => abort("standard source provider is missing \{path}")
       }
   }
+}
+
+///|
+pub fn StandardLibrarySources::with_parse_events(
+  self : StandardLibrarySources,
+  parse_events : Array[Array[@parser.ParseEvent]?],
+) -> StandardLibrarySources {
+  guard parse_events.length() == self.sources.length() else {
+    abort("standard source parse-event count mismatch")
+  }
+  { ..self, parse_events, }
 }
 
 ///|
@@ -170,7 +206,7 @@ pub fn required_standard_library_source_paths(
         ),
       )
       next_file += 1
-      let events = @parser.parse_bytes(file.source)
+      let events = file.events()
       let mut scanning = true
       while scanning {
         match events.next() {
@@ -328,10 +364,9 @@ fn standard_preamble_program_files(
   let files : Array[ProgramFile] = []
   for index, path in paths {
     files.push(
-      ProgramFile::named(
+      ProgramFile::from_manifest(
         make_program_file_id(module_id, index),
-        path,
-        standard_sources.source(path),
+        standard_sources.file(path),
       ),
     )
   }
@@ -342,7 +377,7 @@ fn standard_preamble_program_files(
 fn standard_library_program_files(
   module_id : ModuleId,
   logical_path : String,
-  source : Bytes,
+  standard_sources : StandardLibrarySources,
   import_text_runtime : Bool,
   import_option : Bool,
 ) -> Array[ProgramFile] {
@@ -364,10 +399,9 @@ fn standard_library_program_files(
     )
   }
   files.push(
-    ProgramFile::named(
+    ProgramFile::from_manifest(
       make_program_file_id(module_id, files.length()),
-      logical_path,
-      source,
+      standard_sources.file(logical_path),
     ),
   )
   files
@@ -423,10 +457,9 @@ pub fn collect_program_manifest_with_standard_sources(
       }
       let module_id = manifest_module_id(module_id_base, module_index)
       files.push(
-        ProgramFile::named(
+        ProgramFile::from_manifest(
           make_program_file_id(module_id, file_index),
-          file.path,
-          file.source,
+          file,
         ),
       )
     }
@@ -483,11 +516,7 @@ pub fn collect_program_manifest_with_standard_sources(
     collect_program_files_with_frozen_standard_imports(
       option_module_id,
       standard_library_program_files(
-        option_module_id,
-        "std/option.dew",
-        standard_sources.source("std/option.dew"),
-        false,
-        false,
+        option_module_id, "std/option.dew", standard_sources, false, false,
       ),
     ),
   )
@@ -499,11 +528,7 @@ pub fn collect_program_manifest_with_standard_sources(
     collect_program_files_with_frozen_standard_imports(
       result_module_id,
       standard_library_program_files(
-        result_module_id,
-        "std/result.dew",
-        standard_sources.source("std/result.dew"),
-        false,
-        false,
+        result_module_id, "std/result.dew", standard_sources, false, false,
       ),
     ),
   )
@@ -516,11 +541,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/fixed_array.dew",
-          standard_sources.source("std/fixed_array.dew"),
-          false,
-          false,
+          module_id, "std/fixed_array.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -534,11 +555,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/map.dew",
-          standard_sources.source("std/map.dew"),
-          false,
-          false,
+          module_id, "std/map.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -552,11 +569,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/array.dew",
-          standard_sources.source("std/array.dew"),
-          false,
-          false,
+          module_id, "std/array.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -570,11 +583,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/set.dew",
-          standard_sources.source("std/set.dew"),
-          false,
-          false,
+          module_id, "std/set.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -588,11 +597,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/stack.dew",
-          standard_sources.source("std/collections/stack.dew"),
-          false,
-          false,
+          module_id, "std/collections/stack.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -606,11 +611,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/queue.dew",
-          standard_sources.source("std/queue.dew"),
-          false,
-          false,
+          module_id, "std/queue.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -624,10 +625,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/circular_buffer.dew",
-          standard_sources.source("std/collections/circular_buffer.dew"),
-          false,
+          module_id, "std/collections/circular_buffer.dew", standard_sources, false,
           false,
         ),
       ),
@@ -642,11 +640,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/deque.dew",
-          standard_sources.source("std/collections/deque.dew"),
-          false,
-          false,
+          module_id, "std/collections/deque.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -660,11 +654,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/ordering.dew",
-          standard_sources.source("std/ordering.dew"),
-          false,
-          false,
+          module_id, "std/ordering.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -678,10 +668,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/binary_heap.dew",
-          standard_sources.source("std/collections/binary_heap.dew"),
-          false,
+          module_id, "std/collections/binary_heap.dew", standard_sources, false,
           false,
         ),
       ),
@@ -696,10 +683,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/priority_queue.dew",
-          standard_sources.source("std/collections/priority_queue.dew"),
-          false,
+          module_id, "std/collections/priority_queue.dew", standard_sources, false,
           false,
         ),
       ),
@@ -714,10 +698,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/red_black_tree.dew",
-          standard_sources.source("std/collections/red_black_tree.dew"),
-          false,
+          module_id, "std/collections/red_black_tree.dew", standard_sources, false,
           false,
         ),
       ),
@@ -732,10 +713,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/ordered_map.dew",
-          standard_sources.source("std/collections/ordered_map.dew"),
-          false,
+          module_id, "std/collections/ordered_map.dew", standard_sources, false,
           false,
         ),
       ),
@@ -750,10 +728,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/collections/ordered_set.dew",
-          standard_sources.source("std/collections/ordered_set.dew"),
-          false,
+          module_id, "std/collections/ordered_set.dew", standard_sources, false,
           false,
         ),
       ),
@@ -768,11 +743,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/text_runtime.dew",
-          standard_sources.source("std/text_runtime.dew"),
-          false,
-          false,
+          module_id, "std/text_runtime.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -796,7 +767,7 @@ pub fn collect_program_manifest_with_standard_sources(
           standard_library_program_files(
             module_id,
             text_files[source_index - 1],
-            standard_sources.source(text_files[source_index - 1]),
+            standard_sources,
             true,
             source_index == 1 || source_index == 4,
           ),
@@ -813,11 +784,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/text.dew",
-          standard_sources.source("std/text.dew"),
-          false,
-          false,
+          module_id, "std/text.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -831,11 +798,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/show.dew",
-          standard_sources.source("std/show.dew"),
-          false,
-          false,
+          module_id, "std/show.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -849,11 +812,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/disposable.dew",
-          standard_sources.source("std/disposable.dew"),
-          false,
-          false,
+          module_id, "std/disposable.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -867,11 +826,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/wasi.dew",
-          standard_sources.source("std/wasi.dew"),
-          false,
-          false,
+          module_id, "std/wasi.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -885,11 +840,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id,
-          "std/wasm/intrinsics.dew",
-          standard_sources.source("std/wasm/intrinsics.dew"),
-          false,
-          false,
+          module_id, "std/wasm/intrinsics.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -909,7 +860,7 @@ pub fn collect_program_manifest_with_standard_sources(
         standard_library_program_files(
           module_id,
           "std/" + path[8:].to_owned() + ".dew",
-          standard_sources.source("std/" + path[8:].to_owned() + ".dew"),
+          standard_sources,
           false,
           false,
         ),

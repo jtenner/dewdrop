@@ -4,7 +4,7 @@
 pub enum DeclarationVisibility {
   ModuleVisible
   Public
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// Initial type-expression representation. Generic parameters and named types
@@ -13,7 +13,7 @@ pub enum TypeExpr {
   NamedType(String, UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
   FunctionType(Array[TypeExpr], TypeExpr, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn TypeExpr::offset(self : TypeExpr) -> UInt64 {
@@ -29,21 +29,21 @@ pub struct TypeParameter {
   name : String
   bounds : Array[TypeExpr]
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 /// One trait requested by a postfix `derive(...)` clause.
 pub struct DeriveRequest {
   name : String
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct FnParameter {
   name : String
   type_ : TypeExpr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct BuiltinDeclaration {
@@ -55,7 +55,7 @@ pub struct BuiltinDeclaration {
   return_type : TypeExpr
   builtin_name : Bytes
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct ImportDeclaration {
@@ -65,7 +65,7 @@ pub struct ImportDeclaration {
   import_alias : String?
   import_alias_offset : UInt64
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct LetDeclaration {
@@ -75,13 +75,13 @@ pub struct LetDeclaration {
   name_offset : UInt64
   value : Expr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct ReceiverParameter {
   explicit_type : TypeExpr?
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 priv struct ParsedFunctionParameters {
@@ -97,7 +97,7 @@ pub struct TraitMethod {
   parameters : Array[FnParameter]
   return_type : TypeExpr
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn TraitMethod::has_receiver(self : TraitMethod) -> Bool {
@@ -112,7 +112,7 @@ pub struct TraitDeclaration {
   type_parameters : Array[TypeParameter]
   methods : Array[TraitMethod]
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum Declaration {
@@ -126,7 +126,7 @@ pub enum Declaration {
   Struct(StructDeclaration)
   Enum(EnumDeclaration)
   TypeAlias(TypeAliasDeclaration)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn Declaration::offset(self : Declaration) -> UInt64 {
@@ -190,7 +190,7 @@ pub enum DeclarationExpectation {
   Equal
   BuiltinString
   LineEnd
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum DeclarationError {
@@ -211,7 +211,7 @@ pub enum DeclarationError {
   EmptyTupleVariant(UInt64)
   PublicImplNotAllowed(UInt64)
   ForeignImplRequiresTrait(UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn DeclarationError::offset(self : DeclarationError) -> UInt64 {
