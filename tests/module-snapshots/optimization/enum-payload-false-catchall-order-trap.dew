@@ -1,0 +1,21 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  match Maybe::Some(trap_first(), trap_second()) {
+    _ if false => 0
+    ignored if false => 1
+    Maybe::Some(first, second) => second
+    Maybe::None => 0
+  }
+}

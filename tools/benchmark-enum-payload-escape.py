@@ -66,6 +66,21 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+FALSE_CATCHALL = """enum Maybe {
+  Some(I32)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  match Maybe::Some(value) {
+    _ if false => 0
+    ignored if false => 1
+    Maybe::Some(item) => item
+    Maybe::None => 0
+  }
+}
+"""
+
 LOCAL = """enum Maybe {
   Some(I32)
   None
@@ -272,6 +287,7 @@ def main() -> None:
     arm_order = build("arm-order", ARM_ORDER)
     alternative = build("alternative", ALTERNATIVE)
     constant_guard = build("constant-guard", CONSTANT_GUARD)
+    false_catchall = build("false-catchall", FALSE_CATCHALL)
     local = build("local", LOCAL)
     struct = build("struct", STRUCT)
     struct_baseline = build("struct-baseline", STRUCT_BASELINE)
@@ -284,6 +300,7 @@ def main() -> None:
             arm_order,
             alternative,
             constant_guard,
+            false_catchall,
             local,
             struct,
             nested,
@@ -298,6 +315,7 @@ def main() -> None:
     arm_order_median = statistics.median(raw[str(arm_order)])
     alternative_median = statistics.median(raw[str(alternative)])
     constant_guard_median = statistics.median(raw[str(constant_guard)])
+    false_catchall_median = statistics.median(raw[str(false_catchall)])
     local_median = statistics.median(raw[str(local)])
     struct_median = statistics.median(raw[str(struct)])
     nested_median = statistics.median(raw[str(nested)])
@@ -311,6 +329,7 @@ def main() -> None:
         "arm_order_median_us": round(arm_order_median, 4),
         "alternative_median_us": round(alternative_median, 4),
         "constant_guard_median_us": round(constant_guard_median, 4),
+        "false_catchall_median_us": round(false_catchall_median, 4),
         "local_median_us": round(local_median, 4),
         "struct_median_us": round(struct_median, 4),
         "nested_median_us": round(nested_median, 4),
@@ -321,6 +340,7 @@ def main() -> None:
         "arm_order_ratio": round(arm_order_median / baseline_median, 4),
         "alternative_ratio": round(alternative_median / baseline_median, 4),
         "constant_guard_ratio": round(constant_guard_median / baseline_median, 4),
+        "false_catchall_ratio": round(false_catchall_median / baseline_median, 4),
         "local_ratio": round(local_median / baseline_median, 4),
         "struct_ratio": round(struct_median / struct_baseline_median, 4),
         "nested_ratio": round(nested_median / nested_baseline_median, 4),
@@ -328,6 +348,7 @@ def main() -> None:
         "arm_order_wasm_bytes": arm_order.stat().st_size,
         "alternative_wasm_bytes": alternative.stat().st_size,
         "constant_guard_wasm_bytes": constant_guard.stat().st_size,
+        "false_catchall_wasm_bytes": false_catchall.stat().st_size,
         "local_wasm_bytes": local.stat().st_size,
         "struct_wasm_bytes": struct.stat().st_size,
         "nested_wasm_bytes": nested.stat().st_size,
@@ -342,6 +363,8 @@ def main() -> None:
         "alternative_struct_get": wat_count(alternative, "struct.get"),
         "constant_guard_struct_new": wat_count(constant_guard, "struct.new"),
         "constant_guard_struct_get": wat_count(constant_guard, "struct.get"),
+        "false_catchall_struct_new": wat_count(false_catchall, "struct.new"),
+        "false_catchall_struct_get": wat_count(false_catchall, "struct.get"),
         "local_struct_new": wat_count(local, "struct.new"),
         "local_struct_get": wat_count(local, "struct.get"),
         "struct_struct_new": wat_count(struct, "struct.new"),

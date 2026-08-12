@@ -4277,19 +4277,26 @@ fn scalar_replace_program_variant_payload_match(
       candidate.body >= module_.expressions.length() {
       return false
     }
+    let guard_constant = if candidate.guard_condition < 0 {
+      1
+    } else if candidate.guard_condition >= module_.expressions.length() {
+      -1
+    } else {
+      match module_.expressions[candidate.guard_condition].kind {
+        PlannedBoolConst(false) => 0
+        PlannedBoolConst(true) => 1
+        _ => -1
+      }
+    }
+    if guard_constant == 0 {
+      continue
+    }
     match program_pattern_variant_relation(
       module_, candidate.pattern, variant, 0,
     ) {
       1 => {
-        if candidate.guard_condition >= 0 {
-          if candidate.guard_condition >= module_.expressions.length() {
-            return false
-          }
-          match module_.expressions[candidate.guard_condition].kind {
-            PlannedBoolConst(false) => continue
-            PlannedBoolConst(true) => ()
-            _ => return false
-          }
+        if guard_constant < 0 {
+          return false
         }
         selected_arm = arms.start + index
         break
