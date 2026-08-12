@@ -25,6 +25,40 @@ def source(aliases: int, mutable: bool) -> str:
 """
 
 
+def reference_source(mutable: bool) -> str:
+    binding = "let mut alias = source" if mutable else "let alias = source"
+    return f"""struct Token {{
+  value: I32
+}}
+
+pub fn main(value: I32) -> I32 {{
+  let source = Token {{
+    value: value + 1
+  }}
+  {binding}
+  source.value - alias.value + source.value
+}}
+"""
+
+
+def generic_source(mutable: bool) -> str:
+    binding = "let mut alias = source" if mutable else "let alias = source"
+    return f"""fn select_second<t>(first: t, second: t) -> t {{
+  second
+}}
+
+fn shared<t>(value: t) -> t {{
+  let source = value
+  {binding}
+  select_second(source, alias)
+}}
+
+pub fn main(value: I32) -> I32 {{
+  shared(value + 1)
+}}
+"""
+
+
 def build(name: str, text: str) -> Path:
     source_path = TMP / f"{name}.dew"
     wasm_path = TMP / f"{name}.wasm"
@@ -98,9 +132,32 @@ def main() -> None:
     TMP.mkdir(parents=True, exist_ok=True)
     coalesced = build("coalesced", source(args.aliases, False))
     retained = build("retained", source(args.aliases, True))
-    raw = measure([coalesced, retained], args.samples, args.batch)
+    reference_coalesced = build(
+        "reference-coalesced", reference_source(False),
+    )
+    reference_retained = build(
+        "reference-retained", reference_source(True),
+    )
+    generic_coalesced = build("generic-coalesced", generic_source(False))
+    generic_retained = build("generic-retained", generic_source(True))
+    raw = measure(
+        [
+            coalesced,
+            retained,
+            reference_coalesced,
+            reference_retained,
+            generic_coalesced,
+            generic_retained,
+        ],
+        args.samples,
+        args.batch,
+    )
     coalesced_us = statistics.median(raw[str(coalesced)])
     retained_us = statistics.median(raw[str(retained)])
+    reference_coalesced_us = statistics.median(raw[str(reference_coalesced)])
+    reference_retained_us = statistics.median(raw[str(reference_retained)])
+    generic_coalesced_us = statistics.median(raw[str(generic_coalesced)])
+    generic_retained_us = statistics.median(raw[str(generic_retained)])
     print(json.dumps({
         "aliases": args.aliases,
         "samples": args.samples,
@@ -114,6 +171,44 @@ def main() -> None:
         "coalesced_local_set": wat_count(coalesced, "local.set"),
         "retained_local_get": wat_count(retained, "local.get"),
         "retained_local_set": wat_count(retained, "local.set"),
+        "reference_coalesced_median_us": round(reference_coalesced_us, 4),
+        "reference_retained_median_us": round(reference_retained_us, 4),
+        "reference_ratio": round(
+            reference_coalesced_us / reference_retained_us, 4,
+        ),
+        "reference_coalesced_wasm_bytes": reference_coalesced.stat().st_size,
+        "reference_retained_wasm_bytes": reference_retained.stat().st_size,
+        "reference_coalesced_local_get": wat_count(
+            reference_coalesced, "local.get",
+        ),
+        "reference_coalesced_local_set": wat_count(
+            reference_coalesced, "local.set",
+        ),
+        "reference_retained_local_get": wat_count(
+            reference_retained, "local.get",
+        ),
+        "reference_retained_local_set": wat_count(
+            reference_retained, "local.set",
+        ),
+        "generic_coalesced_median_us": round(generic_coalesced_us, 4),
+        "generic_retained_median_us": round(generic_retained_us, 4),
+        "generic_ratio": round(
+            generic_coalesced_us / generic_retained_us, 4,
+        ),
+        "generic_coalesced_wasm_bytes": generic_coalesced.stat().st_size,
+        "generic_retained_wasm_bytes": generic_retained.stat().st_size,
+        "generic_coalesced_local_get": wat_count(
+            generic_coalesced, "local.get",
+        ),
+        "generic_coalesced_local_set": wat_count(
+            generic_coalesced, "local.set",
+        ),
+        "generic_retained_local_get": wat_count(
+            generic_retained, "local.get",
+        ),
+        "generic_retained_local_set": wat_count(
+            generic_retained, "local.set",
+        ),
     }, indent=2, sort_keys=True))
 
 

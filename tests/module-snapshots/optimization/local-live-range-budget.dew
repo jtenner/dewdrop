@@ -1,0 +1,61 @@
+struct Token {
+  value: I32
+}
+
+fn shared_reference(value: Token) -> I32 {
+  let source = value
+  let alias = source
+  source.value + alias.value
+}
+
+fn sequential_reference(value: Token) -> I32 {
+  let source = value
+  let first = source.value
+  let alias = source
+  first + alias.value
+}
+
+fn branched_reference(value: Token, flag: Bool) -> I32 {
+  let source = value
+  let alias = source
+  if flag {
+    source.value
+  } else {
+    alias.value
+  }
+}
+
+fn looped_reference(value: Token) -> I32 {
+  let source = value
+  let first = source.value
+  let alias = source
+  let second = while 0 {
+    0 => break alias.value
+    state => continue state - 1
+  }
+  first + second
+}
+
+fn select_second<t>(first: t, second: t) -> t {
+  second
+}
+
+fn shared_generic<t>(value: t) -> t {
+  let source = value
+  let alias = source
+  select_second(source, alias)
+}
+
+pub fn main() -> I32 {
+  shared_reference(Token {
+    value: 2
+  }) + sequential_reference(Token {
+    value: 3
+  }) + branched_reference(Token {
+    value: 4
+  }, true) + branched_reference(Token {
+    value: 5
+  }, false) + looped_reference(Token {
+    value: 6
+  }) + shared_generic(7)
+}

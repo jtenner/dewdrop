@@ -1859,7 +1859,7 @@ test "immutable local aliases coalesce into source storage" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nfn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn shared(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\nfn retained(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  source.value + alias.value\n}\npub fn main() -> I32 {\n  coalesced(20) + shared(9) + retained(Token {\n    value: 1\n  })\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nfn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn shared(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\nfn retained(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  source.value + alias.value\n}\nfn sequential(value: Token) -> I32 {\n  let source = value\n  let first = source.value\n  let alias = source\n  first + alias.value\n}\nfn branched(value: Token, flag: Bool) -> I32 {\n  let source = value\n  let alias = source\n  if flag {\n    source.value\n  } else {\n    alias.value\n  }\n}\nfn looped(value: Token) -> I32 {\n  let source = value\n  let first = source.value\n  let alias = source\n  let second = while 0 {\n    0 => break alias.value\n    state => continue state - 1\n  }\n  first + second\n}\nfn select_second<t>(first: t, second: t) -> t {\n  second\n}\nfn generic_shared<t>(value: t) -> t {\n  let source = value\n  let alias = source\n  select_second(source, alias)\n}\nfn mutable_retained(value: Token) -> I32 {\n  let source = value\n  let mut alias = source\n  source.value + alias.value\n}\npub fn main() -> I32 {\n  coalesced(20) + shared(9) + retained(Token {\n    value: 1\n  }) + sequential(Token {\n    value: 2\n  }) + branched(Token {\n    value: 3\n  }, true) + branched(Token {\n    value: 4\n  }, false) + looped(Token {\n    value: 5\n  }) + generic_shared(6) + mutable_retained(Token {\n    value: 7\n  })\n}\n",
         ),
       ]),
     ]),
@@ -1908,7 +1908,77 @@ test "immutable local aliases coalesce into source storage" {
   let retained_items = optimized.modules[0].blocks[retained_block].items
   assert_true(
     optimized.modules[0].block_items[retained_items.start + 1].kind
-    is PlannedLetItem(_, false, _),
+    is PlannedElidedLetItem(_),
+  )
+  let sequential = collected.lookup_value("sequential").unwrap()
+  let sequential_source = collected.body_of(sequential).unwrap()
+  let sequential_body = optimized.modules[0].bodies[semantic_id_local(
+      sequential_source.id,
+    )]
+  let sequential_block = match sequential_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected sequential block")
+  }
+  let sequential_items = optimized.modules[0].blocks[sequential_block].items
+  assert_true(
+    optimized.modules[0].block_items[sequential_items.start + 2].kind
+    is PlannedElidedLetItem(_),
+  )
+  let branched = collected.lookup_value("branched").unwrap()
+  let branched_source = collected.body_of(branched).unwrap()
+  let branched_body = optimized.modules[0].bodies[semantic_id_local(
+      branched_source.id,
+    )]
+  let branched_block = match branched_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected branched block")
+  }
+  let branched_items = optimized.modules[0].blocks[branched_block].items
+  assert_true(
+    optimized.modules[0].block_items[branched_items.start + 1].kind
+    is PlannedElidedLetItem(_),
+  )
+  let looped = collected.lookup_value("looped").unwrap()
+  let looped_source = collected.body_of(looped).unwrap()
+  let looped_body = optimized.modules[0].bodies[semantic_id_local(
+      looped_source.id,
+    )]
+  let looped_block = match looped_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected looped block")
+  }
+  let looped_items = optimized.modules[0].blocks[looped_block].items
+  assert_true(
+    optimized.modules[0].block_items[looped_items.start + 2].kind
+    is PlannedElidedLetItem(_),
+  )
+  let generic_shared = collected.lookup_value("generic_shared").unwrap()
+  let generic_source = collected.body_of(generic_shared).unwrap()
+  let generic_body = optimized.modules[0].bodies[semantic_id_local(
+      generic_source.id,
+    )]
+  let generic_block = match generic_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected generic block")
+  }
+  let generic_items = optimized.modules[0].blocks[generic_block].items
+  assert_true(
+    optimized.modules[0].block_items[generic_items.start + 1].kind
+    is PlannedElidedLetItem(_),
+  )
+  let mutable_retained = collected.lookup_value("mutable_retained").unwrap()
+  let mutable_source = collected.body_of(mutable_retained).unwrap()
+  let mutable_body = optimized.modules[0].bodies[semantic_id_local(
+      mutable_source.id,
+    )]
+  let mutable_block = match mutable_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected mutable block")
+  }
+  let mutable_items = optimized.modules[0].blocks[mutable_block].items
+  assert_true(
+    optimized.modules[0].block_items[mutable_items.start + 1].kind
+    is PlannedLetItem(_, true, _),
   )
   let unoptimized_body = unoptimized.modules[0].bodies[semantic_id_local(
       coalesced_source.id,
@@ -1922,6 +1992,39 @@ test "immutable local aliases coalesce into source storage" {
     unoptimized.modules[0].block_items[unoptimized_items.start + 1].kind
     is PlannedLetItem(_, false, _),
   )
+}
+
+///|
+test "reference alias coalescing rejects mutation and captures" {
+  let program = collect_program_manifest(
+    22839UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Token {\n  value: I32\n}\nfn mutable_source(value: Token) -> I32 {\n  let mut source = value\n  let alias = source\n  source.value + alias.value\n}\nfn captured_source(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  let read = fn() -> I32 {\n    source.value\n  }\n  read() + alias.value\n}\nfn captured_alias(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  let read = fn() -> I32 {\n    alias.value\n  }\n  source.value + read()\n}\npub fn main() -> I32 {\n  mutable_source(Token {\n    value: 1\n  }) + captured_source(Token {\n    value: 2\n  }) + captured_alias(Token {\n    value: 3\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let optimized = optimize_program_lowering(
+    plan_unoptimized_program_lowering(program, analyzed),
+  )
+  let collected = program.modules[0]
+  for name in ["mutable_source", "captured_source", "captured_alias"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let source_body = collected.body_of(declaration).unwrap()
+    let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+    let block = match body.root {
+      BlockBodyRoot(block) => block
+      _ => abort("expected block")
+    }
+    let items = optimized.modules[0].blocks[block].items
+    assert_true(
+      optimized.modules[0].block_items[items.start + 1].kind
+      is PlannedLetItem(_, false, _),
+    )
+  }
 }
 
 ///|

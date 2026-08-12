@@ -754,7 +754,7 @@
     call 18
   )
   (func (;25;) (type 28)
-    (local eqref eqref eqref eqref eqref)
+    (local eqref eqref eqref eqref)
     v128.const i32x4 0xe2a2c224 0x90f0ac82 0x0000888d 0x00000000
     array.new_fixed 29 1
     i32.const 0
@@ -762,8 +762,6 @@
     struct.new 30
     call 19
     local.set 0
-    local.get 0
-    local.set 1
     local.get 0
     ref.cast (ref 3)
     call 21
@@ -792,7 +790,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 1
+    local.get 0
     ref.cast (ref 3)
     call 22
     i32.const 162
@@ -859,8 +857,8 @@
     i32.const 0
     struct.new 30
     call 19
-    local.set 2
-    local.get 2
+    local.set 1
+    local.get 1
     ref.cast (ref 3)
     call 21
     i32.eqz
@@ -879,14 +877,14 @@
     i32.const 0
     i32.const 12
     struct.new 30
-    local.set 3
-    local.get 3
+    local.set 2
+    local.get 2
     i32.const 1
     i32.const 10
     call 1
     call 20
-    local.set 4
-    local.get 4
+    local.set 3
+    local.get 3
     ref.cast (ref 4)
     call 24
     i32.const 36
@@ -901,7 +899,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 4
+    local.get 3
     ref.cast (ref 4)
     call 24
     i32.const 162
@@ -916,7 +914,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 4
+    local.get 3
     ref.cast (ref 4)
     call 24
     i32.const 8364
@@ -931,7 +929,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 4
+    local.get 3
     ref.cast (ref 4)
     call 24
     i32.const 66376
@@ -946,7 +944,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 4
+    local.get 3
     ref.cast (ref 4)
     call 23
     i32.eqz

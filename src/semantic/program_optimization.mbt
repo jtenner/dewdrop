@@ -2680,6 +2680,81 @@ fn program_cse_elide_local_alias(
 }
 
 ///|
+priv struct ProgramLocalLiveRange {
+  first_read : ExprId
+  last_read : ExprId
+  reads : Int
+  writes : Int
+}
+
+///|
+fn program_local_live_range(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+) -> ProgramLocalLiveRange {
+  let mut first_read = -1
+  let mut last_read = -1
+  let mut reads = 0
+  let mut writes = 0
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match module_.expressions[expression].kind {
+      PlannedLocalGet(source_local) if source_local == local_id => {
+        if first_read < 0 {
+          first_read = expression
+        }
+        last_read = expression
+        reads += 1
+      }
+      PlannedLocalSet(target_local, _) if target_local == local_id =>
+        writes += 1
+      _ => ()
+    }
+  }
+  { first_read, last_read, reads, writes }
+}
+
+///|
+fn program_local_live_ranges_interfere(
+  first : ProgramLocalLiveRange,
+  second : ProgramLocalLiveRange,
+) -> Bool {
+  first.reads > 0 &&
+  second.reads > 0 &&
+  first.first_read <= second.last_read &&
+  second.first_read <= first.last_read
+}
+
+///|
+fn program_alias_live_ranges_are_compatible(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  source_local : LocalId,
+  alias_local : LocalId,
+  initializer : ExprId,
+) -> Bool {
+  let source = program_local_live_range(module_, body, source_local)
+  let alias_range = program_local_live_range(module_, body, alias_local)
+  if source.writes != 0 ||
+    alias_range.writes != 0 ||
+    source.reads < 1 ||
+    source.first_read < 0 ||
+    source.first_read > initializer ||
+    source.last_read < initializer ||
+    (alias_range.reads > 0 && alias_range.first_read <= initializer) {
+    return false
+  }
+  if !program_local_live_ranges_interfere(source, alias_range) {
+    return true
+  }
+  // Overlap is safe because the direct alias carries the same immutable value.
+  // Reusing the source local removes a duplicate GC root without extending life.
+  true
+}
+
+///|
 fn program_alias_shared_source_shape(shape : PlannedValueShape) -> Bool {
   match shape {
     ErrorPlannedValueShape
@@ -2744,7 +2819,10 @@ fn coalesce_program_immutable_local_aliases(
           )
           if (
               source_uses != 1 &&
-              !program_alias_shared_source_shape(source_info.shape)
+              !program_alias_shared_source_shape(source_info.shape) &&
+              !program_alias_live_ranges_are_compatible(
+                module_, body, source_local, alias_local, initializer,
+              )
             ) ||
             !program_cse_elide_local_alias(
               module_, body, alias_local, source_local,

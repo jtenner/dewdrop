@@ -1,0 +1,13 @@
+struct Token {
+  value: I32
+}
+
+fn trap_source() -> Token {
+  unreachable()
+}
+
+pub fn main() -> I32 {
+  let source = trap_source()
+  let alias = source
+  source.value + alias.value
+}

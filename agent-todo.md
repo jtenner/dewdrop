@@ -13,8 +13,7 @@
 
 ## Optimization
 
-- [ ] Model local live ranges and interference across branches, loops, and joins.
-- [ ] Evaluate shared reference/generic alias coalescing through that model.
+- [ ] Add measured physical local-slot reuse for proven noninterfering scalar/reference/generic ranges.
 - [ ] Add tail-position branch optimization.
 - [ ] Measure and implement a first conservative private scalar-enum representation specialization.
 

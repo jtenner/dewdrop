@@ -1,0 +1,66 @@
+struct Token {
+  value: I32
+}
+
+fn shared_reference(value: Token) -> I32 {
+  let source = value
+  let alias = source
+  source.value + alias.value
+}
+
+fn sequential_reference(value: Token) -> I32 {
+  let source = value
+  let first = source.value
+  let alias = source
+  first + alias.value
+}
+
+fn branched_reference(value: Token, flag: Bool) -> I32 {
+  let source = value
+  let alias = source
+  if flag {
+    source.value
+  } else {
+    alias.value
+  }
+}
+
+fn looped_reference(value: Token) -> I32 {
+  let source = value
+  let first = source.value
+  let alias = source
+  let second = while 0 {
+    0 => break alias.value
+    state => continue state - 1
+  }
+  first + second
+}
+
+fn select_second<t>(first: t, second: t) -> t {
+  second
+}
+
+fn shared_generic<t>(value: t) -> t {
+  let source = value
+  let alias = source
+  select_second(source, alias)
+}
+
+pub fn main() -> Unit {
+  assert(shared_reference(Token {
+    value: 2
+  }) == 4, "shared reference")
+  assert(sequential_reference(Token {
+    value: 3
+  }) == 6, "sequential reference")
+  assert(branched_reference(Token {
+    value: 4
+  }, true) == 4, "reference then branch")
+  assert(branched_reference(Token {
+    value: 5
+  }, false) == 5, "reference else branch")
+  assert(looped_reference(Token {
+    value: 6
+  }) == 12, "reference loop")
+  assert(shared_generic(7) == 7, "shared generic")
+}

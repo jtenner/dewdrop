@@ -134,6 +134,16 @@ remains available for characterization and future baseline snapshots. Callers
 must not mutate returned lowering, frozen interfaces, analyzed semantics,
 fragment plans, or final link plans.
 
+Immutable direct-alias coalescing owns a deterministic body-local interval plan:
+it records first and last expression-arena reads plus read/write counts for each
+candidate local. Scalar carriers may share immutable sources directly. Exact
+references and erased generics additionally require matching inferred type,
+physical shape, and nominal evidence, no mutation or capture, and reads ordered
+around the alias initializer so eliminating duplicate storage cannot lengthen the
+source lifetime. These intervals are an optimization proof, not backend local
+coloring; physical slot reuse still requires control-flow-sensitive dominance,
+interference, and backend local-type grouping.
+
 ## Identity ownership
 
 ### Source and semantic IDs
