@@ -1,0 +1,24 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn wildcard(first: I32, second: I32) -> I32 {
+  match Maybe::Some(first, second) {
+    _ => 42
+    Maybe::Some(left, right) => right
+    Maybe::None => 0
+  }
+}
+
+fn binding(first: I32, second: I32) -> I32 {
+  match Maybe::Some(first, second) {
+    ignored if true => 42
+    Maybe::Some(left, right) => right
+    Maybe::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  wildcard(1, 2) + binding(3, 4)
+}

@@ -314,8 +314,8 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
       wildcard_matches += 1
     }
   }
-  assert_eq(wildcard_variants, 1)
-  assert_eq(wildcard_matches, 1)
+  assert_eq(wildcard_variants, 0)
+  assert_eq(wildcard_matches, 0)
 }
 
 ///|
@@ -455,6 +455,42 @@ test "constant-false catchalls do not intercept fresh payload elimination" {
   assert_eq(variants, 0)
   assert_eq(matches, 0)
   assert_eq(selects, 1)
+}
+
+///|
+test "known fresh variants eliminate independent catchall selection" {
+  let program = collect_program_manifest(
+    22822UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn wildcard(first: I32, second: I32) -> I32 {\n  match Maybe::Some(first, second) {\n    _ => 42\n    Maybe::Some(left, right) => right\n    Maybe::None => 0\n  }\n}\nfn binding(first: I32, second: I32) -> I32 {\n  match Maybe::Some(first, second) {\n    ignored if true => 42\n    Maybe::Some(left, right) => right\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  wildcard(1, 2) + binding(3, 4)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  for name in ["wildcard", "binding"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let body = collected.body_of(declaration).unwrap()
+    let mut variants = 0
+    let mut matches = 0
+    let mut selects = 0
+    for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+      match optimized.modules[0].expressions[expression].kind {
+        PlannedVariantTupleNew(_, _, _) => variants += 1
+        PlannedMatchExpression(_, _) => matches += 1
+        PlannedParameterSelect(_, _) => selects += 1
+        _ => ()
+      }
+    }
+    assert_eq(variants, 0)
+    assert_eq(matches, 0)
+    assert_eq(selects, 1)
+  }
 }
 
 ///|

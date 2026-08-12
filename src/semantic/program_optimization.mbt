@@ -4240,6 +4240,99 @@ fn scalarize_nested_pattern_binding(
 }
 
 ///|
+fn program_pattern_is_direct_catchall(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+) -> Bool {
+  if pattern < 0 || pattern >= module_.patterns.length() {
+    return false
+  }
+  match module_.patterns[pattern].source {
+    HirWildcardPattern(_) | HirBindingPattern(_, _) => true
+    _ => false
+  }
+}
+
+///|
+fn scalar_replace_known_variant_catchall(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  variant_expression : ExprId,
+  arm : PlannedPatternArm,
+) -> Bool {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    variant_expression < 0 ||
+    variant_expression >= module_.expressions.length() ||
+    arm.body < 0 ||
+    arm.body >= module_.expressions.length() ||
+    !program_pattern_is_direct_catchall(module_, arm.pattern) {
+    return false
+  }
+  let source = module_.expressions[expression]
+  let body = module_.expressions[arm.body]
+  if body.type_ != source.type_ ||
+    body.shape != source.shape ||
+    !program_scalar_replaceable_field_shape(source.shape) ||
+    !(body.trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  match body.kind {
+    PlannedI32Const(_)
+    | PlannedU32Const(_)
+    | PlannedI64Const(_)
+    | PlannedU64Const(_)
+    | PlannedF32Const(_)
+    | PlannedF64Const(_)
+    | PlannedBoolConst(_) => ()
+    _ => return false
+  }
+  let selector_start = module_.expression_children.length()
+  match module_.expressions[variant_expression].kind {
+    PlannedVariantTupleNew(_, _, arguments) => {
+      if arguments.start < 0 ||
+        arguments.start + arguments.length > module_.expression_children.length() {
+        return false
+      }
+      for index in 0..<arguments.length {
+        module_.expression_children.push(
+          module_.expression_children[arguments.start + index],
+        )
+      }
+    }
+    PlannedVariantStructNew(_, _, fields) => {
+      if fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() {
+        return false
+      }
+      for index in 0..<fields.length {
+        module_.expression_children.push(
+          module_.object_fields[fields.start + index].value,
+        )
+      }
+    }
+    _ => return false
+  }
+  module_.expression_children.push(arm.body)
+  module_.expressions[expression] = {
+    ..source,
+    kind: PlannedParameterSelect(
+      {
+        start: selector_start,
+        length: module_.expression_children.length() - selector_start,
+      },
+      module_.expression_children.length() - selector_start - 1,
+    ),
+  }
+  let variant_source = module_.expressions[variant_expression]
+  module_.expressions[variant_expression] = {
+    ..variant_source,
+    kind: PlannedConsumedExpression,
+  }
+  true
+}
+
+///|
 fn scalar_replace_program_variant_payload_match(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -4302,7 +4395,15 @@ fn scalar_replace_program_variant_payload_match(
         break
       }
       0 => ()
-      _ => return false
+      _ => {
+        if guard_constant > 0 &&
+          program_pattern_is_direct_catchall(module_, candidate.pattern) {
+          return scalar_replace_known_variant_catchall(
+            module_, expression, variant_expression, candidate,
+          )
+        }
+        return false
+      }
     }
   }
   if selected_arm < 0 {
