@@ -1,0 +1,49 @@
+open dew.std.array
+open dew.std.iter
+open dew.std.wasi
+
+fn add(left: I32, right: I32) -> I32 {
+  left + right
+}
+
+fn is_even(value: I32) -> Bool {
+  value % 2 == 0
+}
+
+fn greater_than_three(value: I32) -> Bool {
+  value > 3
+}
+
+fn is_three(value: I32) -> Bool {
+  value == 3
+}
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+pub fn main() -> Unit {
+  let observed = values()
+  observed.clear()
+  iter_for_each(values().iter(), fn(value: I32) -> Unit {
+    observed.push(value)
+  })
+  assert(observed.length() == 5u32, "iter for_each consumes every value")
+  assert(observed[0u32] == 1, "iter for_each preserves first value")
+  assert(observed[4u32] == 5, "iter for_each preserves final value")
+  assert(iter_fold(values().iter(), 0, add) == 15, "iter fold accumulates")
+  assert(iter_any(values().iter(), is_even), "iter any short circuits")
+  assert(!iter_all(values().iter(), is_even), "iter all short circuits")
+  assert(iter_all(values().iter(), greater_than_three) == false, "iter all false")
+  match iter_find(values().iter(), is_three) {
+    Option::Some(value) => assert(value == 3, "iter find returns first match")
+    Option::None => assert(false, "iter find unexpectedly empty")
+  }
+  wasi_fd_write(1u32, b"collections:iter-combinators")
+}

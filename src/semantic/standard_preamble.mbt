@@ -91,7 +91,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 1023
+            collection_mask = 2047
             show = true
             disposable = true
           } else if import_.path.length() == 4 &&
@@ -139,6 +139,7 @@ fn selected_standard_modules(
               "disposable" => disposable = true
               "queue" => collection_mask = collection_mask | 2
               "ordering" => collection_mask = collection_mask | 16
+              "iter" => collection_mask = collection_mask | 1024
               "i8x4" => lane_mask = lane_mask | 1
               "u8x4" => lane_mask = lane_mask | 2
               "i16x2" => lane_mask = lane_mask | 4

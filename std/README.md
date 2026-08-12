@@ -29,6 +29,7 @@ Text, collection, byte, and Wasm APIs are split into focused `dew.std` modules:
 
 ```text
 dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
+dew.std.iter            eager consuming iterator combinators over Iter<t>
 dew.std.option          ambient generic Option<t>
 dew.std.result          ambient generic Result<t, e>
 dew.std.fixed_array                 fixed-length mutable generic arrays

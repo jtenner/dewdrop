@@ -34,6 +34,14 @@ test "functional while emits scalar state break and continue" {
 }
 
 ///|
+test "generic functional while specializes scalar state and result locals" {
+  let module_ = starshine_while_test_module(
+    b"fn countdown<t>(initial: t) -> t {\n  while initial {\n    value => break value\n  }\n}\npub fn main() -> I32 {\n  countdown(42)\n}\n",
+  )
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "functional while emits enum state guards and reference joins" {
   let module_ = starshine_while_test_module(
     b"enum Step {\n  Next(I32)\n  Done(I32)\n}\npub fn main() -> I32 {\n  while (Step::Next(3)) {\n    Step::Next(value) if value > 0 => continue Step::Next(value - 1)\n    Step::Next(value) => break value\n    Step::Done(value) => break value\n  }\n}\n",

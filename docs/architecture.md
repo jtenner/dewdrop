@@ -283,6 +283,9 @@ loading and provenance remain in `src/standard_loader`, which constructs either
 on-disk or bootstrap `StandardLibrarySources`. Semantic collection consumes that
 ordered provider and does not contain generated standard assets. Tests compare
 every on-disk standard source byte-for-byte with the bootstrap provider.
+Selective loading assigns each split module a stable registry slot and prepass bit;
+`dew.std.iter` is slot 47 and is embedded from `std/iter.dew` by its dedicated
+generator.
 
 ## Frozen interfaces and caches
 

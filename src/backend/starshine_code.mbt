@@ -2915,7 +2915,14 @@ fn starshine_body_locals(
     body.expressions.length) {
     match lowering.expressions[expression].kind {
       @semantic.PlannedWhileExpression(control, initial, _) => {
-        match starshine_shape_value_type(lowering.expressions[initial].shape) {
+        let state_source = lowering.expressions[initial]
+        let state_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          state_source.type_,
+          state_source.shape,
+        )
+        match starshine_shape_value_type(state_shape) {
           Some(type_) => {
             control_state_local_indices[control] = parameter_count +
               body_local_types.length()
@@ -2923,8 +2930,14 @@ fn starshine_body_locals(
           }
           None => ()
         }
-        match
-          starshine_shape_value_type(lowering.expressions[expression].shape) {
+        let result_source = lowering.expressions[expression]
+        let result_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          result_source.type_,
+          result_source.shape,
+        )
+        match starshine_shape_value_type(result_shape) {
           Some(type_) => {
             control_result_local_indices[control] = parameter_count +
               body_local_types.length()
@@ -3041,6 +3054,7 @@ fn starshine_body_locals(
       | @semantic.PlannedCircularBufferPopBack(_, _)
       | @semantic.PlannedCircularBufferPeekBack(_, _)
       | @semantic.PlannedArrayClear(_, _, _)
+      | @semantic.PlannedArrayIterHasNext(_)
       | @semantic.PlannedArrayIterNext(_, _) => {
         if fixed_array_ref_scratch_index < 0 {
           fixed_array_ref_scratch_index = parameter_count +

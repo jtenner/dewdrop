@@ -1,0 +1,74 @@
+fn iter_unit() -> Unit {}
+
+pub fn iter_for_each<t, i: Iter<t>>(
+  iter: i,
+  action: fn(t) -> Unit,
+) -> Unit {
+  while true {
+    true if iter.has_next() => {
+      action(iter.next())
+      continue true
+    }
+    _ => break iter_unit()
+  }
+}
+
+pub fn iter_fold<t, state, i: Iter<t>>(
+  iter: i,
+  initial: state,
+  folder: fn(state, t) -> state,
+) -> state {
+  while initial {
+    value if iter.has_next() => continue folder(value, iter.next())
+    value => break value
+  }
+}
+
+pub fn iter_any<t, i: Iter<t>>(
+  iter: i,
+  predicate: fn(t) -> Bool,
+) -> Bool {
+  while true {
+    true if iter.has_next() => {
+      if predicate(iter.next()) {
+        break true
+      } else {
+        continue true
+      }
+    }
+    _ => break false
+  }
+}
+
+pub fn iter_all<t, i: Iter<t>>(
+  iter: i,
+  predicate: fn(t) -> Bool,
+) -> Bool {
+  while true {
+    true if iter.has_next() => {
+      if predicate(iter.next()) {
+        continue true
+      } else {
+        break false
+      }
+    }
+    _ => break true
+  }
+}
+
+pub fn iter_find<t, i: Iter<t>>(
+  iter: i,
+  predicate: fn(t) -> Bool,
+) -> Option<t> {
+  while true {
+    true if iter.has_next() => {
+      let value = iter.next()
+      if predicate(value) {
+        break Option::Some(value)
+      } else {
+        continue true
+      }
+    }
+    _ => break Option::None
+  }
+}
