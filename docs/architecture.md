@@ -298,11 +298,13 @@ architecture is generalized around `InterfaceBundleCacheKey` and
 envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
 I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. One
 bundle selects compiler-owned standard modules and verified external
-dependencies. Ordinary non-root workspace modules outside cyclic SCCs use one
-atomic artifact each under `.dew/cache/workspace-interfaces/`; lookup occurs in
-dependency order and keys commit to manifest source identity plus direct public
-content fingerprints. Private dependency changes retain downstream hits while
-public interface changes invalidate dependents transitively. Verified package
+dependencies. Ordinary non-root workspace modules use artifacts under
+`.dew/cache/workspace-interfaces/`; acyclic modules publish individually while
+multi-module and self-recursive SCCs publish and load as one atomic artifact.
+Lookup occurs in dependency order and keys commit to manifest source identity
+plus direct public content fingerprints. Private dependency changes retain
+downstream hits while public interface changes invalidate dependents
+transitively. Verified package
 capsules provide artifact-assisted source-tree recovery for missing locked
 dependencies.
 
@@ -314,8 +316,8 @@ order. `parse_event_cache_envelope.mbt` validates key/source provenance and the
 payload checksum; the native platform shim publishes through a flushed,
 POSIX-fsynced same-directory temporary file and atomic rename. Missing entries
 are misses, while malformed, incompatible, mismatched, or corrupt entries fail
-visibly. Body, layout, fragment, and cyclic-workspace-SCC caches remain future
-extensions over these source and interface provenance boundaries.
+visibly. Body, layout, and fragment caches remain future extensions over these
+source and interface provenance boundaries.
 
 ## Program specialization and erased ABI
 

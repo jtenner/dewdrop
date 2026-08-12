@@ -197,10 +197,68 @@ DEW_CACHE_DIR=.tmp/dew-workspace-invalidation/uncached-public tools/dew build \
   --root fixture.main -o .tmp/dew-workspace-invalidation/public-uncached.wasm
 cmp .tmp/dew-workspace-invalidation/public.wasm \
   .tmp/dew-workspace-invalidation/public-uncached.wasm
+rm -rf .tmp/dew-workspace-scc-cache
+mkdir -p .tmp/dew-workspace-scc-cache
+cat > .tmp/dew-workspace-scc-cache/a.dew <<'EOF'
+open cycle.b
+pub struct A {
+  b: B
+}
+pub fn keep_a(value: A) -> A {
+  value
+}
+EOF
+cat > .tmp/dew-workspace-scc-cache/b.dew <<'EOF'
+open cycle.a
+pub struct B {
+  a: A
+}
+pub fn keep_b(value: B) -> B {
+  value
+}
+EOF
+cat > .tmp/dew-workspace-scc-cache/main.dew <<'EOF'
+open cycle.a
+pub fn main() -> I32 {
+  42
+}
+EOF
+workspace_scc_build() {
+  output=$1
+  report=$2
+  DEW_CACHE_DIR=.tmp/dew-workspace-scc-cache/cache tools/dew build \
+    --no-build-cache --cache-report \
+    --module cycle.a .tmp/dew-workspace-scc-cache/a.dew \
+    --module cycle.b .tmp/dew-workspace-scc-cache/b.dew \
+    --module cycle.main .tmp/dew-workspace-scc-cache/main.dew \
+    --root cycle.main -o "$output" > "$report"
+}
+workspace_scc_build .tmp/dew-workspace-scc-cache/cold.wasm \
+  .tmp/dew-workspace-scc-cache/cold.txt
+workspace_scc_build .tmp/dew-workspace-scc-cache/warm.wasm \
+  .tmp/dew-workspace-scc-cache/warm.txt
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-workspace-scc-cache/cold.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-workspace-scc-cache/warm.txt
+cmp .tmp/dew-workspace-scc-cache/cold.wasm \
+  .tmp/dew-workspace-scc-cache/warm.wasm
+scc_cache_file=$(find \
+  .tmp/dew-workspace-scc-cache/cache/workspace-interfaces \
+  -type f | head -n 1)
+printf 'corrupt' > "$scc_cache_file"
+if workspace_scc_build .tmp/dew-workspace-scc-cache/corrupt.wasm \
+  .tmp/dew-workspace-scc-cache/corrupt.txt 2>&1; then
+  echo "expected corrupt workspace SCC interface cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt workspace frozen-interface SCC cache' \
+  .tmp/dew-workspace-scc-cache/corrupt.txt
 rm -rf .tmp/dew-workspace-interface-cache \
   .tmp/dew-workspace-interface-cold.wasm \
   .tmp/dew-workspace-interface-warm.wasm \
-  .tmp/dew-workspace-invalidation
+  .tmp/dew-workspace-invalidation \
+  .tmp/dew-workspace-scc-cache
 rm -rf .tmp/dew-build-output-cache
 DEW_CACHE_DIR=.tmp/dew-build-output-cache tools/dew build --cache-report \
   tests/compile-pass/basic.dew -o .tmp/dew-build-output-first.wasm \

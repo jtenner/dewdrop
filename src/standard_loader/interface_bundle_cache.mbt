@@ -362,7 +362,6 @@ fn workspace_module_cache_is_eligible(
 ) -> Bool {
   if !policy.enabled ||
     !policy.store_on_miss ||
-    !cache_platform_supported() ||
     !workspace_module_is_cacheable(program, module_index, policy) {
     return false
   }
@@ -389,6 +388,234 @@ fn workspace_module_cache_is_eligible(
     return true
   }
   false
+}
+
+///|
+fn workspace_scc_contains(
+  scc : @semantic.HirSpan,
+  members : Array[Int],
+  module_index : Int,
+) -> Bool {
+  for item in 0..<scc.length {
+    if members[scc.start + item] == module_index {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn workspace_interface_scc_cache_is_eligible(
+  program : @semantic.CollectedProgram,
+  scc : @semantic.HirSpan,
+  members : Array[Int],
+  policy : InterfaceBundlePolicy,
+) -> Bool {
+  if !policy.enabled || !policy.store_on_miss || scc.length < 1 {
+    return false
+  }
+  for item in 0..<scc.length {
+    if !workspace_module_is_cacheable(
+        program,
+        members[scc.start + item],
+        policy,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn workspace_interface_scc_cache_key(
+  program : @semantic.CollectedProgram,
+  graph : @semantic.ModuleDependencyGraph,
+  scc : @semantic.HirSpan,
+  members : Array[Int],
+  cached : Array[@semantic.FrozenModuleInterface?],
+) -> String? {
+  let source_records : Array[String] = []
+  let dependency_records : Array[String] = []
+  for item in 0..<scc.length {
+    let module_index = members[scc.start + item]
+    source_records.push(
+      program.module_paths[module_index] +
+      "\u0000" +
+      workspace_interface_source_fingerprint(program, module_index),
+    )
+    let dependencies = graph.dependencies[module_index]
+    for edge in 0..<dependencies.length {
+      let dependency_index = graph.dependency_modules[dependencies.start + edge]
+      if workspace_scc_contains(scc, members, dependency_index) {
+        continue
+      }
+      let dependency = match cached[dependency_index] {
+        Some(value) => value
+        None => return None
+      }
+      dependency_records.push(
+        dependency.path + "\u0000" + dependency.content_fingerprint,
+      )
+    }
+  }
+  source_records.sort()
+  dependency_records.sort()
+  let output = Buffer()
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1\x00")
+  for record in source_records {
+    interface_cache_write_string(output, record)
+  }
+  for record in dependency_records {
+    interface_cache_write_string(output, record)
+  }
+  Some(@crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes())))
+}
+
+///|
+fn lookup_workspace_interface_scc(
+  program : @semantic.CollectedProgram,
+  graph : @semantic.ModuleDependencyGraph,
+  scc : @semantic.HirSpan,
+  members : Array[Int],
+  cached : Array[@semantic.FrozenModuleInterface?],
+  key : String,
+) -> Result[Bool, String] {
+  let path = workspace_interface_cache_file(key)
+  if !@fs.path_exists(path) {
+    return Ok(false)
+  }
+  let bytes = @fs.read_file_to_bytes(path) catch {
+    error =>
+      return Err(
+        "cannot read workspace frozen-interface SCC cache \{path}: \{error}",
+      )
+  }
+  let payload = match unwrap_interface_cache_payload(bytes) {
+    Ok(value) => value
+    Err(error) =>
+      return Err(
+        "corrupt workspace frozen-interface SCC cache \{path}: \{error}",
+      )
+  }
+  let interfaces = match @semantic.deserialize_frozen_interfaces(payload) {
+    Ok(value) => value
+    Err(error) =>
+      return Err(
+        "corrupt workspace frozen-interface SCC cache \{path}: \{error}",
+      )
+  }
+  if interfaces.length() != scc.length {
+    return Err(
+      "corrupt workspace frozen-interface SCC cache \{path}: module count mismatch",
+    )
+  }
+  let decoded : Array[@semantic.FrozenModuleInterface?] = Array::make(
+    program.modules.length(),
+    None,
+  )
+  for interface_ in interfaces {
+    let module_index = match program.module_index(interface_.path) {
+      Some(value) => value
+      None =>
+        return Err(
+          "corrupt workspace frozen-interface SCC cache \{path}: unavailable module",
+        )
+    }
+    if !workspace_scc_contains(scc, members, module_index) ||
+      decoded[module_index] is Some(_) ||
+      interface_.module_id != program.modules[module_index].module_id {
+      return Err(
+        "corrupt workspace frozen-interface SCC cache \{path}: identity mismatch",
+      )
+    }
+    decoded[module_index] = Some(interface_)
+  }
+  for item in 0..<scc.length {
+    let module_index = members[scc.start + item]
+    let interface_ = match decoded[module_index] {
+      Some(value) => value
+      None =>
+        return Err(
+          "corrupt workspace frozen-interface SCC cache \{path}: missing module",
+        )
+    }
+    let expected : Array[String] = []
+    let dependencies = graph.dependencies[module_index]
+    for edge in 0..<dependencies.length {
+      let dependency_index = graph.dependency_modules[dependencies.start + edge]
+      let dependency = if workspace_scc_contains(scc, members, dependency_index) {
+        decoded[dependency_index]
+      } else {
+        cached[dependency_index]
+      }
+      match dependency {
+        Some(value) =>
+          expected.push(value.path + "\u0000" + value.content_fingerprint)
+        None => return Ok(false)
+      }
+    }
+    let actual : Array[String] = []
+    for dependency in interface_.dependencies {
+      actual.push(dependency.path + "\u0000" + dependency.content_fingerprint)
+    }
+    expected.sort()
+    actual.sort()
+    if expected != actual {
+      return Ok(false)
+    }
+  }
+  for item in 0..<scc.length {
+    let module_index = members[scc.start + item]
+    cached[module_index] = decoded[module_index]
+  }
+  Ok(true)
+}
+
+///|
+fn store_workspace_interface_scc(
+  key : String,
+  scc : @semantic.HirSpan,
+  members : Array[Int],
+  interfaces : Array[@semantic.FrozenModuleInterface?],
+) -> Result[Unit, String] {
+  let stored : Array[@semantic.FrozenModuleInterface] = []
+  for item in 0..<scc.length {
+    let module_index = members[scc.start + item]
+    match interfaces[module_index] {
+      Some(value) => stored.push(value)
+      None => return Err("cannot cache an incomplete workspace interface SCC")
+    }
+  }
+  let payload = match @semantic.serialize_frozen_interfaces(stored) {
+    Ok(value) => value
+    Err(error) =>
+      return Err(
+        "cannot serialize workspace frozen-interface SCC cache: \{error}",
+      )
+  }
+  let root = interface_cache_root()
+  match ensure_interface_cache_root(root) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let directory = workspace_interface_cache_directory()
+  match ensure_cache_directory(directory) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let path = workspace_interface_cache_file(key)
+  let path_bytes = @utf8.encode(path)
+  let result = cache_platform_atomic_write(
+    path_bytes,
+    path_bytes.length(),
+    wrap_interface_cache_payload(payload),
+  )
+  if result != 0 {
+    return Err(
+      "cannot atomically write workspace frozen-interface SCC cache \{path}: errno \{-result}",
+    )
+  }
+  Ok(())
 }
 
 ///|

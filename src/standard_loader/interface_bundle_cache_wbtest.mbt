@@ -111,7 +111,7 @@ test "workspace interface keys include exact source and dependency evidence" {
 }
 
 ///|
-test "workspace cache excludes roots, standard modules, and cyclic SCCs" {
+test "workspace cache routes cyclic SCCs through aggregate eligibility" {
   let program = @semantic.collect_program_manifest(
     23020UL,
     @semantic.ProgramManifest::new([
@@ -142,6 +142,39 @@ test "workspace cache excludes roots, standard modules, and cyclic SCCs" {
   assert_false(workspace_module_cache_is_eligible(program, graph, 0, policy))
   assert_false(workspace_module_cache_is_eligible(program, graph, 1, policy))
   assert_false(workspace_module_cache_is_eligible(program, graph, 2, policy))
+  let mut found_cycle = false
+  for scc in graph.sccs {
+    if scc.length == 2 {
+      found_cycle = true
+      assert_true(
+        workspace_interface_scc_cache_is_eligible(
+          program,
+          scc,
+          graph.scc_modules,
+          policy,
+        ),
+      )
+      let frozen = @semantic.freeze_program_interfaces(program)
+      let cached : Array[@semantic.FrozenModuleInterface?] = Array::make(
+        program.modules.length(),
+        None,
+      )
+      for index in 3..<program.modules.length() {
+        cached[index] = Some(frozen.interfaces[index])
+      }
+      assert_true(
+        workspace_interface_scc_cache_key(
+          program,
+          graph,
+          scc,
+          graph.scc_modules,
+          cached,
+        )
+        is Some(_),
+      )
+    }
+  }
+  assert_true(found_cycle)
   for index in 3..<program.modules.length() {
     assert_false(
       workspace_module_cache_is_eligible(program, graph, index, policy),

@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Extend acyclic workspace interface reuse into body/layout/fragment caches and deterministic parallel scheduling.
+1. Extend workspace interface reuse into body/layout/fragment caches and deterministic parallel scheduling.
 2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 3. Complete package acquisition and reproducible release infrastructure.
 4. Complete foundational standard modules and Wasm intrinsic parity.
@@ -12,7 +12,6 @@
 
 ## Incremental and parallel compilation
 
-- [ ] Cache cyclic workspace interface SCCs as one atomic artifact.
 - [ ] Cache body inference by declaration/body and relevant dependency/evidence fingerprints.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [ ] Schedule independent module and body jobs across workers.

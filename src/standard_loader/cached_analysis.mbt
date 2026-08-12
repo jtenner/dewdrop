@@ -44,6 +44,11 @@ pub fn analyze_program_with_interface_bundle_cache(
     None,
   )
   let workspace_attempted = Array::make(program.modules.length(), false)
+  let workspace_scc_keys : Array[String?] = Array::make(
+    program.modules.length(),
+    None,
+  )
+  let workspace_scc_attempted = Array::make(program.modules.length(), false)
   let mut cache_error : String? = None
   let frozen = @semantic.freeze_program_interfaces_with_cache_hooks(
     program,
@@ -87,6 +92,45 @@ pub fn analyze_program_with_interface_bundle_cache(
       match workspace_keys[module_index] {
         Some(workspace_key) =>
           match store_workspace_interface(workspace_key, interface_) {
+            Ok(_) => ()
+            Err(error) => cache_error = Some(error)
+          }
+        None => ()
+      }
+    },
+    fn(scc, members, slots) {
+      if cache_error is Some(_) ||
+        !workspace_interface_scc_cache_is_eligible(
+          program, scc, members, policy,
+        ) {
+        return
+      }
+      let representative = members[scc.start]
+      let workspace_key = match
+        workspace_interface_scc_cache_key(program, graph, scc, members, slots) {
+        Some(value) => value
+        None => return
+      }
+      workspace_scc_keys[representative] = Some(workspace_key)
+      workspace_scc_attempted[representative] = true
+      match
+        lookup_workspace_interface_scc(
+          program, graph, scc, members, slots, workspace_key,
+        ) {
+        Err(error) => cache_error = Some(error)
+        Ok(true) => hits += scc.length
+        Ok(false) => misses += scc.length
+      }
+    },
+    fn(scc, members, slots) {
+      let representative = members[scc.start]
+      if cache_error is Some(_) || !workspace_scc_attempted[representative] {
+        return
+      }
+      match workspace_scc_keys[representative] {
+        Some(workspace_key) =>
+          match
+            store_workspace_interface_scc(workspace_key, scc, members, slots) {
             Ok(_) => ()
             Err(error) => cache_error = Some(error)
           }

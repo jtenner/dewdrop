@@ -1823,11 +1823,10 @@ pub fn frozen_program_interfaces_with_fingerprints(
 }
 
 ///|
-fn frozen_module_interface_with_available_fingerprints(
+fn frozen_available_interfaces_with_fingerprints(
   graph : ModuleDependencyGraph,
-  module_index : Int,
   slots : Array[FrozenModuleInterface?],
-) -> FrozenModuleInterface {
+) -> Array[FrozenModuleInterface?] {
   let available : Array[FrozenModuleInterface] = []
   for slot in slots {
     match slot {
@@ -1836,61 +1835,105 @@ fn frozen_module_interface_with_available_fingerprints(
     }
   }
   let identities = frozen_interface_declaration_identities(available)
-  let interface_ = frozen_interface_with_content_fingerprint(
-    slots[module_index].unwrap(),
-    identities,
+  let content : Array[FrozenModuleInterface?] = Array::make(
+    slots.length(),
+    None,
   )
-  let dependency_indices : Array[Int] = []
-  let dependencies = graph.dependencies[module_index]
-  for edge in 0..<dependencies.length {
-    dependency_indices.push(graph.dependency_modules[dependencies.start + edge])
+  for index, slot in slots {
+    match slot {
+      Some(interface_) =>
+        content[index] = Some(
+          frozen_interface_with_content_fingerprint(interface_, identities),
+        )
+      None => ()
+    }
   }
-  dependency_indices.sort_by(fn(left, right) {
-    slots[left].unwrap().path.compare(slots[right].unwrap().path)
-  })
-  let frozen_dependencies : Array[FrozenInterfaceDependency] = []
-  for dependency_index in dependency_indices {
-    let dependency = slots[dependency_index].unwrap()
-    frozen_dependencies.push({
-      path: dependency.path,
-      content_fingerprint: dependency.content_fingerprint,
-    })
-  }
-  let reachable = Array::make(slots.length(), false)
-  let pending : Array[Int] = [module_index]
-  let records : Array[String] = []
-  while pending.length() > 0 {
-    let current = pending.pop().unwrap()
-    if reachable[current] {
+  let output : Array[FrozenModuleInterface?] = Array::make(slots.length(), None)
+  for module_index, slot in content {
+    let interface_ = match slot {
+      Some(value) => value
+      None => continue
+    }
+    let dependency_indices : Array[Int] = []
+    let dependencies = graph.dependencies[module_index]
+    let mut complete = true
+    for edge in 0..<dependencies.length {
+      let dependency_index = graph.dependency_modules[dependencies.start + edge]
+      if content[dependency_index] is None {
+        complete = false
+        break
+      }
+      dependency_indices.push(dependency_index)
+    }
+    if !complete {
       continue
     }
-    reachable[current] = true
-    let current_interface = if current == module_index {
-      interface_
-    } else {
-      slots[current].unwrap()
+    dependency_indices.sort_by(fn(left, right) {
+      content[left].unwrap().path.compare(content[right].unwrap().path)
+    })
+    let frozen_dependencies : Array[FrozenInterfaceDependency] = []
+    for dependency_index in dependency_indices {
+      let dependency = content[dependency_index].unwrap()
+      frozen_dependencies.push({
+        path: dependency.path,
+        content_fingerprint: dependency.content_fingerprint,
+      })
     }
-    records.push(
-      current_interface.path + "\u0000" + current_interface.content_fingerprint,
-    )
-    let current_dependencies = graph.dependencies[current]
-    for edge in 0..<current_dependencies.length {
-      pending.push(graph.dependency_modules[current_dependencies.start + edge])
+    let reachable = Array::make(content.length(), false)
+    let pending : Array[Int] = [module_index]
+    let records : Array[String] = []
+    while pending.length() > 0 {
+      let current = pending.pop().unwrap()
+      if reachable[current] {
+        continue
+      }
+      let current_interface = match content[current] {
+        Some(value) => value
+        None => {
+          complete = false
+          break
+        }
+      }
+      reachable[current] = true
+      records.push(
+        current_interface.path +
+        "\u0000" +
+        current_interface.content_fingerprint,
+      )
+      let current_dependencies = graph.dependencies[current]
+      for edge in 0..<current_dependencies.length {
+        pending.push(
+          graph.dependency_modules[current_dependencies.start + edge],
+        )
+      }
     }
+    if !complete {
+      continue
+    }
+    records.sort()
+    let fingerprint = Buffer(size_hint=64 + records.length() * 96)
+    fingerprint.write_bytes(b"DEW_MODULE_INTERFACE_GRAPH_V1\x00")
+    for record in records {
+      callable_abi_write_string(fingerprint, record)
+    }
+    output[module_index] = Some({
+      ..interface_,
+      interface_fingerprint: @crypto.bytes_to_hex_string(
+        @crypto.sha256(fingerprint.to_bytes()),
+      ),
+      dependencies: frozen_dependencies,
+    })
   }
-  records.sort()
-  let output = Buffer(size_hint=64 + records.length() * 96)
-  output.write_bytes(b"DEW_MODULE_INTERFACE_GRAPH_V1\x00")
-  for record in records {
-    callable_abi_write_string(output, record)
-  }
-  {
-    ..interface_,
-    interface_fingerprint: @crypto.bytes_to_hex_string(
-      @crypto.sha256(output.to_bytes()),
-    ),
-    dependencies: frozen_dependencies,
-  }
+  output
+}
+
+///|
+fn frozen_module_interface_with_available_fingerprints(
+  graph : ModuleDependencyGraph,
+  module_index : Int,
+  slots : Array[FrozenModuleInterface?],
+) -> FrozenModuleInterface {
+  frozen_available_interfaces_with_fingerprints(graph, slots)[module_index].unwrap()
 }
 
 ///|
@@ -3181,6 +3224,8 @@ fn freeze_program_interfaces_with_cached_hook(
   cached : Array[FrozenModuleInterface?],
   resolve_cached : (Int, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?,
   on_frozen : (Int, FrozenModuleInterface) -> Unit,
+  resolve_cached_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
+  on_frozen_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
 ) -> FrozenProgramInterfaces {
   guard cached.length() == program.modules.length() else {
     abort("cached interface slots do not match the collected program")
@@ -3221,10 +3266,36 @@ fn freeze_program_interfaces_with_cached_hook(
         }
       }
     }
+    let mut scc_was_cached = false
+    if repeat {
+      resolve_cached_scc(scc, graph.scc_modules, slots)
+      let mut cached_count = 0
+      for index in 0..<scc.length {
+        let module_index = graph.scc_modules[scc.start + index]
+        match slots[module_index] {
+          Some(interface_) => {
+            guard interface_.module_id ==
+              program.modules[module_index].module_id &&
+              interface_.path == program.module_paths[module_index] else {
+              abort(
+                "resolved cached SCC interface identity does not match the collected module",
+              )
+            }
+            cached_slots[module_index] = true
+            cached_count += 1
+          }
+          None => ()
+        }
+      }
+      guard cached_count == 0 || cached_count == scc.length else {
+        abort("resolved cached SCC must be complete")
+      }
+      scc_was_cached = cached_count == scc.length
+    }
     for index in 0..<scc.length {
       let module_index = graph.scc_modules[scc.start + index]
       let collected = program.modules[module_index]
-      if !cached_slots[module_index] {
+      if !repeat && !cached_slots[module_index] {
         match resolve_cached(module_index, slots) {
           Some(interface_) => {
             guard interface_.module_id == collected.module_id &&
@@ -3304,6 +3375,16 @@ fn freeze_program_interfaces_with_cached_hook(
       }
       scope_slots[module_index] = Some(imports)
     }
+    if repeat && !scc_was_cached {
+      let fingerprinted = frozen_available_interfaces_with_fingerprints(
+        graph, slots,
+      )
+      for index in 0..<scc.length {
+        let module_index = graph.scc_modules[scc.start + index]
+        slots[module_index] = fingerprinted[module_index]
+      }
+      on_frozen_scc(scc, graph.scc_modules, slots)
+    }
   }
   let interfaces : Array[FrozenModuleInterface] = []
   let import_scopes : Array[ModuleImportScope] = []
@@ -3327,6 +3408,8 @@ pub fn freeze_program_interfaces_with_cached(
     cached,
     fn(_, _) { None },
     fn(_, _) { () },
+    fn(_, _, _) { () },
+    fn(_, _, _) { () },
   )
 }
 
@@ -3336,9 +3419,11 @@ pub fn freeze_program_interfaces_with_cache_hooks(
   cached : Array[FrozenModuleInterface?],
   resolve_cached : (Int, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?,
   on_frozen : (Int, FrozenModuleInterface) -> Unit,
+  resolve_cached_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
+  on_frozen_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
 ) -> FrozenProgramInterfaces {
   freeze_program_interfaces_with_cached_hook(
-    program, cached, resolve_cached, on_frozen,
+    program, cached, resolve_cached, on_frozen, resolve_cached_scc, on_frozen_scc,
   )
 }
 

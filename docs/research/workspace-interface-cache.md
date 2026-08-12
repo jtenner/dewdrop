@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented for ordinary non-root workspace modules whose interface dependency SCC contains exactly one non-self-recursive module. The cache supplements the existing standard/dependency interface bundle: dependencies are resolved in deterministic SCC order, then each eligible workspace module is looked up immediately before interface freezing. Executable body collection, body inference, lowering, linking, validation, and encoding still run normally.
+Implemented for ordinary non-root workspace modules, including multi-module and self-recursive interface dependency SCCs. The cache supplements the existing standard/dependency interface bundle: dependencies are resolved in deterministic SCC order, then each eligible workspace module is looked up immediately before interface freezing. Executable body collection, body inference, lowering, linking, validation, and encoding still run normally.
 
 ## Artifact identity
 
@@ -34,7 +34,7 @@ Workspace artifacts reuse the deterministic frozen-interface V11 serializer and 
 
 Checksum, schema, identity, and malformed-payload failures are visible cache errors. A well-formed artifact whose dependency fingerprints no longer match is an ordinary deterministic miss, because it is a valid artifact for a previous dependency state rather than corruption.
 
-Publication uses the native cache platform's same-directory temporary file, flush, `fsync`, and atomic replacement path shared with parser-event artifacts. Unsupported non-native targets leave persistent workspace caching disabled. Multi-module SCCs and self-importing modules remain uncached until one SCC-level artifact can be validated and injected atomically.
+Publication uses the native cache platform's same-directory temporary file, flush, `fsync`, and atomic replacement path shared with parser-event artifacts. Unsupported non-native targets leave persistent workspace caching disabled. Multi-module and self-importing SCCs use one SCC-level key and artifact; lookup validates and injects every member together, and partial SCC reuse is rejected.
 
 ## Reporting
 
@@ -57,7 +57,8 @@ The historical label is retained for CLI compatibility even though the count now
 Permanent validation covers:
 
 - exact source and dependency key sensitivity;
-- root, compiler-owned standard, cyclic-SCC, and self-cycle exclusion;
+- root and compiler-owned standard exclusion;
+- complete cyclic-SCC and self-cycle aggregate eligibility;
 - cold and warm multi-module builds;
 - private implementation changes yielding downstream hits;
 - public interface changes invalidating direct and transitive dependents;
@@ -69,7 +70,6 @@ Permanent validation covers:
 
 ## Remaining work
 
-- Cache cyclic workspace SCCs as one atomic artifact.
 - Cache body inference, layouts, and WasmGC fragments under independently versioned schemas.
 - Schedule independent SCC/body jobs in parallel and merge outputs deterministically.
 - Add allocation and peak-memory measurements to cache benchmarks.
