@@ -48,12 +48,14 @@ The forms were tied at this host-call-scale boundary. Repeated reads reuse one s
 | retained mixed aggregate | 0.0141 µs | 1 | 2 | 489 |
 | synthesized generic components | 0.0143 µs | 0 | 0 | 473 |
 | retained generic aggregate | 0.0156 µs | 1 | 2 | 590 |
-| fresh nominal-reference components | 0.0137 µs | 2 | 2 | 480 |
-| retained fresh outer aggregate | 0.0161 µs | 3 | 4 | 515 |
-| local nominal-reference components | 0.0139 µs | 2 | 2 | 482 |
-| retained local outer aggregate | 0.0150 µs | 3 | 4 | 517 |
+| fresh nominal-reference components | 0.0142 µs | 2 | 2 | 480 |
+| retained fresh outer aggregate | 0.0163 µs | 3 | 4 | 515 |
+| local nominal-reference components | 0.0143 µs | 2 | 2 | 482 |
+| retained local outer aggregate | 0.0152 µs | 3 | 4 | 517 |
+| module nominal-reference components | 0.0146 µs | 2 | 2 | 520 |
+| retained module outer aggregate | 0.0156 µs | 3 | 4 | 555 |
 
-Scalar and mixed forms were effectively tied within timer noise. Mixed replacement removed 44 Wasm bytes, one allocation, and two field reads. Generic splitting measured 0.9162x and removed 117 bytes plus every aggregate operation. Source-local reuse removed 380–384 bytes; synthesized direct scalars removed 154 bytes, one allocation, and 16 field reads. Fresh and local nominal-reference splitting measured 0.8512x and 0.9261x their retained baselines, removing the outer aggregate allocation, two outer field reads, and 35 Wasm bytes while retaining both inner objects.
+Scalar and mixed forms were effectively tied within timer noise. Mixed replacement removed 44 Wasm bytes, one allocation, and two field reads. Generic splitting measured 0.9242x and removed 117 bytes plus every aggregate operation. Source-local reuse removed 380–384 bytes; synthesized direct scalars removed 154 bytes, one allocation, and 16 field reads. Fresh, local, and module nominal-reference splitting measured 0.8714x, 0.9409x, and 0.9360x their retained baselines, each removing the outer aggregate allocation, two outer field reads, and 35 Wasm bytes while retaining the inner/module objects.
 
 `tools/benchmark-join-scalar-replacement.py` measured fresh two-branch `if` and match joins against baselines whose selected path passes the aggregate through a reference-returning helper, over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
 

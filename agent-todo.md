@@ -144,7 +144,7 @@
 ## Optimization and performance discipline
 
 - [ ] Extend fresh tuple/struct-variant payload elimination beyond nested aggregate bindings, constructor-resolved alternatives, exact constant guards, false catchall interception proofs, scalar-constant catchall selection, exact binding-forwarding, nested binding projection, and constructor-disjoint preceding arms to broader binding-derived scalar bodies and nonconstant guard planning; boxes and exact-flow trait objects are eliminated.
-- [x] Extend scalar replacement beyond fresh `if`/match joins and complete/reordered/one-missing component aliases to direct multi-missing and mixed alias/direct aggregates with synthesized scalar, fresh/exact nominal-reference, and direct erased-generic component locals; coerced generic/reference planning remains conservative.
+- [x] Extend scalar replacement beyond fresh `if`/match joins and complete/reordered/one-missing component aliases to direct multi-missing and mixed alias/direct aggregates with synthesized scalar, fresh/local/module exact nominal-reference, and direct erased-generic component locals; coerced generic/reference planning remains conservative.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
 - [ ] Specialize enum representations from frozen usage/layout data.
 - [ ] Consider profile-guided optimization only after deterministic baseline builds exist.
