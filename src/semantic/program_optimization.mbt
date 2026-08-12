@@ -4590,7 +4590,13 @@ fn program_nonconstant_guard_is_discardable(
     return false
   }
   match module_.expressions[guard_expression].kind {
-    PlannedLocalGet(_) | PlannedCaptureGet(_) => true
+    PlannedLocalGet(_) | PlannedCaptureGet(_) | PlannedBoolConst(_) => true
+    PlannedPrefixExpression(HirLogicalNot, operand) =>
+      program_nonconstant_guard_is_discardable(module_, operand)
+    PlannedBinaryExpression(HirLogicalAnd, left, right)
+    | PlannedBinaryExpression(HirLogicalOr, left, right) =>
+      program_nonconstant_guard_is_discardable(module_, left) &&
+      program_nonconstant_guard_is_discardable(module_, right)
     _ => false
   }
 }
