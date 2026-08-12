@@ -3656,6 +3656,105 @@ fn program_pattern_contains_binding(
 }
 
 ///|
+fn program_pattern_variant_relation(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  variant : VariantId,
+  depth : Int,
+) -> Int {
+  if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
+    return -1
+  }
+  match module_.patterns[pattern].source {
+    HirAlternativePattern(first, remaining, _) => {
+      if remaining.start < 0 ||
+        remaining.start + remaining.length > module_.pattern_children.length() {
+        return -1
+      }
+      let mut matching = 0
+      let first_relation = program_pattern_variant_relation(
+        module_, first, variant, depth + 1,
+      )
+      if first_relation < 0 {
+        return -1
+      }
+      if first_relation > 0 {
+        matching += 1
+      }
+      for index in 0..<remaining.length {
+        let relation = program_pattern_variant_relation(
+          module_,
+          module_.pattern_children[remaining.start + index],
+          variant,
+          depth + 1,
+        )
+        if relation < 0 {
+          return -1
+        }
+        if relation > 0 {
+          matching += 1
+        }
+      }
+      if matching > 0 { 1 } else { 0 }
+    }
+    _ =>
+      match module_.patterns[pattern].selected_constructor {
+        VariantInferredPatternConstructor(candidate, _) =>
+          if candidate == variant { 1 } else { 0 }
+        _ => -1
+      }
+  }
+}
+
+///|
+fn program_pattern_for_variant(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  variant : VariantId,
+  depth : Int,
+) -> PatternId {
+  if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
+    return -1
+  }
+  match module_.patterns[pattern].source {
+    HirAlternativePattern(first, remaining, _) => {
+      if remaining.start < 0 ||
+        remaining.start + remaining.length > module_.pattern_children.length() {
+        return -1
+      }
+      let mut selected = -1
+      if program_pattern_variant_relation(
+          module_, first, variant, depth + 1,
+        ) > 0 {
+        selected = first
+      }
+      for index in 0..<remaining.length {
+        let candidate = module_.pattern_children[remaining.start + index]
+        if program_pattern_variant_relation(
+            module_, candidate, variant, depth + 1,
+          ) > 0 {
+          if selected >= 0 {
+            return -1
+          }
+          selected = candidate
+        }
+      }
+      if selected < 0 {
+        -1
+      } else {
+        program_pattern_for_variant(module_, selected, variant, depth + 1)
+      }
+    }
+    _ =>
+      if program_pattern_variant_relation(module_, pattern, variant, depth) > 0 {
+        pattern
+      } else {
+        -1
+      }
+  }
+}
+
+///|
 fn program_can_scalarize_nested_pattern_binding(
   module_ : PlannedModuleLowering,
   pattern : PatternId,
@@ -3913,16 +4012,17 @@ fn scalar_replace_program_variant_payload_match(
       candidate.body >= module_.expressions.length() {
       return false
     }
-    match module_.patterns[candidate.pattern].selected_constructor {
-      VariantInferredPatternConstructor(candidate_variant, _) if
-        candidate_variant == variant => {
+    match program_pattern_variant_relation(
+      module_, candidate.pattern, variant, 0,
+    ) {
+      1 => {
         if candidate.guard_condition >= 0 {
           return false
         }
         selected_arm = arms.start + index
         break
       }
-      VariantInferredPatternConstructor(_, _) => ()
+      0 => ()
       _ => return false
     }
   }
@@ -3930,7 +4030,13 @@ fn scalar_replace_program_variant_payload_match(
     return false
   }
   let arm = module_.pattern_arms[selected_arm]
-  let root = module_.patterns[arm.pattern]
+  let root_pattern = program_pattern_for_variant(
+    module_, arm.pattern, variant, 0,
+  )
+  if root_pattern < 0 {
+    return false
+  }
+  let root = module_.patterns[root_pattern]
   let selected_variant = variant
   let local_id = match module_.expressions[arm.body].kind {
     PlannedLocalGet(local_id) => local_id

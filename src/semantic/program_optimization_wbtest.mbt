@@ -356,6 +356,40 @@ test "nested fresh enum payload patterns eliminate aggregate wrappers" {
 }
 
 ///|
+test "constructor-resolved alternative payload patterns eliminate variants" {
+  let program = collect_program_manifest(
+    22818UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Choice {\n  First(I32)\n  Second(I32)\n  Empty\n}\nfn alternative(value: I32) -> I32 {\n  match Choice::First(value) {\n    Choice::First(item), Choice::Second(item) => item\n    Choice::Empty => 0\n  }\n}\npub fn main() -> I32 {\n  alternative(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let alternative = collected.lookup_value("alternative").unwrap()
+  let body = collected.body_of(alternative).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  let mut selects = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedVariantTupleNew(_, _, _) => variants += 1
+      PlannedMatchExpression(_, _) => matches += 1
+      PlannedParameterSelect(_, _) => selects += 1
+      _ => ()
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+  assert_eq(selects, 1)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,

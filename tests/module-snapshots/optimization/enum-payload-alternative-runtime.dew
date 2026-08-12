@@ -1,0 +1,16 @@
+enum Choice {
+  First(I32)
+  Second(I32)
+  Empty
+}
+
+fn alternative(value: I32) -> I32 {
+  match Choice::First(value) {
+    Choice::First(item), Choice::Second(item) => item
+    Choice::Empty => 0
+  }
+}
+
+pub fn main() -> I32 {
+  alternative(42)
+}
