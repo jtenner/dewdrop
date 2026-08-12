@@ -164,6 +164,7 @@ fn program_reachable_callable_roots(
         body.expressions.length) {
         let target = match module_.expressions[expression].kind {
           PlannedDirectCall(target, _, _, _)
+          | PlannedTailCall(target, _, _, _)
           | PlannedOperatorCall(target, _, _, _, _)
           | PlannedIndexCall(target, _, _, _)
           | PlannedIndexSetCall(target, _, _, _, _) => target
@@ -207,6 +208,7 @@ fn program_reachable_callable_roots(
       let (first_target, second_target) = match
         module_.expressions[expression].kind {
         PlannedDirectCall(target, _, _, _)
+        | PlannedTailCall(target, _, _, _)
         | PlannedOperatorCall(target, _, _, _, _)
         | PlannedIndexCall(target, _, _, _)
         | PlannedIndexSetCall(target, _, _, _, _) => (target, 0UL)
@@ -1393,6 +1395,7 @@ fn program_call_target_and_arguments(
 ) -> (DeclId, HirSpan)? {
   match expression.kind {
     PlannedDirectCall(target, _, _, arguments)
+    | PlannedTailCall(target, _, _, arguments)
     | PlannedOperatorCall(target, _, _, _, arguments)
     | PlannedIndexCall(target, _, _, arguments)
     | PlannedIndexSetCall(target, _, _, _, arguments) =>

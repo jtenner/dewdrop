@@ -1360,6 +1360,7 @@ fn starshine_nominal_expression_result_is_precise(
     | @semantic.PlannedCaptureGet(_)
     | @semantic.PlannedModuleValueGet(_, _)
     | @semantic.PlannedDirectCall(_, _, _, _)
+    | @semantic.PlannedTailCall(_, _, _, _)
     | @semantic.PlannedOperatorCall(_, _, _, _, _)
     | @semantic.PlannedIndexCall(_, _, _, _)
     | @semantic.PlannedIndexSetCall(_, _, _, _, _)
@@ -2604,7 +2605,8 @@ fn starshine_body_locals(
           None => ()
         }
       }
-      @semantic.PlannedDirectCall(declaration, _, _, _) => {
+      @semantic.PlannedDirectCall(declaration, _, _, _)
+      | @semantic.PlannedTailCall(declaration, _, _, _) => {
         let name = match program {
           Some(link) =>
             match link.function_of(declaration) {
@@ -6353,7 +6355,8 @@ fn starshine_emit_body_instructions(
               None => local_type_index
             }
             let needs_cast = match lowering.expressions[base].kind {
-              @semantic.PlannedDirectCall(_, _, _, arguments) if arguments.length >
+              @semantic.PlannedDirectCall(_, _, _, arguments)
+              | @semantic.PlannedTailCall(_, _, _, arguments) if arguments.length >
                 0 => true
               @semantic.PlannedFunctionValueCall(_, _, _) => true
               @semantic.PlannedLocalGet(local_id) => {

@@ -1,0 +1,37 @@
+fn increment(value: I32, enabled: Bool) -> I32 {
+  if enabled {
+    value + 1
+  } else {
+    value
+  }
+}
+
+fn decrement(value: I32, enabled: Bool) -> I32 {
+  if enabled {
+    value - 1
+  } else {
+    value
+  }
+}
+
+fn choose_if(value: I32, increase: Bool) -> I32 {
+  if increase {
+    increment(value, true)
+  } else {
+    decrement(value, true)
+  }
+}
+
+fn choose_match(value: I32, increase: Bool) -> I32 {
+  match increase {
+    true => increment(value, true)
+    false => decrement(value, true)
+  }
+}
+
+pub fn main() -> Unit {
+  assert(choose_if(41, true) == 42, "if then tail call")
+  assert(choose_if(43, false) == 42, "if else tail call")
+  assert(choose_match(41, true) == 42, "match true tail call")
+  assert(choose_match(43, false) == 42, "match false tail call")
+}

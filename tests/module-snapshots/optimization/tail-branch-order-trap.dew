@@ -1,0 +1,27 @@
+fn trap_condition() -> Bool {
+  unreachable()
+}
+
+fn trap_argument() -> I32 {
+  1 / 0
+}
+
+fn identity(value: I32, enabled: Bool) -> I32 {
+  if enabled {
+    value
+  } else {
+    value
+  }
+}
+
+fn choose() -> I32 {
+  if trap_condition() {
+    identity(trap_argument(), true)
+  } else {
+    identity(trap_argument(), false)
+  }
+}
+
+pub fn main() -> I32 {
+  choose()
+}

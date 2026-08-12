@@ -2128,6 +2128,59 @@ test "common field extraction reuses exact nested reference loads" {
 }
 
 ///|
+test "tail calls mark scalar direct calls across branch tails" {
+  let program = collect_program_manifest(
+    22840UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn increment(value: I32, enabled: Bool) -> I32 {\n  if enabled {\n    value + 1\n  } else {\n    value\n  }\n}\nfn decrement(value: I32, enabled: Bool) -> I32 {\n  if enabled {\n    value - 1\n  } else {\n    value\n  }\n}\nfn choose(value: I32, increase: Bool) -> I32 {\n  if increase {\n    increment(value, true)\n  } else {\n    decrement(value, true)\n  }\n}\nfn choose_match(value: I32, increase: Bool) -> I32 {\n  match increase {\n    true => increment(value, true)\n    false => decrement(value, true)\n  }\n}\nfn non_tail(value: I32) -> I32 {\n  increment(value, true) + 1\n}\nfn reference(value: String) -> String {\n  value\n}\nfn reference_tail(value: String) -> String {\n  reference(value)\n}\npub fn main() -> I32 {\n  choose(41, true) + choose_match(43, false) + non_tail(40)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  for name in ["choose", "choose_match"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let calls = body_calls(collected, collected.body_of(declaration).unwrap())
+    assert_eq(calls.length(), 2)
+    for call in calls {
+      assert_true(
+        optimized.modules[0].expressions[call].kind
+        is PlannedTailCall(_, _, _, _),
+      )
+      assert_true(
+        unoptimized.modules[0].expressions[call].kind
+        is PlannedDirectCall(_, _, _, _),
+      )
+    }
+  }
+  let non_tail = collected.lookup_value("non_tail").unwrap()
+  let non_tail_calls = body_calls(
+    collected,
+    collected.body_of(non_tail).unwrap(),
+  )
+  assert_eq(non_tail_calls.length(), 1)
+  assert_true(
+    optimized.modules[0].expressions[non_tail_calls[0]].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+  let reference_tail = collected.lookup_value("reference_tail").unwrap()
+  let reference_calls = body_calls(
+    collected,
+    collected.body_of(reference_tail).unwrap(),
+  )
+  assert_eq(reference_calls.length(), 1)
+  assert_true(
+    optimized.modules[0].expressions[reference_calls[0]].kind
+    is PlannedDirectCall(_, _, _, _),
+  )
+}
+
+///|
 test "tail recursion marks only exact non-generic scalar self calls in tail position" {
   let program = collect_program_manifest(
     22807UL,

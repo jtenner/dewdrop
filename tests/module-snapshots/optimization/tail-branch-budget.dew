@@ -1,0 +1,35 @@
+fn increment(value: I32, enabled: Bool) -> I32 {
+  if enabled {
+    value + 1
+  } else {
+    value
+  }
+}
+
+fn decrement(value: I32, enabled: Bool) -> I32 {
+  if enabled {
+    value - 1
+  } else {
+    value
+  }
+}
+
+fn choose_if(value: I32, increase: Bool) -> I32 {
+  if increase {
+    increment(value, true)
+  } else {
+    decrement(value, true)
+  }
+}
+
+fn choose_match(value: I32, increase: Bool) -> I32 {
+  match increase {
+    true => increment(value, true)
+    false => decrement(value, true)
+  }
+}
+
+pub fn main() -> I32 {
+  choose_if(41, true) + choose_if(43, false) +
+  choose_match(41, true) + choose_match(43, false)
+}

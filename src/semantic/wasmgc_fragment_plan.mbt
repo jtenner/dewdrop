@@ -476,6 +476,7 @@ fn wasmgc_reachable_defined_functions(
       body.expressions.length) {
       let target = match lowering.expressions[expression].kind {
         PlannedDirectCall(declaration, _, _, _)
+        | PlannedTailCall(declaration, _, _, _)
         | PlannedOperatorCall(declaration, _, _, _, _)
         | PlannedIndexCall(declaration, _, _, _)
         | PlannedIndexSetCall(declaration, _, _, _, _)
@@ -516,6 +517,7 @@ fn wasmgc_reachable_defined_functions(
       body.expressions.length) {
       let target = match lowering.expressions[expression].kind {
         PlannedDirectCall(declaration, _, _, _)
+        | PlannedTailCall(declaration, _, _, _)
         | PlannedOperatorCall(declaration, _, _, _, _)
         | PlannedIndexCall(declaration, _, _, _)
         | PlannedIndexSetCall(declaration, _, _, _, _)
@@ -1947,7 +1949,8 @@ fn wasmgc_direct_builtin_of(
       return b""
   }
   let (target, arguments) = match lowering.expressions[expression].kind {
-    PlannedDirectCall(target, receiver, arguments, type_arguments) => {
+    PlannedDirectCall(target, receiver, arguments, type_arguments)
+    | PlannedTailCall(target, receiver, arguments, type_arguments) => {
       if receiver >= 0 || type_arguments.length != 0 {
         return b""
       }
@@ -3704,6 +3707,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       body.expressions.length) {
       let declaration = match lowering.expressions[expression_index].kind {
         PlannedDirectCall(target, _, _, _)
+        | PlannedTailCall(target, _, _, _)
         | PlannedOperatorCall(target, _, _, _, _)
         | PlannedIndexCall(target, _, _, _)
         | PlannedIndexSetCall(target, _, _, _, _)

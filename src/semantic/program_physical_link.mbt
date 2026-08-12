@@ -162,6 +162,7 @@ fn program_initializer_dependencies(
             _ => ()
           }
         PlannedDirectCall(target, _, _, _)
+        | PlannedTailCall(target, _, _, _)
         | PlannedOperatorCall(target, _, _, _, _)
         | PlannedIndexCall(target, _, _, _)
         | PlannedIndexSetCall(target, _, _, _, _) => {

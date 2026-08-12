@@ -636,6 +636,7 @@ fn program_link_validate_calls(
     for expression_index, expression in module_.expressions {
       let (target, type_arguments, function_reference) = match expression.kind {
         PlannedDirectCall(declaration, _, _, type_arguments)
+        | PlannedTailCall(declaration, _, _, type_arguments)
         | PlannedOperatorCall(declaration, _, _, _, type_arguments)
         | PlannedIndexCall(declaration, _, _, type_arguments)
         | PlannedIndexSetCall(declaration, _, _, _, type_arguments) =>

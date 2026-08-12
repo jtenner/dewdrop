@@ -38,6 +38,39 @@ def loop_source(count: int) -> str:
 """
 
 
+def branch_source(tail: bool) -> str:
+    first = "increment(value, true)" if tail else "increment(value, true) + 0"
+    second = "decrement(value, true)" if tail else "decrement(value, true) + 0"
+    return f"""fn increment(value: I32, enabled: Bool) -> I32 {{
+  if enabled {{
+    value + 1
+  }} else {{
+    value
+  }}
+}}
+
+fn decrement(value: I32, enabled: Bool) -> I32 {{
+  if enabled {{
+    value - 1
+  }} else {{
+    value
+  }}
+}}
+
+fn choose(value: I32, increase: Bool) -> I32 {{
+  if increase {{
+    {first}
+  }} else {{
+    {second}
+  }}
+}}
+
+pub fn main() -> I32 {{
+  choose(41, true) - choose(43, false)
+}}
+"""
+
+
 def build(name: str, source: str) -> Path:
     source_path = TMP / f"{name}.dew"
     wasm_path = TMP / f"{name}.wasm"
@@ -82,6 +115,16 @@ const { performance } = require('perf_hooks');
     return json.loads(completed.stdout)
 
 
+def wat_count(path: Path, instruction: str) -> int:
+    wat = subprocess.run(
+        ["wasm-tools", "print", str(path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return wat.count(instruction)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--count", type=int, default=128)
@@ -94,9 +137,15 @@ def main() -> None:
     recursive = build("recursive", recursive_source(args.count))
     loop = build("loop", loop_source(args.count))
     deep = build("recursive-deep", recursive_source(args.deep_count))
-    raw = measure([recursive, loop], args.samples)
+    branch_tail = build("branch-tail", branch_source(True))
+    branch_retained = build("branch-retained", branch_source(False))
+    raw = measure(
+        [recursive, loop, branch_tail, branch_retained], args.samples,
+    )
     recursive_us = statistics.median(raw[str(recursive)])
     loop_us = statistics.median(raw[str(loop)])
+    branch_tail_us = statistics.median(raw[str(branch_tail)])
+    branch_retained_us = statistics.median(raw[str(branch_retained)])
     subprocess.run(
         [
             "node",
@@ -116,6 +165,17 @@ def main() -> None:
         "tail_to_loop_ratio": round(recursive_us / loop_us, 4),
         "tail_recursive_wasm_bytes": recursive.stat().st_size,
         "functional_loop_wasm_bytes": loop.stat().st_size,
+        "branch_tail_median_us": round(branch_tail_us, 3),
+        "branch_retained_median_us": round(branch_retained_us, 3),
+        "branch_tail_to_retained_ratio": round(
+            branch_tail_us / branch_retained_us, 4,
+        ),
+        "branch_tail_wasm_bytes": branch_tail.stat().st_size,
+        "branch_retained_wasm_bytes": branch_retained.stat().st_size,
+        "branch_tail_return_call": wat_count(branch_tail, "return_call"),
+        "branch_retained_return_call": wat_count(
+            branch_retained, "return_call",
+        ),
         "deep_tail_recursion_completed": True,
     }, indent=2, sort_keys=True))
 

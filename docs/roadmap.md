@@ -20,7 +20,7 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 ## Active priority order
 
-1. Finish the bounded optimization program: tail-position branch optimization, measured enum representation specialization, and any follow-up local-slot reuse justified by the new interference model.
+1. Finish the bounded optimization program: measured enum representation specialization and any follow-up local-slot reuse justified by the new interference model.
 2. Add per-file incremental artifacts, workspace interface reuse, deterministic dependency invalidation, and deterministic parallel module/body scheduling.
 3. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
 4. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
@@ -32,7 +32,6 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 ## Optimization
 
 - [ ] Add physical local-slot reuse across proven noninterfering scalar, reference, and generic local ranges when measured output improves.
-- [ ] Add tail-position branch optimization beyond exact scalar self-recursion.
 - [ ] Measure and implement a first conservative private scalar-enum representation specialization using frozen usage/layout data.
 - [ ] Defer profile-guided optimization until reproducible deterministic baseline builds and stable workload collection exist.
 

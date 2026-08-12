@@ -6266,91 +6266,6 @@ fn factor_program_variant_payload_extractions(
 }
 
 ///|
-fn mark_tail_recursive_expression(
-  module_ : PlannedModuleLowering,
-  expression : ExprId,
-  declaration : DeclId,
-  depth : Int,
-) -> Unit {
-  if expression < 0 ||
-    expression >= module_.expressions.length() ||
-    depth > module_.expressions.length() + module_.blocks.length() {
-    return
-  }
-  let source = module_.expressions[expression]
-  match source.kind {
-    PlannedDirectCall(target, receiver, arguments, type_arguments) if target ==
-      declaration &&
-      receiver < 0 &&
-      type_arguments.length == 0 =>
-      module_.expressions[expression] = {
-        ..source,
-        kind: PlannedTailCall(target, receiver, arguments, type_arguments),
-      }
-    PlannedBlockExpression(block) =>
-      mark_tail_recursive_block(module_, block, declaration, depth + 1)
-    PlannedIfExpression(_, then_block, alternative) => {
-      mark_tail_recursive_block(module_, then_block, declaration, depth + 1)
-      mark_tail_recursive_expression(
-        module_,
-        alternative,
-        declaration,
-        depth + 1,
-      )
-    }
-    PlannedMatchExpression(_, arms) => {
-      if arms.start < 0 ||
-        arms.start + arms.length > module_.pattern_arms.length() {
-        return
-      }
-      for index in 0..<arms.length {
-        mark_tail_recursive_expression(
-          module_,
-          module_.pattern_arms[arms.start + index].body,
-          declaration,
-          depth + 1,
-        )
-      }
-    }
-    _ => ()
-  }
-}
-
-///|
-fn mark_tail_recursive_block(
-  module_ : PlannedModuleLowering,
-  block : BlockId,
-  declaration : DeclId,
-  depth : Int,
-) -> Unit {
-  if block < 0 ||
-    block >= module_.blocks.length() ||
-    depth > module_.expressions.length() + module_.blocks.length() {
-    return
-  }
-  let items = module_.blocks[block].items
-  if items.start < 0 ||
-    items.start + items.length > module_.block_items.length() {
-    return
-  }
-  for index in 0..<items.length {
-    match module_.block_items[items.start + index].kind {
-      PlannedReturnItem(value) if value >= 0 =>
-        mark_tail_recursive_expression(module_, value, declaration, depth + 1)
-      _ => ()
-    }
-  }
-  if items.length == 0 {
-    return
-  }
-  match module_.block_items[items.start + items.length - 1].kind {
-    PlannedExpressionItem(value) =>
-      mark_tail_recursive_expression(module_, value, declaration, depth + 1)
-    _ => ()
-  }
-}
-
-///|
 fn program_tail_scalar_shape(shape : PlannedValueShape) -> Bool {
   match shape {
     ErrorPlannedValueShape | RefPlannedValueShape | GenericPlannedValueShape =>
@@ -6379,7 +6294,167 @@ fn program_tail_body_uses_scalar_carriers(
 }
 
 ///|
-fn mark_program_tail_recursion(modules : Array[PlannedModuleLowering]) -> Unit {
+fn program_tail_target_uses_scalar_carriers(
+  module_ : PlannedModuleLowering,
+  declaration : DeclId,
+  result_shape : PlannedValueShape,
+) -> Bool {
+  let callable = match module_.functions.callable_of(declaration) {
+    Some(value) => value
+    None => return false
+  }
+  if callable.compiler_owned ||
+    callable.has_receiver ||
+    program_callable_generic_parameters(callable).length > 0 ||
+    callable.result_shape != result_shape {
+    return false
+  }
+  let body_id = match callable.kind {
+    PlannedFunctionCallable(body) => body
+    PlannedImplMethodCallable(_, Some(body)) => body
+    _ => return false
+  }
+  let body_index = semantic_id_local(body_id)
+  body_index >= 0 &&
+  body_index < module_.bodies.length() &&
+  program_tail_body_uses_scalar_carriers(
+    module_,
+    module_.bodies[body_index],
+    callable,
+  )
+}
+
+///|
+fn mark_tail_position_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  declaration : DeclId,
+  result_shape : PlannedValueShape,
+  branch_tail : Bool,
+  depth : Int,
+) -> Unit {
+  if expression < 0 ||
+    expression >= module_.expressions.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return
+  }
+  let source = module_.expressions[expression]
+  match source.kind {
+    PlannedDirectCall(target, receiver, arguments, type_arguments) if receiver <
+      0 &&
+      type_arguments.length == 0 &&
+      (
+        target == declaration ||
+        (
+          branch_tail &&
+          program_tail_target_uses_scalar_carriers(
+            module_, target, result_shape,
+          )
+        )
+      ) =>
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedTailCall(target, receiver, arguments, type_arguments),
+      }
+    PlannedBlockExpression(block) =>
+      mark_tail_position_block(
+        module_,
+        block,
+        declaration,
+        result_shape,
+        branch_tail,
+        depth + 1,
+      )
+    PlannedIfExpression(_, then_block, alternative) => {
+      mark_tail_position_block(
+        module_,
+        then_block,
+        declaration,
+        result_shape,
+        true,
+        depth + 1,
+      )
+      mark_tail_position_expression(
+        module_,
+        alternative,
+        declaration,
+        result_shape,
+        true,
+        depth + 1,
+      )
+    }
+    PlannedMatchExpression(_, arms) => {
+      if arms.start < 0 ||
+        arms.start + arms.length > module_.pattern_arms.length() {
+        return
+      }
+      for index in 0..<arms.length {
+        mark_tail_position_expression(
+          module_,
+          module_.pattern_arms[arms.start + index].body,
+          declaration,
+          result_shape,
+          true,
+          depth + 1,
+        )
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn mark_tail_position_block(
+  module_ : PlannedModuleLowering,
+  block : BlockId,
+  declaration : DeclId,
+  result_shape : PlannedValueShape,
+  branch_tail : Bool,
+  depth : Int,
+) -> Unit {
+  if block < 0 ||
+    block >= module_.blocks.length() ||
+    depth > module_.expressions.length() + module_.blocks.length() {
+    return
+  }
+  let items = module_.blocks[block].items
+  if items.start < 0 ||
+    items.start + items.length > module_.block_items.length() {
+    return
+  }
+  for index in 0..<items.length {
+    match module_.block_items[items.start + index].kind {
+      PlannedReturnItem(value) if value >= 0 =>
+        mark_tail_position_expression(
+          module_,
+          value,
+          declaration,
+          result_shape,
+          false,
+          depth + 1,
+        )
+      _ => ()
+    }
+  }
+  if items.length == 0 {
+    return
+  }
+  match module_.block_items[items.start + items.length - 1].kind {
+    PlannedExpressionItem(value) =>
+      mark_tail_position_expression(
+        module_,
+        value,
+        declaration,
+        result_shape,
+        branch_tail,
+        depth + 1,
+      )
+    _ => ()
+  }
+}
+
+///|
+fn mark_program_tail_calls(modules : Array[PlannedModuleLowering]) -> Unit {
   for module_ in modules {
     for body in module_.bodies {
       let callable = match module_.functions.callable_of(body.declaration) {
@@ -6393,14 +6468,23 @@ fn mark_program_tail_recursion(modules : Array[PlannedModuleLowering]) -> Unit {
       }
       match body.root {
         ExpressionBodyRoot(expression) =>
-          mark_tail_recursive_expression(
+          mark_tail_position_expression(
             module_,
             expression,
             body.declaration,
+            callable.result_shape,
+            false,
             0,
           )
         BlockBodyRoot(block) =>
-          mark_tail_recursive_block(module_, block, body.declaration, 0)
+          mark_tail_position_block(
+            module_,
+            block,
+            body.declaration,
+            callable.result_shape,
+            false,
+            0,
+          )
       }
     }
   }
@@ -6430,7 +6514,7 @@ pub fn optimize_program_lowering(
   scalar_replace_program_struct_field_reads(modules, effects)
   scalar_replace_program_variant_payload_reads(modules)
   factor_program_variant_payload_extractions(modules)
-  mark_program_tail_recursion(modules)
+  mark_program_tail_calls(modules)
   {
     graph: lowering.graph,
     modules,

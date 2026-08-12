@@ -144,6 +144,15 @@ source lifetime. These intervals are an optimization proof, not backend local
 coloring; physical slot reuse still requires control-flow-sensitive dominance,
 interference, and backend local-type grouping.
 
+`PlannedTailCall` refines `PlannedDirectCall` after other call rewrites complete.
+Every reachability, specialization, link-validation, physical-dependency, nominal
+result, conversion-scratch, and backend emission query that recognizes direct
+calls must recognize tail calls identically unless it is specifically choosing
+between `call` and `return_call`. Tail transfers remain bounded to local
+user-defined receiver-free non-generic scalar-only bodies; cross-function
+transfers are added only inside terminal `if` branches and match arms so root
+forwarding wrappers remain available to summary/directization passes.
+
 ## Identity ownership
 
 ### Source and semantic IDs

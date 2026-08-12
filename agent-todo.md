@@ -14,7 +14,6 @@
 ## Optimization
 
 - [ ] Add measured physical local-slot reuse for proven noninterfering scalar/reference/generic ranges.
-- [ ] Add tail-position branch optimization.
 - [ ] Measure and implement a first conservative private scalar-enum representation specialization.
 
 ## Incremental and parallel compilation
