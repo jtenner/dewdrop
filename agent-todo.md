@@ -80,7 +80,6 @@
 
 ## Standard library
 
-- [ ] Implement `dew.std.math` with explicit overflow, trap, NaN, and signed-zero policies.
 - [ ] Implement portable `dew.std.io` separately from WASI adapters.
 - [ ] Implement `dew.std.testing` beyond compiler-owned primitives.
 - [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported Core 3 operation.

@@ -1,0 +1,81 @@
+open dew.std.math
+
+test "signed checked arithmetic rejects overflow" {
+  assert(i32_checked_add(2147483647, 1) is Option::None, "I32 add overflow")
+  assert(i64_checked_sub(-9223372036854775808i64, 1i64) is Option::None, "I64 sub overflow")
+  assert(i16_checked_mul(300i16, 300i16) is Option::None, "I16 mul overflow")
+  assert(i8_checked_div(-128i8, -1i8) is Option::None, "I8 div overflow")
+}
+
+test "signed checked arithmetic returns exact values" {
+  assert(i32_checked_add(20, 22) is Option::Some(42), "I32 checked add")
+  assert(i64_checked_mul(3037000499i64, 3037000499i64) is Option::Some(9223372030926249001i64), "I64 checked mul")
+  assert(i8_checked_rem(-128i8, -1i8) is Option::Some(0i8), "I8 checked rem")
+}
+
+test "unsigned checked arithmetic rejects wraparound" {
+  assert(u8_checked_add(255u8, 1u8) is Option::None, "U8 add overflow")
+  assert(u16_checked_sub(0u16, 1u16) is Option::None, "U16 sub overflow")
+  assert(u64_checked_mul(18446744073709551615u64, 2u64) is Option::None, "U64 mul overflow")
+  assert(u32_checked_div(1u32, 0u32) is Option::None, "U32 divide by zero")
+}
+
+test "wrapping arithmetic follows fixed-width carriers" {
+  assert(i8_wrapping_add(127i8, 1i8) == -128i8, "I8 wrapping add")
+  assert(u16_wrapping_sub(0u16, 1u16) == 65535u16, "U16 wrapping sub")
+  assert(i32_wrapping_mul(1073741824, 4) == 0, "I32 wrapping mul")
+}
+
+test "integer extrema and clamps are deterministic" {
+  assert(i16_abs(-32767i16) == 32767i16, "I16 abs")
+  assert(i32_min(-4, 7) == -4, "I32 min")
+  assert(i32_max(-4, 7) == 7, "I32 max")
+  assert(i32_clamp(11, 0, 10) == 10, "I32 clamp upper")
+  assert(u32_clamp(3u32, 4u32, 9u32) == 4u32, "U32 clamp lower")
+}
+
+test "signed abs traps on the unrepresentable minimum" expect_trap "unreachable" {
+  i32_abs(-2147483648i32)
+}
+
+test "integer clamp rejects an inverted interval" expect_trap "unreachable" {
+  i32_clamp(5, 9, 4)
+}
+
+test "floating classification uses exact IEEE bits" {
+  let nan32 = f32_from_bits(2143294004u32)
+  let nan64 = f64_from_bits(9221120237041095220u64)
+  assert(f32_is_nan(nan32), "F32 NaN")
+  assert(f64_is_nan(nan64), "F64 NaN")
+  assert(f32_is_infinite(1.0f32 / 0.0f32), "F32 infinity")
+  assert(f64_is_finite(42.0f64), "F64 finite")
+}
+
+test "floating min max clamp and copysign define signed zero" {
+  let neg_zero32 = f32_from_bits(2147483648u32)
+  let neg_zero64 = f64_from_bits(9223372036854775808u64)
+  assert(f32_to_bits(f32_min(0.0f32, neg_zero32)) == 2147483648u32, "F32 min zero")
+  assert(f32_to_bits(f32_max(neg_zero32, 0.0f32)) == 0u32, "F32 max zero")
+  assert(f64_to_bits(f64_clamp(neg_zero64, 0.0f64, 1.0f64)) == 9223372036854775808u64, "F64 clamp zero")
+  assert(f32_to_bits(f32_copysign(3.5f32, neg_zero32)) == 3227516928u32, "F32 copysign")
+}
+
+test "floating clamp rejects NaN bounds" expect_trap "unreachable" {
+  f32_clamp(1.0f32, f32_from_bits(2143294004u32), 2.0f32)
+}
+
+test "floating min and max preserve the selected NaN operand" {
+  let nan32 = f32_from_bits(2143294004u32)
+  let nan64 = f64_from_bits(9221120237041095220u64)
+  assert(f32_to_bits(f32_min(nan32, 1.0f32)) == 2143294004u32, "F32 left NaN")
+  assert(f64_to_bits(f64_max(1.0f64, nan64)) == 9221120237041095220u64, "F64 right NaN")
+}
+
+test "scalar floating operations map to Core instructions" {
+  assert(f32_abs(-3.5f32) == 3.5f32, "F32 abs")
+  assert(f32_sqrt(81.0f32) == 9.0f32, "F32 sqrt")
+  assert(f64_floor(3.75f64) == 3.0f64, "F64 floor")
+  assert(f64_ceil(3.25f64) == 4.0f64, "F64 ceil")
+  assert(f64_trunc(-3.75f64) == -3.0f64, "F64 trunc")
+  assert(f32_nearest(2.5f32) == 2.0f32, "F32 nearest ties even")
+}

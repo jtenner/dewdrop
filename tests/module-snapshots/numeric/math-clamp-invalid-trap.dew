@@ -1,0 +1,5 @@
+open dew.std.math
+
+pub fn main() -> I32 {
+  i32_clamp(5, 9, 4)
+}

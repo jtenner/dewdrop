@@ -1,0 +1,34 @@
+open dew.std.math
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  let nan32 = f32_from_bits(2143294004u32)
+  let nan64 = f64_from_bits(9221120237041095220u64)
+  let neg_zero32 = f32_from_bits(2147483648u32)
+  let neg_zero64 = f64_from_bits(9223372036854775808u64)
+  let checked_i32 = i32_checked_add(2147483647, 1)
+  let checked_u64 = u64_checked_mul(18446744073709551615u64, 2u64)
+  let exact_i64 = i64_checked_mul(3037000499i64, 3037000499i64)
+  let all_good =
+    i8_wrapping_add(127i8, 1i8) == -128i8 &&
+    i16_abs(-32767i16) == 32767i16 &&
+    i32_clamp(11, 0, 10) == 10 &&
+    u32_clamp(3u32, 4u32, 9u32) == 4u32 &&
+    checked_i32 is Option::None &&
+    checked_u64 is Option::None &&
+    exact_i64 is Option::Some(9223372030926249001i64) &&
+    i64_checked_div(-9223372036854775808i64, -1i64) is Option::None &&
+    f32_to_bits(f32_min(0.0f32, neg_zero32)) == 2147483648u32 &&
+    f32_to_bits(f32_max(neg_zero32, 0.0f32)) == 0u32 &&
+    f64_to_bits(f64_clamp(neg_zero64, 0.0f64, 1.0f64)) == 9223372036854775808u64 &&
+    f32_to_bits(f32_min(nan32, 1.0f32)) == 2143294004u32 &&
+    f64_to_bits(f64_max(1.0f64, nan64)) == 9221120237041095220u64 &&
+    f32_is_nan(f32_sqrt(-1.0f32)) &&
+    f64_is_infinite(1.0f64 / 0.0f64) &&
+    f32_to_bits(f32_copysign(3.5f32, neg_zero32)) == 3227516928u32
+  if all_good {
+    wasi_fd_write(1u32, b"numeric:math")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

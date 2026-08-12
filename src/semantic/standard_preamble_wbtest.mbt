@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 59)
+  assert_eq(wildcard_paths.length(), 60)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -52,10 +52,11 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[28], "std/show.dew")
   assert_eq(wildcard_paths[29], "std/disposable.dew")
   assert_eq(wildcard_paths[30], "std/iter.dew")
-  assert_eq(wildcard_paths[31], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[36], "std/text.dew")
-  assert_eq(wildcard_paths[38], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[58], "std/f64x2.dew")
+  assert_eq(wildcard_paths[31], "std/math.dew")
+  assert_eq(wildcard_paths[32], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[37], "std/text.dew")
+  assert_eq(wildcard_paths[39], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[59], "std/f64x2.dew")
 }
 
 ///|
@@ -68,7 +69,21 @@ test "standard import prepass selects split module bits" {
         b"open dew.std.string\nopen dew.std.bytes\nopen dew.std.wasi\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (9, false, false, true, false, false, false, false, false, 0, 0),
+    (9, false, false, false, true, false, false, false, false, false, 0, 0),
+  )
+}
+
+///|
+test "standard import prepass selects scalar math dependencies" {
+  let module_id = 998UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.math\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (0, false, false, true, false, false, false, false, false, false, 0, 0),
   )
 }
 
@@ -82,7 +97,7 @@ test "standard import prepass selects generic iterator dependencies" {
         b"open dew.std.iter\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (0, false, false, false, false, false, false, false, false, 1024, 0),
+    (0, false, false, false, false, false, false, false, false, false, 1024, 0),
   )
 }
 
@@ -96,7 +111,7 @@ test "standard import prepass selects text iteration dependencies" {
         b"open dew.std.text\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (17, false, false, false, false, true, false, false, false, 0, 0),
+    (17, false, false, false, false, false, true, false, false, false, 0, 0),
   )
 }
 
@@ -110,7 +125,7 @@ test "standard import prepass selects Show and builder dependency" {
         b"open dew.std.show\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (3, true, false, false, false, false, false, false, false, 0, 0),
+    (3, true, false, false, false, false, false, false, false, false, 0, 0),
   )
 }
 
@@ -124,7 +139,7 @@ test "standard import prepass selects Disposable" {
         b"open dew.std.disposable\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (0, false, true, false, false, false, false, false, false, 0, 0),
+    (0, false, true, false, false, false, false, false, false, false, 0, 0),
   )
 }
 
@@ -138,7 +153,9 @@ test "standard import prepass selects lane module bits" {
         b"open dew.std.i8x4\nopen dew.std.f64x2\npub fn run() -> Unit {\n}\n",
       ),
     ]),
-    (0, false, false, false, false, false, false, false, false, 0, 524289),
+    (
+      0, false, false, false, false, false, false, false, false, false, 0, 524289,
+    ),
   )
 }
 

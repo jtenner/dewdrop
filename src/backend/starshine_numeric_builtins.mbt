@@ -360,6 +360,38 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::i64_div_u()])
   } else if name == b"dew_u64_rem" {
     Some([@lib.Instruction::i64_rem_u()])
+  } else if name == b"dew_math_f32_to_bits" {
+    Some([@lib.Instruction::i32_reinterpret_f32()])
+  } else if name == b"dew_math_f32_from_bits" {
+    Some([@lib.Instruction::f32_reinterpret_i32()])
+  } else if name == b"dew_math_f32_abs" {
+    Some([@lib.Instruction::f32_abs()])
+  } else if name == b"dew_math_f32_sqrt" {
+    Some([@lib.Instruction::f32_sqrt()])
+  } else if name == b"dew_math_f32_ceil" {
+    Some([@lib.Instruction::f32_ceil()])
+  } else if name == b"dew_math_f32_floor" {
+    Some([@lib.Instruction::f32_floor()])
+  } else if name == b"dew_math_f32_trunc" {
+    Some([@lib.Instruction::f32_trunc()])
+  } else if name == b"dew_math_f32_nearest" {
+    Some([@lib.Instruction::f32_nearest()])
+  } else if name == b"dew_math_f64_to_bits" {
+    Some([@lib.Instruction::i64_reinterpret_f64()])
+  } else if name == b"dew_math_f64_from_bits" {
+    Some([@lib.Instruction::f64_reinterpret_i64()])
+  } else if name == b"dew_math_f64_abs" {
+    Some([@lib.Instruction::f64_abs()])
+  } else if name == b"dew_math_f64_sqrt" {
+    Some([@lib.Instruction::f64_sqrt()])
+  } else if name == b"dew_math_f64_ceil" {
+    Some([@lib.Instruction::f64_ceil()])
+  } else if name == b"dew_math_f64_floor" {
+    Some([@lib.Instruction::f64_floor()])
+  } else if name == b"dew_math_f64_trunc" {
+    Some([@lib.Instruction::f64_trunc()])
+  } else if name == b"dew_math_f64_nearest" {
+    Some([@lib.Instruction::f64_nearest()])
   } else if name == b"dew_f32_eq" {
     Some([@lib.Instruction::f32_eq()])
   } else if name == b"dew_f32_ne" {

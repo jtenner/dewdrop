@@ -215,7 +215,10 @@ planning, and backend runtime emission depend on those identities.
 
 `tools/standard-builtin-registry.json` is the canonical compiler identity table
 for Option, FixedArray, Map, Set, lane modules, collection methods, and index
-implementations. `tools/generate_standard_builtin_registry.py` generates
+implementations. Scalar `dew.std.math` builtins are ordinary inline builtin
+names: exact float bit reinterpretation and Core unary math operations are
+mapped in `src/backend/starshine_numeric_builtins.mbt`, while the integer and
+floating policy layer remains generated Dew source. `tools/generate_standard_builtin_registry.py` generates
 `src/semantic/standard_builtin_registry.mbt`, including typed
 `StandardBuiltinOperation` cases instead of integer operation codes. White-box
 collection tests validate generated slots and ordinals against bootstrap source;

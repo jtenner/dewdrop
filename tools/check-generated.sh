@@ -24,6 +24,7 @@ python3 tools/generate_ordered_set_std.py --check
 python3 tools/generate_show_std.py --check
 python3 tools/generate_disposable_std.py --check
 python3 tools/generate_iter_std.py --check
+python3 tools/generate_math_std.py --check
 python3 tools/generate_text_iteration_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
