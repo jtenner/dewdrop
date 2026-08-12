@@ -3466,6 +3466,7 @@ fn scalar_replace_synthesized_struct_components(
       let base_gets : Array[ExprId] = []
       let field_indices : Array[Int] = []
       let first_field_get : Array[ExprId] = Array::make(fields.length, -1)
+      let component_nominals : Array[DeclId] = Array::make(fields.length, 0UL)
       let mut valid = true
       for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
         let source_local = match module_.expressions[expression].kind {
@@ -3519,16 +3520,40 @@ fn scalar_replace_synthesized_struct_components(
         let object_value = module_.object_fields[
           fields.start + selected_index
         ].value
-        if object_value < 0 ||
-          object_value >= module_.expressions.length() ||
-          !program_scalar_replaceable_field_shape(
-            module_.expressions[selected_get].shape,
-          ) ||
+        if object_value < 0 || object_value >= module_.expressions.length() {
+          valid = false
+          break
+        }
+        let field_shape = module_.expressions[selected_get].shape
+        let mut component_nominal = 0UL
+        let supported_shape = if program_scalar_replaceable_field_shape(
+          field_shape,
+        ) {
+          true
+        } else if field_shape is RefPlannedValueShape {
+          match module_.expressions[object_value].kind {
+            PlannedLocalGet(source_local) if
+              source_local >= 0 && source_local < body.locals.length => {
+              component_nominal = module_.locals[
+                body.locals.start + source_local
+              ].nominal
+              component_nominal != 0UL
+            }
+            _ => false
+          }
+        } else {
+          false
+        }
+        if !supported_shape ||
           module_.expressions[object_value].type_ !=
           module_.expressions[selected_get].type_ ||
-          module_.expressions[object_value].shape !=
-          module_.expressions[selected_get].shape ||
+          module_.expressions[object_value].shape != field_shape ||
           !(module_.expressions[selected_get].trait_object_coercion is NoInferredTraitObjectCoercion) {
+          valid = false
+          break
+        }
+        if first_field_get[selected_index] >= 0 &&
+          component_nominals[selected_index] != component_nominal {
           valid = false
           break
         }
@@ -3560,6 +3585,7 @@ fn scalar_replace_synthesized_struct_components(
         field_indices.push(selected_index)
         if first_field_get[selected_index] < 0 {
           first_field_get[selected_index] = selected_get
+          component_nominals[selected_index] = component_nominal
         }
       }
       if !valid || field_gets.length() != use_count {
@@ -3595,7 +3621,7 @@ fn scalar_replace_synthesized_struct_components(
           mutable_: false,
           type_: field_source.type_,
           shape: field_source.shape,
-          nominal: 0UL,
+          nominal: component_nominals[field_index],
           offset: field_source.offset,
         })
       }

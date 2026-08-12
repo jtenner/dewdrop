@@ -1,0 +1,28 @@
+struct Token {
+  value: I32
+}
+
+struct Pair {
+  first: Token
+  second: Token
+}
+
+fn trap_first() -> Token {
+  unreachable()
+}
+
+fn trap_second() -> Token {
+  let zero = 0
+  let trapped = 1 / zero
+  Token {
+    value: trapped
+  }
+}
+
+pub fn main() -> I32 {
+  let pair = Pair {
+    first: trap_first()
+    second: trap_second()
+  }
+  pair.second.value
+}
