@@ -1,0 +1,21 @@
+open dew.std.io
+open dew.std.bytes
+
+pub fn main() -> Bool {
+  let input = BytesInput::new(b"portable")
+  let output = BytesOutput::new()
+  match io_read_exact(input, 8u32) {
+    Result::Ok(value) => {
+      match io_write_all(output, value) {
+        Result::Ok(8u32) => {
+          match output.finish() {
+            Result::Ok(result) => result.equals(b"portable")
+            Result::Err(_) => false
+          }
+        }
+        _ => false
+      }
+    }
+    Result::Err(_) => false
+  }
+}

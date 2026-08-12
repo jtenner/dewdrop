@@ -80,7 +80,6 @@
 
 ## Standard library
 
-- [ ] Implement portable `dew.std.io` separately from WASI adapters.
 - [ ] Implement `dew.std.testing` beyond compiler-owned primitives.
 - [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported Core 3 operation.
 - [ ] Add generated declaration/backend intrinsic parity checks.

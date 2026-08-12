@@ -240,6 +240,7 @@ pub fn required_standard_library_source_paths(
     include_show,
     include_disposable,
     include_math,
+    include_io,
     include_wasi,
     include_wasm_intrinsics,
     include_fixed_array,
@@ -253,6 +254,7 @@ pub fn required_standard_library_source_paths(
     include_show ||
     include_disposable ||
     include_math ||
+    include_io ||
     include_wasi ||
     include_wasm_intrinsics ||
     include_fixed_array ||
@@ -332,6 +334,9 @@ pub fn required_standard_library_source_paths(
   }
   if include_math {
     required.push("std/math.dew")
+  }
+  if include_io {
+    required.push("std/io.dew")
   }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
@@ -433,6 +438,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let mut selected_show = false
   let mut selected_disposable = false
   let mut selected_math = false
+  let mut selected_io = false
   let mut selected_wasi = false
   let mut selected_wasm_intrinsics = false
   let mut selected_fixed_array = false
@@ -477,6 +483,7 @@ pub fn collect_program_manifest_with_standard_sources(
       include_show,
       include_disposable,
       include_math,
+      include_io,
       include_wasi,
       include_wasm_intrinsics,
       include_fixed_array,
@@ -490,6 +497,7 @@ pub fn collect_program_manifest_with_standard_sources(
     selected_show = selected_show || include_show
     selected_disposable = selected_disposable || include_disposable
     selected_math = selected_math || include_math
+    selected_io = selected_io || include_io
     selected_wasi = selected_wasi || include_wasi
     selected_wasm_intrinsics = selected_wasm_intrinsics ||
       include_wasm_intrinsics
@@ -769,6 +777,20 @@ pub fn collect_program_manifest_with_standard_sources(
         module_id,
         standard_library_program_files(
           module_id, "std/math.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if selected_io {
+    let module_id = standard_library_module_id(49)
+    let module_index = modules.length()
+    first_module["dew.std.io"] = module_index
+    module_paths.push("dew.std.io")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/io.dew", standard_sources, false, false,
         ),
       ),
     )

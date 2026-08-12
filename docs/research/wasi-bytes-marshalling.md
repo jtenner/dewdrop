@@ -161,8 +161,8 @@ backing construction.
 
 ## Follow-up work
 
-- Introduce typed errno results if callers need recoverable I/O failures.
+- Add recoverable `WasiReader`/`WasiWriter` adapters implementing the portable `dew.std.io` traits while preserving exact Preview 1 errno values; the existing direct WASI functions remain trapping.
 - Add scatter/gather APIs only if profiling justifies more than one iovec.
-- Integrate with a future stream abstraction and CLI runtime.
+- Integrate portable streams with the CLI runtime without making `dew.std.io` host-specific.
 - Run full WASI marshalling on Wago after its standalone CLI enables Core 3 and the required WASI host plugin is configured; the Core 3 API now accepts V128 GC-array storage.
 - Measure larger regular-file and socket-like workloads.

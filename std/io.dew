@@ -1,0 +1,252 @@
+open dew.std.fixed_array
+open dew.std.bytes
+open dew.std.bytes_builder
+
+pub enum IoError {
+  UnexpectedEnd
+  ZeroProgress
+  InvalidProgress
+  Closed
+  LimitExceeded
+  Backend(U32)
+}
+
+pub trait Reader {
+  fn read(self, limit: U32) -> Result<Bytes, IoError>
+}
+
+pub trait Writer {
+  fn write(self, value: Bytes) -> Result<U32, IoError>
+}
+
+pub fn io_read<r: Reader>(
+  reader: r,
+  limit: U32,
+) -> Result<Bytes, IoError> {
+  reader.read(limit)
+}
+
+pub fn io_write<w: Writer>(
+  writer: w,
+  value: Bytes,
+) -> Result<U32, IoError> {
+  writer.write(value)
+}
+
+pub fn io_read_exact<r: Reader>(
+  reader: r,
+  length: U32,
+) -> Result<Bytes, IoError> {
+  let builder = BytesBuilder::with_capacity(length)
+  while 0u32 {
+    total if total < length => {
+      match reader.read(length - total) {
+        Result::Ok(chunk) => {
+          let count = chunk.byte_length()
+          if count == 0u32 {
+            break Result::Err(IoError::UnexpectedEnd)
+          } else if count > length - total {
+            break Result::Err(IoError::InvalidProgress)
+          } else {
+            builder.append(chunk)
+            continue total + count
+          }
+        }
+        Result::Err(error) => break Result::Err(error)
+      }
+    }
+    _ => break Result::Ok(builder.finish())
+  }
+}
+
+pub fn io_write_all<w: Writer>(
+  writer: w,
+  value: Bytes,
+) -> Result<U32, IoError> {
+  let length = value.byte_length()
+  while 0u32 {
+    total if total < length => {
+      let remaining = value.view(total, length - total)
+      match writer.write(remaining) {
+        Result::Ok(written) => {
+          if written == 0u32 {
+            break Result::Err(IoError::ZeroProgress)
+          } else if written > length - total {
+            break Result::Err(IoError::InvalidProgress)
+          } else {
+            continue total + written
+          }
+        }
+        Result::Err(error) => break Result::Err(error)
+      }
+    }
+    _ => break Result::Ok(length)
+  }
+}
+
+pub fn io_read_to_end<r: Reader>(
+  reader: r,
+  chunk_limit: U32,
+  max_bytes: U32,
+) -> Result<Bytes, IoError> {
+  if chunk_limit == 0u32 {
+    Result::Err(IoError::ZeroProgress)
+  } else {
+    let builder = BytesBuilder::new()
+    while 0u32 {
+      total => {
+        match reader.read(chunk_limit) {
+          Result::Ok(chunk) => {
+            let count = chunk.byte_length()
+            if count == 0u32 {
+              break Result::Ok(builder.finish())
+            } else if count > chunk_limit {
+              break Result::Err(IoError::InvalidProgress)
+            } else if total > max_bytes || count > max_bytes - total {
+              break Result::Err(IoError::LimitExceeded)
+            } else {
+              builder.append(chunk)
+              continue total + count
+            }
+          }
+          Result::Err(error) => break Result::Err(error)
+        }
+      }
+    }
+  }
+}
+
+pub fn io_copy<r: Reader, w: Writer>(
+  reader: r,
+  writer: w,
+  chunk_limit: U32,
+) -> Result<U32, IoError> {
+  if chunk_limit == 0u32 {
+    Result::Err(IoError::ZeroProgress)
+  } else {
+    while 0u32 {
+      total => {
+        match reader.read(chunk_limit) {
+          Result::Ok(chunk) => {
+            let count = chunk.byte_length()
+            if count == 0u32 {
+              break Result::Ok(total)
+            } else if count > chunk_limit {
+              break Result::Err(IoError::InvalidProgress)
+            } else if count > 4294967295u32 - total {
+              break Result::Err(IoError::LimitExceeded)
+            } else {
+              match io_write_all(writer, chunk) {
+                Result::Ok(written) => {
+                  if written == count {
+                    continue total + count
+                  } else {
+                    break Result::Err(IoError::InvalidProgress)
+                  }
+                }
+                Result::Err(error) => break Result::Err(error)
+              }
+            }
+          }
+          Result::Err(error) => break Result::Err(error)
+        }
+      }
+    }
+  }
+}
+
+pub struct BytesInput {
+  value: Bytes
+  offset: FixedArray<U32>
+}
+
+impl BytesInput {
+  fn new(value: Bytes) -> BytesInput {
+    BytesInput {
+      value: value
+      offset: FixedArray::make(1u32, 0u32)
+    }
+  }
+  fn remaining(self) -> U32 {
+    let offset = self.offset.get_unchecked(0u32)
+    let length = self.value.byte_length()
+    if offset > length {
+      0u32
+    } else {
+      length - offset
+    }
+  }
+  fn is_empty(self) -> Bool {
+    self.remaining() == 0u32
+  }
+}
+
+impl Reader for BytesInput {
+  fn read(self, limit: U32) -> Result<Bytes, IoError> {
+    let offset = self.offset.get_unchecked(0u32)
+    let length = self.value.byte_length()
+    if offset > length {
+      Result::Err(IoError::InvalidProgress)
+    } else if limit == 0u32 || offset == length {
+      Result::Ok(b"")
+    } else {
+      let available = length - offset
+      let count = if limit < available {
+        limit
+      } else {
+        available
+      }
+      self.offset.set_unchecked(0u32, offset + count)
+      Result::Ok(self.value.view(offset, count))
+    }
+  }
+}
+
+pub struct BytesOutput {
+  builder: BytesBuilder
+  state: FixedArray<U32>
+}
+
+impl BytesOutput {
+  fn new() -> BytesOutput {
+    BytesOutput::with_capacity(0u32)
+  }
+  fn with_capacity(capacity: U32) -> BytesOutput {
+    BytesOutput {
+      builder: BytesBuilder::with_capacity(capacity)
+      state: FixedArray::make(2u32, 0u32)
+    }
+  }
+  fn byte_length(self) -> U32 {
+    self.state.get_unchecked(1u32)
+  }
+  fn is_closed(self) -> Bool {
+    self.state.get_unchecked(0u32) != 0u32
+  }
+  fn finish(self) -> Result<Bytes, IoError> {
+    if self.is_closed() {
+      Result::Err(IoError::Closed)
+    } else {
+      self.state.set_unchecked(0u32, 1u32)
+      Result::Ok(self.builder.finish())
+    }
+  }
+}
+
+impl Writer for BytesOutput {
+  fn write(self, value: Bytes) -> Result<U32, IoError> {
+    if self.is_closed() {
+      Result::Err(IoError::Closed)
+    } else {
+      let added = value.byte_length()
+      let length = self.byte_length()
+      if added > 4294967295u32 - length {
+        Result::Err(IoError::LimitExceeded)
+      } else {
+        self.builder.append(value)
+        self.state.set_unchecked(1u32, length + added)
+        Result::Ok(added)
+      }
+    }
+  }
+}

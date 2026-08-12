@@ -119,7 +119,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 - [x] Implement `dew.std.iter` combinators over the minimal ambient `Iter<t>` protocol with explicit allocation/consumption behavior.
 - [x] Implement `dew.std.math` with explicit overflow, trap, NaN, and signed-zero policies.
-- [ ] Implement portable `dew.std.io` abstractions separately from WASI adapters.
+- [x] Implement portable `dew.std.io` abstractions separately from WASI adapters.
 - [ ] Implement `dew.std.testing` beyond compiler-owned assertion/test primitives.
 - [ ] Complete `dew.std.wasm.intrinsics` for every compiler-supported WebAssembly Core 3 scalar, reference, GC, memory, table, SIMD, conversion, control, and host-boundary operation.
 - [ ] Add generated declaration/backend parity checks so no source-addressable compiler builtin lives outside `dew.std.wasm.intrinsics`.

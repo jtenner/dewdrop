@@ -218,7 +218,11 @@ for Option, FixedArray, Map, Set, lane modules, collection methods, and index
 implementations. Scalar `dew.std.math` builtins are ordinary inline builtin
 names: exact float bit reinterpretation and Core unary math operations are
 mapped in `src/backend/starshine_numeric_builtins.mbt`, while the integer and
-floating policy layer remains generated Dew source. `tools/generate_standard_builtin_registry.py` generates
+floating policy layer remains generated Dew source. Portable `dew.std.io`
+contains only ordinary traits, control flow, FixedArray state, immutable Bytes,
+and BytesBuilder composition. Its architecture fixture rejects WASI imports and
+linear memory, keeping host adapters outside the portable module.
+`tools/generate_standard_builtin_registry.py` generates
 `src/semantic/standard_builtin_registry.mbt`, including typed
 `StandardBuiltinOperation` cases instead of integer operation codes. White-box
 collection tests validate generated slots and ordinals against bootstrap source;

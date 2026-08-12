@@ -1,0 +1,106 @@
+open dew.std.io
+open dew.std.bytes
+
+test "BytesInput reads bounded shared ranges" {
+  let input = BytesInput::new(b"abcdef")
+  match io_read(input, 2u32) {
+    Result::Ok(value) => assert(value.equals(b"ab"), "first input chunk")
+    Result::Err(_) => assert(false, "first input read failed")
+  }
+  assert(input.remaining() == 4u32, "remaining after first read")
+  match io_read(input, 99u32) {
+    Result::Ok(value) => assert(value.equals(b"cdef"), "final input chunk")
+    Result::Err(_) => assert(false, "final input read failed")
+  }
+  assert(input.is_empty(), "input did not exhaust")
+  match io_read(input, 1u32) {
+    Result::Ok(value) => assert(value.byte_length() == 0u32, "EOF chunk was not empty")
+    Result::Err(_) => assert(false, "EOF read failed")
+  }
+}
+
+test "io_read_exact assembles repeated reads" {
+  let input = BytesInput::new(b"portable")
+  match io_read_exact(input, 8u32) {
+    Result::Ok(value) => assert(value.equals(b"portable"), "exact input bytes")
+    Result::Err(_) => assert(false, "exact read failed")
+  }
+  assert(input.is_empty(), "exact read did not consume input")
+}
+
+test "io_read_exact reports short input" {
+  let input = BytesInput::new(b"short")
+  assert(io_read_exact(input, 6u32) is Result::Err(IoError::UnexpectedEnd), "missing short-read error")
+}
+
+test "io_read_to_end respects the explicit byte bound" {
+  let input = BytesInput::new(b"chunked")
+  match io_read_to_end(input, 2u32, 7u32) {
+    Result::Ok(value) => assert(value.equals(b"chunked"), "read to end bytes")
+    Result::Err(_) => assert(false, "read to end failed")
+  }
+  let limited = BytesInput::new(b"overflow")
+  assert(io_read_to_end(limited, 3u32, 7u32) is Result::Err(IoError::LimitExceeded), "missing read limit error")
+  assert(io_read_to_end(BytesInput::new(b"x"), 0u32, 1u32) is Result::Err(IoError::ZeroProgress), "zero read chunk accepted")
+}
+
+test "BytesOutput accumulates writes and publishes once" {
+  let output = BytesOutput::with_capacity(6u32)
+  assert(io_write(output, b"ab") is Result::Ok(2u32), "first output write")
+  assert(io_write_all(output, b"cdef") is Result::Ok(4u32), "write all")
+  assert(output.byte_length() == 6u32, "output length")
+  match output.finish() {
+    Result::Ok(value) => assert(value.equals(b"abcdef"), "finished output")
+    Result::Err(_) => assert(false, "output finish failed")
+  }
+  assert(output.is_closed(), "finished output remained open")
+  assert(io_write(output, b"x") is Result::Err(IoError::Closed), "closed output accepted write")
+  assert(output.finish() is Result::Err(IoError::Closed), "closed output finished twice")
+}
+
+struct ZeroWriter {}
+
+impl Writer for ZeroWriter {
+  fn write(self, value: Bytes) -> Result<U32, IoError> {
+    Result::Ok(0u32)
+  }
+}
+
+test "io_write_all rejects zero progress" {
+  assert(io_write_all(ZeroWriter {}, b"x") is Result::Err(IoError::ZeroProgress), "missing zero-progress error")
+}
+
+test "io_copy transfers bounded chunks" {
+  let input = BytesInput::new(b"copy me")
+  let output = BytesOutput::new()
+  assert(io_copy(input, output, 3u32) is Result::Ok(7u32), "copy count")
+  match output.finish() {
+    Result::Ok(value) => assert(value.equals(b"copy me"), "copied bytes")
+    Result::Err(_) => assert(false, "copy output failed")
+  }
+  assert(io_copy(BytesInput::new(b"x"), BytesOutput::new(), 0u32) is Result::Err(IoError::ZeroProgress), "zero copy chunk accepted")
+}
+
+struct OverreportWriter {}
+
+impl Writer for OverreportWriter {
+  fn write(self, value: Bytes) -> Result<U32, IoError> {
+    Result::Ok(value.byte_length() + 1u32)
+  }
+}
+
+test "io_write_all rejects over-reporting" {
+  assert(io_write_all(OverreportWriter {}, b"x") is Result::Err(IoError::InvalidProgress), "missing invalid-progress error")
+}
+
+struct BackendReader {}
+
+impl Reader for BackendReader {
+  fn read(self, limit: U32) -> Result<Bytes, IoError> {
+    Result::Err(IoError::Backend(17u32))
+  }
+}
+
+test "io_read_exact preserves backend errors" {
+  assert(io_read_exact(BackendReader {}, 1u32) is Result::Err(IoError::Backend(17u32)), "backend error changed")
+}
