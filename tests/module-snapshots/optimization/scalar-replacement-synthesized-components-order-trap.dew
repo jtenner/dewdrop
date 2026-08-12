@@ -1,0 +1,24 @@
+struct Quad {
+  first: I32
+  second: I32
+  third: I32
+  fourth: I32
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  let quad = Quad {
+    first: 1
+    second: trap_first()
+    third: trap_second()
+    fourth: 4
+  }
+  quad.first + quad.third
+}

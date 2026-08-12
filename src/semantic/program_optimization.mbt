@@ -2488,6 +2488,9 @@ fn prepare_program_optimization_mutation(
     }
     modules[module_index] = {
       ..module_,
+      bodies: module_.bodies.copy(),
+      locals: module_.locals.copy(),
+      blocks: module_.blocks.copy(),
       expressions: module_.expressions.copy(),
       block_items: module_.block_items.copy(),
       expression_children: module_.expression_children.copy(),
@@ -3411,6 +3414,263 @@ fn scalar_replace_repeated_same_struct_field_local(
 }
 
 ///|
+fn scalar_replace_synthesized_struct_components(
+  module_ : PlannedModuleLowering,
+  body_index : Int,
+) -> Bool {
+  if body_index < 0 || body_index >= module_.bodies.length() {
+    return false
+  }
+  let body = module_.bodies[body_index]
+  if body.locals.start < 0 ||
+    body.locals.start + body.locals.length > module_.locals.length() {
+    return false
+  }
+  for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+    if block < 0 || block >= module_.blocks.length() {
+      continue
+    }
+    let items = module_.blocks[block].items
+    if items.start < 0 ||
+      items.start + items.length > module_.block_items.length() {
+      continue
+    }
+    for item_index in 0..<items.length {
+      let (local_id, initializer) = match
+        module_.block_items[items.start + item_index].kind {
+        PlannedLetItem(local_id, false, initializer) =>
+          (local_id, initializer)
+        _ => continue
+      }
+      if local_id < 0 ||
+        local_id >= body.locals.length ||
+        initializer < 0 ||
+        initializer >= module_.expressions.length() ||
+        program_cse_local_is_captured(module_, body, local_id) {
+        continue
+      }
+      let fields = match module_.expressions[initializer].kind {
+        PlannedStructNew(_, _, fields) => fields
+        _ => continue
+      }
+      if fields.length < 2 ||
+        fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() {
+        continue
+      }
+      let (use_count, _) = program_local_get_count(module_, body, local_id)
+      if use_count < 2 {
+        continue
+      }
+      let field_gets : Array[ExprId] = []
+      let base_gets : Array[ExprId] = []
+      let field_indices : Array[Int] = []
+      let first_field_get : Array[ExprId] = Array::make(fields.length, -1)
+      let mut valid = true
+      for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+        let source_local = match module_.expressions[expression].kind {
+          PlannedLocalGet(candidate) => candidate
+          _ => continue
+        }
+        if source_local != local_id {
+          continue
+        }
+        let mut selected_get = -1
+        let mut selected_field : FieldId? = None
+        for candidate in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+          match module_.expressions[candidate].kind {
+            PlannedFieldGet(field, base) if base == expression => {
+              if selected_get >= 0 {
+                valid = false
+                break
+              }
+              selected_get = candidate
+              selected_field = Some(field)
+            }
+            _ => ()
+          }
+        }
+        if !valid || selected_get < 0 {
+          valid = false
+          break
+        }
+        let selected_field = match selected_field {
+          Some(field) => field
+          None => {
+            valid = false
+            break
+          }
+        }
+        let mut selected_index = -1
+        for field_index in 0..<fields.length {
+          if module_.object_fields[fields.start + field_index].field ==
+            selected_field {
+            if selected_index >= 0 {
+              valid = false
+              break
+            }
+            selected_index = field_index
+          }
+        }
+        if !valid || selected_index < 0 {
+          valid = false
+          break
+        }
+        let object_value = module_.object_fields[
+          fields.start + selected_index
+        ].value
+        if object_value < 0 ||
+          object_value >= module_.expressions.length() ||
+          !program_scalar_replaceable_field_shape(
+            module_.expressions[selected_get].shape,
+          ) ||
+          module_.expressions[object_value].type_ !=
+          module_.expressions[selected_get].type_ ||
+          module_.expressions[object_value].shape !=
+          module_.expressions[selected_get].shape ||
+          !(module_.expressions[selected_get].trait_object_coercion is NoInferredTraitObjectCoercion) {
+          valid = false
+          break
+        }
+        for candidate_block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+          if candidate_block < 0 || candidate_block >= module_.blocks.length() {
+            continue
+          }
+          let candidate_items = module_.blocks[candidate_block].items
+          for candidate_item in 0..<candidate_items.length {
+            match module_.block_items[
+              candidate_items.start + candidate_item
+            ].kind {
+              PlannedLetItem(_, false, value) if value == selected_get => {
+                valid = false
+                break
+              }
+              _ => ()
+            }
+          }
+          if !valid {
+            break
+          }
+        }
+        if !valid {
+          break
+        }
+        field_gets.push(selected_get)
+        base_gets.push(expression)
+        field_indices.push(selected_index)
+        if first_field_get[selected_index] < 0 {
+          first_field_get[selected_index] = selected_get
+        }
+      }
+      if !valid || field_gets.length() != use_count {
+        continue
+      }
+      let mut selected_fields = 0
+      for field_index in 0..<fields.length {
+        if first_field_get[field_index] >= 0 {
+          selected_fields += 1
+        }
+      }
+      if selected_fields < 2 {
+        continue
+      }
+      let new_locals_start = module_.locals.length()
+      for index in 0..<body.locals.length {
+        module_.locals.push(module_.locals[body.locals.start + index])
+      }
+      let component_locals : Array[LocalId] = Array::make(fields.length, -1)
+      for field_index in 0..<fields.length {
+        let field_get = first_field_get[field_index]
+        if field_get < 0 {
+          continue
+        }
+        let field_source = module_.expressions[field_get]
+        component_locals[field_index] = module_.locals.length() -
+          new_locals_start
+        module_.locals.push({
+          body: module_.locals[new_locals_start + local_id].body,
+          lambda: module_.locals[new_locals_start + local_id].lambda,
+          local_id: component_locals[field_index],
+          kind: LetLocal,
+          mutable_: false,
+          type_: field_source.type_,
+          shape: field_source.shape,
+          nominal: 0UL,
+          offset: field_source.offset,
+        })
+      }
+      let aggregate_local = module_.locals[new_locals_start + local_id]
+      module_.locals[new_locals_start + local_id] = {
+        ..aggregate_local,
+        shape: UnitPlannedValueShape,
+        nominal: 0UL,
+      }
+      let new_items_start = module_.block_items.length()
+      for index in 0..<item_index {
+        module_.block_items.push(module_.block_items[items.start + index])
+      }
+      let aggregate_item = module_.block_items[items.start + item_index]
+      for field_index in 0..<fields.length {
+        let object_value = module_.object_fields[
+          fields.start + field_index
+        ].value
+        module_.block_items.push(
+          if component_locals[field_index] >= 0 {
+            {
+              ..aggregate_item,
+              kind: PlannedLetItem(
+                component_locals[field_index], false, object_value,
+              ),
+            }
+          } else {
+            { ..aggregate_item, kind: PlannedExpressionItem(object_value) }
+          },
+        )
+      }
+      for index in (item_index + 1)..<items.length {
+        module_.block_items.push(module_.block_items[items.start + index])
+      }
+      let initializer_source = module_.expressions[initializer]
+      module_.expressions[initializer] = {
+        ..initializer_source,
+        kind: PlannedConsumedExpression,
+      }
+      for index in 0..<field_gets.length() {
+        let field_index = field_indices[index]
+        let field_get = field_gets[index]
+        let field_source = module_.expressions[field_get]
+        module_.expressions[field_get] = {
+          ..field_source,
+          kind: PlannedLocalGet(component_locals[field_index]),
+        }
+        let base = base_gets[index]
+        let base_source = module_.expressions[base]
+        module_.expressions[base] = {
+          ..base_source,
+          kind: PlannedConsumedExpression,
+        }
+      }
+      module_.blocks[block] = {
+        ..module_.blocks[block],
+        items: {
+          start: new_items_start,
+          length: items.length - 1 + fields.length,
+        },
+      }
+      module_.bodies[body_index] = {
+        ..body,
+        locals: {
+          start: new_locals_start,
+          length: body.locals.length + selected_fields,
+        },
+      }
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn program_struct_initializer_is_discardable(
   module_ : PlannedModuleLowering,
   initializer : ExprId,
@@ -3456,6 +3716,11 @@ fn scalar_replace_program_struct_field_reads(
           module_, expression, base,
         ),
       )
+    }
+    for body_index in 0..<module_.bodies.length() {
+      while scalar_replace_synthesized_struct_components(
+        module_, body_index,
+      ) {}
     }
     for body in module_.bodies {
       for

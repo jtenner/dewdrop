@@ -4,15 +4,17 @@ Date: 2026-08-12
 
 The whole-program optimizer replaces a supported scalar field read directly from fresh struct construction with a source-ordered `PlannedParameterSelect`. Every field initializer still evaluates exactly once in source order; unselected values are discarded and the selected initializer becomes the result. The now-unreachable `PlannedStructNew` is consumed, removing both the aggregate allocation and its subsequent field load.
 
-The same rewrite covers an immutable, uncaptured struct local when its only use is a later direct field read in the same lexical block. The local declaration and sole local read are elided. An adjacent use always qualifies. A non-adjacent use qualifies only when every constructor initializer and every intervening expression is proven total/discardable by the existing callable-effect summaries, so moving the initializer cannot cross a mutation, trap, allocation, or other observable effect. Copied block-item, expression, and child arenas keep the unoptimized lowering unchanged.
+The same rewrite covers an immutable, uncaptured struct local when its only use is a later direct field read in the same lexical block. The local declaration and sole local read are elided. An adjacent use always qualifies. A non-adjacent use qualifies only when every constructor initializer and every intervening expression is proven total/discardable by the existing callable-effect summaries, so moving the initializer cannot cross a mutation, trap, allocation, or other observable effect. Copied body, local, block, block-item, expression, and child arenas keep the unoptimized lowering unchanged.
 
-A further bounded case handles two or more reads of the same supported scalar field from one immutable, uncaptured fresh-struct local. Instead of introducing component scratch storage, the optimizer changes the existing aggregate local to the selected scalar carrier. The declaration becomes a source-ordered `PlannedParameterSelect`, every repeated field read becomes a direct read of that local, and each obsolete aggregate base read is consumed. Because initialization stays at the original declaration, effectful initializers and intervening operations need not move. Any mixed-field read, direct aggregate use, trait coercion, capture, or mutation rejects the rewrite.
+A further bounded case handles two or more reads of the same supported scalar field from one immutable, uncaptured fresh-struct local. Instead of introducing component scratch storage, the optimizer changes the existing aggregate local to the selected scalar carrier. The declaration becomes a source-ordered `PlannedParameterSelect`, every repeated field read becomes a direct read of that local, and each obsolete aggregate base read is consumed. Because initialization stays at the original declaration, effectful initializers and intervening operations need not move. Any direct aggregate use, trait coercion, capture, or mutation rejects the repeated-field rewrite; distinct direct scalar reads are handled by synthesized components.
 
-Distinct scalar fields can also reuse locals already required by source. When a fresh aggregate declaration is followed immediately by immutable direct aliases for every field, aliases may appear in any source order: the optimizer maps them by frozen field identity and schedules the existing locals in constructor order. Exactly one field may be missing; its initializer remains an expression item while the other fields initialize their aliases. The dead aggregate local becomes carrier-free. This preserves every initializer once in source order without scratch locals or movement across user expressions. Two or more missing fields, non-adjacent aliases, repeated/narrow/reference/generic fields, or non-field uses remain allocated until a broader component planner can synthesize equivalent storage.
+Distinct scalar fields can also reuse locals already required by source. When a fresh aggregate declaration is followed immediately by immutable direct aliases for every field, aliases may appear in any source order: the optimizer maps them by frozen field identity and schedules the existing locals in constructor order. Exactly one field may be missing; its initializer remains an expression item while the other fields initialize their aliases. The dead aggregate local becomes carrier-free.
+
+A separate synthesized-component path handles an immutable uncaptured aggregate with two or more distinct direct scalar field reads and any number of unobserved fields. The optimizer appends a copied body-local arena with one compiler-owned local per observed field, appends a rebuilt block-item sequence, and repoints the body and block spans. The original declaration expands into constructor-order component `let` items and expression items for unobserved initializers; all field reads become local reads. This preserves every initializer exactly once at the original declaration and introduces no `local.tee`. Direct aggregate uses, source alias initializers, references/generics, coercions, and captures remain conservative.
 
 Sole-use projections now cross bounded `if` and match joins when every reachable branch or arm recursively ends in fresh construction of the same struct field. The optimizer preflights the complete control-flow result tree before mutation, then converts each constructor to a source-ordered selector and changes intervening block, `if`/match, and existing local carriers to the selected scalar. Conditions, scrutinees, guards, and nonselected paths remain untouched. A call-returned, coerced, escaping, or otherwise non-fresh result rejects the entire rewrite without partial mutation.
 
-The initial shape set is I32/U32/I64/U64, F32/F64, Swar32/Swar64, and V128. Narrow integer fields remain unchanged because packed storage performs truncation/extension that direct selection must not bypass. Reference and generic fields remain unchanged until nominal cast, identity, and escape policies are explicit. Trait-coerced constructor bases, variants, captured/mutable locals, multiple uses, cross-block uses, effectful gaps, and escaping values are also excluded.
+The initial shape set is I32/U32/I64/U64, F32/F64, Swar32/Swar64, and V128. Narrow integer fields remain unchanged because packed storage performs truncation/extension that direct selection must not bypass. Reference and generic fields remain unchanged until nominal cast, identity, and escape policies are explicit. Trait-coerced constructor bases, variants, captured/mutable locals, direct aggregate uses, source-alias/direct-use mixtures, and escaping values are also excluded.
 
 The success snapshot uses a pure intervening local and contains no `struct.new` or `struct.get`. A separate trap snapshot gives the first field an `unreachable` trap and the selected second field an integer divide-by-zero trap; Node and Wago both observe `unreachable`, proving that scalar replacement preserves complete source-order initializer evaluation rather than evaluating only the selected field.
 
@@ -27,21 +29,23 @@ The allocation-free form measured 0.8763x the escaping runtime, about 12.4% fast
 
 | Form | Median | `struct.new` | `struct.get` | Wasm bytes |
 | --- | ---: | ---: | ---: | ---: |
-| repeated same field | 0.0180 µs | 0 | 0 | 623 |
-| alternating distinct fields | 0.0179 µs | 1 | 64 | 1,080 |
+| repeated same field | 0.0170 µs | 0 | 0 | 623 |
+| synthesized alternating fields | 0.0170 µs | 0 | 0 | 624 |
 
-The runtime ratio was 1.0056x at this very small call boundary, effectively tied within timer noise, while repeated-field replacement removed 457 Wasm bytes and all aggregate operations.
+The forms were tied at this host-call-scale boundary. Repeated reads reuse one source local, while alternating distinct reads use two synthesized component locals; both remove every aggregate operation.
 
 `tools/benchmark-component-scalar-replacement.py` measured 32 distinct fields over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
 
 | Form | Median | `struct.new` | `struct.get` | Wasm bytes |
 | --- | ---: | ---: | ---: | ---: |
-| constructor-order aliases | 0.0184 µs | 0 | 0 | 741 |
-| reverse-order aliases | 0.0188 µs | 0 | 0 | 741 |
-| one missing alias | 0.0185 µs | 0 | 0 | 737 |
-| retained aggregate | 0.0193 µs | 1 | 32 | 1,121 |
+| constructor-order aliases | 0.0177 µs | 0 | 0 | 693 |
+| reverse-order aliases | 0.0177 µs | 0 | 0 | 693 |
+| one missing alias | 0.0178 µs | 0 | 0 | 689 |
+| retained alias aggregate | 0.0177 µs | 1 | 32 | 1,073 |
+| 16 synthesized direct components | 0.0178 µs | 0 | 0 | 629 |
+| retained direct aggregate | 0.0177 µs | 1 | 16 | 783 |
 
-Ordered, reversed, and one-missing component reuse measured 0.9534x, 0.9741x, and 0.9586x the retained runtime. They removed 380–384 Wasm bytes and every aggregate operation.
+All forms were effectively tied within timer noise. Source-local component reuse removed 380–384 Wasm bytes; synthesized direct components removed 154 bytes, one allocation, and 16 field reads.
 
 `tools/benchmark-join-scalar-replacement.py` measured fresh two-branch `if` and match joins against baselines whose selected path passes the aggregate through a reference-returning helper, over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
 
@@ -52,4 +56,4 @@ Ordered, reversed, and one-missing component reuse measured 0.9534x, 0.9741x, an
 | fresh match join | 0.0154 µs | 2 | 1 | 529 |
 | retained match arm | 0.0161 µs | 4 | 2 | 567 |
 
-The allocation-free `if` and match joins measured 0.9550x and 0.9566x their retained baselines, roughly 4.4–4.5% faster, and removed 38–40 Wasm bytes. The match fixture's remaining struct operations belong to the matched `Choice` enum rather than `Pair`. Reordered or missing components still require broader dominance-aware component planning.
+The allocation-free `if` and match joins measured 0.9550x and 0.9566x their retained baselines, roughly 4.4–4.5% faster, and removed 38–40 Wasm bytes. The match fixture's remaining struct operations belong to the matched `Choice` enum rather than `Pair`. Mixed source-alias/direct-use and reference/generic components still require broader identity-aware planning.

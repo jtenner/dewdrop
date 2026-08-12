@@ -16,7 +16,7 @@ TMP = ROOT / ".tmp" / "component-scalar-replacement-benchmark"
 def source(mode: str, fields: int) -> str:
     declarations = "\n".join(f"  f{index}: I32" for index in range(fields))
     initializers = "\n".join(
-        f"    f{index}: {'0' if index == 0 else f'value + {index}'}"
+        f"    f{index}: {'0' if index == 0 or index % 2 == 1 else f'value + {index}'}"
         for index in range(fields)
     )
     order = list(range(fields))
@@ -24,13 +24,20 @@ def source(mode: str, fields: int) -> str:
         order.reverse()
     elif mode == "missing":
         order = order[1:]
-    aliases = "\n".join(
+    elif mode in {"direct", "direct-retained"}:
+        order = list(range(0, fields, 2))
+    direct = mode in {"direct", "direct-retained"}
+    aliases = "" if direct else "\n".join(
         f"  let value{index} = aggregate.f{index}" for index in order
     )
-    total = " + ".join(f"value{index}" for index in order)
-    helper = "\nfn retain(value: Aggregate) -> Aggregate {\n  value\n}\n" if mode == "retained" else ""
-    constructor = "retain(Aggregate {" if mode == "retained" else "Aggregate {"
-    close = "  })" if mode == "retained" else "  }"
+    total = " + ".join(
+        f"aggregate.f{index}" if direct else f"value{index}"
+        for index in order
+    )
+    retained = mode in {"retained", "direct-retained"}
+    helper = "\nfn retain(value: Aggregate) -> Aggregate {\n  value\n}\n" if retained else ""
+    constructor = "retain(Aggregate {" if retained else "Aggregate {"
+    close = "  })" if retained else "  }"
     return f"""struct Aggregate {{
 {declarations}
 }}
@@ -121,9 +128,14 @@ def main() -> None:
     reversed_ = build("reversed", source("reversed", args.fields))
     missing = build("missing", source("missing", args.fields))
     retained = build("retained", source("retained", args.fields))
-    expected = 7 * (args.fields - 1) + args.fields * (args.fields - 1) // 2
+    direct = build("direct", source("direct", args.fields))
+    direct_retained = build(
+        "direct-retained", source("direct-retained", args.fields),
+    )
+    selected = list(range(0, args.fields, 2))
+    expected = sum(0 if index == 0 else 7 + index for index in selected)
     raw = measure(
-        [ordered, reversed_, missing, retained],
+        [ordered, reversed_, missing, retained, direct, direct_retained],
         expected,
         args.samples,
         args.batch,
@@ -132,6 +144,8 @@ def main() -> None:
     reversed_median = statistics.median(raw[str(reversed_)])
     missing_median = statistics.median(raw[str(missing)])
     retained_median = statistics.median(raw[str(retained)])
+    direct_median = statistics.median(raw[str(direct)])
+    direct_retained_median = statistics.median(raw[str(direct_retained)])
     print(json.dumps({
         "fields": args.fields,
         "samples": args.samples,
@@ -140,13 +154,18 @@ def main() -> None:
         "reversed_median_us": round(reversed_median, 4),
         "missing_median_us": round(missing_median, 4),
         "retained_median_us": round(retained_median, 4),
+        "direct_median_us": round(direct_median, 4),
+        "direct_retained_median_us": round(direct_retained_median, 4),
         "ordered_ratio": round(ordered_median / retained_median, 4),
         "reversed_ratio": round(reversed_median / retained_median, 4),
         "missing_ratio": round(missing_median / retained_median, 4),
+        "direct_ratio": round(direct_median / direct_retained_median, 4),
         "ordered_wasm_bytes": ordered.stat().st_size,
         "reversed_wasm_bytes": reversed_.stat().st_size,
         "missing_wasm_bytes": missing.stat().st_size,
         "retained_wasm_bytes": retained.stat().st_size,
+        "direct_wasm_bytes": direct.stat().st_size,
+        "direct_retained_wasm_bytes": direct_retained.stat().st_size,
         "ordered_struct_new": wat_count(ordered, "struct.new"),
         "ordered_struct_get": wat_count(ordered, "struct.get"),
         "reversed_struct_new": wat_count(reversed_, "struct.new"),
@@ -155,6 +174,10 @@ def main() -> None:
         "missing_struct_get": wat_count(missing, "struct.get"),
         "retained_struct_new": wat_count(retained, "struct.new"),
         "retained_struct_get": wat_count(retained, "struct.get"),
+        "direct_struct_new": wat_count(direct, "struct.new"),
+        "direct_struct_get": wat_count(direct, "struct.get"),
+        "direct_retained_struct_new": wat_count(direct_retained, "struct.new"),
+        "direct_retained_struct_get": wat_count(direct_retained, "struct.get"),
     }, indent=2, sort_keys=True))
 
 

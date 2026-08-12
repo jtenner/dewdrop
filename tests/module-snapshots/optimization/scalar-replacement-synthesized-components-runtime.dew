@@ -1,0 +1,20 @@
+struct Quad {
+  first: I32
+  second: I32
+  third: I32
+  fourth: I32
+}
+
+fn selected(first: I32, second: I32, third: I32, fourth: I32) -> I32 {
+  let quad = Quad {
+    first: first
+    second: second
+    third: third
+    fourth: fourth
+  }
+  quad.first + quad.third
+}
+
+pub fn main() -> I32 {
+  selected(20, 1, 22, 2)
+}
