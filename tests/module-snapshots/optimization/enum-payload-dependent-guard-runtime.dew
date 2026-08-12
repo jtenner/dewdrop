@@ -1,0 +1,17 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn guarded(first: I32, second: I32) -> I32 {
+  match Maybe::Some(first, second) {
+    Maybe::Some(left, right) if left > 0 => right
+    Maybe::Some(left, right) if right == 0 => right
+    Maybe::Some(left, right) => right
+    Maybe::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  guarded(1, 20) + guarded(0, 22)
+}

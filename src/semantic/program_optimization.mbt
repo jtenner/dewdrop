@@ -4590,11 +4590,27 @@ fn program_nonconstant_guard_is_discardable(
     return false
   }
   match module_.expressions[guard_expression].kind {
-    PlannedLocalGet(_) | PlannedCaptureGet(_) | PlannedBoolConst(_) => true
+    PlannedLocalGet(_)
+    | PlannedCaptureGet(_)
+    | PlannedI32Const(_)
+    | PlannedU32Const(_)
+    | PlannedI64Const(_)
+    | PlannedU64Const(_)
+    | PlannedBoolConst(_) => true
     PlannedPrefixExpression(HirLogicalNot, operand) =>
       program_nonconstant_guard_is_discardable(module_, operand)
     PlannedBinaryExpression(HirLogicalAnd, left, right)
     | PlannedBinaryExpression(HirLogicalOr, left, right) =>
+      program_nonconstant_guard_is_discardable(module_, left) &&
+      program_nonconstant_guard_is_discardable(module_, right)
+    PlannedOperatorCall(target, operator, left, right, _) if
+      semantic_id_module(target) == standard_library_module_id(0) &&
+      (operator is HirEqual ||
+      operator is HirNotEqual ||
+      operator is HirLess ||
+      operator is HirLessEqual ||
+      operator is HirGreater ||
+      operator is HirGreaterEqual) =>
       program_nonconstant_guard_is_discardable(module_, left) &&
       program_nonconstant_guard_is_discardable(module_, right)
     _ => false
