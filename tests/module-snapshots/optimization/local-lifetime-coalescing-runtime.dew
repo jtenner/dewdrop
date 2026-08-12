@@ -1,0 +1,27 @@
+struct Token {
+  value: I32
+}
+
+fn scalar(value: I32) -> I32 {
+  let source = value + 1
+  let alias = source
+  alias * 2
+}
+
+fn reference(value: Token) -> I32 {
+  let source = value
+  let alias = source
+  alias.value
+}
+
+fn retained(value: I32) -> I32 {
+  let source = value + 1
+  let alias = source
+  source + alias
+}
+
+pub fn main() -> I32 {
+  scalar(20) + reference(Token {
+    value: 1
+  }) + retained(9)
+}

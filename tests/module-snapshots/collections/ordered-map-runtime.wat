@@ -3645,7 +3645,7 @@
     call 11
   )
   (func (;60;) (type 139) (param (ref 111) i32 i32)
-    (local i32 i32)
+    (local i32)
     local.get 0
     struct.get 111 0
     ref.cast (ref 9)
@@ -3653,8 +3653,6 @@
     local.get 2
     call 11
     local.set 3
-    local.get 3
-    local.set 4
   )
   (func (;61;) (type 140) (param (ref 111)) (result i32)
     local.get 0

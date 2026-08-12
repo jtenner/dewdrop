@@ -59,12 +59,10 @@
     i32.const 0
   )
   (func (;6;) (type 13) (param eqref i32) (result i32)
-    (local i32 eqref)
+    (local i32)
     i32.const 0
     local.set 2
     local.get 0
-    local.set 3
-    local.get 3
     local.get 1
     call 7
   )

@@ -1,0 +1,9 @@
+fn trap_source() -> I32 {
+  unreachable()
+}
+
+pub fn main() -> I32 {
+  let source = trap_source()
+  let alias = source
+  alias
+}

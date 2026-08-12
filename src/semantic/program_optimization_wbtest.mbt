@@ -1373,6 +1373,64 @@ test "repeated same-field struct locals scalar replace into the existing local" 
 }
 
 ///|
+test "immutable sole-use local aliases coalesce into source storage" {
+  let program = collect_program_manifest(
+    22838UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn retained(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\npub fn main() -> I32 {\n  coalesced(20) + retained(9)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let coalesced = collected.lookup_value("coalesced").unwrap()
+  let coalesced_source = collected.body_of(coalesced).unwrap()
+  let coalesced_body = optimized.modules[0].bodies[
+    semantic_id_local(coalesced_source.id)
+  ]
+  let coalesced_block = match coalesced_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected coalesced block")
+  }
+  let coalesced_items = optimized.modules[0].blocks[coalesced_block].items
+  assert_true(
+    optimized.modules[0].block_items[coalesced_items.start + 1].kind
+    is PlannedElidedLetItem(_),
+  )
+  let retained = collected.lookup_value("retained").unwrap()
+  let retained_source = collected.body_of(retained).unwrap()
+  let retained_body = optimized.modules[0].bodies[
+    semantic_id_local(retained_source.id)
+  ]
+  let retained_block = match retained_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected retained block")
+  }
+  let retained_items = optimized.modules[0].blocks[retained_block].items
+  assert_true(
+    optimized.modules[0].block_items[retained_items.start + 1].kind
+    is PlannedLetItem(_, false, _),
+  )
+  let unoptimized_body = unoptimized.modules[0].bodies[
+    semantic_id_local(coalesced_source.id)
+  ]
+  let unoptimized_block = match unoptimized_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected unoptimized block")
+  }
+  let unoptimized_items = unoptimized.modules[0].blocks[unoptimized_block].items
+  assert_true(
+    unoptimized.modules[0].block_items[unoptimized_items.start + 1].kind
+    is PlannedLetItem(_, false, _),
+  )
+}
+
+///|
 test "common field extraction reuses immutable scalar loads only in the copy" {
   let program = collect_program_manifest(
     22808UL,

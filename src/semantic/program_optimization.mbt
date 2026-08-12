@@ -2680,6 +2680,77 @@ fn program_cse_elide_local_alias(
 }
 
 ///|
+fn coalesce_program_immutable_local_aliases(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    for body in module_.bodies {
+      for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+        if block < 0 || block >= module_.blocks.length() {
+          continue
+        }
+        let items = module_.blocks[block].items
+        if items.start < 0 ||
+          items.start + items.length > module_.block_items.length() {
+          continue
+        }
+        for index in 1..<items.length {
+          let (alias_local, initializer) = match
+            module_.block_items[items.start + index].kind {
+            PlannedLetItem(local_id, false, initializer) =>
+              (local_id, initializer)
+            _ => continue
+          }
+          if initializer < 0 ||
+            initializer >= module_.expressions.length() ||
+            alias_local < 0 ||
+            alias_local >= body.locals.length ||
+            program_cse_local_is_captured(module_, body, alias_local) {
+            continue
+          }
+          let source_local = match module_.expressions[initializer].kind {
+            PlannedLocalGet(local_id) => local_id
+            _ => continue
+          }
+          if source_local < 0 ||
+            source_local >= body.locals.length ||
+            source_local == alias_local ||
+            module_.locals[body.locals.start + source_local].mutable_ ||
+            module_.locals[body.locals.start + alias_local].mutable_ ||
+            program_cse_local_is_captured(module_, body, source_local) {
+            continue
+          }
+          let source_info = module_.locals[body.locals.start + source_local]
+          let alias_info = module_.locals[body.locals.start + alias_local]
+          if source_info.type_ != alias_info.type_ ||
+            source_info.shape != alias_info.shape ||
+            source_info.nominal != alias_info.nominal {
+            continue
+          }
+          let (source_uses, _) = program_local_get_count(
+            module_, body, source_local,
+          )
+          if source_uses != 1 ||
+            !program_cse_elide_local_alias(
+              module_, body, alias_local, source_local,
+            ) {
+            continue
+          }
+          module_.block_items[items.start + index] = {
+            ..module_.block_items[items.start + index],
+            kind: PlannedElidedLetItem(alias_local),
+          }
+          module_.expressions[initializer] = {
+            ..module_.expressions[initializer],
+            kind: PlannedConsumedExpression,
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
 fn cse_program_field_extractions(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -5279,6 +5350,7 @@ pub fn optimize_program_lowering(
   let effects = program_callable_effect_summaries(modules)
   directize_transparent_callback_calls(modules, effects)
   directize_generic_parameter_selectors(modules)
+  coalesce_program_immutable_local_aliases(modules)
   let elided_trait_wrappers = directize_exact_runtime_trait_flows(
     modules,
     lowering.index.module_lookup,
