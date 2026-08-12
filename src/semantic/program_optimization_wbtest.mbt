@@ -775,6 +775,75 @@ test "fresh payload bindings inline exact primitive scalar transforms" {
 }
 
 ///|
+test "fresh payload bindings inline immutable scalar transform chains" {
+  let program = collect_program_manifest(
+    22839UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn transformed(first: I32, second: I32) -> I32 {\n  match Maybe::Some(first, second) {\n    Maybe::Some(left, right) => {\n      let negated = -right\n      let adjusted = negated + 1\n      adjusted * 2\n    }\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  transformed(1, -20)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let transformed = collected.lookup_value("transformed").unwrap()
+  let body = collected.body_of(transformed).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  let mut selects = 0
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedVariantTupleNew(_, _, _) => variants += 1
+      PlannedMatchExpression(_, _) => matches += 1
+      PlannedParameterSelect(_, _) => selects += 1
+      _ => ()
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+  assert_eq(selects, 1)
+}
+
+///|
+test "effectful payload result blocks remain conservative" {
+  let program = collect_program_manifest(
+    22840UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn observe(value: I32) -> Unit {\n  ignore(value)\n}\nfn transformed(first: I32, second: I32) -> I32 {\n  match Maybe::Some(first, second) {\n    Maybe::Some(left, right) => {\n      observe(left)\n      let adjusted = right + 1\n      adjusted\n    }\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  transformed(1, 41)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let transformed = collected.lookup_value("transformed").unwrap()
+  let body = collected.body_of(transformed).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedVariantTupleNew(_, _, _) => variants += 1
+      PlannedMatchExpression(_, _) => matches += 1
+      _ => ()
+    }
+  }
+  assert_eq(variants, 1)
+  assert_eq(matches, 1)
+}
+
+///|
 test "struct variant fields inline exact primitive scalar transforms" {
   let program = collect_program_manifest(
     22835UL,

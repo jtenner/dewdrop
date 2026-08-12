@@ -1,0 +1,23 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  match Maybe::Some(trap_first(), trap_second()) {
+    Maybe::Some(first, second) => {
+      let negated = -second
+      let adjusted = negated + 1
+      adjusted * 2
+    }
+    Maybe::None => 0
+  }
+}

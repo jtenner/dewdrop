@@ -4835,16 +4835,131 @@ fn program_guarded_variant_selector_is_stable(
 }
 
 ///|
-fn program_scalar_transform_binding_expression(
+fn program_body_containing_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
+) -> PlannedBodyLowering? {
+  for body in module_.bodies {
+    if expression >= body.expressions.start &&
+      expression < body.expressions.start + body.expressions.length {
+      return Some(body)
+    }
+  }
+  None
+}
+
+///|
+fn program_transform_local_initializer(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  local_id : LocalId,
+) -> ExprId {
+  if local_id < 0 ||
+    local_id >= body.locals.length ||
+    module_.locals[body.locals.start + local_id].mutable_ ||
+    program_cse_local_is_captured(module_, body, local_id) {
+    return -1
+  }
+  let mut initializer = -1
+  for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+    if block < 0 || block >= module_.blocks.length() {
+      continue
+    }
+    let items = module_.blocks[block].items
+    if items.start < 0 ||
+      items.start + items.length > module_.block_items.length() {
+      continue
+    }
+    for index in 0..<items.length {
+      match module_.block_items[items.start + index].kind {
+        PlannedLetItem(candidate, false, value) if candidate == local_id => {
+          if initializer >= 0 {
+            return -1
+          }
+          initializer = value
+        }
+        _ => ()
+      }
+    }
+  }
+  initializer
+}
+
+///|
+fn program_transform_block_is_pure_immutable_chain(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  block : BlockId,
+) -> Bool {
+  if block < 0 || block >= module_.blocks.length() {
+    return false
+  }
+  let items = module_.blocks[block].items
+  if items.length == 0 ||
+    items.start < 0 ||
+    items.start + items.length > module_.block_items.length() {
+    return false
+  }
+  for index in 0..<items.length {
+    match module_.block_items[items.start + index].kind {
+      PlannedLetItem(local_id, false, initializer) if index + 1 < items.length &&
+        local_id >= 0 &&
+        local_id < body.locals.length &&
+        initializer >= 0 &&
+        initializer < module_.expressions.length() &&
+        !program_cse_local_is_captured(module_, body, local_id) => ()
+      PlannedExpressionItem(expression) if index + 1 == items.length &&
+        expression >= 0 &&
+        expression < module_.expressions.length() => ()
+      _ => return false
+    }
+  }
+  true
+}
+
+///|
+fn program_scalar_transform_binding_expression(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  expression : ExprId,
   depth : Int,
+  visited_locals : Array[LocalId],
 ) -> ExprId {
   if expression < 0 || expression >= module_.expressions.length() || depth >= 64 {
     return -2
   }
   match module_.expressions[expression].kind {
-    PlannedLocalGet(_) => expression
+    PlannedLocalGet(local_id) => {
+      let initializer = program_transform_local_initializer(
+        module_, body, local_id,
+      )
+      if initializer >= 0 && !visited_locals.contains(local_id) {
+        visited_locals.push(local_id)
+        let selected = program_scalar_transform_binding_expression(
+          module_,
+          body,
+          initializer,
+          depth + 1,
+          visited_locals,
+        )
+        ignore(visited_locals.pop())
+        selected
+      } else {
+        expression
+      }
+    }
+    PlannedBlockExpression(block) if program_transform_block_is_pure_immutable_chain(
+        module_, body, block,
+      ) => {
+      let tail = program_scalar_replacement_block_tail(module_, block)
+      program_scalar_transform_binding_expression(
+        module_,
+        body,
+        tail,
+        depth + 1,
+        visited_locals,
+      )
+    }
     PlannedI32Const(_)
     | PlannedU32Const(_)
     | PlannedI64Const(_)
@@ -4853,7 +4968,13 @@ fn program_scalar_transform_binding_expression(
     PlannedPrefixExpression(operator, operand) if operator is HirPositive ||
       operator is HirNegative ||
       operator is HirLogicalNot =>
-      program_scalar_transform_binding_expression(module_, operand, depth + 1)
+      program_scalar_transform_binding_expression(
+        module_,
+        body,
+        operand,
+        depth + 1,
+        visited_locals,
+      )
     PlannedOperatorCall(target, operator, left, right, _) if semantic_id_module(
         target,
       ) ==
@@ -4874,13 +4995,17 @@ fn program_scalar_transform_binding_expression(
       ) => {
       let left_binding = program_scalar_transform_binding_expression(
         module_,
+        body,
         left,
         depth + 1,
+        visited_locals,
       )
       let right_binding = program_scalar_transform_binding_expression(
         module_,
+        body,
         right,
         depth + 1,
+        visited_locals,
       )
       if left_binding == -2 ||
         right_binding == -2 ||
@@ -4988,10 +5113,16 @@ fn scalar_replace_program_variant_payload_match(
   }
   let root = module_.patterns[root_pattern]
   let selected_variant = variant
+  let body = match program_body_containing_expression(module_, expression) {
+    Some(body) => body
+    None => return false
+  }
   let transform_binding_expression = program_scalar_transform_binding_expression(
     module_,
+    body,
     arm.body,
     0,
+    [],
   )
   if transform_binding_expression == -2 {
     return false
