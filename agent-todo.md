@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Finish bounded private enum specialization and measured local-slot reuse.
+1. Finish bounded private enum parameter/result or scalar-payload specialization.
 2. Add per-file incremental artifacts, workspace interface reuse, and deterministic parallel scheduling.
 3. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 4. Complete package acquisition and reproducible release infrastructure.
@@ -13,7 +13,6 @@
 
 ## Optimization
 
-- [ ] Add measured physical local-slot reuse for proven noninterfering scalar/reference/generic ranges.
 - [ ] Evaluate private enum parameter/result or scalar-payload specialization with complete call-site/ABI evidence.
 
 ## Incremental and parallel compilation

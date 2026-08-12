@@ -1,0 +1,10 @@
+fn trap() -> I32 {
+  unreachable()
+}
+
+pub fn main() -> I32 {
+  let first = 1
+  let observed = first
+  let second = trap()
+  observed + second
+}

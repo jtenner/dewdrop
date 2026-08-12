@@ -692,7 +692,7 @@
     call 19
   )
   (func (;22;) (type 26)
-    (local eqref eqref eqref eqref)
+    (local eqref eqref)
     call 9
     local.set 0
     local.get 0
@@ -816,20 +816,20 @@
       unreachable
     end
     call 10
-    local.set 1
+    local.set 0
     v128.const i32x4 0x706c6130 0x62316168 0x32617465 0x00000000
     array.new_fixed 27 1
     i32.const 0
     i32.const 12
     struct.new 28
-    local.set 2
-    local.get 1
+    local.set 1
+    local.get 0
     ref.cast (ref 2)
-    local.get 2
+    local.get 1
     i32.const 1
     i32.const 5
     call 21
-    local.get 2
+    local.get 1
     i32.const 7
     i32.const 4
     call 21
@@ -845,9 +845,9 @@
     if ;; label = @1
       unreachable
     end
-    local.get 1
+    local.get 0
     ref.cast (ref 2)
-    local.get 2
+    local.get 1
     i32.const 1
     i32.const 5
     call 21
@@ -872,8 +872,8 @@
       unreachable
     end
     call 11
-    local.set 3
-    local.get 3
+    local.set 0
+    local.get 0
     ref.cast (ref 3)
     v128.const i32x4 0x00000061 0x00000000 0x00000000 0x00000000
     array.new_fixed 27 1
@@ -899,7 +899,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 3
+    local.get 0
     ref.cast (ref 3)
     v128.const i32x4 0x0000007a 0x00000000 0x00000000 0x00000000
     array.new_fixed 27 1

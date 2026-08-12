@@ -58,7 +58,7 @@
     i64.xor
   )
   (func (;3;) (type 3) (param i64 i32 i32) (result i64)
-    (local i64 i64 i64)
+    (local i64 i64)
     local.get 1
     i64.extend_i32_u
     i64.const 7
@@ -82,8 +82,8 @@
     local.get 3
     i64.shl
     i64.or
-    local.set 5
-    local.get 5
+    local.set 3
+    local.get 3
   )
   (func (;4;) (type 4) (param i32) (result i64)
     local.get 0

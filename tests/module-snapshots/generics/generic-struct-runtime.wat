@@ -19,7 +19,7 @@
   (type (;17;) (struct (field (mut (ref 12))) (field (mut i32)) (field (mut i32))))
   (export "main" (func 0))
   (func (;0;) (type 5)
-    (local (ref 1) (ref 1))
+    (local (ref 1))
     i32.const 42
     i64.const 7
     call 1
@@ -58,8 +58,8 @@
     i32.const 7
     struct.new 0
     call 4
-    local.set 1
-    local.get 1
+    local.set 0
+    local.get 0
     call 5
     f64.const 0x1.54p+5 (;=42.5;)
     f64.eq
@@ -74,7 +74,7 @@
     if ;; label = @1
       unreachable
     end
-    local.get 1
+    local.get 0
     call 6
     ref.cast (ref 0)
     struct.get 0 0

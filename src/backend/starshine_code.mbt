@@ -2451,6 +2451,226 @@ fn starshine_capture_cell_type_index(
 }
 
 ///|
+priv enum StarshineLocalSlotCarrier {
+  StarshineI32LocalSlot
+  StarshineI64LocalSlot
+  StarshineF32LocalSlot
+  StarshineF64LocalSlot
+  StarshineV128LocalSlot
+  StarshineEqRefLocalSlot
+  StarshineNominalRefLocalSlot(Int)
+  StarshineGenericLocalSlot(@semantic.BodyTypeId)
+  StarshineCaptureCellLocalSlot(Int)
+  StarshineUniqueLocalSlot(Int)
+} derive(Eq)
+
+///|
+priv struct StarshineLocalLiveRange {
+  initializer : @semantic.ExprId
+  last_read : @semantic.ExprId
+  writes : Int
+  declarations : Int
+  captured : Bool
+}
+
+///|
+fn starshine_body_has_linear_local_lifetimes(
+  lowering : @semantic.PlannedModuleLowering,
+  body : @semantic.PlannedBodyLowering,
+) -> Bool {
+  let block = match body.root {
+    @semantic.BlockBodyRoot(block) => block
+    @semantic.ExpressionBodyRoot(_) => return false
+  }
+  if block < 0 || block >= lowering.blocks.length() {
+    return false
+  }
+  let expression_end = body.expressions.start + body.expressions.length
+  let items = lowering.blocks[block].items
+  let mut previous_root = body.expressions.start - 1
+  for item in items.start..<(items.start + items.length) {
+    let root = match lowering.block_items[item].kind {
+      @semantic.PlannedLetItem(_, _, expression)
+      | @semantic.PlannedExpressionItem(expression)
+      | @semantic.PlannedReturnItem(expression) => expression
+      @semantic.PlannedElidedLetItem(_) => -1
+    }
+    if root >= 0 {
+      if root < body.expressions.start ||
+        root >= expression_end ||
+        root <= previous_root {
+        return false
+      }
+      previous_root = root
+    }
+  }
+  for expression in body.expressions.start..<expression_end {
+    match lowering.expressions[expression].kind {
+      @semantic.PlannedBlockExpression(_)
+      | @semantic.PlannedIfExpression(_, _, _)
+      | @semantic.PlannedMatchExpression(_, _)
+      | @semantic.PlannedWhileExpression(_, _, _)
+      | @semantic.PlannedBreakExpression(_, _)
+      | @semantic.PlannedContinueExpression(_, _) => return false
+      _ => ()
+    }
+  }
+  true
+}
+
+///|
+fn starshine_body_local_live_ranges(
+  lowering : @semantic.PlannedModuleLowering,
+  body : @semantic.PlannedBodyLowering,
+) -> Array[StarshineLocalLiveRange] {
+  let ranges = Array::make(body.locals.length, {
+    initializer: -1,
+    last_read: -1,
+    writes: 0,
+    declarations: 0,
+    captured: false,
+  })
+  let expression_positions = Array::make(lowering.expressions.length(), -1)
+  let mut expression_cursor = body.expressions.start
+  let mut position = 0
+  match body.root {
+    @semantic.BlockBodyRoot(block) if block >= 0 &&
+      block < lowering.blocks.length() => {
+      let items = lowering.blocks[block].items
+      for item in items.start..<(items.start + items.length) {
+        let root = match lowering.block_items[item].kind {
+          @semantic.PlannedLetItem(local_id, _, initializer) if local_id >= 0 &&
+            local_id < ranges.length() => {
+            ranges[local_id] = {
+              ..ranges[local_id],
+              initializer: position,
+              declarations: ranges[local_id].declarations + 1,
+            }
+            initializer
+          }
+          @semantic.PlannedLetItem(_, _, expression)
+          | @semantic.PlannedExpressionItem(expression)
+          | @semantic.PlannedReturnItem(expression) => expression
+          @semantic.PlannedElidedLetItem(_) => -1
+        }
+        if root >= expression_cursor && root < expression_positions.length() {
+          for expression in expression_cursor..<=root {
+            expression_positions[expression] = position
+          }
+          expression_cursor = root + 1
+        }
+        position += 1
+      }
+    }
+    _ => ()
+  }
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    let expression_position = if expression >= 0 &&
+      expression < expression_positions.length() {
+      expression_positions[expression]
+    } else {
+      -1
+    }
+    match lowering.expressions[expression].kind {
+      @semantic.PlannedLocalGet(local_id) if local_id >= 0 &&
+        local_id < ranges.length() =>
+        if expression_position < 0 {
+          // Optimizer-synthesized children can sit outside source-root arena
+          // order. An unmapped read makes this local ineligible rather than
+          // allowing an underestimated lifetime.
+          ranges[local_id] = {
+            ..ranges[local_id],
+            writes: ranges[local_id].writes + 1,
+          }
+        } else if expression_position > ranges[local_id].last_read {
+          ranges[local_id] = {
+            ..ranges[local_id],
+            last_read: expression_position,
+          }
+        }
+      @semantic.PlannedLocalSet(local_id, _) if local_id >= 0 &&
+        local_id < ranges.length() =>
+        ranges[local_id] = {
+          ..ranges[local_id],
+          writes: ranges[local_id].writes + 1,
+        }
+      _ => ()
+    }
+  }
+  for capture in lowering.captures {
+    match capture.source {
+      @semantic.BodyLocalCapture(owner, local_id) if owner == body.body &&
+        local_id >= 0 &&
+        local_id < ranges.length() =>
+        ranges[local_id] = { ..ranges[local_id], captured: true }
+      @semantic.LambdaLocalCapture(owner, local_id) if local_id >= 0 &&
+        local_id < ranges.length() &&
+        lowering.locals[body.locals.start + local_id].lambda == owner =>
+        ranges[local_id] = { ..ranges[local_id], captured: true }
+      _ => ()
+    }
+  }
+  ranges
+}
+
+///|
+fn starshine_local_slot_carrier(
+  lowering : @semantic.PlannedModuleLowering,
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  body : @semantic.PlannedBodyLowering,
+  local_id : Int,
+  cell_slot : Int,
+) -> StarshineLocalSlotCarrier? {
+  if local_id < 0 || local_id >= body.locals.length {
+    return None
+  }
+  if cell_slot >= 0 {
+    return Some(StarshineCaptureCellLocalSlot(cell_slot))
+  }
+  let planned_local = lowering.locals[body.locals.start + local_id]
+  match planned_local.shape {
+    @semantic.I8PlannedValueShape
+    | @semantic.I16PlannedValueShape
+    | @semantic.I32PlannedValueShape
+    | @semantic.U8PlannedValueShape
+    | @semantic.U16PlannedValueShape
+    | @semantic.U32PlannedValueShape
+    | @semantic.Swar32PlannedValueShape => Some(StarshineI32LocalSlot)
+    @semantic.I64PlannedValueShape
+    | @semantic.U64PlannedValueShape
+    | @semantic.Swar64PlannedValueShape => Some(StarshineI64LocalSlot)
+    @semantic.F32PlannedValueShape => Some(StarshineF32LocalSlot)
+    @semantic.F64PlannedValueShape => Some(StarshineF64LocalSlot)
+    @semantic.V128PlannedValueShape => Some(StarshineV128LocalSlot)
+    @semantic.GenericPlannedValueShape =>
+      Some(StarshineGenericLocalSlot(planned_local.type_))
+    @semantic.RefPlannedValueShape =>
+      match
+        starshine_precise_nominal_local_type_index(
+          lowering, planned, program, planned_local,
+        ) {
+        Some(type_index) => Some(StarshineNominalRefLocalSlot(type_index))
+        None => Some(StarshineEqRefLocalSlot)
+      }
+    @semantic.ErrorPlannedValueShape
+    | @semantic.UnitPlannedValueShape
+    | @semantic.NeverPlannedValueShape => None
+  }
+}
+
+///|
+fn starshine_local_slot_types_are_compatible(
+  carrier : StarshineLocalSlotCarrier,
+  slot_carriers : Array[StarshineLocalSlotCarrier],
+  slot : Int,
+) -> Bool {
+  slot >= 0 && slot < slot_carriers.length() && slot_carriers[slot] == carrier
+}
+
+///|
 fn starshine_body_locals(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -2490,6 +2710,13 @@ fn starshine_body_locals(
     }
   }
   let body_local_types : Array[@lib.ValType] = []
+  let reuse_linear_local_slots = starshine_body_has_linear_local_lifetimes(
+    lowering, body,
+  )
+  let local_live_ranges = starshine_body_local_live_ranges(lowering, body)
+  let slot_carriers : Array[StarshineLocalSlotCarrier] = []
+  let slot_last_uses : Array[Int] = []
+  let slot_reusable : Array[Bool] = []
   let mut parameter_count = leading_parameter_count
   for local_id in 0..<body.locals.length {
     let planned_local = lowering.locals[body.locals.start + local_id]
@@ -2554,9 +2781,61 @@ fn starshine_body_locals(
         }
         match local_type {
           Some(type_) => {
-            local_indices[local_id] = parameter_count +
-              body_local_types.length()
-            body_local_types.push(type_)
+            let carrier = starshine_local_slot_carrier(
+              lowering, planned, program, body, local_id, cell_slot,
+            )
+            let live_range = local_live_ranges[local_id]
+            let reusable = reuse_linear_local_slots &&
+              planned_local.kind is @semantic.LetLocal &&
+              !planned_local.mutable_ &&
+              cell_slot < 0 &&
+              carrier is Some(_) &&
+              live_range.declarations == 1 &&
+              live_range.writes == 0 &&
+              !live_range.captured &&
+              live_range.initializer >= 0 &&
+              live_range.last_read >= live_range.initializer
+            let mut slot = -1
+            if reusable {
+              let carrier = carrier.unwrap()
+              for candidate in 0..<body_local_types.length() {
+                if slot_reusable[candidate] &&
+                  slot_last_uses[candidate] <= live_range.initializer &&
+                  starshine_local_slot_types_are_compatible(
+                    carrier, slot_carriers, candidate,
+                  ) {
+                  slot = candidate
+                  break
+                }
+              }
+            }
+            if slot < 0 {
+              slot = body_local_types.length()
+              body_local_types.push(type_)
+              slot_carriers.push(
+                match carrier {
+                  Some(value) => value
+                  None => StarshineUniqueLocalSlot(local_id)
+                },
+              )
+              slot_last_uses.push(
+                if live_range.last_read > live_range.initializer {
+                  live_range.last_read
+                } else {
+                  live_range.initializer
+                },
+              )
+              slot_reusable.push(reusable)
+            } else {
+              slot_last_uses[slot] = if live_range.last_read >
+                live_range.initializer {
+                live_range.last_read
+              } else {
+                live_range.initializer
+              }
+              slot_reusable[slot] = reusable
+            }
+            local_indices[local_id] = parameter_count + slot
           }
           None => ()
         }

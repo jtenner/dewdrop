@@ -1,0 +1,43 @@
+struct Token {
+  value: I32
+}
+
+fn scalar(value: I32) -> I32 {
+  let first = value + 1
+  let second = first * 2
+  let third = second - 3
+  third
+}
+
+fn overlap(value: I32) -> I32 {
+  let first = value + 1
+  let second = first + 2
+  first + second
+}
+
+fn make_token(value: I32) -> Token {
+  Token {
+    value: value
+  }
+}
+
+fn reference(value: I32) -> I32 {
+  let first = make_token(value)
+  let first_value = first.value
+  let second = make_token(first_value + 1)
+  second.value
+}
+
+fn generic<t>(value: t) -> t {
+  let first = value
+  let second = select(first)
+  second
+}
+
+fn select<t>(value: t) -> t {
+  value
+}
+
+pub fn main() -> I32 {
+  scalar(5) + overlap(7) + reference(11) + generic(13)
+}

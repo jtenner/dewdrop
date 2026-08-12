@@ -10,14 +10,14 @@
     ref.cast (ref 0)
   )
   (func (;1;) (type 3) (result (ref 0))
-    (local i32 i32)
+    (local i32)
     i32.const 0
     local.set 0
     i32.const 1
     local.get 0
     i32.div_s
-    local.set 1
-    local.get 1
+    local.set 0
+    local.get 0
     struct.new 0
     ref.cast (ref 0)
   )

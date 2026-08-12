@@ -606,7 +606,7 @@
     ref.cast (ref 0)
   )
   (func (;3;) (type 5)
-    (local eqref eqref)
+    (local eqref)
     v128.const i32x4 0x00636261 0x00000000 0x00000000 0x00000000
     array.new_fixed 6 1
     i32.const 0
@@ -620,8 +620,8 @@
     i32.const 1
     struct.new 7
     call 2
-    local.set 1
-    local.get 1
+    local.set 0
+    local.get 0
     drop
   )
   (func (;4;) (type 5)

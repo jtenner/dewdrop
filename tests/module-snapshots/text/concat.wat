@@ -821,7 +821,7 @@
     local.get 6
   )
   (func (;10;) (type 10) (result i32)
-    (local eqref eqref eqref)
+    (local eqref eqref)
     v128.const i32x4 0x62617878 0x66656463 0x6a696867 0x6e6d6c6b
     v128.const i32x4 0x7271706f 0x00757473 0x00000000 0x00000000
     array.new_fixed 11 2
@@ -845,9 +845,9 @@
     local.get 0
     local.get 1
     call 7
-    local.set 2
+    local.set 0
     i32.const 1
-    local.get 2
+    local.get 0
     call 5
     call 9
   )

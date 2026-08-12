@@ -307,7 +307,7 @@
     call 2
   )
   (func (;6;) (type 6) (param i64 i64) (result i64)
-    (local i64 i64 i64 i64 i64 i64)
+    (local i64 i64 i64)
     local.get 0
     local.set 2
     local.get 1
@@ -339,11 +339,11 @@
     i64.and
     i64.const 7
     i64.shr_u
-    local.set 5
-    local.get 5
+    local.set 3
+    local.get 3
     i64.const 255
     i64.mul
-    local.set 6
+    local.set 3
     local.get 2
     i64.const -9187201950435737472
     i64.and
@@ -353,14 +353,14 @@
     i64.mul
     i64.const 9187201950435737471
     i64.xor
-    local.set 7
+    local.set 2
     local.get 4
-    local.get 6
+    local.get 3
     i64.const -1
     i64.xor
     i64.and
-    local.get 7
-    local.get 6
+    local.get 2
+    local.get 3
     i64.and
     i64.or
   )

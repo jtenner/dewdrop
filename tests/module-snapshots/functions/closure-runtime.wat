@@ -65,27 +65,27 @@
     call 6
   )
   (func (;4;) (type 13)
-    (local eqref eqref eqref (ref 0) eqref eqref eqref eqref)
+    (local eqref eqref (ref 0) eqref eqref eqref eqref)
     ref.func 8
     struct.new 4
     local.set 0
     local.get 0
-    local.set 5
-    local.get 5
+    local.set 4
+    local.get 4
     ref.cast (ref 1)
     struct.get 1 0
     ref.test (ref 5)
     if (result i32) ;; label = @1
       i32.const 42
-      local.get 5
+      local.get 4
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 5)
       call_ref 5
     else
-      local.get 5
+      local.get 4
       i32.const 42
-      local.get 5
+      local.get 4
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 8)
@@ -108,22 +108,22 @@
     call 2
     local.set 1
     local.get 1
-    local.set 6
-    local.get 6
+    local.set 5
+    local.get 5
     ref.cast (ref 1)
     struct.get 1 0
     ref.test (ref 5)
     if (result i32) ;; label = @1
       i32.const 41
-      local.get 6
+      local.get 5
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 5)
       call_ref 5
     else
-      local.get 6
+      local.get 5
       i32.const 41
-      local.get 6
+      local.get 5
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 8)
@@ -190,24 +190,24 @@
     end
     i32.const 39
     call 3
-    local.set 2
-    local.get 2
-    local.set 7
-    local.get 7
+    local.set 0
+    local.get 0
+    local.set 6
+    local.get 6
     ref.cast (ref 1)
     struct.get 1 0
     ref.test (ref 5)
     if (result i32) ;; label = @1
       i32.const 1
-      local.get 7
+      local.get 6
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 5)
       call_ref 5
     else
-      local.get 7
+      local.get 6
       i32.const 1
-      local.get 7
+      local.get 6
       ref.cast (ref 1)
       struct.get 1 0
       ref.cast (ref 8)
@@ -227,8 +227,8 @@
     end
     i32.const 41
     struct.new 0
-    local.set 3
-    local.get 3
+    local.set 2
+    local.get 2
     call 10
     i32.const 42
     i32.eq
@@ -244,8 +244,8 @@
       unreachable
     end
     global.get 0
-    local.set 4
-    local.get 4
+    local.set 3
+    local.get 3
     i32.const 40
     call 11
     i32.const 42

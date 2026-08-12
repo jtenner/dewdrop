@@ -46,7 +46,7 @@
     i32.extend8_s
   )
   (func (;3;) (type 2) (param i64) (result i64)
-    (local i64 i64 i64)
+    (local i64)
     local.get 0
     local.set 1
     local.get 1
@@ -56,19 +56,19 @@
     i64.const 6148914691236517205
     i64.and
     i64.sub
-    local.set 2
-    local.get 2
+    local.set 1
+    local.get 1
     i64.const 3689348814741910323
     i64.and
-    local.get 2
+    local.get 1
     i64.const 2
     i64.shr_u
     i64.const 3689348814741910323
     i64.and
     i64.add
-    local.set 3
-    local.get 3
-    local.get 3
+    local.set 1
+    local.get 1
+    local.get 1
     i64.const 4
     i64.shr_u
     i64.add

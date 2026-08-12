@@ -140,9 +140,18 @@ candidate local. Scalar carriers may share immutable sources directly. Exact
 references and erased generics additionally require matching inferred type,
 physical shape, and nominal evidence, no mutation or capture, and reads ordered
 around the alias initializer so eliminating duplicate storage cannot lengthen the
-source lifetime. These intervals are an optimization proof, not backend local
-coloring; physical slot reuse still requires control-flow-sensitive dominance,
-interference, and backend local-type grouping.
+source lifetime. These intervals remain an alias-elimination proof rather than a
+general control-flow coloring model.
+
+The backend separately performs bounded deterministic slot reuse for linear
+root-block bodies with no nested block, conditional, match, or loop control flow.
+Immutable uncaptured single-declaration `let` locals receive root-item lifetime
+positions, and first-fit allocation reuses the first compatible slot whose prior
+value is dead by the next initializer. Exact nominal references require one
+physical type index, erased generics require one inferred generic type, and
+scalar/SIMD carriers require one Wasm value carrier. Mutable locals, pattern
+locals, captures, control-flow joins, and backedges remain distinct. This is a
+measured linear allocator, not general graph coloring.
 
 `PlannedTailCall` refines `PlannedDirectCall` after other call rewrites complete.
 Every reachability, specialization, link-validation, physical-dependency, nominal

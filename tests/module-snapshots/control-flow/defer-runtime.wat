@@ -339,7 +339,7 @@
     call 17
   )
   (func (;10;) (type 2)
-    (local eqref eqref eqref eqref eqref eqref eqref i32 eqref)
+    (local eqref eqref i32 eqref)
     call 1
     local.set 0
     local.get 0
@@ -360,21 +360,21 @@
     end
     local.get 0
     i32.const 0
-    local.set 7
-    local.set 6
-    local.get 7
-    local.get 6
+    local.set 2
+    local.set 1
+    local.get 2
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 1
     i32.ge_u
     if ;; label = @1
       unreachable
     end
-    local.get 6
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 0
     ref.cast (ref 21)
-    local.get 7
+    local.get 2
     array.get 21
     i32.const 132
     i32.eq
@@ -389,8 +389,8 @@
       unreachable
     end
     call 1
-    local.set 1
-    local.get 1
+    local.set 0
+    local.get 0
     ref.cast (ref 0)
     call 4
     i32.const 9
@@ -405,23 +405,23 @@
     if ;; label = @1
       unreachable
     end
-    local.get 1
+    local.get 0
     i32.const 0
-    local.set 7
-    local.set 6
-    local.get 7
-    local.get 6
+    local.set 2
+    local.set 1
+    local.get 2
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 1
     i32.ge_u
     if ;; label = @1
       unreachable
     end
-    local.get 6
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 0
     ref.cast (ref 21)
-    local.get 7
+    local.get 2
     array.get 21
     i32.const 45
     i32.eq
@@ -437,8 +437,8 @@
       unreachable
     end
     call 1
-    local.set 2
-    local.get 2
+    local.set 0
+    local.get 0
     ref.cast (ref 0)
     call 6
     i32.const 11
@@ -453,23 +453,23 @@
     if ;; label = @1
       unreachable
     end
-    local.get 2
+    local.get 0
     i32.const 0
-    local.set 7
-    local.set 6
-    local.get 7
-    local.get 6
+    local.set 2
+    local.set 1
+    local.get 2
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 1
     i32.ge_u
     if ;; label = @1
       unreachable
     end
-    local.get 6
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 0
     ref.cast (ref 21)
-    local.get 7
+    local.get 2
     array.get 21
     i32.const 76
     i32.eq
@@ -484,8 +484,8 @@
       unreachable
     end
     call 1
-    local.set 3
-    local.get 3
+    local.set 0
+    local.get 0
     ref.cast (ref 0)
     call 7
     i32.const 2
@@ -500,23 +500,23 @@
     if ;; label = @1
       unreachable
     end
-    local.get 3
+    local.get 0
     i32.const 0
-    local.set 7
-    local.set 6
-    local.get 7
-    local.get 6
+    local.set 2
+    local.set 1
+    local.get 2
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 1
     i32.ge_u
     if ;; label = @1
       unreachable
     end
-    local.get 6
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 0
     ref.cast (ref 21)
-    local.get 7
+    local.get 2
     array.get 21
     i32.const 1212
     i32.eq
@@ -531,27 +531,27 @@
       unreachable
     end
     call 1
-    local.set 4
-    local.get 4
+    local.set 0
+    local.get 0
     ref.cast (ref 0)
     call 8
-    local.get 4
+    local.get 0
     i32.const 0
-    local.set 7
-    local.set 6
-    local.get 7
-    local.get 6
+    local.set 2
+    local.set 1
+    local.get 2
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 1
     i32.ge_u
     if ;; label = @1
       unreachable
     end
-    local.get 6
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 0
     ref.cast (ref 21)
-    local.get 7
+    local.get 2
     array.get 21
     i32.const 89
     i32.eq
@@ -567,27 +567,27 @@
       unreachable
     end
     call 1
-    local.set 5
-    local.get 5
+    local.set 0
+    local.get 0
     ref.cast (ref 0)
     call 9
-    local.get 5
+    local.get 0
     i32.const 0
-    local.set 7
-    local.set 6
-    local.get 7
-    local.get 6
+    local.set 2
+    local.set 1
+    local.get 2
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 1
     i32.ge_u
     if ;; label = @1
       unreachable
     end
-    local.get 6
+    local.get 1
     ref.cast (ref 0)
     struct.get 0 0
     ref.cast (ref 21)
-    local.get 7
+    local.get 2
     array.get 21
     i32.const 4
     i32.eq
