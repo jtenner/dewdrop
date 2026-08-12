@@ -824,12 +824,10 @@ fn wasmgc_required_nominal_declarations(
       continue
     }
     for index in 0..<callable.parameters.length {
-      wasmgc_mark_nominal_type(
-        resolved,
-        functions.parameters[callable.parameters.start + index].type_,
-        required,
-      )
-      |> ignore
+      let parameter = functions.parameters[callable.parameters.start + index]
+      if parameter.shape is RefPlannedValueShape {
+        wasmgc_mark_nominal_type(resolved, parameter.type_, required) |> ignore
+      }
     }
     wasmgc_mark_nominal_type(resolved, callable.result_type, required) |> ignore
     if callable.has_receiver {
@@ -1868,6 +1866,23 @@ fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
 }
 
 ///|
+fn wasmgc_callable_has_scalarized_parameter(
+  resolved : ResolvedModuleTypes,
+  functions : PlannedModuleFunctions,
+  callable : PlannedCallable,
+) -> Bool {
+  for index in 0..<callable.parameters.length {
+    let parameter = functions.parameters[callable.parameters.start + index]
+    if parameter.shape is I32PlannedValueShape &&
+      planned_resolved_value_shape(resolved, parameter.type_)
+      is RefPlannedValueShape {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn wasmgc_plan_function_job(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
@@ -1879,17 +1894,21 @@ fn wasmgc_plan_function_job(
   let parameters : Array[PlannedWasmValueType] = []
   for index in 0..<callable.parameters.length {
     let parameter = functions.parameters[callable.parameters.start + index]
-    match
-      wasmgc_value_type(
-        resolved,
-        parameter.type_,
-        callable.self_type,
-        type_index_by_declaration,
-        function_type_by_resolved,
-        closure_abi,
-      ) {
-      Some(value) => parameters.push(value)
-      None => ()
+    match parameter.shape {
+      I32PlannedValueShape => parameters.push(WasmI32Value)
+      _ =>
+        match
+          wasmgc_value_type(
+            resolved,
+            parameter.type_,
+            callable.self_type,
+            type_index_by_declaration,
+            function_type_by_resolved,
+            closure_abi,
+          ) {
+          Some(value) => parameters.push(value)
+          None => ()
+        }
     }
   }
   let results : Array[PlannedWasmValueType] = []
@@ -3109,8 +3128,12 @@ fn plan_module_wasmgc_fragments_in_orders(
       match runtime_requirement_signatures.get(callable.declaration) {
         Some(index) => index
         None => {
-          let canonical = function_type_by_resolved[resolved.callable_function_types[callable_index]]
-          if canonical >= 0 {
+          let source_function_type = resolved.callable_function_types[callable_index]
+          let canonical = function_type_by_resolved[source_function_type]
+          let scalarized_parameter = wasmgc_callable_has_scalarized_parameter(
+            resolved, functions, callable,
+          )
+          if canonical >= 0 && !scalarized_parameter {
             canonical
           } else {
             let index = next_signature_type

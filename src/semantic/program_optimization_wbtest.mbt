@@ -2197,6 +2197,91 @@ test "private unit enum locals specialize to scalar tags" {
 }
 
 ///|
+test "private unit enum parameters specialize with complete direct call evidence" {
+  let program = collect_program_manifest(
+    22843UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum State {\n  Left\n  Right\n}\nfn classify(state: State) -> I32 {\n  match state {\n    State::Left => 1\n    State::Right => 2\n  }\n}\npub fn main(flag: Bool) -> I32 {\n  classify(if flag {\n    State::Left\n  } else {\n    State::Right\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let classify = collected.lookup_value("classify").unwrap()
+  let classify_body = optimized.modules[0].bodies[semantic_id_local(
+      collected.body_of(classify).unwrap().id,
+    )]
+  assert_true(
+    optimized.modules[0].locals[classify_body.locals.start].shape
+    is I32PlannedValueShape,
+  )
+  assert_true(
+    unoptimized.modules[0].locals[classify_body.locals.start].shape
+    is RefPlannedValueShape,
+  )
+  let main = collected.lookup_value("main").unwrap()
+  let calls = body_calls(collected, collected.body_of(main).unwrap())
+  assert_eq(calls.length(), 1)
+  let (_, _, arguments, _) = match
+    optimized.modules[0].expressions[calls[0]].kind {
+    PlannedDirectCall(target, receiver, arguments, type_arguments) =>
+      (target, receiver, arguments, type_arguments)
+    _ => abort("expected direct call")
+  }
+  let argument = optimized.modules[0].expression_children[arguments.start]
+  assert_true(
+    optimized.modules[0].expressions[argument].shape is I32PlannedValueShape,
+  )
+  assert_true(
+    unoptimized.modules[0].expressions[argument].shape is RefPlannedValueShape,
+  )
+}
+
+///|
+test "private unit enum parameter specialization rejects incomplete call evidence" {
+  let program = collect_program_manifest(
+    22844UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"pub enum PublicState {\n  Left\n  Right\n}\nenum State {\n  Left\n  Right\n}\nenum PayloadState {\n  Empty\n  Value(I32)\n}\nfn public_parameter(state: PublicState) -> I32 {\n  match state {\n    PublicState::Left => 1\n    PublicState::Right => 2\n  }\n}\nfn payload_parameter(state: PayloadState) -> I32 {\n  match state {\n    PayloadState::Empty => 1\n    PayloadState::Value(value) => value\n  }\n}\nfn guarded_parameter(state: State) -> I32 {\n  match state {\n    State::Left if true => 1\n    State::Left => 2\n    State::Right => 3\n  }\n}\nfn escaping_parameter(state: State) -> State {\n  state\n}\npub fn referenced_parameter(state: State) -> I32 {\n  match state {\n    State::Left => 1\n    State::Right => 2\n  }\n}\nfn accept(callback: fn(State) -> I32, state: State) -> I32 {\n  callback(state)\n}\npub fn main() -> I32 {\n  public_parameter(PublicState::Left) + payload_parameter(PayloadState::Value(2)) +\n  guarded_parameter(State::Right) + match escaping_parameter(State::Left) {\n    State::Left => 4\n    State::Right => 5\n  } + accept(referenced_parameter, State::Right)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let optimized = optimize_program_lowering(
+    plan_unoptimized_program_lowering(program, analyzed),
+  )
+  let collected = program.modules[0]
+  for name in ["guarded_parameter", "escaping_parameter"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let callable = optimized.modules[0].functions
+      .callable_of(declaration)
+      .unwrap()
+    assert_true(
+      optimized.modules[0].functions.parameters[callable.parameters.start].shape
+      is RefPlannedValueShape,
+    )
+  }
+  for name in ["public_parameter", "payload_parameter", "referenced_parameter"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let callable = optimized.modules[0].functions
+      .callable_of(declaration)
+      .unwrap()
+    assert_true(
+      optimized.modules[0].functions.parameters[callable.parameters.start].shape
+      is RefPlannedValueShape,
+    )
+  }
+}
+
+///|
 test "scalar unit enum specialization rejects public payload guarded and escaping locals" {
   let program = collect_program_manifest(
     22842UL,

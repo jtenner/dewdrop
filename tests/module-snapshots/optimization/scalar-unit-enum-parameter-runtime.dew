@@ -1,0 +1,27 @@
+enum State {
+  Left
+  Center
+  Right
+}
+
+fn classify(state: State) -> I32 {
+  match state {
+    State::Left => 10
+    State::Center => 20
+    State::Right => 30
+  }
+}
+
+pub fn main() -> Unit {
+  assert(classify(State::Center) == 20, "scalar enum parameter direct")
+  assert(classify(if true {
+    State::Left
+  } else {
+    State::Right
+  }) == 10, "scalar enum parameter branch")
+  assert(classify(if false {
+    State::Left
+  } else {
+    State::Right
+  }) == 30, "scalar enum parameter alternative")
+}

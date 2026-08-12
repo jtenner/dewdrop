@@ -162,14 +162,21 @@ user-defined receiver-free non-generic scalar-only bodies; cross-function
 transfers are added only inside terminal `if` branches and match arms so root
 forwarding wrappers remain available to summary/directization passes.
 
-Private scalar unit-enum specialization is a copied-lowering, body-local proof.
-The type-layout plan freezes declaration visibility, generic arity, source-order
-variant tags, and payload shapes. Only module-visible non-generic unit-only enums
-qualify, and only when one immutable uncaptured local is initialized by proven
-constructor/`if` tails and every local read is an exact unguarded match
-scrutinee. The optimizer changes those local expression/pattern carriers to
-`I32`; specialization and fragment reachability then omit the otherwise-unused
-enum physical type. Public ABI shapes and all escaping values remain unchanged.
+Private scalar unit-enum specialization is a copied-lowering proof. The
+type-layout plan freezes declaration visibility, generic arity, source-order
+variant tags, and payload shapes. Body-local specialization requires one
+immutable uncaptured local initialized by proven constructor/`if` tails whose
+every read is an exact unguarded match scrutinee. Parameter specialization adds a
+closed-call proof: a module-visible receiver-free non-generic function parameter
+must have the same match-only usage, no function reference, and only direct or
+tail call sites whose corresponding arguments are proven constructor/`if` trees
+for that enum. The optimizer changes accepted local, parameter, argument,
+expression, and pattern carriers to `I32`. Fragment planning emits a distinct
+private physical signature when the optimized parameter differs from its
+resolved source function type, and reachability omits the enum physical type
+when no retained value needs it. Public callables, payloads, results, methods,
+generics, captures, guarded matches, escaping uses, and incomplete call evidence
+remain reference-backed.
 
 ## Identity ownership
 

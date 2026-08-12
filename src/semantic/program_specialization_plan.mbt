@@ -305,13 +305,17 @@ fn program_reachable_callable_roots(
         continue
       }
       for index in 0..<callable.parameters.length {
-        ignore(
-          program_mark_resolved_nominal_roots(
-            resolved,
-            module_.functions.parameters[callable.parameters.start + index].type_,
-            reachable,
-          ),
-        )
+        let parameter = module_.functions.parameters[callable.parameters.start +
+          index]
+        if parameter.shape is RefPlannedValueShape {
+          ignore(
+            program_mark_resolved_nominal_roots(
+              resolved,
+              parameter.type_,
+              reachable,
+            ),
+          )
+        }
       }
       ignore(
         program_mark_resolved_nominal_roots(

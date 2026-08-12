@@ -1,0 +1,21 @@
+enum State {
+  Left
+  Center
+  Right
+}
+
+fn classify(state: State) -> I32 {
+  match state {
+    State::Left => 10
+    State::Center => 20
+    State::Right => 30
+  }
+}
+
+pub fn main() -> I32 {
+  classify(if true {
+    State::Left
+  } else {
+    State::Right
+  }) + classify(State::Center)
+}
