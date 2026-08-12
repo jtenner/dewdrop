@@ -1427,6 +1427,38 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
 }
 
 ///|
+test "common field extraction reuses exact nested reference loads" {
+  let program = collect_program_manifest(
+    22837UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Inner {\n  value: I32\n}\nstruct Outer {\n  inner: Inner\n}\nfn sum(outer: Outer) -> I32 {\n  let inner = outer.inner\n  let first = inner.value\n  let second = outer.inner.value\n  first + second\n}\npub fn main() -> I32 {\n  sum(Outer {\n    inner: Inner {\n      value: 21\n    }\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let sum = collected.lookup_value("sum").unwrap()
+  let body = collected.body_of(sum).unwrap()
+  let mut optimized_fields = 0
+  let mut unoptimized_fields = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      optimized_fields += 1
+    }
+    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      unoptimized_fields += 1
+    }
+  }
+  assert_eq(unoptimized_fields, 4)
+  assert_eq(optimized_fields, 2)
+}
+
+///|
 test "tail recursion marks only exact non-generic scalar self calls in tail position" {
   let program = collect_program_manifest(
     22807UL,

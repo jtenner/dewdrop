@@ -1,0 +1,22 @@
+struct Inner {
+  value: I32
+}
+
+struct Outer {
+  inner: Inner
+}
+
+fn sum(outer: Outer) -> I32 {
+  let inner = outer.inner
+  let first = inner.value
+  let second = outer.inner.value
+  first + second
+}
+
+pub fn main() -> I32 {
+  sum(Outer {
+    inner: Inner {
+      value: 21
+    }
+  })
+}

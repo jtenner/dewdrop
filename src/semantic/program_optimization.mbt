@@ -2526,11 +2526,10 @@ fn directize_exact_runtime_trait_flows(
 }
 
 ///|
-fn program_cse_scalar_shape(shape : PlannedValueShape) -> Bool {
+fn program_cse_reusable_shape(shape : PlannedValueShape) -> Bool {
   match shape {
     ErrorPlannedValueShape
     | UnitPlannedValueShape
-    | RefPlannedValueShape
     | GenericPlannedValueShape
     | NeverPlannedValueShape => false
     _ => true
@@ -2547,7 +2546,7 @@ fn program_cse_field_key(
     return None
   }
   let source = module_.expressions[expression]
-  if !program_cse_scalar_shape(source.shape) ||
+  if !program_cse_reusable_shape(source.shape) ||
     !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
     return None
   }
@@ -2592,7 +2591,9 @@ fn program_cse_cached_field_local(
   }
   let source = module_.expressions[expression]
   let cached = module_.locals[body.locals.start + local_id]
-  if source.type_ != cached.type_ || source.shape != cached.shape {
+  if source.type_ != cached.type_ ||
+    source.shape != cached.shape ||
+    (source.shape is RefPlannedValueShape && cached.nominal == 0UL) {
     return -1
   }
   local_id
@@ -2605,6 +2606,18 @@ fn program_cse_rewrite_field_from_local(
   expression : ExprId,
   available : Map[(FieldId, LocalId), LocalId],
 ) -> Bool {
+  if expression < 0 || expression >= module_.expressions.length() {
+    return false
+  }
+  match module_.expressions[expression].kind {
+    PlannedFieldGet(_, base) if base >= 0 =>
+      ignore(
+        program_cse_rewrite_field_from_local(
+          module_, body, base, available,
+        ),
+      )
+    _ => ()
+  }
   let local_id = program_cse_cached_field_local(
     module_, body, expression, available,
   )
@@ -2715,8 +2728,21 @@ fn cse_program_field_extractions(
               if mutable_ {
                 continue
               }
+              ignore(
+                program_cse_rewrite_field_from_local(
+                  module_, body, value, available,
+                ),
+              )
               match program_cse_field_key(module_, body, value) {
-                Some(key) => available[key] = local_id
+                Some(key) => {
+                  let planned_local = module_.locals[
+                    body.locals.start + local_id
+                  ]
+                  if !(module_.expressions[value].shape is RefPlannedValueShape) ||
+                    planned_local.nominal != 0UL {
+                    available[key] = local_id
+                  }
+                }
                 None => ()
               }
             }

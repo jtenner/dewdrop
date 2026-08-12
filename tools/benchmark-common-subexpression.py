@@ -115,6 +115,41 @@ def instruction_count(wasm: Path, instruction: str) -> int:
     return completed.stdout.count(instruction)
 
 
+def nested_source(optimized: bool, pairs: int) -> str:
+    reads = []
+    for index in range(pairs):
+        reads.append(f"  let cached{index} = inner.value")
+        base = "outer.inner.value"
+        if not optimized:
+            base = f"retain(outer).inner.value"
+        reads.append(f"  let nested{index} = {base}")
+    total = " + ".join(
+        value
+        for index in range(pairs)
+        for value in (f"cached{index}", f"nested{index}")
+    )
+    helper = "\nfn retain(value: Outer) -> Outer {\n  value\n}\n" if not optimized else ""
+    return f"""struct Inner {{
+  value: I32
+}}
+
+struct Outer {{
+  inner: Inner
+}}
+{helper}
+pub fn main() -> I32 {{
+  let outer = Outer {{
+    inner: Inner {{
+      value: 7
+    }}
+  }}
+  let inner = outer.inner
+{chr(10).join(reads)}
+  {total}
+}}
+"""
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--terms", type=int, default=64)
@@ -135,6 +170,18 @@ def main() -> None:
     )
     optimized_us = statistics.median(raw[str(optimized)])
     baseline_us = statistics.median(raw[str(baseline)])
+    nested = build("nested-cse", nested_source(True, args.terms))
+    nested_baseline = build(
+        "nested-retained", nested_source(False, args.terms),
+    )
+    nested_raw = measure(
+        [nested, nested_baseline],
+        args.terms * 14,
+        args.samples,
+        args.batch,
+    )
+    nested_us = statistics.median(nested_raw[str(nested)])
+    nested_baseline_us = statistics.median(nested_raw[str(nested_baseline)])
     print(json.dumps({
         "terms": args.terms,
         "iterations": args.iterations,
@@ -147,6 +194,15 @@ def main() -> None:
         "mutable_baseline_wasm_bytes": baseline.stat().st_size,
         "immutable_cse_struct_gets": instruction_count(optimized, "struct.get"),
         "mutable_baseline_struct_gets": instruction_count(baseline, "struct.get"),
+        "nested_cse_median_us": round(nested_us, 3),
+        "nested_baseline_median_us": round(nested_baseline_us, 3),
+        "nested_ratio": round(nested_us / nested_baseline_us, 4),
+        "nested_cse_wasm_bytes": nested.stat().st_size,
+        "nested_baseline_wasm_bytes": nested_baseline.stat().st_size,
+        "nested_cse_struct_gets": instruction_count(nested, "struct.get"),
+        "nested_baseline_struct_gets": instruction_count(
+            nested_baseline, "struct.get",
+        ),
     }, indent=2, sort_keys=True))
 
 
