@@ -5739,30 +5739,162 @@ fn scalar_replace_program_variant_payload_reads(
 }
 
 ///|
-fn program_map_direct_variant_pattern_bindings(
+fn program_pattern_has_same_constructor(
+  left : InferredPatternConstructor,
+  right : InferredPatternConstructor,
+) -> Bool {
+  match (left, right) {
+    (
+      VariantInferredPatternConstructor(left_variant, _),
+      VariantInferredPatternConstructor(right_variant, _),
+    ) => left_variant == right_variant
+    (
+      StructInferredPatternConstructor(left_struct, _),
+      StructInferredPatternConstructor(right_struct, _),
+    ) => left_struct == right_struct
+    _ =>
+      left is NoInferredPatternConstructor &&
+      right is NoInferredPatternConstructor
+  }
+}
+
+///|
+fn program_pattern_is_variant_tree(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  depth : Int,
+) -> Bool {
+  if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
+    return false
+  }
+  match module_.patterns[pattern].source {
+    HirAlternativePattern(first, remaining, _) => {
+      if remaining.start < 0 ||
+        remaining.start + remaining.length > module_.pattern_children.length() ||
+        !program_pattern_is_variant_tree(module_, first, depth + 1) {
+        return false
+      }
+      for index in 0..<remaining.length {
+        if !program_pattern_is_variant_tree(
+            module_,
+            module_.pattern_children[remaining.start + index],
+            depth + 1,
+          ) {
+          return false
+        }
+      }
+      true
+    }
+    _ =>
+      module_.patterns[pattern].selected_constructor
+      is VariantInferredPatternConstructor(_, _)
+  }
+}
+
+///|
+fn program_map_nested_pattern_bindings(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   canonical_pattern : PatternId,
   candidate_pattern : PatternId,
-  variant : VariantId,
   binding_targets : Array[LocalId],
+  depth : Int,
 ) -> Bool {
-  let canonical_root = program_pattern_for_variant(
-    module_, canonical_pattern, variant, 0,
-  )
-  let candidate_root = program_pattern_for_variant(
-    module_, candidate_pattern, variant, 0,
-  )
-  if canonical_root < 0 ||
-    candidate_root < 0 ||
-    canonical_root != canonical_pattern ||
-    candidate_root != candidate_pattern {
+  if depth >= 64 ||
+    canonical_pattern < 0 ||
+    canonical_pattern >= module_.patterns.length() ||
+    candidate_pattern < 0 ||
+    candidate_pattern >= module_.patterns.length() {
     return false
   }
   match
     (
-      module_.patterns[canonical_root].source,
-      module_.patterns[candidate_root].source,
+      module_.patterns[canonical_pattern].source,
+      module_.patterns[candidate_pattern].source,
+    ) {
+    (
+      HirAlternativePattern(canonical_first, canonical_remaining, _),
+      HirAlternativePattern(candidate_first, candidate_remaining, _),
+    ) => {
+      if canonical_remaining.length != candidate_remaining.length ||
+        canonical_remaining.start < 0 ||
+        canonical_remaining.start + canonical_remaining.length >
+        module_.pattern_children.length() ||
+        candidate_remaining.start < 0 ||
+        candidate_remaining.start + candidate_remaining.length >
+        module_.pattern_children.length() ||
+        !program_map_nested_pattern_bindings(
+          module_,
+          body,
+          canonical_first,
+          candidate_first,
+          binding_targets,
+          depth + 1,
+        ) {
+        return false
+      }
+      for index in 0..<candidate_remaining.length {
+        if !program_map_nested_pattern_bindings(
+            module_,
+            body,
+            module_.pattern_children[canonical_remaining.start + index],
+            module_.pattern_children[candidate_remaining.start + index],
+            binding_targets,
+            depth + 1,
+          ) {
+          return false
+        }
+      }
+      return true
+    }
+    (HirAlternativePattern(_, _, _), _) | (_, HirAlternativePattern(_, _, _)) =>
+      return false
+    _ => ()
+  }
+  if !program_pattern_has_same_constructor(
+      module_.patterns[canonical_pattern].selected_constructor,
+      module_.patterns[candidate_pattern].selected_constructor,
+    ) {
+    return false
+  }
+  match
+    (
+      module_.patterns[canonical_pattern].reference,
+      module_.patterns[candidate_pattern].reference,
+    ) {
+    (
+      PatternBindingReference(target_local),
+      PatternBindingReference(source_local),
+    ) => {
+      if source_local < 0 ||
+        source_local >= body.locals.length ||
+        target_local < 0 ||
+        target_local >= body.locals.length ||
+        program_cse_local_is_captured(module_, body, source_local) ||
+        program_cse_local_is_captured(module_, body, target_local) ||
+        module_.locals[body.locals.start + source_local].type_ !=
+        module_.locals[body.locals.start + target_local].type_ ||
+        module_.locals[body.locals.start + source_local].shape !=
+        module_.locals[body.locals.start + target_local].shape ||
+        module_.locals[body.locals.start + source_local].nominal !=
+        module_.locals[body.locals.start + target_local].nominal ||
+        (
+          binding_targets[source_local] >= 0 &&
+          binding_targets[source_local] != target_local
+        ) {
+        return false
+      }
+      binding_targets[source_local] = target_local
+      return true
+    }
+    (_, PatternBindingReference(_)) | (PatternBindingReference(_), _) =>
+      return false
+    _ => ()
+  }
+  match
+    (
+      module_.patterns[canonical_pattern].source,
+      module_.patterns[candidate_pattern].source,
     ) {
     (
       HirTuplePattern(_, canonical_children, _),
@@ -5782,115 +5914,84 @@ fn program_map_direct_variant_pattern_bindings(
           index]
         let candidate = module_.pattern_children[candidate_children.start +
           index]
-        if canonical < 0 ||
-          canonical >= module_.patterns.length() ||
-          candidate < 0 ||
-          candidate >= module_.patterns.length() {
-          return false
+        if module_.patterns[candidate].source is HirRestPattern(_) ||
+          module_.patterns[canonical].source is HirRestPattern(_) {
+          if !(module_.patterns[candidate].source is HirRestPattern(_)) ||
+            !(module_.patterns[canonical].source is HirRestPattern(_)) {
+            return false
+          }
+          continue
         }
-        let source_local = match module_.patterns[candidate].reference {
-          PatternBindingReference(local_id) => local_id
-          _ =>
-            match module_.patterns[candidate].source {
-              HirWildcardPattern(_) => continue
-              _ => return false
-            }
-        }
-        let target_local = match module_.patterns[canonical].reference {
-          PatternBindingReference(local_id) => local_id
-          _ => return false
-        }
-        if source_local < 0 ||
-          source_local >= body.locals.length ||
-          target_local < 0 ||
-          target_local >= body.locals.length ||
-          program_cse_local_is_captured(module_, body, source_local) ||
-          program_cse_local_is_captured(module_, body, target_local) ||
-          module_.locals[body.locals.start + source_local].type_ !=
-          module_.locals[body.locals.start + target_local].type_ ||
-          module_.locals[body.locals.start + source_local].shape !=
-          module_.locals[body.locals.start + target_local].shape ||
-          module_.locals[body.locals.start + source_local].nominal !=
-          module_.locals[body.locals.start + target_local].nominal ||
-          (
-            binding_targets[source_local] >= 0 &&
-            binding_targets[source_local] != target_local
+        if !program_map_nested_pattern_bindings(
+            module_,
+            body,
+            canonical,
+            candidate,
+            binding_targets,
+            depth + 1,
           ) {
           return false
         }
-        binding_targets[source_local] = target_local
       }
       true
     }
     (
-      HirStructPattern(_, canonical_fields, _, _, _),
-      HirStructPattern(_, candidate_fields, _, _, _),
+      HirStructPattern(_, canonical_fields, canonical_rest, _, _),
+      HirStructPattern(_, candidate_fields, candidate_rest, _, _),
     ) => {
-      if canonical_fields.start < 0 ||
+      if canonical_rest != candidate_rest ||
+        canonical_fields.start < 0 ||
         canonical_fields.start + canonical_fields.length >
         module_.pattern_fields.length() ||
         candidate_fields.start < 0 ||
         candidate_fields.start + candidate_fields.length >
-        module_.pattern_fields.length() {
+        module_.pattern_fields.length() ||
+        canonical_fields.length != candidate_fields.length {
         return false
       }
       for index in 0..<candidate_fields.length {
         let candidate = module_.pattern_fields[candidate_fields.start + index]
-        if candidate.pattern < 0 ||
-          candidate.pattern >= module_.patterns.length() {
-          return false
-        }
-        let source_local = match module_.patterns[candidate.pattern].reference {
-          PatternBindingReference(local_id) => local_id
-          _ =>
-            match module_.patterns[candidate.pattern].source {
-              HirWildcardPattern(_) => continue
-              _ => return false
-            }
-        }
-        let mut target_local = -1
+        let mut canonical_pattern = -1
         for canonical_index in 0..<canonical_fields.length {
           let canonical = module_.pattern_fields[canonical_fields.start +
             canonical_index]
-          if canonical.name != candidate.name ||
-            canonical.pattern < 0 ||
-            canonical.pattern >= module_.patterns.length() {
-            continue
-          }
-          match module_.patterns[canonical.pattern].reference {
-            PatternBindingReference(local_id) => {
-              if target_local >= 0 {
-                return false
-              }
-              target_local = local_id
+          if canonical.name == candidate.name {
+            if canonical_pattern >= 0 {
+              return false
             }
-            _ => ()
+            canonical_pattern = canonical.pattern
           }
         }
-        if source_local < 0 ||
-          source_local >= body.locals.length ||
-          target_local < 0 ||
-          target_local >= body.locals.length ||
-          program_cse_local_is_captured(module_, body, source_local) ||
-          program_cse_local_is_captured(module_, body, target_local) ||
-          module_.locals[body.locals.start + source_local].type_ !=
-          module_.locals[body.locals.start + target_local].type_ ||
-          module_.locals[body.locals.start + source_local].shape !=
-          module_.locals[body.locals.start + target_local].shape ||
-          module_.locals[body.locals.start + source_local].nominal !=
-          module_.locals[body.locals.start + target_local].nominal ||
-          (
-            binding_targets[source_local] >= 0 &&
-            binding_targets[source_local] != target_local
+        if canonical_pattern < 0 ||
+          !program_map_nested_pattern_bindings(
+            module_,
+            body,
+            canonical_pattern,
+            candidate.pattern,
+            binding_targets,
+            depth + 1,
           ) {
           return false
         }
-        binding_targets[source_local] = target_local
       }
       true
     }
+    (HirWildcardPattern(_), HirWildcardPattern(_)) => true
     _ => false
   }
+}
+
+///|
+fn program_map_variant_pattern_bindings(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  canonical_pattern : PatternId,
+  candidate_pattern : PatternId,
+  binding_targets : Array[LocalId],
+) -> Bool {
+  program_map_nested_pattern_bindings(
+    module_, body, canonical_pattern, candidate_pattern, binding_targets, 0,
+  )
 }
 
 ///|
@@ -5923,15 +6024,8 @@ fn factor_program_variant_payload_extractions(
           break
         }
         let first = module_.pattern_arms[first_arm_id]
-        let variant = match
-          module_.patterns[first.pattern].selected_constructor {
-          VariantInferredPatternConstructor(variant, _) => variant
-          _ => {
-            first_offset += 1
-            continue
-          }
-        }
-        if first.guard_condition < 0 ||
+        if !program_pattern_is_variant_tree(module_, first.pattern, 0) ||
+          first.guard_condition < 0 ||
           first.guard_condition >= module_.expressions.length() ||
           module_.expressions[first.guard_condition].kind is PlannedBoolConst(_) ||
           !program_nonconstant_guard_is_discardable(
@@ -5954,13 +6048,7 @@ fn factor_program_variant_payload_extractions(
             break
           }
           let candidate = module_.pattern_arms[candidate_id]
-          if program_pattern_variant_relation(
-              module_,
-              candidate.pattern,
-              variant,
-              0,
-            ) !=
-            1 ||
+          if !program_pattern_is_variant_tree(module_, candidate.pattern, 0) ||
             candidate.body < 0 ||
             candidate.body >= module_.expressions.length() ||
             module_.expressions[candidate.body].type_ !=
@@ -5997,12 +6085,11 @@ fn factor_program_variant_payload_extractions(
             candidate_offset += 1
             continue
           }
-          if !program_map_direct_variant_pattern_bindings(
+          if !program_map_variant_pattern_bindings(
               module_,
               body,
               first.pattern,
               candidate.pattern,
-              variant,
               binding_targets,
             ) {
             break

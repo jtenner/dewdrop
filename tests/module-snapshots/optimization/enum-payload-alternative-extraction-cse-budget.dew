@@ -1,0 +1,21 @@
+enum Choice {
+  First(I32, I32)
+  Second(I32, I32)
+  Empty
+}
+
+fn retain(value: Choice) -> Choice {
+  value
+}
+
+fn guarded(first: I32, second: I32) -> I32 {
+  match retain(Choice::First(first, second)) {
+    Choice::First(left, right), Choice::Second(left, right) if left > 0 => right + 1
+    Choice::First(left, right), Choice::Second(left, right) => right
+    Choice::Empty => 0
+  }
+}
+
+pub fn main() -> I32 {
+  guarded(1, 20) + guarded(0, 22)
+}

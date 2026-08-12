@@ -1,0 +1,25 @@
+enum Choice {
+  First(I32, I32)
+  Second(I32, I32)
+  Empty
+}
+
+fn retain(value: Choice) -> Choice {
+  value
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  match retain(Choice::First(trap_first(), trap_second())) {
+    Choice::First(left, right), Choice::Second(left, right) if left > 0 => right + 1
+    Choice::First(left, right), Choice::Second(left, right) => right
+    Choice::Empty => 0
+  }
+}

@@ -1,0 +1,34 @@
+struct Box {
+  left: I32
+  right: I32
+}
+
+enum Wrapped {
+  Some(Box)
+  None
+}
+
+fn retain(value: Wrapped) -> Wrapped {
+  value
+}
+
+fn guarded(left: I32, right: I32) -> I32 {
+  match retain(Wrapped::Some(Box {
+    left: left
+    right: right
+  })) {
+    Wrapped::Some(Box {
+      left
+      right
+    }) if left > 0 => right + 1
+    Wrapped::Some(Box {
+      left
+      right
+    }) => right
+    Wrapped::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  guarded(1, 20) + guarded(0, 22)
+}
