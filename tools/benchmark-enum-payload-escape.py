@@ -197,6 +197,33 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+STRUCT_STABLE_GUARD = """enum RecordMaybe {
+  Some {
+    left: I32
+    right: I32
+  }
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  let flag = value > 0
+  match (RecordMaybe::Some {
+    left: value + 1
+    right: value
+  }) {
+    RecordMaybe::Some {
+      left
+      right
+    } if flag => right
+    RecordMaybe::Some {
+      left
+      right
+    } => right
+    RecordMaybe::None => 0
+  }
+}
+"""
+
 STRUCT_BASELINE = """enum RecordMaybe {
   Some {
     left: I32
@@ -375,6 +402,7 @@ def main() -> None:
     composite_guard = build("composite-guard", COMPOSITE_GUARD)
     local = build("local", LOCAL)
     struct = build("struct", STRUCT)
+    struct_stable_guard = build("struct-stable-guard", STRUCT_STABLE_GUARD)
     struct_baseline = build("struct-baseline", STRUCT_BASELINE)
     nested = build("nested", NESTED)
     nested_baseline = build("nested-baseline", NESTED_BASELINE)
@@ -393,6 +421,7 @@ def main() -> None:
             composite_guard,
             local,
             struct,
+            struct_stable_guard,
             nested,
             baseline,
             struct_baseline,
@@ -415,6 +444,9 @@ def main() -> None:
     composite_guard_median = statistics.median(raw[str(composite_guard)])
     local_median = statistics.median(raw[str(local)])
     struct_median = statistics.median(raw[str(struct)])
+    struct_stable_guard_median = statistics.median(
+        raw[str(struct_stable_guard)],
+    )
     nested_median = statistics.median(raw[str(nested)])
     baseline_median = statistics.median(raw[str(baseline)])
     struct_baseline_median = statistics.median(raw[str(struct_baseline)])
@@ -434,6 +466,9 @@ def main() -> None:
         "composite_guard_median_us": round(composite_guard_median, 4),
         "local_median_us": round(local_median, 4),
         "struct_median_us": round(struct_median, 4),
+        "struct_stable_guard_median_us": round(
+            struct_stable_guard_median, 4,
+        ),
         "nested_median_us": round(nested_median, 4),
         "baseline_median_us": round(baseline_median, 4),
         "struct_baseline_median_us": round(struct_baseline_median, 4),
@@ -454,6 +489,9 @@ def main() -> None:
         ),
         "local_ratio": round(local_median / baseline_median, 4),
         "struct_ratio": round(struct_median / struct_baseline_median, 4),
+        "struct_stable_guard_ratio": round(
+            struct_stable_guard_median / struct_baseline_median, 4,
+        ),
         "nested_ratio": round(nested_median / nested_baseline_median, 4),
         "optimized_wasm_bytes": optimized.stat().st_size,
         "arm_order_wasm_bytes": arm_order.stat().st_size,
@@ -467,6 +505,7 @@ def main() -> None:
         "composite_guard_wasm_bytes": composite_guard.stat().st_size,
         "local_wasm_bytes": local.stat().st_size,
         "struct_wasm_bytes": struct.stat().st_size,
+        "struct_stable_guard_wasm_bytes": struct_stable_guard.stat().st_size,
         "nested_wasm_bytes": nested.stat().st_size,
         "baseline_wasm_bytes": baseline.stat().st_size,
         "struct_baseline_wasm_bytes": struct_baseline.stat().st_size,
@@ -495,6 +534,12 @@ def main() -> None:
         "local_struct_get": wat_count(local, "struct.get"),
         "struct_struct_new": wat_count(struct, "struct.new"),
         "struct_struct_get": wat_count(struct, "struct.get"),
+        "struct_stable_guard_struct_new": wat_count(
+            struct_stable_guard, "struct.new",
+        ),
+        "struct_stable_guard_struct_get": wat_count(
+            struct_stable_guard, "struct.get",
+        ),
         "nested_struct_new": wat_count(nested, "struct.new"),
         "nested_struct_get": wat_count(nested, "struct.get"),
         "baseline_struct_new": wat_count(baseline, "struct.new"),

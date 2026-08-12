@@ -631,6 +631,38 @@ test "composite pure guards collapse identical payload arms" {
 }
 
 ///|
+test "stable guarded struct variants collapse identical fields" {
+  let program = collect_program_manifest(
+    22832UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn guarded(flag: Bool, left: I32, right: I32) -> I32 {\n  match (Record::Some {\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } if flag => right\n    Record::Some {\n      left\n      right\n    } => right\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(true, 1, 20) + guarded(false, 2, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let guarded = collected.lookup_value("guarded").unwrap()
+  let body = collected.body_of(guarded).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedVariantStructNew(_, _, _) {
+      variants += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+      matches += 1
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,
