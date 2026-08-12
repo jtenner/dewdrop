@@ -2915,6 +2915,26 @@ fn program_can_scalarize_joined_struct_field(
         module_, alternative, field, type_, shape, depth + 1,
       )
     }
+    PlannedMatchExpression(_, arms) => {
+      if arms.length == 0 ||
+        arms.start < 0 ||
+        arms.start + arms.length > module_.pattern_arms.length() {
+        return false
+      }
+      for index in 0..<arms.length {
+        if !program_can_scalarize_joined_struct_field(
+            module_,
+            module_.pattern_arms[arms.start + index].body,
+            field,
+            type_,
+            shape,
+            depth + 1,
+          ) {
+          return false
+        }
+      }
+      true
+    }
     _ => false
   }
 }
@@ -2996,6 +3016,28 @@ fn scalarize_joined_struct_field(
       }
       true
     }
+    PlannedMatchExpression(scrutinee, arms) => {
+      for index in 0..<arms.length {
+        if !scalarize_joined_struct_field(
+            module_,
+            module_.pattern_arms[arms.start + index].body,
+            field,
+            type_,
+            shape,
+            depth + 1,
+          ) {
+          return false
+        }
+      }
+      module_.expressions[expression] = {
+        ..source,
+        type_,
+        shape,
+        trait_object_coercion: NoInferredTraitObjectCoercion,
+        kind: PlannedMatchExpression(scrutinee, arms),
+      }
+      true
+    }
     _ => false
   }
 }
@@ -3009,7 +3051,8 @@ fn scalar_replace_joined_struct_field_local(
 ) -> Bool {
   if initializer < 0 ||
     initializer >= module_.expressions.length() ||
-    !(module_.expressions[initializer].kind is PlannedIfExpression(_, _, _)) {
+    (!(module_.expressions[initializer].kind is PlannedIfExpression(_, _, _)) &&
+    !(module_.expressions[initializer].kind is PlannedMatchExpression(_, _))) {
     return false
   }
   let (use_count, only_use) = program_local_get_count(
@@ -3394,7 +3437,9 @@ fn scalar_replace_program_struct_field_reads(
           }
           let supported_initializer = match
             module_.expressions[initializer].kind {
-            PlannedStructNew(_, _, _) | PlannedIfExpression(_, _, _) => true
+            PlannedStructNew(_, _, _)
+            | PlannedIfExpression(_, _, _)
+            | PlannedMatchExpression(_, _) => true
             _ => false
           }
           if !supported_initializer ||

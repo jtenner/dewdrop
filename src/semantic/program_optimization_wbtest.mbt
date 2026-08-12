@@ -453,6 +453,66 @@ test "sole-use struct fields scalar replace across fresh if joins" {
 }
 
 ///|
+test "sole-use struct fields scalar replace across fresh match joins" {
+  let program = collect_program_manifest(
+    22816UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Choice {\n  First\n  Second\n}\nstruct Pair {\n  left: I32\n  right: I32\n}\nfn choose(choice: Choice, left: I32, right: I32) -> I32 {\n  let pair = match choice {\n    Choice::First => Pair {\n      left: left\n      right: right\n    }\n    Choice::Second => Pair {\n      left: right\n      right: left\n    }\n  }\n  pair.right\n}\npub fn main() -> I32 {\n  choose(Choice::First, 1, 2) + choose(Choice::Second, 3, 4)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let choose = collected.lookup_value("choose").unwrap()
+  let source_body = collected.body_of(choose).unwrap()
+  let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
+  let block = match body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected choose block")
+  }
+  let items = optimized.modules[0].blocks[block].items
+  let (local_id, initializer) = match
+    optimized.modules[0].block_items[items.start].kind {
+    PlannedLetItem(local_id, false, initializer) => (local_id, initializer)
+    _ => abort("expected match join local")
+  }
+  assert_true(
+    optimized.modules[0].expressions[initializer].kind
+    is PlannedMatchExpression(_, _),
+  )
+  assert_eq(
+    optimized.modules[0].expressions[initializer].shape,
+    I32PlannedValueShape,
+  )
+  assert_eq(
+    optimized.modules[0].locals[body.locals.start + local_id].shape,
+    I32PlannedValueShape,
+  )
+  let mut optimized_fields = 0
+  let mut optimized_structs = 0
+  let mut unoptimized_structs = 0
+  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      optimized_fields += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      optimized_structs += 1
+    }
+    if unoptimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      unoptimized_structs += 1
+    }
+  }
+  assert_eq(optimized_fields, 0)
+  assert_eq(optimized_structs, 0)
+  assert_eq(unoptimized_structs, 2)
+}
+
+///|
 test "ordered component aliases scalar replace distinct struct fields" {
   let program = collect_program_manifest(
     22812UL,

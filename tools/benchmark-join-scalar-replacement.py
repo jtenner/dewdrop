@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark fresh-branch scalar replacement across an if join."""
+"""Benchmark fresh-branch scalar replacement across if and match joins."""
 
 from __future__ import annotations
 
@@ -50,6 +50,70 @@ pub fn main(value: I32) -> I32 {
     }
   } else {
     retain(Pair {
+      left: value + 3
+      right: value + 4
+    })
+  }
+  pair.right
+}
+"""
+
+MATCH = """enum Choice {
+  First
+  Second
+}
+
+struct Pair {
+  left: I32
+  right: I32
+}
+
+pub fn main(value: I32) -> I32 {
+  let choice = if value == 0 {
+    Choice::First
+  } else {
+    Choice::Second
+  }
+  let pair = match choice {
+    Choice::First => Pair {
+      left: value + 1
+      right: value + 2
+    }
+    Choice::Second => Pair {
+      left: value + 3
+      right: value + 4
+    }
+  }
+  pair.right
+}
+"""
+
+MATCH_BASELINE = """enum Choice {
+  First
+  Second
+}
+
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn retain(value: Pair) -> Pair {
+  value
+}
+
+pub fn main(value: I32) -> I32 {
+  let choice = if value == 0 {
+    Choice::First
+  } else {
+    Choice::Second
+  }
+  let pair = match choice {
+    Choice::First => Pair {
+      left: value + 1
+      right: value + 2
+    }
+    Choice::Second => retain(Pair {
       left: value + 3
       right: value + 4
     })
@@ -131,21 +195,38 @@ def main() -> None:
     TMP.mkdir(parents=True, exist_ok=True)
     optimized = build("optimized", OPTIMIZED)
     baseline = build("baseline", BASELINE)
-    raw = measure([optimized, baseline], args.samples, args.batch)
+    match = build("match", MATCH)
+    match_baseline = build("match-baseline", MATCH_BASELINE)
+    raw = measure(
+        [optimized, baseline, match, match_baseline],
+        args.samples,
+        args.batch,
+    )
     optimized_median = statistics.median(raw[str(optimized)])
     baseline_median = statistics.median(raw[str(baseline)])
+    match_median = statistics.median(raw[str(match)])
+    match_baseline_median = statistics.median(raw[str(match_baseline)])
     print(json.dumps({
         "samples": args.samples,
         "batch": args.batch,
         "optimized_median_us": round(optimized_median, 4),
         "baseline_median_us": round(baseline_median, 4),
         "ratio": round(optimized_median / baseline_median, 4),
+        "match_median_us": round(match_median, 4),
+        "match_baseline_median_us": round(match_baseline_median, 4),
+        "match_ratio": round(match_median / match_baseline_median, 4),
         "optimized_wasm_bytes": optimized.stat().st_size,
         "baseline_wasm_bytes": baseline.stat().st_size,
+        "match_wasm_bytes": match.stat().st_size,
+        "match_baseline_wasm_bytes": match_baseline.stat().st_size,
         "optimized_struct_new": wat_count(optimized, "struct.new"),
         "optimized_struct_get": wat_count(optimized, "struct.get"),
         "baseline_struct_new": wat_count(baseline, "struct.new"),
         "baseline_struct_get": wat_count(baseline, "struct.get"),
+        "match_struct_new": wat_count(match, "struct.new"),
+        "match_struct_get": wat_count(match, "struct.get"),
+        "match_baseline_struct_new": wat_count(match_baseline, "struct.new"),
+        "match_baseline_struct_get": wat_count(match_baseline, "struct.get"),
     }, indent=2, sort_keys=True))
 
 

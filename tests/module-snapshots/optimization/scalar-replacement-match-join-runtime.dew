@@ -1,0 +1,27 @@
+enum Choice {
+  First
+  Second
+}
+
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn choose(choice: Choice, left: I32, right: I32) -> I32 {
+  let pair = match choice {
+    Choice::First => Pair {
+      left: left
+      right: right
+    }
+    Choice::Second => Pair {
+      left: right
+      right: left
+    }
+  }
+  pair.right
+}
+
+pub fn main() -> I32 {
+  choose(Choice::First, 10, 12) + choose(Choice::Second, 20, 22)
+}

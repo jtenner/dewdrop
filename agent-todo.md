@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 11, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
+> Execution-only backlog synchronized with every unfinished item in `docs/roadmap.md` on August 12, 2026. Completed work is intentionally omitted. Overlapping roadmap entries are consolidated here into one actionable item and must be removed from this file when completed.
 
 ## Current priority order
 
@@ -144,7 +144,7 @@
 ## Optimization and performance discipline
 
 - [ ] Extend fresh tuple/struct-variant payload elimination beyond constructor-disjoint preceding arms to nested/alternative patterns, guards, and wildcard/binding arm proofs; boxes and exact-flow trait objects are eliminated.
-- [ ] Extend scalar replacement beyond fresh `if` joins and ordered one-to-one component aliases to match joins plus reordered/missing components with synthesized component-local planning.
+- [ ] Extend scalar replacement beyond fresh `if`/match joins and ordered one-to-one component aliases to reordered/missing components with synthesized component-local planning.
 - [ ] Add local lifetime coalescing and deeper payload-load/extraction CSE.
 - [ ] Specialize enum representations from frozen usage/layout data.
 - [ ] Consider profile-guided optimization only after deterministic baseline builds exist.
