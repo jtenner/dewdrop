@@ -291,15 +291,20 @@ cross-module semantic/ABI data. A `FrozenModuleInterface` contains translated
 public declarations, types, callables, implementation evidence, dependencies,
 and deterministic fingerprints.
 
-The persistent cache stores checksummed serialized frozen-interface bundles.
-Corrupt, incompatible, or identity-mismatched artifacts fail visibly. The cache
+The persistent cache stores checksummed serialized frozen interfaces. Corrupt,
+incompatible, or identity-mismatched artifacts fail visibly. The cache
 architecture is generalized around `InterfaceBundleCacheKey` and
 `InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V11
 envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
-I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. The
-current interface policy selects compiler-owned standard modules and verified
-external dependencies. Verified package capsules provide artifact-assisted
-source-tree recovery for missing locked dependencies.
+I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. One
+bundle selects compiler-owned standard modules and verified external
+dependencies. Ordinary non-root workspace modules outside cyclic SCCs use one
+atomic artifact each under `.dew/cache/workspace-interfaces/`; lookup occurs in
+dependency order and keys commit to manifest source identity plus direct public
+content fingerprints. Private dependency changes retain downstream hits while
+public interface changes invalidate dependents transitively. Verified package
+capsules provide artifact-assisted source-tree recovery for missing locked
+dependencies.
 
 The earlier syntax boundary is now `parse_event_cache.mbt`. It prepares each
 workspace source before standard-module selection, prepares only the selected
@@ -309,8 +314,8 @@ order. `parse_event_cache_envelope.mbt` validates key/source provenance and the
 payload checksum; the native platform shim publishes through a flushed,
 POSIX-fsynced same-directory temporary file and atomic rename. Missing entries
 are misses, while malformed, incompatible, mismatched, or corrupt entries fail
-visibly. Ordinary workspace-interface, body, layout, and fragment caches remain
-future extensions over this source-provenance boundary.
+visibly. Body, layout, fragment, and cyclic-workspace-SCC caches remain future
+extensions over these source and interface provenance boundaries.
 
 ## Program specialization and erased ABI
 

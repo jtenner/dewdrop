@@ -281,7 +281,7 @@ Run that file with the included host:
 node tools/dew-run.mjs hello.wasm
 ```
 
-This separates compilation from execution. It is useful when testing a different runtime or embedding the module in another host program. Successful Wasm, HIR, and lowering builds are stored as verified content-addressed entries under `.dew/cache/builds/`; an exact repeated request can restore the output without invoking the compiler. Compilation also stores checksummed per-file parser-event artifacts under `.dew/cache/parse-events/`, reused by import scanning and semantic collection. Use `--no-build-cache` to force compilation, `--no-parse-event-cache` to force parsing, and `--cache-report` to report cache status.
+This separates compilation from execution. It is useful when testing a different runtime or embedding the module in another host program. Successful Wasm, HIR, and lowering builds are stored as verified content-addressed entries under `.dew/cache/builds/`; an exact repeated request can restore the output without invoking the compiler. Compilation also stores checksummed per-file parser-event artifacts under `.dew/cache/parse-events/`, reused by import scanning and semantic collection, plus non-root workspace frozen interfaces under `.dew/cache/workspace-interfaces/`. Workspace keys include exact manifest source identity and direct public dependency fingerprints, so private dependency changes retain downstream reuse while public interface changes invalidate dependents. Use `--no-build-cache` to force compilation, `--no-parse-event-cache` to force parsing, `--no-interface-cache` to disable frozen-interface reuse, and `--cache-report` to report cache status.
 
 ### 8. Inspect the generated WebAssembly text
 

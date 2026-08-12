@@ -34,7 +34,7 @@ priv enum ParseEventFilePreparation {
 
 ///|
 fn parse_event_cache_enabled() -> Bool {
-  parse_event_cache_platform_supported() &&
+  cache_platform_supported() &&
   @sys.get_env_var("DEW_PARSE_EVENT_CACHE").unwrap_or("1") != "0"
 }
 
@@ -174,7 +174,7 @@ fn store_parse_event_cache(
   }
   let path = parse_event_cache_file(key_digest)
   let path_bytes = @utf8.encode(path)
-  let result = parse_event_cache_platform_atomic_write(
+  let result = cache_platform_atomic_write(
     path_bytes,
     path_bytes.length(),
     envelope,

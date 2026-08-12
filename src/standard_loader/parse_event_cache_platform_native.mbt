@@ -1,11 +1,11 @@
 ///|
-fn parse_event_cache_platform_supported() -> Bool {
+fn cache_platform_supported() -> Bool {
   true
 }
 
 ///|
 #borrow(path, content)
-extern "c" fn parse_event_cache_platform_atomic_write(
+extern "c" fn cache_platform_atomic_write(
   path : Bytes,
   path_length : Int,
   content : Bytes,

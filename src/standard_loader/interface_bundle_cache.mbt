@@ -6,20 +6,20 @@ pub enum InterfaceBundleCacheLookup {
 }
 
 ///|
-pub enum InterfaceBundleCacheStatus {
-  InterfaceBundleCacheWasDisabled
-  InterfaceBundleCacheWasMiss
-  InterfaceBundleCacheWasHit
-} derive(Eq, Debug)
+pub struct InterfaceBundleCacheStatus {
+  enabled : Bool
+  hits : Int
+  misses : Int
+}
 
 ///|
 pub fn InterfaceBundleCacheStatus::label(
   self : InterfaceBundleCacheStatus,
 ) -> String {
-  match self {
-    InterfaceBundleCacheWasDisabled => "disabled"
-    InterfaceBundleCacheWasMiss => "miss"
-    InterfaceBundleCacheWasHit => "hit"
+  if !self.enabled {
+    "disabled"
+  } else {
+    "hits \{self.hits}, misses \{self.misses}"
   }
 }
 
@@ -140,6 +140,255 @@ fn interface_cache_file(key : InterfaceBundleCacheKey) -> String {
     interface_cache_join(interface_cache_root(), "interfaces"),
     "v11-" + key.fingerprint + ".dwi",
   )
+}
+
+///|
+fn workspace_interface_cache_directory() -> String {
+  interface_cache_join(interface_cache_root(), "workspace-interfaces")
+}
+
+///|
+fn workspace_interface_cache_file(key : String) -> String {
+  interface_cache_join(
+    workspace_interface_cache_directory(),
+    "v1-" + key + ".dwi",
+  )
+}
+
+///|
+fn interface_cache_write_string(output : Buffer, value : String) -> Unit {
+  let bytes = @utf8.encode(value)
+  let length = bytes.length().reinterpret_as_uint()
+  output.write_byte((length & 0xffU).to_byte())
+  output.write_byte(((length >> 8) & 0xffU).to_byte())
+  output.write_byte(((length >> 16) & 0xffU).to_byte())
+  output.write_byte(((length >> 24) & 0xffU).to_byte())
+  output.write_bytes(bytes)
+}
+
+///|
+fn workspace_interface_source_fingerprint(
+  program : @semantic.CollectedProgram,
+  module_index : Int,
+) -> String {
+  let module_ = program.modules[module_index]
+  let output = Buffer()
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SOURCE_V1\x00")
+  interface_cache_write_string(output, program.module_paths[module_index])
+  let module_id = module_.module_id
+  for shift in [0, 8, 16, 24, 32, 40, 48, 56] {
+    output.write_byte(((module_id >> shift) & 0xffUL).to_byte())
+  }
+  for index in 0..<module_.files.length() {
+    interface_cache_write_string(output, module_.file_paths[index])
+    let source = module_.file_sources[index]
+    let length = source.length().reinterpret_as_uint()
+    output.write_byte((length & 0xffU).to_byte())
+    output.write_byte(((length >> 8) & 0xffU).to_byte())
+    output.write_byte(((length >> 16) & 0xffU).to_byte())
+    output.write_byte(((length >> 24) & 0xffU).to_byte())
+    output.write_bytes(source)
+  }
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
+fn workspace_interface_cache_key_from_dependency_records(
+  source_fingerprint : String,
+  dependency_records : Array[String],
+) -> String {
+  dependency_records.sort()
+  let output = Buffer()
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1\x00")
+  interface_cache_write_string(output, source_fingerprint)
+  for record in dependency_records {
+    interface_cache_write_string(output, record)
+  }
+  @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes()))
+}
+
+///|
+fn workspace_interface_cache_key(
+  program : @semantic.CollectedProgram,
+  graph : @semantic.ModuleDependencyGraph,
+  module_index : Int,
+  cached : Array[@semantic.FrozenModuleInterface?],
+) -> String? {
+  let dependency_records : Array[String] = []
+  let dependencies = graph.dependencies[module_index]
+  for edge in 0..<dependencies.length {
+    let dependency_index = graph.dependency_modules[dependencies.start + edge]
+    let dependency = match cached[dependency_index] {
+      Some(value) => value
+      None => return None
+    }
+    dependency_records.push(
+      dependency.path + "\u0000" + dependency.content_fingerprint,
+    )
+  }
+  Some(
+    workspace_interface_cache_key_from_dependency_records(
+      workspace_interface_source_fingerprint(program, module_index),
+      dependency_records,
+    ),
+  )
+}
+
+///|
+fn validate_workspace_interface_cache_hit(
+  program : @semantic.CollectedProgram,
+  graph : @semantic.ModuleDependencyGraph,
+  module_index : Int,
+  cached : Array[@semantic.FrozenModuleInterface?],
+  interface_ : @semantic.FrozenModuleInterface,
+) -> Result[Bool, String] {
+  if interface_.module_id != program.modules[module_index].module_id ||
+    interface_.path != program.module_paths[module_index] {
+    return Err("workspace frozen-interface cache identity mismatch")
+  }
+  let dependencies = graph.dependencies[module_index]
+  let expected : Array[String] = []
+  for edge in 0..<dependencies.length {
+    let dependency_index = graph.dependency_modules[dependencies.start + edge]
+    let dependency = match cached[dependency_index] {
+      Some(value) => value
+      None => return Ok(false)
+    }
+    expected.push(dependency.path + "\u0000" + dependency.content_fingerprint)
+  }
+  let actual : Array[String] = []
+  for dependency in interface_.dependencies {
+    actual.push(dependency.path + "\u0000" + dependency.content_fingerprint)
+  }
+  expected.sort()
+  actual.sort()
+  Ok(expected == actual)
+}
+
+///|
+fn lookup_workspace_interface(
+  program : @semantic.CollectedProgram,
+  graph : @semantic.ModuleDependencyGraph,
+  module_index : Int,
+  cached : Array[@semantic.FrozenModuleInterface?],
+  key : String,
+) -> Result[@semantic.FrozenModuleInterface?, String] {
+  let path = workspace_interface_cache_file(key)
+  if !@fs.path_exists(path) {
+    return Ok(None)
+  }
+  let bytes = @fs.read_file_to_bytes(path) catch {
+    error =>
+      return Err(
+        "cannot read workspace frozen-interface cache \{path}: \{error}",
+      )
+  }
+  let payload = match unwrap_interface_cache_payload(bytes) {
+    Ok(value) => value
+    Err(error) =>
+      return Err("corrupt workspace frozen-interface cache \{path}: \{error}")
+  }
+  let interfaces = match @semantic.deserialize_frozen_interfaces(payload) {
+    Ok(value) => value
+    Err(error) =>
+      return Err("corrupt workspace frozen-interface cache \{path}: \{error}")
+  }
+  if interfaces.length() != 1 {
+    return Err("workspace frozen-interface cache must contain one module")
+  }
+  let interface_ = interfaces[0]
+  match
+    validate_workspace_interface_cache_hit(
+      program, graph, module_index, cached, interface_,
+    ) {
+    Ok(true) => Ok(Some(interface_))
+    Ok(false) => Ok(None)
+    Err(error) =>
+      Err("corrupt workspace frozen-interface cache \{path}: \{error}")
+  }
+}
+
+///|
+fn store_workspace_interface(
+  key : String,
+  interface_ : @semantic.FrozenModuleInterface,
+) -> Result[Unit, String] {
+  let payload = match @semantic.serialize_frozen_interfaces([interface_]) {
+    Ok(value) => value
+    Err(error) =>
+      return Err("cannot serialize workspace frozen-interface cache: \{error}")
+  }
+  let root = interface_cache_root()
+  match ensure_interface_cache_root(root) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let directory = workspace_interface_cache_directory()
+  match ensure_cache_directory(directory) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let path = workspace_interface_cache_file(key)
+  let path_bytes = @utf8.encode(path)
+  let result = cache_platform_atomic_write(
+    path_bytes,
+    path_bytes.length(),
+    wrap_interface_cache_payload(payload),
+  )
+  if result != 0 {
+    return Err(
+      "cannot atomically write workspace frozen-interface cache \{path}: errno \{-result}",
+    )
+  }
+  Ok(())
+}
+
+///|
+fn workspace_module_is_cacheable(
+  program : @semantic.CollectedProgram,
+  index : Int,
+  policy : InterfaceBundlePolicy,
+) -> Bool {
+  index != policy.root_module_index &&
+  !interface_bundle_module_is_cacheable(program, index, policy)
+}
+
+///|
+fn workspace_module_cache_is_eligible(
+  program : @semantic.CollectedProgram,
+  graph : @semantic.ModuleDependencyGraph,
+  module_index : Int,
+  policy : InterfaceBundlePolicy,
+) -> Bool {
+  if !policy.enabled ||
+    !policy.store_on_miss ||
+    !cache_platform_supported() ||
+    !workspace_module_is_cacheable(program, module_index, policy) {
+    return false
+  }
+  for scc in graph.sccs {
+    let mut contains = false
+    for item in 0..<scc.length {
+      if graph.scc_modules[scc.start + item] == module_index {
+        contains = true
+        break
+      }
+    }
+    if !contains {
+      continue
+    }
+    if scc.length != 1 {
+      return false
+    }
+    let dependencies = graph.dependencies[module_index]
+    for edge in 0..<dependencies.length {
+      if graph.dependency_modules[dependencies.start + edge] == module_index {
+        return false
+      }
+    }
+    return true
+  }
+  false
 }
 
 ///|

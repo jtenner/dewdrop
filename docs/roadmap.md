@@ -20,7 +20,7 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 ## Active priority order
 
-1. Extend workspace interface reuse, deterministic dependency invalidation, and deterministic parallel module/body scheduling over the completed per-file parser-event cache.
+1. Extend the completed acyclic workspace interface reuse into body/layout/fragment caches and deterministic parallel module/body scheduling.
 2. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
 3. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
 4. Complete foundational standard modules and Wasm intrinsic parity.
@@ -35,10 +35,11 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 ## Incremental and parallel compilation
 
 - [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
-- [ ] Extend frozen-interface caching to ordinary workspace modules after source and dependency provenance is explicit.
+- [x] Extend frozen-interface caching to ordinary non-root workspace modules with exact manifest source identity, direct public dependency fingerprints, atomic publication, and fail-visible corruption.
 - [ ] Cache body inference by declaration/body fingerprint and relevant imported interface/evidence fingerprints.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
-- [ ] Invalidate dependents by public-interface fingerprint rather than private implementation changes.
+- [x] Invalidate acyclic workspace dependents by public-interface content fingerprint rather than private implementation changes.
+- [ ] Cache cyclic workspace interface SCCs as one atomic artifact.
 - [ ] Schedule independent module and body jobs across workers.
 - [ ] Buffer and merge diagnostics, artifacts, and final indices in deterministic source/manifest order.
 - [ ] Add forward, reverse, and randomized simulated completion-order tests.

@@ -2,9 +2,9 @@
 
 ## Status
 
-Implemented for compiler-owned `dew.std.*` interfaces and versioned external dependency packages. The cache key combines the exact ordered standard source subset with the resolved dependency package identity/version/integrity closure. A hit injects standard and non-root dependency interfaces while continuing to collect executable bodies and run body inference, lowering, reachability, linking, Starshine validation, and encoding normally.
+Implemented for compiler-owned `dew.std.*` interfaces, versioned external dependency packages, and ordinary non-root workspace modules outside cyclic SCCs. The standard/dependency bundle key combines the exact ordered standard source subset with the resolved dependency package identity/version/integrity closure. Workspace entries use exact manifest source identity plus direct public dependency content fingerprints. Hits inject frozen interfaces while continuing to collect executable bodies and run body inference, lowering, reachability, linking, Starshine validation, and encoding normally.
 
-Installed dependencies additionally receive content-addressed V1 package capsules. When a locked dependency tree is unavailable, the CLI verifies the capsule against the complete lock provenance and atomically restores its exact ordered package payload at the locked path before compilation. The ordinary interface-cache hit then avoids refreezing that dependency interface, while restored executable bodies keep static linking and emitted Wasm byte-identical. Root-package interfaces, collected-body artifacts, layouts, lowering fragments, and emitted Wasm are not cached yet.
+Installed dependencies additionally receive content-addressed V1 package capsules. When a locked dependency tree is unavailable, the CLI verifies the capsule against the complete lock provenance and atomically restores its exact ordered package payload at the locked path before compilation. The ordinary interface-cache hit then avoids refreezing that dependency interface, while restored executable bodies keep static linking and emitted Wasm byte-identical. Root-package interfaces, cyclic workspace SCC interfaces, collected-body artifacts, layouts, lowering fragments, and emitted Wasm are not cached by this layer yet.
 
 ## Content key
 
@@ -100,8 +100,7 @@ DEW_INTERFACE_CACHE=0 tools/dew check ...
 `--cache-report` prints exactly one of:
 
 ```text
-standard interface cache: miss
-standard interface cache: hit
+standard interface cache: hits <n>, misses <n>
 standard interface cache: disabled
 ```
 
@@ -148,7 +147,7 @@ A complete hit currently pays decode plus cached graph/scope injection, about 37
 
 ## Remaining work
 
-1. Add cache-file I/O and checksum-only benchmarks, allocation counts, and representative larger external-package workloads.
+1. Add allocation counts and representative larger external-package workloads.
 2. Measure whether serializing collected dependency bodies is worth avoiding restoration-time syntax collection; package-tree lookup and interface refreezing are already removed from the recovery path.
-3. Define atomic frozen-interface artifact publication when the MoonBit filesystem abstraction exposes rename/replace semantics; Python-owned package capsules already publish and restore atomically.
+3. Extend workspace caching to complete cyclic SCC artifacts.
 4. Extend caching to collected bodies, layouts, fragments, and final Wasm only after their serialization schemas stabilize.

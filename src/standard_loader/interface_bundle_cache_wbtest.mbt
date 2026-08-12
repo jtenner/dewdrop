@@ -51,6 +51,105 @@ test "interface bundle policy selects standard and dependency modules explicitly
 }
 
 ///|
+test "workspace interface keys include exact source and dependency evidence" {
+  let program = @semantic.collect_program_manifest(
+    23010UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("dep.value", [
+        @semantic.ManifestFile::new(
+          "dep.dew", b"pub fn value() -> I32 {\n  1\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.library", [
+        @semantic.ManifestFile::new(
+          "library.dew", b"open dep.value\npub fn read() -> I32 {\n  value()\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open app.library\npub fn main() -> I32 {\n  read()\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let frozen = @semantic.freeze_program_interfaces(program)
+  let graph = frozen.graph
+  let cached : Array[@semantic.FrozenModuleInterface?] = Array::make(
+    program.modules.length(),
+    None,
+  )
+  for index, interface_ in frozen.interfaces {
+    cached[index] = Some(interface_)
+  }
+  cached[1] = None
+  let source_fingerprint = workspace_interface_source_fingerprint(program, 1)
+  let dependency_records : Array[String] = []
+  let dependencies = graph.dependencies[1]
+  for edge in 0..<dependencies.length {
+    let dependency = frozen.interfaces[graph.dependency_modules[dependencies.start +
+      edge]]
+    dependency_records.push(
+      dependency.path + "\u0000" + dependency.content_fingerprint,
+    )
+  }
+  let key = workspace_interface_cache_key_from_dependency_records(
+    source_fingerprint, dependency_records,
+  )
+  dependency_records.push("changed\u0000fingerprint")
+  assert_true(
+    workspace_interface_cache_key_from_dependency_records(
+      source_fingerprint, dependency_records,
+    ) !=
+    key,
+  )
+  assert_eq(
+    workspace_interface_cache_key(program, graph, 1, cached).unwrap(),
+    key,
+  )
+  cached[0] = None
+  assert_true(workspace_interface_cache_key(program, graph, 1, cached) is None)
+}
+
+///|
+test "workspace cache excludes roots, standard modules, and cyclic SCCs" {
+  let program = @semantic.collect_program_manifest(
+    23020UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.left", [
+        @semantic.ManifestFile::new(
+          "left.dew", b"open app.right\npub fn left() -> I32 {\n  1\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.right", [
+        @semantic.ManifestFile::new(
+          "right.dew", b"open app.left\npub fn right() -> I32 {\n  2\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open app.left\npub fn main() -> I32 {\n  left()\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let graph = @semantic.build_module_dependency_graph(program)
+  let policy : InterfaceBundlePolicy = {
+    enabled: true,
+    store_on_miss: true,
+    root_module_index: 2,
+    include_dependencies: false,
+  }
+  assert_false(workspace_module_cache_is_eligible(program, graph, 0, policy))
+  assert_false(workspace_module_cache_is_eligible(program, graph, 1, policy))
+  assert_false(workspace_module_cache_is_eligible(program, graph, 2, policy))
+  for index in 3..<program.modules.length() {
+    assert_false(
+      workspace_module_cache_is_eligible(program, graph, index, policy),
+    )
+  }
+}
+
+///|
 test "interface bundle cache key includes dependency provenance" {
   let base : StandardLibraryLoad = {
     sources: @semantic.StandardLibrarySources::bootstrap(),

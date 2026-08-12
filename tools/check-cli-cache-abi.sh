@@ -39,8 +39,10 @@ DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --cache-report \
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --cache-report \
   tests/module-snapshots/numeric/scalar.dew \
   > .tmp/dew-interface-cache-hit.txt
-grep -q '^standard interface cache: miss$' .tmp/dew-interface-cache-miss.txt
-grep -q '^standard interface cache: hit$' .tmp/dew-interface-cache-hit.txt
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-interface-cache-miss.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-interface-cache-hit.txt
 grep -q '^parse event cache: hits 0, misses ' .tmp/dew-interface-cache-miss.txt
 grep -q '^parse event cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-interface-cache-hit.txt
@@ -82,6 +84,123 @@ if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
 fi
 grep -q 'corrupt frozen-interface cache' \
   .tmp/dew-interface-cache-corrupt.txt
+rm -rf .tmp/dew-workspace-interface-cache
+DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew build \
+  --no-build-cache --cache-report \
+  --module fixture.library tests/cli/multi-module/library.dew \
+  --module fixture.main tests/cli/multi-module/main.dew \
+  --root fixture.main -o .tmp/dew-workspace-interface-cold.wasm \
+  > .tmp/dew-workspace-interface-cold.txt
+DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew build \
+  --no-build-cache --cache-report \
+  --module fixture.library tests/cli/multi-module/library.dew \
+  --module fixture.main tests/cli/multi-module/main.dew \
+  --root fixture.main -o .tmp/dew-workspace-interface-warm.wasm \
+  > .tmp/dew-workspace-interface-warm.txt
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-workspace-interface-cold.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-workspace-interface-warm.txt
+cmp .tmp/dew-workspace-interface-cold.wasm \
+  .tmp/dew-workspace-interface-warm.wasm
+workspace_cache_file=$(find \
+  .tmp/dew-workspace-interface-cache/workspace-interfaces \
+  -type f | head -n 1)
+printf 'corrupt' > "$workspace_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew check \
+  --module fixture.library tests/cli/multi-module/library.dew \
+  --module fixture.main tests/cli/multi-module/main.dew \
+  --root fixture.main \
+  > .tmp/dew-workspace-interface-corrupt.txt 2>&1; then
+  echo "expected corrupt workspace interface cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt workspace frozen-interface cache' \
+  .tmp/dew-workspace-interface-corrupt.txt
+rm -rf .tmp/dew-workspace-invalidation
+mkdir -p .tmp/dew-workspace-invalidation
+cat > .tmp/dew-workspace-invalidation/base.dew <<'EOF'
+pub fn base() -> I32 {
+  40
+}
+EOF
+cat > .tmp/dew-workspace-invalidation/library.dew <<'EOF'
+open fixture.base
+pub fn answer() -> I32 {
+  base() + 2
+}
+EOF
+cat > .tmp/dew-workspace-invalidation/main.dew <<'EOF'
+open fixture.library
+pub fn main() -> I32 {
+  answer()
+}
+EOF
+workspace_build() {
+  output=$1
+  report=$2
+  shift 2
+  DEW_CACHE_DIR=.tmp/dew-workspace-invalidation/cache tools/dew build \
+    --no-build-cache --cache-report "$@" \
+    --module fixture.base .tmp/dew-workspace-invalidation/base.dew \
+    --module fixture.library .tmp/dew-workspace-invalidation/library.dew \
+    --module fixture.main .tmp/dew-workspace-invalidation/main.dew \
+    --root fixture.main -o "$output" > "$report"
+}
+workspace_build .tmp/dew-workspace-invalidation/cold.wasm \
+  .tmp/dew-workspace-invalidation/cold.txt
+workspace_build .tmp/dew-workspace-invalidation/warm.wasm \
+  .tmp/dew-workspace-invalidation/warm.txt
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-workspace-invalidation/cold.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-workspace-invalidation/warm.txt
+cmp .tmp/dew-workspace-invalidation/cold.wasm \
+  .tmp/dew-workspace-invalidation/warm.wasm
+cat > .tmp/dew-workspace-invalidation/base.dew <<'EOF'
+fn hidden() -> I32 {
+  1
+}
+pub fn base() -> I32 {
+  40
+}
+EOF
+workspace_build .tmp/dew-workspace-invalidation/private.wasm \
+  .tmp/dew-workspace-invalidation/private.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 1$' \
+  .tmp/dew-workspace-invalidation/private.txt
+DEW_CACHE_DIR=.tmp/dew-workspace-invalidation/uncached tools/dew build \
+  --no-build-cache --no-interface-cache \
+  --module fixture.base .tmp/dew-workspace-invalidation/base.dew \
+  --module fixture.library .tmp/dew-workspace-invalidation/library.dew \
+  --module fixture.main .tmp/dew-workspace-invalidation/main.dew \
+  --root fixture.main -o .tmp/dew-workspace-invalidation/private-uncached.wasm
+cmp .tmp/dew-workspace-invalidation/private.wasm \
+  .tmp/dew-workspace-invalidation/private-uncached.wasm
+cat > .tmp/dew-workspace-invalidation/base.dew <<'EOF'
+pub fn base() -> I32 {
+  40
+}
+pub fn visible() -> I32 {
+  1
+}
+EOF
+workspace_build .tmp/dew-workspace-invalidation/public.wasm \
+  .tmp/dew-workspace-invalidation/public.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 2$' \
+  .tmp/dew-workspace-invalidation/public.txt
+DEW_CACHE_DIR=.tmp/dew-workspace-invalidation/uncached-public tools/dew build \
+  --no-build-cache --no-interface-cache \
+  --module fixture.base .tmp/dew-workspace-invalidation/base.dew \
+  --module fixture.library .tmp/dew-workspace-invalidation/library.dew \
+  --module fixture.main .tmp/dew-workspace-invalidation/main.dew \
+  --root fixture.main -o .tmp/dew-workspace-invalidation/public-uncached.wasm
+cmp .tmp/dew-workspace-invalidation/public.wasm \
+  .tmp/dew-workspace-invalidation/public-uncached.wasm
+rm -rf .tmp/dew-workspace-interface-cache \
+  .tmp/dew-workspace-interface-cold.wasm \
+  .tmp/dew-workspace-interface-warm.wasm \
+  .tmp/dew-workspace-invalidation
 rm -rf .tmp/dew-build-output-cache
 DEW_CACHE_DIR=.tmp/dew-build-output-cache tools/dew build --cache-report \
   tests/compile-pass/basic.dew -o .tmp/dew-build-output-first.wasm \
@@ -118,8 +237,10 @@ DEW_CACHE_DIR=.tmp/dew-cache-invalidation tools/dew check --cache-report \
   --package-root .tmp/dew-cache-package-root \
   tests/module-snapshots/numeric/scalar.dew \
   > .tmp/dew-cache-content-changed.txt
-grep -q '^standard interface cache: miss$' .tmp/dew-cache-content-first.txt
-grep -q '^standard interface cache: miss$' .tmp/dew-cache-content-changed.txt
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-cache-content-first.txt
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-cache-content-changed.txt
 grep -q '^parse event cache: hits 0, misses ' \
   .tmp/dew-cache-content-first.txt
 grep -q '^parse event cache: hits [1-9][0-9]*, misses 1$' \
@@ -241,9 +362,9 @@ DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
   --cache-report \
   --manifest tests/abi-consumers/imported-package/dew.json \
   > .tmp/dew-external-package-cache-hit.txt
-grep -q '^standard interface cache: miss$' \
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-external-package-cache-miss.txt
-grep -q '^standard interface cache: hit$' \
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-external-package-cache-hit.txt
 test "$(find .tmp/dew-external-package-cache/interfaces -name 'v11-*.dwi' | wc -l)" -eq 1
 rm -rf .tmp/dew-artifact-only .tmp/dew-artifact-cache
@@ -305,7 +426,7 @@ DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
   --cache-report \
   --manifest .tmp/dew-versioned-package-changed/dew.json \
   > .tmp/dew-external-package-cache-changed.txt
-grep -q '^standard interface cache: miss$' \
+grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-external-package-cache-changed.txt
 test "$(find .tmp/dew-external-package-cache/interfaces -name 'v11-*.dwi' | wc -l)" -eq 2
 tools/dew build \
