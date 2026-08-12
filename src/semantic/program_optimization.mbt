@@ -2612,9 +2612,7 @@ fn program_cse_rewrite_field_from_local(
   match module_.expressions[expression].kind {
     PlannedFieldGet(_, base) if base >= 0 =>
       ignore(
-        program_cse_rewrite_field_from_local(
-          module_, body, base, available,
-        ),
+        program_cse_rewrite_field_from_local(module_, body, base, available),
       )
     _ => ()
   }
@@ -2771,8 +2769,7 @@ fn cse_program_field_extractions(
 ) -> Unit {
   for module_ in modules {
     for body in module_.bodies {
-      for
-        block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+      for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
         if block < 0 || block >= module_.blocks.length() {
           continue
         }
@@ -2821,9 +2818,8 @@ fn cse_program_field_extractions(
               )
               match program_cse_field_key(module_, body, value) {
                 Some(key) => {
-                  let planned_local = module_.locals[
-                    body.locals.start + local_id
-                  ]
+                  let planned_local = module_.locals[body.locals.start +
+                    local_id]
                   if !(module_.expressions[value].shape is RefPlannedValueShape) ||
                     planned_local.nominal != 0UL {
                     available[key] = local_id
@@ -2836,10 +2832,7 @@ fn cse_program_field_extractions(
               if value >= 0 {
                 ignore(
                   program_cse_rewrite_field_from_local(
-                    module_,
-                    body,
-                    value,
-                    available,
+                    module_, body, value, available,
                   ),
                 )
               }
@@ -2852,9 +2845,7 @@ fn cse_program_field_extractions(
 }
 
 ///|
-fn program_scalar_replaceable_field_shape(
-  shape : PlannedValueShape,
-) -> Bool {
+fn program_scalar_replaceable_field_shape(shape : PlannedValueShape) -> Bool {
   match shape {
     I32PlannedValueShape
     | U32PlannedValueShape
@@ -2886,7 +2877,8 @@ fn scalar_replace_program_struct_field_read(
     PlannedFieldGet(field, _) => field
     _ => return false
   }
-  if !(module_.expressions[struct_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+  if !(module_.expressions[struct_expression].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   let fields = match module_.expressions[struct_expression].kind {
@@ -2895,10 +2887,14 @@ fn scalar_replace_program_struct_field_read(
   }
   if fields.start < 0 ||
     fields.start + fields.length > module_.object_fields.length() ||
-    (!program_scalar_replaceable_field_shape(source.shape) &&
-    !(fields.length == 1 &&
-    ((source.shape is RefPlannedValueShape) ||
-    (source.shape is GenericPlannedValueShape)))) {
+    (
+      !program_scalar_replaceable_field_shape(source.shape) &&
+      !(fields.length == 1 &&
+      (
+        source.shape is RefPlannedValueShape ||
+        source.shape is GenericPlannedValueShape
+      ))
+    ) {
     return false
   }
   let start = module_.expression_children.length()
@@ -2922,10 +2918,7 @@ fn scalar_replace_program_struct_field_read(
   }
   module_.expressions[expression] = {
     ..source,
-    kind: PlannedParameterSelect(
-      { start, length: fields.length },
-      selected,
-    ),
+    kind: PlannedParameterSelect({ start, length: fields.length }, selected),
   }
   let struct_source = module_.expressions[struct_expression]
   module_.expressions[struct_expression] = {
@@ -2989,7 +2982,8 @@ fn program_can_scalarize_joined_struct_field(
   if expression < 0 ||
     expression >= module_.expressions.length() ||
     depth > module_.expressions.length() + module_.blocks.length() ||
-    !(module_.expressions[expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    !(module_.expressions[expression].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   match module_.expressions[expression].kind {
@@ -3016,18 +3010,31 @@ fn program_can_scalarize_joined_struct_field(
     PlannedBlockExpression(block) => {
       let tail = program_scalar_replacement_block_tail(module_, block)
       program_can_scalarize_joined_struct_field(
-        module_, tail, field, type_, shape, depth + 1,
+        module_,
+        tail,
+        field,
+        type_,
+        shape,
+        depth + 1,
       )
     }
     PlannedIfExpression(_, then_block, alternative) => {
-      let then_tail = program_scalar_replacement_block_tail(
-        module_, then_block,
-      )
+      let then_tail = program_scalar_replacement_block_tail(module_, then_block)
       program_can_scalarize_joined_struct_field(
-        module_, then_tail, field, type_, shape, depth + 1,
+        module_,
+        then_tail,
+        field,
+        type_,
+        shape,
+        depth + 1,
       ) &&
       program_can_scalarize_joined_struct_field(
-        module_, alternative, field, type_, shape, depth + 1,
+        module_,
+        alternative,
+        field,
+        type_,
+        shape,
+        depth + 1,
       )
     }
     PlannedMatchExpression(_, arms) => {
@@ -3088,17 +3095,19 @@ fn scalarize_joined_struct_field(
         type_,
         shape,
         trait_object_coercion: NoInferredTraitObjectCoercion,
-        kind: PlannedParameterSelect(
-          { start, length: fields.length },
-          selected,
-        ),
+        kind: PlannedParameterSelect({ start, length: fields.length }, selected),
       }
       true
     }
     PlannedBlockExpression(block) => {
       let tail = program_scalar_replacement_block_tail(module_, block)
       if !scalarize_joined_struct_field(
-          module_, tail, field, type_, shape, depth + 1,
+          module_,
+          tail,
+          field,
+          type_,
+          shape,
+          depth + 1,
         ) {
         return false
       }
@@ -3111,14 +3120,22 @@ fn scalarize_joined_struct_field(
       true
     }
     PlannedIfExpression(condition, then_block, alternative) => {
-      let then_tail = program_scalar_replacement_block_tail(
-        module_, then_block,
-      )
+      let then_tail = program_scalar_replacement_block_tail(module_, then_block)
       if !scalarize_joined_struct_field(
-          module_, then_tail, field, type_, shape, depth + 1,
+          module_,
+          then_tail,
+          field,
+          type_,
+          shape,
+          depth + 1,
         ) ||
         !scalarize_joined_struct_field(
-          module_, alternative, field, type_, shape, depth + 1,
+          module_,
+          alternative,
+          field,
+          type_,
+          shape,
+          depth + 1,
         ) {
         return false
       }
@@ -3166,13 +3183,13 @@ fn scalar_replace_joined_struct_field_local(
 ) -> Bool {
   if initializer < 0 ||
     initializer >= module_.expressions.length() ||
-    (!(module_.expressions[initializer].kind is PlannedIfExpression(_, _, _)) &&
-    !(module_.expressions[initializer].kind is PlannedMatchExpression(_, _))) {
+    (
+      !(module_.expressions[initializer].kind is PlannedIfExpression(_, _, _)) &&
+      !(module_.expressions[initializer].kind is PlannedMatchExpression(_, _))
+    ) {
     return false
   }
-  let (use_count, only_use) = program_local_get_count(
-    module_, body, local_id,
-  )
+  let (use_count, only_use) = program_local_get_count(module_, body, local_id)
   if use_count != 1 || only_use < 0 {
     return false
   }
@@ -3196,7 +3213,8 @@ fn scalar_replace_joined_struct_field_local(
     !program_scalar_replaceable_field_shape(
       module_.expressions[field_expression].shape,
     ) ||
-    !(module_.expressions[field_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    !(module_.expressions[field_expression].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   let field = match field {
@@ -3205,10 +3223,20 @@ fn scalar_replace_joined_struct_field_local(
   }
   let field_source = module_.expressions[field_expression]
   if !program_can_scalarize_joined_struct_field(
-      module_, initializer, field, field_source.type_, field_source.shape, 0,
+      module_,
+      initializer,
+      field,
+      field_source.type_,
+      field_source.shape,
+      0,
     ) ||
     !scalarize_joined_struct_field(
-      module_, initializer, field, field_source.type_, field_source.shape, 0,
+      module_,
+      initializer,
+      field,
+      field_source.type_,
+      field_source.shape,
+      0,
     ) {
     return false
   }
@@ -3243,7 +3271,8 @@ fn scalar_replace_struct_component_aliases(
 ) -> Bool {
   if initializer < 0 ||
     initializer >= module_.expressions.length() ||
-    !(module_.expressions[initializer].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    !(module_.expressions[initializer].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   let fields = match module_.expressions[initializer].kind {
@@ -3289,7 +3318,8 @@ fn scalar_replace_struct_component_aliases(
       !program_scalar_replaceable_field_shape(
         module_.expressions[field_get].shape,
       ) ||
-      !(module_.expressions[field_get].trait_object_coercion is NoInferredTraitObjectCoercion) {
+      !(module_.expressions[field_get].trait_object_coercion
+      is NoInferredTraitObjectCoercion) {
       return false
     }
     let mut selected_field = -1
@@ -3304,9 +3334,7 @@ fn scalar_replace_struct_component_aliases(
     if selected_field < 0 || component_locals[selected_field] >= 0 {
       return false
     }
-    let object_value = module_.object_fields[
-      fields.start + selected_field
-    ].value
+    let object_value = module_.object_fields[fields.start + selected_field].value
     if object_value < 0 ||
       object_value >= module_.expressions.length() ||
       module_.expressions[object_value].shape !=
@@ -3351,11 +3379,7 @@ fn scalar_replace_struct_component_aliases(
     module_.block_items[target_item] = if component_locals[field_index] >= 0 {
       {
         ..target_source,
-        kind: PlannedLetItem(
-          component_locals[field_index],
-          false,
-          object_value,
-        ),
+        kind: PlannedLetItem(component_locals[field_index], false, object_value),
       }
     } else {
       { ..target_source, kind: PlannedExpressionItem(object_value) }
@@ -3396,7 +3420,8 @@ fn scalar_replace_repeated_same_struct_field_local(
     local_id >= body.locals.length ||
     initializer < 0 ||
     initializer >= module_.expressions.length() ||
-    !(module_.expressions[initializer].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    !(module_.expressions[initializer].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   let fields = match module_.expressions[initializer].kind {
@@ -3446,7 +3471,8 @@ fn scalar_replace_repeated_same_struct_field_local(
     if !program_scalar_replaceable_field_shape(
         module_.expressions[expression].shape,
       ) ||
-      !(module_.expressions[expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+      !(module_.expressions[expression].trait_object_coercion
+      is NoInferredTraitObjectCoercion) {
       return false
     }
     match selected_field {
@@ -3495,10 +3521,7 @@ fn scalar_replace_repeated_same_struct_field_local(
     type_: field_source.type_,
     shape: field_source.shape,
     trait_object_coercion: NoInferredTraitObjectCoercion,
-    kind: PlannedParameterSelect(
-      { start, length: fields.length },
-      selected,
-    ),
+    kind: PlannedParameterSelect({ start, length: fields.length }, selected),
   }
   let local_index = body.locals.start + local_id
   let local_source = module_.locals[local_index]
@@ -3550,8 +3573,7 @@ fn scalar_replace_synthesized_struct_components(
     for item_index in 0..<items.length {
       let (local_id, initializer) = match
         module_.block_items[items.start + item_index].kind {
-        PlannedLetItem(local_id, false, initializer) =>
-          (local_id, initializer)
+        PlannedLetItem(local_id, false, initializer) => (local_id, initializer)
         _ => continue
       }
       if local_id < 0 ||
@@ -3582,7 +3604,9 @@ fn scalar_replace_synthesized_struct_components(
       let alias_locals : Array[LocalId] = Array::make(fields.length, -1)
       let alias_items : Array[Int] = Array::make(fields.length, -1)
       let mut valid = true
-      for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+      for
+        expression in body.expressions.start..<(body.expressions.start +
+        body.expressions.length) {
         let source_local = match module_.expressions[expression].kind {
           PlannedLocalGet(candidate) => candidate
           _ => continue
@@ -3592,7 +3616,9 @@ fn scalar_replace_synthesized_struct_components(
         }
         let mut selected_get = -1
         let mut selected_field : FieldId? = None
-        for candidate in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+        for
+          candidate in body.expressions.start..<(body.expressions.start +
+          body.expressions.length) {
           match module_.expressions[candidate].kind {
             PlannedFieldGet(field, base) if base == expression => {
               if selected_get >= 0 {
@@ -3631,9 +3657,7 @@ fn scalar_replace_synthesized_struct_components(
           valid = false
           break
         }
-        let object_value = module_.object_fields[
-          fields.start + selected_index
-        ].value
+        let object_value = module_.object_fields[fields.start + selected_index].value
         if object_value < 0 || object_value >= module_.expressions.length() {
           valid = false
           break
@@ -3641,16 +3665,15 @@ fn scalar_replace_synthesized_struct_components(
         let field_shape = module_.expressions[selected_get].shape
         let mut component_nominal = 0UL
         let supported_shape = if program_scalar_replaceable_field_shape(
-          field_shape,
-        ) {
+            field_shape,
+          ) {
           true
         } else if field_shape is RefPlannedValueShape {
           match module_.expressions[object_value].kind {
-            PlannedLocalGet(source_local) if
-              source_local >= 0 && source_local < body.locals.length => {
-              component_nominal = module_.locals[
-                body.locals.start + source_local
-              ].nominal
+            PlannedLocalGet(source_local) if source_local >= 0 &&
+              source_local < body.locals.length => {
+              component_nominal = module_.locals[body.locals.start +
+                source_local].nominal
               component_nominal != 0UL
             }
             PlannedStructNew(declaration, _, _) => {
@@ -3665,9 +3688,10 @@ fn scalar_replace_synthesized_struct_components(
           }
         } else if field_shape is GenericPlannedValueShape {
           match module_.expressions[object_value].kind {
-            PlannedLocalGet(source_local) if
-              source_local >= 0 && source_local < body.locals.length =>
-              module_.locals[body.locals.start + source_local].shape is GenericPlannedValueShape
+            PlannedLocalGet(source_local) if source_local >= 0 &&
+              source_local < body.locals.length =>
+              module_.locals[body.locals.start + source_local].shape
+              is GenericPlannedValueShape
             _ => false
           }
         } else {
@@ -3677,7 +3701,8 @@ fn scalar_replace_synthesized_struct_components(
           module_.expressions[object_value].type_ !=
           module_.expressions[selected_get].type_ ||
           module_.expressions[object_value].shape != field_shape ||
-          !(module_.expressions[selected_get].trait_object_coercion is NoInferredTraitObjectCoercion) {
+          !(module_.expressions[selected_get].trait_object_coercion
+          is NoInferredTraitObjectCoercion) {
           valid = false
           break
         }
@@ -3688,17 +3713,18 @@ fn scalar_replace_synthesized_struct_components(
         }
         let mut alias_local = -1
         let mut alias_item = -1
-        for candidate_block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+        for
+          candidate_block in body.blocks.start..<(body.blocks.start +
+          body.blocks.length) {
           if candidate_block < 0 || candidate_block >= module_.blocks.length() {
             continue
           }
           let candidate_items = module_.blocks[candidate_block].items
           for candidate_item in 0..<candidate_items.length {
-            match module_.block_items[
-              candidate_items.start + candidate_item
-            ].kind {
-              PlannedLetItem(candidate_local, false, value) if
-                value == selected_get => {
+            match
+              module_.block_items[candidate_items.start + candidate_item].kind {
+              PlannedLetItem(candidate_local, false, value) if value ==
+                selected_get => {
                 if candidate_block != block ||
                   candidate_item <= item_index ||
                   alias_local >= 0 {
@@ -3720,9 +3746,11 @@ fn scalar_replace_synthesized_struct_components(
           }
         }
         if !valid ||
-          (alias_local >= 0 &&
-          alias_locals[selected_index] >= 0 &&
-          alias_locals[selected_index] != alias_local) {
+          (
+            alias_local >= 0 &&
+            alias_locals[selected_index] >= 0 &&
+            alias_locals[selected_index] != alias_local
+          ) {
           valid = false
           break
         }
@@ -3794,15 +3822,15 @@ fn scalar_replace_synthesized_struct_components(
       }
       let aggregate_item = module_.block_items[items.start + item_index]
       for field_index in 0..<fields.length {
-        let object_value = module_.object_fields[
-          fields.start + field_index
-        ].value
+        let object_value = module_.object_fields[fields.start + field_index].value
         module_.block_items.push(
           if component_locals[field_index] >= 0 {
             {
               ..aggregate_item,
               kind: PlannedLetItem(
-                component_locals[field_index], false, object_value,
+                component_locals[field_index],
+                false,
+                object_value,
               ),
             }
           } else {
@@ -3916,19 +3944,16 @@ fn scalar_replace_program_struct_field_reads(
         _ => continue
       }
       ignore(
-        scalar_replace_program_struct_field_read(
-          module_, expression, base,
-        ),
+        scalar_replace_program_struct_field_read(module_, expression, base),
       )
     }
     for body_index in 0..<module_.bodies.length() {
-      while scalar_replace_synthesized_struct_components(
-        module_, body_index,
-      ) {}
+      while scalar_replace_synthesized_struct_components(module_, body_index) {
+
+      }
     }
     for body in module_.bodies {
-      for
-        block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+      for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
         if block < 0 || block >= module_.blocks.length() {
           continue
         }
@@ -3979,10 +4004,9 @@ fn scalar_replace_program_struct_field_reads(
           if use_count != 1 || only_use < 0 {
             continue
           }
-          let initializer_is_discardable =
-            program_struct_initializer_is_discardable(
-              module_, initializer, effects,
-            )
+          let initializer_is_discardable = program_struct_initializer_is_discardable(
+            module_, initializer, effects,
+          )
           let mut selected_expression = -1
           for candidate in (index + 1)..<items.length {
             let (candidate_expression, exits) = match
@@ -4099,9 +4123,7 @@ fn program_pattern_contains_binding(
       false
     }
     HirAlternativePattern(first, remaining, _) => {
-      if program_pattern_contains_binding(
-          module_, first, binding, depth + 1,
-        ) {
+      if program_pattern_contains_binding(module_, first, binding, depth + 1) {
         return true
       }
       if remaining.start < 0 ||
@@ -4142,7 +4164,10 @@ fn program_pattern_variant_relation(
       }
       let mut matching = 0
       let first_relation = program_pattern_variant_relation(
-        module_, first, variant, depth + 1,
+        module_,
+        first,
+        variant,
+        depth + 1,
       )
       if first_relation < 0 {
         return -1
@@ -4164,12 +4189,20 @@ fn program_pattern_variant_relation(
           matching += 1
         }
       }
-      if matching > 0 { 1 } else { 0 }
+      if matching > 0 {
+        1
+      } else {
+        0
+      }
     }
     _ =>
       match module_.patterns[pattern].selected_constructor {
         VariantInferredPatternConstructor(candidate, _) =>
-          if candidate == variant { 1 } else { 0 }
+          if candidate == variant {
+            1
+          } else {
+            0
+          }
         _ => -1
       }
   }
@@ -4192,16 +4225,19 @@ fn program_pattern_for_variant(
         return -1
       }
       let mut selected = -1
-      if program_pattern_variant_relation(
-          module_, first, variant, depth + 1,
-        ) > 0 {
+      if program_pattern_variant_relation(module_, first, variant, depth + 1) >
+        0 {
         selected = first
       }
       for index in 0..<remaining.length {
         let candidate = module_.pattern_children[remaining.start + index]
         if program_pattern_variant_relation(
-            module_, candidate, variant, depth + 1,
-          ) > 0 {
+            module_,
+            candidate,
+            variant,
+            depth + 1,
+          ) >
+          0 {
           if selected >= 0 {
             return -1
           }
@@ -4238,7 +4274,8 @@ fn program_can_scalarize_nested_pattern_binding(
     pattern >= module_.patterns.length() ||
     value < 0 ||
     value >= module_.expressions.length() ||
-    !(module_.expressions[value].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    !(module_.expressions[value].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   if module_.patterns[pattern].reference is PatternBindingReference(candidate) {
@@ -4262,11 +4299,12 @@ fn program_can_scalarize_nested_pattern_binding(
       let mut selected_pattern = -1
       let mut selected_name : String? = None
       for index in 0..<pattern_fields.length {
-        let candidate = module_.pattern_fields[
-          pattern_fields.start + index
-        ]
+        let candidate = module_.pattern_fields[pattern_fields.start + index]
         if program_pattern_contains_binding(
-            module_, candidate.pattern, binding, depth + 1,
+            module_,
+            candidate.pattern,
+            binding,
+            depth + 1,
           ) {
           if selected_pattern >= 0 {
             return false
@@ -4314,9 +4352,7 @@ fn program_can_scalarize_nested_pattern_binding(
       let mut selected = -1
       for index in 0..<children.length {
         let child = module_.pattern_children[children.start + index]
-        if program_pattern_contains_binding(
-            module_, child, binding, depth + 1,
-          ) {
+        if program_pattern_contains_binding(module_, child, binding, depth + 1) {
           if selected >= 0 {
             return false
           }
@@ -4369,11 +4405,12 @@ fn scalarize_nested_pattern_binding(
     ) => {
       let mut selected_name : String? = None
       for index in 0..<pattern_fields.length {
-        let candidate = module_.pattern_fields[
-          pattern_fields.start + index
-        ]
+        let candidate = module_.pattern_fields[pattern_fields.start + index]
         if program_pattern_contains_binding(
-            module_, candidate.pattern, binding, depth + 1,
+            module_,
+            candidate.pattern,
+            binding,
+            depth + 1,
           ) {
           if selected >= 0 {
             return false
@@ -4406,9 +4443,7 @@ fn scalarize_nested_pattern_binding(
         let child = module_.pattern_children[children.start + index]
         let candidate = module_.object_fields[fields.start + index].value
         module_.expression_children.push(candidate)
-        if program_pattern_contains_binding(
-            module_, child, binding, depth + 1,
-          ) {
+        if program_pattern_contains_binding(module_, child, binding, depth + 1) {
           selected = index
           selected_pattern = child
           selected_value = candidate
@@ -4481,22 +4516,17 @@ fn scalar_replace_known_variant_catchall(
     return false
   }
   match (module_.patterns[arm.pattern].reference, body.kind) {
-    (PatternBindingReference(binding), PlannedLocalGet(local_id)) if
-      binding == local_id => {
+    (PatternBindingReference(binding), PlannedLocalGet(local_id)) if binding ==
+      local_id => {
       let selector_start = module_.expression_children.length()
       module_.expression_children.push(variant_expression)
       module_.expressions[expression] = {
         ..source,
-        kind: PlannedParameterSelect(
-          { start: selector_start, length: 1 }, 0,
-        ),
+        kind: PlannedParameterSelect({ start: selector_start, length: 1 }, 0),
       }
       return true
     }
-    (
-      PatternBindingReference(binding),
-      PlannedMatchExpression(scrutinee, _),
-    ) => {
+    (PatternBindingReference(binding), PlannedMatchExpression(scrutinee, _)) => {
       if scrutinee < 0 || scrutinee >= module_.expressions.length() {
         return false
       }
@@ -4506,15 +4536,14 @@ fn scalar_replace_known_variant_catchall(
       }
       if source_binding != binding ||
         !scalar_replace_program_variant_payload_match(
-          module_, arm.body, variant_expression,
+          module_,
+          arm.body,
+          variant_expression,
         ) {
         return false
       }
       let rewritten_body = module_.expressions[arm.body]
-      module_.expressions[expression] = {
-        ..source,
-        kind: rewritten_body.kind,
-      }
+      module_.expressions[expression] = { ..source, kind: rewritten_body.kind }
       module_.expressions[arm.body] = {
         ..rewritten_body,
         kind: PlannedConsumedExpression,
@@ -4545,7 +4574,8 @@ fn scalar_replace_known_variant_catchall(
   match module_.expressions[variant_expression].kind {
     PlannedVariantTupleNew(_, _, arguments) => {
       if arguments.start < 0 ||
-        arguments.start + arguments.length > module_.expression_children.length() {
+        arguments.start + arguments.length >
+        module_.expression_children.length() {
         return false
       }
       for index in 0..<arguments.length {
@@ -4604,15 +4634,19 @@ fn program_variant_direct_binding_selector(
     _ => return -1
   }
   let root_pattern = program_pattern_for_variant(
-    module_, arm.pattern, variant, 0,
+    module_,
+    arm.pattern,
+    variant,
+    0,
   )
   if root_pattern < 0 {
     return -1
   }
-  match (
-    module_.expressions[variant_expression].kind,
-    module_.patterns[root_pattern].source,
-  ) {
+  match
+    (
+      module_.expressions[variant_expression].kind,
+      module_.patterns[root_pattern].source,
+    ) {
     (
       PlannedVariantTupleNew(candidate_variant, _, arguments),
       HirTuplePattern(_, children, _),
@@ -4649,7 +4683,8 @@ fn program_variant_direct_binding_selector(
         fields.start < 0 ||
         fields.start + fields.length > module_.object_fields.length() ||
         pattern_fields.start < 0 ||
-        pattern_fields.start + pattern_fields.length > module_.pattern_fields.length() {
+        pattern_fields.start + pattern_fields.length >
+        module_.pattern_fields.length() {
         return -1
       }
       let mut selected_name : String? = None
@@ -4674,9 +4709,11 @@ fn program_variant_direct_binding_selector(
       }
       let mut selected = -1
       for index in 0..<fields.length {
-        match program_variant_field_name(
-          module_, module_.object_fields[fields.start + index].field,
-        ) {
+        match
+          program_variant_field_name(
+            module_,
+            module_.object_fields[fields.start + index].field,
+          ) {
           Some(name) if name == selected_name => {
             if selected >= 0 {
               return -1
@@ -4697,8 +4734,7 @@ fn program_nonconstant_guard_is_discardable(
   module_ : PlannedModuleLowering,
   guard_expression : ExprId,
 ) -> Bool {
-  if guard_expression < 0 ||
-    guard_expression >= module_.expressions.length() {
+  if guard_expression < 0 || guard_expression >= module_.expressions.length() {
     return false
   }
   match module_.expressions[guard_expression].kind {
@@ -4715,14 +4751,18 @@ fn program_nonconstant_guard_is_discardable(
     | PlannedBinaryExpression(HirLogicalOr, left, right) =>
       program_nonconstant_guard_is_discardable(module_, left) &&
       program_nonconstant_guard_is_discardable(module_, right)
-    PlannedOperatorCall(target, operator, left, right, _) if
-      semantic_id_module(target) == standard_library_module_id(0) &&
-      (operator is HirEqual ||
-      operator is HirNotEqual ||
-      operator is HirLess ||
-      operator is HirLessEqual ||
-      operator is HirGreater ||
-      operator is HirGreaterEqual) =>
+    PlannedOperatorCall(target, operator, left, right, _) if semantic_id_module(
+        target,
+      ) ==
+      standard_library_module_id(0) &&
+      (
+        operator is HirEqual ||
+        operator is HirNotEqual ||
+        operator is HirLess ||
+        operator is HirLessEqual ||
+        operator is HirGreater ||
+        operator is HirGreaterEqual
+      ) =>
       program_nonconstant_guard_is_discardable(module_, left) &&
       program_nonconstant_guard_is_discardable(module_, right)
     _ => false
@@ -4741,9 +4781,7 @@ fn program_guarded_variant_selector_is_stable(
     return false
   }
   let guarded = module_.pattern_arms[arms.start + guarded_index]
-  if !program_nonconstant_guard_is_discardable(
-      module_, guarded.guard_condition,
-    ) {
+  if !program_nonconstant_guard_is_discardable(module_, guarded.guard_condition) {
     return false
   }
   let selected = program_variant_direct_binding_selector(
@@ -4755,7 +4793,10 @@ fn program_guarded_variant_selector_is_stable(
   for index in (guarded_index + 1)..<arms.length {
     let candidate = module_.pattern_arms[arms.start + index]
     let relation = program_pattern_variant_relation(
-      module_, candidate.pattern, variant, 0,
+      module_,
+      candidate.pattern,
+      variant,
+      0,
     )
     if relation == 0 {
       continue
@@ -4772,11 +4813,13 @@ fn program_guarded_variant_selector_is_stable(
         PlannedBoolConst(true) => ()
         _ => {
           if !program_nonconstant_guard_is_discardable(
-              module_, candidate.guard_condition,
+              module_,
+              candidate.guard_condition,
             ) ||
             program_variant_direct_binding_selector(
               module_, candidate, variant_expression, variant,
-            ) != selected {
+            ) !=
+            selected {
             return false
           }
           continue
@@ -4784,8 +4827,9 @@ fn program_guarded_variant_selector_is_stable(
       }
     }
     return program_variant_direct_binding_selector(
-      module_, candidate, variant_expression, variant,
-    ) == selected
+        module_, candidate, variant_expression, variant,
+      ) ==
+      selected
   }
   false
 }
@@ -4796,9 +4840,7 @@ fn program_scalar_transform_binding_expression(
   expression : ExprId,
   depth : Int,
 ) -> ExprId {
-  if expression < 0 ||
-    expression >= module_.expressions.length() ||
-    depth >= 64 {
+  if expression < 0 || expression >= module_.expressions.length() || depth >= 64 {
     return -2
   }
   match module_.expressions[expression].kind {
@@ -4808,32 +4850,37 @@ fn program_scalar_transform_binding_expression(
     | PlannedI64Const(_)
     | PlannedU64Const(_)
     | PlannedBoolConst(_) => -1
-    PlannedPrefixExpression(operator, operand) if
-      operator is HirPositive ||
+    PlannedPrefixExpression(operator, operand) if operator is HirPositive ||
       operator is HirNegative ||
       operator is HirLogicalNot =>
-      program_scalar_transform_binding_expression(
-        module_, operand, depth + 1,
-      )
-    PlannedOperatorCall(target, operator, left, right, _) if
-      semantic_id_module(target) == standard_library_module_id(0) &&
-      (operator is HirBitOr ||
-      operator is HirBitXor ||
-      operator is HirBitAnd ||
-      operator is HirEqual ||
-      operator is HirNotEqual ||
-      operator is HirLess ||
-      operator is HirLessEqual ||
-      operator is HirGreater ||
-      operator is HirGreaterEqual ||
-      operator is HirAdd ||
-      operator is HirSubtract ||
-      operator is HirMultiply) => {
+      program_scalar_transform_binding_expression(module_, operand, depth + 1)
+    PlannedOperatorCall(target, operator, left, right, _) if semantic_id_module(
+        target,
+      ) ==
+      standard_library_module_id(0) &&
+      (
+        operator is HirBitOr ||
+        operator is HirBitXor ||
+        operator is HirBitAnd ||
+        operator is HirEqual ||
+        operator is HirNotEqual ||
+        operator is HirLess ||
+        operator is HirLessEqual ||
+        operator is HirGreater ||
+        operator is HirGreaterEqual ||
+        operator is HirAdd ||
+        operator is HirSubtract ||
+        operator is HirMultiply
+      ) => {
       let left_binding = program_scalar_transform_binding_expression(
-        module_, left, depth + 1,
+        module_,
+        left,
+        depth + 1,
       )
       let right_binding = program_scalar_transform_binding_expression(
-        module_, right, depth + 1,
+        module_,
+        right,
+        depth + 1,
       )
       if left_binding == -2 ||
         right_binding == -2 ||
@@ -4870,7 +4917,8 @@ fn scalar_replace_program_variant_payload_match(
     arms.start < 0 ||
     arms.start + arms.length > module_.pattern_arms.length() ||
     !(source.trait_object_coercion is NoInferredTraitObjectCoercion) ||
-    !(module_.expressions[variant_expression].trait_object_coercion is NoInferredTraitObjectCoercion) {
+    !(module_.expressions[variant_expression].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
     return false
   }
   let variant = match module_.expressions[variant_expression].kind {
@@ -4901,9 +4949,8 @@ fn scalar_replace_program_variant_payload_match(
     if guard_constant == 0 {
       continue
     }
-    match program_pattern_variant_relation(
-      module_, candidate.pattern, variant, 0,
-    ) {
+    match
+      program_pattern_variant_relation(module_, candidate.pattern, variant, 0) {
       1 => {
         if guard_constant < 0 &&
           !program_guarded_variant_selector_is_stable(
@@ -4931,15 +4978,21 @@ fn scalar_replace_program_variant_payload_match(
   }
   let arm = module_.pattern_arms[selected_arm]
   let root_pattern = program_pattern_for_variant(
-    module_, arm.pattern, variant, 0,
+    module_,
+    arm.pattern,
+    variant,
+    0,
   )
   if root_pattern < 0 {
     return false
   }
   let root = module_.patterns[root_pattern]
   let selected_variant = variant
-  let transform_binding_expression =
-    program_scalar_transform_binding_expression(module_, arm.body, 0)
+  let transform_binding_expression = program_scalar_transform_binding_expression(
+    module_,
+    arm.body,
+    0,
+  )
   if transform_binding_expression == -2 {
     return false
   }
@@ -4965,7 +5018,8 @@ fn scalar_replace_program_variant_payload_match(
       if selected_variant != variant ||
         arguments.length == 0 ||
         arguments.start < 0 ||
-        arguments.start + arguments.length > module_.expression_children.length() ||
+        arguments.start + arguments.length >
+        module_.expression_children.length() ||
         children.length != arguments.length ||
         children.start < 0 ||
         children.start + children.length > module_.pattern_children.length() {
@@ -4976,9 +5030,7 @@ fn scalar_replace_program_variant_payload_match(
         if pattern < 0 || pattern >= module_.patterns.length() {
           return false
         }
-        if program_pattern_contains_binding(
-            module_, pattern, local_id, 0,
-          ) {
+        if program_pattern_contains_binding(module_, pattern, local_id, 0) {
           if selected >= 0 {
             return false
           }
@@ -5002,7 +5054,8 @@ fn scalar_replace_program_variant_payload_match(
         fields.start < 0 ||
         fields.start + fields.length > module_.object_fields.length() ||
         pattern_fields.start < 0 ||
-        pattern_fields.start + pattern_fields.length > module_.pattern_fields.length() {
+        pattern_fields.start + pattern_fields.length >
+        module_.pattern_fields.length() {
         return false
       }
       let mut selected_name : String? = None
@@ -5013,7 +5066,10 @@ fn scalar_replace_program_variant_payload_match(
           return false
         }
         if program_pattern_contains_binding(
-            module_, pattern_field.pattern, local_id, 0,
+            module_,
+            pattern_field.pattern,
+            local_id,
+            0,
           ) {
           if selected_name is Some(_) {
             return false
@@ -5055,16 +5111,21 @@ fn scalar_replace_program_variant_payload_match(
     _ => return false
   }
   let direct_payload = payload_pattern >= 0 &&
-    module_.patterns[payload_pattern].reference is PatternBindingReference(binding) &&
+    module_.patterns[payload_pattern].reference
+    is PatternBindingReference(binding) &&
     binding == local_id
   if payload < 0 ||
     payload >= module_.expressions.length() ||
     payload_pattern < 0 ||
-    (!program_scalar_replaceable_field_shape(source.shape) &&
-    !(direct_payload &&
-    payload_count == 1 &&
-    ((source.shape is RefPlannedValueShape) ||
-    (source.shape is GenericPlannedValueShape)))) ||
+    (
+      !program_scalar_replaceable_field_shape(source.shape) &&
+      !(direct_payload &&
+      payload_count == 1 &&
+      (
+        source.shape is RefPlannedValueShape ||
+        source.shape is GenericPlannedValueShape
+      ))
+    ) ||
     !program_can_scalarize_nested_pattern_binding(
       module_,
       payload_pattern,
@@ -5143,8 +5204,7 @@ fn scalar_replace_program_variant_payload_reads(
       }
     }
     for body in module_.bodies {
-      for
-        block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
+      for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
         if block < 0 || block >= module_.blocks.length() {
           continue
         }
@@ -5162,8 +5222,12 @@ fn scalar_replace_program_variant_payload_reads(
           }
           if initializer < 0 ||
             initializer >= module_.expressions.length() ||
-            (!(module_.expressions[initializer].kind is PlannedVariantTupleNew(_, _, _)) &&
-            !(module_.expressions[initializer].kind is PlannedVariantStructNew(_, _, _))) ||
+            (
+              !(module_.expressions[initializer].kind
+              is PlannedVariantTupleNew(_, _, _)) &&
+              !(module_.expressions[initializer].kind
+              is PlannedVariantStructNew(_, _, _))
+            ) ||
             program_cse_local_is_captured(module_, body, local_id) {
             continue
           }
@@ -5297,9 +5361,8 @@ fn mark_tail_recursive_block(
 ///|
 fn program_tail_scalar_shape(shape : PlannedValueShape) -> Bool {
   match shape {
-    ErrorPlannedValueShape
-    | RefPlannedValueShape
-    | GenericPlannedValueShape => false
+    ErrorPlannedValueShape | RefPlannedValueShape | GenericPlannedValueShape =>
+      false
     _ => true
   }
 }

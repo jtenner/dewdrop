@@ -142,7 +142,9 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
   let body = collected.body_of(choose).unwrap()
   let mut field_get = -1
   let mut struct_new = -1
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match unoptimized.modules[0].expressions[expression].kind {
       PlannedFieldGet(_, base) => {
         field_get = expression
@@ -162,8 +164,7 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
     is PlannedConsumedExpression,
   )
   assert_true(
-    unoptimized.modules[0].expressions[field_get].kind
-    is PlannedFieldGet(_, _),
+    unoptimized.modules[0].expressions[field_get].kind is PlannedFieldGet(_, _),
   )
   assert_true(
     unoptimized.modules[0].expressions[struct_new].kind
@@ -214,9 +215,9 @@ test "adjacent nonescaping struct locals scalar replace" {
   )
   let choose_gap = collected.lookup_value("choose_gap").unwrap()
   let gap_source_body = collected.body_of(choose_gap).unwrap()
-  let gap_body = optimized.modules[0].bodies[
-    semantic_id_local(gap_source_body.id)
-  ]
+  let gap_body = optimized.modules[0].bodies[semantic_id_local(
+      gap_source_body.id,
+    )]
   let gap_block = match gap_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected gap block body")
@@ -228,9 +229,9 @@ test "adjacent nonescaping struct locals scalar replace" {
   )
   let choose_effect = collected.lookup_value("choose_effect").unwrap()
   let effect_source_body = collected.body_of(choose_effect).unwrap()
-  let effect_body = optimized.modules[0].bodies[
-    semantic_id_local(effect_source_body.id)
-  ]
+  let effect_body = optimized.modules[0].bodies[semantic_id_local(
+      effect_source_body.id,
+    )]
   let effect_block = match effect_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected effect block body")
@@ -265,16 +266,20 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
     let mut optimized_matches = 0
     let mut selects = 0
     let mut unoptimized_variants = 0
-    for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+    for
+      expression in source_body.expressions.start..<(source_body.expressions.start +
+      source_body.expressions.length) {
       match optimized.modules[0].expressions[expression].kind {
         PlannedVariantTupleNew(_, _, _) | PlannedVariantStructNew(_, _, _) =>
           optimized_variants += 1
         _ => ()
       }
-      if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+      if optimized.modules[0].expressions[expression].kind
+        is PlannedMatchExpression(_, _) {
         optimized_matches += 1
       }
-      if optimized.modules[0].expressions[expression].kind is PlannedParameterSelect(_, _) {
+      if optimized.modules[0].expressions[expression].kind
+        is PlannedParameterSelect(_, _) {
         selects += 1
       }
       match unoptimized.modules[0].expressions[expression].kind {
@@ -292,11 +297,15 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
   let reordered_body = collected.body_of(reordered).unwrap()
   let mut reordered_variants = 0
   let mut reordered_matches = 0
-  for expression in reordered_body.expressions.start..<(reordered_body.expressions.start + reordered_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+  for
+    expression in reordered_body.expressions.start..<(reordered_body.expressions.start +
+    reordered_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantTupleNew(_, _, _) {
       reordered_variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       reordered_matches += 1
     }
   }
@@ -306,11 +315,15 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
   let wildcard_body = collected.body_of(wildcard).unwrap()
   let mut wildcard_variants = 0
   let mut wildcard_matches = 0
-  for expression in wildcard_body.expressions.start..<(wildcard_body.expressions.start + wildcard_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+  for
+    expression in wildcard_body.expressions.start..<(wildcard_body.expressions.start +
+    wildcard_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantTupleNew(_, _, _) {
       wildcard_variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       wildcard_matches += 1
     }
   }
@@ -340,7 +353,9 @@ test "nested fresh enum payload patterns eliminate aggregate wrappers" {
   let mut optimized_variants = 0
   let mut optimized_matches = 0
   let mut optimized_selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedStructNew(_, _, _) => optimized_structs += 1
       PlannedVariantTupleNew(_, _, _) => optimized_variants += 1
@@ -376,7 +391,9 @@ test "constructor-resolved alternative payload patterns eliminate variants" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedVariantTupleNew(_, _, _) => variants += 1
       PlannedMatchExpression(_, _) => matches += 1
@@ -410,7 +427,9 @@ test "constant matching-constructor guards preserve payload elimination" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedVariantTupleNew(_, _, _) => variants += 1
       PlannedMatchExpression(_, _) => matches += 1
@@ -444,7 +463,9 @@ test "constant-false catchalls do not intercept fresh payload elimination" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedVariantTupleNew(_, _, _) => variants += 1
       PlannedMatchExpression(_, _) => matches += 1
@@ -479,7 +500,9 @@ test "known fresh variants eliminate independent catchall selection" {
     let mut variants = 0
     let mut matches = 0
     let mut selects = 0
-    for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
       match optimized.modules[0].expressions[expression].kind {
         PlannedVariantTupleNew(_, _, _) => variants += 1
         PlannedMatchExpression(_, _) => matches += 1
@@ -514,14 +537,19 @@ test "binding catchall may forward the exact fresh variant" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantTupleNew(_, _, _) {
       variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       matches += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedParameterSelect(_, 0) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedParameterSelect(_, 0) {
       selects += 1
     }
   }
@@ -551,7 +579,9 @@ test "binding catchalls scalarize nested payload matches" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedVariantTupleNew(_, _, _) => variants += 1
       PlannedMatchExpression(_, _) => matches += 1
@@ -585,7 +615,9 @@ test "external nonconstant guards collapse identical payload arms" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedVariantTupleNew(_, _, _) => variants += 1
       PlannedMatchExpression(_, _) => matches += 1
@@ -618,11 +650,15 @@ test "composite pure guards collapse identical payload arms" {
   let body = collected.body_of(guarded).unwrap()
   let mut variants = 0
   let mut matches = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantTupleNew(_, _, _) {
       variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       matches += 1
     }
   }
@@ -650,11 +686,15 @@ test "stable guarded struct variants collapse identical fields" {
   let body = collected.body_of(guarded).unwrap()
   let mut variants = 0
   let mut matches = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantStructNew(_, _, _) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantStructNew(_, _, _) {
       variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       matches += 1
     }
   }
@@ -682,11 +722,15 @@ test "payload-dependent pure guards collapse identical payload arms" {
   let body = collected.body_of(guarded).unwrap()
   let mut variants = 0
   let mut matches = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantTupleNew(_, _, _) {
       variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       matches += 1
     }
   }
@@ -715,7 +759,9 @@ test "fresh payload bindings inline exact primitive scalar transforms" {
   let mut variants = 0
   let mut matches = 0
   let mut selects = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedVariantTupleNew(_, _, _) => variants += 1
       PlannedMatchExpression(_, _) => matches += 1
@@ -748,11 +794,15 @@ test "struct variant fields inline exact primitive scalar transforms" {
   let body = collected.body_of(transformed).unwrap()
   let mut variants = 0
   let mut matches = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantStructNew(_, _, _) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantStructNew(_, _, _) {
       variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       matches += 1
     }
   }
@@ -790,11 +840,15 @@ test "let-bound fresh payloads inline exact scalar transforms" {
   )
   let mut variants = 0
   let mut matches = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedVariantTupleNew(_, _, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedVariantTupleNew(_, _, _) {
       variants += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedMatchExpression(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedMatchExpression(_, _) {
       matches += 1
     }
   }
@@ -825,17 +879,23 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
     let mut optimized_structs = 0
     let mut parameter_selects = 0
     let mut unoptimized_fields = 0
-    for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-      if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    for
+      expression in source_body.expressions.start..<(source_body.expressions.start +
+      source_body.expressions.length) {
+      if optimized.modules[0].expressions[expression].kind
+        is PlannedFieldGet(_, _) {
         optimized_fields += 1
       }
-      if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      if optimized.modules[0].expressions[expression].kind
+        is PlannedStructNew(_, _, _) {
         optimized_structs += 1
       }
-      if optimized.modules[0].expressions[expression].kind is PlannedParameterSelect(_, 0) {
+      if optimized.modules[0].expressions[expression].kind
+        is PlannedParameterSelect(_, 0) {
         parameter_selects += 1
       }
-      if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      if unoptimized.modules[0].expressions[expression].kind
+        is PlannedFieldGet(_, _) {
         unoptimized_fields += 1
       }
     }
@@ -848,11 +908,15 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
   let retained_body = collected.body_of(retained).unwrap()
   let mut retained_fields = 0
   let mut retained_structs = 0
-  for expression in retained_body.expressions.start..<(retained_body.expressions.start + retained_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in retained_body.expressions.start..<(retained_body.expressions.start +
+    retained_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       retained_fields += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       retained_structs += 1
     }
   }
@@ -881,11 +945,15 @@ test "direct distinct struct reads synthesize component locals" {
   let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
   let mut structs = 0
   let mut fields = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       structs += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       fields += 1
     }
   }
@@ -919,11 +987,15 @@ test "mixed source aliases and direct reads share component locals" {
   let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
   let mut structs = 0
   let mut fields = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       structs += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       fields += 1
     }
   }
@@ -957,7 +1029,9 @@ test "direct distinct reference fields synthesize nominal component locals" {
   let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
   let mut pair_structs = 0
   let mut pair_fields = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedStructNew(_, _, _) => pair_structs += 1
       PlannedFieldGet(_, _) => pair_fields += 1
@@ -994,11 +1068,15 @@ test "direct distinct generic fields synthesize erased component locals" {
   let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
   let mut structs = 0
   let mut fields = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       structs += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       fields += 1
     }
   }
@@ -1032,11 +1110,15 @@ test "fresh nominal reference fields synthesize exact component locals" {
   let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
   let mut structs = 0
   let mut fields = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       structs += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       fields += 1
     }
   }
@@ -1070,11 +1152,15 @@ test "nominal module values synthesize exact component locals" {
   let body = optimized.modules[0].bodies[semantic_id_local(source_body.id)]
   let mut structs = 0
   let mut fields = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       structs += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       fields += 1
     }
   }
@@ -1105,9 +1191,9 @@ test "sole-use struct fields scalar replace across fresh if joins" {
   let collected = program.modules[0]
   let choose = collected.lookup_value("choose").unwrap()
   let choose_source_body = collected.body_of(choose).unwrap()
-  let choose_body = optimized.modules[0].bodies[
-    semantic_id_local(choose_source_body.id)
-  ]
+  let choose_body = optimized.modules[0].bodies[semantic_id_local(
+      choose_source_body.id,
+    )]
   let choose_block = match choose_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected choose block")
@@ -1133,14 +1219,19 @@ test "sole-use struct fields scalar replace across fresh if joins" {
   let mut choose_field_gets = 0
   let mut choose_struct_news = 0
   let mut unoptimized_struct_news = 0
-  for expression in choose_source_body.expressions.start..<(choose_source_body.expressions.start + choose_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in choose_source_body.expressions.start..<(choose_source_body.expressions.start +
+    choose_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       choose_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       choose_struct_news += 1
     }
-    if unoptimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       unoptimized_struct_news += 1
     }
   }
@@ -1151,11 +1242,15 @@ test "sole-use struct fields scalar replace across fresh if joins" {
   let escaping_source_body = collected.body_of(escaping).unwrap()
   let mut escaping_field_gets = 0
   let mut escaping_struct_news = 0
-  for expression in escaping_source_body.expressions.start..<(escaping_source_body.expressions.start + escaping_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in escaping_source_body.expressions.start..<(escaping_source_body.expressions.start +
+    escaping_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       escaping_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       escaping_struct_news += 1
     }
   }
@@ -1207,14 +1302,19 @@ test "sole-use struct fields scalar replace across fresh match joins" {
   let mut optimized_fields = 0
   let mut optimized_structs = 0
   let mut unoptimized_structs = 0
-  for expression in source_body.expressions.start..<(source_body.expressions.start + source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in source_body.expressions.start..<(source_body.expressions.start +
+    source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       optimized_fields += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       optimized_structs += 1
     }
-    if unoptimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       unoptimized_structs += 1
     }
   }
@@ -1241,9 +1341,9 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
   let collected = program.modules[0]
   let split = collected.lookup_value("split").unwrap()
   let split_source_body = collected.body_of(split).unwrap()
-  let split_body = optimized.modules[0].bodies[
-    semantic_id_local(split_source_body.id)
-  ]
+  let split_body = optimized.modules[0].bodies[semantic_id_local(
+      split_source_body.id,
+    )]
   let split_block = match split_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected split block")
@@ -1256,14 +1356,19 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
   let mut split_field_gets = 0
   let mut split_struct_news = 0
   let mut unoptimized_field_gets = 0
-  for expression in split_source_body.expressions.start..<(split_source_body.expressions.start + split_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in split_source_body.expressions.start..<(split_source_body.expressions.start +
+    split_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       split_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       split_struct_news += 1
     }
-    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       unoptimized_field_gets += 1
     }
   }
@@ -1274,11 +1379,15 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
   let reversed_source_body = collected.body_of(reversed).unwrap()
   let mut reversed_field_gets = 0
   let mut reversed_struct_news = 0
-  for expression in reversed_source_body.expressions.start..<(reversed_source_body.expressions.start + reversed_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in reversed_source_body.expressions.start..<(reversed_source_body.expressions.start +
+    reversed_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       reversed_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       reversed_struct_news += 1
     }
   }
@@ -1288,11 +1397,15 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
   let missing_source_body = collected.body_of(missing).unwrap()
   let mut missing_field_gets = 0
   let mut missing_struct_news = 0
-  for expression in missing_source_body.expressions.start..<(missing_source_body.expressions.start + missing_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in missing_source_body.expressions.start..<(missing_source_body.expressions.start +
+    missing_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       missing_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       missing_struct_news += 1
     }
   }
@@ -1318,9 +1431,9 @@ test "repeated same-field struct locals scalar replace into the existing local" 
   let collected = program.modules[0]
   let repeated = collected.lookup_value("repeated").unwrap()
   let repeated_source_body = collected.body_of(repeated).unwrap()
-  let repeated_body = optimized.modules[0].bodies[
-    semantic_id_local(repeated_source_body.id)
-  ]
+  let repeated_body = optimized.modules[0].bodies[semantic_id_local(
+      repeated_source_body.id,
+    )]
   let repeated_block = match repeated_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected repeated block")
@@ -1342,14 +1455,19 @@ test "repeated same-field struct locals scalar replace into the existing local" 
   let mut repeated_field_gets = 0
   let mut repeated_struct_news = 0
   let mut unoptimized_field_gets = 0
-  for expression in repeated_source_body.expressions.start..<(repeated_source_body.expressions.start + repeated_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in repeated_source_body.expressions.start..<(repeated_source_body.expressions.start +
+    repeated_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       repeated_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       repeated_struct_news += 1
     }
-    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       unoptimized_field_gets += 1
     }
   }
@@ -1360,11 +1478,15 @@ test "repeated same-field struct locals scalar replace into the existing local" 
   let mixed_source_body = collected.body_of(mixed).unwrap()
   let mut mixed_field_gets = 0
   let mut mixed_struct_news = 0
-  for expression in mixed_source_body.expressions.start..<(mixed_source_body.expressions.start + mixed_source_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in mixed_source_body.expressions.start..<(mixed_source_body.expressions.start +
+    mixed_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       mixed_field_gets += 1
     }
-    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedStructNew(_, _, _) {
       mixed_struct_news += 1
     }
   }
@@ -1390,9 +1512,9 @@ test "immutable local aliases coalesce into source storage" {
   let collected = program.modules[0]
   let coalesced = collected.lookup_value("coalesced").unwrap()
   let coalesced_source = collected.body_of(coalesced).unwrap()
-  let coalesced_body = optimized.modules[0].bodies[
-    semantic_id_local(coalesced_source.id)
-  ]
+  let coalesced_body = optimized.modules[0].bodies[semantic_id_local(
+      coalesced_source.id,
+    )]
   let coalesced_block = match coalesced_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected coalesced block")
@@ -1404,9 +1526,9 @@ test "immutable local aliases coalesce into source storage" {
   )
   let shared = collected.lookup_value("shared").unwrap()
   let shared_source = collected.body_of(shared).unwrap()
-  let shared_body = optimized.modules[0].bodies[
-    semantic_id_local(shared_source.id)
-  ]
+  let shared_body = optimized.modules[0].bodies[semantic_id_local(
+      shared_source.id,
+    )]
   let shared_block = match shared_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected shared block")
@@ -1418,9 +1540,9 @@ test "immutable local aliases coalesce into source storage" {
   )
   let retained = collected.lookup_value("retained").unwrap()
   let retained_source = collected.body_of(retained).unwrap()
-  let retained_body = optimized.modules[0].bodies[
-    semantic_id_local(retained_source.id)
-  ]
+  let retained_body = optimized.modules[0].bodies[semantic_id_local(
+      retained_source.id,
+    )]
   let retained_block = match retained_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected retained block")
@@ -1430,9 +1552,9 @@ test "immutable local aliases coalesce into source storage" {
     optimized.modules[0].block_items[retained_items.start + 1].kind
     is PlannedLetItem(_, false, _),
   )
-  let unoptimized_body = unoptimized.modules[0].bodies[
-    semantic_id_local(coalesced_source.id)
-  ]
+  let unoptimized_body = unoptimized.modules[0].bodies[semantic_id_local(
+      coalesced_source.id,
+    )]
   let unoptimized_block = match unoptimized_body.root {
     BlockBodyRoot(block) => block
     _ => abort("expected unoptimized block")
@@ -1467,27 +1589,37 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
   let mut optimized_field_gets = 0
   let mut mutable_field_gets = 0
   let mut unoptimized_field_gets = 0
-  for expression in twice_body.expressions.start..<(twice_body.expressions.start + twice_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in twice_body.expressions.start..<(twice_body.expressions.start +
+    twice_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       optimized_field_gets += 1
     }
-    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       unoptimized_field_gets += 1
     }
   }
-  for expression in mutable_body.expressions.start..<(mutable_body.expressions.start + mutable_body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in mutable_body.expressions.start..<(mutable_body.expressions.start +
+    mutable_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       mutable_field_gets += 1
     }
   }
-  let planned_twice = optimized.modules[0].bodies[
-    semantic_id_local(twice_body.id)
-  ]
+  let planned_twice = optimized.modules[0].bodies[semantic_id_local(
+      twice_body.id,
+    )]
   let mut elided_aliases = 0
-  for block in planned_twice.blocks.start..<(planned_twice.blocks.start + planned_twice.blocks.length) {
+  for
+    block in planned_twice.blocks.start..<(planned_twice.blocks.start +
+    planned_twice.blocks.length) {
     let items = optimized.modules[0].blocks[block].items
     for index in 0..<items.length {
-      if optimized.modules[0].block_items[items.start + index].kind is PlannedElidedLetItem(_) {
+      if optimized.modules[0].block_items[items.start + index].kind
+        is PlannedElidedLetItem(_) {
         elided_aliases += 1
       }
     }
@@ -1518,11 +1650,15 @@ test "common field extraction reuses exact nested reference loads" {
   let body = collected.body_of(sum).unwrap()
   let mut optimized_fields = 0
   let mut unoptimized_fields = 0
-  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
-    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       optimized_fields += 1
     }
-    if unoptimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _) {
       unoptimized_fields += 1
     }
   }
