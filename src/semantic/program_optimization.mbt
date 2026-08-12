@@ -4299,8 +4299,25 @@ fn scalar_replace_known_variant_catchall(
   let body = module_.expressions[arm.body]
   if body.type_ != source.type_ ||
     body.shape != source.shape ||
-    !program_scalar_replaceable_field_shape(source.shape) ||
     !(body.trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return false
+  }
+  match (module_.patterns[arm.pattern].reference, body.kind) {
+    (PatternBindingReference(binding), PlannedLocalGet(local_id)) if
+      binding == local_id => {
+      let selector_start = module_.expression_children.length()
+      module_.expression_children.push(variant_expression)
+      module_.expressions[expression] = {
+        ..source,
+        kind: PlannedParameterSelect(
+          { start: selector_start, length: 1 }, 0,
+        ),
+      }
+      return true
+    }
+    _ => ()
+  }
+  if !program_scalar_replaceable_field_shape(source.shape) {
     return false
   }
   match body.kind {

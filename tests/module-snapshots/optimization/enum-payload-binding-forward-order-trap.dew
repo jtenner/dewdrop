@@ -1,0 +1,24 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  let forwarded = match Maybe::Some(trap_first(), trap_second()) {
+    whole => whole
+    Maybe::Some(first, second) => Maybe::Some(second, first)
+    Maybe::None => Maybe::None
+  }
+  match forwarded {
+    Maybe::Some(first, second) => second
+    Maybe::None => 0
+  }
+}

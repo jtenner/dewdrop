@@ -1,0 +1,19 @@
+enum Maybe {
+  Some(I32)
+  None
+}
+
+fn forwarded(value: I32) -> Maybe {
+  match Maybe::Some(value) {
+    whole => whole
+    Maybe::Some(item) => Maybe::Some(item)
+    Maybe::None => Maybe::None
+  }
+}
+
+pub fn main() -> I32 {
+  match forwarded(42) {
+    Maybe::Some(item) => item
+    Maybe::None => 0
+  }
+}
