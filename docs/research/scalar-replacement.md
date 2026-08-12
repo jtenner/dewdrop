@@ -8,7 +8,7 @@ The same rewrite covers an immutable, uncaptured struct local when its only use 
 
 A further bounded case handles two or more reads of the same supported scalar field from one immutable, uncaptured fresh-struct local. Instead of introducing component scratch storage, the optimizer changes the existing aggregate local to the selected scalar carrier. The declaration becomes a source-ordered `PlannedParameterSelect`, every repeated field read becomes a direct read of that local, and each obsolete aggregate base read is consumed. Because initialization stays at the original declaration, effectful initializers and intervening operations need not move. Any mixed-field read, direct aggregate use, trait coercion, capture, or mutation rejects the rewrite.
 
-Distinct scalar fields can also reuse locals already required by source. When a fresh aggregate declaration is followed immediately by exactly one immutable alias for each field in constructor order, the aggregate declaration is elided and each alias initializer is retargeted to the corresponding constructor initializer. This preserves constructor evaluation order without synthesizing locals or moving effects across user expressions. Reordered, missing, repeated, narrow/reference/generic, or non-field uses remain allocated until a broader component planner can prove equivalent storage and dominance.
+Distinct scalar fields can also reuse locals already required by source. When a fresh aggregate declaration is followed immediately by immutable direct aliases for every field, aliases may appear in any source order: the optimizer maps them by frozen field identity and schedules the existing locals in constructor order. Exactly one field may be missing; its initializer remains an expression item while the other fields initialize their aliases. The dead aggregate local becomes carrier-free. This preserves every initializer once in source order without scratch locals or movement across user expressions. Two or more missing fields, non-adjacent aliases, repeated/narrow/reference/generic fields, or non-field uses remain allocated until a broader component planner can synthesize equivalent storage.
 
 Sole-use projections now cross bounded `if` and match joins when every reachable branch or arm recursively ends in fresh construction of the same struct field. The optimizer preflights the complete control-flow result tree before mutation, then converts each constructor to a source-ordered selector and changes intervening block, `if`/match, and existing local carriers to the selected scalar. Conditions, scrutinees, guards, and nonselected paths remain untouched. A call-returned, coerced, escaping, or otherwise non-fresh result rejects the entire rewrite without partial mutation.
 
@@ -36,10 +36,12 @@ The runtime ratio was 1.0056x at this very small call boundary, effectively tied
 
 | Form | Median | `struct.new` | `struct.get` | Wasm bytes |
 | --- | ---: | ---: | ---: | ---: |
-| constructor-order aliases | 0.0186 µs | 0 | 0 | 744 |
-| reverse-order aliases | 0.0186 µs | 1 | 32 | 1,106 |
+| constructor-order aliases | 0.0184 µs | 0 | 0 | 741 |
+| reverse-order aliases | 0.0188 µs | 0 | 0 | 741 |
+| one missing alias | 0.0185 µs | 0 | 0 | 737 |
+| retained aggregate | 0.0193 µs | 1 | 32 | 1,121 |
 
-The measured ratio was 1.0005x, while ordered component reuse removed 362 Wasm bytes and every aggregate operation.
+Ordered, reversed, and one-missing component reuse measured 0.9534x, 0.9741x, and 0.9586x the retained runtime. They removed 380–384 Wasm bytes and every aggregate operation.
 
 `tools/benchmark-join-scalar-replacement.py` measured fresh two-branch `if` and match joins against baselines whose selected path passes the aggregate through a reference-returning helper, over 10,000 alternating warmed Node 26.3.0 samples in batches of 100 calls:
 

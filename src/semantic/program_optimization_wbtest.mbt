@@ -513,13 +513,13 @@ test "sole-use struct fields scalar replace across fresh match joins" {
 }
 
 ///|
-test "ordered component aliases scalar replace distinct struct fields" {
+test "component aliases scalar replace reordered and one-missing struct fields" {
   let program = collect_program_manifest(
     22812UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn split(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let first = pair.left\n  let second = pair.right\n  first + second\n}\nfn reversed(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let second = pair.right\n  let first = pair.left\n  first + second\n}\npub fn main() -> I32 {\n  split(1, 2) + reversed(3, 4)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn split(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let first = pair.left\n  let second = pair.right\n  first + second\n}\nfn reversed(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let second = pair.right\n  let first = pair.left\n  first + second\n}\nfn missing(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let second = pair.right\n  second\n}\npub fn main() -> I32 {\n  split(1, 2) + reversed(3, 4) + missing(5, 6)\n}\n",
         ),
       ]),
     ]),
@@ -540,7 +540,7 @@ test "ordered component aliases scalar replace distinct struct fields" {
   let split_items = optimized.modules[0].blocks[split_block].items
   assert_true(
     optimized.modules[0].block_items[split_items.start].kind
-    is PlannedElidedLetItem(_),
+    is PlannedLetItem(_, false, _),
   )
   let mut split_field_gets = 0
   let mut split_struct_news = 0
@@ -571,8 +571,22 @@ test "ordered component aliases scalar replace distinct struct fields" {
       reversed_struct_news += 1
     }
   }
-  assert_eq(reversed_field_gets, 2)
-  assert_eq(reversed_struct_news, 1)
+  assert_eq(reversed_field_gets, 0)
+  assert_eq(reversed_struct_news, 0)
+  let missing = collected.lookup_value("missing").unwrap()
+  let missing_source_body = collected.body_of(missing).unwrap()
+  let mut missing_field_gets = 0
+  let mut missing_struct_news = 0
+  for expression in missing_source_body.expressions.start..<(missing_source_body.expressions.start + missing_source_body.expressions.length) {
+    if optimized.modules[0].expressions[expression].kind is PlannedFieldGet(_, _) {
+      missing_field_gets += 1
+    }
+    if optimized.modules[0].expressions[expression].kind is PlannedStructNew(_, _, _) {
+      missing_struct_news += 1
+    }
+  }
+  assert_eq(missing_field_gets, 0)
+  assert_eq(missing_struct_news, 0)
 }
 
 ///|

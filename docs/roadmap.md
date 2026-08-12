@@ -616,7 +616,7 @@ count = count + 1
 - [x] Reuse repeated scalar field extraction from the same immutable direct local when an earlier lexical `let` already stores the value; elide duplicate uncaptured aliases without adding scratch locals, and exclude mutable/reference/effect-uncertain cases.
 - [ ] Extend fresh tuple/struct-variant payload elimination beyond constructor-disjoint preceding arms to nested/alternative patterns, guards, and wildcard/binding arm proofs; nonescaping singleton boxes and exact-flow trait objects already eliminate wrappers and dispatch artifacts.
 - [x] Scalar-replace supported field projections from fresh construction and immutable uncaptured sole-use locals across total/discardable lexical gaps while evaluating every initializer once in source order.
-- [ ] Extend scalar replacement beyond fresh `if`/match joins to reordered/missing distinct-field uses with synthesized component-local planning; repeated reads reuse the aggregate local, while adjacent one-to-one aliases in constructor order reuse existing component locals.
+- [ ] Extend scalar replacement beyond fresh `if`/match joins and complete/reordered/one-missing distinct-field aliases to multi-missing or alias-free aggregates with synthesized component locals; repeated reads reuse the aggregate local.
 - [x] Devirtualize trait-object calls when prerequisite-aware flow analysis proves exact evidence through locals, branches, parameter returns, and effect-free forwarding chains.
 - [ ] Enum representation specialization based on frozen usage/layout data.
 - [ ] Profile-guided optimization only after deterministic baseline builds exist.

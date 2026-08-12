@@ -1,0 +1,27 @@
+struct Pair {
+  left: I32
+  right: I32
+}
+
+fn reversed(left: I32, right: I32) -> I32 {
+  let pair = Pair {
+    left: left
+    right: right
+  }
+  let second = pair.right
+  let first = pair.left
+  first + second
+}
+
+fn missing(left: I32, right: I32) -> I32 {
+  let pair = Pair {
+    left: left
+    right: right
+  }
+  let second = pair.right
+  second
+}
+
+pub fn main() -> I32 {
+  reversed(20, 22) + missing(1, 1)
+}

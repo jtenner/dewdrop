@@ -3118,7 +3118,7 @@ fn scalar_replace_joined_struct_field_local(
 }
 
 ///|
-fn scalar_replace_ordered_struct_component_aliases(
+fn scalar_replace_struct_component_aliases(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   items : HirSpan,
@@ -3137,25 +3137,21 @@ fn scalar_replace_ordered_struct_component_aliases(
   }
   if fields.length < 2 ||
     fields.start < 0 ||
-    fields.start + fields.length > module_.object_fields.length() ||
-    item_index + fields.length >= items.length {
+    fields.start + fields.length > module_.object_fields.length() {
     return false
   }
   let (use_count, _) = program_local_get_count(module_, body, local_id)
-  if use_count != fields.length {
+  if use_count < fields.length - 1 ||
+    use_count > fields.length ||
+    item_index + use_count >= items.length {
     return false
   }
-  let field_gets : Array[ExprId] = []
-  let base_gets : Array[ExprId] = []
-  let component_locals : Array[LocalId] = []
-  for field_index in 0..<fields.length {
-    let object_field = module_.object_fields[fields.start + field_index]
-    let object_value = object_field.value
-    if object_value < 0 || object_value >= module_.expressions.length() {
-      return false
-    }
+  let component_locals : Array[LocalId] = Array::make(fields.length, -1)
+  let field_gets : Array[ExprId] = Array::make(fields.length, -1)
+  let base_gets : Array[ExprId] = Array::make(fields.length, -1)
+  for alias_index in 0..<use_count {
     let (component_local, field_get) = match
-      module_.block_items[items.start + item_index + field_index + 1].kind {
+      module_.block_items[items.start + item_index + alias_index + 1].kind {
       PlannedLetItem(component_local, false, field_get) =>
         (component_local, field_get)
       _ => return false
@@ -3167,9 +3163,7 @@ fn scalar_replace_ordered_struct_component_aliases(
       PlannedFieldGet(field, base) => (field, base)
       _ => return false
     }
-    if field != object_field.field ||
-      base < 0 ||
-      base >= module_.expressions.length() {
+    if base < 0 || base >= module_.expressions.length() {
       return false
     }
     let source_local = match module_.expressions[base].kind {
@@ -3180,48 +3174,97 @@ fn scalar_replace_ordered_struct_component_aliases(
       !program_scalar_replaceable_field_shape(
         module_.expressions[field_get].shape,
       ) ||
-      module_.expressions[object_value].shape !=
-      module_.expressions[field_get].shape ||
-      module_.expressions[object_value].type_ !=
-      module_.expressions[field_get].type_ ||
       !(module_.expressions[field_get].trait_object_coercion is NoInferredTraitObjectCoercion) {
       return false
     }
-    component_locals.push(component_local)
-    field_gets.push(field_get)
-    base_gets.push(base)
+    let mut selected_field = -1
+    for field_index in 0..<fields.length {
+      if module_.object_fields[fields.start + field_index].field == field {
+        if selected_field >= 0 {
+          return false
+        }
+        selected_field = field_index
+      }
+    }
+    if selected_field < 0 || component_locals[selected_field] >= 0 {
+      return false
+    }
+    let object_value = module_.object_fields[
+      fields.start + selected_field
+    ].value
+    if object_value < 0 ||
+      object_value >= module_.expressions.length() ||
+      module_.expressions[object_value].shape !=
+      module_.expressions[field_get].shape ||
+      module_.expressions[object_value].type_ !=
+      module_.expressions[field_get].type_ {
+      return false
+    }
+    component_locals[selected_field] = component_local
+    field_gets[selected_field] = field_get
+    base_gets[selected_field] = base
+  }
+  let mut missing = 0
+  for field_index in 0..<fields.length {
+    let object_value = module_.object_fields[fields.start + field_index].value
+    if object_value < 0 || object_value >= module_.expressions.length() {
+      return false
+    }
+    if component_locals[field_index] < 0 {
+      missing += 1
+    }
+  }
+  if missing > 1 {
+    return false
   }
   let initializer_source = module_.expressions[initializer]
   module_.expressions[initializer] = {
     ..initializer_source,
     kind: PlannedConsumedExpression,
   }
-  module_.block_items[items.start + item_index] = {
-    ..module_.block_items[items.start + item_index],
-    kind: PlannedElidedLetItem(local_id),
+  let aggregate_local_index = body.locals.start + local_id
+  let aggregate_local = module_.locals[aggregate_local_index]
+  module_.locals[aggregate_local_index] = {
+    ..aggregate_local,
+    shape: UnitPlannedValueShape,
+    nominal: 0UL,
   }
   for field_index in 0..<fields.length {
     let object_value = module_.object_fields[fields.start + field_index].value
-    let alias_item = items.start + item_index + field_index + 1
-    module_.block_items[alias_item] = {
-      ..module_.block_items[alias_item],
-      kind: PlannedLetItem(
-        component_locals[field_index],
-        false,
-        object_value,
-      ),
+    let target_item = items.start + item_index + field_index
+    let target_source = module_.block_items[target_item]
+    module_.block_items[target_item] = if component_locals[field_index] >= 0 {
+      {
+        ..target_source,
+        kind: PlannedLetItem(
+          component_locals[field_index],
+          false,
+          object_value,
+        ),
+      }
+    } else {
+      { ..target_source, kind: PlannedExpressionItem(object_value) }
     }
-    let field_get = field_gets[field_index]
-    let field_source = module_.expressions[field_get]
-    module_.expressions[field_get] = {
-      ..field_source,
-      kind: PlannedConsumedExpression,
+    if field_gets[field_index] >= 0 {
+      let field_get = field_gets[field_index]
+      let field_source = module_.expressions[field_get]
+      module_.expressions[field_get] = {
+        ..field_source,
+        kind: PlannedConsumedExpression,
+      }
+      let base = base_gets[field_index]
+      let base_source = module_.expressions[base]
+      module_.expressions[base] = {
+        ..base_source,
+        kind: PlannedConsumedExpression,
+      }
     }
-    let base = base_gets[field_index]
-    let base_source = module_.expressions[base]
-    module_.expressions[base] = {
-      ..base_source,
-      kind: PlannedConsumedExpression,
+  }
+  if use_count == fields.length {
+    let remaining = items.start + item_index + fields.length
+    module_.block_items[remaining] = {
+      ..module_.block_items[remaining],
+      kind: PlannedElidedLetItem(local_id),
     }
   }
   true
@@ -3451,7 +3494,7 @@ fn scalar_replace_program_struct_field_reads(
             ) {
             continue
           }
-          if scalar_replace_ordered_struct_component_aliases(
+          if scalar_replace_struct_component_aliases(
               module_, body, items, index, local_id, initializer,
             ) {
             continue
