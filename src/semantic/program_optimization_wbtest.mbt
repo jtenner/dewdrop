@@ -531,6 +531,40 @@ test "binding catchall may forward the exact fresh variant" {
 }
 
 ///|
+test "binding catchalls scalarize nested payload matches" {
+  let program = collect_program_manifest(
+    22827UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn projected(first: I32, second: I32) -> I32 {\n  match Maybe::Some(first, second) {\n    whole => match whole {\n      Maybe::Some(left, right) => right\n      Maybe::None => 0\n    }\n    Maybe::Some(left, right) => left\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  projected(20, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let projected = collected.lookup_value("projected").unwrap()
+  let body = collected.body_of(projected).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  let mut selects = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedVariantTupleNew(_, _, _) => variants += 1
+      PlannedMatchExpression(_, _) => matches += 1
+      PlannedParameterSelect(_, _) => selects += 1
+      _ => ()
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+  assert_eq(selects, 1)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,

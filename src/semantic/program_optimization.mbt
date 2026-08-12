@@ -4373,6 +4373,39 @@ fn scalar_replace_known_variant_catchall(
       }
       return true
     }
+    (
+      PatternBindingReference(binding),
+      PlannedMatchExpression(scrutinee, _),
+    ) => {
+      if scrutinee < 0 || scrutinee >= module_.expressions.length() {
+        return false
+      }
+      let source_binding = match module_.expressions[scrutinee].kind {
+        PlannedLocalGet(local_id) => local_id
+        _ => return false
+      }
+      if source_binding != binding ||
+        !scalar_replace_program_variant_payload_match(
+          module_, arm.body, variant_expression,
+        ) {
+        return false
+      }
+      let rewritten_body = module_.expressions[arm.body]
+      module_.expressions[expression] = {
+        ..source,
+        kind: rewritten_body.kind,
+      }
+      module_.expressions[arm.body] = {
+        ..rewritten_body,
+        kind: PlannedConsumedExpression,
+      }
+      let scrutinee_source = module_.expressions[scrutinee]
+      module_.expressions[scrutinee] = {
+        ..scrutinee_source,
+        kind: PlannedConsumedExpression,
+      }
+      return true
+    }
     _ => ()
   }
   if !program_scalar_replaceable_field_shape(source.shape) {
