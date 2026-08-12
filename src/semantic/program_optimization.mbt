@@ -5022,6 +5022,336 @@ fn program_scalar_transform_binding_expression(
 }
 
 ///|
+fn program_direct_variant_pattern_bindings(
+  module_ : PlannedModuleLowering,
+  pattern : PatternId,
+  variant_expression : ExprId,
+  variant : VariantId,
+) -> Array[LocalId]? {
+  let root_pattern = program_pattern_for_variant(module_, pattern, variant, 0)
+  if root_pattern < 0 {
+    return None
+  }
+  match
+    (
+      module_.expressions[variant_expression].kind,
+      module_.patterns[root_pattern].source,
+    ) {
+    (
+      PlannedVariantTupleNew(candidate, _, arguments),
+      HirTuplePattern(_, children, _),
+    ) => {
+      if candidate != variant ||
+        arguments.length != children.length ||
+        children.start < 0 ||
+        children.start + children.length > module_.pattern_children.length() {
+        return None
+      }
+      let bindings : Array[LocalId] = []
+      for index in 0..<children.length {
+        let child = module_.pattern_children[children.start + index]
+        if child < 0 || child >= module_.patterns.length() {
+          return None
+        }
+        match module_.patterns[child].reference {
+          PatternBindingReference(local_id) => bindings.push(local_id)
+          _ =>
+            match module_.patterns[child].source {
+              HirWildcardPattern(_) => bindings.push(-1)
+              _ => return None
+            }
+        }
+      }
+      Some(bindings)
+    }
+    (
+      PlannedVariantStructNew(candidate, _, fields),
+      HirStructPattern(_, pattern_fields, _, _, _),
+    ) => {
+      if candidate != variant ||
+        fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() ||
+        pattern_fields.start < 0 ||
+        pattern_fields.start + pattern_fields.length >
+        module_.pattern_fields.length() {
+        return None
+      }
+      let bindings : Array[LocalId] = Array::make(fields.length, -1)
+      let selected_components : Array[Bool] = Array::make(fields.length, false)
+      for index in 0..<pattern_fields.length {
+        let pattern_field = module_.pattern_fields[pattern_fields.start + index]
+        if pattern_field.pattern < 0 ||
+          pattern_field.pattern >= module_.patterns.length() {
+          return None
+        }
+        let binding = match module_.patterns[pattern_field.pattern].reference {
+          PatternBindingReference(local_id) => local_id
+          _ =>
+            match module_.patterns[pattern_field.pattern].source {
+              HirWildcardPattern(_) => -1
+              _ => return None
+            }
+        }
+        let mut selected = -1
+        for field_index in 0..<fields.length {
+          match
+            program_variant_field_name(
+              module_,
+              module_.object_fields[fields.start + field_index].field,
+            ) {
+            Some(name) if name == pattern_field.name => {
+              if selected >= 0 {
+                return None
+              }
+              selected = field_index
+            }
+            _ => ()
+          }
+        }
+        if selected < 0 || selected_components[selected] {
+          return None
+        }
+        selected_components[selected] = true
+        bindings[selected] = binding
+      }
+      Some(bindings)
+    }
+    _ => None
+  }
+}
+
+///|
+fn scalar_replace_program_guarded_variant_match(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  variant_expression : ExprId,
+  arms : HirSpan,
+  guarded_index : Int,
+  variant : VariantId,
+) -> Bool {
+  if !program_scalar_replaceable_field_shape(
+      module_.expressions[expression].shape,
+    ) {
+    return false
+  }
+  let body = match program_body_containing_expression(module_, expression) {
+    Some(body) => body
+    None => return false
+  }
+  let values : Array[ExprId] = []
+  match module_.expressions[variant_expression].kind {
+    PlannedVariantTupleNew(candidate, _, arguments) => {
+      if candidate != variant ||
+        arguments.start < 0 ||
+        arguments.start + arguments.length >
+        module_.expression_children.length() {
+        return false
+      }
+      for index in 0..<arguments.length {
+        values.push(module_.expression_children[arguments.start + index])
+      }
+    }
+    PlannedVariantStructNew(candidate, _, fields) => {
+      if candidate != variant ||
+        fields.start < 0 ||
+        fields.start + fields.length > module_.object_fields.length() {
+        return false
+      }
+      for index in 0..<fields.length {
+        values.push(module_.object_fields[fields.start + index].value)
+      }
+    }
+    _ => return false
+  }
+  if values.length() == 0 {
+    return false
+  }
+  let selected_arms : Array[Int] = []
+  let selected_bindings : Array[Array[LocalId]] = []
+  let canonical_bindings : Array[LocalId] = Array::make(values.length(), -1)
+  let mut saw_nonconstant_guard = false
+  let mut reached_terminal = false
+  for index in guarded_index..<arms.length {
+    let arm_index = arms.start + index
+    let arm = module_.pattern_arms[arm_index]
+    let relation = program_pattern_variant_relation(
+      module_,
+      arm.pattern,
+      variant,
+      0,
+    )
+    if relation == 0 {
+      continue
+    }
+    if relation < 0 ||
+      arm.body < 0 ||
+      arm.body >= module_.expressions.length() ||
+      module_.expressions[arm.body].type_ !=
+      module_.expressions[expression].type_ ||
+      module_.expressions[arm.body].shape !=
+      module_.expressions[expression].shape ||
+      !(module_.expressions[arm.body].trait_object_coercion
+      is NoInferredTraitObjectCoercion) {
+      return false
+    }
+    let guard_state = if arm.guard_condition < 0 {
+      1
+    } else if arm.guard_condition >= module_.expressions.length() {
+      return false
+    } else {
+      match module_.expressions[arm.guard_condition].kind {
+        PlannedBoolConst(false) => 0
+        PlannedBoolConst(true) => 1
+        _ => -1
+      }
+    }
+    if guard_state == 0 {
+      continue
+    }
+    if guard_state < 0 &&
+      !program_nonconstant_guard_is_discardable(module_, arm.guard_condition) {
+      return false
+    }
+    let bindings = match
+      program_direct_variant_pattern_bindings(
+        module_,
+        arm.pattern,
+        variant_expression,
+        variant,
+      ) {
+      Some(bindings) => bindings
+      None => return false
+    }
+    if bindings.length() != values.length() {
+      return false
+    }
+    for component in 0..<bindings.length() {
+      let local_id = bindings[component]
+      if local_id < 0 {
+        continue
+      }
+      let value = values[component]
+      if local_id >= body.locals.length ||
+        value < 0 ||
+        value >= module_.expressions.length() ||
+        program_cse_local_is_captured(module_, body, local_id) ||
+        module_.locals[body.locals.start + local_id].mutable_ ||
+        module_.locals[body.locals.start + local_id].type_ !=
+        module_.expressions[value].type_ ||
+        module_.locals[body.locals.start + local_id].shape !=
+        module_.expressions[value].shape ||
+        !(module_.expressions[value].trait_object_coercion
+        is NoInferredTraitObjectCoercion) {
+        return false
+      }
+      if canonical_bindings[component] < 0 {
+        canonical_bindings[component] = local_id
+      }
+    }
+    selected_arms.push(arm_index)
+    selected_bindings.push(bindings)
+    if guard_state < 0 {
+      saw_nonconstant_guard = true
+    } else {
+      reached_terminal = true
+      break
+    }
+  }
+  if !saw_nonconstant_guard || !reached_terminal || selected_arms.length() < 2 {
+    return false
+  }
+  let binding_targets : Array[LocalId] = Array::make(body.locals.length, -1)
+  for arm_offset in 0..<selected_arms.length() {
+    let bindings = selected_bindings[arm_offset]
+    for component in 0..<bindings.length() {
+      let source_local = bindings[component]
+      let target_local = canonical_bindings[component]
+      if source_local < 0 || target_local < 0 || source_local == target_local {
+        continue
+      }
+      if binding_targets[source_local] >= 0 &&
+        binding_targets[source_local] != target_local {
+        return false
+      }
+      binding_targets[source_local] = target_local
+    }
+  }
+  for
+    candidate in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match module_.expressions[candidate].kind {
+      PlannedLocalGet(local_id) if local_id >= 0 &&
+        local_id < binding_targets.length() &&
+        binding_targets[local_id] >= 0 =>
+        module_.expressions[candidate] = {
+          ..module_.expressions[candidate],
+          kind: PlannedLocalGet(binding_targets[local_id]),
+        }
+      _ => ()
+    }
+  }
+  let terminal = module_.pattern_arms[selected_arms[selected_arms.length() - 1]]
+  let mut result = terminal.body
+  let mut selected_index = selected_arms.length() - 1
+  while selected_index > 0 {
+    selected_index -= 1
+    let arm = module_.pattern_arms[selected_arms[selected_index]]
+    let then_item = module_.block_items.length()
+    module_.block_items.push({
+      kind: PlannedExpressionItem(arm.body),
+      offset: arm.offset,
+    })
+    let then_block = module_.blocks.length()
+    module_.blocks.push({
+      items: { start: then_item, length: 1 },
+      flow: arm.flow,
+      offset: arm.offset,
+    })
+    let conditional = module_.expressions.length()
+    module_.expressions.push({
+      ..module_.expressions[expression],
+      kind: PlannedIfExpression(arm.guard_condition, then_block, result),
+      offset: arm.offset,
+    })
+    result = conditional
+  }
+  let items_start = module_.block_items.length()
+  for component in 0..<values.length() {
+    let value = values[component]
+    let local_id = canonical_bindings[component]
+    module_.block_items.push({
+      kind: if local_id >= 0 {
+        PlannedLetItem(local_id, false, value)
+      } else {
+        PlannedExpressionItem(value)
+      },
+      offset: module_.expressions[value].offset,
+    })
+  }
+  module_.block_items.push({
+    kind: PlannedExpressionItem(result),
+    offset: module_.expressions[expression].offset,
+  })
+  let result_block = module_.blocks.length()
+  module_.blocks.push({
+    items: { start: items_start, length: values.length() + 1 },
+    flow: module_.expressions[expression].flow,
+    offset: module_.expressions[expression].offset,
+  })
+  let source = module_.expressions[expression]
+  module_.expressions[expression] = {
+    ..source,
+    kind: PlannedBlockExpression(result_block),
+  }
+  let variant_source = module_.expressions[variant_expression]
+  module_.expressions[variant_expression] = {
+    ..variant_source,
+    kind: PlannedConsumedExpression,
+  }
+  true
+}
+
+///|
 fn scalar_replace_program_variant_payload_match(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -5081,7 +5411,9 @@ fn scalar_replace_program_variant_payload_match(
           !program_guarded_variant_selector_is_stable(
             module_, arms, index, variant_expression, variant,
           ) {
-          return false
+          return scalar_replace_program_guarded_variant_match(
+            module_, expression, variant_expression, arms, index, variant,
+          )
         }
         selected_arm = arms.start + index
         break

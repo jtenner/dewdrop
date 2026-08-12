@@ -176,6 +176,20 @@ pub fn main(value: I32) -> I32 {
 }
 """
 
+GUARD_PLAN = """enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+pub fn main(value: I32) -> I32 {
+  match Maybe::Some(value + 1, value) {
+    Maybe::Some(first, second) if first > 0 => second
+    Maybe::Some(first, second) => first - 1
+    Maybe::None => 0
+  }
+}
+"""
+
 SCALAR_TRANSFORM = """enum Maybe {
   Some(I32, I32)
   None
@@ -482,6 +496,7 @@ def main() -> None:
     stable_guard = build("stable-guard", STABLE_GUARD)
     composite_guard = build("composite-guard", COMPOSITE_GUARD)
     payload_guard = build("payload-guard", PAYLOAD_GUARD)
+    guard_plan = build("guard-plan", GUARD_PLAN)
     scalar_transform = build("scalar-transform", SCALAR_TRANSFORM)
     local_transform = build("local-transform", LOCAL_TRANSFORM)
     block_transform = build("block-transform", BLOCK_TRANSFORM)
@@ -506,6 +521,7 @@ def main() -> None:
             stable_guard,
             composite_guard,
             payload_guard,
+            guard_plan,
             scalar_transform,
             local_transform,
             block_transform,
@@ -534,6 +550,7 @@ def main() -> None:
     stable_guard_median = statistics.median(raw[str(stable_guard)])
     composite_guard_median = statistics.median(raw[str(composite_guard)])
     payload_guard_median = statistics.median(raw[str(payload_guard)])
+    guard_plan_median = statistics.median(raw[str(guard_plan)])
     scalar_transform_median = statistics.median(raw[str(scalar_transform)])
     local_transform_median = statistics.median(raw[str(local_transform)])
     block_transform_median = statistics.median(raw[str(block_transform)])
@@ -561,6 +578,7 @@ def main() -> None:
         "stable_guard_median_us": round(stable_guard_median, 4),
         "composite_guard_median_us": round(composite_guard_median, 4),
         "payload_guard_median_us": round(payload_guard_median, 4),
+        "guard_plan_median_us": round(guard_plan_median, 4),
         "scalar_transform_median_us": round(scalar_transform_median, 4),
         "local_transform_median_us": round(local_transform_median, 4),
         "block_transform_median_us": round(block_transform_median, 4),
@@ -591,6 +609,7 @@ def main() -> None:
         "payload_guard_ratio": round(
             payload_guard_median / baseline_median, 4,
         ),
+        "guard_plan_ratio": round(guard_plan_median / baseline_median, 4),
         "scalar_transform_ratio": round(
             scalar_transform_median / baseline_median, 4,
         ),
@@ -620,6 +639,7 @@ def main() -> None:
         "stable_guard_wasm_bytes": stable_guard.stat().st_size,
         "composite_guard_wasm_bytes": composite_guard.stat().st_size,
         "payload_guard_wasm_bytes": payload_guard.stat().st_size,
+        "guard_plan_wasm_bytes": guard_plan.stat().st_size,
         "scalar_transform_wasm_bytes": scalar_transform.stat().st_size,
         "local_transform_wasm_bytes": local_transform.stat().st_size,
         "block_transform_wasm_bytes": block_transform.stat().st_size,
@@ -653,6 +673,8 @@ def main() -> None:
         "composite_guard_struct_get": wat_count(composite_guard, "struct.get"),
         "payload_guard_struct_new": wat_count(payload_guard, "struct.new"),
         "payload_guard_struct_get": wat_count(payload_guard, "struct.get"),
+        "guard_plan_struct_new": wat_count(guard_plan, "struct.new"),
+        "guard_plan_struct_get": wat_count(guard_plan, "struct.get"),
         "scalar_transform_struct_new": wat_count(scalar_transform, "struct.new"),
         "scalar_transform_struct_get": wat_count(scalar_transform, "struct.get"),
         "local_transform_struct_new": wat_count(local_transform, "struct.new"),

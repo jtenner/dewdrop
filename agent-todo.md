@@ -13,7 +13,6 @@
 
 ## Optimization
 
-- [ ] Add explicit nonconstant guard-preserving match planning.
 - [ ] Add deeper enum payload-load/extraction CSE and safe nested-alternative extraction sharing.
 - [ ] Model local live ranges and interference across branches, loops, and joins.
 - [ ] Evaluate shared reference/generic alias coalescing through that model.
