@@ -21,7 +21,7 @@ Wrapper elimination measured 0.9397x the retained runtime, about 6.0% faster, an
 
 ## Fresh tuple-variant payloads
 
-A match over direct fresh tuple-variant construction now eliminates the enum allocation and dispatch when the selected arm is unguarded, matches the exact constructor, and directly returns one payload binding. Preceding exact arms for different constructors are proven disjoint and skipped without evaluating their guards. An alternative arm is also accepted when frozen constructor evidence proves exactly one alternative can match the known variant and every sibling is constructor-disjoint; multiple matching alternatives, wildcard, binding, unknown, or matching guarded arms remain barriers. The match expression becomes a `PlannedParameterSelect` over the constructor arguments. Every payload argument still evaluates once in source order, the selected scalar/reference/generic carrier is forwarded directly, and all other arms remain unevaluated. The same proof follows an immutable uncaptured sole-use local when its only read is the match scrutinee: the constructor declaration and local read are elided without moving the selector from the original match location.
+A match over direct fresh tuple-variant construction now eliminates the enum allocation and dispatch when the selected arm is unguarded, matches the exact constructor, and directly returns one payload binding. Preceding exact arms for different constructors are proven disjoint and skipped without evaluating their guards. An alternative arm is also accepted when frozen constructor evidence proves exactly one alternative can match the known variant and every sibling is constructor-disjoint. Matching-constructor guards are accepted only when deterministic folding has reduced them to exact Boolean constants: false arms are skipped and true arms select normally. Multiple matching alternatives, wildcard, binding, unknown, or nonconstant guarded arms remain barriers. The match expression becomes a `PlannedParameterSelect` over the constructor arguments. Every payload argument still evaluates once in source order, the selected scalar/reference/generic carrier is forwarded directly, and all other arms remain unevaluated. The same proof follows an immutable uncaptured sole-use local when its only read is the match scrutinee: the constructor declaration and local read are elided without moving the selector from the original match location.
 
 The success snapshots cover tuple scalar/reference payloads and direct plus let-bound struct-variant fields. Struct patterns resolve the returned binding to the constructor field through frozen layout identity/name, then append every constructor initializer to the same source-ordered selector plan. This proof now recurses through nested fresh struct and tuple-struct patterns: each inner aggregate is converted to its own source-ordered selector before the outer variant selector forwards the final scalar. Separate tuple, struct, and nested trap fixtures select the second binding but give the first payload an `unreachable` trap and the second an integer divide-by-zero trap; Node and Wago both observe `unreachable`, proving complete payload evaluation order. The success WAT contains no enum or nested aggregate construction, constructor test, cast, or payload extraction operation.
 
@@ -29,17 +29,18 @@ The success snapshots cover tuple scalar/reference payloads and direct plus let-
 
 | Form | Median | `struct.new` | `struct.get` | Wasm bytes |
 | --- | ---: | ---: | ---: | ---: |
-| direct tuple payload | 0.0167 µs | 0 | 0 | 440 |
-| constructor-disjoint preceding arm | 0.0159 µs | 0 | 0 | 440 |
-| constructor-resolved alternative | 0.0159 µs | 0 | 0 | 440 |
-| immutable tuple local | 0.0158 µs | 0 | 0 | 440 |
-| retained tuple variant | 0.0175 µs | 1 | 2 | 522 |
-| direct struct field | 0.0170 µs | 0 | 0 | 448 |
-| retained struct variant | 0.0176 µs | 1 | 3 | 540 |
-| nested aggregate payload | 0.0170 µs | 0 | 0 | 453 |
-| retained nested payload | 0.0179 µs | 2 | 6 | 587 |
+| direct tuple payload | 0.0164 µs | 0 | 0 | 440 |
+| constructor-disjoint preceding arm | 0.0156 µs | 0 | 0 | 440 |
+| constructor-resolved alternative | 0.0154 µs | 0 | 0 | 440 |
+| exact constant guards | 0.0167 µs | 0 | 0 | 440 |
+| immutable tuple local | 0.0163 µs | 0 | 0 | 440 |
+| retained tuple variant | 0.0171 µs | 1 | 2 | 522 |
+| direct struct field | 0.0171 µs | 0 | 0 | 448 |
+| retained struct variant | 0.0173 µs | 1 | 3 | 540 |
+| nested aggregate payload | 0.0172 µs | 0 | 0 | 453 |
+| retained nested payload | 0.0174 µs | 2 | 6 | 587 |
 
-Direct, reordered-arm, alternative-arm, and let-bound tuple elimination measured 0.9544x, 0.9087x, 0.9087x, and 0.9030x the retained runtime. Direct struct and nested elimination measured 0.9660x and 0.9504x. Nested elimination removed 134 Wasm bytes, two allocations, and six aggregate reads.
+Direct, reordered-arm, alternative-arm, constant-guard, and let-bound tuple elimination measured 0.9591x, 0.9124x, 0.9008x, 0.9772x, and 0.9533x the retained runtime. Direct struct and nested elimination measured 0.9885x and 0.9880x. Nested elimination removed 134 Wasm bytes, two allocations, and six aggregate reads.
 
 ## Exact trait-object flow audit
 
@@ -56,4 +57,4 @@ The exact erased path is byte-identical in size and has the same allocation/disp
 
 ## Remaining boundaries
 
-Matching-constructor guards and wildcard/binding interception proofs remain conservative. Alternative arms require exactly one constructor-compatible branch, and nested paths are limited to fresh struct and tuple-struct constructors with one unambiguous scalar binding.
+Wildcard/binding interception proofs and nonconstant matching-constructor guard planning remain conservative. Alternative arms require exactly one constructor-compatible branch, and nested paths are limited to fresh struct and tuple-struct constructors with one unambiguous scalar binding.

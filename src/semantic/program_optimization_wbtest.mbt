@@ -390,6 +390,40 @@ test "constructor-resolved alternative payload patterns eliminate variants" {
 }
 
 ///|
+test "constant matching-constructor guards preserve payload elimination" {
+  let program = collect_program_manifest(
+    22819UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32)\n  None\n}\nfn guarded(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::Some(item) if false => 0\n    Maybe::Some(item) if 1 < 2 => item\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let guarded = collected.lookup_value("guarded").unwrap()
+  let body = collected.body_of(guarded).unwrap()
+  let mut variants = 0
+  let mut matches = 0
+  let mut selects = 0
+  for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedVariantTupleNew(_, _, _) => variants += 1
+      PlannedMatchExpression(_, _) => matches += 1
+      PlannedParameterSelect(_, _) => selects += 1
+      _ => ()
+    }
+  }
+  assert_eq(variants, 0)
+  assert_eq(matches, 0)
+  assert_eq(selects, 1)
+}
+
+///|
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,

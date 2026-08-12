@@ -4017,7 +4017,14 @@ fn scalar_replace_program_variant_payload_match(
     ) {
       1 => {
         if candidate.guard_condition >= 0 {
-          return false
+          if candidate.guard_condition >= module_.expressions.length() {
+            return false
+          }
+          match module_.expressions[candidate.guard_condition].kind {
+            PlannedBoolConst(false) => continue
+            PlannedBoolConst(true) => ()
+            _ => return false
+          }
         }
         selected_arm = arms.start + index
         break
