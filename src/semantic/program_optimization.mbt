@@ -2680,6 +2680,18 @@ fn program_cse_elide_local_alias(
 }
 
 ///|
+fn program_alias_shared_source_shape(shape : PlannedValueShape) -> Bool {
+  match shape {
+    ErrorPlannedValueShape
+    | UnitPlannedValueShape
+    | NeverPlannedValueShape
+    | RefPlannedValueShape
+    | GenericPlannedValueShape => false
+    _ => true
+  }
+}
+
+///|
 fn coalesce_program_immutable_local_aliases(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
@@ -2730,7 +2742,10 @@ fn coalesce_program_immutable_local_aliases(
           let (source_uses, _) = program_local_get_count(
             module_, body, source_local,
           )
-          if source_uses != 1 ||
+          if (
+              source_uses != 1 &&
+              !program_alias_shared_source_shape(source_info.shape)
+            ) ||
             !program_cse_elide_local_alias(
               module_, body, alias_local, source_local,
             ) {

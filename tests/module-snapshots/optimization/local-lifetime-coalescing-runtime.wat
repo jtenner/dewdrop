@@ -24,15 +24,13 @@
     struct.get 0 0
   )
   (func (;2;) (type 3) (param i32) (result i32)
-    (local i32 i32)
+    (local i32)
     local.get 0
     i32.const 1
     i32.add
     local.set 1
     local.get 1
-    local.set 2
     local.get 1
-    local.get 2
     i32.add
   )
   (func (;3;) (type 4) (result i32)

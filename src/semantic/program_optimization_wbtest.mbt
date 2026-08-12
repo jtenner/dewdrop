@@ -1373,13 +1373,13 @@ test "repeated same-field struct locals scalar replace into the existing local" 
 }
 
 ///|
-test "immutable sole-use local aliases coalesce into source storage" {
+test "immutable local aliases coalesce into source storage" {
   let program = collect_program_manifest(
     22838UL,
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"fn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn retained(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\npub fn main() -> I32 {\n  coalesced(20) + retained(9)\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nfn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn shared(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\nfn retained(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  source.value + alias.value\n}\npub fn main() -> I32 {\n  coalesced(20) + shared(9) + retained(Token {\n    value: 1\n  })\n}\n",
         ),
       ]),
     ]),
@@ -1400,6 +1400,20 @@ test "immutable sole-use local aliases coalesce into source storage" {
   let coalesced_items = optimized.modules[0].blocks[coalesced_block].items
   assert_true(
     optimized.modules[0].block_items[coalesced_items.start + 1].kind
+    is PlannedElidedLetItem(_),
+  )
+  let shared = collected.lookup_value("shared").unwrap()
+  let shared_source = collected.body_of(shared).unwrap()
+  let shared_body = optimized.modules[0].bodies[
+    semantic_id_local(shared_source.id)
+  ]
+  let shared_block = match shared_body.root {
+    BlockBodyRoot(block) => block
+    _ => abort("expected shared block")
+  }
+  let shared_items = optimized.modules[0].blocks[shared_block].items
+  assert_true(
+    optimized.modules[0].block_items[shared_items.start + 1].kind
     is PlannedElidedLetItem(_),
   )
   let retained = collected.lookup_value("retained").unwrap()
