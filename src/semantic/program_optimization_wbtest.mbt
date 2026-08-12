@@ -2339,7 +2339,107 @@ test "private unit enum parameter specialization rejects incomplete call evidenc
       is RefPlannedValueShape,
     )
   }
-  for name in ["public_parameter", "payload_parameter", "referenced_parameter"] {
+  for name in ["public_parameter", "referenced_parameter"] {
+    let declaration = collected.lookup_value(name).unwrap()
+    let callable = optimized.modules[0].functions
+      .callable_of(declaration)
+      .unwrap()
+    assert_true(
+      optimized.modules[0].functions.parameters[callable.parameters.start].shape
+      is RefPlannedValueShape,
+    )
+  }
+  let payload_parameter = collected.lookup_value("payload_parameter").unwrap()
+  let payload_callable = optimized.modules[0].functions
+    .callable_of(payload_parameter)
+    .unwrap()
+  assert_true(
+    optimized.modules[0].functions.parameters[payload_callable.parameters.start].shape
+    is I64PlannedValueShape,
+  )
+}
+
+///|
+test "private scalar payload enum parameters and results specialize with complete evidence" {
+  let program = collect_program_manifest(
+    22847UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  None\n  Some(I32)\n}\nfn classify(value: Maybe) -> I32 {\n  match value {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\nfn choose(flag: Bool, value: I32) -> Maybe {\n  if flag {\n    Maybe::Some(value)\n  } else {\n    Maybe::None\n  }\n}\npub fn main(flag: Bool, value: I32) -> I32 {\n  classify(if flag {\n    Maybe::Some(value + 1)\n  } else {\n    Maybe::None\n  }) + match choose(flag, value + 2) {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let classify = collected.lookup_value("classify").unwrap()
+  let classify_callable = optimized.modules[0].functions
+    .callable_of(classify)
+    .unwrap()
+  assert_true(
+    optimized.modules[0].functions.parameters[classify_callable.parameters.start].shape
+    is I64PlannedValueShape,
+  )
+  assert_true(
+    unoptimized.modules[0].functions.parameters[classify_callable.parameters.start].shape
+    is RefPlannedValueShape,
+  )
+  let choose = collected.lookup_value("choose").unwrap()
+  assert_true(
+    optimized.modules[0].functions.callable_of(choose).unwrap().result_shape
+    is I64PlannedValueShape,
+  )
+  assert_true(
+    unoptimized.modules[0].functions.callable_of(choose).unwrap().result_shape
+    is RefPlannedValueShape,
+  )
+  let main = collected.lookup_value("main").unwrap()
+  let calls = body_calls(collected, collected.body_of(main).unwrap())
+  let mut specialized_calls = 0
+  for call in calls {
+    match optimized.modules[0].expressions[call].kind {
+      PlannedDirectCall(target, _, arguments, _)
+      | PlannedTailCall(target, _, arguments, _) =>
+        if target == classify {
+          specialized_calls += 1
+          let argument = optimized.modules[0].expression_children[arguments.start]
+          assert_true(
+            optimized.modules[0].expressions[argument].shape
+            is I64PlannedValueShape,
+          )
+        } else if target == choose {
+          specialized_calls += 1
+          assert_true(
+            optimized.modules[0].expressions[call].shape is I64PlannedValueShape,
+          )
+        }
+      _ => ()
+    }
+  }
+  assert_eq(specialized_calls, 2)
+}
+
+///|
+test "private scalar payload enum specialization rejects unsupported payload evidence" {
+  let program = collect_program_manifest(
+    22848UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Wide {\n  Empty\n  Value(I64)\n}\nenum Pair {\n  Empty\n  Value(I32, I32)\n}\nfn wide(value: Wide) -> I64 {\n  match value {\n    Wide::Empty => 0i64\n    Wide::Value(item) => item\n  }\n}\nfn pair(value: Pair) -> I32 {\n  match value {\n    Pair::Empty => 0\n    Pair::Value(left, right) => left + right\n  }\n}\npub fn main() -> Unit {\n  assert(wide(Wide::Value(1i64)) == 1i64, \"wide\")\n  assert(pair(Pair::Value(2, 3)) == 5, \"pair\")\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let optimized = optimize_program_lowering(
+    plan_unoptimized_program_lowering(program, analyzed),
+  )
+  let collected = program.modules[0]
+  for name in ["wide", "pair"] {
     let declaration = collected.lookup_value(name).unwrap()
     let callable = optimized.modules[0].functions
       .callable_of(declaration)

@@ -853,13 +853,18 @@ fn wasmgc_required_nominal_declarations(
         PlannedStructNew(declaration, _, _) => required[declaration] = true
         PlannedUnitVariant(variant, _)
         | PlannedVariantTupleNew(variant, _, _)
-        | PlannedVariantStructNew(variant, _, _) =>
+        | PlannedVariantStructNew(variant, _, _) => {
+          if lowering.expressions[expression].shape is I32PlannedValueShape ||
+            lowering.expressions[expression].shape is I64PlannedValueShape {
+            continue
+          }
           for candidate in layouts.variants {
             if candidate.variant == variant {
               required[candidate.declaration] = true
               break
             }
           }
+        }
         PlannedFieldGet(field, _) =>
           for candidate in layouts.fields {
             if candidate.field == field {
@@ -877,7 +882,8 @@ fn wasmgc_required_nominal_declarations(
         StructInferredPatternConstructor(declaration, _) =>
           required[declaration] = true
         VariantInferredPatternConstructor(variant, _) => {
-          if lowering.patterns[pattern].shape is I32PlannedValueShape {
+          if lowering.patterns[pattern].shape is I32PlannedValueShape ||
+            lowering.patterns[pattern].shape is I64PlannedValueShape {
             continue
           }
           for candidate in layouts.variants {
@@ -1876,13 +1882,19 @@ fn wasmgc_callable_has_scalarized_signature(
 ) -> Bool {
   for index in 0..<callable.parameters.length {
     let parameter = functions.parameters[callable.parameters.start + index]
-    if parameter.shape is I32PlannedValueShape &&
+    if (
+        parameter.shape is I32PlannedValueShape ||
+        parameter.shape is I64PlannedValueShape
+      ) &&
       planned_resolved_value_shape(resolved, parameter.type_)
       is RefPlannedValueShape {
       return true
     }
   }
-  callable.result_shape is I32PlannedValueShape &&
+  (
+    callable.result_shape is I32PlannedValueShape ||
+    callable.result_shape is I64PlannedValueShape
+  ) &&
   planned_resolved_value_shape(resolved, callable.result_type)
   is RefPlannedValueShape
 }
@@ -1901,6 +1913,7 @@ fn wasmgc_plan_function_job(
     let parameter = functions.parameters[callable.parameters.start + index]
     match parameter.shape {
       I32PlannedValueShape => parameters.push(WasmI32Value)
+      I64PlannedValueShape => parameters.push(WasmI64Value)
       _ =>
         match
           wasmgc_value_type(
@@ -1919,6 +1932,7 @@ fn wasmgc_plan_function_job(
   let results : Array[PlannedWasmValueType] = []
   match callable.result_shape {
     I32PlannedValueShape => results.push(WasmI32Value)
+    I64PlannedValueShape => results.push(WasmI64Value)
     _ =>
       match
         wasmgc_value_type(

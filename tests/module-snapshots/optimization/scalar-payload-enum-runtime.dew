@@ -1,0 +1,33 @@
+enum Maybe {
+  None
+  Some(I32)
+}
+
+fn classify(value: Maybe) -> I32 {
+  match value {
+    Maybe::None => 0
+    Maybe::Some(item) => item
+  }
+}
+
+fn choose(flag: Bool, value: I32) -> Maybe {
+  if flag {
+    Maybe::Some(value)
+  } else {
+    Maybe::None
+  }
+}
+
+pub fn main() -> Unit {
+  assert(classify(Maybe::Some(41)) == 41, "packed enum parameter")
+  assert(classify(Maybe::Some(-1)) == -1, "packed enum signed payload bits")
+  assert(classify(Maybe::None) == 0, "packed enum unit parameter")
+  assert(match choose(true, 42) {
+    Maybe::None => 0
+    Maybe::Some(item) => item
+  } == 42, "packed enum result")
+  assert(match choose(false, 43) {
+    Maybe::None => 7
+    Maybe::Some(item) => item
+  } == 7, "packed enum unit result")
+}

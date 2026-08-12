@@ -379,12 +379,17 @@ fn program_reachable_callable_roots(
             reachable[standard_set_type_declaration()] = true
           PlannedUnitVariant(variant, _)
           | PlannedVariantTupleNew(variant, _, _)
-          | PlannedVariantStructNew(variant, _, _) =>
+          | PlannedVariantStructNew(variant, _, _) => {
+            if module_.expressions[expression].shape is I32PlannedValueShape ||
+              module_.expressions[expression].shape is I64PlannedValueShape {
+              continue
+            }
             match
               program_variant_declaration(lowering, module_lookup, variant) {
               Some(declaration) => reachable[declaration] = true
               None => ()
             }
+          }
           _ => ()
         }
       }
@@ -395,7 +400,8 @@ fn program_reachable_callable_roots(
           StructInferredPatternConstructor(declaration, _) =>
             reachable[declaration] = true
           VariantInferredPatternConstructor(variant, _) => {
-            if module_.patterns[pattern].shape is I32PlannedValueShape {
+            if module_.patterns[pattern].shape is I32PlannedValueShape ||
+              module_.patterns[pattern].shape is I64PlannedValueShape {
               continue
             }
             match

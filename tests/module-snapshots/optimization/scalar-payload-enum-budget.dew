@@ -1,0 +1,27 @@
+enum Maybe {
+  None
+  Some(I32)
+}
+
+fn classify(value: Maybe) -> I32 {
+  match value {
+    Maybe::None => 0
+    Maybe::Some(item) => item
+  }
+}
+
+fn choose(flag: Bool, value: I32) -> Maybe {
+  if flag {
+    Maybe::Some(value)
+  } else {
+    Maybe::None
+  }
+}
+
+pub fn main() -> I32 {
+  let value = 40
+  classify(Maybe::Some(value + 1)) + match choose(true, value + 2) {
+    Maybe::None => 0
+    Maybe::Some(item) => item
+  }
+}

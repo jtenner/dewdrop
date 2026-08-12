@@ -1,0 +1,19 @@
+enum Maybe {
+  None
+  Some(I32)
+}
+
+fn classify(value: Maybe) -> I32 {
+  match value {
+    Maybe::None => 0
+    Maybe::Some(item) => item
+  }
+}
+
+fn trap_payload() -> I32 {
+  unreachable()
+}
+
+pub fn main() -> I32 {
+  classify(Maybe::Some(trap_payload()))
+}

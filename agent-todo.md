@@ -4,16 +4,11 @@
 
 ## Current priority order
 
-1. Evaluate bounded private enum scalar-payload specialization after direct parameter/result ABI specialization.
-2. Add per-file incremental artifacts, workspace interface reuse, and deterministic parallel scheduling.
-3. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
-4. Complete package acquisition and reproducible release infrastructure.
-5. Complete foundational standard modules and Wasm intrinsic parity.
-6. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
-
-## Optimization
-
-- [ ] Evaluate private enum scalar-payload specialization with complete payload/call-site ABI evidence.
+1. Add per-file incremental artifacts, workspace interface reuse, and deterministic parallel scheduling.
+2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
+3. Complete package acquisition and reproducible release infrastructure.
+4. Complete foundational standard modules and Wasm intrinsic parity.
+5. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
 
 ## Incremental and parallel compilation
 
@@ -77,7 +72,6 @@
 
 ## Patterns, text, and primitive policies
 
-- [ ] Share safe extraction work across nested alternatives.
 - [ ] Add full nested pattern-matrix usefulness analysis when needed.
 - [ ] Preserve deterministic source-order pattern diagnostics.
 - [ ] Measure retained-range and small-inline-string representations before changing the text ABI.

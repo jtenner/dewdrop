@@ -196,12 +196,14 @@ objects or values with reachable aliases. Functional-loop state is now executabl
 
 ### 20. Scalar unboxed enum representations
 
-The first bounded implementation represents proven private body-local unit-only
-enum values with scalar Wasm tags instead of GC structs. Scalar payloads and
-private parameters/results remain follow-up candidates requiring complete
-call-site and ABI evidence. Every candidate remains compared against Dewdrop's
-optimized subtype-family baseline and must preserve source tags, exhaustive
-matching, and ABI stability.
+The bounded implementations represent proven private unit-only body locals and
+direct parameter/results with scalar Wasm tags instead of GC structs. A second
+closed proof packs private unit-or-single-`I32`-payload parameter/results into one
+`i64`. Broader public, generic, function-value, imported, method, nested,
+multi-field, and non-`I32` payload ABIs remain measurement-driven candidates.
+Every candidate remains compared against Dewdrop's optimized subtype-family
+baseline and must preserve source tags, exhaustive matching, source order, and
+ABI stability.
 
 ### 21. Canonical nullary enum values
 

@@ -23,4 +23,4 @@ Public functions, function references, methods, generic functions, payload-beari
 
 ## Remaining boundaries
 
-Scalar payload enums need a tag-plus-payload or multi-value representation with exactly-once payload evaluation, compatible joins, and complete ABI propagation. Public/generic signatures, function values, cross-module calls, stored results, and adapter generation remain separate work.
+A bounded packed ABI for private enums with unit or one `I32` tuple payload is implemented in `scalar-payload-enum-specialization.md`. Public/generic signatures, function values, cross-module calls, stored or aliased results, multi-field or non-`I32` payloads, and adapter generation remain separate work.

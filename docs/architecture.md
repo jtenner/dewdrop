@@ -177,9 +177,23 @@ parameter, argument, result, call, scrutinee, and pattern carriers to `I32`.
 Fragment planning emits a distinct private physical signature when an optimized
 parameter or result differs from its resolved source function type, and
 reachability omits the enum physical type when no retained value needs it.
-Public callables, payloads, methods, generics, captures, guarded matches,
+Public callables, methods, generics, captures, guarded matches,
 escaping/stored results, function references, and incomplete call or consumer
 evidence remain reference-backed.
+
+A second copied-lowering proof covers private scalar payload enums. Eligible
+module-visible non-generic enums contain only unit variants or one `I32` tuple
+payload and have at least one payload variant. The optimizer packs the frozen tag
+into the low 32 bits of one `i64` and the exact payload bits into the high 32
+bits. Closed parameter call-site evidence and result-consumer evidence match the
+unit-enum rules; constructors, block/`if` joins, locals, private signatures,
+calls, scrutinees, and root patterns change together to the `I64` carrier.
+Backend packing evaluates each payload once before shifting/or-ing, and matching
+uses the existing single-evaluation scratch local before tag comparison and
+payload extraction. Public/generic/function-value/method/imported boundaries,
+struct or multi/non-`I32` payloads, nested patterns, guards, alternatives,
+catchalls, captures, escapes, and stored or duplicated result consumers remain
+subtype-backed.
 
 ## Identity ownership
 

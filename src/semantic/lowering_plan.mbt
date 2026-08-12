@@ -49,6 +49,7 @@ pub enum PlannedExpressionKind {
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
   PlannedVariantStructNew(VariantId, HirSpan, HirSpan)
   PlannedUnitVariant(VariantId, HirSpan)
+  PlannedPackedEnumPayload(Int, ExprId)
   PlannedBlockExpression(BlockId)
   PlannedIfExpression(ExprId, BlockId, ExprId)
   PlannedMatchExpression(ExprId, HirSpan)

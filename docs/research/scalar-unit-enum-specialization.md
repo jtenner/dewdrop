@@ -26,4 +26,4 @@ Public enums retain the subtype-family ABI. Generic, payload-bearing, guarded, c
 
 ## Remaining boundaries
 
-The next representation candidates require a wider ABI and usage model: scalar payload enums need a tag-plus-payload carrier plan or multi-value rewriting; direct parameters/results need private signature rewriting and complete call-site evidence; joins across aliases need control-flow-sensitive representation propagation; and generic or public enums require deterministic adapters and ABI versioning. Those are separate measured tranches rather than extensions of this body-local proof.
+Direct private unit-enum parameters/results and one bounded packed single-`I32`-payload parameter/result ABI are now implemented in separate measured tranches. Broader joins across aliases still need control-flow-sensitive representation propagation, while public, generic, function-value, imported, method, multi-field, nested, and non-`I32` payload boundaries require deterministic adapters or ABI versioning.

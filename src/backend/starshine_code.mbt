@@ -314,6 +314,7 @@ priv enum StarshineEmitTask {
   )
   FinishStarshineStructNew(Int, Int)
   FinishStarshineEnumSubtype(Int, Int, Int)
+  FinishStarshinePackedEnumPayload(Int)
   FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType, Bool)
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
   FinishStarshineWhile(
@@ -1370,6 +1371,7 @@ fn starshine_nominal_expression_result_is_precise(
     | @semantic.PlannedVariantTupleNew(_, _, _)
     | @semantic.PlannedVariantStructNew(_, _, _)
     | @semantic.PlannedUnitVariant(_, _)
+    | @semantic.PlannedPackedEnumPayload(_, _)
     | @semantic.PlannedParameterSelect(_, _) => true
     _ => false
   }
@@ -2112,6 +2114,42 @@ fn starshine_simple_match_pattern_instructions(
     condition.push(starshine_match_local_get(scratch_local))
     condition.push(@lib.Instruction::i32_const(@lib.I32::new(tag)))
     condition.push(@lib.Instruction::i32_eq())
+    return Ok((condition, bindings))
+  }
+  if source.shape is @semantic.I64PlannedValueShape {
+    condition.push(starshine_match_local_get(scratch_local))
+    condition.push(@lib.Instruction::i32_wrap_i64())
+    condition.push(@lib.Instruction::i32_const(@lib.I32::new(tag)))
+    condition.push(@lib.Instruction::i32_eq())
+    match source.source {
+      @semantic.HirQualifiedPattern(_, _, _)
+      | @semantic.HirBindingPattern(_, _) => ()
+      @semantic.HirTuplePattern(_, arguments, _) => {
+        if arguments.length != 1 {
+          return Err(UnsupportedExpression(body.body, pattern))
+        }
+        let child = lowering.pattern_children[arguments.start]
+        let local_id = match lowering.patterns[child].reference {
+          @semantic.PatternBindingReference(local_id) => local_id
+          _ => return Ok((condition, bindings))
+        }
+        if local_id < 0 ||
+          local_id >= local_indices.length() ||
+          local_indices[local_id] < 0 {
+          return Err(InvalidLocal(body.body, local_id))
+        }
+        bindings.push(starshine_match_local_get(scratch_local))
+        bindings.push(@lib.Instruction::i64_const(@lib.I64::new(32L)))
+        bindings.push(@lib.Instruction::i64_shr_u())
+        bindings.push(@lib.Instruction::i32_wrap_i64())
+        bindings.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(local_indices[local_id].reinterpret_as_uint()),
+          ),
+        )
+      }
+      _ => return Err(UnsupportedExpression(body.body, pattern))
+    }
     return Ok((condition, bindings))
   }
   let base_type = match
@@ -6409,6 +6447,10 @@ fn starshine_emit_body_instructions(
               }
             }
           }
+          @semantic.PlannedPackedEnumPayload(tag, payload) => {
+            tasks.push(FinishStarshinePackedEnumPayload(tag))
+            tasks.push(EmitStarshineExpression(payload))
+          }
           @semantic.PlannedUnitVariant(variant, _) => {
             let owner_module = match program {
               Some(link) =>
@@ -8683,6 +8725,15 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
+      FinishStarshinePackedEnumPayload(tag) => {
+        let output = results.pop().unwrap()
+        output.push(@lib.Instruction::i64_extend_i32u())
+        output.push(@lib.Instruction::i64_const(@lib.I64::new(32L)))
+        output.push(@lib.Instruction::i64_shl())
+        output.push(@lib.Instruction::i64_const(@lib.I64::new(tag.to_int64())))
+        output.push(@lib.Instruction::i64_or())
+        results.push(output)
+      }
       FinishStarshineFieldGet(type_index, field_index, storage, needs_cast) => {
         let output = results.pop().unwrap()
         if needs_cast {
@@ -8732,7 +8783,9 @@ fn starshine_emit_body_instructions(
         let scalar_scrutinee = match lowering.expressions[expression].kind {
           @semantic.PlannedMatchExpression(scrutinee, _) =>
             lowering.expressions[scrutinee].shape
-            is @semantic.I32PlannedValueShape
+            is @semantic.I32PlannedValueShape ||
+            lowering.expressions[scrutinee].shape
+            is @semantic.I64PlannedValueShape
           _ => false
         }
         let mut dense_dispatch = planned.dense_enum_dispatch &&
