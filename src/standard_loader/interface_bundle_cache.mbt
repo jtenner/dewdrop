@@ -27,6 +27,7 @@ pub fn InterfaceBundleCacheStatus::label(
 pub struct CachedInterfaceBundleAnalysis {
   analyzed : @semantic.AnalyzedProgramSemantics
   status : InterfaceBundleCacheStatus
+  body_cache_status : BodyInferenceCacheStatus
 }
 
 ///|

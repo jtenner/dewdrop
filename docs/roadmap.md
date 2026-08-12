@@ -13,7 +13,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
-- checksummed per-file parser-event artifacts, verified standard/external interface caches, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
+- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, verified module body-inference reuse, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
@@ -36,7 +36,8 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 - [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
 - [x] Extend frozen-interface caching to ordinary non-root workspace modules with exact manifest source identity, direct public dependency fingerprints, atomic publication, and fail-visible corruption.
-- [ ] Cache body inference by declaration/body fingerprint and relevant imported interface/evidence fingerprints.
+- [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation and independent controls.
+- [ ] Refine module body artifacts into declaration/lambda jobs after module-value SCC, capture, and evidence dependencies have exact fingerprints.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
 - [x] Cache cyclic workspace interface SCCs as one atomic artifact.

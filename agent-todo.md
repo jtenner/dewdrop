@@ -12,7 +12,7 @@
 
 ## Incremental and parallel compilation
 
-- [ ] Cache body inference by declaration/body and relevant dependency/evidence fingerprints.
+- [ ] Refine complete module body-inference artifacts into declaration/lambda jobs after module-value SCC, capture, and evidence dependencies have exact fingerprints.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [ ] Schedule independent module and body jobs across workers.
 - [ ] Merge diagnostics and artifacts in deterministic source/manifest order.

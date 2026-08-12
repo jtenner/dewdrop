@@ -44,7 +44,7 @@ pub enum PrimitiveType {
   StringViewType
   StringBuilderType
   BytesBuilderType
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn PrimitiveType::rank(self : PrimitiveType) -> Int {

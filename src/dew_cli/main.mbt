@@ -121,7 +121,7 @@ fn print_usage() -> Unit {
   println("  repeat --module NAME to begin another statically linked module")
   println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
-    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --cache-report",
+    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --no-body-cache, --cache-report",
   )
 }
 
@@ -152,6 +152,14 @@ fn main {
     @sys.set_env_var(
       "DEW_PARSE_EVENT_CACHE",
       if request.parse_event_cache {
+        "1"
+      } else {
+        "0"
+      },
+    )
+    @sys.set_env_var(
+      "DEW_BODY_CACHE",
+      if request.body_cache {
         "1"
       } else {
         "0"
@@ -242,6 +250,9 @@ fn main {
       index += 1
     } else if argument == "--no-interface-cache" {
       @sys.set_env_var("DEW_INTERFACE_CACHE", "0")
+      index += 1
+    } else if argument == "--no-body-cache" {
+      @sys.set_env_var("DEW_BODY_CACHE", "0")
       index += 1
     } else if argument == "--cache-report" {
       cache_report = true
@@ -346,6 +357,7 @@ fn main {
     }
   }
   let cache_status = compiled.cache_status.label()
+  let body_cache_status = compiled.body_cache_status.label()
   let parse_event_cache_status = compiled.parse_event_cache_status.label()
   if report_compilation_diagnostics(
       compiled.program,
@@ -358,6 +370,7 @@ fn main {
   if cache_report {
     println("parse event cache: \{parse_event_cache_status}")
     println("standard interface cache: \{cache_status}")
+    println("body inference cache: \{body_cache_status}")
   }
   if command == "check" {
     println(

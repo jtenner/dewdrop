@@ -18,7 +18,7 @@ pub enum PlannedValueShape {
   RefPlannedValueShape
   GenericPlannedValueShape
   NeverPlannedValueShape
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum PlannedExpressionKind {

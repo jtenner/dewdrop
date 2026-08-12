@@ -773,6 +773,24 @@ pub struct AnalyzedProgramSemantics {
 }
 
 ///|
+pub fn make_analyzed_program_module(
+  module_id : ModuleId,
+  imports : ResolvedModuleImports,
+  names : ResolvedModuleNames,
+  inferred : InferredModuleBodies,
+) -> AnalyzedProgramModule {
+  { module_id, imports, names, inferred }
+}
+
+///|
+pub fn make_analyzed_program_semantics(
+  frozen : FrozenProgramInterfaces,
+  modules : Array[AnalyzedProgramModule],
+) -> AnalyzedProgramSemantics {
+  { frozen, modules }
+}
+
+///|
 /// Runs imported signature resolution, body name resolution, and body inference
 /// from one already-frozen interface graph.
 pub fn analyze_program_semantics_with_frozen(

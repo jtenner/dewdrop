@@ -46,6 +46,10 @@ grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
 grep -q '^parse event cache: hits 0, misses ' .tmp/dew-interface-cache-miss.txt
 grep -q '^parse event cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-interface-cache-hit.txt
+grep -q '^body inference cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-interface-cache-miss.txt
+grep -q '^body inference cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-interface-cache-hit.txt
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew build \
   tests/module-snapshots/numeric/scalar.dew -o .tmp/dew-cache-hit.wasm
 cmp .tmp/dew-std-disk.wasm .tmp/dew-cache-hit.wasm
@@ -55,6 +59,12 @@ DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
   > .tmp/dew-interface-cache-disabled.txt
 grep -q '^standard interface cache: disabled$' \
   .tmp/dew-interface-cache-disabled.txt
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+  --no-body-cache --cache-report \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-body-cache-disabled.txt
+grep -q '^body inference cache: disabled$' \
+  .tmp/dew-body-cache-disabled.txt
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
   --no-parse-event-cache --no-interface-cache --cache-report \
   tests/module-snapshots/numeric/scalar.dew \
@@ -84,6 +94,19 @@ if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
 fi
 grep -q 'corrupt frozen-interface cache' \
   .tmp/dew-interface-cache-corrupt.txt
+rm -rf .tmp/dew-interface-cache/interfaces
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+  tests/module-snapshots/numeric/scalar.dew > /dev/null
+body_cache_file=$(find .tmp/dew-interface-cache/body-inference -type f | head -n 1)
+printf 'corrupt' > "$body_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-body-cache-corrupt.txt 2>&1; then
+  echo "expected corrupt body-inference cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt body-inference cache' \
+  .tmp/dew-body-cache-corrupt.txt
 rm -rf .tmp/dew-workspace-interface-cache
 DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew build \
   --no-build-cache --cache-report \
@@ -100,6 +123,10 @@ DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew build \
 grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-workspace-interface-cold.txt
 grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-workspace-interface-warm.txt
+grep -q '^body inference cache: hits 0, misses [1-9][0-9]*$' \
+  .tmp/dew-workspace-interface-cold.txt
+grep -q '^body inference cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-workspace-interface-warm.txt
 cmp .tmp/dew-workspace-interface-cold.wasm \
   .tmp/dew-workspace-interface-warm.wasm

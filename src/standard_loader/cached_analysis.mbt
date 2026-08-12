@@ -142,9 +142,12 @@ pub fn analyze_program_with_interface_bundle_cache(
     Some(error) => return Err(error)
     None => ()
   }
-  let analyzed = @semantic.analyze_program_semantics_with_frozen(
-    program, frozen,
-  )
+  let body_cached = match
+    analyze_program_semantics_with_body_cache(program, frozen) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let analyzed = body_cached.analyzed
   if bundle_miss && policy.store_on_miss {
     match store_interface_bundle(program, frozen.interfaces, key, policy) {
       Err(error) => return Err(error)
@@ -154,5 +157,6 @@ pub fn analyze_program_with_interface_bundle_cache(
   Ok({
     analyzed,
     status: { enabled: policy.enabled && key.fingerprint != "", hits, misses },
+    body_cache_status: body_cached.status,
   })
 }

@@ -47,6 +47,7 @@ pub struct CompilerCompilation {
   lowering : @semantic.PlannedProgramLowering
   link : @semantic.PlannedProgramWasmGCLink
   cache_status : @standard_loader.InterfaceBundleCacheStatus
+  body_cache_status : @standard_loader.BodyInferenceCacheStatus
   parse_event_cache_status : @standard_loader.ParseEventCacheStatus
 }
 
@@ -108,6 +109,7 @@ pub fn compile_manifest(
     lowering,
     link,
     cache_status: cached.status,
+    body_cache_status: cached.body_cache_status,
     parse_event_cache_status: prepared.status,
   })
 }

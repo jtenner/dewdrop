@@ -45,7 +45,7 @@ pub enum BodyInferenceDiagnostic {
   UnresolvedExpressionType(ExprId, UInt64)
   UnresolvedLocalType(BodyId, LocalId, UInt64)
   UnresolvedLambdaLocalType(LambdaId, LocalId, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn BodyInferenceDiagnostic::offset(
@@ -109,7 +109,7 @@ pub struct InferredModuleValues {
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn InferredModuleValues::type_term(
@@ -143,14 +143,14 @@ pub enum InferredPatternConstructor {
   ErrorInferredPatternConstructor
   StructInferredPatternConstructor(DeclId, HirSpan)
   VariantInferredPatternConstructor(VariantId, HirSpan)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredObjectFieldTarget {
   NoObjectFieldTarget
   ErrorObjectFieldTarget
   SelectedObjectFieldTarget(FieldId)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredExpressionSelection {
@@ -162,7 +162,7 @@ pub enum InferredExpressionSelection {
   FieldAccessSelection(FieldId)
   ImportedModuleValueSelection(DeclId)
   FunctionReferenceSelection(DeclId, HirSpan)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredCallTarget {
@@ -172,32 +172,32 @@ pub enum InferredCallTarget {
   SelectedBoundInferredCallTarget(DeclId, Int, HirSpan)
   SelectedDynamicTraitCallTarget(DeclId, DeclId, Int, HirSpan)
   SelectedFunctionValueCallTarget(ExprId)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredTraitObjectCoercion {
   NoInferredTraitObjectCoercion
   ErrorInferredTraitObjectCoercion
   SelectedInferredTraitObjectCoercion(DeclId, Int)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredTraitEvidenceKind {
   ConcreteInferredTraitEvidence(DeclId, HirSpan)
   BoundInferredTraitEvidence(Int)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredTraitEvidenceArgument {
   ShapeInferredTraitEvidenceArgument(PlannedValueShape)
   GenericInferredTraitEvidenceArgument(Int)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct InferredTraitEvidence {
   kind : InferredTraitEvidenceKind
   prerequisites : HirSpan
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct InferredBody {
@@ -206,7 +206,7 @@ pub struct InferredBody {
   types : HirSpan
   type_arguments : HirSpan
   diagnostics : HirSpan
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct InferredLambda {
@@ -215,7 +215,7 @@ pub struct InferredLambda {
   types : HirSpan
   type_arguments : HirSpan
   diagnostics : HirSpan
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct InferredModuleBodies {
@@ -250,7 +250,7 @@ pub struct InferredModuleBodies {
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn InferredModuleBodies::body(

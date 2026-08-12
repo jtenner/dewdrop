@@ -80,7 +80,10 @@ interface freezing: public declarations, resolved types, ABI fingerprints
 imported semantics: import scopes and translated imported identities
   |
   v
-body semantics: name resolution, inference, evidence, flow
+body semantics: fresh name resolution plus cached-or-fresh inference/evidence
+  |
+  v
+body artifact validation: exact source/interface provenance and HIR arena identity
   |
   v
 module lowering: backend-neutral executable operations and layouts
@@ -97,6 +100,14 @@ physical linking: recursive type groups, initializers, indices, exports
   v
 backend emission: Starshine module construction, validation, binary encoding
 ```
+
+Persistent executable semantics use a bounded module artifact under
+`.dew/cache/body-inference/`. Its key commits to exact module source, default-preamble
+policy, stable module identity, and the transitive frozen interface/evidence
+fingerprint. Name resolution remains fresh; a hit is accepted only after checksum,
+provenance, schema, module/body/lambda identity, and arena-length validation. This
+keeps downstream lowering IDs unchanged while deferring per-body rebasing until
+module-value SCC, lambda-capture, and recursive evidence dependencies are explicit.
 
 The whole-program stages now have explicit implementation owners:
 

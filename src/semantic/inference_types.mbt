@@ -11,7 +11,7 @@ pub enum BodyTypeTerm {
   BodyVariableType(TypeVariableId)
   BodyAppliedType(BodyTypeId, HirSpan)
   BodyFunctionType(HirSpan, BodyTypeId)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum TypeConstraintOriginKind {
@@ -22,20 +22,20 @@ pub enum TypeConstraintOriginKind {
   CallTypeConstraint
   OperatorTypeConstraint
   SyntheticTypeConstraint
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct TypeConstraintOrigin {
   kind : TypeConstraintOriginKind
   source : Int
   offset : UInt64
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum LocalInferenceDiagnostic {
   LocalTypeMismatch(BodyTypeId, BodyTypeId, TypeConstraintOrigin)
   InfiniteLocalType(TypeVariableId, BodyTypeId, TypeConstraintOrigin)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn LocalInferenceDiagnostic::offset(

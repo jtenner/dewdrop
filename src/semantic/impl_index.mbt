@@ -3,26 +3,26 @@ pub enum ImplTargetHead {
   ErrorImplTargetHead
   PrimitiveImplTargetHead(PrimitiveType)
   NominalImplTargetHead(DeclId)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum IndexedImplKind {
   InherentIndexedImpl
   TraitIndexedImpl(DeclId)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum ImplBucketKind {
   InherentImplBucket
   TraitImplBucket(DeclId)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct IndexedImplMethod {
   declaration : DeclId
   requirement : DeclId?
   instance : Bool
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct IndexedImpl {
@@ -36,14 +36,14 @@ pub struct IndexedImpl {
   valid : Bool
   coherent : Bool
   specificity : Int
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct ImplBucket {
   kind : ImplBucketKind
   target_head : ImplTargetHead
   implementations : HirSpan
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct IndexedMethodDispatch {
@@ -53,7 +53,7 @@ pub struct IndexedMethodDispatch {
   instance : Bool
   implementation : Int
   method_index : Int
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub struct IndexedTraitMethodDispatch {
@@ -62,7 +62,7 @@ pub struct IndexedTraitMethodDispatch {
   instance : Bool
   implementation : Int
   method_index : Int
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum ImplIndexDiagnostic {
@@ -79,7 +79,7 @@ pub enum ImplIndexDiagnostic {
   TraitMethodParameterTypeMismatch(DeclId, DeclId, Int, UInt64)
   TraitMethodReturnTypeMismatch(DeclId, DeclId, UInt64)
   DuplicateInherentMethod(NameId, DeclId, DeclId, UInt64)
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn ImplIndexDiagnostic::offset(self : ImplIndexDiagnostic) -> UInt64 {
@@ -110,7 +110,7 @@ pub struct ModuleImplIndex {
   method_dispatch : Array[IndexedMethodDispatch]
   trait_method_dispatch : Array[IndexedTraitMethodDispatch]
   diagnostics : Array[ImplIndexDiagnostic]
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub fn ModuleImplIndex::implementation(

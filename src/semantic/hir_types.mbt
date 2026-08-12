@@ -6,7 +6,7 @@ pub type HirTypeId = Int
 pub struct HirSpan {
   start : Int
   length : Int
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn empty_hir_span(at : Int) -> HirSpan {

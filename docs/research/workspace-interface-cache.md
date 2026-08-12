@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented for ordinary non-root workspace modules, including multi-module and self-recursive interface dependency SCCs. The cache supplements the existing standard/dependency interface bundle: dependencies are resolved in deterministic SCC order, then each eligible workspace module is looked up immediately before interface freezing. Executable body collection, body inference, lowering, linking, validation, and encoding still run normally.
+Implemented for ordinary non-root workspace modules, including multi-module and self-recursive interface dependency SCCs. The cache supplements the existing standard/dependency interface bundle: dependencies are resolved in deterministic SCC order, then each eligible workspace module is looked up immediately before interface freezing. Executable body collection still runs normally; body inference may now be reused by the independently versioned module-body cache, while lowering, linking, validation, and encoding still run normally.
 
 ## Artifact identity
 
@@ -70,6 +70,7 @@ Permanent validation covers:
 
 ## Remaining work
 
-- Cache body inference, layouts, and WasmGC fragments under independently versioned schemas.
+- Refine module-level body inference reuse into declaration/lambda jobs after exact module-value, capture, and evidence dependencies are fingerprinted.
+- Cache layouts and WasmGC fragments under independently versioned schemas.
 - Schedule independent SCC/body jobs in parallel and merge outputs deterministically.
 - Add allocation and peak-memory measurements to cache benchmarks.

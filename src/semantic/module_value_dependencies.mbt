@@ -5,7 +5,7 @@ pub struct ModuleValueDependencies {
   dependency_declarations : Array[DeclId]
   sccs : Array[HirSpan]
   scc_declarations : Array[DeclId]
-} derive(Eq, Debug)
+} derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 fn module_let_indices_by_declaration(collected : CollectedModule) -> Array[Int] {

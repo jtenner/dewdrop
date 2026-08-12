@@ -411,6 +411,59 @@ fn cache_write_interface(
 }
 
 ///|
+/// Hashes the exact imported identity/evidence structure consumed by body
+/// inference while deliberately excluding source locations. Public semantic
+/// fingerprints remain ID-independent; this companion fingerprint preserves the
+/// concrete IDs stored in inferred call/evidence arenas without invalidating on
+/// private body-only offset changes.
+pub fn frozen_interface_body_evidence_fingerprint(
+  interface_ : FrozenModuleInterface,
+) -> Result[String, String] {
+  let declarations : Array[FrozenInterfaceDeclaration] = []
+  for declaration in interface_.declarations {
+    declarations.push({ ..declaration, location: { file: 0UL, offset: 0UL } })
+  }
+  let fields : Array[FrozenInterfaceField] = []
+  for field in interface_.fields {
+    fields.push({ ..field, location: { file: 0UL, offset: 0UL } })
+  }
+  let variants : Array[FrozenInterfaceVariant] = []
+  for variant in interface_.variants {
+    variants.push({ ..variant, location: { file: 0UL, offset: 0UL } })
+  }
+  let callables : Array[FrozenInterfaceCallable] = []
+  for callable in interface_.callables {
+    callables.push({ ..callable, location: { file: 0UL, offset: 0UL } })
+  }
+  let parameters : Array[FrozenInterfaceParameter] = []
+  for parameter in interface_.parameters {
+    parameters.push({ ..parameter, location: { file: 0UL, offset: 0UL } })
+  }
+  let implementations : Array[FrozenInterfaceImplementation] = []
+  for implementation in interface_.implementations {
+    implementations.push({
+      ..implementation,
+      location: { file: 0UL, offset: 0UL },
+    })
+  }
+  let normalized : FrozenModuleInterface = {
+    ..interface_,
+    declarations,
+    fields,
+    variants,
+    callables,
+    parameters,
+    implementations,
+  }
+  let output = Buffer()
+  output.write_bytes(b"DEW_BODY_EVIDENCE_INTERFACE_V1\x00")
+  match cache_write_interface(output, normalized) {
+    Err(error) => Err(error)
+    Ok(_) => Ok(@crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes())))
+  }
+}
+
+///|
 /// Serializes diagnostics-free frozen interfaces into a deterministic,
 /// versioned compiler artifact. The format is private to the matching compiler
 /// ABI and is never a language-level interchange format.
