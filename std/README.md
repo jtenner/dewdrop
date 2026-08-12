@@ -174,7 +174,7 @@ open dew.std.i16x2
 open dew.std.u16x2
 ```
 
-The package driver loads requested lane files from the selected on-disk `dew.std` package. Generated lane byte tables remain portable bootstrap providers selected only by `--bootstrap-std` or compiler-only APIs. Diagnostics-free standard frozen interfaces are cached persistently by exact selected source content under `.dew-cache/interfaces`; executable bodies and later lowering artifacts are still analyzed normally.
+The package driver loads requested lane files from the selected on-disk `dew.std` package. Generated lane byte tables remain portable bootstrap providers selected only by `--bootstrap-std` or compiler-only APIs. Diagnostics-free standard frozen interfaces are cached persistently by exact selected source content under `.dew/cache/interfaces`; executable bodies and later lowering artifacts are still analyzed normally.
 
 Physical carriers are:
 

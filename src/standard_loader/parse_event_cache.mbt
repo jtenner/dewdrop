@@ -67,7 +67,7 @@ fn parse_event_cache_key_digest(
 
 ///|
 fn parse_event_cache_root() -> String {
-  @sys.get_env_var("DEW_CACHE_DIR").unwrap_or(".dew-cache")
+  @sys.get_env_var("DEW_CACHE_DIR").unwrap_or(".dew/cache")
 }
 
 ///|
@@ -98,6 +98,17 @@ fn ensure_parse_event_cache_directory(path : String) -> Result[Unit, String] {
       return Err("cannot create parse-event cache directory \{path}: \{error}")
   }
   Ok(())
+}
+
+///|
+fn ensure_parse_event_cache_root(path : String) -> Result[Unit, String] {
+  if path == ".dew/cache" {
+    match ensure_parse_event_cache_directory(".dew") {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+  }
+  ensure_parse_event_cache_directory(path)
 }
 
 ///|
@@ -152,7 +163,7 @@ fn store_parse_event_cache(
     Err(error) => return Err(error)
   }
   let root = parse_event_cache_root()
-  match ensure_parse_event_cache_directory(root) {
+  match ensure_parse_event_cache_root(root) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }

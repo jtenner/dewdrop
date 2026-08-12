@@ -28,7 +28,7 @@ The owner path distinguishes identical logical filenames in different workspace 
 Entries live at:
 
 ```text
-.dew-cache/parse-events/v1-<key>.dpe
+.dew/cache/parse-events/v1-<key>.dpe
 ```
 
 The envelope is:

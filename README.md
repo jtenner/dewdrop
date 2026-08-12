@@ -281,7 +281,7 @@ Run that file with the included host:
 node tools/dew-run.mjs hello.wasm
 ```
 
-This separates compilation from execution. It is useful when testing a different runtime or embedding the module in another host program. Successful Wasm, HIR, and lowering builds are stored as verified content-addressed entries under `.dew-cache/builds/`; an exact repeated request can restore the output without invoking the compiler. Compilation also stores checksummed per-file parser-event artifacts under `.dew-cache/parse-events/`, reused by import scanning and semantic collection. Use `--no-build-cache` to force compilation, `--no-parse-event-cache` to force parsing, and `--cache-report` to report cache status.
+This separates compilation from execution. It is useful when testing a different runtime or embedding the module in another host program. Successful Wasm, HIR, and lowering builds are stored as verified content-addressed entries under `.dew/cache/builds/`; an exact repeated request can restore the output without invoking the compiler. Compilation also stores checksummed per-file parser-event artifacts under `.dew/cache/parse-events/`, reused by import scanning and semantic collection. Use `--no-build-cache` to force compilation, `--no-parse-event-cache` to force parsing, and `--cache-report` to report cache status.
 
 ### 8. Inspect the generated WebAssembly text
 
@@ -604,7 +604,7 @@ From the package directory, invoke the compiler without listing source files:
 /path/to/dewdrop/tools/dew test
 ```
 
-If the package has dependencies, `dew.json` records requested dependency versions while `dew.lock` records exact resolved versions, sources, materialized paths, SHA-256 integrity, and expected interface fingerprints. A successful source-backed resolution publishes a verified content-addressed capsule under `.dew-cache/packages/`; if that locked dependency tree is later removed, the CLI can atomically restore it from the capsule and produce byte-identical Wasm. Registry lookup and first-time network installation remain roadmap work.
+If the package has dependencies, `dew.json` records requested dependency versions while `dew.lock` records exact resolved versions, sources, materialized paths, SHA-256 integrity, and expected interface fingerprints. A successful source-backed resolution publishes a verified content-addressed capsule under `.dew/cache/packages/`; if that locked dependency tree is later removed, the CLI can atomically restore it from the capsule and produce byte-identical Wasm. Registry lookup and first-time network installation remain roadmap work.
 
 You can compute a package's canonical integrity value with:
 
@@ -731,7 +731,7 @@ tools/dew clean
 tools/dew clean --dry-run
 ```
 
-Removes the configured `.dew-cache` build, parse-event, interface, and package artifacts. `--dry-run` prints the selected cache path without changing it.
+Removes the configured `.dew/cache` build, parse-event, interface, and package artifacts while leaving the parent `.dew` metadata directory intact. `--dry-run` prints the selected cache path without changing it.
 
 ### Emit compiler representations
 

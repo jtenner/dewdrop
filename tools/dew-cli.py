@@ -218,9 +218,13 @@ def _conventional_source_paths(
     package_root = package.path.parent
     source_root = package_root / "src"
     if source_root.is_dir():
-        candidates = sorted(source_root.rglob("*.dew"))
+        candidates = sorted(
+            source for source in source_root.rglob("*.dew") if source.is_file()
+        )
     else:
-        candidates = sorted(package_root.glob("*.dew"))
+        candidates = sorted(
+            source for source in package_root.glob("*.dew") if source.is_file()
+        )
     hash_files: list[tuple[str, Path]] = []
     compile_files: list[str] = []
     for source in candidates:
@@ -286,7 +290,7 @@ def _package_artifact_key(lock: LockedPackage) -> str:
 
 
 def _configured_cache_path() -> Path:
-    configured = Path(os.environ.get("DEW_CACHE_DIR", ".dew-cache"))
+    configured = Path(os.environ.get("DEW_CACHE_DIR", ".dew/cache"))
     return configured if configured.is_absolute() else ROOT / configured
 
 

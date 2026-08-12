@@ -2,7 +2,7 @@
 
 Date: 2026-08-11
 
-`dew clean` removes the complete configured Dew cache, including frozen standard/dependency interfaces and installed package capsules. The default target is `.dew-cache` under the Dewdrop root; `DEW_CACHE_DIR` selects an alternative.
+`dew clean` removes the complete configured Dew cache, including frozen standard/dependency interfaces and installed package capsules. The default target is `.dew/cache` under the Dewdrop root; `DEW_CACHE_DIR` selects an alternative. Cleaning the default cache leaves the parent `.dew` metadata directory intact.
 
 `dew clean --dry-run` reports the exact path without changing it. Repeated clean operations are idempotent and report an already-clean cache. Unknown or duplicate options fail visibly.
 

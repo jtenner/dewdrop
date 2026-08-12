@@ -47,7 +47,7 @@ V11 uses:
 ```text
 DEW_FROZEN_INTERFACES_V11\0
 DEW_STD_INTERFACE_CACHE_V11\0
-.dew-cache/interfaces/v11-<bundle-fingerprint>.dwi
+.dew/cache/interfaces/v11-<bundle-fingerprint>.dwi
 ```
 
 V10 artifacts are ignored by filename and rejected by payload/envelope magic.

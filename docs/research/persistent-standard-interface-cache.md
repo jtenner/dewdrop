@@ -79,8 +79,8 @@ The payload binds artifact version, exact lock identity/version/source/integrity
 The default locations are:
 
 ```text
-.dew-cache/interfaces/v11-<bundle-fingerprint>.dwi
-.dew-cache/packages/v1-<package-artifact-key>.dpa
+.dew/cache/interfaces/v11-<bundle-fingerprint>.dwi
+.dew/cache/packages/v1-<package-artifact-key>.dpa
 ```
 
 The cache root may be changed with:

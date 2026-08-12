@@ -53,9 +53,9 @@ including `open dew.std.*`, remain available. `dew test` does not
 accept this option because its compiler-owned assertion runtime requires the
 standard test preamble.
 
-The default cache locations are `.dew-cache/interfaces/` for frozen bundles and
-`.dew-cache/packages/` for installed package capsules; `DEW_CACHE_DIR` changes
-the shared root. `--no-interface-cache` or `DEW_INTERFACE_CACHE=0` disables
+The default cache locations are `.dew/cache/interfaces/` for frozen bundles and
+`.dew/cache/packages/` for installed package capsules; `DEW_CACHE_DIR` changes
+the shared cache root. `--no-interface-cache` or `DEW_INTERFACE_CACHE=0` disables
 frozen-interface reuse, and
 `--cache-report` prints `miss`, `hit`, or `disabled`. Keys are SHA-256 hashes of
 the exact ordered selected standard logical paths and source bytes plus a

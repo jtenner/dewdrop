@@ -92,7 +92,7 @@ fn interface_bundle_module_is_cacheable(
 
 ///|
 fn interface_cache_root() -> String {
-  @sys.get_env_var("DEW_CACHE_DIR").unwrap_or(".dew-cache")
+  @sys.get_env_var("DEW_CACHE_DIR").unwrap_or(".dew/cache")
 }
 
 ///|
@@ -121,6 +121,17 @@ fn ensure_cache_directory(path : String) -> Result[Unit, String] {
       return Err("cannot create interface cache directory \{path}: \{error}")
   }
   Ok(())
+}
+
+///|
+fn ensure_interface_cache_root(path : String) -> Result[Unit, String] {
+  if path == ".dew/cache" {
+    match ensure_cache_directory(".dew") {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+  }
+  ensure_cache_directory(path)
 }
 
 ///|
@@ -223,7 +234,7 @@ pub fn store_interface_bundle(
       return Err("cannot serialize frozen-interface cache: \{error}")
   }
   let root = interface_cache_root()
-  match ensure_cache_directory(root) {
+  match ensure_interface_cache_root(root) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }

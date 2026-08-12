@@ -2,7 +2,7 @@
 
 Date: 2026-08-11
 
-`dew build` now publishes successful Wasm, HIR, and lowering outputs into `.dew-cache/builds/` and restores them on an exact subsequent request without invoking the native Dew compiler. `--no-build-cache` forces ordinary compilation. `--cache-report` reports the deterministic output-cache key and whether the request hit or missed.
+`dew build` now publishes successful Wasm, HIR, and lowering outputs into `.dew/cache/builds/` and restores them on an exact subsequent request without invoking the native Dew compiler. `--no-build-cache` forces ordinary compilation. `--cache-report` reports the deterministic output-cache key and whether the request hit or missed.
 
 The SHA-256 key commits to normalized compiler arguments excluding only the destination path and report flag, every explicit Dew source payload, custom standard-root Dew sources, dependency-interface environment state, and the Dew compiler/standard-library/workspace-dependency source trees. Compiler-source content hashes are memoized only while the exact sorted path, size, modification-time, and change-time manifest remains unchanged. Consequently, changing source, compiler, generated standard source, standard root, module graph, emit mode, ABI expectation, or relevant package environment invalidates the entry. Different output destinations share one artifact.
 

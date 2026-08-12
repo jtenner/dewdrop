@@ -90,6 +90,7 @@ class VersionedManifestTests(unittest.TestCase):
             with mock.patch.object(dew_cli, "ROOT", root):
                 dependency, integrity = self.package(root)
                 manifest = self.root_package(root, dependency, integrity)
+                (root / ".dew" / "cache").mkdir(parents=True)
                 resolved_root, modules, dependency_key, interfaces = dew_cli.load_manifest(manifest)
                 self.assertEqual(resolved_root, "fixture.application")
                 self.assertEqual(
@@ -112,7 +113,7 @@ class VersionedManifestTests(unittest.TestCase):
                 dependency, integrity = self.package(root)
                 manifest = self.root_package(root, dependency, integrity)
                 first = dew_cli.load_manifest(manifest)
-                artifacts = list((root / ".dew-cache" / "packages").glob("v1-*.dpa"))
+                artifacts = list((root / ".dew" / "cache" / "packages").glob("v1-*.dpa"))
                 self.assertEqual(len(artifacts), 1)
                 shutil.rmtree(dependency.parent)
                 second = dew_cli.load_manifest(manifest)
@@ -127,7 +128,7 @@ class VersionedManifestTests(unittest.TestCase):
                 dependency, integrity = self.package(root)
                 manifest = self.root_package(root, dependency, integrity)
                 dew_cli.load_manifest(manifest)
-                artifact = next((root / ".dew-cache" / "packages").glob("v1-*.dpa"))
+                artifact = next((root / ".dew" / "cache" / "packages").glob("v1-*.dpa"))
                 artifact.write_bytes(b"corrupt")
                 shutil.rmtree(dependency.parent)
                 with self.assertRaisesRegex(
@@ -475,6 +476,16 @@ class BuildOutputCacheTests(unittest.TestCase):
 
 
 class CleanCommandTests(unittest.TestCase):
+    def test_default_cache_is_nested_under_dew_metadata(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            with mock.patch.object(dew_cli, "ROOT", root), mock.patch.dict(
+                os.environ, {}, clear=True
+            ):
+                self.assertEqual(
+                    dew_cli._configured_cache_path(), root / ".dew" / "cache"
+                )
+
     def test_clean_removes_configured_cache(self) -> None:
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
             root = Path(temporary)

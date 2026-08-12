@@ -1,5 +1,6 @@
 _build/
 .dew-cache/
+.dew/cache/
 .tmp/
 target/
 .mooncakes/
