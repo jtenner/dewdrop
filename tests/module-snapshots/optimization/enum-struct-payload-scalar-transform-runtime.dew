@@ -1,0 +1,24 @@
+enum Record {
+  Some {
+    left: I32
+    right: I32
+  }
+  None
+}
+
+fn transformed(left: I32, right: I32) -> I32 {
+  match (Record::Some {
+    left: left
+    right: right
+  }) {
+    Record::Some {
+      left
+      right
+    } => -right + 1
+    Record::None => 0
+  }
+}
+
+pub fn main() -> I32 {
+  transformed(1, -41)
+}

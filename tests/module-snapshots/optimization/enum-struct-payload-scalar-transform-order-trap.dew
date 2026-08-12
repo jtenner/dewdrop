@@ -1,0 +1,28 @@
+enum Record {
+  Some {
+    left: I32
+    right: I32
+  }
+  None
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  match (Record::Some {
+    left: trap_first()
+    right: trap_second()
+  }) {
+    Record::Some {
+      left
+      right
+    } => -right + 1
+    Record::None => 0
+  }
+}
