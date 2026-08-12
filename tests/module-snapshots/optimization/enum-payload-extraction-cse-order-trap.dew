@@ -1,0 +1,24 @@
+enum Maybe {
+  Some(I32, I32)
+  None
+}
+
+fn retain(value: Maybe) -> Maybe {
+  value
+}
+
+fn trap_first() -> I32 {
+  unreachable()
+}
+
+fn trap_second() -> I32 {
+  1 / 0
+}
+
+pub fn main() -> I32 {
+  match retain(Maybe::Some(trap_first(), trap_second())) {
+    Maybe::Some(first, second) if first > 0 => second + 1
+    Maybe::Some(first, second) => second
+    Maybe::None => 0
+  }
+}

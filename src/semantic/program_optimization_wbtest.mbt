@@ -739,6 +739,92 @@ test "payload-dependent pure guards collapse identical payload arms" {
 }
 
 ///|
+test "retained variants share guarded payload extraction" {
+  let program = collect_program_manifest(
+    22844UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Maybe {\n  Some(I32, I32)\n  None\n}\nfn retain(value: Maybe) -> Maybe {\n  value\n}\nfn guarded(first: I32, second: I32) -> I32 {\n  match retain(Maybe::Some(first, second)) {\n    Maybe::Some(left, right) if left > 0 => right + 1\n    Maybe::Some(left, right) => right\n    Maybe::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(1, 20) + guarded(0, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let guarded = collected.lookup_value("guarded").unwrap()
+  let body = collected.body_of(guarded).unwrap()
+  let mut selected_arms = -1
+  let mut selected_first_arm = -1
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedMatchExpression(_, arms) => {
+        selected_arms = arms.length
+        selected_first_arm = optimized.modules[0].arm_children[arms.start]
+      }
+      _ => ()
+    }
+  }
+  assert_eq(selected_arms, 2)
+  assert_true(selected_first_arm >= 0)
+  assert_eq(
+    optimized.modules[0].pattern_arms[selected_first_arm].guard_condition,
+    -1,
+  )
+  assert_true(
+    optimized.modules[0].expressions[optimized.modules[0].pattern_arms[selected_first_arm].body].kind
+    is PlannedIfExpression(_, _, _),
+  )
+}
+
+///|
+test "retained struct variants share guarded field extraction" {
+  let program = collect_program_manifest(
+    22845UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn retain(value: Record) -> Record {\n  value\n}\nfn guarded(left: I32, right: I32) -> I32 {\n  match retain(Record::Some {\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } if left > 0 => right + 1\n    Record::Some {\n      left\n      right\n    } => right\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(1, 20) + guarded(0, 22)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let guarded = collected.lookup_value("guarded").unwrap()
+  let body = collected.body_of(guarded).unwrap()
+  let mut selected_arms = -1
+  let mut selected_first_arm = -1
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedMatchExpression(_, arms) => {
+        selected_arms = arms.length
+        selected_first_arm = optimized.modules[0].arm_children[arms.start]
+      }
+      _ => ()
+    }
+  }
+  assert_eq(selected_arms, 2)
+  assert_true(selected_first_arm >= 0)
+  assert_eq(
+    optimized.modules[0].pattern_arms[selected_first_arm].guard_condition,
+    -1,
+  )
+  assert_true(
+    optimized.modules[0].expressions[optimized.modules[0].pattern_arms[selected_first_arm].body].kind
+    is PlannedIfExpression(_, _, _),
+  )
+}
+
+///|
 test "nonconstant payload guards retain conditional scalar results" {
   let program = collect_program_manifest(
     22841UL,

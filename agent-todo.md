@@ -13,7 +13,7 @@
 
 ## Optimization
 
-- [ ] Add deeper enum payload-load/extraction CSE and safe nested-alternative extraction sharing.
+- [ ] Extend retained enum payload extraction sharing to safe nested and alternative-pattern paths.
 - [ ] Model local live ranges and interference across branches, loops, and joins.
 - [ ] Evaluate shared reference/generic alias coalescing through that model.
 - [ ] Add tail-position branch optimization.

@@ -2493,7 +2493,9 @@ fn prepare_program_optimization_mutation(
       blocks: module_.blocks.copy(),
       expressions: module_.expressions.copy(),
       block_items: module_.block_items.copy(),
+      pattern_arms: module_.pattern_arms.copy(),
       expression_children: module_.expression_children.copy(),
+      arm_children: module_.arm_children.copy(),
       call_type_arguments: module_.call_type_arguments.copy(),
       call_type_argument_shapes: module_.call_type_argument_shapes.copy(),
       expression_evidence: evidence,
@@ -5737,6 +5739,368 @@ fn scalar_replace_program_variant_payload_reads(
 }
 
 ///|
+fn program_map_direct_variant_pattern_bindings(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  canonical_pattern : PatternId,
+  candidate_pattern : PatternId,
+  variant : VariantId,
+  binding_targets : Array[LocalId],
+) -> Bool {
+  let canonical_root = program_pattern_for_variant(
+    module_, canonical_pattern, variant, 0,
+  )
+  let candidate_root = program_pattern_for_variant(
+    module_, candidate_pattern, variant, 0,
+  )
+  if canonical_root < 0 ||
+    candidate_root < 0 ||
+    canonical_root != canonical_pattern ||
+    candidate_root != candidate_pattern {
+    return false
+  }
+  match
+    (
+      module_.patterns[canonical_root].source,
+      module_.patterns[candidate_root].source,
+    ) {
+    (
+      HirTuplePattern(_, canonical_children, _),
+      HirTuplePattern(_, candidate_children, _),
+    ) => {
+      if canonical_children.length != candidate_children.length ||
+        canonical_children.start < 0 ||
+        canonical_children.start + canonical_children.length >
+        module_.pattern_children.length() ||
+        candidate_children.start < 0 ||
+        candidate_children.start + candidate_children.length >
+        module_.pattern_children.length() {
+        return false
+      }
+      for index in 0..<candidate_children.length {
+        let canonical = module_.pattern_children[canonical_children.start +
+          index]
+        let candidate = module_.pattern_children[candidate_children.start +
+          index]
+        if canonical < 0 ||
+          canonical >= module_.patterns.length() ||
+          candidate < 0 ||
+          candidate >= module_.patterns.length() {
+          return false
+        }
+        let source_local = match module_.patterns[candidate].reference {
+          PatternBindingReference(local_id) => local_id
+          _ =>
+            match module_.patterns[candidate].source {
+              HirWildcardPattern(_) => continue
+              _ => return false
+            }
+        }
+        let target_local = match module_.patterns[canonical].reference {
+          PatternBindingReference(local_id) => local_id
+          _ => return false
+        }
+        if source_local < 0 ||
+          source_local >= body.locals.length ||
+          target_local < 0 ||
+          target_local >= body.locals.length ||
+          program_cse_local_is_captured(module_, body, source_local) ||
+          program_cse_local_is_captured(module_, body, target_local) ||
+          module_.locals[body.locals.start + source_local].type_ !=
+          module_.locals[body.locals.start + target_local].type_ ||
+          module_.locals[body.locals.start + source_local].shape !=
+          module_.locals[body.locals.start + target_local].shape ||
+          module_.locals[body.locals.start + source_local].nominal !=
+          module_.locals[body.locals.start + target_local].nominal ||
+          (
+            binding_targets[source_local] >= 0 &&
+            binding_targets[source_local] != target_local
+          ) {
+          return false
+        }
+        binding_targets[source_local] = target_local
+      }
+      true
+    }
+    (
+      HirStructPattern(_, canonical_fields, _, _, _),
+      HirStructPattern(_, candidate_fields, _, _, _),
+    ) => {
+      if canonical_fields.start < 0 ||
+        canonical_fields.start + canonical_fields.length >
+        module_.pattern_fields.length() ||
+        candidate_fields.start < 0 ||
+        candidate_fields.start + candidate_fields.length >
+        module_.pattern_fields.length() {
+        return false
+      }
+      for index in 0..<candidate_fields.length {
+        let candidate = module_.pattern_fields[candidate_fields.start + index]
+        if candidate.pattern < 0 ||
+          candidate.pattern >= module_.patterns.length() {
+          return false
+        }
+        let source_local = match module_.patterns[candidate.pattern].reference {
+          PatternBindingReference(local_id) => local_id
+          _ =>
+            match module_.patterns[candidate.pattern].source {
+              HirWildcardPattern(_) => continue
+              _ => return false
+            }
+        }
+        let mut target_local = -1
+        for canonical_index in 0..<canonical_fields.length {
+          let canonical = module_.pattern_fields[canonical_fields.start +
+            canonical_index]
+          if canonical.name != candidate.name ||
+            canonical.pattern < 0 ||
+            canonical.pattern >= module_.patterns.length() {
+            continue
+          }
+          match module_.patterns[canonical.pattern].reference {
+            PatternBindingReference(local_id) => {
+              if target_local >= 0 {
+                return false
+              }
+              target_local = local_id
+            }
+            _ => ()
+          }
+        }
+        if source_local < 0 ||
+          source_local >= body.locals.length ||
+          target_local < 0 ||
+          target_local >= body.locals.length ||
+          program_cse_local_is_captured(module_, body, source_local) ||
+          program_cse_local_is_captured(module_, body, target_local) ||
+          module_.locals[body.locals.start + source_local].type_ !=
+          module_.locals[body.locals.start + target_local].type_ ||
+          module_.locals[body.locals.start + source_local].shape !=
+          module_.locals[body.locals.start + target_local].shape ||
+          module_.locals[body.locals.start + source_local].nominal !=
+          module_.locals[body.locals.start + target_local].nominal ||
+          (
+            binding_targets[source_local] >= 0 &&
+            binding_targets[source_local] != target_local
+          ) {
+          return false
+        }
+        binding_targets[source_local] = target_local
+      }
+      true
+    }
+    _ => false
+  }
+}
+
+///|
+fn factor_program_variant_payload_extractions(
+  modules : Array[PlannedModuleLowering],
+) -> Unit {
+  for module_ in modules {
+    if module_.pattern_arms.length() != module_.arm_children.length() {
+      continue
+    }
+    let expression_limit = module_.expressions.length()
+    for expression in 0..<expression_limit {
+      let arms = match module_.expressions[expression].kind {
+        PlannedMatchExpression(_, arms) => arms
+        _ => continue
+      }
+      if arms.length < 2 ||
+        arms.start < 0 ||
+        arms.start + arms.length > module_.arm_children.length() {
+        continue
+      }
+      let body = match program_body_containing_expression(module_, expression) {
+        Some(body) => body
+        None => continue
+      }
+      let mut first_offset = 0
+      while first_offset + 1 < arms.length {
+        let first_arm_id = module_.arm_children[arms.start + first_offset]
+        if first_arm_id < 0 || first_arm_id >= module_.pattern_arms.length() {
+          break
+        }
+        let first = module_.pattern_arms[first_arm_id]
+        let variant = match
+          module_.patterns[first.pattern].selected_constructor {
+          VariantInferredPatternConstructor(variant, _) => variant
+          _ => {
+            first_offset += 1
+            continue
+          }
+        }
+        if first.guard_condition < 0 ||
+          first.guard_condition >= module_.expressions.length() ||
+          module_.expressions[first.guard_condition].kind is PlannedBoolConst(_) ||
+          !program_nonconstant_guard_is_discardable(
+            module_,
+            first.guard_condition,
+          ) {
+          first_offset += 1
+          continue
+        }
+        let selected_arms : Array[PatternArmId] = [first_arm_id]
+        let binding_targets : Array[LocalId] = Array::make(
+          body.locals.length,
+          -1,
+        )
+        let mut terminal_offset = -1
+        let mut candidate_offset = first_offset + 1
+        while candidate_offset < arms.length {
+          let candidate_id = module_.arm_children[arms.start + candidate_offset]
+          if candidate_id < 0 || candidate_id >= module_.pattern_arms.length() {
+            break
+          }
+          let candidate = module_.pattern_arms[candidate_id]
+          if program_pattern_variant_relation(
+              module_,
+              candidate.pattern,
+              variant,
+              0,
+            ) !=
+            1 ||
+            candidate.body < 0 ||
+            candidate.body >= module_.expressions.length() ||
+            module_.expressions[candidate.body].type_ !=
+            module_.expressions[expression].type_ ||
+            module_.expressions[candidate.body].shape !=
+            module_.expressions[expression].shape ||
+            !(module_.expressions[candidate.body].trait_object_coercion
+            is NoInferredTraitObjectCoercion) {
+            break
+          }
+          let guard_state = if candidate.guard_condition < 0 {
+            1
+          } else if candidate.guard_condition >= module_.expressions.length() {
+            -2
+          } else {
+            match module_.expressions[candidate.guard_condition].kind {
+              PlannedBoolConst(false) => 0
+              PlannedBoolConst(true) => 1
+              _ =>
+                if program_nonconstant_guard_is_discardable(
+                    module_,
+                    candidate.guard_condition,
+                  ) {
+                  -1
+                } else {
+                  -2
+                }
+            }
+          }
+          if guard_state == -2 {
+            break
+          }
+          if guard_state == 0 {
+            candidate_offset += 1
+            continue
+          }
+          if !program_map_direct_variant_pattern_bindings(
+              module_,
+              body,
+              first.pattern,
+              candidate.pattern,
+              variant,
+              binding_targets,
+            ) {
+            break
+          }
+          selected_arms.push(candidate_id)
+          if guard_state == 1 {
+            terminal_offset = candidate_offset
+            break
+          }
+          candidate_offset += 1
+        }
+        if terminal_offset < 0 || selected_arms.length() < 2 {
+          first_offset += 1
+          continue
+        }
+        for
+          candidate in body.expressions.start..<(body.expressions.start +
+          body.expressions.length) {
+          match module_.expressions[candidate].kind {
+            PlannedLocalGet(local_id) if local_id >= 0 &&
+              local_id < binding_targets.length() &&
+              binding_targets[local_id] >= 0 =>
+              module_.expressions[candidate] = {
+                ..module_.expressions[candidate],
+                kind: PlannedLocalGet(binding_targets[local_id]),
+              }
+            _ => ()
+          }
+        }
+        let terminal = module_.pattern_arms[selected_arms[selected_arms.length() -
+          1]]
+        let mut result = terminal.body
+        let mut selected_index = selected_arms.length() - 1
+        while selected_index > 0 {
+          selected_index -= 1
+          let arm = module_.pattern_arms[selected_arms[selected_index]]
+          let then_item = module_.block_items.length()
+          module_.block_items.push({
+            kind: PlannedExpressionItem(arm.body),
+            offset: arm.offset,
+          })
+          let then_block = module_.blocks.length()
+          module_.blocks.push({
+            items: { start: then_item, length: 1 },
+            flow: arm.flow,
+            offset: arm.offset,
+          })
+          let conditional = module_.expressions.length()
+          module_.expressions.push({
+            ..module_.expressions[expression],
+            kind: PlannedIfExpression(arm.guard_condition, then_block, result),
+            offset: arm.offset,
+          })
+          result = conditional
+        }
+        let new_arms_start = module_.pattern_arms.length()
+        for index in 0..<first_offset {
+          let copied = module_.pattern_arms[module_.arm_children[arms.start +
+            index]]
+          let copied_id = module_.pattern_arms.length()
+          module_.pattern_arms.push(copied)
+          module_.arm_children.push(copied_id)
+        }
+        let combined_arm = module_.pattern_arms.length()
+        module_.pattern_arms.push({
+          ..first,
+          guard_condition: -1,
+          body: result,
+          flow: module_.expressions[expression].flow,
+        })
+        module_.arm_children.push(combined_arm)
+        for index in (terminal_offset + 1)..<arms.length {
+          let copied = module_.pattern_arms[module_.arm_children[arms.start +
+            index]]
+          let copied_id = module_.pattern_arms.length()
+          module_.pattern_arms.push(copied)
+          module_.arm_children.push(copied_id)
+        }
+        module_.expressions[expression] = {
+          ..module_.expressions[expression],
+          kind: PlannedMatchExpression(
+            match module_.expressions[expression].kind {
+              PlannedMatchExpression(scrutinee, _) => scrutinee
+              _ => -1
+            },
+            {
+              start: new_arms_start,
+              length: first_offset + 1 + arms.length - terminal_offset - 1,
+            },
+          ),
+        }
+        break
+      }
+    }
+  }
+}
+
+///|
 fn mark_tail_recursive_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -5900,6 +6264,7 @@ pub fn optimize_program_lowering(
   cse_program_field_extractions(modules)
   scalar_replace_program_struct_field_reads(modules, effects)
   scalar_replace_program_variant_payload_reads(modules)
+  factor_program_variant_payload_extractions(modules)
   mark_program_tail_recursion(modules)
   {
     graph: lowering.graph,
