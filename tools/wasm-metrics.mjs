@@ -63,6 +63,9 @@ const metrics = {
   return_call_refs: count(/^\s*return_call_ref\b/gm),
   struct_news: count(/^\s*struct\.new\b/gm),
   array_news: count(/^\s*array\.new(?:_default|_fixed|_data|_elem)?\b/gm),
+  allocation_sites:
+    count(/^\s*struct\.new\b/gm) +
+    count(/^\s*array\.new(?:_default|_fixed|_data|_elem)?\b/gm),
   ref_casts: count(/^\s*ref\.cast\b/gm),
   ref_tests: count(/^\s*ref\.test\b/gm),
   local_gets: count(/^\s*local\.get\b/gm),
