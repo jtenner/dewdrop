@@ -117,3 +117,6 @@ The remaining medium/large gap is now dominated by exact duplicate policy and
 generic recursive materialization rather than UTF-8 validation or token copying.
 The next order-of-magnitude improvement requires typed decoding or indexed lazy
 access, not another unmeasured scanner micro-optimization.
+
+The follow-up exhaustive implementations and measurements are recorded in
+[`json-exhaustive-performance-experiments.md`](json-exhaustive-performance-experiments.md).

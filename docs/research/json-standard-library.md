@@ -170,3 +170,6 @@ are recorded in
 The final experiment matrix, retained wins, rejected prototypes, and current
 json-as ratios are recorded in
 [`json-final-performance-experiments.md`](json-final-performance-experiments.md).
+The subsequent typed-decoding, structural-index, exact-Set, visitor, backend, and
+instrumentation experiments are recorded in
+[`json-exhaustive-performance-experiments.md`](json-exhaustive-performance-experiments.md).

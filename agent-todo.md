@@ -81,7 +81,7 @@
 
 ## Standard library
 
-- [ ] Design generated typed JSON decoding and a public event engine; specialized allocation-free value validation, raw documents, and canonical String/number provenance are complete, while recursive generic visitors remain blocked by backend linkage.
+- [ ] Design a one-pass generated typed JSON decoder and public cursor/event core; slice-reparse typed and raw-index prototypes were measured and rejected, and minimal recursive generic visitors now link, so isolate the remaining JSON-specific callback/capture case before changing the compiler.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.
