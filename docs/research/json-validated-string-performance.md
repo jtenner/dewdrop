@@ -119,13 +119,52 @@ Negative values are faster. The small checked-Bytes difference is noise; medium
 and large parsing improve about 2.8-3.4%. Generated benchmark modules are 625
 bytes smaller for every fixture.
 
+## Writer-state follow-up
+
+The writer previously allocated three growable arrays on every serialization:
+one scalar error-code cell and two empty payload arrays for invalid numbers and
+duplicate keys. The retained follow-up replaces them with one fixed error-code
+cell and one fixed String payload cell. The payload is written only for the two
+payload-bearing failures. This removes growable length/capacity metadata and
+success-path push/growth behavior while preserving the first-error, typed-payload,
+byte-limit, depth-limit, and fail-stop contracts.
+
+A five-round paired benchmark with 101 interleaved samples per round measured:
+
+| Fixture | Stringify | Round trip |
+|---|---:|---:|
+| small, 44 B | -4.53% | -0.02% |
+| medium, 1,070 B | -2.82% | -1.32% |
+| large, 5,251 B | -3.53% | -1.84% |
+
+Negative values are faster. The small round-trip result is neutral because parsing
+dominates that combined path. `tools/benchmark-json-writer-state.py` retains the
+broader rejected state experiment: caching every output-length update in a second
+fixed cell regressed small and large serialization despite helping medium, so it
+was not adopted.
+
+## Measured but rejected follow-ups
+
+The following ideas were implemented in isolated standard roots and rejected
+because they did not improve every representative fixture:
+
+- pre-sizing every parsed Array/Object to 4 elements: medium improved about
+  1.2-1.6%, but large parse regressed 0.1-0.3%; capacities 1, 2, 8, and 16 were
+  likewise workload-dependent;
+- pre-sizing every output builder to 256 bytes: small serialization regressed
+  about 3.9% and round trips about 4.4%;
+- fusing scalar terminator scanning with number grammar: small improved 1.5-2.8%,
+  but large parse regressed about 1.0-1.2%;
+- caching writer length in fixed state: medium improved, but small and large
+  serialization regressed roughly 7-8%.
+
+These candidates remain useful profiling evidence, not production changes.
+
 ## Remaining priorities
 
-1. Consolidate writer error and payload state without allocating empty success-
-   path growable arrays.
-2. Measure Array growth and recursive `JsonValue` construction independently.
-3. Fuse number-end discovery and grammar validation where exact diagnostics can
-   remain identical.
-4. Consider opaque validated numbers only as an explicit API change.
-5. Keep lazy/raw documents and generated typed decoding as separate APIs rather
+1. Measure Array growth and recursive `JsonValue` construction independently.
+2. Consider workload-sensitive capacity hints only through an explicit API or a
+   proven general Array policy, not JSON-local guesses.
+3. Consider opaque validated numbers only as an explicit API change.
+4. Keep lazy/raw documents and generated typed decoding as separate APIs rather
    than weakening strict eager `JsonValue`.

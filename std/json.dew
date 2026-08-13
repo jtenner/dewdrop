@@ -72,9 +72,8 @@ struct JsonWriter {
   builder: StringBuilder
   max_depth: U32
   max_bytes: U32
-  error: Array<U32>
-  invalid_numbers: Array<String>
-  duplicate_keys: Array<String>
+  error: FixedArray<U32>
+  error_payload: FixedArray<String>
 }
 
 builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
@@ -920,6 +919,18 @@ fn json_writer_set_error(writer: JsonWriter, code: U32) -> Unit {
   }
 }
 
+fn json_writer_set_payload_error(
+  writer: JsonWriter,
+  code: U32,
+  payload: String,
+) -> Unit {
+  if writer.error.get_unchecked(0u32) == 0u32 {
+    writer.error_payload.set_unchecked(0u32, payload)
+    writer.error.set_unchecked(0u32, code)
+  } else {
+  }
+}
+
 fn json_writer_append_ascii(writer: JsonWriter, byte: U8) -> Unit {
   if writer.error.get_unchecked(0u32) != 0u32 {
   } else if writer.builder.byte_length() >= writer.max_bytes {
@@ -1037,8 +1048,7 @@ fn json_write_value(
         if json_number_is_valid(bytes, 0u32, bytes.byte_length()) {
           json_writer_append_text(writer, number)
         } else {
-          writer.invalid_numbers.push(number)
-          json_writer_set_error(writer, 2u32)
+          json_writer_set_payload_error(writer, 2u32, number)
         }
       }
       JsonValue::String(text) => json_write_string(writer, text)
@@ -1092,8 +1102,7 @@ fn json_write_value(
               json_object_prefix_has_key(members, index, member.key)
             }
             if duplicate {
-              writer.duplicate_keys.push(member.key)
-              json_writer_set_error(writer, 4u32)
+              json_writer_set_payload_error(writer, 4u32, member.key)
             } else {
               if key_shard == 0u32 && bloom_active {
                 key_filter0 = key_filter0.add_hash(key_hash)
@@ -1128,28 +1137,26 @@ pub fn json_stringify_with_limits(
   max_depth: U32,
   max_bytes: U32,
 ) -> Result<String, JsonWriteError> {
-  let error = Array::with_capacity(1u32)
-  error.push(0u32)
+  let error = FixedArray::make(1u32, 0u32)
   let writer = JsonWriter {
     builder: StringBuilder::new()
     max_depth: max_depth
     max_bytes: max_bytes
     error: error
-    invalid_numbers: Array::new()
-    duplicate_keys: Array::new()
+    error_payload: FixedArray::make(1u32, "")
   }
   json_write_value(writer, value, 0u32)
   if error.get_unchecked(0u32) == 1u32 {
     Result::Err(JsonWriteError::DepthLimitExceeded)
   } else if error.get_unchecked(0u32) == 2u32 {
     Result::Err(
-      JsonWriteError::InvalidNumber(writer.invalid_numbers.get_unchecked(0u32)),
+      JsonWriteError::InvalidNumber(writer.error_payload.get_unchecked(0u32)),
     )
   } else if error.get_unchecked(0u32) == 3u32 {
     Result::Err(JsonWriteError::ByteLimitExceeded)
   } else if error.get_unchecked(0u32) == 4u32 {
     Result::Err(
-      JsonWriteError::DuplicateObjectKey(writer.duplicate_keys.get_unchecked(0u32)),
+      JsonWriteError::DuplicateObjectKey(writer.error_payload.get_unchecked(0u32)),
     )
   } else {
     Result::Ok(writer.builder.finish())

@@ -81,7 +81,7 @@
 
 ## Standard library
 
-- [ ] Consolidate JSON parser and writer state, then profile exact-number materialization and validation without weakening `JsonValue::Number(String)`.
+- [ ] Profile exact-number materialization and validation without weakening `JsonValue::Number(String)`; prior fused scanning regressed large documents and remains rejected.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.
