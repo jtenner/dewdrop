@@ -3210,10 +3210,16 @@ fn starshine_body_locals(
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_bucket_scratch_index < 0 {
           map_bucket_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_hash_scratch_index < 0 {
           map_hash_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::i64())
+        }
+        if map_entry_scratch_index < 0 {
           map_entry_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
@@ -3255,10 +3261,16 @@ fn starshine_body_locals(
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_bucket_scratch_index < 0 {
           map_bucket_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_hash_scratch_index < 0 {
           map_hash_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::i64())
+        }
+        if map_entry_scratch_index < 0 {
           map_entry_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
@@ -3284,10 +3296,16 @@ fn starshine_body_locals(
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_bucket_scratch_index < 0 {
           map_bucket_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_hash_scratch_index < 0 {
           map_hash_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::i64())
+        }
+        if map_entry_scratch_index < 0 {
           map_entry_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
@@ -3321,10 +3339,16 @@ fn starshine_body_locals(
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_bucket_scratch_index < 0 {
           map_bucket_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if map_hash_scratch_index < 0 {
           map_hash_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::i64())
+        }
+        if map_entry_scratch_index < 0 {
           map_entry_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }

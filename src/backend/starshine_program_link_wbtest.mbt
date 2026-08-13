@@ -27,6 +27,27 @@ fn backend_program_link_pipeline() -> (
 }
 
 ///|
+test "array scratch allocation does not suppress later Set scratch locals" {
+  let program = @semantic.collect_program_manifest(
+    2396UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"open dew.std.array\nopen dew.std.set\nopen dew.std.string\nfn read_first(values: Array<String>) -> String {\n  values.get_unchecked(0u32)\n}\npub fn run() -> U32 {\n  let values = Array::new()\n  values.push(\"a\")\n  let seen = Set::empty()\n  seen.insert(\"a\")\n  if seen.contains(read_first(values)) {\n    1u32\n  } else {\n    0u32\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(program.diagnostics.length(), 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "wasm intrinsics are imported through an at alias" {
   let program = @semantic.collect_program_manifest(
     2397UL,
