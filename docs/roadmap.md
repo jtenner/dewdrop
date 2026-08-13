@@ -49,12 +49,23 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ## Compiler resource and performance discipline
 
+The measured compiler, collection, text, cache, backend, and JSON baseline is
+fast enough for the first release. Remaining performance work is post-release
+hardening and observability rather than a release gate.
+
+### Post-release performance TODOs
+
 - [ ] Define budgets for source/file/module graph size, nesting/width, alias expansion, inference/unification, trait search, pattern usefulness, specialization/adapter growth, and diagnostic volume.
 - [ ] Diagnose budget exhaustion deterministically without panic, unchecked indexing, partial cache publication, or silent fallback.
-- [ ] Track compilation, validation/encoding, and runtime time separately with warmup and variance reporting.
-- [ ] Track compiler allocations and peak memory separately from wall time.
+- [ ] Add opt-in runtime allocation and phase counters at generic WasmGC aggregate emission points with zero production overhead.
+- [ ] Track compilation, validation/encoding, runtime time, compiler allocations, and peak memory separately with warmup and variance reporting.
 - [ ] Extend whole-build cache measurements to representative external-package and multi-module workloads.
-- [ ] Establish reviewed regression thresholds for hot compiler and generated-program workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements, while cross-engine thresholds remain pending.
+- [ ] Establish reviewed cross-engine regression thresholds for hot compiler and generated-program workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements.
+- [ ] Benchmark Array growth, large reference copying, write barriers, and GC behavior on each supported WasmGC runtime.
+- [ ] Add representative heap, ordered-tree, queue, JSON, and generated typed-decoder performance suites around the retained bulk Array growth path.
+- [ ] Use runtime allocation evidence to evaluate proof-driven constructor/store forwarding, physical nominal propagation, and private `Result` forwarding.
+- [ ] Benchmark thresholded exact-`Set` duplicate tracking only for substantially wider JSON objects; retain Bloom plus exact fallback for ordinary objects.
+- [ ] Measure reusable nested structural JSON indexes only on repeated selective lookup workloads with explicit memory and source-retention contracts.
 - [ ] Audit integer conversions, packed identity limits, and malformed-input-driven array indexing.
 
 ## Modules, imports, packages, and visibility

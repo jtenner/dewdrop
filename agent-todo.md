@@ -20,14 +20,22 @@
 - [ ] Require byte-identical cold, warm, incremental, and parallel output.
 - [ ] Add hundreds-of-files and representative external-package stress workloads.
 
-## Compiler resources and performance
+## Post-release performance work
+
+The current measured baseline is fast enough for the first release. These items
+are follow-up hardening and observability work, not release blockers.
 
 - [ ] Define compiler budgets for graph size, nesting/width, alias expansion, inference, trait search, pattern usefulness, specialization growth, and diagnostic volume.
 - [ ] Diagnose budget exhaustion deterministically without panic or partial cache publication.
-- [ ] Track compile, validation/encoding, and runtime time with warmup and variance.
-- [ ] Track compiler allocations and peak memory.
+- [ ] Add opt-in runtime allocation and phase counters with zero production overhead.
+- [ ] Track compile, validation/encoding, runtime time, compiler allocations, and peak memory with warmup and variance.
 - [ ] Extend cache measurements to external-package and multi-module workloads.
-- [ ] Establish reviewed regression thresholds for hot workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements, but cross-engine thresholds remain pending.
+- [ ] Establish reviewed cross-engine regression thresholds for hot workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements.
+- [ ] Benchmark Array growth, large reference copying, write barriers, and GC behavior on each supported WasmGC runtime.
+- [ ] Add representative heap, ordered-tree, queue, JSON, and generated typed-decoder performance suites.
+- [ ] Use runtime allocation evidence to evaluate proof-driven constructor/store forwarding, physical nominal propagation, and private `Result` forwarding.
+- [ ] Benchmark thresholded exact-`Set` JSON duplicate tracking only for substantially wider objects.
+- [ ] Benchmark reusable nested JSON structural indexes only for repeated selective lookups with explicit ownership and memory contracts.
 - [ ] Audit integer conversions, packed identities, and malformed-input-driven indexing.
 
 ## Modules, imports, packages, and visibility
