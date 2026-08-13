@@ -1,0 +1,8 @@
+import dew.std.wasm.intrinsics as @wasm
+
+pub fn main() -> Unit {
+  let value = @wasm.wasm_string_load_u8x16("0123456789abcdef", 1u32)
+  if @wasm.wasm_u8x16_extract_0(value) == 0u8 {
+  } else {
+  }
+}

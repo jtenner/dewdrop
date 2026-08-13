@@ -23,11 +23,11 @@ The backend name set is extracted from `starshine_code.mbt` and every `starshine
 - two generated aliases collide;
 - the checked-in source or bootstrap mirror is stale.
 
-The first published `i64_trunc_i32` spelling remains as a compatibility alias. The generated module currently contains 1,314 aliases covering 830 distinct backend inline names. Multiple aliases are intentional where typed packed-lane APIs share one physical operation. One added declaration, `wasm_bytes_load_u8x16(Bytes, U32)`, is a bounds-checked WasmGC representation bridge rather than a linear-memory load; it exists so Dew source can apply ordinary SIMD instructions to private GC-backed Bytes without adding domain-specific scanner builtins.
+The first published `i64_trunc_i32` spelling remains as a compatibility alias. The generated module currently contains 1,315 aliases covering 830 distinct backend inline names. Multiple aliases are intentional where typed packed-lane APIs share one physical operation. The added `wasm_bytes_load_u8x16(Bytes, U32)` and `wasm_string_load_u8x16(String, U32)` declarations are bounds-checked WasmGC representation bridges rather than linear-memory loads; they let Dew source apply ordinary SIMD instructions to private GC-backed text storage without adding domain-specific scanner builtins.
 
 ## Validation
 
-`std/tests/04_wasm_intrinsics_test.dew` directly exercises scalar arithmetic, `u32_ctz`, the backend-only comparison, integer truncation, float square root, typed memory, and SIMD through the imported intrinsic module. Text tests separately exercise aligned, unaligned, and bounds-failing GC-backed Bytes SIMD loads.
+`std/tests/04_wasm_intrinsics_test.dew` directly exercises scalar arithmetic, `u32_ctz`, the backend-only comparison, integer truncation, float square root, typed memory, and SIMD through the imported intrinsic module. Text tests separately exercise aligned, unaligned, and bounds-failing GC-backed Bytes and String SIMD loads.
 
 The module snapshots:
 

@@ -116,21 +116,21 @@ semantics.
 
 ## Post-Bloom and serializer measurements
 
-After the four-shard exact Bloom prefilter and index/StringView serializer
-tranches, a fresh run at Dew commit `8f8969d` plus the serializer working tree
-measured:
+After the four-shard exact Bloom prefilter, index/StringView serializer, and
+validated-String parser tranches, a fresh run measured:
 
 ### Deserialization
 
 | Fixture | Dew eager `JsonValue` | json-as `JSON.Obj` | json-as typed struct | Dew / `JSON.Obj` | Dew / typed |
 |---|---:|---:|---:|---:|---:|
-| small | 417.85 ns | 228.37 ns | 80.13 ns | 1.83x | 5.21x |
-| medium | 6.108 us | 727.46 ns | 1.663 us | 8.40x | 3.67x |
-| large | 17.592 us | 2.525 us | 3.297 us | 6.97x | 5.34x |
+| small | 374.62 ns | 229.68 ns | 82.38 ns | 1.63x | 4.55x |
+| medium | 5.196 us | 742.69 ns | 1.691 us | 7.00x | 3.07x |
+| large | 14.935 us | 2.597 us | 3.344 us | 5.75x | 4.47x |
 
-The large dynamic parse ratio improved from 8.70x to 6.97x primarily by removing
-most wide-object duplicate-key scans. Medium remains dominated by eager string
-and tree materialization rather than duplicate lookup.
+The large dynamic parse ratio improved from 8.70x to 5.75x by removing most
+wide-object duplicate scans and then eliminating redundant validation and
+builder work for clean validated strings. Medium remains dominated by eager tree
+and compact string materialization.
 
 ### Serialization
 
@@ -147,23 +147,19 @@ strict eager gap is approximately 4.4-9.1x.
 
 ## Conclusions and next optimization order
 
-1. Add a generic bounds-checked String SIMD load bridge and a String parser path
-   that trusts String's existing UTF-8 invariant. This removes the measured
-   2.4-5.5% validation pass and enables direct clean-span handling.
-2. Add a no-escape string parser path that delays `StringBuilder` allocation and
-   avoids repeated `Bytes -> String` validation. The current fixtures are string
-   heavy and contain no escaped strings, making this the next high-confidence
-   strict-eager target.
-3. Replace parser `Array<U32>` one-cell counters with cheaper fixed/scalar state
+1. Replace parser `Array<U32>` one-cell counters with cheaper fixed/scalar state
    and consolidate writer error/length state.
-4. Profile exact number materialization and serialization revalidation; an
-   opaque validated `JsonNumber` remains a separate API change.
+2. Profile Array growth and recursive `JsonValue` construction independently on
+   string-heavy and aggregate-heavy fixtures.
+3. Fuse number-end discovery and grammar validation where exact diagnostics can
+   remain identical; profile serialization revalidation separately.
+4. Consider an opaque validated `JsonNumber` only as a separate API change.
 5. Add a separate lazy/raw document API if passthrough and selective access are
    desired. Do not silently weaken `JsonValue`'s eager, strict contract.
 6. Consider generated typed decoding only as a distinct API. Its semantics,
    unknown-field policy, duplicate handling, number conversion policy, and code
    size must be explicit.
 
-Direct String SIMD alone is not the main gap: storage wrapping remains nearly
-neutral. Its value is enabling the broader validated-String/no-escape tranche,
-not replacing eager tree construction with a wider scan.
+Direct String SIMD was useful because it enabled the broader no-escape and
+compact-span tranche. It still does not replace eager tree construction or make
+the dynamic/lazy json-as path semantically equivalent.

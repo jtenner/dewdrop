@@ -51,15 +51,17 @@ Whitespace, string-special, and scalar-terminator scanning are implemented in
 handle the final short suffix. This keeps alignment, classification, delimiter
 policy, first-match selection, and scalar fallback visible in Dew.
 
-One narrow representation bridge is compiler-owned:
+Two narrow representation bridges are compiler-owned:
 
 ```dew
 wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16
+wasm_string_load_u8x16(value: String, start: U32) -> U8x16
 ```
 
-It loads sixteen logical bytes from the private GC-backed `Bytes` view and traps
-unless the full chunk is inside that logical view. It handles aligned and
-unaligned backing offsets but performs no JSON-specific classification or scan.
+They load sixteen logical bytes from private GC-backed text views and trap unless
+the full chunk is inside the logical view. They share one generic backend
+emitter, handle aligned and unaligned backing offsets, and perform no
+JSON-specific classification or scan.
 The operation is generated into `dew.std.wasm.intrinsics`; the existing
 `wasm_v128_load(address: U32)` remains a linear-memory operation and is not used
 on GC references.
@@ -144,3 +146,9 @@ existing member prefix rather than a temporary key array, and appends clean text
 as validated `StringView` spans. The paired results and remaining costs are
 recorded in
 [`json-serialization-performance.md`](json-serialization-performance.md).
+
+Validated `String` parsing now uses direct String SIMD, delays builders until an
+escape is found, compactly materializes clean StringView spans, and validates
+Bytes inputs exactly once before a private trusted rewrap. Measurements and
+boundary coverage are recorded in
+[`json-validated-string-performance.md`](json-validated-string-performance.md).

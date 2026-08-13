@@ -62,12 +62,20 @@ EXTRA_DECLARATIONS = [
         target="dew_u32_ctz",
     ),
     IntrinsicDeclaration(
-        source="WasmGC Bytes representation bridge",
+        source="WasmGC text representation bridges",
         name="bytes_load_u8x16",
         alias="wasm_bytes_load_u8x16",
         generics="",
         signature="(value: Bytes, start: U32) -> U8x16",
         target="dew_bytes_load_u8x16",
+    ),
+    IntrinsicDeclaration(
+        source="WasmGC text representation bridges",
+        name="string_load_u8x16",
+        alias="wasm_string_load_u8x16",
+        generics="",
+        signature="(value: String, start: U32) -> U8x16",
+        target="dew_string_load_u8x16",
     ),
 ]
 

@@ -62,6 +62,7 @@ pub enum JsonOutputError {
 
 struct JsonParser {
   input: Bytes
+  source: String
   offset: Array<U32>
   values: Array<U32>
   limits: JsonLimits
@@ -75,6 +76,8 @@ struct JsonWriter {
   invalid_numbers: Array<String>
   duplicate_keys: Array<String>
 }
+
+builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
 
 fn json_unit() -> Unit {}
 
@@ -144,7 +147,42 @@ fn json_skip_whitespace_simd(value: Bytes, start: U32) -> U32 {
   }
 }
 
-fn json_scan_string_special_simd(value: Bytes, start: U32) -> U32 {
+fn json_scan_string_special_simd(value: String, start: U32) -> U32 {
+  let length = value.byte_length()
+  let mut index = start
+  while index {
+    current if current + 16u32 <= length => {
+      let vector = wasm_string_load_u8x16(value, current)
+      let specials = wasm_u8x16_or(
+        wasm_u8x16_lt_u(vector, wasm_u8x16_splat(32u8)),
+        wasm_u8x16_or(
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(34u8)),
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(92u8)),
+        ),
+      )
+      let mask = wasm_u8x16_bitmask(specials)
+      if mask == 0u32 {
+        continue current + 16u32
+      } else {
+        break current + json_first_mask_lane(mask)
+      }
+    }
+    current => {
+      if current >= length {
+        break current
+      } else {
+        let byte = value.byte_at(current)
+        if byte < 32u8 || byte == 34u8 || byte == 92u8 {
+          break current
+        } else {
+          continue current + 1u32
+        }
+      }
+    }
+  }
+}
+
+fn json_scan_bytes_string_special_simd(value: Bytes, start: U32) -> U32 {
   let length = value.byte_length()
   let mut index = start
   while index {
@@ -371,7 +409,7 @@ fn json_append_plain_string_segment(
     false
   } else {
     if end > start {
-      builder.append_checked(parser.input.view(start, end - start))
+      builder.append_view(parser.source.view(start, end - start))
     } else {
     }
     true
@@ -386,12 +424,27 @@ fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
   } else if parser.input.byte_at(opening) != 34u8 {
     Result::Err(JsonParseError::UnexpectedByte(opening, parser.input.byte_at(opening)))
   } else {
+    let content = opening + 1u32
+    let first_special = json_scan_string_special_simd(parser.source, content)
+    if first_special >= length {
+      Result::Err(JsonParseError::UnexpectedEnd(length))
+    } else if parser.input.byte_at(first_special) == 34u8 {
+      let decoded_length = first_special - content
+      if decoded_length > parser.limits.max_string_bytes {
+        Result::Err(JsonParseError::StringLimitExceeded(first_special))
+      } else {
+        json_parser_set_offset(parser, first_special + 1u32)
+        Result::Ok(parser.source.view(content, decoded_length).compact())
+      }
+    } else if parser.input.byte_at(first_special) < 32u8 {
+      Result::Err(JsonParseError::InvalidEscape(first_special))
+    } else {
     let builder = StringBuilder::new()
-    let mut segment = opening + 1u32
-    let mut index = segment
+    let mut segment = content
+    let mut index = first_special
     while true {
       true => {
-      let special = json_scan_string_special_simd(parser.input, index)
+      let special = json_scan_string_special_simd(parser.source, index)
       if special >= length {
         break Result::Err(JsonParseError::UnexpectedEnd(length))
       } else {
@@ -478,6 +531,7 @@ fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
       }
       }
     }
+    }
   }
 }
 
@@ -505,7 +559,7 @@ fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
     Result::Err(JsonParseError::InvalidNumber(start))
   } else {
     json_parser_set_offset(parser, end)
-    Result::Ok(JsonValue::Number(parser.input.view(start, end - start).to_string()))
+    Result::Ok(JsonValue::Number(parser.source.view(start, end - start).compact()))
   }
 }
 
@@ -783,22 +837,21 @@ fn json_parse_value(
   }
 }
 
-pub fn json_parse_bytes_with_limits(
-  input: Bytes,
+fn json_parse_validated_string_with_limits(
+  source: String,
   limits: JsonLimits,
 ) -> Result<JsonValue, JsonParseError> {
-  let length = input.byte_length()
+  let length = source.byte_length()
   if length > limits.max_input_bytes {
     Result::Err(JsonParseError::InputLimitExceeded(length))
-  } else if input.is_valid_utf8() == false {
-    Result::Err(JsonParseError::InvalidUtf8)
   } else {
     let offset = Array::with_capacity(1u32)
     offset.push(0u32)
     let values = Array::with_capacity(1u32)
     values.push(0u32)
     let parser = JsonParser {
-      input: input
+      input: source.as_bytes()
+      source: source
       offset: offset
       values: values
       limits: limits
@@ -817,12 +870,29 @@ pub fn json_parse_bytes_with_limits(
   }
 }
 
+pub fn json_parse_bytes_with_limits(
+  input: Bytes,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonParseError> {
+  let length = input.byte_length()
+  if length > limits.max_input_bytes {
+    Result::Err(JsonParseError::InputLimitExceeded(length))
+  } else if input.is_valid_utf8() == false {
+    Result::Err(JsonParseError::InvalidUtf8)
+  } else {
+    json_parse_validated_string_with_limits(
+      json_bytes_to_string_unchecked(input),
+      limits,
+    )
+  }
+}
+
 pub fn json_parse_bytes(input: Bytes) -> Result<JsonValue, JsonParseError> {
   json_parse_bytes_with_limits(input, json_default_limits())
 }
 
 pub fn json_parse(input: String) -> Result<JsonValue, JsonParseError> {
-  json_parse_bytes(input.as_bytes())
+  json_parse_validated_string_with_limits(input, json_default_limits())
 }
 
 pub fn json_parse_reader_with_limits<r: Reader>(
@@ -904,7 +974,7 @@ fn json_write_string(
   let mut index = 0u32
   while index {
     current if current < length && writer.error.get_unchecked(0u32) == 0u32 => {
-      let special = json_scan_string_special_simd(bytes, current)
+      let special = json_scan_bytes_string_special_simd(bytes, current)
       if special > current {
         json_writer_append_view(writer, value.view(current, special - current))
       } else {

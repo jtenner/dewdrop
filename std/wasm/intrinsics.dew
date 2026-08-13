@@ -1374,5 +1374,6 @@ pub builtin wasm_u8x8_xor(left: U8x8, right: U8x8) -> U8x8 = "swar64_xor"
 pub builtin wasm_core_i32_lt(left: I32, right: I32) -> Bool = "i32_lt"
 pub builtin wasm_u32_ctz(value: U32) -> U32 = "dew_u32_ctz"
 
-// WasmGC Bytes representation bridge
+// WasmGC text representation bridges
 pub builtin wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16 = "dew_bytes_load_u8x16"
+pub builtin wasm_string_load_u8x16(value: String, start: U32) -> U8x16 = "dew_string_load_u8x16"

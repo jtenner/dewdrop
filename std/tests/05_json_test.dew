@@ -43,6 +43,25 @@ test "JSON decodes escapes and surrogate pairs" {
   }
 }
 
+test "JSON compactly materializes clean validated strings" {
+  let document = "{\"key\":\"abcdefghijklmnopqrstuvwxyz0123456789\"}"
+  match json_parse(document) {
+    Result::Ok(JsonValue::Object(members)) => {
+      let member = members.get_unchecked(0u32)
+      assert(json_object_get(members, "key") is Option::Some(_), "clean key changed")
+      assert(
+        member.value is JsonValue::String("abcdefghijklmnopqrstuvwxyz0123456789"),
+        "clean string changed",
+      )
+      assert(
+        json_stringify(JsonValue::Object(members)) is Result::Ok(document),
+        "clean validated string did not round trip",
+      )
+    }
+    _ => assert(false, "clean validated string did not parse")
+  }
+}
+
 test "JSON accepts the RFC 8259 scalar and empty aggregate forms" {
   assert(json_parse(" null ") is Result::Ok(JsonValue::Null), "null did not parse")
   assert(json_parse("true") is Result::Ok(JsonValue::Bool(true)), "true did not parse")

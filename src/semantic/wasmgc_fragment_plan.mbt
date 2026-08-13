@@ -1844,6 +1844,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_byte_length" ||
   name == b"dew_bytes_is_valid_utf8" ||
   name == b"dew_bytes_to_string" ||
+  name == b"dew_bytes_to_string_unchecked" ||
   name == b"dew_bytes_equals" ||
   name == b"dew_bytes_hash" ||
   name == b"dew_bytes_byte_at" ||
@@ -1854,6 +1855,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_starts_with" ||
   name == b"dew_bytes_ends_with" ||
   name == b"dew_bytes_load_u8x16" ||
+  name == b"dew_string_load_u8x16" ||
   name == b"dew_wasi_fd_write" ||
   name == b"dew_wasi_fd_read" ||
   name == b"dew_test_assert" ||
