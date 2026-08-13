@@ -557,9 +557,13 @@ fn json_string_hash(value: String) -> U64 {
   value.hash()
 }
 
-fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
+fn json_object_prefix_has_key(
+  members: Array<JsonMember>,
+  end: U32,
+  key: String,
+) -> Bool {
   while 0u32 {
-    index if index < members.length() => {
+    index if index < end => {
       if json_string_equals(members.get_unchecked(index).key, key) {
         break true
       } else {
@@ -568,6 +572,10 @@ fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
     }
     _ => break false
   }
+}
+
+fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
+  json_object_prefix_has_key(members, members.length(), key)
 }
 
 fn json_u64_to_u32(value: U64) -> U32 {
@@ -599,19 +607,6 @@ fn json_bloom_shard_maybe_contains(
 
 fn json_bloom_threshold() -> U32 {
   16u32
-}
-
-fn json_string_array_has_key(keys: Array<String>, key: String) -> Bool {
-  while 0u32 {
-    index if index < keys.length() => {
-      if json_string_equals(keys.get_unchecked(index), key) {
-        break true
-      } else {
-        continue index + 1u32
-      }
-    }
-    _ => break false
-  }
 }
 
 fn json_parse_object(
@@ -880,14 +875,14 @@ fn json_writer_append_text(writer: JsonWriter, value: String) -> Unit {
   }
 }
 
-fn json_writer_append_bytes(writer: JsonWriter, value: Bytes) -> Unit {
+fn json_writer_append_view(writer: JsonWriter, value: StringView) -> Unit {
   let used = writer.builder.byte_length()
   let added = value.byte_length()
   if writer.error.get_unchecked(0u32) != 0u32 {
   } else if used > writer.max_bytes || added > writer.max_bytes - used {
     json_writer_set_error(writer, 3u32)
   } else {
-    writer.builder.append_checked(value)
+    writer.builder.append_view(value)
   }
 }
 
@@ -911,7 +906,7 @@ fn json_write_string(
     current if current < length && writer.error.get_unchecked(0u32) == 0u32 => {
       let special = json_scan_string_special_simd(bytes, current)
       if special > current {
-        json_writer_append_bytes(writer, bytes.view(current, special - current))
+        json_writer_append_view(writer, value.view(current, special - current))
       } else {
       }
       if special >= length {
@@ -984,17 +979,15 @@ fn json_write_value(
       JsonValue::String(text) => json_write_string(writer, text)
       JsonValue::Array(values) => {
         json_writer_append_ascii(writer, 91u8)
-        let mut first = true
-        let iter = values.iter()
-        while true {
-          true if iter.has_next() && writer.error.get_unchecked(0u32) == 0u32 => {
-            if first {
-              first = false
-            } else {
+        let length = values.length()
+        while 0u32 {
+          index if index < length && writer.error.get_unchecked(0u32) == 0u32 => {
+            if index > 0u32 {
               json_writer_append_ascii(writer, 44u8)
+            } else {
             }
-            json_write_value(writer, iter.next(), depth + 1u32)
-            continue true
+            json_write_value(writer, values.get_unchecked(index), depth + 1u32)
+            continue index + 1u32
           }
           _ => break json_unit()
         }
@@ -1002,17 +995,15 @@ fn json_write_value(
       }
       JsonValue::Object(members) => {
         json_writer_append_ascii(writer, 123u8)
-        let keys = Array::new()
         let mut key_filter0 = BloomFilter::empty()
         let mut key_filter1 = BloomFilter::empty()
         let mut key_filter2 = BloomFilter::empty()
         let mut key_filter3 = BloomFilter::empty()
-        let bloom_active = members.length() >= json_bloom_threshold()
-        let mut first = true
-        let iter = members.iter()
-        while true {
-          true if iter.has_next() && writer.error.get_unchecked(0u32) == 0u32 => {
-            let member = iter.next()
+        let length = members.length()
+        let bloom_active = length >= json_bloom_threshold()
+        while 0u32 {
+          index if index < length && writer.error.get_unchecked(0u32) == 0u32 => {
+            let member = members.get_unchecked(index)
             let key_hash = if bloom_active {
               json_string_hash(member.key)
             } else {
@@ -1031,9 +1022,9 @@ fn json_write_value(
                 key_filter3,
                 key_shard,
                 key_hash,
-              ) && json_string_array_has_key(keys, member.key)
+              ) && json_object_prefix_has_key(members, index, member.key)
             } else {
-              json_string_array_has_key(keys, member.key)
+              json_object_prefix_has_key(members, index, member.key)
             }
             if duplicate {
               writer.duplicate_keys.push(member.key)
@@ -1049,17 +1040,15 @@ fn json_write_value(
                 key_filter3 = key_filter3.add_hash(key_hash)
               } else {
               }
-              keys.push(member.key)
-              if first {
-                first = false
-              } else {
+              if index > 0u32 {
                 json_writer_append_ascii(writer, 44u8)
+              } else {
               }
               json_write_string(writer, member.key)
               json_writer_append_ascii(writer, 58u8)
               json_write_value(writer, member.value, depth + 1u32)
             }
-            continue true
+            continue index + 1u32
           }
           _ => break json_unit()
         }

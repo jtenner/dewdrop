@@ -1,6 +1,6 @@
 # Dew JSON and json-as benchmark comparison
 
-Status: measured August 13, 2026.
+Status: initial comparison and post-optimization measurements recorded August 13, 2026.
 
 ## Purpose
 
@@ -114,24 +114,56 @@ runtime, and aggressive Binaryen speed optimization. Dew therefore currently
 trades substantial throughput for a smaller generic module and stricter eager
 semantics.
 
+## Post-Bloom and serializer measurements
+
+After the four-shard exact Bloom prefilter and index/StringView serializer
+tranches, a fresh run at Dew commit `8f8969d` plus the serializer working tree
+measured:
+
+### Deserialization
+
+| Fixture | Dew eager `JsonValue` | json-as `JSON.Obj` | json-as typed struct | Dew / `JSON.Obj` | Dew / typed |
+|---|---:|---:|---:|---:|---:|
+| small | 417.85 ns | 228.37 ns | 80.13 ns | 1.83x | 5.21x |
+| medium | 6.108 us | 727.46 ns | 1.663 us | 8.40x | 3.67x |
+| large | 17.592 us | 2.525 us | 3.297 us | 6.97x | 5.34x |
+
+The large dynamic parse ratio improved from 8.70x to 6.97x primarily by removing
+most wide-object duplicate-key scans. Medium remains dominated by eager string
+and tree materialization rather than duplicate lookup.
+
+### Serialization
+
+| Fixture | Dew eager tree | json-as `JSON.Obj` | json-as typed struct | Dew / `JSON.Obj` | Dew / typed |
+|---|---:|---:|---:|---:|---:|
+| small | 245.27 ns | 44.81 ns | 56.18 ns | 5.47x | 4.37x |
+| medium | 4.354 us | 81.94 ns | 479.82 ns | 53.14x | 9.07x |
+| large | 13.046 us | 255.55 ns | 1.606 us | 51.05x | 8.12x |
+
+The serializer tranche is 17-22% faster than the post-Bloom baseline, but the
+remaining `JSON.Obj` gap is still mostly semantic passthrough rather than an
+implementation deficit. Against generated typed serialization, the remaining
+strict eager gap is approximately 4.4-9.1x.
+
 ## Conclusions and next optimization order
 
 1. Add a generic bounds-checked String SIMD load bridge and a String parser path
-   that trusts String's existing UTF-8 invariant. Expect only a low-single-digit
-   whole-parse improvement from this benchmark.
-2. Replace parser `Array<U32>` one-cell counters with scalar mutable parser state
-   once Dew can represent that state without introducing allocation or aliasing
-   regressions.
-3. Profile allocation and dispatch in `json_parse_string`, number lexeme
-   creation, array/object growth, and recursive `JsonValue` construction.
-4. Replace quadratic duplicate-key detection with a source-level hash set once
-   the Map path used by recursive nominal values validates reliably.
+   that trusts String's existing UTF-8 invariant. This removes the measured
+   2.4-5.5% validation pass and enables direct clean-span handling.
+2. Add a no-escape string parser path that delays `StringBuilder` allocation and
+   avoids repeated `Bytes -> String` validation. The current fixtures are string
+   heavy and contain no escaped strings, making this the next high-confidence
+   strict-eager target.
+3. Replace parser `Array<U32>` one-cell counters with cheaper fixed/scalar state
+   and consolidate writer error/length state.
+4. Profile exact number materialization and serialization revalidation; an
+   opaque validated `JsonNumber` remains a separate API change.
 5. Add a separate lazy/raw document API if passthrough and selective access are
    desired. Do not silently weaken `JsonValue`'s eager, strict contract.
 6. Consider generated typed decoding only as a distinct API. Its semantics,
    unknown-field policy, duplicate handling, number conversion policy, and code
    size must be explicit.
 
-The immediate String-backed SIMD change is worthwhile, but the benchmark rejects
-it as the main performance hypothesis: the measured String/Bytes delta is at
-most roughly 0.5%, while validation itself accounts for only 2.4-5.5%.
+Direct String SIMD alone is not the main gap: storage wrapping remains nearly
+neutral. Its value is enabling the broader validated-String/no-escape tranche,
+not replacing eager tree construction with a wider scan.

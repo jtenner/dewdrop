@@ -138,3 +138,9 @@ Wide-object duplicate checking now uses four scalar filters from
 positive still performs the authoritative source-order equality scan. Paired
 measurements, threshold analysis, collision coverage, and the exact policy are
 recorded in [`json-bloom-prefilter.md`](json-bloom-prefilter.md).
+
+Strict serialization uses index traversal, checks object duplicates against the
+existing member prefix rather than a temporary key array, and appends clean text
+as validated `StringView` spans. The paired results and remaining costs are
+recorded in
+[`json-serialization-performance.md`](json-serialization-performance.md).

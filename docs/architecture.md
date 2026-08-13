@@ -240,8 +240,11 @@ policy, delimiter classification, limits, duplicate-key handling, tree
 construction, Reader/Writer composition, and serialization in Dew source.
 Wide-object duplicate-key checks compose four allocation-free
 `dew.std.bloom_filter` scalar values with an exact source-order equality fallback
-for every probabilistic positive; no JSON-specific membership builtin exists. Its
-only new representation primitive is the bounds-checked
+for every probabilistic positive; no JSON-specific membership builtin exists.
+Serialization traverses authoritative arrays by index, reuses member prefixes
+for exact duplicate checks, and appends validated clean `StringView` spans
+without a second key array or iterator allocation. Its only new representation
+primitive is the bounds-checked
 `wasm_bytes_load_u8x16(Bytes, U32)` bridge over private GC-backed byte storage;
 `u32_ctz` and the remaining SIMD operations map directly to WebAssembly
 instructions. JSON-specific runtime helpers are forbidden by architecture tests.

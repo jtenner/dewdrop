@@ -81,6 +81,8 @@
 
 ## Standard library
 
+- [ ] Optimize validated-String JSON parsing with direct String SIMD loading, a no-escape fast path, compact span materialization, and clean/escaped/Unicode/malformed benchmarks.
+- [ ] Consolidate JSON parser and writer state, then profile exact-number materialization and validation without weakening `JsonValue::Number(String)`.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.
