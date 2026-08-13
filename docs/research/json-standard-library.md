@@ -123,3 +123,12 @@ measured on the development machine at a median **77.442 µs**, or **13.928 ns
 per input byte**, across 100 samples with batches of three. The generated module
 was 23,431 bytes. The script reports machine-local measurements rather than
 encoding them as pass/fail thresholds.
+
+`tools/benchmark-json-comparison.py` additionally extracts json-as's own compact
+small, medium, and large fixtures, builds both implementations, and runs them
+under one Node/V8 executable. The complete methodology, semantic caveats, and
+August 13, 2026 measurements are recorded in
+[`json-as-benchmark-comparison.md`](json-as-benchmark-comparison.md). The
+comparison shows that String-to-Bytes wrapping is effectively neutral and the
+redundant UTF-8 pass accounts for only about 2.4-5.5% of Dew parse time; eager
+recursive tree construction and policy work dominate the larger throughput gap.
