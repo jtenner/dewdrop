@@ -163,6 +163,10 @@ can return the original validated source byte-for-byte, while canonical output
 still traverses `document.value()`. `JsonRawDocument` validates and retains only
 source until explicit materialization. Specialized validation avoids eager value
 construction. Parsed validated-number modes and `JsonNumber` avoid repeated
-number validation during canonical output. API contracts and paired results
+number validation during canonical output. Canonical parse modes additionally
+retain parser-proven String escape requirements, avoiding clean-string rescans. API contracts and paired results
 are recorded in
 [`json-retained-and-validated-apis.md`](json-retained-and-validated-apis.md).
+The final experiment matrix, retained wins, rejected prototypes, and current
+json-as ratios are recorded in
+[`json-final-performance-experiments.md`](json-final-performance-experiments.md).

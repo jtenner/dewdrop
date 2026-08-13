@@ -153,12 +153,18 @@ are now implemented. Retained parsing removes roughly 20-28% from the compact
 parse path when callers accept whole-source retention, and repeated constructed
 number serialization improves 38% through `JsonNumber`.
 
+Specialized validation, source-only `JsonRawDocument`, and parsed validated-number
+modes are now implemented. On the current pinned run, retained Dew parsing is
+1.31x/4.93x/4.13x the dynamic json-as time and 3.61x/2.15x/3.16x the generated
+typed time for small/medium/large. Compact parsing remains 1.63x/6.91x/5.76x the
+dynamic time.
+
 The next large work is intentionally separate:
 
 1. generated typed decoding with explicit unknown-field, duplicate, conversion,
    limit, diagnostics, and code-size policies;
-2. a truly allocation-free event engine after recursive generic visitor linkage
-   is supported or a stable non-generic callback carrier is designed;
+2. a reusable event engine after recursive generic visitor linkage is supported
+   or a stable non-generic callback carrier is designed;
 3. compiler/backend improvements to recursive enum and collection construction
    that benefit the compact eager API generally.
 

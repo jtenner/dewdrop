@@ -13,6 +13,7 @@ pub enum JsonValue {
   Number(String)
   ValidatedNumber(JsonNumber)
   String(String)
+  ValidatedString(JsonString)
   Array(Array<JsonValue>)
   Object(Array<JsonMember>)
 }
@@ -24,6 +25,16 @@ pub struct JsonMember {
 
 pub struct JsonNumber {
   lexeme: String
+}
+
+pub struct JsonString {
+  value: String
+  needs_escape: Bool
+}
+
+struct ParsedJsonString {
+  value: String
+  needs_escape: Bool
 }
 
 pub struct JsonLimits {
@@ -83,6 +94,7 @@ struct JsonParser {
   limits: JsonLimits
   compact_tokens: Bool
   validated_numbers: Bool
+  validated_strings: Bool
 }
 
 struct JsonWriter {
@@ -432,7 +444,9 @@ fn json_append_plain_string_segment(
   }
 }
 
-fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
+fn json_parse_string_with_provenance(
+  parser: JsonParser,
+) -> Result<ParsedJsonString, JsonParseError> {
   let opening = json_parser_offset(parser)
   let length = parser.input.byte_length()
   if opening >= length {
@@ -452,9 +466,15 @@ fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
         json_parser_set_offset(parser, first_special + 1u32)
         let view = parser.source.view(content, decoded_length)
         if parser.compact_tokens {
-          Result::Ok(view.compact())
+          Result::Ok(ParsedJsonString {
+            value: view.compact()
+            needs_escape: false
+          })
         } else {
-          Result::Ok(view.to_string())
+          Result::Ok(ParsedJsonString {
+            value: view.to_string()
+            needs_escape: false
+          })
         }
       }
     } else if parser.input.byte_at(first_special) < 32u8 {
@@ -477,7 +497,10 @@ fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
       let byte = parser.input.byte_at(special)
       if byte == 34u8 {
         json_parser_set_offset(parser, special + 1u32)
-        break Result::Ok(builder.finish())
+        break Result::Ok(ParsedJsonString {
+          value: builder.finish()
+          needs_escape: true
+        })
       } else if byte < 32u8 {
         break Result::Err(JsonParseError::InvalidEscape(special))
       } else if byte != 92u8 {
@@ -556,6 +579,13 @@ fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
   }
 }
 
+fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
+  match json_parse_string_with_provenance(parser) {
+    Result::Ok(value) => Result::Ok(value.value)
+    Result::Err(error) => Result::Err(error)
+  }
+}
+
 fn json_parse_literal(
   parser: JsonParser,
   spelling: Bytes,
@@ -590,6 +620,22 @@ impl JsonNumber {
   }
   fn value(self) -> JsonValue {
     JsonValue::ValidatedNumber(self)
+  }
+}
+
+pub fn json_string(value: String) -> JsonString {
+  JsonString {
+    value: value
+    needs_escape: json_scan_bytes_string_special_simd(value.as_bytes(), 0u32) < value.byte_length()
+  }
+}
+
+impl JsonString {
+  fn string(self) -> String {
+    self.value
+  }
+  fn value(self) -> JsonValue {
+    JsonValue::ValidatedString(self)
   }
 }
 
@@ -881,8 +927,17 @@ fn json_parse_value(
       } else if byte == 102u8 {
         json_parse_literal(parser, b"false", JsonValue::Bool(false))
       } else if byte == 34u8 {
-        match json_parse_string(parser) {
-          Result::Ok(value) => Result::Ok(JsonValue::String(value))
+        match json_parse_string_with_provenance(parser) {
+          Result::Ok(value) => {
+            if parser.validated_strings {
+              Result::Ok(JsonValue::ValidatedString(JsonString {
+                value: value.value
+                needs_escape: value.needs_escape
+              }))
+            } else {
+              Result::Ok(JsonValue::String(value.value))
+            }
+          }
           Result::Err(error) => Result::Err(error)
         }
       } else if byte == 91u8 {
@@ -1137,6 +1192,7 @@ fn json_parse_validated_string_with_limits(
   limits: JsonLimits,
   compact_tokens: Bool,
   validated_numbers: Bool,
+  validated_strings: Bool,
 ) -> Result<JsonValue, JsonParseError> {
   let length = source.byte_length()
   if length > limits.max_input_bytes {
@@ -1149,6 +1205,7 @@ fn json_parse_validated_string_with_limits(
       limits: limits
       compact_tokens: compact_tokens
       validated_numbers: validated_numbers
+      validated_strings: validated_strings
     }
     match json_parse_value(parser, 0u32) {
       Result::Err(error) => Result::Err(error)
@@ -1179,6 +1236,7 @@ pub fn json_parse_bytes_with_limits(
       limits,
       true,
       false,
+      false,
     )
   }
 }
@@ -1191,7 +1249,7 @@ pub fn json_parse_with_limits(
   input: String,
   limits: JsonLimits,
 ) -> Result<JsonValue, JsonParseError> {
-  json_parse_validated_string_with_limits(input, limits, true, false)
+  json_parse_validated_string_with_limits(input, limits, true, false, false)
 }
 
 pub fn json_parse(input: String) -> Result<JsonValue, JsonParseError> {
@@ -1202,7 +1260,7 @@ pub fn json_parse_retained_with_limits(
   input: String,
   limits: JsonLimits,
 ) -> Result<JsonValue, JsonParseError> {
-  json_parse_validated_string_with_limits(input, limits, false, false)
+  json_parse_validated_string_with_limits(input, limits, false, false, false)
 }
 
 pub fn json_parse_retained(input: String) -> Result<JsonValue, JsonParseError> {
@@ -1213,7 +1271,7 @@ pub fn json_parse_validated_numbers_with_limits(
   input: String,
   limits: JsonLimits,
 ) -> Result<JsonValue, JsonParseError> {
-  json_parse_validated_string_with_limits(input, limits, true, true)
+  json_parse_validated_string_with_limits(input, limits, true, true, false)
 }
 
 pub fn json_parse_validated_numbers(
@@ -1226,13 +1284,37 @@ pub fn json_parse_retained_validated_numbers_with_limits(
   input: String,
   limits: JsonLimits,
 ) -> Result<JsonValue, JsonParseError> {
-  json_parse_validated_string_with_limits(input, limits, false, true)
+  json_parse_validated_string_with_limits(input, limits, false, true, false)
 }
 
 pub fn json_parse_retained_validated_numbers(
   input: String,
 ) -> Result<JsonValue, JsonParseError> {
   json_parse_retained_validated_numbers_with_limits(input, json_default_limits())
+}
+
+pub fn json_parse_canonical_with_limits(
+  input: String,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonParseError> {
+  json_parse_validated_string_with_limits(input, limits, true, true, true)
+}
+
+pub fn json_parse_canonical(input: String) -> Result<JsonValue, JsonParseError> {
+  json_parse_canonical_with_limits(input, json_default_limits())
+}
+
+pub fn json_parse_retained_canonical_with_limits(
+  input: String,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonParseError> {
+  json_parse_validated_string_with_limits(input, limits, false, true, true)
+}
+
+pub fn json_parse_retained_canonical(
+  input: String,
+) -> Result<JsonValue, JsonParseError> {
+  json_parse_retained_canonical_with_limits(input, json_default_limits())
 }
 
 pub fn json_parse_document_with_limits(
@@ -1279,6 +1361,7 @@ pub fn json_validate_with_limits(
       limits: limits
       compact_tokens: false
       validated_numbers: false
+      validated_strings: false
     }
     match json_validate_value(parser, 0u32) {
       Result::Err(error) => Result::Err(error)
@@ -1464,6 +1547,19 @@ fn json_write_string(
   json_writer_append_ascii(writer, 34u8)
 }
 
+fn json_write_validated_string(
+  writer: JsonWriter,
+  value: JsonString,
+) -> Unit {
+  if value.needs_escape {
+    json_write_string(writer, value.value)
+  } else {
+    json_writer_append_ascii(writer, 34u8)
+    json_writer_append_text(writer, value.value)
+    json_writer_append_ascii(writer, 34u8)
+  }
+}
+
 fn json_write_value(
   writer: JsonWriter,
   value: JsonValue,
@@ -1493,6 +1589,7 @@ fn json_write_value(
       }
       JsonValue::ValidatedNumber(number) => json_writer_append_text(writer, number.lexeme)
       JsonValue::String(text) => json_write_string(writer, text)
+      JsonValue::ValidatedString(text) => json_write_validated_string(writer, text)
       JsonValue::Array(values) => {
         json_writer_append_ascii(writer, 91u8)
         let length = values.length()

@@ -230,6 +230,25 @@ test "JSON serialization is compact and deterministic" {
   }
 }
 
+test "JSON canonical parse modes validate strings and numbers once" {
+  match json_parse_retained_canonical("{\"clean\":\"text\",\"escaped\":\"line\\n\",\"number\":-12.5e2}") {
+    Result::Ok(JsonValue::Object(members)) => {
+      assert(json_object_get(members, "clean") is Option::Some(JsonValue::ValidatedString(_)), "clean provenance missing")
+      assert(json_object_get(members, "escaped") is Option::Some(JsonValue::ValidatedString(_)), "escaped provenance missing")
+      assert(json_object_get(members, "number") is Option::Some(JsonValue::ValidatedNumber(_)), "number provenance missing")
+      assert(
+        json_stringify(JsonValue::Object(members)) is Result::Ok("{\"clean\":\"text\",\"escaped\":\"line\\n\",\"number\":-12.5e2}"),
+        "canonical parse did not serialize",
+      )
+    }
+    _ => assert(false, "canonical parse failed")
+  }
+  let clean = json_string("clean")
+  let escaped = json_string("line\n")
+  assert(json_stringify(clean.value()) is Result::Ok("\"clean\""), "clean JsonString")
+  assert(json_stringify(escaped.value()) is Result::Ok("\"line\\n\""), "escaped JsonString")
+}
+
 test "JSON parsed validated-number modes preserve exact lexemes" {
   assert(
     json_parse_validated_numbers("[-12.5e2]") is Result::Ok(JsonValue::Array(_)),

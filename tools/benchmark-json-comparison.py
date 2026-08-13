@@ -136,6 +136,63 @@ fn json_benchmark_parse_string_repeat(remaining: U32, total: U32) -> U32 {{
   }}
 }}
 
+fn json_benchmark_parse_retained_repeat(remaining: U32, total: U32) -> U32 {{
+  if remaining == 0u32 {{
+    total
+  }} else {{
+    match json_parse_retained(json_benchmark_document()) {{
+      Result::Ok(JsonValue::Object(members)) =>
+        json_benchmark_parse_retained_repeat(remaining - 1u32, total + members.length())
+      _ => total
+    }}
+  }}
+}}
+
+fn json_benchmark_validate_json_repeat(remaining: U32, total: U32) -> U32 {{
+  if remaining == 0u32 {{
+    total
+  }} else {{
+    match json_validate(json_benchmark_document()) {{
+      Result::Ok(_) =>
+        json_benchmark_validate_json_repeat(remaining - 1u32, total + {root_size}u32)
+      Result::Err(_) => total
+    }}
+  }}
+}}
+
+fn json_benchmark_raw_document_repeat(remaining: U32, total: U32) -> U32 {{
+  if remaining == 0u32 {{
+    total
+  }} else {{
+    match json_parse_raw_document(json_benchmark_document()) {{
+      Result::Ok(document) =>
+        json_benchmark_raw_document_repeat(
+          remaining - 1u32,
+          total + document.stringify_source().byte_length(),
+        )
+      Result::Err(_) => total
+    }}
+  }}
+}}
+
+fn json_benchmark_canonical_roundtrip_repeat(remaining: U32, total: U32) -> U32 {{
+  if remaining == 0u32 {{
+    total
+  }} else {{
+    match json_parse_retained_canonical(json_benchmark_document()) {{
+      Result::Ok(value) => match json_stringify(value) {{
+        Result::Ok(output) =>
+          json_benchmark_canonical_roundtrip_repeat(
+            remaining - 1u32,
+            total + output.byte_length(),
+          )
+        Result::Err(_) => total
+      }}
+      Result::Err(_) => total
+    }}
+  }}
+}}
+
 fn json_benchmark_parse_bytes_repeat(remaining: U32, total: U32) -> U32 {{
   if remaining == 0u32 {{
     total
@@ -195,6 +252,22 @@ pub fn parse_string(iterations: U32) -> U32 {{
   json_benchmark_parse_string_repeat(iterations, 0u32)
 }}
 
+pub fn parse_retained(iterations: U32) -> U32 {{
+  json_benchmark_parse_retained_repeat(iterations, 0u32)
+}}
+
+pub fn validate_json(iterations: U32) -> U32 {{
+  json_benchmark_validate_json_repeat(iterations, 0u32)
+}}
+
+pub fn raw_document(iterations: U32) -> U32 {{
+  json_benchmark_raw_document_repeat(iterations, 0u32)
+}}
+
+pub fn canonical_roundtrip(iterations: U32) -> U32 {{
+  json_benchmark_canonical_roundtrip_repeat(iterations, 0u32)
+}}
+
 pub fn parse_bytes(iterations: U32) -> U32 {{
   json_benchmark_parse_bytes_repeat(iterations, 0u32)
 }}
@@ -239,6 +312,10 @@ const { performance } = require('perf_hooks');
     ['baseline', spec => spec.rootSize],
     ['validate_bytes', spec => 1],
     ['parse_string', spec => spec.rootSize],
+    ['parse_retained', spec => spec.rootSize],
+    ['validate_json', spec => spec.rootSize],
+    ['raw_document', spec => spec.bytes],
+    ['canonical_roundtrip', spec => spec.bytes],
     ['parse_bytes', spec => spec.rootSize],
     ['stringify', spec => spec.bytes],
     ['roundtrip', spec => spec.bytes],

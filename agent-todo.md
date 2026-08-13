@@ -81,7 +81,7 @@
 
 ## Standard library
 
-- [ ] Design generated typed JSON decoding and a public event engine; specialized allocation-free value validation and raw documents are complete, while recursive generic visitors remain blocked by backend linkage.
+- [ ] Design generated typed JSON decoding and a public event engine; specialized allocation-free value validation, raw documents, and canonical String/number provenance are complete, while recursive generic visitors remain blocked by backend linkage.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.
