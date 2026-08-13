@@ -148,7 +148,8 @@ recorded in
 [`json-serialization-performance.md`](json-serialization-performance.md).
 
 Validated `String` parsing now uses direct String SIMD, delays builders until an
-escape is found, compactly materializes clean StringView spans, and validates
-Bytes inputs exactly once before a private trusted rewrap. Measurements and
-boundary coverage are recorded in
+escape is found, compactly materializes clean StringView spans, validates Bytes
+inputs exactly once before a private trusted rewrap, and stores offset/value
+count in one fixed two-cell parser state carrier. Measurements and boundary
+coverage are recorded in
 [`json-validated-string-performance.md`](json-validated-string-performance.md).

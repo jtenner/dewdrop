@@ -96,9 +96,33 @@ paths. On the development machine it measured 316.63 ns, 353.59 ns, 1.428 us,
 358.07 ns, and 22.25 ns respectively. These are absolute path costs rather than
 baseline deltas and are intended for future regression analysis.
 
+## Fixed parser state follow-up
+
+The parser previously allocated two one-element growable `Array<U32>` values for
+its mutable offset and total-value count. The follow-up state tranche stores both
+cells in one `FixedArray<U32>` instead. This removes capacity/length metadata,
+array growth initialization, and one GC allocation without changing recursive
+parser signatures or mutation visibility.
+
+`tools/benchmark-json-parser-state.py` builds isolated array-state and fixed-state
+standard roots and measures the same compact fixtures with 30 warmups, 101 paired
+interleaved samples per round, five rounds, and approximately 256 KiB per batch.
+Median paired changes were:
+
+| Fixture | Parse String | Parse Bytes | Round trip |
+|---|---:|---:|---:|
+| small, 44 B | -1.79% | +0.34% | -2.97% |
+| medium, 1,070 B | -3.05% | -3.37% | -0.77% |
+| large, 5,251 B | -3.14% | -2.78% | -1.39% |
+
+Negative values are faster. The small checked-Bytes difference is noise; medium
+and large parsing improve about 2.8-3.4%. Generated benchmark modules are 625
+bytes smaller for every fixture.
+
 ## Remaining priorities
 
-1. Replace one-cell growable parser arrays with cheaper fixed/scalar state.
+1. Consolidate writer error and payload state without allocating empty success-
+   path growable arrays.
 2. Measure Array growth and recursive `JsonValue` construction independently.
 3. Fuse number-end discovery and grammar validation where exact diagnostics can
    remain identical.

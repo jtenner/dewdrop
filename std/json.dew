@@ -1,6 +1,7 @@
 open dew.std.array
 open dew.std.bloom_filter
 open dew.std.bytes
+open dew.std.fixed_array
 open dew.std.io
 open dew.std.string
 open dew.std.string_builder
@@ -63,8 +64,7 @@ pub enum JsonOutputError {
 struct JsonParser {
   input: Bytes
   source: String
-  offset: Array<U32>
-  values: Array<U32>
+  state: FixedArray<U32>
   limits: JsonLimits
 }
 
@@ -91,19 +91,19 @@ pub fn json_default_limits() -> JsonLimits {
 }
 
 fn json_parser_offset(parser: JsonParser) -> U32 {
-  parser.offset.get_unchecked(0u32)
+  parser.state.get_unchecked(0u32)
 }
 
 fn json_parser_set_offset(parser: JsonParser, offset: U32) -> Unit {
-  parser.offset.set_unchecked(0u32, offset)
+  parser.state.set_unchecked(0u32, offset)
 }
 
 fn json_parser_value_count(parser: JsonParser) -> U32 {
-  parser.values.get_unchecked(0u32)
+  parser.state.get_unchecked(1u32)
 }
 
 fn json_parser_set_value_count(parser: JsonParser, count: U32) -> Unit {
-  parser.values.set_unchecked(0u32, count)
+  parser.state.set_unchecked(1u32, count)
 }
 
 fn json_is_whitespace(byte: U8) -> Bool {
@@ -845,15 +845,10 @@ fn json_parse_validated_string_with_limits(
   if length > limits.max_input_bytes {
     Result::Err(JsonParseError::InputLimitExceeded(length))
   } else {
-    let offset = Array::with_capacity(1u32)
-    offset.push(0u32)
-    let values = Array::with_capacity(1u32)
-    values.push(0u32)
     let parser = JsonParser {
       input: source.as_bytes()
       source: source
-      offset: offset
-      values: values
+      state: FixedArray::make(2u32, 0u32)
       limits: limits
     }
     match json_parse_value(parser, 0u32) {
