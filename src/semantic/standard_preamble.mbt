@@ -109,7 +109,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 4095
+            collection_mask = 8191
             show = true
             disposable = true
             math = true
@@ -165,6 +165,7 @@ fn selected_standard_modules(
                 text_mask = text_mask | 12
               }
               "testing" => testing = true
+              "bloom_filter" => collection_mask = collection_mask | 4096
               "json" => {
                 text_mask = text_mask | 15
                 fixed_array = true

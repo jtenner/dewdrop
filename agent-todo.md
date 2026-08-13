@@ -81,6 +81,7 @@
 
 ## Standard library
 
+- [ ] Integrate `dew.std.bloom_filter` into strict JSON duplicate-key prefiltering with exact equality fallback and benchmark the threshold separately from the foundational module.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.

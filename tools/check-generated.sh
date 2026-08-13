@@ -27,6 +27,7 @@ python3 tools/generate_iter_std.py --check
 python3 tools/generate_math_std.py --check
 python3 tools/generate_io_std.py --check
 python3 tools/generate_testing_std.py --check
+python3 tools/generate_bloom_filter_std.py --check
 python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check

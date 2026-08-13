@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 63)
+  assert_eq(wildcard_paths.length(), 64)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -56,10 +56,11 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[32], "std/io.dew")
   assert_eq(wildcard_paths[33], "std/testing.dew")
   assert_eq(wildcard_paths[34], "std/json.dew")
-  assert_eq(wildcard_paths[35], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[40], "std/text.dew")
-  assert_eq(wildcard_paths[42], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[62], "std/f64x2.dew")
+  assert_eq(wildcard_paths[35], "std/bloom_filter.dew")
+  assert_eq(wildcard_paths[36], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[41], "std/text.dew")
+  assert_eq(wildcard_paths[43], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[63], "std/f64x2.dew")
 }
 
 ///|
@@ -126,6 +127,23 @@ test "standard import prepass selects testing dependencies" {
     (
       0, false, false, false, false, true, false, false, false, false, false, false,
       0, 0,
+    ),
+  )
+}
+
+///|
+test "standard import prepass selects Bloom filter" {
+  let module_id = 1002UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.bloom_filter\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      0, false, false, false, false, false, false, false, false, false, false, false,
+      4096, 0,
     ),
   )
 }

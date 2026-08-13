@@ -11,7 +11,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - local and imported types, traits, implementations, generic bounds, evidence-aware specialization, runtime trait values, closures, mutable captures, module state, and recursive physical type groups;
 - fixed-width scalar, packed-lane, SIMD, strict UTF-8 text, Bytes, strict bounded JSON, WASI Preview 1, test metadata, and deterministic Starshine validation/encoding;
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
-- carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
+- carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
 - checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, verified module body-inference reuse, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
@@ -128,6 +128,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ### Measurement-driven collections
 
+- [x] Add a reusable allocation-free `U64` Bloom filter with explicit probabilistic-positive semantics and precomputed-hash operations.
 - [ ] Specify and benchmark sequence/deque/measure workloads before implementing a finger tree.
 - [ ] Add a persistent list only if measured workloads justify a distinct representation.
 - [ ] Benchmark WasmGC arrays against linked representations only when a concrete sequence workload requires it.

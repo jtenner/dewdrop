@@ -1,0 +1,4 @@
+///|
+pub fn standard_bloom_filter_source() -> Bytes {
+  b"pub type BloomFilter = U64\n\nfn bloom_filter_hash_mask(hash: U64) -> U64 {\n  (1u64 << (hash & 63u64)) | (1u64 << ((hash >> 32u64) & 63u64))\n}\n\npub fn bloom_filter_empty() -> BloomFilter {\n  0u64\n}\n\npub fn bloom_filter_is_empty(filter: BloomFilter) -> Bool {\n  filter == 0u64\n}\n\npub fn bloom_filter_add_hash(\n  filter: BloomFilter,\n  hash: U64,\n) -> BloomFilter {\n  filter | bloom_filter_hash_mask(hash)\n}\n\npub fn bloom_filter_maybe_contains_hash(\n  filter: BloomFilter,\n  hash: U64,\n) -> Bool {\n  let mask = bloom_filter_hash_mask(hash)\n  (filter & mask) == mask\n}\n\npub fn bloom_filter_add<t: Hash>(\n  filter: BloomFilter,\n  value: t,\n) -> BloomFilter {\n  bloom_filter_add_hash(filter, value.hash())\n}\n\npub fn bloom_filter_maybe_contains<t: Hash>(\n  filter: BloomFilter,\n  value: t,\n) -> Bool {\n  bloom_filter_maybe_contains_hash(filter, value.hash())\n}\n"
+}
