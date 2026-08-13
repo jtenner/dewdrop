@@ -160,7 +160,9 @@ Callers that explicitly accept whole-source retention can use
 `json_parse_retained` or `json_parse_document`; these preserve the same strict
 parser policy while sharing clean String and exact-number ranges. `JsonDocument`
 can return the original validated source byte-for-byte, while canonical output
-still traverses `document.value()`. `JsonNumber` provides a validate-once path
-for repeatedly serialized constructed numbers. API contracts and paired results
+still traverses `document.value()`. `JsonRawDocument` validates and retains only
+source until explicit materialization. Specialized validation avoids eager value
+construction. Parsed validated-number modes and `JsonNumber` avoid repeated
+number validation during canonical output. API contracts and paired results
 are recorded in
 [`json-retained-and-validated-apis.md`](json-retained-and-validated-apis.md).

@@ -34,6 +34,18 @@ test "JSON parses nested values and exact numbers" {
   }
 }
 
+test "JSON raw documents validate without eager tree materialization" {
+  let source = " {\"ok\":[true,null,-1.25e2]} "
+  match json_parse_raw_document(source) {
+    Result::Ok(document) => {
+      assert(document.source().equals(source), "raw source changed")
+      assert(document.stringify_source().equals(source), "raw source output changed")
+      assert(document.materialize() is Result::Ok(JsonValue::Object(_)), "raw materialization failed")
+    }
+    Result::Err(_) => assert(false, "raw JSON document did not validate")
+  }
+}
+
 test "JSON validation uses strict retained parsing" {
   assert(json_validate("{\"ok\":[true,null,-1.25e2]}") is Result::Ok(_), "valid JSON failed validation")
   assert(
@@ -215,6 +227,26 @@ test "JSON serialization is compact and deterministic" {
       assert(json_parse(output) is Result::Ok(_), "serialized JSON did not parse")
     }
     Result::Err(_) => assert(false, "JSON serialization failed")
+  }
+}
+
+test "JSON parsed validated-number modes preserve exact lexemes" {
+  assert(
+    json_parse_validated_numbers("[-12.5e2]") is Result::Ok(JsonValue::Array(_)),
+    "validated-number parse failed",
+  )
+  match json_parse_retained_validated_numbers("[-12.5e2]") {
+    Result::Ok(JsonValue::Array(values)) => {
+      assert(
+        values.get_unchecked(0u32) is JsonValue::ValidatedNumber(_),
+        "retained validated number representation changed",
+      )
+      assert(
+        json_stringify(JsonValue::Array(values)) is Result::Ok("[-12.5e2]"),
+        "parsed validated number did not serialize",
+      )
+    }
+    _ => assert(false, "retained validated-number parse failed")
   }
 }
 

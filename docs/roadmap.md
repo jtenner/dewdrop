@@ -135,7 +135,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ### Structured data, security, and networking
 
-- [x] Implement Dew-native JSON with strict UTF-8, exact number lexemes, deterministic serialization, bounded Reader/Writer and value APIs, source-level Bytes/String SIMD scanning, validated-String no-escape parsing, fixed parser and writer state, explicit retained-source documents, validate-once JsonNumber values, exact Bloom-assisted wide-object duplicate checks, allocation-free index traversal, validated clean-span output, and direct conformance coverage.
+- [x] Implement Dew-native JSON with strict UTF-8, exact number lexemes, deterministic serialization, bounded Reader/Writer and value APIs, source-level Bytes/String SIMD scanning, validated-String no-escape parsing, fixed parser and writer state, explicit retained-source and raw validated documents, specialized validation, parsed validate-once JsonNumber values, exact Bloom-assisted wide-object duplicate checks, allocation-free index traversal, validated clean-span output, and direct conformance coverage.
 - [ ] Implement Dew-native TOML, beginning with the package-manifest subset and deterministic duplicate/dotted-key behavior.
 - [ ] Implement a versioned bounded YAML subset only after JSON and TOML stabilize.
 - [ ] Define the boundaries among non-secret fast hashes, constant-time primitives, and password/KDF APIs before adding cryptography modules.

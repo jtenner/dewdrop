@@ -34,12 +34,13 @@ therefore a source-preserving operation rather than canonical serialization.
 `document.value()` exposes the retained strict tree; canonical deterministic
 output remains `json_stringify(document.value())`.
 
-`json_validate` currently uses the retained strict parser and drops the produced
-tree. It avoids token copies but does not yet avoid recursive value/collection
-allocation; a generic visitor implementation was prototyped but rejected after
-exposing an unresolved generic recursive-method backend linkage (`MissingFunction`).
-The API is still useful for validation-only callers and leaves room for a future
-allocation-free specialized event engine.
+`json_validate` now has a specialized strict recursive engine that does not
+construct `JsonValue`, `JsonMember`, or value arrays. It retains exact object-key
+tracking because duplicate rejection is contractual, but drops all non-key
+values after grammar/limit validation. A generic visitor implementation was also
+prototyped and rejected after exposing an unresolved recursive generic-method
+backend linkage (`MissingFunction`); the specialized validator avoids that
+compiler limitation.
 
 ## Validated exact numbers
 
@@ -85,13 +86,18 @@ This operation validates and materializes the retained tree, then returns the
 already retained original source. It is not equivalent to canonical tree
 serialization, but its semantics are explicit rather than hidden passthrough.
 
-### Retained validation
+### Specialized validation
 
-| Fixture | `json_validate` |
-|---|---:|
-| small | 295.08 ns |
-| medium | 3.564 us |
-| large | 10.346 us |
+Compared with the earlier retained-parse-and-drop implementation:
+
+| Fixture | Previous validation | Specialized validation | Delta |
+|---|---:|---:|---:|
+| small | 297.31 ns | 262.42 ns | -11.81% |
+| medium | 3.533 us | 3.404 us | -3.57% |
+| large | 9.799 us | 9.542 us | -2.83% |
+
+The current full benchmark measured 263.16 ns, 3.861 us, and 10.135 us when
+interleaved with all retained/document operations.
 
 ### Validated-number serialization
 
@@ -100,10 +106,17 @@ A three-number array serialized in 119.68 ns through `JsonNumber`, versus
 performed once outside the repeated serialization loop, matching the intended
 reuse model.
 
+The parser can now directly produce `ValidatedNumber` values through
+`json_parse_validated_numbers` and
+`json_parse_retained_validated_numbers`. On a 973-byte, 128-number fixture, the
+retained parse-and-canonicalize path improved from 12.951 us to 11.033 us:
+**14.81% faster**.
+
 Reproducible drivers:
 
 - `tools/benchmark-json-retained.py`
 - `tools/benchmark-json-number.py`
+- `tools/benchmark-json-parsed-numbers.py`
 
 ## Rejected current-API micro-optimizations
 
@@ -116,13 +129,20 @@ fixtures:
   lengths, and scalar fused number scanning remain rejected as previously
   measured;
 - a generic recursive visitor/event parser is blocked on general recursive
-  generic-method linking rather than JSON semantics.
+  generic-method linking rather than JSON semantics;
+- SIMD digit-run scanning improved the validated-number benchmark by 2.51% but
+  regressed the compatibility parse/stringify path by 0.32%, so the shared
+  scanner remains scalar.
 
 ## Remaining large work
 
+`JsonRawDocument` now validates and retains only the source; it does not eagerly
+construct a value tree. `materialize()` explicitly invokes retained eager parsing.
+The measured parse-plus-source-output path is 286.58 ns small, 3.886 us medium,
+and 10.135 us large.
+
 Generated typed decoding still requires a schema/derivation design, unknown-field
 and duplicate policies, numeric conversion rules, generated code registration,
-and code-size budgets. A genuinely allocation-free event stream requires either
-non-generic callback carriers or a compiler fix for recursive generic visitor
-linkage. Those are separate architectural tranches, not safe additions to the
-strict eager implementation commit.
+and code-size budgets. A generic event stream still requires either non-generic
+callback carriers or a compiler fix for recursive generic visitor linkage.
+Those remain separate architectural tranches.

@@ -87,6 +87,18 @@ fn document_repeat(remaining: U32, total: U32) -> U32 {{
   }}
 }}
 
+fn raw_document_repeat(remaining: U32, total: U32) -> U32 {{
+  if remaining == 0u32 {{
+    total
+  }} else {{
+    match json_parse_raw_document(document()) {{
+      Result::Ok(value) =>
+        raw_document_repeat(remaining - 1u32, total + value.stringify_source().byte_length())
+      Result::Err(_) => total
+    }}
+  }}
+}}
+
 fn retained_roundtrip_repeat(remaining: U32, total: U32) -> U32 {{
   if remaining == 0u32 {{
     total
@@ -116,6 +128,10 @@ pub fn validate(iterations: U32) -> U32 {{
 
 pub fn document_roundtrip(iterations: U32) -> U32 {{
   document_repeat(iterations, 0u32)
+}}
+
+pub fn raw_document_roundtrip(iterations: U32) -> U32 {{
+  raw_document_repeat(iterations, 0u32)
 }}
 
 pub fn retained_roundtrip(iterations: U32) -> U32 {{
@@ -154,7 +170,7 @@ def main() -> None:
 const fs=require('fs'),{performance}=require('perf_hooks');
 (async()=>{const specs=JSON.parse(fs.readFileSync(process.argv[1])),samples=+process.argv[2],rounds=+process.argv[3],target=+process.argv[4],out={};
 for(const s of specs){const i=(await WebAssembly.instantiate(fs.readFileSync(s.wasm),{})).instance,b=Math.max(1,Math.min(5000,Math.floor(target/s.bytes)));out[s.name]={};
-for(const op of ['compact','retained','validate','document_roundtrip','retained_roundtrip']){for(let w=0;w<30;w++)i.exports[op](b);let rs=[];for(let r=0;r<rounds;r++){let xs=[];for(let n=0;n<samples;n++){let t=performance.now();i.exports[op](b);xs.push((performance.now()-t)*1e6/b)}rs.push(xs)}out[s.name][op]=rs}}
+for(const op of ['compact','retained','validate','document_roundtrip','raw_document_roundtrip','retained_roundtrip']){for(let w=0;w<30;w++)i.exports[op](b);let rs=[];for(let r=0;r<rounds;r++){let xs=[];for(let n=0;n<samples;n++){let t=performance.now();i.exports[op](b);xs.push((performance.now()-t)*1e6/b)}rs.push(xs)}out[s.name][op]=rs}}
 process.stdout.write(JSON.stringify(out))})().catch(e=>{console.error(e);process.exit(1)});
 """
     raw = json.loads(run(["node", "-e", runner, str(specs), str(args.samples), str(args.rounds),
@@ -169,6 +185,7 @@ process.stdout.write(JSON.stringify(out))})().catch(e=>{console.error(e);process
             "retained_delta_percent": round((medians["retained"] / medians["compact"] - 1) * 100, 2),
             "validate_ns_per_op": round(medians["validate"], 2),
             "document_roundtrip_ns_per_op": round(medians["document_roundtrip"], 2),
+            "raw_document_roundtrip_ns_per_op": round(medians["raw_document_roundtrip"], 2),
             "retained_roundtrip_ns_per_op": round(medians["retained_roundtrip"], 2),
         }
     report = {
