@@ -407,50 +407,23 @@ fn starshine_array_growth(
     ),
   )
   grow.push(starshine_array_local_set(backing_local))
+  grow.push(starshine_array_local_get(backing_local))
+  grow.push(starshine_match_cast(array_type))
   grow.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-  grow.push(starshine_array_local_set(index_local))
-  let copy_loop : Array[@lib.Instruction] = [
-    starshine_array_local_get(index_local),
-  ]
   append_starshine_instructions(
-    copy_loop,
-    starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
-  )
-  copy_loop.push(@lib.Instruction::i32_ge_u())
-  copy_loop.push(@lib.Instruction::br_if(@lib.LabelIdx::new(1U)))
-  copy_loop.push(starshine_array_local_get(backing_local))
-  copy_loop.push(starshine_match_cast(array_type))
-  copy_loop.push(starshine_array_local_get(index_local))
-  append_starshine_instructions(
-    copy_loop,
+    grow,
     starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
   )
-  copy_loop.push(starshine_match_cast(array_type))
-  copy_loop.push(starshine_array_local_get(index_local))
-  copy_loop.push(
-    @lib.Instruction::array_get(
-      @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
-    ),
+  grow.push(starshine_match_cast(array_type))
+  grow.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+  append_starshine_instructions(
+    grow,
+    starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
   )
-  copy_loop.push(
-    @lib.Instruction::array_set(
-      @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
-    ),
-  )
-  copy_loop.push(starshine_array_local_get(index_local))
-  copy_loop.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
-  copy_loop.push(@lib.Instruction::i32_add())
-  copy_loop.push(starshine_array_local_set(index_local))
-  copy_loop.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
   grow.push(
-    @lib.Instruction::block(
-      @lib.BlockType::void_(),
-      @lib.Expr::new([
-        @lib.Instruction::loop_(
-          @lib.BlockType::void_(),
-          @lib.Expr::new(copy_loop),
-        ),
-      ]),
+    @lib.Instruction::array_copy(
+      @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
     ),
   )
   grow.push(starshine_array_local_get(wrapper_local))

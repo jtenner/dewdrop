@@ -119,33 +119,18 @@
       local.get 2
       array.new_default 21
       local.set 3
+      local.get 3
+      ref.cast (ref 21)
       i32.const 0
-      local.set 2
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 2
-          local.get 1
-          ref.cast (ref 0)
-          struct.get 0 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 3
-          ref.cast (ref 21)
-          local.get 2
-          local.get 1
-          ref.cast (ref 0)
-          struct.get 0 0
-          ref.cast (ref 21)
-          local.get 2
-          array.get 21
-          array.set 21
-          local.get 2
-          i32.const 1
-          i32.add
-          local.set 2
-          br 0 (;@3;)
-        end
-      end
+      local.get 1
+      ref.cast (ref 0)
+      struct.get 0 0
+      ref.cast (ref 21)
+      i32.const 0
+      local.get 1
+      ref.cast (ref 0)
+      struct.get 0 1
+      array.copy 21 21
       local.get 1
       ref.cast (ref 0)
       local.get 3

@@ -4401,33 +4401,18 @@
                       local.get 8
                       array.new_default 141
                       local.set 9
+                      local.get 9
+                      ref.cast (ref 141)
                       i32.const 0
-                      local.set 8
-                      block ;; label = @10
-                        loop ;; label = @11
-                          local.get 8
-                          local.get 7
-                          ref.cast (ref 6)
-                          struct.get 6 1
-                          i32.ge_u
-                          br_if 1 (;@10;)
-                          local.get 9
-                          ref.cast (ref 141)
-                          local.get 8
-                          local.get 7
-                          ref.cast (ref 6)
-                          struct.get 6 0
-                          ref.cast (ref 141)
-                          local.get 8
-                          array.get 141
-                          array.set 141
-                          local.get 8
-                          i32.const 1
-                          i32.add
-                          local.set 8
-                          br 0 (;@11;)
-                        end
-                      end
+                      local.get 7
+                      ref.cast (ref 6)
+                      struct.get 6 0
+                      ref.cast (ref 141)
+                      i32.const 0
+                      local.get 7
+                      ref.cast (ref 6)
+                      struct.get 6 1
+                      array.copy 141 141
                       local.get 7
                       ref.cast (ref 6)
                       local.get 9
@@ -5223,33 +5208,18 @@
                 local.get 29
                 array.new_default 141
                 local.set 30
+                local.get 30
+                ref.cast (ref 141)
                 i32.const 0
-                local.set 29
-                block ;; label = @7
-                  loop ;; label = @8
-                    local.get 29
-                    local.get 28
-                    ref.cast (ref 6)
-                    struct.get 6 1
-                    i32.ge_u
-                    br_if 1 (;@7;)
-                    local.get 30
-                    ref.cast (ref 141)
-                    local.get 29
-                    local.get 28
-                    ref.cast (ref 6)
-                    struct.get 6 0
-                    ref.cast (ref 141)
-                    local.get 29
-                    array.get 141
-                    array.set 141
-                    local.get 29
-                    i32.const 1
-                    i32.add
-                    local.set 29
-                    br 0 (;@8;)
-                  end
-                end
+                local.get 28
+                ref.cast (ref 6)
+                struct.get 6 0
+                ref.cast (ref 141)
+                i32.const 0
+                local.get 28
+                ref.cast (ref 6)
+                struct.get 6 1
+                array.copy 141 141
                 local.get 28
                 ref.cast (ref 6)
                 local.get 30

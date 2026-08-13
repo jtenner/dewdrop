@@ -54,7 +54,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [ ] Track compilation, validation/encoding, and runtime time separately with warmup and variance reporting.
 - [ ] Track compiler allocations and peak memory separately from wall time.
 - [ ] Extend whole-build cache measurements to representative external-package and multi-module workloads.
-- [ ] Establish reviewed regression thresholds for hot compiler and generated-program workloads.
+- [ ] Establish reviewed regression thresholds for hot compiler and generated-program workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements, while cross-engine thresholds remain pending.
 - [ ] Audit integer conversions, packed identity limits, and malformed-input-driven array indexing.
 
 ## Modules, imports, packages, and visibility

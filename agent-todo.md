@@ -27,7 +27,7 @@
 - [ ] Track compile, validation/encoding, and runtime time with warmup and variance.
 - [ ] Track compiler allocations and peak memory.
 - [ ] Extend cache measurements to external-package and multi-module workloads.
-- [ ] Establish reviewed regression thresholds for hot workloads.
+- [ ] Establish reviewed regression thresholds for hot workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements, but cross-engine thresholds remain pending.
 - [ ] Audit integer conversions, packed identities, and malformed-input-driven indexing.
 
 ## Modules, imports, packages, and visibility

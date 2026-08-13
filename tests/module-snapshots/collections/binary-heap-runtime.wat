@@ -432,33 +432,18 @@
       local.get 3
       array.new_default 71
       local.set 4
+      local.get 4
+      ref.cast (ref 71)
       i32.const 0
-      local.set 3
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 3
-          local.get 2
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 4
-          ref.cast (ref 71)
-          local.get 3
-          local.get 2
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 3
-          array.get 71
-          array.set 71
-          local.get 3
-          i32.const 1
-          i32.add
-          local.set 3
-          br 0 (;@3;)
-        end
-      end
+      local.get 2
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 2
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 2
       ref.cast (ref 2)
       local.get 4
@@ -605,33 +590,18 @@
                 local.get 10
                 array.new_default 71
                 local.set 11
+                local.get 11
+                ref.cast (ref 71)
                 i32.const 0
-                local.set 10
-                block ;; label = @7
-                  loop ;; label = @8
-                    local.get 10
-                    local.get 9
-                    ref.cast (ref 2)
-                    struct.get 2 1
-                    i32.ge_u
-                    br_if 1 (;@7;)
-                    local.get 11
-                    ref.cast (ref 71)
-                    local.get 10
-                    local.get 9
-                    ref.cast (ref 2)
-                    struct.get 2 0
-                    ref.cast (ref 71)
-                    local.get 10
-                    array.get 71
-                    array.set 71
-                    local.get 10
-                    i32.const 1
-                    i32.add
-                    local.set 10
-                    br 0 (;@8;)
-                  end
-                end
+                local.get 9
+                ref.cast (ref 2)
+                struct.get 2 0
+                ref.cast (ref 71)
+                i32.const 0
+                local.get 9
+                ref.cast (ref 2)
+                struct.get 2 1
+                array.copy 71 71
                 local.get 9
                 ref.cast (ref 2)
                 local.get 11
@@ -789,33 +759,18 @@
       local.get 3
       array.new_default 71
       local.set 4
+      local.get 4
+      ref.cast (ref 71)
       i32.const 0
-      local.set 3
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 3
-          local.get 2
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 4
-          ref.cast (ref 71)
-          local.get 3
-          local.get 2
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 3
-          array.get 71
-          array.set 71
-          local.get 3
-          i32.const 1
-          i32.add
-          local.set 3
-          br 0 (;@3;)
-        end
-      end
+      local.get 2
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 2
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 2
       ref.cast (ref 2)
       local.get 4
@@ -1051,33 +1006,18 @@
       local.get 3
       array.new_default 76
       local.set 4
+      local.get 4
+      ref.cast (ref 76)
       i32.const 0
-      local.set 3
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 3
-          local.get 2
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 4
-          ref.cast (ref 76)
-          local.get 3
-          local.get 2
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 76)
-          local.get 3
-          array.get 76
-          array.set 76
-          local.get 3
-          i32.const 1
-          i32.add
-          local.set 3
-          br 0 (;@3;)
-        end
-      end
+      local.get 2
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 76)
+      i32.const 0
+      local.get 2
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 76 76
       local.get 2
       ref.cast (ref 2)
       local.get 4
@@ -2862,33 +2802,18 @@
       local.get 21
       array.new_default 71
       local.set 22
+      local.get 22
+      ref.cast (ref 71)
       i32.const 0
-      local.set 21
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 22
-          ref.cast (ref 71)
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 21
-          array.get 71
-          array.set 71
-          local.get 21
-          i32.const 1
-          i32.add
-          local.set 21
-          br 0 (;@3;)
-        end
-      end
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 20
       ref.cast (ref 2)
       local.get 22
@@ -2954,33 +2879,18 @@
       local.get 21
       array.new_default 71
       local.set 22
+      local.get 22
+      ref.cast (ref 71)
       i32.const 0
-      local.set 21
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 22
-          ref.cast (ref 71)
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 21
-          array.get 71
-          array.set 71
-          local.get 21
-          i32.const 1
-          i32.add
-          local.set 21
-          br 0 (;@3;)
-        end
-      end
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 20
       ref.cast (ref 2)
       local.get 22
@@ -3046,33 +2956,18 @@
       local.get 21
       array.new_default 71
       local.set 22
+      local.get 22
+      ref.cast (ref 71)
       i32.const 0
-      local.set 21
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 22
-          ref.cast (ref 71)
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 21
-          array.get 71
-          array.set 71
-          local.get 21
-          i32.const 1
-          i32.add
-          local.set 21
-          br 0 (;@3;)
-        end
-      end
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 20
       ref.cast (ref 2)
       local.get 22
@@ -3138,33 +3033,18 @@
       local.get 21
       array.new_default 71
       local.set 22
+      local.get 22
+      ref.cast (ref 71)
       i32.const 0
-      local.set 21
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 22
-          ref.cast (ref 71)
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 21
-          array.get 71
-          array.set 71
-          local.get 21
-          i32.const 1
-          i32.add
-          local.set 21
-          br 0 (;@3;)
-        end
-      end
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 20
       ref.cast (ref 2)
       local.get 22
@@ -3230,33 +3110,18 @@
       local.get 21
       array.new_default 71
       local.set 22
+      local.get 22
+      ref.cast (ref 71)
       i32.const 0
-      local.set 21
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 22
-          ref.cast (ref 71)
-          local.get 21
-          local.get 20
-          ref.cast (ref 2)
-          struct.get 2 0
-          ref.cast (ref 71)
-          local.get 21
-          array.get 71
-          array.set 71
-          local.get 21
-          i32.const 1
-          i32.add
-          local.set 21
-          br 0 (;@3;)
-        end
-      end
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 0
+      ref.cast (ref 71)
+      i32.const 0
+      local.get 20
+      ref.cast (ref 2)
+      struct.get 2 1
+      array.copy 71 71
       local.get 20
       ref.cast (ref 2)
       local.get 22

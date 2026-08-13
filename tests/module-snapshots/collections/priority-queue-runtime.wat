@@ -458,33 +458,18 @@
       local.get 3
       array.new_default 101
       local.set 4
+      local.get 4
+      ref.cast (ref 101)
       i32.const 0
-      local.set 3
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 3
-          local.get 2
-          ref.cast (ref 9)
-          struct.get 9 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 4
-          ref.cast (ref 101)
-          local.get 3
-          local.get 2
-          ref.cast (ref 9)
-          struct.get 9 0
-          ref.cast (ref 101)
-          local.get 3
-          array.get 101
-          array.set 101
-          local.get 3
-          i32.const 1
-          i32.add
-          local.set 3
-          br 0 (;@3;)
-        end
-      end
+      local.get 2
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 101)
+      i32.const 0
+      local.get 2
+      ref.cast (ref 9)
+      struct.get 9 1
+      array.copy 101 101
       local.get 2
       ref.cast (ref 9)
       local.get 4
@@ -610,33 +595,18 @@
       local.get 3
       array.new_default 101
       local.set 4
+      local.get 4
+      ref.cast (ref 101)
       i32.const 0
-      local.set 3
-      block ;; label = @2
-        loop ;; label = @3
-          local.get 3
-          local.get 2
-          ref.cast (ref 9)
-          struct.get 9 1
-          i32.ge_u
-          br_if 1 (;@2;)
-          local.get 4
-          ref.cast (ref 101)
-          local.get 3
-          local.get 2
-          ref.cast (ref 9)
-          struct.get 9 0
-          ref.cast (ref 101)
-          local.get 3
-          array.get 101
-          array.set 101
-          local.get 3
-          i32.const 1
-          i32.add
-          local.set 3
-          br 0 (;@3;)
-        end
-      end
+      local.get 2
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 101)
+      i32.const 0
+      local.get 2
+      ref.cast (ref 9)
+      struct.get 9 1
+      array.copy 101 101
       local.get 2
       ref.cast (ref 9)
       local.get 4
