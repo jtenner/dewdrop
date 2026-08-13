@@ -23,6 +23,7 @@
   (func (;1;) (type 3) (result i32)
     i32.const 21
     struct.new 0
+    ref.cast (ref 0)
     struct.new 1
     call 0
   )

@@ -789,13 +789,21 @@
     i32.const 0
     i32.const 23
     struct.new 5
+    ref.cast (ref 4)
     struct.new 7
+    ref.cast (ref 6)
     struct.new 9
+    ref.cast (ref 8)
     struct.new 11
+    ref.cast (ref 10)
     struct.new 13
+    ref.cast (ref 12)
     struct.new 15
+    ref.cast (ref 14)
     struct.new 17
+    ref.cast (ref 16)
     struct.new 19
+    ref.cast (ref 18)
     struct.new 21
     call 3
     i32.add

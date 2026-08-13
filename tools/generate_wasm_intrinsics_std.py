@@ -53,6 +53,22 @@ EXTRA_DECLARATIONS = [
         signature="(left: I32, right: I32) -> Bool",
         target="i32_lt",
     ),
+    IntrinsicDeclaration(
+        source="backend-only Core operations",
+        name="u32_ctz",
+        alias="wasm_u32_ctz",
+        generics="",
+        signature="(value: U32) -> U32",
+        target="dew_u32_ctz",
+    ),
+    IntrinsicDeclaration(
+        source="WasmGC Bytes representation bridge",
+        name="bytes_load_u8x16",
+        alias="wasm_bytes_load_u8x16",
+        generics="",
+        signature="(value: Bytes, start: U32) -> U8x16",
+        target="dew_bytes_load_u8x16",
+    ),
 ]
 
 

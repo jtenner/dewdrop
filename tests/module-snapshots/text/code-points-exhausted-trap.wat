@@ -338,6 +338,7 @@
   (func (;9;) (type 11) (param eqref) (result (ref 1))
     local.get 0
     call 8
+    ref.cast (ref 0)
     struct.new 1
     ref.cast (ref 1)
   )

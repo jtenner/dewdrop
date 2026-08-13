@@ -3105,9 +3105,11 @@
     i32.const -5
     i32.const 6
     struct.new 33
+    ref.cast (ref 33)
     i32.const 1
     i32.const 8
     struct.new 35
+    ref.cast (ref 34)
     struct.new 38
     call 35
     i32.const 1

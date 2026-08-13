@@ -10,6 +10,6 @@
   "return_call_refs": { "exact": 0 },
   "struct_news": { "min": 48, "max": 52 },
   "array_news": { "max": 4 },
-  "ref_casts": { "max": 76 },
+  "ref_casts": { "max": 82 },
   "ref_tests": { "max": 1 }
 }

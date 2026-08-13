@@ -79,8 +79,11 @@
     ref.null eq
     i32.const 0
     struct.new 0
+    ref.cast (ref 0)
     struct.new 1
+    ref.cast (ref 0)
     struct.new 1
+    ref.cast (ref 0)
     struct.new 1
     call 3
     local.set 0
@@ -135,6 +138,7 @@
         v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 1
         local.get 2
+        ref.cast (ref 0)
         struct.new 1
         local.set 4
         br 1 (;@1;)
@@ -179,6 +183,7 @@
         v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         ref.null eq
         local.get 2
+        ref.cast (ref 0)
         struct.new 1
         local.set 4
         br 1 (;@1;)

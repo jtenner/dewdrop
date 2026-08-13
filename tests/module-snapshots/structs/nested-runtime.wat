@@ -276,6 +276,7 @@
   (func (;3;) (type 5) (result i32)
     i32.const 9
     struct.new 2
+    ref.cast (ref 2)
     struct.new 3
     call 2
     i32.const 9

@@ -32,6 +32,7 @@ dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.iter            eager consuming iterator combinators over Iter<t>
 dew.std.math            explicit checked/wrapping integer and IEEE float math
 dew.std.io              portable byte Reader/Writer contracts and in-memory streams
+dew.std.json            strict bounded JSON values, I/O facades, and serialization
 dew.std.testing         explicit assertion helpers over compiler-owned test primitives
 dew.std.option          ambient generic Option<t>
 dew.std.result          ambient generic Result<t, e>
@@ -77,7 +78,7 @@ import dew.std.wasm.intrinsics as @wasm
 let narrowed = @wasm.i64_trunc_i32(value)
 ```
 
-The module is generated from the compiler's backend inline-builtin surface. It exposes every currently source-addressable scalar, conversion, memory, packed-lane, and SIMD operation with a `wasm_`-prefixed public name, while retaining `i64_trunc_i32` as the first-published compatibility spelling. The generator fails when a backend inline builtin lacks a declaration, and the bootstrap source is generated from the same output. Reference, GC, table, and host-boundary operations remain absent until Dew exposes corresponding safe carrier types and signatures.
+The module is generated from the compiler's backend inline-builtin surface. It exposes every currently source-addressable scalar, conversion, memory, packed-lane, and SIMD operation with a `wasm_`-prefixed public name, while retaining `i64_trunc_i32` as the first-published compatibility spelling. It also exposes `wasm_bytes_load_u8x16(Bytes, U32)`, a bounds-checked representation bridge that loads sixteen logical bytes from GC-backed `Bytes`; unlike `wasm_v128_load(U32)`, it does not address linear memory. The generator fails when a backend inline builtin lacks a declaration, and the bootstrap source is generated from the same output. General reference, GC, table, and host-boundary operations remain absent until Dew exposes corresponding safe carrier types and signatures.
 
 All public standard modules may be selected explicitly:
 
@@ -149,6 +150,8 @@ WASI marshalling uses the 65,520 data bytes remaining in one reusable 64 KiB lin
 
 `dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the separate Preview 1 adapter surface.
 
+`dew.std.json` implements strict RFC 8259 parsing in Dew source. `JsonValue::Number` preserves the exact validated lexeme; arrays and object members preserve source order; duplicate keys are rejected during parsing and serialization; UTF-8, escapes, surrogate pairs, trailing input, nesting, value count, input bytes, and decoded string bytes have explicit policies and errors. `json_parse_reader`/`json_write` compose with portable `Reader`/`Writer`; they are bounded whole-value facades rather than a separate token-stream parser. Whitespace, string-special, and scalar-delimiter scans use generated `U8x16` operations, `u32_ctz`, and the generic GC-backed `Bytes` load bridge. Regenerate its bootstrap mirror with `python3 tools/generate_json_std.py`.
+
 `dew.std.math` uses type-prefixed names because Dew does not permit duplicate top-level function names. Integer `*_wrapping_*` operations expose fixed-width wrapping semantics; `*_checked_*` returns `Option` instead of trapping on overflow or zero divisors. Signed exact `*_abs` and invalid clamps trap. Floating bit conversion is exact, min/max preserve selected NaN payloads and define signed-zero selection, and clamp rejects NaN bounds while preserving a NaN input. The generated source and bootstrap mirror are refreshed with:
 
 ```text
@@ -161,6 +164,7 @@ After editing the text or WASI standard sources, regenerate their portable boots
 python3 tools/generate_string_std.py
 python3 tools/generate_wasi_std.py
 python3 tools/generate_wasm_intrinsics_std.py
+python3 tools/generate_json_std.py
 ```
 
 Typed packed-lane modules are organized as one generated source file per public type:

@@ -1,0 +1,247 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.io
+open dew.std.json
+open dew.std.string
+
+test "JSON parses nested values and exact numbers" {
+  match json_parse("{\"name\":\"dew\",\"ok\":true,\"values\":[null,-12.5e2]}") {
+    Result::Ok(JsonValue::Object(members)) => {
+      assert(members.length() == 3u32, "object member count")
+      let name = members.get_unchecked(0u32)
+      let ok = members.get_unchecked(1u32)
+      let list = members.get_unchecked(2u32)
+      assert(name.value is JsonValue::String("dew"), "string member")
+      assert(ok.value is JsonValue::Bool(true), "bool member")
+      assert(
+        json_object_get(members, "name") is Option::Some(JsonValue::String("dew")),
+        "object lookup failed",
+      )
+      assert(json_object_get(members, "missing") is Option::None, "missing lookup")
+      match list.value {
+        JsonValue::Array(values) => {
+          assert(values.length() == 2u32, "array length")
+          assert(values.get_unchecked(0u32) is JsonValue::Null, "null item")
+          assert(
+            values.get_unchecked(1u32) is JsonValue::Number("-12.5e2"),
+            "exact number lexeme",
+          )
+        }
+        _ => assert(false, "wrong array member")
+      }
+    }
+    _ => assert(false, "valid JSON did not parse")
+  }
+}
+
+test "JSON decodes escapes and surrogate pairs" {
+  match json_parse("\"line\\n\\u03bb \\ud83c\\udf0d\"") {
+    Result::Ok(JsonValue::String(value)) => {
+      assert(value.equals("line\nλ 🌍"), "decoded JSON string")
+    }
+    _ => assert(false, "escaped JSON string did not parse")
+  }
+}
+
+test "JSON accepts the RFC 8259 scalar and empty aggregate forms" {
+  assert(json_parse(" null ") is Result::Ok(JsonValue::Null), "null did not parse")
+  assert(json_parse("true") is Result::Ok(JsonValue::Bool(true)), "true did not parse")
+  assert(json_parse("false") is Result::Ok(JsonValue::Bool(false)), "false did not parse")
+  assert(json_parse("-0") is Result::Ok(JsonValue::Number("-0")), "negative zero")
+  assert(json_parse("0.125E+2") is Result::Ok(JsonValue::Number("0.125E+2")), "exponent")
+  assert(json_parse("[]") is Result::Ok(JsonValue::Array(_)), "empty array")
+  assert(json_parse("{}") is Result::Ok(JsonValue::Object(_)), "empty object")
+}
+
+test "JSON rejects duplicate keys and malformed numbers" {
+  assert(
+    json_parse("{\"a\":1,\"a\":2}") is Result::Err(JsonParseError::DuplicateObjectKey(_, "a")),
+    "duplicate object key accepted",
+  )
+  assert(
+    json_parse("01") is Result::Err(JsonParseError::InvalidNumber(0u32)),
+    "leading zero accepted",
+  )
+  assert(
+    json_parse("1.") is Result::Err(JsonParseError::InvalidNumber(0u32)),
+    "missing fractional digit accepted",
+  )
+}
+
+test "JSON rejects malformed aggregate and trailing syntax" {
+  assert(json_parse("[1,]") is Result::Err(_), "array trailing comma accepted")
+  assert(json_parse("{\"a\":1,}") is Result::Err(_), "object trailing comma accepted")
+  assert(json_parse("{\"a\" 1}") is Result::Err(_), "missing colon accepted")
+  assert(json_parse("tru") is Result::Err(_), "short literal accepted")
+  assert(json_parse("null false") is Result::Err(JsonParseError::TrailingData(5u32)), "trailing data accepted")
+  assert(json_parse("1e") is Result::Err(JsonParseError::InvalidNumber(0u32)), "short exponent accepted")
+}
+
+test "JSON rejects malformed UTF8 and invalid escapes" {
+  assert(
+    json_parse_bytes(b"\xFF") is Result::Err(JsonParseError::InvalidUtf8),
+    "malformed UTF8 accepted",
+  )
+  assert(
+    json_parse("\"\\x\"") is Result::Err(JsonParseError::InvalidEscape(1u32)),
+    "unknown escape accepted",
+  )
+  assert(
+    json_parse("\"\\ud800\"") is Result::Err(JsonParseError::InvalidUnicodeEscape(1u32)),
+    "unpaired surrogate accepted",
+  )
+  assert(
+    json_parse("\"line\nfeed\"") is Result::Err(JsonParseError::InvalidEscape(5u32)),
+    "unescaped control byte accepted",
+  )
+}
+
+test "JSON limits are explicit and deterministic" {
+  let tiny = JsonLimits {
+    max_input_bytes: 2u32
+    max_depth: 8u32
+    max_values: 8u32
+    max_string_bytes: 8u32
+  }
+  assert(
+    json_parse_bytes_with_limits(b"null", tiny) is Result::Err(JsonParseError::InputLimitExceeded(4u32)),
+    "input limit ignored",
+  )
+  let shallow = JsonLimits {
+    max_input_bytes: 32u32
+    max_depth: 1u32
+    max_values: 8u32
+    max_string_bytes: 8u32
+  }
+  assert(
+    json_parse_bytes_with_limits(b"[[null]]", shallow) is Result::Err(JsonParseError::DepthLimitExceeded(2u32)),
+    "depth limit ignored",
+  )
+  let one_value = JsonLimits {
+    max_input_bytes: 32u32
+    max_depth: 8u32
+    max_values: 1u32
+    max_string_bytes: 8u32
+  }
+  assert(
+    json_parse_bytes_with_limits(b"[null]", one_value) is Result::Err(JsonParseError::ValueLimitExceeded(1u32)),
+    "value limit ignored",
+  )
+  let short_string = JsonLimits {
+    max_input_bytes: 32u32
+    max_depth: 8u32
+    max_values: 8u32
+    max_string_bytes: 3u32
+  }
+  assert(
+    json_parse_bytes_with_limits(b"\"abcd\"", short_string) is Result::Err(JsonParseError::StringLimitExceeded(5u32)),
+    "string limit ignored",
+  )
+}
+
+test "JSON serialization is compact and deterministic" {
+  let members = json_object()
+  members.push(json_member("quote", JsonValue::String("a\"b\n")))
+  let values = json_array()
+  values.push(JsonValue::Bool(true))
+  values.push(JsonValue::Number("1.25e2"))
+  members.push(json_member("values", JsonValue::Array(values)))
+  match json_stringify(JsonValue::Object(members)) {
+    Result::Ok(output) => {
+      assert(
+        output.equals("{\"quote\":\"a\\\"b\\n\",\"values\":[true,1.25e2]}"),
+        "unexpected JSON serialization",
+      )
+      assert(json_parse(output) is Result::Ok(_), "serialized JSON did not parse")
+    }
+    Result::Err(_) => assert(false, "JSON serialization failed")
+  }
+}
+
+test "JSON serialization validates nested number lexemes and duplicate keys" {
+  let values = json_array()
+  values.push(JsonValue::Null)
+  values.push(JsonValue::Number("nan"))
+  assert(
+    json_stringify(JsonValue::Array(values)) is Result::Err(JsonWriteError::InvalidNumber("nan")),
+    "nested invalid JSON number serialized",
+  )
+  let members = json_object()
+  members.push(json_member("a", JsonValue::Null))
+  members.push(json_member("a", JsonValue::Bool(true)))
+  assert(
+    json_stringify(JsonValue::Object(members)) is Result::Err(JsonWriteError::DuplicateObjectKey("a")),
+    "duplicate object keys serialized",
+  )
+}
+
+test "JSON serialization enforces depth and escapes control bytes" {
+  let inner = json_array()
+  inner.push(JsonValue::Null)
+  let outer = json_array()
+  outer.push(JsonValue::Array(inner))
+  assert(
+    json_stringify_with_limits(JsonValue::Array(outer), 1u32, 64u32) is Result::Err(JsonWriteError::DepthLimitExceeded),
+    "serialization depth limit ignored",
+  )
+  assert(
+    json_stringify(JsonValue::String("\x00\x1F/")) is Result::Ok("\"\\u0000\\u001f/\""),
+    "control-byte escaping changed",
+  )
+}
+
+test "JSON serialization byte limits stop before oversized output" {
+  assert(
+    json_stringify_with_limits(JsonValue::String("abcd"), 8u32, 3u32) is Result::Err(JsonWriteError::ByteLimitExceeded),
+    "serialization byte limit ignored",
+  )
+}
+
+test "JSON Writer facade maps serialization and IO results explicitly" {
+  let output = BytesOutput::new()
+  let members = json_object()
+  members.push(json_member("ok", JsonValue::Bool(true)))
+  match json_write(output, JsonValue::Object(members)) {
+    Result::Ok(written) => {
+      assert(written == 11u32, "writer byte count")
+      match output.finish() {
+        Result::Ok(bytes) => assert(bytes.equals(b"{\"ok\":true}"), "writer bytes")
+        Result::Err(_) => assert(false, "writer did not finish")
+      }
+    }
+    Result::Err(_) => assert(false, "JSON writer failed")
+  }
+  assert(
+    json_write_with_limits(BytesOutput::new(), JsonValue::String("abcd"), 8u32, 3u32) is Result::Err(JsonOutputError::Write(JsonWriteError::ByteLimitExceeded)),
+    "writer serialization error was not preserved",
+  )
+  let closed = BytesOutput::new()
+  match closed.finish() {
+    Result::Ok(_) => {
+      assert(
+        json_write(closed, JsonValue::Null) is Result::Err(JsonOutputError::Io(IoError::Closed)),
+        "writer IO error was not preserved",
+      )
+    }
+    Result::Err(_) => assert(false, "writer close setup failed")
+  }
+}
+
+test "JSON Reader facade maps IO and parse errors explicitly" {
+  match json_parse_reader(BytesInput::new(b"[true,null]"), 3u32) {
+    Result::Ok(JsonValue::Array(values)) => {
+      assert(values.length() == 2u32, "reader array length")
+      assert(values.get_unchecked(0u32) is JsonValue::Bool(true), "reader bool")
+      assert(values.get_unchecked(1u32) is JsonValue::Null, "reader null")
+    }
+    _ => assert(false, "reader JSON did not parse")
+  }
+  assert(
+    json_parse_reader(BytesInput::new(b"null"), 0u32) is Result::Err(JsonReadError::Io(IoError::ZeroProgress)),
+    "reader IO error was not preserved",
+  )
+  assert(
+    json_parse_reader(BytesInput::new(b"{"), 2u32) is Result::Err(JsonReadError::Parse(JsonParseError::UnexpectedEnd(1u32))),
+    "reader parse error was not preserved",
+  )
+}

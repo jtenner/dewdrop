@@ -328,6 +328,8 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::i32_div_u()])
   } else if name == b"dew_u32_rem" {
     Some([@lib.Instruction::i32_rem_u()])
+  } else if name == b"dew_u32_ctz" {
+    Some([@lib.Instruction::i32_ctz()])
   } else if name == b"dew_u64_or" {
     Some([@lib.Instruction::i64_or()])
   } else if name == b"dew_u64_xor" {

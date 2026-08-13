@@ -789,16 +789,30 @@ fn wasmgc_mark_nominal_type(
   type_ : ResolvedTypeId,
   required : Map[DeclId, Bool],
 ) -> Bool {
-  match wasmgc_nominal_declaration(resolved, type_) {
-    Some(declaration) if semantic_id_module(declaration) == resolved.module_id =>
-      if required.contains(declaration) {
-        false
-      } else {
-        required[declaration] = true
-        true
+  let mut changed = false
+  let pending : Array[ResolvedTypeId] = [type_]
+  while pending.length() > 0 {
+    let current = pending.pop().unwrap()
+    if current < 0 || current >= resolved.types.length() {
+      continue
+    }
+    match resolved.types[current] {
+      NominalType(declaration) =>
+        if semantic_id_module(declaration) == resolved.module_id &&
+          !required.contains(declaration) {
+          required[declaration] = true
+          changed = true
+        }
+      AppliedType(base, arguments) => {
+        pending.push(base)
+        for index in 0..<arguments.length {
+          pending.push(resolved.type_arguments[arguments.start + index])
+        }
       }
-    _ => false
+      _ => ()
+    }
   }
+  changed
 }
 
 ///|
@@ -1839,6 +1853,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_find" ||
   name == b"dew_bytes_starts_with" ||
   name == b"dew_bytes_ends_with" ||
+  name == b"dew_bytes_load_u8x16" ||
   name == b"dew_wasi_fd_write" ||
   name == b"dew_wasi_fd_read" ||
   name == b"dew_test_assert" ||

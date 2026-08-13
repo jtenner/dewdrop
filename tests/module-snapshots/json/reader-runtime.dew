@@ -1,0 +1,25 @@
+open dew.std.array
+open dew.std.io
+open dew.std.json
+open dew.std.bytes
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  match json_parse_reader(BytesInput::new(b"[true,null]"), 3u32) {
+    Result::Ok(JsonValue::Array(values)) if values.length() == 2u32 => {
+      let output = BytesOutput::new()
+      match json_write(output, JsonValue::Array(values)) {
+        Result::Ok(11u32) => {
+          match output.finish() {
+            Result::Ok(bytes) if bytes.equals(b"[true,null]") => {
+              wasi_fd_write(1u32, b"json:reader-writer")
+            }
+            _ => wasi_fd_write(1u32, b"FAIL")
+          }
+        }
+        _ => wasi_fd_write(1u32, b"FAIL")
+      }
+    }
+    _ => wasi_fd_write(1u32, b"FAIL")
+  }
+}

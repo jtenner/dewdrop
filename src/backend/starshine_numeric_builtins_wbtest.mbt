@@ -16,4 +16,8 @@ test "scalar math builtins map to deterministic Wasm instructions" {
     starshine_numeric_builtin_instructions(b"dew_math_f64_nearest"),
     Some([@lib.Instruction::f64_nearest()]),
   )
+  assert_eq(
+    starshine_numeric_builtin_instructions(b"dew_u32_ctz"),
+    Some([@lib.Instruction::i32_ctz()]),
+  )
 }

@@ -2,6 +2,8 @@ import dew.std.wasm.intrinsics as @wasm
 
 test "generated scalar Wasm intrinsics execute directly" {
   assert(@wasm.wasm_i32_add(19i32, 23i32) == 42i32, "i32 add intrinsic failed")
+  assert(@wasm.wasm_u32_ctz(0u32) == 32u32, "u32 ctz zero failed")
+  assert(@wasm.wasm_u32_ctz(72u32) == 3u32, "u32 ctz nonzero failed")
   assert(@wasm.wasm_core_i32_lt(1i32, 2i32), "backend-only i32 lt intrinsic failed")
   assert(@wasm.i64_trunc_i32(4294967297i64) == 1i32, "i64 truncation intrinsic failed")
   assert(@wasm.wasm_f32_sqrt(81.0f32) == 9.0f32, "f32 sqrt intrinsic failed")

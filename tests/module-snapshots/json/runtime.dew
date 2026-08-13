@@ -1,0 +1,22 @@
+open dew.std.array
+open dew.std.json
+open dew.std.string
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  match json_parse("  {\"message\":\"SIMD 0123456789abcdef λ\",\"values\":[null,true,-12.5e2]}  ") {
+    Result::Ok(JsonValue::Object(members)) => {
+      let message_ok = json_object_get(members, "message") is Option::Some(JsonValue::String("SIMD 0123456789abcdef λ"))
+      let compact_ok = match json_stringify(JsonValue::Object(members)) {
+        Result::Ok(output) => output.equals("{\"message\":\"SIMD 0123456789abcdef λ\",\"values\":[null,true,-12.5e2]}")
+        Result::Err(_) => false
+      }
+      if message_ok && compact_ok {
+        wasi_fd_write(1u32, b"json:strict-simd")
+      } else {
+        wasi_fd_write(1u32, b"FAIL")
+      }
+    }
+    _ => wasi_fd_write(1u32, b"FAIL")
+  }
+}

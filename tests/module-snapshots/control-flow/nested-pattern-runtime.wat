@@ -560,12 +560,14 @@
     i32.const 0
     i32.const 7
     struct.new 3
+    ref.cast (ref 2)
     struct.new 5
     call 2
     i32.const 0
     i32.const 1
     i32.const 5
     struct.new 3
+    ref.cast (ref 2)
     struct.new 5
     call 2
     i32.add
@@ -573,6 +575,7 @@
     i32.const 0
     i32.const 3
     struct.new 3
+    ref.cast (ref 2)
     i32.const 1
     struct.new 6
     call 2
@@ -580,6 +583,7 @@
     i32.const 1
     i32.const 4
     struct.new 3
+    ref.cast (ref 2)
     struct.new 7
     call 3
     i32.add

@@ -490,12 +490,14 @@
   (func (;13;) (type 16) (param eqref) (result (ref 3))
     local.get 0
     call 12
+    ref.cast (ref 2)
     struct.new 3
     ref.cast (ref 3)
   )
   (func (;14;) (type 17) (param eqref) (result (ref 4))
     local.get 0
     call 12
+    ref.cast (ref 2)
     struct.new 4
     ref.cast (ref 4)
   )

@@ -14,8 +14,10 @@
     (local (ref 1))
     global.get 0
     ref.cast (ref 0)
+    ref.cast (ref 0)
     call 0
     struct.new 0
+    ref.cast (ref 0)
     struct.new 1
     local.set 0
     local.get 0

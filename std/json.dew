@@ -1,0 +1,1033 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.io
+open dew.std.string
+open dew.std.string_builder
+open dew.std.wasm.intrinsics
+
+pub enum JsonValue {
+  Null
+  Bool(Bool)
+  Number(String)
+  String(String)
+  Array(Array<JsonValue>)
+  Object(Array<JsonMember>)
+}
+
+pub struct JsonMember {
+  key: String
+  value: JsonValue
+}
+
+pub struct JsonLimits {
+  max_input_bytes: U32
+  max_depth: U32
+  max_values: U32
+  max_string_bytes: U32
+}
+
+pub enum JsonParseError {
+  InputLimitExceeded(U32)
+  DepthLimitExceeded(U32)
+  ValueLimitExceeded(U32)
+  StringLimitExceeded(U32)
+  InvalidUtf8
+  UnexpectedEnd(U32)
+  UnexpectedByte(U32, U8)
+  InvalidLiteral(U32)
+  InvalidNumber(U32)
+  InvalidEscape(U32)
+  InvalidUnicodeEscape(U32)
+  DuplicateObjectKey(U32, String)
+  TrailingData(U32)
+}
+
+pub enum JsonWriteError {
+  DepthLimitExceeded
+  ByteLimitExceeded
+  InvalidNumber(String)
+  DuplicateObjectKey(String)
+}
+
+pub enum JsonReadError {
+  Io(IoError)
+  Parse(JsonParseError)
+}
+
+pub enum JsonOutputError {
+  Io(IoError)
+  Write(JsonWriteError)
+}
+
+struct JsonParser {
+  input: Bytes
+  offset: Array<U32>
+  values: Array<U32>
+  limits: JsonLimits
+}
+
+struct JsonWriter {
+  builder: StringBuilder
+  max_depth: U32
+  max_bytes: U32
+  error: Array<U32>
+  invalid_numbers: Array<String>
+  duplicate_keys: Array<String>
+}
+
+fn json_unit() -> Unit {}
+
+pub fn json_default_limits() -> JsonLimits {
+  JsonLimits {
+    max_input_bytes: 16777216u32
+    max_depth: 128u32
+    max_values: 1048576u32
+    max_string_bytes: 16777216u32
+  }
+}
+
+fn json_parser_offset(parser: JsonParser) -> U32 {
+  parser.offset.get_unchecked(0u32)
+}
+
+fn json_parser_set_offset(parser: JsonParser, offset: U32) -> Unit {
+  parser.offset.set_unchecked(0u32, offset)
+}
+
+fn json_parser_value_count(parser: JsonParser) -> U32 {
+  parser.values.get_unchecked(0u32)
+}
+
+fn json_parser_set_value_count(parser: JsonParser, count: U32) -> Unit {
+  parser.values.set_unchecked(0u32, count)
+}
+
+fn json_is_whitespace(byte: U8) -> Bool {
+  byte == 32u8 || byte == 9u8 || byte == 10u8 || byte == 13u8
+}
+
+fn json_first_mask_lane(mask: U32) -> U32 {
+  wasm_u32_ctz(mask)
+}
+
+fn json_skip_whitespace_simd(value: Bytes, start: U32) -> U32 {
+  let length = value.byte_length()
+  let mut index = start
+  while index {
+    current if current + 16u32 <= length => {
+      let vector = wasm_bytes_load_u8x16(value, current)
+      let whitespace = wasm_u8x16_or(
+        wasm_u8x16_or(
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(32u8)),
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(9u8)),
+        ),
+        wasm_u8x16_or(
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(10u8)),
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(13u8)),
+        ),
+      )
+      let non_whitespace = wasm_u8x16_bitmask(whitespace) ^ 65535u32
+      if non_whitespace == 0u32 {
+        continue current + 16u32
+      } else {
+        break current + json_first_mask_lane(non_whitespace)
+      }
+    }
+    current => {
+      if current < length && json_is_whitespace(value.byte_at(current)) {
+        continue current + 1u32
+      } else {
+        break current
+      }
+    }
+  }
+}
+
+fn json_scan_string_special_simd(value: Bytes, start: U32) -> U32 {
+  let length = value.byte_length()
+  let mut index = start
+  while index {
+    current if current + 16u32 <= length => {
+      let vector = wasm_bytes_load_u8x16(value, current)
+      let specials = wasm_u8x16_or(
+        wasm_u8x16_lt_u(vector, wasm_u8x16_splat(32u8)),
+        wasm_u8x16_or(
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(34u8)),
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(92u8)),
+        ),
+      )
+      let mask = wasm_u8x16_bitmask(specials)
+      if mask == 0u32 {
+        continue current + 16u32
+      } else {
+        break current + json_first_mask_lane(mask)
+      }
+    }
+    current => {
+      if current >= length {
+        break current
+      } else {
+        let byte = value.byte_at(current)
+        if byte < 32u8 || byte == 34u8 || byte == 92u8 {
+          break current
+        } else {
+          continue current + 1u32
+        }
+      }
+    }
+  }
+}
+
+fn json_is_scalar_terminator(byte: U8) -> Bool {
+  json_is_whitespace(byte) || byte == 44u8 || byte == 93u8 || byte == 125u8
+}
+
+fn json_scan_scalar_end_simd(value: Bytes, start: U32) -> U32 {
+  let length = value.byte_length()
+  let mut index = start
+  while index {
+    current if current + 16u32 <= length => {
+      let vector = wasm_bytes_load_u8x16(value, current)
+      let terminators = wasm_u8x16_or(
+        wasm_u8x16_or(
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(32u8)),
+          wasm_u8x16_eq(vector, wasm_u8x16_splat(9u8)),
+        ),
+        wasm_u8x16_or(
+          wasm_u8x16_or(
+            wasm_u8x16_eq(vector, wasm_u8x16_splat(10u8)),
+            wasm_u8x16_eq(vector, wasm_u8x16_splat(13u8)),
+          ),
+          wasm_u8x16_or(
+            wasm_u8x16_eq(vector, wasm_u8x16_splat(44u8)),
+            wasm_u8x16_or(
+              wasm_u8x16_eq(vector, wasm_u8x16_splat(93u8)),
+              wasm_u8x16_eq(vector, wasm_u8x16_splat(125u8)),
+            ),
+          ),
+        ),
+      )
+      let mask = wasm_u8x16_bitmask(terminators)
+      if mask == 0u32 {
+        continue current + 16u32
+      } else {
+        break current + json_first_mask_lane(mask)
+      }
+    }
+    current => {
+      if current < length && json_is_scalar_terminator(value.byte_at(current)) == false {
+        continue current + 1u32
+      } else {
+        break current
+      }
+    }
+  }
+}
+
+fn json_parser_skip_whitespace(parser: JsonParser) -> Unit {
+  json_parser_set_offset(
+    parser,
+    json_skip_whitespace_simd(parser.input, json_parser_offset(parser)),
+  )
+}
+
+fn json_is_digit(byte: U8) -> Bool {
+  byte >= 48u8 && byte <= 57u8
+}
+
+fn json_is_nonzero_digit(byte: U8) -> Bool {
+  byte >= 49u8 && byte <= 57u8
+}
+
+fn json_digit_run_end(value: Bytes, start: U32, end: U32) -> U32 {
+  while start {
+    index if index < end && json_is_digit(value.byte_at(index)) => continue index + 1u32
+    index => break index
+  }
+}
+
+fn json_number_after_integer(
+  value: Bytes,
+  start: U32,
+  end: U32,
+) -> Option<U32> {
+  if start >= end {
+    Option::None
+  } else if value.byte_at(start) == 48u8 {
+    if start + 1u32 < end && json_is_digit(value.byte_at(start + 1u32)) {
+      Option::None
+    } else {
+      Option::Some(start + 1u32)
+    }
+  } else if json_is_nonzero_digit(value.byte_at(start)) {
+    Option::Some(json_digit_run_end(value, start + 1u32, end))
+  } else {
+    Option::None
+  }
+}
+
+fn json_number_after_fraction(
+  value: Bytes,
+  start: U32,
+  end: U32,
+) -> Option<U32> {
+  if start < end && value.byte_at(start) == 46u8 {
+    let digits = start + 1u32
+    if digits >= end || json_is_digit(value.byte_at(digits)) == false {
+      Option::None
+    } else {
+      Option::Some(json_digit_run_end(value, digits + 1u32, end))
+    }
+  } else {
+    Option::Some(start)
+  }
+}
+
+fn json_number_after_exponent(
+  value: Bytes,
+  start: U32,
+  end: U32,
+) -> Option<U32> {
+  if start < end && (value.byte_at(start) == 101u8 || value.byte_at(start) == 69u8) {
+    let first = start + 1u32
+    let digits = if first < end && (value.byte_at(first) == 43u8 || value.byte_at(first) == 45u8) {
+      first + 1u32
+    } else {
+      first
+    }
+    if digits >= end || json_is_digit(value.byte_at(digits)) == false {
+      Option::None
+    } else {
+      Option::Some(json_digit_run_end(value, digits + 1u32, end))
+    }
+  } else {
+    Option::Some(start)
+  }
+}
+
+fn json_number_is_valid(value: Bytes, start: U32, end: U32) -> Bool {
+  if start >= end {
+    false
+  } else {
+    let integer_start = if value.byte_at(start) == 45u8 {
+      start + 1u32
+    } else {
+      start
+    }
+    match json_number_after_integer(value, integer_start, end) {
+      Option::None => false
+      Option::Some(after_integer) => {
+        match json_number_after_fraction(value, after_integer, end) {
+          Option::None => false
+          Option::Some(after_fraction) => {
+            match json_number_after_exponent(value, after_fraction, end) {
+              Option::Some(after_exponent) => after_exponent == end
+              Option::None => false
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn json_hex_value(byte: U8) -> U32 {
+  if byte >= 48u8 && byte <= 57u8 {
+    u8_into_u32(byte - 48u8)
+  } else if byte >= 65u8 && byte <= 70u8 {
+    u8_into_u32(byte - 55u8)
+  } else if byte >= 97u8 && byte <= 102u8 {
+    u8_into_u32(byte - 87u8)
+  } else {
+    4294967295u32
+  }
+}
+
+fn json_parse_hex4(input: Bytes, start: U32) -> Option<U32> {
+  if start > input.byte_length() || input.byte_length() - start < 4u32 {
+    Option::None
+  } else {
+    let a = json_hex_value(input.byte_at(start))
+    let b = json_hex_value(input.byte_at(start + 1u32))
+    let c = json_hex_value(input.byte_at(start + 2u32))
+    let d = json_hex_value(input.byte_at(start + 3u32))
+    if a == 4294967295u32 || b == 4294967295u32 || c == 4294967295u32 || d == 4294967295u32 {
+      Option::None
+    } else {
+      Option::Some((a << 12u32) | (b << 8u32) | (c << 4u32) | d)
+    }
+  }
+}
+
+fn json_append_plain_string_segment(
+  parser: JsonParser,
+  builder: StringBuilder,
+  start: U32,
+  end: U32,
+) -> Bool {
+  let used = builder.byte_length()
+  if end < start || used > parser.limits.max_string_bytes || end - start > parser.limits.max_string_bytes - used {
+    false
+  } else {
+    if end > start {
+      builder.append_checked(parser.input.view(start, end - start))
+    } else {
+    }
+    true
+  }
+}
+
+fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
+  let opening = json_parser_offset(parser)
+  let length = parser.input.byte_length()
+  if opening >= length {
+    Result::Err(JsonParseError::UnexpectedEnd(opening))
+  } else if parser.input.byte_at(opening) != 34u8 {
+    Result::Err(JsonParseError::UnexpectedByte(opening, parser.input.byte_at(opening)))
+  } else {
+    let builder = StringBuilder::new()
+    let mut segment = opening + 1u32
+    let mut index = segment
+    while true {
+      true => {
+      let special = json_scan_string_special_simd(parser.input, index)
+      if special >= length {
+        break Result::Err(JsonParseError::UnexpectedEnd(length))
+      } else {
+      }
+      if json_append_plain_string_segment(parser, builder, segment, special) == false {
+        break Result::Err(JsonParseError::StringLimitExceeded(special))
+      } else {
+      }
+      let byte = parser.input.byte_at(special)
+      if byte == 34u8 {
+        json_parser_set_offset(parser, special + 1u32)
+        break Result::Ok(builder.finish())
+      } else if byte < 32u8 {
+        break Result::Err(JsonParseError::InvalidEscape(special))
+      } else if byte != 92u8 {
+        break Result::Err(JsonParseError::UnexpectedByte(special, byte))
+      } else if special + 1u32 >= length {
+        break Result::Err(JsonParseError::UnexpectedEnd(length))
+      } else {
+        let escape = parser.input.byte_at(special + 1u32)
+        if escape == 34u8 || escape == 92u8 || escape == 47u8 {
+          builder.append_ascii(escape)
+          index = special + 2u32
+          segment = index
+        } else if escape == 98u8 {
+          builder.append_ascii(8u8)
+          index = special + 2u32
+          segment = index
+        } else if escape == 102u8 {
+          builder.append_ascii(12u8)
+          index = special + 2u32
+          segment = index
+        } else if escape == 110u8 {
+          builder.append_ascii(10u8)
+          index = special + 2u32
+          segment = index
+        } else if escape == 114u8 {
+          builder.append_ascii(13u8)
+          index = special + 2u32
+          segment = index
+        } else if escape == 116u8 {
+          builder.append_ascii(9u8)
+          index = special + 2u32
+          segment = index
+        } else if escape == 117u8 {
+          match json_parse_hex4(parser.input, special + 2u32) {
+            Option::None => break Result::Err(JsonParseError::InvalidUnicodeEscape(special))
+            Option::Some(first) => {
+              if first >= 55296u32 && first <= 56319u32 {
+                let second_escape = special + 6u32
+                if second_escape + 5u32 >= length ||
+                  parser.input.byte_at(second_escape) != 92u8 ||
+                  parser.input.byte_at(second_escape + 1u32) != 117u8 {
+                  break Result::Err(JsonParseError::InvalidUnicodeEscape(special))
+                } else {
+                }
+                match json_parse_hex4(parser.input, second_escape + 2u32) {
+                  Option::Some(second) if second >= 56320u32 && second <= 57343u32 => {
+                    builder.append_scalar(
+                      65536u32 + ((first - 55296u32) << 10u32) + (second - 56320u32),
+                    )
+                    index = second_escape + 6u32
+                    segment = index
+                  }
+                  _ => break Result::Err(JsonParseError::InvalidUnicodeEscape(special))
+                }
+              } else if first >= 56320u32 && first <= 57343u32 {
+                break Result::Err(JsonParseError::InvalidUnicodeEscape(special))
+              } else {
+                builder.append_scalar(first)
+                index = special + 6u32
+                segment = index
+              }
+            }
+          }
+        } else {
+          break Result::Err(JsonParseError::InvalidEscape(special))
+        }
+        if builder.byte_length() > parser.limits.max_string_bytes {
+          break Result::Err(JsonParseError::StringLimitExceeded(special))
+        } else {
+          continue true
+        }
+      }
+      }
+    }
+  }
+}
+
+fn json_parse_literal(
+  parser: JsonParser,
+  spelling: Bytes,
+  value: JsonValue,
+) -> Result<JsonValue, JsonParseError> {
+  let start = json_parser_offset(parser)
+  let length = parser.input.byte_length()
+  if start > length || spelling.byte_length() > length - start {
+    Result::Err(JsonParseError::UnexpectedEnd(length))
+  } else if parser.input.view(start, spelling.byte_length()).equals(spelling) == false {
+    Result::Err(JsonParseError::InvalidLiteral(start))
+  } else {
+    json_parser_set_offset(parser, start + spelling.byte_length())
+    Result::Ok(value)
+  }
+}
+
+fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
+  let start = json_parser_offset(parser)
+  let end = json_scan_scalar_end_simd(parser.input, start)
+  if json_number_is_valid(parser.input, start, end) == false {
+    Result::Err(JsonParseError::InvalidNumber(start))
+  } else {
+    json_parser_set_offset(parser, end)
+    Result::Ok(JsonValue::Number(parser.input.view(start, end - start).to_string()))
+  }
+}
+
+fn json_parse_array(
+  parser: JsonParser,
+  depth: U32,
+) -> Result<JsonValue, JsonParseError> {
+  let values = Array::new()
+  json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
+  json_parser_skip_whitespace(parser)
+  if json_parser_offset(parser) < parser.input.byte_length() &&
+    parser.input.byte_at(json_parser_offset(parser)) == 93u8 {
+    json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
+    Result::Ok(JsonValue::Array(values))
+  } else {
+    while true {
+      true => {
+      match json_parse_value(parser, depth + 1u32) {
+        Result::Err(error) => break Result::Err(error)
+        Result::Ok(value) => values.push(value)
+      }
+      json_parser_skip_whitespace(parser)
+      let offset = json_parser_offset(parser)
+      if offset >= parser.input.byte_length() {
+        break Result::Err(JsonParseError::UnexpectedEnd(offset))
+      } else {
+      }
+      let byte = parser.input.byte_at(offset)
+      if byte == 93u8 {
+        json_parser_set_offset(parser, offset + 1u32)
+        break Result::Ok(JsonValue::Array(values))
+      } else if byte == 44u8 {
+        json_parser_set_offset(parser, offset + 1u32)
+        json_parser_skip_whitespace(parser)
+      } else {
+        break Result::Err(JsonParseError::UnexpectedByte(offset, byte))
+      }
+      continue true
+      }
+    }
+  }
+}
+
+fn json_string_equals(left: String, right: String) -> Bool {
+  left.equals(right)
+}
+
+fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
+  while 0u32 {
+    index if index < members.length() => {
+      if json_string_equals(members.get_unchecked(index).key, key) {
+        break true
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break false
+  }
+}
+
+fn json_string_array_has_key(keys: Array<String>, key: String) -> Bool {
+  while 0u32 {
+    index if index < keys.length() => {
+      if json_string_equals(keys.get_unchecked(index), key) {
+        break true
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break false
+  }
+}
+
+fn json_parse_object(
+  parser: JsonParser,
+  depth: U32,
+) -> Result<JsonValue, JsonParseError> {
+  let members = Array::new()
+  json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
+  json_parser_skip_whitespace(parser)
+  if json_parser_offset(parser) < parser.input.byte_length() &&
+    parser.input.byte_at(json_parser_offset(parser)) == 125u8 {
+    json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
+    Result::Ok(JsonValue::Object(members))
+  } else {
+    while true {
+      true => {
+      let key_offset = json_parser_offset(parser)
+      if key_offset >= parser.input.byte_length() {
+        break Result::Err(JsonParseError::UnexpectedEnd(key_offset))
+      } else {
+      }
+      if parser.input.byte_at(key_offset) != 34u8 {
+        break Result::Err(
+          JsonParseError::UnexpectedByte(key_offset, parser.input.byte_at(key_offset)),
+        )
+      } else {
+      }
+      let key = match json_parse_string(parser) {
+        Result::Ok(value) => value
+        Result::Err(error) => break Result::Err(error)
+      }
+      if json_object_has_key(members, key) {
+        break Result::Err(JsonParseError::DuplicateObjectKey(key_offset, key))
+      } else {
+      }
+      json_parser_skip_whitespace(parser)
+      let colon = json_parser_offset(parser)
+      if colon >= parser.input.byte_length() {
+        break Result::Err(JsonParseError::UnexpectedEnd(colon))
+      } else {
+      }
+      if parser.input.byte_at(colon) != 58u8 {
+        break Result::Err(
+          JsonParseError::UnexpectedByte(colon, parser.input.byte_at(colon)),
+        )
+      } else {
+      }
+      json_parser_set_offset(parser, colon + 1u32)
+      json_parser_skip_whitespace(parser)
+      let member_value = match json_parse_value(parser, depth + 1u32) {
+        Result::Ok(value) => value
+        Result::Err(error) => break Result::Err(error)
+      }
+      members.push(JsonMember {
+        key: key
+        value: member_value
+      })
+      json_parser_skip_whitespace(parser)
+      let offset = json_parser_offset(parser)
+      if offset >= parser.input.byte_length() {
+        break Result::Err(JsonParseError::UnexpectedEnd(offset))
+      } else {
+      }
+      let byte = parser.input.byte_at(offset)
+      if byte == 125u8 {
+        json_parser_set_offset(parser, offset + 1u32)
+        break Result::Ok(JsonValue::Object(members))
+      } else if byte == 44u8 {
+        json_parser_set_offset(parser, offset + 1u32)
+        json_parser_skip_whitespace(parser)
+      } else {
+        break Result::Err(JsonParseError::UnexpectedByte(offset, byte))
+      }
+      continue true
+      }
+    }
+  }
+}
+
+fn json_parse_value(
+  parser: JsonParser,
+  depth: U32,
+) -> Result<JsonValue, JsonParseError> {
+  if depth > parser.limits.max_depth {
+    Result::Err(JsonParseError::DepthLimitExceeded(depth))
+  } else if json_parser_value_count(parser) >= parser.limits.max_values {
+    Result::Err(JsonParseError::ValueLimitExceeded(json_parser_offset(parser)))
+  } else {
+    json_parser_set_value_count(parser, json_parser_value_count(parser) + 1u32)
+    json_parser_skip_whitespace(parser)
+    let offset = json_parser_offset(parser)
+    if offset >= parser.input.byte_length() {
+      Result::Err(JsonParseError::UnexpectedEnd(offset))
+    } else {
+      let byte = parser.input.byte_at(offset)
+      if byte == 110u8 {
+        json_parse_literal(parser, b"null", JsonValue::Null)
+      } else if byte == 116u8 {
+        json_parse_literal(parser, b"true", JsonValue::Bool(true))
+      } else if byte == 102u8 {
+        json_parse_literal(parser, b"false", JsonValue::Bool(false))
+      } else if byte == 34u8 {
+        match json_parse_string(parser) {
+          Result::Ok(value) => Result::Ok(JsonValue::String(value))
+          Result::Err(error) => Result::Err(error)
+        }
+      } else if byte == 91u8 {
+        json_parse_array(parser, depth)
+      } else if byte == 123u8 {
+        json_parse_object(parser, depth)
+      } else if byte == 45u8 || json_is_digit(byte) {
+        json_parse_number(parser)
+      } else {
+        Result::Err(JsonParseError::UnexpectedByte(offset, byte))
+      }
+    }
+  }
+}
+
+pub fn json_parse_bytes_with_limits(
+  input: Bytes,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonParseError> {
+  let length = input.byte_length()
+  if length > limits.max_input_bytes {
+    Result::Err(JsonParseError::InputLimitExceeded(length))
+  } else if input.is_valid_utf8() == false {
+    Result::Err(JsonParseError::InvalidUtf8)
+  } else {
+    let offset = Array::with_capacity(1u32)
+    offset.push(0u32)
+    let values = Array::with_capacity(1u32)
+    values.push(0u32)
+    let parser = JsonParser {
+      input: input
+      offset: offset
+      values: values
+      limits: limits
+    }
+    match json_parse_value(parser, 0u32) {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(value) => {
+        json_parser_skip_whitespace(parser)
+        if json_parser_offset(parser) == length {
+          Result::Ok(value)
+        } else {
+          Result::Err(JsonParseError::TrailingData(json_parser_offset(parser)))
+        }
+      }
+    }
+  }
+}
+
+pub fn json_parse_bytes(input: Bytes) -> Result<JsonValue, JsonParseError> {
+  json_parse_bytes_with_limits(input, json_default_limits())
+}
+
+pub fn json_parse(input: String) -> Result<JsonValue, JsonParseError> {
+  json_parse_bytes(input.as_bytes())
+}
+
+pub fn json_parse_reader_with_limits<r: Reader>(
+  reader: r,
+  chunk_limit: U32,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonReadError> {
+  match io_read_to_end(reader, chunk_limit, limits.max_input_bytes) {
+    Result::Err(error) => Result::Err(JsonReadError::Io(error))
+    Result::Ok(input) => {
+      match json_parse_bytes_with_limits(input, limits) {
+        Result::Err(error) => Result::Err(JsonReadError::Parse(error))
+        Result::Ok(value) => Result::Ok(value)
+      }
+    }
+  }
+}
+
+pub fn json_parse_reader<r: Reader>(
+  reader: r,
+  chunk_limit: U32,
+) -> Result<JsonValue, JsonReadError> {
+  json_parse_reader_with_limits(reader, chunk_limit, json_default_limits())
+}
+
+fn json_writer_set_error(writer: JsonWriter, code: U32) -> Unit {
+  if writer.error.get_unchecked(0u32) == 0u32 {
+    writer.error.set_unchecked(0u32, code)
+  } else {
+  }
+}
+
+fn json_writer_append_ascii(writer: JsonWriter, byte: U8) -> Unit {
+  if writer.error.get_unchecked(0u32) != 0u32 {
+  } else if writer.builder.byte_length() >= writer.max_bytes {
+    json_writer_set_error(writer, 3u32)
+  } else {
+    writer.builder.append_ascii(byte)
+  }
+}
+
+fn json_writer_append_text(writer: JsonWriter, value: String) -> Unit {
+  let used = writer.builder.byte_length()
+  let added = value.byte_length()
+  if writer.error.get_unchecked(0u32) != 0u32 {
+  } else if used > writer.max_bytes || added > writer.max_bytes - used {
+    json_writer_set_error(writer, 3u32)
+  } else {
+    writer.builder.append(value)
+  }
+}
+
+fn json_writer_append_bytes(writer: JsonWriter, value: Bytes) -> Unit {
+  let used = writer.builder.byte_length()
+  let added = value.byte_length()
+  if writer.error.get_unchecked(0u32) != 0u32 {
+  } else if used > writer.max_bytes || added > writer.max_bytes - used {
+    json_writer_set_error(writer, 3u32)
+  } else {
+    writer.builder.append_checked(value)
+  }
+}
+
+fn json_hex_ascii(value: U8) -> U8 {
+  if value < 10u8 {
+    value + 48u8
+  } else {
+    value + 87u8
+  }
+}
+
+fn json_write_string(
+  writer: JsonWriter,
+  value: String,
+) -> Unit {
+  json_writer_append_ascii(writer, 34u8)
+  let bytes = value.as_bytes()
+  let length = bytes.byte_length()
+  let mut index = 0u32
+  while index {
+    current if current < length && writer.error.get_unchecked(0u32) == 0u32 => {
+      let special = json_scan_string_special_simd(bytes, current)
+      if special > current {
+        json_writer_append_bytes(writer, bytes.view(current, special - current))
+      } else {
+      }
+      if special >= length {
+        break length
+      } else {
+        let byte = bytes.byte_at(special)
+        if byte == 34u8 || byte == 92u8 {
+          json_writer_append_ascii(writer, 92u8)
+          json_writer_append_ascii(writer, byte)
+        } else if byte == 8u8 || byte == 12u8 || byte == 10u8 || byte == 13u8 || byte == 9u8 {
+          json_writer_append_ascii(writer, 92u8)
+          json_writer_append_ascii(
+            writer,
+            if byte == 8u8 {
+              98u8
+            } else if byte == 12u8 {
+              102u8
+            } else if byte == 10u8 {
+              110u8
+            } else if byte == 13u8 {
+              114u8
+            } else {
+              116u8
+            },
+          )
+        } else {
+          json_writer_append_ascii(writer, 92u8)
+          json_writer_append_ascii(writer, 117u8)
+          json_writer_append_ascii(writer, 48u8)
+          json_writer_append_ascii(writer, 48u8)
+          json_writer_append_ascii(writer, json_hex_ascii(byte >> 4u8))
+          json_writer_append_ascii(writer, json_hex_ascii(byte & 15u8))
+        }
+        continue special + 1u32
+      }
+    }
+    current => break current
+  }
+  json_writer_append_ascii(writer, 34u8)
+}
+
+fn json_write_value(
+  writer: JsonWriter,
+  value: JsonValue,
+  depth: U32,
+) -> Unit {
+  if writer.error.get_unchecked(0u32) != 0u32 {
+    json_unit()
+  } else if depth > writer.max_depth {
+    json_writer_set_error(writer, 1u32)
+  } else {
+    match value {
+      JsonValue::Null => json_writer_append_text(writer, "null")
+      JsonValue::Bool(flag) => {
+        if flag {
+          json_writer_append_text(writer, "true")
+        } else {
+          json_writer_append_text(writer, "false")
+        }
+      }
+      JsonValue::Number(number) => {
+        let bytes = number.as_bytes()
+        if json_number_is_valid(bytes, 0u32, bytes.byte_length()) {
+          json_writer_append_text(writer, number)
+        } else {
+          writer.invalid_numbers.push(number)
+          json_writer_set_error(writer, 2u32)
+        }
+      }
+      JsonValue::String(text) => json_write_string(writer, text)
+      JsonValue::Array(values) => {
+        json_writer_append_ascii(writer, 91u8)
+        let mut first = true
+        let iter = values.iter()
+        while true {
+          true if iter.has_next() && writer.error.get_unchecked(0u32) == 0u32 => {
+            if first {
+              first = false
+            } else {
+              json_writer_append_ascii(writer, 44u8)
+            }
+            json_write_value(writer, iter.next(), depth + 1u32)
+            continue true
+          }
+          _ => break json_unit()
+        }
+        json_writer_append_ascii(writer, 93u8)
+      }
+      JsonValue::Object(members) => {
+        json_writer_append_ascii(writer, 123u8)
+        let keys = Array::new()
+        let mut first = true
+        let iter = members.iter()
+        while true {
+          true if iter.has_next() && writer.error.get_unchecked(0u32) == 0u32 => {
+            let member = iter.next()
+            if json_string_array_has_key(keys, member.key) {
+              writer.duplicate_keys.push(member.key)
+              json_writer_set_error(writer, 4u32)
+            } else {
+              keys.push(member.key)
+              if first {
+                first = false
+              } else {
+                json_writer_append_ascii(writer, 44u8)
+              }
+              json_write_string(writer, member.key)
+              json_writer_append_ascii(writer, 58u8)
+              json_write_value(writer, member.value, depth + 1u32)
+            }
+            continue true
+          }
+          _ => break json_unit()
+        }
+        json_writer_append_ascii(writer, 125u8)
+      }
+    }
+  }
+}
+
+pub fn json_stringify_with_limits(
+  value: JsonValue,
+  max_depth: U32,
+  max_bytes: U32,
+) -> Result<String, JsonWriteError> {
+  let error = Array::with_capacity(1u32)
+  error.push(0u32)
+  let writer = JsonWriter {
+    builder: StringBuilder::new()
+    max_depth: max_depth
+    max_bytes: max_bytes
+    error: error
+    invalid_numbers: Array::new()
+    duplicate_keys: Array::new()
+  }
+  json_write_value(writer, value, 0u32)
+  if error.get_unchecked(0u32) == 1u32 {
+    Result::Err(JsonWriteError::DepthLimitExceeded)
+  } else if error.get_unchecked(0u32) == 2u32 {
+    Result::Err(
+      JsonWriteError::InvalidNumber(writer.invalid_numbers.get_unchecked(0u32)),
+    )
+  } else if error.get_unchecked(0u32) == 3u32 {
+    Result::Err(JsonWriteError::ByteLimitExceeded)
+  } else if error.get_unchecked(0u32) == 4u32 {
+    Result::Err(
+      JsonWriteError::DuplicateObjectKey(writer.duplicate_keys.get_unchecked(0u32)),
+    )
+  } else {
+    Result::Ok(writer.builder.finish())
+  }
+}
+
+pub fn json_stringify(value: JsonValue) -> Result<String, JsonWriteError> {
+  json_stringify_with_limits(value, 128u32, 16777216u32)
+}
+
+pub fn json_write_with_limits<w: Writer>(
+  writer: w,
+  value: JsonValue,
+  max_depth: U32,
+  max_bytes: U32,
+) -> Result<U32, JsonOutputError> {
+  match json_stringify_with_limits(value, max_depth, max_bytes) {
+    Result::Err(error) => Result::Err(JsonOutputError::Write(error))
+    Result::Ok(output) => {
+      match io_write_all(writer, output.as_bytes()) {
+        Result::Err(error) => Result::Err(JsonOutputError::Io(error))
+        Result::Ok(written) => Result::Ok(written)
+      }
+    }
+  }
+}
+
+pub fn json_write<w: Writer>(
+  writer: w,
+  value: JsonValue,
+) -> Result<U32, JsonOutputError> {
+  json_write_with_limits(writer, value, 128u32, 16777216u32)
+}
+
+pub fn json_member(key: String, value: JsonValue) -> JsonMember {
+  JsonMember {
+    key: key
+    value: value
+  }
+}
+
+pub fn json_array() -> Array<JsonValue> {
+  Array::new()
+}
+
+pub fn json_object() -> Array<JsonMember> {
+  Array::new()
+}
+
+pub fn json_object_get(
+  members: Array<JsonMember>,
+  key: String,
+) -> Option<JsonValue> {
+  while 0u32 {
+    index if index < members.length() => {
+      let member = members.get_unchecked(index)
+      if json_string_equals(member.key, key) {
+        break Option::Some(member.value)
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break Option::None
+  }
+}

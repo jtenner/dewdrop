@@ -640,6 +640,7 @@
     local.get 2
     array.new 41
     struct.new 3
+    ref.cast (ref 3)
     struct.new 18
     ref.cast (ref 18)
   )
@@ -743,6 +744,7 @@
     local.get 2
     array.new 41
     struct.new 3
+    ref.cast (ref 3)
     struct.new 19
     ref.cast (ref 19)
   )

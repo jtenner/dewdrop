@@ -1,0 +1,14 @@
+open dew.std.json
+open dew.std.string
+
+pub fn main() -> Bool {
+  match json_parse(" {\"a\":[true,null,-1.25e2],\"b\":\"0123456789abcdef\"} ") {
+    Result::Ok(value) => {
+      match json_stringify(value) {
+        Result::Ok(output) => output.equals("{\"a\":[true,null,-1.25e2],\"b\":\"0123456789abcdef\"}")
+        Result::Err(_) => false
+      }
+    }
+    Result::Err(_) => false
+  }
+}

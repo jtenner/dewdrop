@@ -1403,6 +1403,7 @@
       i32.const 0
       struct.new 0
     end
+    ref.cast (ref 0)
     local.set 25
     block ;; label = @1
       block ;; label = @2
@@ -1477,6 +1478,7 @@
       i32.const 0
       struct.new 0
     end
+    ref.cast (ref 0)
     local.set 26
     block ;; label = @1
       block ;; label = @2

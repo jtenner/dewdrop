@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 12, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
+> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 13, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
 
 ## Current priority order
 
@@ -82,7 +82,7 @@
 ## Standard library
 
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
-- [ ] Implement bounded Dew-native JSON and TOML; add YAML only after both stabilize.
+- [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.
 - [ ] Implement bounded HTTP semantics separately from host transport adapters.
 

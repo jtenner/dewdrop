@@ -3,6 +3,8 @@ open dew.std.string_builder
 open dew.std.bytes
 open dew.std.bytes_builder
 open dew.std.text
+open dew.std.u8x16
+open dew.std.wasm.intrinsics
 
 test "String byte_length counts UTF8 bytes" {
   assert("aλ🌍".byte_length() == 7u32, "unexpected String byte length")
@@ -365,6 +367,20 @@ test "BytesBuilder result supports checked UTF8 conversion" {
     builder.finish().to_string().equals("prefix λ 世界 🌍"),
     "BytesBuilder valid UTF8 conversion changed content",
   )
+}
+
+test "GC-backed Bytes SIMD loads preserve aligned and unaligned logical lanes" {
+  let source = b"xx0123456789abcdef-0123456789abcdefyy".view(2u32, 33u32)
+  let aligned = wasm_bytes_load_u8x16(source, 0u32)
+  let unaligned = wasm_bytes_load_u8x16(source, 1u32)
+  assert(aligned.extract_0() == 48u8, "wrong aligned SIMD lane zero")
+  assert(aligned.extract_15() == 102u8, "wrong aligned SIMD lane fifteen")
+  assert(unaligned.extract_0() == 49u8, "wrong unaligned SIMD lane zero")
+  assert(unaligned.extract_15() == 45u8, "wrong unaligned SIMD lane fifteen")
+}
+
+test "GC-backed Bytes SIMD loads trap outside the logical view" expect_trap "unreachable" {
+  wasm_bytes_load_u8x16(b"0123456789abcdef", 1u32)
 }
 
 test "Bytes view and subarray share arbitrary logical ranges" {

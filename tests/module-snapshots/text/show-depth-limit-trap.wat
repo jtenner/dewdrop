@@ -512,6 +512,7 @@
       i32.const 1
       i32.sub
       call 16
+      ref.cast (ref 18)
       struct.new 19
     end
     ref.cast (ref 18)

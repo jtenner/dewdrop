@@ -312,9 +312,23 @@ priv enum StarshineEmitTask {
     Int,
     Int
   )
-  FinishStarshineStructNew(Int, Int)
-  FinishStarshineEnumSubtype(Int, Int, Int)
+  FinishStarshineStructNew(
+    @semantic.PlannedProgramWasmGCLink?,
+    Int,
+    @semantic.PlannedModuleWasmGCFragments,
+    @semantic.PlannedWasmPhysicalType,
+    Int
+  )
+  FinishStarshineEnumSubtype(
+    @semantic.PlannedProgramWasmGCLink?,
+    Int,
+    @semantic.PlannedModuleWasmGCFragments,
+    @semantic.PlannedWasmPhysicalType,
+    Int,
+    Int
+  )
   FinishStarshinePackedEnumPayload(Int)
+  FinishStarshineNominalResult(@semantic.DeclId)
   FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType, Bool)
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
   FinishStarshineWhile(
@@ -1315,6 +1329,42 @@ fn starshine_match_cast(type_index : Int) -> @lib.Instruction {
     false,
     @lib.HeapType::new(@lib.TypeIdx::new(type_index.reinterpret_as_uint())),
   )
+}
+
+///|
+fn starshine_append_storage_cast(
+  output : Array[@lib.Instruction],
+  program : @semantic.PlannedProgramWasmGCLink?,
+  owner_module : Int,
+  module_plan : @semantic.PlannedModuleWasmGCFragments,
+  physical : @semantic.PlannedWasmPhysicalType,
+  storage : @semantic.PlannedWasmStorageType,
+) -> Unit {
+  match storage {
+    @semantic.WasmNominalRefStorage(reference) => {
+      let local_type_index = match reference {
+        @semantic.WasmModuleTypeReference(value) => value
+        @semantic.WasmRecursiveTypeReference(value) =>
+          module_plan.type_groups[physical.group_index].first_type_index + value
+      }
+      let type_index = starshine_local_physical_type_index(
+        program, owner_module, local_type_index,
+      )
+      if type_index >= 0 {
+        output.push(starshine_match_cast(type_index))
+      }
+    }
+    @semantic.WasmExternalNominalRefStorage(declaration) =>
+      match program {
+        Some(link) =>
+          match link.type_lookup.get(declaration) {
+            Some(type_index) => output.push(starshine_match_cast(type_index))
+            None => ()
+          }
+        None => ()
+      }
+    _ => ()
+  }
 }
 
 ///|
@@ -5540,6 +5590,9 @@ fn starshine_emit_body_instructions(
             let element_shape = starshine_specialized_shape(
               lowering, generic_specialization, element_type, shape,
             )
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
             tasks.push(
               FinishStarshineArray(
                 5,
@@ -5561,6 +5614,9 @@ fn starshine_emit_body_instructions(
               source.type_,
               shape,
             )
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
             tasks.push(
               FinishStarshineArray(
                 6,
@@ -6001,6 +6057,9 @@ fn starshine_emit_body_instructions(
               source.type_,
               shape,
             )
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
             tasks.push(
               FinishStarshineArray(
                 14,
@@ -6415,13 +6474,21 @@ fn starshine_emit_body_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
-            let type_index = match
-              starshine_emitted_type_index(planned, program, declaration) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, expression))
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(declaration))
+                .unwrap_or(program_module_index)
+              None => program_module_index
             }
             tasks.push(
-              FinishStarshineStructNew(type_index, physical.fields.length),
+              FinishStarshineStructNew(
+                program,
+                owner_module,
+                physical_plan,
+                physical,
+                physical.fields.length,
+              ),
             )
             let mut physical_offset = physical.fields.length
             while physical_offset > 0 {
@@ -6486,12 +6553,11 @@ fn starshine_emit_body_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
-            let subtype = match program {
-              Some(link) =>
-                link.physical_type_index(owner_module, physical.type_index)
-              None => physical.type_index
-            }
-            tasks.push(FinishStarshineEnumSubtype(subtype, tag, 0))
+            tasks.push(
+              FinishStarshineEnumSubtype(
+                program, owner_module, variant_plan, physical, tag, 0,
+              ),
+            )
           }
           @semantic.PlannedVariantTupleNew(variant, _, arguments) => {
             let owner_module = match program {
@@ -6513,11 +6579,6 @@ fn starshine_emit_body_instructions(
               starshine_variant_payload_physical_type(variant_plan, variant) {
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
-            }
-            let subtype = match program {
-              Some(link) =>
-                link.physical_type_index(owner_module, physical.type_index)
-              None => physical.type_index
             }
             let values : Array[StarshineEmitTask] = []
             for field in variant_plan.variant_fields_of(variant) {
@@ -6542,7 +6603,14 @@ fn starshine_emit_body_instructions(
               }
             }
             tasks.push(
-              FinishStarshineEnumSubtype(subtype, tag, values.length()),
+              FinishStarshineEnumSubtype(
+                program,
+                owner_module,
+                variant_plan,
+                physical,
+                tag,
+                values.length(),
+              ),
             )
             let mut value_index = values.length()
             while value_index > 0 {
@@ -6571,11 +6639,6 @@ fn starshine_emit_body_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
-            let subtype = match program {
-              Some(link) =>
-                link.physical_type_index(owner_module, physical.type_index)
-              None => physical.type_index
-            }
             let values = match
               starshine_ordered_variant_object_values(
                 lowering, variant_plan, variant, fields,
@@ -6584,7 +6647,14 @@ fn starshine_emit_body_instructions(
               None => return Err(UnsupportedExpression(body.body, expression))
             }
             tasks.push(
-              FinishStarshineEnumSubtype(subtype, tag, values.length()),
+              FinishStarshineEnumSubtype(
+                program,
+                owner_module,
+                variant_plan,
+                physical,
+                tag,
+                values.length(),
+              ),
             )
             let variant_fields = variant_plan.variant_fields_of(variant)
             let mut value_index = values.length()
@@ -8711,12 +8781,31 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineStructNew(type_index, count) => {
+      FinishStarshineStructNew(
+        program,
+        owner_module,
+        physical_plan,
+        physical,
+        count
+      ) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = []
-        for fragment in fragments {
+        for index, fragment in fragments {
           append_starshine_instructions(output, fragment)
+          starshine_append_storage_cast(
+            output,
+            program,
+            owner_module,
+            physical_plan,
+            physical,
+            physical_plan.fields[physical.fields.start + index].storage,
+          )
         }
+        let type_index = starshine_local_physical_type_index(
+          program,
+          owner_module,
+          physical.type_index,
+        )
         output.push(
           @lib.Instruction::struct_new(
             @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
@@ -8724,14 +8813,34 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
-      FinishStarshineEnumSubtype(type_index, tag, count) => {
+      FinishStarshineEnumSubtype(
+        program,
+        owner_module,
+        variant_plan,
+        physical,
+        tag,
+        count
+      ) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = [
           @lib.Instruction::i32_const(@lib.I32::new(tag)),
         ]
-        for fragment in fragments {
+        for index, fragment in fragments {
           append_starshine_instructions(output, fragment)
+          starshine_append_storage_cast(
+            output,
+            program,
+            owner_module,
+            variant_plan,
+            physical,
+            variant_plan.fields[physical.fields.start + index + 1].storage,
+          )
         }
+        let type_index = starshine_local_physical_type_index(
+          program,
+          owner_module,
+          physical.type_index,
+        )
         output.push(
           @lib.Instruction::struct_new(
             @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
@@ -8746,6 +8855,14 @@ fn starshine_emit_body_instructions(
         output.push(@lib.Instruction::i64_shl())
         output.push(@lib.Instruction::i64_const(@lib.I64::new(tag.to_int64())))
         output.push(@lib.Instruction::i64_or())
+        results.push(output)
+      }
+      FinishStarshineNominalResult(declaration) => {
+        let output = results.pop().unwrap()
+        match starshine_emitted_type_index(planned, program, declaration) {
+          Some(type_index) => output.push(starshine_match_cast(type_index))
+          None => ()
+        }
         results.push(output)
       }
       FinishStarshineFieldGet(type_index, field_index, storage, needs_cast) => {

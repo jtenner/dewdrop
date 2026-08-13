@@ -364,6 +364,7 @@
     i32.const 0
     i32.const 0
     struct.new 9
+    ref.cast (ref 9)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -414,6 +415,7 @@
       i32.const 0
       struct.new 0
     end
+    ref.cast (ref 0)
     ref.cast (ref 0)
   )
   (func (;10;) (type 33) (param (ref 12) eqref)
@@ -536,6 +538,7 @@
     i32.const 0
     local.get 4
     struct.new 9
+    ref.cast (ref 9)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -554,6 +557,7 @@
     i32.const 0
     i32.const 0
     struct.new 9
+    ref.cast (ref 9)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -1617,6 +1621,7 @@
     local.get 1
     ref.cast (ref 11)
     call 7
+    ref.cast (ref 12)
     struct.new 51
     ref.cast (ref 51)
   )
@@ -1674,6 +1679,7 @@
     ref.cast (ref 11)
     local.get 2
     call 12
+    ref.cast (ref 12)
     struct.new 51
     ref.cast (ref 51)
   )
@@ -1688,6 +1694,7 @@
     local.get 1
     ref.cast (ref 11)
     call 13
+    ref.cast (ref 12)
     struct.new 51
     ref.cast (ref 51)
   )
@@ -1726,6 +1733,7 @@
     struct.get 51 0
     ref.cast (ref 12)
     call 16
+    ref.cast (ref 10)
     struct.new 52
     ref.cast (ref 52)
   )

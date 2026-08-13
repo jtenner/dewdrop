@@ -25,6 +25,7 @@
     call 1
     call 2
     struct.new 0
+    ref.cast (ref 0)
     struct.new 2
     call 0
     local.set 4

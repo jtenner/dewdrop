@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 62)
+  assert_eq(wildcard_paths.length(), 63)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -55,10 +55,11 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[31], "std/math.dew")
   assert_eq(wildcard_paths[32], "std/io.dew")
   assert_eq(wildcard_paths[33], "std/testing.dew")
-  assert_eq(wildcard_paths[34], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[39], "std/text.dew")
-  assert_eq(wildcard_paths[41], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[61], "std/f64x2.dew")
+  assert_eq(wildcard_paths[34], "std/json.dew")
+  assert_eq(wildcard_paths[35], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[40], "std/text.dew")
+  assert_eq(wildcard_paths[42], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[62], "std/f64x2.dew")
 }
 
 ///|
@@ -125,6 +126,23 @@ test "standard import prepass selects testing dependencies" {
     (
       0, false, false, false, false, true, false, false, false, false, false, false,
       0, 0,
+    ),
+  )
+}
+
+///|
+test "standard import prepass selects JSON dependencies" {
+  let module_id = 1001UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.json\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      15, false, false, false, true, false, false, true, true, true, false, false,
+      2048, 2048,
     ),
   )
 }

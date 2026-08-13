@@ -442,6 +442,7 @@
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     ref.null eq
     struct.new 3
+    ref.cast (ref 3)
     i32.const 1
     i32.const 11
     i64.const 0
@@ -450,6 +451,7 @@
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     ref.null eq
     struct.new 5
+    ref.cast (ref 4)
     struct.new 7
     i32.const 9
     i64.const 0
@@ -464,6 +466,7 @@
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     ref.null eq
     struct.new 3
+    ref.cast (ref 3)
     i32.const 1
     i32.const 11
     i64.const 0
@@ -472,6 +475,7 @@
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     ref.null eq
     struct.new 5
+    ref.cast (ref 4)
     struct.new 7
     call 9
     local.set 2

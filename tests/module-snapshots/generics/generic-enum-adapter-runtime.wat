@@ -168,6 +168,7 @@
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     ref.null eq
     struct.new 0
+    ref.cast (ref 0)
     struct.new 5
     call 4
     local.set 10
@@ -219,6 +220,7 @@
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     ref.null eq
     struct.new 3
+    ref.cast (ref 1)
     struct.new 2
     call 5
     ref.cast (ref 2)
@@ -326,6 +328,7 @@
         local.get 3
         struct.get 0 5
         struct.new 0
+        ref.cast (ref 0)
         struct.new 5
         local.set 5
         br 1 (;@1;)
@@ -340,6 +343,7 @@
     struct.get 2 0
     ref.cast (ref 1)
     call 2
+    ref.cast (ref 1)
     struct.new 2
     ref.cast (ref 2)
   )
@@ -407,6 +411,7 @@
         v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         ref.null eq
         struct.new 0
+        ref.cast (ref 0)
         struct.new 5
         local.set 5
         br 1 (;@1;)
@@ -421,6 +426,7 @@
     struct.get 2 0
     ref.cast (ref 1)
     call 4
+    ref.cast (ref 1)
     struct.new 2
     ref.cast (ref 2)
   )

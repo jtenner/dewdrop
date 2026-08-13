@@ -3160,6 +3160,63 @@ fn starshine_text_builder_finish_body(
 }
 
 ///|
+/// Load sixteen logical bytes from a bounds-checked Bytes view. This is the
+/// representation bridge used by Dew source SIMD algorithms; it performs no
+/// domain-specific classification or scanning.
+fn starshine_bytes_load_u8x16_body(base : Int) -> @lib.Func {
+  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
+  let bytes_type = @lib.TypeIdx::new((base + 2).reinterpret_as_uint())
+  let bytes_ref = 2
+  let chunks = 3
+  let physical_index = 4
+  let vector = 5
+  let body : Array[@lib.Instruction] = [
+    @lib.Instruction::local_get(text_local(0)),
+    @lib.Instruction::ref_cast(false, @lib.HeapType::new(bytes_type)),
+    @lib.Instruction::local_set(text_local(bytes_ref)),
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 2U),
+    @lib.Instruction::i32_gt_u(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 2U),
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::i32_sub(),
+    text_i32(16),
+    @lib.Instruction::i32_lt_u(),
+    @lib.Instruction::if_(
+      @lib.BlockType::void_(),
+      [@lib.Instruction::unreachable_()],
+      None,
+    ),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 0U),
+    @lib.Instruction::local_set(text_local(chunks)),
+    @lib.Instruction::local_get(text_local(bytes_ref)),
+    @lib.Instruction::struct_get(bytes_type, 1U),
+    @lib.Instruction::local_get(text_local(1)),
+    @lib.Instruction::i32_add(),
+    @lib.Instruction::local_set(text_local(physical_index)),
+  ]
+  text_load_logical_v128(body, array_type, chunks, physical_index, vector)
+  body.push(@lib.Instruction::local_get(text_local(vector)))
+  @lib.Func::new(
+    @lib.Locals::from_types([
+      text_runtime_ref(base + 2),
+      text_runtime_ref(base),
+      @lib.ValType::i32(),
+      @lib.ValType::v128(),
+    ]),
+    @lib.Expr::new(body),
+  )
+}
+
+///|
 fn emit_starshine_text_runtime_function(
   name : Bytes,
   base : Int,
@@ -3281,6 +3338,8 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_text_affix_body(base, 2, 2, false))
   } else if name == b"dew_bytes_ends_with" {
     Some(starshine_text_affix_body(base, 2, 2, true))
+  } else if name == b"dew_bytes_load_u8x16" {
+    Some(starshine_bytes_load_u8x16_body(base))
   } else if name == b"dew_debug_i8" {
     Some(starshine_debug_i32_body(8, true, wasi_fd_write_function_index))
   } else if name == b"dew_debug_i16" {

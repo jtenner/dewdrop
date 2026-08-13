@@ -343,6 +343,9 @@ pub fn required_standard_library_source_paths(
   if include_testing {
     required.push("std/testing.dew")
   }
+  if (collection_mask & 2048) != 0 {
+    required.push("std/json.dew")
+  }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
     let text_files = [
@@ -813,6 +816,20 @@ pub fn collect_program_manifest_with_standard_sources(
         module_id,
         standard_library_program_files(
           module_id, "std/testing.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 2048) != 0 {
+    let module_id = standard_library_module_id(51)
+    let module_index = modules.length()
+    first_module["dew.std.json"] = module_index
+    module_paths.push("dew.std.json")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/json.dew", standard_sources, true, false,
         ),
       ),
     )

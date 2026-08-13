@@ -109,7 +109,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 2047
+            collection_mask = 4095
             show = true
             disposable = true
             math = true
@@ -165,6 +165,15 @@ fn selected_standard_modules(
                 text_mask = text_mask | 12
               }
               "testing" => testing = true
+              "json" => {
+                text_mask = text_mask | 15
+                fixed_array = true
+                array = true
+                io = true
+                wasm_intrinsics = true
+                lane_mask = lane_mask | 2048
+                collection_mask = collection_mask | 2048
+              }
               "queue" => collection_mask = collection_mask | 2
               "ordering" => collection_mask = collection_mask | 16
               "iter" => collection_mask = collection_mask | 1024

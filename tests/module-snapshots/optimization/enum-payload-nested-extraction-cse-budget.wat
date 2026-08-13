@@ -16,6 +16,7 @@
     local.get 0
     local.get 1
     struct.new 0
+    ref.cast (ref 0)
     struct.new 2
     call 0
     local.set 6

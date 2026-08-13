@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 12, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
+> Living roadmap as of August 13, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
 
 ## Current baseline
 
@@ -9,7 +9,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - a streaming WTF-8 tokenizer and non-backtracking parser;
 - deterministic multi-file and multi-module collection, diagnostics, frozen interfaces, package manifests, lock records, and dependency SCCs;
 - local and imported types, traits, implementations, generic bounds, evidence-aware specialization, runtime trait values, closures, mutable captures, module state, and recursive physical type groups;
-- fixed-width scalar, packed-lane, SIMD, strict UTF-8 text, Bytes, WASI Preview 1, test metadata, and deterministic Starshine validation/encoding;
+- fixed-width scalar, packed-lane, SIMD, strict UTF-8 text, Bytes, strict bounded JSON, WASI Preview 1, test metadata, and deterministic Starshine validation/encoding;
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
@@ -134,7 +134,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ### Structured data, security, and networking
 
-- [ ] Implement Dew-native JSON with strict UTF-8, deterministic serialization, streaming and value APIs, bounded resources, and differential conformance tests.
+- [x] Implement Dew-native JSON with strict UTF-8, exact number lexemes, deterministic serialization, bounded Reader/Writer and value APIs, source-level SIMD scanning, and direct conformance coverage.
 - [ ] Implement Dew-native TOML, beginning with the package-manifest subset and deterministic duplicate/dotted-key behavior.
 - [ ] Implement a versioned bounded YAML subset only after JSON and TOML stabilize.
 - [ ] Define the boundaries among non-secret fast hashes, constant-time primitives, and password/KDF APIs before adding cryptography modules.

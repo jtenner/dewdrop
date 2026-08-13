@@ -405,40 +405,49 @@
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const 0
     array.new_default 154
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const 0
     array.new_default 154
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const 0
     array.new_default 154
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const 0
     array.new_default 154
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const 0
     array.new_default 154
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const 0
     array.new_default 154
     i32.const 0
     i32.const 0
     struct.new 7
+    ref.cast (ref 7)
     i32.const -1
     call 3
+    ref.cast (ref 7)
     i32.const 0
     call 4
+    ref.cast (ref 7)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -1887,6 +1896,7 @@
   )
   (func (;22;) (type 77) (param (ref 9) (ref 0) i32 (ref 0) i32) (result (ref 10))
     local.get 0
+    ref.cast (ref 9)
     local.get 0
     ref.cast (ref 9)
     local.get 1
@@ -1894,7 +1904,9 @@
     local.get 2
     call 48
     call 3
+    ref.cast (ref 7)
     local.get 3
+    ref.cast (ref 0)
     local.get 4
     struct.new 10
     ref.cast (ref 10)
@@ -3565,6 +3577,7 @@
   (func (;52;) (type 127) (param eqref) (result (ref 107))
     local.get 0
     call 6
+    ref.cast (ref 9)
     struct.new 107
     ref.cast (ref 107)
   )
@@ -3659,6 +3672,7 @@
     struct.get 107 0
     ref.cast (ref 9)
     call 18
+    ref.cast (ref 10)
     struct.new 108
     ref.cast (ref 108)
   )
@@ -3686,6 +3700,7 @@
     ref.cast (ref 0)
     local.get 4
     call 22
+    ref.cast (ref 10)
     struct.new 108
     ref.cast (ref 108)
   )

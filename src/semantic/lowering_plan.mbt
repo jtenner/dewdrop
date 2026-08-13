@@ -189,6 +189,7 @@ pub enum PlannedExpressionKind {
 pub struct PlannedExpression {
   type_ : BodyTypeId
   shape : PlannedValueShape
+  nominal : DeclId
   flow : BodyFlowSummary
   trait_object_coercion : InferredTraitObjectCoercion
   kind : PlannedExpressionKind
@@ -412,6 +413,7 @@ fn planned_error_expression() -> PlannedExpression {
   {
     type_: 0,
     shape: ErrorPlannedValueShape,
+    nominal: 0UL,
     flow: { outcomes: 0 },
     trait_object_coercion: NoInferredTraitObjectCoercion,
     kind: PlannedPoisonExpression,
@@ -1412,6 +1414,11 @@ fn plan_body_lowering_job(
     expressions[local_index] = {
       type_: inferred.expression_types[expression],
       shape: planned_value_shape(
+        resolved,
+        inferred,
+        inferred.expression_types[expression],
+      ),
+      nominal: planned_nominal_declaration(
         resolved,
         inferred,
         inferred.expression_types[expression],

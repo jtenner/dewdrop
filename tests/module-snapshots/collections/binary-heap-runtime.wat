@@ -332,6 +332,7 @@
     i32.const 0
     i32.const 0
     struct.new 2
+    ref.cast (ref 2)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -388,6 +389,7 @@
       i32.const 0
       struct.new 0
     end
+    ref.cast (ref 0)
     ref.cast (ref 0)
   )
   (func (;11;) (type 35) (param (ref 12) i32)
@@ -510,6 +512,7 @@
     i32.const 0
     local.get 4
     struct.new 2
+    ref.cast (ref 2)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -733,6 +736,7 @@
     i32.const 0
     i32.const 0
     struct.new 2
+    ref.cast (ref 2)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
@@ -994,6 +998,7 @@
     i32.const 0
     i32.const 0
     struct.new 2
+    ref.cast (ref 2)
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)

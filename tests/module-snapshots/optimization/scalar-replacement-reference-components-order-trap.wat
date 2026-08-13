@@ -24,7 +24,9 @@
   (func (;2;) (type 4) (result i32)
     (local (ref 1))
     call 0
+    ref.cast (ref 0)
     call 1
+    ref.cast (ref 0)
     struct.new 1
     local.set 0
     local.get 0

@@ -686,6 +686,17 @@ test "cross module recursive aggregate SCC emits one valid recursive group" {
 }
 
 ///|
+test "recursive nominal values survive generic arrays and aggregate fields" {
+  let stages = backend_test_single_module_stages(
+    2446UL, b"open dew.std.array\npub enum Node {\n  Leaf(I32)\n  Branch(Array<Node>)\n}\npub struct Holder {\n  values: Array<Node>\n}\nfn build() -> Holder {\n  let children = Array::new()\n  children.push(Node::Leaf(42))\n  let roots = Array::new()\n  roots.push(Node::Branch(children))\n  Holder {\n    values: roots\n  }\n}\npub fn main() -> I32 {\n  match build().values.get_unchecked(0u32) {\n    Node::Branch(children) => {\n      match children.get_unchecked(0u32) {\n        Node::Leaf(value) => value\n        _ => 0\n      }\n    }\n    _ => 0\n  }\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  let module_ = stages.emit_module()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_true(stages.emit_binary().length() > 8)
+}
+
+///|
 test "cross module recursive SCC emits valid forward calls" {
   let program = @semantic.collect_program_manifest(
     2450UL,

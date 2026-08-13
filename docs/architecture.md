@@ -235,7 +235,13 @@ and BytesBuilder composition. Its architecture fixture rejects WASI imports and
 linear memory, keeping host adapters outside the portable module. The
 `dew.std.testing` helper layer is likewise ordinary source: it delegates failure
 to the compiler-owned assertion builtin and does not own test metadata,
-reachability, or runtime normalization.
+reachability, or runtime normalization. `dew.std.json` keeps grammar, scanning
+policy, delimiter classification, limits, duplicate-key handling, tree
+construction, Reader/Writer composition, and serialization in Dew source. Its
+only new representation primitive is the bounds-checked
+`wasm_bytes_load_u8x16(Bytes, U32)` bridge over private GC-backed byte storage;
+`u32_ctz` and the remaining SIMD operations map directly to WebAssembly
+instructions. JSON-specific runtime helpers are forbidden by architecture tests.
 `tools/generate_standard_builtin_registry.py` generates
 `src/semantic/standard_builtin_registry.mbt`, including typed
 `StandardBuiltinOperation` cases instead of integer operation codes. White-box
