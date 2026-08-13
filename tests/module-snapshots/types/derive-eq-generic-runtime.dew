@@ -19,35 +19,35 @@ struct Nested<t> {
 } derive(Eq)
 
 pub fn main() -> U32 {
-  let pairs = Pair {
+  let pairs = Pair::{
     left: 3
     right: 4
-  } == Pair {
+  } == Pair::{
     left: 3
     right: 4
-  } && Pair {
+  } && Pair::{
     left: true
     right: false
-  } != Pair {
+  } != Pair::{
     left: true
     right: true
   }
   let variants = Maybe::Some(7) == Maybe::Some(7) &&
     Maybe::Some(7) != Maybe::Some(8) &&
     Maybe::None != Maybe::Some(0) &&
-    Maybe::Named {
+    Maybe::Named::{
       value: true
-    } == Maybe::Named {
+    } == Maybe::Named::{
       value: true
     }
-  let nested = Nested {
-    pair: Pair {
+  let nested = Nested::{
+    pair: Pair::{
       left: 9
       right: 10
     }
     maybe: Maybe::Some(11)
-  } == Nested {
-    pair: Pair {
+  } == Nested::{
+    pair: Pair::{
       left: 9
       right: 10
     }

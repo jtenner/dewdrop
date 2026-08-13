@@ -156,7 +156,7 @@ fn tree_entry<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
 ) -> TreeEntry<k, v> {
-  TreeEntry {
+  TreeEntry::{
     key: tree_key(tree, node)
     value: tree_value(tree, node)
   }
@@ -165,7 +165,7 @@ fn tree_entry<k, v, c>(
 pub fn red_black_tree_new<k, v, c: Comparator<k>>(
   comparator: c,
 ) -> RedBlackTree<k, v, c> {
-  RedBlackTree {
+  RedBlackTree::{
     keys: array_new()
     values: array_new()
     parents: array_new()
@@ -748,7 +748,7 @@ pub fn red_black_tree_range<k, v, c: Comparator<k>>(
   upper: Option<k>,
   upper_inclusive: Bool,
 ) -> RedBlackTreeIter<k, v, c> {
-  RedBlackTreeIter {
+  RedBlackTreeIter::{
     tree: tree
     current: tree_i32_box(tree_iter_start(tree, lower, lower_inclusive))
     upper: upper

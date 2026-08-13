@@ -169,7 +169,7 @@ test "JSON rejects malformed UTF8 and invalid escapes" {
 }
 
 test "JSON limits are explicit and deterministic" {
-  let tiny = JsonLimits {
+  let tiny = JsonLimits::{
     max_input_bytes: 2u32
     max_depth: 8u32
     max_values: 8u32
@@ -179,7 +179,7 @@ test "JSON limits are explicit and deterministic" {
     json_parse_bytes_with_limits(b"null", tiny) is Result::Err(JsonParseError::InputLimitExceeded(4u32)),
     "input limit ignored",
   )
-  let shallow = JsonLimits {
+  let shallow = JsonLimits::{
     max_input_bytes: 32u32
     max_depth: 1u32
     max_values: 8u32
@@ -189,7 +189,7 @@ test "JSON limits are explicit and deterministic" {
     json_parse_bytes_with_limits(b"[[null]]", shallow) is Result::Err(JsonParseError::DepthLimitExceeded(2u32)),
     "depth limit ignored",
   )
-  let one_value = JsonLimits {
+  let one_value = JsonLimits::{
     max_input_bytes: 32u32
     max_depth: 8u32
     max_values: 1u32
@@ -199,7 +199,7 @@ test "JSON limits are explicit and deterministic" {
     json_parse_bytes_with_limits(b"[null]", one_value) is Result::Err(JsonParseError::ValueLimitExceeded(1u32)),
     "value limit ignored",
   )
-  let short_string = JsonLimits {
+  let short_string = JsonLimits::{
     max_input_bytes: 32u32
     max_depth: 8u32
     max_values: 8u32

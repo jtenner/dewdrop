@@ -5,7 +5,7 @@ test "Disposable standard module has stable identity and generic dispatch" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.disposable\nstruct Resource {\n  value: I32\n}\nimpl Disposable for Resource {\n  fn dispose(self) -> Unit {\n    assert(self.value == 7, \"dispose\")\n  }\n}\nfn close<t: Disposable>(value: t) -> Unit {\n  dispose(value)\n}\npub fn run() -> Unit {\n  close(Resource {\n    value: 7\n  })\n}\n",
+          "main.dew", b"open dew.std.disposable\nstruct Resource {\n  value: I32\n}\nimpl Disposable for Resource {\n  fn dispose(self) -> Unit {\n    assert(self.value == 7, \"dispose\")\n  }\n}\nfn close<t: Disposable>(value: t) -> Unit {\n  dispose(value)\n}\npub fn run() -> Unit {\n  close(Resource::{\n    value: 7\n  })\n}\n",
         ),
       ]),
     ]),

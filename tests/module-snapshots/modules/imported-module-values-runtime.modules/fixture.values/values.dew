@@ -3,7 +3,7 @@ pub struct Box {
 }
 
 fn make(value: I32) -> Box {
-  Box {
+  Box::{
     value: value
   }
 }

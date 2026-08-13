@@ -94,7 +94,7 @@ test "Map rejects keys without Hash evidence" {
     ProgramManifest::new([
       ManifestModule::new("fixture.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.map\nstruct Key {}\npub fn run() -> I32 {\n  let values = Map::singleton(Key {}, 1)\n  values[Key {}]\n}\n",
+          "main.dew", b"open dew.std.map\nstruct Key {}\npub fn run() -> I32 {\n  let values = Map::singleton(Key::{}, 1)\n  values[Key::{}]\n}\n",
         ),
       ]),
     ]),
@@ -118,7 +118,7 @@ test "Hash implementations require collision equality" {
     ProgramManifest::new([
       ManifestModule::new("fixture.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.map\nstruct Key {}\nimpl Hash for Key {\n  fn hash(self) -> U64 {\n    0u64\n  }\n}\npub fn run() -> I32 {\n  let values = Map::singleton(Key {}, 1)\n  values[Key {}]\n}\n",
+          "main.dew", b"open dew.std.map\nstruct Key {}\nimpl Hash for Key {\n  fn hash(self) -> U64 {\n    0u64\n  }\n}\npub fn run() -> I32 {\n  let values = Map::singleton(Key::{}, 1)\n  values[Key::{}]\n}\n",
         ),
       ]),
     ]),
@@ -134,7 +134,7 @@ test "Hash implementations must return U64" {
     ProgramManifest::new([
       ManifestModule::new("fixture.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.map\nstruct Key {}\nimpl Hash for Key {\n  fn hash(self) -> I32 {\n    0\n  }\n  fn hash_eq(self, right: Key) -> Bool {\n    true\n  }\n}\npub fn run() -> I32 {\n  let values = Map::singleton(Key {}, 1)\n  values[Key {}]\n}\n",
+          "main.dew", b"open dew.std.map\nstruct Key {}\nimpl Hash for Key {\n  fn hash(self) -> I32 {\n    0\n  }\n  fn hash_eq(self, right: Key) -> Bool {\n    true\n  }\n}\npub fn run() -> I32 {\n  let values = Map::singleton(Key::{}, 1)\n  values[Key::{}]\n}\n",
         ),
       ]),
     ]),

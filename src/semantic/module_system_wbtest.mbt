@@ -366,7 +366,7 @@ test "frozen interfaces exclude test-only implementation evidence" {
     ProgramFile::named(
       make_program_file_id(module_id, 1),
       "evidence_test.dew",
-      b"impl Mark for Item {\n  fn mark(self) -> I32 {\n    7\n  }\n}\ntest \"uses local evidence\" {\n  assert(Item {}.mark() == 7, \"wrong mark\")\n}\n",
+      b"impl Mark for Item {\n  fn mark(self) -> I32 {\n    7\n  }\n}\ntest \"uses local evidence\" {\n  assert(Item::{}.mark() == 7, \"wrong mark\")\n}\n",
     ),
   ])
   let resolved = resolve_module_types(collected)

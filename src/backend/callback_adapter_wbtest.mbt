@@ -44,7 +44,7 @@ test "generic aggregate callback fields plan flattened wrapper closures" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn identity_box<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {\n  if first {\n    value\n  } else {\n    value\n  }\n}\npub fn main() -> Unit {\n  let box = identity_box(CallbackBox {\n    callback: increment\n  }, true)\n  assert(true, \"aggregate callback\")\n}\n",
+          "main.dew", b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\npub fn identity_box<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {\n  if first {\n    value\n  } else {\n    value\n  }\n}\npub fn main() -> Unit {\n  let box = identity_box(CallbackBox::{\n    callback: increment\n  }, true)\n  assert(true, \"aggregate callback\")\n}\n",
         ),
       ]),
     ]),

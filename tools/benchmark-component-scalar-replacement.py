@@ -58,7 +58,7 @@ GENERIC_DIRECT = """struct Pair<t> {
 }
 
 fn selected<t>(first: t, second: t, choose_first: Bool) -> t {
-  let pair = Pair {
+  let pair = Pair::{
     first: first
     second: second
   }
@@ -84,7 +84,7 @@ fn retain<t>(value: Pair<t>) -> Pair<t> {
 }
 
 fn selected<t>(first: t, second: t, choose_first: Bool) -> t {
-  let pair = retain(Pair {
+  let pair = retain(Pair::{
     first: first
     second: second
   })
@@ -107,7 +107,7 @@ MIXED_DIRECT = """struct Triple {
 }
 
 pub fn main(value: I32) -> I32 {
-  let triple = Triple {
+  let triple = Triple::{
     first: value
     second: 0
     third: value + 1
@@ -128,7 +128,7 @@ fn retain(value: Triple) -> Triple {
 }
 
 pub fn main(value: I32) -> I32 {
-  let triple = retain(Triple {
+  let triple = retain(Triple::{
     first: value
     second: 0
     third: value + 1
@@ -147,12 +147,12 @@ struct Pair {
   second: Token
 }
 
-pub let stored = Token {
+pub let stored = Token::{
   value: 7
 }
 
 fn selected(second: Token) -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     first: stored
     second: second
   }
@@ -160,7 +160,7 @@ fn selected(second: Token) -> I32 {
 }
 
 pub fn main(value: I32) -> I32 {
-  selected(Token {
+  selected(Token::{
     value: value + 1
   })
 }
@@ -175,7 +175,7 @@ struct Pair {
   second: Token
 }
 
-pub let stored = Token {
+pub let stored = Token::{
   value: 7
 }
 
@@ -184,7 +184,7 @@ fn retain(value: Pair) -> Pair {
 }
 
 fn selected(second: Token) -> I32 {
-  let pair = retain(Pair {
+  let pair = retain(Pair::{
     first: stored
     second: second
   })
@@ -192,7 +192,7 @@ fn selected(second: Token) -> I32 {
 }
 
 pub fn main(value: I32) -> I32 {
-  selected(Token {
+  selected(Token::{
     value: value + 1
   })
 }
@@ -208,11 +208,11 @@ struct Pair {
 }
 
 fn selected(first: I32, second: I32) -> I32 {
-  let pair = Pair {
-    first: Token {
+  let pair = Pair::{
+    first: Token::{
       value: first
     }
-    second: Token {
+    second: Token::{
       value: second
     }
   }
@@ -238,11 +238,11 @@ fn retain(value: Pair) -> Pair {
 }
 
 fn selected(first: I32, second: I32) -> I32 {
-  let pair = retain(Pair {
-    first: Token {
+  let pair = retain(Pair::{
+    first: Token::{
       value: first
     }
-    second: Token {
+    second: Token::{
       value: second
     }
   })
@@ -264,7 +264,7 @@ struct Pair {
 }
 
 fn selected(first: Token, second: Token) -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     first: first
     second: second
   }
@@ -272,9 +272,9 @@ fn selected(first: Token, second: Token) -> I32 {
 }
 
 pub fn main(value: I32) -> I32 {
-  selected(Token {
+  selected(Token::{
     value: value
-  }, Token {
+  }, Token::{
     value: value + 1
   })
 }
@@ -294,7 +294,7 @@ fn retain(value: Pair) -> Pair {
 }
 
 fn selected(first: Token, second: Token) -> I32 {
-  let pair = retain(Pair {
+  let pair = retain(Pair::{
     first: first
     second: second
   })
@@ -302,9 +302,9 @@ fn selected(first: Token, second: Token) -> I32 {
 }
 
 pub fn main(value: I32) -> I32 {
-  selected(Token {
+  selected(Token::{
     value: value
-  }, Token {
+  }, Token::{
     value: value + 1
   })
 }

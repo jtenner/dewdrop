@@ -5,7 +5,7 @@ struct Container {
 } derive(Debug)
 
 pub fn main() -> Unit {
-  debug(Container {
-    value: Opaque {}
+  debug(Container::{
+    value: Opaque::{}
   })
 }

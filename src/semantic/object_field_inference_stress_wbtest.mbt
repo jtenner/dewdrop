@@ -7,7 +7,7 @@ fn wide_construction_source(field_count : Int) -> Bytes {
     output.write_string_utf8(index.to_string())
     output.write_string_utf8(": I32\n")
   }
-  output.write_string_utf8("}\nfn make() -> Wide {\n  Wide {\n")
+  output.write_string_utf8("}\nfn make() -> Wide {\n  Wide::{\n")
   for index in 0..<field_count {
     output.write_string_utf8("    field_")
     output.write_string_utf8(index.to_string())

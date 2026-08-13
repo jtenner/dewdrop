@@ -19,7 +19,7 @@ impl<t: Marker> Value for Box<t> {
 }
 
 pub fn yes_box() -> Box<Yes> {
-  Box {
-    value: Yes {}
+  Box::{
+    value: Yes::{}
   }
 }

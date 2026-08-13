@@ -83,7 +83,7 @@ def exact_source(source: str) -> str:
         Result::Ok(value) => value
         Result::Err(error) => break Result::Err(error)
       }
-      members.push(JsonMember {
+      members.push(JsonMember::{
         key: key
         value: member_value
       })

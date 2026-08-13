@@ -33,7 +33,7 @@ impl Disposable for Resource {
 
 fn acquire(digit: I32) -> Resource {
   record(1)
-  Resource {
+  Resource::{
     digit: digit
   }
 }

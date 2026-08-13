@@ -28,11 +28,11 @@ fn static_read(value: Item) -> I32 {
 }
 
 pub fn main() -> U32 {
-  debug(invoke(Item {
+  debug(invoke(Item::{
     value: 21
   }))
   wasi_fd_write(1u32, b"|")
-  debug(static_read(Item {
+  debug(static_read(Item::{
     value: 7
   }))
   wasi_fd_write(1u32, b"|trait:value")

@@ -9,7 +9,7 @@ enum Wrapped {
 }
 
 fn nested(left: I32, right: I32) -> I32 {
-  match Wrapped::Some(Box {
+  match Wrapped::Some(Box::{
     left: left
     right: right
   }) {

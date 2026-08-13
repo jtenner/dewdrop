@@ -8,11 +8,11 @@ struct Pair {
 }
 
 fn selected(first: I32, second: I32) -> I32 {
-  let pair = Pair {
-    first: Token {
+  let pair = Pair::{
+    first: Token::{
       value: first
     }
-    second: Token {
+    second: Token::{
       value: second
     }
   }

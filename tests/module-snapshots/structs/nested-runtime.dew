@@ -12,8 +12,8 @@ fn read(outer: Outer) -> I32 {
 }
 
 pub fn main() -> U32 {
-  if read(Outer {
-    inner: Inner {
+  if read(Outer::{
+    inner: Inner::{
       value: 9
     }
   }) == 9 {

@@ -110,7 +110,7 @@ builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_s
 fn json_unit() -> Unit {}
 
 pub fn json_default_limits() -> JsonLimits {
-  JsonLimits {
+  JsonLimits::{
     max_input_bytes: 16777216u32
     max_depth: 128u32
     max_values: 1048576u32
@@ -466,12 +466,12 @@ fn json_parse_string_with_provenance(
         json_parser_set_offset(parser, first_special + 1u32)
         let view = parser.source.view(content, decoded_length)
         if parser.compact_tokens {
-          Result::Ok(ParsedJsonString {
+          Result::Ok(ParsedJsonString::{
             value: view.compact()
             needs_escape: false
           })
         } else {
-          Result::Ok(ParsedJsonString {
+          Result::Ok(ParsedJsonString::{
             value: view.to_string()
             needs_escape: false
           })
@@ -497,7 +497,7 @@ fn json_parse_string_with_provenance(
       let byte = parser.input.byte_at(special)
       if byte == 34u8 {
         json_parser_set_offset(parser, special + 1u32)
-        break Result::Ok(ParsedJsonString {
+        break Result::Ok(ParsedJsonString::{
           value: builder.finish()
           needs_escape: true
         })
@@ -606,7 +606,7 @@ fn json_parse_literal(
 pub fn json_number(value: String) -> Result<JsonNumber, JsonWriteError> {
   let bytes = value.as_bytes()
   if json_number_is_valid(bytes, 0u32, bytes.byte_length()) {
-    Result::Ok(JsonNumber {
+    Result::Ok(JsonNumber::{
       lexeme: value
     })
   } else {
@@ -624,7 +624,7 @@ impl JsonNumber {
 }
 
 pub fn json_string(value: String) -> JsonString {
-  JsonString {
+  JsonString::{
     value: value
     needs_escape: json_scan_bytes_string_special_simd(value.as_bytes(), 0u32) < value.byte_length()
   }
@@ -659,7 +659,7 @@ fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
   match json_parse_number_lexeme(parser) {
     Result::Ok(value) => {
       if parser.validated_numbers {
-        Result::Ok(JsonValue::ValidatedNumber(JsonNumber {
+        Result::Ok(JsonValue::ValidatedNumber(JsonNumber::{
           lexeme: value
         }))
       } else {
@@ -878,7 +878,7 @@ fn json_parse_object(
         Result::Ok(value) => value
         Result::Err(error) => break Result::Err(error)
       }
-      members.push(JsonMember {
+      members.push(JsonMember::{
         key: key
         value: member_value
       })
@@ -930,7 +930,7 @@ fn json_parse_value(
         match json_parse_string_with_provenance(parser) {
           Result::Ok(value) => {
             if parser.validated_strings {
-              Result::Ok(JsonValue::ValidatedString(JsonString {
+              Result::Ok(JsonValue::ValidatedString(JsonString::{
                 value: value.value
                 needs_escape: value.needs_escape
               }))
@@ -1198,7 +1198,7 @@ fn json_parse_validated_string_with_limits(
   if length > limits.max_input_bytes {
     Result::Err(JsonParseError::InputLimitExceeded(length))
   } else {
-    let parser = JsonParser {
+    let parser = JsonParser::{
       input: source.as_bytes()
       source: source
       state: FixedArray::make(2u32, 0u32)
@@ -1323,7 +1323,7 @@ pub fn json_parse_document_with_limits(
 ) -> Result<JsonDocument, JsonParseError> {
   match json_parse_retained_with_limits(input, limits) {
     Result::Err(error) => Result::Err(error)
-    Result::Ok(value) => Result::Ok(JsonDocument {
+    Result::Ok(value) => Result::Ok(JsonDocument::{
       source: input
       value: value
     })
@@ -1354,7 +1354,7 @@ pub fn json_validate_with_limits(
   if length > limits.max_input_bytes {
     Result::Err(JsonParseError::InputLimitExceeded(length))
   } else {
-    let parser = JsonParser {
+    let parser = JsonParser::{
       input: input.as_bytes()
       source: input
       state: FixedArray::make(2u32, 0u32)
@@ -1387,7 +1387,7 @@ pub fn json_parse_raw_document_with_limits(
 ) -> Result<JsonRawDocument, JsonParseError> {
   match json_validate_with_limits(input, limits) {
     Result::Err(error) => Result::Err(error)
-    Result::Ok(_) => Result::Ok(JsonRawDocument {
+    Result::Ok(_) => Result::Ok(JsonRawDocument::{
       source: input
     })
   }
@@ -1676,7 +1676,7 @@ pub fn json_stringify_with_limits(
   max_bytes: U32,
 ) -> Result<String, JsonWriteError> {
   let error = FixedArray::make(1u32, 0u32)
-  let writer = JsonWriter {
+  let writer = JsonWriter::{
     builder: StringBuilder::new()
     max_depth: max_depth
     max_bytes: max_bytes
@@ -1730,7 +1730,7 @@ pub fn json_write<w: Writer>(
 }
 
 pub fn json_member(key: String, value: JsonValue) -> JsonMember {
-  JsonMember {
+  JsonMember::{
     key: key
     value: value
   }

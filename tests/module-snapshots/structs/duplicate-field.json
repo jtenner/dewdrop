@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:8:5: error: DuplicateConstructionField(1, 70, 83)\n  |\n8 |     value: 2\n  |     ^\n  = fixture.dew:7:5: first field is here"
+    "fixture.dew:8:5: error: DuplicateConstructionField(1, 71, 84)\n  |\n8 |     value: 2\n  |     ^\n  = fixture.dew:7:5: first field is here"
   ],
   "warnings": [],
   "output": null

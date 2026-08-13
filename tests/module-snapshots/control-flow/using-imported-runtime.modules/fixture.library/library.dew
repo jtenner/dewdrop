@@ -12,7 +12,7 @@ impl Disposable for Resource {
 }
 
 pub fn acquire() -> Resource {
-  Resource {
+  Resource::{
     value: 7
   }
 }

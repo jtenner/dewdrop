@@ -389,27 +389,55 @@ test "qualified access requires an identifier property" {
 }
 
 ///|
-test "named and qualified values accept postfix construction bodies" {
+test "legacy bare-brace struct construction is rejected" {
+  let parser = Parser::from_bytes(b"Point {}")
+  assert_eq(parser.parse_expression(), Ok(NameExpr("Point", 0UL)))
+  match parser.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.LeftBrace) => ()
+        _ => fail("expected legacy construction brace to remain")
+      }
+    None => fail("expected legacy construction brace")
+  }
+}
+
+///|
+test "named and qualified values accept double-colon construction bodies" {
   assert_eq(
-    parse_test_expression(b"Point {\n  x: 10\n  y: 20\n}"),
+    parse_test_expression(b"Point::{\n  x: 10\n  y: 20\n}"),
     Ok(
       ConstructExpr(
         NameExpr("Point", 0UL),
         [
-          { name: "x", value: I32Expr(10UL, 13UL), offset: 10UL },
-          { name: "y", value: I32Expr(20UL, 21UL), offset: 18UL },
+          { name: "x", value: I32Expr(10UL, 14UL), offset: 11UL },
+          { name: "y", value: I32Expr(20UL, 22UL), offset: 19UL },
         ],
-        6UL,
+        7UL,
       ),
     ),
   )
   assert_eq(
-    parse_test_expression(b"Message::Data {}"),
+    parse_test_expression(b"Message::Data::{}"),
     Ok(
       ConstructExpr(
         QualifiedExpr(NameExpr("Message", 0UL), "Data", 7UL),
         [],
-        14UL,
+        15UL,
+      ),
+    ),
+  )
+}
+
+///|
+test "construction permits a soft newline after double colon" {
+  assert_eq(
+    parse_test_expression(b"Point::\n{\n  x: 10\n}"),
+    Ok(
+      ConstructExpr(
+        NameExpr("Point", 0UL),
+        [{ name: "x", value: I32Expr(10UL, 15UL), offset: 12UL }],
+        8UL,
       ),
     ),
   )
@@ -418,20 +446,20 @@ test "named and qualified values accept postfix construction bodies" {
 ///|
 test "construction remains in binary-seeking mode" {
   assert_eq(
-    parse_test_expression(b"Message::Data {\n  value: item\n}.value(1)"),
+    parse_test_expression(b"Message::Data::{\n  value: item\n}.value(1)"),
     Ok(
       CallExpr(
         FieldExpr(
           ConstructExpr(
             QualifiedExpr(NameExpr("Message", 0UL), "Data", 7UL),
-            [{ name: "value", value: NameExpr("item", 25UL), offset: 18UL }],
-            14UL,
+            [{ name: "value", value: NameExpr("item", 26UL), offset: 19UL }],
+            15UL,
           ),
           "value",
-          31UL,
+          32UL,
         ),
-        [I32Expr(1UL, 38UL)],
-        37UL,
+        [I32Expr(1UL, 39UL)],
+        38UL,
       ),
     ),
   )
@@ -439,7 +467,7 @@ test "construction remains in binary-seeking mode" {
 
 ///|
 test "a top-level newline terminates before a construction body" {
-  let parser = Parser::from_bytes(b"Point\n{}")
+  let parser = Parser::from_bytes(b"Point\n::{}")
   assert_eq(parser.parse_expression(), Ok(NameExpr("Point", 0UL)))
   match parser.peek_token() {
     Some(token) =>
@@ -454,16 +482,16 @@ test "a top-level newline terminates before a construction body" {
 ///|
 test "construction binds above infix operators" {
   assert_eq(
-    parse_test_expression(b"left + Point {} * right"),
+    parse_test_expression(b"left + Point::{} * right"),
     Ok(
       BinaryExpr(
         Add,
         NameExpr("left", 0UL),
         BinaryExpr(
           Multiply,
-          ConstructExpr(NameExpr("Point", 7UL), [], 13UL),
-          NameExpr("right", 18UL),
-          16UL,
+          ConstructExpr(NameExpr("Point", 7UL), [], 14UL),
+          NameExpr("right", 19UL),
+          17UL,
         ),
         5UL,
       ),

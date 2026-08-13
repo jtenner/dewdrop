@@ -13,7 +13,7 @@ fn separated(pair: Pair) -> I32 {
 }
 
 pub fn main() -> Unit {
-  let pair = Pair {
+  let pair = Pair::{
     value: 21
   }
   assert(adjacent(pair) == 42, "adjacent field CSE")

@@ -3,13 +3,13 @@ struct Box<t> {
 }
 
 pub fn echo_box<t>(value: Box<t>) -> Box<t> {
-  Box {
+  Box::{
     value: value.value
   }
 }
 
 pub fn main() -> Unit {
-  let boxed = echo_box(Box {
+  let boxed = echo_box(Box::{
     value: 42
   })
   assert(boxed.value == 42, "nested aggregate specialization")

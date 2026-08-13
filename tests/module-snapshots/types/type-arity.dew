@@ -3,7 +3,7 @@ struct Box<t> {
 }
 
 fn make() -> Box {
-  Box {
+  Box::{
     item: 1
   }
 }

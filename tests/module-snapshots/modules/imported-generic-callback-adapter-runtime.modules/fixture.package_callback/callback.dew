@@ -7,7 +7,7 @@ pub fn increment(value: I32) -> I32 {
 }
 
 pub fn make_box() -> CallbackBox<I32> {
-  CallbackBox {
+  CallbackBox::{
     callback: increment
   }
 }

@@ -3,7 +3,7 @@ struct Point {
 }
 
 pub fn main() -> I32 {
-  let point = Point {
+  let point = Point::{
     x: 1
   }
   point.y

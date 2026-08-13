@@ -5,11 +5,11 @@ struct Box {
 
 fn choose(flag: Bool) -> Box {
   if flag {
-    Box {
+    Box::{
       value: 11
     }
   } else {
-    Box {
+    Box::{
       value: 22
     }
   }

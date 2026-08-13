@@ -368,7 +368,7 @@ test "linked program emits struct construction and field access" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"pub struct Pair {\n  first: I32\n  second: I32\n}\nfn make(first: I32, second: I32) -> Pair {\n  Pair {\n    second: second\n    first: first\n  }\n}\nfn sum(value: Pair) -> I32 {\n  value.first + value.second\n}\npub fn run(value: I32) -> I32 {\n  sum(make(value, 1))\n}\n",
+          "main.dew", b"pub struct Pair {\n  first: I32\n  second: I32\n}\nfn make(first: I32, second: I32) -> Pair {\n  Pair::{\n    second: second\n    first: first\n  }\n}\nfn sum(value: Pair) -> I32 {\n  value.first + value.second\n}\npub fn run(value: I32) -> I32 {\n  sum(make(value, 1))\n}\n",
         ),
       ]),
     ]),
@@ -494,7 +494,7 @@ test "imported struct variant match validates with the subtype representation" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"open app.library\nfn read(value: Message) -> I32 {\n  match value {\n    Message::Idle => 0\n    Message::Move {\n      x\n      ...\n    } => x\n  }\n}\npub fn run(value: I32) -> I32 {\n  read(Message::Move {\n    y: 0\n    x: value\n  })\n}\n",
+          "main.dew", b"open app.library\nfn read(value: Message) -> I32 {\n  match value {\n    Message::Idle => 0\n    Message::Move {\n      x\n      ...\n    } => x\n  }\n}\npub fn run(value: I32) -> I32 {\n  read(Message::Move::{\n    y: 0\n    x: value\n  })\n}\n",
         ),
       ]),
       @semantic.ManifestModule::new("app.library", [
@@ -560,7 +560,7 @@ test "imported enum construction validates with the subtype representation" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"open app.library\npub fn idle() -> Message {\n  Message::Idle\n}\npub fn number(value: I32) -> Message {\n  Message::Number(value)\n}\npub fn move(x: I32, y: I32) -> Message {\n  Message::Move {\n    y: y\n    x: x\n  }\n}\n",
+          "main.dew", b"open app.library\npub fn idle() -> Message {\n  Message::Idle\n}\npub fn number(value: I32) -> Message {\n  Message::Number(value)\n}\npub fn move(x: I32, y: I32) -> Message {\n  Message::Move::{\n    y: y\n    x: x\n  }\n}\n",
         ),
       ]),
       @semantic.ManifestModule::new("app.library", [
@@ -595,7 +595,7 @@ test "imported struct construction and field access emit external type indices" 
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"open app.library\nfn make(value: I32) -> Item {\n  Item {\n    value: value\n  }\n}\nfn read(value: Item) -> I32 {\n  value.value\n}\npub fn run(value: I32) -> I32 {\n  read(make(value))\n}\n",
+          "main.dew", b"open app.library\nfn make(value: I32) -> Item {\n  Item::{\n    value: value\n  }\n}\nfn read(value: Item) -> I32 {\n  value.value\n}\npub fn run(value: I32) -> I32 {\n  read(make(value))\n}\n",
         ),
       ]),
       @semantic.ManifestModule::new("app.library", [
@@ -709,7 +709,7 @@ test "cross module recursive aggregate SCC emits one valid recursive group" {
 ///|
 test "recursive nominal values survive generic arrays and aggregate fields" {
   let stages = backend_test_single_module_stages(
-    2446UL, b"open dew.std.array\npub enum Node {\n  Leaf(I32)\n  Branch(Array<Node>)\n}\npub struct Holder {\n  values: Array<Node>\n}\nfn build() -> Holder {\n  let children = Array::new()\n  children.push(Node::Leaf(42))\n  let roots = Array::new()\n  roots.push(Node::Branch(children))\n  Holder {\n    values: roots\n  }\n}\npub fn main() -> I32 {\n  match build().values.get_unchecked(0u32) {\n    Node::Branch(children) => {\n      match children.get_unchecked(0u32) {\n        Node::Leaf(value) => value\n        _ => 0\n      }\n    }\n    _ => 0\n  }\n}\n",
+    2446UL, b"open dew.std.array\npub enum Node {\n  Leaf(I32)\n  Branch(Array<Node>)\n}\npub struct Holder {\n  values: Array<Node>\n}\nfn build() -> Holder {\n  let children = Array::new()\n  children.push(Node::Leaf(42))\n  let roots = Array::new()\n  roots.push(Node::Branch(children))\n  Holder::{\n    values: roots\n  }\n}\npub fn main() -> I32 {\n  match build().values.get_unchecked(0u32) {\n    Node::Branch(children) => {\n      match children.get_unchecked(0u32) {\n        Node::Leaf(value) => value\n        _ => 0\n      }\n    }\n    _ => 0\n  }\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   let module_ = stages.emit_module()
@@ -749,7 +749,7 @@ test "local implementation methods cast imported nominal arguments" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"open app.types\npub trait Read {\n  fn read(self) -> I32\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn main() -> I32 {\n  let item = Item {}\n  item.read()\n}\n",
+          "main.dew", b"open app.types\npub trait Read {\n  fn read(self) -> I32\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn main() -> I32 {\n  let item = Item::{}\n  item.read()\n}\n",
         ),
       ]),
       @semantic.ManifestModule::new("app.types", [
@@ -803,7 +803,7 @@ test "generic bound calls cast specialized nominal parameters" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    42\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  read(Item {})\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    42\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  read(Item::{})\n}\n",
         ),
       ]),
     ]),
@@ -963,7 +963,7 @@ test "erased trait dictionaries capture caller runtime prerequisites" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn erase_read<t: Read>(value: t) -> Read {\n  value\n}\nfn helper<t: Value>(value: t) -> Read {\n  erase_read(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> Read {\n  helper(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  let result = invoke(outer(42))\n  assert(result == 42, \"captured erased dictionary result\")\n  result\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn erase_read<t: Read>(value: t) -> Read {\n  value\n}\nfn helper<t: Value>(value: t) -> Read {\n  erase_read(Box::{\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> Read {\n  helper(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  let result = invoke(outer(42))\n  assert(result == 42, \"captured erased dictionary result\")\n  result\n}\n",
         ),
       ]),
     ]),
@@ -1014,7 +1014,7 @@ test "imported erased trait dictionaries capture caller runtime prerequisites" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.provider", [
         @semantic.ManifestFile::new(
-          "provider.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\npub fn erase<t: Value>(value: t) -> Read {\n  Box {\n    value: value\n  }\n}\n",
+          "provider.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\npub fn erase<t: Value>(value: t) -> Read {\n  Box::{\n    value: value\n  }\n}\n",
         ),
       ]),
       @semantic.ManifestModule::new("app.main", [
@@ -1185,7 +1185,7 @@ test "public runtime evidence forwards recursive static prerequisite trees" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\nfn consume<t: Inspect>(value: t) -> I32 {\n  value.inspect()\n}\npub fn nested_read<t: Value>(value: t) -> I32 {\n  consume(Wrap {\n    value: Box {\n      value: value\n    }\n  })\n}\npub fn main() -> I32 {\n  nested_read(42)\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\nfn consume<t: Inspect>(value: t) -> I32 {\n  value.inspect()\n}\npub fn nested_read<t: Value>(value: t) -> I32 {\n  consume(Wrap::{\n    value: Box::{\n      value: value\n    }\n  })\n}\npub fn main() -> I32 {\n  nested_read(42)\n}\n",
         ),
       ]),
     ]),
@@ -1209,7 +1209,7 @@ test "open generic prerequisite dictionaries emit valid adapters" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn choose<t: Read>(flag: Bool, value: t) -> Read {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(choose(true, Box {\n    value: 42\n  }))\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn choose<t: Read>(flag: Bool, value: t) -> Read {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(choose(true, Box::{\n    value: 42\n  }))\n}\n",
         ),
       ]),
     ]),

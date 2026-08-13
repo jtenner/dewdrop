@@ -12,7 +12,7 @@ fn return_erased_identity() -> fn(Item) -> Item {
 
 pub fn main() -> Unit {
   let erased_identity = return_erased_identity()
-  let item = erased_identity(Item {
+  let item = erased_identity(Item::{
     value: 42
   })
   assert(item.value == 42, "erased generic reference fallback")

@@ -67,7 +67,7 @@ impl Writer for ZeroWriter {
 }
 
 test "io_write_all rejects zero progress" {
-  assert(io_write_all(ZeroWriter {}, b"x") is Result::Err(IoError::ZeroProgress), "missing zero-progress error")
+  assert(io_write_all(ZeroWriter::{}, b"x") is Result::Err(IoError::ZeroProgress), "missing zero-progress error")
 }
 
 test "io_copy transfers bounded chunks" {
@@ -90,7 +90,7 @@ impl Writer for OverreportWriter {
 }
 
 test "io_write_all rejects over-reporting" {
-  assert(io_write_all(OverreportWriter {}, b"x") is Result::Err(IoError::InvalidProgress), "missing invalid-progress error")
+  assert(io_write_all(OverreportWriter::{}, b"x") is Result::Err(IoError::InvalidProgress), "missing invalid-progress error")
 }
 
 struct BackendReader {}
@@ -102,5 +102,5 @@ impl Reader for BackendReader {
 }
 
 test "io_read_exact preserves backend errors" {
-  assert(io_read_exact(BackendReader {}, 1u32) is Result::Err(IoError::Backend(17u32)), "backend error changed")
+  assert(io_read_exact(BackendReader::{}, 1u32) is Result::Err(IoError::Backend(17u32)), "backend error changed")
 }

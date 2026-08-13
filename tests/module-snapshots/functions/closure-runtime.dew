@@ -45,7 +45,7 @@ pub fn main() -> Unit {
   let nested = make_nested(39)
   assert(nested(1) == 42, "nested closure")
 
-  let box = Box {
+  let box = Box::{
     value: 41
   }
   let read_box = fn() -> I32 {

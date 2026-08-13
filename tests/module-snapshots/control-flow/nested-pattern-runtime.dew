@@ -50,11 +50,11 @@ fn read_box(value: Box) -> I32 {
 pub fn main() -> U32 {
   let result = read_outer(Outer::Wrap(Inner::A(7))) +
     read_outer(Outer::Wrap(Inner::B(5))) +
-    read_outer(Outer::Named {
+    read_outer(Outer::Named::{
       inner: Inner::A(3)
       flag: true
     }) +
-    read_box(Box {
+    read_box(Box::{
       inner: Inner::B(4)
     })
   if result == 192 {

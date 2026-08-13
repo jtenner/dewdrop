@@ -13,7 +13,7 @@ fn retain(value: Wrapped) -> Wrapped {
 }
 
 fn guarded(left: I32, right: I32) -> I32 {
-  match retain(Wrapped::Some(Box {
+  match retain(Wrapped::Some(Box::{
     left: left
     right: right
   })) {

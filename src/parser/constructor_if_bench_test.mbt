@@ -2,7 +2,7 @@
 fn aggregate_expression_source(field_count : Int, qualified : Bool) -> Bytes {
   let output = Buffer(size_hint=field_count * 28 + 32)
   if qualified {
-    output.write_string_utf8("Message::Data {\n")
+    output.write_string_utf8("Message::Data::{\n")
   } else {
     output.write_string_utf8("{\n")
   }

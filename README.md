@@ -445,7 +445,7 @@ fn sum(point: Point) -> I32 {
 }
 
 fn example() -> I32 {
-  let point = Point {
+  let point = Point::{
     x: 20
     y: 22
   }

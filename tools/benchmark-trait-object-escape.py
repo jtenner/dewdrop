@@ -35,7 +35,7 @@ fn invoke(value: Value) -> I32 {
 }
 
 pub fn main(value: I32) -> I32 {
-  invoke(identity(Number {
+  invoke(identity(Number::{
     stored: value
   }))
 }
@@ -56,7 +56,7 @@ impl Value for Number {
 }
 
 pub fn main(value: I32) -> I32 {
-  Number {
+  Number::{
     stored: value
   }.value()
 }

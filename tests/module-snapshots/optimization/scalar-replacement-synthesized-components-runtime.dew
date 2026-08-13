@@ -6,7 +6,7 @@ struct Quad {
 }
 
 fn selected(first: I32, second: I32, third: I32, fourth: I32) -> I32 {
-  let quad = Quad {
+  let quad = Quad::{
     first: first
     second: second
     third: third

@@ -18,7 +18,7 @@ pub trait Comparator<t> {
 pub struct NaturalComparator {}
 
 pub fn natural_comparator() -> NaturalComparator {
-  NaturalComparator {
+  NaturalComparator::{
   }
 }
 
@@ -76,17 +76,17 @@ pub struct BytesComparator {
 }
 
 pub fn string_comparator() -> StringComparator {
-  StringComparator {
+  StringComparator::{
   }
 }
 
 pub fn string_view_comparator() -> StringViewComparator {
-  StringViewComparator {
+  StringViewComparator::{
   }
 }
 
 pub fn bytes_comparator() -> BytesComparator {
-  BytesComparator {
+  BytesComparator::{
   }
 }
 

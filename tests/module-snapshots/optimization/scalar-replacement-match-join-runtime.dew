@@ -10,11 +10,11 @@ struct Pair {
 
 fn choose(choice: Choice, left: I32, right: I32) -> I32 {
   let pair = match choice {
-    Choice::First => Pair {
+    Choice::First => Pair::{
       left: left
       right: right
     }
-    Choice::Second => Pair {
+    Choice::Second => Pair::{
       left: right
       right: left
     }

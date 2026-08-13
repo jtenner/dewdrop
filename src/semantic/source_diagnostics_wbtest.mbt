@@ -24,7 +24,7 @@ test "HIR nodes retain exact source files across one module" {
       "first.dew", b"fn first(value: I32) -> I32 {\n  value\n}\n",
     ),
     ManifestFile::new(
-      "second.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\n\npub fn second(value: Pair) -> Pair {\n  let identity = fn(value: I32) -> I32 {\n    value\n  }\n  match value {\n    Pair {\n      left: left\n      right: right\n    } => Pair {\n      left: identity(right)\n      right: left\n    }\n  }\n}\n",
+      "second.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\n\npub fn second(value: Pair) -> Pair {\n  let identity = fn(value: I32) -> I32 {\n    value\n  }\n  match value {\n    Pair {\n      left: left\n      right: right\n    } => Pair::{\n      left: identity(right)\n      right: left\n    }\n  }\n}\n",
     ),
   ])
   let collected = program.modules[0]

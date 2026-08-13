@@ -73,7 +73,7 @@ test "all scalar numeric operator families validate through Starshine" {
 ///|
 test "small integer aggregate fields use valid packed signed and unsigned gets" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
-    b"pub struct Tiny {\n  signed8: I8\n  unsigned8: U8\n  signed16: I16\n  unsigned16: U16\n}\npub enum TinyValue {\n  Signed(I8)\n  Unsigned(U16)\n}\npub fn read_struct(value: Tiny) -> I16 {\n  value.signed16\n}\npub fn read_enum(value: TinyValue) -> I16 {\n  match value {\n    TinyValue::Signed(item) => i8_into_i16(item)\n    TinyValue::Unsigned(item) => u16_into_i16(item)\n  }\n}\npub fn build(value: I8) -> Tiny {\n  Tiny {\n    signed8: value\n    unsigned8: 255u8\n    signed16: i8_into_i16(value)\n    unsigned16: 65535u16\n  }\n}\n",
+    b"pub struct Tiny {\n  signed8: I8\n  unsigned8: U8\n  signed16: I16\n  unsigned16: U16\n}\npub enum TinyValue {\n  Signed(I8)\n  Unsigned(U16)\n}\npub fn read_struct(value: Tiny) -> I16 {\n  value.signed16\n}\npub fn read_enum(value: TinyValue) -> I16 {\n  match value {\n    TinyValue::Signed(item) => i8_into_i16(item)\n    TinyValue::Unsigned(item) => u16_into_i16(item)\n  }\n}\npub fn build(value: I8) -> Tiny {\n  Tiny::{\n    signed8: value\n    unsigned8: 255u8\n    signed16: i8_into_i16(value)\n    unsigned16: 65535u16\n  }\n}\n",
   )
   assert_eq(diagnostics, 0)
   let module_ = emit_starshine_program_module(lowering, fragments).unwrap()
@@ -133,7 +133,7 @@ test "GC-backed v128 strings and utf8 algorithms validate" {
 ///|
 test "nominal aggregate results survive if-expression eqref joins" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
-    b"pub enum EdgeChoice {\n  None\n  Item(I32)\n}\npub struct EdgeBox {\n  value: I32\n}\nfn edge_one() -> EdgeBox {\n  EdgeBox {\n    value: 1\n  }\n}\nfn edge_two() -> EdgeBox {\n  EdgeBox {\n    value: 2\n  }\n}\npub fn choose(flag: Bool) -> EdgeChoice {\n  if flag {\n    EdgeChoice::None\n  } else {\n    EdgeChoice::Item(7)\n  }\n}\npub fn boxed(flag: Bool) -> EdgeBox {\n  if flag {\n    edge_one()\n  } else {\n    edge_two()\n  }\n}\n",
+    b"pub enum EdgeChoice {\n  None\n  Item(I32)\n}\npub struct EdgeBox {\n  value: I32\n}\nfn edge_one() -> EdgeBox {\n  EdgeBox::{\n    value: 1\n  }\n}\nfn edge_two() -> EdgeBox {\n  EdgeBox::{\n    value: 2\n  }\n}\npub fn choose(flag: Bool) -> EdgeChoice {\n  if flag {\n    EdgeChoice::None\n  } else {\n    EdgeChoice::Item(7)\n  }\n}\npub fn boxed(flag: Bool) -> EdgeBox {\n  if flag {\n    edge_one()\n  } else {\n    edge_two()\n  }\n}\n",
   )
   assert_eq(diagnostics, 0)
   let module_ = emit_starshine_program_module(lowering, fragments).unwrap()

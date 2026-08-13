@@ -14,8 +14,8 @@ fn sum(outer: Outer) -> I32 {
 }
 
 pub fn main() -> I32 {
-  sum(Outer {
-    inner: Inner {
+  sum(Outer::{
+    inner: Inner::{
       value: 21
     }
   })

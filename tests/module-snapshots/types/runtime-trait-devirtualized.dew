@@ -25,7 +25,7 @@ fn invoke(value: Read) -> I32 {
 }
 
 pub fn main() -> U32 {
-  debug(invoke(Item {
+  debug(invoke(Item::{
     value: 42
   }))
   debug(invoke(7))

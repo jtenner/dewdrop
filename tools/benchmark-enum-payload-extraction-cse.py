@@ -67,7 +67,7 @@ fn retain(value: Wrapped) -> Wrapped {
 }
 
 pub fn main(value: I32) -> I32 {
-  match retain(Wrapped::Some(Box {
+  match retain(Wrapped::Some(Box::{
     left: value + 1
     right: value
   })) {

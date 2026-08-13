@@ -1,5 +1,5 @@
 ///|
-let parse_event_cache_file_magic : Bytes = b"DEW_PARSE_EVENT_CACHE_V1\x00"
+let parse_event_cache_file_magic : Bytes = b"DEW_PARSE_EVENT_CACHE_V2\x00"
 
 ///|
 fn wrap_parse_event_cache_payload(

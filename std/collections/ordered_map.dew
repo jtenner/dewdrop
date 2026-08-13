@@ -11,7 +11,7 @@ pub type OrderedMapIter<k, v, c> = RedBlackTreeIter<k, v, c>
 pub fn ordered_map_new<k, v, c: Comparator<k>>(
   comparator: c,
 ) -> OrderedMap<k, v, c> {
-  OrderedMap {
+  OrderedMap::{
     tree: red_black_tree_new(comparator)
   }
 }

@@ -13,7 +13,7 @@ pub fn read(item: Item) -> I32 {
 }
 
 pub fn item() -> Item {
-  Item {
+  Item::{
     value: 42
   }
 }

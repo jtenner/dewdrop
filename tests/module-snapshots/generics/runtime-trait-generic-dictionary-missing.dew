@@ -15,7 +15,7 @@ fn invoke(value: Value) -> I32 {
   value.value()
 }
 pub fn main() -> I32 {
-  invoke(Box {
-    value: No {}
+  invoke(Box::{
+    value: No::{}
   })
 }

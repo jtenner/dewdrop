@@ -21,8 +21,8 @@ struct Box {
 }
 
 pub fn main(value: I32) -> I32 {
-  Box {
-    value: Token {
+  Box::{
+    value: Token::{
       value: value
     }
   }.value.value
@@ -42,8 +42,8 @@ fn retain(value: Box) -> Box {
 }
 
 pub fn main(value: I32) -> I32 {
-  retain(Box {
-    value: Token {
+  retain(Box::{
+    value: Token::{
       value: value
     }
   }).value.value

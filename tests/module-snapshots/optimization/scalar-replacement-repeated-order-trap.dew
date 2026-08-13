@@ -12,7 +12,7 @@ fn trap_second() -> I32 {
 }
 
 pub fn main() -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     left: trap_first()
     right: trap_second()
   }

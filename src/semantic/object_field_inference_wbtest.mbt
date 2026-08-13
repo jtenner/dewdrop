@@ -55,7 +55,7 @@ fn selected_expression_of_kind(
 ///|
 test "generic struct construction selects fields and type arguments" {
   let (collected, resolved, _, inferred) = call_test_module(
-    401UL, b"struct Pair<t> {\n  first: t\n  second: Bool\n}\nfn make(value: I32) -> Pair<I32> {\n  Pair {\n    first: value\n    second: true\n  }\n}\n",
+    401UL, b"struct Pair<t> {\n  first: t\n  second: Bool\n}\nfn make(value: I32) -> Pair<I32> {\n  Pair::{\n    first: value\n    second: true\n  }\n}\n",
   )
   assert_eq(inferred.diagnostics.length(), 0)
   let (_, selection) = selected_expression_of_kind(collected, inferred, true)
@@ -134,7 +134,7 @@ test "generic field access substitutes the base type arguments" {
 ///|
 test "generic aggregate function fields remain callable after instantiation" {
   let (collected, resolved, names, inferred) = call_test_module(
-    414UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {\n  if first {\n    value\n  } else {\n    value\n  }\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox {\n    callback: increment\n  }, true)\n  let callback = box.callback\n  callback(41)\n}\n",
+    414UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>, first: Bool) -> CallbackBox<t> {\n  if first {\n    value\n  } else {\n    value\n  }\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox::{\n    callback: increment\n  }, true)\n  let callback = box.callback\n  callback(41)\n}\n",
   )
   let mut field_expression = -1
   for index, expression in collected.expressions {
@@ -193,7 +193,7 @@ test "generic aggregate function fields remain callable after instantiation" {
 ///|
 test "generic struct enum variant construction retains its variant" {
   let (collected, resolved, _, inferred) = call_test_module(
-    404UL, b"enum Message<t> {\n  Empty\n  Data {\n    value: t\n    code: I32\n  }\n}\nfn make(value: String) -> Message<String> {\n  Message::Data {\n    value: value\n    code: 1\n  }\n}\n",
+    404UL, b"enum Message<t> {\n  Empty\n  Data {\n    value: t\n    code: I32\n  }\n}\nfn make(value: String) -> Message<String> {\n  Message::Data::{\n    value: value\n    code: 1\n  }\n}\n",
   )
   assert_eq(inferred.diagnostics.length(), 0)
   let (_, selection) = selected_expression_of_kind(collected, inferred, true)
@@ -326,7 +326,7 @@ test "nested objects and chained fields resolve through the member worklist" {
 ///|
 test "construction validates unknown missing duplicate fields and payload kind" {
   let (_, _, _, inferred) = call_test_module(
-    406UL, b"struct Pair {\n  first: I32\n  second: Bool\n}\nenum Flag {\n  On\n}\nfn bad() -> Pair {\n  Pair {\n    first: 1\n    first: 2\n    extra: 3\n  }\n}\nfn bad_variant() -> Flag {\n  Flag::On {}\n}\n",
+    406UL, b"struct Pair {\n  first: I32\n  second: Bool\n}\nenum Flag {\n  On\n}\nfn bad() -> Pair {\n  Pair::{\n    first: 1\n    first: 2\n    extra: 3\n  }\n}\nfn bad_variant() -> Flag {\n  Flag::On::{}\n}\n",
   )
   let mut duplicate = 0
   let mut unknown = 0
@@ -350,7 +350,7 @@ test "construction validates unknown missing duplicate fields and payload kind" 
 ///|
 test "tuple construction arity and unconstrained generic arguments diagnose" {
   let (_, _, _, inferred) = call_test_module(
-    411UL, b"enum Maybe<t> {\n  Some(t)\n}\nstruct Empty<t> {}\nfn bad() -> Maybe<I32> {\n  Maybe::Some()\n}\nlet empty = Empty {}\n",
+    411UL, b"enum Maybe<t> {\n  Some(t)\n}\nstruct Empty<t> {}\nfn bad() -> Maybe<I32> {\n  Maybe::Some()\n}\nlet empty = Empty::{}\n",
   )
   let mut arity = 0
   let mut unresolved = 0
@@ -391,7 +391,7 @@ test "unknown method calls do not cascade into field diagnostics" {
 ///|
 test "object and field inference merges deterministically by body order" {
   let collected = collect_bytes(
-    413UL, b"struct Pair {\n  first: I32\n}\nfn make() -> Pair {\n  Pair {\n    first: 1\n  }\n}\nfn read(value: Pair) -> I32 {\n  value.first\n}\n",
+    413UL, b"struct Pair {\n  first: I32\n}\nfn make() -> Pair {\n  Pair::{\n    first: 1\n  }\n}\nfn read(value: Pair) -> I32 {\n  value.first\n}\n",
   )
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)

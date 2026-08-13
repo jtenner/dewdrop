@@ -12,7 +12,7 @@ fn number(value: I32) -> Choice {
 }
 
 fn pair(left: I32, right: I32) -> Choice {
-  Choice::Pair {
+  Choice::Pair::{
     left: left
     right: right
   }

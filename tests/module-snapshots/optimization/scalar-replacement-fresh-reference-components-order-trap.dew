@@ -16,11 +16,11 @@ fn trap_second() -> I32 {
 }
 
 pub fn main() -> I32 {
-  let pair = Pair {
-    first: Token {
+  let pair = Pair::{
+    first: Token::{
       value: trap_first()
     }
-    second: Token {
+    second: Token::{
       value: trap_second()
     }
   }

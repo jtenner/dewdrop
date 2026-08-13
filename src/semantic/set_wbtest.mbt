@@ -85,7 +85,7 @@ test "Set rejects keys without Hash evidence" {
     ProgramManifest::new([
       ManifestModule::new("fixture.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.set\nstruct Key {}\npub fn run() -> Bool {\n  let values = Set::singleton(Key {})\n  values.contains(Key {})\n}\n",
+          "main.dew", b"open dew.std.set\nstruct Key {}\npub fn run() -> Bool {\n  let values = Set::singleton(Key::{})\n  values.contains(Key::{})\n}\n",
         ),
       ]),
     ]),

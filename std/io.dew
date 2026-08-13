@@ -162,7 +162,7 @@ pub struct BytesInput {
 
 impl BytesInput {
   fn new(value: Bytes) -> BytesInput {
-    BytesInput {
+    BytesInput::{
       value: value
       offset: FixedArray::make(1u32, 0u32)
     }
@@ -212,7 +212,7 @@ impl BytesOutput {
     BytesOutput::with_capacity(0u32)
   }
   fn with_capacity(capacity: U32) -> BytesOutput {
-    BytesOutput {
+    BytesOutput::{
       builder: BytesBuilder::with_capacity(capacity)
       state: FixedArray::make(2u32, 0u32)
     }

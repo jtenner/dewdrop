@@ -27,26 +27,26 @@ fn some_i32(value: I32) -> Choice<I32> {
 }
 
 pub fn main() -> U32 {
-  let first = Nested {
-    pair: Pair {
+  let first = Nested::{
+    pair: Pair::{
       left: 3
       right: 4
     }
     choice: Choice::Some(5)
   }
-  let same = Nested {
-    pair: Pair {
+  let same = Nested::{
+    pair: Pair::{
       left: 3
       right: 4
     }
     choice: Choice::Some(5)
   }
-  let different = Nested {
-    pair: Pair {
+  let different = Nested::{
+    pair: Pair::{
       left: 3
       right: 9
     }
-    choice: Choice::Named {
+    choice: Choice::Named::{
       value: 5
     }
   }

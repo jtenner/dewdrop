@@ -13,7 +13,7 @@ Bootstrap standard-library bytes participate only when they are selected by a co
 Each artifact key is SHA-256 over:
 
 ```text
-DEW_PARSE_EVENT_KEY_V1\0
+DEW_PARSE_EVENT_KEY_V2\0
 u32 owner/module-path byte length
 owner/module-path UTF-8 bytes
 u32 logical file-path byte length
@@ -28,13 +28,13 @@ The owner path distinguishes identical logical filenames in different workspace 
 Entries live at:
 
 ```text
-.dew/cache/parse-events/v1-<key>.dpe
+.dew/cache/parse-events/v2-<key>.dpe
 ```
 
 The envelope is:
 
 ```text
-DEW_PARSE_EVENT_CACHE_V1\0
+DEW_PARSE_EVENT_CACHE_V2\0
 32-byte key/provenance digest
 32-byte source digest
 32-byte SHA-256(payload)

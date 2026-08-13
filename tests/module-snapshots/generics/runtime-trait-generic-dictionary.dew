@@ -46,20 +46,20 @@ fn invoke(flag: Bool, left: Value, right: Value) -> I32 {
 pub fn main() -> U32 {
   debug(invoke(
     true,
-    Box {
-      value: Yes {}
+    Box::{
+      value: Yes::{}
     },
-    Box {
-      value: Other {}
+    Box::{
+      value: Other::{}
     },
   ))
   debug(invoke(
     false,
-    Box {
-      value: Yes {}
+    Box::{
+      value: Yes::{}
     },
-    Box {
-      value: Other {}
+    Box::{
+      value: Other::{}
     },
   ))
   wasi_fd_write(1u32, b"|trait:generic-dictionary")

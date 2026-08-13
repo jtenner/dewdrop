@@ -5,7 +5,7 @@ struct Wrapper<t> {
 } derive(Debug)
 
 pub fn main() -> Unit {
-  debug(Wrapper {
-    value: Missing {}
+  debug(Wrapper::{
+    value: Missing::{}
   })
 }

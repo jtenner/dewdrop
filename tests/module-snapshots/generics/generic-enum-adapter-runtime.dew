@@ -21,17 +21,17 @@ pub fn echo_maybe<t>(value: Maybe<t>) -> Maybe<t> {
     Maybe::Some(item) => Maybe::Some(item)
     Maybe::Named {
       value
-    } => Maybe::Named {
+    } => Maybe::Named::{
       value: value
     }
-    Maybe::Boxed(box) => Maybe::Boxed(Box {
+    Maybe::Boxed(box) => Maybe::Boxed(Box::{
       value: box.value
     })
   }
 }
 
 pub fn echo_envelope<t>(value: Envelope<t>) -> Envelope<t> {
-  Envelope {
+  Envelope::{
     payload: echo_maybe(value.payload)
   }
 }
@@ -50,7 +50,7 @@ pub fn main() -> Unit {
     "generic tuple enum payload",
   )
   assert(
-    match echo_maybe(Maybe::Named {
+    match echo_maybe(Maybe::Named::{
       value: 43
     }) {
       Maybe::Named {
@@ -61,7 +61,7 @@ pub fn main() -> Unit {
     "generic struct enum payload",
   )
   assert(
-    match echo_maybe(Maybe::Boxed(Box {
+    match echo_maybe(Maybe::Boxed(Box::{
       value: 44
     })) {
       Maybe::Boxed(box) => box.value == 44
@@ -70,7 +70,7 @@ pub fn main() -> Unit {
     "nested generic struct enum payload",
   )
   assert(
-    match echo_envelope(Envelope {
+    match echo_envelope(Envelope::{
       payload: Maybe::Some(45)
     }).payload {
       Maybe::Some(value) => value == 45

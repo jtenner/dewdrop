@@ -226,10 +226,10 @@ test "match scrutinees stop before ungrouped braces" {
 }
 
 ///|
-test "parenthesized constructors remain valid match scrutinees" {
-  match parse_test_expression(b"match (Point {}) {\n  _ => valid\n}") {
+test "explicit constructors remain valid match scrutinees" {
+  match parse_test_expression(b"match Point::{} {\n  _ => valid\n}") {
     Ok(MatchExpr(ConstructExpr(NameExpr("Point", _), [], _), [_], _)) => ()
-    _ => fail("expected constructed match scrutinee")
+    _ => fail("expected explicit constructor scrutinee")
   }
 }
 

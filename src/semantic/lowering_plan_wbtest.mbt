@@ -67,7 +67,7 @@ test "lowering plans freeze exact direct and method call targets" {
 ///|
 test "lowering freezes runtime trait coercions and dynamic slots" {
   let (collected, _, _, _, _, planned) = lowering_test_module(
-    907UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item {})\n}\n",
+    907UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item::{})\n}\n",
   )
   assert_eq(planned.diagnostics.length(), 0)
   let invoke_calls = body_calls(collected, collected.bodies[1])
@@ -100,7 +100,7 @@ test "lowering freezes runtime trait coercions and dynamic slots" {
 ///|
 test "lowering preserves instantiated generic aggregate callback signatures" {
   let (collected, resolved, _, _, _, planned) = lowering_test_module(
-    906UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>) -> CallbackBox<t> {\n  value\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox {\n    callback: increment\n  })\n  let callback = box.callback\n  callback(41)\n}\n",
+    906UL, b"struct CallbackBox<t> {\n  callback: fn(t) -> t\n}\nfn increment(value: I32) -> I32 {\n  value + 1\n}\nfn identity<t>(value: CallbackBox<t>) -> CallbackBox<t> {\n  value\n}\nfn use() -> I32 {\n  let box = identity(CallbackBox::{\n    callback: increment\n  })\n  let callback = box.callback\n  callback(41)\n}\n",
   )
   assert_eq(planned.diagnostics.length(), 0)
   let calls = body_calls(collected, collected.bodies[2])
@@ -128,7 +128,7 @@ test "lowering preserves instantiated generic aggregate callback signatures" {
 ///|
 test "lowering plans freeze constructors fields locals and block items" {
   let (collected, _, names, _, _, planned) = lowering_test_module(
-    902UL, b"struct Item {\n  value: I32\n}\nfn make(value: I32) -> I32 {\n  let item = Item {\n    value: value\n  }\n  item.value\n}\n",
+    902UL, b"struct Item {\n  value: I32\n}\nfn make(value: I32) -> I32 {\n  let item = Item::{\n    value: value\n  }\n  item.value\n}\n",
   )
   assert_eq(planned.diagnostics.length(), 0)
   let body = collected.bodies[0]

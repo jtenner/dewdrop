@@ -12,7 +12,7 @@ fn trap_second() -> I32 {
 }
 
 fn selected<t>(first: t, second: t, choose_first: Bool) -> t {
-  let pair = Pair {
+  let pair = Pair::{
     first: first
     second: second
   }

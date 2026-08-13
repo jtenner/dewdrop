@@ -5,7 +5,7 @@ pub struct Box<t> {
 } derive(Show)
 
 pub fn box<t: Show>(value: t) -> Box<t> {
-  Box {
+  Box::{
     value: value
   }
 }

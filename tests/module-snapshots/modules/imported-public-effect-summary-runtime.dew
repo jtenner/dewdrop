@@ -5,7 +5,7 @@ fn increment(value: I32) -> I32 {
 }
 
 pub fn main() -> I32 {
-  let trait_result = invoke(Item {
+  let trait_result = invoke(Item::{
     value: 41
   })
   let callback_result = apply(increment, 0)

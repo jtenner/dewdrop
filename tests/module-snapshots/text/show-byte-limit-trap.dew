@@ -17,5 +17,5 @@ impl Show for Huge {
 }
 
 pub fn main() -> Unit {
-  let ignored = show(Huge {})
+  let ignored = show(Huge::{})
 }

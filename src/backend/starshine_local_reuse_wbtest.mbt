@@ -5,7 +5,7 @@ test "linear immutable locals reuse compatible physical slots" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nfn scalar(value: I32) -> I32 {\n  let first = value + 1\n  let second = first * 2\n  let third = second - 3\n  third\n}\nfn overlap(value: I32) -> I32 {\n  let first = value + 1\n  let second = first + 2\n  first + second\n}\nfn make_token(value: I32) -> Token {\n  Token {\n    value: value\n  }\n}\nfn reference(value: I32) -> I32 {\n  let first = make_token(value)\n  let first_value = first.value\n  let second = make_token(first_value + 1)\n  second.value\n}\nfn generic<t>(value: t) -> t {\n  let first = value\n  let second = select(first)\n  second\n}\nfn select<t>(value: t) -> t {\n  value\n}\npub fn main() -> I32 {\n  scalar(5) + overlap(7) + reference(8) + generic(9)\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nfn scalar(value: I32) -> I32 {\n  let first = value + 1\n  let second = first * 2\n  let third = second - 3\n  third\n}\nfn overlap(value: I32) -> I32 {\n  let first = value + 1\n  let second = first + 2\n  first + second\n}\nfn make_token(value: I32) -> Token {\n  Token::{\n    value: value\n  }\n}\nfn reference(value: I32) -> I32 {\n  let first = make_token(value)\n  let first_value = first.value\n  let second = make_token(first_value + 1)\n  second.value\n}\nfn generic<t>(value: t) -> t {\n  let first = value\n  let second = select(first)\n  second\n}\nfn select<t>(value: t) -> t {\n  value\n}\npub fn main() -> I32 {\n  scalar(5) + overlap(7) + reference(8) + generic(9)\n}\n",
         ),
       ]),
     ]),

@@ -74,13 +74,13 @@ pub fn main() -> Unit {
   operation = decrement
   assert(apply(43) == 42, "function-valued mutable capture")
 
-  let mut item = Item {
+  let mut item = Item::{
     value: 40
   }
   let read_item = fn() -> I32 {
     item.value
   }
-  item = Item {
+  item = Item::{
     value: 42
   }
   assert(read_item() == 42, "nominal mutable capture")

@@ -257,7 +257,7 @@ STRUCT = """enum RecordMaybe {
 }
 
 pub fn main(value: I32) -> I32 {
-  match (RecordMaybe::Some {
+  match (RecordMaybe::Some::{
     left: value + 1
     right: value
   }) {
@@ -279,7 +279,7 @@ STRUCT_TRANSFORM = """enum RecordMaybe {
 }
 
 pub fn main(value: I32) -> I32 {
-  match (RecordMaybe::Some {
+  match (RecordMaybe::Some::{
     left: value + 1
     right: value
   }) {
@@ -302,7 +302,7 @@ STRUCT_STABLE_GUARD = """enum RecordMaybe {
 
 pub fn main(value: I32) -> I32 {
   let flag = value > 0
-  match (RecordMaybe::Some {
+  match (RecordMaybe::Some::{
     left: value + 1
     right: value
   }) {
@@ -332,7 +332,7 @@ fn retain(value: RecordMaybe) -> RecordMaybe {
 }
 
 pub fn main(value: I32) -> I32 {
-  match retain(RecordMaybe::Some {
+  match retain(RecordMaybe::Some::{
     left: value + 1
     right: value
   }) {
@@ -356,7 +356,7 @@ enum Wrapped {
 }
 
 pub fn main(value: I32) -> I32 {
-  match Wrapped::Some(Box {
+  match Wrapped::Some(Box::{
     left: value + 1
     right: value
   }) {
@@ -384,7 +384,7 @@ fn retain(value: Wrapped) -> Wrapped {
 }
 
 pub fn main(value: I32) -> I32 {
-  match retain(Wrapped::Some(Box {
+  match retain(Wrapped::Some(Box::{
     left: value + 1
     right: value
   })) {

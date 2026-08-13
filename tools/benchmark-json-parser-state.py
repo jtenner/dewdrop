@@ -62,7 +62,7 @@ fn json_parser_value_count(parser: JsonParser) -> U32 {
 fn json_parser_set_value_count(parser: JsonParser, count: U32) -> Unit {
   parser.values.set_unchecked(0u32, count)
 }"""
-FIXED_INIT = """    let parser = JsonParser {
+FIXED_INIT = """    let parser = JsonParser::{
       input: source.as_bytes()
       source: source
       state: FixedArray::make(2u32, 0u32)

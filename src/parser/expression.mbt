@@ -964,23 +964,6 @@ fn Parser::parse_expression_context(
                 return finish_expression_with_groups(
                   nested_groups, values, operator_codes, operator_offsets,
                 )
-              @tokenizer.Symbol(@tokenizer.LeftBrace) => {
-                self.consume_lookahead()
-                let fields = match self.parse_object_fields(offset) {
-                  Ok(value) => value
-                  Err(error) => return Err(error.inside_brace())
-                }
-                let target = match pop_expression(values) {
-                  Some(value) => value
-                  None =>
-                    return Err(
-                      expression_failure(MissingOperand(offset)).inside_parentheses_count(
-                        nested_groups,
-                      ),
-                    )
-                }
-                values.push(ConstructExpr(target, fields, offset))
-              }
               @tokenizer.Symbol(@tokenizer.LeftParen) => {
                 self.consume_lookahead()
                 let arguments = match self.parse_call_arguments(offset) {
@@ -1008,10 +991,45 @@ fn Parser::parse_expression_context(
               }
               @tokenizer.Symbol(@tokenizer.DoubleColon) => {
                 self.consume_lookahead()
-                match self.parse_qualified_access(values, offset) {
-                  Ok(_) => ()
-                  Err(error) =>
-                    return Err(error.inside_parentheses_count(nested_groups))
+                self.skip_newlines()
+                match self.peek_token() {
+                  Some(next) =>
+                    match next.kind() {
+                      @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+                        self.consume_lookahead()
+                        let fields = match
+                          self.parse_object_fields(next.offset()) {
+                          Ok(value) => value
+                          Err(error) => return Err(error.inside_brace())
+                        }
+                        let target = match pop_expression(values) {
+                          Some(value) => value
+                          None =>
+                            return Err(
+                              expression_failure(MissingOperand(offset)).inside_parentheses_count(
+                                nested_groups,
+                              ),
+                            )
+                        }
+                        values.push(
+                          ConstructExpr(target, fields, next.offset()),
+                        )
+                      }
+                      _ =>
+                        match self.parse_qualified_access(values, offset) {
+                          Ok(_) => ()
+                          Err(error) =>
+                            return Err(
+                              error.inside_parentheses_count(nested_groups),
+                            )
+                        }
+                    }
+                  None =>
+                    return Err(
+                      expression_failure(ExpectedQualifiedName(None)).inside_parentheses_count(
+                        nested_groups,
+                      ),
+                    )
                 }
               }
               @tokenizer.Symbol(@tokenizer.LeftBracket) => {

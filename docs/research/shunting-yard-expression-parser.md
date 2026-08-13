@@ -61,7 +61,7 @@ Parentheses in value-seeking mode push a group marker onto the same operator sta
 
 A left parenthesis in operator-seeking mode is a function call. Call arguments invoke the same expression parser and stop at an unconsumed comma or right parenthesis. This recursion follows syntactic nesting only; operator precedence itself remains iterative.
 
-A dot in operator-seeking mode consumes exactly one following identifier and constructs field access. `::` similarly consumes one property identifier as a right-unary qualification. A left brace attaches a constructor field body, and a left bracket parses one nested expression through a required right bracket. Calls, fields, qualification, construction, and indexes may chain arbitrarily.
+A dot in operator-seeking mode consumes exactly one following identifier and constructs field access. `::` consumes either one property identifier as right-unary qualification or a left brace as an explicit constructor body. A bare left brace no longer attaches to a completed value. A left bracket parses one nested expression through a required right bracket. Calls, fields, qualification, explicit construction, and indexes may chain arbitrarily.
 
 An opening brace in value-seeking mode parses an inline object. Each ordered field has an identifier, colon, and expression value. A `Newline` is mandatory after every non-empty field, including the final field before `}`; commas are not field separators. Empty `{}` is valid. If, match, and functional while are keyword-led values parsed by dedicated control-flow routines; after completion they re-enter operator-seeking mode. Value-carrying `break` and `continue` similarly parse as control-transfer expressions whose context legality is deferred to semantic analysis.
 

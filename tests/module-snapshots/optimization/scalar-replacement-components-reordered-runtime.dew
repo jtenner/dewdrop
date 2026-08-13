@@ -4,7 +4,7 @@ struct Pair {
 }
 
 fn reversed(left: I32, right: I32) -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     left: left
     right: right
   }
@@ -14,7 +14,7 @@ fn reversed(left: I32, right: I32) -> I32 {
 }
 
 fn missing(left: I32, right: I32) -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     left: left
     right: right
   }

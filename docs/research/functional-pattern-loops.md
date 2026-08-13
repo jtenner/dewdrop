@@ -146,15 +146,15 @@ while state {
 }
 ```
 
-A constructor initial state must be grouped:
+Explicit constructor syntax keeps an initial constructor state distinct from the loop body:
 
 ```dew
-while (State {}) {
+while State::{} {
   _ => break result
 }
 ```
 
-This preserves deterministic one-token parsing across `if`, `match`, and `while`.
+Parentheses remain optional grouping. This preserves deterministic one-token parsing across `if`, `match`, and `while`.
 
 ## Expression composition
 
@@ -181,7 +181,7 @@ Dedicated diagnostics cover:
 - Unclosed functional while
 - Pattern and lexical errors inherited from pattern arms
 
-Tests cover guarded state arms, direct and block transfers, alternatives, tuple and struct rest, underscore discards, grouped constructor initial states, postfix/infix continuation, transfer expressions outside loops, missing values, malformed arm structure, compact empty bodies, unclosed bodies, and a 512-arm iterative stress case.
+Tests cover guarded state arms, direct and block transfers, alternatives, tuple and struct rest, underscore discards, explicit constructor initial states, postfix/infix continuation, transfer expressions outside loops, missing values, malformed arm structure, compact empty bodies, unclosed bodies, and a 512-arm iterative stress case.
 
 ## Benchmarks
 

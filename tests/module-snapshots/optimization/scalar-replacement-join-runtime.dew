@@ -5,12 +5,12 @@ struct Pair {
 
 fn choose(flag: Bool, left: I32, right: I32) -> I32 {
   let pair = if flag {
-    Pair {
+    Pair::{
       left: left
       right: right
     }
   } else {
-    Pair {
+    Pair::{
       left: right
       right: left
     }

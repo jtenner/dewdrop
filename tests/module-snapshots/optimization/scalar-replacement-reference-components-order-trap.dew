@@ -14,13 +14,13 @@ fn trap_first() -> Token {
 fn trap_second() -> Token {
   let zero = 0
   let trapped = 1 / zero
-  Token {
+  Token::{
     value: trapped
   }
 }
 
 pub fn main() -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     first: trap_first()
     second: trap_second()
   }

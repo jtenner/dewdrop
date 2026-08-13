@@ -9,7 +9,7 @@ fn sum(point: Point) -> I32 {
 }
 
 pub fn main() -> U32 {
-  if sum(Point {
+  if sum(Point::{
     x: 20
     y: 22
   }) == 42 {

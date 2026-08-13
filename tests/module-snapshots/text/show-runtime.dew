@@ -37,7 +37,7 @@ pub fn main() -> Unit {
   assert_show(18446744073709551615u64, "18446744073709551615")
   assert_show("dew", "dew")
   assert_show("abcdef".view(1u32, 3u32), "bcd")
-  assert_show(Pair {
+  assert_show(Pair::{
     left: -42
     right: 99u64
   }, "(-42,99)")

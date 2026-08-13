@@ -203,7 +203,7 @@ test "ordinary bodies cannot select test-only impl evidence" {
     ProgramFile::named(
       make_program_file_id(module_id, 1),
       "evidence_test.dew",
-      b"impl Value {\n  fn answer(self) -> I32 {\n    self.raw\n  }\n}\ntest \"test impl remains visible in test mode\" {\n  assert(Value {\n    raw: 7\n  }.answer() == 7, \"wrong value\")\n}\n",
+      b"impl Value {\n  fn answer(self) -> I32 {\n    self.raw\n  }\n}\ntest \"test impl remains visible in test mode\" {\n  assert(Value::{\n    raw: 7\n  }.answer() == 7, \"wrong value\")\n}\n",
     ),
   ])
   let allowed_types = resolve_module_types(allowed)
@@ -228,7 +228,7 @@ test "production physical layouts exclude test-only nominal declarations" {
     ProgramFile::named(
       make_program_file_id(module_id, 1),
       "layout_test.dew",
-      b"struct TestOnly {\n  value: I32\n}\ntest \"construct test-only layout\" {\n  let value = TestOnly {\n    value: 1\n  }\n}\n",
+      b"struct TestOnly {\n  value: I32\n}\ntest \"construct test-only layout\" {\n  let value = TestOnly::{\n    value: 1\n  }\n}\n",
     ),
   ])
   let resolved = resolve_module_types(collected)

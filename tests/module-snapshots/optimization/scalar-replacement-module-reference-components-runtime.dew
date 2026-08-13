@@ -7,12 +7,12 @@ struct Pair {
   second: Token
 }
 
-pub let stored = Token {
+pub let stored = Token::{
   value: 20
 }
 
 fn selected(second: Token) -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     first: stored
     second: second
   }
@@ -20,7 +20,7 @@ fn selected(second: Token) -> I32 {
 }
 
 pub fn main() -> I32 {
-  selected(Token {
+  selected(Token::{
     value: 22
   })
 }

@@ -118,7 +118,7 @@ test "derive Debug supplies ambient debug call evidence" {
     ProgramManifest::new([
       ManifestModule::new("derive.debug", [
         ManifestFile::new(
-          "debug.dew", b"struct Point {\n  value: I32\n} derive(Debug)\nfn run() -> Unit {\n  debug(Point {\n    value: 1\n  })\n}\n",
+          "debug.dew", b"struct Point {\n  value: I32\n} derive(Debug)\nfn run() -> Unit {\n  debug(Point::{\n    value: 1\n  })\n}\n",
         ),
       ]),
     ]),

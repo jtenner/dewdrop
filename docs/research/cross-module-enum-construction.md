@@ -9,7 +9,7 @@ Supported construction forms are:
 ```dew
 Message::Idle
 Message::Number(value)
-Message::Move {
+Message::Move::{
   x: x
   y: y
 }

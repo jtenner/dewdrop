@@ -2,20 +2,21 @@
 
 Date: 2026-07-29
 
+Updated August 13, 2026: explicit nominal construction now uses `::{ ... }`; the legacy `Target { ... }` spelling is rejected.
+
 ## Constructor expressions
 
-A `{ ... }` token has a deterministic role based on expression mode:
-
-- In unary-value-seeking mode it begins an untyped `ObjectExpr`.
-- In binary-operator-seeking mode it is a postfix construction body attached to the current value.
+A `{ ... }` token begins an untyped `ObjectExpr` in unary-value-seeking mode.
+Explicit struct construction is the postfix token pair `::{`, attached to the
+current value in binary-operator-seeking mode:
 
 ```dew
-Point {
+Point::{
   x: 10
   y: 20
 }
 
-Message::Data {
+Message::Data::{
   value: payload
 }
 ```
@@ -30,7 +31,7 @@ Construction remains in binary-seeking mode, so calls, fields, indexes, qualific
 
 `ObjectExpr` and `ConstructExpr` share one field-body parser. Field ordering, mandatory terminating newlines, blank lines, comments, nested values, and malformed-field diagnostics therefore remain identical.
 
-A physical newline after a complete target terminates the expression before `{`, so construction requires the opening brace on the target's physical expression line.
+A newline after `::` is soft because the postfix is incomplete. A bare `{` after a complete target is no longer construction syntax and remains available to enclosing block parsers.
 
 ## Brace-aware expression contexts
 
@@ -42,13 +43,15 @@ Parser::parse_expression()
 
 Internally, `parse_expression_context(stop_at_left_brace=true)` stops before an ungrouped `{` while in binary-seeking mode. The brace remains in one-token lookahead. This boolean is a call-local parameter and does not enlarge `Parser` state.
 
-The stop rule applies only at grouping depth zero. Parentheses restore ordinary construction behavior:
+The stop rule applies only at grouping depth zero. Explicit construction no longer conflicts with the condition/body boundary:
 
 ```dew
-if (Point {}).is_valid() {
+if Point::{}.is_valid() {
   run()
 }
 ```
+
+Parentheses remain available for ordinary grouping.
 
 No source rewinding or competing parse tree is needed.
 
@@ -138,7 +141,7 @@ Implicit Unit is a typing/lowering rule rather than a parser-allocated node.
 
 ## Tests
 
-Coverage includes named and qualified construction, empty and populated bodies, postfix continuation, infix precedence, newline termination, if-valued fields, binary conditions, grouped constructor conditions, optional else, value branches, nested else-if, same-line else enforcement, reusable function blocks, tail lookup, malformed conditions/bodies/items/else branches, unclosed blocks, and a 1,024-arm iterative else-if stress chain.
+Coverage includes named and qualified `::{ ... }` construction, rejection of the legacy bare-brace spelling, empty and populated bodies, soft newlines after `::`, postfix continuation, infix precedence, top-level newline termination before `::`, if-valued fields, binary conditions, explicit constructor conditions/scrutinees/loop states, optional else, value branches, nested else-if, same-line else enforcement, reusable function blocks, tail lookup, malformed conditions/bodies/items/else branches, unclosed blocks, and a 1,024-arm iterative else-if stress chain.
 
 ## Benchmarks
 

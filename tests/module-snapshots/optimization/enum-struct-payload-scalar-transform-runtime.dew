@@ -7,7 +7,7 @@ enum Record {
 }
 
 fn transformed(left: I32, right: I32) -> I32 {
-  match (Record::Some {
+  match (Record::Some::{
     left: left
     right: right
   }) {

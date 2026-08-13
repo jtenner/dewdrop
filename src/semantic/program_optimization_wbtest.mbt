@@ -129,7 +129,7 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  Pair {\n    left: left\n    right: right\n  }.right\n}\npub fn main() -> I32 {\n  choose(1, 2)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  Pair::{\n    left: left\n    right: right\n  }.right\n}\npub fn main() -> I32 {\n  choose(1, 2)\n}\n",
         ),
       ]),
     ]),
@@ -179,7 +179,7 @@ test "adjacent nonescaping struct locals scalar replace" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.right\n}\nfn choose_gap(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let marker = 0\n  pair.right\n}\nfn effect() -> I32 {\n  1 / 0\n}\nfn choose_effect(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let marker = effect()\n  pair.right\n}\npub fn main() -> I32 {\n  choose(1, 2) + choose_gap(3, 4)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn choose(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  pair.right\n}\nfn choose_gap(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  let marker = 0\n  pair.right\n}\nfn effect() -> I32 {\n  1 / 0\n}\nfn choose_effect(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  let marker = effect()\n  pair.right\n}\npub fn main() -> I32 {\n  choose(1, 2) + choose_gap(3, 4)\n}\n",
         ),
       ]),
     ]),
@@ -250,7 +250,7 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"enum Maybe {\n  Some(I32)\n  None\n}\nstruct Token {\n  value: I32\n}\nenum TokenMaybe {\n  Some(Token)\n  None\n}\nenum RecordMaybe {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn project(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_ref(value: Token) -> Token {\n  match TokenMaybe::Some(value) {\n    TokenMaybe::Some(item) => item\n    TokenMaybe::None => Token {\n      value: 0\n    }\n  }\n}\nfn project_local(value: I32) -> I32 {\n  let maybe = Maybe::Some(value)\n  match maybe {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_struct(left: I32, right: I32) -> I32 {\n  match (RecordMaybe::Some {\n    left: left\n    right: right\n  }) {\n    RecordMaybe::Some {\n      left\n      right\n    } => right\n    RecordMaybe::None => 0\n  }\n}\nfn reordered(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\nfn wildcard(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    _ => 0\n    Maybe::Some(item) => item\n  }\n}\npub fn main() -> I32 {\n  project(5) + project_local(5) + project_struct(1, 10) + project_ref(Token {\n    value: 22\n  }).value + reordered(1) + wildcard(1)\n}\n",
+          "main.dew", b"enum Maybe {\n  Some(I32)\n  None\n}\nstruct Token {\n  value: I32\n}\nenum TokenMaybe {\n  Some(Token)\n  None\n}\nenum RecordMaybe {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn project(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_ref(value: Token) -> Token {\n  match TokenMaybe::Some(value) {\n    TokenMaybe::Some(item) => item\n    TokenMaybe::None => Token::{\n      value: 0\n    }\n  }\n}\nfn project_local(value: I32) -> I32 {\n  let maybe = Maybe::Some(value)\n  match maybe {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\nfn project_struct(left: I32, right: I32) -> I32 {\n  match (RecordMaybe::Some::{\n    left: left\n    right: right\n  }) {\n    RecordMaybe::Some {\n      left\n      right\n    } => right\n    RecordMaybe::None => 0\n  }\n}\nfn reordered(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\nfn wildcard(value: I32) -> I32 {\n  match Maybe::Some(value) {\n    _ => 0\n    Maybe::Some(item) => item\n  }\n}\npub fn main() -> I32 {\n  project(5) + project_local(5) + project_struct(1, 10) + project_ref(Token::{\n    value: 22\n  }).value + reordered(1) + wildcard(1)\n}\n",
         ),
       ]),
     ]),
@@ -338,7 +338,7 @@ test "nested fresh enum payload patterns eliminate aggregate wrappers" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Box {\n  left: I32\n  right: I32\n}\nenum Wrapped {\n  Some(Box)\n  None\n}\nfn nested(left: I32, right: I32) -> I32 {\n  match Wrapped::Some(Box {\n    left: left\n    right: right\n  }) {\n    Wrapped::Some(Box {\n      left\n      right\n    }) => right\n    Wrapped::None => 0\n  }\n}\npub fn main() -> I32 {\n  nested(20, 22)\n}\n",
+          "main.dew", b"struct Box {\n  left: I32\n  right: I32\n}\nenum Wrapped {\n  Some(Box)\n  None\n}\nfn nested(left: I32, right: I32) -> I32 {\n  match Wrapped::Some(Box::{\n    left: left\n    right: right\n  }) {\n    Wrapped::Some(Box {\n      left\n      right\n    }) => right\n    Wrapped::None => 0\n  }\n}\npub fn main() -> I32 {\n  nested(20, 22)\n}\n",
         ),
       ]),
     ]),
@@ -673,7 +673,7 @@ test "stable guarded struct variants collapse identical fields" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn guarded(flag: Bool, left: I32, right: I32) -> I32 {\n  match (Record::Some {\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } if flag => right\n    Record::Some {\n      left\n      right\n    } => right\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(true, 1, 20) + guarded(false, 2, 22)\n}\n",
+          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn guarded(flag: Bool, left: I32, right: I32) -> I32 {\n  match (Record::Some::{\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } if flag => right\n    Record::Some {\n      left\n      right\n    } => right\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(true, 1, 20) + guarded(false, 2, 22)\n}\n",
         ),
       ]),
     ]),
@@ -788,7 +788,7 @@ test "retained struct variants share guarded field extraction" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn retain(value: Record) -> Record {\n  value\n}\nfn guarded(left: I32, right: I32) -> I32 {\n  match retain(Record::Some {\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } if left > 0 => right + 1\n    Record::Some {\n      left\n      right\n    } => right\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(1, 20) + guarded(0, 22)\n}\n",
+          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn retain(value: Record) -> Record {\n  value\n}\nfn guarded(left: I32, right: I32) -> I32 {\n  match retain(Record::Some::{\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } if left > 0 => right + 1\n    Record::Some {\n      left\n      right\n    } => right\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(1, 20) + guarded(0, 22)\n}\n",
         ),
       ]),
     ]),
@@ -831,7 +831,7 @@ test "retained nested variants share guarded payload extraction" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Box {\n  left: I32\n  right: I32\n}\nenum Wrapped {\n  Some(Box)\n  None\n}\nfn retain(value: Wrapped) -> Wrapped {\n  value\n}\nfn guarded(left: I32, right: I32) -> I32 {\n  match retain(Wrapped::Some(Box {\n    left: left\n    right: right\n  })) {\n    Wrapped::Some(Box {\n      left\n      right\n    }) if left > 0 => right + 1\n    Wrapped::Some(Box {\n      left\n      right\n    }) => right\n    Wrapped::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(1, 20) + guarded(0, 22)\n}\n",
+          "main.dew", b"struct Box {\n  left: I32\n  right: I32\n}\nenum Wrapped {\n  Some(Box)\n  None\n}\nfn retain(value: Wrapped) -> Wrapped {\n  value\n}\nfn guarded(left: I32, right: I32) -> I32 {\n  match retain(Wrapped::Some(Box::{\n    left: left\n    right: right\n  })) {\n    Wrapped::Some(Box {\n      left\n      right\n    }) if left > 0 => right + 1\n    Wrapped::Some(Box {\n      left\n      right\n    }) => right\n    Wrapped::None => 0\n  }\n}\npub fn main() -> I32 {\n  guarded(1, 20) + guarded(0, 22)\n}\n",
         ),
       ]),
     ]),
@@ -1139,7 +1139,7 @@ test "struct variant fields inline exact primitive scalar transforms" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn transformed(left: I32, right: I32) -> I32 {\n  match (Record::Some {\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } => -right + 1\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  transformed(1, -41)\n}\n",
+          "main.dew", b"enum Record {\n  Some {\n    left: I32\n    right: I32\n  }\n  None\n}\nfn transformed(left: I32, right: I32) -> I32 {\n  match (Record::Some::{\n    left: left\n    right: right\n  }) {\n    Record::Some {\n      left\n      right\n    } => -right + 1\n    Record::None => 0\n  }\n}\npub fn main() -> I32 {\n  transformed(1, -41)\n}\n",
         ),
       ]),
     ]),
@@ -1221,7 +1221,7 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Box<t> {\n  value: t\n}\nfn unbox_text(value: String) -> String {\n  Box {\n    value: value\n  }.value\n}\nfn unbox<t>(value: t) -> t {\n  Box {\n    value: value\n  }.value\n}\nfn retain(value: Box<String>) -> Box<String> {\n  value\n}\nfn retained(value: String) -> String {\n  retain(Box {\n    value: value\n  }).value\n}\npub fn main() -> I32 {\n  let text = unbox_text(\"dew\")\n  unbox(42) + retained(text).byte_length().into()\n}\n",
+          "main.dew", b"struct Box<t> {\n  value: t\n}\nfn unbox_text(value: String) -> String {\n  Box::{\n    value: value\n  }.value\n}\nfn unbox<t>(value: t) -> t {\n  Box::{\n    value: value\n  }.value\n}\nfn retain(value: Box<String>) -> Box<String> {\n  value\n}\nfn retained(value: String) -> String {\n  retain(Box::{\n    value: value\n  }).value\n}\npub fn main() -> I32 {\n  let text = unbox_text(\"dew\")\n  unbox(42) + retained(text).byte_length().into()\n}\n",
         ),
       ]),
     ]),
@@ -1289,7 +1289,7 @@ test "direct distinct struct reads synthesize component locals" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Quad {\n  first: I32\n  second: I32\n  third: I32\n  fourth: I32\n}\nfn selected(first: I32, second: I32, third: I32, fourth: I32) -> I32 {\n  let quad = Quad {\n    first: first\n    second: second\n    third: third\n    fourth: fourth\n  }\n  quad.first + quad.third\n}\npub fn main() -> I32 {\n  selected(20, 1, 22, 2)\n}\n",
+          "main.dew", b"struct Quad {\n  first: I32\n  second: I32\n  third: I32\n  fourth: I32\n}\nfn selected(first: I32, second: I32, third: I32, fourth: I32) -> I32 {\n  let quad = Quad::{\n    first: first\n    second: second\n    third: third\n    fourth: fourth\n  }\n  quad.first + quad.third\n}\npub fn main() -> I32 {\n  selected(20, 1, 22, 2)\n}\n",
         ),
       ]),
     ]),
@@ -1331,7 +1331,7 @@ test "mixed source aliases and direct reads share component locals" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Triple {\n  first: I32\n  second: I32\n  third: I32\n}\nfn selected(first: I32, second: I32, third: I32) -> I32 {\n  let triple = Triple {\n    first: first\n    second: second\n    third: third\n  }\n  let saved = triple.third\n  triple.first + saved\n}\npub fn main() -> I32 {\n  selected(20, 1, 22)\n}\n",
+          "main.dew", b"struct Triple {\n  first: I32\n  second: I32\n  third: I32\n}\nfn selected(first: I32, second: I32, third: I32) -> I32 {\n  let triple = Triple::{\n    first: first\n    second: second\n    third: third\n  }\n  let saved = triple.third\n  triple.first + saved\n}\npub fn main() -> I32 {\n  selected(20, 1, 22)\n}\n",
         ),
       ]),
     ]),
@@ -1373,7 +1373,7 @@ test "direct distinct reference fields synthesize nominal component locals" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\nfn selected(first: Token, second: Token) -> I32 {\n  let pair = Pair {\n    first: first\n    second: second\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(Token {\n    value: 20\n  }, Token {\n    value: 22\n  })\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\nfn selected(first: Token, second: Token) -> I32 {\n  let pair = Pair::{\n    first: first\n    second: second\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(Token::{\n    value: 20\n  }, Token::{\n    value: 22\n  })\n}\n",
         ),
       ]),
     ]),
@@ -1412,7 +1412,7 @@ test "direct distinct generic fields synthesize erased component locals" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair<t> {\n  first: t\n  second: t\n}\nfn selected<t>(first: t, second: t, choose_first: Bool) -> t {\n  let pair = Pair {\n    first: first\n    second: second\n  }\n  if choose_first {\n    pair.first\n  } else {\n    pair.second\n  }\n}\npub fn main() -> I32 {\n  selected(20, 22, false)\n}\n",
+          "main.dew", b"struct Pair<t> {\n  first: t\n  second: t\n}\nfn selected<t>(first: t, second: t, choose_first: Bool) -> t {\n  let pair = Pair::{\n    first: first\n    second: second\n  }\n  if choose_first {\n    pair.first\n  } else {\n    pair.second\n  }\n}\npub fn main() -> I32 {\n  selected(20, 22, false)\n}\n",
         ),
       ]),
     ]),
@@ -1454,7 +1454,7 @@ test "fresh nominal reference fields synthesize exact component locals" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\nfn selected(first: I32, second: I32) -> I32 {\n  let pair = Pair {\n    first: Token {\n      value: first\n    }\n    second: Token {\n      value: second\n    }\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(20, 22)\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\nfn selected(first: I32, second: I32) -> I32 {\n  let pair = Pair::{\n    first: Token::{\n      value: first\n    }\n    second: Token::{\n      value: second\n    }\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(20, 22)\n}\n",
         ),
       ]),
     ]),
@@ -1496,7 +1496,7 @@ test "nominal module values synthesize exact component locals" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\npub let stored = Token {\n  value: 20\n}\nfn selected(second: Token) -> I32 {\n  let pair = Pair {\n    first: stored\n    second: second\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(Token {\n    value: 22\n  })\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nstruct Pair {\n  first: Token\n  second: Token\n}\npub let stored = Token::{\n  value: 20\n}\nfn selected(second: Token) -> I32 {\n  let pair = Pair::{\n    first: stored\n    second: second\n  }\n  pair.first.value + pair.second.value\n}\npub fn main() -> I32 {\n  selected(Token::{\n    value: 22\n  })\n}\n",
         ),
       ]),
     ]),
@@ -1538,7 +1538,7 @@ test "sole-use struct fields scalar replace across fresh if joins" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn identity(pair: Pair) -> Pair {\n  pair\n}\nfn choose(flag: Bool, left: I32, right: I32) -> I32 {\n  let pair = if flag {\n    Pair {\n      left: left\n      right: right\n    }\n  } else {\n    Pair {\n      left: right\n      right: left\n    }\n  }\n  pair.right\n}\nfn escaping(flag: Bool, left: I32, right: I32) -> I32 {\n  let pair = if flag {\n    Pair {\n      left: left\n      right: right\n    }\n  } else {\n    identity(Pair {\n      left: right\n      right: left\n    })\n  }\n  pair.right\n}\npub fn main() -> I32 {\n  choose(true, 1, 2) + choose(false, 3, 4) + escaping(true, 5, 6)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn identity(pair: Pair) -> Pair {\n  pair\n}\nfn choose(flag: Bool, left: I32, right: I32) -> I32 {\n  let pair = if flag {\n    Pair::{\n      left: left\n      right: right\n    }\n  } else {\n    Pair::{\n      left: right\n      right: left\n    }\n  }\n  pair.right\n}\nfn escaping(flag: Bool, left: I32, right: I32) -> I32 {\n  let pair = if flag {\n    Pair::{\n      left: left\n      right: right\n    }\n  } else {\n    identity(Pair::{\n      left: right\n      right: left\n    })\n  }\n  pair.right\n}\npub fn main() -> I32 {\n  choose(true, 1, 2) + choose(false, 3, 4) + escaping(true, 5, 6)\n}\n",
         ),
       ]),
     ]),
@@ -1623,7 +1623,7 @@ test "sole-use struct fields scalar replace across fresh match joins" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"enum Choice {\n  First\n  Second\n}\nstruct Pair {\n  left: I32\n  right: I32\n}\nfn choose(choice: Choice, left: I32, right: I32) -> I32 {\n  let pair = match choice {\n    Choice::First => Pair {\n      left: left\n      right: right\n    }\n    Choice::Second => Pair {\n      left: right\n      right: left\n    }\n  }\n  pair.right\n}\npub fn main() -> I32 {\n  choose(Choice::First, 1, 2) + choose(Choice::Second, 3, 4)\n}\n",
+          "main.dew", b"enum Choice {\n  First\n  Second\n}\nstruct Pair {\n  left: I32\n  right: I32\n}\nfn choose(choice: Choice, left: I32, right: I32) -> I32 {\n  let pair = match choice {\n    Choice::First => Pair::{\n      left: left\n      right: right\n    }\n    Choice::Second => Pair::{\n      left: right\n      right: left\n    }\n  }\n  pair.right\n}\npub fn main() -> I32 {\n  choose(Choice::First, 1, 2) + choose(Choice::Second, 3, 4)\n}\n",
         ),
       ]),
     ]),
@@ -1688,7 +1688,7 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn split(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let first = pair.left\n  let second = pair.right\n  first + second\n}\nfn reversed(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let second = pair.right\n  let first = pair.left\n  first + second\n}\nfn missing(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  let second = pair.right\n  second\n}\npub fn main() -> I32 {\n  split(1, 2) + reversed(3, 4) + missing(5, 6)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn split(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  let first = pair.left\n  let second = pair.right\n  first + second\n}\nfn reversed(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  let second = pair.right\n  let first = pair.left\n  first + second\n}\nfn missing(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  let second = pair.right\n  second\n}\npub fn main() -> I32 {\n  split(1, 2) + reversed(3, 4) + missing(5, 6)\n}\n",
         ),
       ]),
     ]),
@@ -1778,7 +1778,7 @@ test "repeated same-field struct locals scalar replace into the existing local" 
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn repeated(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.right + pair.right + pair.right\n}\nfn mixed(left: I32, right: I32) -> I32 {\n  let pair = Pair {\n    left: left\n    right: right\n  }\n  pair.left + pair.right\n}\npub fn main() -> I32 {\n  repeated(1, 2) + mixed(3, 4)\n}\n",
+          "main.dew", b"struct Pair {\n  left: I32\n  right: I32\n}\nfn repeated(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  pair.right + pair.right + pair.right\n}\nfn mixed(left: I32, right: I32) -> I32 {\n  let pair = Pair::{\n    left: left\n    right: right\n  }\n  pair.left + pair.right\n}\npub fn main() -> I32 {\n  repeated(1, 2) + mixed(3, 4)\n}\n",
         ),
       ]),
     ]),
@@ -1859,7 +1859,7 @@ test "immutable local aliases coalesce into source storage" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nfn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn shared(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\nfn retained(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  source.value + alias.value\n}\nfn sequential(value: Token) -> I32 {\n  let source = value\n  let first = source.value\n  let alias = source\n  first + alias.value\n}\nfn branched(value: Token, flag: Bool) -> I32 {\n  let source = value\n  let alias = source\n  if flag {\n    source.value\n  } else {\n    alias.value\n  }\n}\nfn looped(value: Token) -> I32 {\n  let source = value\n  let first = source.value\n  let alias = source\n  let second = while 0 {\n    0 => break alias.value\n    state => continue state - 1\n  }\n  first + second\n}\nfn select_second<t>(first: t, second: t) -> t {\n  second\n}\nfn generic_shared<t>(value: t) -> t {\n  let source = value\n  let alias = source\n  select_second(source, alias)\n}\nfn mutable_retained(value: Token) -> I32 {\n  let source = value\n  let mut alias = source\n  source.value + alias.value\n}\npub fn main() -> I32 {\n  coalesced(20) + shared(9) + retained(Token {\n    value: 1\n  }) + sequential(Token {\n    value: 2\n  }) + branched(Token {\n    value: 3\n  }, true) + branched(Token {\n    value: 4\n  }, false) + looped(Token {\n    value: 5\n  }) + generic_shared(6) + mutable_retained(Token {\n    value: 7\n  })\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nfn coalesced(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  alias * 2\n}\nfn shared(value: I32) -> I32 {\n  let source = value + 1\n  let alias = source\n  source + alias\n}\nfn retained(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  source.value + alias.value\n}\nfn sequential(value: Token) -> I32 {\n  let source = value\n  let first = source.value\n  let alias = source\n  first + alias.value\n}\nfn branched(value: Token, flag: Bool) -> I32 {\n  let source = value\n  let alias = source\n  if flag {\n    source.value\n  } else {\n    alias.value\n  }\n}\nfn looped(value: Token) -> I32 {\n  let source = value\n  let first = source.value\n  let alias = source\n  let second = while 0 {\n    0 => break alias.value\n    state => continue state - 1\n  }\n  first + second\n}\nfn select_second<t>(first: t, second: t) -> t {\n  second\n}\nfn generic_shared<t>(value: t) -> t {\n  let source = value\n  let alias = source\n  select_second(source, alias)\n}\nfn mutable_retained(value: Token) -> I32 {\n  let source = value\n  let mut alias = source\n  source.value + alias.value\n}\npub fn main() -> I32 {\n  coalesced(20) + shared(9) + retained(Token::{\n    value: 1\n  }) + sequential(Token::{\n    value: 2\n  }) + branched(Token::{\n    value: 3\n  }, true) + branched(Token::{\n    value: 4\n  }, false) + looped(Token::{\n    value: 5\n  }) + generic_shared(6) + mutable_retained(Token::{\n    value: 7\n  })\n}\n",
         ),
       ]),
     ]),
@@ -2001,7 +2001,7 @@ test "reference alias coalescing rejects mutation and captures" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Token {\n  value: I32\n}\nfn mutable_source(value: Token) -> I32 {\n  let mut source = value\n  let alias = source\n  source.value + alias.value\n}\nfn captured_source(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  let read = fn() -> I32 {\n    source.value\n  }\n  read() + alias.value\n}\nfn captured_alias(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  let read = fn() -> I32 {\n    alias.value\n  }\n  source.value + read()\n}\npub fn main() -> I32 {\n  mutable_source(Token {\n    value: 1\n  }) + captured_source(Token {\n    value: 2\n  }) + captured_alias(Token {\n    value: 3\n  })\n}\n",
+          "main.dew", b"struct Token {\n  value: I32\n}\nfn mutable_source(value: Token) -> I32 {\n  let mut source = value\n  let alias = source\n  source.value + alias.value\n}\nfn captured_source(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  let read = fn() -> I32 {\n    source.value\n  }\n  read() + alias.value\n}\nfn captured_alias(value: Token) -> I32 {\n  let source = value\n  let alias = source\n  let read = fn() -> I32 {\n    alias.value\n  }\n  source.value + read()\n}\npub fn main() -> I32 {\n  mutable_source(Token::{\n    value: 1\n  }) + captured_source(Token::{\n    value: 2\n  }) + captured_alias(Token::{\n    value: 3\n  })\n}\n",
         ),
       ]),
     ]),
@@ -2034,7 +2034,7 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Point {\n  x: I32\n}\nfn twice(point: Point) -> I32 {\n  let first = point.x\n  let second = point.x\n  first + second\n}\nfn mutable_twice(initial: Point) -> I32 {\n  let mut point = initial\n  let first = point.x\n  let second = point.x\n  first + second\n}\npub fn main() -> I32 {\n  twice(Point {\n    x: 21\n  }) + mutable_twice(Point {\n    x: 1\n  })\n}\n",
+          "main.dew", b"struct Point {\n  x: I32\n}\nfn twice(point: Point) -> I32 {\n  let first = point.x\n  let second = point.x\n  first + second\n}\nfn mutable_twice(initial: Point) -> I32 {\n  let mut point = initial\n  let first = point.x\n  let second = point.x\n  first + second\n}\npub fn main() -> I32 {\n  twice(Point::{\n    x: 21\n  }) + mutable_twice(Point::{\n    x: 1\n  })\n}\n",
         ),
       ]),
     ]),
@@ -2098,7 +2098,7 @@ test "common field extraction reuses exact nested reference loads" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Inner {\n  value: I32\n}\nstruct Outer {\n  inner: Inner\n}\nfn sum(outer: Outer) -> I32 {\n  let inner = outer.inner\n  let first = inner.value\n  let second = outer.inner.value\n  first + second\n}\npub fn main() -> I32 {\n  sum(Outer {\n    inner: Inner {\n      value: 21\n    }\n  })\n}\n",
+          "main.dew", b"struct Inner {\n  value: I32\n}\nstruct Outer {\n  inner: Inner\n}\nfn sum(outer: Outer) -> I32 {\n  let inner = outer.inner\n  let first = inner.value\n  let second = outer.inner.value\n  first + second\n}\npub fn main() -> I32 {\n  sum(Outer::{\n    inner: Inner::{\n      value: 21\n    }\n  })\n}\n",
         ),
       ]),
     ]),

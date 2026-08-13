@@ -17,20 +17,20 @@ impl Hash for Key {
 }
 
 pub fn main() -> Unit {
-  let values = Map::singleton(Key { hash_value: 1u64, identity: 1 }, 10)
-  values.insert(Key { hash_value: 17u64, identity: 2 }, 20)
-  values.insert(Key { hash_value: 33u64, identity: 3 }, 30)
+  let values = Map::singleton(Key::{ hash_value: 1u64, identity: 1 }, 10)
+  values.insert(Key::{ hash_value: 17u64, identity: 2 }, 20)
+  values.insert(Key::{ hash_value: 33u64, identity: 3 }, 30)
 
-  assert(values[Key { hash_value: 1u64, identity: 1 }] == 10, "first same-bucket hash")
-  assert(values[Key { hash_value: 17u64, identity: 2 }] == 20, "second same-bucket hash")
-  assert(values[Key { hash_value: 33u64, identity: 3 }] == 30, "third same-bucket hash")
-  assert(!values.contains_key(Key { hash_value: 49u64, identity: 4 }), "missing same-bucket hash")
+  assert(values[Key::{ hash_value: 1u64, identity: 1 }] == 10, "first same-bucket hash")
+  assert(values[Key::{ hash_value: 17u64, identity: 2 }] == 20, "second same-bucket hash")
+  assert(values[Key::{ hash_value: 33u64, identity: 3 }] == 30, "third same-bucket hash")
+  assert(!values.contains_key(Key::{ hash_value: 49u64, identity: 4 }), "missing same-bucket hash")
 
-  let keys = Set::singleton(Key { hash_value: 1u64, identity: 1 })
-  assert(keys.insert(Key { hash_value: 17u64, identity: 2 }), "set second same-bucket hash")
-  assert(keys.insert(Key { hash_value: 33u64, identity: 3 }), "set third same-bucket hash")
-  assert(keys.contains(Key { hash_value: 1u64, identity: 1 }), "set first same-bucket hash")
-  assert(keys.contains(Key { hash_value: 17u64, identity: 2 }), "set second same-bucket lookup")
-  assert(keys.contains(Key { hash_value: 33u64, identity: 3 }), "set third same-bucket lookup")
-  assert(!keys.contains(Key { hash_value: 49u64, identity: 4 }), "set missing same-bucket hash")
+  let keys = Set::singleton(Key::{ hash_value: 1u64, identity: 1 })
+  assert(keys.insert(Key::{ hash_value: 17u64, identity: 2 }), "set second same-bucket hash")
+  assert(keys.insert(Key::{ hash_value: 33u64, identity: 3 }), "set third same-bucket hash")
+  assert(keys.contains(Key::{ hash_value: 1u64, identity: 1 }), "set first same-bucket hash")
+  assert(keys.contains(Key::{ hash_value: 17u64, identity: 2 }), "set second same-bucket lookup")
+  assert(keys.contains(Key::{ hash_value: 33u64, identity: 3 }), "set third same-bucket lookup")
+  assert(!keys.contains(Key::{ hash_value: 49u64, identity: 4 }), "set missing same-bucket hash")
 }

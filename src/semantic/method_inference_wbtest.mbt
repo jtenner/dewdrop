@@ -238,7 +238,7 @@ test "method parameters constrain nested object arguments" {
 ///|
 test "type-qualified static and instance methods select impl declarations" {
   let (collected, _, _, inferred) = call_test_module(
-    711UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn make(value: I32) -> Item {\n    Item {\n      value: value\n    }\n  }\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  let made = Item::make(1)\n  Item::read(made)\n}\n",
+    711UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn make(value: I32) -> Item {\n    Item::{\n      value: value\n    }\n  }\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  let made = Item::make(1)\n  Item::read(made)\n}\n",
   )
   assert_eq(inferred.diagnostics.length(), 0)
   let calls = body_calls(collected, collected.bodies[2])
@@ -274,7 +274,7 @@ test "primitive-qualified static methods select impl declarations" {
 ///|
 test "trait-qualified instance and static methods select coherent evidence" {
   let (collected, _, _, inferred) = call_test_module(
-    713UL, b"trait Build {\n  fn make(value: I32) -> Self\n  fn read(self) -> I32\n}\nstruct Item {\n  value: I32\n}\nimpl Build for Item {\n  fn make(value: I32) -> Self {\n    Item {\n      value: value\n    }\n  }\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  let made = Build::make(1)\n  Build::read(made)\n}\n",
+    713UL, b"trait Build {\n  fn make(value: I32) -> Self\n  fn read(self) -> I32\n}\nstruct Item {\n  value: I32\n}\nimpl Build for Item {\n  fn make(value: I32) -> Self {\n    Item::{\n      value: value\n    }\n  }\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  let made = Build::make(1)\n  Build::read(made)\n}\n",
   )
   assert_eq(inferred.diagnostics.length(), 0)
   let calls = body_calls(collected, collected.bodies[2])
@@ -294,7 +294,7 @@ test "trait-qualified instance and static methods select coherent evidence" {
 ///|
 test "generic static methods infer impl arguments through Self" {
   let (collected, resolved, _, inferred) = call_test_module(
-    712UL, b"struct Box<a> {\n  value: a\n}\nimpl<a> Box<a> {\n  fn make(value: a) -> Self {\n    Box {\n      value: value\n    }\n  }\n}\nfn use() -> Box<I32> {\n  Box::make(1)\n}\n",
+    712UL, b"struct Box<a> {\n  value: a\n}\nimpl<a> Box<a> {\n  fn make(value: a) -> Self {\n    Box::{\n      value: value\n    }\n  }\n}\nfn use() -> Box<I32> {\n  Box::make(1)\n}\n",
   )
   assert_eq(inferred.diagnostics.length(), 0)
   let calls = body_calls(collected, collected.bodies[1])
@@ -316,7 +316,7 @@ test "generic static methods infer impl arguments through Self" {
 ///|
 test "runtime trait values retain coercion evidence and dynamic method slots" {
   let (collected, _, _, inferred) = call_test_module(
-    715UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item {})\n}\n",
+    715UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item::{})\n}\n",
   )
   assert_eq(inferred.impl_index.diagnostics.length(), 0)
   assert_eq(inferred.diagnostics.length(), 0)

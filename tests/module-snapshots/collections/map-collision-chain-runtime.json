@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:17:46: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(\n      ExpectedObjectFieldNewline(\n        Some(Token(Symbol(RightBrace), 252, 85)),\n        243,\n      ),\n    ),\n  },\n)\n  |\n17 |   let values = Map::singleton(Key { value: 0 }, 0)\n  |                                              ^"
+    "fixture.dew:17:47: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(\n      ExpectedObjectFieldNewline(\n        Some(Token(Symbol(RightBrace), 253, 86)),\n        244,\n      ),\n    ),\n  },\n)\n  |\n17 |   let values = Map::singleton(Key::{ value: 0 }, 0)\n  |                                               ^"
   ],
   "warnings": [],
   "output": null

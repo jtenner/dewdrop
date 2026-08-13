@@ -4,7 +4,7 @@ struct Pair {
 }
 
 fn split(left: I32, right: I32) -> I32 {
-  let pair = Pair {
+  let pair = Pair::{
     left: left
     right: right
   }

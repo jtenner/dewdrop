@@ -126,10 +126,10 @@ test "functional transfers compose inside nested if blocks" {
 }
 
 ///|
-test "functional while initial constructors require grouping" {
-  match parse_test_expression(b"while (State {}) {\n  _ => break 0\n}") {
+test "functional while accepts explicit constructor initial states" {
+  match parse_test_expression(b"while State::{} {\n  _ => break 0\n}") {
     Ok(WhileExpr(ConstructExpr(NameExpr("State", _), [], _), [_], _)) => ()
-    _ => fail("expected grouped constructor initial state")
+    _ => fail("expected explicit constructor initial state")
   }
 }
 

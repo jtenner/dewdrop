@@ -37,7 +37,7 @@ fn invoke(value: Read) -> I32 {
 }
 
 pub fn main() -> U32 {
-  debug(invoke(choose(true, Box {
+  debug(invoke(choose(true, Box::{
     value: 42
   })))
   wasi_fd_write(1u32, b"|trait:open-generic-prerequisite")

@@ -19,12 +19,12 @@ OPTIMIZED = """struct Pair {
 
 pub fn main(value: I32) -> I32 {
   let pair = if value == 0 {
-    Pair {
+    Pair::{
       left: value + 1
       right: value + 2
     }
   } else {
-    Pair {
+    Pair::{
       left: value + 3
       right: value + 4
     }
@@ -44,12 +44,12 @@ fn retain(value: Pair) -> Pair {
 
 pub fn main(value: I32) -> I32 {
   let pair = if value == 0 {
-    Pair {
+    Pair::{
       left: value + 1
       right: value + 2
     }
   } else {
-    retain(Pair {
+    retain(Pair::{
       left: value + 3
       right: value + 4
     })
@@ -75,11 +75,11 @@ pub fn main(value: I32) -> I32 {
     Choice::Second
   }
   let pair = match choice {
-    Choice::First => Pair {
+    Choice::First => Pair::{
       left: value + 1
       right: value + 2
     }
-    Choice::Second => Pair {
+    Choice::Second => Pair::{
       left: value + 3
       right: value + 4
     }
@@ -109,11 +109,11 @@ pub fn main(value: I32) -> I32 {
     Choice::Second
   }
   let pair = match choice {
-    Choice::First => Pair {
+    Choice::First => Pair::{
       left: value + 1
       right: value + 2
     }
-    Choice::Second => retain(Pair {
+    Choice::Second => retain(Pair::{
       left: value + 3
       right: value + 4
     })

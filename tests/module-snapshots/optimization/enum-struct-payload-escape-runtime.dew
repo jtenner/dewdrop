@@ -7,7 +7,7 @@ enum RecordMaybe {
 }
 
 fn project(left: I32, right: I32) -> I32 {
-  match (RecordMaybe::Some {
+  match (RecordMaybe::Some::{
     left: left
     right: right
   }) {
@@ -20,7 +20,7 @@ fn project(left: I32, right: I32) -> I32 {
 }
 
 fn project_local(left: I32, right: I32) -> I32 {
-  let wrapped = RecordMaybe::Some {
+  let wrapped = RecordMaybe::Some::{
     left: left
     right: right
   }

@@ -9,7 +9,7 @@ fn sum(pair: Pair) -> I32 {
 }
 
 pub fn main() -> U32 {
-  if sum(Pair {
+  if sum(Pair::{
     right: 29
     left: 13
   }) == 42 {

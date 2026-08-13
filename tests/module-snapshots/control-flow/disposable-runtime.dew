@@ -11,7 +11,7 @@ impl Disposable for Resource {
 }
 
 pub fn main() -> Unit {
-  dispose(Resource {
+  dispose(Resource::{
     value: 7
   })
 }

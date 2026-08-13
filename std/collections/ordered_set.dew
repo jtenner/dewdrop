@@ -12,7 +12,7 @@ pub struct OrderedSetIter<k, c> {
 pub fn ordered_set_new<k, c: Comparator<k>>(
   comparator: c,
 ) -> OrderedSet<k, c> {
-  OrderedSet {
+  OrderedSet::{
     tree: red_black_tree_new(comparator)
   }
 }
@@ -96,7 +96,7 @@ pub fn ordered_set_successor<k, c: Comparator<k>>(
 pub fn ordered_set_iter<k, c: Comparator<k>>(
   set: OrderedSet<k, c>,
 ) -> OrderedSetIter<k, c> {
-  OrderedSetIter {
+  OrderedSetIter::{
     inner: red_black_tree_iter(set.tree)
   }
 }
@@ -108,7 +108,7 @@ pub fn ordered_set_range<k, c: Comparator<k>>(
   upper: Option<k>,
   upper_inclusive: Bool,
 ) -> OrderedSetIter<k, c> {
-  OrderedSetIter {
+  OrderedSetIter::{
     inner: red_black_tree_range(
       set.tree,
       lower,

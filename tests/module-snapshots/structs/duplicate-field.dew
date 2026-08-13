@@ -3,7 +3,7 @@ pub struct Item {
 }
 
 pub fn main() -> I32 {
-  Item {
+  Item::{
     value: 1
     value: 2
   }.value

@@ -48,7 +48,7 @@ test "module values emit globals dependency-ordered initializers and start" {
 ///|
 test "module value initializers support calls and nominal references" {
   let module_ = starshine_module_value_test_module(
-    b"struct Box {\n  value: I32\n}\nfn make(value: I32) -> Box {\n  Box {\n    value: value\n  }\n}\nlet box = make(41)\npub fn main() -> I32 {\n  box.value + 1\n}\n",
+    b"struct Box {\n  value: I32\n}\nfn make(value: I32) -> Box {\n  Box::{\n    value: value\n  }\n}\nlet box = make(41)\npub fn main() -> I32 {\n  box.value + 1\n}\n",
   )
   assert_eq(@validate.validate_module(module_), Ok(()))
   assert_true(module_.global_sec is Some(_))
@@ -105,7 +105,7 @@ test "imported module values retain scalar nominal and applied types" {
       ]),
       @semantic.ManifestModule::new("app.values", [
         @semantic.ManifestFile::new(
-          "values.dew", b"pub struct Box {\n  value: I32\n}\nfn make(value: I32) -> Box {\n  Box {\n    value: value\n  }\n}\npub let answer = 40 + 2\npub let box = make(answer - 1)\npub let maybe = Option::Some(answer)\n",
+          "values.dew", b"pub struct Box {\n  value: I32\n}\nfn make(value: I32) -> Box {\n  Box::{\n    value: value\n  }\n}\npub let answer = 40 + 2\npub let box = make(answer - 1)\npub let maybe = Option::Some(answer)\n",
         ),
       ]),
     ]),

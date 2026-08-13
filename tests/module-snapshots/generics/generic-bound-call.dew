@@ -10,9 +10,9 @@ fn keep<t: Marker>(value: t) -> t {
 }
 
 fn accepted() -> Allowed {
-  keep(Allowed {})
+  keep(Allowed::{})
 }
 
 pub fn main() -> Denied {
-  keep(Denied {})
+  keep(Denied::{})
 }

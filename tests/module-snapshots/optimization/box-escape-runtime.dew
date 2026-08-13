@@ -11,19 +11,19 @@ struct GenericBox<t> {
 }
 
 fn unbox(value: Token) -> Token {
-  Box {
+  Box::{
     value: value
   }.value
 }
 
 fn generic_unbox<t>(value: t) -> t {
-  GenericBox {
+  GenericBox::{
     value: value
   }.value
 }
 
 pub fn main() -> I32 {
-  let token = Token {
+  let token = Token::{
     value: 21
   }
   unbox(token).value + generic_unbox(token).value

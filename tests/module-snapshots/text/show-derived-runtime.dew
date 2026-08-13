@@ -27,24 +27,24 @@ fn no_choice() -> Choice<I32> {
 }
 
 fn empty_choice() -> Choice<I32> {
-  Choice::EmptyStruct {}
+  Choice::EmptyStruct::{}
 }
 
 pub fn main() -> Unit {
-  assert(show(Empty {}).equals("Empty {}"), "empty struct")
-  assert(show(Point {
+  assert(show(Empty::{}).equals("Empty {}"), "empty struct")
+  assert(show(Point::{
     x: -7
     label: "dew"
   }).equals("Point { x: -7, label: dew }"), "struct show")
   assert(show(no_choice()).equals("Choice::None"), "unit variant")
   assert(show(Choice::Some(5)).equals("Choice::Some(5)"), "tuple variant")
   assert(show(empty_choice()).equals("Choice::EmptyStruct {}"), "empty struct variant")
-  assert(show(Choice::Pair {
+  assert(show(Choice::Pair::{
     left: 1
     right: 2
   }).equals("Choice::Pair { left: 1, right: 2 }"), "struct variant")
-  assert(show(Wrapper {
-    value: Point {
+  assert(show(Wrapper::{
+    value: Point::{
       x: 3
       label: "nested"
     }

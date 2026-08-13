@@ -18,11 +18,11 @@ fn trap_second() -> I32 {
 
 pub fn main() -> I32 {
   let pair = match Choice::First {
-    Choice::First => Pair {
+    Choice::First => Pair::{
       left: trap_first()
       right: trap_second()
     }
-    Choice::Second => Pair {
+    Choice::Second => Pair::{
       left: 0
       right: 1
     }

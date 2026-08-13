@@ -32,8 +32,8 @@ pub fn priority_queue_new<t, p, c: Comparator<p>>(
   comparator: c,
   order: HeapOrder,
 ) -> PriorityQueue<t, p, c> {
-  PriorityQueue {
-    heap: binary_heap_new(PriorityItemComparator {
+  PriorityQueue::{
+    heap: binary_heap_new(PriorityItemComparator::{
       comparator: comparator
     }, order)
   }
@@ -44,8 +44,8 @@ pub fn priority_queue_with_capacity<t, p, c: Comparator<p>>(
   order: HeapOrder,
   capacity: U32,
 ) -> PriorityQueue<t, p, c> {
-  PriorityQueue {
-    heap: binary_heap_with_capacity(PriorityItemComparator {
+  PriorityQueue::{
+    heap: binary_heap_with_capacity(PriorityItemComparator::{
       comparator: comparator
     }, order, capacity)
   }
@@ -74,7 +74,7 @@ pub fn priority_queue_enqueue<t, p, c: Comparator<p>>(
   value: t,
   priority: p,
 ) -> Unit {
-  binary_heap_push(queue.heap, PriorityItem {
+  binary_heap_push(queue.heap, PriorityItem::{
     value: value
     priority: priority
   })
@@ -109,7 +109,7 @@ pub fn priority_item_priority<t, p>(item: PriorityItem<t, p>) -> p {
 pub fn priority_queue_iter<t, p, c>(
   queue: PriorityQueue<t, p, c>,
 ) -> PriorityQueueIter<t, p> {
-  PriorityQueueIter {
+  PriorityQueueIter::{
     inner: binary_heap_iter(queue.heap)
   }
 }

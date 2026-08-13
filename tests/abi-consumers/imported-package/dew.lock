@@ -6,7 +6,7 @@
       "version": "1.0.0",
       "source": "file:dependency",
       "path": "dependency",
-      "integrity": "sha256-161f93e295328f04102eba2f56f57fca5bbd5ade0a034b07dae3b18cea708b25",
+      "integrity": "sha256-9d2e9f14f671b98f23d6ba2edffd4c5c822a971d9c8777ca826e5b6192b414cd",
       "interface": "0d132356648283c826f91ae5d7b908215c10d5ebaf3ca24258e01391c26e7378"
     }
   ]

@@ -33,13 +33,13 @@ impl<t: Marker> Value for Box<t> {
 }
 
 pub fn yes_box() -> Box<Yes> {
-  Box {
-    value: Yes {}
+  Box::{
+    value: Yes::{}
   }
 }
 
 pub fn other_box() -> Box<Other> {
-  Box {
-    value: Other {}
+  Box::{
+    value: Other::{}
   }
 }

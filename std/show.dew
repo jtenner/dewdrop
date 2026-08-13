@@ -28,7 +28,7 @@ fn show_require_bytes(formatter: ShowFormatter, added: U32) -> Unit {
 
 pub fn show<t: Show>(value: t) -> String {
   let builder = StringBuilder::new()
-  show_append(ShowFormatter {
+  show_append(ShowFormatter::{
     builder: builder
     depth: 0u32
   }, value)
@@ -44,7 +44,7 @@ fn show_require_depth(formatter: ShowFormatter) -> Unit {
 
 pub fn show_append<t: Show>(formatter: ShowFormatter, value: t) -> Unit {
   show_require_depth(formatter)
-  value.append_show(ShowFormatter {
+  value.append_show(ShowFormatter::{
     builder: formatter.builder
     depth: formatter.depth + 1u32
   })

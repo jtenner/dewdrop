@@ -125,7 +125,7 @@ test "imported enum patterns retain external variant IDs" {
 ///|
 test "imported enum construction retains external variant IDs" {
   let (_, frozen, _, names, inferred) = imported_semantic_program(
-    b"open app.library\npub fn idle() -> Message {\n  Message::Idle\n}\npub fn number(value: I32) -> Message {\n  Message::Number(value)\n}\npub fn move(x: I32, y: I32) -> Message {\n  Message::Move {\n    y: y\n    x: x\n  }\n}\n",
+    b"open app.library\npub fn idle() -> Message {\n  Message::Idle\n}\npub fn number(value: I32) -> Message {\n  Message::Number(value)\n}\npub fn move(x: I32, y: I32) -> Message {\n  Message::Move::{\n    y: y\n    x: x\n  }\n}\n",
     b"pub enum Message {\n  Idle\n  Number(I32)\n  Move {\n    x: I32\n    y: I32\n  }\n}\n",
   )
   assert_eq(frozen.interfaces[0].resolved_types.diagnostics.length(), 0)
@@ -154,7 +154,7 @@ test "imported enum construction retains external variant IDs" {
 ///|
 test "imported struct construction and field access retain external IDs" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
-    b"open app.library\npub fn make(value: I32) -> Item {\n  Item {\n    value: value\n  }\n}\npub fn read(value: Item) -> I32 {\n  value.value\n}\n",
+    b"open app.library\npub fn make(value: I32) -> Item {\n  Item::{\n    value: value\n  }\n}\npub fn read(value: Item) -> I32 {\n  value.value\n}\n",
     b"pub struct Item {\n  value: I32\n}\n",
   )
   assert_eq(frozen.interfaces[0].resolved_types.diagnostics.length(), 0)
@@ -457,7 +457,7 @@ test "test-only implementation evidence is absent from imported scopes" {
     ProgramManifest::new([
       ManifestModule::new("app.consumer", [
         ManifestFile::new(
-          "consumer.dew", b"open app.library\npub fn run() -> I32 {\n  Item {}.mark()\n}\n",
+          "consumer.dew", b"open app.library\npub fn run() -> I32 {\n  Item::{}.mark()\n}\n",
         ),
       ]),
       ManifestModule::new("app.library", [

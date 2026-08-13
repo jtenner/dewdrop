@@ -15,16 +15,16 @@ enum Choice {
 } derive(Eq)
 
 pub fn main() -> U32 {
-  let points = Point {
+  let points = Point::{
     x: 3
     y: 4
-  } == Point {
+  } == Point::{
     x: 3
     y: 4
-  } && Point {
+  } && Point::{
     x: 3
     y: 4
-  } != Point {
+  } != Point::{
     x: 4
     y: 3
   }
@@ -32,16 +32,16 @@ pub fn main() -> U32 {
     Choice::None != Choice::Number(0) &&
     Choice::Number(7) == Choice::Number(7) &&
     Choice::Number(7) != Choice::Number(8) &&
-    Choice::Named {
+    Choice::Named::{
       label: 9
       active: true
-    } == Choice::Named {
+    } == Choice::Named::{
       label: 9
       active: true
-    } && Choice::Named {
+    } && Choice::Named::{
       label: 9
       active: true
-    } != Choice::Named {
+    } != Choice::Named::{
       label: 9
       active: false
     }

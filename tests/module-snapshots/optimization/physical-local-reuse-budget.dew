@@ -16,7 +16,7 @@ fn overlap(value: I32) -> I32 {
 }
 
 fn make_token(value: I32) -> Token {
-  Token {
+  Token::{
     value: value
   }
 }

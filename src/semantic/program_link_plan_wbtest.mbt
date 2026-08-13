@@ -369,7 +369,7 @@ test "program linker plans recursive aggregate erased adapters" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Box<t> {\n  value: t\n}\npub fn echo_box<t>(value: Box<t>) -> Box<t> {\n  Box {\n    value: value.value\n  }\n}\npub fn main() -> Unit {\n  let boxed = echo_box(Box {\n    value: 42\n  })\n  assert(boxed.value == 42, \"nested aggregate adapter demand\")\n}\n",
+          "main.dew", b"struct Box<t> {\n  value: t\n}\npub fn echo_box<t>(value: Box<t>) -> Box<t> {\n  Box::{\n    value: value.value\n  }\n}\npub fn main() -> Unit {\n  let boxed = echo_box(Box::{\n    value: 42\n  })\n  assert(boxed.value == 42, \"nested aggregate adapter demand\")\n}\n",
         ),
       ]),
     ]),
@@ -404,7 +404,7 @@ test "program linker plans recursive enum erased adapters" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"struct Box<t> {\n  value: t\n}\nstruct Envelope<t> {\n  payload: Maybe<t>\n}\nenum Maybe<t> {\n  None\n  Some(t)\n  Boxed(Box<t>)\n}\npub fn echo_maybe<t>(value: Maybe<t>) -> Maybe<t> {\n  match value {\n    Maybe::None => Maybe::None\n    Maybe::Some(item) => Maybe::Some(item)\n    Maybe::Boxed(box) => Maybe::Boxed(Box {\n      value: box.value\n    })\n  }\n}\npub fn echo_envelope<t>(value: Envelope<t>) -> Envelope<t> {\n  Envelope {\n    payload: echo_maybe(value.payload)\n  }\n}\npub fn main() -> Unit {\n  let maybe = echo_maybe(Maybe::Some(42))\n  let envelope = echo_envelope(Envelope {\n    payload: Maybe::Boxed(Box {\n      value: 43\n    })\n  })\n}\n",
+          "main.dew", b"struct Box<t> {\n  value: t\n}\nstruct Envelope<t> {\n  payload: Maybe<t>\n}\nenum Maybe<t> {\n  None\n  Some(t)\n  Boxed(Box<t>)\n}\npub fn echo_maybe<t>(value: Maybe<t>) -> Maybe<t> {\n  match value {\n    Maybe::None => Maybe::None\n    Maybe::Some(item) => Maybe::Some(item)\n    Maybe::Boxed(box) => Maybe::Boxed(Box::{\n      value: box.value\n    })\n  }\n}\npub fn echo_envelope<t>(value: Envelope<t>) -> Envelope<t> {\n  Envelope::{\n    payload: echo_maybe(value.payload)\n  }\n}\npub fn main() -> Unit {\n  let maybe = echo_maybe(Maybe::Some(42))\n  let envelope = echo_envelope(Envelope::{\n    payload: Maybe::Boxed(Box::{\n      value: 43\n    })\n  })\n}\n",
         ),
       ]),
     ]),
@@ -1084,7 +1084,7 @@ test "public bound call fallbacks remain evidence carrying without scalar adapte
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    41\n  }\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  read(Item {}) + read(1)\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    41\n  }\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub fn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\npub fn main() -> I32 {\n  read(Item::{}) + read(1)\n}\n",
         ),
       ]),
     ]),
@@ -1193,7 +1193,7 @@ test "external generic fallback forwards runtime prerequisites through static ev
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\nfn helper<t: Value>(value: t) -> I32 {\n  consume(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> I32 {\n  helper(value)\n}\npub fn main() -> I32 {\n  outer(42)\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\nfn helper<t: Value>(value: t) -> I32 {\n  consume(Box::{\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> I32 {\n  helper(value)\n}\npub fn main() -> I32 {\n  outer(42)\n}\n",
         ),
       ]),
     ]),
@@ -1227,7 +1227,7 @@ test "external generic fallback forwards recursive static prerequisite trees" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\nfn consume_inspect<t: Inspect>(value: t) -> I32 {\n  value.inspect()\n}\npub fn nested_read<t: Value>(value: t) -> I32 {\n  consume_inspect(Wrap {\n    value: Box {\n      value: value\n    }\n  })\n}\npub fn main() -> I32 {\n  42\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\ntrait Inspect {\n  fn inspect(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {\n  fn inspect(self) -> I32 {\n    self.value.read()\n  }\n}\nfn consume_inspect<t: Inspect>(value: t) -> I32 {\n  value.inspect()\n}\npub fn nested_read<t: Value>(value: t) -> I32 {\n  consume_inspect(Wrap::{\n    value: Box::{\n      value: value\n    }\n  })\n}\npub fn main() -> I32 {\n  42\n}\n",
         ),
       ]),
     ]),
@@ -1288,7 +1288,7 @@ test "external generic fallback captures erased concrete runtime prerequisites" 
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn erase_read<t: Read>(value: t) -> Read {\n  value\n}\nfn helper<t: Value>(value: t) -> Read {\n  erase_read(Box {\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> Read {\n  helper(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(outer(42))\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn erase_read<t: Read>(value: t) -> Read {\n  value\n}\nfn helper<t: Value>(value: t) -> Read {\n  erase_read(Box::{\n    value: value\n  })\n}\npub fn outer<t: Value>(value: t) -> Read {\n  helper(value)\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(outer(42))\n}\n",
         ),
       ]),
     ]),
@@ -1444,7 +1444,7 @@ test "open generic trait dictionaries preserve recursive prerequisite evidence" 
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn choose<t: Read>(flag: Bool, value: t) -> Read {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(choose(true, Box {\n    value: 42\n  }))\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn choose<t: Read>(flag: Bool, value: t) -> Read {\n  if flag {\n    value\n  } else {\n    value\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(choose(true, Box::{\n    value: 42\n  }))\n}\n",
         ),
       ]),
     ]),
@@ -1524,7 +1524,7 @@ test "generic trait coercions accept nominal implementation evidence" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    42\n  }\n}\nfn erase<t: Value>(value: t) -> Value {\n  value\n}\npub fn main() -> Value {\n  erase(Item {})\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nstruct Item {}\nimpl Value for Item {\n  fn value(self) -> I32 {\n    42\n  }\n}\nfn erase<t: Value>(value: t) -> Value {\n  value\n}\npub fn main() -> Value {\n  erase(Item::{})\n}\n",
         ),
       ]),
     ]),
@@ -1587,7 +1587,7 @@ test "transparent runtime trait wrappers devirtualize exact call-site evidence" 
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {\n  value: I32\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(Item {\n    value: 35\n  }) + invoke(7)\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {\n  value: I32\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  invoke(Item::{\n    value: 35\n  }) + invoke(7)\n}\n",
         ),
       ]),
     ]),
@@ -1626,7 +1626,7 @@ test "exact runtime trait flows erase generic prerequisite forwarding chains" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn identity(value: Read) -> Read {\n  value\n}\nfn invoke(value: Read) -> I32 {\n  let selected = if true {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\nfn forward(value: Read) -> I32 {\n  invoke(identity(value))\n}\npub fn main() -> I32 {\n  let selected = identity(Box {\n    value: 42\n  })\n  forward(selected)\n}\n",
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn identity(value: Read) -> Read {\n  value\n}\nfn invoke(value: Read) -> I32 {\n  let selected = if true {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\nfn forward(value: Read) -> I32 {\n  invoke(identity(value))\n}\npub fn main() -> I32 {\n  let selected = identity(Box::{\n    value: 42\n  })\n  forward(selected)\n}\n",
         ),
       ]),
     ]),
@@ -1693,7 +1693,7 @@ test "runtime trait flow joins retain differing implementation evidence" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Left {}\nstruct Right {}\nimpl Read for Left {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Read for Right {\n  fn read(self) -> I32 {\n    2\n  }\n}\nfn invoke(flag: Bool, left: Read, right: Read) -> I32 {\n  let selected = if flag {\n    left\n  } else {\n    right\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(true, Left {}, Right {})\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Left {}\nstruct Right {}\nimpl Read for Left {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Read for Right {\n  fn read(self) -> I32 {\n    2\n  }\n}\nfn invoke(flag: Bool, left: Read, right: Read) -> I32 {\n  let selected = if flag {\n    left\n  } else {\n    right\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(true, Left::{}, Right::{})\n}\n",
         ),
       ]),
     ]),
@@ -1728,7 +1728,7 @@ test "public runtime trait summaries discard total effect-free preludes" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn condition() -> Bool {\n  true\n}\npub fn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn condition() -> Bool {\n  true\n}\npub fn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item::{})\n}\n",
         ),
       ]),
     ]),
@@ -1766,7 +1766,7 @@ test "public runtime trait summaries retain trapping preludes" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn condition() -> Bool {\n  assert(false, \"observable prelude\")\n  true\n}\npub fn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\npub fn condition() -> Bool {\n  assert(false, \"observable prelude\")\n  true\n}\npub fn invoke(value: Read) -> I32 {\n  let selected = if condition() {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\npub fn main() -> I32 {\n  invoke(Item::{})\n}\n",
         ),
       ]),
     ]),
@@ -1809,7 +1809,7 @@ test "runtime trait link executes imported traits and implementations" {
       ]),
       ManifestModule::new("fixture.library", [
         ManifestFile::new(
-          "library.dew", b"pub struct Item {\n  value: I32\n}\npub trait Mark {\n  fn mark(self) -> I32\n}\nimpl Mark for Item {\n  fn mark(self) -> I32 {\n    self.value + 1\n  }\n}\npub fn item() -> Item {\n  Item {\n    value: 41\n  }\n}\n",
+          "library.dew", b"pub struct Item {\n  value: I32\n}\npub trait Mark {\n  fn mark(self) -> I32\n}\nimpl Mark for Item {\n  fn mark(self) -> I32 {\n    self.value + 1\n  }\n}\npub fn item() -> Item {\n  Item::{\n    value: 41\n  }\n}\n",
         ),
       ]),
     ]),
@@ -1892,7 +1892,7 @@ test "runtime trait dictionaries distinguish generic prerequisite evidence" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Marker {\n  fn marker(self) -> I32\n}\ntrait Value {\n  fn value(self) -> I32\n}\nstruct Yes {}\nstruct Other {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {\n  fn marker(self) -> I32 {\n    42\n  }\n}\nimpl Marker for Other {\n  fn marker(self) -> I32 {\n    7\n  }\n}\nimpl<t: Marker> Value for Box<t> {\n  fn value(self) -> I32 {\n    self.value.marker()\n  }\n}\nfn invoke(value: Value) -> I32 {\n  value.value() + 0\n}\npub fn main() -> I32 {\n  invoke(Box {\n    value: Yes {}\n  }) + invoke(Box {\n    value: Other {}\n  })\n}\n",
+          "main.dew", b"trait Marker {\n  fn marker(self) -> I32\n}\ntrait Value {\n  fn value(self) -> I32\n}\nstruct Yes {}\nstruct Other {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {\n  fn marker(self) -> I32 {\n    42\n  }\n}\nimpl Marker for Other {\n  fn marker(self) -> I32 {\n    7\n  }\n}\nimpl<t: Marker> Value for Box<t> {\n  fn value(self) -> I32 {\n    self.value.marker()\n  }\n}\nfn invoke(value: Value) -> I32 {\n  value.value() + 0\n}\npub fn main() -> I32 {\n  invoke(Box::{\n    value: Yes::{}\n  }) + invoke(Box::{\n    value: Other::{}\n  })\n}\n",
         ),
       ]),
     ]),
@@ -1926,7 +1926,7 @@ test "runtime trait link maps typed dictionary signatures" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read() + 0\n}\npub fn main() -> I32 {\n  invoke(Item {})\n}\n",
+          "main.dew", b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read() + 0\n}\npub fn main() -> I32 {\n  invoke(Item::{})\n}\n",
         ),
       ]),
     ]),

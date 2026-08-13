@@ -14,7 +14,7 @@ fn get_it(value: I32) -> Option<I32> {
 pub fn main() -> Unit {
   assert(42 is 42, "literal pattern matches")
   assert(!(42 is 41), "literal pattern rejects mismatch")
-  let point = Point {
+  let point = Point::{
     x: 3
     y: 4
   }

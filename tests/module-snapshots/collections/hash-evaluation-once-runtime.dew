@@ -22,7 +22,7 @@ impl Hash for Key {
 pub fn main() -> Unit {
   let hash_calls = FixedArray::make(1u32, 0)
   let equality_calls = FixedArray::make(1u32, 0)
-  let key = Key {
+  let key = Key::{
     identity: 7
     hash_calls: hash_calls
     equality_calls: equality_calls

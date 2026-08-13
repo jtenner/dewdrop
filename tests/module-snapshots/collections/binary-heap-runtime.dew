@@ -99,7 +99,7 @@ pub fn main() -> Unit {
   assert(pop_i32(built) == 6, "Floyd fourth")
   assert(pop_i32(built) == 7, "Floyd fifth")
 
-  let absolute = binary_heap_new(AbsComparator {}, HeapOrder::Minimum)
+  let absolute = binary_heap_new(AbsComparator::{}, HeapOrder::Minimum)
   binary_heap_push(absolute, -9)
   binary_heap_push(absolute, 2)
   binary_heap_push(absolute, -1)
@@ -108,16 +108,16 @@ pub fn main() -> Unit {
     Option::None => assert(false, "custom comparator missing")
   }
 
-  let entries = binary_heap_new(EntryComparator {}, HeapOrder::Minimum)
-  binary_heap_push(entries, Entry {
+  let entries = binary_heap_new(EntryComparator::{}, HeapOrder::Minimum)
+  binary_heap_push(entries, Entry::{
     priority: 3
     value: 30
   })
-  binary_heap_push(entries, Entry {
+  binary_heap_push(entries, Entry::{
     priority: 1
     value: 10
   })
-  binary_heap_push(entries, Entry {
+  binary_heap_push(entries, Entry::{
     priority: 2
     value: 20
   })

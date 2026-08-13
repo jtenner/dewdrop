@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:12:5: error: NoMatchingMethod(6, 29, 151)\n  |\n12 |   } == Pair {\n  |     ^"
+    "fixture.dew:12:5: error: NoMatchingMethod(6, 29, 154)\n  |\n12 |   } == Pair::{\n  |     ^"
   ],
   "warnings": [],
   "output": null

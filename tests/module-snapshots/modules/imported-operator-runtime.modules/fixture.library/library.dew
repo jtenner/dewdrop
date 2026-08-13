@@ -4,14 +4,14 @@ pub struct Item {
 
 impl Add for Item {
   fn add(self, right: Item) -> Item {
-    Item {
+    Item::{
       value: self.value + right.value
     }
   }
 }
 
 pub fn item(value: I32) -> Item {
-  Item {
+  Item::{
     value: value
   }
 }

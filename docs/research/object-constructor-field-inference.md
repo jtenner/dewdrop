@@ -78,7 +78,7 @@ struct Pair<t> {
   second: Bool
 }
 
-Pair {
+Pair::{
   first: value
   second: true
 }
@@ -208,7 +208,7 @@ enum Message<t> {
   }
 }
 
-Message::Data {
+Message::Data::{
   value: text
   code: 1
 }

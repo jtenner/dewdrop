@@ -32,15 +32,15 @@ struct Message {
 fn unit_value() -> Unit {}
 
 pub fn main() -> U32 {
-  let point = Point {
+  let point = Point::{
     x: 3
     y: 4
   }
-  let named = Choice::Named {
+  let named = Choice::Named::{
     label: 9
     active: true
   }
-  let wrapped = Wrapper {
+  let wrapped = Wrapper::{
     value: 42
   }
   debug(point)
@@ -51,8 +51,8 @@ pub fn main() -> U32 {
   wasi_fd_write(1u32, b"|")
   debug(wrapped)
   wasi_fd_write(1u32, b"|")
-  debug(Scene {
-    point: Point {
+  debug(Scene::{
+    point: Point::{
       x: -5
       y: 6
     }
@@ -87,7 +87,7 @@ pub fn main() -> U32 {
   wasi_fd_write(1u32, b"|")
   debug(unit_value())
   wasi_fd_write(1u32, b"|")
-  debug(Message {
+  debug(Message::{
     text: "line\nquote: \" slash: \\ tab:\t λ"
     data: b"\x00A\xff\"\\\n"
   })

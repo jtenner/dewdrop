@@ -4,7 +4,7 @@ struct Point {
 }
 
 pub fn main() -> I32 {
-  Point {
+  Point::{
     x: 1
   }.x
 }

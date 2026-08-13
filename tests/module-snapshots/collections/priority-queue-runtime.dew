@@ -61,10 +61,10 @@ pub fn main() -> Unit {
   assert(take_value(maximum) == 1, "maximum last")
 
   let jobs = priority_queue_new(natural_comparator(), HeapOrder::Minimum)
-  priority_queue_enqueue(jobs, Job {
+  priority_queue_enqueue(jobs, Job::{
     id: 2
   }, 2)
-  priority_queue_enqueue(jobs, Job {
+  priority_queue_enqueue(jobs, Job::{
     id: 1
   }, 1)
   match priority_queue_dequeue(jobs) {

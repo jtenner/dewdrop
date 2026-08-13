@@ -3,5 +3,5 @@ open dew.std.disposable
 struct Resource {}
 
 pub fn main() -> Unit {
-  using resource = Resource {}
+  using resource = Resource::{}
 }

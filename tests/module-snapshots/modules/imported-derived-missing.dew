@@ -3,7 +3,7 @@ open fixture.derived_missing
 struct Missing {}
 
 pub fn main() -> Unit {
-  debug(Box {
-    value: Missing {}
+  debug(Box::{
+    value: Missing::{}
   })
 }

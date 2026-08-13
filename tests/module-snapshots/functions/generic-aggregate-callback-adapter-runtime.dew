@@ -34,11 +34,11 @@ pub fn identity_choice<t>(value: CallbackChoice<t>, first: Bool) -> CallbackChoi
 }
 
 pub fn main() -> Unit {
-  let box = identity_box(CallbackBox {
+  let box = identity_box(CallbackBox::{
     callback: increment
   }, true)
   let tuple = identity_choice(CallbackChoice::Tuple(increment), true)
-  let structured = identity_choice(CallbackChoice::Struct {
+  let structured = identity_choice(CallbackChoice::Struct::{
     callback: increment
   }, false)
   let callback = box.callback

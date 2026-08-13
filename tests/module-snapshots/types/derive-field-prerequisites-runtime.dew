@@ -9,13 +9,13 @@ struct Selected<a, b> {
 struct Phantom<t> {} derive(Eq, Debug, Hash)
 
 fn selected() -> Selected<I32, Missing> {
-  Selected {
+  Selected::{
     value: 7
   }
 }
 
 fn phantom() -> Phantom<Missing> {
-  Phantom {}
+  Phantom::{}
 }
 
 pub fn main() -> U32 {

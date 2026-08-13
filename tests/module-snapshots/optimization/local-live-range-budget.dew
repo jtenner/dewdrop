@@ -47,15 +47,15 @@ fn shared_generic<t>(value: t) -> t {
 }
 
 pub fn main() -> I32 {
-  shared_reference(Token {
+  shared_reference(Token::{
     value: 2
-  }) + sequential_reference(Token {
+  }) + sequential_reference(Token::{
     value: 3
-  }) + branched_reference(Token {
+  }) + branched_reference(Token::{
     value: 4
-  }, true) + branched_reference(Token {
+  }, true) + branched_reference(Token::{
     value: 5
-  }, false) + looped_reference(Token {
+  }, false) + looped_reference(Token::{
     value: 6
   }) + shared_generic(7)
 }

@@ -17,7 +17,7 @@ fn read(value: Message) -> I32 {
 }
 
 pub fn main() -> I32 {
-  read(Message::Move {
+  read(Message::Move::{
     y: 22
     x: 20
   })

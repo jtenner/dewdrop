@@ -25,7 +25,7 @@ pub fn binary_heap_new<t, c: Comparator<t>>(
   comparator: c,
   order: HeapOrder,
 ) -> BinaryHeap<t, c> {
-  BinaryHeap {
+  BinaryHeap::{
     values: array_new()
     comparator: comparator
     maximum: heap_order_is_maximum(order)
@@ -37,7 +37,7 @@ pub fn binary_heap_with_capacity<t, c: Comparator<t>>(
   order: HeapOrder,
   capacity: U32,
 ) -> BinaryHeap<t, c> {
-  BinaryHeap {
+  BinaryHeap::{
     values: array_with_capacity(capacity)
     comparator: comparator
     maximum: heap_order_is_maximum(order)

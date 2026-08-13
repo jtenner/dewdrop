@@ -7,6 +7,6 @@ impl Disposable for Resource {
 }
 
 pub fn main() -> Unit {
-  using resource = Resource {}
+  using resource = Resource::{}
   resource.dispose()
 }

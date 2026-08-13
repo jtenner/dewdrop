@@ -49,8 +49,8 @@ impl<t: Read> Inspect for Wrap<t> {
 }
 
 pub fn erase_nested<t: Value + OtherValue>(value: t) -> Inspect {
-  Wrap {
-    value: Box {
+  Wrap::{
+    value: Box::{
       value: value
     }
   }

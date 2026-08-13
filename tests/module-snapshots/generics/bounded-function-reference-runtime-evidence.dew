@@ -59,7 +59,7 @@ fn invoke(callback: fn(I32) -> I32) -> I32 {
 }
 
 fn invoke_item(callback: fn(Item) -> I32) -> I32 {
-  callback(Item {
+  callback(Item::{
     value: 42
   })
 }

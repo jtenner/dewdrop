@@ -15,7 +15,7 @@ test "typed V128 lane families validate with native SIMD instructions" {
 ///|
 test "typed lane reinterpretation memory and aggregates preserve raw carriers" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
-    b"open dew.std.i16x4\nopen dew.std.f32x4\nopen dew.std.i32x4\npub struct Lanes {\n  compact: I16x4\n  native: F32x4\n}\npub fn reinterpret(value: F32x4) -> I32x4 {\n  i32x4_from_v128(f32x4_to_v128(value))\n}\npub fn roundtrip_native(address: U32, value: I32x4) -> I32x4 {\n  i32x4_store(address, value)\n  i32x4_load(address)\n}\npub fn roundtrip_compact(address: U32, value: I16x4) -> I16x4 {\n  i16x4_store(address, value)\n  i16x4_load(address)\n}\npub fn build(compact: I16x4, native: F32x4) -> Lanes {\n  Lanes {\n    compact: compact\n    native: native\n  }\n}\n",
+    b"open dew.std.i16x4\nopen dew.std.f32x4\nopen dew.std.i32x4\npub struct Lanes {\n  compact: I16x4\n  native: F32x4\n}\npub fn reinterpret(value: F32x4) -> I32x4 {\n  i32x4_from_v128(f32x4_to_v128(value))\n}\npub fn roundtrip_native(address: U32, value: I32x4) -> I32x4 {\n  i32x4_store(address, value)\n  i32x4_load(address)\n}\npub fn roundtrip_compact(address: U32, value: I16x4) -> I16x4 {\n  i16x4_store(address, value)\n  i16x4_load(address)\n}\npub fn build(compact: I16x4, native: F32x4) -> Lanes {\n  Lanes::{\n    compact: compact\n    native: native\n  }\n}\n",
   )
   assert_eq(diagnostics, 0)
   assert_true(backend_program_uses_linear_memory(fragments))

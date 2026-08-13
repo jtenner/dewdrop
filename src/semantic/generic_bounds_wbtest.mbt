@@ -280,7 +280,7 @@ test "generic calls freeze recursive concrete and symbolic evidence" {
 ///|
 test "recursive implementation evidence retains node-local arguments" {
   let collected = collect_bytes(
-    2736UL, b"trait Value {}\ntrait Read {}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {}\ntrait Inspect {}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {}\nfn require<t: Inspect>(value: t) -> t {\n  value\n}\nfn nested<t: Value>(value: t) -> Wrap<Box<t>> {\n  require(Wrap {\n    value: Box {\n      value: value\n    }\n  })\n}\n",
+    2736UL, b"trait Value {}\ntrait Read {}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {}\ntrait Inspect {}\nstruct Wrap<t> {\n  value: t\n}\nimpl<t: Read> Inspect for Wrap<t> {}\nfn require<t: Inspect>(value: t) -> t {\n  value\n}\nfn nested<t: Value>(value: t) -> Wrap<Box<t>> {\n  require(Wrap::{\n    value: Box::{\n      value: value\n    }\n  })\n}\n",
   )
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
@@ -369,7 +369,7 @@ test "generic method calls freeze implementation prerequisite evidence" {
 ///|
 test "generic calls require local coherent trait evidence" {
   let accepted = collect_bytes(
-    2721UL, b"trait Marker {}\nstruct Yes {}\nimpl Marker for Yes {}\nfn keep<t: Marker>(value: t) -> t {\n  value\n}\nfn accepted() -> Yes {\n  keep(Yes {})\n}\n",
+    2721UL, b"trait Marker {}\nstruct Yes {}\nimpl Marker for Yes {}\nfn keep<t: Marker>(value: t) -> t {\n  value\n}\nfn accepted() -> Yes {\n  keep(Yes::{})\n}\n",
   )
   let accepted_types = resolve_module_types(accepted)
   let accepted_names = resolve_module_names(accepted)
@@ -379,7 +379,7 @@ test "generic calls require local coherent trait evidence" {
   assert_eq(accepted_inferred.diagnostics.length(), 0)
 
   let rejected = collect_bytes(
-    2722UL, b"trait Marker {}\nstruct No {}\nfn keep<t: Marker>(value: t) -> t {\n  value\n}\nfn rejected() -> No {\n  keep(No {})\n}\n",
+    2722UL, b"trait Marker {}\nstruct No {}\nfn keep<t: Marker>(value: t) -> t {\n  value\n}\nfn rejected() -> No {\n  keep(No::{})\n}\n",
   )
   let rejected_types = resolve_module_types(rejected)
   let rejected_names = resolve_module_names(rejected)
@@ -458,7 +458,7 @@ test "generic implementation bounds constrain operator evidence transitively" {
 ///|
 test "generic call obligations match applied trait arguments" {
   let collected = collect_bytes(
-    2723UL, b"trait Convert<t> {}\nstruct Item {}\nimpl Convert<I32> for Item {}\nfn accepts<t: Convert<I32>>(value: t) -> t {\n  value\n}\nfn rejects<t: Convert<I64>>(value: t) -> t {\n  value\n}\nfn run_ok() -> Item {\n  accepts(Item {})\n}\nfn run_bad() -> Item {\n  rejects(Item {})\n}\n",
+    2723UL, b"trait Convert<t> {}\nstruct Item {}\nimpl Convert<I32> for Item {}\nfn accepts<t: Convert<I32>>(value: t) -> t {\n  value\n}\nfn rejects<t: Convert<I64>>(value: t) -> t {\n  value\n}\nfn run_ok() -> Item {\n  accepts(Item::{})\n}\nfn run_bad() -> Item {\n  rejects(Item::{})\n}\n",
   )
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
@@ -622,7 +622,7 @@ test "imported generic calls retain and enforce bound evidence" {
     ProgramManifest::new([
       ManifestModule::new("bounds.consumer", [
         ManifestFile::new(
-          "consumer.dew", b"open bounds.library\nstruct Yes {}\nstruct No {}\nimpl Marker for Yes {}\nfn accepted() -> Yes {\n  keep(Yes {})\n}\nfn rejected() -> No {\n  keep(No {})\n}\n",
+          "consumer.dew", b"open bounds.library\nstruct Yes {}\nstruct No {}\nimpl Marker for Yes {}\nfn accepted() -> Yes {\n  keep(Yes::{})\n}\nfn rejected() -> No {\n  keep(No::{})\n}\n",
         ),
       ]),
       ManifestModule::new("bounds.library", [

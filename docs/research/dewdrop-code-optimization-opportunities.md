@@ -18,14 +18,14 @@ fn churn(boxed: Box) -> I32 {
   if boxed.remaining == 0 {
     0
   } else {
-    churn(Box {
+    churn(Box::{
       remaining: boxed.remaining - 1
     })
   }
 }
 
 pub fn main() -> I32 {
-  churn(Box {
+  churn(Box::{
     remaining: 10000
   })
 }

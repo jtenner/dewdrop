@@ -27,8 +27,8 @@ foreign impl Mark for Item {
 }
 
 pub fn main() -> U32 {
-  let local = Local {}
-  let item = Item {}
+  let local = Local::{}
+  let item = Item::{}
   if local.mark() * 100 + item.local_mark() * 10 + item.mark() == 345 {
     wasi_fd_write(1u32, b"trait:package-ownership")
   } else {

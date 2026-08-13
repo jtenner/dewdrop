@@ -234,7 +234,7 @@ test "if expressions compose with infix and postfix continuations" {
 test "constructor fields may contain if expressions" {
   match
     parse_test_expression(
-      b"Config {\n  value: if ready {\n    first\n  } else {\n    second\n  }\n}",
+      b"Config::{\n  value: if ready {\n    first\n  } else {\n    second\n  }\n}",
     ) {
     Ok(ConstructExpr(NameExpr("Config", _), [field], _)) =>
       match field.value {
@@ -261,10 +261,10 @@ test "if conditions stop before their ungrouped body brace" {
 }
 
 ///|
-test "parenthesized constructor expressions remain valid conditions" {
-  match parse_test_expression(b"if (Point {}) {\n  valid\n}") {
+test "explicit constructor expressions remain valid conditions" {
+  match parse_test_expression(b"if Point::{} {\n  valid\n}") {
     Ok(IfExpr(ConstructExpr(NameExpr("Point", _), [], _), _, None, _)) => ()
-    _ => fail("expected grouped constructor condition")
+    _ => fail("expected explicit constructor condition")
   }
 }
 

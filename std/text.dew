@@ -80,14 +80,14 @@ fn code_point_state() -> FixedArray<U32> {
 }
 
 pub fn string_code_points(value: String) -> StringCodePoints {
-  StringCodePoints {
+  StringCodePoints::{
     value: value
     state: code_point_state()
   }
 }
 
 pub fn string_view_code_points(value: StringView) -> StringViewCodePoints {
-  StringViewCodePoints {
+  StringViewCodePoints::{
     value: value
     state: code_point_state()
   }

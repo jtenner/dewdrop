@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:11:10: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(UsingValueEscape(\"resource\", 175)),\n  },\n)\n  |\n11 |   return resource\n  |          ^"
+    "fixture.dew:11:10: error: ParseDiagnostic(\n  12884901888256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(UsingValueEscape(\"resource\", 176)),\n  },\n)\n  |\n11 |   return resource\n  |          ^"
   ],
   "warnings": [],
   "output": null

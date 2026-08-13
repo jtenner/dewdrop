@@ -37,7 +37,7 @@ test "trait_declaration impl index retains coherent method_info evidence" {
 ///|
 test "inherent impls share a nominal bucket and retain static methods" {
   let (collected, _, index) = impl_test_module(
-    602UL, b"struct Item {}\nimpl Item {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Item {\n  fn make() -> Item {\n    Item {}\n  }\n}\n",
+    602UL, b"struct Item {}\nimpl Item {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Item {\n  fn make() -> Item {\n    Item::{}\n  }\n}\n",
   )
   assert_eq(index.diagnostics.length(), 0)
   assert_eq(index.buckets.length(), 1)

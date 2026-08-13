@@ -49,7 +49,7 @@ fn consume<t: Read>(value: t) -> I32 {
 }
 
 pub fn consume_value<t: Value>(value: t) -> I32 {
-  consume(Box {
+  consume(Box::{
     value: value
   })
 }
@@ -73,16 +73,16 @@ fn consume_inspect<t: Inspect>(value: t) -> I32 {
 }
 
 pub fn consume_nested_value<t: Value>(value: t) -> I32 {
-  consume_inspect(Wrap {
-    value: Box {
+  consume_inspect(Wrap::{
+    value: Box::{
       value: value
     }
   })
 }
 
 pub fn erase_nested_value<t: Value>(value: t) -> Inspect {
-  Wrap {
-    value: Box {
+  Wrap::{
+    value: Box::{
       value: value
     }
   }
@@ -103,7 +103,7 @@ impl<t: Value + OtherValue> PairInspect for PairBox<t> {
 }
 
 pub fn erase_pair_value<t: Value + OtherValue>(value: t) -> PairInspect {
-  PairBox {
+  PairBox::{
     value: value
   }
 }

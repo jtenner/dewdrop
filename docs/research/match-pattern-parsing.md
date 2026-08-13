@@ -107,13 +107,15 @@ match left + right {
 }
 ```
 
-A constructor used as the scrutinee must be grouped:
+Explicit constructor syntax keeps the scrutinee/body boundary unambiguous without grouping:
 
 ```dew
-match (Point {}) {
+match Point::{} {
   _ => result
 }
 ```
+
+Parentheses remain optional ordinary grouping.
 
 ## Match grammar
 

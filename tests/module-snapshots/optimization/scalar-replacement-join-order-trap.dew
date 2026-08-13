@@ -13,12 +13,12 @@ fn trap_second() -> I32 {
 
 pub fn main() -> I32 {
   let pair = if true {
-    Pair {
+    Pair::{
       left: trap_first()
       right: trap_second()
     }
   } else {
-    Pair {
+    Pair::{
       left: 0
       right: 1
     }

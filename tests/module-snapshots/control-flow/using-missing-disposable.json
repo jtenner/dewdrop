@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:6:3: error: NoMatchingMethod(5, 7, 71)\n  |\n6 |   using resource = Resource {}\n  |   ^"
+    "fixture.dew:6:3: error: NoMatchingMethod(5, 7, 71)\n  |\n6 |   using resource = Resource::{}\n  |   ^"
   ],
   "warnings": [],
   "output": null

@@ -13,7 +13,7 @@ fn trap_second() -> I32 {
 }
 
 pub fn main() -> I32 {
-  let triple = Triple {
+  let triple = Triple::{
     first: 1
     second: trap_first()
     third: trap_second()

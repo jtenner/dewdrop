@@ -7,7 +7,7 @@ impl Disposable for Resource {
 }
 
 fn escape() -> Resource {
-  using resource = Resource {}
+  using resource = Resource::{}
   return resource
 }
 

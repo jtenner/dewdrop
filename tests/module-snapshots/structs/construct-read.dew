@@ -8,7 +8,7 @@ fn sum(value: Pair) -> I32 {
 }
 
 pub fn main() -> I32 {
-  sum(Pair {
+  sum(Pair::{
     right: 22
     left: 20
   })

@@ -5,7 +5,7 @@ struct Triple {
 }
 
 fn selected(first: I32, second: I32, third: I32) -> I32 {
-  let triple = Triple {
+  let triple = Triple::{
     first: first
     second: second
     third: third

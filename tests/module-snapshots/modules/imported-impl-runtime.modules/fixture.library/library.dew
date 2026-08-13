@@ -13,7 +13,7 @@ impl Mark for Item {
 }
 
 pub fn item() -> Item {
-  Item {
+  Item::{
     value: 41
   }
 }

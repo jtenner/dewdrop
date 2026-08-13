@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:7:9: error: MissingConstructionField(3, 2, 67)\n  |\n7 |   Point {\n  |         ^"
+    "fixture.dew:7:10: error: MissingConstructionField(3, 2, 68)\n  |\n7 |   Point::{\n  |          ^"
   ],
   "warnings": [],
   "output": null

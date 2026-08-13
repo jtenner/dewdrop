@@ -231,7 +231,7 @@ test "body HIR preserves every literal kind and empty returns" {
 ///|
 test "body HIR lowers object construction and postfix expressions" {
   let collected = collect_bytes(
-    26UL, b"let object = {\n  text: \"value\"\n  count: 1U\n  intrinsic: @operation\n}\nlet message = Message::Data {\n  value: item\n}.value(1)\nlet indexed = values[1 + 2]\n",
+    26UL, b"let object = {\n  text: \"value\"\n  count: 1U\n  intrinsic: @operation\n}\nlet message = Message::Data::{\n  value: item\n}.value(1)\nlet indexed = values[1 + 2]\n",
   )
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(collected.bodies.length(), 3)
