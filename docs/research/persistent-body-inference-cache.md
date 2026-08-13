@@ -20,8 +20,10 @@ module-value and lambda-capture fingerprints are explicit.
 Artifacts live at:
 
 ```text
-.dew/cache/body-inference/v1-<key>.dbi
+.dew/cache/body-inference/v2-<key>.dbi
 ```
+
+The V2 key domain invalidates pre-method-alias artifacts after transparent-alias qualified dispatch and method-local bound evidence changed.
 
 `DEW_CACHE_DIR` replaces the complete `.dew/cache` root. `dew clean` therefore
 removes these artifacts with the other project-local caches.

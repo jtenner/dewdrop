@@ -55,6 +55,39 @@ fn BasicBodyInferencer::callable_exists(
 }
 
 ///|
+fn BasicBodyInferencer::type_qualified_impl_target_head(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+) -> ImplTargetHead {
+  if semantic_id_module(declaration) == self.collected.module_id {
+    match self.collected.declaration(declaration) {
+      Some(TopLevelReference({ kind: TypeAliasDecl, .. })) => {
+        let resolved_type = self.resolved.declaration_type(declaration)
+        for index, alias_info in self.collected.aliases {
+          if alias_info.declaration == declaration {
+            return resolved_impl_target_head(
+                self.resolved,
+                self.resolved.alias_target_types[index],
+              ).0
+          }
+        }
+        resolved_impl_target_head(self.resolved, resolved_type).0
+      }
+      _ => NominalImplTargetHead(declaration)
+    }
+  } else {
+    match self.imports {
+      Some(imports) =>
+        match imports.type_declaration_type(declaration) {
+          Some(type_) => resolved_impl_target_head(self.resolved, type_).0
+          None => NominalImplTargetHead(declaration)
+        }
+      None => NominalImplTargetHead(declaration)
+    }
+  }
+}
+
+///|
 fn BasicBodyInferencer::call_parameter_count(
   self : BasicBodyInferencer,
   declaration : DeclId,
@@ -640,7 +673,7 @@ fn BasicBodyInferencer::prepare_call(
                     call_slot,
                     expression,
                     arguments,
-                    NominalImplTargetHead(declaration),
+                    self.type_qualified_impl_target_head(declaration),
                     property,
                     offset,
                   ) {
@@ -663,7 +696,7 @@ fn BasicBodyInferencer::prepare_call(
                         call_slot,
                         expression,
                         arguments,
-                        NominalImplTargetHead(declaration),
+                        self.type_qualified_impl_target_head(declaration),
                         property,
                         offset,
                       ) {

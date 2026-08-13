@@ -33,6 +33,35 @@ fn imported_semantic_program(
 }
 
 ///|
+test "imported transparent aliases support qualified and instance methods" {
+  let (program, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn run() -> Counter {\n  Counter::empty().add(2u64)\n}\n",
+    b"pub type Counter = U64\nimpl Counter {\n  fn empty() -> Counter {\n    0u64\n  }\n  fn add(self, value: U64) -> Counter {\n    self + value\n  }\n}\n",
+  )
+  assert_eq(frozen.import_diagnostics.length(), 0)
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let collected = program.modules[0]
+  let body = collected.body_of(collected.lookup_value("run").unwrap()).unwrap()
+  let calls = body_calls(collected, body)
+  assert_eq(calls.length(), 2)
+}
+
+///|
+test "imported method-local bounds select generic method evidence" {
+  let (program, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn run() -> Bool {\n  Filter::empty().add(7u64).contains(7u64)\n}\n",
+    b"pub type Filter = U64\nimpl Filter {\n  fn empty() -> Filter {\n    0u64\n  }\n  fn add<t: Hash>(self, value: t) -> Filter {\n    self | value.hash()\n  }\n  fn contains<t: Hash>(self, value: t) -> Bool {\n    (self & value.hash()) == value.hash()\n  }\n}\n",
+  )
+  assert_eq(frozen.import_diagnostics.length(), 0)
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let collected = program.modules[0]
+  let body = collected.body_of(collected.lookup_value("run").unwrap()).unwrap()
+  assert_eq(body_calls(collected, body).length(), 3)
+}
+
+///|
 test "imported generic function calls select external declaration evidence" {
   let (program, frozen, imports, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run() -> I32 {\n  identity(7)\n}\n", b"pub fn identity<t>(value: t) -> t {\n  value\n}\n",

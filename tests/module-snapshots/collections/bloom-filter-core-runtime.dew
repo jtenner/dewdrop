@@ -1,11 +1,11 @@
 open dew.std.bloom_filter
 
 pub fn main() -> Bool {
-  let empty = bloom_filter_empty()
-  let first = bloom_filter_add_hash(empty, 123u64)
-  let second = bloom_filter_add_hash(first, 456u64)
-  bloom_filter_is_empty(empty) &&
-    bloom_filter_maybe_contains_hash(second, 123u64) &&
-    bloom_filter_maybe_contains_hash(second, 456u64) &&
-    !bloom_filter_maybe_contains_hash(second, 789u64)
+  let empty = BloomFilter::empty()
+  let first = empty.add_hash(123u64)
+  let second = first.add_hash(456u64)
+  empty.is_empty() &&
+    second.maybe_contains_hash(123u64) &&
+    second.maybe_contains_hash(456u64) &&
+    !second.maybe_contains_hash(789u64)
 }

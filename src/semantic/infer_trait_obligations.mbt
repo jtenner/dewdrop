@@ -7,14 +7,39 @@ priv struct DeclaredBodyTraitEvidence {
 }
 
 ///|
-fn BasicBodyInferencer::body_generic_parameters(
+fn BasicBodyInferencer::body_generic_parameter_spans(
   self : BasicBodyInferencer,
-) -> HirSpan {
+) -> (HirSpan, HirSpan) {
   match self.collected.declaration(self.body.declaration) {
     Some(MethodReference(method_info)) if method_info.kind == ImplMethodDecl =>
-      self.collected.generic_parameters_of(method_info.parent)
-    _ => self.collected.generic_parameters_of(self.body.declaration)
+      (
+        self.collected.generic_parameters_of(method_info.parent),
+        self.collected.generic_parameters_of(self.body.declaration),
+      )
+    _ =>
+      (
+        self.collected.generic_parameters_of(self.body.declaration),
+        { start: 0, length: 0 },
+      )
   }
+}
+
+///|
+fn BasicBodyInferencer::body_generic_parameter_ordinal(
+  self : BasicBodyInferencer,
+  parameter : GenericParameterId,
+) -> Int? {
+  let (owner, method_parameters) = self.body_generic_parameter_spans()
+  let parameter_index = semantic_id_local(parameter)
+  if parameter_index >= owner.start &&
+    parameter_index < owner.start + owner.length {
+    return Some(parameter_index - owner.start)
+  }
+  if parameter_index >= method_parameters.start &&
+    parameter_index < method_parameters.start + method_parameters.length {
+    return Some(owner.length + parameter_index - method_parameters.start)
+  }
+  None
 }
 
 ///|
@@ -94,37 +119,43 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
     Some(value) => value
     None => return []
   }
-  let generics = self.body_generic_parameters()
+  let (owner, method_parameters) = self.body_generic_parameter_spans()
   let mut evidence_index = 0
   let evidence : Array[DeclaredBodyTraitEvidence] = []
-  for generic_offset in 0..<generics.length {
-    let generic = self.collected.generic_parameters[generics.start +
-      generic_offset]
-    for bound_offset in 0..<generic.bounds.length {
-      let bound_index = generic.bounds.start + bound_offset
-      if generic.id == parameter {
-        let bound_type = self.resolved.generic_bound_types[bound_index]
-        match self.resolved_bound_trait(bound_type) {
-          Some(trait_declaration) =>
-            if trait_filter is None ||
-              trait_filter.unwrap() == trait_declaration {
-              match
-                self.trait_requirement_named(trait_declaration, method_name) {
-                Some(requirement) =>
-                  evidence.push({
-                    bound_type,
-                    trait_declaration,
-                    requirement,
-                    evidence_index,
-                  })
-                None => ()
+  let mut span = owner
+  let mut phase = 0
+  while phase < 2 {
+    for generic_offset in 0..<span.length {
+      let generic = self.collected.generic_parameters[span.start +
+        generic_offset]
+      for bound_offset in 0..<generic.bounds.length {
+        let bound_index = generic.bounds.start + bound_offset
+        if generic.id == parameter {
+          let bound_type = self.resolved.generic_bound_types[bound_index]
+          match self.resolved_bound_trait(bound_type) {
+            Some(trait_declaration) =>
+              if trait_filter is None ||
+                trait_filter.unwrap() == trait_declaration {
+                match
+                  self.trait_requirement_named(trait_declaration, method_name) {
+                  Some(requirement) =>
+                    evidence.push({
+                      bound_type,
+                      trait_declaration,
+                      requirement,
+                      evidence_index,
+                    })
+                  None => ()
+                }
               }
-            }
-          None => ()
+            None => ()
+          }
         }
+        evidence_index += 1
       }
-      evidence_index += 1
     }
+    span = method_parameters
+    phase += 1
   }
   evidence
 }
@@ -188,29 +219,35 @@ fn BasicBodyInferencer::body_declared_trait_obligation_evidence(
     Some(value) => value
     None => return None
   }
-  let generics = self.body_generic_parameters()
+  let (owner, method_parameters) = self.body_generic_parameter_spans()
   let mut evidence_index = 0
-  for generic_offset in 0..<generics.length {
-    let generic = self.collected.generic_parameters[generics.start +
-      generic_offset]
-    for bound_offset in 0..<generic.bounds.length {
-      let bound_type = self.resolved.generic_bound_types[generic.bounds.start +
-        bound_offset]
-      if generic.id == parameter &&
-        self.resolved_bound_trait(bound_type) == Some(trait_declaration) {
-        let snapshot = self.solver.snapshot()
-        let viable = self.solver.unify(
-          bound,
-          self.solver.resolved_type(bound_type),
-          origin,
-        )
-        self.solver.rollback(snapshot)
-        if viable {
-          return Some(evidence_index)
+  let mut span = owner
+  let mut phase = 0
+  while phase < 2 {
+    for generic_offset in 0..<span.length {
+      let generic = self.collected.generic_parameters[span.start +
+        generic_offset]
+      for bound_offset in 0..<generic.bounds.length {
+        let bound_type = self.resolved.generic_bound_types[generic.bounds.start +
+          bound_offset]
+        if generic.id == parameter &&
+          self.resolved_bound_trait(bound_type) == Some(trait_declaration) {
+          let snapshot = self.solver.snapshot()
+          let viable = self.solver.unify(
+            bound,
+            self.solver.resolved_type(bound_type),
+            origin,
+          )
+          self.solver.rollback(snapshot)
+          if viable {
+            return Some(evidence_index)
+          }
         }
+        evidence_index += 1
       }
-      evidence_index += 1
     }
+    span = method_parameters
+    phase += 1
   }
   None
 }
@@ -382,6 +419,100 @@ fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
 }
 
 ///|
+fn BasicBodyInferencer::method_candidate_bounds_satisfied(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+  origin : TypeConstraintOrigin,
+  depth : Int,
+) -> Bool {
+  if depth >= 64 {
+    return false
+  }
+  let local_method = semantic_id_module(declaration) == self.collected.module_id
+  let generics = if local_method {
+    self.collected.generic_parameters_of(declaration)
+  } else {
+    match self.imports {
+      Some(imports) =>
+        match imports.callable(declaration) {
+          Some(callable) => callable.generic_parameters
+          None => return false
+        }
+      None => return false
+    }
+  }
+  if generics.length == 0 {
+    return true
+  }
+  let argument_start = self.call_scratch.instantiation_generics.length
+  for generic_offset in 0..<generics.length {
+    let (parameter_bounds, bound_types) = if local_method {
+      (
+        self.collected.generic_parameters[generics.start + generic_offset].bounds,
+        self.resolved.generic_bound_types,
+      )
+    } else {
+      let imports = self.imports.unwrap()
+      let callable = imports.callable(declaration).unwrap()
+      (
+        imports.generic_parameter_bounds[callable.generic_bounds.start +
+        generic_offset],
+        imports.generic_bound_types,
+      )
+    }
+    for
+      bound_offset in parameter_bounds.start..<(parameter_bounds.start +
+      parameter_bounds.length) {
+      let resolved_bound = bound_types[bound_offset]
+      let trait_declaration = match self.resolved.types[resolved_bound] {
+        TraitType(value) => value
+        AppliedType(base, _) =>
+          match self.resolved.types[base] {
+            TraitType(value) => value
+            _ => continue
+          }
+        _ => continue
+      }
+      if !self.trait_obligation_satisfied_at_depth(
+          self.call_scratch.candidate_type_arguments[argument_start +
+          generic_offset],
+          self.instantiate_signature_type(resolved_bound),
+          trait_declaration,
+          origin,
+          depth + 1,
+        ) {
+        return false
+      }
+    }
+  }
+  true
+}
+
+///|
+fn BasicBodyInferencer::validate_method_call_obligations(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  declaration : DeclId,
+  type_arguments : HirSpan,
+  implementation_generic_count : Int,
+  offset : UInt64,
+) -> Unit {
+  let method_generic_count = self.call_generic_count(declaration)
+  if method_generic_count <= 0 {
+    return
+  }
+  self.validate_call_obligations(
+    expression,
+    declaration,
+    {
+      start: type_arguments.start + implementation_generic_count,
+      length: method_generic_count,
+    },
+    offset,
+  )
+}
+
+///|
 fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
   self : BasicBodyInferencer,
   target : BodyTypeId,
@@ -548,20 +679,12 @@ fn BasicBodyInferencer::trait_evidence_argument(
       Some(ShapeInferredTraitEvidenceArgument(RefPlannedValueShape))
     BodyResolvedType(resolved_type) =>
       match self.resolved.types[resolved_type] {
-        GenericParameterType(parameter) => {
-          let generics = self.body_generic_parameters()
-          let parameter_index = semantic_id_local(parameter)
-          if parameter_index >= generics.start &&
-            parameter_index < generics.start + generics.length {
-            Some(
-              GenericInferredTraitEvidenceArgument(
-                parameter_index - generics.start,
-              ),
-            )
-          } else {
-            Some(ShapeInferredTraitEvidenceArgument(GenericPlannedValueShape))
+        GenericParameterType(parameter) =>
+          match self.body_generic_parameter_ordinal(parameter) {
+            Some(ordinal) => Some(GenericInferredTraitEvidenceArgument(ordinal))
+            None =>
+              Some(ShapeInferredTraitEvidenceArgument(GenericPlannedValueShape))
           }
-        }
         _ =>
           Some(
             ShapeInferredTraitEvidenceArgument(

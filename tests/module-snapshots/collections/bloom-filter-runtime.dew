@@ -3,15 +3,15 @@ open dew.std.string
 open dew.std.wasi
 
 pub fn main() -> U32 {
-  let empty = bloom_filter_empty()
-  let with_dew = bloom_filter_add(empty, "dew")
-  let collision = bloom_filter_add(empty, "p")
+  let empty = BloomFilter::empty()
+  let with_dew = empty.add("dew")
+  let collision = empty.add("p")
   let valid =
-    bloom_filter_is_empty(empty) &&
-    !bloom_filter_is_empty(with_dew) &&
-    bloom_filter_maybe_contains(with_dew, "dew") &&
-    !bloom_filter_maybe_contains(with_dew, "starshine") &&
-    bloom_filter_maybe_contains(collision, "0") &&
+    empty.is_empty() &&
+    !with_dew.is_empty() &&
+    with_dew.maybe_contains("dew") &&
+    !with_dew.maybe_contains("starshine") &&
+    collision.maybe_contains("0") &&
     !"p".equals("0")
   if valid {
     wasi_fd_write(1u32, b"collections:bloom-filter")

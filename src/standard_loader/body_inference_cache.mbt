@@ -35,7 +35,7 @@ fn body_inference_cache_directory() -> String {
 
 ///|
 fn body_inference_cache_file(key : String) -> String {
-  interface_cache_join(body_inference_cache_directory(), "v1-" + key + ".dbi")
+  interface_cache_join(body_inference_cache_directory(), "v2-" + key + ".dbi")
 }
 
 ///|
@@ -105,7 +105,7 @@ fn body_inference_cache_key_digest(
   interface_ : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V1\x00")
+  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V2\x00")
   output.write_byte(if program.default_preamble { 1 } else { 0 })
   interface_cache_write_string(output, program.module_paths[module_index])
   for byte in source {

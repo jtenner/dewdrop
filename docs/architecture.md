@@ -288,7 +288,11 @@ loops retain direct indexed access.
 
 Small iterative helpers centralize parallel-stack assertions, integer result-range
 assembly, and reusable generation marks across alias import/normalization and
-local unification. Dewdrop deliberately rejects a universal callback visitor:
+local unification. Transparent type aliases preserve their spelling for qualified
+inherent method lookup while dispatching through the normalized target head, so
+scalar aliases such as `BloomFilter = U64` retain one scalar carrier. Method-body
+trait evidence includes contiguous implementation-owner and method-local generic
+parameters. Dewdrop deliberately rejects a universal callback visitor:
 phase-specific task enums and direct loops remain visible, as confirmed by the
 native type-resolution and local-unification benchmarks.
 

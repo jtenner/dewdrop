@@ -2,47 +2,47 @@ open dew.std.bloom_filter
 open dew.std.string
 
 test "Bloom filter reports inserted values and definite misses" {
-  let empty = bloom_filter_empty()
-  assert(bloom_filter_is_empty(empty), "new Bloom filter was not empty")
+  let empty = BloomFilter::empty()
+  assert(empty.is_empty(), "new Bloom filter was not empty")
   assert(
-    !bloom_filter_maybe_contains(empty, "dew"),
+    !empty.maybe_contains("dew"),
     "empty Bloom filter reported a possible member",
   )
-  let with_dew = bloom_filter_add(empty, "dew")
-  assert(!bloom_filter_is_empty(with_dew), "Bloom filter add kept empty bits")
+  let with_dew = empty.add("dew")
+  assert(!with_dew.is_empty(), "Bloom filter add kept empty bits")
   assert(
-    bloom_filter_maybe_contains(with_dew, "dew"),
+    with_dew.maybe_contains("dew"),
     "Bloom filter rejected an inserted value",
   )
   assert(
-    !bloom_filter_maybe_contains(with_dew, "starshine"),
+    !with_dew.maybe_contains("starshine"),
     "Bloom filter lost a definite miss",
   )
-  assert(bloom_filter_is_empty(empty), "Bloom filter mutation changed the input value")
+  assert(empty.is_empty(), "Bloom filter mutation changed the input value")
 }
 
-test "Bloom filter hash operations match Hash-based operations" {
+test "Bloom filter hash methods match Hash-based methods" {
   let hash = "dew".hash()
-  let from_hash = bloom_filter_add_hash(bloom_filter_empty(), hash)
-  let from_value = bloom_filter_add(bloom_filter_empty(), "dew")
+  let from_hash = BloomFilter::empty().add_hash(hash)
+  let from_value = BloomFilter::empty().add("dew")
   assert(from_hash == from_value, "Bloom filter hash and value insertion diverged")
   assert(
-    bloom_filter_maybe_contains_hash(from_hash, hash),
+    from_hash.maybe_contains_hash(hash),
     "Bloom filter hash query rejected an inserted hash",
   )
 }
 
 test "Bloom filter positives remain explicitly probabilistic" {
-  let filter = bloom_filter_add(bloom_filter_empty(), "p")
+  let filter = BloomFilter::empty().add("p")
   assert(
-    bloom_filter_maybe_contains(filter, "0"),
+    filter.maybe_contains("0"),
     "expected deterministic two-probe Bloom collision changed",
   )
   assert(!"p".equals("0"), "Bloom collision fixture is not distinct")
 }
 
 test "Bloom filter accepts any value with Hash evidence" {
-  let filter = bloom_filter_add(bloom_filter_empty(), 42u64)
-  assert(bloom_filter_maybe_contains(filter, 42u64), "U64 Hash value was absent")
-  assert(!bloom_filter_maybe_contains(filter, 43u64), "distinct U64 was not a definite miss")
+  let filter = BloomFilter::empty().add(42u64)
+  assert(filter.maybe_contains(42u64), "U64 Hash value was absent")
+  assert(!filter.maybe_contains(43u64), "distinct U64 was not a definite miss")
 }

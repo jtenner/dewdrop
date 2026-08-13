@@ -22,6 +22,88 @@ test "inherent instance methods select exact implementation declarations" {
 }
 
 ///|
+test "transparent aliases support qualified and instance inherent methods" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    718UL, b"type Counter = U64\nimpl Counter {\n  fn empty() -> Counter {\n    0u64\n  }\n  fn add(self, value: U64) -> Counter {\n    self + value\n  }\n}\nfn use() -> Counter {\n  Counter::empty().add(2u64)\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  assert_eq(calls.length(), 2)
+  for call in calls {
+    assert_call_primitive(
+      inferred,
+      resolved,
+      inferred.expression_types[call],
+      U64Type,
+    )
+  }
+}
+
+///|
+test "method-local bounds are available inside inherent method bodies" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    719UL, b"trait Mark {\n  fn mark(self) -> U64\n}\nimpl Mark for U64 {\n  fn mark(self) -> U64 {\n    self\n  }\n}\nstruct Hasher {}\nimpl Hasher {\n  fn mark_value<t: Mark>(value: t) -> U64 {\n    value.mark()\n  }\n}\nfn use() -> U64 {\n  Hasher::mark_value(7u64)\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  let owner_generics = collected.generic_parameters_of(
+    collected.impls[1].declaration,
+  )
+  let method_generics = collected.generic_parameters_of(collected.methods[2].id)
+  assert_eq(owner_generics.length, 0)
+  assert_eq(method_generics.length, 1)
+  let generic = collected.generic_parameters[method_generics.start]
+  assert_eq(generic.bounds.length, 1)
+  let parameters = collected.parameters_of(collected.methods[2].id)
+  assert_eq(parameters.length, 1)
+  match resolved.types[resolved.parameter_types[parameters.start]] {
+    GenericParameterType(parameter) => assert_eq(parameter, generic.id)
+    _ => fail("expected method parameter to retain its generic identity")
+  }
+  let bound_type = resolved.generic_bound_types[generic.bounds.start]
+  match resolved.types[bound_type] {
+    TraitType(declaration) =>
+      assert_eq(
+        collected.name(
+          collected.declarations[semantic_id_local(declaration)].name,
+        ),
+        "Mark",
+      )
+    AppliedType(base, _) =>
+      match resolved.types[base] {
+        TraitType(declaration) =>
+          assert_eq(
+            collected.name(
+              collected.declarations[semantic_id_local(declaration)].name,
+            ),
+            "Mark",
+          )
+        _ => fail("expected applied method-local Mark bound")
+      }
+    _ => fail("expected method-local Mark bound")
+  }
+  for diagnostic in inferred.diagnostics {
+    match diagnostic {
+      NoMatchingMethod(name, _, _) =>
+        fail("unexpected missing method: " + collected.name(name))
+      UnsatisfiedTraitObligation(_, _, _, _, _) =>
+        fail("unexpected unsatisfied method-local trait bound")
+      _ => fail("unexpected method-local generic diagnostic")
+    }
+  }
+  assert_eq(inferred.diagnostics.length(), 0)
+}
+
+///|
+test "method-local bounds remain available after earlier generic methods" {
+  let (_, _, _, inferred) = call_test_module(
+    720UL, b"trait Mark {\n  fn mark(self) -> U64\n}\nimpl Mark for U64 {\n  fn mark(self) -> U64 {\n    self\n  }\n}\nstruct Hasher<a> {}\nimpl<a> Hasher<a> {\n  fn first<x>(self, value: x) -> x {\n    value\n  }\n  fn mark_value<t: Mark>(self, value: t) -> U64 {\n    value.mark()\n  }\n}\nfn use(hasher: Hasher<Bool>) -> U64 {\n  hasher.mark_value(7u64)\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+}
+
+///|
 test "generic inherent methods substitute impl arguments and Self" {
   let (collected, resolved, _, inferred) = call_test_module(
     702UL, b"struct Box<t> {\n  item: t\n}\nimpl<t> Box<t> {\n  fn get(self) -> t {\n    self.item\n  }\n}\nfn use(boxed: Box<I32>) -> I32 {\n  boxed.get()\n}\n",

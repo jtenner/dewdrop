@@ -66,7 +66,10 @@ fn BasicBodyInferencer::begin_method_candidate(
     self.collected.module_id {
     self.collected.generic_parameters_of(declaration)
   } else {
-    { start: 0, length: self.call_generic_count(declaration) }
+    match self.imported_callable_of(declaration) {
+      Some(callable) => callable.generic_parameters
+      None => { start: 0, length: 0 }
+    }
   }
   self.call_scratch.candidate_type_arguments.clear()
   for
@@ -143,6 +146,9 @@ fn BasicBodyInferencer::try_method_candidate(
       implementation_index, origin, 0,
     )
   }
+  if viable {
+    viable = self.method_candidate_bounds_satisfied(declaration, origin, 0)
+  }
   self.solver.rollback(snapshot)
   viable
 }
@@ -186,12 +192,24 @@ fn BasicBodyInferencer::select_method_candidate(
   for type_ in self.call_scratch.candidate_type_arguments {
     self.call_type_arguments.push(type_)
   }
-  self.call_targets[call_slot] = SelectedInferredCallTarget(declaration, {
+  let type_arguments = {
     start,
     length: self.call_scratch.candidate_type_arguments.length(),
-  })
+  }
+  self.call_targets[call_slot] = SelectedInferredCallTarget(
+    declaration, type_arguments,
+  )
   self.record_selected_impl_prerequisite_evidence(
     expression, implementation_index, origin,
+  )
+  self.validate_method_call_obligations(
+    expression,
+    declaration,
+    type_arguments,
+    self.implementation_generic_parameters(
+      self.impl_index.implementations[implementation_index].declaration,
+    ).length,
+    offset,
   )
 }
 
