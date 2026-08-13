@@ -147,19 +147,21 @@ strict eager gap is approximately 4.4-9.1x.
 
 ## Conclusions and next optimization order
 
-1. Replace parser `Array<U32>` one-cell counters with cheaper fixed/scalar state
-   and consolidate writer error/length state.
-2. Profile Array growth and recursive `JsonValue` construction independently on
-   string-heavy and aggregate-heavy fixtures.
-3. Fuse number-end discovery and grammar validation where exact diagnostics can
-   remain identical; profile serialization revalidation separately.
-4. Consider an opaque validated `JsonNumber` only as a separate API change.
-5. Add a separate lazy/raw document API if passthrough and selective access are
-   desired. Do not silently weaken `JsonValue`'s eager, strict contract.
-6. Consider generated typed decoding only as a distinct API. Its semantics,
-   unknown-field policy, duplicate handling, number conversion policy, and code
-   size must be explicit.
+Parser and writer scalar state, validated String scanning, explicit retained
+source views, source-preserving `JsonDocument`, and validate-once `JsonNumber`
+are now implemented. Retained parsing removes roughly 20-28% from the compact
+parse path when callers accept whole-source retention, and repeated constructed
+number serialization improves 38% through `JsonNumber`.
+
+The next large work is intentionally separate:
+
+1. generated typed decoding with explicit unknown-field, duplicate, conversion,
+   limit, diagnostics, and code-size policies;
+2. a truly allocation-free event engine after recursive generic visitor linkage
+   is supported or a stable non-generic callback carrier is designed;
+3. compiler/backend improvements to recursive enum and collection construction
+   that benefit the compact eager API generally.
 
 Direct String SIMD was useful because it enabled the broader no-escape and
-compact-span tranche. It still does not replace eager tree construction or make
-the dynamic/lazy json-as path semantically equivalent.
+retained-span tranches. It still does not replace eager tree construction or
+make json-as's generated typed and dynamic lazy modes semantically equivalent.

@@ -81,7 +81,7 @@
 
 ## Standard library
 
-- [ ] Profile exact-number materialization and validation without weakening `JsonValue::Number(String)`; prior fused scanning regressed large documents and remains rejected.
+- [ ] Design generated typed JSON decoding and a non-generic allocation-free event engine; retained documents and validate-once JsonNumber values are complete, while recursive generic visitors remain blocked by backend linkage.
 - [ ] Specify and benchmark workloads before adding finger trees or persistent lists.
 - [ ] Implement bounded Dew-native TOML; add YAML only after JSON and TOML stabilize.
 - [ ] Define cryptography boundaries and reviewed algorithms before implementation.

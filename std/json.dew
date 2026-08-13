@@ -11,6 +11,7 @@ pub enum JsonValue {
   Null
   Bool(Bool)
   Number(String)
+  ValidatedNumber(JsonNumber)
   String(String)
   Array(Array<JsonValue>)
   Object(Array<JsonMember>)
@@ -21,12 +22,22 @@ pub struct JsonMember {
   value: JsonValue
 }
 
+pub struct JsonNumber {
+  lexeme: String
+}
+
 pub struct JsonLimits {
   max_input_bytes: U32
   max_depth: U32
   max_values: U32
   max_string_bytes: U32
 }
+
+pub struct JsonDocument {
+  source: String
+  value: JsonValue
+}
+
 
 pub enum JsonParseError {
   InputLimitExceeded(U32)
@@ -66,6 +77,7 @@ struct JsonParser {
   source: String
   state: FixedArray<U32>
   limits: JsonLimits
+  compact_tokens: Bool
 }
 
 struct JsonWriter {
@@ -433,7 +445,12 @@ fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
         Result::Err(JsonParseError::StringLimitExceeded(first_special))
       } else {
         json_parser_set_offset(parser, first_special + 1u32)
-        Result::Ok(parser.source.view(content, decoded_length).compact())
+        let view = parser.source.view(content, decoded_length)
+        if parser.compact_tokens {
+          Result::Ok(view.compact())
+        } else {
+          Result::Ok(view.to_string())
+        }
       }
     } else if parser.input.byte_at(first_special) < 32u8 {
       Result::Err(JsonParseError::InvalidEscape(first_special))
@@ -551,14 +568,46 @@ fn json_parse_literal(
   }
 }
 
-fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
+pub fn json_number(value: String) -> Result<JsonNumber, JsonWriteError> {
+  let bytes = value.as_bytes()
+  if json_number_is_valid(bytes, 0u32, bytes.byte_length()) {
+    Result::Ok(JsonNumber {
+      lexeme: value
+    })
+  } else {
+    Result::Err(JsonWriteError::InvalidNumber(value))
+  }
+}
+
+impl JsonNumber {
+  fn lexeme(self) -> String {
+    self.lexeme
+  }
+  fn value(self) -> JsonValue {
+    JsonValue::ValidatedNumber(self)
+  }
+}
+
+fn json_parse_number_lexeme(parser: JsonParser) -> Result<String, JsonParseError> {
   let start = json_parser_offset(parser)
   let end = json_scan_scalar_end_simd(parser.input, start)
   if json_number_is_valid(parser.input, start, end) == false {
     Result::Err(JsonParseError::InvalidNumber(start))
   } else {
     json_parser_set_offset(parser, end)
-    Result::Ok(JsonValue::Number(parser.source.view(start, end - start).compact()))
+    let view = parser.source.view(start, end - start)
+    if parser.compact_tokens {
+      Result::Ok(view.compact())
+    } else {
+      Result::Ok(view.to_string())
+    }
+  }
+}
+
+fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
+  match json_parse_number_lexeme(parser) {
+    Result::Ok(value) => Result::Ok(JsonValue::Number(value))
+    Result::Err(error) => Result::Err(error)
   }
 }
 
@@ -839,6 +888,7 @@ fn json_parse_value(
 fn json_parse_validated_string_with_limits(
   source: String,
   limits: JsonLimits,
+  compact_tokens: Bool,
 ) -> Result<JsonValue, JsonParseError> {
   let length = source.byte_length()
   if length > limits.max_input_bytes {
@@ -849,6 +899,7 @@ fn json_parse_validated_string_with_limits(
       source: source
       state: FixedArray::make(2u32, 0u32)
       limits: limits
+      compact_tokens: compact_tokens
     }
     match json_parse_value(parser, 0u32) {
       Result::Err(error) => Result::Err(error)
@@ -877,6 +928,7 @@ pub fn json_parse_bytes_with_limits(
     json_parse_validated_string_with_limits(
       json_bytes_to_string_unchecked(input),
       limits,
+      true,
     )
   }
 }
@@ -885,9 +937,71 @@ pub fn json_parse_bytes(input: Bytes) -> Result<JsonValue, JsonParseError> {
   json_parse_bytes_with_limits(input, json_default_limits())
 }
 
-pub fn json_parse(input: String) -> Result<JsonValue, JsonParseError> {
-  json_parse_validated_string_with_limits(input, json_default_limits())
+pub fn json_parse_with_limits(
+  input: String,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonParseError> {
+  json_parse_validated_string_with_limits(input, limits, true)
 }
+
+pub fn json_parse(input: String) -> Result<JsonValue, JsonParseError> {
+  json_parse_with_limits(input, json_default_limits())
+}
+
+pub fn json_parse_retained_with_limits(
+  input: String,
+  limits: JsonLimits,
+) -> Result<JsonValue, JsonParseError> {
+  json_parse_validated_string_with_limits(input, limits, false)
+}
+
+pub fn json_parse_retained(input: String) -> Result<JsonValue, JsonParseError> {
+  json_parse_retained_with_limits(input, json_default_limits())
+}
+
+pub fn json_parse_document_with_limits(
+  input: String,
+  limits: JsonLimits,
+) -> Result<JsonDocument, JsonParseError> {
+  match json_parse_retained_with_limits(input, limits) {
+    Result::Err(error) => Result::Err(error)
+    Result::Ok(value) => Result::Ok(JsonDocument {
+      source: input
+      value: value
+    })
+  }
+}
+
+pub fn json_parse_document(input: String) -> Result<JsonDocument, JsonParseError> {
+  json_parse_document_with_limits(input, json_default_limits())
+}
+
+impl JsonDocument {
+  fn source(self) -> String {
+    self.source
+  }
+  fn value(self) -> JsonValue {
+    self.value
+  }
+  fn stringify_source(self) -> String {
+    self.source
+  }
+}
+
+pub fn json_validate_with_limits(
+  input: String,
+  limits: JsonLimits,
+) -> Result<Unit, JsonParseError> {
+  match json_parse_retained_with_limits(input, limits) {
+    Result::Ok(_) => Result::Ok(json_unit())
+    Result::Err(error) => Result::Err(error)
+  }
+}
+
+pub fn json_validate(input: String) -> Result<Unit, JsonParseError> {
+  json_validate_with_limits(input, json_default_limits())
+}
+
 
 pub fn json_parse_reader_with_limits<r: Reader>(
   reader: r,
@@ -1051,6 +1165,7 @@ fn json_write_value(
           json_writer_set_payload_error(writer, 2u32, number)
         }
       }
+      JsonValue::ValidatedNumber(number) => json_writer_append_text(writer, number.lexeme)
       JsonValue::String(text) => json_write_string(writer, text)
       JsonValue::Array(values) => {
         json_writer_append_ascii(writer, 91u8)

@@ -155,3 +155,12 @@ code and optional typed String payload in fixed cells rather than three growable
 arrays. Measurements, rejected workload-dependent candidates, and boundary
 coverage are recorded in
 [`json-validated-string-performance.md`](json-validated-string-performance.md).
+
+Callers that explicitly accept whole-source retention can use
+`json_parse_retained` or `json_parse_document`; these preserve the same strict
+parser policy while sharing clean String and exact-number ranges. `JsonDocument`
+can return the original validated source byte-for-byte, while canonical output
+still traverses `document.value()`. `JsonNumber` provides a validate-once path
+for repeatedly serialized constructed numbers. API contracts and paired results
+are recorded in
+[`json-retained-and-validated-apis.md`](json-retained-and-validated-apis.md).

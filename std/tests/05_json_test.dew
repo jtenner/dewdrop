@@ -34,6 +34,39 @@ test "JSON parses nested values and exact numbers" {
   }
 }
 
+test "JSON validation uses strict retained parsing" {
+  assert(json_validate("{\"ok\":[true,null,-1.25e2]}") is Result::Ok(_), "valid JSON failed validation")
+  assert(
+    json_validate("{\"a\":1,\"a\":2}") is Result::Err(JsonParseError::DuplicateObjectKey(_, "a")),
+    "duplicate key passed validation",
+  )
+}
+
+test "JSON retained parsing and documents preserve source views" {
+  let document = " {\"key\":\"abcdefghijklmnopqrstuvwxyz0123456789\",\"number\":-12.5e2} "
+  match json_parse_retained(document) {
+    Result::Ok(JsonValue::Object(members)) => {
+      assert(
+        json_object_get(members, "key") is Option::Some(JsonValue::String("abcdefghijklmnopqrstuvwxyz0123456789")),
+        "retained clean string changed",
+      )
+      assert(
+        json_object_get(members, "number") is Option::Some(JsonValue::Number("-12.5e2")),
+        "retained exact number changed",
+      )
+    }
+    _ => assert(false, "retained JSON did not parse")
+  }
+  match json_parse_document(document) {
+    Result::Ok(parsed) => {
+      assert(parsed.source().equals(document), "document source changed")
+      assert(parsed.stringify_source().equals(document), "source-preserving output changed")
+      assert(parsed.value() is JsonValue::Object(_), "document value changed")
+    }
+    Result::Err(_) => assert(false, "JSON document did not parse")
+  }
+}
+
 test "JSON decodes escapes and surrogate pairs" {
   match json_parse("\"line\\n\\u03bb \\ud83c\\udf0d\"") {
     Result::Ok(JsonValue::String(value)) => {
@@ -183,6 +216,23 @@ test "JSON serialization is compact and deterministic" {
     }
     Result::Err(_) => assert(false, "JSON serialization failed")
   }
+}
+
+test "JSON validated numbers skip repeated validation without weakening constructors" {
+  match json_number("-12.5e2") {
+    Result::Ok(number) => {
+      assert(number.lexeme().equals("-12.5e2"), "validated number lexeme changed")
+      assert(
+        json_stringify(number.value()) is Result::Ok("-12.5e2"),
+        "validated number did not serialize",
+      )
+    }
+    Result::Err(_) => assert(false, "valid number was rejected")
+  }
+  assert(
+    json_number("nan") is Result::Err(JsonWriteError::InvalidNumber("nan")),
+    "invalid validated number was accepted",
+  )
 }
 
 test "JSON serialization validates nested number lexemes and duplicate keys" {
