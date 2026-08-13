@@ -160,7 +160,7 @@ test "standard import prepass selects JSON dependencies" {
     ]),
     (
       15, false, false, false, true, false, false, true, true, true, false, false,
-      2048, 2048,
+      6144, 2048,
     ),
   )
 }

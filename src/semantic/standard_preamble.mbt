@@ -173,7 +173,7 @@ fn selected_standard_modules(
                 io = true
                 wasm_intrinsics = true
                 lane_mask = lane_mask | 2048
-                collection_mask = collection_mask | 2048
+                collection_mask = collection_mask | 6144
               }
               "queue" => collection_mask = collection_mask | 2
               "ordering" => collection_mask = collection_mask | 16

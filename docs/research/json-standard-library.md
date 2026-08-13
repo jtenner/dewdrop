@@ -132,3 +132,9 @@ August 13, 2026 measurements are recorded in
 comparison shows that String-to-Bytes wrapping is effectively neutral and the
 redundant UTF-8 pass accounts for only about 2.4-5.5% of Dew parse time; eager
 recursive tree construction and policy work dominate the larger throughput gap.
+
+Wide-object duplicate checking now uses four scalar filters from
+`dew.std.bloom_filter` after a 16-key threshold, while every probabilistic
+positive still performs the authoritative source-order equality scan. Paired
+measurements, threshold analysis, collision coverage, and the exact policy are
+recorded in [`json-bloom-prefilter.md`](json-bloom-prefilter.md).

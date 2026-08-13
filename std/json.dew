@@ -1,4 +1,5 @@
 open dew.std.array
+open dew.std.bloom_filter
 open dew.std.bytes
 open dew.std.io
 open dew.std.string
@@ -552,6 +553,10 @@ fn json_string_equals(left: String, right: String) -> Bool {
   left.equals(right)
 }
 
+fn json_string_hash(value: String) -> U64 {
+  value.hash()
+}
+
 fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
   while 0u32 {
     index if index < members.length() => {
@@ -563,6 +568,37 @@ fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
     }
     _ => break false
   }
+}
+
+fn json_u64_to_u32(value: U64) -> U32 {
+  value.into()
+}
+
+fn json_bloom_shard(hash: U64) -> U32 {
+  json_u64_to_u32((hash >> 43u64) & 3u64)
+}
+
+fn json_bloom_shard_maybe_contains(
+  first: BloomFilter,
+  second: BloomFilter,
+  third: BloomFilter,
+  fourth: BloomFilter,
+  shard: U32,
+  hash: U64,
+) -> Bool {
+  if shard == 0u32 {
+    first.maybe_contains_hash(hash)
+  } else if shard == 1u32 {
+    second.maybe_contains_hash(hash)
+  } else if shard == 2u32 {
+    third.maybe_contains_hash(hash)
+  } else {
+    fourth.maybe_contains_hash(hash)
+  }
+}
+
+fn json_bloom_threshold() -> U32 {
+  16u32
 }
 
 fn json_string_array_has_key(keys: Array<String>, key: String) -> Bool {
@@ -583,6 +619,10 @@ fn json_parse_object(
   depth: U32,
 ) -> Result<JsonValue, JsonParseError> {
   let members = Array::new()
+  let mut key_filter0 = BloomFilter::empty()
+  let mut key_filter1 = BloomFilter::empty()
+  let mut key_filter2 = BloomFilter::empty()
+  let mut key_filter3 = BloomFilter::empty()
   json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
   json_parser_skip_whitespace(parser)
   if json_parser_offset(parser) < parser.input.byte_length() &&
@@ -607,8 +647,61 @@ fn json_parse_object(
         Result::Ok(value) => value
         Result::Err(error) => break Result::Err(error)
       }
-      if json_object_has_key(members, key) {
+      let member_count = members.length()
+      let bloom_active = member_count >= json_bloom_threshold()
+      let key_hash = if bloom_active {
+        key.hash()
+      } else {
+        0u64
+      }
+      if member_count == json_bloom_threshold() {
+        while 0u32 {
+          index if index < member_count => {
+            let member = members.get_unchecked(index)
+            let existing_hash = json_string_hash(member.key)
+            let existing_shard = json_bloom_shard(existing_hash)
+            if existing_shard == 0u32 {
+              key_filter0 = key_filter0.add_hash(existing_hash)
+            } else if existing_shard == 1u32 {
+              key_filter1 = key_filter1.add_hash(existing_hash)
+            } else if existing_shard == 2u32 {
+              key_filter2 = key_filter2.add_hash(existing_hash)
+            } else {
+              key_filter3 = key_filter3.add_hash(existing_hash)
+            }
+            continue index + 1u32
+          }
+          _ => break json_unit()
+        }
+      } else {
+      }
+      let key_shard = if bloom_active {
+        json_bloom_shard(key_hash)
+      } else {
+        0u32
+      }
+      let duplicate = if bloom_active {
+        json_bloom_shard_maybe_contains(
+          key_filter0,
+          key_filter1,
+          key_filter2,
+          key_filter3,
+          key_shard,
+          key_hash,
+        ) && json_object_has_key(members, key)
+      } else {
+        json_object_has_key(members, key)
+      }
+      if duplicate {
         break Result::Err(JsonParseError::DuplicateObjectKey(key_offset, key))
+      } else if key_shard == 0u32 && bloom_active {
+        key_filter0 = key_filter0.add_hash(key_hash)
+      } else if key_shard == 1u32 && bloom_active {
+        key_filter1 = key_filter1.add_hash(key_hash)
+      } else if key_shard == 2u32 && bloom_active {
+        key_filter2 = key_filter2.add_hash(key_hash)
+      } else if bloom_active {
+        key_filter3 = key_filter3.add_hash(key_hash)
       } else {
       }
       json_parser_skip_whitespace(parser)
@@ -910,15 +1003,52 @@ fn json_write_value(
       JsonValue::Object(members) => {
         json_writer_append_ascii(writer, 123u8)
         let keys = Array::new()
+        let mut key_filter0 = BloomFilter::empty()
+        let mut key_filter1 = BloomFilter::empty()
+        let mut key_filter2 = BloomFilter::empty()
+        let mut key_filter3 = BloomFilter::empty()
+        let bloom_active = members.length() >= json_bloom_threshold()
         let mut first = true
         let iter = members.iter()
         while true {
           true if iter.has_next() && writer.error.get_unchecked(0u32) == 0u32 => {
             let member = iter.next()
-            if json_string_array_has_key(keys, member.key) {
+            let key_hash = if bloom_active {
+              json_string_hash(member.key)
+            } else {
+              0u64
+            }
+            let key_shard = if bloom_active {
+              json_bloom_shard(key_hash)
+            } else {
+              0u32
+            }
+            let duplicate = if bloom_active {
+              json_bloom_shard_maybe_contains(
+                key_filter0,
+                key_filter1,
+                key_filter2,
+                key_filter3,
+                key_shard,
+                key_hash,
+              ) && json_string_array_has_key(keys, member.key)
+            } else {
+              json_string_array_has_key(keys, member.key)
+            }
+            if duplicate {
               writer.duplicate_keys.push(member.key)
               json_writer_set_error(writer, 4u32)
             } else {
+              if key_shard == 0u32 && bloom_active {
+                key_filter0 = key_filter0.add_hash(key_hash)
+              } else if key_shard == 1u32 && bloom_active {
+                key_filter1 = key_filter1.add_hash(key_hash)
+              } else if key_shard == 2u32 && bloom_active {
+                key_filter2 = key_filter2.add_hash(key_hash)
+              } else if bloom_active {
+                key_filter3 = key_filter3.add_hash(key_hash)
+              } else {
+              }
               keys.push(member.key)
               if first {
                 first = false

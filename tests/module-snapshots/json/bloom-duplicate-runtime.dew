@@ -1,0 +1,29 @@
+open dew.std.array
+open dew.std.json
+open dew.std.string
+open dew.std.wasi
+
+pub fn main() -> U32 {
+  let parsed_collision = json_parse("{\"a\":0,\"b\":1,\"c\":2,\"d\":3,\"e\":4,\"f\":5,\"g\":6,\"h\":7,\"i\":8,\"j\":9,\"k\":10,\"l\":11,\"m\":12,\"n\":13,\"o\":14,\"q\":15,\"p\":16,\"0\":17}") is Result::Ok(JsonValue::Object(_))
+  let parsed_duplicate = json_parse("{\"a\":0,\"b\":1,\"c\":2,\"d\":3,\"e\":4,\"f\":5,\"g\":6,\"h\":7,\"i\":8,\"j\":9,\"k\":10,\"l\":11,\"m\":12,\"n\":13,\"o\":14,\"q\":15,\"a\":16}") is Result::Err(JsonParseError::DuplicateObjectKey(_, "a"))
+  let written_collision = match json_parse("{\"100\":null,\"101\":null,\"102\":null,\"103\":null,\"104\":null,\"105\":null,\"106\":null,\"107\":null,\"108\":null,\"109\":null,\"110\":null,\"111\":null,\"112\":null,\"113\":null,\"114\":null,\"115\":null}") {
+    Result::Ok(JsonValue::Object(members)) => {
+      members.push(json_member("p", JsonValue::Null))
+      members.push(json_member("0", JsonValue::Null))
+      json_stringify(JsonValue::Object(members)) is Result::Ok(_)
+    }
+    _ => false
+  }
+  let written_duplicate = match json_parse("{\"0\":null,\"1\":null,\"2\":null,\"3\":null,\"4\":null,\"5\":null,\"6\":null,\"7\":null,\"8\":null,\"9\":null,\"10\":null,\"11\":null,\"12\":null,\"13\":null,\"14\":null,\"15\":null}") {
+    Result::Ok(JsonValue::Object(members)) => {
+      members.push(json_member("0", JsonValue::Null))
+      json_stringify(JsonValue::Object(members)) is Result::Err(JsonWriteError::DuplicateObjectKey("0"))
+    }
+    _ => false
+  }
+  if parsed_collision && parsed_duplicate && written_collision && written_duplicate {
+    wasi_fd_write(1u32, b"json:bloom-exact")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

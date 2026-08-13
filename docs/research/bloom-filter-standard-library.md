@@ -31,4 +31,4 @@ The module uses reserved standard-library slot 52 and is included in determinist
 
 ## Validation
 
-Direct standard-library tests cover empty filters, insertion, definite misses, immutable value behavior, generic `Hash` evidence, parity between value and precomputed-hash operations, and a deterministic false-positive collision between distinct strings. Module-selection tests cover explicit and wildcard loading. JSON integration remains a separate measured tranche so the general primitive lands independently of one consumer.
+Direct standard-library tests cover empty filters, insertion, definite misses, immutable value behavior, generic `Hash` evidence, parity between value and precomputed-hash operations, and a deterministic false-positive collision between distinct strings. Module-selection tests cover explicit and wildcard loading. Strict JSON now consumes the module through a measured four-filter wide-object duplicate-key prefilter; every positive retains exact equality fallback, including the deterministic distinct `"p"`/`"0"` collision. The consumer policy and paired measurements are documented in [`json-bloom-prefilter.md`](json-bloom-prefilter.md).
