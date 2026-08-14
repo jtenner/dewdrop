@@ -1,9 +1,9 @@
 ///|
-/// Parser-event persistent artifact kind and V4 envelope schema.
+/// Parser-event persistent artifact kind and V1 envelope schema.
 let parse_event_artifact_kind = 1
 
 ///|
-let parse_event_envelope_version = 4U
+let parse_event_envelope_version = 1U
 
 ///|
 fn wrap_parse_event_cache_payload(

@@ -1,6 +1,6 @@
 ///|
 /// Parser-event payload schema version.
-let parse_event_payload_version = 4U
+let parse_event_payload_version = 1U
 
 ///|
 /// Conservative recursive syntax depth accepted from persistent artifacts.
@@ -2895,7 +2895,7 @@ pub fn serialize_parse_events(
 }
 
 ///|
-/// Decodes the direct canonical V4 parser-event payload.
+/// Decodes the direct canonical V1 parser-event payload.
 pub fn deserialize_parse_events(
   payload : Bytes,
 ) -> Result[Array[ParseEvent], String] {

@@ -36,7 +36,7 @@ test "parse-event artifact preserves non-finite F32 payload bits" {
 }
 
 ///|
-test "parse-event artifact locks V4 header and declaration discriminants" {
+test "parse-event artifact locks V1 header and declaration discriminants" {
   let events : Array[ParseEvent] = [
     Declaration(
       Let({
@@ -51,7 +51,7 @@ test "parse-event artifact locks V4 header and declaration discriminants" {
   ]
   assert_eq(
     serialize_parse_events(events).unwrap(),
-    b"\x04\x00\x00\x00\x01\x00\x02\x00\x00\x01x\x04\x02\x01\x08\x00",
+    b"\x01\x00\x00\x00\x01\x00\x02\x00\x00\x01x\x04\x02\x01\x08\x00",
   )
 }
 

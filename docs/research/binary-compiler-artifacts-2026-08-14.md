@@ -29,7 +29,7 @@ Legacy artifact sizes from those generated workloads were:
 
 | Artifact set | Files | Bytes |
 | --- | ---: | ---: |
-| parse-event V3 JSON envelopes | 143 | 516,007 |
+| legacy development parse-event JSON envelopes | 143 | 516,007 |
 | standard-interface V12 binary envelope | 1 | 379,462 |
 | workspace-interface V1/V12 binary envelopes | 99 | 154,066 |
 | complete-body V3 JSON envelopes | 3 | 1,327,016 |
@@ -46,7 +46,7 @@ The shared container starts with `DEWART\0\1`, then stores artifact kind, U32 ve
 
 | Artifact | Kind | Current version/path |
 | --- | ---: | --- |
-| parser events | 1 | V4, `parse-events/v4-*.dpe` |
+| parser events | 1 | V1, `parse-events/v1-*.dpe` |
 | standard/external interfaces | 2 | V13, `interfaces/v13-*.dwi` |
 | workspace interfaces | 3 | V2, `workspace-interfaces/v2-*.dwi` |
 | complete inferred bodies | 4 | V4 key/envelope with V2 payload, `body-inference/v4-*.dbi` |

@@ -4,6 +4,16 @@ test "parse-event cache envelope verifies checksum and provenance" {
   let source = @crypto.sha256(b"source")
   let payload = b"payload"
   let wrapped = wrap_parse_event_cache_payload(key, source, payload).unwrap()
+  assert_eq(wrapped[8], 1)
+  assert_eq(wrapped[9], 1)
+  assert_eq(wrapped[10], 0)
+  assert_eq(wrapped[11], 0)
+  assert_eq(wrapped[12], 0)
+  assert_true(
+    parse_event_cache_file(key).has_suffix(
+      "/parse-events/v1-" + @crypto.bytes_to_hex_string(key) + ".dpe",
+    ),
+  )
   assert_eq(
     unwrap_parse_event_cache_payload(wrapped, key, source).unwrap(),
     payload,

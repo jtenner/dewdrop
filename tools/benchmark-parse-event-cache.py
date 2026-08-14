@@ -87,7 +87,7 @@ def main() -> None:
     print(f"cold: {cold * 1000:.3f} ms")
     print(f"warm median: {warm * 1000:.3f} ms")
     print(f"changed-file: {changed * 1000:.3f} ms")
-    artifacts = list((CACHE / "parse-events").glob("v4-*.dpe"))
+    artifacts = list((CACHE / "parse-events").glob("v1-*.dpe"))
     print(f"warm/cold: {warm / cold:.4f}x")
     print(f"artifact files: {len(artifacts)}")
     print(f"artifact bytes: {sum(path.stat().st_size for path in artifacts)}")

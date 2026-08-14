@@ -13,7 +13,7 @@ Bootstrap standard-library bytes participate only when they are selected by a co
 Each artifact key is SHA-256 over:
 
 ```text
-DEW_PARSE_EVENT_KEY_V4\0
+DEW_PARSE_EVENT_KEY_V1\0
 u32 owner/module-path byte length
 owner/module-path UTF-8 bytes
 u32 logical file-path byte length
@@ -28,20 +28,25 @@ The owner path distinguishes identical logical filenames in different workspace 
 Entries live at:
 
 ```text
-.dew/cache/parse-events/v4-<key>.dpe
+.dew/cache/parse-events/v1-<key>.dpe
 ```
 
-The envelope is:
+The V1 envelope is the shared canonical artifact container:
 
 ```text
-DEW_PARSE_EVENT_CACHE_V4\0
-32-byte key/provenance digest
+DEWART\0\1
+u8 kind = 1
+u32 version = 1
+u32 flags = 0
+u64 payload length
+varint provenance count = 2
+32-byte key digest
 32-byte source digest
 32-byte SHA-256(payload)
 payload
 ```
 
-The payload is a direct canonical V4 binary syntax graph. Every declaration,
+The payload is a direct canonical V1 binary syntax graph. Every declaration,
 expression, pattern, token, diagnostic, offset, string, and byte sequence uses an
 explicit stable tag and bounded length. F32/F64 values use exact IEEE bits, so
 non-finite payloads need no JSON marker bridge. Unsigned values use canonical

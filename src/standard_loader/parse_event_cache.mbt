@@ -56,7 +56,7 @@ fn parse_event_cache_key_digest(
   source_digest : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_PARSE_EVENT_KEY_V4\x00")
+  output.write_bytes(b"DEW_PARSE_EVENT_KEY_V1\x00")
   parse_event_cache_write_string(output, owner_path)
   parse_event_cache_write_string(output, file.path)
   for byte in source_digest {
@@ -115,7 +115,7 @@ fn ensure_parse_event_cache_root(path : String) -> Result[Unit, String] {
 fn parse_event_cache_file(key_digest : FixedArray[Byte]) -> String {
   parse_event_cache_join(
     parse_event_cache_join(parse_event_cache_root(), "parse-events"),
-    "v4-" + @crypto.bytes_to_hex_string(key_digest) + ".dpe",
+    "v1-" + @crypto.bytes_to_hex_string(key_digest) + ".dpe",
   )
 }
 

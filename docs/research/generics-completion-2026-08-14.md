@@ -41,7 +41,7 @@ The list is exact rather than partial: its length must equal the selected declar
 
 The parser retains explicit calls distinctly, while collection lowers them to ordinary call HIR plus aligned syntax spans. Declaration type resolution canonicalizes those syntax roots without adding body inference variables. Inference seeds candidate argument slots from the resolved explicit types before signature instantiation, candidate trials, trait-obligation validation, and specialization freezing. Exact arity mismatches use `CallTypeArgumentCountMismatch`.
 
-Because the parser-event AST schema changed, persistent parse-event artifacts advanced from V2 to V3. Frozen-interface and standard-interface cache artifacts advanced from V11 to V12 and retain canonical resolved explicit-call type arrays, because root or imported consumer bodies may proceed into inference after in-memory freezing or cache restoration.
+Because Dewdrop is unreleased, the changed parser-event AST schema remains parser artifact V1; incompatible development artifacts are ignored by the current V1 key and codec. Frozen-interface and standard-interface artifacts retain canonical resolved explicit-call type arrays because root or imported consumer bodies may proceed into inference after in-memory freezing or cache restoration.
 
 ## Structural overload specificity
 

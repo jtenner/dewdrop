@@ -370,7 +370,7 @@ The earlier syntax boundary is now `parse_event_cache.mbt`. It prepares each
 workspace source before standard-module selection, prepares only the selected
 standard sources afterward, and attaches one immutable `ParseEvent` array to the
 file model. Import scanning and collection consume that same array in manifest
-order. `parse_event_cache_envelope.mbt` validates V4 key/source provenance and the
+order. `parse_event_cache_envelope.mbt` validates V1 key/source provenance and the
 payload checksum. The payload is a direct tagged binary syntax graph with exact
 IEEE float bits and no JSON bridge. The native platform shim publishes through a flushed,
 POSIX-fsynced same-directory temporary file and atomic rename. Missing entries
