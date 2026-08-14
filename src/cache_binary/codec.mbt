@@ -296,6 +296,15 @@ pub fn Reader::read_count(self : Reader, maximum : Int, field : String) -> Int {
 }
 
 ///|
+pub fn Reader::skip(self : Reader, length : Int, field : String) -> Unit {
+  if length < 0 || length > self.remaining() {
+    self.fail(field, "invalid or truncated skipped range")
+    return
+  }
+  self.offset += length
+}
+
+///|
 pub fn Reader::read_raw_bytes(
   self : Reader,
   length : Int,

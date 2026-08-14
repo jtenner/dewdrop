@@ -25,13 +25,14 @@ The owner path distinguishes identical logical filenames in different workspace 
 
 ## Artifact format
 
-Entries live at:
+The default native path stores each file as a `PEVT` entry in one
+`.dew/cache/packs/v1-<graph>.dwp` file. `--no-cache-pack` retains the legacy path:
 
 ```text
 .dew/cache/parse-events/v1-<key>.dpe
 ```
 
-The V1 envelope is the shared canonical artifact container:
+The legacy V1 envelope is the shared canonical artifact container:
 
 ```text
 DEWART\0\1

@@ -42,7 +42,7 @@ All baseline cached and uncached comparison outputs were byte-identical.
 
 All hot artifacts now use canonical binary fields. Unsigned integers use minimal unsigned varints. Signed `Int` values use ZigZag varints. Fixed U32/U64 fields are little-endian. F32/F64 use exact IEEE bits. Booleans, options, and domain enums use explicit checked tags. Strings are strict UTF-8. Strings, bytes, arrays, and sections are length-prefixed and bounded.
 
-The shared container starts with `DEWART\0\1`, then stores artifact kind, U32 version, zero flags, U64 payload length, bounded provenance digests, SHA-256 payload checksum, and exact payload bytes. Readers retain the first contextual field/byte error and reject non-canonical varints, integer overflow, impossible counts, invalid tags, truncation, trailing bytes, checksum failure, and provenance mismatch before indexing or large allocation.
+The original shared container starts with `DEWART\0\1`, then stores artifact kind, U32 version, zero flags, U64 payload length, bounded provenance digests, SHA-256 payload checksum, and exact payload bytes. Readers retain the first contextual field/byte error and reject non-canonical varints, integer overflow, impossible counts, invalid tags, truncation, trailing bytes, checksum failure, and provenance mismatch before indexing or large allocation. Native compilation now places these semantic payloads inside one aligned BLAKE3 pack by default; the original envelopes remain the explicit `--no-cache-pack` migration path.
 
 | Artifact | Kind | Current version/path |
 | --- | ---: | --- |
@@ -60,7 +60,7 @@ Family bundles store sorted raw 32-byte fingerprints, fixed U64 offset/length re
 
 ## Migration and corruption policy
 
-Old filenames are stale by construction and are not decoded under new schemas. Missing current-version files are misses. Existing current-version files that are malformed, truncated, non-canonical, mismatched, or corrupt fail visibly. Publication remains same-directory, flushed/fsynced, and atomic.
+Old filenames are stale by construction and are not decoded under new schemas. Missing current-version files are misses. Existing current-version files that are malformed, truncated, non-canonical, mismatched, or corrupt fail visibly. Publication remains same-directory, flushed/fsynced, and atomic. The aligned V1 pack is a new outer storage layer rather than a semantic payload rewrite; see [`unified-aligned-cache-pack.md`](unified-aligned-cache-pack.md).
 
 Tests cover primitive golden bytes, canonical varints, overflow and allocation bombs, exact float bits, every common-envelope truncation, deterministic payload mutations, invalid tags, trailing bytes, provenance/checksum mismatch, semantic evidence validation, sorted/duplicate family indexes, and byte-identical re-encoding. Python tests exhaustively truncate and mutate whole-build and compiler-memo artifacts.
 

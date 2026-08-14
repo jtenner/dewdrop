@@ -21,23 +21,17 @@ fragment hit/miss counts.
 
 ## Artifacts and keys
 
-Type layouts use:
+The default native path stores type layouts in `LAYT` sections and baseline
+WasmGC fragments in `FRG0` sections inside one
+`.dew/cache/packs/v1-<graph>.dwp` file. `--no-cache-pack` retains the legacy
+`.dew/cache/type-layouts/` and `.dew/cache/wasmgc-fragments/` files for migration
+and comparison tests.
 
-```text
-.dew/cache/type-layouts/v1-<key>.dtl
-```
+The layout entry key commits to the default-preamble policy, logical module path,
+stable module ID, exact ordered module source, transitive frozen
+interface/implementation-evidence context, and compiler producer fingerprint.
 
-The key commits to the default-preamble policy, logical module path, stable
-module ID, exact ordered module source, and transitive frozen
-interface/implementation-evidence context.
-
-Baseline WasmGC fragments use:
-
-```text
-.dew/cache/wasmgc-fragments/v1-<key>.dwf
-```
-
-The key commits to the module identity and exact source plus one complete program
+The fragment entry key commits to the module identity and exact source plus one complete program
 context. That context includes root-module selection, production/test planning
 options, every module path and stable ID, exact source digests, frozen interface
 context, and body-evidence fingerprints. A program edit therefore invalidates
@@ -51,11 +45,10 @@ private edit in another module.
 
 ## Binary schemas and rebasing boundary
 
-Both payloads use bounded canonical binary schemas inside the shared checksummed
-`DEWART\0\1` container:
-
-- artifact kind 8: type layouts;
-- artifact kind 9: WasmGC fragments.
+Both payloads keep their bounded canonical binary schemas. By default they are
+placed in 16-byte-aligned pack entries with full BLAKE3 provenance and payload
+checksums. Legacy mode keeps the shared `DEWART\0\1` kind-8 and kind-9
+envelopes.
 
 The codecs use canonical varints, fixed little-endian IDs and offsets, explicit
 checked enum/Boolean/option tags, strict UTF-8, bounded arrays and bytes, and
@@ -115,10 +108,14 @@ warmed native run measured:
 | warm/disabled ratio | 1.1421x |
 
 The run produced four layout artifacts totaling 48,889 bytes and four fragment
-artifacts totaling 115,050 bytes. The warm filesystem path is 14.21% slower than
-fresh planning on this workload. The cache therefore remains opt-in and causes
-zero default-path regression. Future admission requires a workload where avoided
-fragment work exceeds keying, file I/O, decoding, and validation costs.
+artifacts totaling 115,050 bytes. The legacy warm filesystem path was 14.21%
+slower than fresh planning. Phase-level planning reuse therefore remains opt-in.
+
+The later unified pack keeps these entries for incremental misses but adds an
+exact successful-program section. On the implemented 100-module startup
+benchmark, that exact section avoids all planning and semantic decoding and is
+substantially faster than both legacy phase files and fresh compilation. See
+[`unified-aligned-cache-pack.md`](unified-aligned-cache-pack.md).
 
 ## Validation coverage
 

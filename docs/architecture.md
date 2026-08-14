@@ -101,14 +101,23 @@ physical linking: recursive type groups, initializers, indices, exports
 backend emission: Starshine module construction, validation, binary encoding
 ```
 
+Native persistent compiler data is grouped into one 16-byte-aligned artifact
+pack under `.dew/cache/packs/`. The compiler reads the pack once, scans
+contiguous fixed entry headers, and lazily decodes only selected payloads.
+BLAKE3-256 binds exact owners, direct content, compiler/dependency context, and
+payload bytes. The U32 digest lanes in entry headers are fast filters only.
+Exact successful check, HIR, lowering, and Wasm entries are the default warm
+boundary and bypass all compiler phases. `--no-program-cache` retains phase
+entries while disabling that boundary; `--no-cache-pack` selects the legacy
+per-artifact storage path.
+
 Persistent executable semantics remain opt-in while the end-to-end admission
-policy is evaluated on broader heavy-inference workloads. Their payloads are now
-canonical binary rather than JSON. `--body-cache` first uses a complete module
-artifact under `.dew/cache/body-inference/`; its key
+policy is evaluated on broader heavy-inference workloads. Their payloads remain
+canonical binary inside aligned pack entries. `--body-cache` first uses a
+complete module entry; its key
 commits to exact module source, default-preamble policy, stable module identity,
 and the transitive frozen interface/evidence fingerprint. `--body-family-cache`
-implies that policy and may load one atomic module bundle from
-`.dew/cache/body-inference-families/`. Each entry owns a non-module-value root body
+implies that policy and may load one atomic `BFAM` pack entry. Each entry owns a non-module-value root body
 and its nested lambda tree, commits to exact declaration source plus
 location-independent module-value/signature/name/evidence context, and normalizes
 expression/pattern IDs and absolute offsets before persistence. Lookup validates
@@ -121,16 +130,17 @@ inference remain fresh. The binary codecs pass isolated encode/decode and size
 admission gates, but the explicit policy remains until broader end-to-end cache
 costs are consistently below fresh inference.
 
-`--plan-cache` independently persists canonical binary module type layouts under
-`.dew/cache/type-layouts/` and baseline module-local WasmGC fragments under
-`.dew/cache/wasmgc-fragments/`. Layout keys bind exact module source and frozen
+`--plan-cache` independently persists canonical binary module type layouts and
+baseline module-local WasmGC fragments as `LAYT` and `FRG0` pack sections. Layout
+keys bind exact module source and frozen
 semantic context. Fragment keys additionally bind root selection, planning mode,
 and exact whole-program source/interface/evidence context because optimization
 and reachability are interprocedural. Cached fragments contain no program-level
 specializations or final indices. The physical linker always assigns final type,
 signature, function, global, and initializer indices fresh. This planning cache
 is also opt-in because current end-to-end file I/O and validation exceed fresh
-planning despite fragment decoding being faster in isolation.
+planning despite fragment decoding being faster in isolation. Exact program
+entries avoid that phase-level cost on unchanged warm requests.
 
 The whole-program stages now have explicit implementation owners:
 
@@ -360,16 +370,16 @@ public declarations, types, callables, implementation evidence, dependencies,
 and deterministic fingerprints.
 
 The persistent cache stores checksummed serialized frozen interfaces. Corrupt,
-incompatible, or identity-mismatched artifacts fail visibly. The cache
+incompatible, or identity-mismatched entries fail visibly. The cache
 architecture is generalized around `InterfaceBundleCacheKey` and
-`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V13
-standard envelope and V2 workspace envelope, `interface_bundle_cache.mbt` owns
-provenance, module selection, and
-I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. One
-bundle selects compiler-owned standard modules and verified external
-dependencies. Ordinary non-root workspace modules use artifacts under
-`.dew/cache/workspace-interfaces/`; acyclic modules publish individually while
-multi-module and self-recursive SCCs publish and load as one atomic artifact.
+`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible
+legacy V13 standard and V2 workspace envelopes, `interface_bundle_cache.mbt`
+owns provenance and module selection, `cache_pack.mbt` owns default unified I/O,
+and `cached_analysis.mbt` owns semantic analysis using cached slots. One bundle
+selects compiler-owned standard modules and verified external dependencies.
+Ordinary non-root workspace modules use `IFCE` pack entries; acyclic modules
+publish individually while multi-module and self-recursive SCCs publish and load
+as one atomic entry.
 Lookup occurs in dependency order and keys commit to manifest source identity
 plus direct public content fingerprints. Private dependency changes retain
 downstream hits while public interface changes invalidate dependents
@@ -381,9 +391,10 @@ The earlier syntax boundary is now `parse_event_cache.mbt`. It prepares each
 workspace source before standard-module selection, prepares only the selected
 standard sources afterward, and attaches one immutable `ParseEvent` array to the
 file model. Import scanning and collection consume that same array in manifest
-order. `parse_event_cache_envelope.mbt` validates V1 key/source provenance and the
-payload checksum. The payload is a direct tagged binary syntax graph with exact
-IEEE float bits and no JSON bridge. The native platform shim publishes through a flushed,
+order. Default `PEVT` pack entries bind BLAKE3 owner/source/producer context and
+payload bytes; `parse_event_cache_envelope.mbt` retains the legacy V1
+key/source/checksum path. The payload is a direct tagged binary syntax graph with
+exact IEEE float bits and no JSON bridge. The native platform shim publishes through a flushed,
 POSIX-fsynced same-directory temporary file and atomic rename. Missing entries
 are misses, while malformed, incompatible, mismatched, or corrupt entries fail
 visibly. Body, layout, and fragment caches remain future extensions over these

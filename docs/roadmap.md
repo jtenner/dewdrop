@@ -13,7 +13,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
-- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, opt-in complete-module and declaration-family body-inference reuse, opt-in module type-layout and baseline WasmGC-fragment reuse, fast checksummed whole-build compiler fingerprinting, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
+- one-read 16-byte-aligned compiler cache packs with BLAKE3-256 provenance, lazy selected-entry decoding, exact successful check/HIR/lowering/Wasm reuse, parser/interface reuse, opt-in body/layout/fragment reuse, fast checksummed whole-build compiler fingerprinting, verified host output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
@@ -38,7 +38,8 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation, canonical binary payloads, and explicit opt-in controls pending broader end-to-end admission.
 - [x] Refine module body artifacts into exact declaration-family jobs: one root body plus its nested lambda tree, normalized/rebased IDs and offsets, atomic per-module bundles, strict validation, deterministic mixed merging, map-based lookup, precomputed source ranges, and no duplicate module artifact or partial-bundle rewrite.
 - [x] Replace parser-event, frozen-interface, complete-body, declaration-family, build-output-header, and compiler-fingerprint JSON or legacy payloads with bounded canonical binary artifacts; keep semantic caches opt-in until broader end-to-end admission is stable.
-- [x] Cache module type layouts and baseline module-local WasmGC fragment plans under independently versioned canonical binary schemas; validate all local arenas and keep program-global index assignment fresh. The policy is opt-in because measured warm filesystem overhead still exceeds fresh planning.
+- [x] Cache module type layouts and baseline module-local WasmGC fragment plans under independently versioned canonical binary schemas; validate all local arenas and keep program-global index assignment fresh. The phase policy remains opt-in.
+- [x] Replace per-file/per-module native cache I/O with one 16-byte-aligned BLAKE3 artifact pack, lazy selected-entry validation, atomic repacking, and exact successful check/HIR/lowering/Wasm entries. A 100-module exact warm hit is materially faster than both legacy phase files and fresh compilation.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
 - [x] Cache cyclic workspace interface SCCs as one atomic artifact.
 - [x] Require byte-identical cache-disabled, cold, warm, and private-edit output for planning artifacts.
@@ -56,11 +57,11 @@ The current compiler is written in MoonBit, which cannot execute these compiler 
 ## Compiler resource and performance discipline
 
 The measured compiler, collection, text, and backend baseline is fast enough for
-the first release. Hot compiler caches now use deterministic bounded binary
-artifacts. Parser/body/family/interface codec speed and size gates pass, and the
-verified whole-build hit remains within the regression limit. Semantic body and
-layout/fragment planning caches stay opt-in because thin end-to-end workloads
-still include keying, I/O, decoding, and validation costs beyond fresh work.
+the first release. Hot compiler caches now use deterministic bounded binary payloads inside one
+aligned pack. Parser/body/family/interface codec speed and size gates pass.
+Exact successful requests use one indexed pack read and skip compiler phases.
+Semantic body and layout/fragment phase reuse stays opt-in because its decoding
+and validation can still exceed fresh work when the exact entry misses.
 Remaining MoonBit-compiler work is broader heavy-workload admission, hardening,
 and observability rather than a release gate. Parallel compiler jobs remain
 deferred until self-hosting.

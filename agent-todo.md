@@ -24,7 +24,7 @@ are follow-up hardening and observability work, not release blockers.
 - [ ] Diagnose budget exhaustion deterministically without panic or partial cache publication.
 - [ ] Add opt-in runtime allocation and phase counters with zero production overhead.
 - [ ] Track compile, validation/encoding, runtime time, compiler allocations, and peak memory with warmup and variance.
-- [ ] Extend binary-cache admission measurements to larger external-package and heavy-inference multi-module workloads before changing the default body-cache policy.
+- [ ] Extend aligned-pack phase-cache admission measurements beyond the implemented 100-module startup benchmark to larger external-package and heavy-inference workloads before changing the default body-cache policy.
 - [ ] Establish reviewed cross-engine regression thresholds for hot workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements.
 - [ ] Benchmark Array growth, large reference copying, write barriers, and GC behavior on each supported WasmGC runtime.
 - [ ] Add representative heap, ordered-tree, queue, JSON, and generated typed-decoder performance suites.

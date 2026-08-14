@@ -19,6 +19,8 @@ persistent formats, or long-lived contributor expectations.
   — preserve flat arenas while making phase ownership and mutation explicit.
 - [`0002-parallel-compilation-after-self-hosting.md`](0002-parallel-compilation-after-self-hosting.md)
   — defer compiler job parallelism until Dewdrop is self-hosted.
+- [`0003-unified-aligned-cache-pack.md`](0003-unified-aligned-cache-pack.md)
+  — replace per-module cache I/O with one aligned BLAKE3 pack and exact warm results.
 
 ## Record template
 

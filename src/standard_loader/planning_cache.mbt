@@ -226,6 +226,7 @@ fn lookup_type_layout_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
   module_index : Int,
+  pack? : CompilationCachePack? = None,
 ) -> Result[@semantic.PlannedModuleTypeLayouts?, String] {
   let (fingerprint, key, source, interface_) = match
     type_layout_cache_key(program, frozen, module_index) {
@@ -233,16 +234,41 @@ fn lookup_type_layout_cache(
     Err(error) => return Err("cannot fingerprint type-layout cache: \{error}")
   }
   let path = type_layout_cache_file(fingerprint)
-  if !@fs.path_exists(path) {
-    return Ok(None)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read type-layout cache \{path}: \{error}")
-  }
-  let payload = match
-    unwrap_type_layout_cache_payload(bytes, key, source, interface_) {
-    Ok(value) => value
-    Err(error) => return Err("corrupt type-layout cache \{path}: \{error}")
+  let payload = match pack {
+    Some(session) if session.enabled => {
+      let context = Buffer()
+      context.write_bytes(b"DEW_LAYOUT_PACK_CONTEXT_V1\x00")
+      for byte in key {
+        context.write_byte(byte)
+      }
+      for byte in interface_ {
+        context.write_byte(byte)
+      }
+      match
+        session.lookup(
+          cache_pack_layout_kind,
+          1U,
+          "module:" + program.module_paths[module_index],
+          cache_pack_rehash_digest(source),
+          @cache_binary.blake3(context.to_bytes()),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(None)
+      }
+    }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(None)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error => return Err("cannot read type-layout cache \{path}: \{error}")
+      }
+      match unwrap_type_layout_cache_payload(bytes, key, source, interface_) {
+        Ok(value) => value
+        Err(error) => return Err("corrupt type-layout cache \{path}: \{error}")
+      }
+    }
   }
   let layouts = match
     @semantic.deserialize_planned_module_type_layouts(payload) {
@@ -261,6 +287,7 @@ fn store_type_layout_cache(
   frozen : @semantic.FrozenProgramInterfaces,
   module_index : Int,
   layouts : @semantic.PlannedModuleTypeLayouts,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let (fingerprint, key, source, interface_) = match
     type_layout_cache_key(program, frozen, module_index) {
@@ -270,6 +297,29 @@ fn store_type_layout_cache(
   let payload = match @semantic.serialize_planned_module_type_layouts(layouts) {
     Ok(value) => value
     Err(error) => return Err("cannot serialize type-layout cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled => {
+      let context = Buffer()
+      context.write_bytes(b"DEW_LAYOUT_PACK_CONTEXT_V1\x00")
+      for byte in key {
+        context.write_byte(byte)
+      }
+      for byte in interface_ {
+        context.write_byte(byte)
+      }
+      return session.store(
+        cache_pack_layout_kind,
+        1U,
+        0U,
+        1U,
+        "module:" + program.module_paths[module_index],
+        cache_pack_rehash_digest(source),
+        @cache_binary.blake3(context.to_bytes()),
+        payload,
+      )
+    }
+    _ => ()
   }
   let envelope = match
     wrap_type_layout_cache_payload(key, source, interface_, payload) {
@@ -344,21 +394,52 @@ fn lookup_wasmgc_fragment_cache(
   module_index : Int,
   program_context : FixedArray[Byte],
   options : @semantic.WasmGCPlanningOptions,
+  pack? : CompilationCachePack? = None,
 ) -> Result[@semantic.PlannedModuleWasmGCFragments?, String] {
   let (fingerprint, key, source) = wasmgc_fragment_cache_key(
     program, module_index, program_context,
   )
   let path = wasmgc_fragment_cache_file(fingerprint)
-  if !@fs.path_exists(path) {
-    return Ok(None)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read WasmGC fragment cache \{path}: \{error}")
-  }
-  let payload = match
-    unwrap_wasmgc_fragment_cache_payload(bytes, key, source, program_context) {
-    Ok(value) => value
-    Err(error) => return Err("corrupt WasmGC fragment cache \{path}: \{error}")
+  let payload = match pack {
+    Some(session) if session.enabled => {
+      let context = Buffer()
+      context.write_bytes(b"DEW_FRAGMENT_PACK_CONTEXT_V1\x00")
+      for byte in key {
+        context.write_byte(byte)
+      }
+      for byte in program_context {
+        context.write_byte(byte)
+      }
+      match
+        session.lookup(
+          cache_pack_fragment_kind,
+          1U,
+          "module:" + program.module_paths[module_index],
+          cache_pack_rehash_digest(source),
+          @cache_binary.blake3(context.to_bytes()),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(None)
+      }
+    }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(None)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error =>
+          return Err("cannot read WasmGC fragment cache \{path}: \{error}")
+      }
+      match
+        unwrap_wasmgc_fragment_cache_payload(
+          bytes, key, source, program_context,
+        ) {
+        Ok(value) => value
+        Err(error) =>
+          return Err("corrupt WasmGC fragment cache \{path}: \{error}")
+      }
+    }
   }
   let fragments = match
     @semantic.deserialize_planned_module_wasmgc_fragments(payload) {
@@ -380,6 +461,7 @@ fn store_wasmgc_fragment_cache(
   program_context : FixedArray[Byte],
   options : @semantic.WasmGCPlanningOptions,
   fragments : @semantic.PlannedModuleWasmGCFragments,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   match
     validate_cached_wasmgc_fragments(lowering, module_index, options, fragments) {
@@ -399,6 +481,29 @@ fn store_wasmgc_fragment_cache(
     @semantic.serialize_planned_module_wasmgc_fragments(fragments) {
     Ok(value) => value
     Err(error) => return Err("cannot serialize WasmGC fragment cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled => {
+      let context = Buffer()
+      context.write_bytes(b"DEW_FRAGMENT_PACK_CONTEXT_V1\x00")
+      for byte in key {
+        context.write_byte(byte)
+      }
+      for byte in program_context {
+        context.write_byte(byte)
+      }
+      return session.store(
+        cache_pack_fragment_kind,
+        1U,
+        0U,
+        1U,
+        "module:" + program.module_paths[module_index],
+        cache_pack_rehash_digest(source),
+        @cache_binary.blake3(context.to_bytes()),
+        payload,
+      )
+    }
+    _ => ()
   }
   let envelope = match
     wrap_wasmgc_fragment_cache_payload(key, source, program_context, payload) {
@@ -434,6 +539,7 @@ fn store_wasmgc_fragment_cache(
 pub fn plan_program_lowering_with_cache(
   program : @semantic.CollectedProgram,
   analyzed : @semantic.AnalyzedProgramSemantics,
+  pack? : CompilationCachePack? = None,
 ) -> Result[CachedProgramLowering, String] {
   let enabled = planning_cache_enabled()
   if !enabled {
@@ -452,7 +558,8 @@ pub fn plan_program_lowering_with_cache(
   let mut hits = 0
   let mut misses = 0
   for module_index, collected in program.modules {
-    match lookup_type_layout_cache(program, analyzed.frozen, module_index) {
+    match
+      lookup_type_layout_cache(program, analyzed.frozen, module_index, pack~) {
       Err(error) => return Err(error)
       Ok(Some(value)) => {
         hits += 1
@@ -465,7 +572,13 @@ pub fn plan_program_lowering_with_cache(
           analyzed.frozen.interfaces[module_index].resolved_types,
         )
         match
-          store_type_layout_cache(program, analyzed.frozen, module_index, value) {
+          store_type_layout_cache(
+            program,
+            analyzed.frozen,
+            module_index,
+            value,
+            pack~,
+          ) {
           Ok(_) => ()
           Err(error) => return Err(error)
         }
@@ -494,6 +607,7 @@ pub fn plan_program_wasmgc_link_with_cache(
   lowering : @semantic.PlannedProgramLowering,
   root_module_index : Int,
   options : @semantic.WasmGCPlanningOptions,
+  pack? : CompilationCachePack? = None,
 ) -> Result[CachedProgramWasmGCLink, String] {
   let enabled = planning_cache_enabled()
   if !enabled {
@@ -538,7 +652,12 @@ pub fn plan_program_wasmgc_link_with_cache(
   for module_index, _ in lowering.modules {
     match
       lookup_wasmgc_fragment_cache(
-        program, lowering, module_index, context, options,
+        program,
+        lowering,
+        module_index,
+        context,
+        options,
+        pack~,
       ) {
       Err(error) => return Err(error)
       Ok(Some(value)) => {
@@ -561,7 +680,13 @@ pub fn plan_program_wasmgc_link_with_cache(
       }
       match
         store_wasmgc_fragment_cache(
-          program, lowering, module_index, context, options, fresh,
+          program,
+          lowering,
+          module_index,
+          context,
+          options,
+          fresh,
+          pack~,
         ) {
         Ok(_) => ()
         Err(error) => cache_error = Some(error)

@@ -458,6 +458,7 @@ fn lookup_body_inference_cache(
   resolved : @semantic.ResolvedModuleTypes,
   imports : @semantic.ResolvedModuleImports,
   names : @semantic.ResolvedModuleNames,
+  pack? : CompilationCachePack? = None,
 ) -> Result[@semantic.InferredModuleBodies?, String] {
   let (key, key_digest, source_digest, interface_digest) = match
     body_inference_cache_key(program, frozen, module_index) {
@@ -466,18 +467,46 @@ fn lookup_body_inference_cache(
       return Err("cannot fingerprint body-inference cache: \{error}")
   }
   let path = body_inference_cache_file(key)
-  if !@fs.path_exists(path) {
-    return Ok(None)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read body-inference cache \{path}: \{error}")
-  }
-  let payload = match
-    unwrap_body_inference_cache_payload(
-      bytes, key_digest, source_digest, interface_digest,
-    ) {
-    Ok(value) => value
-    Err(error) => return Err("corrupt body-inference cache \{path}: \{error}")
+  let payload = match pack {
+    Some(session) if session.enabled => {
+      let context_bytes = Buffer()
+      context_bytes.write_bytes(b"DEW_BODY_MODULE_PACK_CONTEXT_V1\x00")
+      for byte in key_digest {
+        context_bytes.write_byte(byte)
+      }
+      for byte in interface_digest {
+        context_bytes.write_byte(byte)
+      }
+      match
+        session.lookup(
+          cache_pack_body_module_kind,
+          2U,
+          "module:" + program.module_paths[module_index],
+          cache_pack_rehash_digest(source_digest),
+          @cache_binary.blake3(context_bytes.to_bytes()),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(None)
+      }
+    }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(None)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error =>
+          return Err("cannot read body-inference cache \{path}: \{error}")
+      }
+      match
+        unwrap_body_inference_cache_payload(
+          bytes, key_digest, source_digest, interface_digest,
+        ) {
+        Ok(value) => value
+        Err(error) =>
+          return Err("corrupt body-inference cache \{path}: \{error}")
+      }
+    }
   }
   let inferred = match @semantic.deserialize_inferred_module_bodies(payload) {
     Ok(value) => value
@@ -502,6 +531,7 @@ fn store_body_inference_cache(
   frozen : @semantic.FrozenProgramInterfaces,
   module_index : Int,
   inferred : @semantic.InferredModuleBodies,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let (key, key_digest, source_digest, interface_digest) = match
     body_inference_cache_key(program, frozen, module_index) {
@@ -512,6 +542,29 @@ fn store_body_inference_cache(
   let payload = match @semantic.serialize_inferred_module_bodies(inferred) {
     Ok(value) => value
     Err(error) => return Err("cannot serialize body-inference cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled => {
+      let context_bytes = Buffer()
+      context_bytes.write_bytes(b"DEW_BODY_MODULE_PACK_CONTEXT_V1\x00")
+      for byte in key_digest {
+        context_bytes.write_byte(byte)
+      }
+      for byte in interface_digest {
+        context_bytes.write_byte(byte)
+      }
+      return session.store(
+        cache_pack_body_module_kind,
+        2U,
+        0U,
+        1U,
+        "module:" + program.module_paths[module_index],
+        cache_pack_rehash_digest(source_digest),
+        @cache_binary.blake3(context_bytes.to_bytes()),
+        payload,
+      )
+    }
+    _ => ()
   }
   let envelope = match
     wrap_body_inference_cache_payload(
@@ -548,20 +601,41 @@ fn store_body_inference_cache(
 ///|
 fn lookup_body_inference_family_cache(
   module_id : @semantic.ModuleId,
+  module_path : String,
   context : FixedArray[Byte],
+  pack? : CompilationCachePack? = None,
 ) -> Result[@semantic.BodyInferenceFamilyBundleIndex?, String] {
   let fingerprint = @crypto.bytes_to_hex_string(context)
   let path = body_inference_family_cache_file(fingerprint)
-  if !@fs.path_exists(path) {
-    return Ok(None)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read body-family cache \{path}: \{error}")
-  }
-  let payload = match
-    unwrap_body_inference_family_cache_payload(bytes, context, context, context) {
-    Ok(value) => value
-    Err(error) => return Err("corrupt body-family cache \{path}: \{error}")
+  let payload = match pack {
+    Some(session) if session.enabled =>
+      match
+        session.lookup(
+          cache_pack_body_family_kind,
+          2U,
+          "module-family:" + module_path,
+          cache_pack_rehash_digest(context),
+          @cache_binary.blake3(b"DEW_BODY_FAMILY_PACK_CONTEXT_V1"),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(None)
+      }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(None)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error => return Err("cannot read body-family cache \{path}: \{error}")
+      }
+      match
+        unwrap_body_inference_family_cache_payload(
+          bytes, context, context, context,
+        ) {
+        Ok(value) => value
+        Err(error) => return Err("corrupt body-family cache \{path}: \{error}")
+      }
+    }
   }
   let bundle = match @semantic.open_body_inference_family_bundle(payload) {
     Ok(value) => value
@@ -575,12 +649,28 @@ fn lookup_body_inference_family_cache(
 
 ///|
 fn store_body_inference_family_cache(
+  module_path : String,
   context : FixedArray[Byte],
   bundle : @semantic.BodyInferenceFamilyBundle,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let payload = match @semantic.serialize_body_inference_family_bundle(bundle) {
     Ok(value) => value
     Err(error) => return Err("cannot serialize body-family cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled =>
+      return session.store(
+        cache_pack_body_family_kind,
+        2U,
+        0U,
+        1U,
+        "module-family:" + module_path,
+        cache_pack_rehash_digest(context),
+        @cache_binary.blake3(b"DEW_BODY_FAMILY_PACK_CONTEXT_V1"),
+        payload,
+      )
+    _ => ()
   }
   let envelope = match
     wrap_body_inference_family_cache_payload(context, context, context, payload) {
@@ -622,6 +712,7 @@ fn infer_module_with_body_family_cache(
   resolved : @semantic.ResolvedModuleTypes,
   imports : @semantic.ResolvedModuleImports,
   names : @semantic.ResolvedModuleNames,
+  pack? : CompilationCachePack? = None,
 ) -> Result[@semantic.BodyInferenceFamilyAnalysis, String] {
   let keys = match
     body_inference_family_cache_keys(program, frozen, module_index) {
@@ -660,7 +751,9 @@ fn infer_module_with_body_family_cache(
   let existing = match
     lookup_body_inference_family_cache(
       program.modules[module_index].module_id,
+      program.module_paths[module_index],
       context,
+      pack~,
     ) {
     Ok(value) => value
     Err(error) => return Err(error)
@@ -712,7 +805,13 @@ fn infer_module_with_body_family_cache(
       Ok(value) => value
       Err(error) => return Err("cannot assemble body-family cache: \{error}")
     }
-    match store_body_inference_family_cache(context, bundle) {
+    match
+      store_body_inference_family_cache(
+        program.module_paths[module_index],
+        context,
+        bundle,
+        pack~,
+      ) {
       Ok(_) => ()
       Err(error) => return Err(error)
     }
@@ -728,6 +827,7 @@ fn infer_module_with_body_family_cache(
 pub fn analyze_program_semantics_with_body_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
+  pack? : CompilationCachePack? = None,
 ) -> Result[CachedProgramSemanticAnalysis, String] {
   let enabled = body_inference_cache_enabled()
   let family_enabled = body_inference_family_cache_enabled()
@@ -750,7 +850,13 @@ pub fn analyze_program_semantics_with_body_cache(
       let inferred = if enabled {
         match
           lookup_body_inference_cache(
-            program, frozen, module_index, resolved, imports, names,
+            program,
+            frozen,
+            module_index,
+            resolved,
+            imports,
+            names,
+            pack~,
           ) {
           Err(error) => return Err(error)
           Ok(Some(value)) => {
@@ -763,7 +869,13 @@ pub fn analyze_program_semantics_with_body_cache(
             let value = if family_enabled {
               let family_analysis = match
                 infer_module_with_body_family_cache(
-                  program, frozen, module_index, resolved, imports, names,
+                  program,
+                  frozen,
+                  module_index,
+                  resolved,
+                  imports,
+                  names,
+                  pack~,
                 ) {
                 Ok(value) => value
                 Err(error) => return Err(error)
@@ -781,7 +893,13 @@ pub fn analyze_program_semantics_with_body_cache(
             }
             if !family_applicable {
               match
-                store_body_inference_cache(program, frozen, module_index, value) {
+                store_body_inference_cache(
+                  program,
+                  frozen,
+                  module_index,
+                  value,
+                  pack~,
+                ) {
                 Ok(_) => ()
                 Err(error) => return Err(error)
               }

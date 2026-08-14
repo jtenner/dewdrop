@@ -2,7 +2,7 @@
 const COMPILE_REQUEST_MAGIC : UInt = 0x44574352U
 
 ///|
-const COMPILE_REQUEST_VERSION : UInt = 5U
+const COMPILE_REQUEST_VERSION : UInt = 6U
 
 ///|
 priv struct CompileRequestReader {
@@ -116,6 +116,8 @@ priv struct CompileRequest {
   body_cache : Bool
   body_family_cache : Bool
   planning_cache : Bool
+  cache_pack : Bool
+  program_cache : Bool
   cache_report : Bool
   build_mode : Int
   dependency_cache_key : String
@@ -170,6 +172,8 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
   let body_cache = reader.read_bool("body inference cache")
   let body_family_cache = reader.read_bool("body-family inference cache")
   let planning_cache = reader.read_bool("layout and fragment planning cache")
+  let cache_pack = reader.read_bool("compilation cache pack")
+  let program_cache = reader.read_bool("exact program cache")
   let cache_report = reader.read_bool("cache report")
   let build_mode = reader.read_u32().reinterpret_as_int()
   if build_mode < 0 || build_mode > 1 {
@@ -197,6 +201,8 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
         body_cache,
         body_family_cache,
         planning_cache,
+        cache_pack,
+        program_cache,
         cache_report,
         build_mode,
         dependency_cache_key,
@@ -246,6 +252,20 @@ fn CompileRequest::cli_arguments(self : CompileRequest) -> Array[String] {
   } else {
     arguments.push("--no-plan-cache")
   }
+  arguments.push(
+    if self.cache_pack {
+      "--cache-pack"
+    } else {
+      "--no-cache-pack"
+    },
+  )
+  arguments.push(
+    if self.program_cache {
+      "--program-cache"
+    } else {
+      "--no-program-cache"
+    },
+  )
   if self.cache_report {
     arguments.push("--cache-report")
   }

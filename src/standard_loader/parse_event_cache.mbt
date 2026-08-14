@@ -120,10 +120,50 @@ fn parse_event_cache_file(key_digest : FixedArray[Byte]) -> String {
 }
 
 ///|
+fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {
+  "file:" + owner_path + ":" + file_path
+}
+
+///|
+fn parse_event_pack_context(
+  owner_path : String,
+  file : @semantic.ManifestFile,
+) -> FixedArray[Byte] {
+  let output = Buffer()
+  output.write_bytes(b"DEW_PARSE_EVENT_PACK_CONTEXT_V1\x00")
+  parse_event_cache_write_string(output, owner_path)
+  parse_event_cache_write_string(output, file.path)
+  @cache_binary.blake3(output.to_bytes())
+}
+
+///|
 fn lookup_parse_event_cache(
   owner_path : String,
   file : @semantic.ManifestFile,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Array[@parser.ParseEvent]?, String] {
+  match pack {
+    Some(session) if session.enabled => {
+      let payload = session.lookup(
+        cache_pack_parse_event_kind,
+        1U,
+        parse_event_pack_owner(owner_path, file.path),
+        @cache_binary.blake3(file.source),
+        parse_event_pack_context(owner_path, file),
+      )
+      match payload {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(None) => return Ok(None)
+        Ok(Some(bytes)) =>
+          match @parser.deserialize_parse_events(bytes) {
+            Ok(value) => return Ok(Some(value))
+            Err(error) =>
+              return Err("corrupt parse-event cache pack entry: \{error}")
+          }
+      }
+    }
+    _ => ()
+  }
   let source_digest = @crypto.sha256(file.source)
   let key_digest = parse_event_cache_key_digest(owner_path, file, source_digest)
   let path = parse_event_cache_file(key_digest)
@@ -150,10 +190,25 @@ fn store_parse_event_cache(
   owner_path : String,
   file : @semantic.ManifestFile,
   events : Array[@parser.ParseEvent],
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let payload = match @parser.serialize_parse_events(events) {
     Ok(value) => value
     Err(error) => return Err("cannot serialize parse-event cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled =>
+      return session.store(
+        cache_pack_parse_event_kind,
+        1U,
+        0U,
+        0U,
+        parse_event_pack_owner(owner_path, file.path),
+        @cache_binary.blake3(file.source),
+        parse_event_pack_context(owner_path, file),
+        payload,
+      )
+    _ => ()
   }
   let source_digest = @crypto.sha256(file.source)
   let key_digest = parse_event_cache_key_digest(owner_path, file, source_digest)
@@ -192,13 +247,14 @@ fn prepare_manifest_file_parse_events(
   owner_path : String,
   file : @semantic.ManifestFile,
   enabled : Bool,
+  pack? : CompilationCachePack? = None,
 ) -> Result[(@semantic.ManifestFile, ParseEventFilePreparation), String] {
   match file.parse_events {
     Some(_) => return Ok((file, ParseEventAlreadyPrepared))
     None => ()
   }
   if enabled {
-    match lookup_parse_event_cache(owner_path, file) {
+    match lookup_parse_event_cache(owner_path, file, pack~) {
       Err(error) => return Err(error)
       Ok(Some(events)) =>
         return Ok((file.with_parse_events(events), ParseEventCacheHit))
@@ -207,7 +263,7 @@ fn prepare_manifest_file_parse_events(
   }
   let events = @parser.parse_bytes(file.source).to_array()
   if enabled {
-    match store_parse_event_cache(owner_path, file, events) {
+    match store_parse_event_cache(owner_path, file, events, pack~) {
       Ok(_) => ()
       Err(error) => return Err(error)
     }
@@ -243,6 +299,7 @@ fn record_parse_event_preparation(
 /// scans and semantic collection consume the same event arrays.
 pub fn prepare_manifest_parse_event_cache(
   manifest : @semantic.ProgramManifest,
+  pack? : CompilationCachePack? = None,
 ) -> Result[PreparedParseEventManifest, String] {
   let enabled = parse_event_cache_enabled()
   let modules : Array[@semantic.ManifestModule] = []
@@ -252,7 +309,7 @@ pub fn prepare_manifest_parse_event_cache(
     let files : Array[@semantic.ManifestFile] = []
     for file in module_.files {
       let prepared = match
-        prepare_manifest_file_parse_events(module_.path, file, enabled) {
+        prepare_manifest_file_parse_events(module_.path, file, enabled, pack~) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -279,6 +336,7 @@ pub fn prepare_program_parse_event_cache(
   loaded : StandardLibraryLoad,
   default_preamble : Bool,
   prior_status? : ParseEventCacheStatus = ParseEventCacheWasUsed(0, 0),
+  pack? : CompilationCachePack? = None,
 ) -> Result[PreparedParseEventInputs, String] {
   let enabled = parse_event_cache_enabled()
   let (prior_hits, prior_misses) = parse_event_cache_status_counts(prior_status)
@@ -289,7 +347,7 @@ pub fn prepare_program_parse_event_cache(
     let files : Array[@semantic.ManifestFile] = []
     for file in module_.files {
       let prepared = match
-        prepare_manifest_file_parse_events(module_.path, file, enabled) {
+        prepare_manifest_file_parse_events(module_.path, file, enabled, pack~) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -314,7 +372,7 @@ pub fn prepare_program_parse_event_cache(
         loaded.sources.sources[index],
       )
       let prepared = match
-        prepare_manifest_file_parse_events("dew.std", file, enabled) {
+        prepare_manifest_file_parse_events("dew.std", file, enabled, pack~) {
         Ok(value) => value
         Err(error) => return Err(error)
       }

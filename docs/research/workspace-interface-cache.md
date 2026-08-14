@@ -2,17 +2,19 @@
 
 ## Status
 
-Implemented for ordinary non-root workspace modules, including multi-module and self-recursive interface dependency SCCs. The cache supplements the existing standard/dependency interface bundle: dependencies are resolved in deterministic SCC order, then each eligible workspace module is looked up immediately before interface freezing. Executable body collection still runs normally; body inference may now be reused by the independently versioned module-body cache, while lowering, linking, validation, and encoding still run normally.
+Implemented for ordinary non-root workspace modules, including multi-module and self-recursive interface dependency SCCs. The cache supplements the existing standard/dependency interface bundle: dependencies are resolved in deterministic SCC order, then each eligible workspace module is looked up immediately before interface freezing. On an exact program miss, executable body collection still runs normally; body inference may be reused by the independently versioned module-body cache, while lowering, linking, validation, and encoding continue from the selected phase entries. An exact pack hit bypasses these phases.
 
 ## Artifact identity
 
-Artifacts live at:
+The default native path stores workspace modules and recursive SCCs as `IFCE`
+entries in one `.dew/cache/packs/v1-<graph>.dwp` file. `--no-cache-pack` retains
+the legacy path:
 
 ```text
 .dew/cache/workspace-interfaces/v2-<key>.dwi
 ```
 
-The key is SHA-256 over a private V2 marker, the exact module source fingerprint, and sorted direct dependency records. The source fingerprint commits to:
+The semantic key remains SHA-256 over a private V2 marker, the exact module source fingerprint, and sorted direct dependency records. The aligned pack adds full BLAKE3 owner, producer-context, content, and payload binding. The source fingerprint commits to:
 
 - logical module path;
 - stable manifest-derived module ID;

@@ -289,7 +289,13 @@ class CompileRequestProtocolTests(unittest.TestCase):
         read_u32()
         read_u32()
         read_u32()
-        return bool(read_u32()), bool(read_u32()), bool(read_u32())
+        return (
+            bool(read_u32()),
+            bool(read_u32()),
+            bool(read_u32()),
+            bool(read_u32()),
+            bool(read_u32()),
+        )
 
     def test_body_cache_is_opt_in_and_family_mode_enables_it(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -329,31 +335,31 @@ class CompileRequestProtocolTests(unittest.TestCase):
         )
         self.assertEqual(
             self.cache_policy(default_request),
-            (False, False, False),
+            (False, False, False, True, True),
         )
         self.assertEqual(
             self.cache_policy(explicit_request),
-            (True, False, False),
+            (True, False, False, True, True),
         )
         self.assertEqual(
             self.cache_policy(family_request),
-            (True, True, False),
+            (True, True, False, True, True),
         )
         self.assertEqual(
             self.cache_policy(family_environment_request),
-            (True, True, False),
+            (True, True, False, True, True),
         )
         self.assertEqual(
             self.cache_policy(planning_environment_request),
-            (False, False, True),
+            (False, False, True, True, True),
         )
         self.assertEqual(
             self.cache_policy(explicit_planning_request),
-            (False, False, True),
+            (False, False, True, True, True),
         )
         self.assertEqual(
             self.cache_policy(disabled_planning_request),
-            (False, False, False),
+            (False, False, False, True, True),
         )
 
     def test_versioned_request_carries_ordered_inputs_and_policy(self) -> None:
@@ -405,7 +411,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
             return value
 
         self.assertEqual(read_u32(), 0x44574352)
-        self.assertEqual(read_u32(), 5)
+        self.assertEqual(read_u32(), 6)
         self.assertEqual(read_u32(), 1)
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "app.wasm")
@@ -426,8 +432,10 @@ class CompileRequestProtocolTests(unittest.TestCase):
                 read_u32(),
                 read_u32(),
                 read_u32(),
+                read_u32(),
+                read_u32(),
             ),
-            (0, 0, 0, 1, 1, 0, 1),
+            (0, 0, 0, 1, 1, 0, 1, 1, 1),
         )
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "dependency-key")

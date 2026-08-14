@@ -4,6 +4,122 @@ cd "$(dirname "$0")/.."
 
 echo "== compiler CLI smoke =="
 mkdir -p .tmp
+
+rm -rf .tmp/dew-unified-cache-pack
+DEW_CACHE_DIR=.tmp/dew-unified-cache-pack DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --body-cache \
+  --plan-cache --cache-report tests/module-snapshots/numeric/scalar.dew \
+  -o .tmp/dew-unified-pack-cold.wasm > .tmp/dew-unified-pack-cold.txt
+DEW_CACHE_DIR=.tmp/dew-unified-cache-pack DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --body-cache \
+  --plan-cache --cache-report tests/module-snapshots/numeric/scalar.dew \
+  -o .tmp/dew-unified-pack-warm.wasm > .tmp/dew-unified-pack-warm.txt
+grep -q '^compilation cache pack: exact hit, reads 1, hits 1, misses 0$' \
+  .tmp/dew-unified-pack-warm.txt
+cmp .tmp/dew-unified-pack-cold.wasm .tmp/dew-unified-pack-warm.wasm
+test "$(find .tmp/dew-unified-cache-pack/packs -name 'v1-*.dwp' | wc -l)" -eq 1
+test ! -d .tmp/dew-unified-cache-pack/parse-events
+test ! -d .tmp/dew-unified-cache-pack/interfaces
+test ! -d .tmp/dew-unified-cache-pack/body-inference
+test ! -d .tmp/dew-unified-cache-pack/type-layouts
+test ! -d .tmp/dew-unified-cache-pack/wasmgc-fragments
+rm -rf .tmp/dew-unified-exact-only-cache
+DEW_CACHE_DIR=.tmp/dew-unified-exact-only-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache \
+  --no-parse-event-cache --no-interface-cache --no-body-cache --no-plan-cache \
+  tests/module-snapshots/numeric/scalar.dew \
+  -o .tmp/dew-unified-exact-only-cold.wasm > /dev/null
+DEW_CACHE_DIR=.tmp/dew-unified-exact-only-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --cache-report \
+  --no-parse-event-cache --no-interface-cache --no-body-cache --no-plan-cache \
+  tests/module-snapshots/numeric/scalar.dew \
+  -o .tmp/dew-unified-exact-only-warm.wasm \
+  > .tmp/dew-unified-exact-only-warm.txt
+grep -q '^compilation cache pack: exact hit, reads 1, hits 1, misses 0$' \
+  .tmp/dew-unified-exact-only-warm.txt
+cmp .tmp/dew-unified-exact-only-cold.wasm \
+  .tmp/dew-unified-exact-only-warm.wasm
+DEW_CACHE_DIR=.tmp/dew-unified-cache-pack DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=0 tools/dew check --body-cache --plan-cache \
+  --cache-report tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-unified-pack-phase-warm.txt
+grep -q '^parse event cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-unified-pack-phase-warm.txt
+grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
+  .tmp/dew-unified-pack-phase-warm.txt
+grep -q '^body inference cache: module hits [1-9][0-9]*, module misses 0, family disabled$' \
+  .tmp/dew-unified-pack-phase-warm.txt
+grep -q '^layout and fragment cache: layout hits [1-9][0-9]*, layout misses 0, fragment hits [1-9][0-9]*, fragment misses 0$' \
+  .tmp/dew-unified-pack-phase-warm.txt
+rm -rf .tmp/dew-unified-edit-cache .tmp/dew-unified-edit
+mkdir -p .tmp/dew-unified-edit
+cat > .tmp/dew-unified-edit/main.dew <<'EOF'
+pub fn main() -> I32 {
+  1
+}
+EOF
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --cache-report \
+  .tmp/dew-unified-edit/main.dew -o .tmp/dew-unified-edit/first.wasm \
+  > .tmp/dew-unified-edit/first.txt
+python3 - <<'PY'
+from pathlib import Path
+path = Path('.tmp/dew-unified-edit/main.dew')
+path.write_text(path.read_text().replace('  1\n', '  2\n'))
+PY
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --cache-report \
+  .tmp/dew-unified-edit/main.dew -o .tmp/dew-unified-edit/changed.wasm \
+  > .tmp/dew-unified-edit/changed.txt
+if grep -q '^compilation cache pack: exact hit' .tmp/dew-unified-edit/changed.txt; then
+  echo "expected source edit to invalidate exact pack result" >&2
+  exit 1
+fi
+if cmp -s .tmp/dew-unified-edit/first.wasm .tmp/dew-unified-edit/changed.wasm; then
+  echo "expected source edit to change Wasm" >&2
+  exit 1
+fi
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --cache-report \
+  .tmp/dew-unified-edit/main.dew -o .tmp/dew-unified-edit/warm.wasm \
+  > .tmp/dew-unified-edit/warm.txt
+grep -q '^compilation cache pack: exact hit, reads 1, hits 1, misses 0$' \
+  .tmp/dew-unified-edit/warm.txt
+cmp .tmp/dew-unified-edit/changed.wasm .tmp/dew-unified-edit/warm.wasm
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --emit hir \
+  .tmp/dew-unified-edit/main.dew -o .tmp/dew-unified-edit/cold.hir > /dev/null
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --emit hir --cache-report \
+  .tmp/dew-unified-edit/main.dew -o .tmp/dew-unified-edit/warm.hir \
+  > .tmp/dew-unified-edit/warm-hir.txt
+grep -q '^compilation cache pack: exact hit, reads 1, hits 1, misses 0$' \
+  .tmp/dew-unified-edit/warm-hir.txt
+cmp .tmp/dew-unified-edit/cold.hir .tmp/dew-unified-edit/warm.hir
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --emit lowering \
+  .tmp/dew-unified-edit/main.dew -o .tmp/dew-unified-edit/cold.lowering > /dev/null
+DEW_CACHE_DIR=.tmp/dew-unified-edit-cache DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --emit lowering \
+  --cache-report .tmp/dew-unified-edit/main.dew \
+  -o .tmp/dew-unified-edit/warm.lowering \
+  > .tmp/dew-unified-edit/warm-lowering.txt
+grep -q '^compilation cache pack: exact hit, reads 1, hits 1, misses 0$' \
+  .tmp/dew-unified-edit/warm-lowering.txt
+cmp .tmp/dew-unified-edit/cold.lowering .tmp/dew-unified-edit/warm.lowering
+pack_file=$(find .tmp/dew-unified-cache-pack/packs -name 'v1-*.dwp' -print -quit)
+printf 'corrupt' > "$pack_file"
+if DEW_CACHE_DIR=.tmp/dew-unified-cache-pack DEW_CACHE_PACK=1 \
+  DEW_PROGRAM_CACHE=1 tools/dew check \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-unified-pack-corrupt.txt 2>&1; then
+  echo "expected corrupt unified cache pack to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt compilation cache pack' .tmp/dew-unified-pack-corrupt.txt
+
+export DEW_CACHE_PACK=0
+export DEW_PROGRAM_CACHE=0
 export DEW_CACHE_DIR=.tmp/dew-check-interface-cache
 rm -rf "$DEW_CACHE_DIR"
 tools/dew check tests/module-snapshots/numeric/scalar.dew

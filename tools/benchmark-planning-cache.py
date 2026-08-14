@@ -60,6 +60,8 @@ def command(source: Path, *, enabled: bool) -> list[str]:
 def run(source: Path, *, enabled: bool) -> tuple[float, str]:
     environment = os.environ.copy()
     environment["DEW_CACHE_DIR"] = str(CACHE)
+    environment["DEW_CACHE_PACK"] = "0"
+    environment["DEW_PROGRAM_CACHE"] = "0"
     started = time.perf_counter()
     completed = subprocess.run(
         command(source, enabled=enabled),

@@ -35,6 +35,10 @@ tools/dew check --cache-report FILE ...
 tools/dew check --no-interface-cache FILE ...
 tools/dew check --plan-cache FILE ...
 tools/dew check --no-plan-cache FILE ...
+tools/dew check --cache-pack FILE ...
+tools/dew check --no-cache-pack FILE ...
+tools/dew check --program-cache FILE ...
+tools/dew check --no-program-cache FILE ...
 ```
 
 The default explicit-file module name is `main`. Repeating `--module NAME` starts another statically linked module, and `--root NAME` selects the link root. Explicit `dew.modules.json` graphs preserve listed module/file order. Package mode instead derives one module from `@scope/name` and deterministically sorts conventional `src/**/*.dew` or immediate sibling `*.dew` sources. Production commands exclude `_test.dew`; package tests include it.
@@ -55,17 +59,23 @@ including `open dew.std.*`, remain available. `dew test` does not
 accept this option because its compiler-owned assertion runtime requires the
 standard test preamble.
 
-The default cache locations are `.dew/cache/interfaces/` for frozen bundles and
-`.dew/cache/packages/` for installed package capsules; `DEW_CACHE_DIR` changes
-the shared cache root. `--no-interface-cache` or `DEW_INTERFACE_CACHE=0` disables
-frozen-interface reuse, and
-`--plan-cache` or `DEW_PLAN_CACHE=1` enables the opt-in canonical binary module
-layout and baseline WasmGC fragment caches; `--no-plan-cache` disables them.
-`--cache-report` prints per-layer hit/miss counts or `disabled`. Keys are SHA-256 hashes of
+The default native compiler cache is one
+`.dew/cache/packs/v1-<graph>.dwp` file. It contains parser, interface, optional
+body/layout/fragment, and exact successful program entries. `DEW_CACHE_DIR`
+changes the shared cache root. `--no-cache-pack` or `DEW_CACHE_PACK=0` selects
+the legacy per-artifact paths. `--no-program-cache` or `DEW_PROGRAM_CACHE=0`
+disables exact successful check/HIR/lowering/Wasm reuse but retains phase
+entries. `--no-interface-cache` or `DEW_INTERFACE_CACHE=0` disables
+frozen-interface reuse, and `--plan-cache` or `DEW_PLAN_CACHE=1` enables the
+opt-in module layout and baseline WasmGC fragment entries; `--no-plan-cache`
+disables them. `--cache-report` prints per-layer hit/miss counts, exact bypasses,
+or `disabled`. Legacy keys are SHA-256 hashes of
 the exact ordered selected standard logical paths and source bytes plus a
 private compiler cache ABI marker. Cache payloads use deterministic semantic
-serialization and an envelope checksum. Corrupt or identity-mismatched cache
-artifacts fail visibly instead of silently recompiling. Package capsules bind
+serialization and an envelope checksum. Pack entries instead use aligned
+headers plus full BLAKE3-256 owner, content, compiler-context, and payload
+digests. Corrupt or identity-mismatched cache data fails visibly instead of
+silently recompiling. Package capsules bind
 exact lock provenance, dependency requests, ordered source payloads, per-file
 checksums, and an envelope checksum. Missing locked package trees are restored
 through a staged atomic rename; corrupt, mismatched, or unsafe capsules and

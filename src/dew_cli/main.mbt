@@ -30,12 +30,14 @@ fn report_compilation_diagnostics(
   analyzed : @semantic.AnalyzedProgramSemantics,
   lowering : @semantic.PlannedProgramLowering,
   link : @semantic.PlannedProgramWasmGCLink,
-) -> Bool {
+) -> (Bool, Int) {
   let mut has_errors = false
+  let mut count = 0
   for
     diagnostic in @semantic.collect_compiler_source_diagnostics(
       program, analyzed, lowering, link,
     ) {
+    count += 1
     let rendered = @semantic.render_compiler_source_diagnostic(
       program, diagnostic,
     )
@@ -47,7 +49,7 @@ fn report_compilation_diagnostics(
       @semantic.CompilerWarning => cli_warning(rendered)
     }
   }
-  has_errors
+  (has_errors, count)
 }
 
 ///|
@@ -121,7 +123,7 @@ fn print_usage() -> Unit {
   println("  repeat --module NAME to begin another statically linked module")
   println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
-    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --body-cache, --body-family-cache, --no-body-cache, --plan-cache, --no-plan-cache, --cache-report",
+    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --body-cache, --body-family-cache, --no-body-cache, --plan-cache, --no-plan-cache, --cache-pack, --no-cache-pack, --program-cache, --no-program-cache, --cache-report",
   )
 }
 
@@ -176,6 +178,22 @@ fn main {
     @sys.set_env_var(
       "DEW_PLAN_CACHE",
       if request.planning_cache {
+        "1"
+      } else {
+        "0"
+      },
+    )
+    @sys.set_env_var(
+      "DEW_CACHE_PACK",
+      if request.cache_pack {
+        "1"
+      } else {
+        "0"
+      },
+    )
+    @sys.set_env_var(
+      "DEW_PROGRAM_CACHE",
+      if request.program_cache {
         "1"
       } else {
         "0"
@@ -284,6 +302,18 @@ fn main {
     } else if argument == "--no-plan-cache" {
       @sys.set_env_var("DEW_PLAN_CACHE", "0")
       index += 1
+    } else if argument == "--cache-pack" {
+      @sys.set_env_var("DEW_CACHE_PACK", "1")
+      index += 1
+    } else if argument == "--no-cache-pack" {
+      @sys.set_env_var("DEW_CACHE_PACK", "0")
+      index += 1
+    } else if argument == "--program-cache" {
+      @sys.set_env_var("DEW_PROGRAM_CACHE", "1")
+      index += 1
+    } else if argument == "--no-program-cache" {
+      @sys.set_env_var("DEW_PROGRAM_CACHE", "0")
+      index += 1
     } else if argument == "--cache-report" {
       cache_report = true
       index += 1
@@ -329,8 +359,52 @@ fn main {
     }
   }
   let manifest = @semantic.ProgramManifest::new(modules)
+  let cache_pack = match
+    @standard_loader.open_compilation_cache_pack(
+      manifest, root_module_index, default_preamble, 0,
+    ) {
+    Ok(value) => value
+    Err(error) => {
+      cli_fail(error)
+      abort("unreachable cache-pack failure")
+    }
+  }
+  let command_tag = if command == "check" { 0 } else { 1 }
+  let emit_tag = match emit {
+    "hir" => 1
+    "lowering" => 2
+    _ => 0
+  }
+  match
+    @standard_loader.lookup_program_output_cache(
+      cache_pack, manifest, root_module_index, default_preamble, command_tag, emit_tag,
+      dependency_interface_modules, dependency_interface_fingerprints,
+    ) {
+    Err(error) => cli_fail("corrupt compilation cache pack: \{error}")
+    Ok(Some(cached_output)) => {
+      if cache_report {
+        println("parse event cache: bypassed by exact program hit")
+        println("standard interface cache: bypassed by exact program hit")
+        println("body inference cache: bypassed by exact program hit")
+        println("layout and fragment cache: bypassed by exact program hit")
+        println("compilation cache pack: exact hit, \{cache_pack.status()}")
+      }
+      if command == "check" {
+        println(
+          "checked \{total_file_count} Dew source file(s) in \{modules.length()} module(s)",
+        )
+      } else {
+        write_cli_output(output, cached_output)
+      }
+      return
+    }
+    Ok(None) => ()
+  }
   let prepared_manifest = match
-    @standard_loader.prepare_manifest_parse_event_cache(manifest) {
+    @standard_loader.prepare_manifest_parse_event_cache(
+      manifest,
+      pack=Some(cache_pack),
+    ) {
     Ok(value) => value
     Err(error) => {
       cli_fail(error)
@@ -360,6 +434,7 @@ fn main {
         4000UL, root_module_index, default_preamble,
       ),
       prior_parse_event_cache_status=prepared_manifest.status,
+      pack=Some(cache_pack),
     ) {
     Ok(compiled) => compiled
     Err(error) => {
@@ -390,12 +465,14 @@ fn main {
   let body_cache_status = compiled.body_cache_status.label()
   let planning_cache_status = compiled.planning_cache_status.label()
   let parse_event_cache_status = compiled.parse_event_cache_status.label()
-  if report_compilation_diagnostics(
-      compiled.program,
-      compiled.analyzed,
-      compiled.lowering,
-      compiled.link,
-    ) {
+  let cache_pack_status = compiled.cache_pack_status
+  let diagnostic_status = report_compilation_diagnostics(
+    compiled.program,
+    compiled.analyzed,
+    compiled.lowering,
+    compiled.link,
+  )
+  if diagnostic_status.0 {
     @sys.exit(1)
   }
   if cache_report {
@@ -403,39 +480,64 @@ fn main {
     println("standard interface cache: \{cache_status}")
     println("body inference cache: \{body_cache_status}")
     println("layout and fragment cache: \{planning_cache_status}")
+    println("compilation cache pack: \{cache_pack_status}")
   }
   if command == "check" {
+    if diagnostic_status.1 == 0 {
+      match
+        @standard_loader.store_program_output_cache(
+          cache_pack, manifest, root_module_index, default_preamble, command_tag,
+          emit_tag, dependency_interface_modules, dependency_interface_fingerprints,
+          b"",
+        ) {
+        Ok(_) => ()
+        Err(error) => cli_fail(error)
+      }
+      match cache_pack.commit() {
+        Ok(_) => ()
+        Err(error) => cli_fail(error)
+      }
+    }
     println(
       "checked \{total_file_count} Dew source file(s) in \{modules.length()} module(s)",
     )
     return
   }
-  if emit == "hir" {
-    write_cli_output(output, render_program_hir(compiled.program))
-    return
-  }
-  if emit == "lowering" {
-    write_cli_output(
-      output,
-      render_program_lowering(compiled.program, compiled.lowering),
+  let result = if emit == "hir" {
+    render_program_hir(compiled.program)
+  } else if emit == "lowering" {
+    render_program_lowering(compiled.program, compiled.lowering)
+  } else {
+    let encoded = match compiled.emit_binary() {
+      Ok(binary) => binary
+      Err(error) => {
+        cli_error(@debug.to_string(error))
+        @sys.exit(1)
+        b""
+      }
+    }
+    let with_abi = @backend.append_wasm_abi_section(
+      encoded,
+      compiled.analyzed.frozen.interfaces[root_module_index],
     )
-    return
+    @backend.append_wasm_metrics_section(
+      with_abi,
+      compiled.link.materialized_specialization_count(),
+    )
   }
-  let encoded = match compiled.emit_binary() {
-    Ok(binary) => binary
-    Err(error) => {
-      cli_error(@debug.to_string(error))
-      @sys.exit(1)
-      b""
+  if diagnostic_status.1 == 0 {
+    match
+      @standard_loader.store_program_output_cache(
+        cache_pack, manifest, root_module_index, default_preamble, command_tag, emit_tag,
+        dependency_interface_modules, dependency_interface_fingerprints, result,
+      ) {
+      Ok(_) => ()
+      Err(error) => cli_fail(error)
+    }
+    match cache_pack.commit() {
+      Ok(_) => ()
+      Err(error) => cli_fail(error)
     }
   }
-  let with_abi = @backend.append_wasm_abi_section(
-    encoded,
-    compiled.analyzed.frozen.interfaces[root_module_index],
-  )
-  let binary = @backend.append_wasm_metrics_section(
-    with_abi,
-    compiled.link.materialized_specialization_count(),
-  )
-  write_cli_output(output, binary)
+  write_cli_output(output, result)
 }

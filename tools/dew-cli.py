@@ -427,12 +427,17 @@ def _build_cache_compiler_file_paths() -> list[str]:
                 for name in names:
                     if name.endswith(".mbt") or name == "moon.pkg":
                         files.add((Path(directory) / name).as_posix())
-    standard_root = ROOT / "std"
-    if standard_root.is_dir():
-        for directory, _, names in os.walk(standard_root):
-            for name in names:
-                if name.endswith(".dew"):
-                    files.add((Path(directory) / name).as_posix())
+    standard_roots = {ROOT / "std"}
+    configured_standard = os.environ.get("DEW_STD_ROOT", "")
+    if configured_standard:
+        configured = Path(configured_standard).expanduser().resolve()
+        standard_roots.add(configured / "std" if (configured / "std").is_dir() else configured)
+    for standard_root in standard_roots:
+        if standard_root.is_dir():
+            for directory, _, names in os.walk(standard_root):
+                for name in names:
+                    if name.endswith(".dew"):
+                        files.add((Path(directory) / name).as_posix())
     tools_root = ROOT / "tools"
     if tools_root.is_dir():
         for directory, _, names in os.walk(tools_root):
@@ -1461,6 +1466,8 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         os.environ.get("DEW_BODY_CACHE", "0") == "1" or body_family_cache
     )
     planning_cache = os.environ.get("DEW_PLAN_CACHE", "0") == "1"
+    cache_pack = os.environ.get("DEW_CACHE_PACK", "1") != "0"
+    program_cache = os.environ.get("DEW_PROGRAM_CACHE", "1") != "0"
     cache_report = False
     standard_policy = 1 if os.environ.get("DEW_BOOTSTRAP_STD") == "1" else 0
     standard_root = "" if standard_policy == 1 else os.environ.get("DEW_STD_ROOT", ".")
@@ -1535,6 +1542,18 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         elif argument == "--no-plan-cache":
             planning_cache = False
             index += 1
+        elif argument == "--cache-pack":
+            cache_pack = True
+            index += 1
+        elif argument == "--no-cache-pack":
+            cache_pack = False
+            index += 1
+        elif argument == "--program-cache":
+            program_cache = True
+            index += 1
+        elif argument == "--no-program-cache":
+            program_cache = False
+            index += 1
         elif argument == "--cache-report":
             cache_report = True
             index += 1
@@ -1570,7 +1589,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         buffer.extend(encoded)
 
     write_u32(0x44574352)
-    write_u32(5)
+    write_u32(6)
     write_u32(command)
     write_u32(emit)
     write_string(output)
@@ -1593,6 +1612,8 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
     write_bool(body_cache)
     write_bool(body_family_cache)
     write_bool(planning_cache)
+    write_bool(cache_pack)
+    write_bool(program_cache)
     write_bool(cache_report)
     write_u32(0)  # production build mode
     write_string(dependency_cache_key)
@@ -1612,6 +1633,8 @@ def moon_cli(arguments: list[str], *, check: bool = False) -> subprocess.Complet
         ) as request:
             request.write(_compile_request_bytes(arguments))
             request_path = Path(request.name)
+        environment = os.environ.copy()
+        environment["DEW_COMPILER_FINGERPRINT"] = _build_cache_compiler_fingerprint()
         return subprocess.run(
             [
                 "moon",
@@ -1625,6 +1648,7 @@ def moon_cli(arguments: list[str], *, check: bool = False) -> subprocess.Complet
                 str(request_path),
             ],
             cwd=ROOT,
+            env=environment,
             check=check,
         )
     finally:

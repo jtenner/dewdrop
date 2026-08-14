@@ -36,8 +36,8 @@ checksum-invalid memos are rebuilt rather than trusted. This removes repeated
 `Path.resolve`, recursive glob, and content hashing from the common hit while
 retaining conservative source invalidation.
 
-Each `.dba` entry is a single atomically published V2 binary envelope inside the common `DEWART\0\1` container. Its fixed body contains emit
-kind, raw request key, raw payload digest, U64 payload size, and payload. Missing entries are misses;
+Each host `.dba` entry is a single atomically published V2 binary envelope inside the common `DEWART\0\1` container. Its fixed body contains emit
+kind, raw request key, raw payload digest, U64 payload size, and payload. The native compiler also stores exact successful check/HIR/lowering/Wasm results in the unified aligned `.dwp` pack; this path is used when the host output cache is bypassed or for `check`. Missing entries are misses;
 malformed, mismatched, truncated, or checksum-invalid entries are fail-visible
 corruption and are never treated as misses. Cache hits are atomically copied to
 the requested destination. Failed compilations and missing outputs are never

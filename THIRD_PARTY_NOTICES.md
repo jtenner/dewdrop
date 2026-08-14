@@ -1,5 +1,17 @@
 # Third-party notices
 
+## BLAKE3
+
+Dew's portable cache-pack BLAKE3 implementation follows the public BLAKE3
+specification, reference implementation, and official test vectors from:
+
+```text
+https://github.com/BLAKE3-team/BLAKE3
+```
+
+The upstream project is available under either the Apache License 2.0 or CC0
+1.0 Universal. Dewdrop uses the Apache License 2.0 option.
+
 ## JairusSW/as-simd
 
 Dew's `Swar32` and `Swar64` packed-lane formulas are derived in part from:

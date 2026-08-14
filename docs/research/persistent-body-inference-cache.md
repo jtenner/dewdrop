@@ -25,13 +25,14 @@ mixture of cached and fresh jobs, and feeds the ordinary deterministic merge.
 
 ## Complete-module artifact
 
-Complete module artifacts remain at:
+The default native path stores complete modules as `BMOD` entries in one
+`.dew/cache/packs/v1-<graph>.dwp` file. `--no-cache-pack` retains the legacy path:
 
 ```text
 .dew/cache/body-inference/v4-<key>.dbi
 ```
 
-The V4 key is SHA-256 over:
+The V4 semantic key is SHA-256 over:
 
 - the private schema/domain marker;
 - default-preamble policy;
@@ -46,7 +47,8 @@ changes this key and may then fall through to declaration-family lookup.
 ## Declaration-family bundle
 
 Family artifacts for one ordinary workspace or external-package module are
-stored together:
+stored together as one `BFAM` pack entry. `--no-cache-pack` retains the legacy
+path:
 
 ```text
 .dew/cache/body-inference-families/v2-<context-fingerprint>.dbf
@@ -141,9 +143,9 @@ DEW_BODY_FAMILY_CACHE=1 tools/dew check ...
 
 Without either option, `--cache-report` prints `body inference cache: disabled`.
 
-The compiler host request is V5. The family-cache policy introduced by V4 and
-the planning-cache policy added by V5 are transported explicitly to the MoonBit
-compiler process.
+The compiler host request is V6. The family-cache policy introduced by V4, the
+planning-cache policy added by V5, and the aligned pack/exact-program policies
+added by V6 are transported explicitly to the MoonBit compiler process.
 
 Without family reuse, `--cache-report` prints:
 

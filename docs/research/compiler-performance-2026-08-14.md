@@ -3,8 +3,9 @@
 ## Scope
 
 This review profiled the native compiler, persistent semantic caches, verified
-whole-build cache, and representative one-module and 96-module incremental
-workloads. Correctness, deterministic diagnostics, byte-identical outputs, and
+whole-build cache, and representative one-module, 96-module, and 100-module
+incremental/startup workloads. Correctness, deterministic diagnostics,
+byte-identical outputs, and
 fail-visible cache corruption remain mandatory; no durability or validation
 checks were removed to obtain the measurements below.
 
@@ -119,10 +120,29 @@ faster at **104.839 ms**, so family persistence correctly remains opt-in.
 The final hit is 0.4441x the ordinary compile time. Ten samples produced
 byte-identical 422-byte Wasm outputs and one verified build artifact.
 
+### Unified 100-module cache pack
+
+The later aligned-pack tranche replaced 523 parser/interface/body/layout/fragment
+files with one `.dwp` compiler-data file. Including the compiler fingerprint memo,
+total cache files fell from 524 to 2. Seven warm samples measured:
+
+| Path | Warm median |
+| --- | ---: |
+| exact aligned-pack result | 105.843 ms |
+| aligned-pack phase entries only | 997.337 ms |
+| legacy per-artifact phase files | 964.345 ms |
+| all compiler caches disabled | 925.105 ms |
+
+The exact pack path is 89.02% faster than legacy warm phase reuse and 88.56%
+faster than fresh compilation. Lazy index opening plus one selected lookup takes
+76.88 us in the focused 512-entry codec benchmark. Phase-only pack reuse remains
+slightly slower and is retained for incremental misses, not as the unchanged
+warm boundary.
+
 ## Remaining work
 
-- Replace semantic JSON artifacts with a compact format before considering
-  default admission again.
+- Keep semantic body and planning phase caches opt-in until larger external and
+  heavy-inference workloads show a phase-level win.
 - Add phase timing, allocation, and peak-memory reporting so cache admission can
   use representative evidence rather than source-size guesses.
 - Profile verified-output destination publication separately; atomic write and

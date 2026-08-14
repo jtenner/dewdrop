@@ -50,6 +50,7 @@ pub struct CompilerCompilation {
   body_cache_status : @standard_loader.BodyInferenceCacheStatus
   planning_cache_status : @standard_loader.PlanningCacheStatus
   parse_event_cache_status : @standard_loader.ParseEventCacheStatus
+  cache_pack_status : String
 }
 
 ///|
@@ -60,6 +61,7 @@ pub fn compile_manifest(
   prior_parse_event_cache_status? : @standard_loader.ParseEventCacheStatus = @standard_loader.ParseEventCacheWasUsed(
     0, 0,
   ),
+  pack? : @standard_loader.CompilationCachePack? = None,
 ) -> Result[CompilerCompilation, String] {
   let prepared = match
     @standard_loader.prepare_program_parse_event_cache(
@@ -67,6 +69,7 @@ pub fn compile_manifest(
       loaded,
       options.default_preamble,
       prior_status=prior_parse_event_cache_status,
+      pack~,
     ) {
     Ok(value) => value
     Err(error) => return Err(error)
@@ -83,13 +86,14 @@ pub fn compile_manifest(
       program,
       loaded,
       root_module_index=options.root_module_index,
+      pack~,
     ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let analyzed = cached.analyzed
   let planned = match
-    @standard_loader.plan_program_lowering_with_cache(program, analyzed) {
+    @standard_loader.plan_program_lowering_with_cache(program, analyzed, pack~) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -106,11 +110,20 @@ pub fn compile_manifest(
       lowering,
       options.root_module_index,
       planning_options,
+      pack~,
     ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let link = linked.link
+  match pack {
+    Some(session) =>
+      match session.commit() {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    None => ()
+  }
   Ok({
     program,
     analyzed,
@@ -123,6 +136,10 @@ pub fn compile_manifest(
       linked.status,
     ),
     parse_event_cache_status: prepared.status,
+    cache_pack_status: match pack {
+      Some(session) => session.status()
+      None => "disabled"
+    },
   })
 }
 

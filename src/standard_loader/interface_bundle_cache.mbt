@@ -267,27 +267,52 @@ fn validate_workspace_interface_cache_hit(
 }
 
 ///|
+fn interface_pack_context(label : Bytes) -> FixedArray[Byte] {
+  @cache_binary.blake3(label)
+}
+
+///|
 fn lookup_workspace_interface(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
   module_index : Int,
   cached : Array[@semantic.FrozenModuleInterface?],
   key : String,
+  pack? : CompilationCachePack? = None,
 ) -> Result[@semantic.FrozenModuleInterface?, String] {
   let path = workspace_interface_cache_file(key)
-  if !@fs.path_exists(path) {
-    return Ok(None)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error =>
-      return Err(
-        "cannot read workspace frozen-interface cache \{path}: \{error}",
-      )
-  }
-  let payload = match unwrap_workspace_interface_cache_payload(bytes, key) {
-    Ok(value) => value
-    Err(error) =>
-      return Err("corrupt workspace frozen-interface cache \{path}: \{error}")
+  let payload = match pack {
+    Some(session) if session.enabled =>
+      match
+        session.lookup(
+          cache_pack_interface_kind,
+          13U,
+          "interface:workspace:" + program.module_paths[module_index],
+          @cache_binary.blake3(@utf8.encode(key)),
+          interface_pack_context(b"DEW_INTERFACE_PACK_WORKSPACE_V1"),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(None)
+      }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(None)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error =>
+          return Err(
+            "cannot read workspace frozen-interface cache \{path}: \{error}",
+          )
+      }
+      match unwrap_workspace_interface_cache_payload(bytes, key) {
+        Ok(value) => value
+        Err(error) =>
+          return Err(
+            "corrupt workspace frozen-interface cache \{path}: \{error}",
+          )
+      }
+    }
   }
   let interfaces = match @semantic.deserialize_frozen_interfaces(payload) {
     Ok(value) => value
@@ -313,11 +338,26 @@ fn lookup_workspace_interface(
 fn store_workspace_interface(
   key : String,
   interface_ : @semantic.FrozenModuleInterface,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let payload = match @semantic.serialize_frozen_interfaces([interface_]) {
     Ok(value) => value
     Err(error) =>
       return Err("cannot serialize workspace frozen-interface cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled =>
+      return session.store(
+        cache_pack_interface_kind,
+        13U,
+        1U,
+        1U,
+        "interface:workspace:" + interface_.path,
+        @cache_binary.blake3(@utf8.encode(key)),
+        interface_pack_context(b"DEW_INTERFACE_PACK_WORKSPACE_V1"),
+        payload,
+      )
+    _ => ()
   }
   let root = interface_cache_root()
   match ensure_interface_cache_root(root) {
@@ -485,23 +525,42 @@ fn lookup_workspace_interface_scc(
   members : Array[Int],
   cached : Array[@semantic.FrozenModuleInterface?],
   key : String,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Bool, String] {
   let path = workspace_interface_cache_file(key)
-  if !@fs.path_exists(path) {
-    return Ok(false)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error =>
-      return Err(
-        "cannot read workspace frozen-interface SCC cache \{path}: \{error}",
-      )
-  }
-  let payload = match unwrap_workspace_interface_cache_payload(bytes, key) {
-    Ok(value) => value
-    Err(error) =>
-      return Err(
-        "corrupt workspace frozen-interface SCC cache \{path}: \{error}",
-      )
+  let representative = members[scc.start]
+  let payload = match pack {
+    Some(session) if session.enabled =>
+      match
+        session.lookup(
+          cache_pack_interface_kind,
+          13U,
+          "interface:scc:" + program.module_paths[representative],
+          @cache_binary.blake3(@utf8.encode(key)),
+          interface_pack_context(b"DEW_INTERFACE_PACK_WORKSPACE_SCC_V1"),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(false)
+      }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(false)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error =>
+          return Err(
+            "cannot read workspace frozen-interface SCC cache \{path}: \{error}",
+          )
+      }
+      match unwrap_workspace_interface_cache_payload(bytes, key) {
+        Ok(value) => value
+        Err(error) =>
+          return Err(
+            "corrupt workspace frozen-interface SCC cache \{path}: \{error}",
+          )
+      }
+    }
   }
   let interfaces = match @semantic.deserialize_frozen_interfaces(payload) {
     Ok(value) => value
@@ -583,6 +642,7 @@ fn store_workspace_interface_scc(
   scc : @semantic.HirSpan,
   members : Array[Int],
   interfaces : Array[@semantic.FrozenModuleInterface?],
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let stored : Array[@semantic.FrozenModuleInterface] = []
   for item in 0..<scc.length {
@@ -598,6 +658,26 @@ fn store_workspace_interface_scc(
       return Err(
         "cannot serialize workspace frozen-interface SCC cache: \{error}",
       )
+  }
+  match pack {
+    Some(session) if session.enabled => {
+      let representative = members[scc.start]
+      let owner = match interfaces[representative] {
+        Some(value) => "interface:scc:" + value.path
+        None => return Err("cannot cache an incomplete workspace interface SCC")
+      }
+      return session.store(
+        cache_pack_interface_kind,
+        13U,
+        2U,
+        2U,
+        owner,
+        @cache_binary.blake3(@utf8.encode(key)),
+        interface_pack_context(b"DEW_INTERFACE_PACK_WORKSPACE_SCC_V1"),
+        payload,
+      )
+    }
+    _ => ()
   }
   let root = interface_cache_root()
   match ensure_interface_cache_root(root) {
@@ -636,21 +716,40 @@ pub fn lookup_interface_bundle(
   program : @semantic.CollectedProgram,
   key : InterfaceBundleCacheKey,
   policy : InterfaceBundlePolicy,
+  pack? : CompilationCachePack? = None,
 ) -> Result[InterfaceBundleCacheLookup, String] {
   if !interface_bundle_cache_enabled(key, policy) {
     return Ok(InterfaceBundleCacheDisabled)
   }
   let path = interface_cache_file(key)
-  if !@fs.path_exists(path) {
-    return Ok(InterfaceBundleCacheMiss)
-  }
-  let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read frozen-interface cache \{path}: \{error}")
-  }
-  let payload = match
-    unwrap_standard_interface_cache_payload(bytes, key.fingerprint) {
-    Ok(payload) => payload
-    Err(error) => return Err("corrupt frozen-interface cache \{path}: \{error}")
+  let payload = match pack {
+    Some(session) if session.enabled =>
+      match
+        session.lookup(
+          cache_pack_interface_kind,
+          13U,
+          "interface:bundle",
+          @cache_binary.blake3(@utf8.encode(key.fingerprint)),
+          interface_pack_context(b"DEW_INTERFACE_PACK_BUNDLE_V1"),
+        ) {
+        Err(error) => return Err("corrupt compilation cache pack: \{error}")
+        Ok(Some(value)) => value
+        Ok(None) => return Ok(InterfaceBundleCacheMiss)
+      }
+    _ => {
+      if !@fs.path_exists(path) {
+        return Ok(InterfaceBundleCacheMiss)
+      }
+      let bytes = @fs.read_file_to_bytes(path) catch {
+        error =>
+          return Err("cannot read frozen-interface cache \{path}: \{error}")
+      }
+      match unwrap_standard_interface_cache_payload(bytes, key.fingerprint) {
+        Ok(value) => value
+        Err(error) =>
+          return Err("corrupt frozen-interface cache \{path}: \{error}")
+      }
+    }
   }
   let interfaces = match @semantic.deserialize_frozen_interfaces(payload) {
     Ok(interfaces) => interfaces
@@ -701,6 +800,7 @@ pub fn store_interface_bundle(
   interfaces : Array[@semantic.FrozenModuleInterface],
   key : InterfaceBundleCacheKey,
   policy : InterfaceBundlePolicy,
+  pack? : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   if !interface_bundle_cache_enabled(key, policy) {
     return Ok(())
@@ -722,6 +822,20 @@ pub fn store_interface_bundle(
     Ok(bytes) => bytes
     Err(error) =>
       return Err("cannot serialize frozen-interface cache: \{error}")
+  }
+  match pack {
+    Some(session) if session.enabled =>
+      return session.store(
+        cache_pack_interface_kind,
+        13U,
+        0U,
+        3U,
+        "interface:bundle",
+        @cache_binary.blake3(@utf8.encode(key.fingerprint)),
+        interface_pack_context(b"DEW_INTERFACE_PACK_BUNDLE_V1"),
+        bytes,
+      )
+    _ => ()
   }
   let root = interface_cache_root()
   match ensure_interface_cache_root(root) {

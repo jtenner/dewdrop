@@ -6,6 +6,7 @@ pub fn analyze_program_with_interface_bundle_cache(
   program : @semantic.CollectedProgram,
   loaded : StandardLibraryLoad,
   root_module_index? : Int = 0,
+  pack? : CompilationCachePack? = None,
 ) -> Result[CachedInterfaceBundleAnalysis, String] {
   let cached : Array[@semantic.FrozenModuleInterface?] = Array::make(
     program.modules.length(),
@@ -16,7 +17,7 @@ pub fn analyze_program_with_interface_bundle_cache(
   let mut hits = 0
   let mut misses = 0
   let mut bundle_miss = false
-  match lookup_interface_bundle(program, key, policy) {
+  match lookup_interface_bundle(program, key, policy, pack~) {
     Err(error) => return Err(error)
     Ok(InterfaceBundleCacheDisabled) => ()
     Ok(InterfaceBundleCacheMiss) => {
@@ -69,7 +70,12 @@ pub fn analyze_program_with_interface_bundle_cache(
       workspace_attempted[module_index] = true
       match
         lookup_workspace_interface(
-          program, graph, module_index, slots, workspace_key,
+          program,
+          graph,
+          module_index,
+          slots,
+          workspace_key,
+          pack~,
         ) {
         Err(error) => {
           cache_error = Some(error)
@@ -91,7 +97,7 @@ pub fn analyze_program_with_interface_bundle_cache(
       }
       match workspace_keys[module_index] {
         Some(workspace_key) =>
-          match store_workspace_interface(workspace_key, interface_) {
+          match store_workspace_interface(workspace_key, interface_, pack~) {
             Ok(_) => ()
             Err(error) => cache_error = Some(error)
           }
@@ -115,7 +121,13 @@ pub fn analyze_program_with_interface_bundle_cache(
       workspace_scc_attempted[representative] = true
       match
         lookup_workspace_interface_scc(
-          program, graph, scc, members, slots, workspace_key,
+          program,
+          graph,
+          scc,
+          members,
+          slots,
+          workspace_key,
+          pack~,
         ) {
         Err(error) => cache_error = Some(error)
         Ok(true) => hits += scc.length
@@ -130,7 +142,13 @@ pub fn analyze_program_with_interface_bundle_cache(
       match workspace_scc_keys[representative] {
         Some(workspace_key) =>
           match
-            store_workspace_interface_scc(workspace_key, scc, members, slots) {
+            store_workspace_interface_scc(
+              workspace_key,
+              scc,
+              members,
+              slots,
+              pack~,
+            ) {
             Ok(_) => ()
             Err(error) => cache_error = Some(error)
           }
@@ -143,13 +161,14 @@ pub fn analyze_program_with_interface_bundle_cache(
     None => ()
   }
   let body_cached = match
-    analyze_program_semantics_with_body_cache(program, frozen) {
+    analyze_program_semantics_with_body_cache(program, frozen, pack~) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let analyzed = body_cached.analyzed
   if bundle_miss && policy.store_on_miss {
-    match store_interface_bundle(program, frozen.interfaces, key, policy) {
+    match
+      store_interface_bundle(program, frozen.interfaces, key, policy, pack~) {
       Err(error) => return Err(error)
       Ok(_) => ()
     }
