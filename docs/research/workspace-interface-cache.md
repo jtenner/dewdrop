@@ -9,10 +9,10 @@ Implemented for ordinary non-root workspace modules, including multi-module and 
 Artifacts live at:
 
 ```text
-.dew/cache/workspace-interfaces/v1-<key>.dwi
+.dew/cache/workspace-interfaces/v2-<key>.dwi
 ```
 
-The key is SHA-256 over a private V1 marker, the exact module source fingerprint, and sorted direct dependency records. The source fingerprint commits to:
+The key is SHA-256 over a private V2 marker, the exact module source fingerprint, and sorted direct dependency records. The source fingerprint commits to:
 
 - logical module path;
 - stable manifest-derived module ID;
@@ -25,7 +25,7 @@ Module IDs remain in the source key because frozen declaration identities are ma
 
 ## Validation and publication
 
-Workspace artifacts reuse the deterministic frozen-interface V12 serializer and checksum envelope, but contain exactly one module. Lookup validates:
+Workspace artifacts reuse the deterministic frozen-interface V13 serializer and checksum envelope, but contain exactly one module. Lookup validates:
 
 - envelope checksum and schema;
 - exactly one decoded module;
@@ -66,7 +66,7 @@ Permanent validation covers:
 - fail-visible workspace-artifact corruption;
 - atomic publication through the shared native cache writer.
 
-`tools/benchmark-workspace-interface-cache.py` generates a 96-module chain. A representative run measured approximately 543 ms cold, 361 ms warm, 372 ms after a private leaf change, and 383 ms after a public leaf change. Including the two compiler-owned ambient standard interfaces in the aggregate report, the private change produced 98 hits and one miss; the public change produced 97 hits and two misses. These figures are supporting measurements rather than release thresholds.
+`tools/benchmark-workspace-interface-cache.py` generates a 96-module chain. A representative run measured 967.653 ms cold, 300.146 ms warm, 304.818 ms after a private leaf change, and 307.193 ms after a public leaf change. Including the two compiler-owned ambient standard interfaces in the aggregate report, the private change produced 98 hits and one miss; the public change produced 97 hits and two misses. These figures are supporting measurements rather than release thresholds.
 
 ## Remaining work
 

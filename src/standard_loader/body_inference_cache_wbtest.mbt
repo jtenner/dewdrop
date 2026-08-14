@@ -11,10 +11,45 @@ test "body-inference cache envelope verifies checksum and provenance" {
     unwrap_body_inference_cache_payload(wrapped, key, source, interface_).unwrap(),
     payload,
   )
+  for cut in 0..<wrapped.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(wrapped[index])
+    }
+    assert_true(
+      unwrap_body_inference_cache_payload(
+        truncated.to_bytes(),
+        key,
+        source,
+        interface_,
+      )
+      is Err(_),
+    )
+  }
+  for selected in 0..<wrapped.length() {
+    let mutated = Buffer(size_hint=wrapped.length())
+    for index in 0..<wrapped.length() {
+      mutated.write_byte(
+        if index == selected {
+          wrapped[index] ^ 0x80
+        } else {
+          wrapped[index]
+        },
+      )
+    }
+    assert_true(
+      unwrap_body_inference_cache_payload(
+        mutated.to_bytes(),
+        key,
+        source,
+        interface_,
+      )
+      is Err(_),
+    )
+  }
   let changed = @crypto.sha256(b"changed")
   match unwrap_body_inference_cache_payload(wrapped, key, source, changed) {
-    Err(error) =>
-      assert_eq(error, "body-inference cache interface provenance mismatch")
+    Err(error) => assert_true(error.contains("provenance mismatch"))
     Ok(_) => fail("expected interface provenance mismatch")
   }
   let corrupt = Buffer()
@@ -29,7 +64,7 @@ test "body-inference cache envelope verifies checksum and provenance" {
       source,
       interface_,
     ) {
-    Err(error) => assert_eq(error, "body-inference cache checksum mismatch")
+    Err(error) => assert_true(error.contains("checksum mismatch"))
     Ok(_) => fail("expected checksum mismatch")
   }
   let family = wrap_body_inference_family_cache_payload(
@@ -39,11 +74,47 @@ test "body-inference cache envelope verifies checksum and provenance" {
     unwrap_body_inference_family_cache_payload(family, key, source, interface_).unwrap(),
     payload,
   )
+  for cut in 0..<family.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(family[index])
+    }
+    assert_true(
+      unwrap_body_inference_family_cache_payload(
+        truncated.to_bytes(),
+        key,
+        source,
+        interface_,
+      )
+      is Err(_),
+    )
+  }
+  for selected in 0..<family.length() {
+    let mutated = Buffer(size_hint=family.length())
+    for index in 0..<family.length() {
+      mutated.write_byte(
+        if index == selected {
+          family[index] ^ 0x40
+        } else {
+          family[index]
+        },
+      )
+    }
+    assert_true(
+      unwrap_body_inference_family_cache_payload(
+        mutated.to_bytes(),
+        key,
+        source,
+        interface_,
+      )
+      is Err(_),
+    )
+  }
   match
     unwrap_body_inference_family_cache_payload(
       family, changed, source, interface_,
     ) {
-    Err(error) => assert_eq(error, "body-family cache key provenance mismatch")
+    Err(error) => assert_true(error.contains("provenance mismatch"))
     Ok(_) => fail("expected body-family key mismatch")
   }
 }

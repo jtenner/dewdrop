@@ -41,10 +41,10 @@ The private frozen-interface payload first advanced from V7 to V8 for aligned
 span per frozen generic parameter. V10 adds the owner generic-parameter span to
 every frozen implementation so imported generic evidence can instantiate and
 enforce its own prerequisites. V11 retained that layout while adding package-
-ownership validation for frozen implementation evidence. V12 adds canonical
+ownership validation for frozen implementation evidence. V13 adds canonical
 resolved explicit-call type arguments required when an in-memory or restored
 root interface proceeds into body inference. The outer persistent envelope and
-filenames now use `v12-<fingerprint>.dwi`; older artifacts are ignored by
+filenames now use `v13-<fingerprint>.dwi`; older artifacts are ignored by
 construction rather than decoded under a newer policy.
 
 ## Call-site obligation checking
@@ -160,7 +160,7 @@ A nominal argument carried through an ordinary generic specialization uses the c
 
 Tests cover function, builtin, and trait declarations; ordered multi-bound
 parsing; nested applied bounds adjacent to the outer `>`; unbounded parameters;
-flat HIR retention; trait-namespace resolution; byte-identical V12
+flat HIR retention; trait-namespace resolution; byte-identical V13
 frozen-interface serialization/deserialization; local and imported call-bound
 checking; local, transitive, operator, and imported generic-implementation
 prerequisites; symbolic generic-body operators, methods, applied trait arguments,

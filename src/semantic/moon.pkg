@@ -1,5 +1,6 @@
 import {
   "jtenner/dewdrop/parser",
+  "jtenner/dewdrop/cache_binary",
   "jtenner/dewdrop/tokenizer",
   "jtenner/dewdrop/standard_sources",
   "moonbitlang/core/bench",

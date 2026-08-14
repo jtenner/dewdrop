@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Compact declaration-family artifacts, then extend reuse into layout/fragment caches and deterministic parallel scheduling.
+1. Extend reuse into layout/fragment caches and deterministic parallel scheduling.
 2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 3. Complete package acquisition and reproducible release infrastructure.
 4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
@@ -12,7 +12,6 @@
 
 ## Incremental and parallel compilation
 
-- [ ] Replace declaration-family JSON bundles with a compact encoding and define measured admission thresholds before enabling them by default.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [ ] Schedule independent module and body jobs across workers.
 - [ ] Merge diagnostics and artifacts in deterministic source/manifest order.
@@ -29,7 +28,7 @@ are follow-up hardening and observability work, not release blockers.
 - [ ] Diagnose budget exhaustion deterministically without panic or partial cache publication.
 - [ ] Add opt-in runtime allocation and phase counters with zero production overhead.
 - [ ] Track compile, validation/encoding, runtime time, compiler allocations, and peak memory with warmup and variance.
-- [ ] Extend cache measurements to external-package and multi-module workloads.
+- [ ] Extend binary-cache admission measurements to larger external-package and heavy-inference multi-module workloads before changing the default body-cache policy.
 - [ ] Establish reviewed cross-engine regression thresholds for hot workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements.
 - [ ] Benchmark Array growth, large reference copying, write barriers, and GC behavior on each supported WasmGC runtime.
 - [ ] Add representative heap, ordered-tree, queue, JSON, and generated typed-decoder performance suites.

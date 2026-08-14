@@ -35,7 +35,7 @@ The package capsule key is independently domain-separated over exact locked pack
 `serialize_frozen_interfaces` writes a private deterministic binary format beginning with:
 
 ```text
-DEW_FROZEN_INTERFACES_V12\0
+DEW_FROZEN_INTERFACES_V13\0
 ```
 
 It serializes diagnostics-free `FrozenModuleInterface` records, including:
@@ -56,7 +56,7 @@ No maps, addresses, filesystem paths, or worker-order values enter the artifact.
 The serialized payload is wrapped in a second cache-file envelope:
 
 ```text
-DEW_STD_INTERFACE_CACHE_V12\0
+DEW_STD_INTERFACE_CACHE_V13\0
 SHA-256(payload)
 payload
 ```
@@ -79,7 +79,7 @@ The payload binds artifact version, exact lock identity/version/source/integrity
 The default locations are:
 
 ```text
-.dew/cache/interfaces/v12-<bundle-fingerprint>.dwi
+.dew/cache/interfaces/v13-<bundle-fingerprint>.dwi
 .dew/cache/packages/v1-<package-artifact-key>.dpa
 ```
 
@@ -124,7 +124,7 @@ Permanent coverage includes:
 - explicit disabled mode;
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
-- versioned external package miss/hit behavior and `v12-*.dwi` filenames;
+- versioned external package miss/hit behavior and `v13-*.dwi` filenames;
 - installed package capsule publication, source-tree removal, verified atomic recovery, and byte-identical pre/post-recovery Wasm;
 - fail-visible corrupt package capsules and refusal to overwrite nonempty partial package trees;
 - rejection of injected ordinary orphan evidence before a cache hit can expose it;
@@ -134,16 +134,16 @@ Permanent coverage includes:
 - byte-identical Wasm between cache miss, cache hit, on-disk uncached, and generated bootstrap providers;
 - the complete Node/Wago module snapshot suite with cache-enabled native generation.
 
-Release-mode native phase benchmarks over the all-standard wildcard program currently measure:
+Release-mode native phase benchmarks after the V13 binary migration measure:
 
 ```text
-serialize all frozen interfaces       8.68 ms ± 91.29 us
-decode all frozen interfaces          9.72 ms ± 166.61 us
-cached-interface freeze/injection     27.54 ms ± 317.56 us
-fresh interface freeze               137.63 ms ± 2.14 ms
+serialize all frozen interfaces       4.63 ms ± 0.17 ms
+decode all frozen interfaces          6.69 ms ± 0.07 ms
+cached-interface freeze/injection     52.57 ms ± 0.63 ms
+fresh interface freeze               683.49 ms ± 2.64 ms
 ```
 
-A complete hit currently pays decode plus cached graph/scope injection, about 37.26 ms before cache-file I/O and checksum hashing, versus 137.63 ms for fresh interface freezing. This is a substantial interface-phase saving rather than a claim about complete compilation speed. Warm bootstrap CLI samples remain roughly 112–124 ms for both paths because launcher, source collection, body analysis, lowering, and linking dominate. The measurements must remain separated rather than presenting the cache as an end-to-end win it has not yet demonstrated.
+A complete hit currently pays decode plus cached graph/scope injection, about 59.26 ms before cache-file I/O and checksum hashing, versus 683.49 ms for fresh interface freezing. This is a substantial interface-phase saving rather than a claim about complete compilation speed. Warm bootstrap CLI samples remain roughly 112–124 ms for both paths because launcher, source collection, body analysis, lowering, and linking dominate. The measurements must remain separated rather than presenting the cache as an end-to-end win it has not yet demonstrated.
 
 ## Remaining work
 

@@ -69,7 +69,7 @@ FileId   = packed ModuleId + manifest_file_index offset
 
 Module and file identities therefore depend only on explicit manifest order. Directory enumeration and worker completion order cannot affect them.
 
-The collector diagnoses empty and duplicate module/file paths. Strict explicit compiler graphs are now named `dew.modules.json`; convention-first `dew.json` package definitions derive modules and sorted sources, while exact transitive resolution lives in `dew.lock`. Ordered compiler-owned `dew.std` roots, versioned/Git dependency requests, source integrity, interface expectations, and V12 dependency-interface caching are implemented by the bootstrap driver.
+The collector diagnoses empty and duplicate module/file paths. Strict explicit compiler graphs are now named `dew.modules.json`; convention-first `dew.json` package definitions derive modules and sorted sources, while exact transitive resolution lives in `dew.lock`. Ordered compiler-owned `dew.std` roots, versioned/Git dependency requests, source integrity, interface expectations, and V13 dependency-interface caching are implemented by the bootstrap driver.
 
 ## Frozen module interfaces
 

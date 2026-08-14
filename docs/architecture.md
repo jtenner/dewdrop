@@ -101,9 +101,10 @@ physical linking: recursive type groups, initializers, indices, exports
 backend emission: Starshine module construction, validation, binary encoding
 ```
 
-Persistent executable semantics are opt-in because measured JSON decode and
-validation cost more than fresh inference on current workloads. `--body-cache`
-first uses a complete module artifact under `.dew/cache/body-inference/`; its key
+Persistent executable semantics remain opt-in while the end-to-end admission
+policy is evaluated on broader heavy-inference workloads. Their payloads are now
+canonical binary rather than JSON. `--body-cache` first uses a complete module
+artifact under `.dew/cache/body-inference/`; its key
 commits to exact module source, default-preamble policy, stable module identity,
 and the transitive frozen interface/evidence fingerprint. `--body-family-cache`
 implies that policy and may load one atomic module bundle from
@@ -116,8 +117,9 @@ and fresh jobs through the ordinary source-ordered merge. Family lookup uses one
 fingerprint map and precomputed source ranges; applicable ordinary modules are not
 duplicated into the larger complete-module cache, and partial misses do not
 rewrite an existing baseline bundle. Name resolution and module-value SCC
-inference remain fresh. Compact encoding and measured admission wins are required
-before either semantic cache becomes default.
+inference remain fresh. The binary codecs pass isolated encode/decode and size
+admission gates, but the explicit policy remains until broader end-to-end cache
+costs are consistently below fresh inference.
 
 The whole-program stages now have explicit implementation owners:
 
@@ -349,8 +351,9 @@ and deterministic fingerprints.
 The persistent cache stores checksummed serialized frozen interfaces. Corrupt,
 incompatible, or identity-mismatched artifacts fail visibly. The cache
 architecture is generalized around `InterfaceBundleCacheKey` and
-`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V12
-envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
+`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V13
+standard envelope and V2 workspace envelope, `interface_bundle_cache.mbt` owns
+provenance, module selection, and
 I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. One
 bundle selects compiler-owned standard modules and verified external
 dependencies. Ordinary non-root workspace modules use artifacts under
@@ -367,8 +370,9 @@ The earlier syntax boundary is now `parse_event_cache.mbt`. It prepares each
 workspace source before standard-module selection, prepares only the selected
 standard sources afterward, and attaches one immutable `ParseEvent` array to the
 file model. Import scanning and collection consume that same array in manifest
-order. `parse_event_cache_envelope.mbt` validates key/source provenance and the
-payload checksum; the native platform shim publishes through a flushed,
+order. `parse_event_cache_envelope.mbt` validates V4 key/source provenance and the
+payload checksum. The payload is a direct tagged binary syntax graph with exact
+IEEE float bits and no JSON bridge. The native platform shim publishes through a flushed,
 POSIX-fsynced same-directory temporary file and atomic rename. Missing entries
 are misses, while malformed, incompatible, mismatched, or corrupt entries fail
 visibly. Body, layout, and fragment caches remain future extensions over these

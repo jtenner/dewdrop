@@ -171,8 +171,8 @@ test "frozen interface decoder rejects cyclic implementation heads" {
 ///|
 test "frozen interface decoder rejects corruption and trailing bytes" {
   assert_true(deserialize_frozen_interfaces(b"bad") is Err(_))
-  let oversized = Buffer()
-  oversized.write_bytes(frozen_interface_cache_magic)
+  let oversized = @cache_binary.Writer::new()
+  oversized.write_raw(frozen_interface_cache_magic)
   cache_write_int(oversized, 0x7fffffff)
   assert_true(deserialize_frozen_interfaces(oversized.to_bytes()) is Err(_))
   let program = collect_program_manifest(
@@ -186,6 +186,32 @@ test "frozen interface decoder rejects corruption and trailing bytes" {
   let encoded = serialize_frozen_interfaces(
     freeze_program_interfaces(program).interfaces,
   ).unwrap()
+  for cut in 0..<encoded.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(encoded[index])
+    }
+    assert_true(deserialize_frozen_interfaces(truncated.to_bytes()) is Err(_))
+  }
+  for iteration in 0..<128 {
+    let selected = (iteration * 3571 + 23) % encoded.length()
+    let mutated = Buffer(size_hint=encoded.length())
+    for index in 0..<encoded.length() {
+      mutated.write_byte(
+        if index == selected {
+          encoded[index] ^ 0x20
+        } else {
+          encoded[index]
+        },
+      )
+    }
+    let mutated = mutated.to_bytes()
+    match deserialize_frozen_interfaces(mutated) {
+      Ok(value) =>
+        assert_eq(serialize_frozen_interfaces(value).unwrap(), mutated)
+      Err(_) => ()
+    }
+  }
   let with_trailing = Buffer()
   with_trailing.write_bytes(encoded)
   with_trailing.write_byte(0)

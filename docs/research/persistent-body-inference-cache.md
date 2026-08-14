@@ -8,7 +8,7 @@ Implemented as two opt-in deterministic executable-semantic cache layers:
 2. `--body-family-cache` enables that policy and can recover unchanged root-body
    jobs when the complete-module key misses.
 
-Both are disabled by default because measured JSON decode, validation, and
+Both are disabled by default because measured end-to-end keying, I/O, validation, and
 publication cost more than fresh inference on current one-module and 96-module
 workloads. Exact verified whole-build output reuse remains enabled by default.
 
@@ -28,10 +28,10 @@ mixture of cached and fresh jobs, and feeds the ordinary deterministic merge.
 Complete module artifacts remain at:
 
 ```text
-.dew/cache/body-inference/v3-<key>.dbi
+.dew/cache/body-inference/v4-<key>.dbi
 ```
 
-The V3 key is SHA-256 over:
+The V4 key is SHA-256 over:
 
 - the private schema/domain marker;
 - default-preamble policy;
@@ -49,7 +49,7 @@ Family artifacts for one ordinary workspace or external-package module are
 stored together:
 
 ```text
-.dew/cache/body-inference-families/v1-<context-fingerprint>.dbf
+.dew/cache/body-inference-families/v2-<context-fingerprint>.dbf
 ```
 
 One atomic bundle avoids hundreds of small file opens and publications. Entries
@@ -105,12 +105,15 @@ covered across changed preceding expression ranges.
 
 ## Payloads and fail-visible publication
 
-Complete-module and family payloads use private deterministic JSON schemas behind
-separate magic headers. The family bundle envelope binds the context provenance
-and payload checksum. Lookup rejects unsupported versions, truncation, malformed
-UTF-8/JSON, checksum/provenance mismatch, wrong module ownership, duplicate or
-unordered entries, incompatible body/lambda owners, malformed type graphs, and
-arena mismatches.
+Complete-module payload V2 and family-bundle V2 use canonical direct binary
+schemas inside the shared checksummed artifact container. Family fingerprints
+are raw sorted 32-byte digests followed by fixed offset/length index records and
+concatenated bounded family sections. Lookup binary-searches the index and
+decodes only the selected section. Unsupported versions, truncation,
+non-canonical values, invalid UTF-8/tags, checksum/provenance mismatch, wrong
+ownership, duplicate/unordered entries, malformed type graphs, and arena
+mismatches fail visibly.
+
 
 Both layers use same-directory atomic publication. Missing files or missing
 family fingerprints are ordinary misses; malformed existing artifacts are never
@@ -181,10 +184,9 @@ measured only **104.839 ms**, family-warm reuse measured **147.674 ms**, and a
 compiler-warm cold-cache build measured **205.725 ms**.
 
 These measurements show that deterministic granular reuse is correct but the
-current JSON artifact path is not a performance win for tiny, cheaply inferred
+thin end-to-end cache path is not yet a performance win for tiny, cheaply inferred
 functions. Family caching is therefore opt-in rather than a default regression.
-Future default admission requires compact encoding and representative workloads
-where avoided inference exceeds decode/rebase cost.
+The compact encoding now passes isolated speed and size gates. Future default admission still requires representative heavy-inference workloads where avoided inference exceeds complete keying, I/O, validation, and rebase cost.
 
 ## Remaining work
 

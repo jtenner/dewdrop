@@ -299,7 +299,104 @@ def _package_cache_root() -> Path:
     return _configured_cache_path().resolve()
 
 
-_BUILD_CACHE_MAGIC = b"DEW_BUILD_OUTPUT_V1\x00"
+_ARTIFACT_MAGIC = b"DEWART\x00\x01"
+_BUILD_ARTIFACT_KIND = 6
+_COMPILER_MEMO_ARTIFACT_KIND = 7
+_BUILD_ARTIFACT_VERSION = 2
+_COMPILER_MEMO_VERSION = 4
+
+
+def _encode_uvar(value: int) -> bytes:
+    if value < 0 or value > 0xFFFFFFFFFFFFFFFF:
+        raise ValueError("unsigned varint is out of range")
+    output = bytearray()
+    while value >= 0x80:
+        output.append((value & 0x7F) | 0x80)
+        value >>= 7
+    output.append(value)
+    return bytes(output)
+
+
+def _decode_uvar(data: bytes, offset: int) -> tuple[int, int]:
+    start = offset
+    value = 0
+    for index in range(10):
+        if offset >= len(data):
+            raise ValueError("truncated unsigned varint")
+        byte = data[offset]
+        offset += 1
+        if index == 9 and byte > 1:
+            raise ValueError("unsigned varint overflow")
+        value |= (byte & 0x7F) << (index * 7)
+        if byte < 0x80:
+            if offset - start > 1 and value < 1 << ((offset - start - 1) * 7):
+                raise ValueError("non-canonical unsigned varint")
+            return value, offset
+    raise ValueError("unterminated unsigned varint")
+
+
+def _wrap_binary_artifact(
+    kind: int,
+    version: int,
+    provenance: list[bytes],
+    payload: bytes,
+) -> bytes:
+    if kind < 0 or kind > 255 or version < 0 or version > 0xFFFFFFFF:
+        raise ValueError("artifact identity is out of range")
+    if len(provenance) > 255 or any(len(digest) != 32 for digest in provenance):
+        raise ValueError("artifact provenance must contain SHA-256 digests")
+    return b"".join(
+        (
+            _ARTIFACT_MAGIC,
+            bytes((kind,)),
+            struct.pack("<IIQ", version, 0, len(payload)),
+            _encode_uvar(len(provenance)),
+            *provenance,
+            hashlib.sha256(payload).digest(),
+            payload,
+        )
+    )
+
+
+def _unwrap_binary_artifact(
+    encoded: bytes,
+    kind: int,
+    version: int,
+    expected_provenance: list[bytes] | None = None,
+) -> tuple[bytes, list[bytes]]:
+    minimum = len(_ARTIFACT_MAGIC) + 1 + 4 + 4 + 8 + 1 + 32
+    if len(encoded) < minimum or encoded[: len(_ARTIFACT_MAGIC)] != _ARTIFACT_MAGIC:
+        raise ValueError("unsupported or truncated artifact magic")
+    offset = len(_ARTIFACT_MAGIC)
+    actual_kind = encoded[offset]
+    offset += 1
+    actual_version, flags, payload_length = struct.unpack_from("<IIQ", encoded, offset)
+    offset += 16
+    if actual_kind != kind or actual_version != version or flags != 0:
+        raise ValueError("unsupported artifact kind, version, or flags")
+    provenance_count, offset = _decode_uvar(encoded, offset)
+    if provenance_count > 255:
+        raise ValueError("artifact provenance count exceeds limit")
+    provenance: list[bytes] = []
+    for _ in range(provenance_count):
+        end = offset + 32
+        if end > len(encoded):
+            raise ValueError("truncated artifact provenance")
+        provenance.append(encoded[offset:end])
+        offset = end
+    checksum_end = offset + 32
+    if checksum_end > len(encoded):
+        raise ValueError("truncated artifact checksum")
+    checksum = encoded[offset:checksum_end]
+    offset = checksum_end
+    if payload_length > len(encoded) - offset or offset + payload_length != len(encoded):
+        raise ValueError("invalid artifact payload length or trailing bytes")
+    payload = encoded[offset:]
+    if hashlib.sha256(payload).digest() != checksum:
+        raise ValueError("artifact payload checksum mismatch")
+    if expected_provenance is not None and provenance != expected_provenance:
+        raise ValueError("artifact provenance mismatch")
+    return payload, provenance
 
 
 def _build_cache_compiler_roots() -> list[Path]:
@@ -363,15 +460,78 @@ def _build_cache_metadata_record(path: Path) -> dict[str, object] | None:
     }
 
 
-def _build_cache_compiler_manifest_checksum(
-    files: list[object], fingerprint: str
-) -> str:
-    payload = json.dumps(
-        {"files": files, "fingerprint": fingerprint},
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+def _encode_compiler_memo(
+    files: list[dict[str, object]], fingerprint: str
+) -> bytes:
+    fingerprint_bytes = bytes.fromhex(fingerprint)
+    body = bytearray(fingerprint_bytes)
+    body.extend(_encode_uvar(len(files)))
+    for record in files:
+        path = str(record["path"]).encode("utf-8")
+        body.extend(_encode_uvar(len(path)))
+        body.extend(path)
+        body.extend(
+            struct.pack(
+                "<Qqq",
+                int(record["size"]),
+                int(record["mtime_ns"]),
+                int(record["ctime_ns"]),
+            )
+        )
+    manifest_checksum = hashlib.sha256(body).digest()
+    payload = bytes(body) + manifest_checksum
+    return _wrap_binary_artifact(
+        _COMPILER_MEMO_ARTIFACT_KIND,
+        _COMPILER_MEMO_VERSION,
+        [manifest_checksum],
+        payload,
+    )
+
+
+def _decode_compiler_memo(encoded: bytes) -> tuple[str, list[dict[str, object]]]:
+    payload, provenance = _unwrap_binary_artifact(
+        encoded,
+        _COMPILER_MEMO_ARTIFACT_KIND,
+        _COMPILER_MEMO_VERSION,
+    )
+    if len(payload) < 64:
+        raise ValueError("truncated compiler fingerprint memo")
+    body = payload[:-32]
+    manifest_checksum = payload[-32:]
+    if hashlib.sha256(body).digest() != manifest_checksum or provenance != [manifest_checksum]:
+        raise ValueError("compiler fingerprint memo manifest checksum mismatch")
+    fingerprint = body[:32].hex()
+    offset = 32
+    count, offset = _decode_uvar(body, offset)
+    if count < 1 or count > 1_000_000:
+        raise ValueError("compiler fingerprint memo file count exceeds limit")
+    files: list[dict[str, object]] = []
+    previous = ""
+    for _ in range(count):
+        length, offset = _decode_uvar(body, offset)
+        if length > 1_048_576 or length > len(body) - offset:
+            raise ValueError("invalid compiler fingerprint memo path length")
+        try:
+            path = body[offset : offset + length].decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ValueError("invalid compiler fingerprint memo path UTF-8") from error
+        offset += length
+        if path <= previous or len(body) - offset < 24:
+            raise ValueError("unordered or truncated compiler fingerprint memo")
+        size, mtime_ns, ctime_ns = struct.unpack_from("<Qqq", body, offset)
+        offset += 24
+        files.append(
+            {
+                "path": path,
+                "size": size,
+                "mtime_ns": mtime_ns,
+                "ctime_ns": ctime_ns,
+            }
+        )
+        previous = path
+    if offset != len(body):
+        raise ValueError("trailing compiler fingerprint memo bytes")
+    return fingerprint, files
 
 
 def _build_cache_metadata_matches(record: object) -> bool:
@@ -393,33 +553,13 @@ def _build_cache_metadata_matches(record: object) -> bool:
     )
 
 
-def _build_cache_compiler_memo_matches(cached: object) -> bool:
-    if not isinstance(cached, dict) or cached.get("version") != 3:
+def _build_cache_compiler_memo_matches(
+    cached: tuple[str, list[dict[str, object]]]
+) -> bool:
+    fingerprint, files = cached
+    if re.fullmatch(r"[0-9a-f]{64}", fingerprint) is None or not files:
         return False
-    fingerprint = cached.get("fingerprint")
-    files = cached.get("files")
-    manifest_checksum = cached.get("manifest_checksum")
-    if (
-        not isinstance(fingerprint, str)
-        or re.fullmatch(r"[0-9a-f]{64}", fingerprint) is None
-        or not isinstance(manifest_checksum, str)
-        or re.fullmatch(r"[0-9a-f]{64}", manifest_checksum) is None
-        or not isinstance(files, list)
-        or not files
-        or manifest_checksum
-        != _build_cache_compiler_manifest_checksum(files, fingerprint)
-    ):
-        return False
-    cached_paths: list[str] = []
-    previous = ""
-    for record in files:
-        if not isinstance(record, dict) or not isinstance(record.get("path"), str):
-            return False
-        path = record["path"]
-        if path <= previous:
-            return False
-        cached_paths.append(path)
-        previous = path
+    cached_paths = [str(record["path"]) for record in files]
     if cached_paths != _build_cache_compiler_file_paths():
         return False
     return all(_build_cache_metadata_matches(record) for record in files)
@@ -431,13 +571,13 @@ def _build_cache_argument_path(value: str) -> Path:
 
 
 def _build_cache_compiler_fingerprint() -> str:
-    memo = _package_cache_root() / "compiler-fingerprint-v3.json"
+    memo = _package_cache_root() / "compiler-fingerprint-v4.dbm"
     if memo.is_file() and not memo.is_symlink():
         try:
-            cached = json.loads(memo.read_text(encoding="utf-8"))
+            cached = _decode_compiler_memo(memo.read_bytes())
             if _build_cache_compiler_memo_matches(cached):
-                return cached["fingerprint"]
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                return cached[0]
+        except (OSError, ValueError):
             pass
     files = _build_cache_compiler_files()
     file_records: list[dict[str, object]] = []
@@ -447,35 +587,20 @@ def _build_cache_compiler_fingerprint() -> str:
             raise ManifestError(f"compiler fingerprint input disappeared: {path}")
         file_records.append(record)
     digest = hashlib.sha256()
-    digest.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_V3\x00")
+    digest.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_V4\x00")
     for record, path in zip(file_records, files):
         _write_hash_string(digest, str(record["path"]))
         data = path.read_bytes()
         digest.update(len(data).to_bytes(8, "little"))
         digest.update(data)
     fingerprint = digest.hexdigest()
-    manifest_checksum = _build_cache_compiler_manifest_checksum(
-        file_records, fingerprint
-    )
-    _atomic_write(
-        memo,
-        json.dumps(
-            {
-                "files": file_records,
-                "fingerprint": fingerprint,
-                "manifest_checksum": manifest_checksum,
-                "version": 3,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8"),
-    )
+    _atomic_write(memo, _encode_compiler_memo(file_records, fingerprint))
     return fingerprint
 
 
 def _build_cache_key(arguments: list[str]) -> str | None:
     digest = hashlib.sha256()
-    digest.update(b"DEW_BUILD_OUTPUT_KEY_V1\x00")
+    digest.update(b"DEW_BUILD_OUTPUT_KEY_V2\x00")
     normalized: list[str] = []
     source_paths: list[Path] = []
     standard_roots: list[Path] = []
@@ -537,22 +662,39 @@ def _build_cache_emit(arguments: list[str]) -> str:
 
 
 def _build_cache_artifact_path(key: str) -> Path:
-    return _package_cache_root() / "builds" / f"v1-{key}.dba"
+    return _package_cache_root() / "builds" / f"v2-{key}.dba"
+
+
+def _build_cache_emit_tag(emit: str) -> int:
+    try:
+        return {"wasm": 0, "hir": 1, "lowering": 2}[emit]
+    except KeyError as error:
+        raise ManifestError(f"unsupported build cache emit kind: {emit}") from error
 
 
 def _encode_build_cache_artifact(key: str, emit: str, payload: bytes) -> bytes:
-    header = json.dumps(
-        {
-            "emit": emit,
-            "key": key,
-            "sha256": hashlib.sha256(payload).hexdigest(),
-            "size": len(payload),
-            "version": 1,
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return _BUILD_CACHE_MAGIC + struct.pack("<I", len(header)) + header + payload
+    try:
+        key_bytes = bytes.fromhex(key)
+    except ValueError as error:
+        raise ManifestError("build cache key is not SHA-256") from error
+    if len(key_bytes) != 32:
+        raise ManifestError("build cache key is not SHA-256")
+    digest = hashlib.sha256(payload).digest()
+    body = b"".join(
+        (
+            bytes((_build_cache_emit_tag(emit),)),
+            key_bytes,
+            digest,
+            struct.pack("<Q", len(payload)),
+            payload,
+        )
+    )
+    return _wrap_binary_artifact(
+        _BUILD_ARTIFACT_KIND,
+        _BUILD_ARTIFACT_VERSION,
+        [key_bytes],
+        body,
+    )
 
 
 def _decode_build_cache_artifact(
@@ -564,33 +706,33 @@ def _decode_build_cache_artifact(
         raise ManifestError(f"corrupt build cache artifact: {artifact}")
     try:
         encoded = artifact.read_bytes()
-    except OSError as error:
-        raise ManifestError(f"cannot read build cache artifact: {artifact}") from error
-    prefix = len(_BUILD_CACHE_MAGIC)
-    if len(encoded) < prefix + 4 or encoded[:prefix] != _BUILD_CACHE_MAGIC:
-        raise ManifestError(f"corrupt build cache artifact: {artifact}")
-    header_length = struct.unpack_from("<I", encoded, prefix)[0]
-    header_start = prefix + 4
-    header_end = header_start + header_length
-    if header_length > 65536 or header_end > len(encoded):
-        raise ManifestError(f"corrupt build cache artifact: {artifact}")
-    try:
-        header = json.loads(encoded[header_start:header_end].decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        key_bytes = bytes.fromhex(key)
+        if len(key_bytes) != 32:
+            raise ValueError("invalid key")
+        body, _ = _unwrap_binary_artifact(
+            encoded,
+            _BUILD_ARTIFACT_KIND,
+            _BUILD_ARTIFACT_VERSION,
+            [key_bytes],
+        )
+        header_length = 1 + 32 + 32 + 8
+        if len(body) < header_length:
+            raise ValueError("truncated build artifact header")
+        emit_tag = body[0]
+        stored_key = body[1:33]
+        stored_digest = body[33:65]
+        payload_length = struct.unpack_from("<Q", body, 65)[0]
+        payload = body[header_length:]
+        if (
+            emit_tag != _build_cache_emit_tag(emit)
+            or stored_key != key_bytes
+            or payload_length != len(payload)
+            or stored_digest != hashlib.sha256(payload).digest()
+        ):
+            raise ValueError("build artifact header mismatch")
+        return payload
+    except (OSError, ValueError) as error:
         raise ManifestError(f"corrupt build cache artifact: {artifact}") from error
-    if not isinstance(header, dict):
-        raise ManifestError(f"corrupt build cache artifact: {artifact}")
-    exact_keys(header, {"emit", "key", "sha256", "size", "version"}, "build cache")
-    payload = encoded[header_end:]
-    if (
-        header["version"] != 1
-        or header["key"] != key
-        or header["emit"] != emit
-        or header["size"] != len(payload)
-        or header["sha256"] != hashlib.sha256(payload).hexdigest()
-    ):
-        raise ManifestError(f"corrupt build cache artifact: {artifact}")
-    return payload
 
 
 def _atomic_write(path: Path, payload: bytes) -> None:

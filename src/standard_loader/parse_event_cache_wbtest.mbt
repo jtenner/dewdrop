@@ -8,9 +8,35 @@ test "parse-event cache envelope verifies checksum and provenance" {
     unwrap_parse_event_cache_payload(wrapped, key, source).unwrap(),
     payload,
   )
+  for cut in 0..<wrapped.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(wrapped[index])
+    }
+    assert_true(
+      unwrap_parse_event_cache_payload(truncated.to_bytes(), key, source)
+      is Err(_),
+    )
+  }
+  for selected in 0..<wrapped.length() {
+    let mutated = Buffer(size_hint=wrapped.length())
+    for index in 0..<wrapped.length() {
+      mutated.write_byte(
+        if index == selected {
+          wrapped[index] ^ 0x80
+        } else {
+          wrapped[index]
+        },
+      )
+    }
+    assert_true(
+      unwrap_parse_event_cache_payload(mutated.to_bytes(), key, source)
+      is Err(_),
+    )
+  }
   let changed_key = @crypto.sha256(b"other-key")
   match unwrap_parse_event_cache_payload(wrapped, changed_key, source) {
-    Err(error) => assert_eq(error, "parse-event cache key provenance mismatch")
+    Err(error) => assert_true(error.contains("provenance mismatch"))
     Ok(_) => fail("expected key provenance mismatch")
   }
   let corrupt = Buffer()
@@ -19,7 +45,7 @@ test "parse-event cache envelope verifies checksum and provenance" {
   }
   corrupt.write_byte(b'x')
   match unwrap_parse_event_cache_payload(corrupt.to_bytes(), key, source) {
-    Err(error) => assert_eq(error, "parse-event cache checksum mismatch")
+    Err(error) => assert_true(error.contains("checksum mismatch"))
     Ok(_) => fail("expected checksum mismatch")
   }
 }

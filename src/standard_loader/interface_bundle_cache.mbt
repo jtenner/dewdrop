@@ -139,7 +139,7 @@ fn ensure_interface_cache_root(path : String) -> Result[Unit, String] {
 fn interface_cache_file(key : InterfaceBundleCacheKey) -> String {
   interface_cache_join(
     interface_cache_join(interface_cache_root(), "interfaces"),
-    "v12-" + key.fingerprint + ".dwi",
+    "v13-" + key.fingerprint + ".dwi",
   )
 }
 
@@ -152,7 +152,7 @@ fn workspace_interface_cache_directory() -> String {
 fn workspace_interface_cache_file(key : String) -> String {
   interface_cache_join(
     workspace_interface_cache_directory(),
-    "v1-" + key + ".dwi",
+    "v2-" + key + ".dwi",
   )
 }
 
@@ -174,7 +174,7 @@ fn workspace_interface_source_fingerprint(
 ) -> String {
   let module_ = program.modules[module_index]
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SOURCE_V1\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SOURCE_V2\x00")
   interface_cache_write_string(output, program.module_paths[module_index])
   let module_id = module_.module_id
   for shift in [0, 8, 16, 24, 32, 40, 48, 56] {
@@ -200,7 +200,7 @@ fn workspace_interface_cache_key_from_dependency_records(
 ) -> String {
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V2\x00")
   interface_cache_write_string(output, source_fingerprint)
   for record in dependency_records {
     interface_cache_write_string(output, record)
@@ -284,7 +284,7 @@ fn lookup_workspace_interface(
         "cannot read workspace frozen-interface cache \{path}: \{error}",
       )
   }
-  let payload = match unwrap_interface_cache_payload(bytes) {
+  let payload = match unwrap_workspace_interface_cache_payload(bytes, key) {
     Ok(value) => value
     Err(error) =>
       return Err("corrupt workspace frozen-interface cache \{path}: \{error}")
@@ -329,12 +329,17 @@ fn store_workspace_interface(
     Ok(_) => ()
     Err(error) => return Err(error)
   }
+  let envelope = match wrap_workspace_interface_cache_payload(key, payload) {
+    Ok(value) => value
+    Err(error) =>
+      return Err("cannot envelope workspace frozen-interface cache: \{error}")
+  }
   let path = workspace_interface_cache_file(key)
   let path_bytes = @utf8.encode(path)
   let result = cache_platform_atomic_write(
     path_bytes,
     path_bytes.length(),
-    wrap_interface_cache_payload(payload),
+    envelope,
   )
   if result != 0 {
     return Err(
@@ -462,7 +467,7 @@ fn workspace_interface_scc_cache_key(
   source_records.sort()
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V2\x00")
   for record in source_records {
     interface_cache_write_string(output, record)
   }
@@ -491,7 +496,7 @@ fn lookup_workspace_interface_scc(
         "cannot read workspace frozen-interface SCC cache \{path}: \{error}",
       )
   }
-  let payload = match unwrap_interface_cache_payload(bytes) {
+  let payload = match unwrap_workspace_interface_cache_payload(bytes, key) {
     Ok(value) => value
     Err(error) =>
       return Err(
@@ -604,12 +609,19 @@ fn store_workspace_interface_scc(
     Ok(_) => ()
     Err(error) => return Err(error)
   }
+  let envelope = match wrap_workspace_interface_cache_payload(key, payload) {
+    Ok(value) => value
+    Err(error) =>
+      return Err(
+        "cannot envelope workspace frozen-interface SCC cache: \{error}",
+      )
+  }
   let path = workspace_interface_cache_file(key)
   let path_bytes = @utf8.encode(path)
   let result = cache_platform_atomic_write(
     path_bytes,
     path_bytes.length(),
-    wrap_interface_cache_payload(payload),
+    envelope,
   )
   if result != 0 {
     return Err(
@@ -635,7 +647,8 @@ pub fn lookup_interface_bundle(
   let bytes = @fs.read_file_to_bytes(path) catch {
     error => return Err("cannot read frozen-interface cache \{path}: \{error}")
   }
-  let payload = match unwrap_interface_cache_payload(bytes) {
+  let payload = match
+    unwrap_standard_interface_cache_payload(bytes, key.fingerprint) {
     Ok(payload) => payload
     Err(error) => return Err("corrupt frozen-interface cache \{path}: \{error}")
   }
@@ -720,10 +733,22 @@ pub fn store_interface_bundle(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
+  let envelope = match
+    wrap_standard_interface_cache_payload(key.fingerprint, bytes) {
+    Ok(value) => value
+    Err(error) => return Err("cannot envelope frozen-interface cache: \{error}")
+  }
   let path = interface_cache_file(key)
-  let envelope = wrap_interface_cache_payload(bytes)
-  @fs.write_bytes_to_file(path, envelope) catch {
-    error => return Err("cannot write frozen-interface cache \{path}: \{error}")
+  let path_bytes = @utf8.encode(path)
+  let result = cache_platform_atomic_write(
+    path_bytes,
+    path_bytes.length(),
+    envelope,
+  )
+  if result != 0 {
+    return Err(
+      "cannot atomically write frozen-interface cache \{path}: errno \{-result}",
+    )
   }
   Ok(())
 }

@@ -1,6 +1,6 @@
 ///|
 /// Reserved Dew words recognized directly by the tokenizer.
-pub enum Keyword {
+pub(all) enum Keyword {
   Fn
   Test
   Pub
@@ -38,7 +38,7 @@ pub enum Keyword {
 
 ///|
 /// Punctuation and operators with fixed spellings.
-pub enum Symbol {
+pub(all) enum Symbol {
   LeftParen
   RightParen
   LeftBrace
@@ -78,7 +78,7 @@ pub enum Symbol {
 
 ///|
 /// Recoverable lexical failures.
-pub enum LexError {
+pub(all) enum LexError {
   UnexpectedUnit(UtfCodepoint)
   InvalidAtIdentifier
   InvalidInteger(String)
@@ -93,7 +93,7 @@ pub enum LexError {
 ///
 /// String literal payloads are `Bytes` rather than MoonBit `String` values so
 /// WTF-8 surrogates and malformed-byte sentinels can be preserved losslessly.
-pub enum TokenKind {
+pub(all) enum TokenKind {
   Newline
   Symbol(Symbol)
   Keyword(Keyword)

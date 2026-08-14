@@ -486,10 +486,10 @@ class BuildOutputCacheTests(unittest.TestCase):
                 ):
                     second = dew_cli._build_cache_compiler_fingerprint()
                 self.assertEqual(first, second)
-                memo = root / ".dew" / "cache" / "compiler-fingerprint-v3.json"
-                corrupted = json.loads(memo.read_text(encoding="utf-8"))
-                corrupted["files"] = []
-                memo.write_text(json.dumps(corrupted), encoding="utf-8")
+                memo = root / ".dew" / "cache" / "compiler-fingerprint-v4.dbm"
+                corrupted = bytearray(memo.read_bytes())
+                corrupted[-1] ^= 0xFF
+                memo.write_bytes(corrupted)
                 self.assertEqual(first, dew_cli._build_cache_compiler_fingerprint())
                 compiler = root / "src" / "compiler.mbt"
                 compiler_status = compiler.stat()
@@ -505,6 +505,32 @@ class BuildOutputCacheTests(unittest.TestCase):
                 )
                 changed = dew_cli._build_cache_compiler_fingerprint()
                 self.assertNotEqual(same_size_changed, changed)
+
+    def test_compiler_fingerprint_memo_rejects_every_truncation_and_mutation(self) -> None:
+        files = [
+            {
+                "path": "moon.mod",
+                "size": 2,
+                "mtime_ns": 10,
+                "ctime_ns": 11,
+            },
+            {
+                "path": "src/compiler.mbt",
+                "size": 16,
+                "mtime_ns": 20,
+                "ctime_ns": 21,
+            },
+        ]
+        encoded = dew_cli._encode_compiler_memo(files, "3" * 64)
+        self.assertEqual(dew_cli._decode_compiler_memo(encoded), ("3" * 64, files))
+        for cut in range(len(encoded)):
+            with self.assertRaises(ValueError):
+                dew_cli._decode_compiler_memo(encoded[:cut])
+        for selected in range(len(encoded)):
+            mutated = bytearray(encoded)
+            mutated[selected] ^= 0x80
+            with self.assertRaises(ValueError):
+                dew_cli._decode_compiler_memo(bytes(mutated))
 
     def test_build_cache_key_tracks_sources_and_ignores_output(self) -> None:
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
@@ -539,22 +565,39 @@ class BuildOutputCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
             artifact = Path(temporary) / "entry.dba"
             payload = b"wasm"
-            artifact.write_bytes(
-                dew_cli._encode_build_cache_artifact("a" * 64, "wasm", payload)
+            encoded = dew_cli._encode_build_cache_artifact(
+                "a" * 64, "wasm", payload
             )
+            self.assertEqual(encoded[:8], b"DEWART\x00\x01")
+            self.assertEqual(encoded[8], dew_cli._BUILD_ARTIFACT_KIND)
+            self.assertEqual(
+                __import__("struct").unpack_from("<I", encoded, 9)[0], 2
+            )
+            artifact.write_bytes(encoded)
             self.assertEqual(
                 dew_cli._decode_build_cache_artifact(
                     artifact, "a" * 64, "wasm"
                 ),
                 payload,
             )
-            artifact.write_bytes(b"corrupt")
-            with self.assertRaisesRegex(
-                dew_cli.ManifestError, "corrupt build cache artifact"
-            ):
-                dew_cli._decode_build_cache_artifact(
-                    artifact, "a" * 64, "wasm"
-                )
+            for cut in range(len(encoded)):
+                artifact.write_bytes(encoded[:cut])
+                with self.assertRaisesRegex(
+                    dew_cli.ManifestError, "corrupt build cache artifact"
+                ):
+                    dew_cli._decode_build_cache_artifact(
+                        artifact, "a" * 64, "wasm"
+                    )
+            for selected in range(len(encoded)):
+                mutated = bytearray(encoded)
+                mutated[selected] ^= 0x40
+                artifact.write_bytes(mutated)
+                with self.assertRaisesRegex(
+                    dew_cli.ManifestError, "corrupt build cache artifact"
+                ):
+                    dew_cli._decode_build_cache_artifact(
+                        artifact, "a" * 64, "wasm"
+                    )
 
     def test_cached_build_restores_verified_output_without_compiling(self) -> None:
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:

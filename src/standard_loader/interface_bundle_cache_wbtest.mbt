@@ -7,16 +7,81 @@ test "bootstrap and on-disk standard providers are byte identical" {
 }
 
 ///|
-test "interface bundle envelope preserves payload and rejects corruption" {
+test "interface bundle envelopes preserve payload, kind, and provenance" {
   let payload = b"frozen interfaces"
+  let standard = wrap_standard_interface_cache_payload("standard", payload).unwrap()
   assert_eq(
-    unwrap_interface_cache_payload(wrap_interface_cache_payload(payload)),
+    unwrap_standard_interface_cache_payload(standard, "standard"),
     Ok(payload),
   )
-  match unwrap_interface_cache_payload(b"bad") {
-    Err(error) =>
-      assert_eq(error, "truncated standard-interface cache envelope")
-    Ok(_) => fail("expected corrupt cache envelope")
+  assert_true(
+    unwrap_standard_interface_cache_payload(standard, "changed") is Err(_),
+  )
+  assert_true(
+    unwrap_workspace_interface_cache_payload(standard, "standard") is Err(_),
+  )
+  assert_true(
+    unwrap_standard_interface_cache_payload(b"bad", "standard") is Err(_),
+  )
+  for cut in 0..<standard.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(standard[index])
+    }
+    assert_true(
+      unwrap_standard_interface_cache_payload(truncated.to_bytes(), "standard")
+      is Err(_),
+    )
+  }
+  for selected in 0..<standard.length() {
+    let mutated = Buffer(size_hint=standard.length())
+    for index in 0..<standard.length() {
+      mutated.write_byte(
+        if index == selected {
+          standard[index] ^ 0x80
+        } else {
+          standard[index]
+        },
+      )
+    }
+    assert_true(
+      unwrap_standard_interface_cache_payload(mutated.to_bytes(), "standard")
+      is Err(_),
+    )
+  }
+  let workspace = wrap_workspace_interface_cache_payload("workspace", payload).unwrap()
+  assert_eq(
+    unwrap_workspace_interface_cache_payload(workspace, "workspace"),
+    Ok(payload),
+  )
+  for cut in 0..<workspace.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(workspace[index])
+    }
+    assert_true(
+      unwrap_workspace_interface_cache_payload(
+        truncated.to_bytes(),
+        "workspace",
+      )
+      is Err(_),
+    )
+  }
+  for selected in 0..<workspace.length() {
+    let mutated = Buffer(size_hint=workspace.length())
+    for index in 0..<workspace.length() {
+      mutated.write_byte(
+        if index == selected {
+          workspace[index] ^ 0x40
+        } else {
+          workspace[index]
+        },
+      )
+    }
+    assert_true(
+      unwrap_workspace_interface_cache_payload(mutated.to_bytes(), "workspace")
+      is Err(_),
+    )
   }
 }
 

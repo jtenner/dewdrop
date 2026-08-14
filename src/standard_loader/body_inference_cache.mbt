@@ -30,6 +30,7 @@ pub struct CachedProgramSemanticAnalysis {
 ///|
 priv struct BodyInferenceFamilyCacheKey {
   fingerprint : String
+  fingerprint_digest : FixedArray[Byte]
   context_digest : FixedArray[Byte]
 }
 
@@ -55,7 +56,7 @@ fn body_inference_cache_directory() -> String {
 
 ///|
 fn body_inference_cache_file(key : String) -> String {
-  interface_cache_join(body_inference_cache_directory(), "v3-" + key + ".dbi")
+  interface_cache_join(body_inference_cache_directory(), "v4-" + key + ".dbi")
 }
 
 ///|
@@ -67,7 +68,7 @@ fn body_inference_family_cache_directory() -> String {
 fn body_inference_family_cache_file(key : String) -> String {
   interface_cache_join(
     body_inference_family_cache_directory(),
-    "v1-" + key + ".dbf",
+    "v2-" + key + ".dbf",
   )
 }
 
@@ -154,7 +155,7 @@ fn body_inference_module_value_source_digest(
   declaration_sources : Array[Bytes?],
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_FAMILY_MODULE_VALUES_V1\x00")
+  output.write_bytes(b"DEW_BODY_FAMILY_MODULE_VALUES_V2\x00")
   for body in collected.bodies {
     if body.kind is @semantic.ModuleLetBody {
       body_family_write_u64(output, body.declaration)
@@ -179,7 +180,7 @@ fn body_inference_family_context_digest(
 ) -> Result[FixedArray[Byte], String] {
   let collected = program.modules[module_index]
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_FAMILY_CONTEXT_V1\x00")
+  output.write_bytes(b"DEW_BODY_FAMILY_CONTEXT_V2\x00")
   let interface_digest = match
     body_inference_interface_digest(frozen, module_index) {
     Ok(value) => value
@@ -267,7 +268,7 @@ fn body_inference_family_cache_keys(
     }
     let source = @crypto.sha256(family_source)
     let key_output = Buffer()
-    key_output.write_bytes(b"DEW_BODY_FAMILY_KEY_V1\x00")
+    key_output.write_bytes(b"DEW_BODY_FAMILY_KEY_V2\x00")
     key_output.write_byte(if program.default_preamble { 1 } else { 0 })
     interface_cache_write_string(key_output, program.module_paths[module_index])
     body_family_write_u64(key_output, body.id)
@@ -281,6 +282,7 @@ fn body_inference_family_cache_keys(
     let key = @crypto.sha256(key_output.to_bytes())
     keys[body_index] = Some({
       fingerprint: @crypto.bytes_to_hex_string(key),
+      fingerprint_digest: key,
       context_digest: context,
     })
   }
@@ -354,7 +356,7 @@ fn body_inference_cache_key_digest(
   interface_ : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V3\x00")
+  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V4\x00")
   output.write_byte(if program.default_preamble { 1 } else { 0 })
   interface_cache_write_string(output, program.module_paths[module_index])
   for byte in source {
@@ -547,7 +549,7 @@ fn store_body_inference_cache(
 fn lookup_body_inference_family_cache(
   module_id : @semantic.ModuleId,
   context : FixedArray[Byte],
-) -> Result[@semantic.BodyInferenceFamilyBundle?, String] {
+) -> Result[@semantic.BodyInferenceFamilyBundleIndex?, String] {
   let fingerprint = @crypto.bytes_to_hex_string(context)
   let path = body_inference_family_cache_file(fingerprint)
   if !@fs.path_exists(path) {
@@ -561,21 +563,12 @@ fn lookup_body_inference_family_cache(
     Ok(value) => value
     Err(error) => return Err("corrupt body-family cache \{path}: \{error}")
   }
-  let bundle = match
-    @semantic.deserialize_body_inference_family_bundle(payload) {
+  let bundle = match @semantic.open_body_inference_family_bundle(payload) {
     Ok(value) => value
     Err(error) => return Err("corrupt body-family cache \{path}: \{error}")
   }
-  if bundle.module_id != module_id {
+  if bundle.owner() != module_id {
     return Err("corrupt body-family cache \{path}: module identity mismatch")
-  }
-  for index in 1..<bundle.entries.length() {
-    if bundle.entries[index - 1].fingerprint >=
-      bundle.entries[index].fingerprint {
-      return Err(
-        "corrupt body-family cache \{path}: unordered or duplicate entries",
-      )
-    }
   }
   Ok(Some(bundle))
 }
@@ -673,22 +666,18 @@ fn infer_module_with_body_family_cache(
     Err(error) => return Err(error)
   }
   match existing {
-    Some(bundle) => {
-      let artifacts : Map[String, @semantic.BodyInferenceFamilyArtifact] = Map::default()
-      for entry in bundle.entries {
-        artifacts[entry.fingerprint] = entry.artifact
-      }
+    Some(bundle) =>
       for index, key in keys {
         match key {
           Some(value) =>
-            match artifacts.get(value.fingerprint) {
-              Some(artifact) => cached[index] = Some(artifact)
-              None => ()
+            match bundle.lookup(value.fingerprint_digest) {
+              Ok(Some(artifact)) => cached[index] = Some(artifact)
+              Ok(None) => ()
+              Err(error) => return Err("corrupt body-family cache: \{error}")
             }
           None => ()
         }
       }
-    }
     None => ()
   }
   let analysis = match

@@ -63,7 +63,7 @@ def main() -> None:
         path.read_bytes() == warm.read_bytes()
         for path in TMP.glob("*.wasm")
     )
-    artifacts = list((cache / "builds").glob("v1-*.dba"))
+    artifacts = list((cache / "builds").glob("v2-*.dba"))
     print(json.dumps({
         "samples": args.samples,
         "cache_hit_median_ms": round(hit, 3),
@@ -71,6 +71,7 @@ def main() -> None:
         "hit_to_uncached_ratio": round(hit / uncached, 4),
         "outputs_byte_identical": outputs_identical,
         "verified_build_artifacts": len(artifacts),
+        "build_artifact_bytes": sum(path.stat().st_size for path in artifacts),
         "wasm_bytes": warm.stat().st_size,
     }, indent=2, sort_keys=True))
 

@@ -36,9 +36,9 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 - [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
 - [x] Extend frozen-interface caching to ordinary non-root workspace modules with exact manifest source identity, direct public dependency fingerprints, atomic publication, and fail-visible corruption.
-- [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation and explicit opt-in controls after JSON decoding measured slower than fresh inference.
+- [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation, canonical binary payloads, and explicit opt-in controls pending broader end-to-end admission.
 - [x] Refine module body artifacts into exact declaration-family jobs: one root body plus its nested lambda tree, normalized/rebased IDs and offsets, atomic per-module bundles, strict validation, deterministic mixed merging, map-based lookup, precomputed source ranges, and no duplicate module artifact or partial-bundle rewrite.
-- [ ] Replace declaration-family JSON bundles with a compact encoding and require measured admission wins before enabling them by default.
+- [x] Replace parser-event, frozen-interface, complete-body, declaration-family, build-output-header, and compiler-fingerprint JSON or legacy payloads with bounded canonical binary artifacts; keep semantic caches opt-in until broader end-to-end admission is stable.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
 - [x] Cache cyclic workspace interface SCCs as one atomic artifact.
@@ -50,12 +50,14 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ## Compiler resource and performance discipline
 
-The measured compiler, collection, text, backend, and JSON baseline is fast
-enough for the first release. JSON body caches are opt-in after profiling showed
-fresh inference was 2.15x–4.42x faster on a 96-module small-body workload. A
-checksummed compiler-manifest fast path halves verified whole-build hit time.
-Remaining work is compact semantic encoding, parallelism, hardening, and
-observability rather than a release gate.
+The measured compiler, collection, text, and backend baseline is fast enough for
+the first release. Hot compiler caches now use deterministic bounded binary
+artifacts. Parser/body/family/interface codec speed and size gates pass, and the
+verified whole-build hit remains within the regression limit. Semantic body
+caches stay opt-in because thin end-to-end workloads still include keying, I/O,
+and validation costs beyond fresh inference. Remaining work is broader heavy
+workload admission, parallelism, hardening, and observability rather than a
+release gate.
 
 ### Post-release performance TODOs
 

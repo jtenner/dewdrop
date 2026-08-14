@@ -1,23 +1,14 @@
 ///|
-let body_inference_cache_magic : Bytes = b"DEW_INFERRED_MODULE_BODIES_V1\x00"
-
-///|
-let body_inference_family_cache_magic : Bytes = b"DEW_INFERRED_BODY_FAMILY_V1\x00"
-
-///|
-let body_inference_family_bundle_magic : Bytes = b"DEW_INFERRED_BODY_FAMILY_BUNDLE_V1\x00"
-
-///|
 pub struct BodyInferenceFamilyBundleEntry {
   fingerprint : String
   artifact : BodyInferenceFamilyArtifact
-} derive(Eq, Debug, ToJson, FromJson)
+} derive(Eq, Debug)
 
 ///|
 pub struct BodyInferenceFamilyBundle {
   module_id : ModuleId
   entries : Array[BodyInferenceFamilyBundleEntry]
-} derive(Eq, Debug, ToJson, FromJson)
+} derive(Eq, Debug)
 
 ///|
 fn body_inference_family_fingerprint_is_valid(value : String) -> Bool {
@@ -79,137 +70,6 @@ pub fn make_body_inference_family_bundle(
     }
   }
   let bundle = { module_id, entries }
-  match validate_body_inference_family_bundle(bundle) {
-    Ok(_) => Ok(bundle)
-    Err(error) => Err(error)
-  }
-}
-
-///|
-/// Serializes one complete module inference result. The persistent cache layer
-/// owns provenance, checksums, and atomic publication; this private payload owns
-/// only the deterministic inferred-body schema.
-pub fn serialize_inferred_module_bodies(
-  inferred : InferredModuleBodies,
-) -> Result[Bytes, String] {
-  let output = Buffer()
-  output.write_bytes(body_inference_cache_magic)
-  output.write_string_utf8(inferred.to_json().stringify())
-  Ok(output.to_bytes())
-}
-
-///|
-/// Decodes one previously validated inferred-body payload. Unsupported,
-/// malformed, schema-incompatible, or trailing JSON fails visibly.
-pub fn deserialize_inferred_module_bodies(
-  payload : Bytes,
-) -> Result[InferredModuleBodies, String] {
-  if payload.length() < body_inference_cache_magic.length() {
-    return Err("truncated body-inference payload header")
-  }
-  for index in 0..<body_inference_cache_magic.length() {
-    if payload[index] != body_inference_cache_magic[index] {
-      return Err("unsupported body-inference payload version")
-    }
-  }
-  let body = Buffer(
-    size_hint=payload.length() - body_inference_cache_magic.length(),
-  )
-  for index in body_inference_cache_magic.length()..<payload.length() {
-    body.write_byte(payload[index])
-  }
-  let text = @utf8.decode(body.to_bytes()) catch {
-    _ => return Err("body-inference payload is not UTF-8")
-  }
-  let json = @json.parse(text) catch {
-    error => return Err("body-inference payload is not valid JSON: \{error}")
-  }
-  let inferred : InferredModuleBodies = @json.from_json(json) catch {
-    error => return Err("body-inference payload schema mismatch: \{error}")
-  }
-  Ok(inferred)
-}
-
-///|
-pub fn serialize_body_inference_family_artifact(
-  artifact : BodyInferenceFamilyArtifact,
-) -> Result[Bytes, String] {
-  let output = Buffer()
-  output.write_bytes(body_inference_family_cache_magic)
-  output.write_string_utf8(artifact.to_json().stringify())
-  Ok(output.to_bytes())
-}
-
-///|
-pub fn deserialize_body_inference_family_artifact(
-  payload : Bytes,
-) -> Result[BodyInferenceFamilyArtifact, String] {
-  if payload.length() < body_inference_family_cache_magic.length() {
-    return Err("truncated body-family inference payload header")
-  }
-  for index in 0..<body_inference_family_cache_magic.length() {
-    if payload[index] != body_inference_family_cache_magic[index] {
-      return Err("unsupported body-family inference payload version")
-    }
-  }
-  let body = Buffer(
-    size_hint=payload.length() - body_inference_family_cache_magic.length(),
-  )
-  for index in body_inference_family_cache_magic.length()..<payload.length() {
-    body.write_byte(payload[index])
-  }
-  let text = @utf8.decode(body.to_bytes()) catch {
-    _ => return Err("body-family inference payload is not UTF-8")
-  }
-  let json = @json.parse(text) catch {
-    error =>
-      return Err("body-family inference payload is not valid JSON: \{error}")
-  }
-  let artifact : BodyInferenceFamilyArtifact = @json.from_json(json) catch {
-    error =>
-      return Err("body-family inference payload schema mismatch: \{error}")
-  }
-  Ok(artifact)
-}
-
-///|
-pub fn serialize_body_inference_family_bundle(
-  bundle : BodyInferenceFamilyBundle,
-) -> Result[Bytes, String] {
-  let output = Buffer()
-  output.write_bytes(body_inference_family_bundle_magic)
-  output.write_string_utf8(bundle.to_json().stringify())
-  Ok(output.to_bytes())
-}
-
-///|
-pub fn deserialize_body_inference_family_bundle(
-  payload : Bytes,
-) -> Result[BodyInferenceFamilyBundle, String] {
-  if payload.length() < body_inference_family_bundle_magic.length() {
-    return Err("truncated body-family bundle payload header")
-  }
-  for index in 0..<body_inference_family_bundle_magic.length() {
-    if payload[index] != body_inference_family_bundle_magic[index] {
-      return Err("unsupported body-family bundle payload version")
-    }
-  }
-  let body = Buffer(
-    size_hint=payload.length() - body_inference_family_bundle_magic.length(),
-  )
-  for index in body_inference_family_bundle_magic.length()..<payload.length() {
-    body.write_byte(payload[index])
-  }
-  let text = @utf8.decode(body.to_bytes()) catch {
-    _ => return Err("body-family bundle payload is not UTF-8")
-  }
-  let json = @json.parse(text) catch {
-    error =>
-      return Err("body-family bundle payload is not valid JSON: \{error}")
-  }
-  let bundle : BodyInferenceFamilyBundle = @json.from_json(json) catch {
-    error => return Err("body-family bundle payload schema mismatch: \{error}")
-  }
   match validate_body_inference_family_bundle(bundle) {
     Ok(_) => Ok(bundle)
     Err(error) => Err(error)

@@ -1,42 +1,69 @@
 ///|
-let interface_bundle_cache_file_magic : Bytes = b"DEW_STD_INTERFACE_CACHE_V12\x00"
+/// Frozen-interface persistent artifact kinds and envelope versions.
+let standard_interface_artifact_kind = 2
 
 ///|
-fn wrap_interface_cache_payload(payload : Bytes) -> Bytes {
-  let output = Buffer()
-  output.write_bytes(interface_bundle_cache_file_magic)
-  let digest = @crypto.sha256(payload)
-  for byte in digest {
-    output.write_byte(byte)
-  }
-  output.write_bytes(payload)
-  output.to_bytes()
+let workspace_interface_artifact_kind = 3
+
+///|
+let standard_interface_envelope_version = 13U
+
+///|
+let workspace_interface_envelope_version = 2U
+
+///|
+fn interface_cache_key_provenance(key : String) -> FixedArray[Byte] {
+  @crypto.sha256(@utf8.encode(key))
 }
 
 ///|
-fn unwrap_interface_cache_payload(bytes : Bytes) -> Result[Bytes, String] {
-  let header_length = interface_bundle_cache_file_magic.length()
-  let digest_length = 32
-  if bytes.length() < header_length + digest_length {
-    return Err("truncated standard-interface cache envelope")
-  }
-  for index in 0..<header_length {
-    if bytes[index] != interface_bundle_cache_file_magic[index] {
-      return Err("unsupported standard-interface cache envelope")
-    }
-  }
-  let payload = Buffer()
-  let mut payload_index = header_length + digest_length
-  while payload_index < bytes.length() {
-    payload.write_byte(bytes[payload_index])
-    payload_index += 1
-  }
-  let payload_bytes = payload.to_bytes()
-  let actual = @crypto.sha256(payload_bytes)
-  for index in 0..<digest_length {
-    if bytes[header_length + index] != actual[index] {
-      return Err("standard-interface cache checksum mismatch")
-    }
-  }
-  Ok(payload_bytes)
+fn wrap_standard_interface_cache_payload(
+  key : String,
+  payload : Bytes,
+) -> Result[Bytes, String] {
+  @cache_binary.wrap_artifact(
+    standard_interface_artifact_kind,
+    standard_interface_envelope_version,
+    [interface_cache_key_provenance(key)],
+    payload,
+  )
+}
+
+///|
+fn unwrap_standard_interface_cache_payload(
+  bytes : Bytes,
+  key : String,
+) -> Result[Bytes, String] {
+  @cache_binary.unwrap_artifact(
+    bytes,
+    standard_interface_artifact_kind,
+    standard_interface_envelope_version,
+    [interface_cache_key_provenance(key)],
+  )
+}
+
+///|
+fn wrap_workspace_interface_cache_payload(
+  key : String,
+  payload : Bytes,
+) -> Result[Bytes, String] {
+  @cache_binary.wrap_artifact(
+    workspace_interface_artifact_kind,
+    workspace_interface_envelope_version,
+    [interface_cache_key_provenance(key)],
+    payload,
+  )
+}
+
+///|
+fn unwrap_workspace_interface_cache_payload(
+  bytes : Bytes,
+  key : String,
+) -> Result[Bytes, String] {
+  @cache_binary.unwrap_artifact(
+    bytes,
+    workspace_interface_artifact_kind,
+    workspace_interface_envelope_version,
+    [interface_cache_key_provenance(key)],
+  )
 }

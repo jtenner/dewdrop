@@ -1,58 +1,51 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V12\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V13\x00"
 
 ///|
-fn cache_write_u32(output : Buffer, value : UInt) -> Unit {
-  output.write_byte((value & 0xffU).to_byte())
-  output.write_byte(((value >> 8) & 0xffU).to_byte())
-  output.write_byte(((value >> 16) & 0xffU).to_byte())
-  output.write_byte(((value >> 24) & 0xffU).to_byte())
+fn cache_write_int(output : @cache_binary.Writer, value : Int) -> Unit {
+  output.write_zigzag_int(value)
 }
 
 ///|
-fn cache_write_int(output : Buffer, value : Int) -> Unit {
-  cache_write_u32(output, value.reinterpret_as_uint())
+fn cache_write_u64(output : @cache_binary.Writer, value : UInt64) -> Unit {
+  output.write_u64_le(value)
 }
 
 ///|
-fn cache_write_u64(output : Buffer, value : UInt64) -> Unit {
-  for shift in [0, 8, 16, 24, 32, 40, 48, 56] {
-    output.write_byte(((value >> shift) & 0xffUL).to_byte())
-  }
+fn cache_write_bool(output : @cache_binary.Writer, value : Bool) -> Unit {
+  output.write_bool(value)
 }
 
 ///|
-fn cache_write_bool(output : Buffer, value : Bool) -> Unit {
-  output.write_byte(if value { 1 } else { 0 })
-}
-
-///|
-fn cache_write_bytes(output : Buffer, value : Bytes) -> Unit {
-  cache_write_int(output, value.length())
+fn cache_write_bytes(output : @cache_binary.Writer, value : Bytes) -> Unit {
   output.write_bytes(value)
 }
 
 ///|
-fn cache_write_string(output : Buffer, value : String) -> Unit {
-  let bytes = Buffer()
-  bytes.write_string_utf8(value)
-  cache_write_bytes(output, bytes.to_bytes())
+fn cache_write_string(output : @cache_binary.Writer, value : String) -> Unit {
+  output.write_string(value)
 }
 
 ///|
-fn cache_write_span(output : Buffer, value : HirSpan) -> Unit {
+fn cache_write_span(output : @cache_binary.Writer, value : HirSpan) -> Unit {
   cache_write_int(output, value.start)
   cache_write_int(output, value.length)
 }
 
 ///|
-fn cache_write_location(output : Buffer, value : SourceLocation) -> Unit {
+fn cache_write_location(
+  output : @cache_binary.Writer,
+  value : SourceLocation,
+) -> Unit {
   cache_write_u64(output, value.file)
   cache_write_u64(output, value.offset)
 }
 
 ///|
-fn cache_write_int_array(output : Buffer, values : Array[Int]) -> Unit {
+fn cache_write_int_array(
+  output : @cache_binary.Writer,
+  values : Array[Int],
+) -> Unit {
   cache_write_int(output, values.length())
   for value in values {
     cache_write_int(output, value)
@@ -60,7 +53,10 @@ fn cache_write_int_array(output : Buffer, values : Array[Int]) -> Unit {
 }
 
 ///|
-fn cache_write_u64_array(output : Buffer, values : Array[UInt64]) -> Unit {
+fn cache_write_u64_array(
+  output : @cache_binary.Writer,
+  values : Array[UInt64],
+) -> Unit {
   cache_write_int(output, values.length())
   for value in values {
     cache_write_u64(output, value)
@@ -68,7 +64,10 @@ fn cache_write_u64_array(output : Buffer, values : Array[UInt64]) -> Unit {
 }
 
 ///|
-fn cache_write_bool_array(output : Buffer, values : Array[Bool]) -> Unit {
+fn cache_write_bool_array(
+  output : @cache_binary.Writer,
+  values : Array[Bool],
+) -> Unit {
   cache_write_int(output, values.length())
   for value in values {
     cache_write_bool(output, value)
@@ -76,7 +75,10 @@ fn cache_write_bool_array(output : Buffer, values : Array[Bool]) -> Unit {
 }
 
 ///|
-fn cache_write_span_array(output : Buffer, values : Array[HirSpan]) -> Unit {
+fn cache_write_span_array(
+  output : @cache_binary.Writer,
+  values : Array[HirSpan],
+) -> Unit {
   cache_write_int(output, values.length())
   for value in values {
     cache_write_span(output, value)
@@ -84,7 +86,10 @@ fn cache_write_span_array(output : Buffer, values : Array[HirSpan]) -> Unit {
 }
 
 ///|
-fn cache_write_primitive(output : Buffer, value : PrimitiveType) -> Unit {
+fn cache_write_primitive(
+  output : @cache_binary.Writer,
+  value : PrimitiveType,
+) -> Unit {
   cache_write_int(output, value.rank())
 }
 
@@ -137,7 +142,10 @@ fn cache_primitive_from_rank(rank : Int) -> PrimitiveType? {
 }
 
 ///|
-fn cache_write_resolved_type(output : Buffer, value : ResolvedType) -> Unit {
+fn cache_write_resolved_type(
+  output : @cache_binary.Writer,
+  value : ResolvedType,
+) -> Unit {
   match value {
     ErrorType => cache_write_int(output, 0)
     PrimitiveType(primitive) => {
@@ -175,7 +183,7 @@ fn cache_write_resolved_type(output : Buffer, value : ResolvedType) -> Unit {
 
 ///|
 fn cache_write_resolved_types(
-  output : Buffer,
+  output : @cache_binary.Writer,
   resolved : ResolvedModuleTypes,
 ) -> Result[Unit, String] {
   if resolved.diagnostics.length() != 0 {
@@ -218,7 +226,7 @@ fn cache_write_resolved_types(
 
 ///|
 fn cache_write_declaration_kind(
-  output : Buffer,
+  output : @cache_binary.Writer,
   value : FrozenInterfaceDeclarationKind,
 ) -> Unit {
   cache_write_int(
@@ -233,7 +241,7 @@ fn cache_write_declaration_kind(
 
 ///|
 fn cache_write_collected_kind(
-  output : Buffer,
+  output : @cache_binary.Writer,
   value : CollectedDeclKind,
 ) -> Unit {
   cache_write_int(
@@ -254,7 +262,7 @@ fn cache_write_collected_kind(
 
 ///|
 fn cache_write_variant_kind(
-  output : Buffer,
+  output : @cache_binary.Writer,
   value : CollectedVariantKind,
 ) -> Unit {
   cache_write_int(
@@ -268,7 +276,10 @@ fn cache_write_variant_kind(
 }
 
 ///|
-fn cache_write_shape(output : Buffer, value : PlannedValueShape) -> Unit {
+fn cache_write_shape(
+  output : @cache_binary.Writer,
+  value : PlannedValueShape,
+) -> Unit {
   cache_write_int(
     output,
     match value {
@@ -296,7 +307,7 @@ fn cache_write_shape(output : Buffer, value : PlannedValueShape) -> Unit {
 
 ///|
 fn cache_write_callable_kind(
-  output : Buffer,
+  output : @cache_binary.Writer,
   value : FrozenInterfaceCallableKind,
 ) -> Unit {
   match value {
@@ -318,7 +329,7 @@ fn cache_write_callable_kind(
 
 ///|
 fn cache_write_interface(
-  output : Buffer,
+  output : @cache_binary.Writer,
   interface_ : FrozenModuleInterface,
 ) -> Result[Unit, String] {
   cache_write_u64(output, interface_.module_id)
@@ -456,8 +467,8 @@ pub fn frozen_interface_body_evidence_fingerprint(
     parameters,
     implementations,
   }
-  let output = Buffer()
-  output.write_bytes(b"DEW_BODY_EVIDENCE_INTERFACE_V1\x00")
+  let output = @cache_binary.Writer::new()
+  output.write_raw(b"DEW_BODY_EVIDENCE_INTERFACE_V2\x00")
   match cache_write_interface(output, normalized) {
     Err(error) => Err(error)
     Ok(_) => Ok(@crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes())))
@@ -471,8 +482,8 @@ pub fn frozen_interface_body_evidence_fingerprint(
 pub fn serialize_frozen_interfaces(
   interfaces : Array[FrozenModuleInterface],
 ) -> Result[Bytes, String] {
-  let output = Buffer()
-  output.write_bytes(frozen_interface_cache_magic)
+  let output = @cache_binary.Writer::new()
+  output.write_raw(frozen_interface_cache_magic)
   cache_write_int(output, interfaces.length())
   for interface_ in interfaces {
     match cache_write_interface(output, interface_) {
@@ -485,9 +496,7 @@ pub fn serialize_frozen_interfaces(
 
 ///|
 priv struct FrozenInterfaceCacheReader {
-  bytes : Bytes
-  mut offset : Int
-  mut error : String?
+  reader : @cache_binary.Reader
 }
 
 ///|
@@ -495,96 +504,42 @@ fn FrozenInterfaceCacheReader::fail(
   self : FrozenInterfaceCacheReader,
   message : String,
 ) -> Unit {
-  if self.error is None {
-    self.error = Some(message)
-  }
-}
-
-///|
-fn FrozenInterfaceCacheReader::read_byte(
-  self : FrozenInterfaceCacheReader,
-) -> UInt {
-  if self.offset >= self.bytes.length() {
-    self.fail("truncated frozen-interface cache")
-    return 0U
-  }
-  let value = self.bytes[self.offset].to_uint()
-  self.offset += 1
-  value
-}
-
-///|
-fn FrozenInterfaceCacheReader::read_u32(
-  self : FrozenInterfaceCacheReader,
-) -> UInt {
-  let b0 = self.read_byte()
-  let b1 = self.read_byte()
-  let b2 = self.read_byte()
-  let b3 = self.read_byte()
-  b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
+  self.reader.fail("interface", message)
 }
 
 ///|
 fn FrozenInterfaceCacheReader::read_int(
   self : FrozenInterfaceCacheReader,
 ) -> Int {
-  self.read_u32().reinterpret_as_int()
+  self.reader.read_zigzag_int("integer")
 }
 
 ///|
 fn FrozenInterfaceCacheReader::read_u64(
   self : FrozenInterfaceCacheReader,
 ) -> UInt64 {
-  let mut value = 0UL
-  for shift in [0, 8, 16, 24, 32, 40, 48, 56] {
-    value = value | (self.read_byte().to_uint64() << shift)
-  }
-  value
+  self.reader.read_u64_le("u64")
 }
 
 ///|
 fn FrozenInterfaceCacheReader::read_bool(
   self : FrozenInterfaceCacheReader,
 ) -> Bool {
-  match self.read_byte() {
-    0U => false
-    1U => true
-    _ => {
-      self.fail("invalid Boolean in frozen-interface cache")
-      false
-    }
-  }
+  self.reader.read_bool("Boolean")
 }
 
 ///|
 fn FrozenInterfaceCacheReader::read_bytes(
   self : FrozenInterfaceCacheReader,
 ) -> Bytes {
-  let length = self.read_int()
-  if length < 0 ||
-    self.offset + length < self.offset ||
-    self.offset + length > self.bytes.length() {
-    self.fail("invalid byte range in frozen-interface cache")
-    return b""
-  }
-  let output = Buffer()
-  for index in 0..<length {
-    output.write_byte(self.bytes[self.offset + index])
-  }
-  self.offset += length
-  output.to_bytes()
+  self.reader.read_bytes(0x10000000, "bytes")
 }
 
 ///|
 fn FrozenInterfaceCacheReader::read_string(
   self : FrozenInterfaceCacheReader,
 ) -> String {
-  let bytes = self.read_bytes()
-  if !semantic_utf8_is_valid(bytes) {
-    self.fail("invalid UTF-8 string in frozen-interface cache")
-    return ""
-  }
-  @utf8.decode_lossy(bytes)
+  self.reader.read_string(0x01000000, "string")
 }
 
 ///|
@@ -607,13 +562,23 @@ fn FrozenInterfaceCacheReader::read_count(
   item_bytes : Int,
   label : String,
 ) -> Int {
-  let length = self.read_int()
-  let remaining = self.bytes.length() - self.offset
-  if length < 0 || item_bytes <= 0 || length > remaining / item_bytes {
-    self.fail("invalid \{label} count in frozen-interface cache")
+  if item_bytes <= 0 {
+    self.fail("invalid \{label} item width")
     return 0
   }
-  length
+  let by_remaining = self.reader.remaining()
+  let maximum = if by_remaining < 0x01000000 {
+    by_remaining
+  } else {
+    0x01000000
+  }
+  let count = self.read_int()
+  if count < 0 || count > maximum {
+    self.fail("invalid \{label} count")
+    0
+  } else {
+    count
+  }
 }
 
 ///|
@@ -966,24 +931,24 @@ fn FrozenInterfaceCacheReader::read_interface(
 pub fn deserialize_frozen_interfaces(
   bytes : Bytes,
 ) -> Result[Array[FrozenModuleInterface], String] {
-  if bytes.length() < frozen_interface_cache_magic.length() {
-    return Err("truncated frozen-interface cache header")
-  }
-  for index in 0..<frozen_interface_cache_magic.length() {
-    if bytes[index] != frozen_interface_cache_magic[index] {
-      return Err("unsupported frozen-interface cache version")
-    }
-  }
-  let reader : FrozenInterfaceCacheReader = {
+  let binary = @cache_binary.Reader::new(
     bytes,
-    offset: frozen_interface_cache_magic.length(),
-    error: None,
+    context="frozen_interface_payload",
+  )
+  let magic = binary.read_raw_bytes(
+    frozen_interface_cache_magic.length(),
+    frozen_interface_cache_magic.length(),
+    "magic",
+  )
+  if magic != frozen_interface_cache_magic {
+    return Err("unsupported frozen-interface cache version")
   }
+  let reader : FrozenInterfaceCacheReader = { reader: binary }
   let count = reader.read_count(1, "interface")
   let interfaces : Array[FrozenModuleInterface] = []
   for _ in 0..<count {
     let interface_ = reader.read_interface()
-    if reader.error is None {
+    if !reader.reader.failed() {
       match frozen_interface_implementation_evidence_error(interface_) {
         Some(error) => return Err(error)
         None => ()
@@ -991,10 +956,8 @@ pub fn deserialize_frozen_interfaces(
     }
     interfaces.push(interface_)
   }
-  match reader.error {
-    Some(error) => Err(error)
-    None if reader.offset != bytes.length() =>
-      Err("trailing bytes in frozen-interface cache")
-    None => Ok(interfaces)
+  match reader.reader.finish() {
+    Err(error) => Err(error)
+    Ok(_) => Ok(interfaces)
   }
 }

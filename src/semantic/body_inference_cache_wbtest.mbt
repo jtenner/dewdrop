@@ -26,9 +26,48 @@ test "inferred module bodies serialize and decode byte-identically" {
 ///|
 test "inferred module body decoder rejects malformed payloads" {
   assert_true(deserialize_inferred_module_bodies(b"bad") is Err(_))
-  let program = body_inference_cache_test_program()
-  let inferred = analyze_program_semantics(program).modules[0].inferred
+  let collected = collect_bytes(23199UL, b"")
+  let inferred = infer_module_bodies(
+    collected,
+    resolve_module_types(collected),
+    resolve_module_names(collected),
+  )
   let encoded = serialize_inferred_module_bodies(inferred).unwrap()
+  for cut in 0..<encoded.length() {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(encoded[index])
+    }
+    assert_true(
+      deserialize_inferred_module_bodies(truncated.to_bytes()) is Err(_),
+    )
+  }
+  for iteration in 0..<128 {
+    let selected = (iteration * 7919 + 17) % encoded.length()
+    let mutated = Buffer(size_hint=encoded.length())
+    for index in 0..<encoded.length() {
+      mutated.write_byte(
+        if index == selected {
+          encoded[index] ^ 0x80
+        } else {
+          encoded[index]
+        },
+      )
+    }
+    let mutated = mutated.to_bytes()
+    match deserialize_inferred_module_bodies(mutated) {
+      Ok(value) =>
+        assert_eq(serialize_inferred_module_bodies(value).unwrap(), mutated)
+      Err(_) => ()
+    }
+  }
+  let invalid_version = Buffer(size_hint=encoded.length())
+  for index in 0..<encoded.length() {
+    invalid_version.write_byte(if index == 0 { 0xff } else { encoded[index] })
+  }
+  assert_true(
+    deserialize_inferred_module_bodies(invalid_version.to_bytes()) is Err(_),
+  )
   let trailing = Buffer()
   trailing.write_bytes(encoded)
   trailing.write_byte(b'x')
@@ -69,6 +108,47 @@ test "body-family artifacts round trip and mix cached and fresh jobs" {
     deserialize_body_inference_family_bundle(bundle_bytes).unwrap(),
     bundle,
   )
+  for
+    cut in [
+      0,
+      1,
+      4,
+      8,
+      12,
+      13,
+      bundle_bytes.length() / 2,
+      bundle_bytes.length() - 1,
+    ] {
+    let truncated = Buffer(size_hint=cut)
+    for index in 0..<cut {
+      truncated.write_byte(bundle_bytes[index])
+    }
+    assert_true(
+      deserialize_body_inference_family_bundle(truncated.to_bytes()) is Err(_),
+    )
+  }
+  for iteration in 0..<128 {
+    let selected = (iteration * 1543 + 11) % bundle_bytes.length()
+    let mutated = Buffer(size_hint=bundle_bytes.length())
+    for index in 0..<bundle_bytes.length() {
+      mutated.write_byte(
+        if index == selected {
+          bundle_bytes[index] ^ 0x40
+        } else {
+          bundle_bytes[index]
+        },
+      )
+    }
+    let mutated = mutated.to_bytes()
+    match deserialize_body_inference_family_bundle(mutated) {
+      Ok(value) =>
+        assert_eq(
+          serialize_body_inference_family_bundle(value).unwrap(),
+          mutated,
+        )
+      Err(_) => ()
+    }
+  }
   assert_true(
     make_body_inference_family_bundle(
       original.module_id,

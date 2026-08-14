@@ -144,7 +144,15 @@ def main() -> None:
         "private_change_report": private_report.strip().splitlines(),
         "public_change_report": public_report.strip().splitlines(),
         "workspace_artifacts": len(
-            list((CACHE / "workspace-interfaces").glob("v1-*.dwi"))
+            list((CACHE / "workspace-interfaces").glob("v2-*.dwi"))
+        ),
+        "workspace_artifact_bytes": sum(
+            path.stat().st_size
+            for path in (CACHE / "workspace-interfaces").glob("v2-*.dwi")
+        ),
+        "standard_artifact_bytes": sum(
+            path.stat().st_size
+            for path in (CACHE / "interfaces").glob("v13-*.dwi")
         ),
         "changed_outputs_match_uncached": True,
     }
