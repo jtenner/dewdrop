@@ -71,8 +71,8 @@ without changing their validated semantic schemas.
 The final `FOOT` section records total bytes, covered bytes, section count, and a
 full BLAKE3 digest over all prior bytes. The strict decoder checks the complete
 footer and every entry. The MoonBit native warm path opens only aligned indexes
-and then checks the selected payload. The temporary Python bootstrapper does not
-parse or hash the pack. This prevents exact-hit startup from scaling with the
+and then checks the selected payload. The MoonBit bootstrapper does not duplicate
+pack parsing or hashing; exact lookup remains in the MoonBit compiler. This prevents exact-hit startup from scaling with the
 number or total bytes of unrelated module entries.
 
 ## Hash policy
@@ -152,18 +152,19 @@ seven warm samples per mode. The final warmed release-native run measured:
 
 | Mode | Cold | Warm median | Cache files | Cache bytes |
 | --- | ---: | ---: | ---: | ---: |
-| unified pack plus exact result | 2,053.822 ms | 105.843 ms | 2 | 3,528,081 |
-| unified pack phase entries only | 1,978.864 ms | 997.337 ms | 2 | 3,527,873 |
-| legacy per-artifact phase files | 2,224.541 ms | 964.345 ms | 524 | 3,491,112 |
-| all compiler caches disabled | 916.331 ms | 925.105 ms | 1 | 67,985 |
+| unified pack plus exact result | 2,020.431 ms | 71.382 ms | 1 | 3,460,096 |
+| unified pack phase entries only | 1,982.064 ms | 968.707 ms | 1 | 3,459,888 |
+| legacy per-artifact phase files | 2,181.468 ms | 911.378 ms | 523 | 3,423,127 |
+| all compiler caches disabled | 861.791 ms | 869.660 ms | 0 | 0 |
 
-The file counts include the compiler fingerprint memo. The unified compiler data
-itself is one `.dwp` file. The exact warm pack is 89.02% faster than the legacy
-phase-file warm path and 88.56% faster than fresh compilation. It is about 9.11
-times as fast as the legacy warm path. Cold pack publication is 7.67% faster than
+The MoonBit bootstrap computes the producer fingerprint directly, so the cache
+file counts no longer include a Python fingerprint memo. The unified compiler
+data is one `.dwp` file. The exact warm pack is 92.17% faster than the legacy
+phase-file warm path and 91.79% faster than fresh compilation. It is about 12.77
+times as fast as the legacy warm path. Cold pack publication is 7.38% faster than
 publishing 523 phase artifacts.
 
-Phase-only pack reuse is 3.42% slower than legacy phase files on this generated
+Phase-only pack reuse is 6.29% slower than legacy phase files on this generated
 workload because it still decodes and validates every requested semantic entry.
 It is retained for incremental misses, not used as the default unchanged-build
 boundary. The exact `CHCK`/`WASM`/`HIR0`/`LWR0` entry is the admitted warm path.

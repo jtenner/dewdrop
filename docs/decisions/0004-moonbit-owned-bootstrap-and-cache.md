@@ -17,25 +17,23 @@ Compiler cache formats, hashing, validation, lookup, publication, and exact-resu
 reuse are implemented only in MoonBit. The Python launcher must not contain a
 second BLAKE3 implementation or a second cache-pack decoder.
 
-The bootstrap command will move from Python to MoonBit. Package manifests,
+The bootstrap command is implemented in MoonBit. Package manifests,
 lockfiles, package capsules, build-output caching, compiler request creation, and
 compiler launch policy will move with it. Small shell launchers may locate and
 start the built MoonBit bootstrap executable, but they must not own compiler or
 cache semantics.
 
-Until that migration is complete, the Python launcher may call the MoonBit
-compiler and perform its existing host duties. Exact cache-pack hits still start
-the MoonBit process. This is an accepted temporary startup cost that avoids two
-implementations of the persistent format.
+`tools/dew` now starts the MoonBit bootstrap command. The old Python bootstrap
+and explicit-test launchers are removed. Exact cache-pack hits still start the
+MoonBit compiler process, which avoids a second pack implementation.
 
 ## Consequences
 
 - Cache-pack code remains portable to WasmGC and the future self-hosted compiler.
 - One implementation owns BLAKE3, pack validation, corruption behavior, and
   provenance rules.
-- The temporary Python launcher does not gain new compiler-cache behavior.
-- Removing Python from the bootstrap path is active implementation work rather
-  than a future optional cleanup.
+- The bootstrap and compiler can move toward self-hosting without translating a
+  Python package/cache implementation.
 - Startup optimization must occur in MoonBit or in the eventual Dew host, not by
   duplicating cache logic in Python.
 

@@ -98,10 +98,11 @@ in manifest order, and invokes only compiler-described exports. It supports the
 same exact file/name and identity-substring filters plus `--list`; matching
 expected traps pass without aborting the remaining run.
 
-The Python bootstrapper is temporary and is now scheduled for direct replacement
-by a MoonBit bootstrap command. Cache-pack hashing, decoding, validation, and
-lookup must not be duplicated in Python during the migration. A small shell
-launcher may locate the built MoonBit command without changing command semantics.
+The bootstrapper is now `src/dew_bootstrap`, implemented in MoonBit. It owns
+manifest and lockfile parsing, package integrity and capsules, compiler
+fingerprinting, whole-build caching, and test/run/WAT dispatch. `tools/dew` is a
+small shell launcher. Cache-pack hashing, decoding, validation, and lookup remain
+in the MoonBit compiler and are not duplicated in the bootstrapper.
 
 ## Diagnostics and exits
 
@@ -150,14 +151,12 @@ without leaking a Python traceback.
 
 ## Next steps
 
-1. Move the complete Python bootstrap path to MoonBit while preserving the
-   versioned compiler request and all package/cache corruption checks.
-2. Add registry lookup, Git checkout, and deterministic lockfile generation
+1. Add registry lookup, Git checkout, and deterministic lockfile generation
    without weakening exact installed-package provenance.
-3. Measure cache-file/package-capsule I/O and representative external-package
+2. Measure cache-file/package-capsule I/O and representative external-package
    workloads; serialize collected bodies only if restoration-time syntax
    collection is a measured bottleneck.
-4. Replace semantic `Debug` messages with stable human diagnostic codes and
+3. Replace semantic `Debug` messages with stable human diagnostic codes and
    prose without changing source ordering or labels.
-5. Improve entry-point and host diagnostics as runtime semantics continue to
+4. Improve entry-point and host diagnostics as runtime semantics continue to
    stabilize.

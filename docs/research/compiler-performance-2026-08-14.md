@@ -128,13 +128,13 @@ total cache files fell from 524 to 2. Seven warm samples measured:
 
 | Path | Warm median |
 | --- | ---: |
-| exact aligned-pack result | 105.843 ms |
-| aligned-pack phase entries only | 997.337 ms |
-| legacy per-artifact phase files | 964.345 ms |
-| all compiler caches disabled | 925.105 ms |
+| exact aligned-pack result | 71.382 ms |
+| aligned-pack phase entries only | 968.707 ms |
+| legacy per-artifact phase files | 911.378 ms |
+| all compiler caches disabled | 869.660 ms |
 
-The exact pack path is 89.02% faster than legacy warm phase reuse and 88.56%
-faster than fresh compilation. Lazy index opening plus one selected lookup takes
+The exact pack path through the MoonBit bootstrap is 92.17% faster than legacy
+warm phase reuse and 91.79% faster than fresh compilation. Lazy index opening plus one selected lookup takes
 76.88 us in the focused 512-entry codec benchmark. Phase-only pack reuse remains
 slightly slower and is retained for incremental misses, not as the unchanged
 warm boundary.

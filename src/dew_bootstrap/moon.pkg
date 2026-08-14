@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+  "moonbitlang/x/crypto",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+}
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "platform_native.mbt": [ "native", "llvm" ] },
+  "native-stub": [ "platform.c" ],
+)

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export DEW_WORKING_DIRECTORY="$PWD"
-cd "$(dirname "$0")/.."
-exec python3 tools/dew-cli.py "$@"
+root="$(cd "$(dirname "$0")/.." && pwd)"
+export DEW_REPOSITORY_ROOT="$root"
+cd "$root"
+exec moon run --target native --release src/dew_bootstrap -- "$@"

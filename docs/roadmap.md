@@ -56,13 +56,13 @@ The current compiler is written in MoonBit, which cannot execute these compiler 
 
 ## MoonBit bootstrap migration
 
-- [ ] Replace `tools/dew-cli.py` with a MoonBit bootstrap command.
-- [ ] Move manifest/lockfile parsing, package resolution, package capsules,
-  compiler fingerprinting, build-output caching, request construction, and host
+- [x] Replace `tools/dew-cli.py` with a MoonBit bootstrap command.
+- [x] Move manifest/lockfile parsing, package resolution, package capsules,
+  compiler fingerprinting, build-output caching, test/run/WAT dispatch, and host
   launch policy to MoonBit.
-- [ ] Keep cache-pack hashing, codecs, validation, lookup, and publication only in
+- [x] Keep cache-pack hashing, codecs, validation, lookup, and publication only in
   MoonBit; do not add a Python cache implementation.
-- [ ] Preserve current CLI output, exit status, corruption behavior, and package
+- [x] Preserve current CLI output, exit status, corruption behavior, and package
   compatibility during the migration.
 
 ## Compiler resource and performance discipline

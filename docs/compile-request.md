@@ -1,10 +1,9 @@
 # Compiler host request protocol
 
-The temporary Python bootstrap host invokes the MoonBit compiler with one
-versioned binary request rather than expanding package and cache policy into
-repeated internal command-line arguments and inherited environment variables.
-The host does not parse compiler cache packs. This request producer is being
-moved to MoonBit.
+The compiler accepts one versioned binary request for matching internal tools.
+The MoonBit `src/dew_bootstrap` command now owns the user-facing bootstrap path
+and invokes the MoonBit compiler command directly after resolving package and
+cache policy. It does not duplicate cache-pack parsing outside MoonBit.
 
 This protocol is private to matching Dewdrop toolchain versions. It is not a
 language-level package format or a stable third-party API.
@@ -15,9 +14,9 @@ language-level package format or a stable third-party API.
 moon run --target native --release src/dew_cli -- --compile-request REQUEST
 ```
 
-The bootstrap host creates `REQUEST`, waits for the compiler process, and removes
-the request file. The compiler still accepts its legacy direct arguments for
-focused development, but `tools/dew` does not use that path.
+A request-producing internal tool creates `REQUEST`, waits for the compiler
+process, and removes the request file. The user-facing MoonBit bootstrap uses the
+direct MoonBit compiler command path instead.
 
 ## Version 6 encoding
 

@@ -37,6 +37,6 @@ node --check tools/dew-abi-metadata.mjs
 node --check tools/dew-abi.mjs
 node --check tools/dew-wasm-consumer.mjs
 node --check tools/wasm-metrics.mjs
-python3 tools/dew_cli_test.py
+moon test --target native src/dew_bootstrap
 python3 tools/cli-fixtures.py
 
