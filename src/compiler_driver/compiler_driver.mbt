@@ -48,6 +48,7 @@ pub struct CompilerCompilation {
   link : @semantic.PlannedProgramWasmGCLink
   cache_status : @standard_loader.InterfaceBundleCacheStatus
   body_cache_status : @standard_loader.BodyInferenceCacheStatus
+  planning_cache_status : @standard_loader.PlanningCacheStatus
   parse_event_cache_status : @standard_loader.ParseEventCacheStatus
 }
 
@@ -87,22 +88,29 @@ pub fn compile_manifest(
     Err(error) => return Err(error)
   }
   let analyzed = cached.analyzed
-  let lowering = @semantic.plan_program_lowering(program, analyzed)
-  let link = match options.planning_mode {
-    CompilerProductionPlanning =>
-      @semantic.plan_program_wasmgc_link(
-        analyzed,
-        lowering,
-        options.root_module_index,
-      )
-    CompilerTestPlanning =>
-      @semantic.plan_program_wasmgc_link_with_options(
-        analyzed,
-        lowering,
-        options.root_module_index,
-        @semantic.WasmGCPlanningOptions::test_mode(),
-      )
+  let planned = match
+    @standard_loader.plan_program_lowering_with_cache(program, analyzed) {
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
+  let lowering = planned.lowering
+  let planning_options = match options.planning_mode {
+    CompilerProductionPlanning =>
+      @semantic.WasmGCPlanningOptions::optimized_subtype_families()
+    CompilerTestPlanning => @semantic.WasmGCPlanningOptions::test_mode()
+  }
+  let linked = match
+    @standard_loader.plan_program_wasmgc_link_with_cache(
+      program,
+      analyzed,
+      lowering,
+      options.root_module_index,
+      planning_options,
+    ) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let link = linked.link
   Ok({
     program,
     analyzed,
@@ -110,6 +118,10 @@ pub fn compile_manifest(
     link,
     cache_status: cached.status,
     body_cache_status: cached.body_cache_status,
+    planning_cache_status: @standard_loader.combine_planning_cache_status(
+      planned.status,
+      linked.status,
+    ),
     parse_event_cache_status: prepared.status,
   })
 }

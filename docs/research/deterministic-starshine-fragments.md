@@ -175,4 +175,6 @@ The body, adapter, aggregate, control-flow, module-state, generic, trait, closur
 reachability, standard-operator, and dead-signature milestones originally listed
 here are implemented. Remaining backend work is limited to roadmap items such as
 optional deterministic Name/source sections, ABI signature deduplication,
-incremental fragment reuse, resource budgets, and explicit external interop.
+resource budgets and explicit external interop. Baseline module-local fragment
+reuse is implemented by the opt-in planning cache documented in
+`docs/research/persistent-layout-fragment-cache.md`.

@@ -1460,6 +1460,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
     body_cache = (
         os.environ.get("DEW_BODY_CACHE", "0") == "1" or body_family_cache
     )
+    planning_cache = os.environ.get("DEW_PLAN_CACHE", "0") == "1"
     cache_report = False
     standard_policy = 1 if os.environ.get("DEW_BOOTSTRAP_STD") == "1" else 0
     standard_root = "" if standard_policy == 1 else os.environ.get("DEW_STD_ROOT", ".")
@@ -1528,6 +1529,12 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
             body_cache = True
             body_family_cache = True
             index += 1
+        elif argument == "--plan-cache":
+            planning_cache = True
+            index += 1
+        elif argument == "--no-plan-cache":
+            planning_cache = False
+            index += 1
         elif argument == "--cache-report":
             cache_report = True
             index += 1
@@ -1563,7 +1570,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         buffer.extend(encoded)
 
     write_u32(0x44574352)
-    write_u32(4)
+    write_u32(5)
     write_u32(command)
     write_u32(emit)
     write_string(output)
@@ -1585,6 +1592,7 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
     write_bool(interface_cache)
     write_bool(body_cache)
     write_bool(body_family_cache)
+    write_bool(planning_cache)
     write_bool(cache_report)
     write_u32(0)  # production build mode
     write_string(dependency_cache_key)

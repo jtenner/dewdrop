@@ -5,6 +5,7 @@ import {
   "jtenner/dewdrop/parser",
   "jtenner/dewdrop/tokenizer",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -15,6 +16,8 @@ pub fn analyze_module_value_dependencies(CollectedModule, ResolvedModuleNames) -
 pub fn analyze_program_semantics(CollectedProgram) -> AnalyzedProgramSemantics
 
 pub fn analyze_program_semantics_with_cached_interfaces(CollectedProgram, Array[FrozenModuleInterface?]) -> AnalyzedProgramSemantics
+
+pub fn analyze_program_semantics_with_frozen(CollectedProgram, FrozenProgramInterfaces) -> AnalyzedProgramSemantics
 
 pub fn build_module_dependency_graph(CollectedProgram) -> ModuleDependencyGraph
 
@@ -38,23 +41,53 @@ pub fn collect_program_manifest_with_standard_sources(UInt64, ProgramManifest, S
 
 pub fn collect_tokens(UInt64, Iter[@tokenizer.Token]) -> CollectedModule
 
+pub fn deserialize_body_inference_family_artifact(Bytes) -> Result[BodyInferenceFamilyArtifact, String]
+
+pub fn deserialize_body_inference_family_bundle(Bytes) -> Result[BodyInferenceFamilyBundle, String]
+
 pub fn deserialize_frozen_interfaces(Bytes) -> Result[Array[FrozenModuleInterface], String]
+
+pub fn deserialize_inferred_module_bodies(Bytes) -> Result[InferredModuleBodies, String]
+
+pub fn deserialize_planned_module_type_layouts(Bytes) -> Result[PlannedModuleTypeLayouts, String]
+
+pub fn deserialize_planned_module_wasmgc_fragments(Bytes) -> Result[PlannedModuleWasmGCFragments, String]
 
 pub fn freeze_program_interfaces(CollectedProgram) -> FrozenProgramInterfaces
 
+pub fn freeze_program_interfaces_with_cache_hooks(CollectedProgram, Array[FrozenModuleInterface?], (Int, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?, (Int, FrozenModuleInterface) -> Unit, (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit, (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit) -> FrozenProgramInterfaces
+
 pub fn freeze_program_interfaces_with_cached(CollectedProgram, Array[FrozenModuleInterface?]) -> FrozenProgramInterfaces
+
+pub fn frozen_interface_body_evidence_fingerprint(FrozenModuleInterface) -> Result[String, String]
 
 pub fn frozen_program_interfaces_with_fingerprints(ModuleDependencyGraph, Array[FrozenModuleInterface]) -> Array[FrozenModuleInterface]
 
 pub fn infer_module_bodies(CollectedModule, ResolvedModuleTypes, ResolvedModuleNames) -> InferredModuleBodies
 
+pub fn infer_module_bodies_with_family_cache(CollectedModule, ResolvedModuleTypes, ResolvedModuleNames, Array[BodyInferenceFamilyArtifact?]) -> Result[BodyInferenceFamilyAnalysis, String]
+
+pub fn infer_module_bodies_with_family_cache_in_order(CollectedModule, ResolvedModuleTypes, ResolvedModuleNames, Array[BodyInferenceFamilyArtifact?], Array[Int]) -> Result[BodyInferenceFamilyAnalysis, String]
+
 pub fn infer_module_bodies_with_imports(CollectedModule, ResolvedModuleTypes, ResolvedModuleImports, ResolvedModuleNames) -> InferredModuleBodies
+
+pub fn infer_module_bodies_with_imports_and_family_cache(CollectedModule, ResolvedModuleTypes, ResolvedModuleImports, ResolvedModuleNames, Array[BodyInferenceFamilyArtifact?]) -> Result[BodyInferenceFamilyAnalysis, String]
 
 pub fn infer_module_values(CollectedModule, ResolvedModuleTypes, ResolvedModuleNames) -> InferredModuleValues
 
 pub fn link_program_wasmgc_fragments(PlannedProgramSpecializationPlan, PlannedProgramLowering, Int) -> PlannedProgramWasmGCLink
 
+pub fn make_analyzed_program_module(UInt64, ResolvedModuleImports, ResolvedModuleNames, InferredModuleBodies) -> AnalyzedProgramModule
+
+pub fn make_analyzed_program_semantics(FrozenProgramInterfaces, Array[AnalyzedProgramModule]) -> AnalyzedProgramSemantics
+
+pub fn make_body_inference_family_bundle(UInt64, Array[String], Array[BodyInferenceFamilyArtifact]) -> Result[BodyInferenceFamilyBundle, String]
+
 pub fn make_program_file_id(UInt64, Int) -> UInt64
+
+pub fn make_uncached_body_inference_family_analysis(InferredModuleBodies, Int) -> BodyInferenceFamilyAnalysis
+
+pub fn open_body_inference_family_bundle(Bytes) -> Result[BodyInferenceFamilyBundleIndex, String]
 
 pub fn optimize_program_lowering(PlannedProgramLowering) -> PlannedProgramLowering
 
@@ -70,15 +103,21 @@ pub fn plan_module_wasmgc_fragments(ResolvedModuleTypes, PlannedModuleLowering) 
 
 pub fn plan_program_lowering(CollectedProgram, AnalyzedProgramSemantics) -> PlannedProgramLowering
 
+pub fn plan_program_lowering_with_type_layouts(CollectedProgram, AnalyzedProgramSemantics, Array[PlannedModuleTypeLayouts]) -> PlannedProgramLowering
+
 pub fn plan_program_wasmgc_fragments(AnalyzedProgramSemantics, PlannedProgramLowering) -> PlannedProgramSpecializationPlan
 
 pub fn plan_program_wasmgc_fragments_with_options(AnalyzedProgramSemantics, PlannedProgramLowering, WasmGCPlanningOptions) -> PlannedProgramSpecializationPlan
+
+pub fn plan_program_wasmgc_fragments_with_options_and_cache_hooks(AnalyzedProgramSemantics, PlannedProgramLowering, WasmGCPlanningOptions, Int, Array[PlannedModuleWasmGCFragments?], (Int, PlannedModuleWasmGCFragments) -> Unit) -> PlannedProgramSpecializationPlan
 
 pub fn plan_program_wasmgc_link(AnalyzedProgramSemantics, PlannedProgramLowering, Int) -> PlannedProgramWasmGCLink
 
 pub fn plan_program_wasmgc_link_with_options(AnalyzedProgramSemantics, PlannedProgramLowering, Int, WasmGCPlanningOptions) -> PlannedProgramWasmGCLink
 
 pub fn plan_unoptimized_program_lowering(CollectedProgram, AnalyzedProgramSemantics) -> PlannedProgramLowering
+
+pub fn plan_unoptimized_program_lowering_with_type_layouts(CollectedProgram, AnalyzedProgramSemantics, Array[PlannedModuleTypeLayouts]) -> PlannedProgramLowering
 
 pub fn program_resolved_trait_evidence_identity(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, HirSpan, Int) -> (UInt64, String)?
 
@@ -104,21 +143,87 @@ pub fn semantic_id_local(UInt64) -> Int
 
 pub fn semantic_id_module(UInt64) -> UInt64
 
+pub fn serialize_body_inference_family_artifact(BodyInferenceFamilyArtifact) -> Result[Bytes, String]
+
+pub fn serialize_body_inference_family_bundle(BodyInferenceFamilyBundle) -> Result[Bytes, String]
+
 pub fn serialize_frozen_interfaces(Array[FrozenModuleInterface]) -> Result[Bytes, String]
+
+pub fn serialize_inferred_module_bodies(InferredModuleBodies) -> Result[Bytes, String]
+
+pub fn serialize_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result[Bytes, String]
+
+pub fn serialize_planned_module_wasmgc_fragments(PlannedModuleWasmGCFragments) -> Result[Bytes, String]
+
+pub fn standard_array_index_declaration() -> UInt64
+
+pub fn standard_array_index_set_declaration() -> UInt64
+
+pub fn standard_array_iterator_type_declaration() -> UInt64
+
+pub fn standard_array_method_declaration(String) -> UInt64
+
+pub fn standard_array_type_declaration() -> UInt64
+
+pub fn standard_circular_buffer_method_declaration(String) -> UInt64
+
+pub fn standard_circular_buffer_type_declaration() -> UInt64
+
+pub fn standard_deque_method_declaration(String) -> UInt64
+
+pub fn standard_deque_type_declaration() -> UInt64
+
+pub fn standard_fixed_array_index_declaration() -> UInt64
+
+pub fn standard_fixed_array_index_set_declaration() -> UInt64
+
+pub fn standard_fixed_array_method_declaration(String) -> UInt64
 
 pub fn standard_fixed_array_type_declaration() -> UInt64
 
 pub fn standard_library_source_paths() -> Array[String]
 
+pub fn standard_map_entry_iterator_type_declaration() -> UInt64
+
+pub fn standard_map_entry_type_declaration() -> UInt64
+
+pub fn standard_map_index_declaration() -> UInt64
+
+pub fn standard_map_index_set_declaration() -> UInt64
+
+pub fn standard_map_key_iterator_type_declaration() -> UInt64
+
+pub fn standard_map_method_declaration(String) -> UInt64
+
 pub fn standard_map_type_declaration() -> UInt64
+
+pub fn standard_map_value_iterator_type_declaration() -> UInt64
 
 pub fn standard_option_none_variant() -> UInt64
 
 pub fn standard_option_some_variant() -> UInt64
 
+pub fn standard_queue_method_declaration(String) -> UInt64
+
+pub fn standard_queue_type_declaration() -> UInt64
+
+pub fn standard_set_iterator_type_declaration() -> UInt64
+
+pub fn standard_set_method_declaration(String) -> UInt64
+
 pub fn standard_set_type_declaration() -> UInt64
 
+pub fn standard_stack_method_declaration(String) -> UInt64
+
+pub fn standard_stack_type_declaration() -> UInt64
+
 pub fn synthetic_type_origin(Int, UInt64) -> TypeConstraintOrigin
+
+pub fn validate_cached_module_wasmgc_fragments(PlannedModuleWasmGCFragments, UInt64, WasmGCPlanningOptions) -> Result[Unit, String]
+
+pub fn validate_module_wasmgc_arenas(PlannedModuleWasmGCFragments) -> Result[Unit, String]
+
+pub fn validate_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result[Unit, String]
 
 pub fn wasmgc_capture_cell_slot(PlannedValueShape) -> Int
 
@@ -220,6 +325,7 @@ pub enum BodyInferenceDiagnostic {
   AmbiguousFunctionReference(Int, Int, UInt64, UInt64, Int, UInt64)
   FunctionCallArgumentCountMismatch(Int, Int, Int, UInt64)
   CallArgumentCountMismatch(Int, UInt64, Int, Int, UInt64)
+  CallTypeArgumentCountMismatch(Int, UInt64, Int, Int, UInt64)
   NoMatchingCallOverload(Int, Int, UInt64)
   AmbiguousCallOverload(Int, Int, UInt64, UInt64, Int, UInt64)
   UnresolvedCallTypeArgument(Int, Int, UInt64)
@@ -254,8 +360,81 @@ pub enum BodyInferenceDiagnostic {
   UnresolvedExpressionType(Int, UInt64)
   UnresolvedLocalType(UInt64, Int, UInt64)
   UnresolvedLambdaLocalType(Int, Int, UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn BodyInferenceDiagnostic::offset(Self) -> UInt64
+
+pub struct BodyInferenceFamilyAnalysis {
+  inferred : InferredModuleBodies
+  families : Array[BodyInferenceFamilyArtifact?]
+  family_hits : Int
+  family_misses : Int
+}
+
+pub struct BodyInferenceFamilyArtifact {
+  module_id : UInt64
+  body : UInt64
+  declaration : UInt64
+  root : BodyInferenceJobResult
+  lambdas : Array[BodyInferenceLambdaArtifact]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct BodyInferenceFamilyBundle {
+  module_id : UInt64
+  entries : Array[BodyInferenceFamilyBundleEntry]
+} derive(Eq, @debug.Debug)
+
+pub struct BodyInferenceFamilyBundleEntry {
+  fingerprint : String
+  artifact : BodyInferenceFamilyArtifact
+} derive(Eq, @debug.Debug)
+
+pub struct BodyInferenceFamilyBundleIndex {
+  module_id : UInt64
+  fingerprints : Array[Bytes]
+  offsets : Array[Int]
+  lengths : Array[Int]
+  payload : Bytes
+  data_start : Int
+}
+pub fn BodyInferenceFamilyBundleIndex::entry_count(Self) -> Int
+pub fn BodyInferenceFamilyBundleIndex::lookup(Self, FixedArray[Byte]) -> Result[BodyInferenceFamilyArtifact?, String]
+pub fn BodyInferenceFamilyBundleIndex::owner(Self) -> UInt64
+
+pub struct BodyInferenceJobResult {
+  result_type : Int
+  types : Array[BodyTypeTerm]
+  type_arguments : Array[Int]
+  expression_types : Array[Int]
+  local_types : Array[Int]
+  capture_types : Array[Int]
+  block_types : Array[Int]
+  pattern_types : Array[Int]
+  pattern_constructors : Array[InferredPatternConstructor]
+  pattern_type_arguments : Array[Int]
+  control_state_types : Array[Int]
+  control_result_types : Array[Int]
+  expression_selections : Array[InferredExpressionSelection]
+  expression_type_arguments : Array[Int]
+  object_field_targets : Array[InferredObjectFieldTarget]
+  trait_object_coercions : Array[InferredTraitObjectCoercion]
+  call_expressions : Array[Int]
+  call_targets : Array[InferredCallTarget]
+  operator_targets : Array[InferredCallTarget]
+  map_hash_targets : Array[InferredCallTarget]
+  map_eq_targets : Array[InferredCallTarget]
+  expression_evidence : Array[HirSpan]
+  trait_evidence_roots : Array[Int]
+  trait_evidence : Array[InferredTraitEvidence]
+  trait_evidence_children : Array[Int]
+  trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
+  call_type_arguments : Array[Int]
+  diagnostics : Array[BodyInferenceDiagnostic]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct BodyInferenceLambdaArtifact {
+  lambda : Int
+  job : BodyInferenceJobResult
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct BodyLocal {
   id : Int
@@ -318,7 +497,7 @@ pub enum BodyTypeTerm {
   BodyVariableType(Int)
   BodyAppliedType(Int, HirSpan)
   BodyFunctionType(HirSpan, Int)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct CollectedAlias {
   declaration : UInt64
@@ -453,6 +632,8 @@ pub struct CollectedModule {
   expressions : Array[HirExpr]
   expression_files : Array[UInt64]
   expression_children : Array[Int]
+  explicit_call_type_argument_spans : Array[HirSpan]
+  explicit_call_type_arguments : Array[Int]
   blocks : Array[HirBlock]
   block_files : Array[UInt64]
   block_items : Array[HirBlockItem]
@@ -869,7 +1050,7 @@ pub enum HirPrefixOperator {
 pub struct HirSpan {
   start : Int
   length : Int
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum HirTypeSyntax {
   NamedTypeSyntax(Int, UInt64)
@@ -882,12 +1063,12 @@ pub struct ImplBucket {
   kind : ImplBucketKind
   target_head : ImplTargetHead
   implementations : HirSpan
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum ImplBucketKind {
   InherentImplBucket
   TraitImplBucket(UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum ImplIndexDiagnostic {
   InvalidImplTraitHead(UInt64, UInt64)
@@ -903,14 +1084,14 @@ pub enum ImplIndexDiagnostic {
   TraitMethodParameterTypeMismatch(UInt64, UInt64, Int, UInt64)
   TraitMethodReturnTypeMismatch(UInt64, UInt64, UInt64)
   DuplicateInherentMethod(Int, UInt64, UInt64, UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ImplIndexDiagnostic::offset(Self) -> UInt64
 
 pub enum ImplTargetHead {
   ErrorImplTargetHead
   PrimitiveImplTargetHead(PrimitiveType)
   NominalImplTargetHead(UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum ImportScopeDiagnostic {
   UnavailableImportedInterface(UInt64, String, UInt64, UInt64)
@@ -959,18 +1140,18 @@ pub struct IndexedImpl {
   valid : Bool
   coherent : Bool
   specificity : Int
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum IndexedImplKind {
   InherentIndexedImpl
   TraitIndexedImpl(UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct IndexedImplMethod {
   declaration : UInt64
   requirement : UInt64?
   instance : Bool
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct IndexedMethodDispatch {
   target_head : ImplTargetHead
@@ -979,7 +1160,7 @@ pub struct IndexedMethodDispatch {
   instance : Bool
   implementation : Int
   method_index : Int
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct IndexedTraitMethodDispatch {
   trait_declaration : UInt64
@@ -987,7 +1168,7 @@ pub struct IndexedTraitMethodDispatch {
   instance : Bool
   implementation : Int
   method_index : Int
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct InferenceSnapshot {
   undo_start : Int
@@ -1003,7 +1184,7 @@ pub struct InferredBody {
   types : HirSpan
   type_arguments : HirSpan
   diagnostics : HirSpan
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredCallTarget {
   NoInferredCallTarget
@@ -1012,7 +1193,7 @@ pub enum InferredCallTarget {
   SelectedBoundInferredCallTarget(UInt64, Int, HirSpan)
   SelectedDynamicTraitCallTarget(UInt64, UInt64, Int, HirSpan)
   SelectedFunctionValueCallTarget(Int)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredExpressionSelection {
   NoExpressionSelection
@@ -1023,7 +1204,7 @@ pub enum InferredExpressionSelection {
   FieldAccessSelection(UInt64)
   ImportedModuleValueSelection(UInt64)
   FunctionReferenceSelection(UInt64, HirSpan)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct InferredLambda {
   lambda : Int
@@ -1031,7 +1212,7 @@ pub struct InferredLambda {
   types : HirSpan
   type_arguments : HirSpan
   diagnostics : HirSpan
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct InferredModuleBodies {
   module_id : UInt64
@@ -1065,7 +1246,7 @@ pub struct InferredModuleBodies {
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[Int]
   diagnostics : Array[BodyInferenceDiagnostic]
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn InferredModuleBodies::arguments(Self, Int) -> ArrayView[Int]
 pub fn InferredModuleBodies::body(Self, UInt64) -> InferredBody?
 pub fn InferredModuleBodies::lambda(Self, Int) -> InferredLambda?
@@ -1079,7 +1260,7 @@ pub struct InferredModuleValues {
   types : Array[BodyTypeTerm]
   type_arguments : Array[Int]
   diagnostics : Array[BodyInferenceDiagnostic]
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn InferredModuleValues::arguments(Self, Int) -> ArrayView[Int]
 pub fn InferredModuleValues::type_term(Self, Int) -> BodyTypeTerm
 
@@ -1087,35 +1268,35 @@ pub enum InferredObjectFieldTarget {
   NoObjectFieldTarget
   ErrorObjectFieldTarget
   SelectedObjectFieldTarget(UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredPatternConstructor {
   NoInferredPatternConstructor
   ErrorInferredPatternConstructor
   StructInferredPatternConstructor(UInt64, HirSpan)
   VariantInferredPatternConstructor(UInt64, HirSpan)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct InferredTraitEvidence {
   kind : InferredTraitEvidenceKind
   prerequisites : HirSpan
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredTraitEvidenceArgument {
   ShapeInferredTraitEvidenceArgument(PlannedValueShape)
   GenericInferredTraitEvidenceArgument(Int)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredTraitEvidenceKind {
   ConcreteInferredTraitEvidence(UInt64, HirSpan)
   BoundInferredTraitEvidence(Int)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredTraitObjectCoercion {
   NoInferredTraitObjectCoercion
   ErrorInferredTraitObjectCoercion
   SelectedInferredTraitObjectCoercion(UInt64, Int)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct LambdaCapture {
   id : Int
@@ -1134,7 +1315,7 @@ pub enum LambdaCaptureSource {
 pub enum LocalInferenceDiagnostic {
   LocalTypeMismatch(Int, Int, TypeConstraintOrigin)
   InfiniteLocalType(Int, Int, TypeConstraintOrigin)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn LocalInferenceDiagnostic::offset(Self) -> UInt64
 
 pub struct LocalTypeSolver {
@@ -1197,8 +1378,10 @@ pub enum ManifestDiagnostic {
 pub struct ManifestFile {
   path : String
   source : Bytes
+  parse_events : Array[@parser.ParseEvent]?
 } derive(Eq, @debug.Debug)
 pub fn ManifestFile::new(String, Bytes) -> Self
+pub fn ManifestFile::with_parse_events(Self, Array[@parser.ParseEvent]) -> Self
 
 pub struct ManifestModule {
   path : String
@@ -1235,7 +1418,7 @@ pub struct ModuleImplIndex {
   method_dispatch : Array[IndexedMethodDispatch]
   trait_method_dispatch : Array[IndexedTraitMethodDispatch]
   diagnostics : Array[ImplIndexDiagnostic]
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ModuleImplIndex::bucket_implementations_of(Self, ImplBucket) -> ArrayView[Int]
 pub fn ModuleImplIndex::implementation(Self, UInt64) -> IndexedImpl?
 pub fn ModuleImplIndex::method_dispatch_span(Self, ImplTargetHead, Int, Bool, Bool) -> HirSpan
@@ -1277,7 +1460,7 @@ pub struct ModuleValueDependencies {
   dependency_declarations : Array[UInt64]
   sccs : Array[HirSpan]
   scc_declarations : Array[UInt64]
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct PlannedBlock {
   items : HirSpan
@@ -1304,6 +1487,7 @@ pub struct PlannedBodyLowering {
   root : HirBodyRoot
   root_type : Int
   root_shape : PlannedValueShape
+  result_shape : PlannedValueShape
   flow : BodyFlowSummary
   locals : HirSpan
   expressions : HirSpan
@@ -1312,6 +1496,14 @@ pub struct PlannedBodyLowering {
   pattern_arms : HirSpan
   diagnostics : HirSpan
 } derive(Eq, @debug.Debug)
+
+pub struct PlannedCallSpecializationView {
+  function : PlannedWasmFunctionFragment
+  parameters : ArrayView[PlannedWasmValueType]
+  results : ArrayView[PlannedWasmValueType]
+  shapes : ArrayView[PlannedValueShape]
+  evidence_roots : ArrayView[Int]
+}
 
 pub struct PlannedCallable {
   declaration : UInt64
@@ -1354,6 +1546,7 @@ pub struct PlannedCapture {
 pub struct PlannedExpression {
   type_ : Int
   shape : PlannedValueShape
+  nominal : UInt64
   flow : BodyFlowSummary
   trait_object_coercion : InferredTraitObjectCoercion
   kind : PlannedExpressionKind
@@ -1388,6 +1581,7 @@ pub enum PlannedExpressionKind {
   PlannedVariantTupleNew(UInt64, HirSpan, HirSpan)
   PlannedVariantStructNew(UInt64, HirSpan, HirSpan)
   PlannedUnitVariant(UInt64, HirSpan)
+  PlannedPackedEnumPayload(Int, Int)
   PlannedBlockExpression(Int)
   PlannedIfExpression(Int, Int, Int)
   PlannedMatchExpression(Int, HirSpan)
@@ -1406,6 +1600,40 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedFixedArraySet(Int, Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
+  PlannedArrayNew(Int, PlannedValueShape)
+  PlannedArrayWithCapacity(Int, Int, PlannedValueShape)
+  PlannedArrayLength(Int)
+  PlannedArrayCapacity(Int)
+  PlannedArrayGet(Int, Int, Int, PlannedValueShape)
+  PlannedArrayGetUnchecked(Int, Int, PlannedValueShape)
+  PlannedArraySet(Int, Int, Int, PlannedValueShape)
+  PlannedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
+  PlannedArrayPush(Int, Int, PlannedValueShape)
+  PlannedArrayPop(Int, Int, PlannedValueShape)
+  PlannedArrayClear(Int, Int, PlannedValueShape)
+  PlannedArrayIter(Int, Int, PlannedValueShape)
+  PlannedArrayIterHasNext(Int)
+  PlannedArrayIterNext(Int, PlannedValueShape)
+  PlannedStackIsEmpty(Int)
+  PlannedStackPeek(Int, PlannedValueShape)
+  PlannedQueueDequeue(Int, PlannedValueShape)
+  PlannedQueuePeek(Int, PlannedValueShape)
+  PlannedCircularBufferNew(Int, PlannedValueShape, Bool)
+  PlannedCircularBufferNewZero(PlannedValueShape)
+  PlannedQueueRingEnqueue(Int, Int, PlannedValueShape)
+  PlannedDequeRingPushFront(Int, Int, PlannedValueShape)
+  PlannedCircularBufferCapacity(Int, PlannedValueShape)
+  PlannedCircularBufferIsFull(Int, PlannedValueShape)
+  PlannedCircularBufferPushBack(Int, Int, PlannedValueShape)
+  PlannedCircularBufferPopFront(Int, PlannedValueShape)
+  PlannedCircularBufferPeekFront(Int, PlannedValueShape)
+  PlannedCircularBufferClear(Int, PlannedValueShape)
+  PlannedCircularBufferIter(Int, PlannedValueShape)
+  PlannedCircularBufferIterHasNext(Int)
+  PlannedCircularBufferIterNext(Int, PlannedValueShape)
+  PlannedCircularBufferPushFront(Int, Int, PlannedValueShape)
+  PlannedCircularBufferPopBack(Int, PlannedValueShape)
+  PlannedCircularBufferPeekBack(Int, PlannedValueShape)
   PlannedMapSingleton(Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
   PlannedMapEmpty(PlannedValueShape, PlannedValueShape, UInt64, UInt64)
   PlannedMapLength(Int)
@@ -1416,6 +1644,15 @@ pub enum PlannedExpressionKind {
   PlannedMapContainsKey(Int, Int, PlannedValueShape, UInt64, UInt64)
   PlannedMapRemove(Int, Int, PlannedValueShape, UInt64, UInt64)
   PlannedMapClear(Int)
+  PlannedMapKeys(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapValues(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntries(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapIterHasNext(Int, Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapKeyIterNext(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapValueIterNext(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryIterNext(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryKey(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryValue(Int, PlannedValueShape, PlannedValueShape)
   PlannedSetEmpty(PlannedValueShape, UInt64, UInt64)
   PlannedSetSingleton(Int, PlannedValueShape, UInt64, UInt64)
   PlannedSetLength(Int)
@@ -1424,7 +1661,11 @@ pub enum PlannedExpressionKind {
   PlannedSetInsert(Int, Int, PlannedValueShape, UInt64, UInt64)
   PlannedSetRemove(Int, Int, PlannedValueShape, UInt64, UInt64)
   PlannedSetClear(Int)
+  PlannedSetIter(Int, PlannedValueShape)
+  PlannedSetIterHasNext(Int, PlannedValueShape)
+  PlannedSetIterNext(Int, PlannedValueShape)
   PlannedDirectCall(UInt64, Int, HirSpan, HirSpan)
+  PlannedTailCall(UInt64, Int, HirSpan, HirSpan)
   PlannedBoundDirectCall(UInt64, Int, Int, HirSpan, HirSpan)
   PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(Int, HirSpan, Int)
@@ -1451,6 +1692,7 @@ pub struct PlannedLambdaLowering {
   root : HirBodyRoot
   root_type : Int
   root_shape : PlannedValueShape
+  result_shape : PlannedValueShape
   flow : BodyFlowSummary
   locals : HirSpan
   captures : HirSpan
@@ -1472,6 +1714,16 @@ pub struct PlannedLocal {
   nominal : UInt64
   offset : UInt64
 } derive(Eq, @debug.Debug)
+
+pub struct PlannedLoweredBodyView {
+  body : PlannedBodyLowering
+  locals : ArrayView[PlannedLocal]
+  expressions : ArrayView[PlannedExpression]
+  blocks : ArrayView[PlannedBlock]
+  patterns : ArrayView[PlannedPattern]
+  pattern_arms : ArrayView[PlannedPatternArm]
+  diagnostics : ArrayView[LoweringPlanDiagnostic]
+}
 
 pub struct PlannedModuleFunctions {
   module_id : UInt64
@@ -1535,9 +1787,12 @@ pub struct PlannedModuleLowering {
   trait_evidence_children : Array[Int]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   pattern_type_arguments : Array[Int]
+  flow_diagnostics : Array[BodyFlowDiagnostic]
   diagnostics : Array[LoweringPlanDiagnostic]
 } derive(Eq, @debug.Debug)
+pub fn PlannedModuleLowering::body_view(Self, UInt64) -> PlannedLoweredBodyView?
 pub fn PlannedModuleLowering::lambda_body(Self, Int) -> PlannedBodyLowering?
+pub fn PlannedModuleLowering::trait_evidence_view(Self, Int) -> PlannedTraitEvidenceView?
 
 pub struct PlannedModuleTypeLayouts {
   module_id : UInt64
@@ -1600,6 +1855,7 @@ pub struct PlannedModuleWasmGCFragments {
 } derive(Eq, @debug.Debug)
 pub fn PlannedModuleWasmGCFragments::field_name_of(Self, UInt64) -> String?
 pub fn PlannedModuleWasmGCFragments::function_of(Self, UInt64) -> PlannedWasmFunctionFragment?
+pub fn PlannedModuleWasmGCFragments::function_view(Self, Int) -> PlannedCallSpecializationView?
 pub fn PlannedModuleWasmGCFragments::imported_function_index(Self, Bytes) -> Int
 pub fn PlannedModuleWasmGCFragments::payload_type_index_of(Self, UInt64) -> Int?
 pub fn PlannedModuleWasmGCFragments::runtime_function_index(Self, Bytes) -> Int
@@ -1610,6 +1866,7 @@ pub fn PlannedModuleWasmGCFragments::variant_tag_of(Self, UInt64) -> Int?
 
 pub struct PlannedNominalLayout {
   declaration : UInt64
+  visibility : SemanticVisibility
   generic_parameters : HirSpan
   test_only : Bool
   kind : PlannedNominalLayoutKind
@@ -1683,6 +1940,13 @@ pub struct PlannedProgramFunctionReferenceSingleton {
   signature_type_index : Int
   global_index : Int
 } derive(Eq, @debug.Debug)
+
+pub struct PlannedProgramFunctionView {
+  function : PlannedProgramWasmFunction
+  fragments : PlannedModuleWasmGCFragments
+  specialization_shapes : ArrayView[PlannedValueShape]
+  specialization_evidence : ArrayView[Int]
+}
 
 pub struct PlannedProgramLowering {
   graph : ModuleDependencyGraph
@@ -1787,6 +2051,7 @@ pub struct PlannedProgramWasmGCLink {
 }
 pub fn PlannedProgramWasmGCLink::function_of(Self, UInt64) -> PlannedProgramWasmFunction?
 pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(Self, Int, UInt64) -> Int
+pub fn PlannedProgramWasmGCLink::function_view(Self, Int) -> PlannedProgramFunctionView?
 pub fn PlannedProgramWasmGCLink::imported_function_index(Self, Bytes) -> Int
 pub fn PlannedProgramWasmGCLink::materialized_specialization_count(Self) -> Int
 pub fn PlannedProgramWasmGCLink::module_runtime_function_index(Self, Int, Bytes) -> Int
@@ -1831,6 +2096,11 @@ pub enum PlannedSpecializationTraitEvidenceKind {
   PlannedRuntimeTraitEvidence(UInt64, Int)
 } derive(Eq, @debug.Debug)
 
+pub struct PlannedTraitEvidenceView {
+  evidence : InferredTraitEvidence
+  prerequisites : ArrayView[Int]
+}
+
 pub enum PlannedValueShape {
   ErrorPlannedValueShape
   UnitPlannedValueShape
@@ -1850,7 +2120,7 @@ pub enum PlannedValueShape {
   RefPlannedValueShape
   GenericPlannedValueShape
   NeverPlannedValueShape
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct PlannedVariantLayout {
   variant : UInt64
@@ -2065,13 +2335,14 @@ pub enum PrimitiveType {
   StringViewType
   StringBuilderType
   BytesBuilderType
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct ProgramFile {
   id : UInt64
   path : String
   source : Bytes
   test_only : Bool
+  parse_events : Array[@parser.ParseEvent]?
 } derive(Eq, @debug.Debug)
 pub fn ProgramFile::line_column(Self, UInt64) -> SourceLineColumn
 pub fn ProgramFile::named(UInt64, String, Bytes) -> Self
@@ -2168,6 +2439,7 @@ pub struct ResolvedModuleImports {
   variants : Array[ResolvedImportedVariant]
   variant_payload_types : Array[Int]
   variant_spans : Map[UInt64, HirSpan]
+  type_declaration_types : Map[UInt64, Int]
   module_value_types : Map[UInt64, Int]
   callable_by_declaration : Map[UInt64, Int]
   implementation_by_declaration : Map[UInt64, Int]
@@ -2179,6 +2451,7 @@ pub fn ResolvedModuleImports::implementation(Self, UInt64) -> ResolvedImportedIm
 pub fn ResolvedModuleImports::is_enum(Self, UInt64) -> Bool
 pub fn ResolvedModuleImports::is_struct(Self, UInt64) -> Bool
 pub fn ResolvedModuleImports::module_value_type(Self, UInt64) -> Int?
+pub fn ResolvedModuleImports::type_declaration_type(Self, UInt64) -> Int?
 pub fn ResolvedModuleImports::value_binding(Self, String) -> ImportedValueBinding?
 pub fn ResolvedModuleImports::variant(Self, UInt64) -> ResolvedImportedVariant?
 pub fn ResolvedModuleImports::variant_named(Self, UInt64, String) -> ResolvedImportedVariant?
@@ -2222,6 +2495,7 @@ pub struct ResolvedModuleTypes {
   lambda_parameter_types : Array[Int]
   lambda_return_types : Array[Int]
   lambda_function_types : Array[Int]
+  explicit_call_type_arguments : Array[Int]
   field_types : Array[Int]
   variant_payloads : Array[HirSpan]
   signature_type_lists : Array[Int]
@@ -2243,6 +2517,7 @@ pub fn ResolvedModuleTypes::arguments(Self, Int) -> ArrayView[Int]
 pub fn ResolvedModuleTypes::declaration_type(Self, UInt64) -> Int
 pub fn ResolvedModuleTypes::primitive(Self, PrimitiveType) -> Int
 pub fn ResolvedModuleTypes::syntax_type(Self, Int) -> Int
+pub fn ResolvedModuleTypes::type_view(Self, Int) -> ResolvedTypeView?
 
 pub enum ResolvedType {
   ErrorType
@@ -2254,6 +2529,11 @@ pub enum ResolvedType {
   AppliedType(Int, HirSpan)
   FunctionType(HirSpan, Int)
 } derive(Eq, @debug.Debug)
+
+pub struct ResolvedTypeView {
+  type_ : ResolvedType
+  arguments : ArrayView[Int]
+}
 
 pub enum SemanticVisibility {
   ModuleVisible
@@ -2272,19 +2552,23 @@ pub struct SourceLocation {
   offset : UInt64
 } derive(Eq, @debug.Debug)
 
+type StandardBuiltinOperation derive(Eq, @debug.Debug)
+
 pub struct StandardLibrarySources {
   paths : Array[String]
   sources : Array[Bytes]
+  parse_events : Array[Array[@parser.ParseEvent]?]
   lookup : Map[String, Int]
 }
 pub fn StandardLibrarySources::bootstrap() -> Self
 pub fn StandardLibrarySources::new(Array[ManifestFile]) -> Self
+pub fn StandardLibrarySources::with_parse_events(Self, Array[Array[@parser.ParseEvent]?]) -> Self
 
 pub struct TypeConstraintOrigin {
   kind : TypeConstraintOriginKind
   source : Int
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum TypeConstraintOriginKind {
   ExpressionTypeConstraint
@@ -2294,7 +2578,7 @@ pub enum TypeConstraintOriginKind {
   CallTypeConstraint
   OperatorTypeConstraint
   SyntheticTypeConstraint
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum TypeDiagnostic {
   ReservedTypeName(UInt64, Int, UInt64)

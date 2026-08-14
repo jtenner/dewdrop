@@ -2,7 +2,7 @@
 
 ## Scope
 
-This tranche replaces JSON on hot compiler-cache paths with direct, canonical binary codecs. It covers parser events, frozen interfaces, complete inferred-module bodies, declaration-family bundles, whole-build output headers, and compiler-source fingerprint memos. Package manifests, lockfiles, installed package capsules, user JSON, Dew JSON APIs, and Wasm payload bytes remain unchanged.
+This tranche replaces JSON on hot compiler-cache paths with direct, canonical binary codecs. It covers parser events, frozen interfaces, complete inferred-module bodies, declaration-family bundles, whole-build output headers, and compiler-source fingerprint memos. The later planning-cache tranche reuses the same container for module type layouts and baseline WasmGC fragments. Package manifests, lockfiles, installed package capsules, user JSON, Dew JSON APIs, and Wasm payload bytes remain unchanged.
 
 ## Baseline before implementation
 
@@ -53,6 +53,8 @@ The shared container starts with `DEWART\0\1`, then stores artifact kind, U32 ve
 | declaration-family bundle | 5 | V2, `body-inference-families/v2-*.dbf` |
 | whole-build output | 6 | V2, `builds/v2-*.dba` |
 | compiler fingerprint memo | 7 | V4, `compiler-fingerprint-v4.dbm` |
+| module type layouts | 8 | V1, `type-layouts/v1-*.dtl` |
+| baseline WasmGC fragments | 9 | V1, `wasmgc-fragments/v1-*.dwf` |
 
 Family bundles store sorted raw 32-byte fingerprints, fixed U64 offset/length records, and concatenated family sections. Lookup uses binary search and decodes only the selected bounded section. No map iteration, address, filesystem order, or worker completion order enters serialized bytes.
 

@@ -62,6 +62,6 @@ Release-mode measurements:
 
 Generic carrier specialization, erased fallback layouts, scalar boxes, runtime
 trait dictionaries, closures, program-wide recursive physical SCC planning, and
-static architecture budgets are implemented. A measured first private scalar-enum
-representation specialization and compiler work budgets remain in
-`docs/roadmap.md`.
+static architecture budgets and opt-in canonical binary layout persistence are
+implemented. A measured first private scalar-enum representation specialization
+and compiler work budgets remain in `docs/roadmap.md`.

@@ -121,7 +121,7 @@ fn print_usage() -> Unit {
   println("  repeat --module NAME to begin another statically linked module")
   println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
-    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --body-cache, --body-family-cache, --no-body-cache, --cache-report",
+    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --body-cache, --body-family-cache, --no-body-cache, --plan-cache, --no-plan-cache, --cache-report",
   )
 }
 
@@ -168,6 +168,14 @@ fn main {
     @sys.set_env_var(
       "DEW_BODY_FAMILY_CACHE",
       if request.body_family_cache {
+        "1"
+      } else {
+        "0"
+      },
+    )
+    @sys.set_env_var(
+      "DEW_PLAN_CACHE",
+      if request.planning_cache {
         "1"
       } else {
         "0"
@@ -269,6 +277,12 @@ fn main {
     } else if argument == "--no-body-cache" {
       @sys.set_env_var("DEW_BODY_CACHE", "0")
       @sys.set_env_var("DEW_BODY_FAMILY_CACHE", "0")
+      index += 1
+    } else if argument == "--plan-cache" {
+      @sys.set_env_var("DEW_PLAN_CACHE", "1")
+      index += 1
+    } else if argument == "--no-plan-cache" {
+      @sys.set_env_var("DEW_PLAN_CACHE", "0")
       index += 1
     } else if argument == "--cache-report" {
       cache_report = true
@@ -374,6 +388,7 @@ fn main {
   }
   let cache_status = compiled.cache_status.label()
   let body_cache_status = compiled.body_cache_status.label()
+  let planning_cache_status = compiled.planning_cache_status.label()
   let parse_event_cache_status = compiled.parse_event_cache_status.label()
   if report_compilation_diagnostics(
       compiled.program,
@@ -387,6 +402,7 @@ fn main {
     println("parse event cache: \{parse_event_cache_status}")
     println("standard interface cache: \{cache_status}")
     println("body inference cache: \{body_cache_status}")
+    println("layout and fragment cache: \{planning_cache_status}")
   }
   if command == "check" {
     println(

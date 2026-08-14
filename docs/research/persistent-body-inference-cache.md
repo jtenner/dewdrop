@@ -141,8 +141,9 @@ DEW_BODY_FAMILY_CACHE=1 tools/dew check ...
 
 Without either option, `--cache-report` prints `body inference cache: disabled`.
 
-The compiler host request is V4 so the Python host transports the family-cache
-policy explicitly to the MoonBit compiler process.
+The compiler host request is V5. The family-cache policy introduced by V4 and
+the planning-cache policy added by V5 are transported explicitly to the MoonBit
+compiler process.
 
 Without family reuse, `--cache-report` prints:
 
@@ -192,7 +193,6 @@ The compact encoding now passes isolated speed and size gates. Future default ad
 
 - Define a compact family-artifact encoding and an evidence-based admission
   policy before enabling family persistence by default.
-- Define deterministic rebasing for layout and WasmGC fragment artifacts.
 - After Dewdrop is self-hosted and Dew supports parallel computation, schedule
   independent module/body work concurrently and merge diagnostics and artifacts
   in manifest/source order.

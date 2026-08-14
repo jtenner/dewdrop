@@ -121,6 +121,17 @@ inference remain fresh. The binary codecs pass isolated encode/decode and size
 admission gates, but the explicit policy remains until broader end-to-end cache
 costs are consistently below fresh inference.
 
+`--plan-cache` independently persists canonical binary module type layouts under
+`.dew/cache/type-layouts/` and baseline module-local WasmGC fragments under
+`.dew/cache/wasmgc-fragments/`. Layout keys bind exact module source and frozen
+semantic context. Fragment keys additionally bind root selection, planning mode,
+and exact whole-program source/interface/evidence context because optimization
+and reachability are interprocedural. Cached fragments contain no program-level
+specializations or final indices. The physical linker always assigns final type,
+signature, function, global, and initializer indices fresh. This planning cache
+is also opt-in because current end-to-end file I/O and validation exceed fresh
+planning despite fragment decoding being faster in isolation.
+
 The whole-program stages now have explicit implementation owners:
 
 - `src/semantic/program_optimization.mbt` owns backend-neutral interprocedural

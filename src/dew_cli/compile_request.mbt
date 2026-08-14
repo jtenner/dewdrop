@@ -2,7 +2,7 @@
 const COMPILE_REQUEST_MAGIC : UInt = 0x44574352U
 
 ///|
-const COMPILE_REQUEST_VERSION : UInt = 4U
+const COMPILE_REQUEST_VERSION : UInt = 5U
 
 ///|
 priv struct CompileRequestReader {
@@ -115,6 +115,7 @@ priv struct CompileRequest {
   interface_cache : Bool
   body_cache : Bool
   body_family_cache : Bool
+  planning_cache : Bool
   cache_report : Bool
   build_mode : Int
   dependency_cache_key : String
@@ -168,6 +169,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
   let interface_cache = reader.read_bool("interface cache")
   let body_cache = reader.read_bool("body inference cache")
   let body_family_cache = reader.read_bool("body-family inference cache")
+  let planning_cache = reader.read_bool("layout and fragment planning cache")
   let cache_report = reader.read_bool("cache report")
   let build_mode = reader.read_u32().reinterpret_as_int()
   if build_mode < 0 || build_mode > 1 {
@@ -194,6 +196,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
         interface_cache,
         body_cache,
         body_family_cache,
+        planning_cache,
         cache_report,
         build_mode,
         dependency_cache_key,
@@ -237,6 +240,11 @@ fn CompileRequest::cli_arguments(self : CompileRequest) -> Array[String] {
   }
   if self.body_family_cache {
     arguments.push("--body-family-cache")
+  }
+  if self.planning_cache {
+    arguments.push("--plan-cache")
+  } else {
+    arguments.push("--no-plan-cache")
   }
   if self.cache_report {
     arguments.push("--cache-report")

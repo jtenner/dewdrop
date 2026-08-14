@@ -13,18 +13,17 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
-- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, opt-in complete-module and declaration-family body-inference reuse, fast checksummed whole-build compiler fingerprinting, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
+- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, opt-in complete-module and declaration-family body-inference reuse, opt-in module type-layout and baseline WasmGC-fragment reuse, fast checksummed whole-build compiler fingerprinting, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
 
 ## Active priority order
 
-1. Extend declaration-family reuse into layout and WasmGC fragment caches.
-2. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
-3. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
-4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
-5. Build formatter, documentation, and language-server tooling over lossless/incremental syntax infrastructure.
+1. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
+2. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
+3. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
+4. Build formatter, documentation, and language-server tooling over lossless/incremental syntax infrastructure.
 
 Every implementation tranche must preserve deterministic diagnostics and Wasm, include focused tests and documentation, and land as a bounded atomic commit.
 
@@ -39,10 +38,10 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation, canonical binary payloads, and explicit opt-in controls pending broader end-to-end admission.
 - [x] Refine module body artifacts into exact declaration-family jobs: one root body plus its nested lambda tree, normalized/rebased IDs and offsets, atomic per-module bundles, strict validation, deterministic mixed merging, map-based lookup, precomputed source ranges, and no duplicate module artifact or partial-bundle rewrite.
 - [x] Replace parser-event, frozen-interface, complete-body, declaration-family, build-output-header, and compiler-fingerprint JSON or legacy payloads with bounded canonical binary artifacts; keep semantic caches opt-in until broader end-to-end admission is stable.
-- [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
+- [x] Cache module type layouts and baseline module-local WasmGC fragment plans under independently versioned canonical binary schemas; validate all local arenas and keep program-global index assignment fresh. The policy is opt-in because measured warm filesystem overhead still exceeds fresh planning.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
 - [x] Cache cyclic workspace interface SCCs as one atomic artifact.
-- [ ] Require byte-identical cold, warm, and incremental output.
+- [x] Require byte-identical cache-disabled, cold, warm, and private-edit output for planning artifacts.
 - [ ] Add hundreds-of-files and representative external-package stress workloads.
 
 ## Parallel compilation after self-hosting
@@ -59,11 +58,12 @@ The current compiler is written in MoonBit, which cannot execute these compiler 
 The measured compiler, collection, text, and backend baseline is fast enough for
 the first release. Hot compiler caches now use deterministic bounded binary
 artifacts. Parser/body/family/interface codec speed and size gates pass, and the
-verified whole-build hit remains within the regression limit. Semantic body
-caches stay opt-in because thin end-to-end workloads still include keying, I/O,
-and validation costs beyond fresh inference. Remaining MoonBit-compiler work is
-broader heavy-workload admission, hardening, and observability rather than a
-release gate. Parallel compiler jobs remain deferred until self-hosting.
+verified whole-build hit remains within the regression limit. Semantic body and
+layout/fragment planning caches stay opt-in because thin end-to-end workloads
+still include keying, I/O, decoding, and validation costs beyond fresh work.
+Remaining MoonBit-compiler work is broader heavy-workload admission, hardening,
+and observability rather than a release gate. Parallel compiler jobs remain
+deferred until self-hosting.
 
 ### Post-release performance TODOs
 

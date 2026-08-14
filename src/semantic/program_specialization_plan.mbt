@@ -2760,8 +2760,11 @@ fn plan_program_wasmgc_fragments_for_root(
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
   erased_fallback_module_index : Int,
+  cached_modules : Array[PlannedModuleWasmGCFragments?],
+  store_fresh : (Int, PlannedModuleWasmGCFragments) -> Unit,
 ) -> PlannedProgramSpecializationPlan {
-  guard lowering.modules.length() == analyzed.modules.length() else {
+  guard lowering.modules.length() == analyzed.modules.length() &&
+    lowering.modules.length() == cached_modules.length() else {
     abort("program fragment inputs have different module counts")
   }
   let slots : Array[PlannedModuleWasmGCFragments?] = Array::make(
@@ -2838,17 +2841,22 @@ fn plan_program_wasmgc_fragments_for_root(
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
       let module_index = lowering.graph.scc_modules[scc.start + index]
-      slots[module_index] = Some(
-        plan_module_wasmgc_fragments_with_options_and_roots(
-          analyzed.frozen.interfaces[module_index].resolved_types,
-          lowering.modules[module_index],
-          Some(analyzed.modules[module_index].imports),
-          options,
-          program_roots,
-          program_function_value_roots,
-          extra_runtime_traits_by_module[module_index],
-        ),
-      )
+      match cached_modules[module_index] {
+        Some(cached) => slots[module_index] = Some(cached)
+        None => {
+          let fresh = plan_module_wasmgc_fragments_with_options_and_roots(
+            analyzed.frozen.interfaces[module_index].resolved_types,
+            lowering.modules[module_index],
+            Some(analyzed.modules[module_index].imports),
+            options,
+            program_roots,
+            program_function_value_roots,
+            extra_runtime_traits_by_module[module_index],
+          )
+          store_fresh(module_index, fresh)
+          slots[module_index] = Some(fresh)
+        }
+      }
     }
   }
   let modules : Array[PlannedModuleWasmGCFragments] = []
@@ -3160,12 +3168,33 @@ fn validate_program_specialization_plan(
 }
 
 ///|
+pub fn plan_program_wasmgc_fragments_with_options_and_cache_hooks(
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  options : WasmGCPlanningOptions,
+  erased_fallback_module_index : Int,
+  cached_modules : Array[PlannedModuleWasmGCFragments?],
+  store_fresh : (Int, PlannedModuleWasmGCFragments) -> Unit,
+) -> PlannedProgramSpecializationPlan {
+  plan_program_wasmgc_fragments_for_root(
+    analyzed, lowering, options, erased_fallback_module_index, cached_modules, store_fresh,
+  )
+}
+
+///|
 pub fn plan_program_wasmgc_fragments_with_options(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
 ) -> PlannedProgramSpecializationPlan {
-  plan_program_wasmgc_fragments_for_root(analyzed, lowering, options, 0)
+  plan_program_wasmgc_fragments_for_root(
+    analyzed,
+    lowering,
+    options,
+    0,
+    Array::make(lowering.modules.length(), None),
+    fn(_, _) { () },
+  )
 }
 
 ///|

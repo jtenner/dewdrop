@@ -71,6 +71,5 @@ Permanent validation covers:
 ## Remaining work
 
 - Refine module-level body inference reuse into declaration/lambda jobs after exact module-value, capture, and evidence dependencies are fingerprinted.
-- Cache layouts and WasmGC fragments under independently versioned schemas.
 - After Dewdrop is self-hosted and Dew supports parallel computation, schedule independent SCC/body jobs concurrently and merge outputs deterministically.
 - Add allocation and peak-memory measurements to cache benchmarks.

@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
@@ -256,7 +257,7 @@ class VersionedManifestTests(unittest.TestCase):
 
 class CompileRequestProtocolTests(unittest.TestCase):
     @staticmethod
-    def cache_policy(encoded: bytes) -> tuple[bool, bool]:
+    def cache_policy(encoded: bytes) -> tuple[bool, bool, bool]:
         offset = 0
 
         def read_u32() -> int:
@@ -288,7 +289,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
         read_u32()
         read_u32()
         read_u32()
-        return bool(read_u32()), bool(read_u32())
+        return bool(read_u32()), bool(read_u32()), bool(read_u32())
 
     def test_body_cache_is_opt_in_and_family_mode_enables_it(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -312,11 +313,47 @@ class CompileRequestProtocolTests(unittest.TestCase):
             family_environment_request = dew_cli._compile_request_bytes(
                 ["check", "main.dew"]
             )
-        self.assertEqual(self.cache_policy(default_request), (False, False))
-        self.assertEqual(self.cache_policy(explicit_request), (True, False))
-        self.assertEqual(self.cache_policy(family_request), (True, True))
+        with mock.patch.dict(
+            os.environ,
+            {"DEW_PLAN_CACHE": "1"},
+            clear=True,
+        ):
+            planning_environment_request = dew_cli._compile_request_bytes(
+                ["check", "main.dew"]
+            )
+        explicit_planning_request = dew_cli._compile_request_bytes(
+            ["check", "--plan-cache", "main.dew"]
+        )
+        disabled_planning_request = dew_cli._compile_request_bytes(
+            ["check", "--plan-cache", "--no-plan-cache", "main.dew"]
+        )
         self.assertEqual(
-            self.cache_policy(family_environment_request), (True, True)
+            self.cache_policy(default_request),
+            (False, False, False),
+        )
+        self.assertEqual(
+            self.cache_policy(explicit_request),
+            (True, False, False),
+        )
+        self.assertEqual(
+            self.cache_policy(family_request),
+            (True, True, False),
+        )
+        self.assertEqual(
+            self.cache_policy(family_environment_request),
+            (True, True, False),
+        )
+        self.assertEqual(
+            self.cache_policy(planning_environment_request),
+            (False, False, True),
+        )
+        self.assertEqual(
+            self.cache_policy(explicit_planning_request),
+            (False, False, True),
+        )
+        self.assertEqual(
+            self.cache_policy(disabled_planning_request),
+            (False, False, False),
         )
 
     def test_versioned_request_carries_ordered_inputs_and_policy(self) -> None:
@@ -368,7 +405,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
             return value
 
         self.assertEqual(read_u32(), 0x44574352)
-        self.assertEqual(read_u32(), 4)
+        self.assertEqual(read_u32(), 5)
         self.assertEqual(read_u32(), 1)
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "app.wasm")
@@ -388,8 +425,9 @@ class CompileRequestProtocolTests(unittest.TestCase):
                 read_u32(),
                 read_u32(),
                 read_u32(),
+                read_u32(),
             ),
-            (0, 0, 0, 1, 1, 1),
+            (0, 0, 0, 1, 1, 0, 1),
         )
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "dependency-key")
@@ -493,11 +531,20 @@ class BuildOutputCacheTests(unittest.TestCase):
                 self.assertEqual(first, dew_cli._build_cache_compiler_fingerprint())
                 compiler = root / "src" / "compiler.mbt"
                 compiler_status = compiler.stat()
-                compiler.write_text("fn compileR() {}", encoding="utf-8")
-                os.utime(
-                    compiler,
-                    ns=(compiler_status.st_atime_ns, compiler_status.st_mtime_ns),
-                )
+                for _ in range(100):
+                    compiler.write_text("fn compileR() {}", encoding="utf-8")
+                    os.utime(
+                        compiler,
+                        ns=(
+                            compiler_status.st_atime_ns,
+                            compiler_status.st_mtime_ns,
+                        ),
+                    )
+                    if compiler.stat().st_ctime_ns != compiler_status.st_ctime_ns:
+                        break
+                    time.sleep(0.01)
+                else:
+                    self.fail("filesystem did not advance compiler source ctime")
                 same_size_changed = dew_cli._build_cache_compiler_fingerprint()
                 self.assertNotEqual(first, same_size_changed)
                 (root / "src" / "added.mbt").write_text(

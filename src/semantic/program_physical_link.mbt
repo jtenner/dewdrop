@@ -1569,7 +1569,12 @@ pub fn plan_program_wasmgc_link_with_options(
 ) -> PlannedProgramWasmGCLink {
   link_program_wasmgc_fragments(
     plan_program_wasmgc_fragments_for_root(
-      analyzed, lowering, options, root_module_index,
+      analyzed,
+      lowering,
+      options,
+      root_module_index,
+      Array::make(lowering.modules.length(), None),
+      fn(_, _) { () },
     ),
     lowering,
     root_module_index,

@@ -481,13 +481,15 @@ pub fn PlannedProgramWasmGCLink::physical_type_index(
 }
 
 ///|
-/// Runs backend-neutral module lowering jobs in dependency-SCC order without
-/// whole-program rewrites. Final module slots remain in manifest order.
-pub fn plan_unoptimized_program_lowering(
+/// Runs backend-neutral module lowering jobs with caller-supplied deterministic
+/// type layouts. Final module slots remain in manifest order.
+pub fn plan_unoptimized_program_lowering_with_type_layouts(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,
+  type_layouts : Array[PlannedModuleTypeLayouts],
 ) -> PlannedProgramLowering {
-  guard program.modules.length() == analyzed.modules.length() else {
+  guard program.modules.length() == analyzed.modules.length() &&
+    program.modules.length() == type_layouts.length() else {
     abort("program lowering inputs have different module counts")
   }
   let slots : Array[PlannedModuleLowering?] = Array::make(
@@ -500,7 +502,10 @@ pub fn plan_unoptimized_program_lowering(
       let collected = program.modules[module_index]
       let semantic = analyzed.modules[module_index]
       let resolved = analyzed.frozen.interfaces[module_index].resolved_types
-      let layouts = plan_module_type_layouts(collected, resolved)
+      let layouts = type_layouts[module_index]
+      guard layouts.module_id == collected.module_id else {
+        abort("program type layout belongs to another module")
+      }
       let initialization = plan_module_initialization(
         collected,
         semantic.inferred.module_values,
@@ -544,7 +549,44 @@ pub fn plan_unoptimized_program_lowering(
 }
 
 ///|
+/// Runs backend-neutral module lowering jobs in dependency-SCC order without
+/// whole-program rewrites. Final module slots remain in manifest order.
+pub fn plan_unoptimized_program_lowering(
+  program : CollectedProgram,
+  analyzed : AnalyzedProgramSemantics,
+) -> PlannedProgramLowering {
+  guard program.modules.length() == analyzed.modules.length() else {
+    abort("program lowering inputs have different module counts")
+  }
+  let layouts : Array[PlannedModuleTypeLayouts] = []
+  for module_index, collected in program.modules {
+    layouts.push(
+      plan_module_type_layouts(
+        collected,
+        analyzed.frozen.interfaces[module_index].resolved_types,
+      ),
+    )
+  }
+  plan_unoptimized_program_lowering_with_type_layouts(
+    program, analyzed, layouts,
+  )
+}
+
+///|
 /// Runs module lowering followed by backend-neutral whole-program optimization.
+pub fn plan_program_lowering_with_type_layouts(
+  program : CollectedProgram,
+  analyzed : AnalyzedProgramSemantics,
+  type_layouts : Array[PlannedModuleTypeLayouts],
+) -> PlannedProgramLowering {
+  optimize_program_lowering(
+    plan_unoptimized_program_lowering_with_type_layouts(
+      program, analyzed, type_layouts,
+    ),
+  )
+}
+
+///|
 pub fn plan_program_lowering(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,

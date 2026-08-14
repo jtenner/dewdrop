@@ -39,6 +39,7 @@ fn compile_request_test_bytes(
   compile_request_test_write_u32(output, 1U)
   compile_request_test_write_u32(output, 1U)
   compile_request_test_write_u32(output, 1U)
+  compile_request_test_write_u32(output, 1U)
   compile_request_test_write_u32(output, 0U)
   compile_request_test_write_string(output, "dependency-key")
   output.to_bytes()
@@ -57,19 +58,20 @@ test "versioned compile request preserves host policy and ordered inputs" {
   assert_false(request.interface_cache)
   assert_true(request.body_cache)
   assert_true(request.body_family_cache)
+  assert_true(request.planning_cache)
   assert_true(request.cache_report)
   assert_eq(request.dependency_cache_key, "dependency-key")
   assert_eq(request.cli_arguments(), [
     "build", "--root", "app.main", "--std-root", "/workspace/dew.std", "--no-parse-event-cache",
-    "--no-interface-cache", "--body-cache", "--body-family-cache", "--cache-report",
-    "--dependency-interface", "dep.value", "abc123", "--module", "app.main", "main.dew",
-    "--output", "/tmp/app.wasm",
+    "--no-interface-cache", "--body-cache", "--body-family-cache", "--plan-cache",
+    "--cache-report", "--dependency-interface", "dep.value", "abc123", "--module",
+    "app.main", "main.dew", "--output", "/tmp/app.wasm",
   ])
 }
 
 ///|
 test "compile request rejects incompatible versions" {
-  match parse_compile_request(compile_request_test_bytes(version=5U)) {
+  match parse_compile_request(compile_request_test_bytes(version=6U)) {
     Err(error) => assert_eq(error, "unsupported compile request version")
     Ok(_) => fail("expected incompatible compile request version")
   }

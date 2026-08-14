@@ -37,7 +37,92 @@ DEW_CACHE_DIR=.tmp/dew-body-default-cache tools/dew check --cache-report \
   tests/module-snapshots/numeric/scalar.dew \
   > .tmp/dew-body-default.txt
 grep -q '^body inference cache: disabled$' .tmp/dew-body-default.txt
+grep -q '^layout and fragment cache: disabled$' .tmp/dew-body-default.txt
 test ! -d .tmp/dew-body-default-cache/body-inference
+test ! -d .tmp/dew-body-default-cache/type-layouts
+test ! -d .tmp/dew-body-default-cache/wasmgc-fragments
+rm -rf .tmp/dew-planning-cache
+DEW_CACHE_DIR=.tmp/dew-planning-cache tools/dew build \
+  --no-build-cache --plan-cache --cache-report \
+  tests/module-snapshots/numeric/scalar.dew \
+  -o .tmp/dew-planning-cache-cold.wasm \
+  > .tmp/dew-planning-cache-cold.txt
+DEW_CACHE_DIR=.tmp/dew-planning-cache tools/dew build \
+  --no-build-cache --plan-cache --cache-report \
+  tests/module-snapshots/numeric/scalar.dew \
+  -o .tmp/dew-planning-cache-warm.wasm \
+  > .tmp/dew-planning-cache-warm.txt
+grep -q '^layout and fragment cache: layout hits 0, layout misses [1-9][0-9]*, fragment hits 0, fragment misses [1-9][0-9]*$' \
+  .tmp/dew-planning-cache-cold.txt
+grep -q '^layout and fragment cache: layout hits [1-9][0-9]*, layout misses 0, fragment hits [1-9][0-9]*, fragment misses 0$' \
+  .tmp/dew-planning-cache-warm.txt
+cmp .tmp/dew-planning-cache-cold.wasm .tmp/dew-planning-cache-warm.wasm
+rm -rf .tmp/dew-planning-incremental
+mkdir -p .tmp/dew-planning-incremental
+cat > .tmp/dew-planning-incremental/library.dew <<'EOF'
+struct Item {
+  value: I32
+}
+fn hidden() -> I32 {
+  1
+}
+pub fn answer() -> I32 {
+  42
+}
+EOF
+cat > .tmp/dew-planning-incremental/main.dew <<'EOF'
+open fixture.library
+pub fn main() -> I32 {
+  answer()
+}
+EOF
+DEW_CACHE_DIR=.tmp/dew-planning-incremental/cache tools/dew build \
+  --no-build-cache --plan-cache \
+  --module fixture.library .tmp/dew-planning-incremental/library.dew \
+  --module fixture.main .tmp/dew-planning-incremental/main.dew \
+  --root fixture.main -o .tmp/dew-planning-incremental/cold.wasm > /dev/null
+python3 - <<'PY'
+from pathlib import Path
+path = Path('.tmp/dew-planning-incremental/library.dew')
+path.write_text(path.read_text().replace('  1\n', '  2\n', 1))
+PY
+DEW_CACHE_DIR=.tmp/dew-planning-incremental/cache tools/dew build \
+  --no-build-cache --plan-cache --cache-report \
+  --module fixture.library .tmp/dew-planning-incremental/library.dew \
+  --module fixture.main .tmp/dew-planning-incremental/main.dew \
+  --root fixture.main -o .tmp/dew-planning-incremental/cached.wasm \
+  > .tmp/dew-planning-incremental/cached.txt
+DEW_CACHE_DIR=.tmp/dew-planning-incremental/fresh-cache tools/dew build \
+  --no-build-cache --no-plan-cache \
+  --module fixture.library .tmp/dew-planning-incremental/library.dew \
+  --module fixture.main .tmp/dew-planning-incremental/main.dew \
+  --root fixture.main -o .tmp/dew-planning-incremental/fresh.wasm > /dev/null
+cmp .tmp/dew-planning-incremental/cached.wasm \
+  .tmp/dew-planning-incremental/fresh.wasm
+grep -q '^layout and fragment cache: layout hits [1-9][0-9]*, layout misses 1, fragment hits 0, fragment misses [1-9][0-9]*$' \
+  .tmp/dew-planning-incremental/cached.txt
+layout_cache_file=$(find .tmp/dew-planning-cache/type-layouts -type f | head -n 1)
+printf 'corrupt' > "$layout_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-planning-cache tools/dew check --plan-cache \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-planning-layout-corrupt.txt 2>&1; then
+  echo "expected corrupt type-layout cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt type-layout cache' .tmp/dew-planning-layout-corrupt.txt
+rm -rf .tmp/dew-planning-cache
+DEW_CACHE_DIR=.tmp/dew-planning-cache tools/dew check --plan-cache \
+  tests/module-snapshots/numeric/scalar.dew > /dev/null
+fragment_cache_file=$(find .tmp/dew-planning-cache/wasmgc-fragments -type f | head -n 1)
+printf 'corrupt' > "$fragment_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-planning-cache tools/dew check --plan-cache \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-planning-fragment-corrupt.txt 2>&1; then
+  echo "expected corrupt WasmGC fragment cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt WasmGC fragment cache' \
+  .tmp/dew-planning-fragment-corrupt.txt
 rm -rf .tmp/dew-interface-cache
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --body-cache \
   --cache-report tests/module-snapshots/numeric/scalar.dew \
