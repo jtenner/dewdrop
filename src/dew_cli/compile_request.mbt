@@ -230,8 +230,13 @@ fn CompileRequest::cli_arguments(self : CompileRequest) -> Array[String] {
   if !self.interface_cache {
     arguments.push("--no-interface-cache")
   }
-  if !self.body_cache {
+  if self.body_cache {
+    arguments.push("--body-cache")
+  } else {
     arguments.push("--no-body-cache")
+  }
+  if self.body_family_cache {
+    arguments.push("--body-family-cache")
   }
   if self.cache_report {
     arguments.push("--cache-report")

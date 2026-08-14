@@ -98,7 +98,7 @@ def main() -> None:
     if match is None:
         raise RuntimeError(f"unexpected body-cache status: {private_status}")
     module_hits, module_misses, family_hits, family_misses = map(int, match.groups())
-    if module_misses != 1 or family_hits != FUNCTION_COUNT + 1 or family_misses != 1:
+    if module_misses != 2 or family_hits != FUNCTION_COUNT + 2 or family_misses != 1:
         raise RuntimeError(
             "private edit did not isolate one declaration family: "
             f"{private_status}"

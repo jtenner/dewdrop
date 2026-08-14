@@ -32,12 +32,18 @@ tools/dew build --bootstrap-std \
   tests/module-snapshots/modules/std-wildcard-runtime.dew \
   -o .tmp/dew-std-wildcard-bootstrap.wasm
 cmp .tmp/dew-std-wildcard-disk.wasm .tmp/dew-std-wildcard-bootstrap.wasm
+rm -rf .tmp/dew-body-default-cache
+DEW_CACHE_DIR=.tmp/dew-body-default-cache tools/dew check --cache-report \
+  tests/module-snapshots/numeric/scalar.dew \
+  > .tmp/dew-body-default.txt
+grep -q '^body inference cache: disabled$' .tmp/dew-body-default.txt
+test ! -d .tmp/dew-body-default-cache/body-inference
 rm -rf .tmp/dew-interface-cache
-DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --cache-report \
-  tests/module-snapshots/numeric/scalar.dew \
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --body-cache \
+  --cache-report tests/module-snapshots/numeric/scalar.dew \
   > .tmp/dew-interface-cache-miss.txt
-DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --cache-report \
-  tests/module-snapshots/numeric/scalar.dew \
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --body-cache \
+  --cache-report tests/module-snapshots/numeric/scalar.dew \
   > .tmp/dew-interface-cache-hit.txt
 grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-interface-cache-miss.txt
@@ -156,11 +162,11 @@ fi
 grep -q 'corrupt frozen-interface cache' \
   .tmp/dew-interface-cache-corrupt.txt
 rm -rf .tmp/dew-interface-cache/interfaces
-DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --body-cache \
   tests/module-snapshots/numeric/scalar.dew > /dev/null
 body_cache_file=$(find .tmp/dew-interface-cache/body-inference -type f | head -n 1)
 printf 'corrupt' > "$body_cache_file"
-if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
+if DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check --body-cache \
   tests/module-snapshots/numeric/scalar.dew \
   > .tmp/dew-body-cache-corrupt.txt 2>&1; then
   echo "expected corrupt body-inference cache to fail visibly" >&2
@@ -170,13 +176,13 @@ grep -q 'corrupt body-inference cache' \
   .tmp/dew-body-cache-corrupt.txt
 rm -rf .tmp/dew-workspace-interface-cache
 DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew build \
-  --no-build-cache --cache-report \
+  --no-build-cache --body-cache --cache-report \
   --module fixture.library tests/cli/multi-module/library.dew \
   --module fixture.main tests/cli/multi-module/main.dew \
   --root fixture.main -o .tmp/dew-workspace-interface-cold.wasm \
   > .tmp/dew-workspace-interface-cold.txt
 DEW_CACHE_DIR=.tmp/dew-workspace-interface-cache tools/dew build \
-  --no-build-cache --cache-report \
+  --no-build-cache --body-cache --cache-report \
   --module fixture.library tests/cli/multi-module/library.dew \
   --module fixture.main tests/cli/multi-module/main.dew \
   --root fixture.main -o .tmp/dew-workspace-interface-warm.wasm \

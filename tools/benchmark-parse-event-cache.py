@@ -39,6 +39,7 @@ def run_build(paths: list[Path], output: Path) -> tuple[float, str]:
         "build",
         "--no-build-cache",
         "--no-interface-cache",
+        "--no-body-cache",
         "--cache-report",
         *map(str, paths),
         "-o",

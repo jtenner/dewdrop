@@ -17,14 +17,14 @@ The bootstrap host creates `REQUEST`, waits for the compiler process, and remove
 the request file. The compiler still accepts its legacy direct arguments for
 focused development, but `tools/dew` does not use that path.
 
-## Version 3 encoding
+## Version 4 encoding
 
 All integers are unsigned 32-bit little-endian values. Strings are a byte length
 followed by UTF-8 bytes. Arrays are a count followed by their elements.
 
 ```text
 magic                         u32 = 0x44574352
-version                       u32 = 3
+version                       u32 = 4
 command                       u32 (0 check, 1 build)
 requested output              u32 (0 Wasm, 1 HIR, 2 lowering)
 output path                   string
@@ -43,6 +43,7 @@ use default preamble          bool-as-u32
 use parse-event cache         bool-as-u32
 use interface cache           bool-as-u32
 use body-inference cache      bool-as-u32
+use body-family cache         bool-as-u32
 report cache status           bool-as-u32
 build mode                    u32 (0 production, 1 test planning; reserved by CLI)
 dependency cache provenance   string

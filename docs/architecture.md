@@ -101,19 +101,23 @@ physical linking: recursive type groups, initializers, indices, exports
 backend emission: Starshine module construction, validation, binary encoding
 ```
 
-Persistent executable semantics first use a complete module artifact under
-`.dew/cache/body-inference/`. Its key commits to exact module source, default-preamble
-policy, stable module identity, and the transitive frozen interface/evidence
-fingerprint. On a module miss, explicit `--body-family-cache` mode may load one
-atomic module bundle from `.dew/cache/body-inference-families/`. Each entry owns a
-non-module-value root body and its nested lambda tree, commits to exact declaration
-source plus location-independent module-value/signature/name/evidence context, and
-normalizes expression/pattern IDs and absolute offsets before persistence. Lookup
-validates owner/arena/type/evidence structure, rebases into current HIR, and mixes
-cached and fresh jobs through the ordinary source-ordered merge. Name resolution
-and module-value SCC inference remain fresh. Family persistence is opt-in because
-current JSON decoding is slower than fresh inference for measured tiny bodies; a
-compact encoding and admission policy are required before default enablement.
+Persistent executable semantics are opt-in because measured JSON decode and
+validation cost more than fresh inference on current workloads. `--body-cache`
+first uses a complete module artifact under `.dew/cache/body-inference/`; its key
+commits to exact module source, default-preamble policy, stable module identity,
+and the transitive frozen interface/evidence fingerprint. `--body-family-cache`
+implies that policy and may load one atomic module bundle from
+`.dew/cache/body-inference-families/`. Each entry owns a non-module-value root body
+and its nested lambda tree, commits to exact declaration source plus
+location-independent module-value/signature/name/evidence context, and normalizes
+expression/pattern IDs and absolute offsets before persistence. Lookup validates
+owner/arena/type/evidence structure, rebases into current HIR, and mixes cached
+and fresh jobs through the ordinary source-ordered merge. Family lookup uses one
+fingerprint map and precomputed source ranges; applicable ordinary modules are not
+duplicated into the larger complete-module cache, and partial misses do not
+rewrite an existing baseline bundle. Name resolution and module-value SCC
+inference remain fresh. Compact encoding and measured admission wins are required
+before either semantic cache becomes default.
 
 The whole-program stages now have explicit implementation owners:
 

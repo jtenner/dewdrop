@@ -36,7 +36,10 @@ priv struct BodyInferenceFamilyCacheKey {
 ///|
 fn body_inference_cache_enabled() -> Bool {
   cache_platform_supported() &&
-  @sys.get_env_var("DEW_BODY_CACHE").unwrap_or("1") != "0"
+  (
+    @sys.get_env_var("DEW_BODY_CACHE").unwrap_or("0") == "1" ||
+    @sys.get_env_var("DEW_BODY_FAMILY_CACHE").unwrap_or("0") == "1"
+  )
 }
 
 ///|
@@ -82,61 +85,73 @@ fn body_family_write_int(output : Buffer, value : Int) -> Unit {
 }
 
 ///|
-fn body_family_source_for_declaration(
+fn body_family_declaration_sources(
   collected : @semantic.CollectedModule,
-  declaration : @semantic.DeclId,
-) -> Result[Bytes, String] {
-  let location = match collected.declaration_location(declaration) {
-    Some(value) => value
-    None => return Err("body-family declaration location is missing")
-  }
-  let mut file_index = -1
+) -> Result[Array[Bytes?], String] {
+  let file_indices : Map[@semantic.FileId, Int] = Map::default()
+  let declarations_by_file : Array[Array[(Int, @semantic.DeclId)]] = []
   for index, file in collected.files {
-    if file == location.file {
-      file_index = index
-      break
+    file_indices[file] = index
+    declarations_by_file.push([])
+  }
+  for declaration in collected.declarations {
+    let declaration_index = @semantic.semantic_id_local(declaration.id)
+    let file = collected.declaration_files[declaration_index]
+    let file_index = match file_indices.get(file) {
+      Some(value) => value
+      None => return Err("body-family declaration file is missing")
     }
+    declarations_by_file[file_index].push(
+      (declaration.offset.to_uint().reinterpret_as_int(), declaration.id),
+    )
   }
-  if file_index < 0 {
-    return Err("body-family declaration file is missing")
+  for method_declaration in collected.methods {
+    let declaration_index = @semantic.semantic_id_local(method_declaration.id)
+    let file = collected.declaration_files[declaration_index]
+    let file_index = match file_indices.get(file) {
+      Some(value) => value
+      None => return Err("body-family method file is missing")
+    }
+    declarations_by_file[file_index].push(
+      (
+        method_declaration.offset.to_uint().reinterpret_as_int(),
+        method_declaration.id,
+      ),
+    )
   }
-  let source = collected.file_sources[file_index]
-  let start = location.offset.to_uint().reinterpret_as_int()
-  if start < 0 || start > source.length() {
-    return Err("body-family declaration offset is out of range")
-  }
-  let mut end = source.length()
-  for candidate in collected.declarations {
-    let candidate_index = @semantic.semantic_id_local(candidate.id)
-    if collected.declaration_files[candidate_index] == location.file {
-      let offset = candidate.offset.to_uint().reinterpret_as_int()
-      if offset > start && offset < end {
-        end = offset
+  let sources : Array[Bytes?] = Array::make(
+    collected.declaration_files.length(),
+    None,
+  )
+  for file_index, declarations in declarations_by_file {
+    declarations.sort_by(fn(left, right) { left.0.compare(right.0) })
+    let source = collected.file_sources[file_index]
+    for index, declaration in declarations {
+      let start = declaration.0
+      let end = if index + 1 < declarations.length() {
+        declarations[index + 1].0
+      } else {
+        source.length()
       }
-    }
-  }
-  for candidate in collected.methods {
-    let candidate_index = @semantic.semantic_id_local(candidate.id)
-    if collected.declaration_files[candidate_index] == location.file {
-      let offset = candidate.offset.to_uint().reinterpret_as_int()
-      if offset > start && offset < end {
-        end = offset
+      if start < 0 || end < start || end > source.length() {
+        return Err("body-family declaration range is invalid")
       }
+      let output = Buffer(size_hint=end - start)
+      for source_index in start..<end {
+        output.write_byte(source[source_index])
+      }
+      sources[@semantic.semantic_id_local(declaration.1)] = Some(
+        output.to_bytes(),
+      )
     }
   }
-  if end < start || end > source.length() {
-    return Err("body-family declaration range is invalid")
-  }
-  let output = Buffer(size_hint=end - start)
-  for index in start..<end {
-    output.write_byte(source[index])
-  }
-  Ok(output.to_bytes())
+  Ok(sources)
 }
 
 ///|
 fn body_inference_module_value_source_digest(
   collected : @semantic.CollectedModule,
+  declaration_sources : Array[Bytes?],
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
   output.write_bytes(b"DEW_BODY_FAMILY_MODULE_VALUES_V1\x00")
@@ -144,9 +159,9 @@ fn body_inference_module_value_source_digest(
     if body.kind is @semantic.ModuleLetBody {
       body_family_write_u64(output, body.declaration)
       let source = match
-        body_family_source_for_declaration(collected, body.declaration) {
-        Ok(value) => value
-        Err(error) => return Err(error)
+        declaration_sources[@semantic.semantic_id_local(body.declaration)] {
+        Some(value) => value
+        None => return Err("body-family module-value source is missing")
       }
       body_family_write_int(output, source.length())
       output.write_bytes(source)
@@ -160,6 +175,7 @@ fn body_inference_family_context_digest(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
   module_index : Int,
+  declaration_sources : Array[Bytes?],
 ) -> Result[FixedArray[Byte], String] {
   let collected = program.modules[module_index]
   let output = Buffer()
@@ -202,7 +218,7 @@ fn body_inference_family_context_digest(
     body_family_write_u64(output, lambda.root_body)
   }
   let module_values = match
-    body_inference_module_value_source_digest(collected) {
+    body_inference_module_value_source_digest(collected, declaration_sources) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -225,8 +241,14 @@ fn body_inference_family_cache_keys(
   if program.module_paths[module_index].has_prefix("dew.std.") {
     return Ok(Array::make(collected.bodies.length(), None))
   }
+  let declaration_sources = match body_family_declaration_sources(collected) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   let context = match
-    body_inference_family_context_digest(program, frozen, module_index) {
+    body_inference_family_context_digest(
+      program, frozen, module_index, declaration_sources,
+    ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -239,9 +261,9 @@ fn body_inference_family_cache_keys(
       continue
     }
     let family_source = match
-      body_family_source_for_declaration(collected, body.declaration) {
-      Ok(value) => value
-      Err(error) => return Err(error)
+      declaration_sources[@semantic.semantic_id_local(body.declaration)] {
+      Some(value) => value
+      None => return Err("body-family declaration source is missing")
     }
     let source = @crypto.sha256(family_source)
     let key_output = Buffer()
@@ -651,19 +673,22 @@ fn infer_module_with_body_family_cache(
     Err(error) => return Err(error)
   }
   match existing {
-    Some(bundle) =>
+    Some(bundle) => {
+      let artifacts : Map[String, @semantic.BodyInferenceFamilyArtifact] = Map::default()
+      for entry in bundle.entries {
+        artifacts[entry.fingerprint] = entry.artifact
+      }
       for index, key in keys {
         match key {
           Some(value) =>
-            for entry in bundle.entries {
-              if entry.fingerprint == value.fingerprint {
-                cached[index] = Some(entry.artifact)
-                break
-              }
+            match artifacts.get(value.fingerprint) {
+              Some(artifact) => cached[index] = Some(artifact)
+              None => ()
             }
           None => ()
         }
       }
+    }
     None => ()
   }
   let analysis = match
@@ -677,7 +702,7 @@ fn infer_module_with_body_family_cache(
     Ok(value) => value
     Err(error) => return Err("corrupt body-family cache: \{error}")
   }
-  if analysis.family_misses > 0 || existing is None {
+  if existing is None {
     let fingerprints : Array[String] = []
     let artifacts : Array[@semantic.BodyInferenceFamilyArtifact] = []
     for index, key in keys {
@@ -745,6 +770,7 @@ pub fn analyze_program_semantics_with_body_cache(
           }
           Ok(None) => {
             misses += 1
+            let mut family_applicable = false
             let value = if family_enabled {
               let family_analysis = match
                 infer_module_with_body_family_cache(
@@ -755,16 +781,21 @@ pub fn analyze_program_semantics_with_body_cache(
               }
               family_hits += family_analysis.family_hits
               family_misses += family_analysis.family_misses
+              family_applicable = family_analysis.family_hits +
+                family_analysis.family_misses >
+                0
               family_analysis.inferred
             } else {
               @semantic.infer_module_bodies_with_imports(
                 collected, resolved, imports, names,
               )
             }
-            match
-              store_body_inference_cache(program, frozen, module_index, value) {
-              Ok(_) => ()
-              Err(error) => return Err(error)
+            if !family_applicable {
+              match
+                store_body_inference_cache(program, frozen, module_index, value) {
+                Ok(_) => ()
+                Err(error) => return Err(error)
+              }
             }
             value
           }

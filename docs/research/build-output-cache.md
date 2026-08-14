@@ -1,18 +1,60 @@
 # Verified build-output cache
 
-Date: 2026-08-11
+Date: 2026-08-14
 
-`dew build` now publishes successful Wasm, HIR, and lowering outputs into `.dew/cache/builds/` and restores them on an exact subsequent request without invoking the native Dew compiler. `--no-build-cache` forces ordinary compilation. `--cache-report` reports the deterministic output-cache key and whether the request hit or missed.
+`dew build` publishes successful Wasm, HIR, and lowering outputs into
+`.dew/cache/builds/` and restores them on an exact subsequent request without
+invoking the native Dew compiler. `--no-build-cache` forces ordinary compilation.
+`--cache-report` reports the deterministic output-cache key and whether the
+request hit or missed.
 
-The SHA-256 key commits to normalized compiler arguments excluding only the destination path and report flag, every explicit Dew source payload, custom standard-root Dew sources, dependency-interface environment state, and the Dew compiler/standard-library/workspace-dependency source trees. Compiler-source content hashes are memoized only while the exact sorted path, size, modification-time, and change-time manifest remains unchanged. Consequently, changing source, compiler, generated standard source, standard root, module graph, emit mode, ABI expectation, or relevant package environment invalidates the entry. Different output destinations share one artifact.
+The SHA-256 key commits to normalized compiler arguments excluding only the
+destination path and report flag, every explicit Dew source payload, custom
+standard-root Dew sources, dependency-interface environment state, and the Dew
+compiler/standard-library/workspace-dependency source trees. Changing source,
+compiler, generated standard source, standard root, module graph, emit mode, ABI
+expectation, or relevant package environment invalidates the entry. Different
+output destinations share one artifact.
 
-Each `.dba` entry is a single atomically published V1 envelope containing emit kind, key, payload size, and payload SHA-256. Missing entries are misses; malformed, mismatched, truncated, or checksum-invalid entries are fail-visible corruption and are never treated as misses. Cache hits are atomically copied to the requested destination. Failed compilations and missing outputs are never published. `dew clean` removes build entries together with interface and installed-package caches.
+## Compiler fingerprint fast path
 
-`tools/benchmark-build-output-cache.py` measured ten warmed builds of a 422-byte Wasm fixture:
+Compiler-source content hashes use a V3 memo under the configured cache root. On
+an ordinary hit, the host:
 
-| Path | Median |
-| --- | ---: |
-| verified output-cache hit | 68.026 ms |
-| ordinary compile with output cache disabled | 94.220 ms |
+1. walks only compiler-relevant path classes (`*.mbt`, package descriptors,
+   compiler-host files, and standard `*.dew`) and compares the exact sorted path
+   list, so additions and removals cannot hide behind directory timestamp
+   resolution;
+2. directly validates every regular file's size, modification time, and change
+   time;
+3. validates a SHA-256 over the complete memoized manifest and fingerprint;
+4. returns the memoized exact-content fingerprint only when all checks match.
 
-The hit path measured 0.7220x the ordinary compile time, about 27.8% faster. All outputs were byte-identical and exactly one verified artifact was published. This is a whole-request cache; per-file parsing, HIR reuse, transitive invalidation graphs, and parallel module scheduling remain separate milestones.
+Any path or metadata change rehashes every exact file payload and atomically
+publishes a new memo. Missing, malformed, incomplete, unordered, or
+checksum-invalid memos are rebuilt rather than trusted. This removes repeated
+`Path.resolve`, recursive glob, and content hashing from the common hit while
+retaining conservative source invalidation.
+
+Each `.dba` entry is a single atomically published V1 envelope containing emit
+kind, key, payload size, and payload SHA-256. Missing entries are misses;
+malformed, mismatched, truncated, or checksum-invalid entries are fail-visible
+corruption and are never treated as misses. Cache hits are atomically copied to
+the requested destination. Failed compilations and missing outputs are never
+published. `dew clean` removes build entries together with interface and
+installed-package caches.
+
+`tools/benchmark-build-output-cache.py` measured ten warmed builds of a 422-byte
+Wasm fixture:
+
+| Path | Before V3 fast path | After V3 fast path |
+| --- | ---: | ---: |
+| verified output-cache hit median | 88.465 ms | 43.832 ms |
+| ordinary compile with output cache disabled | 100.160 ms | 98.705 ms |
+
+The hit path improved by **50.5%** and now measures 0.4441x ordinary compile time.
+All outputs were byte-identical and exactly one verified artifact was published.
+Atomic destination publication and `fsync` are now a visible part of the remaining
+hit time and were intentionally retained. Per-file parsing, interfaces, optional
+semantic reuse, layout fragments, and parallel module scheduling remain separate
+layers.

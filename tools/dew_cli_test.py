@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import shutil
 import tempfile
@@ -254,6 +255,70 @@ class VersionedManifestTests(unittest.TestCase):
 
 
 class CompileRequestProtocolTests(unittest.TestCase):
+    @staticmethod
+    def cache_policy(encoded: bytes) -> tuple[bool, bool]:
+        offset = 0
+
+        def read_u32() -> int:
+            nonlocal offset
+            value = __import__("struct").unpack_from("<I", encoded, offset)[0]
+            offset += 4
+            return value
+
+        def skip_string() -> None:
+            nonlocal offset
+            length = read_u32()
+            offset += length
+
+        read_u32()
+        read_u32()
+        read_u32()
+        read_u32()
+        skip_string()
+        skip_string()
+        for _ in range(read_u32()):
+            skip_string()
+            for _ in range(read_u32()):
+                skip_string()
+        for _ in range(read_u32()):
+            skip_string()
+            skip_string()
+        read_u32()
+        skip_string()
+        read_u32()
+        read_u32()
+        read_u32()
+        return bool(read_u32()), bool(read_u32())
+
+    def test_body_cache_is_opt_in_and_family_mode_enables_it(self) -> None:
+        with mock.patch.dict(os.environ, {}, clear=True):
+            default_request = dew_cli._compile_request_bytes(["check", "main.dew"])
+            explicit_request = dew_cli._compile_request_bytes(
+                ["check", "--body-cache", "main.dew"]
+            )
+        with mock.patch.dict(
+            os.environ,
+            {"DEW_BODY_CACHE": "0", "DEW_BODY_FAMILY_CACHE": "0"},
+            clear=True,
+        ):
+            family_request = dew_cli._compile_request_bytes(
+                ["check", "--body-family-cache", "main.dew"]
+            )
+        with mock.patch.dict(
+            os.environ,
+            {"DEW_BODY_CACHE": "0", "DEW_BODY_FAMILY_CACHE": "1"},
+            clear=True,
+        ):
+            family_environment_request = dew_cli._compile_request_bytes(
+                ["check", "main.dew"]
+            )
+        self.assertEqual(self.cache_policy(default_request), (False, False))
+        self.assertEqual(self.cache_policy(explicit_request), (True, False))
+        self.assertEqual(self.cache_policy(family_request), (True, True))
+        self.assertEqual(
+            self.cache_policy(family_environment_request), (True, True)
+        )
+
     def test_versioned_request_carries_ordered_inputs_and_policy(self) -> None:
         environment = {
             "DEW_BOOTSTRAP_STD": "1",
@@ -324,7 +389,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
                 read_u32(),
                 read_u32(),
             ),
-            (0, 0, 0, 0, 1, 1),
+            (0, 0, 0, 1, 1, 1),
         )
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "dependency-key")
@@ -407,6 +472,39 @@ class BuildOutputCacheTests(unittest.TestCase):
         (root / "moon.mod").write_text("{}", encoding="utf-8")
         (root / "src" / "compiler.mbt").write_text("fn compiler() {}", encoding="utf-8")
         (root / "std" / "base.dew").write_text("pub fn base() -> Unit {}", encoding="utf-8")
+
+    def test_compiler_fingerprint_reuses_validated_file_manifest(self) -> None:
+        with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:
+            root = Path(temporary)
+            self.compiler_tree(root)
+            with mock.patch.object(dew_cli, "ROOT", root):
+                first = dew_cli._build_cache_compiler_fingerprint()
+                with mock.patch.object(
+                    dew_cli,
+                    "_build_cache_compiler_files",
+                    side_effect=AssertionError("unexpected compiler-tree rescan"),
+                ):
+                    second = dew_cli._build_cache_compiler_fingerprint()
+                self.assertEqual(first, second)
+                memo = root / ".dew" / "cache" / "compiler-fingerprint-v3.json"
+                corrupted = json.loads(memo.read_text(encoding="utf-8"))
+                corrupted["files"] = []
+                memo.write_text(json.dumps(corrupted), encoding="utf-8")
+                self.assertEqual(first, dew_cli._build_cache_compiler_fingerprint())
+                compiler = root / "src" / "compiler.mbt"
+                compiler_status = compiler.stat()
+                compiler.write_text("fn compileR() {}", encoding="utf-8")
+                os.utime(
+                    compiler,
+                    ns=(compiler_status.st_atime_ns, compiler_status.st_mtime_ns),
+                )
+                same_size_changed = dew_cli._build_cache_compiler_fingerprint()
+                self.assertNotEqual(first, same_size_changed)
+                (root / "src" / "added.mbt").write_text(
+                    "fn added() {}", encoding="utf-8"
+                )
+                changed = dew_cli._build_cache_compiler_fingerprint()
+                self.assertNotEqual(same_size_changed, changed)
 
     def test_build_cache_key_tracks_sources_and_ignores_output(self) -> None:
         with tempfile.TemporaryDirectory(dir=dew_cli.ROOT / ".tmp") as temporary:

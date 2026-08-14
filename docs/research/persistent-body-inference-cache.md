@@ -2,11 +2,15 @@
 
 ## Status
 
-Implemented as two deterministic executable-semantic cache layers:
+Implemented as two opt-in deterministic executable-semantic cache layers:
 
-1. the default complete-module cache stores one `InferredModuleBodies` result;
-2. an explicit declaration-family cache can recover unchanged root-body jobs when
-   the complete-module key misses.
+1. `--body-cache` stores one complete `InferredModuleBodies` result;
+2. `--body-family-cache` enables that policy and can recover unchanged root-body
+   jobs when the complete-module key misses.
+
+Both are disabled by default because measured JSON decode, validation, and
+publication cost more than fresh inference on current one-module and 96-module
+workloads. Exact verified whole-build output reuse remains enabled by default.
 
 A declaration family is one non-module-value root body plus every nested lambda
 whose `root_body` is that body. Nested lambdas remain atomic with their root
@@ -35,9 +39,9 @@ The V3 key is SHA-256 over:
 - manifest-ordered source paths and exact bytes;
 - the transitive frozen interface and implementation-evidence fingerprint.
 
-An exact module hit remains the first lookup because it avoids module-value and
-individual job assembly entirely. A private body edit changes this key and may
-then fall through to declaration-family lookup when that layer is enabled.
+When body caching is enabled, an exact module hit remains the first lookup because
+it avoids module-value and individual job assembly entirely. A private body edit
+changes this key and may then fall through to declaration-family lookup.
 
 ## Declaration-family bundle
 
@@ -51,8 +55,9 @@ stored together:
 One atomic bundle avoids hundreds of small file opens and publications. Entries
 are sorted by their 64-hex family fingerprint and contain the normalized root job
 plus source-ordered nested-lambda jobs. Compiler-owned `dew.std.*` modules retain
-complete-module caching only; their generated/distributed sources do not use
-family bundles.
+complete-module caching only when that layer is enabled; their
+generated/distributed sources do not use family bundles. Ordinary modules using
+family mode are not duplicated into the much larger complete-module cache.
 
 The context fingerprint commits to:
 
@@ -109,23 +114,29 @@ arena mismatches.
 
 Both layers use same-directory atomic publication. Missing files or missing
 family fingerprints are ordinary misses; malformed existing artifacts are never
-silently ignored.
+silently ignored. Family lookup constructs one fingerprint map and declaration
+source ranges are precomputed in file order. A partial miss retains the existing
+context bundle rather than serializing and atomically rewriting the entire bundle
+for one changed declaration; the bundle acts as a reusable baseline while exact
+repeated requests are handled by the default whole-build cache.
 
 ## Controls and reporting
 
-Complete-module reuse remains enabled by default and is controlled by:
+Complete-module persistence is opt-in:
 
 ```text
-tools/dew check --no-body-cache ...
-DEW_BODY_CACHE=0 tools/dew check ...
+tools/dew check --body-cache ...
+DEW_BODY_CACHE=1 tools/dew check ...
 ```
 
-Declaration-family persistence is deliberately opt-in:
+Declaration-family persistence is also opt-in and implies the body-cache policy:
 
 ```text
 tools/dew check --body-family-cache ...
 DEW_BODY_FAMILY_CACHE=1 tools/dew check ...
 ```
+
+Without either option, `--cache-report` prints `body inference cache: disabled`.
 
 The compiler host request is V4 so the Python host transports the family-cache
 policy explicitly to the MoonBit compiler process.
@@ -161,11 +172,13 @@ Permanent coverage includes:
 - cold, warm, private-body-change, and root-body-change benchmark reporting.
 
 A representative native run on August 14, 2026 generated 192 tiny private
-functions. Editing one function produced **193 family hits and 1 family miss**,
-with byte-identical output. The family-enabled build measured **174.689 ms** while
-a body-cache-disabled median measured **109.100 ms**; warm exact-module reuse
-measured **157.792 ms**, and a compiler-warm cold-cache build measured
-**225.209 ms**.
+functions. Editing one function produced **194 family hits and 1 family miss**
+across the library and root modules, with byte-identical output. Map lookup,
+precomputed source ranges, baseline-bundle retention, and avoiding duplicate
+module artifacts reduced that edit from **170.610 ms** to **154.463 ms**; a root
+edit fell from **163.585 ms** to **147.540 ms**. A body-cache-disabled median still
+measured only **104.839 ms**, family-warm reuse measured **147.674 ms**, and a
+compiler-warm cold-cache build measured **205.725 ms**.
 
 These measurements show that deterministic granular reuse is correct but the
 current JSON artifact path is not a performance win for tiny, cheaply inferred

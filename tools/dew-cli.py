@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shutil
+import stat as stat_module
 import struct
 import subprocess
 import sys
@@ -312,8 +313,8 @@ def _build_cache_compiler_roots() -> list[Path]:
     return sorted(roots, key=lambda path: path.as_posix())
 
 
-def _build_cache_compiler_files() -> list[Path]:
-    files: set[Path] = {Path(__file__).resolve()}
+def _build_cache_compiler_file_paths() -> list[str]:
+    files = {Path(__file__).resolve().as_posix()}
     for compiler_root in _build_cache_compiler_roots():
         for candidate in (
             compiler_root / "moon.mod",
@@ -322,23 +323,106 @@ def _build_cache_compiler_files() -> list[Path]:
             compiler_root / ".mooncakes" / ".moon-lock",
         ):
             if candidate.is_file():
-                files.add(candidate.resolve())
+                files.add(candidate.as_posix())
         source_root = compiler_root / "src"
         if source_root.is_dir():
-            for pattern in ("*.mbt", "moon.pkg"):
-                for candidate in source_root.rglob(pattern):
-                    if candidate.is_file():
-                        files.add(candidate.resolve())
-    for directory, pattern in (
-        (ROOT / "std", "*.dew"),
-        (ROOT / "tools", "dew-cli.py"),
+            for directory, _, names in os.walk(source_root):
+                for name in names:
+                    if name.endswith(".mbt") or name == "moon.pkg":
+                        files.add((Path(directory) / name).as_posix())
+    standard_root = ROOT / "std"
+    if standard_root.is_dir():
+        for directory, _, names in os.walk(standard_root):
+            for name in names:
+                if name.endswith(".dew"):
+                    files.add((Path(directory) / name).as_posix())
+    tools_root = ROOT / "tools"
+    if tools_root.is_dir():
+        for directory, _, names in os.walk(tools_root):
+            if "dew-cli.py" in names:
+                files.add((Path(directory) / "dew-cli.py").as_posix())
+    return sorted(files)
+
+
+def _build_cache_compiler_files() -> list[Path]:
+    return [Path(path) for path in _build_cache_compiler_file_paths()]
+
+
+def _build_cache_metadata_record(path: Path) -> dict[str, object] | None:
+    try:
+        status = os.stat(path, follow_symlinks=False)
+    except OSError:
+        return None
+    if not stat_module.S_ISREG(status.st_mode):
+        return None
+    return {
+        "ctime_ns": status.st_ctime_ns,
+        "mtime_ns": status.st_mtime_ns,
+        "path": path.as_posix(),
+        "size": status.st_size,
+    }
+
+
+def _build_cache_compiler_manifest_checksum(
+    files: list[object], fingerprint: str
+) -> str:
+    payload = json.dumps(
+        {"files": files, "fingerprint": fingerprint},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _build_cache_metadata_matches(record: object) -> bool:
+    if (
+        not isinstance(record, dict)
+        or set(record) != {"ctime_ns", "mtime_ns", "path", "size"}
+        or not isinstance(record.get("path"), str)
     ):
-        if not directory.is_dir():
-            continue
-        for candidate in directory.rglob(pattern):
-            if candidate.is_file():
-                files.add(candidate.resolve())
-    return sorted(files, key=lambda path: path.as_posix())
+        return False
+    try:
+        status = os.stat(record["path"], follow_symlinks=False)
+    except OSError:
+        return False
+    return (
+        stat_module.S_ISREG(status.st_mode)
+        and status.st_ctime_ns == record["ctime_ns"]
+        and status.st_mtime_ns == record["mtime_ns"]
+        and status.st_size == record["size"]
+    )
+
+
+def _build_cache_compiler_memo_matches(cached: object) -> bool:
+    if not isinstance(cached, dict) or cached.get("version") != 3:
+        return False
+    fingerprint = cached.get("fingerprint")
+    files = cached.get("files")
+    manifest_checksum = cached.get("manifest_checksum")
+    if (
+        not isinstance(fingerprint, str)
+        or re.fullmatch(r"[0-9a-f]{64}", fingerprint) is None
+        or not isinstance(manifest_checksum, str)
+        or re.fullmatch(r"[0-9a-f]{64}", manifest_checksum) is None
+        or not isinstance(files, list)
+        or not files
+        or manifest_checksum
+        != _build_cache_compiler_manifest_checksum(files, fingerprint)
+    ):
+        return False
+    cached_paths: list[str] = []
+    previous = ""
+    for record in files:
+        if not isinstance(record, dict) or not isinstance(record.get("path"), str):
+            return False
+        path = record["path"]
+        if path <= previous:
+            return False
+        cached_paths.append(path)
+        previous = path
+    if cached_paths != _build_cache_compiler_file_paths():
+        return False
+    return all(_build_cache_metadata_matches(record) for record in files)
 
 
 def _build_cache_argument_path(value: str) -> Path:
@@ -347,44 +431,41 @@ def _build_cache_argument_path(value: str) -> Path:
 
 
 def _build_cache_compiler_fingerprint() -> str:
-    files = _build_cache_compiler_files()
-    records: list[dict[str, object]] = []
-    for path in files:
-        stat = path.stat()
-        records.append(
-            {
-                "ctime_ns": stat.st_ctime_ns,
-                "mtime_ns": stat.st_mtime_ns,
-                "path": path.as_posix(),
-                "size": stat.st_size,
-            }
-        )
-    memo = _package_cache_root() / "compiler-fingerprint-v1.json"
+    memo = _package_cache_root() / "compiler-fingerprint-v3.json"
     if memo.is_file() and not memo.is_symlink():
         try:
             cached = json.loads(memo.read_text(encoding="utf-8"))
-            if (
-                isinstance(cached, dict)
-                and cached.get("version") == 1
-                and cached.get("files") == records
-                and isinstance(cached.get("fingerprint"), str)
-                and re.fullmatch(r"[0-9a-f]{64}", cached["fingerprint"])
-            ):
+            if _build_cache_compiler_memo_matches(cached):
                 return cached["fingerprint"]
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             pass
+    files = _build_cache_compiler_files()
+    file_records: list[dict[str, object]] = []
+    for path in files:
+        record = _build_cache_metadata_record(path)
+        if record is None:
+            raise ManifestError(f"compiler fingerprint input disappeared: {path}")
+        file_records.append(record)
     digest = hashlib.sha256()
-    digest.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_V1\x00")
-    for record, path in zip(records, files):
+    digest.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_V3\x00")
+    for record, path in zip(file_records, files):
         _write_hash_string(digest, str(record["path"]))
         data = path.read_bytes()
         digest.update(len(data).to_bytes(8, "little"))
         digest.update(data)
     fingerprint = digest.hexdigest()
+    manifest_checksum = _build_cache_compiler_manifest_checksum(
+        file_records, fingerprint
+    )
     _atomic_write(
         memo,
         json.dumps(
-            {"files": records, "fingerprint": fingerprint, "version": 1},
+            {
+                "files": file_records,
+                "fingerprint": fingerprint,
+                "manifest_checksum": manifest_checksum,
+                "version": 3,
+            },
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8"),
@@ -1233,8 +1314,10 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
     default_preamble = True
     parse_event_cache = True
     interface_cache = True
-    body_cache = os.environ.get("DEW_BODY_CACHE", "1") != "0"
     body_family_cache = os.environ.get("DEW_BODY_FAMILY_CACHE", "0") == "1"
+    body_cache = (
+        os.environ.get("DEW_BODY_CACHE", "0") == "1" or body_family_cache
+    )
     cache_report = False
     standard_policy = 1 if os.environ.get("DEW_BOOTSTRAP_STD") == "1" else 0
     standard_root = "" if standard_policy == 1 else os.environ.get("DEW_STD_ROOT", ".")
@@ -1292,10 +1375,15 @@ def _compile_request_bytes(arguments: list[str]) -> bytes:
         elif argument == "--no-interface-cache":
             interface_cache = False
             index += 1
+        elif argument == "--body-cache":
+            body_cache = True
+            index += 1
         elif argument == "--no-body-cache":
             body_cache = False
+            body_family_cache = False
             index += 1
         elif argument == "--body-family-cache":
+            body_cache = True
             body_family_cache = True
             index += 1
         elif argument == "--cache-report":

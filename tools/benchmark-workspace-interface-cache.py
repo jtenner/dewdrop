@@ -56,6 +56,7 @@ def command(
         str(ROOT / "tools" / "dew"),
         "build",
         "--no-build-cache",
+        "--no-body-cache",
         "--cache-report",
     ]
     if not interface_cache:

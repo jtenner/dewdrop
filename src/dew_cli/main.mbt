@@ -121,7 +121,7 @@ fn print_usage() -> Unit {
   println("  repeat --module NAME to begin another statically linked module")
   println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
-    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --no-body-cache, --cache-report",
+    "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --body-cache, --body-family-cache, --no-body-cache, --cache-report",
   )
 }
 
@@ -259,8 +259,16 @@ fn main {
     } else if argument == "--no-interface-cache" {
       @sys.set_env_var("DEW_INTERFACE_CACHE", "0")
       index += 1
+    } else if argument == "--body-cache" {
+      @sys.set_env_var("DEW_BODY_CACHE", "1")
+      index += 1
+    } else if argument == "--body-family-cache" {
+      @sys.set_env_var("DEW_BODY_CACHE", "1")
+      @sys.set_env_var("DEW_BODY_FAMILY_CACHE", "1")
+      index += 1
     } else if argument == "--no-body-cache" {
       @sys.set_env_var("DEW_BODY_CACHE", "0")
+      @sys.set_env_var("DEW_BODY_FAMILY_CACHE", "0")
       index += 1
     } else if argument == "--cache-report" {
       cache_report = true

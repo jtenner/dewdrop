@@ -13,7 +13,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
-- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, verified complete-module and opt-in declaration-family body-inference reuse, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
+- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, opt-in complete-module and declaration-family body-inference reuse, fast checksummed whole-build compiler fingerprinting, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
@@ -36,8 +36,8 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 - [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
 - [x] Extend frozen-interface caching to ordinary non-root workspace modules with exact manifest source identity, direct public dependency fingerprints, atomic publication, and fail-visible corruption.
-- [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation and independent controls.
-- [x] Refine module body artifacts into exact declaration-family jobs: one root body plus its nested lambda tree, normalized/rebased IDs and offsets, atomic per-module bundles, strict validation, deterministic mixed merging, and explicit opt-in controls.
+- [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation and explicit opt-in controls after JSON decoding measured slower than fresh inference.
+- [x] Refine module body artifacts into exact declaration-family jobs: one root body plus its nested lambda tree, normalized/rebased IDs and offsets, atomic per-module bundles, strict validation, deterministic mixed merging, map-based lookup, precomputed source ranges, and no duplicate module artifact or partial-bundle rewrite.
 - [ ] Replace declaration-family JSON bundles with a compact encoding and require measured admission wins before enabling them by default.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
@@ -50,9 +50,12 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 ## Compiler resource and performance discipline
 
-The measured compiler, collection, text, cache, backend, and JSON baseline is
-fast enough for the first release. Remaining performance work is post-release
-hardening and observability rather than a release gate.
+The measured compiler, collection, text, backend, and JSON baseline is fast
+enough for the first release. JSON body caches are opt-in after profiling showed
+fresh inference was 2.15x–4.42x faster on a 96-module small-body workload. A
+checksummed compiler-manifest fast path halves verified whole-build hit time.
+Remaining work is compact semantic encoding, parallelism, hardening, and
+observability rather than a release gate.
 
 ### Post-release performance TODOs
 
