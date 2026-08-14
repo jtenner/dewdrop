@@ -1323,11 +1323,11 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-154 | Answered and implemented | Structural recovery ignores declaration keywords until all recorded delimiters close, then consumes the declaration-ending line and resumes keyword-led synchronization. |
 | D-155 | Answered | If an enclosing delimiter never closes, compiler recovery proceeds to EOF rather than speculatively treating a keyword inside the open scope as top-level. |
 | D-156 | Implemented | Nested recovery has trait, impl, function, enum, functional-while, generic, group, call, index, EOF, 1,024-delimiter and 256-declaration stress, and cross-backend benchmark coverage. |
-| D-157 | Implemented | Semantic entities use deterministic packed module/local numeric IDs; module collection requires no global allocator and can become one independent worker job. |
+| D-157 | Implemented | Semantic entities use deterministic packed module/local numeric IDs; module collection requires no global allocator and can become one independent worker job after self-hosting. |
 | D-158 | Implemented | Declaration collection consumes the lazy parse-event iterator directly, interns names per module, preserves parser diagnostics, and builds separate type, trait, and value namespaces. |
 | D-159 | Implemented | Dew-visible builtin declarations form source-ordered overload chains; ordinary duplicate module bindings and duplicate immediate members produce collection diagnostics while retaining stable identities. |
 | D-160 | Implemented | Declaration-level type syntax lowers into child-first flat HIR with shared argument spans, iterative traversal, and reusable module-builder scratch arrays. |
-| D-161 | Provisional and implemented | Semantic phase artifacts are frozen by convention after construction; future parallel jobs read immutable prior-phase artifacts and write only job-local outputs. |
+| D-161 | Provisional and implemented | Semantic phase artifacts are frozen by convention after construction; post-self-hosting parallel jobs will read immutable prior-phase artifacts and write only job-local outputs. |
 | D-162 | Implemented | Module lets, top-level functions, and impl methods receive stable source-order `BodyId` values and constant-time declaration-to-body lookup; builtins and trait signatures have no body. |
 | D-163 | Implemented | Executable HIR uses module-wide expression, block, pattern, object-field, and arm arenas with per-body spans rather than one arena set per function. |
 | D-164 | Implemented | Body lowering is an iterative visit/finish task machine backed by reusable primitive stacks and typed parser-source pools; no recursive host calls are required. |
@@ -1339,7 +1339,7 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-170 | Implemented | Generic constructor arity and applicability are checked before interning an application; invalid types use one poison `ErrorType` to suppress cascades. |
 | D-171 | Provisional and implemented | Shorthand `self` and named `Self` require a containing trait or impl context; a top-level receiver must currently provide an explicit concrete type. |
 | D-172 | Implemented | Alias targets produce deduplicated dependency edges and iterative Kosaraju SCC diagnostics for multi-alias and self cycles. |
-| D-173 | Implemented | Resolved parameter, callable, field, variant, alias, and impl signature tables are immutable-by-convention and indexed for future parallel body jobs. |
+| D-173 | Implemented | Resolved parameter, callable, field, variant, alias, and impl signature tables are immutable-by-convention and indexed for future post-self-hosting parallel body jobs. |
 | D-174 | Implemented | Resolved type interning uses structural collision checks and 32-bit hash buckets to avoid BigInt-heavy hashing on JavaScript and classic Wasm. |
 | D-175 | Implemented | Type aliases are transparent in callable, field, tuple-variant, and impl signatures; generic alias substitution is keyed by stable `GenericParameterId`. |
 | D-176 | Implemented | Alias normalization and substitution use reusable iterative task machines and canonical type-ID memoization rather than recursive host calls. |
@@ -1368,7 +1368,7 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-199 | Implemented | Literal token kinds seed fixed primitive expression types, and local-name expressions reuse the exact type slot of their resolved `LocalId`. |
 | D-200 | Provisional and implemented | Logical operators enforce `Bool`; comparisons equate operands and produce `Bool`; other current operators propagate operand/result equality while domain and trait selection remain deferred. |
 | D-201 | Implemented | Unsupported inference forms poison one outer expression and coalesce consumed name or qualification roots to avoid diagnostic cascades. |
-| D-202 | Implemented | Final body outputs retain only reachable local type terms; worker-local solver scratch is reset and reused across sequential jobs while preserving parallel ownership. |
+| D-202 | Implemented | Final body outputs retain only reachable local type terms; solver scratch is reset and reused across sequential jobs while preserving the ownership needed by post-self-hosting workers. |
 | D-203 | Implemented | Forward and reverse body inference scheduling produce identical complete `InferredModuleBodies` artifacts. |
 | D-204 | Implemented | A call rooted at a module value name reads the frozen value-binding chain; one callable declaration selects directly, while local values and module lets are not callable until first-class function types exist. |
 | D-205 | Implemented | Every direct generic call receives fresh body-local variables, and iterative signature substitution replaces only generic parameters owned by the selected declaration. |

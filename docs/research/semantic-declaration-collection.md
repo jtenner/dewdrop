@@ -30,7 +30,7 @@ low 32 bits:  module-local source-order index
 
 Top-level declarations and nested trait/impl methods share one declaration index sequence. This gives methods stable `DeclId` values without a global allocator. A compact signed location array maps the local declaration component directly to either a top-level declaration index or a method index, so downstream phases do not scan the separate arenas. Fields, variants, generic parameters, and value parameters each use independent module-local sequences because their ID kinds are semantically distinct.
 
-Module IDs must eventually be assigned from a deterministic module-path ordering before modules are collected in parallel. Collection itself performs no global allocation and writes only its own module artifact.
+Module IDs are assigned from a deterministic module-path ordering. If collection becomes parallel after self-hosting, that assignment must still happen before concurrent module jobs begin. Collection itself performs no global allocation and writes only its own module artifact.
 
 ## Name interning
 
@@ -86,9 +86,9 @@ Module namespace duplicate detection remains expected constant time through pers
 
 Parser diagnostics are preserved in event order, and collection continues after parser recovery.
 
-## Parallelization properties
+## Post-self-hosting parallelization properties
 
-Collection already follows the intended future threaded contract:
+Collection already follows the intended future self-hosted threaded contract:
 
 - one job owns one module builder;
 - no global mutable state is read or written;

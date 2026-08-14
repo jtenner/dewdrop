@@ -17,6 +17,8 @@ persistent formats, or long-lived contributor expectations.
 
 - [`0001-compiler-phase-and-arena-boundaries.md`](0001-compiler-phase-and-arena-boundaries.md)
   — preserve flat arenas while making phase ownership and mutation explicit.
+- [`0002-parallel-compilation-after-self-hosting.md`](0002-parallel-compilation-after-self-hosting.md)
+  — defer compiler job parallelism until Dewdrop is self-hosted.
 
 ## Record template
 

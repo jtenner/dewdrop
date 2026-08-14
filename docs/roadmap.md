@@ -20,7 +20,7 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 ## Active priority order
 
-1. Compact declaration-family artifacts, then extend reuse into layout/fragment caches and deterministic parallel module/body scheduling.
+1. Extend declaration-family reuse into layout and WasmGC fragment caches.
 2. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
 3. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
 4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
@@ -32,7 +32,7 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 
 - [ ] Defer profile-guided optimization until reproducible deterministic baseline builds and stable workload collection exist.
 
-## Incremental and parallel compilation
+## Incremental compilation
 
 - [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
 - [x] Extend frozen-interface caching to ordinary non-root workspace modules with exact manifest source identity, direct public dependency fingerprints, atomic publication, and fail-visible corruption.
@@ -42,11 +42,17 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
 - [x] Cache cyclic workspace interface SCCs as one atomic artifact.
-- [ ] Schedule independent module and body jobs across workers.
+- [ ] Require byte-identical cold, warm, and incremental output.
+- [ ] Add hundreds-of-files and representative external-package stress workloads.
+
+## Parallel compilation after self-hosting
+
+The current compiler is written in MoonBit, which cannot execute these compiler jobs in parallel. Internal worker scheduling is not active work and is not a release goal for the MoonBit implementation. Revisit it only after Dewdrop is self-hosted and Dew provides parallel computation. The deterministic identity, artifact, and merge contracts remain preparation for that later work. See [`decisions/0002-parallel-compilation-after-self-hosting.md`](decisions/0002-parallel-compilation-after-self-hosting.md).
+
+- [ ] Schedule independent module and body jobs across workers in the self-hosted compiler.
 - [ ] Buffer and merge diagnostics, artifacts, and final indices in deterministic source/manifest order.
 - [ ] Add forward, reverse, and randomized simulated completion-order tests.
-- [ ] Require byte-identical cold, warm, incremental, and parallel output.
-- [ ] Add hundreds-of-files and representative external-package stress workloads.
+- [ ] Require byte-identical sequential and parallel output.
 
 ## Compiler resource and performance discipline
 
@@ -55,9 +61,9 @@ the first release. Hot compiler caches now use deterministic bounded binary
 artifacts. Parser/body/family/interface codec speed and size gates pass, and the
 verified whole-build hit remains within the regression limit. Semantic body
 caches stay opt-in because thin end-to-end workloads still include keying, I/O,
-and validation costs beyond fresh inference. Remaining work is broader heavy
-workload admission, parallelism, hardening, and observability rather than a
-release gate.
+and validation costs beyond fresh inference. Remaining MoonBit-compiler work is
+broader heavy-workload admission, hardening, and observability rather than a
+release gate. Parallel compiler jobs remain deferred until self-hosting.
 
 ### Post-release performance TODOs
 

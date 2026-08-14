@@ -170,9 +170,9 @@ Match and functional while reuse `HirPatternArm`. Each arm records one pattern I
 
 Pattern children and arm lists use explicit child arenas because nested matches and nested payload patterns mean their direct children are not necessarily contiguous in the primary node arenas.
 
-## Parallel analysis properties
+## Post-self-hosting parallel analysis properties
 
-After collection finishes, executable HIR is immutable by convention. A future body-analysis worker receives:
+After collection finishes, executable HIR is immutable by convention. Once Dewdrop is self-hosted and Dew supports parallel computation, a body-analysis worker can receive:
 
 - one `HirBody`;
 - read-only module arenas;

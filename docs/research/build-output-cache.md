@@ -56,5 +56,6 @@ The hit path improved by **50.5%** and now measures 0.4441x ordinary compile tim
 All outputs were byte-identical and exactly one verified artifact was published.
 Atomic destination publication and `fsync` are now a visible part of the remaining
 hit time and were intentionally retained. Per-file parsing, interfaces, optional
-semantic reuse, layout fragments, and parallel module scheduling remain separate
-layers.
+semantic reuse, and layout fragments remain separate layers. Parallel module
+scheduling is deferred until Dewdrop is self-hosted and Dew supports parallel
+computation.

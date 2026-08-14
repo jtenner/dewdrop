@@ -958,9 +958,9 @@ bytes from the source file
   -> validated and encoded WasmGC
 ```
 
-Each stage tries to consume an immutable result from the previous stage and produce a new result for the next one. This makes compiler behavior easier to reason about and prepares the project for future incremental and parallel compilation.
+Each stage tries to consume an immutable result from the previous stage and produce a new result for the next one. This makes compiler behavior easier to reason about and supports incremental compilation.
 
-The frontend is deliberately streaming and forward-only. It does not keep every possible parse tree or repeatedly rewind input. The backend assigns deterministic identities and indices so output does not depend on hash-map iteration or worker completion order.
+The current compiler runs compiler jobs sequentially because MoonBit cannot execute them in parallel. Internal parallel scheduling is deferred until Dewdrop is self-hosted and Dew provides parallel computation. The frontend is deliberately streaming and forward-only. It does not keep every possible parse tree or repeatedly rewind input. The backend assigns deterministic identities and indices so output does not depend on hash-map iteration or scheduling order.
 
 ## Runtime and ABI notes for advanced users
 

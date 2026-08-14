@@ -187,7 +187,7 @@ All measurements use native release mode and `@bench.T`.
 
 Fragment planning plus stable merge totals approximately 225.21 us, about 31.8% lower than the first combined measurement. Module emission improved by approximately 28.0%, binary emission by approximately 27.4%, and the measured full pipeline by approximately 35.7%.
 
-The split also clarifies future parallelism: module-local fragment jobs can run independently, while only the small stable merge assigns final indices.
+The split also preserves a path to post-self-hosting parallelism: module-local fragment jobs can run independently, while only the small stable merge assigns final indices. The MoonBit compiler continues to run these jobs sequentially.
 
 ## Current follow-up boundary
 
@@ -196,4 +196,5 @@ generic carrier specialization and erased fallbacks, deterministic optimization,
 module-value initialization, and compiler-driver orchestration all execute. The
 remaining linker-facing work is tracked centrally in `docs/roadmap.md`: ABI
 signature deduplication, optional additional Wasm sections, incremental fragment
-reuse, deterministic parallel scheduling, and explicit external Wasm interop.
+reuse, and explicit external Wasm interop. Deterministic parallel scheduling is
+deferred until Dewdrop is self-hosted and Dew supports parallel computation.

@@ -67,5 +67,5 @@ White-box coverage checks the exported-let inference classifier and verifies tha
 
 - Profile declaration fingerprint field/variant/requirement grouping on aggregate-heavy interfaces before adding indexes; the current function-heavy benchmark is dominated by hashing rather than scans.
 - Consider validating and freezing exported module lets independently from executable function bodies if module-value inference becomes a measurable interface bottleneck.
-- Preserve the current no-exported-let fast path when workspace interface caching and parallel interface jobs are added.
+- Preserve the current no-exported-let fast path as workspace interface caching grows and, after self-hosting, if parallel interface jobs are added.
 - Avoid transitive reachability bitset caching unless large sparse graphs justify its memory cost; the current reusable record ordering captures most of the avoidable allocation without quadratic retained memory.

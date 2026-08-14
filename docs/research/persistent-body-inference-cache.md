@@ -193,6 +193,7 @@ The compact encoding now passes isolated speed and size gates. Future default ad
 - Define a compact family-artifact encoding and an evidence-based admission
   policy before enabling family persistence by default.
 - Define deterministic rebasing for layout and WasmGC fragment artifacts.
-- Schedule independent module/body work in parallel and merge diagnostics and
-  artifacts in manifest/source order.
+- After Dewdrop is self-hosted and Dew supports parallel computation, schedule
+  independent module/body work concurrently and merge diagnostics and artifacts
+  in manifest/source order.
 - Add compiler allocation and peak-memory measurements to cache benchmarks.

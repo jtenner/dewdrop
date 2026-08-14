@@ -200,7 +200,7 @@ The initial eager implementation took approximately **15.41 ms** on native for a
 
 Raw alias targets remain compact recipes, while actual closed or contextually generic use sites normalize on demand and share memoized results.
 
-## Determinism and parallelism
+## Determinism and post-self-hosting parallelism
 
 The normalizer uses only:
 
@@ -212,7 +212,7 @@ The normalizer uses only:
 
 No identity depends on allocation addresses, global insertion order, or worker scheduling. Signature roots are visited in stable collected-record order. Diagnostics are sorted by source offset and diagnostic rank before publication.
 
-Once a module's `ResolvedModuleTypes` is frozen, body jobs can read normalized signatures concurrently.
+Once Dewdrop is self-hosted and Dew supports parallel computation, body jobs can read a frozen module's normalized signatures concurrently. The MoonBit compiler runs these jobs sequentially.
 
 ## Complexity
 

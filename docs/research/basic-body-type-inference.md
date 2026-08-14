@@ -332,7 +332,7 @@ Body jobs may execute in any order. Completed fragments are stored by body index
 
 The sequential implementation reuses one `LocalTypeSolver` across body jobs after resetting its logical lengths. This retains array capacity and eliminates repeated allocation for modules containing many small functions.
 
-This remains compatible with future parallel execution: each worker owns one reusable solver and processes independent body jobs. No solver is shared concurrently.
+This remains compatible with post-self-hosting parallel execution: after Dew provides parallel computation, each worker can own one reusable solver and process independent body jobs. The MoonBit compiler continues to run jobs sequentially.
 
 Forward and reverse body order produce identical complete `InferredModuleBodies` artifacts.
 

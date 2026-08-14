@@ -14,8 +14,8 @@ and whole-program rewrites can make ownership unclear.
 Replacing the arenas with object graphs would make subsystem ownership more
 visible at the cost of memory, locality, and additional allocation. Leaving all
 arrays publicly interpreted by every consumer would preserve the representation
-but make future optimization, incremental compilation, and parallel scheduling
-harder to reason about safely.
+but make future optimization, incremental compilation, and post-self-hosting
+parallel scheduling harder to reason about safely.
 
 ## Decision
 

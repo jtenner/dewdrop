@@ -120,6 +120,6 @@ The changed file added only whitespace and produced byte-identical 1,762-byte Wa
 
 1. Extend frozen-interface reuse to ordinary workspace modules using explicit source and dependency provenance.
 2. Add body-inference, layout, and fragment artifacts where deterministic rebasing is defined.
-3. Schedule independent jobs in parallel and merge diagnostics/artifacts in manifest order.
+3. After Dewdrop is self-hosted and Dew supports parallel computation, schedule independent jobs concurrently and merge diagnostics/artifacts in manifest order.
 4. Add hundreds-of-files and external-package stress measurements plus allocation and peak-memory reporting.
 5. Build a comment-preserving lossless syntax layer for formatting, documentation, and language-server editing; parser events intentionally preserve semantic syntax, not trivia.

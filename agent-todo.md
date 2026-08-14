@@ -4,20 +4,19 @@
 
 ## Current priority order
 
-1. Extend reuse into layout/fragment caches and deterministic parallel scheduling.
+1. Extend reuse into layout and WasmGC fragment caches.
 2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 3. Complete package acquisition and reproducible release infrastructure.
 4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
 5. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
 
-## Incremental and parallel compilation
+## Incremental compilation
 
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
-- [ ] Schedule independent module and body jobs across workers.
-- [ ] Merge diagnostics and artifacts in deterministic source/manifest order.
-- [ ] Add forward, reverse, and randomized completion-order tests.
-- [ ] Require byte-identical cold, warm, incremental, and parallel output.
+- [ ] Require byte-identical cold, warm, and incremental output.
 - [ ] Add hundreds-of-files and representative external-package stress workloads.
+
+Parallel module/body jobs, completion-order tests, and parallel-output checks are intentionally absent from this execution backlog. MoonBit cannot run these compiler jobs in parallel. They become active work only after Dewdrop is self-hosted and Dew supports parallel computation; see [`docs/decisions/0002-parallel-compilation-after-self-hosting.md`](docs/decisions/0002-parallel-compilation-after-self-hosting.md).
 
 ## Post-release performance work
 
