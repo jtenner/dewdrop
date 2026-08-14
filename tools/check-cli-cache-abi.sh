@@ -46,13 +46,74 @@ grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
 grep -q '^parse event cache: hits 0, misses ' .tmp/dew-interface-cache-miss.txt
 grep -q '^parse event cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-interface-cache-hit.txt
-grep -q '^body inference cache: hits 0, misses [1-9][0-9]*$' \
+grep -q '^body inference cache: module hits 0, module misses [1-9][0-9]*, family disabled$' \
   .tmp/dew-interface-cache-miss.txt
-grep -q '^body inference cache: hits [1-9][0-9]*, misses 0$' \
+grep -q '^body inference cache: module hits [1-9][0-9]*, module misses 0, family disabled$' \
   .tmp/dew-interface-cache-hit.txt
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew build \
   tests/module-snapshots/numeric/scalar.dew -o .tmp/dew-cache-hit.wasm
 cmp .tmp/dew-std-disk.wasm .tmp/dew-cache-hit.wasm
+rm -rf .tmp/dew-body-family-cache .tmp/dew-body-family
+mkdir -p .tmp/dew-body-family
+cat > .tmp/dew-body-family/main.dew <<'DEW'
+fn first() -> I32 {
+  1
+}
+fn changed() -> I32 {
+  2
+}
+fn later() -> I32 {
+  first() + 3
+}
+fn main() -> I32 {
+  later() + changed()
+}
+DEW
+DEW_CACHE_DIR=.tmp/dew-body-family-cache tools/dew build \
+  --body-family-cache --cache-report .tmp/dew-body-family/main.dew \
+  -o .tmp/dew-body-family-cold.wasm \
+  > .tmp/dew-body-family-cold.txt
+cat > .tmp/dew-body-family/main.dew <<'DEW'
+fn first() -> I32 {
+  1
+}
+fn changed() -> I32 {
+  if true {
+    20
+  } else {
+    2
+  }
+}
+fn later() -> I32 {
+  first() + 3
+}
+fn main() -> I32 {
+  later() + changed()
+}
+DEW
+DEW_CACHE_DIR=.tmp/dew-body-family-cache tools/dew build \
+  --body-family-cache --cache-report .tmp/dew-body-family/main.dew \
+  -o .tmp/dew-body-family-incremental.wasm \
+  > .tmp/dew-body-family-incremental.txt
+DEW_CACHE_DIR=.tmp/dew-body-family-fresh-cache tools/dew build \
+  --no-body-cache .tmp/dew-body-family/main.dew \
+  -o .tmp/dew-body-family-fresh.wasm > /dev/null
+cmp .tmp/dew-body-family-incremental.wasm .tmp/dew-body-family-fresh.wasm
+grep -q '^body inference cache: module hits [1-9][0-9]*, module misses 1, family hits 3, family misses 1$' \
+  .tmp/dew-body-family-incremental.txt
+test "$(find .tmp/dew-body-family-cache/body-inference-families -name 'v1-*.dbf' | wc -l)" -eq 1
+rm -rf .tmp/dew-body-family-cache/body-inference
+family_cache_file=$(find \
+  .tmp/dew-body-family-cache/body-inference-families \
+  -type f -print -quit)
+printf 'corrupt' > "$family_cache_file"
+if DEW_CACHE_DIR=.tmp/dew-body-family-cache tools/dew check \
+  --body-family-cache .tmp/dew-body-family/main.dew \
+  > .tmp/dew-body-family-corrupt.txt 2>&1; then
+  echo "expected corrupt body-family cache to fail visibly" >&2
+  exit 1
+fi
+grep -q 'corrupt body-family cache' .tmp/dew-body-family-corrupt.txt
 DEW_CACHE_DIR=.tmp/dew-interface-cache tools/dew check \
   --no-interface-cache --cache-report \
   tests/module-snapshots/numeric/scalar.dew \
@@ -124,9 +185,9 @@ grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-workspace-interface-cold.txt
 grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-workspace-interface-warm.txt
-grep -q '^body inference cache: hits 0, misses [1-9][0-9]*$' \
+grep -q '^body inference cache: module hits 0, module misses [1-9][0-9]*, family disabled$' \
   .tmp/dew-workspace-interface-cold.txt
-grep -q '^body inference cache: hits [1-9][0-9]*, misses 0$' \
+grep -q '^body inference cache: module hits [1-9][0-9]*, module misses 0, family disabled$' \
   .tmp/dew-workspace-interface-warm.txt
 cmp .tmp/dew-workspace-interface-cold.wasm \
   .tmp/dew-workspace-interface-warm.wasm

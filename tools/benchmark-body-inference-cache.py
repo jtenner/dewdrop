@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Measure cold, warm, private-body-change, and dependency-change body inference reuse."""
+"""Measure module and declaration-family body-inference reuse."""
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import statistics
 import subprocess
@@ -47,7 +48,9 @@ def command(library: Path, root: Path, output: Path, *, body_cache: bool = True)
         "--no-build-cache",
         "--cache-report",
     ]
-    if not body_cache:
+    if body_cache:
+        result.append("--body-family-cache")
+    else:
         result.append("--no-body-cache")
     result.extend(("--module", "bench.library", str(library)))
     result.extend(("--module", "bench.main", str(root)))
@@ -84,6 +87,35 @@ def main() -> None:
     text = library.read_text(encoding="utf-8")
     library.write_text(text.replace("value + 191", "value + 190", 1), encoding="utf-8")
     private_ms, private_report = run_build(library, root, WORK / "private.wasm")
+    private_status = next(
+        line for line in private_report.splitlines() if line.startswith("body inference cache:")
+    )
+    match = re.fullmatch(
+        r"body inference cache: module hits (\d+), module misses (\d+), "
+        r"family hits (\d+), family misses (\d+)",
+        private_status,
+    )
+    if match is None:
+        raise RuntimeError(f"unexpected body-cache status: {private_status}")
+    module_hits, module_misses, family_hits, family_misses = map(int, match.groups())
+    if module_misses != 1 or family_hits != FUNCTION_COUNT + 1 or family_misses != 1:
+        raise RuntimeError(
+            "private edit did not isolate one declaration family: "
+            f"{private_status}"
+        )
+    private_uncached_samples: list[float] = []
+    for index in range(3):
+        elapsed, _ = run_build(
+            library,
+            root,
+            WORK / f"private-uncached-{index}.wasm",
+            body_cache=False,
+        )
+        private_uncached_samples.append(elapsed)
+    if (WORK / "private.wasm").read_bytes() != (
+        WORK / "private-uncached-2.wasm"
+    ).read_bytes():
+        raise RuntimeError("family-cached private edit differs from uncached output")
     root.write_text(
         "open bench.library\npub fn main() -> I32 {\n  answer() + 0\n}\n",
         encoding="utf-8",
@@ -97,12 +129,22 @@ def main() -> None:
         "cold_ms": round(cold_ms, 3),
         "warm_median_ms": round(statistics.median(warm_samples), 3),
         "private_body_change_ms": round(private_ms, 3),
+        "private_body_change_uncached_median_ms": round(
+            statistics.median(private_uncached_samples), 3
+        ),
         "root_body_change_ms": round(root_ms, 3),
         "cold_report": cold_report.strip().splitlines(),
         "warm_report": warm_report.strip().splitlines(),
         "private_body_change_report": private_report.strip().splitlines(),
+        "private_body_change_module_hits": module_hits,
+        "private_body_change_module_misses": module_misses,
+        "private_body_change_family_hits": family_hits,
+        "private_body_change_family_misses": family_misses,
         "root_body_change_report": root_report.strip().splitlines(),
-        "artifacts": len(list((CACHE / "body-inference").glob("v3-*.dbi"))),
+        "module_artifacts": len(list((CACHE / "body-inference").glob("v3-*.dbi"))),
+        "family_artifacts": len(
+            list((CACHE / "body-inference-families").glob("v1-*.dbf"))
+        ),
         "changed_output_matches_uncached": True,
     }
     print(json.dumps(result, indent=2, sort_keys=True))

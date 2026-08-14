@@ -258,6 +258,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
         environment = {
             "DEW_BOOTSTRAP_STD": "1",
             "DEW_BODY_CACHE": "1",
+            "DEW_BODY_FAMILY_CACHE": "0",
             "DEW_DEPENDENCY_INTERFACE_KEY": "dependency-key",
         }
         with mock.patch.dict(os.environ, environment, clear=False):
@@ -279,6 +280,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
                     "--no-parse-event-cache",
                     "--no-interface-cache",
                     "--no-body-cache",
+                    "--body-family-cache",
                     "--cache-report",
                     "-o",
                     "app.wasm",
@@ -301,7 +303,7 @@ class CompileRequestProtocolTests(unittest.TestCase):
             return value
 
         self.assertEqual(read_u32(), 0x44574352)
-        self.assertEqual(read_u32(), 3)
+        self.assertEqual(read_u32(), 4)
         self.assertEqual(read_u32(), 1)
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "app.wasm")
@@ -314,8 +316,15 @@ class CompileRequestProtocolTests(unittest.TestCase):
         self.assertEqual(read_u32(), 1)
         self.assertEqual(read_string(), "")
         self.assertEqual(
-            (read_u32(), read_u32(), read_u32(), read_u32(), read_u32()),
-            (0, 0, 0, 0, 1),
+            (
+                read_u32(),
+                read_u32(),
+                read_u32(),
+                read_u32(),
+                read_u32(),
+                read_u32(),
+            ),
+            (0, 0, 0, 0, 1, 1),
         )
         self.assertEqual(read_u32(), 0)
         self.assertEqual(read_string(), "dependency-key")

@@ -165,6 +165,14 @@ fn main {
         "0"
       },
     )
+    @sys.set_env_var(
+      "DEW_BODY_FAMILY_CACHE",
+      if request.body_family_cache {
+        "1"
+      } else {
+        "0"
+      },
+    )
     let arguments : Array[String] = [process_args[0]]
     for argument in request.cli_arguments() {
       arguments.push(argument)

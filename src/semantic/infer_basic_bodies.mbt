@@ -35,7 +35,7 @@ let empty_inference_bool_array : Array[Bool] = []
 let empty_hir_span_array : Array[HirSpan] = []
 
 ///|
-priv struct BodyInferenceJobResult {
+pub struct BodyInferenceJobResult {
   result_type : BodyTypeId
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
@@ -64,6 +64,42 @@ priv struct BodyInferenceJobResult {
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
+} derive(Eq, Debug, ToJson, FromJson)
+
+///|
+pub struct BodyInferenceLambdaArtifact {
+  lambda : LambdaId
+  job : BodyInferenceJobResult
+} derive(Eq, Debug, ToJson, FromJson)
+
+///|
+pub struct BodyInferenceFamilyArtifact {
+  module_id : ModuleId
+  body : BodyId
+  declaration : DeclId
+  root : BodyInferenceJobResult
+  lambdas : Array[BodyInferenceLambdaArtifact]
+} derive(Eq, Debug, ToJson, FromJson)
+
+///|
+pub struct BodyInferenceFamilyAnalysis {
+  inferred : InferredModuleBodies
+  families : Array[BodyInferenceFamilyArtifact?]
+  family_hits : Int
+  family_misses : Int
+}
+
+///|
+pub fn make_uncached_body_inference_family_analysis(
+  inferred : InferredModuleBodies,
+  body_count : Int,
+) -> BodyInferenceFamilyAnalysis {
+  {
+    inferred,
+    families: Array::make(body_count, None),
+    family_hits: 0,
+    family_misses: 0,
+  }
 }
 
 ///|
@@ -3768,19 +3804,23 @@ fn merge_body_inference_jobs(
 }
 
 ///|
-fn infer_module_bodies_with_imports_in_order(
+fn infer_module_bodies_with_imports_in_order_and_family_cache(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   imports : ResolvedModuleImports?,
   names : ResolvedModuleNames,
   order : Array[Int],
-) -> InferredModuleBodies {
+  cached_families : Array[BodyInferenceFamilyArtifact?],
+) -> Result[BodyInferenceFamilyAnalysis, String] {
   guard collected.module_id == resolved.module_id &&
     collected.module_id == names.module_id else {
     abort("body inference inputs belong to different modules")
   }
   guard order.length() == collected.bodies.length() else {
     abort("body inference order has the wrong length")
+  }
+  if cached_families.length() != collected.bodies.length() {
+    return Err("body-family cache slot count mismatch")
   }
   let callable_indices = callable_indices_by_declaration(collected)
   let variant_spans = variant_spans_by_declaration(collected)
@@ -3795,6 +3835,14 @@ fn infer_module_bodies_with_imports_in_order(
     field_spans,
   )
   let jobs = module_result.jobs
+  let lambda_jobs : Array[BodyInferenceJobResult?] = Array::make(
+    collected.lambdas.length(),
+    None,
+  )
+  let families : Array[BodyInferenceFamilyArtifact?] = Array::make(
+    collected.bodies.length(),
+    None,
+  )
   let seen = Array::make(collected.bodies.length(), false)
   let solver = LocalTypeSolver::new(resolved)
   let call_scratch = CallInferenceScratch::new()
@@ -3810,6 +3858,8 @@ fn infer_module_bodies_with_imports_in_order(
     )
   }
   let mut first_job = true
+  let mut family_hits = 0
+  let mut family_misses = 0
   for body_index in order {
     guard body_index >= 0 && body_index < collected.bodies.length() else {
       abort("body inference order contains an invalid body")
@@ -3820,7 +3870,28 @@ fn infer_module_bodies_with_imports_in_order(
     seen[body_index] = true
     let body = collected.bodies[body_index]
     if body.kind == ModuleLetBody {
+      if cached_families[body_index] is Some(_) {
+        return Err("module-value body has an unexpected family artifact")
+      }
       continue
+    }
+    match cached_families[body_index] {
+      Some(artifact) => {
+        match
+          validate_body_inference_family_artifact(
+            collected, names, body_index, artifact,
+          ) {
+          Ok(_) => ()
+          Err(error) => return Err(error)
+        }
+        restore_body_inference_family_artifact(
+          collected, artifact, jobs, lambda_jobs,
+        )
+        families[body_index] = Some(artifact)
+        family_hits += 1
+        continue
+      }
+      None => family_misses += 1
     }
     if first_job {
       first_job = false
@@ -3850,12 +3921,11 @@ fn infer_module_bodies_with_imports_in_order(
       ).run(),
     )
   }
-  let lambda_jobs : Array[BodyInferenceJobResult?] = Array::make(
-    collected.lambdas.length(),
-    None,
-  )
   let job_importer = BodyJobTypeImporter::new(solver)
   for lambda_index, lambda in collected.lambdas {
+    if lambda_jobs[lambda_index] is Some(_) {
+      continue
+    }
     if first_job {
       first_job = false
     } else {
@@ -3889,14 +3959,31 @@ fn infer_module_bodies_with_imports_in_order(
       ).run(),
     )
   }
-  merge_body_inference_jobs(
-    collected,
-    names,
-    module_result.values,
-    impl_index,
-    jobs,
-    lambda_jobs,
-  )
+  for body_index, body in collected.bodies {
+    if body.kind != ModuleLetBody && families[body_index] is None {
+      families[body_index] = Some(
+        make_body_inference_family_artifact(
+          collected,
+          body,
+          jobs[body_index].unwrap(),
+          lambda_jobs,
+        ),
+      )
+    }
+  }
+  Ok({
+    inferred: merge_body_inference_jobs(
+      collected,
+      names,
+      module_result.values,
+      impl_index,
+      jobs,
+      lambda_jobs,
+    ),
+    families,
+    family_hits,
+    family_misses,
+  })
 }
 
 ///|
@@ -3906,12 +3993,77 @@ fn infer_module_bodies_in_order(
   names : ResolvedModuleNames,
   order : Array[Int],
 ) -> InferredModuleBodies {
-  infer_module_bodies_with_imports_in_order(
+  infer_module_bodies_with_imports_in_order_and_family_cache(
     collected,
     resolved,
     None,
     names,
     order,
+    Array::make(collected.bodies.length(), None),
+  ).unwrap().inferred
+}
+
+///|
+pub fn infer_module_bodies_with_family_cache_in_order(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  names : ResolvedModuleNames,
+  cached_families : Array[BodyInferenceFamilyArtifact?],
+  order : Array[Int],
+) -> Result[BodyInferenceFamilyAnalysis, String] {
+  infer_module_bodies_with_imports_in_order_and_family_cache(
+    collected,
+    resolved,
+    None,
+    names,
+    order,
+    cached_families,
+  )
+}
+
+///|
+pub fn infer_module_bodies_with_family_cache(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  names : ResolvedModuleNames,
+  cached_families : Array[BodyInferenceFamilyArtifact?],
+) -> Result[BodyInferenceFamilyAnalysis, String] {
+  let order : Array[Int] = []
+  for index in 0..<collected.bodies.length() {
+    order.push(index)
+  }
+  infer_module_bodies_with_imports_in_order_and_family_cache(
+    collected,
+    resolved,
+    None,
+    names,
+    order,
+    cached_families,
+  )
+}
+
+///|
+pub fn infer_module_bodies_with_imports_and_family_cache(
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  imports : ResolvedModuleImports,
+  names : ResolvedModuleNames,
+  cached_families : Array[BodyInferenceFamilyArtifact?],
+) -> Result[BodyInferenceFamilyAnalysis, String] {
+  guard collected.module_id == imports.module_id else {
+    abort("body import scope belongs to another module")
+  }
+  let order : Array[Int] = []
+  for index in 0..<collected.bodies.length() {
+    order.push(index)
+  }
+  infer_module_bodies_with_imports_in_order_and_family_cache(
+    collected,
+    resolved,
+    Some(imports),
+    names,
+    order,
+    cached_families,
   )
 }
 
@@ -3922,20 +4074,13 @@ pub fn infer_module_bodies_with_imports(
   imports : ResolvedModuleImports,
   names : ResolvedModuleNames,
 ) -> InferredModuleBodies {
-  guard collected.module_id == imports.module_id else {
-    abort("body import scope belongs to another module")
-  }
-  let order : Array[Int] = []
-  for index in 0..<collected.bodies.length() {
-    order.push(index)
-  }
-  infer_module_bodies_with_imports_in_order(
+  infer_module_bodies_with_imports_and_family_cache(
     collected,
     resolved,
-    Some(imports),
+    imports,
     names,
-    order,
-  )
+    Array::make(collected.bodies.length(), None),
+  ).unwrap().inferred
 }
 
 ///|

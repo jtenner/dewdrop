@@ -2,7 +2,7 @@
 const COMPILE_REQUEST_MAGIC : UInt = 0x44574352U
 
 ///|
-const COMPILE_REQUEST_VERSION : UInt = 3U
+const COMPILE_REQUEST_VERSION : UInt = 4U
 
 ///|
 priv struct CompileRequestReader {
@@ -114,6 +114,7 @@ priv struct CompileRequest {
   parse_event_cache : Bool
   interface_cache : Bool
   body_cache : Bool
+  body_family_cache : Bool
   cache_report : Bool
   build_mode : Int
   dependency_cache_key : String
@@ -166,6 +167,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
   let parse_event_cache = reader.read_bool("parse event cache")
   let interface_cache = reader.read_bool("interface cache")
   let body_cache = reader.read_bool("body inference cache")
+  let body_family_cache = reader.read_bool("body-family inference cache")
   let cache_report = reader.read_bool("cache report")
   let build_mode = reader.read_u32().reinterpret_as_int()
   if build_mode < 0 || build_mode > 1 {
@@ -191,6 +193,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
         parse_event_cache,
         interface_cache,
         body_cache,
+        body_family_cache,
         cache_report,
         build_mode,
         dependency_cache_key,

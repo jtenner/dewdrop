@@ -1,121 +1,182 @@
-# Persistent module body-inference cache
+# Persistent module and declaration-family body-inference cache
 
 ## Status
 
-Implemented as a bounded first executable-semantic artifact: one complete
-`InferredModuleBodies` result per collected module. This tranche intentionally
-keeps imported-signature translation and body name resolution fresh, then reuses
-only the deterministic inference/evidence arenas after validating them against
-the current collected HIR.
+Implemented as two deterministic executable-semantic cache layers:
 
-The module boundary was chosen before per-declaration jobs because current lambda
-capture inference imports types from enclosing body and earlier lambda jobs, while
-module values are inferred through source-ordered SCCs and then merged into one
-module arena. Caching complete modules avoids introducing unstable rebasing or
-partial dependency protocols. Per-body reuse remains a later refinement once
-module-value and lambda-capture fingerprints are explicit.
+1. the default complete-module cache stores one `InferredModuleBodies` result;
+2. an explicit declaration-family cache can recover unchanged root-body jobs when
+   the complete-module key misses.
 
-## Artifact identity
+A declaration family is one non-module-value root body plus every nested lambda
+whose `root_body` is that body. Nested lambdas remain atomic with their root
+because capture types are imported from root locals and earlier parent-lambda
+jobs. Module values continue to infer in deterministic dependency-SCC order and
+are never independently restored by this layer.
 
-Artifacts live at:
+The semantic inference engine already isolates root and lambda jobs behind
+solver resets and merges them in source identity order. The family cache exposes
+that existing boundary, normalizes job-owned IDs for persistence, restores a
+mixture of cached and fresh jobs, and feeds the ordinary deterministic merge.
+
+## Complete-module artifact
+
+Complete module artifacts remain at:
 
 ```text
 .dew/cache/body-inference/v3-<key>.dbi
 ```
 
-The V3 key domain invalidates earlier artifacts after bare pattern-variant resolution was extended through imported expected enum types. V2 previously invalidated pre-method-alias artifacts after transparent-alias qualified dispatch and method-local bound evidence changed.
-
-`DEW_CACHE_DIR` replaces the complete `.dew/cache` root. `dew clean` therefore
-removes these artifacts with the other project-local caches.
-
 The V3 key is SHA-256 over:
 
-- a private schema/domain marker;
-- the default-preamble policy;
-- logical module path;
-- exact module source digest, including stable module ID, manifest-ordered file
-  paths, and exact file bytes;
-- the module's transitive frozen `interface_fingerprint`.
+- the private schema/domain marker;
+- default-preamble policy;
+- logical module path and stable module ID;
+- manifest-ordered source paths and exact bytes;
+- the transitive frozen interface and implementation-evidence fingerprint.
 
-The interface fingerprint commits to local public signatures and coherent
-implementation evidence plus the reachable imported public-interface graph.
-Consequently, a private dependency body change whose public interface remains
-unchanged preserves a dependent module's body key, while any relevant public
-signature/evidence change invalidates it. The changed module itself always gets a
-new key because its exact source digest changes.
+An exact module hit remains the first lookup because it avoids module-value and
+individual job assembly entirely. A private body edit changes this key and may
+then fall through to declaration-family lookup when that layer is enabled.
 
-## Payload and validation
+## Declaration-family bundle
 
-The semantic package serializes `InferredModuleBodies` as deterministic JSON
-behind a private payload magic. Exact arrays include:
+Family artifacts for one ordinary workspace or external-package module are
+stored together:
 
-- module-value SCC/type results;
-- implementation index and diagnostics;
-- body and lambda result/type spans;
-- expression, local, capture, block, pattern, and control types;
-- construction/member/call/operator/map targets;
-- trait-object coercions and recursive evidence forests;
-- diagnostics in deterministic merge order.
+```text
+.dew/cache/body-inference-families/v1-<context-fingerprint>.dbf
+```
 
-The cache envelope stores independent SHA-256 digests for the key, exact source,
-interface provenance, and payload checksum. Lookup rejects unsupported versions,
-truncation, malformed UTF-8/JSON, schema mismatches, checksum failure, provenance
-failure, module identity mismatch, body/lambda identity mismatch, and HIR arena
-length mismatch. These are visible cache errors, never silent misses.
+One atomic bundle avoids hundreds of small file opens and publications. Entries
+are sorted by their 64-hex family fingerprint and contain the normalized root job
+plus source-ordered nested-lambda jobs. Compiler-owned `dew.std.*` modules retain
+complete-module caching only; their generated/distributed sources do not use
+family bundles.
 
-Publication uses the same native same-directory atomic writer as parser-event and
-workspace-interface artifacts. A missing key is the only ordinary miss.
+The context fingerprint commits to:
+
+- default-preamble policy, module path, and stable module/body/declaration IDs;
+- the location-independent frozen body-evidence fingerprint, including concrete
+  semantic IDs and resolved private/public signature structure;
+- transitive imported interface and implementation evidence;
+- the complete interned name table;
+- ordered body identities and kinds;
+- ordered lambda parent/root ownership;
+- exact source bytes for every module-value declaration.
+
+Changing module values, signatures, generic bounds, overload identities, name-ID
+allocation, lambda ownership, or visible evidence therefore selects a different
+bundle. Source locations are intentionally excluded so inserting expressions in
+one private body does not invalidate later unchanged public or private bodies.
+
+Each family entry additionally commits to the exact declaration source range.
+The range begins at the declaration location and ends at the next declaration in
+the same file or at end of file. Editing one function or method therefore changes
+that family fingerprint while preserving independent families under an unchanged
+context.
+
+## Normalization and deterministic merging
+
+`BodyInferenceJobResult` is now a serializable package boundary. Before a family
+is stored, the compiler normalizes:
+
+- call-expression IDs;
+- function-value call-target expression IDs;
+- expression and pattern IDs embedded in diagnostics;
+- expression/pattern constraint-origin IDs;
+- absolute source offsets, relative to the owning declaration.
+
+Lookup validates ownership and every root/lambda arena length, type graph,
+applied/function type span, selection/type-argument span, call span, trait-evidence
+span/index, coercion index, and job-local expression reference before rebasing IDs
+and offsets into the current collected HIR. Invalid artifacts return a visible
+cache error rather than indexing malformed arrays.
+
+Fresh and restored jobs enter the same `merge_body_inference_jobs` path. Forward,
+reverse, and shuffled root-job orders produce equal family artifacts and exactly
+equal `InferredModuleBodies`. Cached diagnostics and nested lambda captures are
+covered across changed preceding expression ranges.
+
+## Payloads and fail-visible publication
+
+Complete-module and family payloads use private deterministic JSON schemas behind
+separate magic headers. The family bundle envelope binds the context provenance
+and payload checksum. Lookup rejects unsupported versions, truncation, malformed
+UTF-8/JSON, checksum/provenance mismatch, wrong module ownership, duplicate or
+unordered entries, incompatible body/lambda owners, malformed type graphs, and
+arena mismatches.
+
+Both layers use same-directory atomic publication. Missing files or missing
+family fingerprints are ordinary misses; malformed existing artifacts are never
+silently ignored.
 
 ## Controls and reporting
 
-Body inference reuse is independently controlled by:
+Complete-module reuse remains enabled by default and is controlled by:
 
 ```text
 tools/dew check --no-body-cache ...
 DEW_BODY_CACHE=0 tools/dew check ...
 ```
 
-`--cache-report` prints:
+Declaration-family persistence is deliberately opt-in:
 
 ```text
-body inference cache: hits <n>, misses <n>
+tools/dew check --body-family-cache ...
+DEW_BODY_FAMILY_CACHE=1 tools/dew check ...
 ```
 
-or:
+The compiler host request is V4 so the Python host transports the family-cache
+policy explicitly to the MoonBit compiler process.
+
+Without family reuse, `--cache-report` prints:
 
 ```text
-body inference cache: disabled
+body inference cache: module hits <n>, module misses <n>, family disabled
 ```
 
-The compiler host request is V3 because it now transports the body-cache policy
-explicitly between the Python bootstrap host and MoonBit compiler process.
+With family reuse enabled it prints:
 
-## Determinism and invalidation
+```text
+body inference cache: module hits <n>, module misses <n>, family hits <n>, family misses <n>
+```
 
-Fresh and cached inference feed the same immutable `AnalyzedProgramModule`
-construction and all later lowering, optimization, specialization, physical
-linking, validation, and encoding phases. Module execution order remains the
-frozen dependency-SCC order; only the inference calculation within each module
-is replaced by a validated artifact.
+`--no-body-cache` disables both layers.
 
-Permanent validation covers payload round trips, envelope provenance/checksum
-failures, source/interface key sensitivity, cold/warm reports, disabled mode,
-fail-visible corruption, and byte-identical cached/uncached Wasm. The benchmark
-`tools/benchmark-body-inference-cache.py` measures a generated multi-module
-workload across cold, warm, private-body-change, and root-body-change builds.
+## Validation
 
-A representative native run with 192 generated private functions measured a
-warm median of **140.943 ms**, a one-module private-body change at **153.630 ms**,
-and a root-body change at **147.956 ms**. The first cold invocation took
-**68,846.424 ms** because it included native compiler build/startup work; it is
-not a steady-state compilation threshold. Warm builds reported **5 hits/0
-misses**; each changed build reported **4 hits/1 miss**, and the changed cached
-Wasm was byte-identical to a body-cache-disabled build.
+Permanent coverage includes:
+
+- complete-module and family payload round trips;
+- bundle sorting and duplicate rejection;
+- exact source, module-value, lambda-family, signature, and evidence key changes;
+- one-body invalidation with unchanged later-body ID/offset rebasing;
+- nested-lambda capture reuse;
+- cached diagnostic expression and absolute-offset rebasing;
+- forward, reverse, and shuffled mixed hit/miss merging;
+- malformed type-graph and owner rejection without aborting;
+- envelope provenance/checksum failures and visible CLI corruption failure;
+- byte-identical family-cached and body-cache-disabled Wasm;
+- cold, warm, private-body-change, and root-body-change benchmark reporting.
+
+A representative native run on August 14, 2026 generated 192 tiny private
+functions. Editing one function produced **193 family hits and 1 family miss**,
+with byte-identical output. The family-enabled build measured **174.689 ms** while
+a body-cache-disabled median measured **109.100 ms**; warm exact-module reuse
+measured **157.792 ms**, and a compiler-warm cold-cache build measured
+**225.209 ms**.
+
+These measurements show that deterministic granular reuse is correct but the
+current JSON artifact path is not a performance win for tiny, cheaply inferred
+functions. Family caching is therefore opt-in rather than a default regression.
+Future default admission requires compact encoding and representative workloads
+where avoided inference exceeds decode/rebase cost.
 
 ## Remaining work
 
-- Split the module artifact into module-value SCC and declaration/lambda job
-  artifacts only after exact capture and evidence dependencies are fingerprinted.
+- Define a compact family-artifact encoding and an evidence-based admission
+  policy before enabling family persistence by default.
 - Define deterministic rebasing for layout and WasmGC fragment artifacts.
 - Schedule independent module/body work in parallel and merge diagnostics and
   artifacts in manifest/source order.

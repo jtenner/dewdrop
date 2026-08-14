@@ -101,13 +101,19 @@ physical linking: recursive type groups, initializers, indices, exports
 backend emission: Starshine module construction, validation, binary encoding
 ```
 
-Persistent executable semantics use a bounded module artifact under
+Persistent executable semantics first use a complete module artifact under
 `.dew/cache/body-inference/`. Its key commits to exact module source, default-preamble
 policy, stable module identity, and the transitive frozen interface/evidence
-fingerprint. Name resolution remains fresh; a hit is accepted only after checksum,
-provenance, schema, module/body/lambda identity, and arena-length validation. This
-keeps downstream lowering IDs unchanged while deferring per-body rebasing until
-module-value SCC, lambda-capture, and recursive evidence dependencies are explicit.
+fingerprint. On a module miss, explicit `--body-family-cache` mode may load one
+atomic module bundle from `.dew/cache/body-inference-families/`. Each entry owns a
+non-module-value root body and its nested lambda tree, commits to exact declaration
+source plus location-independent module-value/signature/name/evidence context, and
+normalizes expression/pattern IDs and absolute offsets before persistence. Lookup
+validates owner/arena/type/evidence structure, rebases into current HIR, and mixes
+cached and fresh jobs through the ordinary source-ordered merge. Name resolution
+and module-value SCC inference remain fresh. Family persistence is opt-in because
+current JSON decoding is slower than fresh inference for measured tiny bodies; a
+compact encoding and admission policy are required before default enablement.
 
 The whole-program stages now have explicit implementation owners:
 

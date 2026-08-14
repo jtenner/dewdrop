@@ -4,7 +4,7 @@
 
 ## Current priority order
 
-1. Extend workspace interface reuse into body/layout/fragment caches and deterministic parallel scheduling.
+1. Compact declaration-family artifacts, then extend reuse into layout/fragment caches and deterministic parallel scheduling.
 2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 3. Complete package acquisition and reproducible release infrastructure.
 4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
@@ -12,7 +12,7 @@
 
 ## Incremental and parallel compilation
 
-- [ ] Refine complete module body-inference artifacts into declaration/lambda jobs after module-value SCC, capture, and evidence dependencies have exact fingerprints.
+- [ ] Replace declaration-family JSON bundles with a compact encoding and define measured admission thresholds before enabling them by default.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [ ] Schedule independent module and body jobs across workers.
 - [ ] Merge diagnostics and artifacts in deterministic source/manifest order.

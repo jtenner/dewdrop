@@ -13,14 +13,14 @@ Dew is an executable, statically linked WasmGC language implementation with:
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
 - deterministic whole-program optimization including folding, immutable-summary inlining, scalar tail recursion, field CSE, local-alias coalescing, aggregate scalar replacement, enum-payload elimination, private unit-enum and packed single-`I32`-payload ABI specialization, box elimination, and exact trait-object directization;
-- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, verified module body-inference reuse, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
+- checksummed per-file parser-event artifacts, verified standard/external/workspace interface caches, verified complete-module and opt-in declaration-family body-inference reuse, verified whole-build output reuse, installed dependency source capsules, safe cache cleaning, and byte-identical repeated builds;
 - broad semantic/backend/parser/tokenizer tests, direct standard-library tests, architecture budgets, generated-source checks, CLI/cache/ABI checks, and deterministic Node/Wago module snapshots.
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
 
 ## Active priority order
 
-1. Extend the completed workspace interface reuse into body/layout/fragment caches and deterministic parallel module/body scheduling.
+1. Compact declaration-family artifacts, then extend reuse into layout/fragment caches and deterministic parallel module/body scheduling.
 2. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
 3. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
 4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
@@ -37,7 +37,8 @@ Every implementation tranche must preserve deterministic diagnostics and Wasm, i
 - [x] Cache deterministic per-file parser events with versioned checksums, source/module provenance, atomic publication, and fail-visible corruption handling.
 - [x] Extend frozen-interface caching to ordinary non-root workspace modules with exact manifest source identity, direct public dependency fingerprints, atomic publication, and fail-visible corruption.
 - [x] Cache complete module body inference by exact source and transitive frozen interface/evidence fingerprints, with strict provenance validation and independent controls.
-- [ ] Refine module body artifacts into declaration/lambda jobs after module-value SCC, capture, and evidence dependencies have exact fingerprints.
+- [x] Refine module body artifacts into exact declaration-family jobs: one root body plus its nested lambda tree, normalized/rebased IDs and offsets, atomic per-module bundles, strict validation, deterministic mixed merging, and explicit opt-in controls.
+- [ ] Replace declaration-family JSON bundles with a compact encoding and require measured admission wins before enabling them by default.
 - [ ] Cache layout and WasmGC fragment plans where deterministic rebasing is defined.
 - [x] Invalidate workspace dependents by public-interface content fingerprint rather than private implementation changes.
 - [x] Cache cyclic workspace interface SCCs as one atomic artifact.
