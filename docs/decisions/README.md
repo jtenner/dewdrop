@@ -21,6 +21,8 @@ persistent formats, or long-lived contributor expectations.
   — defer compiler job parallelism until Dewdrop is self-hosted.
 - [`0003-unified-aligned-cache-pack.md`](0003-unified-aligned-cache-pack.md)
   — replace per-module cache I/O with one aligned BLAKE3 pack and exact warm results.
+- [`0004-moonbit-owned-bootstrap-and-cache.md`](0004-moonbit-owned-bootstrap-and-cache.md)
+  — keep cache semantics in MoonBit and replace the temporary Python bootstrapper.
 
 ## Record template
 

@@ -98,8 +98,10 @@ in manifest order, and invokes only compiler-described exports. It supports the
 same exact file/name and identity-substring filters plus `--list`; matching
 expected traps pass without aborting the remaining run.
 
-A future installed `dew` binary should replace the `moon run`/Python bootstrap
-launchers without changing command semantics.
+The Python bootstrapper is temporary and is now scheduled for direct replacement
+by a MoonBit bootstrap command. Cache-pack hashing, decoding, validation, and
+lookup must not be duplicated in Python during the migration. A small shell
+launcher may locate the built MoonBit command without changing command semantics.
 
 ## Diagnostics and exits
 
@@ -148,12 +150,14 @@ without leaking a Python traceback.
 
 ## Next steps
 
-1. Add registry lookup, Git checkout, and deterministic lockfile generation
+1. Move the complete Python bootstrap path to MoonBit while preserving the
+   versioned compiler request and all package/cache corruption checks.
+2. Add registry lookup, Git checkout, and deterministic lockfile generation
    without weakening exact installed-package provenance.
-2. Measure cache-file/package-capsule I/O and representative external-package
+3. Measure cache-file/package-capsule I/O and representative external-package
    workloads; serialize collected bodies only if restoration-time syntax
    collection is a measured bottleneck.
-3. Replace semantic `Debug` messages with stable human diagnostic codes and
+4. Replace semantic `Debug` messages with stable human diagnostic codes and
    prose without changing source ordering or labels.
-4. Improve entry-point and host diagnostics as runtime semantics continue to
+5. Improve entry-point and host diagnostics as runtime semantics continue to
    stabilize.

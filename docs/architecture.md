@@ -441,14 +441,19 @@ identity assignment.
 
 ## Driver and host ownership
 
-The Python bootstrap driver owns package-manifest and lockfile parsing, package
-integrity checks, standard-package discovery, and host execution. The MoonBit
-compiler executable owns compilation. `tools/dew` now sends one versioned binary
-compile request containing ordered source inputs, dependency expectations,
+The current Python bootstrap driver temporarily owns package-manifest and
+lockfile parsing, package integrity checks, standard-package discovery, and host
+execution. It does not own cache-pack hashing, decoding, validation, or lookup.
+Those rules remain in MoonBit with the compiler. `tools/dew` sends one versioned
+binary compile request containing ordered source inputs, dependency expectations,
 standard-library/cache policy, build mode, and requested output. The protocol is
-documented in [`compile-request.md`](compile-request.md), keeping package and
-host policy separate from compiler orchestration and providing the same boundary
-for future Dew-native tooling.
+documented in [`compile-request.md`](compile-request.md).
+
+The bootstrap driver is being moved to MoonBit. Package and host policy will then
+cross the same request boundary without a Python implementation. Small shell
+launchers may locate the built executable, but they must not own compiler or
+cache semantics. See
+[`decisions/0004-moonbit-owned-bootstrap-and-cache.md`](decisions/0004-moonbit-owned-bootstrap-and-cache.md).
 
 The MoonBit `compiler_driver` package owns the common
 collect/analyze/lower/link/emit sequence used by command, snapshot, test, parity,

@@ -4,10 +4,21 @@
 
 ## Current priority order
 
-1. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
-2. Complete package acquisition and reproducible release infrastructure.
-3. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
-4. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
+1. Replace the Python bootstrapper with a MoonBit bootstrap command. Keep all
+   cache-pack logic in MoonBit.
+2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
+3. Complete package acquisition and reproducible release infrastructure.
+4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
+5. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
+
+## Bootstrap migration
+
+- [ ] Replace `tools/dew-cli.py` with a MoonBit command.
+- [ ] Move manifest/lockfile parsing, package resolution, package capsules,
+  compiler fingerprinting, build-output caching, request creation, and host launch
+  policy to MoonBit.
+- [ ] Keep BLAKE3 and cache-pack parsing, validation, and lookup exclusively in
+  MoonBit.
 
 ## Incremental compilation
 

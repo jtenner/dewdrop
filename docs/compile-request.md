@@ -1,8 +1,10 @@
 # Compiler host request protocol
 
-The Python bootstrap host invokes the MoonBit compiler with one versioned binary
-request rather than expanding package and cache policy into repeated internal
-command-line arguments and inherited environment variables.
+The temporary Python bootstrap host invokes the MoonBit compiler with one
+versioned binary request rather than expanding package and cache policy into
+repeated internal command-line arguments and inherited environment variables.
+The host does not parse compiler cache packs. This request producer is being
+moved to MoonBit.
 
 This protocol is private to matching Dewdrop toolchain versions. It is not a
 language-level package format or a stable third-party API.

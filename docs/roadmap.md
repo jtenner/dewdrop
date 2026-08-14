@@ -54,6 +54,17 @@ The current compiler is written in MoonBit, which cannot execute these compiler 
 - [ ] Add forward, reverse, and randomized simulated completion-order tests.
 - [ ] Require byte-identical sequential and parallel output.
 
+## MoonBit bootstrap migration
+
+- [ ] Replace `tools/dew-cli.py` with a MoonBit bootstrap command.
+- [ ] Move manifest/lockfile parsing, package resolution, package capsules,
+  compiler fingerprinting, build-output caching, request construction, and host
+  launch policy to MoonBit.
+- [ ] Keep cache-pack hashing, codecs, validation, lookup, and publication only in
+  MoonBit; do not add a Python cache implementation.
+- [ ] Preserve current CLI output, exit status, corruption behavior, and package
+  compatibility during the migration.
+
 ## Compiler resource and performance discipline
 
 The measured compiler, collection, text, and backend baseline is fast enough for

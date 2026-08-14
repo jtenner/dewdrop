@@ -70,9 +70,10 @@ without changing their validated semantic schemas.
 
 The final `FOOT` section records total bytes, covered bytes, section count, and a
 full BLAKE3 digest over all prior bytes. The strict decoder checks the complete
-footer and every entry. The native warm path opens only aligned indexes and then
-checks the selected payload. This prevents exact-hit startup from scaling with
-the number or total bytes of unrelated module entries.
+footer and every entry. The MoonBit native warm path opens only aligned indexes
+and then checks the selected payload. The temporary Python bootstrapper does not
+parse or hash the pack. This prevents exact-hit startup from scaling with the
+number or total bytes of unrelated module entries.
 
 ## Hash policy
 
