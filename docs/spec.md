@@ -531,20 +531,20 @@ is-expression = expression "is" pattern
 ```
 
 ```dew
-let present = get_it(42) is Option::Some(_)
+let present = get_it(42) is Some(_)
 
-if get_it(42) is Option::Some(value) {
+if get_it(42) is Some(value) {
   use(value)
 }
 
-if get_it(42) is Option::Some(value) && value > 0 {
+if get_it(42) is Some(value) && value > 0 {
   use(value)
 }
 ```
 
 An `is` expression evaluates its left operand exactly once, tests it against the pattern, and produces `Bool`. It has comparison-level precedence: arithmetic and postfix operations bind inside its scrutinee, while logical conjunction and disjunction bind outside it. As with other comparison operators, an ungrouped comparison may not be chained into the scrutinee.
 
-An `is` expression used directly as an if condition is lowered as a two-arm match. Bindings from the pattern are immutable and available only in the successful then block. When the direct condition is followed by `&&`, those bindings are also in scope in the conjunction's right-hand guard. They do not escape the successful branch and are not introduced by a standalone Boolean use such as `let present = value is Option::Some(_)`. A failed pattern selects the else branch, or implicit Unit when no else is present.
+An `is` expression used directly as an if condition is lowered as a two-arm match. Bindings from the pattern are immutable and available only in the successful then block. When the direct condition is followed by `&&`, those bindings are also in scope in the conjunction's right-hand guard. They do not escape the successful branch and are not introduced by a standalone Boolean use such as `let present = value is Some(_)`. A failed pattern selects the else branch, or implicit Unit when no else is present.
 
 The parser retains `IsExpr` long enough to establish this conditional binding scope. Standalone uses are deterministically desugared to an ordered match returning `true` or `false`, so executable lowering shares match semantics and introduces no second scrutinee evaluation. As with constructor-valued if conditions, a struct pattern in an if condition must be parenthesized so its `{ ... }` cannot be mistaken for the if body: `if (value is Point { x ... }) { ... }`.
 
@@ -577,10 +577,21 @@ struct-pattern-member = identifier (":" pattern)? newline
 
 ```dew
 match option {
-  Option::None, Result::Err(_) => fallback
-  Option::Some(value) if value > 0 => value
-  List::Cons(head, ...), Vector::Items(head, ...) if ready => head
-  Message::Data {
+  None => fallback
+  Some(value) if value > 0 => value
+}
+
+match result {
+  Err(_) => fallback
+  Ok(value) => value
+}
+
+match sequence {
+  Cons(head, ...), Items(head, ...) if ready => head
+}
+
+match message {
+  Data {
     item
     ...
   } => {
@@ -601,7 +612,7 @@ Pattern bindings are always immutable. `mut` is not part of pattern grammar and 
 
 ```dew
 match option {
-  Option::Some(value) => {
+  Some(value) => {
     let mut value = value
     update(value)
   }
@@ -628,10 +639,10 @@ control-transfer = "continue" expression
 
 ```dew
 let value = while initial {
-  State::Next(next) if next.is_valid() => {
+  Next(next) if next.is_valid() => {
     continue next
   }
-  State::Done(result) => break result
+  Done(result) => break result
   _ => break 0
 }
 ```
@@ -758,7 +769,7 @@ Function and impl-method jobs begin only after the module-value barrier. Primiti
 
 Every match arm pattern receives the scrutinee type as an expected type, and every functional-loop arm pattern receives the loop state type. Iterative pattern tasks propagate expectations through wildcard, binding, literal, qualified, tuple, struct, rest, and alternative patterns. Corresponding alternative occurrences already share one `LocalId`, so payload constraints enforce compatible binding types directly.
 
-Bare variants select from the expected enum when it is known; otherwise one globally unique module variant may determine the enum. Ambiguous or missing candidates are diagnostic. Qualified variants select only from their explicit enum. Unit, tuple, and struct payload kinds are checked, tuple rest maps prefix and suffix patterns, and struct rest permits omitted fields. Generic enum and struct payload types are instantiated from expected nominal arguments or fresh variables. Selected `VariantId` or struct `DeclId` values and zonked generic arguments are retained in frozen pattern-constructor side tables.
+Bare local or imported variants select from the expected enum when it is known; otherwise one globally unique visible variant may determine the enum. Thus patterns normally write `None`, `Some(value)`, `Ok(value)`, `Err(error)`, or `Named { ... }` without an enum prefix. Ambiguous or missing candidates are diagnostic. Qualified variants remain accepted when explicit disambiguation is desired and select only from their named enum. Unit, tuple, and struct payload kinds are checked, tuple rest maps prefix and suffix patterns, and struct rest permits omitted fields. Generic enum and struct payload types are instantiated from expected nominal arguments or fresh variables. Selected `VariantId` or struct `DeclId` values and zonked generic arguments are retained in frozen pattern-constructor side tables.
 
 Match guards check against `Bool`. Non-diverging arm bodies constrain one shared match result; all-diverging matches produce `Never`. Selected constructors, wildcard status, guard expressions, and expected nominal types become frozen inputs for the subsequent flow and coverage phase.
 
@@ -1754,10 +1765,11 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-598 | Implemented | `dew.std.io` defines portable `Reader` and `Writer` traits over `Bytes` and typed `IoError` results, with one-dispatch read/write facades, exact reads, partial-write completion, bounded read-to-end, and bounded copy helpers. Empty successful reads are EOF; zero and over-reported progress are explicit errors; all total-size growth is U32 checked. `BytesInput` yields shared immutable ranges from an alias-visible cursor, and `BytesOutput` publishes one builder-backed result before returning `Closed` on later use. Selective loading adds FixedArray, Bytes, and BytesBuilder dependencies but not WASI; the host-independent WAT fixture contains neither Preview 1 imports nor linear memory. |
 | D-599 | Implemented | `dew.std.testing` provides explicit-message `fail`, Boolean, Eq/Ne, ordering, Option-shape, and Result-shape assertions as ordinary source functions. Helpers evaluate inputs once and use static ambient evidence; failure delegates to compiler-owned `assert`, retaining zero-I/O production traps and test-mode dynamic message transport. The module does not own test discovery, `_test.dew` visibility, expected-trap normalization, metadata, filtering, formatting, host I/O, or trap catching. Generic value-extracting expect helpers remain deferred until generic `Never`-arm carrier joins validate reliably. |
 | D-600 | Implemented | `dew.std.wasm.intrinsics` is generated from the complete backend inline-builtin name set and the exact existing Dew carrier signatures that select those names. The generator emits 1,315 unambiguous public aliases covering 830 backend names, preserves the original `i64_trunc_i32` spelling, embeds identical bootstrap bytes, rejects duplicate aliases, and fails if any backend inline name lacks a declaration. Direct Node/Wago execution and host-independent WAT budgets cover scalar arithmetic/comparison, `u32_ctz`, truncation, float unary math, linear memory, SIMD, and the bounds-checked GC-backed `Bytes` load bridge. |
-| D-601 | Implemented provisionally | Complete `InferredModuleBodies` results persist under `.dew/cache/body-inference/v2-<key>.dbi`; the V2 key domain invalidates artifacts produced before transparent-alias method dispatch and method-local generic-bound evidence. The key commits to exact module path/ID/file order/source bytes, default-preamble policy, and the module's transitive frozen interface/evidence fingerprint. A private payload version plus envelope key/source/interface digests and SHA-256 checksum reject unsupported, malformed, mismatched, truncated, or corrupt artifacts visibly. Lookup reruns import translation and name resolution, validates module/body/lambda identities and every collected-HIR arena length, then feeds unchanged inferred arenas to lowering. Missing keys alone are misses; publication is atomic. `--no-body-cache`, `DEW_BODY_CACHE=0`, cache reporting, host compile-request V3, cold/warm/corruption tests, byte-identical cached/uncached Wasm, and a generated benchmark are included. Per-declaration/lambda reuse remains deferred until module-value SCC, capture, and recursive evidence dependencies have exact fingerprints. |
+| D-601 | Implemented provisionally | Complete `InferredModuleBodies` results persist under `.dew/cache/body-inference/v3-<key>.dbi`; the V3 key domain invalidates artifacts produced before imported expected-type bare pattern-variant selection, while V2 previously invalidated pre-transparent-alias and method-local-bound artifacts. The key commits to exact module path/ID/file order/source bytes, default-preamble policy, and the module's transitive frozen interface/evidence fingerprint. A private payload version plus envelope key/source/interface digests and SHA-256 checksum reject unsupported, malformed, mismatched, truncated, or corrupt artifacts visibly. Lookup reruns import translation and name resolution, validates module/body/lambda identities and every collected-HIR arena length, then feeds unchanged inferred arenas to lowering. Missing keys alone are misses; publication is atomic. `--no-body-cache`, `DEW_BODY_CACHE=0`, cache reporting, host compile-request V3, cold/warm/corruption tests, byte-identical cached/uncached Wasm, and a generated benchmark are included. Per-declaration/lambda reuse remains deferred until module-value SCC, capture, and recursive evidence dependencies have exact fingerprints. |
 | D-602 | Implemented | `dew.std.json` implements strict RFC 8259 values, bounded parsing, deterministic compact serialization, ordered object members, duplicate-key rejection, exact validated number lexemes, strict UTF-8, escape and surrogate validation, trailing-data rejection, and explicit input/depth/value/string limits. `json_parse_reader`/`json_write` compose with portable `Reader`/`Writer` while preserving typed I/O versus JSON failures. Whitespace, string-special, and scalar-terminator scans remain Dew source using `U8x16` masks and `u32_ctz`; the representation bridges are bounds-checked `wasm_bytes_load_u8x16(Bytes, U32)` and `wasm_string_load_u8x16(String, U32)`, which share one generic GC-backed text loader and trap outside the logical view. Objects at or above 16 keys use four scalar `BloomFilter` shards selected by hash bits 43-44; every positive still performs the authoritative ordered equality scan, preserving exact collision and duplicate behavior. Serialization traverses arrays by index, checks constructed keys against the authoritative prior member prefix without a temporary key array, and appends clean validated `StringView` spans without repeated Bytes-to-String validation. Parsing trusts validated String input, validates Bytes once before a private trusted rewrap, uses direct String SIMD scans, delays builders until an escape is found, compactly materializes clean String and exact-number spans, and keeps mutable offset/value-count state in one fixed two-cell carrier rather than growable arrays. Serialization retains the first typed error in one fixed code cell and one fixed optional String payload cell rather than allocating three growable error arrays. `json_parse_retained` explicitly trades whole-source retention for shared clean String and exact-number ranges; `JsonDocument` retains the validated source and tree and can return original source bytes, while canonical output still uses `json_stringify`. `JsonRawDocument` uses the specialized validator and retains only source until explicit materialization. `JsonNumber` validates a constructed exact lexeme once, parsed validated-number modes can produce `JsonValue::ValidatedNumber` directly, and validated numbers serialize without repeated grammar validation; legacy `JsonValue::Number(String)` remains checked for compatibility. Canonical parse modes also produce `JsonValue::ValidatedString(JsonString)` with parser-proven escape requirements, so clean parsed strings serialize without rescanning while decoded escaped strings retain the checked writer path. Recursive nominal types inside applied generic arguments remain reachable, constructor fields receive precise nominal casts, and generic Array results recover exact nominal types. Generated bootstrap parity, direct tests, recursive nominal regression coverage, Node/Wago snapshots, architecture checks, and benchmarks are included. |
 | D-603 | Implemented | `dew.std.bloom_filter` provides an allocation-free `BloomFilter` transparent over one `U64`. Two deterministic bit probes are derived from the low and upper hash halves. `BloomFilter::empty()` and the value/hash insertion and query methods return updated scalar values and report only definite absence or possible presence. Positive results are never exact membership evidence and require caller-selected equality or collection fallback when false positives are unacceptable. The module is ordinary Dew source with no dedicated compiler builtin and uses reserved standard slot 52. Strict JSON composes four filters for wide-object duplicate-key prefiltering and retains exact equality fallback on every positive. |
 | D-604 | Implemented | Nominal struct and struct-style enum construction use explicit postfix `::{ ... }`: `Point::{ ... }` and `Message::Data::{ ... }`. `::` may therefore consume either an identifier for qualification or a left brace for construction; a newline after `::` remains soft. Bare `Target { ... }` is no longer construction syntax, removing the value/block brace ambiguity. Untyped `{ ... }` objects and struct patterns retain their existing syntax. |
+| D-605 | Implemented | Enum patterns normally omit the enum prefix. Bare unit, tuple, and struct-style variant patterns select from the scrutinee/state expected enum, including imported `Option`, `Result`, and user enums, so `None`, `Some(value)`, `Ok(value)`, `Err(error)`, and `Named { ... }` are canonical. Qualified `Type::Variant` patterns remain accepted for explicit disambiguation. Without an expected enum, exactly one visible matching variant is required; ambiguity and absence remain diagnostic. |
 | D-477 | Implemented | Consumer coherence compares every newly imported trait implementation against local and earlier imported evidence in the shared resolved-type arena. Exact, generic, strictly specialized, and incomparable patterns use the same unification rules as local coherence; incoherent entries are removed from method and qualified-trait dispatch. `check`, test generation, snapshot generation, and benchmark generation report implementation-index diagnostics directly. |
 | D-476 | Implemented | Reachable nominal roots close transitively through local and imported struct/enum payload types before fragment planning. When an external physical reference would otherwise point forward, the linker computes deterministic program-wide physical SCCs, assigns a final index to every module-local physical type, emits each SCC as one Wasm recursive group, and places callable signatures afterward. References inside shared groups use their final type-section indices because Starshine's relative recursive-index form is intentionally not binary-encodable. Acyclic links retain the existing module-local type order and snapshots. |
 | D-478 | Implemented provisionally | Every source-verified locked dependency publishes one content-addressed V1 installed package capsule keyed by exact package identity, version, source, package-integrity V2 digest, expected transitive interface fingerprint, and derived module path. The capsule commits to sorted dependency requests and ordered conventional `.dew` payloads through a canonical envelope checksum plus per-file SHA-256 digests. If the locked package tree is absent, the CLI rejects corrupt, mismatched, unordered, duplicate, or unsafe payloads, recomputes package integrity, stages the complete package beside its destination, and atomically restores it at the original locked path. Existing frozen-interface injection and ordinary body/link planning then produce byte-identical Wasm; nonempty partial destinations are never overwritten. |

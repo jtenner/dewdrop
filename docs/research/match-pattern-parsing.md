@@ -38,10 +38,10 @@ value
 42
 -42
 true
-Option::None
-Option::Some(value)
-List::Cons(head, ..., tail)
-Message::Data {
+None
+Some(value)
+Cons(head, ..., tail)
+Data {
   value
   metadata: details
   ...
@@ -73,13 +73,13 @@ The parser still deliberately excludes range patterns, type annotations, and ref
 Pattern bindings are permanently immutable: `mut` is rejected wherever a pattern is expected. Every binding-position identifier beginning with `_` is normalized to `WildcardPattern(offset)`, introduces no local name, and is omitted from alternative binding-set comparisons:
 
 ```dew
-Option::Some(_value), Result::Ok(_other) => fallback
+Some(_value), Ok(_other) => fallback
 ```
 
 Both payloads above are discards, not distinct bindings. Struct shorthand retains the structural field name while discarding its value:
 
 ```dew
-Message::Data {
+Data {
   _metadata
 }
 ```
@@ -87,7 +87,7 @@ Message::Data {
 The field lookup still uses `_metadata`, but no `_metadata` local binding is created. Code that needs mutation creates an explicit body-local rebinding after the match succeeds:
 
 ```dew
-Option::Some(value) => {
+Some(value) => {
   let mut value = value
   update(value)
 }
@@ -134,16 +134,21 @@ Examples:
 
 ```dew
 match option {
-  Option::None, Result::Err(_) => fallback
-  Option::Some(value) if value > 0 => value
+  None => fallback
+  Some(value) if value > 0 => value
+}
+
+match result {
+  Err(_) => fallback
+  Ok(value) => value
 }
 
 match sequence {
-  List::Cons(head, ...), Vector::Items(head, ...) if ready => head
+  Cons(head, ...), Items(head, ...) if ready => head
 }
 
 match message {
-  Message::Data {
+  Data {
     value
     ...
   } => {

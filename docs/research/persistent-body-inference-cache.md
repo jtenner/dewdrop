@@ -20,15 +20,15 @@ module-value and lambda-capture fingerprints are explicit.
 Artifacts live at:
 
 ```text
-.dew/cache/body-inference/v2-<key>.dbi
+.dew/cache/body-inference/v3-<key>.dbi
 ```
 
-The V2 key domain invalidates pre-method-alias artifacts after transparent-alias qualified dispatch and method-local bound evidence changed.
+The V3 key domain invalidates earlier artifacts after bare pattern-variant resolution was extended through imported expected enum types. V2 previously invalidated pre-method-alias artifacts after transparent-alias qualified dispatch and method-local bound evidence changed.
 
 `DEW_CACHE_DIR` replaces the complete `.dew/cache` root. `dew clean` therefore
 removes these artifacts with the other project-local caches.
 
-The V1 key is SHA-256 over:
+The V3 key is SHA-256 over:
 
 - a private schema/domain marker;
 - the default-preamble policy;

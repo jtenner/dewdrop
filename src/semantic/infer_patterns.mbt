@@ -421,6 +421,9 @@ fn BasicBodyInferencer::variant_index_in_declaration(
   declaration : DeclId,
   name : NameId,
 ) -> Int {
+  guard semantic_id_module(declaration) == self.collected.module_id else {
+    return -1
+  }
   let local_index = semantic_id_local(declaration)
   if local_index < 0 || local_index >= self.variant_spans.length() {
     return -1
@@ -575,35 +578,76 @@ fn BasicBodyInferencer::select_value_variant(
 }
 
 ///|
+fn BasicBodyInferencer::imported_pattern_variant_is_visible(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+) -> Bool {
+  match self.imports {
+    Some(imports) =>
+      for binding in imports.scope.declarations {
+        if binding.declaration == declaration {
+          return true
+        }
+      }
+    None => ()
+  }
+  false
+}
+
+///|
 fn BasicBodyInferencer::select_bare_variant(
   self : BasicBodyInferencer,
   name : NameId,
   expected : BodyTypeId,
   pattern : PatternId,
   offset : UInt64,
-) -> Int {
+) -> VariantId? {
   if self.inspect_nominal_type(expected) {
     let declaration = self.call_scratch.nominal_declaration
-    let selected = self.variant_index_in_declaration(declaration, name)
-    if selected < 0 {
-      self.diagnose(UnknownVariantForType(name, declaration, pattern, offset))
+    if semantic_id_module(declaration) == self.collected.module_id {
+      let selected = self.variant_index_in_declaration(declaration, name)
+      if selected >= 0 {
+        return Some(self.collected.variants[selected].id)
+      }
+    } else {
+      match self.imported_variant_named(declaration, name) {
+        Some(variant) => return Some(variant.variant)
+        None => ()
+      }
     }
-    return selected
+    self.diagnose(UnknownVariantForType(name, declaration, pattern, offset))
+    return None
   }
-  let mut selected = -1
+  let mut selected : VariantId? = None
   let mut count = 0
   let mut first = 0UL
   let mut second = 0UL
-  for index, variant in self.collected.variants {
+  for variant in self.collected.variants {
     if variant.name == name {
       count += 1
       if count == 1 {
-        selected = index
+        selected = Some(variant.id)
         first = variant.id
       } else if count == 2 {
         second = variant.id
       }
     }
+  }
+  match self.imports {
+    Some(imports) =>
+      for variant in imports.variants {
+        if variant.name == self.collected.name(name) &&
+          self.imported_pattern_variant_is_visible(variant.declaration) {
+          count += 1
+          if count == 1 {
+            selected = Some(variant.variant)
+            first = variant.variant
+          } else if count == 2 {
+            second = variant.variant
+          }
+        }
+      }
+    None => ()
   }
   if count == 1 {
     selected
@@ -615,7 +659,7 @@ fn BasicBodyInferencer::select_bare_variant(
     } else {
       self.diagnose(InvalidPatternConstructor(pattern, offset))
     }
-    -1
+    None
   }
 }
 
@@ -631,16 +675,8 @@ fn BasicBodyInferencer::select_variant_base(
   match self.collected.patterns[base] {
     HirBindingPattern(name, _) =>
       match self.names.pattern_references[base] {
-        PatternVariantReference(_) => {
-          let selected = self.select_bare_variant(
-            name, expected, owner_pattern, offset,
-          )
-          if selected >= 0 {
-            Some(self.collected.variants[selected].id)
-          } else {
-            None
-          }
-        }
+        PatternVariantReference(_) =>
+          self.select_bare_variant(name, expected, owner_pattern, offset)
         _ => {
           self.diagnose(InvalidPatternConstructor(owner_pattern, offset))
           None

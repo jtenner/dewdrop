@@ -19,29 +19,29 @@ fn result_error() -> Result<U32, String> {
 pub fn main() -> Unit {
   assert(
     match option_i64() {
-      Option::Some(value) => value == 42i64
-      Option::None => false
+      Some(value) => value == 42i64
+      None => false
     },
     "Option<I64>",
   )
   assert(
     match option_string() {
-      Option::Some(value) => value.byte_length() == 5u32
-      Option::None => false
+      Some(value) => value.byte_length() == 5u32
+      None => false
     },
     "Option<String>",
   )
   assert(
     match result_ok() {
-      Result::Ok(value) => value == 7u32
-      Result::Err(_) => false
+      Ok(value) => value == 7u32
+      Err(_) => false
     },
     "Result::Ok",
   )
   assert(
     match result_error() {
-      Result::Ok(_) => false
-      Result::Err(message) => message.byte_length() == 3u32
+      Ok(_) => false
+      Err(message) => message.byte_length() == 3u32
     },
     "Result::Err",
   )

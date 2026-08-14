@@ -475,8 +475,8 @@ enum Choice {
 
 fn read(choice: Choice) -> I32 {
   match choice {
-    Choice::First(value) => value
-    Choice::Second(value) => value
+    First(value) => value
+    Second(value) => value
   }
 }
 ```
@@ -490,8 +490,8 @@ fn read(choice: Choice) -> I32 {
 ```dew
 fn read_or_zero(value: Option<I32>) -> I32 {
   match value {
-    Option::Some(item) => item
-    Option::None => 0
+    Some(item) => item
+    None => 0
   }
 }
 ```

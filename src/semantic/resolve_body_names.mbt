@@ -1328,10 +1328,29 @@ fn BodyNameResolver::run(self : BodyNameResolver) -> BodyNameJobResult {
 }
 
 ///|
-fn body_variant_names(collected : CollectedModule) -> Map[NameId, Bool] {
+fn body_variant_names(
+  collected : CollectedModule,
+  imports : ModuleImportScope?,
+) -> Map[NameId, Bool] {
   let names : Map[NameId, Bool] = Map::default()
   for variant in collected.variants {
     names[variant.name] = true
+  }
+  match imports {
+    Some(imports) =>
+      for interface_index in imports.imported_interfaces {
+        match imports.interfaces[interface_index] {
+          Some(interface_) =>
+            for variant in interface_.variants {
+              match collected.find_name(variant.name) {
+                Some(name) => names[name] = true
+                None => ()
+              }
+            }
+          None => ()
+        }
+      }
+    None => ()
   }
   names
 }
@@ -1545,7 +1564,7 @@ fn resolve_module_names_with_imports_in_order(
     collected.bodies.length(),
     None,
   )
-  let variant_names = body_variant_names(collected)
+  let variant_names = body_variant_names(collected, imports)
   for body_index in order {
     guard body_index >= 0 && body_index < collected.bodies.length() else {
       abort("body name-resolution order contains an invalid body")

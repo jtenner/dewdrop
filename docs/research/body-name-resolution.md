@@ -186,7 +186,7 @@ Examples:
 ```dew
 value
 Some(value)
-State::Done(value)
+Done(value)
 Message { payload }
 ```
 
@@ -206,7 +206,7 @@ pub enum BodyPatternReference {
 }
 ```
 
-Known type, trait, or variant names in a bare pattern position are treated as constructor candidates rather than new locals. This supports unit variants such as `Done` while retaining expected-type disambiguation for repeated variant spellings.
+Known local or imported type, trait, or variant names in a bare pattern position are treated as constructor candidates rather than new locals. Imported variant spellings are discovered from every imported interface, including compiler-owned Option and Result defaults. This supports canonical bare patterns such as `Done`, `Some(value)`, and `Ok(value)` while retaining expected-type disambiguation for repeated variant spellings.
 
 A missing base in an explicit constructor context produces `UnknownPatternConstructor`.
 
@@ -217,7 +217,7 @@ Tuple and struct payload subpatterns return to ordinary binding context. Field s
 For:
 
 ```dew
-State::A(value), State::B(value) if value > 0 => value
+A(value), B(value) if value > 0 => value
 ```
 
 name resolution treats the first alternative as the binding contract. It allocates one `PatternLocal` for `value` and maps every corresponding binding occurrence in later alternatives to the same `LocalId`.

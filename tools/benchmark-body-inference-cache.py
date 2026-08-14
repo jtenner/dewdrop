@@ -102,7 +102,7 @@ def main() -> None:
         "warm_report": warm_report.strip().splitlines(),
         "private_body_change_report": private_report.strip().splitlines(),
         "root_body_change_report": root_report.strip().splitlines(),
-        "artifacts": len(list((CACHE / "body-inference").glob("v1-*.dbi"))),
+        "artifacts": len(list((CACHE / "body-inference").glob("v3-*.dbi"))),
         "changed_output_matches_uncached": True,
     }
     print(json.dumps(result, indent=2, sort_keys=True))

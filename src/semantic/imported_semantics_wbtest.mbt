@@ -97,16 +97,17 @@ test "imported generic function calls select external declaration evidence" {
 }
 
 ///|
-test "imported enum patterns retain external variant IDs" {
+test "bare imported enum patterns infer from the expected type" {
   let (_, frozen, _, names, inferred) = imported_semantic_program(
-    b"open app.library\npub fn read(value: OptionI32) -> I32 {\n  match value {\n    OptionI32::None => 0\n    OptionI32::Some(item) => item\n  }\n}\n",
-    b"pub enum OptionI32 {\n  None\n  Some(I32)\n}\n",
+    b"open app.library\npub fn read(value: OptionI32) -> I32 {\n  match value {\n    None => 0\n    Some(item) => item\n    Named {\n      value\n    } => value\n  }\n}\n",
+    b"pub enum OptionI32 {\n  None\n  Some(I32)\n  Named {\n    value: I32\n  }\n}\n",
   )
   assert_eq(names.diagnostics.length(), 0)
   assert_eq(inferred.diagnostics.length(), 0)
   let variants = frozen.interfaces[1].variants
   let mut saw_none = false
   let mut saw_some = false
+  let mut saw_named = false
   for selected in inferred.pattern_constructors {
     match selected {
       VariantInferredPatternConstructor(variant, _) =>
@@ -114,12 +115,15 @@ test "imported enum patterns retain external variant IDs" {
           saw_none = true
         } else if variant == variants[1].variant {
           saw_some = true
+        } else if variant == variants[2].variant {
+          saw_named = true
         }
       _ => ()
     }
   }
   assert_true(saw_none)
   assert_true(saw_some)
+  assert_true(saw_named)
 }
 
 ///|
