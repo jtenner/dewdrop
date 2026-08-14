@@ -30,6 +30,24 @@ test "testing option and result helpers accept expected variants" {
   assert_result_err(testing_err(9), "assert_result_err")
 }
 
+test "testing value helpers return generic success payloads" {
+  assert(expect_option_some(Option::Some(7), "option value") == 7, "option payload")
+  assert(expect_result_ok(testing_ok(11), "result ok value") == 11, "result ok payload")
+  assert(expect_result_err(testing_err(13), "result err value") == 13, "result err payload")
+}
+
+test "testing option value helper traps on None" expect_trap "unreachable" {
+  expect_option_some(testing_none(), "expected Some")
+}
+
+test "testing result value helper traps on Err" expect_trap "unreachable" {
+  expect_result_ok(testing_err(9), "expected Ok")
+}
+
+test "testing error value helper traps on Ok" expect_trap "unreachable" {
+  expect_result_err(testing_ok(9), "expected Err")
+}
+
 test "testing fail preserves dynamic assertion transport" expect_trap "unreachable" {
   fail("expected testing failure")
 }

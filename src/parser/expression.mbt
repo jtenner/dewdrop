@@ -1015,6 +1015,55 @@ fn Parser::parse_expression_context(
                           ConstructExpr(target, fields, next.offset()),
                         )
                       }
+                      @tokenizer.Symbol(@tokenizer.Less) => {
+                        self.consume_lookahead()
+                        let type_arguments = match
+                          self.parse_explicit_type_arguments_after_less() {
+                          Ok(value) => value
+                          Err(error) => return Err(error.inside_angle())
+                        }
+                        self.skip_newlines()
+                        let call_offset = match self.peek_token() {
+                          Some(call) =>
+                            match call.kind() {
+                              @tokenizer.Symbol(@tokenizer.LeftParen) => {
+                                self.consume_lookahead()
+                                call.offset()
+                              }
+                              _ =>
+                                return Err(
+                                  expression_failure(
+                                    ExpectedCallDelimiter(Some(call)),
+                                  ).inside_parentheses_count(nested_groups),
+                                )
+                            }
+                          None =>
+                            return Err(
+                              expression_failure(ExpectedCallDelimiter(None)).inside_parentheses_count(
+                                nested_groups,
+                              ),
+                            )
+                        }
+                        let arguments = match
+                          self.parse_call_arguments(call_offset) {
+                          Ok(value) => value
+                          Err(error) => return Err(error.inside_parenthesis())
+                        }
+                        let callee = match pop_expression(values) {
+                          Some(value) => value
+                          None =>
+                            return Err(
+                              expression_failure(MissingOperand(offset)).inside_parentheses_count(
+                                nested_groups,
+                              ),
+                            )
+                        }
+                        values.push(
+                          ExplicitTypeCallExpr(
+                            callee, type_arguments, arguments, call_offset,
+                          ),
+                        )
+                      }
                       _ =>
                         match self.parse_qualified_access(values, offset) {
                           Ok(_) => ()

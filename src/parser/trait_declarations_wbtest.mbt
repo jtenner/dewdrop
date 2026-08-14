@@ -25,6 +25,7 @@ test "generic trait declarations preserve method signatures" {
           {
             name: "add",
             name_offset: 20UL,
+            type_parameters: [],
             receiver: None,
             parameters: [
               { name: "left", type_: NamedType("t", 30UL), offset: 24UL },
@@ -173,7 +174,7 @@ test "trait comments preserve member newlines" {
 }
 
 ///|
-test "trait methods require return types and do not accept method generics" {
+test "trait methods require return types and accept method generics" {
   match
     Parser::from_bytes(b"trait Bad {\n  fn value()\n}\n").parse_declaration() {
     Err(ExpectedDeclarationSyntax(Arrow, Some(token))) =>
@@ -184,13 +185,18 @@ test "trait methods require return types and do not accept method generics" {
     _ => fail("expected missing method return type")
   }
   match
-    Parser::from_bytes(b"trait Bad {\n  fn value<t>(value: t) -> t\n}\n").parse_declaration() {
-    Err(ExpectedDeclarationSyntax(LeftParen, Some(token))) =>
-      match token.kind() {
-        @tokenizer.Symbol(@tokenizer.Less) => ()
-        _ => fail("expected generic opener")
-      }
-    _ => fail("expected method-level generics to be rejected")
+    Parser::from_bytes(
+      b"trait Convert<t> {\n  fn convert<u: Eq>(self, value: u) -> u\n}\n",
+    ).parse_declaration() {
+    Ok(Trait(declaration)) => {
+      let requirement = declaration.methods[0]
+      assert_eq(requirement.type_parameters.length(), 1)
+      assert_eq(requirement.type_parameters[0].name, "u")
+      assert_eq(requirement.type_parameters[0].bounds, [NamedType("Eq", 35UL)])
+      assert_eq(requirement.parameters.length(), 1)
+      assert_true(requirement.has_receiver())
+    }
+    _ => fail("expected method-level generics to parse")
   }
   match
     Parser::from_bytes(b"trait Default {\n  fn value() -> I32 {\n  }\n}\n").parse_declaration() {

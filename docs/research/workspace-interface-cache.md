@@ -25,7 +25,7 @@ Module IDs remain in the source key because frozen declaration identities are ma
 
 ## Validation and publication
 
-Workspace artifacts reuse the deterministic frozen-interface V11 serializer and checksum envelope, but contain exactly one module. Lookup validates:
+Workspace artifacts reuse the deterministic frozen-interface V12 serializer and checksum envelope, but contain exactly one module. Lookup validates:
 
 - envelope checksum and schema;
 - exactly one decoded module;

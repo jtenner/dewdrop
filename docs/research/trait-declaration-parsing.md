@@ -59,7 +59,7 @@ Trait methods store an optional `ReceiverParameter` separately from their ordina
 - ordered method signatures;
 - declaration offset.
 
-Each `TraitMethod` retains its name, optional receiver, compact array of ordinary typed parameters, return type, and offsets. Keeping the receiver separate avoids wrapping every ordinary parameter in a larger tagged enum and improved the 64-method native parse benchmark.
+Each `TraitMethod` retains its name, ordered method-level generic parameters and bounds, optional receiver, compact array of ordinary typed parameters, return type, and offsets. Keeping the receiver separate avoids wrapping every ordinary parameter in a larger tagged enum and improved the 64-method native parse benchmark.
 
 ## Newline behavior
 
@@ -75,13 +75,14 @@ A method body on a trait member is not part of the initial grammar. A `{` after 
 
 ## Current exclusions
 
-The parser intentionally does not yet accept:
+The parser intentionally does not accept:
 
-- method-level generic parameters;
-- trait parameter bounds or supertraits;
+- supertraits;
 - default method bodies;
 - associated types or constants;
 - separate visibility modifiers on trait methods.
+
+Trait and method generic bounds are accepted. Associated types, associated constants, and supertraits are excluded from the first stable edition rather than being implicit future syntax.
 
 These can be added as explicit grammar extensions without introducing declaration backtracking.
 
@@ -89,7 +90,7 @@ These can be added as explicit grammar extensions without introducing declaratio
 
 Dedicated errors cover receiver position, explicit receiver type, and unclosed trait bodies. Existing declaration expectations identify missing names, braces, parameter punctuation, arrows, return types, member newlines, and the required `fn` keyword.
 
-Tests cover public and module-visible traits, generic parameters, receiver and static methods, explicit `self: Self`, invalid receivers, compact and multiline empty bodies, multiline parameter lists, malformed member syntax, unsupported method generics, non-method members, declaration separation, and a 512-method trait body.
+Tests cover public and module-visible traits, trait and method generic parameters and bounds, receiver and static methods, explicit `self: Self`, immediate-scope generic shadowing, invalid receivers, compact and multiline empty bodies, multiline parameter lists, malformed member syntax, non-method members, declaration separation, and a 512-method trait body.
 
 ## Benchmarks
 

@@ -53,6 +53,8 @@ priv struct CollectionBuilder {
   expressions : Array[HirExpr]
   expression_files : Array[FileId]
   expression_children : Array[ExprId]
+  explicit_call_type_argument_spans : Array[HirSpan]
+  explicit_call_type_arguments : Array[HirTypeId]
   blocks : Array[HirBlock]
   block_files : Array[FileId]
   block_items : Array[HirBlockItem]
@@ -147,6 +149,8 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     expressions: [],
     expression_files: [],
     expression_children: [],
+    explicit_call_type_argument_spans: [],
+    explicit_call_type_arguments: [],
     blocks: [],
     block_files: [],
     block_items: [],
@@ -722,6 +726,10 @@ fn CollectionBuilder::collect_trait(
           None => ()
         }
     }
+    self.collect_generic_parameters(
+      collected_method.id,
+      source_method.type_parameters,
+    )
     self.collect_parameters(
       collected_method.id,
       source_method.receiver,
@@ -1240,6 +1248,8 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     expressions: self.expressions,
     expression_files: self.expression_files,
     expression_children: self.expression_children,
+    explicit_call_type_argument_spans: self.explicit_call_type_argument_spans,
+    explicit_call_type_arguments: self.explicit_call_type_arguments,
     blocks: self.blocks,
     block_files: self.block_files,
     block_items: self.block_items,

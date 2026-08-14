@@ -35,15 +35,15 @@ The package capsule key is independently domain-separated over exact locked pack
 `serialize_frozen_interfaces` writes a private deterministic binary format beginning with:
 
 ```text
-DEW_FROZEN_INTERFACES_V11\0
+DEW_FROZEN_INTERFACES_V12\0
 ```
 
 It serializes diagnostics-free `FrozenModuleInterface` records, including:
 
 - stable module and declaration identities;
 - complete resolved-type arenas, applied-type spans, resolved generic-bound types,
-  one ordered bound span per generic parameter, and owner generic spans for
-  frozen implementations;
+  canonical explicit-call type arguments, one ordered bound span per generic
+  parameter, and owner generic spans for frozen implementations;
 - public declarations, aggregate fields, and variants;
 - callable kinds, parameters, result shapes, and receiver bits;
 - public implementation evidence;
@@ -56,7 +56,7 @@ No maps, addresses, filesystem paths, or worker-order values enter the artifact.
 The serialized payload is wrapped in a second cache-file envelope:
 
 ```text
-DEW_STD_INTERFACE_CACHE_V11\0
+DEW_STD_INTERFACE_CACHE_V12\0
 SHA-256(payload)
 payload
 ```
@@ -79,7 +79,7 @@ The payload binds artifact version, exact lock identity/version/source/integrity
 The default locations are:
 
 ```text
-.dew/cache/interfaces/v11-<bundle-fingerprint>.dwi
+.dew/cache/interfaces/v12-<bundle-fingerprint>.dwi
 .dew/cache/packages/v1-<package-artifact-key>.dpa
 ```
 
@@ -124,7 +124,7 @@ Permanent coverage includes:
 - explicit disabled mode;
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
-- versioned external package miss/hit behavior and `v11-*.dwi` filenames;
+- versioned external package miss/hit behavior and `v12-*.dwi` filenames;
 - installed package capsule publication, source-tree removal, verified atomic recovery, and byte-identical pre/post-recovery Wasm;
 - fail-visible corrupt package capsules and refusal to overwrite nonempty partial package trees;
 - rejection of injected ordinary orphan evidence before a cache hit can expose it;

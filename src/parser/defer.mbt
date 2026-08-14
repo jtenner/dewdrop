@@ -217,6 +217,20 @@ fn defer_transform_expression(
         offset,
       )
     }
+    ExplicitTypeCallExpr(callee, type_arguments, arguments, offset) => {
+      let transformed : Array[Expr] = []
+      for argument in arguments {
+        transformed.push(
+          defer_transform_expression(argument, cleanups, loop_depth),
+        )
+      }
+      ExplicitTypeCallExpr(
+        defer_transform_expression(callee, cleanups, loop_depth),
+        type_arguments,
+        transformed,
+        offset,
+      )
+    }
     FieldExpr(base, name, offset) =>
       FieldExpr(
         defer_transform_expression(base, cleanups, loop_depth),
@@ -526,7 +540,8 @@ fn deferred_expression_dispose_offset(
         Some(offset) => Some(offset)
         None => deferred_expression_dispose_offset(right, name)
       }
-    CallExpr(callee, arguments, _) => {
+    CallExpr(callee, arguments, _)
+    | ExplicitTypeCallExpr(callee, _, arguments, _) => {
       match deferred_expression_dispose_offset(callee, name) {
         Some(offset) => return Some(offset)
         None => ()

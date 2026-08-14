@@ -139,7 +139,7 @@ fn ensure_interface_cache_root(path : String) -> Result[Unit, String] {
 fn interface_cache_file(key : InterfaceBundleCacheKey) -> String {
   interface_cache_join(
     interface_cache_join(interface_cache_root(), "interfaces"),
-    "v11-" + key.fingerprint + ".dwi",
+    "v12-" + key.fingerprint + ".dwi",
   )
 }
 

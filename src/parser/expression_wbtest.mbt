@@ -261,6 +261,18 @@ test "lambda headers fail deterministically at the forward cursor" {
 }
 
 ///|
+test "explicit call-site type arguments use turbofish syntax" {
+  match parse_test_expression(b"identity::<I32, Bool>(1, true)") {
+    Ok(_) => ()
+    _ => fail("expected explicit call-site type arguments")
+  }
+  match parse_test_expression(b"value.keep::<\n  I32,\n>(1)") {
+    Ok(_) => ()
+    _ => fail("expected multiline method type arguments")
+  }
+}
+
+///|
 test "calls chain without expression backtracking" {
   assert_eq(
     parse_test_expression(b"f()(1)"),

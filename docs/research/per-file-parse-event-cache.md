@@ -1,6 +1,6 @@
 # Per-file parse-event cache
 
-Date: 2026-08-12
+Date: 2026-08-14
 
 ## Status
 
@@ -13,7 +13,7 @@ Bootstrap standard-library bytes participate only when they are selected by a co
 Each artifact key is SHA-256 over:
 
 ```text
-DEW_PARSE_EVENT_KEY_V2\0
+DEW_PARSE_EVENT_KEY_V3\0
 u32 owner/module-path byte length
 owner/module-path UTF-8 bytes
 u32 logical file-path byte length
@@ -28,20 +28,20 @@ The owner path distinguishes identical logical filenames in different workspace 
 Entries live at:
 
 ```text
-.dew/cache/parse-events/v2-<key>.dpe
+.dew/cache/parse-events/v3-<key>.dpe
 ```
 
 The envelope is:
 
 ```text
-DEW_PARSE_EVENT_CACHE_V2\0
+DEW_PARSE_EVENT_CACHE_V3\0
 32-byte key/provenance digest
 32-byte source digest
 32-byte SHA-256(payload)
 payload
 ```
 
-The payload is deterministic compact JSON generated from the complete parser event and AST graph. Parser and tokenizer syntax types derive `ToJson` and `FromJson`; diagnostics, token evidence, exact offsets, byte strings, declaration order, expression trees, patterns, and bodies are therefore retained. A private recursive transform encodes non-finite `F32` JSON numbers by exact IEEE-754 bits before stringification and restores them before schema decoding.
+The payload is deterministic compact JSON generated from the complete parser event and AST graph. V3 invalidates V2 after adding trait-method generic parameters and explicit-type call expressions to that graph. Parser and tokenizer syntax types derive `ToJson` and `FromJson`; diagnostics, token evidence, exact offsets, byte strings, declaration order, expression trees, patterns, and bodies are therefore retained. A private recursive transform encodes non-finite `F32` JSON numbers by exact IEEE-754 bits before stringification and restores them before schema decoding.
 
 Lookup rejects truncated or unsupported envelopes, key or source provenance mismatch, checksum mismatch, malformed UTF-8/JSON, and schema-invalid syntax. Existing invalid artifacts fail visibly as `corrupt parse-event cache`; they are never treated as misses. Missing artifacts are ordinary misses.
 

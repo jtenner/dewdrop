@@ -1,13 +1,13 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 13, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
+> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 14, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
 
 ## Current priority order
 
 1. Extend workspace interface reuse into body/layout/fragment caches and deterministic parallel scheduling.
 2. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
 3. Complete package acquisition and reproducible release infrastructure.
-4. Complete foundational standard modules and Wasm intrinsic parity.
+4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
 5. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
 
 ## Incremental and parallel compilation
@@ -53,12 +53,6 @@ are follow-up hardening and observability work, not release blockers.
 
 ## Type system and language surface
 
-- [ ] Define method-level generic syntax and shadowing.
-- [ ] Define explicit call-site type arguments.
-- [ ] Implement structural match-set overload specificity.
-- [ ] Keep inference variables out of frozen module type interners.
-- [ ] Fix generic value-returning match joins with `Never` failure arms, then add testing value-extraction helpers.
-- [ ] Decide associated types, associated constants, and supertraits for the first stable edition.
 - [ ] Add negative/sealed implementations, higher-kinded types, or variance only when concrete requirements justify them.
 - [ ] Design optional arguments and their ABI/evaluation-order rules.
 - [ ] Add checked, saturating, wrapping, and explicit truncating conversions.

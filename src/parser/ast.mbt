@@ -69,6 +69,7 @@ pub enum Expr {
   PrefixExpr(PrefixOperator, Expr, UInt64)
   BinaryExpr(BinaryOperator, Expr, Expr, UInt64)
   CallExpr(Expr, Array[Expr], UInt64)
+  ExplicitTypeCallExpr(Expr, Array[TypeExpr], Array[Expr], UInt64)
   FieldExpr(Expr, String, UInt64)
   QualifiedExpr(Expr, String, UInt64)
   IndexExpr(Expr, Expr, UInt64)
@@ -130,6 +131,7 @@ pub fn Expr::offset(self : Expr) -> UInt64 {
     | PrefixExpr(_, _, offset)
     | BinaryExpr(_, _, _, offset)
     | CallExpr(_, _, offset)
+    | ExplicitTypeCallExpr(_, _, _, offset)
     | FieldExpr(_, _, offset)
     | QualifiedExpr(_, _, offset)
     | IndexExpr(_, _, offset) => offset

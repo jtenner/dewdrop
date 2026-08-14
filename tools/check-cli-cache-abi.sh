@@ -451,7 +451,7 @@ grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-external-package-cache-miss.txt
 grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-external-package-cache-hit.txt
-test "$(find .tmp/dew-external-package-cache/interfaces -name 'v11-*.dwi' | wc -l)" -eq 1
+test "$(find .tmp/dew-external-package-cache/interfaces -name 'v12-*.dwi' | wc -l)" -eq 1
 rm -rf .tmp/dew-artifact-only .tmp/dew-artifact-cache
 cp -R tests/abi-consumers/imported-package .tmp/dew-artifact-only
 DEW_CACHE_DIR=.tmp/dew-artifact-cache tools/dew build \
@@ -513,7 +513,7 @@ DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
   > .tmp/dew-external-package-cache-changed.txt
 grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-external-package-cache-changed.txt
-test "$(find .tmp/dew-external-package-cache/interfaces -name 'v11-*.dwi' | wc -l)" -eq 2
+test "$(find .tmp/dew-external-package-cache/interfaces -name 'v12-*.dwi' | wc -l)" -eq 2
 tools/dew build \
   --manifest tests/abi-consumers/imported-package/dew.json \
   -o .tmp/dew-imported-package-provider.wasm

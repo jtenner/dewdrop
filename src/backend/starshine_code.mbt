@@ -3044,7 +3044,14 @@ fn starshine_body_locals(
         body_local_types.push(@lib.ValType::eqref_null())
       }
       @semantic.PlannedMatchExpression(scrutinee, _) => {
-        let scratch_type = match lowering.expressions[scrutinee].shape {
+        let scrutinee_source = lowering.expressions[scrutinee]
+        let scrutinee_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          scrutinee_source.type_,
+          scrutinee_source.shape,
+        )
+        let scratch_type = match scrutinee_shape {
           @semantic.ErrorPlannedValueShape => Some(@lib.ValType::eqref_null())
           shape => starshine_shape_value_type(shape)
         }
@@ -3056,8 +3063,14 @@ fn starshine_body_locals(
           }
           None => ()
         }
-        match
-          starshine_shape_value_type(lowering.expressions[expression].shape) {
+        let result_source = lowering.expressions[expression]
+        let result_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          result_source.type_,
+          result_source.shape,
+        )
+        match starshine_shape_value_type(result_shape) {
           Some(type_) => {
             match_result_local_indices[expression] = parameter_count +
               body_local_types.length()
@@ -8610,7 +8623,18 @@ fn starshine_emit_body_instructions(
             )
         }
         match emitted {
-          Ok(output) => results.push(output)
+          Ok(output) => {
+            if expression >= 0 &&
+              lowering.expressions[expression].shape
+              is @semantic.NeverPlannedValueShape &&
+              (
+                output.length() == 0 ||
+                output[output.length() - 1] != @lib.Instruction::unreachable_()
+              ) {
+              output.push(@lib.Instruction::unreachable_())
+            }
+            results.push(output)
+          }
           Err(error) => return Err(error)
         }
       }

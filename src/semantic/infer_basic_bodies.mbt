@@ -190,6 +190,8 @@ priv struct CallInferenceScratch {
   pending_function_calls : Array[Int]
   deferred_function_calls : Array[Int]
   overload_candidates : Array[DeclId]
+  overload_viable_candidates : Array[DeclId]
+  overload_maximal_candidates : Array[DeclId]
   pending_methods : Array[ExprId]
   deferred_methods : Array[ExprId]
   pending_debug_dispatches : Array[Int]
@@ -232,6 +234,8 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
     pending_function_calls: [],
     deferred_function_calls: [],
     overload_candidates: [],
+    overload_viable_candidates: [],
+    overload_maximal_candidates: [],
     pending_methods: [],
     deferred_methods: [],
     pending_debug_dispatches: [],
@@ -274,6 +278,8 @@ fn CallInferenceScratch::begin_body(self : CallInferenceScratch) -> Unit {
   self.pending_function_calls.clear()
   self.deferred_function_calls.clear()
   self.overload_candidates.clear()
+  self.overload_viable_candidates.clear()
+  self.overload_maximal_candidates.clear()
   self.pending_methods.clear()
   self.deferred_methods.clear()
   self.pending_operators.clear()
@@ -1617,7 +1623,11 @@ fn BasicBodyInferencer::initialize_expression_types(
       HirCallExpr(_, _, _) => {
         self.call_expressions.push(expression)
         self.call_targets.push(NoInferredCallTarget)
-        self.solver.fresh_variable()
+        if self.direct_call_is_declared_never(expression) {
+          self.primitive(NeverType)
+        } else {
+          self.solver.fresh_variable()
+        }
       }
       HirObjectExpr(_, _)
       | HirConstructExpr(_, _, _)
@@ -2343,7 +2353,15 @@ fn BasicBodyInferencer::constrain_match_expression(
       )
     }
     let body_type = self.expression_type(arm.body)
-    if !self.is_never_type(body_type) {
+    let declared_never_call = self.direct_call_is_declared_never(arm.body)
+    if declared_never_call {
+      self.constrain(
+        body_type,
+        self.primitive(NeverType),
+        expression_type_origin(arm.body, arm.offset),
+      )
+    }
+    if !declared_never_call && !self.is_never_type(body_type) {
       all_never = false
       self.constrain_assignable(
         body_type,
@@ -2656,6 +2674,7 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     NoMatchingFunctionReference(_, _, _) => 42
     AmbiguousFunctionReference(_, _, _, _, _, _) => 43
     UnsatisfiedTraitObligation(_, _, _, _, _) => 44
+    CallTypeArgumentCountMismatch(_, _, _, _, _) => 45
   }
 }
 

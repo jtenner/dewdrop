@@ -93,6 +93,7 @@ priv struct ParsedFunctionParameters {
 pub struct TraitMethod {
   name : String
   name_offset : UInt64
+  type_parameters : Array[TypeParameter]
   receiver : ReceiverParameter?
   parameters : Array[FnParameter]
   return_type : TypeExpr
@@ -380,6 +381,40 @@ fn Parser::parse_type_arguments(
     }
   } nobreak {
     abort("unreachable type argument parser termination")
+  }
+}
+
+///|
+fn Parser::parse_explicit_type_arguments_after_less(
+  self : Parser,
+) -> Result[Array[TypeExpr], RecoveryFailure] {
+  let arguments : Array[TypeExpr] = []
+  let state : TypeCloserState = { pending: 0, offset: 0UL }
+  self.skip_newlines()
+  while true {
+    let argument = match self.parse_type_inner(state) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    arguments.push(argument)
+    if self.consume_type_greater(state) {
+      if state.pending > 0 {
+        return Err(declaration_failure(UnexpectedTypeCloser(state.offset)))
+      }
+      return Ok(arguments)
+    }
+    guard self.consume_comma() else {
+      return Err(self.declaration_error(TypeArgumentSeparatorOrClose))
+    }
+    self.skip_newlines()
+    if self.consume_type_greater(state) {
+      if state.pending > 0 {
+        return Err(declaration_failure(UnexpectedTypeCloser(state.offset)))
+      }
+      return Ok(arguments)
+    }
+  } nobreak {
+    abort("unreachable explicit type argument parser termination")
   }
 }
 
@@ -861,6 +896,10 @@ fn Parser::parse_trait_method_after_keyword(
     Ok(value) => value
     Err(error) => return Err(error)
   }
+  let type_parameters = match self.parse_optional_type_parameters() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   guard self.consume_left_paren() else {
     return Err(self.declaration_error(LeftParen))
   }
@@ -886,6 +925,7 @@ fn Parser::parse_trait_method_after_keyword(
   Ok({
     name,
     name_offset,
+    type_parameters,
     receiver: parsed_parameters.receiver,
     parameters: parsed_parameters.parameters,
     return_type,

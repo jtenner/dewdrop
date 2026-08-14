@@ -46,6 +46,7 @@
     if ;; label = @1
       unreachable
     end
+    unreachable
   )
   (func (;1;) (type 6) (param i32 eqref)
     local.get 0
@@ -148,6 +149,7 @@
           end
           local.get 1
           call 0
+          unreachable
           br 2 (;@1;)
         end
         br 1 (;@1;)
@@ -172,6 +174,7 @@
         end
         local.get 1
         call 0
+        unreachable
         br 1 (;@1;)
       end
       unreachable
@@ -194,6 +197,7 @@
         end
         local.get 1
         call 0
+        unreachable
         br 1 (;@1;)
       end
       unreachable
@@ -214,6 +218,7 @@
           end
           local.get 1
           call 0
+          unreachable
           br 2 (;@1;)
         end
         br 1 (;@1;)

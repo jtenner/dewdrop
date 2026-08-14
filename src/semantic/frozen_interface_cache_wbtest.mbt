@@ -5,7 +5,7 @@ test "frozen interfaces serialize and decode byte-identically" {
     ProgramManifest::new([
       ManifestModule::new("cache.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.string\nopen dew.std.bytes\npub trait LocalBound {\n  fn accept(self) -> Bool\n}\npub struct Item {\n  text: String\n}\npub fn keep(value: Option<U32>) -> Option<U32> {\n  value\n}\npub fn passthrough(callback: fn(I32) -> I64) -> fn(I32) -> I64 {\n  callback\n}\npub fn bounded<t: LocalBound>(value: t) -> t {\n  value\n}\npub struct Box<t> {\n  value: t\n}\nimpl<t: LocalBound> LocalBound for Box<t> {\n  fn accept(self) -> Bool {\n    true\n  }\n}\n",
+          "main.dew", b"open dew.std.string\nopen dew.std.bytes\npub trait LocalBound {\n  fn accept(self) -> Bool\n}\npub struct Item {\n  text: String\n}\npub fn keep(value: Option<U32>) -> Option<U32> {\n  value\n}\npub fn passthrough(callback: fn(I32) -> I64) -> fn(I32) -> I64 {\n  callback\n}\npub fn bounded<t: LocalBound>(value: t) -> t {\n  value\n}\npub fn phantom<t>() -> I32 {\n  1\n}\npub fn explicit() -> I32 {\n  phantom::<Bool>()\n}\npub struct Box<t> {\n  value: t\n}\nimpl<t: LocalBound> LocalBound for Box<t> {\n  fn accept(self) -> Bool {\n    true\n  }\n}\n",
         ),
       ]),
     ]),
@@ -19,6 +19,10 @@ test "frozen interfaces serialize and decode byte-identically" {
     }
   }
   assert_eq(bounded_implementations, 1)
+  assert_eq(
+    frozen.interfaces[0].resolved_types.explicit_call_type_arguments.length(),
+    1,
+  )
   let encoded = serialize_frozen_interfaces(frozen.interfaces).unwrap()
   let decoded = deserialize_frozen_interfaces(encoded).unwrap()
   assert_eq(decoded, frozen.interfaces)

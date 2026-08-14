@@ -1,0 +1,38 @@
+struct Box<t> {
+  value: t
+}
+
+fn pick<t>(value: Box<t>) -> I32 {
+  1
+}
+
+fn pick<t>(value: Box<Box<t>>) -> I32 {
+  2
+}
+
+fn phantom<t>() -> I32 {
+  3
+}
+
+trait Keep {
+  fn keep<t>(self, value: t) -> t
+}
+
+struct Keeper {}
+
+impl Keep for Keeper {
+  fn keep<t>(self, value: t) -> t {
+    value
+  }
+}
+
+pub fn main() -> Unit {
+  let nested = Box::{
+    value: Box::{
+      value: 42
+    }
+  }
+  assert(pick(nested) == 2, "structural overload specificity")
+  assert(phantom::<Bool>() == 3, "explicit direct type argument")
+  assert(Keeper::{}.keep::<I64>(42i64) == 42i64, "method generic type argument")
+}

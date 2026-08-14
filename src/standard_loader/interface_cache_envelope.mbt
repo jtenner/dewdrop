@@ -1,5 +1,5 @@
 ///|
-let interface_bundle_cache_file_magic : Bytes = b"DEW_STD_INTERFACE_CACHE_V11\x00"
+let interface_bundle_cache_file_magic : Bytes = b"DEW_STD_INTERFACE_CACHE_V12\x00"
 
 ///|
 fn wrap_interface_cache_payload(payload : Bytes) -> Bytes {

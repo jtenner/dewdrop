@@ -127,7 +127,7 @@ For methods, lookup checks:
 1. Method-level generic parameters
 2. Generic parameters on the containing trait or impl
 
-Trait methods currently have no method-level generic syntax, while impl methods may use the function declaration grammar. Cross-owner generic shadowing remains a later diagnostic decision; current lookup gives the immediate method scope precedence.
+Trait and impl methods use the same method-level generic syntax. Cross-owner shadowing is permitted: a method parameter may reuse a containing trait/impl parameter spelling, stable IDs keep them distinct, and the immediate method scope takes precedence.
 
 ## `Self`
 

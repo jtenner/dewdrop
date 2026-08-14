@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 13, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
+> Living roadmap as of August 14, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
 
 ## Current baseline
 
@@ -23,7 +23,7 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 1. Extend the completed workspace interface reuse into body/layout/fragment caches and deterministic parallel module/body scheduling.
 2. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
 3. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
-4. Complete foundational standard modules and Wasm intrinsic parity.
+4. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
 5. Build formatter, documentation, and language-server tooling over lossless/incremental syntax infrastructure.
 
 Every implementation tranche must preserve deterministic diagnostics and Wasm, include focused tests and documentation, and land as a bounded atomic commit.
@@ -83,12 +83,12 @@ hardening and observability rather than a release gate.
 
 ## Type system, traits, and language surface
 
-- [ ] Define method-level generic syntax and shadowing.
-- [ ] Define explicit call-site type-argument syntax.
-- [ ] Improve overload specificity from generic-count tiers to structural match-set containment.
-- [ ] Keep inference variables out of frozen module type interners.
-- [ ] Fix generic value-returning match joins whose failing arm calls a `Never`-returning function, then add value-extracting testing helpers without backend carrier mismatches.
-- [ ] Decide whether associated types, associated constants, and supertraits belong in the first stable language edition.
+- [x] Define method-level generic syntax as `fn name<t: Bound>(...)`; the immediate method scope may shadow containing trait/impl parameters and wins lookup by stable identity.
+- [x] Define exact explicit call-site type arguments as `callee::<T, U>(...)`, including instance and qualified methods; method syntax supplies method-local arguments while containing impl arguments remain inferred.
+- [x] Select ordinary overloads by strict structural match-set containment across the complete parameter/result signature; equivalent and overlapping-incomparable maxima remain ambiguous.
+- [x] Keep body-local inference variables out of frozen module type interners and regression-test interner immutability across inferred and explicitly specialized calls.
+- [x] Preserve `Never` for declared diverging calls before generic match joins, specialize match scratch/result carriers, emit unreachable continuation after no-result calls, and provide generic value-extracting testing helpers.
+- [x] Exclude associated types, associated constants, and supertraits from the first stable language edition; reconsider them only through an edition-gated design after concrete library requirements exist.
 - [ ] Add negative or sealed implementations only if concrete coherence/library requirements justify them.
 - [ ] Define higher-kinded types or variance only if concrete library requirements justify them.
 - [ ] Design optional arguments, including defaults, omission, overload selection, evaluation order, and ABI effects.

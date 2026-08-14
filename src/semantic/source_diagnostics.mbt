@@ -348,6 +348,7 @@ fn BodyInferenceDiagnostic::primary_location(
     | AmbiguousFunctionReference(_, expression, _, _, _, offset)
     | FunctionCallArgumentCountMismatch(expression, _, _, offset)
     | CallArgumentCountMismatch(expression, _, _, _, offset)
+    | CallTypeArgumentCountMismatch(expression, _, _, _, offset)
     | NoMatchingCallOverload(_, expression, offset)
     | AmbiguousCallOverload(_, expression, _, _, _, offset)
     | UnresolvedCallTypeArgument(expression, _, offset)

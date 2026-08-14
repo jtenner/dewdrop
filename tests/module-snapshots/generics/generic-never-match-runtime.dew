@@ -1,0 +1,31 @@
+enum Maybe<t> {
+  Some(t)
+  None
+}
+
+struct Item {
+  value: I32
+}
+
+fn stop() -> Never {
+  unreachable()
+}
+
+fn expect_some<t>(value: Maybe<t>) -> t {
+  match value {
+    Maybe::Some(item) => item
+    Maybe::None => stop()
+  }
+}
+
+pub fn main() -> Unit {
+  assert(expect_some(Maybe::Some(42)) == 42, "generic Never i32 join")
+  assert(expect_some(Maybe::Some(42i64)) == 42i64, "generic Never i64 join")
+  assert(expect_some(Maybe::Some(42.5f64)) == 42.5f64, "generic Never f64 join")
+  assert(
+    expect_some(Maybe::Some(Item::{
+      value: 42
+    })).value == 42,
+    "generic Never reference join",
+  )
+}

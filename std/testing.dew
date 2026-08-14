@@ -1,5 +1,6 @@
-pub fn fail(message: String) -> Unit {
+pub fn fail(message: String) -> Never {
   assert(false, message)
+  unreachable()
 }
 
 pub fn assert_true(condition: Bool, message: String) -> Unit {
@@ -59,5 +60,26 @@ pub fn assert_result_err<t, e>(value: Result<t, e>, message: String) -> Unit {
   match value {
     Result::Ok(_) => fail(message)
     Result::Err(_) => {}
+  }
+}
+
+pub fn expect_option_some<t>(value: Option<t>, message: String) -> t {
+  match value {
+    Option::Some(item) => item
+    Option::None => fail(message)
+  }
+}
+
+pub fn expect_result_ok<t, e>(value: Result<t, e>, message: String) -> t {
+  match value {
+    Result::Ok(item) => item
+    Result::Err(_) => fail(message)
+  }
+}
+
+pub fn expect_result_err<t, e>(value: Result<t, e>, message: String) -> e {
+  match value {
+    Result::Ok(_) => fail(message)
+    Result::Err(error) => error
   }
 }

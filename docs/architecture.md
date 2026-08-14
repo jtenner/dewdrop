@@ -339,7 +339,7 @@ and deterministic fingerprints.
 The persistent cache stores checksummed serialized frozen interfaces. Corrupt,
 incompatible, or identity-mismatched artifacts fail visibly. The cache
 architecture is generalized around `InterfaceBundleCacheKey` and
-`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V11
+`InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible V12
 envelope, `interface_bundle_cache.mbt` owns provenance, module selection, and
 I/O, and `cached_analysis.mbt` owns semantic analysis using cached slots. One
 bundle selects compiler-owned standard modules and verified external

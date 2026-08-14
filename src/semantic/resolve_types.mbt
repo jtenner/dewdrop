@@ -19,6 +19,7 @@ priv struct TypeResolver {
   lambda_parameter_types : Array[ResolvedTypeId]
   lambda_return_types : Array[ResolvedTypeId]
   lambda_function_types : Array[ResolvedTypeId]
+  explicit_call_type_arguments : Array[ResolvedTypeId]
   field_types : Array[ResolvedTypeId]
   variant_payloads : Array[HirSpan]
   signature_type_lists : Array[ResolvedTypeId]
@@ -120,6 +121,10 @@ fn TypeResolver::new(
     ),
     lambda_return_types: Array::make(collected.lambdas.length(), -1),
     lambda_function_types: Array::make(collected.lambdas.length(), -1),
+    explicit_call_type_arguments: Array::make(
+      collected.explicit_call_type_arguments.length(),
+      -1,
+    ),
     field_types: Array::make(collected.fields.length(), -1),
     variant_payloads: Array::make(
       collected.variants.length(),
@@ -878,6 +883,41 @@ fn TypeResolver::resolve_signatures(self : TypeResolver) -> Unit {
       any_type_name,
     )
   }
+  for body in self.collected.bodies {
+    for
+      expression in body.expressions.start..<(body.expressions.start +
+      body.expressions.length) {
+      if expression >= self.collected.explicit_call_type_argument_spans.length() {
+        continue
+      }
+      let explicit = self.collected.explicit_call_type_argument_spans[expression]
+      for argument in explicit.start..<(explicit.start + explicit.length) {
+        self.explicit_call_type_arguments[argument] = self.resolve_syntax(
+          body.declaration,
+          self.collected.explicit_call_type_arguments[argument],
+          any_type_name,
+        )
+      }
+    }
+  }
+  for lambda in self.collected.lambdas {
+    let owner = self.collected.bodies[semantic_id_local(lambda.root_body)].declaration
+    for
+      expression in lambda.body.expressions.start..<(lambda.body.expressions.start +
+      lambda.body.expressions.length) {
+      if expression >= self.collected.explicit_call_type_argument_spans.length() {
+        continue
+      }
+      let explicit = self.collected.explicit_call_type_argument_spans[expression]
+      for argument in explicit.start..<(explicit.start + explicit.length) {
+        self.explicit_call_type_arguments[argument] = self.resolve_syntax(
+          owner,
+          self.collected.explicit_call_type_arguments[argument],
+          any_type_name,
+        )
+      }
+    }
+  }
   for index, field in self.collected.fields {
     self.field_types[index] = self.resolve_syntax(
       field.declaration,
@@ -1036,6 +1076,7 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
     lambda_parameter_types: self.lambda_parameter_types,
     lambda_return_types: self.lambda_return_types,
     lambda_function_types: self.lambda_function_types,
+    explicit_call_type_arguments: self.explicit_call_type_arguments,
     field_types: self.field_types,
     variant_payloads: self.variant_payloads,
     signature_type_lists: self.signature_type_lists,

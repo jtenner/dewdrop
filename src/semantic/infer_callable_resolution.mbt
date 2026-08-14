@@ -149,6 +149,84 @@ fn BasicBodyInferencer::call_result_type(
 }
 
 ///|
+fn BasicBodyInferencer::call_result_is_never(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+) -> Bool {
+  if !self.callable_exists(declaration) {
+    return false
+  }
+  self.resolved.types[self.call_result_type(declaration)]
+  is PrimitiveType(NeverType)
+}
+
+///|
+fn BasicBodyInferencer::direct_call_is_declared_never(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+) -> Bool {
+  let target = match self.collected.expressions[expression] {
+    HirCallExpr(target, _, _) => target
+    _ => return false
+  }
+  match self.collected.expressions[target] {
+    HirNameExpr(name, _) =>
+      match self.collected.value_bindings.get(name) {
+        Some(binding) => {
+          let mut cursor = binding.head
+          let mut found = false
+          while cursor >= 0 {
+            let candidate = self.collected.value_binding_candidates[cursor]
+            if self.declaration_visible(candidate.declaration) {
+              if !self.call_result_is_never(candidate.declaration) {
+                return false
+              }
+              found = true
+            }
+            cursor = candidate.next
+          }
+          found
+        }
+        None =>
+          match self.names.expression_references[target] {
+            ImportedValueNameReference(head) =>
+              match self.imports {
+                Some(imports) => {
+                  let mut cursor = head
+                  let mut found = false
+                  while cursor >= 0 {
+                    let declaration = imports.callables[cursor].declaration
+                    if !self.call_result_is_never(declaration) {
+                      return false
+                    }
+                    found = true
+                    cursor = imports.scope.callable_references[cursor].next
+                  }
+                  found
+                }
+                None => false
+              }
+            _ => false
+          }
+      }
+    _ => false
+  }
+}
+
+///|
+fn BasicBodyInferencer::call_function_type(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+) -> ResolvedTypeId {
+  let local_index = self.callable_index_of(declaration)
+  if local_index >= 0 {
+    self.resolved.callable_function_types[local_index]
+  } else {
+    self.imported_callable_of(declaration).unwrap().function_type
+  }
+}
+
+///|
 fn BasicBodyInferencer::call_generic_count(
   self : BasicBodyInferencer,
   declaration : DeclId,
@@ -164,12 +242,80 @@ fn BasicBodyInferencer::call_generic_count(
 }
 
 ///|
+fn BasicBodyInferencer::explicit_call_type_arguments(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+) -> HirSpan {
+  if expression < 0 ||
+    expression >= self.collected.explicit_call_type_argument_spans.length() {
+    { start: 0, length: 0 }
+  } else {
+    self.collected.explicit_call_type_argument_spans[expression]
+  }
+}
+
+///|
+fn BasicBodyInferencer::apply_explicit_call_type_arguments(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  candidate_start : Int,
+  candidate_count : Int,
+) -> Bool {
+  let explicit = self.explicit_call_type_arguments(expression)
+  if explicit.length == 0 {
+    return true
+  }
+  if explicit.length != candidate_count {
+    return false
+  }
+  for index in 0..<candidate_count {
+    self.call_scratch.candidate_type_arguments[candidate_start + index] = self.solver.resolved_type(
+      self.resolved.explicit_call_type_arguments[explicit.start + index],
+    )
+  }
+  true
+}
+
+///|
 fn BasicBodyInferencer::call_arity_matches(
   self : BasicBodyInferencer,
   declaration : DeclId,
   arguments : HirSpan,
 ) -> Bool {
   self.call_parameter_count(declaration) == arguments.length
+}
+
+///|
+fn BasicBodyInferencer::explicit_call_type_arity_matches(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  declaration : DeclId,
+) -> Bool {
+  let explicit = self.explicit_call_type_arguments(expression)
+  explicit.length == 0 ||
+  explicit.length == self.call_generic_count(declaration)
+}
+
+///|
+fn BasicBodyInferencer::diagnose_call_type_arity(
+  self : BasicBodyInferencer,
+  call_slot : Int,
+  expression : ExprId,
+  declaration : DeclId,
+  offset : UInt64,
+) -> Unit {
+  let explicit = self.explicit_call_type_arguments(expression)
+  self.call_targets[call_slot] = ErrorInferredCallTarget
+  self.poison_expression(expression)
+  self.diagnose(
+    CallTypeArgumentCountMismatch(
+      expression,
+      declaration,
+      self.call_generic_count(declaration),
+      explicit.length,
+      offset,
+    ),
+  )
 }
 
 ///|
@@ -364,6 +510,13 @@ fn BasicBodyInferencer::select_call_candidate(
     abort("selected call is not callable")
   }
   self.begin_call_candidate(declaration)
+  guard self.apply_explicit_call_type_arguments(
+    expression,
+    0,
+    self.call_scratch.candidate_type_arguments.length(),
+  ) else {
+    abort("selected call has mismatched explicit type argument count")
+  }
   let origin = call_type_origin(expression, offset)
   let parameter_types : Array[BodyTypeId] = []
   for index in 0..<arguments.length {
@@ -527,6 +680,12 @@ fn BasicBodyInferencer::prepare_imported_value_call(
               offset,
             ),
           )
+        } else if !self.explicit_call_type_arity_matches(
+            expression, declaration,
+          ) {
+          self.diagnose_call_type_arity(
+            call_slot, expression, declaration, offset,
+          )
         } else {
           self.select_call_candidate(
             call_slot, expression, arguments, declaration, offset,
@@ -577,6 +736,12 @@ fn BasicBodyInferencer::prepare_call(
                       arguments.length,
                       offset,
                     ),
+                  )
+                } else if !self.explicit_call_type_arity_matches(
+                    expression, declaration,
+                  ) {
+                  self.diagnose_call_type_arity(
+                    call_slot, expression, declaration, offset,
                   )
                 } else {
                   self.select_call_candidate(
@@ -798,34 +963,79 @@ fn BasicBodyInferencer::trial_overload(
       }
     _ => abort("overload trial reference is not a value binding")
   }
-  let mut previous_generic_count = -1
-  while true {
-    let mut next_generic_count = 0x7fffffff
-    for declaration in self.call_scratch.overload_candidates {
-      let generic_count = self.call_generic_count(declaration)
-      if generic_count > previous_generic_count &&
-        generic_count < next_generic_count {
-        next_generic_count = generic_count
+  self.call_scratch.overload_viable_candidates.clear()
+  for declaration in self.call_scratch.overload_candidates {
+    if self.call_generic_count(declaration) == 0 &&
+      self.try_call_candidate(expression, arguments, declaration, offset) {
+      self.call_scratch.overload_viable_candidates.push(declaration)
+    }
+  }
+  if self.call_scratch.overload_viable_candidates.length() > 0 {
+    self.retain_structurally_maximal_overloads()
+    return
+  }
+  for declaration in self.call_scratch.overload_candidates {
+    if self.call_generic_count(declaration) > 0 &&
+      self.try_call_candidate(expression, arguments, declaration, offset) {
+      self.call_scratch.overload_viable_candidates.push(declaration)
+    }
+  }
+  self.retain_structurally_maximal_overloads()
+}
+
+///|
+fn BasicBodyInferencer::call_pattern_matches(
+  self : BasicBodyInferencer,
+  general : DeclId,
+  specific : DeclId,
+) -> Bool {
+  let snapshot = self.solver.snapshot()
+  self.begin_call_candidate(general)
+  let general_type = self.instantiate_signature_type(
+    self.call_function_type(general),
+  )
+  let matches = self.solver.unify(
+    general_type,
+    self.solver.resolved_type(self.call_function_type(specific)),
+    synthetic_type_origin(-1, 0UL),
+  )
+  self.solver.rollback(snapshot)
+  matches
+}
+
+///|
+fn BasicBodyInferencer::retain_structurally_maximal_overloads(
+  self : BasicBodyInferencer,
+) -> Unit {
+  self.call_scratch.overload_maximal_candidates.clear()
+  for candidate in self.call_scratch.overload_viable_candidates {
+    let mut dominated = false
+    for other in self.call_scratch.overload_viable_candidates {
+      if candidate == other {
+        continue
+      }
+      if self.call_pattern_matches(candidate, other) &&
+        !self.call_pattern_matches(other, candidate) {
+        dominated = true
+        break
       }
     }
-    if next_generic_count == 0x7fffffff {
-      return
+    if !dominated {
+      self.call_scratch.overload_maximal_candidates.push(candidate)
     }
-    for declaration in self.call_scratch.overload_candidates {
-      if self.call_generic_count(declaration) == next_generic_count &&
-        self.try_call_candidate(expression, arguments, declaration, offset) {
-        self.call_scratch.trial_viable_count += 1
-        if self.call_scratch.trial_viable_count == 1 {
-          self.call_scratch.trial_first_declaration = declaration
-        } else if self.call_scratch.trial_viable_count == 2 {
-          self.call_scratch.trial_second_declaration = declaration
-        }
-      }
-    }
-    if self.call_scratch.trial_viable_count > 0 {
-      return
-    }
-    previous_generic_count = next_generic_count
+  }
+  self.call_scratch.trial_viable_count = self.call_scratch.overload_maximal_candidates.length()
+  self.call_scratch.trial_first_declaration = if self.call_scratch.trial_viable_count >
+    0 {
+    self.call_scratch.overload_maximal_candidates[0]
+  } else {
+    0UL
+  }
+  self.call_scratch.trial_second_declaration = if self.call_scratch.trial_viable_count >
+    1 {
+    self.call_scratch.overload_maximal_candidates[1]
+  } else {
+    0UL
   }
 }
 

@@ -172,6 +172,41 @@ test "trait and impl signatures resolve parent generic and Self scopes" {
 }
 
 ///|
+test "trait method generics resolve before enclosing trait generics" {
+  let collected = collect_bytes(
+    58UL, b"trait Convert<t> {\n  fn keep<t>(self, value: t) -> t\n  fn outer(self, value: t) -> t\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  assert_eq(resolved.diagnostics.length(), 0)
+  let inner = collected.generic_parameters_of(collected.methods[0].id)
+  let outer = collected.generic_parameters_of(collected.declarations[0].id)
+  assert_eq(inner.length, 1)
+  assert_eq(outer.length, 1)
+  assert_true(
+    collected.generic_parameters[inner.start].id !=
+    collected.generic_parameters[outer.start].id,
+  )
+  let keep_parameters = collected.parameters_of(collected.methods[0].id)
+  assert_eq(
+    resolved.parameter_types[keep_parameters.start + 1],
+    resolved.generic_parameter_types[inner.start],
+  )
+  assert_eq(
+    resolved.callable_return_types[0],
+    resolved.generic_parameter_types[inner.start],
+  )
+  let outer_parameters = collected.parameters_of(collected.methods[1].id)
+  assert_eq(
+    resolved.parameter_types[outer_parameters.start + 1],
+    resolved.generic_parameter_types[outer.start],
+  )
+  assert_eq(
+    resolved.callable_return_types[1],
+    resolved.generic_parameter_types[outer.start],
+  )
+}
+
+///|
 test "top-level shorthand self has no implicit Self context" {
   let collected = collect_bytes(43UL, b"fn invalid(self) -> Unit {}\n")
   let resolved = resolve_module_types(collected)

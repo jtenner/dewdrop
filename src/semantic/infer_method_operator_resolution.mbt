@@ -88,6 +88,25 @@ fn BasicBodyInferencer::begin_method_candidate(
 }
 
 ///|
+fn BasicBodyInferencer::apply_explicit_method_type_arguments(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  implementation_index : Int,
+  declaration : DeclId,
+) -> Bool {
+  let owner_count = self.implementation_generic_parameters(
+      self.impl_index.implementations[implementation_index].declaration,
+    ).length
+  let method_count = if semantic_id_module(declaration) ==
+    self.collected.module_id {
+    self.collected.generic_parameters_of(declaration).length
+  } else {
+    self.call_generic_count(declaration)
+  }
+  self.apply_explicit_call_type_arguments(expression, owner_count, method_count)
+}
+
+///|
 fn BasicBodyInferencer::try_method_candidate(
   self : BasicBodyInferencer,
   expression : ExprId,
@@ -108,6 +127,12 @@ fn BasicBodyInferencer::try_method_candidate(
   }
   let snapshot = self.solver.snapshot()
   let target = self.begin_method_candidate(implementation_index, declaration)
+  if !self.apply_explicit_method_type_arguments(
+      expression, implementation_index, declaration,
+    ) {
+    self.solver.rollback(snapshot)
+    return false
+  }
   let origin = call_type_origin(expression, offset)
   let mut viable = self.solver.unify(
     self.expression_type(receiver),
@@ -165,6 +190,11 @@ fn BasicBodyInferencer::select_method_candidate(
   offset : UInt64,
 ) -> Unit {
   let target = self.begin_method_candidate(implementation_index, declaration)
+  guard self.apply_explicit_method_type_arguments(
+    expression, implementation_index, declaration,
+  ) else {
+    abort("selected method has mismatched explicit type argument count")
+  }
   let origin = call_type_origin(expression, offset)
   self.constrain(self.expression_type(receiver), target, origin)
   self.constrain(
@@ -1148,6 +1178,17 @@ fn BasicBodyInferencer::select_declared_bound_method(
   }
   let receiver_type = self.expression_type(receiver)
   self.begin_declared_body_trait_evidence(selected, receiver_type)
+  let method_count = self.call_generic_count(declaration)
+  if !self.apply_explicit_call_type_arguments(
+      expression,
+      self.call_scratch.candidate_type_arguments.length() - method_count,
+      method_count,
+    ) {
+    self.call_targets[call_slot] = ErrorInferredCallTarget
+    self.poison_expression(expression)
+    self.diagnose(NoMatchingMethod(name, expression, offset))
+    return true
+  }
   let origin = call_type_origin(expression, offset)
   self.constrain(
     receiver_type,
@@ -1435,6 +1476,12 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
   }
   let snapshot = self.solver.snapshot()
   self.begin_method_candidate(implementation_index, declaration) |> ignore
+  if !self.apply_explicit_method_type_arguments(
+      expression, implementation_index, declaration,
+    ) {
+    self.solver.rollback(snapshot)
+    return false
+  }
   let origin = call_type_origin(expression, offset)
   let mut viable = true
   let mut index = 0
@@ -1477,6 +1524,13 @@ fn BasicBodyInferencer::select_qualified_method_candidate(
   offset : UInt64,
 ) -> Unit {
   self.begin_method_candidate(implementation_index, declaration) |> ignore
+  guard self.apply_explicit_method_type_arguments(
+    expression, implementation_index, declaration,
+  ) else {
+    abort(
+      "selected qualified method has mismatched explicit type argument count",
+    )
+  }
   let origin = call_type_origin(expression, offset)
   for index in 0..<arguments.length {
     self.constrain_assignable(
@@ -2172,6 +2226,14 @@ fn BasicBodyInferencer::try_call_candidate(
   }
   let snapshot = self.solver.snapshot()
   self.begin_call_candidate(declaration)
+  if !self.apply_explicit_call_type_arguments(
+      expression,
+      0,
+      self.call_scratch.candidate_type_arguments.length(),
+    ) {
+    self.solver.rollback(snapshot)
+    return false
+  }
   let origin = call_type_origin(expression, offset)
   let parameter_types : Array[BodyTypeId] = []
   for index in 0..<arguments.length {

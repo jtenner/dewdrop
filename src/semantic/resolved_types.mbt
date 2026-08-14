@@ -200,6 +200,7 @@ pub struct ResolvedModuleTypes {
   lambda_parameter_types : Array[ResolvedTypeId]
   lambda_return_types : Array[ResolvedTypeId]
   lambda_function_types : Array[ResolvedTypeId]
+  explicit_call_type_arguments : Array[ResolvedTypeId]
   field_types : Array[ResolvedTypeId]
   variant_payloads : Array[HirSpan]
   signature_type_lists : Array[ResolvedTypeId]

@@ -52,7 +52,7 @@ Body inference now reads the source-ordered builtin candidate chain retained by 
 
 Each candidate receives fresh call-local variables for its generic parameters. Parameter and return signatures are substituted iteratively through canonical applied types, and both argument types and the call's expected result type participate in selection. A unique winner records its exact `DeclId` and zonked inferred generic arguments in `InferredModuleBodies`.
 
-Candidates are currently tried in ascending declared-generic-count tiers. A viable concrete candidate therefore outranks generic fallbacks, while a less-specific tier is considered only when every more-specific tier fails. Equally ranked viable candidates are ambiguous. Full structural match-set containment between generic signatures remains future work.
+A viable concrete candidate is trialed before generic fallbacks. When no concrete candidate succeeds, viable generic signatures are ordered by strict structural match-set containment over complete parameter and result types. The unique undominated candidate wins; alpha-equivalent and overlapping-incomparable maxima remain ambiguous.
 
 Nested overloaded calls use an iterative retry worklist. Candidate trials are repeated only after another call commits constraints that may distinguish the deferred overload. Details and benchmarks are in `docs/research/direct-generic-overload-call-inference.md`.
 

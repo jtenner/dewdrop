@@ -154,6 +154,84 @@ test "method-local generics instantiate freshly after impl generics" {
 }
 
 ///|
+test "trait method generics dispatch through matching implementation methods" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    721UL, b"trait Convert {\n  fn keep<t>(self, value: t) -> t\n}\nstruct Item {}\nimpl Convert for Item {\n  fn keep<t>(self, value: t) -> t {\n    value\n  }\n}\nfn use(item: Item) -> I32 {\n  item.keep(42)\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let requirement_generics = collected.generic_parameters_of(
+    collected.methods[0].id,
+  )
+  let implementation_generics = collected.generic_parameters_of(
+    collected.methods[1].id,
+  )
+  assert_eq(requirement_generics.length, 1)
+  assert_eq(implementation_generics.length, 1)
+  let calls = body_calls(collected, collected.bodies[1])
+  match inferred.call_targets[calls[0]] {
+    SelectedInferredCallTarget(declaration, arguments) => {
+      assert_eq(declaration, collected.methods[1].id)
+      assert_eq(arguments.length, 1)
+      assert_call_primitive(
+        inferred,
+        resolved,
+        inferred.call_type_arguments[arguments.start],
+        I32Type,
+      )
+    }
+    _ => fail("expected generic trait implementation method")
+  }
+}
+
+///|
+test "trait method generic bounds constrain static calls" {
+  let (_, _, _, accepted) = call_test_module(
+    722UL, b"trait Mark {}\nimpl Mark for I32 {}\ntrait Convert {\n  fn keep<t: Mark>(self, value: t) -> t\n}\nstruct Item {}\nimpl Convert for Item {\n  fn keep<t: Mark>(self, value: t) -> t {\n    value\n  }\n}\nfn use(item: Item) -> I32 {\n  item.keep(42)\n}\n",
+  )
+  assert_eq(accepted.impl_index.diagnostics.length(), 0)
+  assert_eq(accepted.diagnostics.length(), 0)
+  let (_, _, _, rejected) = call_test_module(
+    723UL, b"trait Mark {}\ntrait Convert {\n  fn keep<t: Mark>(self, value: t) -> t\n}\nstruct Item {}\nimpl Convert for Item {\n  fn keep<t: Mark>(self, value: t) -> t {\n    value\n  }\n}\nfn use(item: Item) -> Bool {\n  item.keep(true)\n}\n",
+  )
+  let mut unsatisfied = 0
+  for diagnostic in rejected.diagnostics {
+    match diagnostic {
+      NoMatchingMethod(_, _, _) | UnsatisfiedTraitObligation(_, _, _, _, _) =>
+        unsatisfied += 1
+      _ => ()
+    }
+  }
+  assert_eq(unsatisfied, 1)
+}
+
+///|
+test "explicit type arguments specialize inherent and trait methods" {
+  let (collected, resolved, _, inferred) = call_test_module(
+    724UL, b"trait Factory {\n  fn make<t>(self) -> I32\n}\nstruct Item {}\nimpl Factory for Item {\n  fn make<t>(self) -> I32 {\n    1\n  }\n}\nimpl Item {\n  fn inherent<t>(self) -> I32 {\n    2\n  }\n}\nfn use(item: Item) -> I32 {\n  item.make::<Bool>() + item.inherent::<I64>()\n}\n",
+  )
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let calls = body_calls(collected, collected.bodies[2])
+  assert_eq(calls.length(), 2)
+  let expected = [BoolType, I64Type]
+  for index in 0..<calls.length() {
+    match inferred.call_targets[calls[index]] {
+      SelectedInferredCallTarget(_, arguments) => {
+        assert_eq(arguments.length, 1)
+        assert_call_primitive(
+          inferred,
+          resolved,
+          inferred.call_type_arguments[arguments.start],
+          expected[index],
+        )
+      }
+      _ => fail("expected explicitly specialized method")
+    }
+  }
+}
+
+///|
 test "trait methods dispatch statically through coherent impl evidence" {
   let (collected, _, _, inferred) = call_test_module(
     703UL, b"trait Show {\n  fn show(self) -> String\n}\nstruct Item {}\nimpl Show for Item {\n  fn show(self) -> String {\n    \"item\"\n  }\n}\nfn use(item: Item) -> String {\n  item.show()\n}\n",
@@ -394,6 +472,32 @@ test "generic trait coercion evidence is deterministic across body schedules" {
     collected, resolved, names, reverse_order,
   )
   assert_eq(forward, reverse)
+}
+
+///|
+test "runtime trait calls reject method-generic requirements while static calls work" {
+  let (collected, _, _, inferred) = call_test_module(
+    725UL, b"trait Factory {\n  fn make<t>(self, value: t) -> I32\n}\nstruct Item {}\nimpl Factory for Item {\n  fn make<t>(self, value: t) -> I32 {\n    42\n  }\n}\nfn dynamic(value: Factory) -> I32 {\n  value.make(1)\n}\nfn static(value: Item) -> I32 {\n  value.make(1)\n}\n",
+  )
+  let dynamic_calls = body_calls(collected, collected.bodies[1])
+  assert_eq(inferred.call_targets[dynamic_calls[0]], ErrorInferredCallTarget)
+  let static_calls = body_calls(collected, collected.bodies[2])
+  match inferred.call_targets[static_calls[0]] {
+    SelectedInferredCallTarget(declaration, arguments) => {
+      assert_eq(declaration, collected.methods[1].id)
+      assert_eq(arguments.length, 1)
+    }
+    _ => fail("expected static method-generic dispatch")
+  }
+  let mut missing = 0
+  for diagnostic in inferred.diagnostics {
+    match diagnostic {
+      NoMatchingMethod(_, expression, _) if expression == dynamic_calls[0] =>
+        missing += 1
+      _ => ()
+    }
+  }
+  assert_eq(missing, 1)
 }
 
 ///|

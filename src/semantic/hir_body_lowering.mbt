@@ -84,6 +84,7 @@ fn CollectionBuilder::emit_expr(
   let id = self.expressions.length()
   self.expressions.push(expression)
   self.expression_files.push(self.current_file)
+  self.explicit_call_type_argument_spans.push({ start: 0, length: 0 })
   self.body_expr_results.push(id)
   id
 }
@@ -254,7 +255,8 @@ fn CollectionBuilder::visit_expr_source(
       self.schedule_expr(right)
       self.schedule_expr(left)
     }
-    @parser.CallExpr(target, arguments, _) => {
+    @parser.CallExpr(target, arguments, _)
+    | @parser.ExplicitTypeCallExpr(target, _, arguments, _) => {
       let start = self.body_expr_results.length()
       self.push_body_task(body_finish_expr, source_index, start, 0)
       let mut index = arguments.length()
@@ -358,7 +360,8 @@ fn CollectionBuilder::finish_expr_source(
         self.body_expr_results[first_start + 1],
         offset,
       )
-    @parser.CallExpr(_, arguments, offset) => {
+    @parser.CallExpr(_, arguments, offset)
+    | @parser.ExplicitTypeCallExpr(_, _, arguments, offset) => {
       let target = self.body_expr_results[first_start]
       let argument_start = self.expression_children.length()
       for index in 0..<arguments.length() {
@@ -393,7 +396,20 @@ fn CollectionBuilder::finish_expr_source(
     _ => abort("invalid expression finish task")
   }
   self.body_expr_results.truncate(first_start)
-  ignore(self.emit_expr(expression))
+  let expression_id = self.emit_expr(expression)
+  match source {
+    @parser.ExplicitTypeCallExpr(_, type_arguments, _, _) => {
+      let start = self.explicit_call_type_arguments.length()
+      for type_ in type_arguments {
+        self.explicit_call_type_arguments.push(self.lower_type(type_))
+      }
+      self.explicit_call_type_argument_spans[expression_id] = {
+        start,
+        length: self.explicit_call_type_arguments.length() - start,
+      }
+    }
+    _ => ()
+  }
 }
 
 ///|

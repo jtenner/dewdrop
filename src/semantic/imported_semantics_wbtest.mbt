@@ -97,6 +97,37 @@ test "imported generic function calls select external declaration evidence" {
 }
 
 ///|
+test "imported explicit calls and trait method generics retain exact arguments" {
+  let (program, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn run(item: Item) -> I32 {\n  phantom::<Bool>() + item.keep::<I32>(41)\n}\n",
+    b"pub fn phantom<t>() -> I32 {\n  1\n}\npub trait Keep {\n  fn keep<t>(self, value: t) -> t\n}\npub struct Item {}\nimpl Keep for Item {\n  fn keep<t>(self, value: t) -> t {\n    value\n  }\n}\n",
+  )
+  assert_eq(frozen.import_diagnostics.length(), 0)
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.impl_index.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let collected = program.modules[0]
+  let body = collected.body_of(collected.lookup_value("run").unwrap()).unwrap()
+  let calls = body_calls(collected, body)
+  assert_eq(calls.length(), 2)
+  let expected = [BoolType, I32Type]
+  for index in 0..<calls.length() {
+    match inferred.call_targets[calls[index]] {
+      SelectedInferredCallTarget(_, arguments) => {
+        assert_eq(arguments.length, 1)
+        assert_call_primitive(
+          inferred,
+          frozen.interfaces[0].resolved_types,
+          inferred.call_type_arguments[arguments.start],
+          expected[index],
+        )
+      }
+      _ => fail("expected imported explicit generic selection")
+    }
+  }
+}
+
+///|
 test "bare imported enum patterns infer from the expected type" {
   let (_, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn read(value: OptionI32) -> I32 {\n  match value {\n    None => 0\n    Some(item) => item\n    Named {\n      value\n    } => value\n  }\n}\n",

@@ -17,7 +17,7 @@ The implemented call layer supports:
 - expected-result-type participation in overload selection;
 - rollback-based speculative candidate checking;
 - exact non-generic preference over generic candidates;
-- provisional generic specificity tiers;
+- structural generic match-set specificity;
 - iterative retry of nested overload obligations;
 - selected declaration and instantiated type-argument output;
 - ambiguity, no-match, invalid-target, and unresolved-generic diagnostics;
@@ -226,24 +226,13 @@ A losing candidate therefore cannot leak constraints or diagnostics into the bod
 
 If exactly one candidate remains, that signature is instantiated again outside speculation and committed to the body solver.
 
-## Specificity tiers
+## Structural specificity
 
-The implemented first ordering rule is:
+Every arity-compatible candidate is trialed under solver rollback. Viable candidates are then compared by directional structural matching over their complete function types, including nested parameters and results. Candidate `A` is strictly narrower than `B` when `B` can instantiate to `A` but `A` cannot instantiate to `B`.
 
-> A viable candidate with fewer declared generic parameters outranks a viable candidate with more declared generic parameters.
+The unique undominated candidate wins. This preserves concrete-over-generic behavior while handling equal-generic-count cases such as `Box<Box<t>>` versus `Box<t>`, and it permits an expected nested result type to select an otherwise argument-free overload. Declaration order does not affect the winner. Alpha-equivalent signatures and overlapping-incomparable signatures remain ambiguous.
 
-Therefore a concrete candidate has tier zero and outranks a generic fallback.
-
-Candidates are tried one specificity tier at a time:
-
-1. Find the smallest generic-parameter count not tried yet
-2. Trial only candidates in that tier
-3. Stop immediately if that tier has any viable candidates
-4. Continue to the next less-specific tier only if none were viable
-
-This matters for both semantics and performance. A viable exact candidate prevents speculative instantiation of every generic fallback.
-
-This is a partial implementation of the broader structural-specificity decision. Full generic/generic strict match-set containment remains future work. Candidates with the same current tier and no unique winner are ambiguous.
+Pairwise containment checks reuse the body-local solver under snapshots. They allocate only rollback-scoped variables and applications, never mutate `ResolvedModuleTypes`, and cannot leak diagnostics.
 
 ## Iterative overload worklist
 
@@ -349,8 +338,8 @@ The optimization sequence was:
 2. Retain per-body call results sparsely and populate the module-aligned table only during merge.
 3. Reuse one call-instantiation and candidate-trial scratch arena per worker across body jobs.
 4. Preserve generation-marked signature-instantiation caches across jobs without reusing stale term IDs.
-5. Trial overloads by specificity tier and stop after the first tier with viable candidates.
-6. Skip all generic fallback trials after a viable exact candidate.
+5. Retain every viable candidate under rollback.
+6. Compute deterministic undominated maxima by directional structural signature matching.
 
 The worker-scratch change also restored no-call inference performance from a temporary 392.23 us regression to 346.71 us for the existing 256-function basic workload, effectively returning to the pre-call 347.50 us baseline.
 
@@ -391,7 +380,9 @@ Call inference tests cover:
 - argument-driven overload selection;
 - expected-result-driven overload selection;
 - exact-over-generic preference;
-- fallback to a generic tier when the exact tier has no viable candidate;
+- strict nested generic/generic containment independent of declaration order;
+- result-type structural specificity;
+- equivalent and overlapping-incomparable ambiguity;
 - nested overload worklist retries;
 - no-match diagnostics;
 - ambiguity diagnostics with stable declaration identities;
@@ -407,6 +398,6 @@ Call inference tests cover:
 
 Expected-type enum/pattern inference, matches and functional loops, members,
 qualified calls, operator and trait obligations, imported callable/value types,
-and executable generic evidence are implemented by later phases. Full
-generic/generic structural match-set specificity, explicit type arguments, and
-optional arguments remain open in `docs/roadmap.md`.
+executable generic evidence, structural overload specificity, and exact
+`turbofish` call-site type arguments are implemented by later tranches. Optional
+arguments remain open in `docs/roadmap.md`.

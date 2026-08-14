@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:9:4: error: DuplicateName(\n  {\n    space: ModuleValue,\n    name: 3,\n    first: 12884901888001,\n    duplicate: 12884901888002,\n    first_file: 12884901888256,\n    duplicate_file: 12884901888256,\n    first_offset: 33,\n    duplicate_offset: 75,\n  },\n)\n  |\n9 | fn pick<t>(value: Box<Box<t>>) -> I32 {\n  |    ^\n  = fixture.dew:5:4: first declaration is here"
+  ],
+  "warnings": [],
+  "output": null
+}

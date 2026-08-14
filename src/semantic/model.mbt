@@ -270,6 +270,8 @@ pub struct CollectedModule {
   expressions : Array[HirExpr]
   expression_files : Array[FileId]
   expression_children : Array[ExprId]
+  explicit_call_type_argument_spans : Array[HirSpan]
+  explicit_call_type_arguments : Array[HirTypeId]
   blocks : Array[HirBlock]
   block_files : Array[FileId]
   block_items : Array[HirBlockItem]
