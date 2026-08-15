@@ -161,7 +161,7 @@ pub enum InferredExpressionSelection {
   StructConstructionSelection(DeclId, HirSpan)
   VariantConstructionSelection(VariantId, HirSpan)
   UnitVariantValueSelection(VariantId, HirSpan)
-  FieldAccessSelection(FieldId)
+  FieldAccessSelection(FieldId, Bool)
   ImportedModuleValueSelection(DeclId)
   FunctionReferenceSelection(DeclId, HirSpan)
 } derive(Eq, Debug, ToJson, FromJson)

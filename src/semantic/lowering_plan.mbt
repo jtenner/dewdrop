@@ -182,7 +182,8 @@ pub enum PlannedExpressionKind {
   PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
   PlannedDynamicTraitCall(DeclId, DeclId, Int, ExprId, HirSpan, HirSpan)
-  PlannedFieldGet(FieldId, ExprId)
+  PlannedFieldGet(FieldId, ExprId, Bool)
+  PlannedFieldSet(FieldId, ExprId, ExprId)
 } derive(Eq, Debug)
 
 ///|
@@ -686,9 +687,10 @@ fn plan_expression_kind(
       }
     UnitVariantValueSelection(variant, type_arguments) =>
       return PlannedUnitVariant(variant, type_arguments)
-    FieldAccessSelection(field) =>
+    FieldAccessSelection(field, mutable_) =>
       match collected.expressions[expression] {
-        HirFieldExpr(base, _, _) => return PlannedFieldGet(field, base)
+        HirFieldExpr(base, _, _) =>
+          return PlannedFieldGet(field, base, mutable_)
         _ => return PlannedPoisonExpression
       }
     ImportedModuleValueSelection(declaration) =>
@@ -719,10 +721,20 @@ fn plan_expression_kind(
     HirStringExpr(value, _) => PlannedStringConst(value)
     HirBytesExpr(value, _) => PlannedBytesConst(value)
     HirAssignmentExpr(target, value, _) =>
-      match names.expression_references[target] {
-        LocalNameReference(local_id) => PlannedLocalSet(local_id, value)
-        LambdaCaptureNameReference(capture) => PlannedCaptureSet(capture, value)
-        _ => PlannedPoisonExpression
+      match collected.expressions[target] {
+        HirFieldExpr(base, _, _) =>
+          match inferred.expression_selections[target] {
+            FieldAccessSelection(field, _) =>
+              PlannedFieldSet(field, base, value)
+            _ => PlannedPoisonExpression
+          }
+        _ =>
+          match names.expression_references[target] {
+            LocalNameReference(local_id) => PlannedLocalSet(local_id, value)
+            LambdaCaptureNameReference(capture) =>
+              PlannedCaptureSet(capture, value)
+            _ => PlannedPoisonExpression
+          }
       }
     HirNameExpr(_, _) =>
       match names.expression_references[expression] {

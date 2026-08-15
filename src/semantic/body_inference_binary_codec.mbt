@@ -1544,9 +1544,10 @@ fn ib_write_selection(
       ib_write_id(writer, d)
       ib_write_span(writer, s)
     }
-    FieldAccessSelection(d) => {
+    FieldAccessSelection(d, mutable_) => {
       writer.write_byte(5)
       ib_write_id(writer, d)
+      writer.write_bool(mutable_)
     }
     ImportedModuleValueSelection(d) => {
       writer.write_byte(6)
@@ -1583,7 +1584,11 @@ fn ib_read_selection(
         ib_read_id(reader, field),
         ib_read_span(reader, field),
       )
-    5 => FieldAccessSelection(ib_read_id(reader, field))
+    5 =>
+      FieldAccessSelection(
+        ib_read_id(reader, field),
+        reader.read_bool(field + ".mutable"),
+      )
     6 => ImportedModuleValueSelection(ib_read_id(reader, field))
     7 =>
       FunctionReferenceSelection(

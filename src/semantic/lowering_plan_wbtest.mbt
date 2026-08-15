@@ -65,6 +65,27 @@ test "lowering plans freeze exact direct and method call targets" {
 }
 
 ///|
+test "lowering freezes mutable field writes" {
+  let (collected, _, _, _, _, planned) = lowering_test_module(
+    913UL, b"struct Box<t> {\n  mut value: t\n}\nfn write(box: Box<I32>, value: I32) -> Unit {\n  box.value = value\n}\n",
+  )
+  assert_eq(planned.diagnostics.length(), 0)
+  let mut field_set = 0
+  for expression in planned.expressions {
+    match expression.kind {
+      PlannedFieldSet(field, base, value) => {
+        field_set += 1
+        assert_eq(field, collected.fields[0].id)
+        assert_true(base >= 0)
+        assert_true(value >= 0)
+      }
+      _ => ()
+    }
+  }
+  assert_eq(field_set, 1)
+}
+
+///|
 test "lowering freezes runtime trait coercions and dynamic slots" {
   let (collected, _, _, _, _, planned) = lowering_test_module(
     907UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Item {}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    42\n  }\n}\nfn invoke(value: Read) -> I32 {\n  value.read()\n}\nfn use() -> I32 {\n  invoke(Item::{})\n}\n",
@@ -139,14 +160,15 @@ test "lowering plans freeze constructors fields locals and block items" {
     body.expressions.length) {
     match planned.expressions[expression].kind {
       PlannedStructNew(_, _, _) => construction = expression
-      PlannedFieldGet(_, _) => field = expression
+      PlannedFieldGet(_, _, _) => field = expression
       _ => ()
     }
   }
   assert_true(construction >= 0)
   assert_true(field >= 0)
   match planned.expressions[field].kind {
-    PlannedFieldGet(field_id, _) => assert_eq(field_id, collected.fields[0].id)
+    PlannedFieldGet(field_id, _, _) =>
+      assert_eq(field_id, collected.fields[0].id)
     _ => fail("expected planned field")
   }
   let block = match body.root {

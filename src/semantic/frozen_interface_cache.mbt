@@ -369,6 +369,7 @@ fn cache_write_interface(
       }
       None => cache_write_bool(output, false)
     }
+    cache_write_bool(output, field.mutable_)
     cache_write_string(output, field.name)
     cache_write_int(output, field.type_)
     cache_write_location(output, field.location)
@@ -839,6 +840,7 @@ fn FrozenInterfaceCacheReader::read_interface(
       field,
       declaration,
       variant,
+      mutable_: self.read_bool(),
       name: self.read_string(),
       type_: self.read_int(),
       location: self.read_location(),

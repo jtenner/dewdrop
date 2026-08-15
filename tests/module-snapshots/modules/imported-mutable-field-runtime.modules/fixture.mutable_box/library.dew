@@ -1,0 +1,9 @@
+pub struct Box<t> {
+  mut value: t
+}
+
+pub fn make_box(value: I32) -> Box<I32> {
+  Box::{
+    value: value
+  }
+}

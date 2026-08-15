@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 14, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
+> Living roadmap as of August 15, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
 
 ## Current baseline
 
@@ -8,7 +8,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 
 - a streaming WTF-8 tokenizer and non-backtracking parser;
 - deterministic multi-file and multi-module collection, diagnostics, frozen interfaces, package manifests, lock records, and dependency SCCs;
-- local and imported types, traits, implementations, generic bounds, evidence-aware specialization, runtime trait values, closures, mutable captures, module state, and recursive physical type groups;
+- local and imported types, traits, implementations, generic bounds, evidence-aware specialization, runtime trait values, closures, mutable captures, alias-visible mutable struct fields, module state, and recursive physical type groups;
 - fixed-width scalar, packed-lane, SIMD, strict UTF-8 text, Bytes, strict bounded JSON, WASI Preview 1, test metadata, and deterministic Starshine validation/encoding;
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
@@ -18,12 +18,22 @@ Dew is an executable, statically linked WasmGC language implementation with:
 
 Suite totals are intentionally not copied into prose. Test runners discover the checked-in suites and print authoritative counts.
 
-## Active priority order
+## Priority policy
 
-1. Add fail-visible compiler work budgets, allocation/peak-memory measurement, and regression thresholds.
-2. Complete package acquisition, reproducible release infrastructure, and the supported WasmGC runtime matrix.
-3. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
-4. Build formatter, documentation, and language-server tooling over lossless/incremental syntax infrastructure.
+### P1 — self-hosting
+
+1. Complete `@alias` lookup across type, trait, constructor, pattern, and static namespaces.
+2. Enforce the `(Self, key) -> value` indexing functional dependency.
+3. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
+4. Replace the compiler's MoonBit Starshine model, validator, and encoder dependencies with Dew-native Wasm construction, validation, and encoding.
+5. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
+6. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
+
+Mutable struct fields were the first P1 language blocker and are complete. Their syntax is `mut name: Type`; writes use `value.name = replacement`, preserve base-before-value evaluation, and are visible through aliases.
+
+### P2 — deferred until self-hosting
+
+All remaining unchecked roadmap work is P2 unless a P1 port exposes it as a concrete blocker. This includes work budgets, package acquisition, TOML, optional arguments, annotations, ordinary Boolean `while`, higher-kinded types, negative implementations, formatter/documentation/LSP work, release infrastructure, and parallel compilation.
 
 Every implementation tranche must preserve deterministic diagnostics and Wasm, include focused tests and documentation, and land as a bounded atomic commit.
 
@@ -119,7 +129,7 @@ deferred until self-hosting.
 - [ ] Add checked, saturating, wrapping, and explicitly truncating conversion families beyond `Into<T>`.
 - [ ] Decide whether ordinary Boolean `while` or a second `loop` form is needed alongside functional loops.
 - [ ] Enforce the `(Self, key) -> value` indexing functional dependency across arrays, maps, and user evidence.
-- [ ] Decide whether mutation extends to aggregate fields; implement field writes only after alias semantics are fixed.
+- [x] Add `mut name: Type` struct fields and `value.name = replacement` block-item writes with base-before-value evaluation, alias-visible mutation, local/imported generic field support, frozen-interface/cache provenance, WasmGC `struct.set`, and conservative optimization barriers.
 - [ ] Define lazy module values only if a concrete initialization use case requires them.
 - [ ] Integrate additional host startup entry points only if explicit `__dew_init` is insufficient.
 

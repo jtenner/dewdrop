@@ -180,7 +180,7 @@ fn body_inference_family_context_digest(
 ) -> Result[FixedArray[Byte], String] {
   let collected = program.modules[module_index]
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_FAMILY_CONTEXT_V2\x00")
+  output.write_bytes(b"DEW_BODY_FAMILY_CONTEXT_V2_MUTABLE_FIELDS\x00")
   let interface_digest = match
     body_inference_interface_digest(frozen, module_index) {
     Ok(value) => value
@@ -268,7 +268,7 @@ fn body_inference_family_cache_keys(
     }
     let source = @crypto.sha256(family_source)
     let key_output = Buffer()
-    key_output.write_bytes(b"DEW_BODY_FAMILY_KEY_V2\x00")
+    key_output.write_bytes(b"DEW_BODY_FAMILY_KEY_V2_MUTABLE_FIELDS\x00")
     key_output.write_byte(if program.default_preamble { 1 } else { 0 })
     interface_cache_write_string(key_output, program.module_paths[module_index])
     body_family_write_u64(key_output, body.id)
@@ -356,7 +356,7 @@ fn body_inference_cache_key_digest(
   interface_ : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V4\x00")
+  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V4_MUTABLE_FIELDS\x00")
   output.write_byte(if program.default_preamble { 1 } else { 0 })
   interface_cache_write_string(output, program.module_paths[module_index])
   for byte in source {
@@ -470,7 +470,9 @@ fn lookup_body_inference_cache(
   let payload = match pack {
     Some(session) if session.enabled => {
       let context_bytes = Buffer()
-      context_bytes.write_bytes(b"DEW_BODY_MODULE_PACK_CONTEXT_V1\x00")
+      context_bytes.write_bytes(
+        b"DEW_BODY_MODULE_PACK_CONTEXT_V1_MUTABLE_FIELDS\x00",
+      )
       for byte in key_digest {
         context_bytes.write_byte(byte)
       }
@@ -546,7 +548,9 @@ fn store_body_inference_cache(
   match pack {
     Some(session) if session.enabled => {
       let context_bytes = Buffer()
-      context_bytes.write_bytes(b"DEW_BODY_MODULE_PACK_CONTEXT_V1\x00")
+      context_bytes.write_bytes(
+        b"DEW_BODY_MODULE_PACK_CONTEXT_V1_MUTABLE_FIELDS\x00",
+      )
       for byte in key_digest {
         context_bytes.write_byte(byte)
       }
@@ -615,7 +619,9 @@ fn lookup_body_inference_family_cache(
           2U,
           "module-family:" + module_path,
           cache_pack_rehash_digest(context),
-          @cache_binary.blake3(b"DEW_BODY_FAMILY_PACK_CONTEXT_V1"),
+          @cache_binary.blake3(
+            b"DEW_BODY_FAMILY_PACK_CONTEXT_V1_MUTABLE_FIELDS",
+          ),
         ) {
         Err(error) => return Err("corrupt compilation cache pack: \{error}")
         Ok(Some(value)) => value
@@ -667,7 +673,7 @@ fn store_body_inference_family_cache(
         1U,
         "module-family:" + module_path,
         cache_pack_rehash_digest(context),
-        @cache_binary.blake3(b"DEW_BODY_FAMILY_PACK_CONTEXT_V1"),
+        @cache_binary.blake3(b"DEW_BODY_FAMILY_PACK_CONTEXT_V1_MUTABLE_FIELDS"),
         payload,
       )
     _ => ()

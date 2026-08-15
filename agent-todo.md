@@ -1,13 +1,21 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 14, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
+> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 15, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
 
-## Current priority order
+## P1 — self-hosting
 
-1. Add fail-visible compiler work budgets and allocation/peak-memory measurement.
-2. Complete package acquisition and reproducible release infrastructure.
-3. Complete bounded typed JSON decoding and TOML, then define reviewed cryptography and HTTP boundaries.
-4. Build formatter, documentation, and language-server tooling over lossless/incremental syntax.
+1. Extend `@alias` lookup through type, trait, enum-constructor, pattern, and static-implementation namespaces.
+2. Enforce the `(Self, key) -> value` indexing functional dependency.
+3. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
+4. Implement Dew-native Wasm construction, validation, and encoding so the compiler no longer depends on MoonBit Starshine packages.
+5. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
+6. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
+
+Mutable struct fields are complete and therefore omitted from this execution-only backlog.
+
+## P2 — deferred until self-hosting
+
+Every unchecked item below is P2 unless the P1 compiler port proves it is a concrete blocker. Package acquisition, work budgets, optional arguments, annotations, ordinary Boolean `while`, higher-kinded types, negative implementations, TOML, formatter/documentation/LSP work, release infrastructure, and parallel compilation remain deferred.
 
 ## Incremental compilation
 
@@ -53,7 +61,6 @@ are follow-up hardening and observability work, not release blockers.
 - [ ] Add checked, saturating, wrapping, and explicit truncating conversions.
 - [ ] Decide ordinary Boolean `while` and a second `loop` form.
 - [ ] Enforce the `(Self, key) -> value` indexing functional dependency.
-- [ ] Decide aggregate field mutation and alias semantics.
 - [ ] Add lazy module values or additional startup entry points only if required.
 
 ## Annotations, derivation, and cleanup

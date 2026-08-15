@@ -464,5 +464,6 @@ Release-mode measurements compare within each backend runner.
 Indexing, generic trait evidence, selected constructor/field/method lowering,
 WasmGC layout, and pattern decision emission are implemented by later phases.
 Still-deferred language questions include trait-provided fields, structural object
-types, direct variant-field refinement, explicit generic qualification, and
-aggregate field mutation. See `docs/roadmap.md`.
+types, direct variant-field refinement, and explicit generic qualification.
+Mutable struct fields were implemented on August 15, 2026; see
+[`mutable-struct-fields.md`](mutable-struct-fields.md).

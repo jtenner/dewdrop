@@ -220,7 +220,8 @@ fn Parser::parse_block_after_left_brace(
             match equal.kind() {
               @tokenizer.Symbol(@tokenizer.Equal) => {
                 let assignable = match expression {
-                  NameExpr(_, _) | IndexExpr(_, _, _) => true
+                  NameExpr(_, _) | FieldExpr(_, _, _) | IndexExpr(_, _, _) =>
+                    true
                   _ => false
                 }
                 if !assignable {
@@ -235,7 +236,7 @@ fn Parser::parse_block_after_left_brace(
                   Err(error) => return Err(error)
                 }
                 match expression {
-                  NameExpr(_, _) =>
+                  NameExpr(_, _) | FieldExpr(_, _, _) =>
                     AssignmentItem(expression, value, equal_offset)
                   IndexExpr(_, _, _) =>
                     IndexSetItem(expression, value, equal_offset)

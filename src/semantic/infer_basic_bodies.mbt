@@ -2550,34 +2550,39 @@ fn BasicBodyInferencer::constrain_expressions(
         self.constrain_while_expression(expression, initial, arms, offset)
       HirObjectExpr(_, _) => ()
       HirAssignmentExpr(target, value, offset) => {
-        let mutable_ = match self.names.expression_references[target] {
-          LocalNameReference(local_id) =>
-            local_id >= 0 &&
-            local_id < self.local_span.length &&
-            self.names.locals[self.local_span.start + local_id].mutable_
-          LambdaCaptureNameReference(capture) =>
-            if self.lambda >= 0 {
-              match self.names.lambda(self.lambda) {
-                Some(lambda_names) =>
-                  capture >= 0 &&
-                  capture < lambda_names.captures.length &&
-                  self.names.captures[lambda_names.captures.start + capture].mutable_
-                None => false
-              }
-            } else {
-              false
-            }
-          ErrorNameReference => false
+        match self.collected.expressions[target] {
+          HirFieldExpr(_, _, _) => ()
           _ => {
-            self.diagnose(InvalidAssignmentTarget(expression, offset))
-            false
-          }
-        }
-        if !mutable_ {
-          match self.names.expression_references[target] {
-            LocalNameReference(_) | LambdaCaptureNameReference(_) =>
-              self.diagnose(ImmutableAssignmentTarget(expression, offset))
-            _ => ()
+            let mutable_ = match self.names.expression_references[target] {
+              LocalNameReference(local_id) =>
+                local_id >= 0 &&
+                local_id < self.local_span.length &&
+                self.names.locals[self.local_span.start + local_id].mutable_
+              LambdaCaptureNameReference(capture) =>
+                if self.lambda >= 0 {
+                  match self.names.lambda(self.lambda) {
+                    Some(lambda_names) =>
+                      capture >= 0 &&
+                      capture < lambda_names.captures.length &&
+                      self.names.captures[lambda_names.captures.start + capture].mutable_
+                    None => false
+                  }
+                } else {
+                  false
+                }
+              ErrorNameReference => false
+              _ => {
+                self.diagnose(InvalidAssignmentTarget(expression, offset))
+                false
+              }
+            }
+            if !mutable_ {
+              match self.names.expression_references[target] {
+                LocalNameReference(_) | LambdaCaptureNameReference(_) =>
+                  self.diagnose(ImmutableAssignmentTarget(expression, offset))
+                _ => ()
+              }
+            }
           }
         }
         self.constrain_assignable(
@@ -2715,6 +2720,31 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
 }
 
 ///|
+fn BasicBodyInferencer::validate_field_assignments(
+  self : BasicBodyInferencer,
+) -> Unit {
+  for
+    expression in self.body.expressions.start..<(self.body.expressions.start +
+    self.body.expressions.length) {
+    match self.collected.expressions[expression] {
+      HirAssignmentExpr(target, _, offset) =>
+        match self.collected.expressions[target] {
+          HirFieldExpr(_, _, _) =>
+            match self.expression_selections[self.expression_index(target)] {
+              FieldAccessSelection(_, mutable_) =>
+                if !mutable_ {
+                  self.diagnose(ImmutableAssignmentTarget(expression, offset))
+                }
+              _ => ()
+            }
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+}
+
+///|
 fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.solver_diagnostic_start = self.solver.diagnostics.length()
   self.initialize_local_types()
@@ -2739,6 +2769,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.constrain_debug_dispatches()
   self.constrain_operator_calls()
   self.constrain_members(true)
+  self.validate_field_assignments()
   self.constrain_function_references()
   self.constrain_pending_function_calls(true)
   self.solver_diagnostic_end = self.solver.diagnostics.length()
@@ -3416,7 +3447,8 @@ fn merge_body_inference_jobs(
               start: expression_argument_start + arguments.start,
               length: arguments.length,
             })
-          FieldAccessSelection(field) => FieldAccessSelection(field)
+          FieldAccessSelection(field, mutable_) =>
+            FieldAccessSelection(field, mutable_)
           ImportedModuleValueSelection(declaration) =>
             ImportedModuleValueSelection(declaration)
           FunctionReferenceSelection(declaration, arguments) =>
@@ -3631,7 +3663,8 @@ fn merge_body_inference_jobs(
               start: expression_argument_start + arguments.start,
               length: arguments.length,
             })
-          FieldAccessSelection(field) => FieldAccessSelection(field)
+          FieldAccessSelection(field, mutable_) =>
+            FieldAccessSelection(field, mutable_)
           ImportedModuleValueSelection(declaration) =>
             ImportedModuleValueSelection(declaration)
           FunctionReferenceSelection(declaration, arguments) =>

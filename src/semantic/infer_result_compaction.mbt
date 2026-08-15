@@ -129,7 +129,7 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
         }
       NoExpressionSelection
       | ErrorExpressionSelection
-      | FieldAccessSelection(_)
+      | FieldAccessSelection(_, _)
       | ImportedModuleValueSelection(_)
       | FunctionReferenceSelection(_, _) => ()
     }

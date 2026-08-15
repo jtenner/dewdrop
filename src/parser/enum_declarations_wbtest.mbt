@@ -316,6 +316,15 @@ test "enum variants and fields do not have visibility modifiers" {
       }
     _ => fail("expected variant field visibility modifier to fail")
   }
+  match
+    Parser::from_bytes(b"enum Bad {\n  Data {\n    mut value: I32\n  }\n}\n").parse_declaration() {
+    Err(ExpectedDeclarationSyntax(EnumVariantFieldName, Some(token))) =>
+      match token.kind() {
+        @tokenizer.Keyword(@tokenizer.Mut) => ()
+        _ => fail("expected mutable enum payload field modifier")
+      }
+    _ => fail("expected mutable enum payload field to fail")
+  }
 }
 
 ///|

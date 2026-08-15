@@ -1,0 +1,10 @@
+open fixture.mutable_box
+
+pub fn main() -> Unit {
+  let box = make_box(1)
+  let alias = box
+  let before = box.value
+  alias.value = 42
+  assert(before == 1, "imported mutable field before write")
+  assert(box.value == 42, "imported mutable field aliases")
+}

@@ -1,0 +1,7 @@
+{
+  "errors": [
+    "fixture.dew:6:13: error: ImmutableAssignmentTarget(3, 89)\n  |\n6 |   box.value = value\n  |             ^"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -15,10 +15,28 @@ test "type layout plans retain generic struct fields and scalar shapes" {
       assert_eq(layouts.fields[fields.start].field, collected.fields[0].id)
       assert_eq(layouts.fields[fields.start].index, 0)
       assert_eq(layouts.fields[fields.start].shape, GenericPlannedValueShape)
+      assert_false(layouts.fields[fields.start].mutable_)
       assert_eq(layouts.fields[fields.start + 1].index, 1)
       assert_eq(layouts.fields[fields.start + 1].shape, I64PlannedValueShape)
+      assert_false(layouts.fields[fields.start + 1].mutable_)
     }
     _ => fail("expected struct layout")
+  }
+}
+
+///|
+test "type layout plans retain mutable struct fields" {
+  let collected = collect_bytes(
+    925UL, b"struct Box<t> {\n  mut value: t\n  label: String\n}\n",
+  )
+  let resolved = resolve_module_types(collected)
+  let layouts = plan_module_type_layouts(collected, resolved)
+  match layouts.layouts[0].kind {
+    PlannedStructLayout(fields) => {
+      assert_true(layouts.fields[fields.start].mutable_)
+      assert_false(layouts.fields[fields.start + 1].mutable_)
+    }
+    _ => fail("expected mutable struct layout")
   }
 }
 

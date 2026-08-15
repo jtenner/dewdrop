@@ -289,6 +289,7 @@ pub fn serialize_planned_module_type_layouts(
       }
       None => writer.write_option_tag(false)
     }
+    writer.write_bool(field.mutable_)
     writer.write_string(field.name)
     ib_write_int(writer, field.index)
     ib_write_int(writer, field.type_)
@@ -344,6 +345,7 @@ pub fn deserialize_planned_module_type_layouts(
       field,
       declaration,
       variant,
+      mutable_: reader.read_bool("field.mutable"),
       name: reader.read_string(planning_binary_maximum_text, "field.name"),
       index: ib_read_int(reader, "field.index"),
       type_: ib_read_int(reader, "field.type"),

@@ -346,7 +346,22 @@ test "local and index setting are block items rather than expressions" {
   }
   match
     Parser::from_bytes(
-      b"fn invalid(value: Item) -> Unit {\n  value.field = 1\n}\n",
+      b"fn update(value: Item) -> Unit {\n  value.field = 1\n}\n",
+    ).parse_declaration() {
+    Ok(Function(declaration)) =>
+      match declaration.body.items[0] {
+        AssignmentItem(
+          FieldExpr(NameExpr("value", _), "field", _),
+          I32Expr(1UL, _),
+          _
+        ) => ()
+        _ => fail("expected field assignment block item")
+      }
+    _ => fail("expected function containing field assignment")
+  }
+  match
+    Parser::from_bytes(
+      b"fn invalid(value: Item) -> Unit {\n  value.method() = 1\n}\n",
     ).parse_declaration() {
     Err(DeclarationExpressionError(ExpectedAssignmentTarget(_, _))) => ()
     _ => fail("expected an invalid assignment target diagnostic")

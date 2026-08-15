@@ -1,0 +1,65 @@
+open dew.std.wasi
+open dew.std.string
+
+struct Box<t> {
+  mut value: t
+}
+
+struct Outer {
+  inner: Box<I32>
+}
+
+struct State {
+  mut calls: I32
+  box: Box<I32>
+}
+
+fn receiver(state: State) -> Box<I32> {
+  state.calls = state.calls + 1
+  state.box
+}
+
+fn replacement(state: State) -> I32 {
+  assert(state.calls == 1, "receiver must run first and once")
+  state.calls = state.calls + 1
+  43
+}
+
+fn update(box: Box<I32>, value: I32) -> Unit {
+  box.value = value
+}
+
+fn identity<t>(value: t) -> t {
+  value
+}
+
+pub fn main() -> U32 {
+  let box = Box::{
+    value: 1
+  }
+  let alias = box
+  update(alias, 40)
+  let outer = Outer::{
+    inner: box
+  }
+  outer.inner.value = 42
+  identity(box).value = 43
+  let state = State::{
+    calls: 0
+    box: box
+  }
+  receiver(state).value = replacement(state)
+  let wide = Box::{
+    value: 1i64
+  }
+  wide.value = 44i64
+  let text = Box::{
+    value: "before"
+  }
+  text.value = "after"
+  if state.calls == 2 && box.value == 43 && wide.value == 44i64 && text.value.equals("after") {
+    wasi_fd_write(1u32, b"struct:mutable-field-43")
+  } else {
+    wasi_fd_write(1u32, b"FAIL")
+  }
+}

@@ -120,7 +120,7 @@ test "generic field access substitutes the base type arguments" {
     }
   }
   match inferred.expression_selections[field_expression] {
-    FieldAccessSelection(field) => assert_eq(field, collected.fields[0].id)
+    FieldAccessSelection(field, _) => assert_eq(field, collected.fields[0].id)
     _ => fail("expected selected field")
   }
   assert_call_primitive(
@@ -129,6 +129,25 @@ test "generic field access substitutes the base type arguments" {
     inferred.expression_types[field_expression],
     I32Type,
   )
+}
+
+///|
+test "mutable field assignment is typed and immutable field assignment diagnoses" {
+  let (_, _, _, mutable_inferred) = call_test_module(
+    415UL, b"struct Box<t> {\n  mut value: t\n}\nfn write(box: Box<I32>, value: I32) -> Unit {\n  box.value = value\n}\n",
+  )
+  assert_eq(mutable_inferred.diagnostics.length(), 0)
+  let (_, _, _, immutable_inferred) = call_test_module(
+    416UL, b"struct Box<t> {\n  value: t\n}\nfn write(box: Box<I32>, value: I32) -> Unit {\n  box.value = value\n}\n",
+  )
+  let mut immutable = 0
+  for diagnostic in immutable_inferred.diagnostics {
+    match diagnostic {
+      ImmutableAssignmentTarget(_, _) => immutable += 1
+      _ => ()
+    }
+  }
+  assert_eq(immutable, 1)
 }
 
 ///|
@@ -305,7 +324,7 @@ test "nested objects and chained fields resolve through the member worklist" {
   for index, selection in inferred.expression_selections {
     match selection {
       StructConstructionSelection(_, _) => object_count += 1
-      FieldAccessSelection(_) => {
+      FieldAccessSelection(_, _) => {
         field_count += 1
         if field_count == 2 {
           assert_call_primitive(

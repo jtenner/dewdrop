@@ -19,6 +19,7 @@ pub struct PlannedFieldLayout {
   field : FieldId
   declaration : DeclId
   variant : VariantId?
+  mutable_ : Bool
   name : String
   index : Int
   type_ : ResolvedTypeId
@@ -156,6 +157,7 @@ pub fn plan_module_type_layouts(
       field: field.id,
       declaration: field.declaration,
       variant: field.variant,
+      mutable_: field.mutable_,
       name: collected.name(field.name),
       index: field_indices[index],
       type_,

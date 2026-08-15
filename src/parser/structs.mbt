@@ -1,5 +1,6 @@
 ///|
 pub struct StructField {
+  mutable_ : Bool
   name : String
   type_ : TypeExpr
   offset : UInt64
@@ -39,6 +40,17 @@ fn Parser::parse_struct_field(
   self : Parser,
   struct_offset : UInt64,
 ) -> Result[StructField, RecoveryFailure] {
+  let mutable_ = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Keyword(@tokenizer.Mut) => {
+          self.consume_lookahead()
+          true
+        }
+        _ => false
+      }
+    None => false
+  }
   let (name, offset) = match self.parse_identifier(StructFieldName) {
     Ok(value) => value
     Err(error) => return Err(error)
@@ -56,7 +68,7 @@ fn Parser::parse_struct_field(
     Err(error) => return Err(error)
   }
   match self.finish_struct_field_line(struct_offset) {
-    Ok(_) => Ok({ name, type_, offset })
+    Ok(_) => Ok({ mutable_, name, type_, offset })
     Err(error) => Err(error)
   }
 }

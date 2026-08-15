@@ -205,12 +205,34 @@ test "imported struct construction and field access retain external IDs" {
     match selection {
       StructConstructionSelection(declaration, _) if declaration == item =>
         saw_construction = true
-      FieldAccessSelection(selected) if selected == field => saw_field = true
+      FieldAccessSelection(selected, _) if selected == field => saw_field = true
       _ => ()
     }
   }
   assert_true(saw_construction)
   assert_true(saw_field)
+  assert_eq(program.modules[0].diagnostics.length(), 0)
+}
+
+///|
+test "imported mutable struct fields retain mutability" {
+  let (program, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn write(box: Box<I32>, value: I32) -> Unit {\n  box.value = value\n}\npub fn read(box: Box<I32>) -> I32 {\n  box.value\n}\n",
+    b"pub struct Box<t> {\n  mut value: t\n}\n",
+  )
+  assert_eq(frozen.interfaces[0].resolved_types.diagnostics.length(), 0)
+  assert_eq(names.diagnostics.length(), 0)
+  assert_eq(inferred.diagnostics.length(), 0)
+  let field = frozen.interfaces[1].fields[0].field
+  let mut selected = 0
+  for selection in inferred.expression_selections {
+    match selection {
+      FieldAccessSelection(candidate, true) if candidate == field =>
+        selected += 1
+      _ => ()
+    }
+  }
+  assert_eq(selected, 2)
   assert_eq(program.modules[0].diagnostics.length(), 0)
 }
 

@@ -146,7 +146,7 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match unoptimized.modules[0].expressions[expression].kind {
-      PlannedFieldGet(_, base) => {
+      PlannedFieldGet(_, base, _) => {
         field_get = expression
         struct_new = base
       }
@@ -164,12 +164,52 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
     is PlannedConsumedExpression,
   )
   assert_true(
-    unoptimized.modules[0].expressions[field_get].kind is PlannedFieldGet(_, _),
+    unoptimized.modules[0].expressions[field_get].kind
+    is PlannedFieldGet(_, _, _),
   )
   assert_true(
     unoptimized.modules[0].expressions[struct_new].kind
     is PlannedStructNew(_, _, _),
   )
+}
+
+///|
+test "mutable field writes block immutable-field optimizations" {
+  let program = collect_program_manifest(
+    22830UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Counter {\n  mut value: I32\n}\nfn update(counter: Counter) -> I32 {\n  let before = counter.value\n  counter.value = before + 1\n  counter.value\n}\npub fn main() -> I32 {\n  update(Counter::{\n    value: 41\n  })\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let unoptimized = plan_unoptimized_program_lowering(program, analyzed)
+  let optimized = optimize_program_lowering(unoptimized)
+  let collected = program.modules[0]
+  let update = collected.lookup_value("update").unwrap()
+  let body = collected.body_of(update).unwrap()
+  let mut unoptimized_gets = 0
+  let mut optimized_gets = 0
+  let mut optimized_sets = 0
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    if unoptimized.modules[0].expressions[expression].kind
+      is PlannedFieldGet(_, _, _) {
+      unoptimized_gets += 1
+    }
+    match optimized.modules[0].expressions[expression].kind {
+      PlannedFieldGet(_, _, _) => optimized_gets += 1
+      PlannedFieldSet(_, _, _) => optimized_sets += 1
+      _ => ()
+    }
+  }
+  assert_eq(unoptimized_gets, 3)
+  assert_eq(optimized_gets, unoptimized_gets)
+  assert_eq(optimized_sets, 1)
 }
 
 ///|
@@ -1241,7 +1281,7 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
       expression in source_body.expressions.start..<(source_body.expressions.start +
       source_body.expressions.length) {
       if optimized.modules[0].expressions[expression].kind
-        is PlannedFieldGet(_, _) {
+        is PlannedFieldGet(_, _, _) {
         optimized_fields += 1
       }
       if optimized.modules[0].expressions[expression].kind
@@ -1253,7 +1293,7 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
         parameter_selects += 1
       }
       if unoptimized.modules[0].expressions[expression].kind
-        is PlannedFieldGet(_, _) {
+        is PlannedFieldGet(_, _, _) {
         unoptimized_fields += 1
       }
     }
@@ -1270,7 +1310,7 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
     expression in retained_body.expressions.start..<(retained_body.expressions.start +
     retained_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       retained_fields += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1311,7 +1351,7 @@ test "direct distinct struct reads synthesize component locals" {
       structs += 1
     }
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       fields += 1
     }
   }
@@ -1353,7 +1393,7 @@ test "mixed source aliases and direct reads share component locals" {
       structs += 1
     }
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       fields += 1
     }
   }
@@ -1392,7 +1432,7 @@ test "direct distinct reference fields synthesize nominal component locals" {
     source_body.expressions.length) {
     match optimized.modules[0].expressions[expression].kind {
       PlannedStructNew(_, _, _) => pair_structs += 1
-      PlannedFieldGet(_, _) => pair_fields += 1
+      PlannedFieldGet(_, _, _) => pair_fields += 1
       _ => ()
     }
   }
@@ -1434,7 +1474,7 @@ test "direct distinct generic fields synthesize erased component locals" {
       structs += 1
     }
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       fields += 1
     }
   }
@@ -1476,7 +1516,7 @@ test "fresh nominal reference fields synthesize exact component locals" {
       structs += 1
     }
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       fields += 1
     }
   }
@@ -1518,7 +1558,7 @@ test "nominal module values synthesize exact component locals" {
       structs += 1
     }
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       fields += 1
     }
   }
@@ -1581,7 +1621,7 @@ test "sole-use struct fields scalar replace across fresh if joins" {
     expression in choose_source_body.expressions.start..<(choose_source_body.expressions.start +
     choose_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       choose_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1604,7 +1644,7 @@ test "sole-use struct fields scalar replace across fresh if joins" {
     expression in escaping_source_body.expressions.start..<(escaping_source_body.expressions.start +
     escaping_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       escaping_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1664,7 +1704,7 @@ test "sole-use struct fields scalar replace across fresh match joins" {
     expression in source_body.expressions.start..<(source_body.expressions.start +
     source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       optimized_fields += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1718,7 +1758,7 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
     expression in split_source_body.expressions.start..<(split_source_body.expressions.start +
     split_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       split_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1726,7 +1766,7 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
       split_struct_news += 1
     }
     if unoptimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       unoptimized_field_gets += 1
     }
   }
@@ -1741,7 +1781,7 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
     expression in reversed_source_body.expressions.start..<(reversed_source_body.expressions.start +
     reversed_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       reversed_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1759,7 +1799,7 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
     expression in missing_source_body.expressions.start..<(missing_source_body.expressions.start +
     missing_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       missing_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1817,7 +1857,7 @@ test "repeated same-field struct locals scalar replace into the existing local" 
     expression in repeated_source_body.expressions.start..<(repeated_source_body.expressions.start +
     repeated_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       repeated_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -1825,7 +1865,7 @@ test "repeated same-field struct locals scalar replace into the existing local" 
       repeated_struct_news += 1
     }
     if unoptimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       unoptimized_field_gets += 1
     }
   }
@@ -1840,7 +1880,7 @@ test "repeated same-field struct locals scalar replace into the existing local" 
     expression in mixed_source_body.expressions.start..<(mixed_source_body.expressions.start +
     mixed_source_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       mixed_field_gets += 1
     }
     if optimized.modules[0].expressions[expression].kind
@@ -2054,11 +2094,11 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
     expression in twice_body.expressions.start..<(twice_body.expressions.start +
     twice_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       optimized_field_gets += 1
     }
     if unoptimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       unoptimized_field_gets += 1
     }
   }
@@ -2066,7 +2106,7 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
     expression in mutable_body.expressions.start..<(mutable_body.expressions.start +
     mutable_body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       mutable_field_gets += 1
     }
   }
@@ -2115,11 +2155,11 @@ test "common field extraction reuses exact nested reference loads" {
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     if optimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       optimized_fields += 1
     }
     if unoptimized.modules[0].expressions[expression].kind
-      is PlannedFieldGet(_, _) {
+      is PlannedFieldGet(_, _, _) {
       unoptimized_fields += 1
     }
   }

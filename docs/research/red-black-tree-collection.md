@@ -4,7 +4,7 @@ Date: 2026-08-11
 
 `dew.std.collections.red_black_tree` implements a mutable comparator-driven red-black tree with insertion/replacement, lookup, removal, minimum/maximum, predecessor/successor, lower/upper bounds, deterministic in-order traversal, bounded range iteration, clear, and a public invariant checker.
 
-The implementation uses structure-of-arrays storage. Keys, values, parent/left/right indices, colors, and liveness flags occupy carrier-specialized Arrays. Root and live length use one-element mutable scalar Arrays because ordinary Dew struct fields are immutable. Node indices remain stable; removal leaves tombstoned storage rather than relocating other nodes. Clear releases all retained key/value references and resets the root and logical length.
+The implementation uses structure-of-arrays storage. Keys, values, parent/left/right indices, colors, and liveness flags occupy carrier-specialized Arrays. Root and live length use the original one-element mutable scalar Arrays; mutable struct fields became available on August 15, 2026, but this measured representation has not been changed. Node indices remain stable; removal leaves tombstoned storage rather than relocating other nodes. Clear releases all retained key/value references and resets the root and logical length.
 
 Insertion and deletion follow the standard red-black recoloring and rotation cases. Missing children are represented by index `-1` and treated as black leaves. Delete fixup carries an explicit parent hint while its replacement is a missing leaf, avoiding a mutable sentinel object.
 

@@ -70,7 +70,7 @@ fn load_paths_with_fingerprint(
 ) -> Result[StandardLibraryLoad, String] {
   let files : Array[@semantic.ManifestFile] = []
   let fingerprint = Buffer()
-  fingerprint.write_bytes(b"DEW_STD_FROZEN_INTERFACE_KEY_V1\x00")
+  fingerprint.write_bytes(b"DEW_STD_FROZEN_INTERFACE_KEY_V1_MUTABLE_FIELDS\x00")
   for logical in paths {
     let physical = join_standard_path(root, logical)
     let source = @fs.read_file_to_bytes(physical) catch {

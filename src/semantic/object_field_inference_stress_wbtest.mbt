@@ -95,7 +95,7 @@ test "member worklist handles a 512-field access chain iteratively" {
   let mut final_type = 0
   for index, selection in inferred.expression_selections {
     match selection {
-      FieldAccessSelection(_) => {
+      FieldAccessSelection(_, _) => {
         selected += 1
         final_type = inferred.expression_types[index]
       }

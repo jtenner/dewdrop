@@ -453,9 +453,25 @@ fn example() -> I32 {
 }
 ```
 
-Struct fields are newline-delimited rather than comma-delimited. A struct or
-enum may append `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, or `derive(Show)` after its closing
-brace. Generated implementations visit fields and payloads in source order and
+Struct fields are newline-delimited rather than comma-delimited. Fields are
+immutable by default. Add `mut` before a field name to allow writes:
+
+```dew
+struct Box<t> {
+  mut value: t
+}
+
+fn replace(box: Box<I32>) -> Unit {
+  box.value = 42
+}
+```
+
+A field write is a block item. It evaluates the receiver first and the new value
+second, once each. Struct values are references, so aliases observe the same
+write. Writing an immutable field is a compile error.
+
+A struct or enum may append `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, or
+`derive(Show)` after its closing brace. Generated implementations visit fields and payloads in source order and
 require the corresponding trait evidence for every stored value. Generic owner
 parameters referenced by stored types receive conditional bounds and execute
 through static evidence specialization; phantom parameters remain unconstrained.

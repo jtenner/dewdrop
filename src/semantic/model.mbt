@@ -81,6 +81,7 @@ pub struct CollectedField {
   id : FieldId
   declaration : DeclId
   variant : VariantId?
+  mutable_ : Bool
   name : NameId
   type_ : HirTypeId
   offset : UInt64

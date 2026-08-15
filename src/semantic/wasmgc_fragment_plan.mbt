@@ -879,7 +879,7 @@ fn wasmgc_required_nominal_declarations(
             }
           }
         }
-        PlannedFieldGet(field, _) =>
+        PlannedFieldGet(field, _, _) | PlannedFieldSet(field, _, _) =>
           for candidate in layouts.fields {
             if candidate.field == field {
               required[candidate.declaration] = true
@@ -1311,17 +1311,69 @@ fn wasmgc_is_erased_generic_storage(
 }
 
 ///|
+fn wasmgc_append_field_with_mutability(
+  fields : Array[PlannedWasmField],
+  role : PlannedWasmFieldRole,
+  storage : PlannedWasmStorageType,
+  mutable_ : Bool,
+  offset : UInt64,
+) -> Unit {
+  if mutable_ {
+    wasmgc_append_mutable_field(fields, role, storage, offset)
+  } else {
+    wasmgc_append_field(fields, role, storage, offset)
+  }
+}
+
+///|
 fn wasmgc_append_erased_generic_fields(
   fields : Array[PlannedWasmField],
   role : PlannedWasmFieldRole,
+  mutable_ : Bool,
   offset : UInt64,
 ) -> Unit {
-  wasmgc_append_field(fields, role, WasmI32Storage, offset)
-  wasmgc_append_field(fields, role, WasmI64Storage, offset)
-  wasmgc_append_field(fields, role, WasmF32Storage, offset)
-  wasmgc_append_field(fields, role, WasmF64Storage, offset)
-  wasmgc_append_field(fields, role, WasmV128Storage, offset)
-  wasmgc_append_field(fields, role, WasmNullableEqRefStorage, offset)
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    WasmI32Storage,
+    mutable_,
+    offset,
+  )
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    WasmI64Storage,
+    mutable_,
+    offset,
+  )
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    WasmF32Storage,
+    mutable_,
+    offset,
+  )
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    WasmF64Storage,
+    mutable_,
+    offset,
+  )
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    WasmV128Storage,
+    mutable_,
+    offset,
+  )
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    WasmNullableEqRefStorage,
+    mutable_,
+    offset,
+  )
 }
 
 ///|
@@ -1416,6 +1468,7 @@ fn wasmgc_append_physical_type_fields(
                 wasmgc_append_erased_generic_fields(
                   target,
                   WasmStructField(field.field),
+                  field.mutable_,
                   field.offset,
                 )
               } else {
@@ -1429,10 +1482,11 @@ fn wasmgc_append_physical_type_fields(
                     group_first_type_indices,
                   ) {
                   Some(storage) =>
-                    wasmgc_append_field(
+                    wasmgc_append_field_with_mutability(
                       target,
                       WasmStructField(field.field),
                       storage,
+                      field.mutable_,
                       field.offset,
                     )
                   None => ()
@@ -1474,6 +1528,7 @@ fn wasmgc_append_physical_type_fields(
               wasmgc_append_erased_generic_fields(
                 target,
                 role,
+                false,
                 source_variant.offset,
               )
             } else {
@@ -1498,7 +1553,12 @@ fn wasmgc_append_physical_type_fields(
             let field = layouts.fields[fields.start + index]
             let role = WasmStructPayloadField(field.field)
             if wasmgc_is_erased_generic_storage(resolved, field.type_) {
-              wasmgc_append_erased_generic_fields(target, role, field.offset)
+              wasmgc_append_erased_generic_fields(
+                target,
+                role,
+                false,
+                field.offset,
+              )
             } else {
               match
                 wasmgc_storage_type(

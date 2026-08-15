@@ -3839,6 +3839,22 @@ fn directize_exact_runtime_trait_flows(
 }
 
 ///|
+fn program_module_has_mutable_fields(module_ : PlannedModuleLowering) -> Bool {
+  for field in module_.type_layouts.fields {
+    if field.mutable_ {
+      return true
+    }
+  }
+  for expression in module_.expressions {
+    match expression.kind {
+      PlannedFieldGet(_, _, true) | PlannedFieldSet(_, _, _) => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
 fn program_cse_reusable_shape(shape : PlannedValueShape) -> Bool {
   match shape {
     ErrorPlannedValueShape
@@ -3864,7 +3880,7 @@ fn program_cse_field_key(
     return None
   }
   let (field, base) = match source.kind {
-    PlannedFieldGet(field, base) => (field, base)
+    PlannedFieldGet(field, base, false) => (field, base)
     _ => return None
   }
   if base < 0 || base >= module_.expressions.length() {
@@ -3923,7 +3939,7 @@ fn program_cse_rewrite_field_from_local(
     return false
   }
   match module_.expressions[expression].kind {
-    PlannedFieldGet(_, base) if base >= 0 =>
+    PlannedFieldGet(_, base, _) if base >= 0 =>
       ignore(
         program_cse_rewrite_field_from_local(module_, body, base, available),
       )
@@ -4265,7 +4281,7 @@ fn scalar_replace_program_struct_field_read(
   }
   let source = module_.expressions[expression]
   let field = match source.kind {
-    PlannedFieldGet(field, _) => field
+    PlannedFieldGet(field, _, _) => field
     _ => return false
   }
   if !(module_.expressions[struct_expression].trait_object_coercion
@@ -4590,7 +4606,7 @@ fn scalar_replace_joined_struct_field_local(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match module_.expressions[expression].kind {
-      PlannedFieldGet(candidate, base) if base == only_use => {
+      PlannedFieldGet(candidate, base, _) if base == only_use => {
         if field_expression >= 0 {
           return false
         }
@@ -4695,7 +4711,7 @@ fn scalar_replace_struct_component_aliases(
       return false
     }
     let (field, base) = match module_.expressions[field_get].kind {
-      PlannedFieldGet(field, base) => (field, base)
+      PlannedFieldGet(field, base, _) => (field, base)
       _ => return false
     }
     if base < 0 || base >= module_.expressions.length() {
@@ -4840,7 +4856,7 @@ fn scalar_replace_repeated_same_struct_field_local(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     let (field, base) = match module_.expressions[expression].kind {
-      PlannedFieldGet(field, base) => (field, base)
+      PlannedFieldGet(field, base, _) => (field, base)
       _ => continue
     }
     if base < body.expressions.start ||
@@ -5011,7 +5027,7 @@ fn scalar_replace_synthesized_struct_components(
           candidate in body.expressions.start..<(body.expressions.start +
           body.expressions.length) {
           match module_.expressions[candidate].kind {
-            PlannedFieldGet(field, base) if base == expression => {
+            PlannedFieldGet(field, base, _) if base == expression => {
               if selected_get >= 0 {
                 valid = false
                 break
@@ -5329,9 +5345,12 @@ fn scalar_replace_program_struct_field_reads(
   effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Unit {
   for module_ in modules {
+    if program_module_has_mutable_fields(module_) {
+      continue
+    }
     for expression in 0..<module_.expressions.length() {
       let base = match module_.expressions[expression].kind {
-        PlannedFieldGet(_, base) => base
+        PlannedFieldGet(_, base, _) => base
         _ => continue
       }
       ignore(
@@ -5413,7 +5432,7 @@ fn scalar_replace_program_struct_field_reads(
             }
             let field_base = match
               module_.expressions[candidate_expression].kind {
-              PlannedFieldGet(_, base) => base
+              PlannedFieldGet(_, base, _) => base
               _ => -1
             }
             if field_base == only_use {

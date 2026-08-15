@@ -1,0 +1,7 @@
+struct Box<t> {
+  value: t
+}
+
+fn update(box: Box<I32>, value: I32) -> Unit {
+  box.value = value
+}

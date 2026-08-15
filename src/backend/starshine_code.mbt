@@ -330,6 +330,8 @@ priv enum StarshineEmitTask {
   FinishStarshinePackedEnumPayload(Int)
   FinishStarshineNominalResult(@semantic.DeclId)
   FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType, Bool)
+  FinishStarshineFieldSet(Int, Int, Bool)
+  FinishStarshineUnitFieldSet
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
   FinishStarshineWhile(
     @semantic.ExprId,
@@ -931,7 +933,7 @@ fn starshine_program_argument_needs_nominal_cast(
     | @semantic.PlannedIfExpression(_, _, _)
     | @semantic.PlannedMatchExpression(_, _)
     | @semantic.PlannedWhileExpression(_, _, _)
-    | @semantic.PlannedFieldGet(_, _) => true
+    | @semantic.PlannedFieldGet(_, _, _) => true
     _ => false
   }
 }
@@ -6779,7 +6781,7 @@ fn starshine_emit_body_instructions(
               }
               _ => return Err(UnsupportedExpression(body.body, expression))
             }
-          @semantic.PlannedFieldGet(field, base) => {
+          @semantic.PlannedFieldGet(field, base, _) => {
             let owner_module = match program {
               Some(link) =>
                 link.module_lookup
@@ -6853,6 +6855,64 @@ fn starshine_emit_body_instructions(
               ),
             )
             tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedFieldSet(field, base, value) => {
+            let owner_module = match program {
+              Some(link) =>
+                link.module_lookup
+                .get(@semantic.semantic_id_module(field))
+                .unwrap_or(program_module_index)
+              None => program_module_index
+            }
+            let field_plan = match program {
+              Some(link) => link.modules[owner_module]
+              None => planned
+            }
+            let value_source = lowering.expressions[value]
+            let field_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              value_source.type_,
+              value_source.shape,
+            )
+            if field_shape is @semantic.UnitPlannedValueShape {
+              tasks.push(FinishStarshineUnitFieldSet)
+              tasks.push(EmitStarshineExpression(value))
+              tasks.push(EmitStarshineExpression(base))
+            } else {
+              let (local_type_index, physical_index, _) = match
+                starshine_field_location(field_plan, field, field_shape) {
+                Some(location) => location
+                None => return Err(UnsupportedExpression(body.body, expression))
+              }
+              let type_index = match program {
+                Some(link) =>
+                  link.physical_type_index(owner_module, local_type_index)
+                None => local_type_index
+              }
+              let needs_cast = match lowering.expressions[base].kind {
+                @semantic.PlannedDirectCall(_, _, _, arguments)
+                | @semantic.PlannedTailCall(_, _, _, arguments) if arguments.length >
+                  0 => true
+                @semantic.PlannedFunctionValueCall(_, _, _) => true
+                @semantic.PlannedLocalGet(local_id) => {
+                  let local_info = lowering.locals[body.locals.start + local_id]
+                  match local_info.kind {
+                    @semantic.ParameterLocal => false
+                    _ => true
+                  }
+                }
+                @semantic.PlannedBlockExpression(_)
+                | @semantic.PlannedIfExpression(_, _, _)
+                | @semantic.PlannedMatchExpression(_, _) => true
+                _ => false
+              }
+              tasks.push(
+                FinishStarshineFieldSet(type_index, physical_index, needs_cast),
+              )
+              tasks.push(EmitStarshineExpression(value))
+              tasks.push(EmitStarshineExpression(base))
+            }
           }
           @semantic.PlannedModuleValueGet(declaration, nominal) =>
             match program {
@@ -8921,6 +8981,28 @@ fn starshine_emit_body_instructions(
         output.push(
           starshine_struct_get_instruction(type_index, field_index, storage),
         )
+        results.push(output)
+      }
+      FinishStarshineFieldSet(type_index, field_index, needs_cast) => {
+        let value = results.pop().unwrap()
+        let output = results.pop().unwrap()
+        if needs_cast {
+          output.push(starshine_match_cast(type_index))
+        }
+        append_starshine_instructions(output, value)
+        output.push(
+          @lib.Instruction::struct_set(
+            @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
+            @lib.U32::new(field_index.reinterpret_as_uint()),
+          ),
+        )
+        results.push(output)
+      }
+      FinishStarshineUnitFieldSet => {
+        let value = results.pop().unwrap()
+        let output = results.pop().unwrap()
+        output.push(@lib.Instruction::drop())
+        append_starshine_instructions(output, value)
         results.push(output)
       }
       FinishStarshineMatch(expression, arms, scratch_local) => {

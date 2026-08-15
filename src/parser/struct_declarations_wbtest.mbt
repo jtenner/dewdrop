@@ -22,14 +22,40 @@ test "public generic structs preserve ordered fields" {
         name_offset: 11UL,
         type_parameters: [{ name: "t", bounds: [], offset: 17UL }],
         fields: [
-          { name: "x", type_: NamedType("t", 27UL), offset: 24UL },
-          { name: "y", type_: NamedType("t", 34UL), offset: 31UL },
+          {
+            mutable_: false,
+            name: "x",
+            type_: NamedType("t", 27UL),
+            offset: 24UL,
+          },
+          {
+            mutable_: false,
+            name: "y",
+            type_: NamedType("t", 34UL),
+            offset: 31UL,
+          },
         ],
         derives: [],
         offset: 0UL,
       }),
     ),
   )
+}
+
+///|
+test "struct fields retain explicit mutability" {
+  match
+    Parser::from_bytes(b"struct Box<t> {\n  mut value: t\n  label: String\n}\n").parse_declaration() {
+    Ok(Struct(declaration)) => {
+      assert_eq(declaration.fields.length(), 2)
+      assert_true(declaration.fields[0].mutable_)
+      assert_eq(declaration.fields[0].name, "value")
+      assert_eq(declaration.fields[0].type_, NamedType("t", 29UL))
+      assert_false(declaration.fields[1].mutable_)
+      assert_eq(declaration.fields[1].name, "label")
+    }
+    _ => fail("expected mutable struct field")
+  }
 }
 
 ///|

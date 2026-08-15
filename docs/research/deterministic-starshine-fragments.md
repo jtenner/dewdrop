@@ -68,7 +68,7 @@ A Dew struct becomes one final WasmGC struct type with source-ordered runtime fi
 - Rigid generic and trait values currently use nullable `eqref` erased slots.
 - `Unit` and `Never` fields occupy no physical slot.
 
-Physical fields are immutable because Dew construction initializes every retained slot and field mutation is not yet part of the language.
+Physical fields are immutable by default. A source field declared with `mut` now marks its retained physical carrier slot, or all erased generic carrier slots, mutable; see [`mutable-struct-fields.md`](mutable-struct-fields.md). Synthetic runtime cells and mutable collection wrappers retain their existing compiler-owned mutable fields.
 
 Generic scalar boxing at an erased `eqref` boundary is not emitted yet. The fragment plan marks the boundary without pretending the final boxing policy is complete.
 

@@ -513,6 +513,7 @@ fn BasicBodyInferencer::try_infer_field_expression(
         )
         self.expression_selections[self.expression_index(expression)] = FieldAccessSelection(
           field.field,
+          field.mutable_,
         )
         return true
       }
@@ -554,6 +555,7 @@ fn BasicBodyInferencer::try_infer_field_expression(
   )
   self.expression_selections[self.expression_index(expression)] = FieldAccessSelection(
     self.collected.fields[field_index].id,
+    self.collected.fields[field_index].mutable_,
   )
   true
 }

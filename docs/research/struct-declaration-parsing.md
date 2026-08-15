@@ -2,6 +2,8 @@
 
 Date: 2026-07-29
 
+Updated: 2026-08-15 for mutable field syntax.
+
 ## Grammar
 
 ```text
@@ -11,14 +13,14 @@ struct-declaration = "pub"? "struct" identifier type-parameters?
 struct-body        = "{" "}"
                    | "{" newline newline* struct-field* "}"
 
-struct-field       = identifier ":" type newline
+struct-field       = "mut"? identifier ":" type newline
 ```
 
 Examples:
 
 ```dew
 pub struct Point<t> {
-  x: t
+  mut x: t
   y: t
 }
 
@@ -29,7 +31,7 @@ struct Cache<t> {
 struct Empty {}
 ```
 
-Struct fields are newline-delimited, matching inline object literals. Commas are not field separators. Every non-empty field requires a newline, including the final field before `}`. Blank lines and line comments are accepted between fields.
+Struct fields are newline-delimited, matching inline object literals. Commas are not field separators. Every non-empty field requires a newline, including the final field before `}`. Blank lines and line comments are accepted between fields. `mut` is an optional field modifier; fields without it remain immutable.
 
 ## Visibility
 
@@ -48,6 +50,7 @@ StructDeclaration {
 }
 
 StructField {
+  mutable
   name
   type
   offset
@@ -66,7 +69,7 @@ entries: Map<String, List<Result<t>>>
 
 ## Recovery and stress coverage
 
-Dedicated expectations identify missing struct names, body-opening newlines, field names, colons, types, and field-ending newlines. `UnclosedStruct` retains the declaration offset. Tests cover compact and multiline empty structs, generic parameter formatting, nested applied field types, rejected comma separators, rejected field visibility modifiers, comments, declaration separation, malformed fields, and a 1,024-field iterative stress case.
+Dedicated expectations identify missing struct names, body-opening newlines, field names, colons, types, and field-ending newlines. `UnclosedStruct` retains the declaration offset. Tests cover explicit mutable and default immutable fields, compact and multiline empty structs, generic parameter formatting, nested applied field types, rejected comma separators, rejected field visibility modifiers, comments, declaration separation, malformed fields, and a 1,024-field iterative stress case.
 
 ## Benchmarks
 
