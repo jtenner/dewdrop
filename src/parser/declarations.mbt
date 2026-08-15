@@ -126,6 +126,8 @@ pub enum Declaration {
   Function(FunctionDeclaration)
   Test(TestDeclaration)
   Impl(ImplDeclaration)
+  ForeignType(ForeignTypeDeclaration)
+  ForeignLibrary(ForeignLibraryDeclaration)
   Struct(StructDeclaration)
   Enum(EnumDeclaration)
   TypeAlias(TypeAliasDeclaration)
@@ -141,6 +143,8 @@ pub fn Declaration::offset(self : Declaration) -> UInt64 {
     Function(declaration) => declaration.offset
     Test(declaration) => declaration.offset
     Impl(declaration) => declaration.offset
+    ForeignType(declaration) => declaration.offset
+    ForeignLibrary(declaration) => declaration.offset
     Struct(declaration) => declaration.offset
     Enum(declaration) => declaration.offset
     TypeAlias(declaration) => declaration.offset
@@ -173,6 +177,11 @@ pub enum DeclarationExpectation {
   TestExpectedTrap
   FunctionBodyNewline
   ImplMemberKeyword
+  ForeignTypeName
+  ForeignLibraryName
+  ForeignLibraryAlias
+  ForeignLibraryMemberKeyword
+  ForeignLibraryExportName
   ForOrLeftBrace
   TraitMethodKeyword
   TraitMethodName
@@ -214,6 +223,11 @@ pub enum DeclarationError {
   EmptyTupleVariant(UInt64)
   PublicImplNotAllowed(UInt64)
   ForeignImplRequiresTrait(UInt64)
+  PublicForeignLibraryNotAllowed(UInt64)
+  PublicForeignLibraryMemberNotAllowed(UInt64)
+  GenericForeignLibraryMemberNotAllowed(UInt64)
+  ReceiverForeignLibraryMemberNotAllowed(UInt64)
+  ForeignLibraryMemberBodyNotAllowed(UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -238,7 +252,12 @@ pub fn DeclarationError::offset(self : DeclarationError) -> UInt64 {
     | UnclosedStructVariant(offset)
     | EmptyTupleVariant(offset)
     | PublicImplNotAllowed(offset)
-    | ForeignImplRequiresTrait(offset) => offset
+    | ForeignImplRequiresTrait(offset)
+    | PublicForeignLibraryNotAllowed(offset)
+    | PublicForeignLibraryMemberNotAllowed(offset)
+    | GenericForeignLibraryMemberNotAllowed(offset)
+    | ReceiverForeignLibraryMemberNotAllowed(offset)
+    | ForeignLibraryMemberBodyNotAllowed(offset) => offset
     DeclarationExpressionError(error) => error.offset()
   }
 }
@@ -1281,23 +1300,48 @@ fn Parser::parse_declaration_recoverable(
           }
         }
         @tokenizer.Keyword(@tokenizer.Foreign) => {
-          if visibility == Public {
-            return Err(
-              declaration_failure(PublicImplNotAllowed(declaration_offset)),
-            )
-          }
           self.consume_lookahead()
           match self.peek_token() {
             Some(next) =>
               match next.kind() {
-                @tokenizer.Keyword(@tokenizer.Impl) => self.consume_lookahead()
+                @tokenizer.Keyword(@tokenizer.Type) => {
+                  self.consume_lookahead()
+                  self.parse_foreign_type_after_keyword(
+                    visibility, declaration_offset,
+                  )
+                }
+                @tokenizer.Keyword(@tokenizer.Impl) => {
+                  self.consume_lookahead()
+                  match self.peek_token() {
+                    Some(value) if value.kind() is @tokenizer.StringLiteral(_) => {
+                      if visibility == Public {
+                        return Err(
+                          declaration_failure(
+                            PublicForeignLibraryNotAllowed(declaration_offset),
+                          ),
+                        )
+                      }
+                      self.parse_foreign_library_after_impl(declaration_offset)
+                    }
+                    _ => {
+                      if visibility == Public {
+                        return Err(
+                          declaration_failure(
+                            PublicImplNotAllowed(declaration_offset),
+                          ),
+                        )
+                      }
+                      match
+                        self.parse_impl_after_keyword(true, declaration_offset) {
+                        Ok(value) => Ok(Impl(value))
+                        Err(error) => Err(error)
+                      }
+                    }
+                  }
+                }
                 _ => return Err(self.declaration_error(DeclarationKeyword))
               }
             None => return Err(self.declaration_error(DeclarationKeyword))
-          }
-          match self.parse_impl_after_keyword(true, declaration_offset) {
-            Ok(value) => Ok(Impl(value))
-            Err(error) => Err(error)
           }
         }
         _ => Err(self.declaration_error(DeclarationKeyword))

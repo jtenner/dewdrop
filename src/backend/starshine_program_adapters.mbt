@@ -195,6 +195,7 @@ fn starshine_program_collect_adapter_cycle_helpers(
           @semantic.PlannedUnitVariantLayout => ()
         }
       }
+    @semantic.PlannedForeignTypeLayout => ()
   }
   ignore(active.pop())
 }
@@ -560,6 +561,7 @@ fn starshine_program_collect_callback_wrappers(
                   @semantic.PlannedUnitVariantLayout => ()
                 }
               }
+            @semantic.PlannedForeignTypeLayout => ()
           }
         _ =>
           for index in 0..<arguments.length {
@@ -1030,7 +1032,7 @@ fn starshine_program_adapter_field_layout(
           return Some(candidate)
         }
       }
-    @semantic.PlannedEnumLayout(_) => ()
+    @semantic.PlannedEnumLayout(_) | @semantic.PlannedForeignTypeLayout => ()
   }
   None
 }
@@ -1550,6 +1552,7 @@ fn starshine_program_append_nominal_aggregate_adapter(
         to_erased, output, adapter_locals, active, helper_plan, parameter_count,
       )
     @semantic.PlannedStructLayout(_) => ()
+    @semantic.PlannedForeignTypeLayout => return false
   }
   let fragments = planned.modules[function_.module_index]
   let physical = match starshine_struct_physical_type(fragments, declaration) {

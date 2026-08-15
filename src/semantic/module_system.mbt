@@ -1653,6 +1653,8 @@ fn frozen_abi_collected_kind_rank(kind : CollectedDeclKind) -> Int {
     StructDecl => 6
     EnumDecl => 7
     TypeAliasDecl => 8
+    ForeignTypeDecl => 9
+    ForeignLibraryDecl => 10
   }
 }
 
@@ -2198,12 +2200,15 @@ fn frozen_declaration_kind(
   kind : CollectedDeclKind,
 ) -> FrozenInterfaceDeclarationKind {
   match kind {
-    StructDecl | EnumDecl | TypeAliasDecl => FrozenTypeDeclaration
+    StructDecl | EnumDecl | TypeAliasDecl | ForeignTypeDecl =>
+      FrozenTypeDeclaration
     TraitDecl => FrozenTraitDeclaration
     BuiltinDecl | LetDecl | FunctionDecl => FrozenValueDeclaration
     TestDecl => abort("test declarations are not module interface values")
     ImplDecl =>
       abort("impl declarations are evidence, not named interface declarations")
+    ForeignLibraryDecl =>
+      abort("foreign library namespaces are module-local link declarations")
   }
 }
 
@@ -2579,6 +2584,7 @@ fn freeze_module_interface(
     }
     let kind = match callable.kind {
       PlannedBuiltinCallable(name) => FrozenBuiltinCallable(name)
+      PlannedForeignCallable(_, _) => FrozenFunctionCallable
       PlannedFunctionCallable(_) => FrozenFunctionCallable
       PlannedTraitMethodCallable(trait_) => FrozenTraitCallable(trait_)
       PlannedImplMethodCallable(implementation, _) =>

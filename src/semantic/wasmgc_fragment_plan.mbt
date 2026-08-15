@@ -93,6 +93,7 @@ pub fn WasmGCPlanningOptions::test_mode() -> WasmGCPlanningOptions {
 ///|
 pub enum PlannedWasmPhysicalTypeKind {
   PlannedWasmStructType(DeclId)
+  PlannedWasmForeignMarkerType(DeclId)
   PlannedWasmEnumBaseType(DeclId)
   PlannedWasmEnumSubtypeType(DeclId, VariantId, Int)
   PlannedWasmClosureType
@@ -141,8 +142,59 @@ pub struct PlannedWasmFunctionTypeFragment {
 } derive(Eq, Debug)
 
 ///|
+pub enum WasmImportKind {
+  HostWasmImport
+  StaticLinkWasmImport
+  WasiWasmImport
+} derive(Eq, Debug)
+
+///|
+pub struct WasmImportIdentity {
+  module_name : Bytes
+  field : Bytes
+  kind : WasmImportKind
+} derive(Eq, Debug)
+
+///|
+pub fn WasmImportIdentity::host(field : Bytes) -> WasmImportIdentity {
+  { module_name: b"dew", field, kind: HostWasmImport }
+}
+
+///|
+pub fn WasmImportIdentity::wasi(field : Bytes) -> WasmImportIdentity {
+  { module_name: b"wasi_snapshot_preview1", field, kind: WasiWasmImport }
+}
+
+///|
+pub fn WasmImportIdentity::static_link(
+  logical_name : Bytes,
+  field : Bytes,
+) -> WasmImportIdentity {
+  let module_name = Buffer(size_hint=5 + logical_name.length())
+  module_name.write_bytes(b"link:")
+  module_name.write_bytes(logical_name)
+  { module_name: module_name.to_bytes(), field, kind: StaticLinkWasmImport }
+}
+
+///|
+pub fn WasmImportIdentity::lookup_name(self : WasmImportIdentity) -> Bytes {
+  match self.kind {
+    HostWasmImport => self.field
+    WasiWasmImport | StaticLinkWasmImport => {
+      let output = Buffer(
+        size_hint=self.module_name.length() + 1 + self.field.length(),
+      )
+      output.write_bytes(self.module_name)
+      output.write_byte(b'.')
+      output.write_bytes(self.field)
+      output.to_bytes()
+    }
+  }
+}
+
+///|
 pub enum PlannedWasmFunctionKind {
-  PlannedWasmImportedFunction(Bytes)
+  PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(BodyId)
@@ -584,10 +636,12 @@ fn wasmgc_add_runtime_dependencies(
         } else if wasmgc_builtin_is_debug_runtime(name) {
           debug_runtimes.push(index)
         }
-      PlannedWasmImportedFunction(name) =>
-        if name == b"wasi_snapshot_preview1.fd_write" {
+      PlannedWasmImportedFunction(identity) =>
+        if identity.module_name == b"wasi_snapshot_preview1" &&
+          identity.field == b"fd_write" {
           wasi_write_import = index
-        } else if name == b"wasi_snapshot_preview1.fd_read" {
+        } else if identity.module_name == b"wasi_snapshot_preview1" &&
+          identity.field == b"fd_read" {
           wasi_read_import = index
         }
       _ => ()
@@ -713,6 +767,11 @@ fn wasmgc_build_physical_sources(
       PlannedStructLayout(_) =>
         sources.push({
           kind: PlannedWasmStructType(layout.declaration),
+          offset: layout.offset,
+        })
+      PlannedForeignTypeLayout =>
+        sources.push({
+          kind: PlannedWasmForeignMarkerType(layout.declaration),
           offset: layout.offset,
         })
       PlannedEnumLayout(variants) => {
@@ -942,7 +1001,7 @@ fn wasmgc_required_nominal_declarations(
               _ => ()
             }
           }
-        PlannedStructLayout(_) => ()
+        PlannedStructLayout(_) | PlannedForeignTypeLayout => ()
       }
     }
   }
@@ -1091,9 +1150,9 @@ fn wasmgc_plan_physical_type_job(
               dependencies,
             )
           }
-        _ => abort("struct physical source has an enum layout")
+        _ => abort("struct physical source has a non-struct layout")
       }
-    PlannedWasmEnumBaseType(_) => ()
+    PlannedWasmForeignMarkerType(_) | PlannedWasmEnumBaseType(_) => ()
     PlannedWasmClosureType
     | PlannedWasmCaptureCellType(_)
     | PlannedWasmLambdaClosureType(_)
@@ -1493,9 +1552,10 @@ fn wasmgc_append_physical_type_fields(
                 }
               }
             }
-          _ => abort("struct physical source has an enum layout")
+          _ => abort("struct physical source has a non-struct layout")
         }
       }
+    PlannedWasmForeignMarkerType(_) => ()
     PlannedWasmEnumBaseType(_) =>
       wasmgc_append_field(
         target,
@@ -1977,6 +2037,17 @@ fn wasmgc_callable_has_scalarized_signature(
 }
 
 ///|
+fn wasmgc_builtin_import_identity(name : Bytes) -> WasmImportIdentity {
+  if name == b"wasi_snapshot_preview1.fd_write" {
+    WasmImportIdentity::wasi(b"fd_write")
+  } else if name == b"wasi_snapshot_preview1.fd_read" {
+    WasmImportIdentity::wasi(b"fd_read")
+  } else {
+    WasmImportIdentity::host(name)
+  }
+}
+
+///|
 fn wasmgc_plan_function_job(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
@@ -2031,8 +2102,12 @@ fn wasmgc_plan_function_job(
       } else if wasmgc_builtin_is_inline(name) {
         PlannedWasmInlineBuiltinFunction(name)
       } else {
-        PlannedWasmImportedFunction(name)
+        PlannedWasmImportedFunction(wasmgc_builtin_import_identity(name))
       }
+    PlannedForeignCallable(logical_name, export_name) =>
+      PlannedWasmImportedFunction(
+        WasmImportIdentity::static_link(logical_name, export_name),
+      )
     PlannedFunctionCallable(body) => PlannedWasmDefinedFunction(body)
     PlannedTraitMethodCallable(_) => PlannedWasmSignatureOnlyFunction
     PlannedImplMethodCallable(_, Some(body)) => PlannedWasmDefinedFunction(body)
@@ -2050,6 +2125,7 @@ fn wasmgc_direct_builtin_of(
     PlannedFunctionCallable(body) => body
     PlannedImplMethodCallable(_, Some(body)) => body
     PlannedBuiltinCallable(_)
+    | PlannedForeignCallable(_, _)
     | PlannedTraitMethodCallable(_)
     | PlannedImplMethodCallable(_, None) => return b""
   }
@@ -2633,6 +2709,7 @@ fn plan_module_wasmgc_fragments_in_orders(
       entity_type_indices[entity] = next_type_index
       match sources[entity].kind {
         PlannedWasmStructType(declaration)
+        | PlannedWasmForeignMarkerType(declaration)
         | PlannedWasmEnumBaseType(declaration) =>
           type_index_by_declaration[semantic_id_local(declaration)] = next_type_index
         PlannedWasmEnumSubtypeType(_, variant, _) =>
@@ -3878,8 +3955,8 @@ fn plan_module_wasmgc_fragments_in_orders(
       continue
     }
     match function_.kind {
-      PlannedWasmImportedFunction(name) =>
-        imported_function_indices[name] = function_.function_index
+      PlannedWasmImportedFunction(identity) =>
+        imported_function_indices[identity.lookup_name()] = function_.function_index
       PlannedWasmRuntimeFunction(name) =>
         runtime_function_indices[name] = function_.function_index
       _ => ()

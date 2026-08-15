@@ -6,6 +6,8 @@ pub enum CollectedDeclKind {
   FunctionDecl
   TestDecl
   ImplDecl
+  ForeignTypeDecl
+  ForeignLibraryDecl
   StructDecl
   EnumDecl
   TypeAliasDecl
@@ -15,6 +17,7 @@ pub enum CollectedDeclKind {
 pub enum CollectedMethodKind {
   TraitMethodDecl
   ImplMethodDecl
+  ForeignLibraryMemberDecl
 } derive(Eq, Debug)
 
 ///|
@@ -162,12 +165,34 @@ pub struct CollectedImpl {
 } derive(Eq, Debug)
 
 ///|
+pub struct CollectedForeignType {
+  declaration : DeclId
+} derive(Eq, Debug)
+
+///|
+pub struct CollectedForeignLibrary {
+  declaration : DeclId
+  logical_name : Bytes
+  logical_name_offset : UInt64
+  members : HirSpan
+} derive(Eq, Debug)
+
+///|
+pub struct CollectedForeignFunction {
+  declaration : DeclId
+  library : DeclId
+  export_name : Bytes
+  export_name_offset : UInt64
+} derive(Eq, Debug)
+
+///|
 pub enum BindingSpace {
   ModuleType
   ModuleTrait
   ModuleValue
   TraitMethod
   ImplMethod
+  ForeignLibraryMember
   StructField
   EnumVariant
   VariantField
@@ -205,6 +230,10 @@ pub enum CollectionDiagnostic {
   TestDeclarationOutsideTestFile(FileId, UInt64)
   UnknownDerivedTrait(String, FileId, UInt64)
   DuplicateDerivedTrait(String, FileId, UInt64, UInt64)
+  EmptyForeignLogicalName(FileId, UInt64)
+  InvalidUtf8ForeignLogicalName(FileId, UInt64)
+  EmptyForeignExportName(FileId, UInt64)
+  InvalidUtf8ForeignExportName(FileId, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -260,6 +289,9 @@ pub struct CollectedModule {
   lets : Array[CollectedLet]
   aliases : Array[CollectedAlias]
   impls : Array[CollectedImpl]
+  foreign_types : Array[CollectedForeignType]
+  foreign_libraries : Array[CollectedForeignLibrary]
+  foreign_functions : Array[CollectedForeignFunction]
   type_syntax : Array[HirTypeSyntax]
   type_syntax_files : Array[FileId]
   type_arguments : Array[HirTypeId]
@@ -293,6 +325,7 @@ pub struct CollectedModule {
   trait_bindings : Map[NameId, DeclId]
   value_bindings : Map[NameId, ValueBinding]
   value_binding_candidates : Array[ValueBindingCandidate]
+  foreign_library_by_alias : Map[NameId, DeclId]
 }
 
 ///|
@@ -534,6 +567,58 @@ pub fn CollectedModule::lookup_trait(
     Some(id) => self.trait_bindings.get(id)
     None => None
   }
+}
+
+///|
+pub fn CollectedModule::lookup_foreign_library(
+  self : CollectedModule,
+  name : NameId,
+) -> DeclId? {
+  self.foreign_library_by_alias.get(name)
+}
+
+///|
+pub fn CollectedModule::foreign_library_member(
+  self : CollectedModule,
+  library : DeclId,
+  name : NameId,
+) -> DeclId? {
+  for foreign_function in self.foreign_functions {
+    if foreign_function.library == library {
+      match self.declaration(foreign_function.declaration) {
+        Some(MethodReference(method_info)) if method_info.name == name =>
+          return Some(method_info.id)
+        _ => ()
+      }
+    }
+  }
+  None
+}
+
+///|
+pub fn CollectedModule::foreign_function(
+  self : CollectedModule,
+  declaration : DeclId,
+) -> CollectedForeignFunction? {
+  for foreign_function in self.foreign_functions {
+    if foreign_function.declaration == declaration {
+      return Some(foreign_function)
+    }
+  }
+  None
+}
+
+///|
+pub fn CollectedModule::foreign_library(
+  self : CollectedModule,
+  declaration : DeclId,
+) -> CollectedForeignLibrary? {
+  for library in self.foreign_libraries {
+    if library.declaration == declaration {
+      return Some(library)
+    }
+  }
+  None
 }
 
 ///|

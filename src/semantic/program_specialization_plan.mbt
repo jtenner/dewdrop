@@ -460,6 +460,7 @@ fn program_reachable_callable_roots(
                   }
               }
             }
+          PlannedForeignTypeLayout => ()
         }
       }
     }

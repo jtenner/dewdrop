@@ -1811,6 +1811,44 @@ fn parse_read_function(
 }
 
 ///|
+fn parse_write_foreign_library_member(
+  writer : @cache_binary.Writer,
+  value : ForeignLibraryMember,
+) -> Unit {
+  writer.write_string(value.name)
+  parse_write_offset(writer, value.name_offset)
+  parse_write_fn_parameters(writer, value.parameters)
+  parse_write_type(writer, value.return_type)
+  writer.write_bytes(value.export_name)
+  parse_write_offset(writer, value.export_name_offset)
+  parse_write_offset(writer, value.offset)
+}
+
+///|
+fn parse_read_foreign_library_member(
+  reader : @cache_binary.Reader,
+  field : String,
+  depth : Int,
+) -> ForeignLibraryMember {
+  {
+    name: reader.read_string(parse_event_maximum_text, field + ".name"),
+    name_offset: parse_read_offset(reader, field + ".name_offset"),
+    parameters: parse_read_fn_parameters(
+      reader,
+      field + ".parameters",
+      depth + 1,
+    ),
+    return_type: parse_read_type(reader, field + ".return_type", depth + 1),
+    export_name: reader.read_bytes(
+      parse_event_maximum_bytes,
+      field + ".export_name",
+    ),
+    export_name_offset: parse_read_offset(reader, field + ".export_name_offset"),
+    offset: parse_read_offset(reader, field + ".offset"),
+  }
+}
+
+///|
 fn parse_write_declaration(
   writer : @cache_binary.Writer,
   value : Declaration,
@@ -1936,6 +1974,25 @@ fn parse_write_declaration(
       parse_write_offset(writer, value.name_offset)
       parse_write_type_parameters(writer, value.type_parameters)
       parse_write_type(writer, value.target)
+      parse_write_offset(writer, value.offset)
+    }
+    ForeignType(value) => {
+      writer.write_byte(10)
+      parse_write_visibility(writer, value.visibility)
+      writer.write_string(value.name)
+      parse_write_offset(writer, value.name_offset)
+      parse_write_offset(writer, value.offset)
+    }
+    ForeignLibrary(value) => {
+      writer.write_byte(11)
+      writer.write_bytes(value.logical_name)
+      parse_write_offset(writer, value.logical_name_offset)
+      writer.write_string(value.namespace_alias)
+      parse_write_offset(writer, value.alias_offset)
+      writer.write_var_u64(value.members.length().to_uint64())
+      for foreign_member in value.members {
+        parse_write_foreign_library_member(writer, foreign_member)
+      }
       parse_write_offset(writer, value.offset)
     }
   }
@@ -2147,6 +2204,50 @@ fn parse_read_declaration(
         target: parse_read_type(reader, field + ".target", depth + 1),
         offset: parse_read_offset(reader, field + ".offset"),
       })
+    10 =>
+      ForeignType({
+        visibility: parse_read_visibility(reader, field + ".visibility"),
+        name: reader.read_string(parse_event_maximum_text, field + ".name"),
+        name_offset: parse_read_offset(reader, field + ".name_offset"),
+        offset: parse_read_offset(reader, field + ".offset"),
+      })
+    11 => {
+      let logical_name = reader.read_bytes(
+        parse_event_maximum_bytes,
+        field + ".logical_name",
+      )
+      let logical_name_offset = parse_read_offset(
+        reader,
+        field + ".logical_name_offset",
+      )
+      let namespace_alias = reader.read_string(
+        parse_event_maximum_text,
+        field + ".namespace_alias",
+      )
+      let alias_offset = parse_read_offset(reader, field + ".alias_offset")
+      let count = reader.read_count(
+        parse_event_maximum_items,
+        field + ".member_count",
+      )
+      let members : Array[ForeignLibraryMember] = []
+      for index in 0..<count {
+        members.push(
+          parse_read_foreign_library_member(
+            reader,
+            field + ".member[\{index}]",
+            depth + 1,
+          ),
+        )
+      }
+      ForeignLibrary({
+        logical_name,
+        logical_name_offset,
+        namespace_alias,
+        alias_offset,
+        members,
+        offset: parse_read_offset(reader, field + ".offset"),
+      })
+    }
     _ => {
       reader.fail(field, "unknown declaration discriminant")
       Import({
@@ -2211,6 +2312,11 @@ fn parse_write_expectation(
       Equal => 40
       BuiltinString => 41
       LineEnd => 42
+      ForeignTypeName => 43
+      ForeignLibraryName => 44
+      ForeignLibraryAlias => 45
+      ForeignLibraryMemberKeyword => 46
+      ForeignLibraryExportName => 47
     },
   )
 }
@@ -2264,6 +2370,11 @@ fn parse_read_expectation(
     40 => Equal
     41 => BuiltinString
     42 => LineEnd
+    43 => ForeignTypeName
+    44 => ForeignLibraryName
+    45 => ForeignLibraryAlias
+    46 => ForeignLibraryMemberKeyword
+    47 => ForeignLibraryExportName
     _ => {
       reader.fail(field, "unknown declaration-expectation discriminant")
       DeclarationKeyword
@@ -2805,6 +2916,26 @@ fn parse_write_declaration_error(
       writer.write_byte(16)
       parse_write_offset(writer, offset)
     }
+    PublicForeignLibraryNotAllowed(offset) => {
+      writer.write_byte(17)
+      parse_write_offset(writer, offset)
+    }
+    PublicForeignLibraryMemberNotAllowed(offset) => {
+      writer.write_byte(18)
+      parse_write_offset(writer, offset)
+    }
+    GenericForeignLibraryMemberNotAllowed(offset) => {
+      writer.write_byte(19)
+      parse_write_offset(writer, offset)
+    }
+    ReceiverForeignLibraryMemberNotAllowed(offset) => {
+      writer.write_byte(20)
+      parse_write_offset(writer, offset)
+    }
+    ForeignLibraryMemberBodyNotAllowed(offset) => {
+      writer.write_byte(21)
+      parse_write_offset(writer, offset)
+    }
   }
 }
 
@@ -2847,6 +2978,26 @@ fn parse_read_declaration_error(
     14 => EmptyTupleVariant(parse_read_offset(reader, field + ".offset"))
     15 => PublicImplNotAllowed(parse_read_offset(reader, field + ".offset"))
     16 => ForeignImplRequiresTrait(parse_read_offset(reader, field + ".offset"))
+    17 =>
+      PublicForeignLibraryNotAllowed(
+        parse_read_offset(reader, field + ".offset"),
+      )
+    18 =>
+      PublicForeignLibraryMemberNotAllowed(
+        parse_read_offset(reader, field + ".offset"),
+      )
+    19 =>
+      GenericForeignLibraryMemberNotAllowed(
+        parse_read_offset(reader, field + ".offset"),
+      )
+    20 =>
+      ReceiverForeignLibraryMemberNotAllowed(
+        parse_read_offset(reader, field + ".offset"),
+      )
+    21 =>
+      ForeignLibraryMemberBodyNotAllowed(
+        parse_read_offset(reader, field + ".offset"),
+      )
     _ => {
       reader.fail(field, "unknown declaration-error discriminant")
       ImportAfterDeclaration(0UL)

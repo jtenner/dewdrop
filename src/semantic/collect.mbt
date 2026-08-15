@@ -28,6 +28,9 @@ priv struct CollectionBuilder {
   lets : Array[CollectedLet]
   aliases : Array[CollectedAlias]
   impls : Array[CollectedImpl]
+  foreign_types : Array[CollectedForeignType]
+  foreign_libraries : Array[CollectedForeignLibrary]
+  foreign_functions : Array[CollectedForeignFunction]
   type_syntax : Array[HirTypeSyntax]
   type_syntax_files : Array[FileId]
   type_arguments : Array[HirTypeId]
@@ -87,6 +90,7 @@ priv struct CollectionBuilder {
   trait_bindings : Map[NameId, DeclId]
   value_bindings : Map[NameId, ValueBinding]
   value_binding_candidates : Array[ValueBindingCandidate]
+  foreign_library_by_alias : Map[NameId, DeclId]
   mut next_declaration_local : Int
 }
 
@@ -124,6 +128,9 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     lets: [],
     aliases: [],
     impls: [],
+    foreign_types: [],
+    foreign_libraries: [],
+    foreign_functions: [],
     type_syntax: [],
     type_syntax_files: [],
     type_arguments: [],
@@ -183,6 +190,7 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     trait_bindings: Map::default(),
     value_bindings: Map::default(),
     value_binding_candidates: [],
+    foreign_library_by_alias: Map::default(),
     next_declaration_local: 0,
   }
 }
@@ -833,6 +841,152 @@ fn CollectionBuilder::collect_test(
 }
 
 ///|
+fn CollectionBuilder::collect_foreign_type(
+  self : CollectionBuilder,
+  value : @parser.ForeignTypeDeclaration,
+) -> Unit {
+  let declaration = self.add_declaration(
+    ForeignTypeDecl,
+    Some(value.name),
+    semantic_visibility(value.visibility),
+    value.offset,
+  )
+  self.bind_unique_module_name(
+    ModuleType,
+    self.type_bindings,
+    declaration.name,
+    declaration.id,
+    value.name_offset,
+  )
+  match self.foreign_library_by_alias.get(declaration.name) {
+    Some(first) =>
+      self.record_duplicate(
+        ModuleType,
+        declaration.name,
+        (first, self.collected_declaration_offset(first)),
+        self.declaration_files[semantic_id_local(first)],
+        declaration.id,
+        value.name_offset,
+      )
+    None => ()
+  }
+  self.foreign_types.push({ declaration: declaration.id })
+}
+
+///|
+fn CollectionBuilder::collect_foreign_library(
+  self : CollectionBuilder,
+  value : @parser.ForeignLibraryDeclaration,
+) -> Unit {
+  let declaration = self.add_declaration(
+    ForeignLibraryDecl,
+    Some(value.namespace_alias),
+    ModuleVisible,
+    value.offset,
+  )
+  self.bind_value_name(
+    ForeignLibraryDecl,
+    declaration.name,
+    declaration.id,
+    value.alias_offset,
+  )
+  match self.type_bindings.get(declaration.name) {
+    Some(first) =>
+      self.record_duplicate(
+        ModuleValue,
+        declaration.name,
+        (first, self.collected_declaration_offset(first)),
+        self.declaration_files[semantic_id_local(first)],
+        declaration.id,
+        value.alias_offset,
+      )
+    None => ()
+  }
+  match self.foreign_library_by_alias.get(declaration.name) {
+    Some(first) =>
+      self.record_duplicate(
+        ModuleValue,
+        declaration.name,
+        (first, self.collected_declaration_offset(first)),
+        self.declaration_files[semantic_id_local(first)],
+        declaration.id,
+        value.alias_offset,
+      )
+    None => self.foreign_library_by_alias[declaration.name] = declaration.id
+  }
+  if value.logical_name.length() == 0 {
+    self.diagnostics.push(
+      EmptyForeignLogicalName(self.current_file, value.logical_name_offset),
+    )
+  } else if !semantic_utf8_is_valid(value.logical_name) {
+    self.diagnostics.push(
+      InvalidUtf8ForeignLogicalName(
+        self.current_file,
+        value.logical_name_offset,
+      ),
+    )
+  }
+  let member_start = self.foreign_functions.length()
+  let method_start = self.methods.length()
+  for source_member in value.members {
+    let collected_method = self.add_method(
+      declaration.id,
+      ForeignLibraryMemberDecl,
+      source_member.name,
+      ModuleVisible,
+      source_member.offset,
+    )
+    match self.first_method_name(method_start, collected_method.name) {
+      Some(first) =>
+        self.record_duplicate(
+          ForeignLibraryMember,
+          collected_method.name,
+          first,
+          self.current_file,
+          collected_method.id,
+          source_member.name_offset,
+        )
+      None => ()
+    }
+    self.collect_parameters(collected_method.id, None, source_member.parameters)
+    self.callables.push({
+      declaration: collected_method.id,
+      return_type: self.lower_type(source_member.return_type),
+    })
+    if source_member.export_name.length() == 0 {
+      self.diagnostics.push(
+        EmptyForeignExportName(
+          self.current_file,
+          source_member.export_name_offset,
+        ),
+      )
+    } else if !semantic_utf8_is_valid(source_member.export_name) {
+      self.diagnostics.push(
+        InvalidUtf8ForeignExportName(
+          self.current_file,
+          source_member.export_name_offset,
+        ),
+      )
+    }
+    self.foreign_functions.push({
+      declaration: collected_method.id,
+      library: declaration.id,
+      export_name: source_member.export_name,
+      export_name_offset: source_member.export_name_offset,
+    })
+  }
+  self.foreign_libraries.push({
+    declaration: declaration.id,
+    logical_name: value.logical_name,
+    logical_name_offset: value.logical_name_offset,
+    members: {
+      start: member_start,
+      length: self.foreign_functions.length() - member_start,
+    },
+  })
+}
+
+///|
 fn CollectionBuilder::collect_impl(
   self : CollectionBuilder,
   value : @parser.ImplDeclaration,
@@ -1203,6 +1357,8 @@ fn CollectionBuilder::collect_declaration(
     @parser.Function(value) => self.collect_function(value)
     @parser.Test(value) => self.collect_test(value)
     @parser.Impl(value) => self.collect_impl(value)
+    @parser.ForeignType(value) => self.collect_foreign_type(value)
+    @parser.ForeignLibrary(value) => self.collect_foreign_library(value)
     @parser.Struct(value) => self.collect_struct(value)
     @parser.Enum(value) => self.collect_enum(value)
     @parser.TypeAlias(value) => self.collect_type_alias(value)
@@ -1238,6 +1394,9 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     lets: self.lets,
     aliases: self.aliases,
     impls: self.impls,
+    foreign_types: self.foreign_types,
+    foreign_libraries: self.foreign_libraries,
+    foreign_functions: self.foreign_functions,
     type_syntax: self.type_syntax,
     type_syntax_files: self.type_syntax_files,
     type_arguments: self.type_arguments,
@@ -1271,6 +1430,7 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     trait_bindings: self.trait_bindings,
     value_bindings: self.value_bindings,
     value_binding_candidates: self.value_binding_candidates,
+    foreign_library_by_alias: self.foreign_library_by_alias,
   }
 }
 

@@ -477,6 +477,16 @@ fn BodyNameResolver::resolve_expression_name(
       }
       _ => ()
     }
+    match self.collected.lookup_foreign_library(name) {
+      Some(declaration) if self.declaration_visible(declaration) => {
+        self.set_expression_reference(
+          expression,
+          ForeignLibraryNameReference(declaration),
+        )
+        return
+      }
+      _ => ()
+    }
     if self.module_value_visible(name) {
       self.set_expression_reference(expression, ModuleValueNameReference(name))
       return
@@ -561,6 +571,16 @@ fn BodyNameResolver::resolve_expression_name(
     self.diagnose(UnknownQualifiedRoot(name, expression, offset))
     self.set_expression_reference(expression, ErrorNameReference)
     return
+  }
+  match self.collected.lookup_foreign_library(name) {
+    Some(declaration) if self.declaration_visible(declaration) => {
+      self.set_expression_reference(
+        expression,
+        ForeignLibraryNameReference(declaration),
+      )
+      return
+    }
+    _ => ()
   }
   if self.module_value_visible(name) {
     self.set_expression_reference(expression, ModuleValueNameReference(name))

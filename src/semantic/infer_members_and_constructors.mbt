@@ -387,6 +387,41 @@ fn BasicBodyInferencer::infer_qualified_value(
       }
     HirNameExpr(_, _) | HirQualifiedExpr(_, _, _) =>
       match self.names.expression_references[base] {
+        ForeignLibraryNameReference(library) => {
+          self.consume_member_root(base)
+          match self.collected.foreign_library_member(library, property) {
+            Some(declaration) => {
+              let local_index = semantic_id_local(declaration)
+              let callable_index = if local_index >= 0 &&
+                local_index < self.callable_indices.length() {
+                self.callable_indices[local_index]
+              } else {
+                -1
+              }
+              if callable_index >= 0 {
+                self.constrain(
+                  self.expression_type(expression),
+                  self.solver.resolved_type(
+                    self.resolved.callable_function_types[callable_index],
+                  ),
+                  expression_type_origin(expression, offset),
+                )
+                self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
+                  declaration,
+                  { start: 0, length: 0 },
+                )
+              } else {
+                self.mark_unsupported(expression)
+              }
+            }
+            None => {
+              self.diagnose(
+                UnknownQualifiedMember(property, library, expression, offset),
+              )
+              self.fail_expression_selection(expression)
+            }
+          }
+        }
         ModuleTypeNameReference(declaration) => {
           self.consume_member_root(base)
           if semantic_id_module(declaration) == self.collected.module_id {

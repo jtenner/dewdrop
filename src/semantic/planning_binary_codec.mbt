@@ -125,6 +125,7 @@ fn pb_write_layout_kind(
       writer.write_byte(1)
       ib_write_span(writer, variants)
     }
+    PlannedForeignTypeLayout => writer.write_byte(2)
   }
 }
 
@@ -136,6 +137,7 @@ fn pb_read_layout_kind(
   match reader.read_byte(field) {
     0 => PlannedStructLayout(ib_read_span(reader, field))
     1 => PlannedEnumLayout(ib_read_span(reader, field))
+    2 => PlannedForeignTypeLayout
     _ => {
       reader.fail(field, "unknown nominal-layout discriminant")
       PlannedStructLayout({ start: 0, length: 0 })
@@ -213,6 +215,7 @@ pub fn validate_planned_module_type_layouts(
         if !pb_span_is_valid(variants, value.variants.length()) {
           return Err("type-layout variant span is outside its arena")
         }
+      PlannedForeignTypeLayout => ()
     }
   }
   for index, field in value.fields {
@@ -598,6 +601,10 @@ fn pb_write_physical_kind(
       writer.write_byte(8)
       ib_write_id(writer, trait_)
     }
+    PlannedWasmForeignMarkerType(declaration) => {
+      writer.write_byte(9)
+      ib_write_id(writer, declaration)
+    }
   }
 }
 
@@ -621,6 +628,7 @@ fn pb_read_physical_kind(
     6 => PlannedWasmTraitMethodSignatureType(ib_read_id(reader, field))
     7 => PlannedWasmTraitVTableType(ib_read_id(reader, field))
     8 => PlannedWasmTraitObjectType(ib_read_id(reader, field))
+    9 => PlannedWasmForeignMarkerType(ib_read_id(reader, field))
     _ => {
       reader.fail(field, "unknown Wasm physical-type discriminant")
       PlannedWasmClosureType
@@ -680,14 +688,49 @@ fn pb_read_value_type(
 }
 
 ///|
+fn pb_write_import_identity(
+  writer : @cache_binary.Writer,
+  value : WasmImportIdentity,
+) -> Unit {
+  writer.write_bytes(value.module_name)
+  writer.write_bytes(value.field)
+  writer.write_byte(
+    match value.kind {
+      HostWasmImport => 0
+      StaticLinkWasmImport => 1
+      WasiWasmImport => 2
+    },
+  )
+}
+
+///|
+fn pb_read_import_identity(
+  reader : @cache_binary.Reader,
+  field : String,
+) -> WasmImportIdentity {
+  let module_name = reader.read_bytes(planning_binary_maximum_text, field)
+  let import_field = reader.read_bytes(planning_binary_maximum_text, field)
+  let kind = match reader.read_byte(field) {
+    0 => HostWasmImport
+    1 => StaticLinkWasmImport
+    2 => WasiWasmImport
+    _ => {
+      reader.fail(field, "unknown Wasm import-kind discriminant")
+      HostWasmImport
+    }
+  }
+  { module_name, field: import_field, kind }
+}
+
+///|
 fn pb_write_function_kind(
   writer : @cache_binary.Writer,
   value : PlannedWasmFunctionKind,
 ) -> Unit {
   match value {
-    PlannedWasmImportedFunction(name) => {
+    PlannedWasmImportedFunction(identity) => {
       writer.write_byte(0)
-      writer.write_bytes(name)
+      pb_write_import_identity(writer, identity)
     }
     PlannedWasmInlineBuiltinFunction(name) => {
       writer.write_byte(1)
@@ -720,10 +763,7 @@ fn pb_read_function_kind(
   field : String,
 ) -> PlannedWasmFunctionKind {
   match reader.read_byte(field) {
-    0 =>
-      PlannedWasmImportedFunction(
-        reader.read_bytes(planning_binary_maximum_text, field),
-      )
+    0 => PlannedWasmImportedFunction(pb_read_import_identity(reader, field))
     1 =>
       PlannedWasmInlineBuiltinFunction(
         reader.read_bytes(planning_binary_maximum_text, field),
@@ -826,8 +866,8 @@ fn pb_rebuild_fragment_maps(
       continue
     }
     match function_.kind {
-      PlannedWasmImportedFunction(name) =>
-        imported[name] = function_.function_index
+      PlannedWasmImportedFunction(identity) =>
+        imported[identity.lookup_name()] = function_.function_index
       PlannedWasmRuntimeFunction(name) =>
         runtime[name] = function_.function_index
       _ => ()

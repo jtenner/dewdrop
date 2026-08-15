@@ -256,6 +256,8 @@ fn cache_write_collected_kind(
       StructDecl => 6
       EnumDecl => 7
       TypeAliasDecl => 8
+      ForeignTypeDecl => 9
+      ForeignLibraryDecl => 10
     },
   )
 }
@@ -730,6 +732,8 @@ fn FrozenInterfaceCacheReader::read_collected_kind(
     6 => StructDecl
     7 => EnumDecl
     8 => TypeAliasDecl
+    9 => ForeignTypeDecl
+    10 => ForeignLibraryDecl
     _ => {
       self.fail("unknown collected declaration kind in frozen-interface cache")
       FunctionDecl

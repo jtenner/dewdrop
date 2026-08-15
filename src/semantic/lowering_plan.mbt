@@ -772,6 +772,7 @@ fn plan_expression_kind(
         | ModuleTypeNameReference(_)
         | ModuleTraitNameReference(_)
         | ImportedModuleNameReference(_)
+        | ForeignLibraryNameReference(_)
         | VariantNameReference(_)
         | NoNameReference => PlannedConsumedExpression
       }

@@ -10190,6 +10190,7 @@ fn starshine_program_group_physical_subtype(
         module_.function_of(requirement).unwrap(),
       )
     @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmForeignMarkerType(_)
     | @semantic.PlannedWasmTraitVTableType(_)
     | @semantic.PlannedWasmTraitObjectType(_) =>
       @lib.SubType::comp_type(composite)
@@ -10258,6 +10259,7 @@ fn starshine_program_physical_subtype(
         module_.function_of(requirement).unwrap(),
       )
     @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmForeignMarkerType(_)
     | @semantic.PlannedWasmTraitVTableType(_)
     | @semantic.PlannedWasmTraitObjectType(_) =>
       @lib.SubType::comp_type(composite)

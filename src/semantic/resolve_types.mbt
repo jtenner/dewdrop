@@ -98,7 +98,7 @@ fn TypeResolver::new(
   for declaration in collected.declarations {
     declaration_types[semantic_id_local(declaration.id)] = match
       declaration.kind {
-      StructDecl | EnumDecl | TypeAliasDecl =>
+      StructDecl | EnumDecl | TypeAliasDecl | ForeignTypeDecl =>
         interner.intern_nominal(declaration.id)
       TraitDecl => interner.intern_trait(declaration.id)
       _ => interner.error_type
@@ -880,7 +880,7 @@ fn TypeResolver::resolve_syntax(
 fn TypeResolver::resolve_reserved_names(self : TypeResolver) -> Unit {
   for declaration in self.collected.declarations {
     match declaration.kind {
-      StructDecl | EnumDecl | TypeAliasDecl => {
+      StructDecl | EnumDecl | TypeAliasDecl | ForeignTypeDecl => {
         let spelling = self.collected.name(declaration.name)
         if primitive_type_from_name(spelling) is Some(_) || spelling == "Self" {
           self.diagnose(

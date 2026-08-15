@@ -302,39 +302,18 @@ fn emit_starshine_program_type_section(
 }
 
 ///|
-fn starshine_import_module(name : Bytes) -> String {
-  if name == b"wasi_snapshot_preview1.fd_write" ||
-    name == b"wasi_snapshot_preview1.fd_read" {
-    "wasi_snapshot_preview1"
-  } else {
-    "dew"
-  }
-}
-
-///|
-fn starshine_import_field(name : Bytes) -> String {
-  if name == b"wasi_snapshot_preview1.fd_write" {
-    "fd_write"
-  } else if name == b"wasi_snapshot_preview1.fd_read" {
-    "fd_read"
-  } else {
-    @utf8.decode_lossy(name)
-  }
-}
-
-///|
 fn emit_starshine_program_import_section(
   planned : @semantic.PlannedProgramWasmGCLink,
 ) -> @lib.ImportSec {
   let imports : Array[@lib.Import] = []
   for function_ in planned.functions {
     match function_.kind {
-      @semantic.PlannedWasmImportedFunction(name) =>
+      @semantic.PlannedWasmImportedFunction(identity) =>
         if !function_.elided {
           imports.push(
             @lib.Import::new(
-              @lib.Name::from_string(starshine_import_module(name)),
-              @lib.Name::from_string(starshine_import_field(name)),
+              @lib.Name::from_string(@utf8.decode_lossy(identity.module_name)),
+              @lib.Name::from_string(@utf8.decode_lossy(identity.field)),
               @lib.ExternType::func(
                 @lib.TypeIdx::new(
                   function_.signature_type_index.reinterpret_as_uint(),

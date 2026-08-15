@@ -238,7 +238,11 @@ fn CollectionDiagnostic::source_parts(
     InvalidExpectedTestTrap(file, _, offset)
     | InvalidUtf8StringLiteral(file, offset)
     | TestDeclarationOutsideTestFile(file, offset)
-    | UnknownDerivedTrait(_, file, offset) =>
+    | UnknownDerivedTrait(_, file, offset)
+    | EmptyForeignLogicalName(file, offset)
+    | InvalidUtf8ForeignLogicalName(file, offset)
+    | EmptyForeignExportName(file, offset)
+    | InvalidUtf8ForeignExportName(file, offset) =>
       (CompilerError, Some({ file, offset }), secondary)
   }
 }

@@ -1,6 +1,7 @@
 ///|
 pub enum PlannedCallableKind {
   PlannedBuiltinCallable(Bytes)
+  PlannedForeignCallable(Bytes, Bytes)
   PlannedFunctionCallable(BodyId)
   PlannedTraitMethodCallable(DeclId)
   PlannedImplMethodCallable(DeclId, BodyId?)
@@ -78,6 +79,16 @@ fn planned_builtin_name(
     }
   }
   b""
+}
+
+///|
+fn planned_foreign_callable_identity(
+  collected : CollectedModule,
+  declaration : DeclId,
+) -> (Bytes, Bytes) {
+  let foreign_function = collected.foreign_function(declaration).unwrap()
+  let library = collected.foreign_library(foreign_function.library).unwrap()
+  (library.logical_name, foreign_function.export_name)
 }
 
 ///|
@@ -161,6 +172,18 @@ fn planned_callable_metadata(
       }
     Some(MethodReference(value)) =>
       match value.kind {
+        ForeignLibraryMemberDecl => {
+          let identity = planned_foreign_callable_identity(
+            collected, declaration,
+          )
+          (
+            PlannedForeignCallable(identity.0, identity.1),
+            value.parent,
+            { start: 0, length: 0 },
+            -1,
+            value.offset,
+          )
+        }
         TraitMethodDecl =>
           (
             PlannedTraitMethodCallable(value.parent),

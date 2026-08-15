@@ -128,6 +128,7 @@ fn starshine_physical_subtype(
         planned.function_of(requirement).unwrap(),
       )
     @semantic.PlannedWasmStructType(_)
+    | @semantic.PlannedWasmForeignMarkerType(_)
     | @semantic.PlannedWasmTraitVTableType(_)
     | @semantic.PlannedWasmTraitObjectType(_) =>
       @lib.SubType::comp_type(composite)
@@ -426,12 +427,12 @@ pub fn emit_starshine_import_section(
   let imports : Array[@lib.Import] = []
   for function_ in planned.functions {
     match function_.kind {
-      @semantic.PlannedWasmImportedFunction(name) =>
+      @semantic.PlannedWasmImportedFunction(identity) =>
         if !function_.elided {
           imports.push(
             @lib.Import::new(
-              @lib.Name::from_string(starshine_import_module(name)),
-              @lib.Name::from_string(starshine_import_field(name)),
+              @lib.Name::from_string(@utf8.decode_lossy(identity.module_name)),
+              @lib.Name::from_string(@utf8.decode_lossy(identity.field)),
               @lib.ExternType::func(
                 @lib.TypeIdx::new(
                   function_.signature_type_index.reinterpret_as_uint(),

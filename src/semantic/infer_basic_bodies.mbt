@@ -2155,7 +2155,8 @@ fn BasicBodyInferencer::constrain_name_expressions(
               self.imported_function_reference_candidate_count(head) == 0 {
               self.mark_unsupported(expression)
             }
-          ImportedModuleNameReference(_) => self.mark_unsupported(expression)
+          ImportedModuleNameReference(_) | ForeignLibraryNameReference(_) =>
+            self.mark_unsupported(expression)
           ImportedModuleValueNameReference(_) => ()
           VariantNameReference(_) => ()
           PrimitiveTypeNameReference(_)

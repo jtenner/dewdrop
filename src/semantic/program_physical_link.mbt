@@ -550,6 +550,7 @@ fn program_cross_module_type_groups(
       let physical = fragments.modules[node.module_index].physical_types[node.fragment_index]
       match physical.kind {
         PlannedWasmStructType(declaration)
+        | PlannedWasmForeignMarkerType(declaration)
         | PlannedWasmEnumBaseType(declaration) =>
           type_lookup[declaration] = final_type_index
         PlannedWasmEnumSubtypeType(_, _, _)
@@ -610,8 +611,9 @@ fn planned_program_local_nominal_declaration(
     return None
   }
   match modules[module_index].physical_types[type_index].kind {
-    PlannedWasmStructType(declaration) | PlannedWasmEnumBaseType(declaration) =>
-      Some(declaration)
+    PlannedWasmStructType(declaration)
+    | PlannedWasmForeignMarkerType(declaration)
+    | PlannedWasmEnumBaseType(declaration) => Some(declaration)
     PlannedWasmEnumSubtypeType(_, _, _)
     | PlannedWasmClosureType
     | PlannedWasmCaptureCellType(_)
@@ -806,6 +808,7 @@ pub fn link_program_wasmgc_fragments(
           physical.type_index
         match physical.kind {
           PlannedWasmStructType(declaration)
+          | PlannedWasmForeignMarkerType(declaration)
           | PlannedWasmEnumBaseType(declaration) =>
             type_lookup[declaration] = type_count + physical.type_index
           PlannedWasmEnumSubtypeType(_, _, _)
@@ -899,6 +902,7 @@ pub fn link_program_wasmgc_fragments(
             physical.type_index
           match physical.kind {
             PlannedWasmStructType(declaration)
+            | PlannedWasmForeignMarkerType(declaration)
             | PlannedWasmEnumBaseType(declaration) =>
               type_lookup[declaration] = type_count + physical.type_index
             PlannedWasmEnumSubtypeType(_, _, _)
@@ -1010,6 +1014,7 @@ pub fn link_program_wasmgc_fragments(
       for physical in module_fragments.physical_types {
         match physical.kind {
           PlannedWasmStructType(declaration)
+          | PlannedWasmForeignMarkerType(declaration)
           | PlannedWasmEnumBaseType(declaration) =>
             match
               lowering.modules[module_index].type_layouts.layout_of(declaration) {
@@ -1512,8 +1517,8 @@ pub fn link_program_wasmgc_fragments(
       continue
     }
     match function_.kind {
-      PlannedWasmImportedFunction(name) =>
-        imported_function_indices[name] = function_.function_index
+      PlannedWasmImportedFunction(identity) =>
+        imported_function_indices[identity.lookup_name()] = function_.function_index
       PlannedWasmRuntimeFunction(name) => {
         runtime_function_indices[name] = function_.function_index
         if function_.module_index >= 0 &&

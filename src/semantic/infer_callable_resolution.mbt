@@ -824,6 +824,24 @@ fn BasicBodyInferencer::prepare_call(
           }
         HirNameExpr(_, _) | HirQualifiedExpr(_, _, _) =>
           match self.names.expression_references[base] {
+            ForeignLibraryNameReference(library) => {
+              self.consume_member_root(target)
+              match self.collected.foreign_library_member(library, property) {
+                Some(declaration) =>
+                  self.select_call_candidate(
+                    call_slot, expression, arguments, declaration, offset,
+                  )
+                None => {
+                  self.call_targets[call_slot] = ErrorInferredCallTarget
+                  self.diagnose(
+                    UnknownQualifiedMember(
+                      property, library, expression, offset,
+                    ),
+                  )
+                  self.fail_expression_selection(expression)
+                }
+              }
+            }
             ModuleTypeNameReference(declaration) => {
               self.consume_member_root(target)
               if semantic_id_module(declaration) == self.collected.module_id {

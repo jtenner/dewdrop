@@ -2,6 +2,7 @@
 pub enum PlannedNominalLayoutKind {
   PlannedStructLayout(HirSpan)
   PlannedEnumLayout(HirSpan)
+  PlannedForeignTypeLayout
 } derive(Eq, Debug)
 
 ///|
@@ -111,7 +112,9 @@ pub fn plan_module_type_layouts(
   }
   let mut has_nominal = false
   for declaration in collected.declarations {
-    if declaration.kind == StructDecl || declaration.kind == EnumDecl {
+    if declaration.kind == StructDecl ||
+      declaration.kind == EnumDecl ||
+      declaration.kind == ForeignTypeDecl {
       has_nominal = true
       break
     }
@@ -242,6 +245,7 @@ pub fn plan_module_type_layouts(
         }
         Some(PlannedEnumLayout(variants))
       }
+      ForeignTypeDecl => Some(PlannedForeignTypeLayout)
       _ => None
     }
     match kind {

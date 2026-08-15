@@ -31,6 +31,7 @@ pub enum BodyNameReference {
   ImportedValueNameReference(Int)
   ImportedModuleValueNameReference(DeclId)
   ImportedModuleNameReference(Int)
+  ForeignLibraryNameReference(DeclId)
   PrimitiveTypeNameReference(PrimitiveType)
   ModuleTypeNameReference(DeclId)
   ModuleTraitNameReference(DeclId)

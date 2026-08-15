@@ -71,9 +71,13 @@ test "test assertion runtime reaches bounded WASI write dependencies" {
         } else if name == b"dew_wasi_fd_write" {
           found_wasi_write = true
         }
-      @semantic.PlannedWasmImportedFunction(name) =>
-        if name == b"wasi_snapshot_preview1.fd_write" {
-          found_wasi_import = true
+      @semantic.PlannedWasmImportedFunction(identity) =>
+        if identity.module_name == b"wasi_snapshot_preview1" &&
+          identity.field == b"fd_write" {
+          match identity.kind {
+            @semantic.WasiWasmImport => found_wasi_import = true
+            _ => ()
+          }
         }
       _ => ()
     }

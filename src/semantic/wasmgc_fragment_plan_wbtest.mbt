@@ -222,7 +222,11 @@ test "WasmGC function slots separate imports definitions and signatures" {
   assert_eq(planned.imported_function_count, 1)
   assert_eq(planned.defined_function_count, 2)
   match planned.functions[0].kind {
-    PlannedWasmImportedFunction(name) => assert_eq(name, b"host")
+    PlannedWasmImportedFunction(identity) => {
+      assert_eq(identity.module_name, b"dew")
+      assert_eq(identity.field, b"host")
+      assert_eq(identity.kind, HostWasmImport)
+    }
     _ => fail("expected builtin import")
   }
   assert_eq(planned.functions[0].function_index, 0)
@@ -247,6 +251,43 @@ test "WasmGC function slots separate imports definitions and signatures" {
     planned.functions[3].signature_type_index,
     planned.physical_types.length() + 2,
   )
+}
+
+///|
+test "foreign libraries plan link imports with nominal marker signatures" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    9750UL, b"foreign type StarshineModule\nforeign impl \"starshine\" as Starshine {\n  fn module_new() -> StarshineModule = \"module_new\"\n}\npub fn make() -> StarshineModule {\n  Starshine.module_new()\n}\n",
+  )
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  assert_eq(lowering.type_layouts.layouts.length(), 1)
+  let declaration = lowering.type_layouts.layouts[0].declaration
+  let marker_index = planned.type_index_of(declaration).unwrap()
+  match planned.physical_types[marker_index].kind {
+    PlannedWasmForeignMarkerType(actual) => assert_eq(actual, declaration)
+    _ => fail("expected foreign nominal marker type")
+  }
+  assert_eq(planned.physical_types[marker_index].fields.length, 0)
+  let mut found = false
+  for function_ in planned.functions {
+    match function_.kind {
+      PlannedWasmImportedFunction(identity) => {
+        assert_eq(identity.module_name, b"link:starshine")
+        assert_eq(identity.field, b"module_new")
+        match identity.kind {
+          StaticLinkWasmImport => ()
+          _ => fail("expected static-link import kind")
+        }
+        assert_eq(function_.results.length, 1)
+        match planned.function_value_types[function_.results.start] {
+          WasmNominalRefValue(actual) => assert_eq(actual, marker_index)
+          _ => fail("expected nominal marker result")
+        }
+        found = true
+      }
+      _ => ()
+    }
+  }
+  assert_true(found)
 }
 
 ///|
