@@ -556,6 +556,88 @@ fn TypeResolver::resolve_trait_named_type(
 }
 
 ///|
+fn TypeResolver::qualified_import_binding(
+  self : TypeResolver,
+  module_alias : NameId,
+  name : NameId,
+  expectation : Int,
+) -> ImportedDeclarationBinding? {
+  let imports = match self.imports {
+    Some(value) => value
+    None => return None
+  }
+  let interface_index = match
+    imports.lookup_alias(self.collected.name(module_alias)) {
+    Some(value) => value
+    None => return None
+  }
+  if expectation == trait_type_name {
+    imports.lookup_module_trait(interface_index, self.collected.name(name))
+  } else {
+    match
+      imports.lookup_module_type(interface_index, self.collected.name(name)) {
+      Some(binding) => Some(binding)
+      None =>
+        imports.lookup_module_trait(interface_index, self.collected.name(name))
+    }
+  }
+}
+
+///|
+fn TypeResolver::resolve_qualified_type(
+  self : TypeResolver,
+  owner : DeclId,
+  module_alias : NameId,
+  name : NameId,
+  offset : UInt64,
+  name_offset : UInt64,
+  expectation : Int,
+  constructor_position : Bool,
+) -> ResolvedTypeId {
+  let binding = match
+    self.qualified_import_binding(module_alias, name, expectation) {
+    Some(value) => value
+    None => {
+      if expectation == trait_type_name {
+        self.diagnose(UnknownTrait(name, owner, name_offset))
+      } else {
+        self.diagnose(UnknownType(name, owner, name_offset))
+      }
+      return self.interner.error_type
+    }
+  }
+  let type_ = self.import_interface_type(
+    binding.interface_index,
+    binding.semantic_type,
+  )
+  if !constructor_position &&
+    expectation != trait_type_name &&
+    binding.source_kind == TypeAliasDecl &&
+    binding.generic_parameter_count > 0 {
+    self.diagnose(
+      TypeArityMismatch(
+        type_,
+        binding.generic_parameter_count,
+        0,
+        owner,
+        offset,
+      ),
+    )
+    return self.interner.error_type
+  }
+  if constructor_position || type_ == self.interner.error_type {
+    return type_
+  }
+  match self.constructor_arity(type_) {
+    Some(0) | None => type_
+    Some(expected) => {
+      self.diagnose(TypeArityMismatch(type_, expected, 0, owner, offset))
+      self.interner.error_type
+    }
+  }
+}
+
+///|
 fn TypeResolver::resolve_named_type(
   self : TypeResolver,
   owner : DeclId,
@@ -623,17 +705,19 @@ fn TypeResolver::imported_alias_binding(
   self : TypeResolver,
   syntax : HirTypeId,
 ) -> ImportedDeclarationBinding? {
-  let name = match self.collected.type_syntax[syntax] {
-    NamedTypeSyntax(name, _) => name
-    _ => return None
-  }
-  match self.imports {
-    Some(imports) =>
-      match imports.lookup_type(self.collected.name(name)) {
-        Some(binding) if binding.source_kind == TypeAliasDecl => Some(binding)
-        _ => None
+  let binding = match self.collected.type_syntax[syntax] {
+    NamedTypeSyntax(name, _) =>
+      match self.imports {
+        Some(imports) => imports.lookup_type(self.collected.name(name))
+        None => None
       }
-    None => None
+    QualifiedTypeSyntax(module_alias, name, _, _) =>
+      self.qualified_import_binding(module_alias, name, any_type_name)
+    _ => None
+  }
+  match binding {
+    Some(value) if value.source_kind == TypeAliasDecl => Some(value)
+    _ => None
   }
 }
 
@@ -734,6 +818,10 @@ fn TypeResolver::resolve_syntax(
       NamedTypeSyntax(name, offset) =>
         self.syntax_types[current] = self.resolve_named_type(
           owner, self_owner, name, offset, current_expectation, constructor_position,
+        )
+      QualifiedTypeSyntax(module_alias, name, offset, name_offset) =>
+        self.syntax_types[current] = self.resolve_qualified_type(
+          owner, module_alias, name, offset, name_offset, current_expectation, constructor_position,
         )
       AppliedTypeSyntax(base, arguments, offset) =>
         if state == 0 {

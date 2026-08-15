@@ -1,0 +1,10 @@
+{
+  "errors": [
+    "fixture.dew:3:29: error: UnknownType(3, 12884901888000, 65)\n  |\n3 | fn missing_type(value: @api.Missing) -> Unit {\n  |                             ^",
+    "fixture.dew:6:26: error: UnknownTrait(7, 12884901888001, 112)\n  |\n6 | fn missing_trait<t: @api.Absent>(value: t) -> Unit {\n  |                          ^",
+    "fixture.dew:11:26: error: UnknownVariantForType(11, 12889196855299, 4, 233)\n  |\n11 |     @api.Message::Unknown(item) => item\n  |                          ^",
+    "fixture.dew:17:5: error: UnknownPatternImportAlias(14, 5, 330)\n  |\n17 |     @missing.Message::Value(item) => item\n  |     ^"
+  ],
+  "warnings": [],
+  "output": null
+}

@@ -693,13 +693,19 @@ Use `open` to bring a module's public names into unqualified lookup:
 open dew.std.map
 ```
 
-Use `import ... as @alias` for qualified access:
+Use `import ... as @alias` for exact qualified access:
 
 ```dew
 import example.library as @library
+
+fn read(value: @library.Item) -> I32 {
+  match value.message {
+    @library.Message::Value(item) => item
+  }
+}
 ```
 
-Qualified alias support is still being extended to every type and pattern namespace, so consult the roadmap and tests when using advanced qualified forms.
+Aliases qualify public values, functions, types, traits, enum constructors and patterns, and static implementation methods. Exact qualification does not add the selected names to unqualified lookup.
 
 Declarations are visible throughout their owning module by default. Add `pub` when another module or the Wasm host must see the declaration:
 

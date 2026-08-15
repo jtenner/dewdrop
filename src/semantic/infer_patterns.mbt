@@ -713,12 +713,14 @@ fn BasicBodyInferencer::select_variant_base(
               }
             }
           }
+        ErrorPatternReference => None
         _ => {
           self.diagnose(InvalidPatternConstructor(owner_pattern, offset))
           None
         }
       }
     }
+    HirImportAliasPattern(_, _) => None
     _ => {
       self.diagnose(InvalidPatternConstructor(owner_pattern, offset))
       None
@@ -1080,7 +1082,7 @@ fn BasicBodyInferencer::infer_pattern(
     self.pattern_types[pattern - self.body.patterns.start] = expected
     match self.collected.patterns[pattern] {
       HirWildcardPattern(_) => ()
-      HirRestPattern(_) =>
+      HirRestPattern(_) | HirImportAliasPattern(_, _) =>
         self.pattern_types[pattern - self.body.patterns.start] = self.solver.error_type()
       HirBindingPattern(_, offset) =>
         match self.names.pattern_references[pattern] {

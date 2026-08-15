@@ -750,6 +750,25 @@ fn BodyNameResolver::collect_pattern_alternative(
     let binding_context = self.pattern_contexts.pop().unwrap()
     match self.collected.patterns[pattern] {
       HirWildcardPattern(_) | HirRestPattern(_) => ()
+      HirImportAliasPattern(name, offset) =>
+        match self.imports {
+          Some(imports) =>
+            match imports.lookup_alias(self.collected.name(name)) {
+              Some(interface_index) =>
+                self.set_pattern_reference(
+                  pattern,
+                  PatternImportedModuleReference(interface_index),
+                )
+              None => {
+                self.diagnose(UnknownPatternImportAlias(name, pattern, offset))
+                self.set_pattern_reference(pattern, ErrorPatternReference)
+              }
+            }
+          None => {
+            self.diagnose(UnknownPatternImportAlias(name, pattern, offset))
+            self.set_pattern_reference(pattern, ErrorPatternReference)
+          }
+        }
       HirBindingPattern(name, offset) =>
         if !binding_context || self.known_pattern_constructor(name) {
           self.resolve_pattern_constructor(pattern, name, offset)
@@ -760,8 +779,58 @@ fn BodyNameResolver::collect_pattern_alternative(
         }
       HirLiteralPattern(expression, _) =>
         self.pattern_literal_expressions.push(expression)
-      HirQualifiedPattern(base, property, _) => {
-        self.set_pattern_reference(pattern, PatternQualifiedReference(property))
+      HirQualifiedPattern(base, property, offset) => {
+        match self.collected.patterns[base] {
+          HirImportAliasPattern(alias_name, _) =>
+            match self.imports {
+              Some(imports) =>
+                match imports.lookup_alias(self.collected.name(alias_name)) {
+                  Some(interface_index) =>
+                    match
+                      imports.lookup_module_type(
+                        interface_index,
+                        self.collected.name(property),
+                      ) {
+                      Some(binding) =>
+                        self.set_pattern_reference(
+                          pattern,
+                          PatternTypeReference(binding.declaration),
+                        )
+                      None =>
+                        match
+                          imports.lookup_module_trait(
+                            interface_index,
+                            self.collected.name(property),
+                          ) {
+                          Some(binding) =>
+                            self.set_pattern_reference(
+                              pattern,
+                              PatternTraitReference(binding.declaration),
+                            )
+                          None => {
+                            self.diagnose(
+                              UnknownPatternConstructor(
+                                property, pattern, offset,
+                              ),
+                            )
+                            self.set_pattern_reference(
+                              pattern,
+                              ErrorPatternReference,
+                            )
+                          }
+                        }
+                    }
+                  None =>
+                    self.set_pattern_reference(pattern, ErrorPatternReference)
+                }
+              None => self.set_pattern_reference(pattern, ErrorPatternReference)
+            }
+          _ =>
+            self.set_pattern_reference(
+              pattern,
+              PatternQualifiedReference(property),
+            )
+        }
         self.pattern_stack.push(base)
         self.pattern_contexts.push(false)
       }
@@ -1005,12 +1074,13 @@ fn BodyResolutionDiagnostic::rank(self : BodyResolutionDiagnostic) -> Int {
     AmbiguousImportedQualifiedRoot(_, _, _) => 2
     UnknownQualifiedRoot(_, _, _) => 3
     UnknownImportAlias(_, _, _) => 4
-    UnknownPatternConstructor(_, _, _) => 5
-    DuplicatePatternBinding(_, _, _) => 6
-    AlternativeMissingBinding(_, _, _) => 7
-    AlternativeExtraBinding(_, _, _) => 8
-    BreakOutsideLoop(_, _) => 9
-    ContinueOutsideLoop(_, _) => 10
+    UnknownPatternImportAlias(_, _, _) => 5
+    UnknownPatternConstructor(_, _, _) => 6
+    DuplicatePatternBinding(_, _, _) => 7
+    AlternativeMissingBinding(_, _, _) => 8
+    AlternativeExtraBinding(_, _, _) => 9
+    BreakOutsideLoop(_, _) => 10
+    ContinueOutsideLoop(_, _) => 11
   }
 }
 
@@ -1143,10 +1213,57 @@ fn BodyNameResolver::schedule_expression_children(
     }
     HirPrefixExpr(_, value, _) | HirFieldExpr(value, _, _) =>
       self.push_task(name_task_visit_expression, value, name_expect_value)
-    HirQualifiedExpr(value, _, _) =>
+    HirQualifiedExpr(value, property, offset) => {
+      if expectation == name_expect_qualified_root {
+        match self.collected.expressions[value] {
+          HirImportAliasExpr(module_alias, _) =>
+            match self.imports {
+              Some(imports) =>
+                match imports.lookup_alias(self.collected.name(module_alias)) {
+                  Some(interface_index) =>
+                    match
+                      imports.lookup_module_type(
+                        interface_index,
+                        self.collected.name(property),
+                      ) {
+                      Some(binding) =>
+                        self.set_expression_reference(
+                          expression,
+                          ModuleTypeNameReference(binding.declaration),
+                        )
+                      None =>
+                        match
+                          imports.lookup_module_trait(
+                            interface_index,
+                            self.collected.name(property),
+                          ) {
+                          Some(binding) =>
+                            self.set_expression_reference(
+                              expression,
+                              ModuleTraitNameReference(binding.declaration),
+                            )
+                          None => {
+                            self.diagnose(
+                              UnknownQualifiedRoot(property, expression, offset),
+                            )
+                            self.set_expression_reference(
+                              expression,
+                              ErrorNameReference,
+                            )
+                          }
+                        }
+                    }
+                  None => ()
+                }
+              None => ()
+            }
+          _ => ()
+        }
+      }
       self.push_task(
         name_task_visit_expression, value, name_expect_qualified_root,
       )
+    }
     HirBinaryExpr(_, left, right, _) | HirIndexExpr(left, right, _) => {
       self.push_task(name_task_visit_expression, right, name_expect_value)
       self.push_task(name_task_visit_expression, left, name_expect_value)

@@ -2712,9 +2712,12 @@ pub struct ImportedModuleValueBinding {
 pub struct ModuleImportScope {
   module_id : ModuleId
   declarations : Array[ImportedDeclarationBinding]
+  declaration_bindings : Map[DeclId, Int]
   imported_interfaces : Array[Int]
   type_bindings : Map[String, Int]
   trait_bindings : Map[String, Int]
+  module_type_bindings : Array[Map[String, Int]]
+  module_trait_bindings : Array[Map[String, Int]]
   value_bindings : Map[String, ImportedValueBinding]
   module_value_bindings : Array[Map[String, ImportedValueBinding]]
   module_let_bindings : Array[Map[String, ImportedModuleValueBinding]]
@@ -2745,6 +2748,49 @@ pub fn ModuleImportScope::lookup_alias(
     Some(index) if index >= 0 => Some(index)
     _ => None
   }
+}
+
+///|
+pub fn ModuleImportScope::lookup_module_declaration(
+  self : ModuleImportScope,
+  interface_index : Int,
+  name : String,
+  kind : FrozenInterfaceDeclarationKind,
+) -> ImportedDeclarationBinding? {
+  guard interface_index >= 0 &&
+    interface_index < self.module_type_bindings.length() else {
+    return None
+  }
+  let table = if kind == FrozenTraitDeclaration {
+    self.module_trait_bindings[interface_index]
+  } else if kind == FrozenTypeDeclaration {
+    self.module_type_bindings[interface_index]
+  } else {
+    return None
+  }
+  match table.get(name) {
+    Some(index) if index >= 0 && index < self.declarations.length() =>
+      Some(self.declarations[index])
+    _ => None
+  }
+}
+
+///|
+pub fn ModuleImportScope::lookup_module_type(
+  self : ModuleImportScope,
+  interface_index : Int,
+  name : String,
+) -> ImportedDeclarationBinding? {
+  self.lookup_module_declaration(interface_index, name, FrozenTypeDeclaration)
+}
+
+///|
+pub fn ModuleImportScope::lookup_module_trait(
+  self : ModuleImportScope,
+  interface_index : Int,
+  name : String,
+) -> ImportedDeclarationBinding? {
+  self.lookup_module_declaration(interface_index, name, FrozenTraitDeclaration)
 }
 
 ///|
@@ -2835,6 +2881,35 @@ pub fn ModuleImportScope::trait_is_ambiguous(
 }
 
 ///|
+fn register_imported_declaration(
+  scope : ModuleImportScope,
+  interface_index : Int,
+  declaration : FrozenInterfaceDeclaration,
+) -> Int {
+  match scope.declaration_bindings.get(declaration.declaration) {
+    Some(index) => index
+    None => {
+      let index = scope.declarations.length()
+      scope.declarations.push({
+        declaration: declaration.declaration,
+        source_kind: declaration.source_kind,
+        generic_parameter_count: declaration.generic_parameter_count,
+        generic_parameters: declaration.generic_parameters,
+        interface_index,
+        semantic_type: declaration.semantic_type,
+      })
+      scope.declaration_bindings[declaration.declaration] = index
+      if declaration.kind == FrozenTypeDeclaration {
+        scope.module_type_bindings[interface_index][declaration.name] = index
+      } else if declaration.kind == FrozenTraitDeclaration {
+        scope.module_trait_bindings[interface_index][declaration.name] = index
+      }
+      index
+    }
+  }
+}
+
+///|
 fn insert_imported_declaration(
   scope : ModuleImportScope,
   interface_index : Int,
@@ -2849,18 +2924,10 @@ fn insert_imported_declaration(
     return
   }
   match table.get(name) {
-    None => {
-      let index = scope.declarations.length()
-      scope.declarations.push({
-        declaration: declaration.declaration,
-        source_kind: declaration.source_kind,
-        generic_parameter_count: declaration.generic_parameter_count,
-        generic_parameters: declaration.generic_parameters,
-        interface_index,
-        semantic_type: declaration.semantic_type,
-      })
-      table[name] = index
-    }
+    None =>
+      table[name] = register_imported_declaration(
+        scope, interface_index, declaration,
+      )
     Some(previous_index) if previous_index >= 0 => {
       let previous = scope.declarations[previous_index]
       if previous.declaration != declaration.declaration {
@@ -3099,6 +3166,10 @@ fn import_frozen_interface_into_scope(
   match interfaces[dependency] {
     Some(interface_) => {
       for declaration_index, declaration in interface_.declarations {
+        if declaration.kind == FrozenTypeDeclaration ||
+          declaration.kind == FrozenTraitDeclaration {
+          ignore(register_imported_declaration(scope, dependency, declaration))
+        }
         insert_imported_module_value(
           scope, dependency, declaration_index, declaration, open_names,
         )
@@ -3134,18 +3205,25 @@ fn build_module_import_scope(
     abort("module import interfaces do not match the manifest")
   }
   let module_ = program.modules[module_index]
+  let module_type_bindings : Array[Map[String, Int]] = []
+  let module_trait_bindings : Array[Map[String, Int]] = []
   let module_value_bindings : Array[Map[String, ImportedValueBinding]] = []
   let module_let_bindings : Array[Map[String, ImportedModuleValueBinding]] = []
   for _ in program.modules {
+    module_type_bindings.push(Map::default())
+    module_trait_bindings.push(Map::default())
     module_value_bindings.push(Map::default())
     module_let_bindings.push(Map::default())
   }
   let scope : ModuleImportScope = {
     module_id: module_.module_id,
     declarations: [],
+    declaration_bindings: Map::default(),
     imported_interfaces: [],
     type_bindings: Map::default(),
     trait_bindings: Map::default(),
+    module_type_bindings,
+    module_trait_bindings,
     value_bindings: Map::default(),
     module_value_bindings,
     module_let_bindings,

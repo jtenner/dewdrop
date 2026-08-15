@@ -416,7 +416,7 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
     let payload_irrefutable = match self.collected.patterns[pattern] {
       HirWildcardPattern(_) | HirBindingPattern(_, _) | HirRestPattern(_) =>
         true
-      HirLiteralPattern(_, _) => false
+      HirImportAliasPattern(_, _) | HirLiteralPattern(_, _) => false
       HirQualifiedPattern(_, _, _) =>
         match selected {
           VariantInferredPatternConstructor(_, _) => true

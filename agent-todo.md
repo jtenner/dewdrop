@@ -4,14 +4,13 @@
 
 ## P1 — self-hosting
 
-1. Extend `@alias` lookup through type, trait, enum-constructor, pattern, and static-implementation namespaces.
-2. Enforce the `(Self, key) -> value` indexing functional dependency.
-3. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
-4. Implement Dew-native Wasm construction, validation, and encoding so the compiler no longer depends on MoonBit Starshine packages.
-5. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
-6. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
+1. Enforce the `(Self, key) -> value` indexing functional dependency.
+2. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
+3. Implement Dew-native Wasm construction, validation, and encoding so the compiler no longer depends on MoonBit Starshine packages.
+4. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
+5. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
 
-Mutable struct fields are complete and therefore omitted from this execution-only backlog.
+Mutable struct fields and complete `@alias` namespace lookup are finished and therefore omitted from this execution-only backlog.
 
 ## P2 — deferred until self-hosting
 
@@ -44,7 +43,6 @@ are follow-up hardening and observability work, not release blockers.
 ## Modules, imports, packages, and visibility
 
 - [ ] Define duplicate identical imports, opens, and aliases across files with both source locations.
-- [ ] Extend `@alias` lookup through type, trait, enum-constructor, pattern, and static-implementation namespaces.
 - [ ] Decide and define selective imports.
 - [ ] Define re-exports and package visibility if needed.
 - [ ] Define canonical standard operator-trait identities and diagnose conflicting local declarations.

@@ -287,7 +287,8 @@ fn BodyResolutionDiagnostic::primary_location(
     | BreakOutsideLoop(expression, offset)
     | ContinueOutsideLoop(expression, offset) =>
       location_at(module_.expression_location(expression), offset)
-    UnknownPatternConstructor(_, pattern, offset)
+    UnknownPatternImportAlias(_, pattern, offset)
+    | UnknownPatternConstructor(_, pattern, offset)
     | AlternativeMissingBinding(_, pattern, offset)
     | AlternativeExtraBinding(_, pattern, offset) =>
       location_at(module_.pattern_location(pattern), offset)

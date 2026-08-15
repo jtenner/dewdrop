@@ -276,6 +276,7 @@ pub fn HirExpr::offset(self : HirExpr) -> UInt64 {
 pub enum HirPattern {
   HirWildcardPattern(UInt64)
   HirBindingPattern(NameId, UInt64)
+  HirImportAliasPattern(NameId, UInt64)
   HirRestPattern(UInt64)
   HirLiteralPattern(ExprId, UInt64)
   HirQualifiedPattern(PatternId, NameId, UInt64)
@@ -289,6 +290,7 @@ pub fn HirPattern::offset(self : HirPattern) -> UInt64 {
   match self {
     HirWildcardPattern(offset)
     | HirBindingPattern(_, offset)
+    | HirImportAliasPattern(_, offset)
     | HirRestPattern(offset)
     | HirLiteralPattern(_, offset)
     | HirQualifiedPattern(_, _, offset)

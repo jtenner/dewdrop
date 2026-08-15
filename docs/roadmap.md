@@ -22,14 +22,13 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 ### P1 — self-hosting
 
-1. Complete `@alias` lookup across type, trait, constructor, pattern, and static namespaces.
-2. Enforce the `(Self, key) -> value` indexing functional dependency.
-3. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
-4. Replace the compiler's MoonBit Starshine model, validator, and encoder dependencies with Dew-native Wasm construction, validation, and encoding.
-5. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
-6. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
+1. Enforce the `(Self, key) -> value` indexing functional dependency.
+2. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
+3. Replace the compiler's MoonBit Starshine model, validator, and encoder dependencies with Dew-native Wasm construction, validation, and encoding.
+4. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
+5. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
 
-Mutable struct fields were the first P1 language blocker and are complete. Their syntax is `mut name: Type`; writes use `value.name = replacement`, preserve base-before-value evaluation, and are visible through aliases.
+Mutable struct fields and complete `@alias` namespace lookup are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
 
 ### P2 — deferred until self-hosting
 
@@ -105,7 +104,7 @@ deferred until self-hosting.
 ## Modules, imports, packages, and visibility
 
 - [ ] Define duplicate identical imports, opens, and aliases across files and report both source locations.
-- [ ] Extend `@alias` lookup through type, trait, enum-constructor, pattern, and static-implementation namespaces.
+- [x] Extend `@alias` lookup through type, trait, enum-constructor, pattern, and static-implementation namespaces.
 - [ ] Decide and define selective imports.
 - [ ] Define re-exports and package visibility if module visibility is insufficient.
 - [ ] Define canonical standard operator-trait identities across imports and diagnose conflicting local declarations.

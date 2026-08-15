@@ -1,0 +1,45 @@
+import fixture.alias_api as @api
+
+struct Local {
+  value: I32
+}
+
+impl @api.Measure for Local {
+  fn measure(self) -> I32 {
+    self.value
+  }
+}
+
+fn measured<t: @api.Measure>(value: t) -> I32 {
+  value.measure()
+}
+
+fn tuple_value(value: @api.Message) -> I32 {
+  match value {
+    @api.Message::Idle => 0
+    @api.Message::Number(item) => item
+    @api.Message::Data {
+      value
+    } => value
+  }
+}
+
+pub fn main() -> Unit {
+  let box = @api.Box::make(40)
+  let tuple = @api.Message::Number(box.value)
+  let structured = @api.Message::Data::{
+    value: tuple_value(tuple) + 1
+  }
+  let result = match structured {
+    @api.Message::Idle => 0
+    @api.Message::Number(value) => value
+    @api.Message::Data {
+      value
+    } => value
+  }
+  let local = Local::{
+    value: result + 1
+  }
+  assert(measured(local) == 42, "alias trait bound")
+  assert(@api.Measure::measure(local) == 42, "alias trait static lookup")
+}

@@ -126,6 +126,7 @@ fn derived_type_mentions_parameter(
 ) -> Bool {
   match type_ {
     NamedType(name, _) => name == parameter
+    QualifiedType(_, _, _, _) => false
     AppliedType(base, arguments, _) => {
       if derived_type_mentions_parameter(base, parameter) {
         return true

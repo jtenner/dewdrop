@@ -42,6 +42,7 @@ pub enum BodyPatternReference {
   NoPatternReference
   ErrorPatternReference
   PatternBindingReference(LocalId)
+  PatternImportedModuleReference(Int)
   PatternTypeReference(DeclId)
   PatternTraitReference(DeclId)
   PatternVariantReference(NameId)
@@ -68,6 +69,7 @@ pub enum BodyResolutionDiagnostic {
   AmbiguousImportedQualifiedRoot(NameId, ExprId, UInt64)
   UnknownQualifiedRoot(NameId, ExprId, UInt64)
   UnknownImportAlias(NameId, ExprId, UInt64)
+  UnknownPatternImportAlias(NameId, PatternId, UInt64)
   UnknownPatternConstructor(NameId, PatternId, UInt64)
   DuplicatePatternBinding(NameId, UInt64, UInt64)
   AlternativeMissingBinding(NameId, PatternId, UInt64)
@@ -86,6 +88,7 @@ pub fn BodyResolutionDiagnostic::offset(
     | AmbiguousImportedQualifiedRoot(_, _, offset)
     | UnknownQualifiedRoot(_, _, offset)
     | UnknownImportAlias(_, _, offset)
+    | UnknownPatternImportAlias(_, _, offset)
     | UnknownPatternConstructor(_, _, offset)
     | AlternativeMissingBinding(_, _, offset)
     | AlternativeExtraBinding(_, _, offset)

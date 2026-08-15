@@ -822,7 +822,7 @@ fn BasicBodyInferencer::prepare_call(
             }
             _ => self.record_invalid_call(call_slot, expression, offset)
           }
-        HirNameExpr(_, _) =>
+        HirNameExpr(_, _) | HirQualifiedExpr(_, _, _) =>
           match self.names.expression_references[base] {
             ModuleTypeNameReference(declaration) => {
               self.consume_member_root(target)

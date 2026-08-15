@@ -1,0 +1,9 @@
+pub struct Present {}
+
+pub trait Available {
+  fn available(self) -> Unit
+}
+
+pub enum Message {
+  Value(I32)
+}

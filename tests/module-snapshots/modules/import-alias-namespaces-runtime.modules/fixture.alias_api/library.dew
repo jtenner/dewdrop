@@ -1,0 +1,23 @@
+pub trait Measure {
+  fn measure(self) -> I32
+}
+
+pub struct Box<t> {
+  value: t
+}
+
+impl Box<I32> {
+  fn make(value: I32) -> Box<I32> {
+    Box::{
+      value: value
+    }
+  }
+}
+
+pub enum Message {
+  Idle
+  Number(I32)
+  Data {
+    value: I32
+  }
+}

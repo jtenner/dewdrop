@@ -11,6 +11,7 @@ pub enum DeclarationVisibility {
 /// use the same identifier token and are resolved during semantic analysis.
 pub enum TypeExpr {
   NamedType(String, UInt64)
+  QualifiedType(String, String, UInt64, UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
   FunctionType(Array[TypeExpr], TypeExpr, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
@@ -19,6 +20,7 @@ pub enum TypeExpr {
 pub fn TypeExpr::offset(self : TypeExpr) -> UInt64 {
   match self {
     NamedType(_, offset)
+    | QualifiedType(_, _, offset, _)
     | AppliedType(_, _, offset)
     | FunctionType(_, _, offset) => offset
   }
@@ -479,11 +481,36 @@ fn Parser::parse_type_inner(
       }
     None => ()
   }
-  let (name, offset) = match self.parse_identifier(Type) {
-    Ok(value) => value
-    Err(error) => return Err(error)
+  let base = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.AtIdentifier(module_alias) => {
+          let alias_offset = token.offset()
+          self.consume_lookahead()
+          let dot = match self.peek_token() {
+            Some(dot) => dot
+            None => return Err(self.declaration_error(Type))
+          }
+          match dot.kind() {
+            @tokenizer.Symbol(@tokenizer.Dot) => self.consume_lookahead()
+            _ => return Err(self.declaration_error(Type))
+          }
+          let (name, name_offset) = match self.parse_identifier(Type) {
+            Ok(value) => value
+            Err(error) => return Err(error)
+          }
+          QualifiedType(module_alias, name, alias_offset, name_offset)
+        }
+        _ => {
+          let (name, offset) = match self.parse_identifier(Type) {
+            Ok(value) => value
+            Err(error) => return Err(error)
+          }
+          NamedType(name, offset)
+        }
+      }
+    None => return Err(self.declaration_error(Type))
   }
-  let base = NamedType(name, offset)
   match self.peek_token() {
     Some(token) =>
       match token.kind() {

@@ -386,7 +386,10 @@ fn deferred_pattern_binds_name(pattern : Pattern, name : String) -> Bool {
       }
       false
     }
-    WildcardPattern(_) | RestPattern(_) | LiteralPattern(_, _) => false
+    WildcardPattern(_)
+    | ImportAliasPattern(_, _)
+    | RestPattern(_)
+    | LiteralPattern(_, _) => false
   }
 }
 

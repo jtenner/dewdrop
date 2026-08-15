@@ -536,6 +536,10 @@ fn CollectionBuilder::visit_pattern_source(
       ignore(self.emit_pattern(HirWildcardPattern(offset)))
     @parser.BindingPattern(name, offset) =>
       ignore(self.emit_pattern(HirBindingPattern(self.intern(name), offset)))
+    @parser.ImportAliasPattern(name, offset) =>
+      ignore(
+        self.emit_pattern(HirImportAliasPattern(self.intern(name), offset)),
+      )
     @parser.RestPattern(offset) =>
       ignore(self.emit_pattern(HirRestPattern(offset)))
     @parser.LiteralPattern(expression, _) => {

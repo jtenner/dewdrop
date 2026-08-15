@@ -1,0 +1,19 @@
+import fixture.alias_errors as @api
+
+fn missing_type(value: @api.Missing) -> Unit {
+}
+
+fn missing_trait<t: @api.Absent>(value: t) -> Unit {
+}
+
+fn missing_pattern(value: @api.Message) -> I32 {
+  match value {
+    @api.Message::Unknown(item) => item
+  }
+}
+
+fn missing_pattern_alias(value: @api.Message) -> I32 {
+  match value {
+    @missing.Message::Value(item) => item
+  }
+}

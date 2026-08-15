@@ -9,6 +9,7 @@ pub struct PatternField {
 pub enum Pattern {
   WildcardPattern(UInt64)
   BindingPattern(String, UInt64)
+  ImportAliasPattern(String, UInt64)
   RestPattern(UInt64)
   LiteralPattern(Expr, UInt64)
   QualifiedPattern(Pattern, String, UInt64)
@@ -22,6 +23,7 @@ pub fn Pattern::offset(self : Pattern) -> UInt64 {
   match self {
     WildcardPattern(offset)
     | BindingPattern(_, offset)
+    | ImportAliasPattern(_, offset)
     | RestPattern(offset)
     | LiteralPattern(_, offset)
     | QualifiedPattern(_, _, offset)
@@ -294,6 +296,10 @@ fn Parser::parse_pattern_base(
           self.consume_lookahead()
           Ok(binding_pattern(name, offset))
         }
+        @tokenizer.AtIdentifier(name) => {
+          self.consume_lookahead()
+          Ok(ImportAliasPattern(name, offset))
+        }
         @tokenizer.Symbol(@tokenizer.Ellipsis) => {
           self.consume_lookahead()
           if allow_rest {
@@ -383,6 +389,34 @@ fn Parser::parse_pattern_context_with_stop(
     match self.peek_token() {
       Some(token) =>
         match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Dot) if pattern
+            is ImportAliasPattern(_, _) => {
+            let separator_offset = token.offset()
+            self.consume_lookahead()
+            self.skip_newlines()
+            let property = match self.peek_token() {
+              Some(next) =>
+                match next.kind() {
+                  @tokenizer.Identifier(name) => {
+                    self.consume_lookahead()
+                    name
+                  }
+                  @tokenizer.Error(error) => {
+                    let offset = next.offset()
+                    self.consume_lookahead()
+                    return Err(
+                      pattern_failure(PatternLexicalError(error, offset)),
+                    )
+                  }
+                  _ =>
+                    return Err(
+                      pattern_failure(ExpectedPatternProperty(Some(next))),
+                    )
+                }
+              None => return Err(pattern_failure(ExpectedPatternProperty(None)))
+            }
+            pattern = QualifiedPattern(pattern, property, separator_offset)
+          }
           @tokenizer.Symbol(@tokenizer.DoubleColon) => {
             let separator_offset = token.offset()
             self.consume_lookahead()

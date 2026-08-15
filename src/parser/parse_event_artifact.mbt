@@ -488,6 +488,13 @@ fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
       writer.write_string(name)
       parse_write_offset(writer, offset)
     }
+    QualifiedType(module_alias, name, offset, name_offset) => {
+      writer.write_byte(3)
+      writer.write_string(module_alias)
+      writer.write_string(name)
+      parse_write_offset(writer, offset)
+      parse_write_offset(writer, name_offset)
+    }
     AppliedType(base, arguments, offset) => {
       writer.write_byte(1)
       parse_write_type(writer, base)
@@ -556,6 +563,13 @@ fn parse_read_type(
         parse_read_offset(reader, field + ".offset"),
       )
     }
+    3 =>
+      QualifiedType(
+        reader.read_string(parse_event_maximum_text, field + ".alias"),
+        reader.read_string(parse_event_maximum_text, field + ".name"),
+        parse_read_offset(reader, field + ".offset"),
+        parse_read_offset(reader, field + ".name_offset"),
+      )
     _ => {
       reader.fail(field, "unknown type discriminant")
       NamedType("", 0UL)
@@ -1449,6 +1463,11 @@ fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern) -> Unit {
       writer.write_string(name)
       parse_write_offset(writer, offset)
     }
+    ImportAliasPattern(name, offset) => {
+      writer.write_byte(8)
+      writer.write_string(name)
+      parse_write_offset(writer, offset)
+    }
     RestPattern(offset) => {
       writer.write_byte(2)
       parse_write_offset(writer, offset)
@@ -1510,6 +1529,11 @@ fn parse_read_pattern(
         parse_read_offset(reader, field + ".offset"),
       )
     2 => RestPattern(parse_read_offset(reader, field + ".offset"))
+    8 =>
+      ImportAliasPattern(
+        reader.read_string(parse_event_maximum_text, field + ".name"),
+        parse_read_offset(reader, field + ".offset"),
+      )
     3 =>
       LiteralPattern(
         parse_read_expr(reader, field + ".value", depth + 1),

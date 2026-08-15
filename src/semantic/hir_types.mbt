@@ -16,6 +16,7 @@ fn empty_hir_span(at : Int) -> HirSpan {
 ///|
 pub enum HirTypeSyntax {
   NamedTypeSyntax(NameId, UInt64)
+  QualifiedTypeSyntax(NameId, NameId, UInt64, UInt64)
   AppliedTypeSyntax(HirTypeId, HirSpan, UInt64)
   FunctionTypeSyntax(HirSpan, HirTypeId, UInt64)
 } derive(Eq, Debug)
@@ -24,6 +25,7 @@ pub enum HirTypeSyntax {
 pub fn HirTypeSyntax::offset(self : HirTypeSyntax) -> UInt64 {
   match self {
     NamedTypeSyntax(_, offset)
+    | QualifiedTypeSyntax(_, _, offset, _)
     | AppliedTypeSyntax(_, _, offset)
     | FunctionTypeSyntax(_, _, offset) => offset
   }
@@ -56,6 +58,19 @@ fn CollectionBuilder::lower_type(
         @parser.NamedType(name, offset) => {
           let id = self.type_syntax.length()
           self.type_syntax.push(NamedTypeSyntax(self.intern(name), offset))
+          self.type_syntax_files.push(self.current_file)
+          results.push(id)
+        }
+        @parser.QualifiedType(module_alias, name, offset, name_offset) => {
+          let id = self.type_syntax.length()
+          self.type_syntax.push(
+            QualifiedTypeSyntax(
+              self.intern(module_alias),
+              self.intern(name),
+              offset,
+              name_offset,
+            ),
+          )
           self.type_syntax_files.push(self.current_file)
           results.push(id)
         }
@@ -128,7 +143,8 @@ fn CollectionBuilder::lower_type(
           results.truncate(result_start)
           results.push(id)
         }
-        @parser.NamedType(_, _) => abort("invalid named-type lowering state")
+        @parser.NamedType(_, _) | @parser.QualifiedType(_, _, _, _) =>
+          abort("invalid named-type lowering state")
       }
     }
   }

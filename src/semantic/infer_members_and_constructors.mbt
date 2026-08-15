@@ -281,63 +281,52 @@ fn BasicBodyInferencer::infer_construct_expression(
   offset : UInt64,
 ) -> Unit {
   self.consume_member_root(target)
-  match self.collected.expressions[target] {
-    HirNameExpr(_, _) =>
-      match self.names.expression_references[target] {
-        ModuleTypeNameReference(declaration) =>
-          if self.declaration_is_struct(declaration) {
-            self.select_struct_construction(
-              expression, fields, declaration, offset,
-            )
-          } else {
-            self.diagnose(InvalidConstructionTarget(expression, offset))
-            self.fail_expression_selection(expression)
-          }
-        _ => {
-          self.diagnose(InvalidConstructionTarget(expression, offset))
-          self.fail_expression_selection(expression)
-        }
+  match self.names.expression_references[target] {
+    ModuleTypeNameReference(declaration) => {
+      if self.declaration_is_struct(declaration) {
+        self.select_struct_construction(expression, fields, declaration, offset)
+      } else {
+        self.diagnose(InvalidConstructionTarget(expression, offset))
+        self.fail_expression_selection(expression)
       }
+      return
+    }
+    _ => ()
+  }
+  match self.collected.expressions[target] {
     HirQualifiedExpr(base, property, _) =>
-      match self.collected.expressions[base] {
-        HirNameExpr(_, _) =>
-          match self.names.expression_references[base] {
-            ModuleTypeNameReference(declaration) =>
-              if semantic_id_module(declaration) == self.collected.module_id {
-                let variant_index = self.variant_index_in_declaration(
-                  declaration, property,
-                )
-                if variant_index < 0 {
-                  self.diagnose(
-                    UnknownQualifiedMember(
-                      property, declaration, expression, offset,
-                    ),
-                  )
-                  self.fail_expression_selection(expression)
-                } else {
-                  self.select_variant_construction(
-                    expression, fields, variant_index, offset,
-                  )
-                }
-              } else {
-                match self.imported_variant_named(declaration, property) {
-                  Some(variant) =>
-                    self.select_imported_variant_construction(
-                      expression, fields, variant, offset,
-                    )
-                  None => {
-                    self.diagnose(
-                      UnknownQualifiedMember(
-                        property, declaration, expression, offset,
-                      ),
-                    )
-                    self.fail_expression_selection(expression)
-                  }
-                }
-              }
-            _ => {
-              self.diagnose(InvalidConstructionTarget(expression, offset))
+      match self.names.expression_references[base] {
+        ModuleTypeNameReference(declaration) =>
+          if semantic_id_module(declaration) == self.collected.module_id {
+            let variant_index = self.variant_index_in_declaration(
+              declaration, property,
+            )
+            if variant_index < 0 {
+              self.diagnose(
+                UnknownQualifiedMember(
+                  property, declaration, expression, offset,
+                ),
+              )
               self.fail_expression_selection(expression)
+            } else {
+              self.select_variant_construction(
+                expression, fields, variant_index, offset,
+              )
+            }
+          } else {
+            match self.imported_variant_named(declaration, property) {
+              Some(variant) =>
+                self.select_imported_variant_construction(
+                  expression, fields, variant, offset,
+                )
+              None => {
+                self.diagnose(
+                  UnknownQualifiedMember(
+                    property, declaration, expression, offset,
+                  ),
+                )
+                self.fail_expression_selection(expression)
+              }
             }
           }
         _ => {
@@ -396,7 +385,7 @@ fn BasicBodyInferencer::infer_qualified_value(
         }
         _ => self.mark_unsupported(expression)
       }
-    HirNameExpr(_, _) =>
+    HirNameExpr(_, _) | HirQualifiedExpr(_, _, _) =>
       match self.names.expression_references[base] {
         ModuleTypeNameReference(declaration) => {
           self.consume_member_root(base)
