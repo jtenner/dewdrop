@@ -349,22 +349,100 @@ fn bootstrap_compile(
 }
 
 ///|
-fn bootstrap_remove_tree(path : String) -> Unit {
-  if !@fs.path_exists(path) {
+fn bootstrap_remove_tree(path : String) -> Bool {
+  match bootstrap_platform_remove_tree(path) {
+    Ok(removed) => removed
+    Err(error) => {
+      bootstrap_fail(error)
+      false
+    }
+  }
+}
+
+///|
+fn bootstrap_path_contains(parent : String, child : String) -> Bool {
+  let normalized_parent = bootstrap_normalize_path(parent)
+  let normalized_child = bootstrap_normalize_path(child)
+  normalized_parent == normalized_child ||
+  normalized_child.has_prefix(
+    if normalized_parent == "/" {
+      "/"
+    } else {
+      normalized_parent + "/"
+    },
+  )
+}
+
+///|
+fn bootstrap_clean_targets(repository : String) -> Array[String] {
+  let candidates = [
+    bootstrap_cache_root(repository),
+    bootstrap_join(repository, "_build"),
+    bootstrap_join(repository, "target"),
+    bootstrap_join(repository, ".tmp"),
+    bootstrap_join(repository, ".dew-cache"),
+  ]
+  let targets : Array[String] = []
+  for candidate in candidates {
+    let target = bootstrap_normalize_path(candidate)
+    if !targets.contains(target) {
+      targets.push(target)
+    }
+  }
+  targets
+}
+
+///|
+fn bootstrap_validate_clean_target(
+  repository : String,
+  working_directory : String,
+  target : String,
+) -> Unit {
+  let normalized = bootstrap_normalize_path(target)
+  let home = bootstrap_normalize_path(
+    @sys.get_env_var("HOME").unwrap_or("/nonexistent-dew-home"),
+  )
+  if normalized == "." ||
+    normalized == "/" ||
+    bootstrap_path_contains(normalized, repository) ||
+    bootstrap_path_contains(normalized, working_directory) ||
+    bootstrap_path_contains(normalized, home) {
+    bootstrap_fail(
+      "refusing to clean unsafe build artifact path: \{normalized}",
+    )
+  }
+  let components = normalized.split("/").filter(part => part != "").count()
+  if components < 2 {
+    bootstrap_fail(
+      "refusing to clean unsafe build artifact path: \{normalized}",
+    )
+  }
+}
+
+///|
+fn bootstrap_clean(repository : String, dry_run : Bool) -> Unit {
+  let working_directory = bootstrap_normalize_path(
+    @sys.get_env_var("DEW_WORKING_DIRECTORY").unwrap_or("."),
+  )
+  let targets = bootstrap_clean_targets(repository)
+  for target in targets {
+    bootstrap_validate_clean_target(repository, working_directory, target)
+  }
+  if dry_run {
+    for target in targets {
+      println("would remove Dew build artifact: \{target}")
+    }
     return
   }
-  if (@fs.is_dir(path) catch { _ => false }) {
-    let entries = @fs.read_dir(path) catch { _ => [] }
-    for entry in entries {
-      bootstrap_remove_tree(bootstrap_join(path, entry))
+  let mut removed = false
+  for target in targets {
+    if bootstrap_remove_tree(target) {
+      removed = true
+      println("removed Dew build artifact: \{target}")
     }
-    @fs.remove_dir(path) catch {
-      error => bootstrap_fail("cannot remove \{path}: \{error}")
-    }
-  } else {
-    @fs.remove_file(path) catch {
-      error => bootstrap_fail("cannot remove \{path}: \{error}")
-    }
+  }
+  if !removed {
+    println("Dew build artifacts already clean")
   }
 }
 
@@ -571,15 +649,7 @@ fn main {
       (remaining.length() == 1 && remaining[0] != "--dry-run") {
       bootstrap_fail("usage: dew clean [--dry-run]")
     }
-    let cache = bootstrap_cache_root(repository)
-    if remaining.length() == 1 {
-      println("would remove Dew cache: \{cache}")
-    } else if @fs.path_exists(cache) {
-      bootstrap_remove_tree(cache)
-      println("removed Dew cache: \{cache}")
-    } else {
-      println("dew cache already clean: \{cache}")
-    }
+    bootstrap_clean(repository, remaining.length() == 1)
     return
   }
   if command == "run" {

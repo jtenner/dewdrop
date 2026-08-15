@@ -18,6 +18,10 @@ extern "C" fn bootstrap_atomic_write_ffi(
 extern "C" fn bootstrap_rename_ffi(source : Bytes, destination : Bytes) -> Int = "dewdrop_bootstrap_rename"
 
 ///|
+#borrow(path)
+extern "C" fn bootstrap_remove_tree_ffi(path : Bytes, path_length : Int) -> Int = "dewdrop_bootstrap_remove_tree"
+
+///|
 fn bootstrap_shell_quote(value : String) -> String {
   let bytes = @utf8.encode(value)
   let output = Buffer(size_hint=bytes.length() + 2)
@@ -68,6 +72,17 @@ fn bootstrap_platform_atomic_write(
     Ok(())
   } else {
     Err("cannot atomically write \{path}: errno \{-result}")
+  }
+}
+
+///|
+fn bootstrap_platform_remove_tree(path : String) -> Result[Bool, String] {
+  let path_bytes = @utf8.encode(path)
+  let result = bootstrap_remove_tree_ffi(path_bytes, path_bytes.length())
+  if result >= 0 {
+    Ok(result == 1)
+  } else {
+    Err("cannot remove \{path}: errno \{-result}")
   }
 }
 

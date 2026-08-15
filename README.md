@@ -1,6 +1,6 @@
 # Dewdrop
 
-Dewdrop is the reference compiler and standard library for **Dew**, an experimental, statically typed programming language that compiles to **WebAssembly GC**.
+Dewdrop is the reference compiler and standard library for **Dew**, a statically typed programming language that compiles to **WebAssembly GC**.
 
 If those words are new to you, that is okay:
 
@@ -740,14 +740,14 @@ tools/dew test path/to/program.dew path/to/program_test.dew
 
 Builds a self-describing test module and runs selected tests.
 
-### Clean compiler caches
+### Clean build artifacts
 
 ```sh
 tools/dew clean
 tools/dew clean --dry-run
 ```
 
-Removes the configured `.dew/cache` build, parse-event, interface, and package artifacts while leaving the parent `.dew` metadata directory intact. `--dry-run` prints the selected cache path without changing it.
+Removes all managed build artifacts: the configured `.dew/cache`, MoonBit `_build`, `target`, `.tmp`, and the legacy `.dew-cache`. The parent `.dew` metadata directory remains. Explicit output paths passed with `-o` are user files and are not removed. `--dry-run` prints every selected path without changing it.
 
 ### Emit compiler representations
 

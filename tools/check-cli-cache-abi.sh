@@ -5,6 +5,41 @@ cd "$(dirname "$0")/.."
 echo "== compiler CLI smoke =="
 mkdir -p .tmp
 
+clean_root="$PWD/.tmp/dew-clean-command"
+clean_link_target="$PWD/.tmp/dew-clean-link-target"
+rm -rf "$clean_root" "$clean_link_target"
+mkdir -p "$clean_root"/{_build,target,.tmp,.dew-cache,.dew/cache}
+for marker in \
+  _build/marker target/marker .tmp/marker .dew-cache/marker .dew/cache/marker; do
+  printf 'managed build artifact\n' > "$clean_root/$marker"
+done
+DEW_REPOSITORY_ROOT="$clean_root" DEW_WORKING_DIRECTORY="$clean_root" \
+  moon run --target native --release src/dew_bootstrap -- clean --dry-run \
+  > .tmp/dew-clean-dry-run.txt
+for target in .dew/cache _build target .tmp .dew-cache; do
+  grep -Fq "would remove Dew build artifact: $clean_root/$target" \
+    .tmp/dew-clean-dry-run.txt
+  test -e "$clean_root/$target"
+done
+DEW_REPOSITORY_ROOT="$clean_root" DEW_WORKING_DIRECTORY="$clean_root" \
+  moon run --target native --release src/dew_bootstrap -- clean \
+  > .tmp/dew-clean.txt
+for target in .dew/cache _build target .tmp .dew-cache; do
+  test ! -e "$clean_root/$target"
+done
+mkdir -p "$clean_link_target"
+printf 'keep\n' > "$clean_link_target/marker"
+ln -s "$clean_link_target" "$clean_root/.dew/cache"
+DEW_REPOSITORY_ROOT="$clean_root" DEW_WORKING_DIRECTORY="$clean_root" \
+  moon run --target native --release src/dew_bootstrap -- clean \
+  > .tmp/dew-clean-symlink.txt
+test ! -e "$clean_root/.dew/cache"
+test -f "$clean_link_target/marker"
+DEW_REPOSITORY_ROOT="$clean_root" DEW_WORKING_DIRECTORY="$clean_root" \
+  moon run --target native --release src/dew_bootstrap -- clean \
+  > .tmp/dew-clean-idempotent.txt
+grep -q '^Dew build artifacts already clean$' .tmp/dew-clean-idempotent.txt
+
 rm -rf .tmp/dew-unified-cache-pack
 DEW_CACHE_DIR=.tmp/dew-unified-cache-pack DEW_CACHE_PACK=1 \
   DEW_PROGRAM_CACHE=1 tools/dew build --no-build-cache --body-cache \

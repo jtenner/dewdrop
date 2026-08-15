@@ -236,7 +236,7 @@ fn bootstrap_restore_package_artifact(
     ".dew-artifact-" +
     bootstrap_package_artifact_key(lock),
   )
-  bootstrap_remove_tree(staging)
+  ignore(bootstrap_remove_tree(staging))
   bootstrap_ensure_directory(staging)
   let dependency_fields : Map[String, Json] = Map([])
   for dependency in dependencies {

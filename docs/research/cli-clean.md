@@ -2,8 +2,8 @@
 
 Date: 2026-08-11
 
-`dew clean` removes the complete configured Dew cache, including frozen standard/dependency interfaces and installed package capsules. The default target is `.dew/cache` under the Dewdrop root; `DEW_CACHE_DIR` selects an alternative. Cleaning the default cache leaves the parent `.dew` metadata directory intact.
+`dew clean` removes all managed build artifacts. These are the configured Dew cache, MoonBit `_build`, `target`, `.tmp`, and the legacy `.dew-cache`. The cache includes frozen standard/dependency interfaces, compiler packs, whole-build outputs, and installed package capsules. The default cache is `.dew/cache`; `DEW_CACHE_DIR` selects an alternative. Cleaning the default cache leaves the parent `.dew` metadata directory intact. Explicit `-o` output paths are user-owned files and are not removed.
 
-`dew clean --dry-run` reports the exact path without changing it. Repeated clean operations are idempotent and report an already-clean cache. Unknown or duplicate options fail visibly.
+`dew clean --dry-run` reports every selected path without changing it. Repeated clean operations are idempotent and report an already-clean workspace. Unknown or duplicate options fail visibly.
 
-Safety checks refuse filesystem root, the user's home directory, the Dewdrop root, and the configured working directory. A cache path that is itself a symlink is unlinked without recursively deleting its target. Regular cache files are removed as corrupt cache state; directories are removed recursively.
+Safety checks refuse filesystem root, the user's home directory, the Dewdrop root, the configured working directory, and any selected ancestor of those paths. A selected path that is a symlink is unlinked without recursively deleting its target. Regular files at managed paths are removed as corrupt build state; directories are removed recursively.
