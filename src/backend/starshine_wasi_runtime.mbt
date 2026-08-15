@@ -3,22 +3,22 @@
 ///|
 /// iovec, host result, and the bounded data window.
 fn wasi_iovec_address() -> Int {
-  0
+  wasi_preview1_scratch_layout().iovec_address
 }
 
 ///|
 fn wasi_result_address() -> Int {
-  8
+  wasi_preview1_scratch_layout().result_address
 }
 
 ///|
 fn wasi_scratch_address() -> Int {
-  16
+  wasi_preview1_scratch_layout().scratch_address
 }
 
 ///|
 fn wasi_scratch_capacity() -> Int {
-  65520
+  wasi_preview1_scratch_layout().scratch_capacity
 }
 
 ///|

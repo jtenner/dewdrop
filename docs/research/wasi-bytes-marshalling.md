@@ -16,6 +16,15 @@ wasi_fd_read(fd: U32, limit: U32) -> Bytes
 host read and stops at the limit, EOF, or the first short read. Any nonzero
 WASI errno traps. Invalid host progress also traps.
 
+## Declarative schema
+
+`src/backend/wasi_marshalling_schema.mbt` now describes Preview 1 boundaries as
+bounded trees of `I32`, input/output bytes, pointers, and lists. Every schema
+has explicit maximum depth and node counts. Byte and list bounds are validated
+before code generation. `fd_write` and `fd_read` use the same one-iovec fast
+path below, but their pointer shape is no longer implicit in handwritten
+address constants. This is the staging boundary for more Preview 1 calls.
+
 ## Ownership
 
 Dew `Bytes` remains an immutable WasmGC value:
@@ -158,6 +167,13 @@ The phase probes are benchmark-only compiler runtime operations and are not
 part of the Dew standard API. Full measurements include the JavaScript Preview
 1 callback. Read callbacks also fill scratch, and complete reads include GC
 backing construction.
+
+## Static-link interaction
+
+The Core Wasm linker preserves the Dew host-facing WASI memory as the first Dew
+memory. Guest memories stay private and receive distinct indices. Deep
+instruction remapping includes both explicit multi-memory operands and implicit
+memory-0 operands.
 
 ## Follow-up work
 
