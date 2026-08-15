@@ -121,6 +121,7 @@ fn print_usage() -> Unit {
     "  dew build [--root NAME] [--module NAME] [--no-default-preamble] [--emit hir|lowering|wasm] -o OUTPUT FILE ...",
   )
   println("  repeat --module NAME to begin another statically linked module")
+  println("  repeat --link-wasm PROVIDER FILE to statically link Core Wasm")
   println("  internal manifest option: --dependency-interface MODULE SHA256")
   println(
     "  driver options: --package-root ROOT, --bootstrap-std, --no-default-preamble, --no-parse-event-cache, --no-interface-cache, --body-cache, --body-family-cache, --no-body-cache, --plan-cache, --no-plan-cache, --cache-pack, --no-cache-pack, --program-cache, --no-program-cache, --cache-report",
@@ -229,6 +230,8 @@ fn main {
   let module_names : Array[String] = []
   let dependency_interface_modules : Array[String] = []
   let dependency_interface_fingerprints : Array[String] = []
+  let static_link_providers : Array[String] = []
+  let static_link_modules : Array[Bytes] = []
   let mut files : Array[@semantic.ManifestFile] = []
   let mut total_file_count = 0
   let mut index = 2
@@ -251,6 +254,17 @@ fn main {
       }
       dependency_interface_modules.push(args[index + 1])
       dependency_interface_fingerprints.push(args[index + 2])
+      index += 3
+    } else if argument == "--link-wasm" {
+      if index + 2 >= args.length() {
+        cli_fail("missing provider or file for --link-wasm")
+      }
+      let provider = args[index + 1]
+      if provider == "" || provider.contains(":") {
+        cli_fail("--link-wasm provider must be a non-empty simple name")
+      }
+      static_link_providers.push(provider)
+      static_link_modules.push(cli_read_file(args[index + 2]))
       index += 3
     } else if argument == "--root" {
       if index + 1 >= args.length() {
@@ -377,8 +391,16 @@ fn main {
   }
   match
     @standard_loader.lookup_program_output_cache(
-      cache_pack, manifest, root_module_index, default_preamble, command_tag, emit_tag,
-      dependency_interface_modules, dependency_interface_fingerprints,
+      cache_pack,
+      manifest,
+      root_module_index,
+      default_preamble,
+      command_tag,
+      emit_tag,
+      dependency_interface_modules,
+      dependency_interface_fingerprints,
+      static_link_providers~,
+      static_link_modules~,
     ) {
     Err(error) => cli_fail("corrupt compilation cache pack: \{error}")
     Ok(Some(cached_output)) => {
@@ -486,9 +508,17 @@ fn main {
     if diagnostic_status.1 == 0 {
       match
         @standard_loader.store_program_output_cache(
-          cache_pack, manifest, root_module_index, default_preamble, command_tag,
-          emit_tag, dependency_interface_modules, dependency_interface_fingerprints,
+          cache_pack,
+          manifest,
+          root_module_index,
+          default_preamble,
+          command_tag,
+          emit_tag,
+          dependency_interface_modules,
+          dependency_interface_fingerprints,
           b"",
+          static_link_providers~,
+          static_link_modules~,
         ) {
         Ok(_) => ()
         Err(error) => cli_fail(error)
@@ -508,10 +538,14 @@ fn main {
   } else if emit == "lowering" {
     render_program_lowering(compiled.program, compiled.lowering)
   } else {
-    let encoded = match compiled.emit_binary() {
+    let libraries : Array[@core_linker.CoreWasmLibrary] = []
+    for index, provider in static_link_providers {
+      libraries.push({ provider, bytes: static_link_modules[index] })
+    }
+    let encoded = match compiled.emit_linked_binary(libraries) {
       Ok(binary) => binary
       Err(error) => {
-        cli_error(@debug.to_string(error))
+        cli_error(error)
         @sys.exit(1)
         b""
       }
@@ -528,8 +562,17 @@ fn main {
   if diagnostic_status.1 == 0 {
     match
       @standard_loader.store_program_output_cache(
-        cache_pack, manifest, root_module_index, default_preamble, command_tag, emit_tag,
-        dependency_interface_modules, dependency_interface_fingerprints, result,
+        cache_pack,
+        manifest,
+        root_module_index,
+        default_preamble,
+        command_tag,
+        emit_tag,
+        dependency_interface_modules,
+        dependency_interface_fingerprints,
+        result,
+        static_link_providers~,
+        static_link_modules~,
       ) {
       Ok(_) => ()
       Err(error) => cli_fail(error)

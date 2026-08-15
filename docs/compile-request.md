@@ -18,14 +18,14 @@ A request-producing internal tool creates `REQUEST`, waits for the compiler
 process, and removes the request file. The user-facing MoonBit bootstrap uses the
 direct MoonBit compiler command path instead.
 
-## Version 6 encoding
+## Version 7 encoding
 
 All integers are unsigned 32-bit little-endian values. Strings are a byte length
 followed by UTF-8 bytes. Arrays are a count followed by their elements.
 
 ```text
 magic                         u32 = 0x44574352
-version                       u32 = 6
+version                       u32 = 7
 command                       u32 (0 check, 1 build)
 requested output              u32 (0 Wasm, 1 HIR, 2 lowering)
 output path                   string
@@ -37,6 +37,10 @@ modules                       array {
 dependency expectations       array {
   module name                 string
   interface fingerprint       string
+}
+static Core Wasm links         array {
+  provider                    string
+  Wasm file path              string
 }
 standard-library policy       u32 (0 ordered on-disk root, 1 bootstrap bytes)
 standard-library root         string
@@ -53,7 +57,7 @@ build mode                    u32 (0 production, 1 test planning; reserved by CL
 dependency cache provenance   string
 ```
 
-Module and file order are semantic input and must be preserved. The Python host
+Module, file, and static-link order are semantic input and must be preserved. Static-link entries become repeated `--link-wasm PROVIDER FILE` CLI arguments. The exact output cache binds each provider name and the BLAKE3 digest of its Wasm bytes. The Python host
 owns package resolution, lockfile verification, source-path selection, and host
 execution. The request contains the resulting compiler inputs and expectations;
 it does not ask the MoonBit compiler to resolve packages.

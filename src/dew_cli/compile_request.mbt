@@ -2,7 +2,7 @@
 const COMPILE_REQUEST_MAGIC : UInt = 0x44574352U
 
 ///|
-const COMPILE_REQUEST_VERSION : UInt = 6U
+const COMPILE_REQUEST_VERSION : UInt = 7U
 
 ///|
 priv struct CompileRequestReader {
@@ -101,6 +101,12 @@ priv struct CompileRequestDependencyInterface {
 }
 
 ///|
+priv struct CompileRequestStaticLink {
+  provider : String
+  path : String
+}
+
+///|
 priv struct CompileRequest {
   command : Int
   emit : Int
@@ -108,6 +114,7 @@ priv struct CompileRequest {
   root_module : String
   modules : Array[CompileRequestModule]
   dependency_interfaces : Array[CompileRequestDependencyInterface]
+  static_links : Array[CompileRequestStaticLink]
   standard_policy : Int
   standard_root : String
   default_preamble : Bool
@@ -161,6 +168,14 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
       fingerprint: reader.read_string("dependency fingerprint"),
     })
   }
+  let static_links : Array[CompileRequestStaticLink] = []
+  let static_link_count = reader.read_count("static link")
+  for _ in 0..<static_link_count {
+    static_links.push({
+      provider: reader.read_string("static-link provider"),
+      path: reader.read_string("static-link module path"),
+    })
+  }
   let standard_policy = reader.read_u32().reinterpret_as_int()
   if standard_policy < 0 || standard_policy > 1 {
     reader.fail("invalid standard-library policy in compile request")
@@ -193,6 +208,7 @@ fn parse_compile_request(bytes : Bytes) -> Result[CompileRequest, String] {
         root_module,
         modules,
         dependency_interfaces,
+        static_links,
         standard_policy,
         standard_root,
         default_preamble,
@@ -273,6 +289,11 @@ fn CompileRequest::cli_arguments(self : CompileRequest) -> Array[String] {
     arguments.push("--dependency-interface")
     arguments.push(dependency.module_name)
     arguments.push(dependency.fingerprint)
+  }
+  for link in self.static_links {
+    arguments.push("--link-wasm")
+    arguments.push(link.provider)
+    arguments.push(link.path)
   }
   for module_ in self.modules {
     arguments.push("--module")

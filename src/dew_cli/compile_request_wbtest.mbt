@@ -31,6 +31,9 @@ fn compile_request_test_bytes(
   compile_request_test_write_u32(output, 1U)
   compile_request_test_write_string(output, "dep.value")
   compile_request_test_write_string(output, "abc123")
+  compile_request_test_write_u32(output, 1U)
+  compile_request_test_write_string(output, "starshine")
+  compile_request_test_write_string(output, "guest.wasm")
   compile_request_test_write_u32(output, 0U)
   compile_request_test_write_string(output, "/workspace/dew.std")
   compile_request_test_write_u32(output, 1U)
@@ -55,6 +58,9 @@ test "versioned compile request preserves host policy and ordered inputs" {
   assert_eq(request.modules.length(), 1)
   assert_eq(request.modules[0].files, ["main.dew"])
   assert_eq(request.dependency_interfaces[0].module_name, "dep.value")
+  assert_eq(request.static_links.length(), 1)
+  assert_eq(request.static_links[0].provider, "starshine")
+  assert_eq(request.static_links[0].path, "guest.wasm")
   assert_eq(request.standard_root, "/workspace/dew.std")
   assert_false(request.parse_event_cache)
   assert_false(request.interface_cache)
@@ -69,7 +75,8 @@ test "versioned compile request preserves host policy and ordered inputs" {
     "build", "--root", "app.main", "--std-root", "/workspace/dew.std", "--no-parse-event-cache",
     "--no-interface-cache", "--body-cache", "--body-family-cache", "--plan-cache",
     "--cache-pack", "--no-program-cache", "--cache-report", "--dependency-interface",
-    "dep.value", "abc123", "--module", "app.main", "main.dew", "--output", "/tmp/app.wasm",
+    "dep.value", "abc123", "--link-wasm", "starshine", "guest.wasm", "--module",
+    "app.main", "main.dew", "--output", "/tmp/app.wasm",
   ])
 }
 

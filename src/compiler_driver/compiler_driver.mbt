@@ -172,3 +172,19 @@ pub fn CompilerCompilation::emit_binary(
 ) -> Result[Bytes, @backend.StarshineProgramBinaryEmissionError] {
   @backend.emit_starshine_program_binary(self.lowering, self.link)
 }
+
+///|
+/// Emits Dew Core Wasm, then resolves all structured `link:<provider>` imports.
+pub fn CompilerCompilation::emit_linked_binary(
+  self : CompilerCompilation,
+  libraries : Array[@core_linker.CoreWasmLibrary],
+) -> Result[Bytes, String] {
+  let dew = match self.emit_binary() {
+    Ok(value) => value
+    Err(error) => return Err(@debug.to_string(error))
+  }
+  match @core_linker.link_core_wasm_gc_modules(dew, libraries) {
+    Ok(value) => Ok(value)
+    Err(error) => Err(@debug.to_string(error))
+  }
+}

@@ -2,8 +2,7 @@
 
 ## Status
 
-Implementation experiment started on `experiment/starshine-wasmgc-static-linker`.
-The linker is owned by Dewdrop. The adjacent Starshine-MB checkout is read-only.
+Implemented on `experiment/starshine-wasmgc-static-linker`. The linker is owned by Dewdrop. The adjacent Starshine-MB checkout remained read-only.
 
 This experiment links Core Wasm-GC modules directly. It does not use WIT, WITX,
 the Component Model, the canonical ABI, JavaScript strings, or `externref`
@@ -53,9 +52,9 @@ cleanup passes needed by this experiment.
 - Existing WASI staging is a fast, bounded one-page implementation for only
   `fd_read` and `fd_write`. It uses offsets 0..65535 and exports memory only when
   those paths are reachable. The generic bridge must preserve this fast path.
-- The CLI compile request is version 6. Exact output cache context currently
-  includes Dew dependency-interface fingerprints, but not linked Wasm artifact
-  hashes or a post-link profile.
+- The CLI compile request is version 7. It carries ordered provider/path pairs.
+  Exact output cache context includes each provider and the BLAKE3 digest of the
+  linked Wasm bytes.
 
 ## Starshine APIs inspected
 
@@ -134,36 +133,73 @@ Artifact observations:
 
 - Debug wrapper artifact: 7,394 bytes.
 - Release wrapper artifact: 1,560 bytes.
-- Release SHA-256:
+- Initial one-export release SHA-256:
   `7cc6b43d6109e117f84c2206da3de8f33df9c23eab49765c4266a182ff1130c8`.
+- Current reproducible fixture, with `module_new` and the String-adapter probe
+  `module_new_named`, SHA-256:
+  `617a2b758bbeb9655cace8a4600b20c573994016da350c72519d0a7ed72123a2`.
 
 The required symbol-injection fallback is therefore not needed with the current
 compiler. The Dewdrop-owned guest build tool will use direct `#export_name`
 exports and will still decode, validate, inspect exact signatures, optimize,
 validate again, and encode deterministically.
 
-## Initial link architecture
+## Implemented link architecture
 
 The root Dew module uses synthetic final empty structs for foreign brands. Link
 metadata maps stable Dew declaration IDs to those marker type indices and source
 constraints. Static imports use module names of the form `link:<logical-name>`.
 
-The pure Core linker receives already decoded and validated `@lib.Module`
-values. It resolves exact exports, binds each marker to one symbolic provider
-source type, plans recursive groups, allocates dense remap arrays, clones all
-sections, replaces static imports with final direct function indices, validates,
-and then runs the selected post-link profile.
+`src/core_linker` decodes Dew and guest modules, resolves exact exports, binds
+empty nominal marker structs to concrete guest GC types, drops marker groups,
+allocates dense maps for every Core index space, and deeply remaps types,
+instructions, globals, tables, elements, data, exports, starts, and memory
+immediates. The instruction remapper has an explicit arm for every Starshine
+Core instruction variant.
 
-Memory policy:
+The linker validates each merged phase. It then runs Starshine's unused-module
+element cleanup as a transaction: the cleaned candidate replaces the linked
+module only after validation succeeds. Guest exports remain private by default.
+The CLI syntax is:
 
-```text
-memory 0   host/WASI scratch memory when needed
-memory 1   Dew private memory when present
-memory 2+  dependency private memories
+```sh
+dew build --link-wasm starshine fixtures/starshine_guest/starshine-guest.wasm \
+  -o app.wasm app.dew
 ```
 
-Tables remain separate. A source `call_indirect` keeps its operand and receives
-a remapped table immediate; it never receives an integer table-base adjustment.
+`CompilerCompilation::emit_linked_binary` exposes the same operation to compiler
+driver users. Unresolved `link:<provider>` imports fail with a provider-specific
+error.
+
+Memory and table policy:
+
+- Existing Dew memories keep their relative order and occupy the earliest
+  available defined-memory indices, so a Dew host/WASI memory remains memory 0
+  when the guest has no memory imports.
+- Guest and dependency memories remain separate and all explicit and implicit
+  memory immediates are remapped. The String adapter gets a private fixed
+  one-page scratch memory.
+- Tables remain separate. A source `call_indirect` keeps its operand and gets a
+  remapped table immediate; it never gets an integer table-base adjustment.
+
+The Dew String adapter recognizes MoonBit's concrete mutable `array<i16>` String
+representation. It reads Dew's validated UTF-8 chunked String, counts UTF-16
+code units, allocates the exact MoonBit array, decodes one-to-four-byte UTF-8,
+and writes surrogate pairs for supplementary scalars.
+
+## Reproducible guest and coverage
+
+`src/starshine_guest` is a `foreign_library` package with direct
+`#export_name` declarations. `scripts/build-starshine-guest.sh` builds release
+Wasm-GC, validates it with `wasm-tools`, replaces the checked-in fixture through
+a temporary file, and removes build output.
+
+Coverage includes parser compatibility, foreign namespace inference and
+receiver-free lowering, structured import codecs, exact marker replacement,
+all-space instruction remapping, separate memory remapping, the Dew-to-MoonBit
+String adapter, missing providers, bounded WASI schemas, CLI/compiler-driver
+integration, and linker microbenchmarks. End-to-end output was validated with
+`wasm-tools` for both `module_new` and `module_new_named`.
 
 ## Baseline tool issue
 

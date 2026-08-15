@@ -63,6 +63,8 @@ fn program_output_context_digest(
   emit : Int,
   dependency_modules : Array[String],
   dependency_fingerprints : Array[String],
+  static_link_providers : Array[String],
+  static_link_modules : Array[Bytes],
 ) -> FixedArray[Byte] {
   let output = Buffer()
   output.write_bytes(b"DEW_PROGRAM_OUTPUT_CONTEXT_V1\x00")
@@ -94,6 +96,18 @@ fn program_output_context_digest(
       cache_pack_write_string(output, "")
     }
   }
+  for index, provider in static_link_providers {
+    cache_pack_write_string(output, provider)
+    if index < static_link_modules.length() {
+      let bytes = static_link_modules[index]
+      program_output_write_int(output, bytes.length())
+      for byte in @cache_binary.blake3(bytes) {
+        output.write_byte(byte)
+      }
+    } else {
+      program_output_write_int(output, 0)
+    }
+  }
   @cache_binary.blake3(output.to_bytes())
 }
 
@@ -119,6 +133,8 @@ pub fn lookup_program_output_cache(
   emit : Int,
   dependency_modules : Array[String],
   dependency_fingerprints : Array[String],
+  static_link_providers? : Array[String] = [],
+  static_link_modules? : Array[Bytes] = [],
 ) -> Result[Bytes?, String] {
   if !pack.enabled || !program_output_cache_enabled() {
     return Ok(None)
@@ -130,6 +146,7 @@ pub fn lookup_program_output_cache(
     program_output_content_digest(manifest),
     program_output_context_digest(
       root_module_index, default_preamble, command, emit, dependency_modules, dependency_fingerprints,
+      static_link_providers, static_link_modules,
     ),
   )
 }
@@ -145,6 +162,8 @@ pub fn store_program_output_cache(
   dependency_modules : Array[String],
   dependency_fingerprints : Array[String],
   payload : Bytes,
+  static_link_providers? : Array[String] = [],
+  static_link_modules? : Array[Bytes] = [],
 ) -> Result[Unit, String] {
   if !pack.enabled || !program_output_cache_enabled() {
     return Ok(())
@@ -158,6 +177,7 @@ pub fn store_program_output_cache(
     program_output_content_digest(manifest),
     program_output_context_digest(
       root_module_index, default_preamble, command, emit, dependency_modules, dependency_fingerprints,
+      static_link_providers, static_link_modules,
     ),
     payload,
   )

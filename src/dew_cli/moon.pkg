@@ -3,6 +3,7 @@ import {
   "jtenner/dewdrop/backend",
   "jtenner/dewdrop/standard_loader",
   "jtenner/dewdrop/compiler_driver",
+  "jtenner/dewdrop/core_linker",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
   "moonbitlang/core/debug",

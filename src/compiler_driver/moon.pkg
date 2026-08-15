@@ -1,5 +1,7 @@
 import {
   "jtenner/dewdrop/semantic",
   "jtenner/dewdrop/backend",
+  "jtenner/dewdrop/core_linker",
   "jtenner/dewdrop/standard_loader",
+  "moonbitlang/core/debug",
 }

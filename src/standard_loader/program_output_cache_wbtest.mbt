@@ -66,3 +66,72 @@ test "exact program pack entries bind source mode dependencies and compiler" {
   )
   @sys.set_env_var("DEW_COMPILER_FINGERPRINT", prior_compiler)
 }
+
+///|
+test "exact program cache binds static-link provider and Wasm digest" {
+  let prior_compiler = @sys.get_env_var("DEW_COMPILER_FINGERPRINT").unwrap_or(
+    "",
+  )
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", "compiler-link")
+  let session = program_output_test_session()
+  let manifest = program_output_test_manifest(1)
+  store_program_output_cache(
+    session,
+    manifest,
+    0,
+    true,
+    1,
+    0,
+    [],
+    [],
+    b"linked",
+    static_link_providers=["starshine"],
+    static_link_modules=[b"guest-a"],
+  ).unwrap()
+  assert_eq(
+    lookup_program_output_cache(
+      session,
+      manifest,
+      0,
+      true,
+      1,
+      0,
+      [],
+      [],
+      static_link_providers=["starshine"],
+      static_link_modules=[b"guest-a"],
+    ).unwrap(),
+    Some(b"linked"),
+  )
+  assert_eq(
+    lookup_program_output_cache(
+      session,
+      manifest,
+      0,
+      true,
+      1,
+      0,
+      [],
+      [],
+      static_link_providers=["starshine"],
+      static_link_modules=[b"guest-b"],
+    ).unwrap(),
+    None,
+  )
+  assert_eq(
+    lookup_program_output_cache(
+      session,
+      manifest,
+      0,
+      true,
+      1,
+      0,
+      [],
+      [],
+      static_link_providers=["other"],
+      static_link_modules=[b"guest-a"],
+    ).unwrap(),
+    None,
+  )
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", prior_compiler)
+}
