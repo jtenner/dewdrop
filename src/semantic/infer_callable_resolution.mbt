@@ -786,10 +786,30 @@ fn BasicBodyInferencer::prepare_call(
         _ => self.record_invalid_call(call_slot, expression, offset)
       }
     }
-    HirFieldExpr(_, _, _) => {
-      self.call_scratch.pending_methods.push(call_slot)
-      self.consume_member_root(target)
-    }
+    HirFieldExpr(base, property, _) =>
+      match self.names.expression_references[base] {
+        ForeignLibraryNameReference(library) => {
+          self.consume_member_root(target)
+          self.consume_member_root(base)
+          match self.collected.foreign_library_member(library, property) {
+            Some(declaration) =>
+              self.select_call_candidate(
+                call_slot, expression, arguments, declaration, offset,
+              )
+            None => {
+              self.call_targets[call_slot] = ErrorInferredCallTarget
+              self.diagnose(
+                UnknownQualifiedMember(property, library, expression, offset),
+              )
+              self.fail_expression_selection(expression)
+            }
+          }
+        }
+        _ => {
+          self.call_scratch.pending_methods.push(call_slot)
+          self.consume_member_root(target)
+        }
+      }
     HirQualifiedExpr(base, property, _) =>
       match self.collected.expressions[base] {
         HirImportAliasExpr(_, _) =>

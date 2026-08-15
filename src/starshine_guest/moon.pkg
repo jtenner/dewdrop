@@ -1,0 +1,5 @@
+import {
+  "jtenner/starshine/lib",
+}
+
+pkgtype(kind: "foreign_library")

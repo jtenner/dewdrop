@@ -258,6 +258,7 @@ test "foreign libraries plan link imports with nominal marker signatures" {
   let (resolved, lowering) = wasmgc_test_inputs(
     9750UL, b"foreign type StarshineModule\nforeign impl \"starshine\" as Starshine {\n  fn module_new() -> StarshineModule = \"module_new\"\n}\npub fn make() -> StarshineModule {\n  Starshine.module_new()\n}\n",
   )
+  assert_eq(lowering.diagnostics.length(), 0)
   let planned = plan_module_wasmgc_fragments(resolved, lowering)
   assert_eq(lowering.type_layouts.layouts.length(), 1)
   let declaration = lowering.type_layouts.layouts[0].declaration

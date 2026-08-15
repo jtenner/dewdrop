@@ -1,0 +1,342 @@
+///|
+fn core_link_test_ref(index : Int) -> @lib.ValType {
+  @lib.ValType::ref_type(
+    @lib.RefType::new(
+      false,
+      @lib.HeapType::new(@lib.TypeIdx::new(index.reinterpret_as_uint())),
+    ),
+  )
+}
+
+///|
+fn core_link_test_dew_module() -> @lib.Module {
+  let marker = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::struct_([])),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::func([], [core_link_test_ref(0)])),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([marker, signature]))
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:starshine"),
+        @lib.Name::from_string("module_new"),
+        @lib.ExternType::func(@lib.TypeIdx::new(1U)),
+      ),
+    ]),
+  )
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("make"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_guest_module() -> @lib.Module {
+  let concrete = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::func([], [core_link_test_ref(0)])),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([concrete, signature]))
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(1U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("module_new"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::i32_const(@lib.I32::new(7)),
+          @lib.Instruction::struct_new(@lib.TypeIdx::new(0U)),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "Core Wasm linker replaces a nominal marker with the guest concrete type" {
+  let dew = @binary.encode_module(core_link_test_dew_module()).unwrap()
+  let guest = @binary.encode_module(core_link_test_guest_module()).unwrap()
+  let linked = link_core_wasm_gc_modules(dew, [
+    { provider: "starshine", bytes: guest },
+  ]).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  @validate.validate_module(module_) |> ignore
+  match module_.import_sec {
+    Some(@lib.ImportSec(imports)) => assert_eq(imports.length(), 0)
+    None => ()
+  }
+  match module_.type_sec {
+    Some(@lib.TypeSec(groups)) => assert_eq(groups.length(), 3)
+    None => fail("expected linked types")
+  }
+  match module_.export_sec {
+    Some(
+      @lib.ExportSec(
+        [@lib.Export(name, @lib.FuncExternIdx(@lib.FuncIdx(index)))]
+      )
+    ) => {
+      assert_eq(name, @lib.Name::from_string("make"))
+      assert_eq(index, 0U)
+    }
+    _ => fail("expected remapped Dew export")
+  }
+}
+
+///|
+fn core_link_test_string_dew_module() -> @lib.Module {
+  let marker = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::struct_([])),
+  )
+  let chunks = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::array(
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::v128()),
+          @lib.Mut::var_(),
+        ),
+      ),
+    ),
+  )
+  let text = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(core_link_test_ref(1)),
+          @lib.Mut::const_(),
+        ),
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([@lib.ValType::eqref_null()], [core_link_test_ref(0)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([marker, chunks, text, signature]))
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:starshine"),
+        @lib.Name::from_string("module_new_named"),
+        @lib.ExternType::func(@lib.TypeIdx::new(3U)),
+      ),
+    ]),
+  )
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("make_named"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_string_guest_module() -> @lib.Module {
+  let string = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::array(
+        @lib.FieldType::new(
+          @lib.StorageType::pack_type(@lib.PackType::i16()),
+          @lib.Mut::var_(),
+        ),
+      ),
+    ),
+  )
+  let module_type = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([core_link_test_ref(0)], [core_link_test_ref(1)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([string, module_type, signature]))
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(2U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("module_new_named"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::i32_const(@lib.I32::new(1)),
+          @lib.Instruction::struct_new(@lib.TypeIdx::new(1U)),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "Core Wasm linker adds the Dew String to MoonBit String adapter" {
+  let dew = @binary.encode_module(core_link_test_string_dew_module()).unwrap()
+  let guest = @binary.encode_module(core_link_test_string_guest_module()).unwrap()
+  let linked = link_core_wasm_gc_modules(
+    dew,
+    [{ provider: "starshine", bytes: guest }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  match module_.mem_sec {
+    Some(@lib.MemSec(memories)) => assert_eq(memories.length(), 1)
+    None => fail("expected private adapter scratch memory")
+  }
+  match module_.code_sec {
+    Some(@lib.CodeSec(functions)) => assert_eq(functions.length(), 2)
+    None => fail("expected guest and adapter functions")
+  }
+}
+
+///|
+test "Core Wasm linker keeps Dew and guest memories separate" {
+  let dew_base = core_link_test_dew_module()
+  let dew = dew_base
+    .with_type_sec(
+      @lib.TypeSec::new([
+        @lib.RecType::new(@lib.SubType::comp_type(@lib.CompType::struct_([]))),
+        @lib.RecType::new(
+          @lib.SubType::comp_type(
+            @lib.CompType::func([], [core_link_test_ref(0)]),
+          ),
+        ),
+        @lib.RecType::new(
+          @lib.SubType::comp_type(
+            @lib.CompType::func([], [@lib.ValType::i32()]),
+          ),
+        ),
+      ]),
+    )
+    .with_mem_sec(
+      @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, Some(1U)))]),
+    )
+    .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(2U)]))
+    .with_code_sec(
+      @lib.CodeSec::new([
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([
+            @lib.Instruction::i32_const(@lib.I32::new(0)),
+            @lib.Instruction::i32_load(
+              @lib.MemArg::new(@lib.U32::new(2U), None, @lib.U64::new(0UL)),
+            ),
+          ]),
+        ),
+      ]),
+    )
+  let guest_base = core_link_test_guest_module()
+  let guest = guest_base
+    .with_mem_sec(
+      @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, Some(1U)))]),
+    )
+    .with_code_sec(
+      @lib.CodeSec::new([
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([
+            @lib.Instruction::i32_const(@lib.I32::new(0)),
+            @lib.Instruction::i32_const(@lib.I32::new(7)),
+            @lib.Instruction::i32_store(
+              @lib.MemArg::new(@lib.U32::new(2U), None, @lib.U64::new(0UL)),
+            ),
+            @lib.Instruction::i32_const(@lib.I32::new(7)),
+            @lib.Instruction::struct_new(@lib.TypeIdx::new(0U)),
+          ]),
+        ),
+      ]),
+    )
+  let linked = link_core_wasm_gc_modules(
+    @binary.encode_module(dew).unwrap(),
+    [{ provider: "starshine", bytes: @binary.encode_module(guest).unwrap() }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  match module_.mem_sec {
+    Some(@lib.MemSec(memories)) => assert_eq(memories.length(), 2)
+    None => fail("expected two private memories")
+  }
+  let mut remapped_guest_store = false
+  match module_.code_sec {
+    Some(@lib.CodeSec(functions)) =>
+      match functions[1] {
+        @lib.Func(_, @lib.Expr(instructions)) =>
+          for instruction in instructions {
+            match instruction {
+              @lib.I32Store(@lib.MemArg(_, Some(@lib.MemIdx(1U)), _)) =>
+                remapped_guest_store = true
+              _ => ()
+            }
+          }
+      }
+    None => fail("expected linked functions")
+  }
+  assert_true(remapped_guest_store)
+}
+
+///|
+test "Core Wasm linker reports missing providers" {
+  let dew = @binary.encode_module(core_link_test_dew_module()).unwrap()
+  match link_core_wasm_gc_modules(dew, []) {
+    Err(CoreWasmMissingProvider("starshine")) => ()
+    _ => fail("expected missing-provider error")
+  }
+}

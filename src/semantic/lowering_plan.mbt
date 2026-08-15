@@ -814,7 +814,11 @@ fn plan_expression_kind(
     HirCallExpr(_, arguments, _) =>
       match inferred.call_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) => {
-          let receiver = planned_call_receiver(collected, expression)
+          let receiver = if collected.foreign_function(declaration) is Some(_) {
+            -1
+          } else {
+            planned_call_receiver(collected, expression)
+          }
           let base = if receiver >= 0 {
             receiver
           } else if arguments.length > 0 {
