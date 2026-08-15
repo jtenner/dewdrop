@@ -1,8 +1,7 @@
 ///|
 test "foreign namespace calls infer without a receiver value" {
   let collected = collect_bytes(
-    9751UL,
-    b"foreign type StarshineModule\nforeign impl \"starshine\" as Starshine {\n  fn module_new() -> StarshineModule = \"module_new\"\n}\npub fn make() -> StarshineModule {\n  Starshine.module_new()\n}\n",
+    9751UL, b"foreign type StarshineModule\nforeign impl \"starshine\" as Starshine {\n  fn module_new() -> StarshineModule = \"module_new\"\n}\npub fn make() -> StarshineModule {\n  Starshine.module_new()\n}\n",
   )
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
@@ -18,7 +17,8 @@ test "foreign namespace calls infer without a receiver value" {
   let layouts = plan_module_type_layouts(collected, resolved)
   let functions = plan_module_functions(collected, resolved)
   let initialization = plan_module_initialization(
-    collected, inferred.module_values,
+    collected,
+    inferred.module_values,
   )
   let flows = analyze_module_flows(collected, resolved, inferred)
   let lowering = plan_module_lowering(

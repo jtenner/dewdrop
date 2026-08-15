@@ -5,7 +5,7 @@ test "fixed arrays emit carrier-specialized WasmGC indexing" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew", b"open dew.std.fixed_array\npub fn run() -> I32 {\n  let values = FixedArray::make(3u32, 7)\n  values[1u32] = 9\n  values[1u32]\n}\npub fn safe(index: U32) -> Option<I32> {\n  let values = FixedArray::make(2u32, 5)\n  fixed_array_get(values, index)\n}\n",
+          "main.dew", b"open dew.std.fixed_array\npub fn run() -> I32 {\n  let values = FixedArray::make(3u32, 7)\n  values[1u32] = 9\n  values[1u32]\n}\npub fn safe(index: U32) -> Option<I32> {\n  let values = FixedArray::make(2u32, 5)\n  values.get(index)\n}\n",
         ),
       ]),
     ]),
@@ -19,7 +19,7 @@ test "fixed arrays emit carrier-specialized WasmGC indexing" {
   assert_eq(link.diagnostics.length(), 0)
   assert_true(
     link.type_lookup.get(@semantic.standard_fixed_array_type_declaration())
-    is Some(_),
+    is None,
   )
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))

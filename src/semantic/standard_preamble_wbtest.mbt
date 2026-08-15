@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 64)
+  assert_eq(wildcard_paths.length(), 65)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -58,9 +58,10 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[34], "std/json.dew")
   assert_eq(wildcard_paths[35], "std/bloom_filter.dew")
   assert_eq(wildcard_paths[36], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[41], "std/text.dew")
-  assert_eq(wildcard_paths[43], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[63], "std/f64x2.dew")
+  assert_eq(wildcard_paths[38], "std/string_fixed_array.dew")
+  assert_eq(wildcard_paths[42], "std/text.dew")
+  assert_eq(wildcard_paths[44], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[64], "std/f64x2.dew")
 }
 
 ///|
@@ -74,7 +75,7 @@ test "standard import prepass selects split module bits" {
       ),
     ]),
     (
-      9, false, false, false, false, false, true, false, false, false, false, false,
+      9, false, false, false, false, false, true, false, true, false, false, false,
       0, 0,
     ),
   )
@@ -210,7 +211,7 @@ test "standard import prepass selects Show and builder dependency" {
       ),
     ]),
     (
-      3, true, false, false, false, false, false, false, false, false, false, false,
+      3, true, false, false, false, false, false, false, true, false, false, false,
       0, 0,
     ),
   )

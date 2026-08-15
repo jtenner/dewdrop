@@ -481,7 +481,7 @@ fn starshine_finish_array(
     None => wrapper_type
   }
   let carrier = match shape {
-    Some(value) => starshine_fixed_array_carrier(value)
+    Some(value) => starshine_value_carrier(value)
     None => -1
   }
   let array_type = starshine_fixed_array_base_for_body(planned, program) +

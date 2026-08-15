@@ -1,0 +1,97 @@
+open dew.std.fixed_array
+
+fn string_fixed_array_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn string_fixed_array_u32_to_u16(value: U32) -> U16 {
+  value.into()
+}
+
+impl String {
+  fn to_utf8_fixed_array(self) -> FixedArray<U8> {
+    let length = self.byte_length()
+    let output = FixedArray::make(length, 0u8)
+    while 0u32 {
+      index if index < length => {
+        output.set_unchecked(index, self.byte_at(index))
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+  fn to_utf16_fixed_array(self) -> FixedArray<U16> {
+    let byte_length = self.byte_length()
+    let output = FixedArray::make(self.utf16_length(), 0u16)
+    let mut input_index = 0u32
+    let mut output_index = 0u32
+    while true {
+      true if input_index < byte_length => {
+        let first = self.byte_at(input_index)
+        let first_bits = string_fixed_array_u8_to_u32(first)
+        let mut scalar = first_bits
+        let mut width = 1u32
+        if first >= 194u8 && first <= 223u8 {
+          let second = string_fixed_array_u8_to_u32(
+            self.byte_at(input_index + 1u32),
+          )
+          scalar = ((first_bits & 31u32) << 6u32) | (second & 63u32)
+          width = 2u32
+        } else if first >= 224u8 && first <= 239u8 {
+          let second = string_fixed_array_u8_to_u32(
+            self.byte_at(input_index + 1u32),
+          )
+          let third = string_fixed_array_u8_to_u32(
+            self.byte_at(input_index + 2u32),
+          )
+          scalar = ((first_bits & 15u32) << 12u32) |
+            ((second & 63u32) << 6u32) |
+            (third & 63u32)
+          width = 3u32
+        } else if first >= 240u8 {
+          let second = string_fixed_array_u8_to_u32(
+            self.byte_at(input_index + 1u32),
+          )
+          let third = string_fixed_array_u8_to_u32(
+            self.byte_at(input_index + 2u32),
+          )
+          let fourth = string_fixed_array_u8_to_u32(
+            self.byte_at(input_index + 3u32),
+          )
+          scalar = ((first_bits & 7u32) << 18u32) |
+            ((second & 63u32) << 12u32) |
+            ((third & 63u32) << 6u32) |
+            (fourth & 63u32)
+          width = 4u32
+        } else {
+          width = 1u32
+        }
+        if scalar <= 65535u32 {
+          output.set_unchecked(
+            output_index,
+            string_fixed_array_u32_to_u16(scalar),
+          )
+          output_index = output_index + 1u32
+        } else {
+          let adjusted = scalar - 65536u32
+          output.set_unchecked(
+            output_index,
+            string_fixed_array_u32_to_u16(
+              55296u32 + (adjusted >> 10u32),
+            ),
+          )
+          output.set_unchecked(
+            output_index + 1u32,
+            string_fixed_array_u32_to_u16(
+              56320u32 + (adjusted & 1023u32),
+            ),
+          )
+          output_index = output_index + 2u32
+        }
+        input_index = input_index + width
+        continue true
+      }
+      _ => break output
+    }
+  }
+}

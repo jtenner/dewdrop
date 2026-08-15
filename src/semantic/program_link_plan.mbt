@@ -232,6 +232,7 @@ pub struct PlannedProgramWasmGCLink {
   type_lookup : Map[DeclId, Int]
   module_lookup : Map[ModuleId, Int]
   erased_box_type_indices : Array[Int]
+  fixed_array_type_base : Int
   type_count : Int
   imported_function_count : Int
   defined_function_count : Int

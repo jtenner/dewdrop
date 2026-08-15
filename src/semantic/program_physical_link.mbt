@@ -21,7 +21,8 @@ fn program_erased_adapter_reference_type(type_ : PlannedWasmValueType) -> Bool {
     WasmNullableEqRefValue
     | WasmFunctionRefValue(_)
     | WasmNominalRefValue(_)
-    | WasmExternalNominalRefValue(_) => true
+    | WasmExternalNominalRefValue(_)
+    | WasmFixedArrayRefValue(_) => true
     _ => false
   }
 }
@@ -666,6 +667,10 @@ fn planned_program_function_types_equal(
       | (WasmV128Value, WasmV128Value)
       | (WasmStringRefValue, WasmStringRefValue)
       | (WasmNullableEqRefValue, WasmNullableEqRefValue) => ()
+      (WasmFixedArrayRefValue(left), WasmFixedArrayRefValue(right)) =>
+        if left != right {
+          return false
+        }
       (WasmExternalNominalRefValue(left), WasmExternalNominalRefValue(right)) =>
         if left != right {
           return false
@@ -797,6 +802,25 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
+  let mut uses_fixed_array_types = false
+  for module_ in fragments.modules {
+    if module_.uses_fixed_array_runtime {
+      uses_fixed_array_types = true
+      break
+    }
+    for value in module_.function_value_types {
+      match value {
+        WasmFixedArrayRefValue(_) => {
+          uses_fixed_array_types = true
+          break
+        }
+        _ => ()
+      }
+    }
+    if uses_fixed_array_types {
+      break
+    }
+  }
   let mut type_count = 0
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
@@ -865,6 +889,7 @@ pub fn link_program_wasmgc_fragments(
   }
   let program_type_groups : Array[PlannedProgramWasmRecursiveGroup] = []
   let program_physical_types : Array[PlannedProgramWasmPhysicalType] = []
+  let mut fixed_array_type_base = -1
   if cross_module_type_scc {
     let (cross_indices, cross_groups, cross_types, cross_lookup) = program_cross_module_type_groups(
       fragments, module_lookup, diagnostics,
@@ -882,9 +907,18 @@ pub fn link_program_wasmgc_fragments(
       type_lookup[declaration] = index
     }
     type_count = program_physical_types.length()
+    if uses_fixed_array_types {
+      fixed_array_type_base = type_count
+      type_count += 8
+    }
   } else {
     program_link_validate_types(fragments, type_lookup, diagnostics)
-    type_count = 0
+    if uses_fixed_array_types {
+      fixed_array_type_base = 0
+      type_count = 8
+    } else {
+      type_count = 0
+    }
   }
   let module_signature_indices : Array[Array[Int]] = []
   for module_ in fragments.modules {
@@ -1555,6 +1589,7 @@ pub fn link_program_wasmgc_fragments(
     type_lookup,
     module_lookup,
     erased_box_type_indices,
+    fixed_array_type_base,
     type_count,
     imported_function_count,
     defined_function_count,

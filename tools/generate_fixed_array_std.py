@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "std/fixed_array.dew"
+STRING_EXTENSION_SOURCE = ROOT / "std/string_fixed_array.dew"
 TARGET = ROOT / "src/standard_sources/standard_fixed_array_sources.mbt"
 
 
@@ -31,10 +32,15 @@ def moonbit_bytes_literal(data: bytes) -> str:
 
 def rendered_source() -> str:
     literal = moonbit_bytes_literal(SOURCE.read_bytes())
+    string_extension = moonbit_bytes_literal(STRING_EXTENSION_SOURCE.read_bytes())
     return (
         "///|\n"
         "pub fn standard_fixed_array_source() -> Bytes {\n"
         f"  {literal}\n"
+        "}\n\n"
+        "///|\n"
+        "pub fn standard_string_fixed_array_source() -> Bytes {\n"
+        f"  {string_extension}\n"
         "}\n"
     )
 

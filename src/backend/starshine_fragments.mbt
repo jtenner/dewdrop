@@ -42,7 +42,8 @@ fn starshine_storage_type(
     @semantic.WasmStringRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
     @semantic.WasmNullableEqRefStorage
-    | @semantic.WasmExternalNominalRefStorage(_) =>
+    | @semantic.WasmExternalNominalRefStorage(_)
+    | @semantic.WasmFixedArrayRefStorage(_) =>
       @lib.StorageType::val_type(@lib.ValType::eqref_null())
     @semantic.WasmNullableFunctionRefStorage =>
       @lib.StorageType::val_type(@lib.ValType::funcref())
@@ -67,7 +68,8 @@ fn starshine_value_type(value : @semantic.PlannedWasmValueType) -> @lib.ValType 
     @semantic.WasmV128Value => @lib.ValType::v128()
     @semantic.WasmStringRefValue => @lib.ValType::eqref_null()
     @semantic.WasmNullableEqRefValue
-    | @semantic.WasmExternalNominalRefValue(_) => @lib.ValType::eqref_null()
+    | @semantic.WasmExternalNominalRefValue(_)
+    | @semantic.WasmFixedArrayRefValue(_) => @lib.ValType::eqref_null()
     @semantic.WasmFunctionRefValue(index) =>
       starshine_function_ref(@lib.TypeIdx::new(index.reinterpret_as_uint()))
     @semantic.WasmNominalRefValue(index) =>
@@ -271,6 +273,8 @@ fn starshine_fixed_array_runtime_types() -> Array[@lib.RecType] {
     @lib.StorageType::val_type(@lib.ValType::f64()),
     @lib.StorageType::val_type(@lib.ValType::v128()),
     @lib.StorageType::val_type(@lib.ValType::eqref_null()),
+    @lib.StorageType::pack_type(@lib.PackType::i8()),
+    @lib.StorageType::pack_type(@lib.PackType::i16()),
   ]
   let types : Array[@lib.RecType] = []
   for storage in storages {
@@ -336,7 +340,7 @@ fn starshine_map_runtime_base(
   planned : @semantic.PlannedModuleWasmGCFragments,
 ) -> Int {
   starshine_fixed_array_runtime_base(planned) +
-  (if planned.uses_fixed_array_runtime { 6 } else { 0 })
+  (if planned.uses_fixed_array_runtime { 8 } else { 0 })
 }
 
 ///| Produces the exact Starshine type section described by the frozen Dew

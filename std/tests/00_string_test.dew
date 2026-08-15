@@ -23,6 +23,27 @@ test "String utf16_length counts UTF16 code units" {
   assert("aλ🌍".utf16_length() == 4u32, "unexpected UTF16 length")
 }
 
+test "String to_utf8_fixed_array copies exact UTF8 bytes" {
+  let bytes = "$¢€𐍈".to_utf8_fixed_array()
+  assert(bytes.length() == 10u32, "wrong UTF8 fixed-array length")
+  assert(bytes[0u32] == 36u8, "wrong ASCII byte")
+  assert(bytes[1u32] == 194u8, "wrong two-byte lead")
+  assert(bytes[2u32] == 162u8, "wrong two-byte tail")
+  assert(bytes[3u32] == 226u8, "wrong three-byte lead")
+  assert(bytes[6u32] == 240u8, "wrong four-byte lead")
+  assert(bytes[9u32] == 136u8, "wrong final UTF8 byte")
+}
+
+test "String to_utf16_fixed_array emits surrogate pairs" {
+  let units = "$¢€𐍈".to_utf16_fixed_array()
+  assert(units.length() == 5u32, "wrong UTF16 fixed-array length")
+  assert(units[0u32] == 36u16, "wrong ASCII UTF16 unit")
+  assert(units[1u32] == 162u16, "wrong two-byte UTF16 unit")
+  assert(units[2u32] == 8364u16, "wrong three-byte UTF16 unit")
+  assert(units[3u32] == 55296u16, "wrong high surrogate")
+  assert(units[4u32] == 57160u16, "wrong low surrogate")
+}
+
 test "String equality handles equal multichunk values" {
   assert(
     "0123456789abcdef-second 🌍".equals("0123456789abcdef-second 🌍"),

@@ -13,19 +13,16 @@ test "fixed array standard source has stable compiler-owned identities" {
         ),
       ]),
       false,
-      false,
+      true,
     ),
   )
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(semantic_id_local(collected.lookup_type("FixedArray").unwrap()), 0)
-  assert_eq(
-    semantic_id_local(collected.lookup_value("fixed_array_make").unwrap()),
-    1,
-  )
-  assert_eq(collected.callables.length(), 14)
-  assert_eq(semantic_id_local(collected.callables[6].declaration), 8)
-  assert_eq(semantic_id_local(collected.callables[12].declaration), 15)
-  assert_eq(semantic_id_local(collected.callables[13].declaration), 17)
+  assert_eq(semantic_id_local(collected.lookup_value("array_new").unwrap()), 1)
+  assert_eq(collected.callables.length(), 12)
+  assert_eq(semantic_id_local(collected.callables[4].declaration), 6)
+  assert_eq(semantic_id_local(collected.callables[10].declaration), 13)
+  assert_eq(semantic_id_local(collected.callables[11].declaration), 15)
 }
 
 ///|
@@ -35,7 +32,7 @@ test "fixed array source calls infer through generic implementations" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.fixed_array\npub fn run() -> I32 {\n  let values = FixedArray::make(3u32, 7)\n  values[1u32] = 9\n  values[1u32]\n}\npub fn safe(index: U32) -> Option<I32> {\n  let values = FixedArray::make(2u32, 5)\n  fixed_array_get(values, index)\n}\n",
+          "main.dew", b"open dew.std.fixed_array\npub fn run() -> I32 {\n  let values = FixedArray::make(3u32, 7)\n  values[1u32] = 9\n  values[1u32]\n}\npub fn safe(index: U32) -> Option<I32> {\n  let values = FixedArray::make(2u32, 5)\n  values.get(index)\n}\n",
         ),
       ]),
     ]),

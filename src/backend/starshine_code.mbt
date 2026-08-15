@@ -414,7 +414,8 @@ fn starshine_shape_matches_storage(
         @semantic.WasmStringRefStorage
         | @semantic.WasmNullableEqRefStorage
         | @semantic.WasmNominalRefStorage(_)
-        | @semantic.WasmExternalNominalRefStorage(_) => true
+        | @semantic.WasmExternalNominalRefStorage(_)
+        | @semantic.WasmFixedArrayRefStorage(_) => true
         _ => false
       }
     @semantic.ErrorPlannedValueShape
@@ -451,6 +452,7 @@ fn starshine_default_storage_instructions(
     | @semantic.WasmNominalRefStorage(_)
     | @semantic.WasmExternalNominalRefStorage(_) =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq()))]
+    @semantic.WasmFixedArrayRefStorage(_) => [@lib.Instruction::unreachable_()]
     @semantic.WasmNullableFunctionRefStorage =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::func()))]
     @semantic.WasmFunctionRefStorage(index) =>
@@ -1365,6 +1367,15 @@ fn starshine_append_storage_cast(
           }
         None => ()
       }
+    @semantic.WasmFixedArrayRefStorage(carrier) =>
+      output.push(
+        starshine_match_cast(
+          match program {
+            Some(link) => link.fixed_array_type_base + carrier
+            None => starshine_fixed_array_runtime_base(module_plan) + carrier
+          },
+        ),
+      )
     _ => ()
   }
 }
@@ -2452,6 +2463,29 @@ fn starshine_program_expression_function_type_index(
 }
 
 ///|
+fn starshine_fixed_array_carrier_for_resolved(
+  lowering : @semantic.PlannedModuleLowering,
+  resolved_type : Int,
+) -> Int {
+  if resolved_type < 0 || resolved_type >= lowering.resolved_types.length() {
+    return -1
+  }
+  match lowering.resolved_types[resolved_type] {
+    @semantic.AppliedType(base, arguments) if arguments.length == 1 =>
+      match lowering.resolved_types[base] {
+        @semantic.NominalType(declaration) if declaration ==
+          @semantic.standard_fixed_array_type_declaration() =>
+          @semantic.wasmgc_fixed_array_carrier_for_resolved_type(
+            lowering.resolved_types,
+            lowering.resolved_type_arguments[arguments.start],
+          )
+        _ => -1
+      }
+    _ => -1
+  }
+}
+
+///|
 fn starshine_body_value_type(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -2459,16 +2493,29 @@ fn starshine_body_value_type(
   body_type : @semantic.BodyTypeId,
   shape : @semantic.PlannedValueShape,
 ) -> @lib.ValType? {
-  if body_type < -1 {
-    let resolved_type = -body_type - 2
+  let resolved_type = if body_type < -1 {
+    -body_type - 2
+  } else if body_type >= 0 && body_type < lowering.types.length() {
+    match lowering.types[body_type] {
+      @semantic.BodyResolvedType(value) => value
+      _ => -1
+    }
+  } else {
+    -1
+  }
+  let fixed_carrier = starshine_fixed_array_carrier_for_resolved(
+    lowering, resolved_type,
+  )
+  if fixed_carrier >= 0 {
+    return Some(@lib.ValType::eqref_null())
+  }
+  if resolved_type >= 0 {
     if planned.closure_type_index >= 0 &&
-      resolved_type >= 0 &&
       resolved_type < planned.closure_entry_type_by_resolved.length() &&
       planned.closure_entry_type_by_resolved[resolved_type] >= 0 {
       return Some(@lib.ValType::eqref_null())
     }
-    if resolved_type >= 0 &&
-      resolved_type < planned.function_type_by_resolved.length() {
+    if resolved_type < planned.function_type_by_resolved.length() {
       let local_type = planned.function_type_by_resolved[resolved_type]
       if local_type >= 0 {
         let emitted_type = match program {
@@ -2974,7 +3021,14 @@ fn starshine_body_locals(
           state_source.type_,
           state_source.shape,
         )
-        match starshine_shape_value_type(state_shape) {
+        match
+          starshine_body_value_type(
+            lowering,
+            planned,
+            program,
+            state_source.type_,
+            state_shape,
+          ) {
           Some(type_) => {
             control_state_local_indices[control] = parameter_count +
               body_local_types.length()
@@ -2989,7 +3043,14 @@ fn starshine_body_locals(
           result_source.type_,
           result_source.shape,
         )
-        match starshine_shape_value_type(result_shape) {
+        match
+          starshine_body_value_type(
+            lowering,
+            planned,
+            program,
+            result_source.type_,
+            result_shape,
+          ) {
           Some(type_) => {
             control_result_local_indices[control] = parameter_count +
               body_local_types.length()
@@ -3081,8 +3142,7 @@ fn starshine_body_locals(
           None => ()
         }
       }
-      @semantic.PlannedFixedArrayMake(_, _, _)
-      | @semantic.PlannedFixedArrayGet(_, _, _) =>
+      @semantic.PlannedFixedArrayMake(_, _, _) =>
         if fixed_array_ref_scratch_index < 0 {
           fixed_array_ref_scratch_index = parameter_count +
             body_local_types.length()
@@ -3410,7 +3470,7 @@ fn starshine_body_locals(
 }
 
 ///|
-fn starshine_fixed_array_carrier(shape : @semantic.PlannedValueShape) -> Int {
+fn starshine_value_carrier(shape : @semantic.PlannedValueShape) -> Int {
   match shape {
     @semantic.I8PlannedValueShape
     | @semantic.I16PlannedValueShape
@@ -3427,6 +3487,30 @@ fn starshine_fixed_array_carrier(shape : @semantic.PlannedValueShape) -> Int {
     @semantic.V128PlannedValueShape => 4
     @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape => 5
     _ => -1
+  }
+}
+
+///|
+fn starshine_fixed_array_carrier(shape : @semantic.PlannedValueShape) -> Int {
+  match shape {
+    @semantic.I8PlannedValueShape | @semantic.U8PlannedValueShape => 6
+    @semantic.I16PlannedValueShape | @semantic.U16PlannedValueShape => 7
+    _ => starshine_value_carrier(shape)
+  }
+}
+
+///|
+fn starshine_fixed_array_get_instruction(
+  shape : @semantic.PlannedValueShape,
+  array_type : Int,
+) -> @lib.Instruction {
+  let type_index = @lib.TypeIdx::new(array_type.reinterpret_as_uint())
+  match shape {
+    @semantic.I8PlannedValueShape | @semantic.I16PlannedValueShape =>
+      @lib.Instruction::array_get_s(type_index)
+    @semantic.U8PlannedValueShape | @semantic.U16PlannedValueShape =>
+      @lib.Instruction::array_get_u(type_index)
+    _ => @lib.Instruction::array_get(type_index)
   }
 }
 
@@ -3448,23 +3532,9 @@ fn starshine_fixed_array_base_for_body(
   program : @semantic.PlannedProgramWasmGCLink?,
 ) -> Int {
   match program {
-    Some(link) =>
-      link.type_count +
-      (if starshine_program_uses_text_runtime(link) { 6 } else { 0 })
+    Some(link) => link.fixed_array_type_base
     None => starshine_fixed_array_runtime_base(planned)
   }
-}
-
-///|
-fn starshine_program_uses_fixed_array_runtime(
-  program : @semantic.PlannedProgramWasmGCLink,
-) -> Bool {
-  for module_ in program.modules {
-    if module_.uses_fixed_array_runtime {
-      return true
-    }
-  }
-  false
 }
 
 ///|
@@ -3475,8 +3545,7 @@ fn starshine_map_base_for_body(
   match program {
     Some(link) =>
       link.type_count +
-      (if starshine_program_uses_text_runtime(link) { 6 } else { 0 }) +
-      (if starshine_program_uses_fixed_array_runtime(link) { 6 } else { 0 })
+      (if starshine_program_uses_text_runtime(link) { 6 } else { 0 })
     None => starshine_map_runtime_base(planned)
   }
 }
@@ -3486,7 +3555,7 @@ fn starshine_map_entry_field(
   shape : @semantic.PlannedValueShape,
   value : Bool,
 ) -> Int {
-  let carrier = starshine_fixed_array_carrier(shape)
+  let carrier = starshine_value_carrier(shape)
   if carrier < 0 {
     -1
   } else if value {
@@ -3529,8 +3598,8 @@ fn starshine_map_new_entry_instructions(
       @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
     ),
   )
-  let key_carrier = starshine_fixed_array_carrier(key_shape)
-  let value_carrier = starshine_fixed_array_carrier(value_shape)
+  let key_carrier = starshine_value_carrier(key_shape)
+  let value_carrier = starshine_value_carrier(value_shape)
   for carrier in 0..<6 {
     if carrier == key_carrier {
       output.push(
@@ -3610,7 +3679,7 @@ fn starshine_set_new_entry_instructions(
       @lib.LocalIdx::new(hash_local.reinterpret_as_uint()),
     ),
   )
-  let key_carrier = starshine_fixed_array_carrier(key_shape)
+  let key_carrier = starshine_value_carrier(key_shape)
   for carrier in 0..<6 {
     if carrier == key_carrier {
       output.push(
@@ -3947,30 +4016,9 @@ fn starshine_fixed_array_backing_prefix(
 ) -> (Array[@lib.Instruction], Int)? {
   let carrier = starshine_fixed_array_carrier(shape)
   guard carrier >= 0 else { return None }
-  let wrapper = match
-    starshine_emitted_type_index(
-      planned,
-      program,
-      @semantic.standard_fixed_array_type_declaration(),
-    ) {
-    Some(value) => value
-    None => return None
-  }
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
     carrier
-  Some(
-    (
-      [
-        starshine_match_cast(wrapper),
-        @lib.Instruction::struct_get(
-          @lib.TypeIdx::new(wrapper.reinterpret_as_uint()),
-          @lib.U32::new(0U),
-        ),
-        starshine_match_cast(array_type),
-      ],
-      array_type,
-    ),
-  )
+  Some(([starshine_match_cast(array_type)], array_type))
 }
 
 ///|
@@ -4309,7 +4357,8 @@ fn starshine_program_adapter_value_code(
     | @semantic.WasmNullableEqRefValue
     | @semantic.WasmFunctionRefValue(_)
     | @semantic.WasmNominalRefValue(_)
-    | @semantic.WasmExternalNominalRefValue(_) => 5
+    | @semantic.WasmExternalNominalRefValue(_)
+    | @semantic.WasmFixedArrayRefValue(_) => 5
   }
 }
 
@@ -5519,45 +5568,47 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArrayMake(length, value, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, -1, shape,
+            )
             tasks.push(
               FinishStarshineFixedArray(
-                1, shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+                1, element_shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(value))
             tasks.push(EmitStarshineExpression(length))
           }
           @semantic.PlannedFixedArrayLength(base, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, -1, shape,
+            )
             tasks.push(
               FinishStarshineFixedArray(
-                2, shape, 1, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+                2, element_shape, 1, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
               ),
             )
-            tasks.push(EmitStarshineExpression(base))
-          }
-          @semantic.PlannedFixedArrayGet(base, index, shape) => {
-            tasks.push(
-              FinishStarshineFixedArray(
-                3, shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
-              ),
-            )
-            tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArrayGetUnchecked(base, index, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, -1, shape,
+            )
             tasks.push(
               FinishStarshineFixedArray(
-                4, shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+                4, element_shape, 2, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedFixedArraySet(base, index, value, shape)
-          | @semantic.PlannedFixedArraySetUnchecked(base, index, value, shape) => {
+          @semantic.PlannedFixedArraySetUnchecked(base, index, value, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, -1, shape,
+            )
             tasks.push(
               FinishStarshineFixedArray(
-                5, shape, 3, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
+                5, element_shape, 3, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
               ),
             )
             tasks.push(EmitStarshineExpression(value))
@@ -7107,7 +7158,7 @@ fn starshine_emit_body_instructions(
         operation,
         shape,
         count,
-        ref_scratch,
+        _ref_scratch,
         i32_scratch
       ) => {
         let fragments = pop_starshine_fragments(results, count)
@@ -7118,15 +7169,6 @@ fn starshine_emit_body_instructions(
         }
         let backing_prefix = backing.0
         let array_type = backing.1
-        let wrapper_type = match
-          starshine_emitted_type_index(
-            planned,
-            program,
-            @semantic.standard_fixed_array_type_declaration(),
-          ) {
-          Some(value) => value
-          None => return Err(UnsupportedExpression(body.body, -102))
-        }
         let output : Array[@lib.Instruction] = []
         if operation == 1 {
           if i32_scratch < 0 {
@@ -7149,11 +7191,6 @@ fn starshine_emit_body_instructions(
               @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
             ),
           )
-          output.push(
-            @lib.Instruction::struct_new(
-              @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
-            ),
-          )
         } else if operation == 2 {
           append_starshine_instructions(output, fragments[0])
           append_starshine_instructions(output, backing_prefix)
@@ -7162,11 +7199,7 @@ fn starshine_emit_body_instructions(
           append_starshine_instructions(output, fragments[0])
           append_starshine_instructions(output, backing_prefix)
           append_starshine_instructions(output, fragments[1])
-          output.push(
-            @lib.Instruction::array_get(
-              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
-            ),
-          )
+          output.push(starshine_fixed_array_get_instruction(shape, array_type))
         } else if operation == 5 {
           append_starshine_instructions(output, fragments[0])
           append_starshine_instructions(output, backing_prefix)
@@ -7175,112 +7208,6 @@ fn starshine_emit_body_instructions(
           output.push(
             @lib.Instruction::array_set(
               @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
-            ),
-          )
-        } else if operation == 3 {
-          if ref_scratch < 0 || i32_scratch < 0 {
-            return Err(UnsupportedExpression(body.body, -1))
-          }
-          let link = match program {
-            Some(value) => value
-            None => return Err(UnsupportedExpression(body.body, -1))
-          }
-          let option_module = @semantic.semantic_id_module(
-            @semantic.standard_option_some_variant(),
-          )
-          let option_module_index = match
-            link.module_lookup.get(option_module) {
-            Some(value) => value
-            None => return Err(UnsupportedExpression(body.body, -1))
-          }
-          let option_plan = link.modules[option_module_index]
-          let some_variant = @semantic.standard_option_some_variant()
-          let none_variant = @semantic.standard_option_none_variant()
-          let some_physical = match
-            starshine_variant_payload_physical_type(option_plan, some_variant) {
-            Some(value) => value
-            None => return Err(UnsupportedExpression(body.body, -1))
-          }
-          let none_physical = match
-            starshine_variant_payload_physical_type(option_plan, none_variant) {
-            Some(value) => value
-            None => return Err(UnsupportedExpression(body.body, -1))
-          }
-          let some_type = link.physical_type_index(
-            option_module_index,
-            some_physical.type_index,
-          )
-          let none_type = link.physical_type_index(
-            option_module_index,
-            none_physical.type_index,
-          )
-          let some_tag = option_plan.variant_tag_of(some_variant).unwrap()
-          let none_tag = option_plan.variant_tag_of(none_variant).unwrap()
-          append_starshine_instructions(output, fragments[0])
-          output.push(
-            @lib.Instruction::local_set(
-              @lib.LocalIdx::new(ref_scratch.reinterpret_as_uint()),
-            ),
-          )
-          append_starshine_instructions(output, fragments[1])
-          output.push(
-            @lib.Instruction::local_set(
-              @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
-            ),
-          )
-          let load_backing : Array[@lib.Instruction] = [
-            @lib.Instruction::local_get(
-              @lib.LocalIdx::new(ref_scratch.reinterpret_as_uint()),
-            ),
-          ]
-          append_starshine_instructions(load_backing, backing_prefix)
-          let success : Array[@lib.Instruction] = [
-            @lib.Instruction::i32_const(@lib.I32::new(some_tag)),
-          ]
-          for field in option_plan.variant_fields_of(some_variant) {
-            if starshine_shape_matches_storage(shape, field.storage) {
-              append_starshine_instructions(success, load_backing)
-              success.push(
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
-                ),
-              )
-              success.push(
-                @lib.Instruction::array_get(
-                  @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
-                ),
-              )
-            } else {
-              append_starshine_instructions(
-                success,
-                starshine_default_storage_instructions(field.storage),
-              )
-            }
-          }
-          success.push(
-            @lib.Instruction::struct_new(
-              @lib.TypeIdx::new(some_type.reinterpret_as_uint()),
-            ),
-          )
-          let failure = [
-            @lib.Instruction::i32_const(@lib.I32::new(none_tag)),
-            @lib.Instruction::struct_new(
-              @lib.TypeIdx::new(none_type.reinterpret_as_uint()),
-            ),
-          ]
-          output.push(
-            @lib.Instruction::local_get(
-              @lib.LocalIdx::new(i32_scratch.reinterpret_as_uint()),
-            ),
-          )
-          append_starshine_instructions(output, load_backing)
-          output.push(@lib.Instruction::array_len())
-          output.push(@lib.Instruction::i32_lt_u())
-          output.push(
-            @lib.Instruction::if_(
-              @lib.BlockType::val_type(@lib.ValType::eqref_null()),
-              success,
-              Some(failure),
             ),
           )
         } else {
@@ -9636,6 +9563,8 @@ fn starshine_append_program_argument_cast(
       planned.physical_type_index(function_.module_index, index)
     @semantic.WasmExternalNominalRefValue(declaration) =>
       planned.type_lookup.get(declaration).unwrap()
+    @semantic.WasmFixedArrayRefValue(carrier) =>
+      planned.fixed_array_type_base + carrier
     _ => -1
   }
   if final_index >= 0 {
@@ -9664,6 +9593,8 @@ fn starshine_append_program_result_cast(
       planned.physical_type_index(function_.module_index, index)
     @semantic.WasmExternalNominalRefValue(declaration) =>
       planned.type_lookup.get(declaration).unwrap()
+    @semantic.WasmFixedArrayRefValue(carrier) =>
+      planned.fixed_array_type_base + carrier
     _ => -1
   }
   if final_index >= 0 {
@@ -10013,6 +9944,14 @@ fn starshine_program_storage_type(
           ),
         ),
       )
+    @semantic.WasmFixedArrayRefStorage(carrier) =>
+      @lib.StorageType::val_type(
+        starshine_nominal_ref(
+          @lib.TypeIdx::new(
+            (planned.fixed_array_type_base + carrier).reinterpret_as_uint(),
+          ),
+        ),
+      )
   }
 }
 
@@ -10048,6 +9987,12 @@ fn starshine_program_value_type(
       starshine_nominal_ref(
         @lib.TypeIdx::new(
           planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
+        ),
+      )
+    @semantic.WasmFixedArrayRefValue(carrier) =>
+      starshine_nominal_ref(
+        @lib.TypeIdx::new(
+          (planned.fixed_array_type_base + carrier).reinterpret_as_uint(),
         ),
       )
   }
@@ -10120,6 +10065,8 @@ fn starshine_program_group_storage_type(
     }
     @semantic.WasmExternalNominalRefStorage(declaration) =>
       nominal(planned.type_lookup.get(declaration).unwrap())
+    @semantic.WasmFixedArrayRefStorage(carrier) =>
+      nominal(planned.fixed_array_type_base + carrier)
   }
 }
 

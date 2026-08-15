@@ -357,6 +357,9 @@ pub fn required_standard_library_source_paths(
     for index, path in text_files {
       if (text_mask & (1 << index)) != 0 {
         required.push(path)
+        if index == 0 {
+          required.push("std/string_fixed_array.dew")
+        }
       }
     }
     if (text_mask & 16) != 0 {
@@ -574,7 +577,7 @@ pub fn collect_program_manifest_with_standard_sources(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id, "std/fixed_array.dew", standard_sources, false, false,
+          module_id, "std/fixed_array.dew", standard_sources, false, true,
         ),
       ),
     )
@@ -878,16 +881,24 @@ pub fn collect_program_manifest_with_standard_sources(
       let module_index = modules.length()
       first_module[text_paths[source_index - 1]] = module_index
       module_paths.push(text_paths[source_index - 1])
+      let text_module_files = standard_library_program_files(
+        module_id,
+        text_files[source_index - 1],
+        standard_sources,
+        true,
+        source_index == 1 || source_index == 4,
+      )
+      if source_index == 1 {
+        text_module_files.push(
+          ProgramFile::from_manifest(
+            make_program_file_id(module_id, text_module_files.length()),
+            standard_sources.file("std/string_fixed_array.dew"),
+          ),
+        )
+      }
       modules.push(
         collect_program_files_with_frozen_standard_imports(
-          module_id,
-          standard_library_program_files(
-            module_id,
-            text_files[source_index - 1],
-            standard_sources,
-            true,
-            source_index == 1 || source_index == 4,
-          ),
+          module_id, text_module_files,
         ),
       )
     }

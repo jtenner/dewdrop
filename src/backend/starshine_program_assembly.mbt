@@ -15,10 +15,20 @@ fn emit_starshine_program_type_section(
       }
       rec_types.push(@lib.RecType::group(subtypes))
     }
+    if planned.fixed_array_type_base >= 0 {
+      for runtime_type in starshine_fixed_array_runtime_types() {
+        rec_types.push(runtime_type)
+      }
+    }
     for signature in planned.program_signature_types {
       rec_types.push(starshine_program_signature_rec_type(planned, signature))
     }
   } else {
+    if planned.fixed_array_type_base >= 0 {
+      for runtime_type in starshine_fixed_array_runtime_types() {
+        rec_types.push(runtime_type)
+      }
+    }
     for scc in planned.graph.sccs {
       for member_index in 0..<scc.length {
         let module_index = planned.graph.scc_modules[scc.start + member_index]
@@ -85,18 +95,6 @@ fn emit_starshine_program_type_section(
   }
   if uses_text {
     for runtime_type in starshine_text_runtime_types(planned.type_count) {
-      rec_types.push(runtime_type)
-    }
-  }
-  let mut uses_fixed_array = false
-  for module_ in planned.modules {
-    if module_.uses_fixed_array_runtime {
-      uses_fixed_array = true
-      break
-    }
-  }
-  if uses_fixed_array {
-    for runtime_type in starshine_fixed_array_runtime_types() {
       rec_types.push(runtime_type)
     }
   }

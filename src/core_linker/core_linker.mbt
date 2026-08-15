@@ -290,12 +290,37 @@ fn core_ref_defined_type(value : @lib.ValType) -> (Bool, Bool, Int)? {
 }
 
 ///|
+fn core_same_packed_array_type(
+  dew_arena : CoreTypeArena,
+  guest_arena : CoreTypeArena,
+  dew : Int,
+  guest : Int,
+) -> Bool {
+  if dew < 0 ||
+    dew >= dew_arena.subtypes.length() ||
+    guest < 0 ||
+    guest >= guest_arena.subtypes.length() {
+    return false
+  }
+  match
+    (
+      dew_arena.subtypes[dew].get_comptype(),
+      guest_arena.subtypes[guest].get_comptype(),
+    ) {
+    (@lib.ArrayCompType(dew_field), @lib.ArrayCompType(guest_field)) =>
+      dew_field == guest_field && dew_field.get_storage_type().is_packed()
+    _ => false
+  }
+}
+
+///|
 fn core_bind_value_type(
   dew_arena : CoreTypeArena,
   guest_arena : CoreTypeArena,
   dew : @lib.ValType,
   guest : @lib.ValType,
   marker_guest_types : Array[Int],
+  concrete_guest_types : Array[Int],
 ) -> Bool {
   match (core_ref_defined_type(dew), core_ref_defined_type(guest)) {
     (
@@ -313,6 +338,21 @@ fn core_bind_value_type(
         return false
       }
       marker_guest_types[marker] = concrete
+      true
+    }
+    (
+      Some((dew_nullable, dew_exact, dew_concrete)),
+      Some((guest_nullable, guest_exact, guest_concrete)),
+    ) if dew_nullable == guest_nullable &&
+      dew_exact == guest_exact &&
+      core_same_packed_array_type(
+        dew_arena, guest_arena, dew_concrete, guest_concrete,
+      ) => {
+      if concrete_guest_types[dew_concrete] >= 0 &&
+        concrete_guest_types[dew_concrete] != guest_concrete {
+        return false
+      }
+      concrete_guest_types[dew_concrete] = guest_concrete
       true
     }
     _ => dew == guest
@@ -348,6 +388,7 @@ fn core_bind_signature(
   dew_type : Int,
   guest_type : Int,
   marker_guest_types : Array[Int],
+  concrete_guest_types : Array[Int],
 ) -> Result[Array[Int], CoreWasmLinkError] {
   let (dew_parameters, dew_results) = match
     core_function_comp_type(dew_arena, dew_type) {
@@ -363,14 +404,14 @@ fn core_bind_signature(
     dew_results.length() != guest_results.length() {
     return Err(CoreWasmSignatureMismatch(provider, export_name))
   }
-  let string_parameters : Array[Int] = []
+  let parameter_adapters : Array[Int] = []
   for index in 0..<dew_parameters.length() {
     if core_is_nullable_eqref(dew_parameters[index]) {
       match core_ref_defined_type(guest_parameters[index]) {
         Some((false, _, concrete)) if core_is_moonbit_string_type(
             guest_arena, concrete,
           ) => {
-          string_parameters.push(index)
+          parameter_adapters.push(index)
           continue
         }
         _ => ()
@@ -382,6 +423,7 @@ fn core_bind_signature(
         dew_parameters[index],
         guest_parameters[index],
         marker_guest_types,
+        concrete_guest_types,
       ) {
       return Err(CoreWasmSignatureMismatch(provider, export_name))
     }
@@ -393,11 +435,12 @@ fn core_bind_signature(
         dew_results[index],
         guest_results[index],
         marker_guest_types,
+        concrete_guest_types,
       ) {
       return Err(CoreWasmSignatureMismatch(provider, export_name))
     }
   }
-  Ok(string_parameters)
+  Ok(parameter_adapters)
 }
 
 ///|

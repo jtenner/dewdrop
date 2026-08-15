@@ -37,20 +37,22 @@ The standard `assert(condition, message)` function remains ambient through `dew.
 
 ## Representation
 
-A `FixedArray<t>` value is one compiler-owned nominal WasmGC wrapper containing its carrier array as nullable `eqref`. The backing array is selected statically from six unboxed physical families:
+A `FixedArray<t>` value is the carrier WasmGC array itself. There is no outer struct and no `eqref`-typed wrapper field. The compiler selects one of eight exact mutable array types:
 
 ```text
+packed i8   for I8 and U8
+packed i16  for I16 and U16
 i32
- i64
- f32
- f64
- v128
- nullable eqref
+i64
+f32
+f64
+v128
+nullable eqref
 ```
 
-The wrapper keeps one stable nominal identity while scalar elements remain unboxed. Compiler-known make/get/set operations cast the private backing reference to the selected carrier array before using `array.new`, `array.len`, `array.get`, or `array.set`.
+The standard source declares only four private builtins: `array_new`, `array_len`, `array_get`, and `array_set`. Each maps directly to a WasmGC array instruction. `array_get` selects `array.get_s` or `array.get_u` for packed signed or unsigned elements. The public methods, the bounds check for `get`, and `Option::Some`/`Option::None` construction are ordinary Dew source.
 
-`get` evaluates the receiver and index once, checks the exact fixed backing length, and constructs `Option::Some` using the existing erased generic-enum carrier field or `Option::None` without reading the array. Indexed get and set lower directly to trapping WasmGC operations.
+Exact packed carriers are part of the static-link ABI. A Dew `FixedArray<U16>` and a MoonBit mutable `array<i16>` are coalesced to one Core Wasm type during linking, so the call needs no copy adapter and no unsafe reference cast.
 
 ## Validation
 
@@ -62,8 +64,10 @@ Coverage includes:
 - exact semantic selections and mechanical direct calls;
 - stable compiler-owned FixedArray identities;
 - static and instance FixedArray method inference;
+- packed `i8`/`i16` signed and unsigned reads;
 - scalar `i32`, `i64`, `f32`, and `f64` carrier execution;
 - reference-carrier construction and mutation;
+- direct packed-array type coalescing at a foreign Core Wasm boundary;
 - zero-length arrays;
 - first/final valid indices;
 - alias-visible mutation;

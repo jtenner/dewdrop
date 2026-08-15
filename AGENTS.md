@@ -7,6 +7,7 @@
 - Store research notes in `docs/research/*.md`.
 - Update and organize documentation with every commit; keep it consistent with the implementation.
 - Design for modularity and performance. Runtime performance is the highest priority, followed by a low memory footprint.
+- Do not add custom compiler intrinsics unless they map directly onto a web assembly instruction.
 - All versions and codecs are version 1. Dewdrop is not released yet, so breaking format changes do not break a released format.
 
 ## Done means done

@@ -39,23 +39,23 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   assert_standard_registry_declaration(fixed, 0, "FixedArray")
   assert_eq(
     standard_fixed_array_method_declaration("make"),
-    make_semantic_id(fixed.module_id, 8),
+    make_semantic_id(fixed.module_id, 6),
   )
   assert_eq(
     standard_fixed_array_method_declaration("set_unchecked"),
-    make_semantic_id(fixed.module_id, 13),
+    make_semantic_id(fixed.module_id, 11),
   )
   assert_eq(
-    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 8)),
-    FixedArrayMake,
+    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 1)),
+    WasmArrayNew,
+  )
+  assert_eq(
+    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 13)),
+    WasmArrayGet,
   )
   assert_eq(
     standard_fixed_array_operation(make_semantic_id(fixed.module_id, 15)),
-    FixedArrayGetUnchecked,
-  )
-  assert_eq(
-    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 17)),
-    FixedArraySetUnchecked,
+    WasmArraySet,
   )
 
   let stack = program.modules[program

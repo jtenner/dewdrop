@@ -187,6 +187,12 @@ representation. It reads Dew's validated UTF-8 chunked String, counts UTF-16
 code units, allocates the exact MoonBit array, decodes one-to-four-byte UTF-8,
 and writes surrogate pairs for supplementary scalars.
 
+`String::to_utf16_fixed_array()` is an ordinary Dew-source alternative when the
+foreign declaration accepts `FixedArray<U16>`. Dew emits that value directly as
+a mutable packed `array<i16>`. The linker coalesces the matching singleton Dew
+and guest array types into one nominal Core Wasm type, so the guest call uses the
+array directly with no copy adapter, `eqref` erasure, or unsafe reference cast.
+
 ## Reproducible guest and coverage
 
 `src/starshine_guest` is a `foreign_library` package with direct

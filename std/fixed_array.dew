@@ -1,41 +1,43 @@
 pub struct FixedArray<t> {}
 
-pub builtin fixed_array_make<t>(length: U32, value: t) -> FixedArray<t> = "dew_fixed_array_make"
-pub builtin fixed_array_length<t>(value: FixedArray<t>) -> U32 = "dew_fixed_array_length"
-pub builtin fixed_array_get<t>(value: FixedArray<t>, index: U32) -> Option<t> = "dew_fixed_array_get"
-pub builtin fixed_array_get_unchecked<t>(value: FixedArray<t>, index: U32) -> t = "dew_fixed_array_get_unchecked"
-pub builtin fixed_array_set<t>(value: FixedArray<t>, index: U32, item: t) -> Unit = "dew_fixed_array_set"
-pub builtin fixed_array_set_unchecked<t>(value: FixedArray<t>, index: U32, item: t) -> Unit = "dew_fixed_array_set_unchecked"
+builtin array_new<t>(length: U32, value: t) -> FixedArray<t> = "array_new"
+builtin array_len<t>(value: FixedArray<t>) -> U32 = "array_len"
+builtin array_get<t>(value: FixedArray<t>, index: U32) -> t = "array_get"
+builtin array_set<t>(value: FixedArray<t>, index: U32, item: t) -> Unit = "array_set"
 
 impl<t> FixedArray<t> {
   fn make(length: U32, value: t) -> FixedArray<t> {
-    fixed_array_make(length, value)
+    array_new(length, value)
   }
   fn length(self) -> U32 {
-    fixed_array_length(self)
+    array_len(self)
   }
   fn get(self, index: U32) -> Option<t> {
-    fixed_array_get(self, index)
+    if index < array_len(self) {
+      Option::Some(array_get(self, index))
+    } else {
+      Option::None
+    }
   }
   fn get_unchecked(self, index: U32) -> t {
-    fixed_array_get_unchecked(self, index)
+    array_get(self, index)
   }
   fn set(self, index: U32, value: t) -> Unit {
-    fixed_array_set(self, index, value)
+    array_set(self, index, value)
   }
   fn set_unchecked(self, index: U32, value: t) -> Unit {
-    fixed_array_set_unchecked(self, index, value)
+    array_set(self, index, value)
   }
 }
 
 impl<t> IndexedGet<U32, t> for FixedArray<t> {
   fn indexed_get(self, index: U32) -> t {
-    fixed_array_get_unchecked(self, index)
+    array_get(self, index)
   }
 }
 
 impl<t> IndexedSet<U32, t> for FixedArray<t> {
   fn indexed_set(self, index: U32, value: t) -> Unit {
-    fixed_array_set_unchecked(self, index, value)
+    array_set(self, index, value)
   }
 }

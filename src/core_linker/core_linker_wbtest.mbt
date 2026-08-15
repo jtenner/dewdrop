@@ -107,6 +107,77 @@ test "Core Wasm linker replaces a nominal marker with the guest concrete type" {
 }
 
 ///|
+fn core_link_test_packed_array_dew_module() -> @lib.Module {
+  let string = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::array(
+        @lib.FieldType::new(
+          @lib.StorageType::pack_type(@lib.PackType::i16()),
+          @lib.Mut::var_(),
+        ),
+      ),
+    ),
+  )
+  let marker = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::struct_([])),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([core_link_test_ref(0)], [core_link_test_ref(1)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([string, marker, signature]))
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:starshine"),
+        @lib.Name::from_string("module_new_named"),
+        @lib.ExternType::func(@lib.TypeIdx::new(2U)),
+      ),
+    ]),
+  )
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("make_named"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+}
+
+///|
+test "Core Wasm linker coalesces exact packed array types without an adapter" {
+  let dew = @binary.encode_module(core_link_test_packed_array_dew_module()).unwrap()
+  let guest = @binary.encode_module(core_link_test_string_guest_module()).unwrap()
+  let linked = link_core_wasm_gc_modules(
+    dew,
+    [{ provider: "starshine", bytes: guest }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  match module_.type_sec {
+    Some(@lib.TypeSec(groups)) => assert_eq(groups.length(), 4)
+    None => fail("expected coalesced linked types")
+  }
+  match module_.code_sec {
+    Some(@lib.CodeSec(functions)) => assert_eq(functions.length(), 1)
+    None => fail("expected only the guest function")
+  }
+  match module_.mem_sec {
+    None | Some(@lib.MemSec([])) => ()
+    _ => fail("did not expect adapter memory")
+  }
+}
+
+///|
 fn core_link_test_string_dew_module() -> @lib.Module {
   let marker = @lib.RecType::new(
     @lib.SubType::comp_type(@lib.CompType::struct_([])),

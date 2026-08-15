@@ -5,16 +5,14 @@
       "slot": 10,
       "path": "dew.std.fixed_array",
       "type": 0,
-      "methods": {"make": 8, "length": 9, "get": 10, "get_unchecked": 11, "set": 12, "set_unchecked": 13},
-      "index": 15,
-      "index_set": 17,
+      "methods": {"make": 6, "length": 7, "get": 8, "get_unchecked": 9, "set": 10, "set_unchecked": 11},
+      "index": 13,
+      "index_set": 15,
       "operations": {
-        "FixedArrayMake": [1, 8],
-        "FixedArrayLength": [2, 9],
-        "FixedArrayGet": [3, 10],
-        "FixedArrayGetUnchecked": [4, 11, 15],
-        "FixedArraySet": [5, 12],
-        "FixedArraySetUnchecked": [6, 13, 17]
+        "WasmArrayNew": [1, 6],
+        "WasmArrayLen": [2, 7],
+        "WasmArrayGet": [3, 9, 13],
+        "WasmArraySet": [4, 11, 15]
       }
     },
     "array": {

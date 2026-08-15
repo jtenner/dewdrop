@@ -21,6 +21,7 @@ pub enum PlannedWasmStorageType {
   WasmFunctionRefStorage(Int)
   WasmNominalRefStorage(PlannedWasmTypeReference)
   WasmExternalNominalRefStorage(DeclId)
+  WasmFixedArrayRefStorage(Int)
 } derive(Eq, Debug)
 
 ///|
@@ -131,6 +132,7 @@ pub enum PlannedWasmValueType {
   WasmFunctionRefValue(Int)
   WasmNominalRefValue(Int)
   WasmExternalNominalRefValue(DeclId)
+  WasmFixedArrayRefValue(Int)
 } derive(Eq, Debug)
 
 ///|
@@ -758,7 +760,8 @@ fn wasmgc_build_physical_sources(
   let source_by_variant = Array::make(layouts.variants.length(), -1)
   for layout in layouts.layouts {
     if (layout.test_only && !options.emit_tests) ||
-      (prune_unrequired && !required_declarations.contains(layout.declaration)) {
+      (prune_unrequired && !required_declarations.contains(layout.declaration)) ||
+      layout.declaration == standard_fixed_array_type_declaration() {
       continue
     }
     let root = sources.length()
@@ -1074,6 +1077,9 @@ fn wasmgc_storage_type(
       | SelfType(_)
       | FunctionType(_, _) => return Some(WasmNullableEqRefStorage)
       NominalType(declaration) => {
+        if declaration == standard_fixed_array_type_declaration() {
+          return Some(WasmNullableEqRefStorage)
+        }
         if semantic_id_module(declaration) != resolved.module_id {
           return Some(WasmExternalNominalRefStorage(declaration))
         }
@@ -1093,7 +1099,24 @@ fn wasmgc_storage_type(
         }
         return Some(WasmNullableEqRefStorage)
       }
-      AppliedType(base, _) => current = base
+      AppliedType(base, arguments) =>
+        match resolved.types[base] {
+          NominalType(declaration) if declaration ==
+            standard_fixed_array_type_declaration() &&
+            arguments.length == 1 => {
+            let carrier = wasmgc_fixed_array_carrier(
+              planned_resolved_value_shape(
+                resolved,
+                resolved.type_arguments[arguments.start],
+              ),
+            )
+            if carrier >= 0 {
+              return Some(WasmFixedArrayRefStorage(carrier))
+            }
+            return Some(WasmNullableEqRefStorage)
+          }
+          _ => current = base
+        }
     }
   }
   Some(WasmNullableEqRefStorage)
@@ -1449,14 +1472,7 @@ fn wasmgc_append_physical_type_fields(
   let start = target.length()
   match source.kind {
     PlannedWasmStructType(declaration) =>
-      if declaration == standard_fixed_array_type_declaration() {
-        wasmgc_append_field(
-          target,
-          WasmStructField(declaration),
-          WasmNullableEqRefStorage,
-          source.offset,
-        )
-      } else if declaration == standard_array_type_declaration() {
+      if declaration == standard_array_type_declaration() {
         wasmgc_append_mutable_field(
           target,
           WasmStructField(declaration),
@@ -1666,6 +1682,7 @@ fn wasmgc_capture_value_type(
     | WasmFunctionRefStorage(_)
     | WasmNominalRefStorage(_)
     | WasmExternalNominalRefStorage(_) => WasmNullableEqRefValue
+    WasmFixedArrayRefStorage(carrier) => WasmFixedArrayRefValue(carrier)
   }
 }
 
@@ -1724,6 +1741,84 @@ fn wasmgc_capture_storage(
     V128PlannedValueShape => Some(WasmV128Storage)
     RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
       Some(WasmNullableEqRefStorage)
+  }
+}
+
+///|
+
+///|
+pub fn wasmgc_fixed_array_carrier_for_resolved_type(
+  types : Array[ResolvedType],
+  root : ResolvedTypeId,
+) -> Int {
+  if root < 0 || root >= types.length() {
+    return 5
+  }
+  match types[root] {
+    PrimitiveType(I8Type | U8Type) => 6
+    PrimitiveType(I16Type | U16Type) => 7
+    PrimitiveType(
+      BoolType
+      | I32Type
+      | U32Type
+      | Swar32Type
+      | I8x4Type
+      | U8x4Type
+      | I16x2Type
+      | U16x2Type
+    ) => 0
+    PrimitiveType(
+      I64Type
+      | U64Type
+      | Swar64Type
+      | I8x8Type
+      | U8x8Type
+      | I16x4Type
+      | U16x4Type
+      | I32x2Type
+      | U32x2Type
+    ) => 1
+    PrimitiveType(F32Type) => 2
+    PrimitiveType(F64Type) => 3
+    PrimitiveType(
+      V128Type
+      | I8x16Type
+      | U8x16Type
+      | I16x8Type
+      | U16x8Type
+      | I32x4Type
+      | U32x4Type
+      | I64x2Type
+      | U64x2Type
+      | F32x4Type
+      | F64x2Type
+    ) => 4
+    AppliedType(_, _) | NominalType(_) | FunctionType(_, _) | TraitType(_) => 5
+    GenericParameterType(_) | SelfType(_) | ErrorType => 5
+    PrimitiveType(UnitType | NeverType) => -1
+    PrimitiveType(
+      StringType
+      | BytesType
+      | StringViewType
+      | StringBuilderType
+      | BytesBuilderType
+    ) => 5
+  }
+}
+
+///|
+pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int {
+  match shape {
+    I8PlannedValueShape | U8PlannedValueShape => 6
+    I16PlannedValueShape | U16PlannedValueShape => 7
+    I32PlannedValueShape | U32PlannedValueShape | Swar32PlannedValueShape => 0
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape => 1
+    F32PlannedValueShape => 2
+    F64PlannedValueShape => 3
+    V128PlannedValueShape => 4
+    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
+      5
+    UnitPlannedValueShape | NeverPlannedValueShape => -1
   }
 }
 
@@ -1807,7 +1902,8 @@ fn wasmgc_value_type(
           return Some(WasmNullableEqRefValue)
         }
       NominalType(declaration) => {
-        if declaration == standard_map_entry_type_declaration() {
+        if declaration == standard_fixed_array_type_declaration() ||
+          declaration == standard_map_entry_type_declaration() {
           return Some(WasmNullableEqRefValue)
         }
         if semantic_id_module(declaration) != resolved.module_id {
@@ -1822,7 +1918,24 @@ fn wasmgc_value_type(
         }
         return Some(WasmNullableEqRefValue)
       }
-      AppliedType(base, _) => current = base
+      AppliedType(base, arguments) =>
+        match resolved.types[base] {
+          NominalType(declaration) if declaration ==
+            standard_fixed_array_type_declaration() &&
+            arguments.length == 1 => {
+            let carrier = wasmgc_fixed_array_carrier(
+              planned_resolved_value_shape(
+                resolved,
+                resolved.type_arguments[arguments.start],
+              ),
+            )
+            if carrier >= 0 {
+              return Some(WasmFixedArrayRefValue(carrier))
+            }
+            return Some(WasmNullableEqRefValue)
+          }
+          _ => current = base
+        }
     }
   }
   Some(WasmNullableEqRefValue)
@@ -3811,9 +3924,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedCircularBufferPeekBack(_, _)
         | PlannedArrayClear(_, _, _)
         | PlannedArrayIterNext(_, _)
-        | PlannedFixedArrayGet(_, _, _)
         | PlannedFixedArrayGetUnchecked(_, _, _)
-        | PlannedFixedArraySet(_, _, _, _)
         | PlannedFixedArraySetUnchecked(_, _, _, _) => {
           uses_fixed_array_runtime = true
           break

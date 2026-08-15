@@ -231,6 +231,7 @@ fn validate_wasmgc_storage_type(
     WasmNominalRefStorage(WasmModuleTypeReference(index)) =>
       index >= 0 && index < physical_count
     WasmNominalRefStorage(WasmRecursiveTypeReference(index)) => index >= 0
+    WasmFixedArrayRefStorage(carrier) => carrier >= 0 && carrier < 8
     _ => true
   }
 }
@@ -244,6 +245,7 @@ fn validate_wasmgc_value_type(
   match value {
     WasmFunctionRefValue(index) => index >= 0 && index < signature_limit
     WasmNominalRefValue(index) => index >= 0 && index < physical_count
+    WasmFixedArrayRefValue(carrier) => carrier >= 0 && carrier < 8
     _ => true
   }
 }

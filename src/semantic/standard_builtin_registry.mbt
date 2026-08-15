@@ -3,12 +3,10 @@
 ///|
 enum StandardBuiltinOperation {
   NoStandardBuiltinOperation
-  FixedArrayMake
-  FixedArrayLength
-  FixedArrayGet
-  FixedArrayGetUnchecked
-  FixedArraySet
-  FixedArraySetUnchecked
+  WasmArrayNew
+  WasmArrayLen
+  WasmArrayGet
+  WasmArraySet
   ArrayNew
   ArrayWithCapacity
   ArrayLength
@@ -118,12 +116,12 @@ pub fn standard_fixed_array_type_declaration() -> DeclId {
 ///|
 pub fn standard_fixed_array_method_declaration(name : String) -> DeclId {
   let local_id = match name {
-    "make" => 8
-    "length" => 9
-    "get" => 10
-    "get_unchecked" => 11
-    "set" => 12
-    "set_unchecked" => 13
+    "make" => 6
+    "length" => 7
+    "get" => 8
+    "get_unchecked" => 9
+    "set" => 10
+    "set_unchecked" => 11
     _ => -1
   }
   if local_id < 0 {
@@ -135,12 +133,12 @@ pub fn standard_fixed_array_method_declaration(name : String) -> DeclId {
 
 ///|
 pub fn standard_fixed_array_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 15)
+  make_semantic_id(standard_library_module_id(10), 13)
 }
 
 ///|
 pub fn standard_fixed_array_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 17)
+  make_semantic_id(standard_library_module_id(10), 15)
 }
 
 ///|
@@ -151,12 +149,10 @@ fn standard_fixed_array_operation(
     return NoStandardBuiltinOperation
   }
   match semantic_id_local(declaration) {
-    1 | 8 => FixedArrayMake
-    2 | 9 => FixedArrayLength
-    3 | 10 => FixedArrayGet
-    4 | 11 | 15 => FixedArrayGetUnchecked
-    5 | 12 => FixedArraySet
-    6 | 13 | 17 => FixedArraySetUnchecked
+    1 | 6 => WasmArrayNew
+    2 | 7 => WasmArrayLen
+    3 | 9 | 13 => WasmArrayGet
+    4 | 11 | 15 => WasmArraySet
     _ => NoStandardBuiltinOperation
   }
 }

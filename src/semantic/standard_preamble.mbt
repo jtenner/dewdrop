@@ -140,7 +140,10 @@ fn selected_standard_modules(
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {
             match import_.path[2] {
-              "string" => text_mask = text_mask | 1
+              "string" => {
+                text_mask = text_mask | 1
+                fixed_array = true
+              }
               "string_builder" => text_mask = text_mask | 2
               "bytes_builder" => text_mask = text_mask | 4
               "bytes" => text_mask = text_mask | 8
@@ -205,6 +208,9 @@ fn selected_standard_modules(
         Some(@parser.Declaration(_)) | None => scanning = false
       }
     }
+  }
+  if (text_mask & 1) != 0 {
+    fixed_array = true
   }
   (
     text_mask, show, disposable, math, io, testing, wasi, wasm_intrinsics, fixed_array,

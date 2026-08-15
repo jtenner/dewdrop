@@ -85,6 +85,7 @@ fn core_build_type_maps(
   dew_arena : CoreTypeArena,
   guest_arena : CoreTypeArena,
   marker_guest_types : Array[Int],
+  concrete_guest_types : Array[Int],
 ) -> Result[(Array[Int], Array[Int], Array[Bool], Int), CoreWasmLinkError] {
   let guest_types = core_make_sequential_indices(
     guest_arena.subtypes.length(),
@@ -110,18 +111,26 @@ fn core_build_type_maps(
       }
       found
     }
-    let mut marker_count = 0
+    let mut bound_count = 0
+    let mut bound_guest_type = -1
     for offset in 0..<length {
-      if marker_guest_types[start + offset] >= 0 {
-        marker_count += 1
+      let dew_type = start + offset
+      let guest_type = if marker_guest_types[dew_type] >= 0 {
+        marker_guest_types[dew_type]
+      } else {
+        concrete_guest_types[dew_type]
+      }
+      if guest_type >= 0 {
+        bound_count += 1
+        bound_guest_type = guest_type
       }
     }
-    if marker_count > 0 {
-      if length != 1 || marker_count != 1 {
+    if bound_count > 0 {
+      if length != 1 || bound_count != 1 {
         return Err(CoreWasmInvalidMarkerGroup(group_index))
       }
       dropped_groups[group_index] = true
-      dew_types[start] = guest_types[marker_guest_types[start]]
+      dew_types[start] = guest_types[bound_guest_type]
     } else {
       for offset in 0..<length {
         dew_types[start + offset] = next
@@ -144,6 +153,7 @@ fn core_pair_link(
   let dew_counts = core_import_counts(dew)
   let guest_counts = core_import_counts(guest)
   let marker_guest_types = Array::make(dew_arena.subtypes.length(), -1)
+  let concrete_guest_types = Array::make(dew_arena.subtypes.length(), -1)
   let linked_guest_function_by_dew_import = Array::make(
     dew_counts.functions,
     -1,
@@ -192,6 +202,7 @@ fn core_pair_link(
               dew_type,
               guest_type,
               marker_guest_types,
+              concrete_guest_types,
             ) {
             Ok(parameters) =>
               string_adapter_parameters_by_dew_import[dew_function_ordinal] = parameters
@@ -208,7 +219,9 @@ fn core_pair_link(
     return Ok(dew)
   }
   let (dew_type_indices, guest_type_indices, dropped_dew_groups, type_count) = match
-    core_build_type_maps(dew_arena, guest_arena, marker_guest_types) {
+    core_build_type_maps(
+      dew_arena, guest_arena, marker_guest_types, concrete_guest_types,
+    ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
