@@ -199,7 +199,14 @@ receiver-free lowering, structured import codecs, exact marker replacement,
 all-space instruction remapping, separate memory remapping, the Dew-to-MoonBit
 String adapter, missing providers, bounded WASI schemas, CLI/compiler-driver
 integration, and linker microbenchmarks. End-to-end output was validated with
-`wasm-tools` for both `module_new` and `module_new_named`.
+`wasm-tools` for both `module_new` and `module_new_named`. Node v26.3.0 also
+instantiated the linked module and called a no-argument Dew wrapper that sends
+`"hello 🌍"` through the UTF-8-to-UTF-16 adapter.
+
+The release Wasm-GC linker microbenchmark on August 15, 2026 measured the small
+`module_new` synthetic pair at **4.49 µs ± 99.03 ns** over 10 samples of 21,380
+runs. This benchmark disables per-phase validation and cleanup so it measures
+the pure planning, remapping, assembly, and encoding path.
 
 ## Baseline tool issue
 
