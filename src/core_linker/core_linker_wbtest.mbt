@@ -261,6 +261,17 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
         ),
       ]),
     )
+    .with_table_sec(
+      @lib.TableSec::new([
+        @lib.Table::new(
+          @lib.TableType::new(
+            @lib.RefType::abs(@lib.AbsHeapType::func()),
+            @lib.Limits::i32(1U, Some(1U)),
+          ),
+          None,
+        ),
+      ]),
+    )
     .with_mem_sec(
       @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, Some(1U)))]),
     )
@@ -280,6 +291,17 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
     )
   let guest_base = core_link_test_guest_module()
   let guest = guest_base
+    .with_table_sec(
+      @lib.TableSec::new([
+        @lib.Table::new(
+          @lib.TableType::new(
+            @lib.RefType::abs(@lib.AbsHeapType::func()),
+            @lib.Limits::i32(1U, Some(1U)),
+          ),
+          None,
+        ),
+      ]),
+    )
     .with_mem_sec(
       @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, Some(1U)))]),
     )
@@ -288,6 +310,8 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
         @lib.Func::new(
           @lib.Locals::empty(),
           @lib.Expr::new([
+            @lib.Instruction::table_size(@lib.TableIdx::new(0U)),
+            @lib.Instruction::drop(),
             @lib.Instruction::i32_const(@lib.I32::new(0)),
             @lib.Instruction::i32_const(@lib.I32::new(7)),
             @lib.Instruction::i32_store(
@@ -314,7 +338,12 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
     Some(@lib.MemSec(memories)) => assert_eq(memories.length(), 2)
     None => fail("expected two private memories")
   }
+  match module_.table_sec {
+    Some(@lib.TableSec(tables)) => assert_eq(tables.length(), 2)
+    None => fail("expected two private tables")
+  }
   let mut remapped_guest_store = false
+  let mut remapped_guest_table = false
   match module_.code_sec {
     Some(@lib.CodeSec(functions)) =>
       match functions[1] {
@@ -323,6 +352,7 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
             match instruction {
               @lib.I32Store(@lib.MemArg(_, Some(@lib.MemIdx(1U)), _)) =>
                 remapped_guest_store = true
+              @lib.TableSize(@lib.TableIdx(1U)) => remapped_guest_table = true
               _ => ()
             }
           }
@@ -330,6 +360,7 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
     None => fail("expected linked functions")
   }
   assert_true(remapped_guest_store)
+  assert_true(remapped_guest_table)
 }
 
 ///|
