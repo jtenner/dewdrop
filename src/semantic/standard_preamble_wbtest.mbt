@@ -83,6 +83,23 @@ test "standard import prepass selects split module bits" {
 }
 
 ///|
+test "standard import prepass selects raw WebAssembly WASI" {
+  let module_id = 1004UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"import dew.std.wasm.wasi as @wasi\npub fn run() -> U32 {\n  @wasi.sched_yield()\n}\n",
+      ),
+    ]),
+    (
+      0, false, false, false, false, false, false, false, false, false, false, false,
+      16384, 0,
+    ),
+  )
+}
+
+///|
 test "standard import prepass selects scalar math dependencies" {
   let module_id = 998UL
   assert_eq(

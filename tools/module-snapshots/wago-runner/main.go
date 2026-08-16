@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -22,6 +23,7 @@ type hostConfig struct {
 	WriteZero       bool   `json:"write_zero"`
 	WriteOverreport bool   `json:"write_overreport"`
 	ReadOverreport  bool   `json:"read_overreport"`
+	Preview1Smoke   bool   `json:"preview1_smoke"`
 }
 
 type runtimeResult struct {
@@ -30,11 +32,12 @@ type runtimeResult struct {
 }
 
 type snapshotHost struct {
-	config      hostConfig
-	stdin       []byte
-	stdinOffset int
-	stdout      []byte
-	err         error
+	config        hostConfig
+	stdin         []byte
+	stdinOffset   int
+	stdout        []byte
+	preview1Calls map[string]bool
+	err           error
 }
 
 func fail(format string, args ...any) {
@@ -47,6 +50,105 @@ func configuredLimit(value *int, fallback int) int {
 		return fallback
 	}
 	return *value
+}
+
+var preview1ParameterCounts = map[string]int{
+	"args_get":                2,
+	"args_sizes_get":          2,
+	"environ_get":             2,
+	"environ_sizes_get":       2,
+	"clock_res_get":           2,
+	"clock_time_get":          3,
+	"fd_advise":               4,
+	"fd_allocate":             3,
+	"fd_close":                1,
+	"fd_datasync":             1,
+	"fd_fdstat_get":           2,
+	"fd_fdstat_set_flags":     2,
+	"fd_fdstat_set_rights":    3,
+	"fd_filestat_get":         2,
+	"fd_filestat_set_size":    2,
+	"fd_filestat_set_times":   4,
+	"fd_pread":                5,
+	"fd_prestat_get":          2,
+	"fd_prestat_dir_name":     3,
+	"fd_pwrite":               5,
+	"fd_read":                 4,
+	"fd_readdir":              5,
+	"fd_renumber":             2,
+	"fd_seek":                 4,
+	"fd_sync":                 1,
+	"fd_tell":                 2,
+	"fd_write":                4,
+	"path_create_directory":   3,
+	"path_filestat_get":       5,
+	"path_filestat_set_times": 7,
+	"path_link":               7,
+	"path_open":               9,
+	"path_readlink":           6,
+	"path_remove_directory":   3,
+	"path_rename":             6,
+	"path_symlink":            5,
+	"path_unlink_file":        3,
+	"poll_oneoff":             4,
+	"proc_exit":               1,
+	"proc_raise":              1,
+	"sched_yield":             0,
+	"random_get":              2,
+	"sock_accept":             3,
+	"sock_recv":               6,
+	"sock_send":               5,
+	"sock_shutdown":           2,
+}
+
+func (h *snapshotHost) markPreview1Call(name string, parameterCount int) {
+	if !h.config.Preview1Smoke {
+		return
+	}
+	expected, ok := preview1ParameterCounts[name]
+	if !ok {
+		h.hostError("unknown WASI Preview 1 call: " + name)
+		return
+	}
+	if parameterCount != expected {
+		h.hostError(fmt.Sprintf("%s received %d parameters, expected %d", name, parameterCount, expected))
+		return
+	}
+	h.preview1Calls[name] = true
+}
+
+func (h *snapshotHost) preview1(name string) func(wago.HostModule, []uint64, []uint64) {
+	return func(_ wago.HostModule, params, results []uint64) {
+		h.markPreview1Call(name, len(params))
+		expectedResults := 1
+		if name == "proc_exit" {
+			expectedResults = 0
+		}
+		if len(results) != expectedResults {
+			h.hostError(fmt.Sprintf("%s received %d result slots, expected %d", name, len(results), expectedResults))
+			return
+		}
+		if expectedResults == 1 {
+			results[0] = wago.I32(0)
+		}
+	}
+}
+
+func (h *snapshotHost) requirePreview1SmokeComplete() error {
+	if !h.config.Preview1Smoke {
+		return nil
+	}
+	missing := make([]string, 0)
+	for name := range preview1ParameterCounts {
+		if !h.preview1Calls[name] {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	sort.Strings(missing)
+	return fmt.Errorf("WASI Preview 1 calls not observed: %s", strings.Join(missing, ", "))
 }
 
 func memoryRange(memory []byte, offset, length uint32) ([]byte, bool) {
@@ -124,6 +226,7 @@ func (h *snapshotHost) hostError(message string) {
 }
 
 func (h *snapshotHost) fdWrite(module wago.HostModule, params, results []uint64) {
+	h.markPreview1Call("fd_write", len(params))
 	if len(params) != 4 || len(results) < 1 {
 		h.hostError(fmt.Sprintf("fd_write received params=%d results=%d", len(params), len(results)))
 		return
@@ -167,6 +270,7 @@ func (h *snapshotHost) fdWrite(module wago.HostModule, params, results []uint64)
 }
 
 func (h *snapshotHost) fdRead(module wago.HostModule, params, results []uint64) {
+	h.markPreview1Call("fd_read", len(params))
 	if len(params) != 4 || len(results) < 1 {
 		h.hostError(fmt.Sprintf("fd_read received params=%d results=%d", len(params), len(results)))
 		return
@@ -286,7 +390,11 @@ func main() {
 		fail("cannot read module: %v", err)
 	}
 
-	host := &snapshotHost{config: config, stdin: stdin}
+	host := &snapshotHost{
+		config:        config,
+		stdin:         stdin,
+		preview1Calls: make(map[string]bool),
+	}
 	compiled, err := wago.Compile(
 		wago.NewRuntimeConfig().
 			WithCoreFeatures(wago.CoreFeaturesV3).
@@ -297,12 +405,19 @@ func main() {
 		fail("compile: %v", err)
 	}
 	defer compiled.Close()
+	imports := wago.Imports{
+		"wasi_snapshot_preview1.fd_write": wago.HostFunc(host.fdWrite),
+		"wasi_snapshot_preview1.fd_read":  wago.HostFunc(host.fdRead),
+	}
+	for name := range preview1ParameterCounts {
+		if name == "fd_write" || name == "fd_read" {
+			continue
+		}
+		imports["wasi_snapshot_preview1."+name] = wago.HostFunc(host.preview1(name))
+	}
 	instance, err := wago.Instantiate(compiled, wago.InstantiateOptions{
-		Imports: wago.Imports{
-			"wasi_snapshot_preview1.fd_write": wago.HostFunc(host.fdWrite),
-			"wasi_snapshot_preview1.fd_read":  wago.HostFunc(host.fdRead),
-		},
-		GC: wago.GCConfig{ThroughputHeapBytes: 64 << 20},
+		Imports: imports,
+		GC:      wago.GCConfig{ThroughputHeapBytes: 64 << 20},
 	})
 	if err != nil {
 		fail("instantiate: %v", err)
@@ -334,6 +449,11 @@ func main() {
 	}
 	if invokeErr == nil {
 		invokeErr = invoke("main")
+	}
+	if invokeErr == nil {
+		if err := host.requirePreview1SmokeComplete(); err != nil {
+			fail("host callback: %v", err)
+		}
 	}
 	lines, err := outputLines(host.stdout)
 	if err != nil {

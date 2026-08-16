@@ -100,7 +100,7 @@ test "standard imports append deterministic compiler-owned modules" {
 }
 
 ///|
-test "dew std wildcard selects every public standard module deterministically" {
+test "dew std wildcard selects every wildcard standard module deterministically" {
   let program = collect_program_manifest(
     1191UL,
     ProgramManifest::new([

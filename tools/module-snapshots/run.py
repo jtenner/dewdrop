@@ -78,6 +78,7 @@ HOST_KEYS = {
     "write_zero",
     "write_overreport",
     "read_overreport",
+    "preview1_smoke",
 }
 
 
@@ -108,7 +109,7 @@ def validate_host(path: Path, host: Any) -> None:
     for name in ("write_errno", "read_errno"):
         if name in host and (type(host[name]) is not int or not 0 <= host[name] <= 65535):
             raise SnapshotError(f"{path.relative_to(ROOT)} {name} must be an integer from 0 through 65535")
-    for name in ("write_zero", "write_overreport", "read_overreport"):
+    for name in ("write_zero", "write_overreport", "read_overreport", "preview1_smoke"):
         if name in host and type(host[name]) is not bool:
             raise SnapshotError(f"{path.relative_to(ROOT)} {name} must be a boolean")
     if "stdin_hex" in host:

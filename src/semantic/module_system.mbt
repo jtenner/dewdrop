@@ -369,6 +369,9 @@ pub fn required_standard_library_source_paths(
       required.push("std/text.dew")
     }
   }
+  if (collection_mask & 16384) != 0 {
+    required.push("std/wasm/wasi.dew")
+  }
   if include_wasi {
     required.push("std/wasi.dew")
   }
@@ -964,6 +967,20 @@ pub fn collect_program_manifest_with_standard_sources(
         module_id,
         standard_library_program_files(
           module_id, "std/disposable.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 16384) != 0 {
+    let module_id = standard_library_module_id(54)
+    let module_index = modules.length()
+    first_module["dew.std.wasm.wasi"] = module_index
+    module_paths.push("dew.std.wasm.wasi")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/wasm/wasi.dew", standard_sources, false, false,
         ),
       ),
     )

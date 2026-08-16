@@ -1,0 +1,62 @@
+import dew.std.wasm.wasi as @wasi
+
+fn require_success(errno: U32) -> Unit {
+  if errno != 0u32 {
+    unreachable()
+  } else {
+  }
+}
+
+pub fn main() -> U32 {
+  u32_store(0u32, 64u32)
+  u32_store(4u32, 0u32)
+  u32_store(8u32, 0u32)
+
+  require_success(@wasi.args_get(128u32, 256u32))
+  require_success(@wasi.args_sizes_get(384u32, 388u32))
+  require_success(@wasi.environ_get(512u32, 640u32))
+  require_success(@wasi.environ_sizes_get(768u32, 772u32))
+  require_success(@wasi.clock_res_get(1u32, 896u32))
+  require_success(@wasi.clock_time_get(1u32, 7u64, 904u32))
+  require_success(@wasi.fd_advise(3u32, 11u64, 13u64, 2u32))
+  require_success(@wasi.fd_allocate(3u32, 17u64, 19u64))
+  require_success(@wasi.fd_close(9u32))
+  require_success(@wasi.fd_datasync(3u32))
+  require_success(@wasi.fd_fdstat_get(3u32, 1024u32))
+  require_success(@wasi.fd_fdstat_set_flags(3u32, 1u32))
+  require_success(@wasi.fd_fdstat_set_rights(3u32, 23u64, 29u64))
+  require_success(@wasi.fd_filestat_get(3u32, 1088u32))
+  require_success(@wasi.fd_filestat_set_size(3u32, 31u64))
+  require_success(@wasi.fd_filestat_set_times(3u32, 37u64, 41u64, 3u32))
+  require_success(@wasi.fd_pread(3u32, 0u32, 1u32, 43u64, 8u32))
+  require_success(@wasi.fd_prestat_get(3u32, 1152u32))
+  require_success(@wasi.fd_prestat_dir_name(3u32, 1216u32, 0u32))
+  require_success(@wasi.fd_pwrite(3u32, 0u32, 1u32, 47u64, 8u32))
+  require_success(@wasi.fd_read(0u32, 0u32, 1u32, 8u32))
+  require_success(@wasi.fd_readdir(3u32, 1280u32, 0u32, 53u64, 1344u32))
+  require_success(@wasi.fd_renumber(7u32, 8u32))
+  require_success(@wasi.fd_seek(3u32, -59i64, 2u32, 1408u32))
+  require_success(@wasi.fd_sync(3u32))
+  require_success(@wasi.fd_tell(3u32, 1472u32))
+  require_success(@wasi.fd_write(9u32, 0u32, 1u32, 8u32))
+  require_success(@wasi.path_create_directory(3u32, 1536u32, 0u32))
+  require_success(@wasi.path_filestat_get(3u32, 1u32, 1600u32, 0u32, 1664u32))
+  require_success(@wasi.path_filestat_set_times(3u32, 1u32, 1728u32, 0u32, 61u64, 67u64, 3u32))
+  require_success(@wasi.path_link(3u32, 1u32, 1792u32, 0u32, 4u32, 1856u32, 0u32))
+  require_success(@wasi.path_open(3u32, 1u32, 1920u32, 0u32, 1u32, 71u64, 73u64, 1u32, 1984u32))
+  require_success(@wasi.path_readlink(3u32, 2048u32, 0u32, 2112u32, 0u32, 2176u32))
+  require_success(@wasi.path_remove_directory(3u32, 2240u32, 0u32))
+  require_success(@wasi.path_rename(3u32, 2304u32, 0u32, 4u32, 2368u32, 0u32))
+  require_success(@wasi.path_symlink(2432u32, 0u32, 3u32, 2496u32, 0u32))
+  require_success(@wasi.path_unlink_file(3u32, 2560u32, 0u32))
+  require_success(@wasi.poll_oneoff(2624u32, 2688u32, 0u32, 2752u32))
+  @wasi.proc_exit(23u32)
+  require_success(@wasi.proc_raise(2u32))
+  require_success(@wasi.sched_yield())
+  require_success(@wasi.random_get(2816u32, 0u32))
+  require_success(@wasi.sock_accept(5u32, 1u32, 2880u32))
+  require_success(@wasi.sock_recv(5u32, 0u32, 1u32, 0u32, 2944u32, 2948u32))
+  require_success(@wasi.sock_send(5u32, 0u32, 1u32, 0u32, 3008u32))
+  require_success(@wasi.sock_shutdown(5u32, 3u32))
+  46u32
+}

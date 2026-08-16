@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Embed std/wasi.dew as the compiler-owned standard WASI preamble."""
+"""Embed the high-level and raw WebAssembly WASI standard modules."""
 
 import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "std/wasi.dew"
+WASM_SOURCE = ROOT / "std/wasm/wasi.dew"
 TARGET = ROOT / "src/standard_sources/standard_wasi_sources.mbt"
 
 
@@ -31,10 +32,15 @@ def moonbit_bytes_literal(data: bytes) -> str:
 
 def rendered_source() -> str:
     literal = moonbit_bytes_literal(SOURCE.read_bytes())
+    wasm_literal = moonbit_bytes_literal(WASM_SOURCE.read_bytes())
     return (
         "///|\n"
         "pub fn standard_wasi_source() -> Bytes {\n"
         f"  {literal}\n"
+        "}\n\n"
+        "///|\n"
+        "pub fn standard_wasm_wasi_source() -> Bytes {\n"
+        f"  {wasm_literal}\n"
         "}\n"
     )
 

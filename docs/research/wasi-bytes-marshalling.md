@@ -2,7 +2,9 @@
 
 ## Status
 
-Implemented for WASI Preview 1 `fd_write` and `fd_read`.
+Implemented for GC-owned Bytes over WASI Preview 1 `fd_write` and `fd_read`.
+The separate raw package now covers all 46 Preview 1 functions; see
+[`wasm-wasi-preview1-2026-08-16.md`](wasm-wasi-preview1-2026-08-16.md).
 
 Public Dew surface:
 
@@ -86,7 +88,9 @@ unused publication tails remain zero.
 
 ## Imports and reachability
 
-Compiler-owned raw imports use exact Preview 1 names:
+The high-level adapter retains only the two imports it needs, while the complete
+raw surface is available separately through `dew.std.wasm.wasi`. Compiler-owned
+imports use exact Preview 1 names:
 
 ```text
 wasi_snapshot_preview1.fd_write

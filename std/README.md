@@ -59,6 +59,7 @@ dew.std.bytes                       immutable Bytes ranges and search
 dew.std.bytes_builder               consuming BytesBuilder
 dew.std.blake3                       portable BLAKE3-256
 dew.std.wasi                        Preview 1 Bytes I/O
+dew.std.wasm.wasi                   raw complete Preview 1 imports
 dew.std.wasm.intrinsics             explicit compiler-known WebAssembly intrinsics
 ```
 
@@ -139,7 +140,9 @@ let bytes = binary.finish() // consumes the BytesBuilder
 
 `String`, `StringView`, and `Bytes` use distinct WasmGC wrappers over shared zero-padded `array<v128>` storage plus byte start and exact byte length. `view(start, length)` and `subarray(start, end)` share storage; `slice(start, end)` and `compact()` exact-copy into start-zero storage. `String.concat`, `String.concat_view`, and `Bytes.concat` check total-length overflow and exact-copy both logical ranges into flat start-zero storage. Ranges use U32 byte offsets, are end-exclusive where applicable, and trap instead of clamping. Strings and views are strict UTF-8; Bytes are arbitrary. `String.view()` checks bounds and UTF-8 scalar boundaries, then shares backing in O(1). `Bytes.to_string()` validates once, traps on malformed input, and shares the same backing on success. Equality compares exact logical bytes and uses logical V128 chunks with dynamic unaligned assembly. `byte_at` is byte-oriented and traps when the unsigned index is outside the exact logical length. `String` and `StringView` provide allocation-free find, contains, prefix, and suffix operations for every String/View operand combination; returned positions are UTF-8 byte offsets and valid text cannot match inside a scalar. `Bytes.find_byte` and `contains_byte` use allocation-free SIMD scanning and report logical byte positions through `Option<U32>`.
 
-WASI Preview 1 integration accepts GC-owned Bytes directly:
+`dew.std.wasm.wasi` exposes all 46 raw `wasi_snapshot_preview1` functions with exact U32/U64/I64 ABI carriers. It requires an explicit import and is not selected by `open dew.std.*`, so the broad convenience wildcard does not retain low-level host signatures. Its U32 pointers address exported linear memory, and callers own Preview 1 record and buffer layouts. Import it with `import dew.std.wasm.wasi as @wasi`. Reachable raw calls retain their exact WASI field names; unreachable calls are removed.
+
+The higher-level WASI Preview 1 adapter accepts GC-owned Bytes directly:
 
 ```dew
 open dew.std.wasi
@@ -152,7 +155,7 @@ WASI marshalling uses the 65,520 data bytes remaining in one reusable 64 KiB lin
 
 `dew.std.testing` adds explicit-message Boolean, equality, ordering, Option-shape, and Result-shape assertions. It delegates failure to the ambient compiler-owned `assert`, so test-mode dynamic messages and production zero-I/O traps remain unchanged. Test discovery, `_test.dew`, `expect_trap`, filters, and metadata remain compiler/tooling features rather than library APIs.
 
-`dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the separate Preview 1 adapter surface.
+`dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the GC-Bytes adapter and `dew.std.wasm.wasi` is the separate raw Preview 1 surface.
 
 `dew.std.json` implements strict RFC 8259 parsing in Dew source. `JsonValue::Number` preserves the exact validated lexeme; arrays and object members preserve source order; duplicate keys are rejected during parsing and serialization; UTF-8, escapes, surrogate pairs, trailing input, nesting, value count, input bytes, and decoded string bytes have explicit policies and errors. Compact-owning `json_parse` remains the default. `json_parse_retained` explicitly shares clean String and number ranges with the whole input, and `json_parse_document` retains both the source and strict tree so source-preserving output is explicit. `json_parse_raw_document` validates and retains only source until explicit materialization. Specialized `json_validate` skips eager value construction. `JsonNumber` validates constructed lexemes once, and parsed validated-number modes avoid repeated serialization validation; legacy Number(String) remains checked. Canonical parse modes also produce `JsonString` provenance so clean parsed strings skip serialization rescans while escaped strings remain checked. `json_parse_reader`/`json_write` compose with portable `Reader`/`Writer`; they are bounded whole-value facades rather than a separate token-stream parser. Whitespace, string-special, and scalar-delimiter scans use generated `U8x16` operations, `u32_ctz`, and generic GC-backed text load bridges. Regenerate its bootstrap mirror with `python3 tools/generate_json_std.py`.
 

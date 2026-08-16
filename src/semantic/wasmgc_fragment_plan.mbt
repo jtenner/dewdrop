@@ -2151,10 +2151,10 @@ fn wasmgc_callable_has_scalarized_signature(
 
 ///|
 fn wasmgc_builtin_import_identity(name : Bytes) -> WasmImportIdentity {
-  if name == b"wasi_snapshot_preview1.fd_write" {
-    WasmImportIdentity::wasi(b"fd_write")
-  } else if name == b"wasi_snapshot_preview1.fd_read" {
-    WasmImportIdentity::wasi(b"fd_read")
+  let wasi_prefix = b"wasi_snapshot_preview1."
+  if name.length() >= wasi_prefix.length() &&
+    name[0:wasi_prefix.length()] == wasi_prefix {
+    WasmImportIdentity::wasi(name[wasi_prefix.length():].to_owned())
   } else {
     WasmImportIdentity::host(name)
   }

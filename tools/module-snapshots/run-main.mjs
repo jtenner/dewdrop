@@ -88,9 +88,74 @@ function fillIovecs(memory, iovs, iovsLength, count) {
   }
 }
 
-const imports = {
-  wasi_snapshot_preview1: {
+const preview1ParameterCounts = Object.freeze({
+  args_get: 2,
+  args_sizes_get: 2,
+  environ_get: 2,
+  environ_sizes_get: 2,
+  clock_res_get: 2,
+  clock_time_get: 3,
+  fd_advise: 4,
+  fd_allocate: 3,
+  fd_close: 1,
+  fd_datasync: 1,
+  fd_fdstat_get: 2,
+  fd_fdstat_set_flags: 2,
+  fd_fdstat_set_rights: 3,
+  fd_filestat_get: 2,
+  fd_filestat_set_size: 2,
+  fd_filestat_set_times: 4,
+  fd_pread: 5,
+  fd_prestat_get: 2,
+  fd_prestat_dir_name: 3,
+  fd_pwrite: 5,
+  fd_read: 4,
+  fd_readdir: 5,
+  fd_renumber: 2,
+  fd_seek: 4,
+  fd_sync: 1,
+  fd_tell: 2,
+  fd_write: 4,
+  path_create_directory: 3,
+  path_filestat_get: 5,
+  path_filestat_set_times: 7,
+  path_link: 7,
+  path_open: 9,
+  path_readlink: 6,
+  path_remove_directory: 3,
+  path_rename: 6,
+  path_symlink: 5,
+  path_unlink_file: 3,
+  poll_oneoff: 4,
+  proc_exit: 1,
+  proc_raise: 1,
+  sched_yield: 0,
+  random_get: 2,
+  sock_accept: 3,
+  sock_recv: 6,
+  sock_send: 5,
+  sock_shutdown: 2,
+});
+const preview1Calls = new Set();
+
+function markPreview1Call(name, count) {
+  if (host.preview1_smoke !== true) return;
+  const expected = preview1ParameterCounts[name];
+  if (count !== expected) {
+    throw new Error(`${name} received ${count} parameters, expected ${expected}`);
+  }
+  preview1Calls.add(name);
+}
+
+function requirePreview1SmokeComplete() {
+  if (host.preview1_smoke !== true) return;
+  const missing = Object.keys(preview1ParameterCounts).filter((name) => !preview1Calls.has(name));
+  if (missing.length > 0) throw new Error(`WASI Preview 1 calls not observed: ${missing.join(", ")}`);
+}
+
+const wasiSnapshotPreview1 = {
     fd_write(fd, iovs, iovsLength, written) {
+      markPreview1Call("fd_write", arguments.length);
       const memory = new DataView(instance.exports.memory.buffer);
       const errno = configuredInteger("write_errno", 0);
       if (errno !== 0) return errno;
@@ -108,6 +173,7 @@ const imports = {
       return 0;
     },
     fd_read(_fd, iovs, iovsLength, read) {
+      markPreview1Call("fd_read", arguments.length);
       const memory = new DataView(instance.exports.memory.buffer);
       const errno = configuredInteger("read_errno", 0);
       if (errno !== 0) return errno;
@@ -126,8 +192,15 @@ const imports = {
       memory.setUint32(read, count, true);
       return 0;
     },
-  },
 };
+for (const [name, parameterCount] of Object.entries(preview1ParameterCounts)) {
+  if (name in wasiSnapshotPreview1) continue;
+  wasiSnapshotPreview1[name] = (...parameters) => {
+    markPreview1Call(name, parameters.length);
+    return name === "proc_exit" ? undefined : 0;
+  };
+}
+const imports = { wasi_snapshot_preview1: wasiSnapshotPreview1 };
 
 function capturedStdout() {
   let length = 0;
@@ -180,6 +253,7 @@ try {
     }
   }
   main();
+  requirePreview1SmokeComplete();
   process.stdout.write(JSON.stringify({ output: capturedStdout(), trap: null }));
 } catch (error) {
   const trap = normalizedTrap(error);

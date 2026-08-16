@@ -133,9 +133,12 @@ fn selected_standard_modules(
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
-            import_.path[2] == "wasm" &&
-            import_.path[3] == "intrinsics" {
-            wasm_intrinsics = true
+            import_.path[2] == "wasm" {
+            match import_.path[3] {
+              "intrinsics" => wasm_intrinsics = true
+              "wasi" => collection_mask = collection_mask | 16384
+              _ => ()
+            }
           } else if import_.path.length() == 3 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {

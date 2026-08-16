@@ -81,6 +81,10 @@ fn starshine_module_uses_wasi(
           name == b"dew_test_assert" {
           return true
         }
+      @semantic.PlannedWasmImportedFunction(identity) =>
+        if identity.kind is @semantic.WasiWasmImport {
+          return true
+        }
       _ => ()
     }
   }

@@ -13,7 +13,7 @@ pub fn standard_source_paths() -> Array[String] {
     "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/bloom_filter.dew",
     "std/blake3.dew", "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew",
     "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew",
-    "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/wasm/wasi.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
   ]
   for
     name in [
@@ -77,6 +77,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/bytes_builder.dew" => Some(standard_text_sources()[3])
     "std/bytes.dew" => Some(standard_text_sources()[4])
     "std/text.dew" => Some(standard_text_iteration_source())
+    "std/wasm/wasi.dew" => Some(standard_wasm_wasi_source())
     "std/wasi.dew" => Some(standard_wasi_source())
     "std/wasm/intrinsics.dew" => Some(standard_wasm_intrinsics_source())
     _ => {

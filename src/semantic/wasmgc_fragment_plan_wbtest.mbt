@@ -21,6 +21,22 @@ fn wasmgc_test_inputs(
 }
 
 ///|
+test "all Preview 1 builtin names select the WASI import namespace" {
+  assert_eq(
+    wasmgc_builtin_import_identity(b"wasi_snapshot_preview1.args_get"),
+    WasmImportIdentity::wasi(b"args_get"),
+  )
+  assert_eq(
+    wasmgc_builtin_import_identity(b"wasi_snapshot_preview1.sock_shutdown"),
+    WasmImportIdentity::wasi(b"sock_shutdown"),
+  )
+  assert_eq(
+    wasmgc_builtin_import_identity(b"custom.host"),
+    WasmImportIdentity::host(b"custom.host"),
+  )
+}
+
+///|
 test "mutually recursive structs form one stable WasmGC recursive group" {
   let (resolved, lowering) = wasmgc_test_inputs(
     971UL, b"struct Left {\n  right: Right\n}\nstruct Right {\n  left: Left\n}\n",

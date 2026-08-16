@@ -12,10 +12,12 @@ foreign ABI.
 
 ## 1. P0: compiler host boundary
 
-Ordinary Dew source still exposes only `fd_read` and `fd_write` through
-`dew.std.wasi`. It cannot read arguments or environment values, open paths,
-inspect files, create directories, rename files, remove owned cache entries, or
-set an exit status.
+The raw ABI foundation is now implemented: `dew.std.wasm.wasi` exposes all 46
+Preview 1 functions and exports linear memory for reachable calls. The remaining
+blocker is the bounded GC-facing host layer. Ordinary compiler code still cannot
+read arguments or environment values, open paths, inspect files, create
+directories, rename files, remove owned cache entries, or return typed host
+errors without manually constructing Preview 1 linear-memory records.
 
 The audited production compiler has 89 direct host calls:
 
@@ -43,8 +45,8 @@ cache code.
 
 ### Required implementation batch
 
-Add a compiler-owned `dew.std.host` module backed by bounded WASI Preview 1
-bridges. The launcher preopens one workspace root; compiler paths are normalized
+Add a compiler-owned `dew.std.host` module backed by the completed
+`dew.std.wasm.wasi` package and bounded WasmGC/linear-memory bridges. The launcher preopens one workspace root; compiler paths are normalized
 relative paths under that root.
 
 Minimum operations:
