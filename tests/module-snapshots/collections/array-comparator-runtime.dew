@@ -1,0 +1,190 @@
+open dew.std.array
+open dew.std.string
+open dew.std.wasi
+
+fn empty_i32_array() -> Array<I32> {
+  Array::new()
+}
+
+fn i32_array_with_capacity(capacity: U32) -> Array<I32> {
+  Array::with_capacity(capacity)
+}
+
+fn nested_i32_array() -> Array<Array<I32>> {
+  Array::with_capacity(3u32)
+}
+
+fn array_values() -> Array<I32> {
+  let values = Array::new()
+  values.push(1)
+  values.push(2)
+  values.push(3)
+  values.push(4)
+  values.push(5)
+  values
+}
+
+fn array_pair(first: I32, second: I32) -> Array<I32> {
+  let values = Array::with_capacity(2u32)
+  values.push(first)
+  values.push(second)
+  values
+}
+
+fn array_take_i32(value: Option<I32>) -> I32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+fn array_take_u32(value: Option<U32>) -> U32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+fn array_twice(value: I32) -> I32 {
+  value * 2
+}
+
+fn array_add(left: I32, right: I32) -> I32 {
+  left + right
+}
+
+fn array_add_index(left: I32, right: I32, index: U32) -> I32 {
+  left + right + u32_into_i32(index)
+}
+
+fn array_is_even(value: I32) -> Bool {
+  value % 2 == 0
+}
+
+fn array_is_even_index(value: I32, index: U32) -> Bool {
+  value % 2 == 0 && index % 2u32 == 1u32
+}
+
+fn array_is_three(value: I32) -> Bool {
+  value == 3
+}
+
+fn array_is_odd(value: I32) -> Bool {
+  value % 2 != 0
+}
+
+fn array_index_matches(value: I32, index: U32) -> Bool {
+  value == u32_into_i32(index) + 1
+}
+
+fn array_expand(value: I32) -> Array<I32> {
+  array_pair(value, value + 10)
+}
+
+fn array_render(value: I32) -> String {
+  if value == 1 {
+    "one"
+  } else if value == 2 {
+    "two"
+  } else {
+    "other"
+  }
+}
+
+fn array_count_positive(total: U32, value: I32) -> U32 {
+  if value > 0 {
+    total + 1u32
+  } else {
+    total
+  }
+}
+
+struct ArraySortItem {
+  key: I32
+  order: I32
+}
+
+struct ArrayDescending {}
+
+impl ArrayComparator<I32> for ArrayDescending {
+  fn before(self, left: I32, right: I32) -> Bool {
+    left > right
+  }
+}
+
+struct ArraySortItemComparator {}
+
+impl ArrayComparator<ArraySortItem> for ArraySortItemComparator {
+  fn before(self, left: ArraySortItem, right: ArraySortItem) -> Bool {
+    left.key < right.key
+  }
+}
+
+fn array_sort_items() -> Array<ArraySortItem> {
+  Array::with_capacity(5u32)
+}
+
+fn array_string_equals(value: String, expected: String) -> Bool {
+  value.equals(expected)
+}
+
+fn array_sort_item_key(value: ArraySortItem) -> I32 {
+  value.key
+}
+
+fn array_sort_item_order(value: ArraySortItem) -> I32 {
+  value.order
+}
+
+fn array_case_19() -> Unit {
+  let descending = array_values()
+  array_sort_by(descending, ArrayDescending::{})
+  assert(descending[0u32] == 5, "descending first")
+  assert(descending[1u32] == 4, "descending second")
+  assert(descending[2u32] == 3, "descending third")
+  assert(descending[3u32] == 2, "descending fourth")
+  assert(descending[4u32] == 1, "descending fifth")
+
+  let items = array_sort_items()
+  items.push(ArraySortItem::{
+    key: 2
+    order: 0
+  })
+  items.push(ArraySortItem::{
+    key: 1
+    order: 1
+  })
+  items.push(ArraySortItem::{
+    key: 2
+    order: 2
+  })
+  items.push(ArraySortItem::{
+    key: 1
+    order: 3
+  })
+  items.push(ArraySortItem::{
+    key: 2
+    order: 4
+  })
+  let sorted = array_to_sorted_by(items, ArraySortItemComparator::{})
+  let source_first = items[0u32]
+  let sorted_zero = sorted[0u32]
+  let sorted_one = sorted[1u32]
+  let sorted_two = sorted[2u32]
+  let sorted_three = sorted[3u32]
+  let sorted_four = sorted[4u32]
+  assert(array_sort_item_order(source_first) == 0, "custom sorted source")
+  assert(array_sort_item_key(sorted_zero) == 1, "stable key first")
+  assert(array_sort_item_order(sorted_zero) == 1, "stable equal first order")
+  assert(array_sort_item_order(sorted_one) == 3, "stable equal second order")
+  assert(array_sort_item_key(sorted_two) == 2, "stable key second group")
+  assert(array_sort_item_order(sorted_two) == 0, "stable second group first")
+  assert(array_sort_item_order(sorted_three) == 2, "stable second group second")
+  assert(array_sort_item_order(sorted_four) == 4, "stable second group third")
+}
+
+
+pub fn main() -> Unit {
+  array_case_19()
+  wasi_fd_write(1u32, b"collections:array-comparator-runtime")
+}

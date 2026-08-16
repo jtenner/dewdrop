@@ -1,0 +1,406 @@
+open dew.std.fixed_array
+open dew.std.array
+open dew.std.bytes
+
+fn blake3_unit() -> Unit {
+}
+
+fn blake3_chunk_start() -> U32 {
+  1u32
+}
+
+fn blake3_chunk_end() -> U32 {
+  2u32
+}
+
+fn blake3_parent() -> U32 {
+  4u32
+}
+
+fn blake3_root() -> U32 {
+  8u32
+}
+
+fn blake3_iv() -> FixedArray<U32> {
+  let values = FixedArray::make(8u32, 0u32)
+  values.set_unchecked(0u32, 1779033703u32)
+  values.set_unchecked(1u32, 3144134277u32)
+  values.set_unchecked(2u32, 1013904242u32)
+  values.set_unchecked(3u32, 2773480762u32)
+  values.set_unchecked(4u32, 1359893119u32)
+  values.set_unchecked(5u32, 2600822924u32)
+  values.set_unchecked(6u32, 528734635u32)
+  values.set_unchecked(7u32, 1541459225u32)
+  values
+}
+
+fn blake3_message_permutation() -> FixedArray<U32> {
+  let values = FixedArray::make(16u32, 0u32)
+  values.set_unchecked(0u32, 2u32)
+  values.set_unchecked(1u32, 6u32)
+  values.set_unchecked(2u32, 3u32)
+  values.set_unchecked(3u32, 10u32)
+  values.set_unchecked(4u32, 7u32)
+  values.set_unchecked(5u32, 0u32)
+  values.set_unchecked(6u32, 4u32)
+  values.set_unchecked(7u32, 13u32)
+  values.set_unchecked(8u32, 1u32)
+  values.set_unchecked(9u32, 11u32)
+  values.set_unchecked(10u32, 12u32)
+  values.set_unchecked(11u32, 5u32)
+  values.set_unchecked(12u32, 9u32)
+  values.set_unchecked(13u32, 14u32)
+  values.set_unchecked(14u32, 15u32)
+  values.set_unchecked(15u32, 8u32)
+  values
+}
+
+struct Blake3Output {
+  input_chaining_value: FixedArray<U32>
+  block_words: FixedArray<U32>
+  counter: U64
+  block_length: U32
+  flags: U32
+}
+
+fn blake3_rotate_right(value: U32, count: U32) -> U32 {
+  (value >> count) | (value << (32u32 - count))
+}
+
+fn blake3_mix(
+  state: FixedArray<U32>,
+  a: U32,
+  b: U32,
+  c: U32,
+  d: U32,
+  left: U32,
+  right: U32,
+) -> Unit {
+  state.set_unchecked(a, state.get_unchecked(a) + state.get_unchecked(b) + left)
+  state.set_unchecked(d, blake3_rotate_right(state.get_unchecked(d) ^ state.get_unchecked(a), 16u32))
+  state.set_unchecked(c, state.get_unchecked(c) + state.get_unchecked(d))
+  state.set_unchecked(b, blake3_rotate_right(state.get_unchecked(b) ^ state.get_unchecked(c), 12u32))
+  state.set_unchecked(a, state.get_unchecked(a) + state.get_unchecked(b) + right)
+  state.set_unchecked(d, blake3_rotate_right(state.get_unchecked(d) ^ state.get_unchecked(a), 8u32))
+  state.set_unchecked(c, state.get_unchecked(c) + state.get_unchecked(d))
+  state.set_unchecked(b, blake3_rotate_right(state.get_unchecked(b) ^ state.get_unchecked(c), 7u32))
+}
+
+fn blake3_round(state: FixedArray<U32>, message: FixedArray<U32>) -> Unit {
+  blake3_mix(state, 0u32, 4u32, 8u32, 12u32, message.get_unchecked(0u32), message.get_unchecked(1u32))
+  blake3_mix(state, 1u32, 5u32, 9u32, 13u32, message.get_unchecked(2u32), message.get_unchecked(3u32))
+  blake3_mix(state, 2u32, 6u32, 10u32, 14u32, message.get_unchecked(4u32), message.get_unchecked(5u32))
+  blake3_mix(state, 3u32, 7u32, 11u32, 15u32, message.get_unchecked(6u32), message.get_unchecked(7u32))
+  blake3_mix(state, 0u32, 5u32, 10u32, 15u32, message.get_unchecked(8u32), message.get_unchecked(9u32))
+  blake3_mix(state, 1u32, 6u32, 11u32, 12u32, message.get_unchecked(10u32), message.get_unchecked(11u32))
+  blake3_mix(state, 2u32, 7u32, 8u32, 13u32, message.get_unchecked(12u32), message.get_unchecked(13u32))
+  blake3_mix(state, 3u32, 4u32, 9u32, 14u32, message.get_unchecked(14u32), message.get_unchecked(15u32))
+}
+
+fn blake3_permute(message: FixedArray<U32>) -> FixedArray<U32> {
+  let permutation = blake3_message_permutation()
+  let output = FixedArray::make(16u32, 0u32)
+  while 0u32 {
+    index if index < 16u32 => {
+      output.set_unchecked(index, message.get_unchecked(permutation.get_unchecked(index)))
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+fn blake3_u64_low(value: U64) -> U32 {
+  value.into()
+}
+
+fn blake3_compress(output: Blake3Output, root_counter: U64) -> FixedArray<U32> {
+  let state = FixedArray::make(16u32, 0u32)
+  while 0u32 {
+    index if index < 8u32 => {
+      state.set_unchecked(index, output.input_chaining_value.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break blake3_unit()
+  }
+  let iv = blake3_iv()
+  while 0u32 {
+    index if index < 4u32 => {
+      state.set_unchecked(8u32 + index, iv.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break blake3_unit()
+  }
+  state.set_unchecked(12u32, blake3_u64_low(root_counter))
+  state.set_unchecked(13u32, blake3_u64_low(root_counter >> 32u64))
+  state.set_unchecked(14u32, output.block_length)
+  state.set_unchecked(15u32, output.flags)
+  let mut message = output.block_words
+  while 0u32 {
+    round if round < 7u32 => {
+      blake3_round(state, message)
+      if round != 6u32 {
+        message = blake3_permute(message)
+      } else {
+      }
+      continue round + 1u32
+    }
+    _ => break blake3_unit()
+  }
+  let result = FixedArray::make(16u32, 0u32)
+  while 0u32 {
+    index if index < 8u32 => {
+      result.set_unchecked(index, state.get_unchecked(index) ^ state.get_unchecked(index + 8u32))
+      result.set_unchecked(
+        index + 8u32,
+        state.get_unchecked(index + 8u32) ^ output.input_chaining_value.get_unchecked(index),
+      )
+      continue index + 1u32
+    }
+    _ => break result
+  }
+}
+
+fn blake3_copy_u32(values: FixedArray<U32>) -> FixedArray<U32> {
+  let output = FixedArray::make(values.length(), 0u32)
+  while 0u32 {
+    index if index < values.length() => {
+      output.set_unchecked(index, values.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+fn blake3_chaining_value(output: Blake3Output) -> FixedArray<U32> {
+  let words = blake3_compress(output, output.counter)
+  let value = FixedArray::make(8u32, 0u32)
+  while 0u32 {
+    index if index < 8u32 => {
+      value.set_unchecked(index, words.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break value
+  }
+}
+
+fn blake3_u32_to_u8(value: U32) -> U8 {
+  value.into()
+}
+
+fn blake3_root_digest(output: Blake3Output) -> FixedArray<U8> {
+  let rooted = Blake3Output::{
+    input_chaining_value: output.input_chaining_value
+    block_words: output.block_words
+    counter: output.counter
+    block_length: output.block_length
+    flags: output.flags | blake3_root()
+  }
+  let words = blake3_compress(rooted, 0u64)
+  let digest = FixedArray::make(32u32, 0u8)
+  while 0u32 {
+    index if index < 8u32 => {
+      let word = words.get_unchecked(index)
+      let offset = index * 4u32
+      digest.set_unchecked(offset, blake3_u32_to_u8(word & 255u32))
+      digest.set_unchecked(offset + 1u32, blake3_u32_to_u8((word >> 8u32) & 255u32))
+      digest.set_unchecked(offset + 2u32, blake3_u32_to_u8((word >> 16u32) & 255u32))
+      digest.set_unchecked(offset + 3u32, blake3_u32_to_u8((word >> 24u32) & 255u32))
+      continue index + 1u32
+    }
+    _ => break digest
+  }
+}
+
+fn blake3_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn blake3_block_words(input: Bytes, start: U32, length: U32) -> FixedArray<U32> {
+  let words = FixedArray::make(16u32, 0u32)
+  while 0u32 {
+    byte_index if byte_index < length => {
+      let word_index = byte_index / 4u32
+      let shift = (byte_index % 4u32) * 8u32
+      let word = words.get_unchecked(word_index) |
+        (blake3_u8_to_u32(input.byte_at(start + byte_index)) << shift)
+      words.set_unchecked(word_index, word)
+      continue byte_index + 1u32
+    }
+    _ => break words
+  }
+}
+
+fn blake3_chunk_output(
+  input: Bytes,
+  start: U32,
+  length: U32,
+  chunk_counter: U64,
+) -> Blake3Output {
+  let block_count = if length == 0u32 {
+    1u32
+  } else {
+    (length / 64u32) + if length % 64u32 == 0u32 {
+      0u32
+    } else {
+      1u32
+    }
+  }
+  let chaining_value = blake3_iv()
+  let mut final_output = Blake3Output::{
+    input_chaining_value: chaining_value
+    block_words: FixedArray::make(16u32, 0u32)
+    counter: chunk_counter
+    block_length: 0u32
+    flags: blake3_chunk_start() | blake3_chunk_end()
+  }
+  while 0u32 {
+    block_index if block_index < block_count => {
+      let block_start = start + block_index * 64u32
+      let consumed = block_index * 64u32
+      let remaining = length - consumed
+      let block_length = if remaining < 64u32 {
+        remaining
+      } else {
+        64u32
+      }
+      let mut flags = 0u32
+      if block_index == 0u32 {
+        flags = flags | blake3_chunk_start()
+      } else {
+      }
+      if block_index + 1u32 == block_count {
+        flags = flags | blake3_chunk_end()
+      } else {
+      }
+      final_output = Blake3Output::{
+        input_chaining_value: blake3_copy_u32(chaining_value)
+        block_words: blake3_block_words(input, block_start, block_length)
+        counter: chunk_counter
+        block_length: block_length
+        flags: flags
+      }
+      if block_index + 1u32 != block_count {
+        let next = blake3_chaining_value(final_output)
+        while 0u32 {
+          index if index < 8u32 => {
+            chaining_value.set_unchecked(index, next.get_unchecked(index))
+            continue index + 1u32
+          }
+          _ => break blake3_unit()
+        }
+      } else {
+      }
+      continue block_index + 1u32
+    }
+    _ => break final_output
+  }
+}
+
+fn blake3_parent_output(
+  left: FixedArray<U32>,
+  right: FixedArray<U32>,
+) -> Blake3Output {
+  let block = FixedArray::make(16u32, 0u32)
+  while 0u32 {
+    index if index < 8u32 => {
+      block.set_unchecked(index, left.get_unchecked(index))
+      block.set_unchecked(index + 8u32, right.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break blake3_unit()
+  }
+  Blake3Output::{
+    input_chaining_value: blake3_iv()
+    block_words: block
+    counter: 0u64
+    block_length: 64u32
+    flags: blake3_parent()
+  }
+}
+
+fn blake3_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn blake3_cv_level(capacity: U32) -> Array<FixedArray<U32>> {
+  Array::with_capacity(capacity)
+}
+
+fn blake3_no_root() -> Option<Blake3Output> {
+  Option::None
+}
+
+pub fn blake3(input: Bytes) -> FixedArray<U8> {
+  let input_length = input.byte_length()
+  let chunk_count = if input_length == 0u32 {
+    1u32
+  } else {
+    (input_length / 1024u32) + if input_length % 1024u32 == 0u32 {
+      0u32
+    } else {
+      1u32
+    }
+  }
+  if chunk_count == 1u32 {
+    blake3_root_digest(blake3_chunk_output(input, 0u32, input_length, 0u64))
+  } else {
+    let level = blake3_cv_level(chunk_count)
+    while 0u32 {
+      chunk_index if chunk_index < chunk_count => {
+        let start = chunk_index * 1024u32
+        let remaining = input_length - start
+        let length = if remaining < 1024u32 {
+          remaining
+        } else {
+          1024u32
+        }
+        level.push(
+          blake3_chaining_value(
+            blake3_chunk_output(input, start, length, blake3_u32_to_u64(chunk_index)),
+          ),
+        )
+        continue chunk_index + 1u32
+      }
+      _ => break blake3_unit()
+    }
+    let mut current = level
+    let mut root = blake3_no_root()
+    while current.length() {
+      count if count > 1u32 => {
+        let next = blake3_cv_level((count / 2u32) + (count % 2u32))
+        while 0u32 {
+          index if index < count => {
+            if index + 1u32 == count {
+              next.push(current.get_unchecked(index))
+              continue index + 1u32
+            } else {
+              let parent = blake3_parent_output(
+                current.get_unchecked(index),
+                current.get_unchecked(index + 1u32),
+              )
+              root = Option::Some(parent)
+              next.push(blake3_chaining_value(parent))
+              continue index + 2u32
+            }
+          }
+          _ => break blake3_unit()
+        }
+        current = next
+        continue current.length()
+      }
+      _ => break blake3_unit()
+    }
+    match root {
+      Some(value) => blake3_root_digest(value)
+      None => unreachable()
+    }
+  }
+}
+
+pub fn blake3_hash32(input: Bytes) -> U32 {
+  let digest = blake3(input)
+  blake3_u8_to_u32(digest.get_unchecked(0u32)) |
+  (blake3_u8_to_u32(digest.get_unchecked(1u32)) << 8u32) |
+  (blake3_u8_to_u32(digest.get_unchecked(2u32)) << 16u32) |
+  (blake3_u8_to_u32(digest.get_unchecked(3u32)) << 24u32)
+}

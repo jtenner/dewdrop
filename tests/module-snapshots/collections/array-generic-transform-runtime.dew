@@ -1,0 +1,43 @@
+open dew.std.array
+open dew.std.string
+open dew.std.wasi
+
+fn pair(first: I32, second: I32) -> Array<I32> {
+  let output = Array::with_capacity(2u32)
+  output.push(first)
+  output.push(second)
+  output
+}
+
+fn render(value: I32) -> String {
+  if value == 1 {
+    "one"
+  } else if value == 2 {
+    "two"
+  } else {
+    "other"
+  }
+}
+
+fn string_is(value: String, expected: String) -> Bool {
+  value.equals(expected)
+}
+
+fn count_positive(total: U32, value: I32) -> U32 {
+  if value > 0 {
+    total + 1u32
+  } else {
+    total
+  }
+}
+
+pub fn main() -> Unit {
+  let values = pair(1, 2)
+  let names = array_map_to(values, render)
+  let first = names[0u32]
+  let second = names[1u32]
+  assert(string_is(first, "one"), "generic map first")
+  assert(string_is(second, "two"), "generic map second")
+  assert(array_reduce_into(values, 0u32, count_positive) == 2u32, "generic reduce")
+  wasi_fd_write(1u32, b"collections:array-generic-transform-runtime")
+}

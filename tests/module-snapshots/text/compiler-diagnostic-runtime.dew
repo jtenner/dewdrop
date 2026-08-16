@@ -1,0 +1,28 @@
+open dew.std.show
+open dew.std.string
+
+pub fn main() -> Unit {
+  let diagnostic = CompilerDiagnostic::{
+    path: "src/main.dew"
+    line: 4294967295u32
+    column: 17u32
+    byte_offset: 99u32
+    level: CompilerDiagnosticLevel::Error
+    code: "E100"
+    message: "bad value\nsecond line"
+  }
+  match render_compiler_diagnostic(diagnostic, 256u32) {
+    Ok(text) => assert(
+      text.equals("src/main.dew:4294967295:17: error[E100]: bad value\nsecond line (byte 99)"),
+      "compiler diagnostic text changed",
+    )
+    Err(_) => assert(false, "compiler diagnostic unexpectedly exceeded limit")
+  }
+  match render_compiler_diagnostic(diagnostic, 8u32) {
+    Err(CompilerDiagnosticRenderError::LimitExceeded(required, limit)) => {
+      assert(required == 72u64, "wrong required diagnostic byte count")
+      assert(limit == 8u32, "wrong diagnostic limit")
+    }
+    _ => assert(false, "small diagnostic limit did not fail")
+  }
+}

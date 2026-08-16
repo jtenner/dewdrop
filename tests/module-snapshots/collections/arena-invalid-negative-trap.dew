@@ -1,0 +1,6 @@
+open dew.std.array
+
+pub fn main() -> Unit {
+  let arena = Arena::make(0i32, 0i32)
+  arena.get(-2i32)
+}

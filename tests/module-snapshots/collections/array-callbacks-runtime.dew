@@ -1,0 +1,41 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+fn empty_values() -> Array<I32> {
+  Array::new()
+}
+
+pub fn main() -> Unit {
+  let values = values()
+  let observed = empty_values()
+  values.for_each(fn(value: I32) -> Unit {
+    observed.push(value)
+    if value == 1 {
+      values.push(6)
+    } else {
+    }
+  })
+  assert(observed.length() == 5u32, "for_each snapshots length")
+  assert(observed[0u32] == 1, "for_each first")
+  assert(observed[4u32] == 5, "for_each final initial value")
+  assert(values.length() == 6u32, "for_each mutation retained")
+
+  let indexed = empty_values()
+  values.for_each_indexed(fn(value: I32, index: U32) -> Unit {
+    indexed.push(value + u32_into_i32(index))
+  })
+  assert(indexed.length() == 6u32, "indexed for_each length")
+  assert(indexed[0u32] == 1, "indexed for_each first")
+  assert(indexed[5u32] == 11, "indexed for_each last")
+  wasi_fd_write(1u32, b"collections:array-callbacks-runtime")
+}

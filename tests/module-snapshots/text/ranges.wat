@@ -1,32 +1,40 @@
 (module
-  (type (;0;) (func (param eqref) (result i32)))
-  (type (;1;) (func (param eqref i32 i32) (result eqref)))
-  (type (;2;) (func (param eqref) (result eqref)))
-  (type (;3;) (func (param eqref i32 i32) (result eqref)))
-  (type (;4;) (func (param eqref) (result i32)))
-  (type (;5;) (func (param eqref i32 i32) (result eqref)))
-  (type (;6;) (func (param eqref) (result eqref)))
-  (type (;7;) (func (param eqref i32 i32) (result eqref)))
-  (type (;8;) (func (result i32)))
-  (type (;9;) (array (mut v128)))
-  (type (;10;) (struct (field (ref 9)) (field i32) (field i32)))
-  (type (;11;) (struct (field (ref 9)) (field i32) (field i32)))
-  (type (;12;) (struct (field (ref 9)) (field i32) (field i32)))
-  (type (;13;) (struct (field (mut (ref 9))) (field (mut i32)) (field (mut i32))))
-  (type (;14;) (struct (field (mut (ref 9))) (field (mut i32)) (field (mut i32))))
+  (type (;0;) (array (mut i32)))
+  (type (;1;) (array (mut i64)))
+  (type (;2;) (array (mut f32)))
+  (type (;3;) (array (mut f64)))
+  (type (;4;) (array (mut v128)))
+  (type (;5;) (array (mut eqref)))
+  (type (;6;) (array (mut i8)))
+  (type (;7;) (array (mut i16)))
+  (type (;8;) (func (param eqref) (result i32)))
+  (type (;9;) (func (param eqref i32 i32) (result eqref)))
+  (type (;10;) (func (param eqref) (result eqref)))
+  (type (;11;) (func (param eqref i32 i32) (result eqref)))
+  (type (;12;) (func (param eqref) (result i32)))
+  (type (;13;) (func (param eqref i32 i32) (result eqref)))
+  (type (;14;) (func (param eqref) (result eqref)))
+  (type (;15;) (func (param eqref i32 i32) (result eqref)))
+  (type (;16;) (func (result i32)))
+  (type (;17;) (array (mut v128)))
+  (type (;18;) (struct (field (ref 17)) (field i32) (field i32)))
+  (type (;19;) (struct (field (ref 17)) (field i32) (field i32)))
+  (type (;20;) (struct (field (ref 17)) (field i32) (field i32)))
+  (type (;21;) (struct (field (mut (ref 17))) (field (mut i32)) (field (mut i32))))
+  (type (;22;) (struct (field (mut (ref 17))) (field (mut i32)) (field (mut i32))))
   (export "main" (func 8))
-  (func (;0;) (type 0) (param eqref) (result i32)
+  (func (;0;) (type 8) (param eqref) (result i32)
     local.get 0
-    ref.cast (ref 10)
-    struct.get 10 2
+    ref.cast (ref 18)
+    struct.get 18 2
   )
-  (func (;1;) (type 1) (param eqref i32 i32) (result eqref)
-    (local (ref 10) (ref 9) i32 i32 i32 i32)
+  (func (;1;) (type 9) (param eqref i32 i32) (result eqref)
+    (local (ref 18) (ref 17) i32 i32 i32 i32)
     local.get 0
-    ref.cast (ref 10)
+    ref.cast (ref 18)
     local.set 3
     local.get 3
-    struct.get 10 2
+    struct.get 18 2
     local.set 5
     local.get 1
     local.get 5
@@ -43,10 +51,10 @@
       unreachable
     end
     local.get 3
-    struct.get 10 0
+    struct.get 18 0
     local.set 4
     local.get 3
-    struct.get 10 1
+    struct.get 18 1
     local.get 1
     i32.add
     local.set 6
@@ -62,7 +70,7 @@
       local.get 6
       i32.const 4
       i32.shr_u
-      array.get 9
+      array.get 17
       local.get 6
       i32.const 15
       i32.and
@@ -91,7 +99,7 @@
       local.get 6
       i32.const 4
       i32.shr_u
-      array.get 9
+      array.get 17
       local.get 6
       i32.const 15
       i32.and
@@ -110,31 +118,31 @@
     end
     local.get 4
     local.get 3
-    struct.get 10 1
+    struct.get 18 1
     local.get 1
     i32.add
     local.get 2
-    struct.new 12
+    struct.new 20
   )
-  (func (;2;) (type 2) (param eqref) (result eqref)
-    (local (ref 12))
+  (func (;2;) (type 10) (param eqref) (result eqref)
+    (local (ref 20))
     local.get 0
-    ref.cast (ref 12)
+    ref.cast (ref 20)
     local.tee 1
-    struct.get 12 0
+    struct.get 20 0
     local.get 1
-    struct.get 12 1
+    struct.get 20 1
     local.get 1
-    struct.get 12 2
-    struct.new 10
+    struct.get 20 2
+    struct.new 18
   )
-  (func (;3;) (type 3) (param eqref i32 i32) (result eqref)
-    (local (ref 12) (ref 9) i32 i32 i32 i32)
+  (func (;3;) (type 11) (param eqref i32 i32) (result eqref)
+    (local (ref 20) (ref 17) i32 i32 i32 i32)
     local.get 0
-    ref.cast (ref 12)
+    ref.cast (ref 20)
     local.set 3
     local.get 3
-    struct.get 12 2
+    struct.get 20 2
     local.set 5
     local.get 1
     local.get 5
@@ -151,10 +159,10 @@
       unreachable
     end
     local.get 3
-    struct.get 12 0
+    struct.get 20 0
     local.set 4
     local.get 3
-    struct.get 12 1
+    struct.get 20 1
     local.get 1
     i32.add
     local.set 6
@@ -170,7 +178,7 @@
       local.get 6
       i32.const 4
       i32.shr_u
-      array.get 9
+      array.get 17
       local.get 6
       i32.const 15
       i32.and
@@ -199,7 +207,7 @@
       local.get 6
       i32.const 4
       i32.shr_u
-      array.get 9
+      array.get 17
       local.get 6
       i32.const 15
       i32.and
@@ -218,27 +226,27 @@
     end
     local.get 4
     local.get 3
-    struct.get 12 1
+    struct.get 20 1
     local.get 1
     i32.add
     local.get 2
-    struct.new 12
+    struct.new 20
   )
-  (func (;4;) (type 4) (param eqref) (result i32)
+  (func (;4;) (type 12) (param eqref) (result i32)
     local.get 0
     call 0
   )
-  (func (;5;) (type 5) (param eqref i32 i32) (result eqref)
+  (func (;5;) (type 13) (param eqref i32 i32) (result eqref)
     local.get 0
     local.get 1
     local.get 2
     call 1
   )
-  (func (;6;) (type 6) (param eqref) (result eqref)
+  (func (;6;) (type 14) (param eqref) (result eqref)
     local.get 0
     call 2
   )
-  (func (;7;) (type 7) (param eqref i32 i32) (result eqref)
+  (func (;7;) (type 15) (param eqref i32 i32) (result eqref)
     local.get 0
     local.get 1
     local.get 2
@@ -246,13 +254,13 @@
     i32.sub
     call 3
   )
-  (func (;8;) (type 8) (result i32)
+  (func (;8;) (type 16) (result i32)
     (local eqref)
     v128.const i32x4 0xbbce7878 0xe796b8e4 0x79798c95 0x00000000
-    array.new_fixed 9 1
+    array.new_fixed 17 1
     i32.const 0
     i32.const 12
-    struct.new 10
+    struct.new 18
     i32.const 2
     i32.const 8
     call 5

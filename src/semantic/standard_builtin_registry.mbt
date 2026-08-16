@@ -26,6 +26,15 @@ enum StandardBuiltinOperation {
   ArrayIter
   ArrayIterHasNext
   ArrayIterNext
+  ArrayMake
+  ArrayReserve
+  ArrayShrinkToFit
+  ArrayTruncate
+  ArrayCopy
+  ArrayCopyWithin
+  ArrayFill
+  ArraySlice
+  ArrayExtend
   StackNew
   StackWithCapacity
   StackLength
@@ -224,7 +233,7 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
   match semantic_id_local(declaration) {
     2 | 17 => ArrayNew
     3 | 18 => ArrayWithCapacity
-    4 | 19 | 21 => ArrayLength
+    4 | 19 => ArrayLength
     5 | 20 => ArrayCapacity
     6 | 24 => ArrayGet
     7 | 25 | 31 => ArrayGetUnchecked
@@ -236,6 +245,15 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
     13 | 29 => ArrayIter
     14 | 35 => ArrayIterHasNext
     15 | 36 => ArrayIterNext
+    37 => ArrayMake
+    38 => ArrayReserve
+    39 => ArrayShrinkToFit
+    40 => ArrayTruncate
+    41 => ArrayCopy
+    42 => ArrayCopyWithin
+    43 => ArrayFill
+    44 => ArraySlice
+    45 => ArrayExtend
     _ => NoStandardBuiltinOperation
   }
 }

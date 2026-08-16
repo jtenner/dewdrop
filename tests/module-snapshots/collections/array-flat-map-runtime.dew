@@ -1,0 +1,23 @@
+open dew.std.array
+open dew.std.wasi
+
+fn pair(first: I32, second: I32) -> Array<I32> {
+  let output = Array::with_capacity(2u32)
+  output.push(first)
+  output.push(second)
+  output
+}
+
+fn expand(value: I32) -> Array<I32> {
+  pair(value, value + 10)
+}
+
+pub fn main() -> Unit {
+  let expanded = pair(1, 2).flat_map(expand)
+  assert(expanded.length() == 4u32, "flat map length")
+  assert(expanded[0u32] == 1, "flat map zero")
+  assert(expanded[1u32] == 11, "flat map one")
+  assert(expanded[2u32] == 2, "flat map two")
+  assert(expanded[3u32] == 12, "flat map three")
+  wasi_fd_write(1u32, b"collections:array-flat-map-runtime")
+}

@@ -88,6 +88,29 @@ pub enum PlannedExpressionKind {
   PlannedArrayIter(ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayIterHasNext(ExprId)
   PlannedArrayIterNext(ExprId, PlannedValueShape)
+  PlannedArrayMake(ExprId, ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayReserve(ExprId, ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayShrinkToFit(ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayTruncate(ExprId, ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayCopy(ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayCopyWithin(
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    BodyTypeId,
+    PlannedValueShape
+  )
+  PlannedArrayFill(
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    BodyTypeId,
+    PlannedValueShape
+  )
+  PlannedArraySlice(ExprId, ExprId, ExprId, BodyTypeId, PlannedValueShape)
+  PlannedArrayExtend(ExprId, ExprId, BodyTypeId, PlannedValueShape)
   PlannedStackIsEmpty(ExprId)
   PlannedStackPeek(ExprId, PlannedValueShape)
   PlannedQueueDequeue(ExprId, PlannedValueShape)
@@ -1122,6 +1145,57 @@ fn plan_expression_kind(
                           inferred.expression_types[expression],
                         ),
                       )
+                    ArrayMake =>
+                      PlannedArrayMake(
+                        base,
+                        key,
+                        element_type,
+                        planned_value_shape(
+                          resolved,
+                          inferred,
+                          inferred.expression_types[key],
+                        ),
+                      )
+                    ArrayReserve =>
+                      PlannedArrayReserve(
+                        base, key, element_type, element_shape,
+                      )
+                    ArrayShrinkToFit =>
+                      PlannedArrayShrinkToFit(base, element_type, element_shape)
+                    ArrayTruncate =>
+                      PlannedArrayTruncate(
+                        base, key, element_type, element_shape,
+                      )
+                    ArrayCopy =>
+                      PlannedArrayCopy(base, element_type, element_shape)
+                    ArrayCopyWithin =>
+                      PlannedArrayCopyWithin(
+                        base,
+                        key,
+                        value,
+                        collected.expression_children[arguments.start + 3],
+                        element_type,
+                        element_shape,
+                      )
+                    ArrayFill =>
+                      PlannedArrayFill(
+                        base,
+                        key,
+                        value,
+                        collected.expression_children[arguments.start + 3],
+                        element_type,
+                        planned_value_shape(
+                          resolved,
+                          inferred,
+                          inferred.expression_types[key],
+                        ),
+                      )
+                    ArraySlice =>
+                      PlannedArraySlice(
+                        base, key, value, element_type, element_shape,
+                      )
+                    ArrayExtend =>
+                      PlannedArrayExtend(base, key, element_type, element_shape)
                     _ =>
                       match standard_map_operation(declaration) {
                         MapSingleton => {

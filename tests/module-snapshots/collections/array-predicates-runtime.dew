@@ -1,0 +1,73 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+fn take_i32(value: Option<I32>) -> I32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+fn take_u32(value: Option<U32>) -> U32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+fn even(value: I32) -> Bool {
+  value % 2 == 0
+}
+
+fn odd(value: I32) -> Bool {
+  value % 2 != 0
+}
+
+fn three(value: I32) -> Bool {
+  value == 3
+}
+
+fn index_matches(value: I32, index: U32) -> Bool {
+  value == u32_into_i32(index) + 1
+}
+
+pub fn main() -> Unit {
+  let values = values()
+  assert(values.every(fn(value: I32) -> Bool {
+    value > 0
+  }), "every true")
+  assert(!values.every(even), "every false")
+  assert(values.every_indexed(index_matches), "every indexed")
+  assert(values.some(even), "some true")
+  assert(!values.some(fn(value: I32) -> Bool {
+    value > 9
+  }), "some false")
+  assert(take_i32(values.find(three)) == 3, "find")
+  assert(take_u32(values.find_index(three)) == 2u32, "find index")
+  assert(take_i32(values.find_last(odd)) == 5, "find last")
+  assert(take_u32(values.find_last_index(odd)) == 4u32, "find last index")
+
+  let calls = Array::make(1u32, 0)
+  assert(values.some(fn(value: I32) -> Bool {
+    calls[0u32] = calls[0u32] + 1
+    value == 2
+  }), "some short circuit")
+  assert(calls[0u32] == 2, "some call count")
+  calls[0u32] = 0
+  assert(!values.every(fn(value: I32) -> Bool {
+    calls[0u32] = calls[0u32] + 1
+    value < 3
+  }), "every short circuit")
+  assert(calls[0u32] == 3, "every call count")
+  wasi_fd_write(1u32, b"collections:array-predicates-runtime")
+}

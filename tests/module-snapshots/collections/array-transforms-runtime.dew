@@ -1,0 +1,30 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+fn twice(value: I32) -> I32 {
+  value * 2
+}
+
+pub fn main() -> Unit {
+  let values = values()
+  let doubled = values.map(twice)
+  assert(doubled.length() == 5u32, "map length")
+  assert(doubled[0u32] == 2, "map first")
+  assert(doubled[4u32] == 10, "map last")
+  let indexed = values.map_indexed(fn(value: I32, index: U32) -> I32 {
+    value + u32_into_i32(index)
+  })
+  assert(indexed[0u32] == 1, "map indexed first")
+  assert(indexed[4u32] == 9, "map indexed last")
+  wasi_fd_write(1u32, b"collections:array-transforms-runtime")
+}

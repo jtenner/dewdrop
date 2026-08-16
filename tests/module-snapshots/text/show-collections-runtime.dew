@@ -1,0 +1,48 @@
+open dew.std.show
+open dew.std.array
+open dew.std.fixed_array
+open dew.std.string
+
+fn show_some() -> Option<I32> {
+  Option::Some(-7i32)
+}
+
+fn show_none() -> Option<I32> {
+  Option::None
+}
+
+fn show_ok() -> Result<I32, String> {
+  Result::Ok(42i32)
+}
+
+fn show_err() -> Result<I32, String> {
+  Result::Err("bad")
+}
+
+fn show_nested(values: Array<I32>) -> Option<Array<I32>> {
+  Option::Some(values)
+}
+
+pub fn main() -> Unit {
+  let values = Array::new()
+  values.push(1i32)
+  values.push(2i32)
+  values.push(3i32)
+  assert(show(values).equals("[1, 2, 3]"), "Array Show changed")
+
+  let fixed = FixedArray::make(2u32, 9u64)
+  assert(show(fixed).equals("[9, 9]"), "FixedArray Show changed")
+
+  let some = show_some()
+  let none = show_none()
+  assert(show(some).equals("Some(-7)"), "Option Some Show changed")
+  assert(show(none).equals("None"), "Option None Show changed")
+
+  let ok = show_ok()
+  let err = show_err()
+  assert(show(ok).equals("Ok(42)"), "Result Ok Show changed")
+  assert(show(err).equals("Err(bad)"), "Result Err Show changed")
+
+  let nested = show_nested(values)
+  assert(show(nested).equals("Some([1, 2, 3])"), "nested Show changed")
+}

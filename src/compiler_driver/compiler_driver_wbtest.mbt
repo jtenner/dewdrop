@@ -16,6 +16,8 @@ test "compiler driver runs the production pipeline" {
   assert_false(compiled.has_errors())
   let binary = compiled.emit_binary().unwrap()
   assert_true(binary.length() > 8)
+  let unlinked = compiled.emit_linked_binary([]).unwrap()
+  assert_eq(unlinked, binary)
 }
 
 ///|

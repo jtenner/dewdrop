@@ -1,0 +1,576 @@
+{
+  "comparisons": {
+    "copy": {
+      "baseline_ns": 401.17,
+      "delta_percent": -48.1,
+      "optimized_ns": 208.19,
+      "speedup": 1.927
+    },
+    "copy_within": {
+      "baseline_ns": 193.89,
+      "delta_percent": -14.79,
+      "optimized_ns": 165.22,
+      "speedup": 1.174
+    },
+    "extend": {
+      "baseline_ns": 601.39,
+      "delta_percent": -31.53,
+      "optimized_ns": 411.79,
+      "speedup": 1.46
+    },
+    "fill": {
+      "baseline_ns": 194.61,
+      "delta_percent": -8.97,
+      "optimized_ns": 177.16,
+      "speedup": 1.098
+    },
+    "make": {
+      "baseline_ns": 187.63,
+      "delta_percent": -64.53,
+      "optimized_ns": 66.56,
+      "speedup": 2.819
+    },
+    "slice": {
+      "baseline_ns": 324.48,
+      "delta_percent": -43.56,
+      "optimized_ns": 183.15,
+      "speedup": 1.772
+    },
+    "truncate": {
+      "baseline_ns": 244.32,
+      "delta_percent": -25.33,
+      "optimized_ns": 182.43,
+      "speedup": 1.339
+    }
+  },
+  "environment": {
+    "node": "v26.3.0",
+    "platform": "Linux-6.12.100+deb13-amd64-x86_64-with-glibc2.41"
+  },
+  "methodology": {
+    "isolated_module_per_method": true,
+    "iterations_per_sample": 1000,
+    "rounds": 5,
+    "samples_per_round": 31,
+    "warmups": 10
+  },
+  "methods": {
+    "at": {
+      "median_ns_per_invocation": 162.02,
+      "round_medians_ns": [
+        168.63,
+        164.75,
+        162.02,
+        157.26,
+        157.15
+      ],
+      "wasm_bytes": 1452
+    },
+    "concat": {
+      "median_ns_per_invocation": 403.18,
+      "round_medians_ns": [
+        426.25,
+        403.18,
+        403.87,
+        395.89,
+        393.84
+      ],
+      "wasm_bytes": 1374
+    },
+    "copy": {
+      "median_ns_per_invocation": 208.19,
+      "round_medians_ns": [
+        233.91,
+        207.51,
+        214.21,
+        208.19,
+        206.82
+      ],
+      "wasm_bytes": 1171
+    },
+    "copy_baseline": {
+      "median_ns_per_invocation": 401.17,
+      "round_medians_ns": [
+        401.17,
+        401.5,
+        404.46,
+        401.11,
+        395.91
+      ],
+      "wasm_bytes": 1437
+    },
+    "copy_within": {
+      "median_ns_per_invocation": 165.22,
+      "round_medians_ns": [
+        181.03,
+        166.76,
+        165.22,
+        161.92,
+        161.84
+      ],
+      "wasm_bytes": 1254
+    },
+    "copy_within_baseline": {
+      "median_ns_per_invocation": 193.89,
+      "round_medians_ns": [
+        193.93,
+        195.06,
+        193.89,
+        191.5,
+        192.82
+      ],
+      "wasm_bytes": 1247
+    },
+    "entries": {
+      "median_ns_per_invocation": 196.79,
+      "round_medians_ns": [
+        196.79,
+        197.36,
+        197.43,
+        195.43,
+        195.73
+      ],
+      "wasm_bytes": 1372
+    },
+    "equals": {
+      "median_ns_per_invocation": 415.3,
+      "round_medians_ns": [
+        420.32,
+        414.83,
+        409.76,
+        415.3,
+        417.78
+      ],
+      "wasm_bytes": 1301
+    },
+    "every": {
+      "median_ns_per_invocation": 412.66,
+      "round_medians_ns": [
+        412.66,
+        413.09,
+        413.39,
+        408.25,
+        409.24
+      ],
+      "wasm_bytes": 1398
+    },
+    "extend": {
+      "median_ns_per_invocation": 411.79,
+      "round_medians_ns": [
+        412.49,
+        414.3,
+        411.79,
+        401.97,
+        368.65
+      ],
+      "wasm_bytes": 1310
+    },
+    "extend_baseline": {
+      "median_ns_per_invocation": 601.39,
+      "round_medians_ns": [
+        598.61,
+        604.25,
+        599.59,
+        601.39,
+        612.46
+      ],
+      "wasm_bytes": 1618
+    },
+    "fill": {
+      "median_ns_per_invocation": 177.16,
+      "round_medians_ns": [
+        184.91,
+        178.86,
+        177.16,
+        175.73,
+        175.39
+      ],
+      "wasm_bytes": 1210
+    },
+    "fill_baseline": {
+      "median_ns_per_invocation": 194.61,
+      "round_medians_ns": [
+        194.82,
+        196.12,
+        194.61,
+        192.13,
+        191.14
+      ],
+      "wasm_bytes": 1206
+    },
+    "filter": {
+      "median_ns_per_invocation": 541.79,
+      "round_medians_ns": [
+        544.44,
+        550.65,
+        540.85,
+        541.64,
+        541.79
+      ],
+      "wasm_bytes": 1576
+    },
+    "find": {
+      "median_ns_per_invocation": 179.86,
+      "round_medians_ns": [
+        182.54,
+        182.04,
+        179.86,
+        176.29,
+        174.48
+      ],
+      "wasm_bytes": 1471
+    },
+    "first": {
+      "median_ns_per_invocation": 157.02,
+      "round_medians_ns": [
+        164.21,
+        158.22,
+        157.02,
+        153.68,
+        154.75
+      ],
+      "wasm_bytes": 1264
+    },
+    "flat": {
+      "median_ns_per_invocation": 434.12,
+      "round_medians_ns": [
+        449.94,
+        432.61,
+        452.05,
+        434.12,
+        428.02
+      ],
+      "wasm_bytes": 1863
+    },
+    "flat_map": {
+      "median_ns_per_invocation": 55.84,
+      "round_medians_ns": [
+        56.67,
+        56.09,
+        55.84,
+        51.0,
+        51.3
+      ],
+      "wasm_bytes": 2534
+    },
+    "for_each": {
+      "median_ns_per_invocation": 727.66,
+      "round_medians_ns": [
+        590.22,
+        732.1,
+        732.39,
+        727.66,
+        722.48
+      ],
+      "wasm_bytes": 1587
+    },
+    "includes": {
+      "median_ns_per_invocation": 162.28,
+      "round_medians_ns": [
+        168.1,
+        167.44,
+        162.28,
+        157.3,
+        157.97
+      ],
+      "wasm_bytes": 1414
+    },
+    "index_of": {
+      "median_ns_per_invocation": 166.68,
+      "round_medians_ns": [
+        168.54,
+        167.7,
+        166.68,
+        157.62,
+        158.62
+      ],
+      "wasm_bytes": 1403
+    },
+    "insert": {
+      "median_ns_per_invocation": 225.22,
+      "round_medians_ns": [
+        226.8,
+        228.43,
+        225.22,
+        223.91,
+        223.69
+      ],
+      "wasm_bytes": 1630
+    },
+    "keys": {
+      "median_ns_per_invocation": 184.72,
+      "round_medians_ns": [
+        184.54,
+        188.96,
+        186.6,
+        184.72,
+        183.69
+      ],
+      "wasm_bytes": 1296
+    },
+    "last": {
+      "median_ns_per_invocation": 160.15,
+      "round_medians_ns": [
+        168.83,
+        161.65,
+        160.15,
+        154.8,
+        154.39
+      ],
+      "wasm_bytes": 1295
+    },
+    "last_index_of": {
+      "median_ns_per_invocation": 166.11,
+      "round_medians_ns": [
+        169.2,
+        167.23,
+        166.11,
+        159.72,
+        158.98
+      ],
+      "wasm_bytes": 1409
+    },
+    "make": {
+      "median_ns_per_invocation": 66.56,
+      "round_medians_ns": [
+        72.42,
+        69.85,
+        66.56,
+        66.11,
+        65.85
+      ],
+      "wasm_bytes": 840
+    },
+    "make_baseline": {
+      "median_ns_per_invocation": 187.63,
+      "round_medians_ns": [
+        188.18,
+        187.63,
+        188.27,
+        184.42,
+        183.31
+      ],
+      "wasm_bytes": 1087
+    },
+    "map": {
+      "median_ns_per_invocation": 593.38,
+      "round_medians_ns": [
+        595.78,
+        595.38,
+        584.25,
+        593.38,
+        589.22
+      ],
+      "wasm_bytes": 1612
+    },
+    "new": {
+      "median_ns_per_invocation": 12.08,
+      "round_medians_ns": [
+        28.86,
+        12.12,
+        12.08,
+        1.25,
+        0.97
+      ],
+      "wasm_bytes": 807
+    },
+    "reduce": {
+      "median_ns_per_invocation": 398.67,
+      "round_medians_ns": [
+        403.75,
+        399.76,
+        398.67,
+        396.15,
+        395.99
+      ],
+      "wasm_bytes": 1408
+    },
+    "remove": {
+      "median_ns_per_invocation": 164.08,
+      "round_medians_ns": [
+        167.77,
+        166.19,
+        164.08,
+        161.59,
+        163.24
+      ],
+      "wasm_bytes": 1341
+    },
+    "reserve": {
+      "median_ns_per_invocation": 46.0,
+      "round_medians_ns": [
+        53.52,
+        48.19,
+        45.59,
+        45.28,
+        46.0
+      ],
+      "wasm_bytes": 1027
+    },
+    "reverse": {
+      "median_ns_per_invocation": 214.89,
+      "round_medians_ns": [
+        218.54,
+        217.45,
+        214.89,
+        211.48,
+        211.5
+      ],
+      "wasm_bytes": 1405
+    },
+    "shift": {
+      "median_ns_per_invocation": 169.22,
+      "round_medians_ns": [
+        174.48,
+        172.67,
+        169.22,
+        167.17,
+        168.0
+      ],
+      "wasm_bytes": 1327
+    },
+    "shrink_to_fit": {
+      "median_ns_per_invocation": 264.4,
+      "round_medians_ns": [
+        274.9,
+        270.32,
+        264.4,
+        260.7,
+        261.35
+      ],
+      "wasm_bytes": 1417
+    },
+    "slice": {
+      "median_ns_per_invocation": 183.15,
+      "round_medians_ns": [
+        208.03,
+        182.14,
+        196.14,
+        183.15,
+        178.17
+      ],
+      "wasm_bytes": 1222
+    },
+    "slice_baseline": {
+      "median_ns_per_invocation": 324.48,
+      "round_medians_ns": [
+        330.87,
+        324.48,
+        325.1,
+        316.69,
+        320.34
+      ],
+      "wasm_bytes": 1425
+    },
+    "some": {
+      "median_ns_per_invocation": 178.14,
+      "round_medians_ns": [
+        178.14,
+        179.29,
+        178.15,
+        174.14,
+        173.23
+      ],
+      "wasm_bytes": 1397
+    },
+    "sort": {
+      "median_ns_per_invocation": 1950.61,
+      "round_medians_ns": [
+        1957.12,
+        1958.77,
+        1950.61,
+        1942.42,
+        1950.31
+      ],
+      "wasm_bytes": 2205
+    },
+    "splice": {
+      "median_ns_per_invocation": 185.88,
+      "round_medians_ns": [
+        191.29,
+        188.64,
+        185.88,
+        184.99,
+        185.54
+      ],
+      "wasm_bytes": 2938
+    },
+    "swap": {
+      "median_ns_per_invocation": 156.4,
+      "round_medians_ns": [
+        160.37,
+        156.66,
+        156.4,
+        153.19,
+        153.02
+      ],
+      "wasm_bytes": 1388
+    },
+    "to_reversed": {
+      "median_ns_per_invocation": 281.09,
+      "round_medians_ns": [
+        281.09,
+        283.83,
+        282.75,
+        275.73,
+        275.91
+      ],
+      "wasm_bytes": 1490
+    },
+    "to_spliced": {
+      "median_ns_per_invocation": 240.85,
+      "round_medians_ns": [
+        245.01,
+        243.76,
+        240.85,
+        236.51,
+        240.52
+      ],
+      "wasm_bytes": 3040
+    },
+    "truncate": {
+      "median_ns_per_invocation": 182.43,
+      "round_medians_ns": [
+        190.2,
+        182.67,
+        182.43,
+        181.37,
+        182.01
+      ],
+      "wasm_bytes": 1156
+    },
+    "truncate_baseline": {
+      "median_ns_per_invocation": 244.32,
+      "round_medians_ns": [
+        248.87,
+        248.3,
+        244.32,
+        242.56,
+        243.6
+      ],
+      "wasm_bytes": 1276
+    },
+    "unshift": {
+      "median_ns_per_invocation": 234.1,
+      "round_medians_ns": [
+        234.1,
+        232.96,
+        237.34,
+        249.05,
+        224.84
+      ],
+      "wasm_bytes": 1606
+    },
+    "with_capacity": {
+      "median_ns_per_invocation": 40.55,
+      "round_medians_ns": [
+        72.66,
+        56.27,
+        40.45,
+        40.2,
+        40.55
+      ],
+      "wasm_bytes": 820
+    }
+  }
+}

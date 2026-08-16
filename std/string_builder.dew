@@ -1,3 +1,55 @@
+fn string_builder_u64_to_u8(value: U64) -> U8 {
+  value.into()
+}
+
+fn string_builder_i8_to_i64(value: I8) -> I64 {
+  value.into()
+}
+
+fn string_builder_i16_to_i64(value: I16) -> I64 {
+  value.into()
+}
+
+fn string_builder_i32_to_i64(value: I32) -> I64 {
+  value.into()
+}
+
+fn string_builder_u8_to_u64(value: U8) -> U64 {
+  value.into()
+}
+
+fn string_builder_u16_to_u64(value: U16) -> U64 {
+  value.into()
+}
+
+fn string_builder_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn string_builder_i64_to_u64(value: I64) -> U64 {
+  value.into()
+}
+
+fn string_builder_append_u64_digits(builder: StringBuilder, value: U64) -> Unit {
+  if value >= 10u64 {
+    string_builder_append_u64_digits(builder, value / 10u64)
+  } else {
+  }
+  string_builder_append_ascii(builder, string_builder_u64_to_u8(value % 10u64) + 48u8)
+}
+
+fn string_builder_append_i64_value(builder: StringBuilder, value: I64) -> Unit {
+  if value < 0i64 {
+    string_builder_append_ascii(builder, 45u8)
+    string_builder_append_u64_digits(
+      builder,
+      string_builder_i64_to_u64(-(value + 1i64)) + 1u64,
+    )
+  } else {
+    string_builder_append_u64_digits(builder, string_builder_i64_to_u64(value))
+  }
+}
+
 impl StringBuilder {
   fn new() -> StringBuilder {
     string_builder_new()
@@ -22,6 +74,30 @@ impl StringBuilder {
   }
   fn append_checked(self, bytes: Bytes) -> Unit {
     string_builder_append(self, bytes_to_string(bytes))
+  }
+  fn append_i8(self, value: I8) -> Unit {
+    string_builder_append_i64_value(self, string_builder_i8_to_i64(value))
+  }
+  fn append_i16(self, value: I16) -> Unit {
+    string_builder_append_i64_value(self, string_builder_i16_to_i64(value))
+  }
+  fn append_i32(self, value: I32) -> Unit {
+    string_builder_append_i64_value(self, string_builder_i32_to_i64(value))
+  }
+  fn append_i64(self, value: I64) -> Unit {
+    string_builder_append_i64_value(self, value)
+  }
+  fn append_u8(self, value: U8) -> Unit {
+    string_builder_append_u64_digits(self, string_builder_u8_to_u64(value))
+  }
+  fn append_u16(self, value: U16) -> Unit {
+    string_builder_append_u64_digits(self, string_builder_u16_to_u64(value))
+  }
+  fn append_u32(self, value: U32) -> Unit {
+    string_builder_append_u64_digits(self, string_builder_u32_to_u64(value))
+  }
+  fn append_u64(self, value: U64) -> Unit {
+    string_builder_append_u64_digits(self, value)
   }
   fn finish(self) -> String {
     string_builder_finish(self)

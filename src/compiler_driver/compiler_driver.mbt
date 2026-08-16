@@ -183,6 +183,9 @@ pub fn CompilerCompilation::emit_linked_binary(
     Ok(value) => value
     Err(error) => return Err(@debug.to_string(error))
   }
+  if libraries.length() == 0 {
+    return Ok(dew)
+  }
   match @core_linker.link_core_wasm_gc_modules(dew, libraries) {
     Ok(value) => Ok(value)
     Err(error) => Err(@debug.to_string(error))

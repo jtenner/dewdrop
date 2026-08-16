@@ -487,6 +487,478 @@ fn starshine_finish_array(
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
     carrier
   let output : Array[@lib.Instruction] = []
+  if operation == 39 {
+    if carrier < 0 || index_local < 0 {
+      return Err(UnsupportedExpression(body_id, -414))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(index_local))
+    append_starshine_instructions(output, fragments[1])
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::array_new(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_array_local_get(index_local))
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      ),
+    )
+    return Ok(output)
+  }
+  if operation == 40 {
+    if carrier < 0 || wrapper_local < 0 || backing_local < 0 || index_local < 0 {
+      return Err(UnsupportedExpression(body_id, -415))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    append_starshine_instructions(output, fragments[1])
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(@lib.Instruction::i32_add())
+    output.push(starshine_array_local_set(index_local))
+    output.push(starshine_array_local_get(index_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(@lib.Instruction::i32_lt_u())
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::void_(),
+        [@lib.Instruction::unreachable_()],
+        None,
+      ),
+    )
+    output.push(starshine_array_local_get(index_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 2),
+    )
+    output.push(@lib.Instruction::i32_gt_u())
+    let reserve : Array[@lib.Instruction] = []
+    let candidate : Array[@lib.Instruction] = []
+    append_starshine_instructions(
+      candidate,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 2),
+    )
+    candidate.push(@lib.Instruction::i32_eqz())
+    let doubled : Array[@lib.Instruction] = []
+    append_starshine_instructions(
+      doubled,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 2),
+    )
+    doubled.push(@lib.Instruction::i32_const(@lib.I32::new(2)))
+    doubled.push(@lib.Instruction::i32_mul())
+    candidate.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::i32()),
+        [@lib.Instruction::i32_const(@lib.I32::new(4))],
+        Some(doubled),
+      ),
+    )
+    append_starshine_instructions(reserve, candidate)
+    reserve.push(starshine_array_local_get(index_local))
+    reserve.push(@lib.Instruction::i32_lt_u())
+    reserve.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::i32()),
+        [starshine_array_local_get(index_local)],
+        Some(candidate),
+      ),
+    )
+    reserve.push(
+      @lib.Instruction::array_new_default(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    reserve.push(starshine_array_local_set(backing_local))
+    reserve.push(starshine_array_local_get(backing_local))
+    reserve.push(starshine_match_cast(array_type))
+    reserve.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    append_starshine_instructions(
+      reserve,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    reserve.push(starshine_match_cast(array_type))
+    reserve.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    append_starshine_instructions(
+      reserve,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    reserve.push(
+      @lib.Instruction::array_copy(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    reserve.push(starshine_array_local_get(wrapper_local))
+    reserve.push(starshine_match_cast(wrapper_type))
+    reserve.push(starshine_array_local_get(backing_local))
+    reserve.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(0U),
+      ),
+    )
+    reserve.push(starshine_array_local_get(wrapper_local))
+    reserve.push(starshine_match_cast(wrapper_type))
+    reserve.push(starshine_array_local_get(backing_local))
+    reserve.push(starshine_match_cast(array_type))
+    reserve.push(@lib.Instruction::array_len())
+    reserve.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(2U),
+      ),
+    )
+    output.push(@lib.Instruction::if_(@lib.BlockType::void_(), reserve, None))
+    return Ok(output)
+  }
+  if operation == 41 || operation == 43 || operation == 46 {
+    if carrier < 0 || wrapper_local < 0 || backing_local < 0 || index_local < 0 {
+      return Err(UnsupportedExpression(body_id, -416))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    if operation == 46 {
+      append_starshine_instructions(output, fragments[2])
+      append_starshine_instructions(output, fragments[1])
+      output.push(@lib.Instruction::i32_sub())
+    } else {
+      append_starshine_instructions(
+        output,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+      )
+    }
+    output.push(starshine_array_local_set(index_local))
+    if operation == 41 {
+      output.push(starshine_array_local_get(index_local))
+      append_starshine_instructions(
+        output,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 2),
+      )
+      output.push(@lib.Instruction::i32_eq())
+      let shrink : Array[@lib.Instruction] = []
+      shrink.push(starshine_array_local_get(index_local))
+      shrink.push(
+        @lib.Instruction::array_new_default(
+          @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        ),
+      )
+      shrink.push(starshine_array_local_set(backing_local))
+      shrink.push(starshine_array_local_get(backing_local))
+      shrink.push(starshine_match_cast(array_type))
+      shrink.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+      append_starshine_instructions(
+        shrink,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+      )
+      shrink.push(starshine_match_cast(array_type))
+      shrink.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+      shrink.push(starshine_array_local_get(index_local))
+      shrink.push(
+        @lib.Instruction::array_copy(
+          @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+          @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        ),
+      )
+      shrink.push(starshine_array_local_get(wrapper_local))
+      shrink.push(starshine_match_cast(wrapper_type))
+      shrink.push(starshine_array_local_get(backing_local))
+      shrink.push(
+        @lib.Instruction::struct_set(
+          @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+          @lib.U32::new(0U),
+        ),
+      )
+      shrink.push(starshine_array_local_get(wrapper_local))
+      shrink.push(starshine_match_cast(wrapper_type))
+      shrink.push(starshine_array_local_get(index_local))
+      shrink.push(
+        @lib.Instruction::struct_set(
+          @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+          @lib.U32::new(2U),
+        ),
+      )
+      output.push(
+        @lib.Instruction::if_(@lib.BlockType::void_(), [], Some(shrink)),
+      )
+      return Ok(output)
+    }
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::array_new_default(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_array_local_set(backing_local))
+    output.push(starshine_array_local_get(backing_local))
+    output.push(starshine_match_cast(array_type))
+    output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    output.push(starshine_match_cast(array_type))
+    if operation == 46 {
+      append_starshine_instructions(output, fragments[1])
+    } else {
+      output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    }
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::array_copy(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_array_local_get(backing_local))
+    output.push(starshine_array_local_get(index_local))
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::struct_new(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+      ),
+    )
+    return Ok(output)
+  }
+  if operation == 42 {
+    if carrier < 0 || wrapper_local < 0 || index_local < 0 {
+      return Err(UnsupportedExpression(body_id, -417))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    append_starshine_instructions(output, fragments[1])
+    output.push(starshine_array_local_set(index_local))
+    output.push(starshine_array_local_get(index_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(@lib.Instruction::i32_gt_u())
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::void_(),
+        [@lib.Instruction::unreachable_()],
+        None,
+      ),
+    )
+    let reference_shape = match shape {
+      Some(@semantic.RefPlannedValueShape)
+      | Some(@semantic.GenericPlannedValueShape) => true
+      _ => false
+    }
+    if reference_shape {
+      append_starshine_instructions(
+        output,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+      )
+      output.push(starshine_match_cast(array_type))
+      output.push(starshine_array_local_get(index_local))
+      output.push(
+        @lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq())),
+      )
+      append_starshine_instructions(
+        output,
+        starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+      )
+      output.push(starshine_array_local_get(index_local))
+      output.push(@lib.Instruction::i32_sub())
+      output.push(
+        @lib.Instruction::array_fill(
+          @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        ),
+      )
+    }
+    output.push(starshine_array_local_get(wrapper_local))
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    return Ok(output)
+  }
+  if operation == 44 {
+    if carrier < 0 || wrapper_local < 0 {
+      return Err(UnsupportedExpression(body_id, -418))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    output.push(starshine_match_cast(array_type))
+    append_starshine_instructions(output, fragments[1])
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    output.push(starshine_match_cast(array_type))
+    append_starshine_instructions(output, fragments[2])
+    append_starshine_instructions(output, fragments[3])
+    append_starshine_instructions(output, fragments[2])
+    output.push(@lib.Instruction::i32_sub())
+    output.push(
+      @lib.Instruction::array_copy(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    return Ok(output)
+  }
+  if operation == 45 {
+    if carrier < 0 || wrapper_local < 0 || value_local < 0 {
+      return Err(UnsupportedExpression(body_id, -419))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    append_starshine_instructions(output, fragments[1])
+    output.push(starshine_array_local_set(value_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    output.push(starshine_match_cast(array_type))
+    append_starshine_instructions(output, fragments[2])
+    output.push(starshine_array_local_get(value_local))
+    append_starshine_instructions(output, fragments[3])
+    append_starshine_instructions(output, fragments[2])
+    output.push(@lib.Instruction::i32_sub())
+    output.push(
+      @lib.Instruction::array_fill(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    return Ok(output)
+  }
+  if operation == 47 {
+    if carrier < 0 || wrapper_local < 0 || backing_local < 0 || index_local < 0 {
+      return Err(UnsupportedExpression(body_id, -420))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    append_starshine_instructions(output, fragments[1])
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    output.push(@lib.Instruction::i32_add())
+    output.push(starshine_array_local_set(index_local))
+    output.push(starshine_array_local_get(index_local))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(@lib.Instruction::i32_lt_u())
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::void_(),
+        [@lib.Instruction::unreachable_()],
+        None,
+      ),
+    )
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::array_new_default(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_array_local_set(backing_local))
+    output.push(starshine_array_local_get(backing_local))
+    output.push(starshine_match_cast(array_type))
+    output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 0),
+    )
+    output.push(starshine_match_cast(array_type))
+    output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    output.push(
+      @lib.Instruction::array_copy(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_array_local_get(backing_local))
+    output.push(starshine_match_cast(array_type))
+    append_starshine_instructions(
+      output,
+      starshine_array_wrapper_field(wrapper_type, wrapper_local, 1),
+    )
+    append_starshine_instructions(output, fragments[1])
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(0U),
+      ),
+    )
+    output.push(starshine_match_cast(array_type))
+    output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    append_starshine_instructions(output, fragments[1])
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    output.push(
+      @lib.Instruction::array_copy(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    output.push(starshine_array_local_get(wrapper_local))
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(starshine_array_local_get(backing_local))
+    output.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(0U),
+      ),
+    )
+    output.push(starshine_array_local_get(wrapper_local))
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    output.push(starshine_array_local_get(wrapper_local))
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(starshine_array_local_get(index_local))
+    output.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(2U),
+      ),
+    )
+    return Ok(output)
+  }
   if operation == 1 ||
     operation == 2 ||
     operation == 20 ||

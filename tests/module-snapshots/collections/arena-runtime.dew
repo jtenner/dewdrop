@@ -1,0 +1,37 @@
+open dew.std.array
+
+pub fn main() -> Unit {
+  let arena = Arena::make(0i32, 0i32)
+  assert(arena_missing_id() == -1i32, "wrong missing arena id")
+  match arena.get(-1i32) {
+    None => {}
+    _ => assert(false, "missing id must return None")
+  }
+  let first = arena.push(10i32)
+  let second = arena.push(20i32)
+  assert(first == 0i32 && second == 1i32, "arena ids are not dense")
+  assert(arena.length() == 2i32, "wrong arena length")
+  assert(arena.get_unchecked(second) == 20i32, "wrong arena value")
+  assert(arena.set(first, 11i32), "arena set rejected live id")
+  assert(!arena.set(-1i32, 1i32), "arena set accepted missing id")
+
+  let checkpoint = arena.checkpoint()
+  let third = arena.push(30i32)
+  let fourth = arena.push(40i32)
+  let span = arena.span(third, 2i32)
+  assert(span.contains(third) && span.end() == 4i32, "wrong arena span")
+  assert(span.contains(fourth), "arena span missed live id")
+  let copied = arena.slice(span)
+  assert(copied.length() == 2u32, "wrong arena slice length")
+  assert(copied.get_unchecked(0u32) == 30i32, "wrong arena slice value")
+
+  let clone = arena.copy()
+  clone.fill(7i32, 0i32, 2i32)
+  assert(arena.get_unchecked(0i32) == 11i32, "arena copy aliased source")
+  arena.rollback(checkpoint)
+  assert(arena.length() == 2i32, "arena rollback changed checkpoint")
+  match arena.get(third) {
+    None => {}
+    _ => assert(false, "arena rollback retained removed id")
+  }
+}

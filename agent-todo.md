@@ -5,9 +5,11 @@
 ## P1 — self-hosting
 
 1. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
-2. Implement Dew-native Wasm construction, validation, and encoding so the compiler no longer depends on MoonBit Starshine packages.
+2. Link the compiled Starshine binary through Dew foreign imports, freeze its typed ABI, and include its exact bytes in deterministic compiler fingerprints.
 3. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
 4. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
+
+Use [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md) for the audited host, Wasm, collection, and port-surface gaps. Port-enabling options in that catalog remain decisions, not active backlog items, until explicitly selected.
 
 Indexed implementation uniqueness, mutable struct fields, and complete `@alias` namespace lookup are finished and therefore omitted from this execution-only backlog.
 

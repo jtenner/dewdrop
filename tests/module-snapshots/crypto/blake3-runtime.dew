@@ -1,0 +1,70 @@
+open dew.std.blake3
+open dew.std.fixed_array
+open dew.std.bytes_builder
+open dew.std.string
+open dew.std.string_builder
+
+fn vector_byte(value: U32) -> U8 {
+  value.into()
+}
+
+fn vector_input(length: U32) -> Bytes {
+  let builder = BytesBuilder::with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(vector_byte(index % 251u32))
+      continue index + 1u32
+    }
+    _ => break builder.finish()
+  }
+}
+
+fn u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn u32_to_u8(value: U32) -> U8 {
+  value.into()
+}
+
+fn upper_nibble(value: U8) -> U8 {
+  u32_to_u8(u8_to_u32(value) >> 4u32)
+}
+
+fn hex_digit(value: U8) -> U8 {
+  if value < 10u8 {
+    value + 48u8
+  } else {
+    value + 87u8
+  }
+}
+
+fn digest_hex(digest: FixedArray<U8>) -> String {
+  let builder = StringBuilder::with_capacity(64u32)
+  while 0u32 {
+    index if index < 32u32 => {
+      let byte = digest.get_unchecked(index)
+      builder.append_ascii(hex_digit(upper_nibble(byte)))
+      builder.append_ascii(hex_digit(byte & 15u8))
+      continue index + 1u32
+    }
+    _ => break builder.finish()
+  }
+}
+
+fn check_vector(length: U32, expected: String) -> Unit {
+  assert(
+    digest_hex(blake3(vector_input(length))).equals(expected),
+    "BLAKE3 vector mismatch",
+  )
+}
+
+pub fn main() -> Unit {
+  check_vector(0u32, "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262")
+  check_vector(1u32, "2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213")
+  check_vector(64u32, "4eed7141ea4a5cd4b788606bd23f46e212af9cacebacdc7d1f4c6dc7f2511b98")
+  check_vector(1024u32, "42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7")
+  check_vector(1025u32, "d00278ae47eb27b34faecf67b4fe263f82d5412916c1ffd97c8cb7fb814b8444")
+  check_vector(8193u32, "bab6c09cb8ce8cf459261398d2e7aef35700bf488116ceb94a36d0f5f1b7bc3b")
+  assert(blake3_hash32(b"") == 3108574127u32, "BLAKE3 hash32 lane changed")
+}

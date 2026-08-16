@@ -2,7 +2,10 @@
 
 ## Status
 
-Implemented on August 11, 2026.
+Implemented on August 11, 2026. The complete TypeScript-inspired Array API,
+bulk runtime operations, stable sorting, tests, and per-method benchmarks were
+added on August 16, 2026; see
+[`array-api-and-performance-2026-08-16.md`](array-api-and-performance-2026-08-16.md).
 
 This milestone adds the ambient protocols:
 
@@ -27,27 +30,17 @@ index, and value are evaluated exactly once in source order.
 
 ## `dew.std.array`
 
-`Array<t>` is a mutable reference-identity growable array with these operations:
-
-```dew
-Array::new() -> Array<t>
-Array::with_capacity(capacity: U32) -> Array<t>
-Array<t>.length() -> U32
-Array<t>.capacity() -> U32
-Array<t>.is_empty() -> Bool
-Array<t>.push(value: t) -> Unit
-Array<t>.pop() -> Option<t>
-Array<t>.get(index: U32) -> Option<t>
-Array<t>.get_unchecked(index: U32) -> t
-Array<t>.set(index: U32, value: t) -> Bool
-Array<t>.set_unchecked(index: U32, value: t) -> Unit
-Array<t>.clear() -> Unit
-Array<t>.iter() -> ArrayIter<t>
-```
+`Array<t>` is a mutable reference-identity growable array. Its original
+constructor, capacity, access, push/pop, clear, index, and value-iterator surface
+now also includes make/reserve/shrink/truncate/copy/extend, deque-like mutation,
+strict bulk ranges, immutable variants, splice, search, structural equality,
+callbacks, stable sorting, flattening, and key/entry iterators. The exact API and
+semantics are listed in
+[`array-api-and-performance-2026-08-16.md`](array-api-and-performance-2026-08-16.md).
 
 Index syntax uses trapping unchecked get/set semantics. Safe `get` returns
-`Option::None`; safe `set` returns false. `pop` returns `Option::None` when the
-array is empty. Calling an exhausted iterator's `next` traps.
+`Option::None`; safe `set` returns false. `pop`, `shift`, search, and signed `at`
+return `Option`. Calling an exhausted iterator's `next` traps.
 
 ### Physical representation
 
@@ -173,12 +166,10 @@ Node/Wago snapshots remain the deterministic correctness contract.
 
 ## Remaining work
 
-- Add bulk reserve, shrink, extend, copy, fill, and slice APIs after their
-  evaluation and overlap semantics are specified.
-- Extend bulk reserve, shrink, copy, fill, and slice APIs only after evaluation,
-  overlap, and alias semantics are specified.
-- Mutation-version invalidation rules are now specified and implemented for
-  Array and the other mutable collection iterators.
+- Keep cross-engine Array benchmarks as measurements rather than fixed release
+  thresholds until more production workloads exist.
+- Add a dedicated compiler-local signed `Arena<t>` facade when the Dew compiler
+  port begins; do not weaken the public U32 Array boundary.
 - Circular-buffer queues, hash collections, heaps, and ordered-tree
   representations are implemented and benchmarked; linked/persistent sequence
   alternatives remain measurement-driven.

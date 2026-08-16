@@ -1,0 +1,30 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+fn even(value: I32) -> Bool {
+  value % 2 == 0
+}
+
+fn even_index(value: I32, index: U32) -> Bool {
+  value % 2 == 0 && index % 2u32 == 1u32
+}
+
+pub fn main() -> Unit {
+  let values = values()
+  let filtered = values.filter(even)
+  assert(filtered.length() == 2u32, "filter length")
+  assert(filtered[0u32] == 2, "filter first")
+  assert(filtered[1u32] == 4, "filter second")
+  assert(values.filter_indexed(even_index).equals(filtered), "filter indexed")
+  wasi_fd_write(1u32, b"collections:array-filter-runtime")
+}

@@ -39,7 +39,7 @@
       "operations": {
         "ArrayNew": [2, 17],
         "ArrayWithCapacity": [3, 18],
-        "ArrayLength": [4, 19, 21],
+        "ArrayLength": [4, 19],
         "ArrayCapacity": [5, 20],
         "ArrayGet": [6, 24],
         "ArrayGetUnchecked": [7, 25, 31],
@@ -50,7 +50,16 @@
         "ArrayClear": [12, 28],
         "ArrayIter": [13, 29],
         "ArrayIterHasNext": [14, 35],
-        "ArrayIterNext": [15, 36]
+        "ArrayIterNext": [15, 36],
+        "ArrayMake": [37],
+        "ArrayReserve": [38],
+        "ArrayShrinkToFit": [39],
+        "ArrayTruncate": [40],
+        "ArrayCopy": [41],
+        "ArrayCopyWithin": [42],
+        "ArrayFill": [43],
+        "ArraySlice": [44],
+        "ArrayExtend": [45]
       }
     },
     "stack": {

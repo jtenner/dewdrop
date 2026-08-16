@@ -23,11 +23,13 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 ### P1 — self-hosting
 
 1. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
-2. Replace the compiler's MoonBit Starshine model, validator, and encoder dependencies with Dew-native Wasm construction, validation, and encoding.
+2. Link the compiled Starshine binary through Dew foreign imports, freeze its typed ABI, and include its exact bytes in deterministic compiler fingerprints.
 3. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
 4. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
 
-Indexed implementation uniqueness, mutable struct fields, and complete `@alias` namespace lookup are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
+The audited hard blockers, missing compiler-library operations, bootstrap-only boundaries, and optional port-enabling language additions are cataloged in [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](research/self-hosting-compiler-gap-catalog-2026-08-16.md). Items described there as port-enabling do not become P1 automatically; promote them only when the port chooses that path.
+
+Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, and Dew-native BLAKE3 are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
 
 ### P2 — deferred until self-hosting
 

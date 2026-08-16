@@ -1,0 +1,25 @@
+open dew.std.string
+open dew.std.string_builder
+
+pub fn main() -> Unit {
+  let builder = StringBuilder::new()
+  builder.append_i8(-128i8)
+  builder.append_ascii(44u8)
+  builder.append_i16(-32768i16)
+  builder.append_ascii(44u8)
+  builder.append_i32(-2147483648i32)
+  builder.append_ascii(44u8)
+  builder.append_i64(-9223372036854775808i64)
+  builder.append_ascii(44u8)
+  builder.append_u8(255u8)
+  builder.append_ascii(44u8)
+  builder.append_u16(65535u16)
+  builder.append_ascii(44u8)
+  builder.append_u32(4294967295u32)
+  builder.append_ascii(44u8)
+  builder.append_u64(18446744073709551615u64)
+  assert(
+    builder.finish().equals("-128,-32768,-2147483648,-9223372036854775808,255,65535,4294967295,18446744073709551615"),
+    "direct integer append changed decimal text",
+  )
+}

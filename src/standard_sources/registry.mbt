@@ -11,8 +11,9 @@ pub fn standard_source_paths() -> Array[String] {
     "std/collections/priority_queue.dew", "std/collections/red_black_tree.dew", "std/collections/ordered_map.dew",
     "std/collections/ordered_set.dew", "std/show.dew", "std/disposable.dew", "std/iter.dew",
     "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/bloom_filter.dew",
-    "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew", "std/string_builder.dew",
-    "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/blake3.dew", "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew",
+    "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew",
+    "std/wasi.dew", "std/wasm/intrinsics.dew",
   ]
   for
     name in [
@@ -67,6 +68,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/testing.dew" => Some(standard_testing_source())
     "std/json.dew" => Some(standard_json_source())
     "std/bloom_filter.dew" => Some(standard_bloom_filter_source())
+    "std/blake3.dew" => Some(standard_blake3_source())
     "std/iter.dew" => Some(standard_iter_source())
     "std/text_runtime.dew" => Some(standard_text_sources()[0])
     "std/string.dew" => Some(standard_text_sources()[1])

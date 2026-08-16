@@ -18,7 +18,7 @@ test "fixed array standard source has stable compiler-owned identities" {
   )
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(semantic_id_local(collected.lookup_type("FixedArray").unwrap()), 0)
-  assert_eq(collected.callables.length(), 8)
+  assert_eq(collected.callables.length(), 11)
   assert_eq(semantic_id_local(collected.callables[0].declaration), 2)
   assert_eq(semantic_id_local(collected.callables[6].declaration), 9)
   assert_eq(semantic_id_local(collected.callables[7].declaration), 11)

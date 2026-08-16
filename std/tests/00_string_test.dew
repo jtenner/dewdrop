@@ -1,3 +1,4 @@
+open dew.std.fixed_array
 open dew.std.string
 open dew.std.string_builder
 open dew.std.bytes

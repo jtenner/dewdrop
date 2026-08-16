@@ -38,3 +38,35 @@ impl<t> IndexedSet<U32, t> for FixedArray<t> {
     wasm_array_set(self, index, value)
   }
 }
+
+impl<t: Eq> FixedArray<t> {
+  fn equals(self, right: FixedArray<t>) -> Bool {
+    let length = wasm_array_len(self)
+    if length != wasm_array_len(right) {
+      false
+    } else {
+      while 0u32 {
+        index if index < length => {
+          if wasm_array_get(self, index) == wasm_array_get(right, index) {
+            continue index + 1u32
+          } else {
+            break false
+          }
+        }
+        _ => break true
+      }
+    }
+  }
+}
+
+impl<t: Eq> Eq for FixedArray<t> {
+  fn eq(self, right: FixedArray<t>) -> Bool {
+    self.equals(right)
+  }
+}
+
+impl<t: Eq> Ne for FixedArray<t> {
+  fn ne(self, right: FixedArray<t>) -> Bool {
+    !self.equals(right)
+  }
+}

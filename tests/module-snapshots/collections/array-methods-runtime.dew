@@ -1,0 +1,500 @@
+open dew.std.array
+open dew.std.string
+open dew.std.wasi
+
+fn empty_i32_array() -> Array<I32> {
+  Array::new()
+}
+
+fn i32_array_with_capacity(capacity: U32) -> Array<I32> {
+  Array::with_capacity(capacity)
+}
+
+fn nested_i32_array() -> Array<Array<I32>> {
+  Array::with_capacity(3u32)
+}
+
+fn array_values() -> Array<I32> {
+  let values = Array::new()
+  values.push(1)
+  values.push(2)
+  values.push(3)
+  values.push(4)
+  values.push(5)
+  values
+}
+
+fn array_pair(first: I32, second: I32) -> Array<I32> {
+  let values = Array::with_capacity(2u32)
+  values.push(first)
+  values.push(second)
+  values
+}
+
+fn array_take_i32(value: Option<I32>) -> I32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+fn array_take_u32(value: Option<U32>) -> U32 {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+fn array_twice(value: I32) -> I32 {
+  value * 2
+}
+
+fn array_add(left: I32, right: I32) -> I32 {
+  left + right
+}
+
+fn array_add_index(left: I32, right: I32, index: U32) -> I32 {
+  left + right + u32_into_i32(index)
+}
+
+fn array_is_even(value: I32) -> Bool {
+  value % 2 == 0
+}
+
+fn array_is_even_index(value: I32, index: U32) -> Bool {
+  value % 2 == 0 && index % 2u32 == 1u32
+}
+
+fn array_is_three(value: I32) -> Bool {
+  value == 3
+}
+
+fn array_is_odd(value: I32) -> Bool {
+  value % 2 != 0
+}
+
+fn array_index_matches(value: I32, index: U32) -> Bool {
+  value == u32_into_i32(index) + 1
+}
+
+fn array_expand(value: I32) -> Array<I32> {
+  array_pair(value, value + 10)
+}
+
+fn array_render(value: I32) -> String {
+  if value == 1 {
+    "one"
+  } else if value == 2 {
+    "two"
+  } else {
+    "other"
+  }
+}
+
+fn array_count_positive(total: U32, value: I32) -> U32 {
+  if value > 0 {
+    total + 1u32
+  } else {
+    total
+  }
+}
+
+struct ArraySortItem {
+  key: I32
+  order: I32
+}
+
+struct ArrayDescending {}
+
+impl ArrayComparator<I32> for ArrayDescending {
+  fn before(self, left: I32, right: I32) -> Bool {
+    left > right
+  }
+}
+
+struct ArraySortItemComparator {}
+
+impl ArrayComparator<ArraySortItem> for ArraySortItemComparator {
+  fn before(self, left: ArraySortItem, right: ArraySortItem) -> Bool {
+    left.key < right.key
+  }
+}
+
+fn array_sort_items() -> Array<ArraySortItem> {
+  Array::with_capacity(5u32)
+}
+
+fn array_string_equals(value: String, expected: String) -> Bool {
+  value.equals(expected)
+}
+
+fn array_sort_item_key(value: ArraySortItem) -> I32 {
+  value.key
+}
+
+fn array_sort_item_order(value: ArraySortItem) -> I32 {
+  value.order
+}
+
+fn array_case_0() -> Unit {
+  let empty = empty_i32_array()
+  assert(empty.length() == 0u32, "new length")
+  assert(empty.capacity() == 0u32, "new capacity")
+  assert(empty.is_empty(), "new empty")
+  assert(empty.first() is Option::None, "new first")
+  assert(empty.last() is Option::None, "new last")
+  assert(empty.at(0) is Option::None, "new at zero")
+  assert(empty.at(-1) is Option::None, "new at negative")
+
+  let reserved = i32_array_with_capacity(7u32)
+  assert(reserved.length() == 0u32, "reserved length")
+  assert(reserved.capacity() == 7u32, "reserved capacity")
+
+  let made = Array::make(5u32, 9)
+  assert(made.length() == 5u32, "make length")
+  assert(made.capacity() == 5u32, "make capacity")
+  assert(made[0u32] == 9, "make first")
+  assert(made[2u32] == 9, "make middle")
+  assert(made[4u32] == 9, "make last")
+  assert(array_take_i32(made.first()) == 9, "first value")
+  assert(array_take_i32(made.last()) == 9, "last value")
+  assert(array_take_i32(made.at(0)) == 9, "at first")
+  assert(array_take_i32(made.at(4)) == 9, "at last")
+  assert(array_take_i32(made.at(-1)) == 9, "at negative one")
+  assert(array_take_i32(made.at(-5)) == 9, "at negative length")
+  assert(made.at(5) is Option::None, "at positive out of range")
+  assert(made.at(-6) is Option::None, "at negative out of range")
+}
+
+
+fn array_case_1() -> Unit {
+  let values = array_values()
+  let alias = values
+  alias[1u32] = 20
+  assert(values[1u32] == 20, "alias indexed mutation")
+  let copied = values.copy()
+  let cloned = values.clone()
+  copied[0u32] = 100
+  cloned[4u32] = 500
+  assert(values[0u32] == 1, "copy does not mutate source first")
+  assert(values[4u32] == 5, "clone does not mutate source last")
+  assert(copied[0u32] == 100, "copy owns first")
+  assert(cloned[4u32] == 500, "clone owns last")
+  assert(copied.capacity() == copied.length(), "copy exact capacity")
+  assert(cloned.capacity() == cloned.length(), "clone exact capacity")
+}
+
+
+fn array_case_2() -> Unit {
+  let values = array_values()
+  let initial = values.capacity()
+  values.reserve(0u32)
+  assert(values.capacity() == initial, "reserve zero no-op")
+  values.reserve(20u32)
+  assert(values.capacity() >= 25u32, "reserve additional capacity")
+  assert(values.length() == 5u32, "reserve length")
+  assert(values[0u32] == 1, "reserve first")
+  assert(values[4u32] == 5, "reserve last")
+  values.truncate(3u32)
+  assert(values.length() == 3u32, "truncate length")
+  assert(values[0u32] == 1, "truncate first")
+  assert(values[2u32] == 3, "truncate final live")
+  let grown = values.capacity()
+  values.truncate(3u32)
+  assert(values.capacity() == grown, "truncate same preserves capacity")
+  values.shrink_to_fit()
+  assert(values.capacity() == 3u32, "shrink exact capacity")
+  assert(values.length() == 3u32, "shrink length")
+  values.clear()
+  assert(values.length() == 0u32, "clear length")
+  assert(values.capacity() == 3u32, "clear capacity")
+  values.shrink_to_fit()
+  assert(values.capacity() == 0u32, "empty shrink capacity")
+  values.push(42)
+  assert(values[0u32] == 42, "push after empty shrink")
+}
+
+
+fn array_case_3() -> Unit {
+  let values = array_values()
+  values.fill(9, 2u32, 2u32)
+  assert(values.equals(array_values()), "empty fill no-op")
+  values.fill(7, 1u32, 4u32)
+  assert(values[0u32] == 1, "partial fill prefix")
+  assert(values[1u32] == 7, "partial fill first")
+  assert(values[2u32] == 7, "partial fill middle")
+  assert(values[3u32] == 7, "partial fill final")
+  assert(values[4u32] == 5, "partial fill suffix")
+  values.fill(8, 0u32, values.length())
+  assert(values[0u32] == 8, "full fill first")
+  assert(values[2u32] == 8, "full fill middle")
+  assert(values[4u32] == 8, "full fill last")
+}
+
+
+fn array_case_4() -> Unit {
+  let right = array_values()
+  right.copy_within(1u32, 0u32, 4u32)
+  assert(right[0u32] == 1, "right overlap prefix")
+  assert(right[1u32] == 1, "right overlap one")
+  assert(right[2u32] == 2, "right overlap two")
+  assert(right[3u32] == 3, "right overlap three")
+  assert(right[4u32] == 4, "right overlap four")
+
+  let left = array_values()
+  left.copy_within(0u32, 1u32, 5u32)
+  assert(left[0u32] == 2, "left overlap zero")
+  assert(left[1u32] == 3, "left overlap one")
+  assert(left[2u32] == 4, "left overlap two")
+  assert(left[3u32] == 5, "left overlap three")
+  assert(left[4u32] == 5, "left overlap suffix")
+
+  let same = array_values()
+  same.copy_within(2u32, 2u32, 5u32)
+  assert(same.equals(array_values()), "same range copy")
+  same.copy_within(5u32, 5u32, 5u32)
+  assert(same.equals(array_values()), "empty end copy")
+}
+
+
+fn array_case_5() -> Unit {
+  let values = array_values()
+  let empty = values.slice(2u32, 2u32)
+  assert(empty.is_empty(), "empty slice")
+  assert(empty.capacity() == 0u32, "empty slice capacity")
+  let middle = values.slice(1u32, 4u32)
+  assert(middle.length() == 3u32, "middle slice length")
+  assert(middle[0u32] == 2, "middle slice first")
+  assert(middle[1u32] == 3, "middle slice middle")
+  assert(middle[2u32] == 4, "middle slice last")
+  middle[0u32] = 20
+  assert(values[1u32] == 2, "slice is independent")
+
+  let joined = values.concat(array_pair(6, 7))
+  assert(joined.length() == 7u32, "concat length")
+  assert(joined[0u32] == 1, "concat first")
+  assert(joined[4u32] == 5, "concat boundary left")
+  assert(joined[5u32] == 6, "concat boundary right")
+  assert(joined[6u32] == 7, "concat last")
+  assert(values.length() == 5u32, "concat source unchanged")
+
+  values.extend(array_pair(6, 7))
+  assert(values.length() == 7u32, "extend length")
+  assert(values[5u32] == 6, "extend first added")
+  assert(values[6u32] == 7, "extend final added")
+  values.push_all(empty_i32_array())
+  assert(values.length() == 7u32, "extend empty")
+
+  let self = array_pair(8, 9)
+  self.extend(self)
+  assert(self.length() == 4u32, "self extend length")
+  assert(self[0u32] == 8, "self extend zero")
+  assert(self[1u32] == 9, "self extend one")
+  assert(self[2u32] == 8, "self extend two")
+  assert(self[3u32] == 9, "self extend three")
+}
+
+
+fn array_case_6() -> Unit {
+  let values = empty_i32_array()
+  assert(values.shift() is Option::None, "empty shift")
+  assert(values.pop() is Option::None, "empty pop")
+  assert(values.remove(0u32) is Option::None, "empty remove")
+  assert(!values.insert(1u32, 9), "insert beyond empty")
+
+  values.unshift(2)
+  values.unshift(1)
+  values.push(4)
+  assert(values.insert(2u32, 3), "insert middle")
+  assert(values.insert(values.length(), 5), "insert end")
+  assert(values.length() == 5u32, "inserted length")
+  assert(values[0u32] == 1, "inserted zero")
+  assert(values[1u32] == 2, "inserted one")
+  assert(values[2u32] == 3, "inserted two")
+  assert(values[3u32] == 4, "inserted three")
+  assert(values[4u32] == 5, "inserted four")
+
+  assert(array_take_i32(values.shift()) == 1, "shift value")
+  assert(array_take_i32(values.remove(1u32)) == 3, "remove middle value")
+  assert(array_take_i32(values.remove(values.length() - 1u32)) == 5, "remove end value")
+  let popped = values.pop()
+  assert(array_take_i32(popped) == 4, "pop value")
+  assert(values.length() == 1u32, "mutation final length")
+  assert(values[0u32] == 2, "mutation final value")
+  assert(values.remove(1u32) is Option::None, "remove end out of range")
+}
+
+
+fn array_case_7() -> Unit {
+  let values = array_values()
+  let reversed = values.to_reversed()
+  assert(values[0u32] == 1, "to_reversed source first")
+  assert(values[4u32] == 5, "to_reversed source last")
+  assert(reversed[0u32] == 5, "to_reversed first")
+  assert(reversed[1u32] == 4, "to_reversed second")
+  assert(reversed[2u32] == 3, "to_reversed middle")
+  assert(reversed[3u32] == 2, "to_reversed fourth")
+  assert(reversed[4u32] == 1, "to_reversed last")
+  values.reverse()
+  assert(values.equals(reversed), "reverse matches immutable reverse")
+  let empty = empty_i32_array()
+  empty.reverse()
+  assert(empty.is_empty(), "reverse empty")
+  let one = Array::make(1u32, 9)
+  one.reverse()
+  assert(one[0u32] == 9, "reverse one")
+}
+
+
+fn array_case_8() -> Unit {
+  let grow = array_values()
+  let removed = grow.splice(1u32, 2u32, Array::make(4u32, 9))
+  assert(removed.length() == 2u32, "grow splice removed length")
+  assert(removed[0u32] == 2, "grow splice removed first")
+  assert(removed[1u32] == 3, "grow splice removed second")
+  assert(grow.length() == 7u32, "grow splice length")
+  assert(grow[0u32] == 1, "grow splice prefix")
+  assert(grow[1u32] == 9, "grow splice insert one")
+  assert(grow[4u32] == 9, "grow splice insert four")
+  assert(grow[5u32] == 4, "grow splice tail one")
+  assert(grow[6u32] == 5, "grow splice tail two")
+
+  let shrink = array_values()
+  let shrink_removed = shrink.splice(1u32, 3u32, array_pair(8, 9))
+  assert(shrink_removed.length() == 3u32, "shrink removed length")
+  assert(shrink_removed[0u32] == 2, "shrink removed first")
+  assert(shrink_removed[2u32] == 4, "shrink removed last")
+  assert(shrink.length() == 4u32, "shrink splice length")
+  assert(shrink[0u32] == 1, "shrink prefix")
+  assert(shrink[1u32] == 8, "shrink insert first")
+  assert(shrink[2u32] == 9, "shrink insert second")
+  assert(shrink[3u32] == 5, "shrink tail")
+
+  let deleted = array_values()
+  let all = deleted.splice(0u32, 99u32, empty_i32_array())
+  assert(all.equals(array_values()), "delete all removed")
+  assert(deleted.is_empty(), "delete all source")
+
+  let appended = array_values()
+  appended.splice(appended.length(), 0u32, array_pair(6, 7))
+  assert(appended.length() == 7u32, "splice append length")
+  assert(appended[5u32] == 6, "splice append first")
+  assert(appended[6u32] == 7, "splice append second")
+
+  let aliased = array_pair(1, 2)
+  aliased.splice(1u32, 0u32, aliased)
+  assert(aliased.length() == 4u32, "alias splice length")
+  assert(aliased[0u32] == 1, "alias splice zero")
+  assert(aliased[1u32] == 1, "alias splice one")
+  assert(aliased[2u32] == 2, "alias splice two")
+  assert(aliased[3u32] == 2, "alias splice three")
+}
+
+
+fn array_case_9() -> Unit {
+  let values = array_values()
+  let changed = values.to_spliced(1u32, 3u32, array_pair(8, 9))
+  assert(values.equals(array_values()), "to_spliced source")
+  assert(changed.length() == 4u32, "to_spliced length")
+  assert(changed[0u32] == 1, "to_spliced prefix")
+  assert(changed[1u32] == 8, "to_spliced first insert")
+  assert(changed[2u32] == 9, "to_spliced second insert")
+  assert(changed[3u32] == 5, "to_spliced suffix")
+}
+
+
+fn array_case_10() -> Unit {
+  let values = empty_i32_array()
+  values.push(4)
+  values.push(2)
+  values.push(4)
+  values.push(3)
+  values.push(4)
+  assert(values.includes(4), "includes present")
+  assert(!values.includes(9), "includes absent")
+  assert(array_take_u32(values.index_of(4)) == 0u32, "index_of first")
+  assert(array_take_u32(values.index_of_from(4, 1u32)) == 2u32, "index_of from")
+  assert(values.index_of_from(4, 5u32) is Option::None, "index_of at end")
+  assert(values.index_of_from(4, 6u32) is Option::None, "index_of beyond end")
+  assert(array_take_u32(values.last_index_of(4)) == 4u32, "last_index_of last")
+  assert(array_take_u32(values.last_index_of_before(4, 4u32)) == 2u32, "last_index before")
+  assert(values.last_index_of_before(4, 0u32) is Option::None, "last index empty prefix")
+  assert(values.last_index_of_before(4, 6u32) is Option::None, "last index invalid end")
+}
+
+
+fn array_case_11() -> Unit {
+  let values = array_values()
+  let same = array_values()
+  let reordered = array_values()
+  reordered.swap(0u32, 1u32)
+  assert(values.equals(same), "equals same values")
+  assert(values == same, "Eq same values")
+  assert(!(values != same), "Ne same values")
+  assert(!values.equals(reordered), "equals order")
+  assert(values != reordered, "Ne order")
+  same.pop()
+  assert(!values.equals(same), "equals length")
+  assert(!(values == same), "Eq length")
+}
+
+
+fn array_case_12() -> Unit {
+  let values = empty_i32_array()
+  values.push(5)
+  values.push(1)
+  values.push(4)
+  values.push(2)
+  values.push(3)
+  values.push(2)
+  let sorted = values.to_sorted()
+  assert(values[0u32] == 5, "to_sorted source first")
+  assert(values[5u32] == 2, "to_sorted source last")
+  assert(sorted[0u32] == 1, "sorted zero")
+  assert(sorted[1u32] == 2, "sorted one")
+  assert(sorted[2u32] == 2, "sorted two")
+  assert(sorted[3u32] == 3, "sorted three")
+  assert(sorted[4u32] == 4, "sorted four")
+  assert(sorted[5u32] == 5, "sorted five")
+  values.sort()
+  assert(values.equals(sorted), "in-place sort")
+  let empty = empty_i32_array()
+  empty.sort()
+  assert(empty.is_empty(), "sort empty")
+  let one = Array::make(1u32, 7)
+  one.sort()
+  assert(one[0u32] == 7, "sort one")
+}
+
+
+fn array_case_13() -> Unit {
+  let nested = nested_i32_array()
+  nested.push(array_pair(1, 2))
+  nested.push(empty_i32_array())
+  nested.push(array_pair(3, 4))
+  let flat = nested.flat()
+  assert(flat.length() == 4u32, "flat length")
+  assert(flat[0u32] == 1, "flat zero")
+  assert(flat[1u32] == 2, "flat one")
+  assert(flat[2u32] == 3, "flat two")
+  assert(flat[3u32] == 4, "flat three")
+}
+
+
+pub fn main() -> Unit {
+  array_case_0()
+  array_case_1()
+  array_case_2()
+  array_case_3()
+  array_case_4()
+  array_case_5()
+  array_case_6()
+  array_case_7()
+  array_case_8()
+  array_case_9()
+  array_case_10()
+  array_case_11()
+  array_case_12()
+  array_case_13()
+  wasi_fd_write(1u32, b"collections:array-methods-runtime")
+}

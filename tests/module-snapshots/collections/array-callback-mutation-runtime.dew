@@ -1,0 +1,42 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+fn empty_values() -> Array<I32> {
+  Array::new()
+}
+
+pub fn main() -> Unit {
+  let source = values()
+  let observed = empty_values()
+  source.for_each(fn(value: I32) -> Unit {
+    observed.push(value)
+    if value == 1 {
+      source.clear()
+    } else {
+    }
+  })
+  assert(observed.length() == 1u32, "for_each skips removed positions")
+  assert(observed[0u32] == 1, "for_each keeps first")
+
+  let filtering = values()
+  let kept = filtering.filter(fn(value: I32) -> Bool {
+    if value == 1 {
+      filtering.clear()
+    } else {
+    }
+    true
+  })
+  assert(kept.length() == 1u32, "filter skips removed positions")
+  assert(kept[0u32] == 1, "filter keeps first")
+  wasi_fd_write(1u32, b"collections:array-callback-mutation-runtime")
+}

@@ -20,12 +20,50 @@ test "array standard source has stable compiler-owned identities" {
   assert_eq(semantic_id_local(collected.lookup_type("Array").unwrap()), 0)
   assert_eq(semantic_id_local(collected.lookup_type("ArrayIter").unwrap()), 1)
   assert_eq(semantic_id_local(collected.lookup_value("array_new").unwrap()), 2)
-  assert_eq(collected.callables.length(), 31)
+  assert_eq(collected.callables.length(), 146)
   assert_eq(semantic_id_local(collected.callables[0].declaration), 2)
   assert_eq(semantic_id_local(collected.callables[13].declaration), 15)
   assert_eq(semantic_id_local(collected.callables[14].declaration), 17)
   assert_eq(semantic_id_local(collected.callables[28].declaration), 33)
   assert_eq(semantic_id_local(collected.callables[30].declaration), 36)
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_make_raw").unwrap()),
+    37,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_reserve_raw").unwrap()),
+    38,
+  )
+  assert_eq(
+    semantic_id_local(
+      collected.lookup_value("array_shrink_to_fit_raw").unwrap(),
+    ),
+    39,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_truncate_raw").unwrap()),
+    40,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_copy_raw").unwrap()),
+    41,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_copy_within_raw").unwrap()),
+    42,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_fill_raw").unwrap()),
+    43,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_slice_raw").unwrap()),
+    44,
+  )
+  assert_eq(
+    semantic_id_local(collected.lookup_value("array_extend_raw").unwrap()),
+    45,
+  )
 }
 
 ///|

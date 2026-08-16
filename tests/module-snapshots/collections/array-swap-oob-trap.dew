@@ -1,0 +1,5 @@
+open dew.std.array
+
+pub fn main() -> Unit {
+  Array::make(3u32, 7).swap(0u32, 3u32)
+}

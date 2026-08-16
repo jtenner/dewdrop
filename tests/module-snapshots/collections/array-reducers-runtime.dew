@@ -1,0 +1,37 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output.push(4)
+  output.push(5)
+  output
+}
+
+fn empty_values() -> Array<I32> {
+  Array::new()
+}
+
+fn add(left: I32, right: I32) -> I32 {
+  left + right
+}
+
+fn add_index(left: I32, right: I32, index: U32) -> I32 {
+  left + right + u32_into_i32(index)
+}
+
+pub fn main() -> Unit {
+  let values = values()
+  assert(values.reduce(0, add) == 15, "reduce sum")
+  assert(values.reduce_indexed(0, add_index) == 25, "reduce indexed")
+  assert(values.reduce_right(0, fn(total: I32, value: I32) -> I32 {
+    total * 10 + value
+  }) == 54321, "reduce right order")
+  let empty = empty_values()
+  assert(empty.reduce(7, add) == 7, "empty reduce")
+  assert(empty.reduce_right(9, add) == 9, "empty reduce right")
+  wasi_fd_write(1u32, b"collections:array-reducers-runtime")
+}

@@ -78,3 +78,1159 @@ impl<t> Iter<t> for ArrayIter<t> {
     array_iter_next(self)
   }
 }
+
+builtin array_make_raw<t>(length: U32, value: t) -> Array<t> = "dew_array_make"
+builtin array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit = "dew_array_reserve"
+builtin array_shrink_to_fit_raw<t>(value: Array<t>) -> Unit = "dew_array_shrink_to_fit"
+builtin array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit = "dew_array_truncate"
+builtin array_copy_raw<t>(value: Array<t>) -> Array<t> = "dew_array_copy"
+builtin array_copy_within_raw<t>(value: Array<t>, target: U32, start: U32, end: U32) -> Unit = "dew_array_copy_within"
+builtin array_fill_raw<t>(value: Array<t>, item: t, start: U32, end: U32) -> Unit = "dew_array_fill"
+builtin array_slice_raw<t>(value: Array<t>, start: U32, end: U32) -> Array<t> = "dew_array_slice"
+builtin array_extend_raw<t>(value: Array<t>, source: Array<t>) -> Unit = "dew_array_extend"
+
+pub trait ArrayComparator<t> {
+  fn before(self, left: t, right: t) -> Bool
+}
+
+pub struct NaturalArrayComparator {}
+
+pub fn natural_array_comparator() -> NaturalArrayComparator {
+  NaturalArrayComparator::{
+  }
+}
+
+impl<t: Lt> ArrayComparator<t> for NaturalArrayComparator {
+  fn before(self, left: t, right: t) -> Bool {
+    left < right
+  }
+}
+
+pub struct ArrayEntry<t> {
+  index: U32
+  value: t
+}
+
+pub struct ArrayKeyIter<t> {
+  values: Array<t>
+  mut index: U32
+}
+
+pub struct ArrayEntryIter<t> {
+  values: Array<t>
+  mut index: U32
+}
+
+fn array_unit() -> Unit {}
+
+fn array_min(left: U32, right: U32) -> U32 {
+  if left < right {
+    left
+  } else {
+    right
+  }
+}
+
+fn array_require_range(length: U32, start: U32, end: U32) -> Unit {
+  if start > end || end > length {
+    unreachable()
+  } else {
+  }
+}
+
+fn array_extend_values<t>(value: Array<t>, source: Array<t>) -> Unit {
+  array_extend_raw(value, source)
+}
+
+fn array_at_index(length: U32, index: I32) -> Option<U32> {
+  let wide_length = u32_into_i64(length)
+  let wide_index = i32_into_i64(index)
+  let resolved = if wide_index < 0i64 {
+    wide_length + wide_index
+  } else {
+    wide_index
+  }
+  if resolved < 0i64 || resolved >= wide_length {
+    Option::None
+  } else {
+    Option::Some(i64_into_u32(resolved))
+  }
+}
+
+fn array_merge_pass_natural<t: Lt>(
+  source: Array<t>,
+  target: Array<t>,
+  width: U32,
+  length: U32,
+) -> Unit {
+  while 0u32 {
+    left if left < length => {
+      let middle = if width > length - left {
+        length
+      } else {
+        left + width
+      }
+      let end = if width > length - middle {
+        length
+      } else {
+        middle + width
+      }
+      let mut first = left
+      let mut second = middle
+      let mut output = left
+      while true {
+        true if first < middle && second < end => {
+          let left_value = array_get_unchecked(source, first)
+          let right_value = array_get_unchecked(source, second)
+          if right_value < left_value {
+            array_set_unchecked(target, output, right_value)
+            second = second + 1u32
+          } else {
+            array_set_unchecked(target, output, left_value)
+            first = first + 1u32
+          }
+          output = output + 1u32
+          continue true
+        }
+        _ => break array_unit()
+      }
+      while first {
+        index if index < middle => {
+          let value = array_get_unchecked(source, index)
+          array_set_unchecked(target, output, value)
+          output = output + 1u32
+          continue index + 1u32
+        }
+        _ => break array_unit()
+      }
+      while second {
+        index if index < end => {
+          let value = array_get_unchecked(source, index)
+          array_set_unchecked(target, output, value)
+          output = output + 1u32
+          continue index + 1u32
+        }
+        _ => break array_unit()
+      }
+      continue end
+    }
+    _ => break array_unit()
+  }
+}
+
+fn array_merge_pass<t, c: ArrayComparator<t>>(
+  source: Array<t>,
+  target: Array<t>,
+  width: U32,
+  length: U32,
+  comparator: c,
+) -> Unit {
+  while 0u32 {
+    left if left < length => {
+      let middle = if width > length - left {
+        length
+      } else {
+        left + width
+      }
+      let end = if width > length - middle {
+        length
+      } else {
+        middle + width
+      }
+      let mut first = left
+      let mut second = middle
+      let mut output = left
+      while true {
+        true if first < middle && second < end => {
+          let left_value = array_get_unchecked(source, first)
+          let right_value = array_get_unchecked(source, second)
+          if comparator.before(right_value, left_value) {
+            array_set_unchecked(target, output, right_value)
+            second = second + 1u32
+          } else {
+            array_set_unchecked(target, output, left_value)
+            first = first + 1u32
+          }
+          output = output + 1u32
+          continue true
+        }
+        _ => break array_unit()
+      }
+      while first {
+        index if index < middle => {
+          let value = array_get_unchecked(source, index)
+          array_set_unchecked(target, output, value)
+          output = output + 1u32
+          continue index + 1u32
+        }
+        _ => break array_unit()
+      }
+      while second {
+        index if index < end => {
+          let value = array_get_unchecked(source, index)
+          array_set_unchecked(target, output, value)
+          output = output + 1u32
+          continue index + 1u32
+        }
+        _ => break array_unit()
+      }
+      continue end
+    }
+    _ => break array_unit()
+  }
+}
+
+pub fn array_map_to<t, u>(values: Array<t>, mapper: fn(t) -> u) -> Array<u> {
+  let limit = array_length(values)
+  let output = Array::with_capacity(limit)
+  while 0u32 {
+    index if index < limit => {
+      if index < array_length(values) {
+        array_push(output, mapper(array_get_unchecked(values, index)))
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+pub fn array_map_to_indexed<t, u>(
+  values: Array<t>,
+  mapper: fn(t, U32) -> u,
+) -> Array<u> {
+  let limit = array_length(values)
+  let output = Array::with_capacity(limit)
+  while 0u32 {
+    index if index < limit => {
+      if index < array_length(values) {
+        array_push(output, mapper(array_get_unchecked(values, index), index))
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+pub fn array_flat_map_to<t, u>(
+  values: Array<t>,
+  mapper: fn(t) -> Array<u>,
+) -> Array<u> {
+  let limit = array_length(values)
+  let output = Array::new()
+  while 0u32 {
+    index if index < limit => {
+      if index < array_length(values) {
+        array_extend_values(output, mapper(array_get_unchecked(values, index)))
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+pub fn array_reduce_into<t, state>(
+  values: Array<t>,
+  initial: state,
+  reducer: fn(state, t) -> state,
+) -> state {
+  let limit = array_length(values)
+  let mut state_value = initial
+  while 0u32 {
+    index if index < limit => {
+      if index < array_length(values) {
+        state_value = reducer(
+          state_value,
+          array_get_unchecked(values, index),
+        )
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break state_value
+  }
+}
+
+pub fn array_reduce_right_into<t, state>(
+  values: Array<t>,
+  initial: state,
+  reducer: fn(state, t) -> state,
+) -> state {
+  let mut state_value = initial
+  while array_length(values) {
+    0u32 => break state_value
+    remaining => {
+      let index = remaining - 1u32
+      if index < array_length(values) {
+        state_value = reducer(
+          state_value,
+          array_get_unchecked(values, index),
+        )
+      } else {
+      }
+      continue index
+    }
+  }
+}
+
+pub fn array_sort_by<t, c: ArrayComparator<t>>(
+  values: Array<t>,
+  comparator: c,
+) -> Unit {
+  let length = array_length(values)
+  if length < 2u32 {
+  } else {
+    let scratch = array_copy_raw(values)
+    let mut width = 1u32
+    let mut read_values = true
+    while true {
+      true if width < length => {
+        if read_values {
+          array_merge_pass(values, scratch, width, length, comparator)
+        } else {
+          array_merge_pass(scratch, values, width, length, comparator)
+        }
+        read_values = !read_values
+        if width > length / 2u32 {
+          width = length
+        } else {
+          width = width * 2u32
+        }
+        continue true
+      }
+      _ => break array_unit()
+    }
+    if !read_values {
+      while 0u32 {
+        index if index < length => {
+          let value = array_get_unchecked(scratch, index)
+          array_set_unchecked(values, index, value)
+          continue index + 1u32
+        }
+        _ => break array_unit()
+      }
+    } else {
+    }
+  }
+}
+
+pub fn array_to_sorted_by<t, c: ArrayComparator<t>>(
+  values: Array<t>,
+  comparator: c,
+) -> Array<t> {
+  let output = array_copy_raw(values)
+  array_sort_by(output, comparator)
+  output
+}
+
+impl<t> Array<t> {
+  fn make(length: U32, value: t) -> Array<t> {
+    array_make_raw(length, value)
+  }
+  fn reserve(self, additional: U32) -> Unit {
+    array_reserve_raw(self, additional)
+  }
+  fn shrink_to_fit(self) -> Unit {
+    array_shrink_to_fit_raw(self)
+  }
+  fn truncate(self, length: U32) -> Unit {
+    array_truncate_raw(self, length)
+  }
+  fn copy(self) -> Array<t> {
+    array_copy_raw(self)
+  }
+  fn clone(self) -> Array<t> {
+    array_copy_raw(self)
+  }
+  fn extend(self, source: Array<t>) -> Unit {
+    array_extend_values(self, source)
+  }
+  fn push_all(self, source: Array<t>) -> Unit {
+    array_extend_values(self, source)
+  }
+  fn first(self) -> Option<t> {
+    array_get(self, 0u32)
+  }
+  fn last(self) -> Option<t> {
+    let length = array_length(self)
+    if length == 0u32 {
+      Option::None
+    } else {
+      array_get(self, length - 1u32)
+    }
+  }
+  fn at(self, index: I32) -> Option<t> {
+    match array_at_index(array_length(self), index) {
+      Option::Some(resolved) => array_get(self, resolved)
+      Option::None => Option::None
+    }
+  }
+  fn swap(self, left: U32, right: U32) -> Unit {
+    let length = array_length(self)
+    if left >= length || right >= length {
+      unreachable()
+    } else if left == right {
+    } else {
+      let left_value = array_get_unchecked(self, left)
+      let right_value = array_get_unchecked(self, right)
+      array_set_unchecked(self, left, right_value)
+      array_set_unchecked(self, right, left_value)
+    }
+  }
+  fn shift(self) -> Option<t> {
+    let length = array_length(self)
+    if length == 0u32 {
+      Option::None
+    } else {
+      let value = array_get_unchecked(self, 0u32)
+      if length > 1u32 {
+        array_copy_within_raw(self, 0u32, 1u32, length)
+      } else {
+      }
+      array_truncate_raw(self, length - 1u32)
+      Option::Some(value)
+    }
+  }
+  fn unshift(self, value: t) -> Unit {
+    let length = array_length(self)
+    array_reserve_raw(self, 1u32)
+    array_push(self, value)
+    if length > 0u32 {
+      array_copy_within_raw(self, 1u32, 0u32, length)
+      array_set_unchecked(self, 0u32, value)
+    } else {
+    }
+  }
+  fn insert(self, index: U32, value: t) -> Bool {
+    let length = array_length(self)
+    if index > length {
+      false
+    } else {
+      array_reserve_raw(self, 1u32)
+      array_push(self, value)
+      if index < length {
+        array_copy_within_raw(self, index + 1u32, index, length)
+        array_set_unchecked(self, index, value)
+      } else {
+      }
+      true
+    }
+  }
+  fn remove(self, index: U32) -> Option<t> {
+    let length = array_length(self)
+    if index >= length {
+      Option::None
+    } else {
+      let value = array_get_unchecked(self, index)
+      if index + 1u32 < length {
+        array_copy_within_raw(self, index, index + 1u32, length)
+      } else {
+      }
+      array_truncate_raw(self, length - 1u32)
+      Option::Some(value)
+    }
+  }
+  fn fill(self, value: t, start: U32, end: U32) -> Unit {
+    array_require_range(array_length(self), start, end)
+    array_fill_raw(self, value, start, end)
+  }
+  fn copy_within(self, target: U32, start: U32, end: U32) -> Unit {
+    let length = array_length(self)
+    array_require_range(length, start, end)
+    let count = end - start
+    if target > length || count > length - target {
+      unreachable()
+    } else {
+      array_copy_within_raw(self, target, start, end)
+    }
+  }
+  fn slice(self, start: U32, end: U32) -> Array<t> {
+    array_require_range(array_length(self), start, end)
+    array_slice_raw(self, start, end)
+  }
+  fn concat(self, other: Array<t>) -> Array<t> {
+    let output = array_copy_raw(self)
+    array_extend_values(output, other)
+    output
+  }
+  fn reverse(self) -> Unit {
+    let length = array_length(self)
+    if length > 1u32 {
+      let mut left = 0u32
+      let mut right = length - 1u32
+      while true {
+        true if left < right => {
+          let left_value = array_get_unchecked(self, left)
+          let right_value = array_get_unchecked(self, right)
+          array_set_unchecked(self, left, right_value)
+          array_set_unchecked(self, right, left_value)
+          left = left + 1u32
+          right = right - 1u32
+          continue true
+        }
+        _ => break array_unit()
+      }
+    } else {
+    }
+  }
+  fn to_reversed(self) -> Array<t> {
+    let output = array_copy_raw(self)
+    output.reverse()
+    output
+  }
+  fn splice(self, start: U32, delete_count: U32, items: Array<t>) -> Array<t> {
+    let length = array_length(self)
+    if start > length {
+      unreachable()
+    } else {
+    }
+    let deleted = array_min(delete_count, length - start)
+    let removed = array_slice_raw(self, start, start + deleted)
+    let additions = array_copy_raw(items)
+    let added = array_length(additions)
+    let tail = start + deleted
+    if added > deleted {
+      let extra = added - deleted
+      array_reserve_raw(self, extra)
+      while 0u32 {
+        index if index < extra => {
+          let value = array_get_unchecked(additions, index)
+          array_push(self, value)
+          continue index + 1u32
+        }
+        _ => break array_unit()
+      }
+      if tail < length {
+        array_copy_within_raw(self, start + added, tail, length)
+      } else {
+      }
+    } else if added < deleted {
+      if tail < length {
+        array_copy_within_raw(self, start + added, tail, length)
+      } else {
+      }
+      array_truncate_raw(self, length - (deleted - added))
+    } else {
+    }
+    while 0u32 {
+      index if index < added => {
+        let value = array_get_unchecked(additions, index)
+        array_set_unchecked(self, start + index, value)
+        continue index + 1u32
+      }
+      _ => break array_unit()
+    }
+    removed
+  }
+  fn to_spliced(self, start: U32, delete_count: U32, items: Array<t>) -> Array<t> {
+    let output = array_copy_raw(self)
+    output.splice(start, delete_count, items)
+    output
+  }
+  fn keys(self) -> ArrayKeyIter<t> {
+    ArrayKeyIter::{
+      values: self
+      index: 0u32
+    }
+  }
+  fn entries(self) -> ArrayEntryIter<t> {
+    ArrayEntryIter::{
+      values: self
+      index: 0u32
+    }
+  }
+  fn for_each(self, action: fn(t) -> Unit) -> Unit {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          action(array_get_unchecked(self, index))
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break array_unit()
+    }
+  }
+  fn for_each_indexed(self, action: fn(t, U32) -> Unit) -> Unit {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          action(array_get_unchecked(self, index), index)
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break array_unit()
+    }
+  }
+  fn map(self, mapper: fn(t) -> t) -> Array<t> {
+    let limit = array_length(self)
+    let output = Array::with_capacity(limit)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          array_push(output, mapper(array_get_unchecked(self, index)))
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+  fn map_indexed(self, mapper: fn(t, U32) -> t) -> Array<t> {
+    let limit = array_length(self)
+    let output = Array::with_capacity(limit)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          array_push(output, mapper(array_get_unchecked(self, index), index))
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+  fn filter(self, predicate: fn(t) -> Bool) -> Array<t> {
+    let limit = array_length(self)
+    let output = Array::with_capacity(limit)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          let value = array_get_unchecked(self, index)
+          if predicate(value) {
+            array_push(output, value)
+          } else {
+          }
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+  fn filter_indexed(self, predicate: fn(t, U32) -> Bool) -> Array<t> {
+    let limit = array_length(self)
+    let output = Array::with_capacity(limit)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          let value = array_get_unchecked(self, index)
+          if predicate(value, index) {
+            array_push(output, value)
+          } else {
+          }
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+  fn flat_map(self, mapper: fn(t) -> Array<t>) -> Array<t> {
+    let limit = array_length(self)
+    let output = Array::new()
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          array_extend_values(output, mapper(array_get_unchecked(self, index)))
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+  fn every(self, predicate: fn(t) -> Bool) -> Bool {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) && !predicate(array_get_unchecked(self, index)) {
+          break false
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break true
+    }
+  }
+  fn every_indexed(self, predicate: fn(t, U32) -> Bool) -> Bool {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) && !predicate(array_get_unchecked(self, index), index) {
+          break false
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break true
+    }
+  }
+  fn some(self, predicate: fn(t) -> Bool) -> Bool {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) && predicate(array_get_unchecked(self, index)) {
+          break true
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break false
+    }
+  }
+  fn some_indexed(self, predicate: fn(t, U32) -> Bool) -> Bool {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) && predicate(array_get_unchecked(self, index), index) {
+          break true
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break false
+    }
+  }
+  fn find(self, predicate: fn(t) -> Bool) -> Option<t> {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          let value = array_get_unchecked(self, index)
+          if predicate(value) {
+            break Option::Some(value)
+          } else {
+          }
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break Option::None
+    }
+  }
+  fn find_index(self, predicate: fn(t) -> Bool) -> Option<U32> {
+    let limit = array_length(self)
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) && predicate(array_get_unchecked(self, index)) {
+          break Option::Some(index)
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break Option::None
+    }
+  }
+  fn find_last(self, predicate: fn(t) -> Bool) -> Option<t> {
+    let length = array_length(self)
+    while length {
+      0u32 => break Option::None
+      remaining => {
+        let index = remaining - 1u32
+        if index < array_length(self) {
+          let value = array_get_unchecked(self, index)
+          if predicate(value) {
+            break Option::Some(value)
+          } else {
+          }
+        } else {
+        }
+        continue index
+      }
+    }
+  }
+  fn find_last_index(self, predicate: fn(t) -> Bool) -> Option<U32> {
+    let length = array_length(self)
+    while length {
+      0u32 => break Option::None
+      remaining => {
+        let index = remaining - 1u32
+        if index < array_length(self) && predicate(array_get_unchecked(self, index)) {
+          break Option::Some(index)
+        } else {
+          continue index
+        }
+      }
+    }
+  }
+  fn reduce(self, initial: t, reducer: fn(t, t) -> t) -> t {
+    let limit = array_length(self)
+    let mut state_value = initial
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          state_value = reducer(state_value, array_get_unchecked(self, index))
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break state_value
+    }
+  }
+  fn reduce_indexed(self, initial: t, reducer: fn(t, t, U32) -> t) -> t {
+    let limit = array_length(self)
+    let mut state_value = initial
+    while 0u32 {
+      index if index < limit => {
+        if index < array_length(self) {
+          state_value = reducer(state_value, array_get_unchecked(self, index), index)
+        } else {
+        }
+        continue index + 1u32
+      }
+      _ => break state_value
+    }
+  }
+  fn reduce_right(self, initial: t, reducer: fn(t, t) -> t) -> t {
+    let mut state_value = initial
+    while array_length(self) {
+      0u32 => break state_value
+      remaining => {
+        let index = remaining - 1u32
+        if index < array_length(self) {
+          state_value = reducer(state_value, array_get_unchecked(self, index))
+        } else {
+        }
+        continue index
+      }
+    }
+  }
+}
+
+impl<t: Lt> Array<t> {
+  fn sort(self) -> Unit {
+    let length = array_length(self)
+    if length < 2u32 {
+    } else {
+      let scratch = array_copy_raw(self)
+      let mut width = 1u32
+      let mut read_self = true
+      while true {
+        true if width < length => {
+          if read_self {
+            array_merge_pass_natural(self, scratch, width, length)
+          } else {
+            array_merge_pass_natural(scratch, self, width, length)
+          }
+          read_self = !read_self
+          if width > length / 2u32 {
+            width = length
+          } else {
+            width = width * 2u32
+          }
+          continue true
+        }
+        _ => break array_unit()
+      }
+      if !read_self {
+        while 0u32 {
+          index if index < length => {
+            let value = array_get_unchecked(scratch, index)
+            array_set_unchecked(self, index, value)
+            continue index + 1u32
+          }
+          _ => break array_unit()
+        }
+      } else {
+      }
+    }
+  }
+  fn to_sorted(self) -> Array<t> {
+    let output = array_copy_raw(self)
+    output.sort()
+    output
+  }
+}
+
+impl<t: Eq> Array<t> {
+  fn includes(self, value: t) -> Bool {
+    self.index_of(value) is Option::Some(_)
+  }
+  fn index_of(self, value: t) -> Option<U32> {
+    self.index_of_from(value, 0u32)
+  }
+  fn index_of_from(self, value: t, start: U32) -> Option<U32> {
+    let length = array_length(self)
+    if start > length {
+      Option::None
+    } else {
+      while start {
+        index if index < length => {
+          if array_get_unchecked(self, index) == value {
+            break Option::Some(index)
+          } else {
+            continue index + 1u32
+          }
+        }
+        _ => break Option::None
+      }
+    }
+  }
+  fn last_index_of(self, value: t) -> Option<U32> {
+    self.last_index_of_before(value, array_length(self))
+  }
+  fn last_index_of_before(self, value: t, end: U32) -> Option<U32> {
+    let length = array_length(self)
+    if end > length {
+      Option::None
+    } else {
+      while end {
+        0u32 => break Option::None
+        remaining => {
+          let index = remaining - 1u32
+          if array_get_unchecked(self, index) == value {
+            break Option::Some(index)
+          } else {
+            continue index
+          }
+        }
+      }
+    }
+  }
+  fn equals(self, other: Array<t>) -> Bool {
+    let length = array_length(self)
+    if length != array_length(other) {
+      false
+    } else {
+      while 0u32 {
+        index if index < length => {
+          if array_get_unchecked(self, index) == array_get_unchecked(other, index) {
+            continue index + 1u32
+          } else {
+            break false
+          }
+        }
+        _ => break true
+      }
+    }
+  }
+}
+
+impl<t: Eq> Eq for Array<t> {
+  fn eq(self, right: Array<t>) -> Bool {
+    self.equals(right)
+  }
+}
+
+impl<t: Eq> Ne for Array<t> {
+  fn ne(self, right: Array<t>) -> Bool {
+    !self.equals(right)
+  }
+}
+
+impl<t> Array<Array<t>> {
+  fn flat(self) -> Array<t> {
+    let output = Array::new()
+    let length = array_length(self)
+    while 0u32 {
+      index if index < length => {
+        array_extend_values(output, array_get_unchecked(self, index))
+        continue index + 1u32
+      }
+      _ => break output
+    }
+  }
+}
+
+impl<t> ArrayEntry<t> {
+  fn index(self) -> U32 {
+    self.index
+  }
+  fn value(self) -> t {
+    self.value
+  }
+}
+
+impl<t> Iter<U32> for ArrayKeyIter<t> {
+  fn has_next(self) -> Bool {
+    self.index < array_length(self.values)
+  }
+  fn next(self) -> U32 {
+    if self.index >= array_length(self.values) {
+      unreachable()
+    } else {
+      let index = self.index
+      self.index = index + 1u32
+      index
+    }
+  }
+}
+
+impl<t> Iter<ArrayEntry<t>> for ArrayEntryIter<t> {
+  fn has_next(self) -> Bool {
+    self.index < array_length(self.values)
+  }
+  fn next(self) -> ArrayEntry<t> {
+    if self.index >= array_length(self.values) {
+      unreachable()
+    } else {
+      let index = self.index
+      let value = array_get_unchecked(self.values, index)
+      self.index = index + 1u32
+      ArrayEntry::{
+        index: index
+        value: value
+      }
+    }
+  }
+}
+
+fn arena_index_to_id(index: U32) -> I32 {
+  if index > 2147483647u32 {
+    unreachable()
+  } else {
+    index.into()
+  }
+}
+
+fn arena_id_to_index(id: I32) -> U32 {
+  if id < 0i32 {
+    unreachable()
+  } else {
+    id.into()
+  }
+}
+
+pub fn arena_missing_id() -> I32 {
+  -1i32
+}
+
+pub struct ArenaSpan {
+  start: I32
+  length: I32
+}
+
+impl ArenaSpan {
+  fn end(self) -> I32 {
+    self.start + self.length
+  }
+  fn is_empty(self) -> Bool {
+    self.length == 0i32
+  }
+  fn contains(self, id: I32) -> Bool {
+    id >= self.start && id < self.end()
+  }
+}
+
+pub struct Arena<t> {
+  values: Array<t>
+}
+
+impl<t> Arena<t> {
+  fn new() -> Arena<t> {
+    Arena::{
+      values: Array::new()
+    }
+  }
+  fn with_capacity(capacity: I32) -> Arena<t> {
+    Arena::{
+      values: Array::with_capacity(arena_id_to_index(capacity))
+    }
+  }
+  fn make(length: I32, value: t) -> Arena<t> {
+    Arena::{
+      values: Array::make(arena_id_to_index(length), value)
+    }
+  }
+  fn length(self) -> I32 {
+    arena_index_to_id(self.values.length())
+  }
+  fn is_empty(self) -> Bool {
+    self.values.is_empty()
+  }
+  fn push(self, value: t) -> I32 {
+    let id = arena_index_to_id(self.values.length())
+    self.values.push(value)
+    id
+  }
+  fn pop(self) -> Option<t> {
+    self.values.pop()
+  }
+  fn get(self, id: I32) -> Option<t> {
+    if id == -1i32 {
+      Option::None
+    } else {
+      self.values.get(arena_id_to_index(id))
+    }
+  }
+  fn get_unchecked(self, id: I32) -> t {
+    self.values.get_unchecked(arena_id_to_index(id))
+  }
+  fn set(self, id: I32, value: t) -> Bool {
+    if id == -1i32 {
+      false
+    } else {
+      self.values.set(arena_id_to_index(id), value)
+    }
+  }
+  fn set_unchecked(self, id: I32, value: t) -> Unit {
+    self.values.set_unchecked(arena_id_to_index(id), value)
+  }
+  fn checkpoint(self) -> I32 {
+    self.length()
+  }
+  fn truncate(self, length: I32) -> Unit {
+    self.values.truncate(arena_id_to_index(length))
+  }
+  fn rollback(self, checkpoint: I32) -> Unit {
+    self.truncate(checkpoint)
+  }
+  fn clear(self) -> Unit {
+    self.values.clear()
+  }
+  fn reserve(self, additional: I32) -> Unit {
+    self.values.reserve(arena_id_to_index(additional))
+  }
+  fn copy(self) -> Arena<t> {
+    Arena::{
+      values: self.values.copy()
+    }
+  }
+  fn fill(self, value: t, start: I32, end: I32) -> Unit {
+    self.values.fill(value, arena_id_to_index(start), arena_id_to_index(end))
+  }
+  fn span(self, start: I32, length: I32) -> ArenaSpan {
+    let start_index = arena_id_to_index(start)
+    let span_length = arena_id_to_index(length)
+    let total = self.values.length()
+    if start_index > total || span_length > total - start_index {
+      unreachable()
+    } else {
+      ArenaSpan::{
+        start: start
+        length: length
+      }
+    }
+  }
+  fn span_from(self, start: I32) -> ArenaSpan {
+    let start_index = arena_id_to_index(start)
+    let total = self.values.length()
+    if start_index > total {
+      unreachable()
+    } else {
+      ArenaSpan::{
+        start: start
+        length: arena_index_to_id(total - start_index)
+      }
+    }
+  }
+  fn slice(self, span: ArenaSpan) -> Array<t> {
+    let start = arena_id_to_index(span.start)
+    let length = arena_id_to_index(span.length)
+    let total = self.values.length()
+    if start > total || length > total - start {
+      unreachable()
+    } else {
+      self.values.slice(start, start + length)
+    }
+  }
+  fn raw_values(self) -> Array<t> {
+    self.values
+  }
+}

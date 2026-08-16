@@ -1,0 +1,64 @@
+open dew.std.fixed_array
+open dew.std.array
+open dew.std.string
+open dew.std.string_builder
+open dew.std.show
+open dew.std.blake3
+
+fn support_option() -> Option<I32> {
+  Option::Some(7i32)
+}
+
+test "FixedArray structural equality uses element Eq" {
+  let left = FixedArray::make(3u32, 4i32)
+  let right = FixedArray::make(3u32, 4i32)
+  assert(left == right, "equal fixed arrays differ")
+  right.set_unchecked(1u32, 5i32)
+  assert(left != right, "different fixed arrays compare equal")
+}
+
+test "StringBuilder appends all integer widths without temporary text" {
+  let builder = StringBuilder::new()
+  builder.append_i64(-9223372036854775808i64)
+  builder.append_ascii(47u8)
+  builder.append_u64(18446744073709551615u64)
+  assert(
+    builder.finish().equals("-9223372036854775808/18446744073709551615"),
+    "integer append changed",
+  )
+}
+
+test "Show renders sums and collections deterministically" {
+  let values = Array::make(2u32, 3i32)
+  assert(show(values).equals("[3, 3]"), "Array Show changed")
+  assert(show(support_option()).equals("Some(7)"), "Option Show changed")
+}
+
+test "compiler diagnostic rendering is bounded" {
+  let diagnostic = CompilerDiagnostic::{
+    path: "main.dew"
+    line: 2u32
+    column: 3u32
+    byte_offset: 4u32
+    level: CompilerDiagnosticLevel::Warning
+    code: "W1"
+    message: "message"
+  }
+  match render_compiler_diagnostic(diagnostic, 128u32) {
+    Ok(text) => assert(
+      text.equals("main.dew:2:3: warning[W1]: message (byte 4)"),
+      "diagnostic rendering changed",
+    )
+    Err(_) => assert(false, "diagnostic unexpectedly exceeded limit")
+  }
+}
+
+test "Arena checkpoints and BLAKE3 are deterministic" {
+  let arena = Arena::make(0i32, 0i32)
+  let first = arena.push(1i32)
+  let checkpoint = arena.checkpoint()
+  arena.push(2i32)
+  arena.rollback(checkpoint)
+  assert(first == 0i32 && arena.length() == 1i32, "arena rollback changed")
+  assert(blake3_hash32(b"") == 3108574127u32, "BLAKE3 lane changed")
+}

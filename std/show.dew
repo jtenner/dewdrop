@@ -1,3 +1,5 @@
+open dew.std.fixed_array
+open dew.std.array
 open dew.std.string
 open dew.std.string_builder
 
@@ -8,6 +10,9 @@ pub struct ShowFormatter {
 
 pub trait Show {
   fn append_show(self, formatter: ShowFormatter) -> Unit
+}
+
+fn show_unit() -> Unit {
 }
 
 fn show_max_depth() -> U32 {
@@ -65,10 +70,6 @@ pub fn show_append_ascii(formatter: ShowFormatter, value: U8) -> Unit {
   formatter.builder.append_ascii(value)
 }
 
-fn show_u64_to_u8(value: U64) -> U8 {
-  value.into()
-}
-
 fn show_i8_to_i64(value: I8) -> I64 {
   value.into()
 }
@@ -97,22 +98,30 @@ fn show_i64_to_u64(value: I64) -> U64 {
   value.into()
 }
 
-fn show_append_u64_digits(formatter: ShowFormatter, value: U64) -> Unit {
-  if value >= 10u64 {
-    show_append_u64_digits(formatter, value / 10u64)
+fn show_u64_digit_count(value: U64) -> U32 {
+  if value < 10u64 {
+    1u32
   } else {
+    1u32 + show_u64_digit_count(value / 10u64)
   }
-  show_append_ascii(formatter, show_u64_to_u8(value % 10u64) + 48u8)
+}
+
+fn show_i64_byte_count(value: I64) -> U32 {
+  if value < 0i64 {
+    1u32 + show_u64_digit_count(show_i64_to_u64(-(value + 1i64)) + 1u64)
+  } else {
+    show_u64_digit_count(show_i64_to_u64(value))
+  }
 }
 
 fn show_append_i64(formatter: ShowFormatter, value: I64) -> Unit {
-  if value < 0i64 {
-    show_append_ascii(formatter, 45u8)
-    let magnitude = show_i64_to_u64(-(value + 1i64)) + 1u64
-    show_append_u64_digits(formatter, magnitude)
-  } else {
-    show_append_u64_digits(formatter, show_i64_to_u64(value))
-  }
+  show_require_bytes(formatter, show_i64_byte_count(value))
+  formatter.builder.append_i64(value)
+}
+
+fn show_append_u64(formatter: ShowFormatter, value: U64) -> Unit {
+  show_require_bytes(formatter, show_u64_digit_count(value))
+  formatter.builder.append_u64(value)
 }
 
 impl Show for Unit {
@@ -157,25 +166,25 @@ impl Show for I64 {
 
 impl Show for U8 {
   fn append_show(self, formatter: ShowFormatter) -> Unit {
-    show_append_u64_digits(formatter, show_u8_to_u64(self))
+    show_append_u64(formatter, show_u8_to_u64(self))
   }
 }
 
 impl Show for U16 {
   fn append_show(self, formatter: ShowFormatter) -> Unit {
-    show_append_u64_digits(formatter, show_u16_to_u64(self))
+    show_append_u64(formatter, show_u16_to_u64(self))
   }
 }
 
 impl Show for U32 {
   fn append_show(self, formatter: ShowFormatter) -> Unit {
-    show_append_u64_digits(formatter, show_u32_to_u64(self))
+    show_append_u64(formatter, show_u32_to_u64(self))
   }
 }
 
 impl Show for U64 {
   fn append_show(self, formatter: ShowFormatter) -> Unit {
-    show_append_u64_digits(formatter, self)
+    show_append_u64(formatter, self)
   }
 }
 
@@ -188,5 +197,149 @@ impl Show for String {
 impl Show for StringView {
   fn append_show(self, formatter: ShowFormatter) -> Unit {
     show_append_view(formatter, self)
+  }
+}
+
+impl<t: Show> Show for FixedArray<t> {
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    show_append_ascii(formatter, 91u8)
+    let length = self.length()
+    while 0u32 {
+      index if index < length => {
+        if index > 0u32 {
+          show_append_text(formatter, ", ")
+        } else {
+        }
+        show_append(formatter, self.get_unchecked(index))
+        continue index + 1u32
+      }
+      _ => break show_unit()
+    }
+    show_append_ascii(formatter, 93u8)
+  }
+}
+
+impl<t: Show> Show for Array<t> {
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    show_append_ascii(formatter, 91u8)
+    let length = self.length()
+    while 0u32 {
+      index if index < length => {
+        if index > 0u32 {
+          show_append_text(formatter, ", ")
+        } else {
+        }
+        show_append(formatter, self.get_unchecked(index))
+        continue index + 1u32
+      }
+      _ => break show_unit()
+    }
+    show_append_ascii(formatter, 93u8)
+  }
+}
+
+impl<t: Show> Show for Option<t> {
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    match self {
+      None => show_append_text(formatter, "None")
+      Some(value) => {
+        show_append_text(formatter, "Some(")
+        show_append(formatter, value)
+        show_append_ascii(formatter, 41u8)
+      }
+    }
+  }
+}
+
+impl<t: Show, e: Show> Show for Result<t, e> {
+  fn append_show(self, formatter: ShowFormatter) -> Unit {
+    match self {
+      Ok(value) => {
+        show_append_text(formatter, "Ok(")
+        show_append(formatter, value)
+        show_append_ascii(formatter, 41u8)
+      }
+      Err(error) => {
+        show_append_text(formatter, "Err(")
+        show_append(formatter, error)
+        show_append_ascii(formatter, 41u8)
+      }
+    }
+  }
+}
+
+pub enum CompilerDiagnosticLevel {
+  Error
+  Warning
+  Info
+  Hint
+}
+
+pub struct CompilerDiagnostic {
+  path: String
+  line: U32
+  column: U32
+  byte_offset: U32
+  level: CompilerDiagnosticLevel
+  code: String
+  message: String
+}
+
+pub enum CompilerDiagnosticRenderError {
+  LimitExceeded(U64, U32)
+}
+
+fn compiler_diagnostic_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn compiler_diagnostic_level_text(level: CompilerDiagnosticLevel) -> String {
+  match level {
+    Error => "error"
+    Warning => "warning"
+    Info => "info"
+    Hint => "hint"
+  }
+}
+
+fn compiler_diagnostic_render_size(
+  diagnostic: CompilerDiagnostic,
+  level: String,
+) -> U64 {
+  compiler_diagnostic_u32_to_u64(diagnostic.path.byte_length()) +
+  compiler_diagnostic_u32_to_u64(show_u64_digit_count(compiler_diagnostic_u32_to_u64(diagnostic.line))) +
+  compiler_diagnostic_u32_to_u64(show_u64_digit_count(compiler_diagnostic_u32_to_u64(diagnostic.column))) +
+  compiler_diagnostic_u32_to_u64(level.byte_length()) +
+  compiler_diagnostic_u32_to_u64(diagnostic.code.byte_length()) +
+  compiler_diagnostic_u32_to_u64(diagnostic.message.byte_length()) +
+  compiler_diagnostic_u32_to_u64(show_u64_digit_count(compiler_diagnostic_u32_to_u64(diagnostic.byte_offset))) +
+  16u64
+}
+
+pub fn render_compiler_diagnostic(
+  diagnostic: CompilerDiagnostic,
+  max_bytes: U32,
+) -> Result<String, CompilerDiagnosticRenderError> {
+  let level = compiler_diagnostic_level_text(diagnostic.level)
+  let required = compiler_diagnostic_render_size(diagnostic, level)
+  if required > compiler_diagnostic_u32_to_u64(max_bytes) {
+    Result::Err(CompilerDiagnosticRenderError::LimitExceeded(required, max_bytes))
+  } else {
+    let builder = StringBuilder::with_capacity(required.into())
+    builder.append(diagnostic.path)
+    builder.append_ascii(58u8)
+    builder.append_u32(diagnostic.line)
+    builder.append_ascii(58u8)
+    builder.append_u32(diagnostic.column)
+    builder.append(": ")
+    builder.append(level)
+    builder.append_ascii(91u8)
+    builder.append(diagnostic.code)
+    builder.append("]: ")
+    builder.append(diagnostic.message)
+    builder.append(" (byte ")
+    builder.append_u32(diagnostic.byte_offset)
+    builder.append_ascii(41u8)
+    Result::Ok(builder.finish())
   }
 }

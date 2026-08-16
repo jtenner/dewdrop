@@ -1,0 +1,33 @@
+open dew.std.fixed_array
+open dew.std.string
+
+struct Item {
+  value: I32
+} derive(Eq)
+
+fn item(value: I32) -> Item {
+  Item::{
+    value: value
+  }
+}
+
+pub fn main() -> Unit {
+  let left = FixedArray::make(3u32, 7i32)
+  let equal = FixedArray::make(3u32, 7i32)
+  let different = FixedArray::make(3u32, 7i32)
+  different.set_unchecked(2u32, 8i32)
+  assert(left == equal, "equal scalar fixed arrays differ")
+  assert(left != different, "different scalar fixed arrays compare equal")
+  assert(left != FixedArray::make(2u32, 7i32), "different lengths compare equal")
+
+  let refs = FixedArray::make(2u32, item(4i32))
+  let refs_equal = FixedArray::make(2u32, item(4i32))
+  let refs_different = FixedArray::make(2u32, item(4i32))
+  refs_different.set_unchecked(1u32, item(5i32))
+  assert(refs == refs_equal, "equal reference fixed arrays differ")
+  assert(refs != refs_different, "different reference fixed arrays compare equal")
+
+  let wide = FixedArray::make(2u32, 9i64)
+  let wide_equal = FixedArray::make(2u32, 9i64)
+  assert(wide == wide_equal, "equal wide fixed arrays differ")
+}

@@ -1,0 +1,5 @@
+open dew.std.array
+
+pub fn main() -> Unit {
+  Array::make(4u32, 7).copy_within(3u32, 0u32, 2u32)
+}

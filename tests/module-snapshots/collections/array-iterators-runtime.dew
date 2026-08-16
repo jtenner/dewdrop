@@ -1,0 +1,23 @@
+open dew.std.array
+open dew.std.wasi
+
+fn values() -> Array<I32> {
+  let output = Array::new()
+  output.push(1)
+  output.push(2)
+  output.push(3)
+  output
+}
+
+pub fn main() -> Unit {
+  let values = values()
+  let keys = values.keys()
+  assert(keys.has_next(), "keys starts")
+  assert(keys.next() == 0u32, "keys zero")
+  values.push(4)
+  assert(keys.next() == 1u32, "keys one")
+  assert(keys.next() == 2u32, "keys two")
+  assert(keys.next() == 3u32, "keys observes push")
+  assert(!keys.has_next(), "keys exhausted")
+  wasi_fd_write(1u32, b"collections:array-iterators-runtime")
+}

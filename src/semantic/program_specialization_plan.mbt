@@ -695,6 +695,44 @@ fn program_generic_parameter_shape(
 }
 
 ///|
+fn program_fixed_array_specialization_value_type(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+  generic_parameters : HirSpan,
+  shapes : Array[PlannedValueShape],
+  shape_span : HirSpan,
+) -> PlannedWasmValueType? {
+  guard type_ >= 0 && type_ < resolved.types.length() else { return None }
+  match resolved.types[type_] {
+    AppliedType(base, arguments) if arguments.length == 1 =>
+      match resolved.types[base] {
+        NominalType(declaration) if declaration ==
+          standard_fixed_array_type_declaration() =>
+          match
+            program_generic_parameter_shape(
+              resolved,
+              resolved.type_arguments[arguments.start],
+              generic_parameters,
+              shapes,
+              shape_span,
+            ) {
+            Some(shape) => {
+              let carrier = wasmgc_fixed_array_carrier(shape)
+              if carrier >= 0 {
+                Some(WasmFixedArrayRefValue(carrier))
+              } else {
+                Some(WasmNullableEqRefValue)
+              }
+            }
+            None => None
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
 fn program_resolve_specialized_shape(
   module_ : PlannedModuleLowering,
   generic_parameters : HirSpan,
@@ -1201,26 +1239,64 @@ fn materialize_program_generic_specialization(
   for index in 0..<callable.parameters.length {
     let parameter = lowering.modules[owner_index].functions.parameters[callable.parameters.start +
       index]
+    let generic_parameters = program_callable_generic_parameters(callable)
+    let base_value = if parameter.shape != UnitPlannedValueShape &&
+      parameter.shape != NeverPlannedValueShape {
+      Some(
+        module_.function_value_types[base.parameters.start +
+        base_parameter_index],
+      )
+    } else {
+      None
+    }
+    let specialized_fixed_array = match
+      program_fixed_array_specialization_value_type(
+        resolved,
+        parameter.type_,
+        generic_parameters,
+        module_.specialization_shapes,
+        specialization_shapes,
+      ) {
+      Some(value) => Some(value)
+      None =>
+        match base_value {
+          Some(WasmFixedArrayRefValue(_)) if specialization_shapes.length == 1 => {
+            let carrier = wasmgc_fixed_array_carrier(
+              module_.specialization_shapes[specialization_shapes.start],
+            )
+            if carrier >= 0 {
+              Some(WasmFixedArrayRefValue(carrier))
+            } else {
+              Some(WasmNullableEqRefValue)
+            }
+          }
+          _ => None
+        }
+    }
     let specialized = program_generic_parameter_shape(
       resolved,
       parameter.type_,
-      program_callable_generic_parameters(callable),
+      generic_parameters,
       module_.specialization_shapes,
       specialization_shapes,
     )
     if parameter.shape != UnitPlannedValueShape &&
       parameter.shape != NeverPlannedValueShape {
-      match specialized {
-        Some(shape) =>
-          match program_specialization_value_type(shape) {
-            Some(value) => module_.function_value_types.push(value)
-            None => ()
-          }
+      match specialized_fixed_array {
+        Some(value) => module_.function_value_types.push(value)
         None =>
-          module_.function_value_types.push(
-            module_.function_value_types[base.parameters.start +
-            base_parameter_index],
-          )
+          match specialized {
+            Some(shape) =>
+              match program_specialization_value_type(shape) {
+                Some(value) => module_.function_value_types.push(value)
+                None => ()
+              }
+            None =>
+              module_.function_value_types.push(
+                module_.function_value_types[base.parameters.start +
+                base_parameter_index],
+              )
+          }
       }
       base_parameter_index += 1
     }
@@ -1248,24 +1324,57 @@ fn materialize_program_generic_specialization(
     module_.function_value_types.push(WasmNullableEqRefValue)
   }
   let result_start = module_.function_value_types.length()
+  let generic_parameters = program_callable_generic_parameters(callable)
+  let specialized_fixed_array_result = match
+    program_fixed_array_specialization_value_type(
+      resolved,
+      callable.result_type,
+      generic_parameters,
+      module_.specialization_shapes,
+      specialization_shapes,
+    ) {
+    Some(value) => Some(value)
+    None =>
+      if base.results.length == 1 && specialization_shapes.length == 1 {
+        match module_.function_value_types[base.results.start] {
+          WasmFixedArrayRefValue(_) => {
+            let carrier = wasmgc_fixed_array_carrier(
+              module_.specialization_shapes[specialization_shapes.start],
+            )
+            if carrier >= 0 {
+              Some(WasmFixedArrayRefValue(carrier))
+            } else {
+              Some(WasmNullableEqRefValue)
+            }
+          }
+          _ => None
+        }
+      } else {
+        None
+      }
+  }
   let specialized_result = program_generic_parameter_shape(
     resolved,
     callable.result_type,
-    program_callable_generic_parameters(callable),
+    generic_parameters,
     module_.specialization_shapes,
     specialization_shapes,
   )
-  match specialized_result {
-    Some(shape) =>
-      match program_specialization_value_type(shape) {
-        Some(value) => module_.function_value_types.push(value)
-        None => ()
-      }
+  match specialized_fixed_array_result {
+    Some(value) => module_.function_value_types.push(value)
     None =>
-      for index in 0..<base.results.length {
-        module_.function_value_types.push(
-          module_.function_value_types[base.results.start + index],
-        )
+      match specialized_result {
+        Some(shape) =>
+          match program_specialization_value_type(shape) {
+            Some(value) => module_.function_value_types.push(value)
+            None => ()
+          }
+        None =>
+          for index in 0..<base.results.length {
+            module_.function_value_types.push(
+              module_.function_value_types[base.results.start + index],
+            )
+          }
       }
   }
   module_.functions[base_index] = { ..base, elided: true }

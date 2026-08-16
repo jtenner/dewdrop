@@ -1,6 +1,6 @@
 open dew.std.fixed_array
 
 pub fn main() -> Unit {
-  let values = fixed_array_make(1u32, 7)
+  let values = FixedArray::make(1u32, 7)
   values[1u32] = 9
 }

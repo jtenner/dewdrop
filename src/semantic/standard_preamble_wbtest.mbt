@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 65)
+  assert_eq(wildcard_paths.length(), 66)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -57,11 +57,12 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[33], "std/testing.dew")
   assert_eq(wildcard_paths[34], "std/json.dew")
   assert_eq(wildcard_paths[35], "std/bloom_filter.dew")
-  assert_eq(wildcard_paths[36], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[38], "std/string_fixed_array.dew")
-  assert_eq(wildcard_paths[42], "std/text.dew")
-  assert_eq(wildcard_paths[44], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[64], "std/f64x2.dew")
+  assert_eq(wildcard_paths[36], "std/blake3.dew")
+  assert_eq(wildcard_paths[37], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[39], "std/string_fixed_array.dew")
+  assert_eq(wildcard_paths[43], "std/text.dew")
+  assert_eq(wildcard_paths[45], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[65], "std/f64x2.dew")
 }
 
 ///|
@@ -150,6 +151,23 @@ test "standard import prepass selects Bloom filter" {
 }
 
 ///|
+test "standard import prepass selects BLAKE3 dependencies" {
+  let module_id = 1003UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.blake3\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      8, false, false, false, false, false, false, true, true, true, false, false,
+      8192, 0,
+    ),
+  )
+}
+
+///|
 test "standard import prepass selects JSON dependencies" {
   let module_id = 1001UL
   assert_eq(
@@ -211,7 +229,7 @@ test "standard import prepass selects Show and builder dependency" {
       ),
     ]),
     (
-      3, true, false, false, false, false, false, true, true, false, false, false,
+      3, true, false, false, false, false, false, true, true, true, false, false,
       0, 0,
     ),
   )

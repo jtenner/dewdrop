@@ -109,7 +109,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 8191
+            collection_mask = 16383
             show = true
             disposable = true
             math = true
@@ -159,6 +159,8 @@ fn selected_standard_modules(
               "show" => {
                 show = true
                 text_mask = text_mask | 3
+                fixed_array = true
+                array = true
               }
               "disposable" => disposable = true
               "math" => math = true
@@ -169,6 +171,13 @@ fn selected_standard_modules(
               }
               "testing" => testing = true
               "bloom_filter" => collection_mask = collection_mask | 4096
+              "blake3" => {
+                text_mask = text_mask | 8
+                fixed_array = true
+                array = true
+                wasm_intrinsics = true
+                collection_mask = collection_mask | 8192
+              }
               "json" => {
                 text_mask = text_mask | 15
                 fixed_array = true
