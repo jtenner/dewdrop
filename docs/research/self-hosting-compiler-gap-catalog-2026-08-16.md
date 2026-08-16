@@ -16,6 +16,9 @@ It separates three kinds of gap:
 This is not a request for MoonBit source compatibility. Dew only needs enough
 surface area to implement Dewdrop cleanly and efficiently.
 
+After SH-04 through SH-08 landed, the remaining runtime/bootstrap work was
+recounted in [`self-hosting-next-blockers-2026-08-16.md`](self-hosting-next-blockers-2026-08-16.md).
+
 ## Audit scope
 
 The production compiler audit includes these packages:
