@@ -29,7 +29,7 @@ def rendered_source() -> str:
     operation_names = [
         name
         for module in (
-            "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
+            "wasm_intrinsics", "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
         )
         for name in modules[module]["operations"]
     ]
@@ -52,7 +52,7 @@ def rendered_source() -> str:
             [
                 "///|",
                 f"pub fn {prefix}_type_declaration() -> DeclId {{",
-                f"  make_semantic_id(standard_library_module_id({module['slot']}), {module['type']})",
+                f"  make_semantic_id(standard_library_module_id({module.get('type_slot', module['slot'])}), {module['type']})",
                 "}",
                 "",
                 "///|",
@@ -132,6 +132,29 @@ def rendered_source() -> str:
                 "",
             ]
         )
+
+    wasm_intrinsics = modules["wasm_intrinsics"]
+    lines.extend(
+        [
+            "///|",
+            *if_multiline_operation_signature("standard_wasm_intrinsics"),
+            f"  if semantic_id_module(declaration) != standard_library_module_id({wasm_intrinsics['slot']}) {{",
+            "    return NoStandardBuiltinOperation",
+            "  }",
+            "  match semantic_id_local(declaration) {",
+        ]
+    )
+    for operation, ordinals in wasm_intrinsics["operations"].items():
+        joined = " | ".join(str(value) for value in ordinals)
+        lines.append(f"    {joined} => {operation}")
+    lines.extend(
+        [
+            "    _ => NoStandardBuiltinOperation",
+            "  }",
+            "}",
+            "",
+        ]
+    )
 
     option = modules["option"]
     lines.extend(

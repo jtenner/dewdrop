@@ -75,7 +75,7 @@ test "standard import prepass selects split module bits" {
       ),
     ]),
     (
-      9, false, false, false, false, false, true, false, true, false, false, false,
+      9, false, false, false, false, false, true, true, true, false, false, false,
       0, 0,
     ),
   )
@@ -109,7 +109,7 @@ test "standard import prepass selects portable IO dependencies" {
       ),
     ]),
     (
-      12, false, false, false, true, false, false, false, true, false, false, false,
+      12, false, false, false, true, false, false, true, true, false, false, false,
       0, 0,
     ),
   )
@@ -194,7 +194,7 @@ test "standard import prepass selects text iteration dependencies" {
       ),
     ]),
     (
-      17, false, false, false, false, false, false, false, true, false, false, false,
+      17, false, false, false, false, false, false, true, true, false, false, false,
       0, 0,
     ),
   )
@@ -211,7 +211,7 @@ test "standard import prepass selects Show and builder dependency" {
       ),
     ]),
     (
-      3, true, false, false, false, false, false, false, true, false, false, false,
+      3, true, false, false, false, false, false, true, true, false, false, false,
       0, 0,
     ),
   )

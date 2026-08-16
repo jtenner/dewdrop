@@ -352,6 +352,7 @@ fn program_reachable_callable_roots(
           PlannedStructNew(declaration, _, _) => reachable[declaration] = true
           PlannedFixedArrayMake(_, _, _)
           | PlannedFixedArrayLength(_, _)
+          | PlannedFixedArrayGet(_, _, _)
           | PlannedFixedArrayGetUnchecked(_, _, _)
           | PlannedFixedArraySetUnchecked(_, _, _, _) =>
             reachable[standard_fixed_array_type_declaration()] = true

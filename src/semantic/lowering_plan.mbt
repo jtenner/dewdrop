@@ -71,6 +71,7 @@ pub enum PlannedExpressionKind {
   PlannedIndexSetCall(DeclId, ExprId, ExprId, ExprId, HirSpan)
   PlannedFixedArrayMake(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArrayLength(ExprId, PlannedValueShape)
+  PlannedFixedArrayGet(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
   PlannedArrayNew(BodyTypeId, PlannedValueShape)
@@ -323,6 +324,18 @@ pub struct PlannedBodyLowering {
   pattern_arms : HirSpan
   diagnostics : HirSpan
 } derive(Eq, Debug)
+
+///|
+fn planned_fixed_array_operation(
+  declaration : DeclId,
+) -> StandardBuiltinOperation {
+  let intrinsic = standard_wasm_intrinsics_operation(declaration)
+  if intrinsic != NoStandardBuiltinOperation {
+    intrinsic
+  } else {
+    standard_fixed_array_operation(declaration)
+  }
+}
 
 ///|
 pub struct PlannedModuleLowering {
@@ -999,8 +1012,8 @@ fn plan_expression_kind(
             CircularBufferPeekBack =>
               PlannedCircularBufferPeekBack(base, element_shape)
             _ =>
-              match standard_fixed_array_operation(declaration) {
-                WasmArrayNew => {
+              match planned_fixed_array_operation(declaration) {
+                WasmArrayNew | FixedArrayMake => {
                   let item = collected.expression_children[arguments.start + 1]
                   PlannedFixedArrayMake(
                     collected.expression_children[arguments.start],
@@ -1012,8 +1025,10 @@ fn plan_expression_kind(
                     ),
                   )
                 }
-                WasmArrayLen => PlannedFixedArrayLength(base, element_shape)
-                WasmArrayGet =>
+                WasmArrayLen | FixedArrayLength =>
+                  PlannedFixedArrayLength(base, element_shape)
+                FixedArrayGet => PlannedFixedArrayGet(base, key, element_shape)
+                WasmArrayGet | FixedArrayGetUnchecked =>
                   PlannedFixedArrayGetUnchecked(
                     base,
                     key,
@@ -1023,7 +1038,7 @@ fn plan_expression_kind(
                       inferred.expression_types[expression],
                     ),
                   )
-                WasmArraySet =>
+                WasmArraySet | FixedArraySet =>
                   PlannedFixedArraySetUnchecked(
                     base,
                     key,
@@ -1268,7 +1283,8 @@ fn plan_expression_kind(
     HirIndexExpr(base, index, offset) =>
       match inferred.operator_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) =>
-          if standard_fixed_array_operation(declaration) == WasmArrayGet {
+          if standard_fixed_array_operation(declaration) ==
+            FixedArrayGetUnchecked {
             PlannedFixedArrayGetUnchecked(
               base,
               index,
@@ -1328,7 +1344,7 @@ fn plan_expression_kind(
     HirIndexSetExpr(base, index, value, offset) =>
       match inferred.operator_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) =>
-          if standard_fixed_array_operation(declaration) == WasmArraySet {
+          if standard_fixed_array_operation(declaration) == FixedArraySet {
             PlannedFixedArraySetUnchecked(
               base,
               index,

@@ -2,8 +2,24 @@
 // Names use a wasm_ prefix so open dew.std.* remains unambiguous.
 // Each declaration preserves the exact Dew carrier signature of its source builtin.
 
+pub struct WasmArray<t> {}
+
 // Compatibility spelling for the first published intrinsic.
 pub builtin i64_trunc_i32(value: I64) -> I32 = "dew_i64_into_i32"
+
+// WasmGC array operations
+pub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = "array_new"
+pub builtin wasm_array_len<t>(value: WasmArray<t>) -> U32 = "array_len"
+pub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = "array_get"
+pub builtin wasm_array_set<t>(value: WasmArray<t>, index: U32, item: t) -> Unit = "array_set"
+
+// backend-only Core operations
+pub builtin wasm_core_i32_lt(left: I32, right: I32) -> Bool = "i32_lt"
+pub builtin wasm_u32_ctz(value: U32) -> U32 = "dew_u32_ctz"
+
+// WasmGC text representation bridges
+pub builtin wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16 = "dew_bytes_load_u8x16"
+pub builtin wasm_string_load_u8x16(value: String, start: U32) -> U8x16 = "dew_string_load_u8x16"
 
 // std/f32x4.dew
 pub builtin wasm_f32x4_from_v128(value: V128) -> F32x4 = "dew_reinterpret"
@@ -1369,11 +1385,3 @@ pub builtin wasm_u8x8_store(address: U32, value: U8x8) -> Unit = "dew_swar64_sto
 pub builtin wasm_u8x8_and(left: U8x8, right: U8x8) -> U8x8 = "swar64_and"
 pub builtin wasm_u8x8_or(left: U8x8, right: U8x8) -> U8x8 = "swar64_or"
 pub builtin wasm_u8x8_xor(left: U8x8, right: U8x8) -> U8x8 = "swar64_xor"
-
-// backend-only Core operations
-pub builtin wasm_core_i32_lt(left: I32, right: I32) -> Bool = "i32_lt"
-pub builtin wasm_u32_ctz(value: U32) -> U32 = "dew_u32_ctz"
-
-// WasmGC text representation bridges
-pub builtin wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16 = "dew_bytes_load_u8x16"
-pub builtin wasm_string_load_u8x16(value: String, start: U32) -> U8x16 = "dew_string_load_u8x16"

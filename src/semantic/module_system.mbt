@@ -369,7 +369,10 @@ pub fn required_standard_library_source_paths(
   if include_wasi {
     required.push("std/wasi.dew")
   }
-  if include_wasm_intrinsics {
+  if include_wasm_intrinsics ||
+    include_fixed_array ||
+    include_array ||
+    collection_mask != 0 {
     required.push("std/wasm/intrinsics.dew")
   }
   for lane_index in 0..<20 {
@@ -533,6 +536,9 @@ pub fn collect_program_manifest_with_standard_sources(
         files,
       ),
     )
+  }
+  if selected_fixed_array {
+    selected_wasm_intrinsics = true
   }
   let preamble_module_id = standard_library_module_id(0)
   let preamble_module_index = modules.length()

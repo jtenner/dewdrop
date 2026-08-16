@@ -3924,6 +3924,7 @@ fn plan_module_wasmgc_fragments_in_orders(
         | PlannedCircularBufferPeekBack(_, _)
         | PlannedArrayClear(_, _, _)
         | PlannedArrayIterNext(_, _)
+        | PlannedFixedArrayGet(_, _, _)
         | PlannedFixedArrayGetUnchecked(_, _, _)
         | PlannedFixedArraySetUnchecked(_, _, _, _) => {
           uses_fixed_array_runtime = true

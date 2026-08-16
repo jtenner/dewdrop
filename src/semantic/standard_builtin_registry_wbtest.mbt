@@ -39,22 +39,38 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   assert_standard_registry_declaration(fixed, 0, "FixedArray")
   assert_eq(
     standard_fixed_array_method_declaration("make"),
-    make_semantic_id(fixed.module_id, 6),
+    make_semantic_id(fixed.module_id, 2),
   )
   assert_eq(
     standard_fixed_array_method_declaration("set_unchecked"),
-    make_semantic_id(fixed.module_id, 11),
+    make_semantic_id(fixed.module_id, 7),
+  )
+  let wasm_intrinsics = program.modules[program
+    .module_index("dew.std.wasm.intrinsics")
+    .unwrap()]
+  assert_eq(wasm_intrinsics.module_id, standard_library_module_id(9))
+  assert_standard_registry_declaration(wasm_intrinsics, 0, "WasmArray")
+  assert_standard_registry_declaration(wasm_intrinsics, 2, "wasm_array_new")
+  assert_eq(
+    standard_fixed_array_type_declaration(),
+    make_semantic_id(wasm_intrinsics.module_id, 0),
   )
   assert_eq(
-    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 1)),
+    standard_wasm_intrinsics_operation(
+      make_semantic_id(wasm_intrinsics.module_id, 2),
+    ),
     WasmArrayNew,
   )
   assert_eq(
-    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 13)),
+    standard_wasm_intrinsics_operation(
+      make_semantic_id(wasm_intrinsics.module_id, 4),
+    ),
     WasmArrayGet,
   )
   assert_eq(
-    standard_fixed_array_operation(make_semantic_id(fixed.module_id, 15)),
+    standard_wasm_intrinsics_operation(
+      make_semantic_id(wasm_intrinsics.module_id, 5),
+    ),
     WasmArraySet,
   )
 

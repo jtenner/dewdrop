@@ -1,18 +1,30 @@
 {
   "modules": {
     "option": {"slot": 2, "path": "dew.std.option", "type": 0, "variants": {"none": 0, "some": 1}},
+    "wasm_intrinsics": {
+      "slot": 9,
+      "path": "dew.std.wasm.intrinsics",
+      "operations": {
+        "WasmArrayNew": [2],
+        "WasmArrayLen": [3],
+        "WasmArrayGet": [4],
+        "WasmArraySet": [5]
+      }
+    },
     "fixed_array": {
       "slot": 10,
       "path": "dew.std.fixed_array",
       "type": 0,
-      "methods": {"make": 6, "length": 7, "get": 8, "get_unchecked": 9, "set": 10, "set_unchecked": 11},
-      "index": 13,
-      "index_set": 15,
+      "type_slot": 9,
+      "methods": {"make": 2, "length": 3, "get": 4, "get_unchecked": 5, "set": 6, "set_unchecked": 7},
+      "index": 9,
+      "index_set": 11,
       "operations": {
-        "WasmArrayNew": [1, 6],
-        "WasmArrayLen": [2, 7],
-        "WasmArrayGet": [3, 9, 13],
-        "WasmArraySet": [4, 11, 15]
+        "FixedArrayMake": [2],
+        "FixedArrayLength": [3],
+        "FixedArrayGet": [4],
+        "FixedArrayGetUnchecked": [5, 9],
+        "FixedArraySet": [6, 7, 11]
       }
     },
     "array": {

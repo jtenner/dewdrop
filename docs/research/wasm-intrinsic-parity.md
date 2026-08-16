@@ -23,7 +23,7 @@ The backend name set is extracted from `starshine_code.mbt` and every `starshine
 - two generated aliases collide;
 - the checked-in source or bootstrap mirror is stale.
 
-The first published `i64_trunc_i32` spelling remains as a compatibility alias. The generated module currently contains 1,315 aliases covering 830 distinct backend inline names. Multiple aliases are intentional where typed packed-lane APIs share one physical operation. The added `wasm_bytes_load_u8x16(Bytes, U32)` and `wasm_string_load_u8x16(String, U32)` declarations are bounds-checked WasmGC representation bridges rather than linear-memory loads; they let Dew source apply ordinary SIMD instructions to private GC-backed text storage without adding domain-specific scanner builtins.
+The first published `i64_trunc_i32` spelling remains as a compatibility alias. The generated module currently contains 1,319 declarations covering 830 distinct backend inline names. The four additional declarations are the generic WasmGC `wasm_array_new`, `wasm_array_len`, `wasm_array_get`, and `wasm_array_set` operations used by `dew.std.fixed_array`. Multiple aliases are intentional where typed packed-lane APIs share one physical operation. The added `wasm_bytes_load_u8x16(Bytes, U32)` and `wasm_string_load_u8x16(String, U32)` declarations are bounds-checked WasmGC representation bridges rather than linear-memory loads; they let Dew source apply ordinary SIMD instructions to private GC-backed text storage without adding domain-specific scanner builtins.
 
 ## Validation
 

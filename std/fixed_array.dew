@@ -1,43 +1,40 @@
-pub struct FixedArray<t> {}
+open dew.std.wasm.intrinsics
 
-builtin array_new<t>(length: U32, value: t) -> FixedArray<t> = "array_new"
-builtin array_len<t>(value: FixedArray<t>) -> U32 = "array_len"
-builtin array_get<t>(value: FixedArray<t>, index: U32) -> t = "array_get"
-builtin array_set<t>(value: FixedArray<t>, index: U32, item: t) -> Unit = "array_set"
+pub type FixedArray<t> = WasmArray<t>
 
 impl<t> FixedArray<t> {
   fn make(length: U32, value: t) -> FixedArray<t> {
-    array_new(length, value)
+    wasm_array_new(length, value)
   }
   fn length(self) -> U32 {
-    array_len(self)
+    wasm_array_len(self)
   }
   fn get(self, index: U32) -> Option<t> {
-    if index < array_len(self) {
-      Option::Some(array_get(self, index))
+    if index < wasm_array_len(self) {
+      Option::Some(wasm_array_get(self, index))
     } else {
       Option::None
     }
   }
   fn get_unchecked(self, index: U32) -> t {
-    array_get(self, index)
+    wasm_array_get(self, index)
   }
   fn set(self, index: U32, value: t) -> Unit {
-    array_set(self, index, value)
+    wasm_array_set(self, index, value)
   }
   fn set_unchecked(self, index: U32, value: t) -> Unit {
-    array_set(self, index, value)
+    wasm_array_set(self, index, value)
   }
 }
 
 impl<t> IndexedGet<U32, t> for FixedArray<t> {
   fn indexed_get(self, index: U32) -> t {
-    array_get(self, index)
+    wasm_array_get(self, index)
   }
 }
 
 impl<t> IndexedSet<U32, t> for FixedArray<t> {
   fn indexed_set(self, index: U32, value: t) -> Unit {
-    array_set(self, index, value)
+    wasm_array_set(self, index, value)
   }
 }

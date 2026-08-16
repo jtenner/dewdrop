@@ -7,6 +7,11 @@ enum StandardBuiltinOperation {
   WasmArrayLen
   WasmArrayGet
   WasmArraySet
+  FixedArrayMake
+  FixedArrayLength
+  FixedArrayGet
+  FixedArrayGetUnchecked
+  FixedArraySet
   ArrayNew
   ArrayWithCapacity
   ArrayLength
@@ -110,18 +115,18 @@ enum StandardBuiltinOperation {
 
 ///|
 pub fn standard_fixed_array_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 0)
+  make_semantic_id(standard_library_module_id(9), 0)
 }
 
 ///|
 pub fn standard_fixed_array_method_declaration(name : String) -> DeclId {
   let local_id = match name {
-    "make" => 6
-    "length" => 7
-    "get" => 8
-    "get_unchecked" => 9
-    "set" => 10
-    "set_unchecked" => 11
+    "make" => 2
+    "length" => 3
+    "get" => 4
+    "get_unchecked" => 5
+    "set" => 6
+    "set_unchecked" => 7
     _ => -1
   }
   if local_id < 0 {
@@ -133,12 +138,12 @@ pub fn standard_fixed_array_method_declaration(name : String) -> DeclId {
 
 ///|
 pub fn standard_fixed_array_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 13)
+  make_semantic_id(standard_library_module_id(10), 9)
 }
 
 ///|
 pub fn standard_fixed_array_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 15)
+  make_semantic_id(standard_library_module_id(10), 11)
 }
 
 ///|
@@ -149,10 +154,11 @@ fn standard_fixed_array_operation(
     return NoStandardBuiltinOperation
   }
   match semantic_id_local(declaration) {
-    1 | 6 => WasmArrayNew
-    2 | 7 => WasmArrayLen
-    3 | 9 | 13 => WasmArrayGet
-    4 | 11 | 15 => WasmArraySet
+    2 => FixedArrayMake
+    3 => FixedArrayLength
+    4 => FixedArrayGet
+    5 | 9 => FixedArrayGetUnchecked
+    6 | 7 | 11 => FixedArraySet
     _ => NoStandardBuiltinOperation
   }
 }
@@ -524,6 +530,22 @@ fn standard_set_operation(declaration : DeclId) -> StandardBuiltinOperation {
     19 | 23 => SetIter
     20 | 25 => SetIterHasNext
     21 | 26 => SetIterNext
+    _ => NoStandardBuiltinOperation
+  }
+}
+
+///|
+fn standard_wasm_intrinsics_operation(
+  declaration : DeclId,
+) -> StandardBuiltinOperation {
+  if semantic_id_module(declaration) != standard_library_module_id(9) {
+    return NoStandardBuiltinOperation
+  }
+  match semantic_id_local(declaration) {
+    2 => WasmArrayNew
+    3 => WasmArrayLen
+    4 => WasmArrayGet
+    5 => WasmArraySet
     _ => NoStandardBuiltinOperation
   }
 }

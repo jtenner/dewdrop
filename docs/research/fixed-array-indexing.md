@@ -50,7 +50,7 @@ v128
 nullable eqref
 ```
 
-The standard source declares only four private builtins: `array_new`, `array_len`, `array_get`, and `array_set`. Each maps directly to a WasmGC array instruction. `array_get` selects `array.get_s` or `array.get_u` for packed signed or unsigned elements. The public methods, the bounds check for `get`, and `Option::Some`/`Option::None` construction are ordinary Dew source.
+All four compiler intrinsics are declared in `dew.std.wasm.intrinsics`: `wasm_array_new`, `wasm_array_len`, `wasm_array_get`, and `wasm_array_set`. Each maps directly to a WasmGC array instruction. `wasm_array_get` selects `array.get_s` or `array.get_u` for packed signed or unsigned elements. `dew.std.fixed_array` declares no builtins; its public type, methods, `get` bounds check, and `Option::Some`/`Option::None` construction are ordinary Dew source.
 
 Exact packed carriers are part of the static-link ABI. A Dew `FixedArray<U16>` and a MoonBit mutable `array<i16>` are coalesced to one Core Wasm type during linking, so the call needs no copy adapter and no unsafe reference cast.
 

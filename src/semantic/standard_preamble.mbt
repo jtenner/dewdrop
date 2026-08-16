@@ -212,6 +212,9 @@ fn selected_standard_modules(
   if (text_mask & 1) != 0 {
     fixed_array = true
   }
+  if fixed_array {
+    wasm_intrinsics = true
+  }
   (
     text_mask, show, disposable, math, io, testing, wasi, wasm_intrinsics, fixed_array,
     array, map, set, collection_mask, lane_mask,
