@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 15, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
+> Living roadmap as of August 16, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
 
 ## Current baseline
 
@@ -22,13 +22,12 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 ### P1 — self-hosting
 
-1. Enforce the `(Self, key) -> value` indexing functional dependency.
-2. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
-3. Replace the compiler's MoonBit Starshine model, validator, and encoder dependencies with Dew-native Wasm construction, validation, and encoding.
-4. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
-5. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
+1. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
+2. Replace the compiler's MoonBit Starshine model, validator, and encoder dependencies with Dew-native Wasm construction, validation, and encoding.
+3. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
+4. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
 
-Mutable struct fields and complete `@alias` namespace lookup are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
+Indexed implementation uniqueness, mutable struct fields, and complete `@alias` namespace lookup are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
 
 ### P2 — deferred until self-hosting
 
@@ -127,7 +126,7 @@ deferred until self-hosting.
 - [ ] Design optional arguments, including defaults, omission, overload selection, evaluation order, and ABI effects.
 - [ ] Add checked, saturating, wrapping, and explicitly truncating conversion families beyond `Into<T>`.
 - [ ] Decide whether ordinary Boolean `while` or a second `loop` form is needed alongside functional loops.
-- [ ] Enforce the `(Self, key) -> value` indexing functional dependency across arrays, maps, and user evidence.
+- [x] Enforce compiler-owned `IndexedGet` and `IndexedSet` as one implementation per concrete receiver type; overlapping receiver patterns are incoherent even when key/value arguments differ or one implementation is more specific.
 - [x] Add `mut name: Type` struct fields and `value.name = replacement` block-item writes with base-before-value evaluation, alias-visible mutation, local/imported generic field support, frozen-interface/cache provenance, WasmGC `struct.set`, and conservative optimization barriers.
 - [ ] Define lazy module values only if a concrete initialization use case requires them.
 - [ ] Integrate additional host startup entry points only if explicit `__dew_init` is insufficient.

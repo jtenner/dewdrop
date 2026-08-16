@@ -61,6 +61,8 @@ Coverage includes:
 - parser acceptance of indexed setting only as a block item;
 - deterministic rejection of non-index setting targets;
 - local user-defined `IndexedGet` and `IndexedSet` implementations;
+- rejection of a second overlapping receiver implementation even when key/value arguments differ or one receiver pattern specializes another;
+- acceptance of implementations whose receiver patterns are disjoint;
 - exact semantic selections and mechanical direct calls;
 - stable compiler-owned FixedArray identities;
 - static and instance FixedArray method inference;
@@ -79,7 +81,6 @@ The snapshot harness recognizes `array-out-of-bounds` separately from linear-mem
 
 ## Deferred work
 
-- Enforce the functional dependency `(Self, key) -> value` across all visible `IndexedGet` implementations.
 - Add array literals.
 - Add compound indexed updates only after place evaluation can be frozen exactly once.
 - Benchmark optional `get` construction against trapping/unchecked access.

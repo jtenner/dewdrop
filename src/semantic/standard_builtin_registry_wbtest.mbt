@@ -32,6 +32,18 @@ test "generated standard builtin registry matches collected bootstrap declaratio
       ]),
     ]),
   )
+  let preamble = program.modules[program
+    .module_index("dew.std.preamble")
+    .unwrap()]
+  assert_eq(
+    standard_indexed_trait_kind(preamble.lookup_trait("IndexedGet").unwrap()),
+    1,
+  )
+  assert_eq(
+    standard_indexed_trait_kind(preamble.lookup_trait("IndexedSet").unwrap()),
+    2,
+  )
+
   let fixed = program.modules[program
     .module_index("dew.std.fixed_array")
     .unwrap()]

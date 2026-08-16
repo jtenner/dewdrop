@@ -10,6 +10,17 @@ fn impl_test_module(
 }
 
 ///|
+fn indexed_impl_test_module(
+  module_id : UInt64,
+  source : Bytes,
+) -> (CollectedModule, ResolvedModuleTypes, ModuleImplIndex) {
+  let collected = collect_bytes_with_standard_preamble(module_id, source)
+  let resolved = resolve_module_types(collected)
+  let index = build_module_impl_index(collected, resolved)
+  (collected, resolved, index)
+}
+
+///|
 test "trait_declaration impl index retains coherent method_info evidence" {
   let (collected, _, index) = impl_test_module(
     601UL, b"trait Show {\n  fn show(self) -> String\n}\nstruct Item {}\nimpl Show for Item {\n  fn show(self) -> String {\n    \"item\"\n  }\n}\n",
@@ -66,6 +77,65 @@ test "equivalent trait impl patterns are incoherent" {
   assert_eq(overlap, 1)
   assert_false(index.implementations[0].coherent)
   assert_false(index.implementations[1].coherent)
+}
+
+///|
+test "indexed traits allow only one implementation for each receiver type" {
+  let (collected, _, index) = indexed_impl_test_module(
+    615UL, b"struct Box<t> {}\nimpl<t> IndexedGet<U32, t> for Box<t> {\n  fn indexed_get(self, index: U32) -> t {\n    unreachable()\n  }\n}\nimpl IndexedGet<String, I32> for Box<I32> {\n  fn indexed_get(self, index: String) -> I32 {\n    1\n  }\n}\nimpl<t> IndexedSet<U32, t> for Box<t> {\n  fn indexed_set(self, index: U32, value: t) -> Unit {}\n}\nimpl IndexedSet<String, I32> for Box<I32> {\n  fn indexed_set(self, index: String, value: I32) -> Unit {}\n}\n",
+  )
+  let mut overlaps = 0
+  for diagnostic in index.diagnostics {
+    match diagnostic {
+      OverlappingTraitImpl(_, _, _, _, _) => overlaps += 1
+      _ => ()
+    }
+  }
+  assert_eq(overlaps, 2)
+  let box_head = NominalImplTargetHead(collected.lookup_type("Box").unwrap())
+  for implementation in index.implementations {
+    if implementation.target_head == box_head {
+      assert_false(implementation.coherent)
+    }
+  }
+}
+
+///|
+test "program modules enforce indexed implementation uniqueness" {
+  let program = collect_program_manifest(
+    617UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"struct Box<t> {}\nimpl<t> IndexedGet<U32, t> for Box<t> {\n  fn indexed_get(self, index: U32) -> t {\n    unreachable()\n  }\n}\nimpl IndexedGet<String, I32> for Box<I32> {\n  fn indexed_get(self, index: String) -> I32 {\n    1\n  }\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let app = program.module_index("app.main").unwrap()
+  let mut overlaps = 0
+  for diagnostic in analyzed.modules[app].inferred.impl_index.diagnostics {
+    match diagnostic {
+      OverlappingTraitImpl(_, _, _, _, _) => overlaps += 1
+      _ => ()
+    }
+  }
+  assert_eq(overlaps, 1)
+}
+
+///|
+test "indexed traits permit implementations for disjoint receiver types" {
+  let (collected, _, index) = indexed_impl_test_module(
+    616UL, b"struct Box<t> {}\nimpl IndexedGet<U32, I32> for Box<I32> {\n  fn indexed_get(self, index: U32) -> I32 {\n    1\n  }\n}\nimpl IndexedGet<String, Bool> for Box<Bool> {\n  fn indexed_get(self, index: String) -> Bool {\n    true\n  }\n}\nimpl IndexedSet<U32, I32> for Box<I32> {\n  fn indexed_set(self, index: U32, value: I32) -> Unit {}\n}\nimpl IndexedSet<String, Bool> for Box<Bool> {\n  fn indexed_set(self, index: String, value: Bool) -> Unit {}\n}\n",
+  )
+  assert_eq(index.diagnostics.length(), 0)
+  let box_head = NominalImplTargetHead(collected.lookup_type("Box").unwrap())
+  for implementation in index.implementations {
+    if implementation.target_head == box_head {
+      assert_true(implementation.coherent)
+    }
+  }
 }
 
 ///|

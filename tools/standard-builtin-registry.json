@@ -1,4 +1,5 @@
 {
+  "preamble_traits": {"indexed_get": 52, "indexed_set": 54},
   "modules": {
     "option": {"slot": 2, "path": "dew.std.option", "type": 0, "variants": {"none": 0, "some": 1}},
     "wasm_intrinsics": {

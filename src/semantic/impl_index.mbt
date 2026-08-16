@@ -1101,6 +1101,66 @@ fn impl_type_contains_generic(
 }
 
 ///|
+fn compiler_indexed_trait_kind(
+  collected : CollectedModule,
+  declaration : DeclId,
+) -> Int {
+  let owner = semantic_id_module(declaration)
+  if owner == collected.module_id {
+    if semantic_id_local(declaration) >= collected.preamble_declaration_count {
+      return 0
+    }
+  } else if !semantic_module_is_standard_package(owner) {
+    return 0
+  }
+  standard_indexed_trait_kind(declaration)
+}
+
+///|
+fn impl_target_patterns_overlap(
+  scratch : ImplPatternScratch,
+  collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
+  left : IndexedImpl,
+  right : IndexedImpl,
+) -> Bool {
+  scratch.solver.reset()
+  let left_external = semantic_id_module(left.declaration) !=
+    collected.module_id
+  let right_external = semantic_id_module(right.declaration) !=
+    collected.module_id
+  let left_generics = if left_external {
+    { start: 0, length: 0 }
+  } else {
+    collected.generic_parameters_of(left.declaration)
+  }
+  let right_generics = if right_external {
+    { start: 0, length: 0 }
+  } else {
+    collected.generic_parameters_of(right.declaration)
+  }
+  let left_target = scratch.import_pattern(
+    resolved,
+    left.target_type,
+    left_generics,
+    left_external,
+    true,
+  )
+  let right_target = scratch.import_pattern(
+    resolved,
+    right.target_type,
+    right_generics,
+    right_external,
+    true,
+  )
+  scratch.solver.unify(
+    left_target,
+    right_target,
+    synthetic_type_origin(-1, 0UL),
+  )
+}
+
+///|
 fn impl_patterns_overlap(
   scratch : ImplPatternScratch,
   collected : CollectedModule,
@@ -1393,7 +1453,11 @@ fn build_module_impl_index_internal(
   let pattern_scratch = ImplPatternScratch::new(resolved)
   for bucket in buckets {
     match bucket.kind {
-      TraitImplBucket(trait_declaration) if bucket.implementations.length > 1 =>
+      TraitImplBucket(trait_declaration) if bucket.implementations.length > 1 => {
+        let indexed_trait = compiler_indexed_trait_kind(
+            collected, trait_declaration,
+          ) !=
+          0
         for right_offset in 1..<bucket.implementations.length {
           let right_index = bucket_implementations[bucket.implementations.start +
             right_offset]
@@ -1402,6 +1466,25 @@ fn build_module_impl_index_internal(
             let left_index = bucket_implementations[bucket.implementations.start +
               left_offset]
             let left = implementations[left_index]
+            if indexed_trait {
+              if !impl_target_patterns_overlap(
+                  pattern_scratch, collected, resolved, left, right,
+                ) {
+                continue
+              }
+              coherence[left_index] = false
+              coherence[right_index] = false
+              diagnostics.push(
+                OverlappingTraitImpl(
+                  trait_declaration,
+                  left.declaration,
+                  right.declaration,
+                  bucket.target_head,
+                  impl_declaration_offset(collected, right.declaration),
+                ),
+              )
+              break
+            }
             let identical = left.trait_type == right.trait_type &&
               left.target_type == right.target_type
             if !identical &&
@@ -1443,6 +1526,7 @@ fn build_module_impl_index_internal(
             }
           }
         }
+      }
       InherentImplBucket => {
         let seen : Map[NameId, DeclId] = Map::default()
         for offset_index in 0..<bucket.implementations.length {
@@ -1795,6 +1879,7 @@ pub fn build_module_impl_index_with_imports(
       TraitIndexedImpl(declaration) => declaration
       InherentIndexedImpl => continue
     }
+    let indexed_trait = compiler_indexed_trait_kind(collected, right_trait) != 0
     let bucket = index.buckets[right.bucket]
     for candidate_offset in 0..<bucket.implementations.length {
       let left_index = index.bucket_implementations[bucket.implementations.start +
@@ -1805,6 +1890,25 @@ pub fn build_module_impl_index_with_imports(
       let left = index.implementations[left_index]
       if !left.valid || !left.coherent {
         continue
+      }
+      if indexed_trait {
+        if !impl_target_patterns_overlap(
+            pattern_scratch, collected, resolved, left, right,
+          ) {
+          continue
+        }
+        coherence[left_index] = false
+        coherence[right_index] = false
+        index.diagnostics.push(
+          OverlappingTraitImpl(
+            right_trait,
+            left.declaration,
+            right.declaration,
+            right.target_head,
+            0UL,
+          ),
+        )
+        break
       }
       let identical = left.trait_type == right.trait_type &&
         left.target_type == right.target_type

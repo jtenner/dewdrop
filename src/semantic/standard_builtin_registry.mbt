@@ -114,6 +114,15 @@ enum StandardBuiltinOperation {
 } derive(Eq, Debug)
 
 ///|
+fn standard_indexed_trait_kind(declaration : DeclId) -> Int {
+  match semantic_id_local(declaration) {
+    52 => 1
+    54 => 2
+    _ => 0
+  }
+}
+
+///|
 pub fn standard_fixed_array_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(9), 0)
 }

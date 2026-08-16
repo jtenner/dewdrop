@@ -43,6 +43,21 @@ def rendered_source() -> str:
     lines.extend(f"  {name}" for name in operation_names)
     lines.extend(["} derive(Eq, Debug)", ""])
 
+    indexed_traits = data["preamble_traits"]
+    lines.extend(
+        [
+            "///|",
+            "fn standard_indexed_trait_kind(declaration : DeclId) -> Int {",
+            "  match semantic_id_local(declaration) {",
+            f"    {indexed_traits['indexed_get']} => 1",
+            f"    {indexed_traits['indexed_set']} => 2",
+            "    _ => 0",
+            "  }",
+            "}",
+            "",
+        ]
+    )
+
     for module_name in (
         "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
     ):

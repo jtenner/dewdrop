@@ -1,16 +1,15 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 15, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
+> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 16, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
 
 ## P1 — self-hosting
 
-1. Enforce the `(Self, key) -> value` indexing functional dependency.
-2. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
-3. Implement Dew-native Wasm construction, validation, and encoding so the compiler no longer depends on MoonBit Starshine packages.
-4. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
-5. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
+1. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
+2. Implement Dew-native Wasm construction, validation, and encoding so the compiler no longer depends on MoonBit Starshine packages.
+3. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
+4. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
 
-Mutable struct fields and complete `@alias` namespace lookup are finished and therefore omitted from this execution-only backlog.
+Indexed implementation uniqueness, mutable struct fields, and complete `@alias` namespace lookup are finished and therefore omitted from this execution-only backlog.
 
 ## P2 — deferred until self-hosting
 
@@ -58,7 +57,6 @@ are follow-up hardening and observability work, not release blockers.
 - [ ] Design optional arguments and their ABI/evaluation-order rules.
 - [ ] Add checked, saturating, wrapping, and explicit truncating conversions.
 - [ ] Decide ordinary Boolean `while` and a second `loop` form.
-- [ ] Enforce the `(Self, key) -> value` indexing functional dependency.
 - [ ] Add lazy module values or additional startup entry points only if required.
 
 ## Annotations, derivation, and cleanup
