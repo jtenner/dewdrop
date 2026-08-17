@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented on `experiment/starshine-wasmgc-static-linker`. The linker is owned by Dewdrop. The adjacent Starshine-MB checkout remained read-only.
+Implemented on `experiment/starshine-wasmgc-static-linker`. The linker is owned by Dewdrop. The original experiment used a read-only adjacent Starshine-MB checkout; Dewdrop now pins Starshine through the `starshine-mb/` Git submodule.
 
 This experiment links Core Wasm-GC modules directly. It does not use WIT, WITX,
 the Component Model, the canonical ABI, JavaScript strings, or `externref`
@@ -12,10 +12,11 @@ adapters for foreign GC values.
 
 - Dewdrop source commit: `970fccc89a6b64ba861037d4656a1edce5d13c18`.
 - Dewdrop MoonBit dependency declaration: `jtenner/starshine@0.1.1`.
-- `moon.work` resolves that package to the adjacent `../starshine-mb` workspace
-  member.
-- Adjacent Starshine-MB commit: `da15411f5bc171f2f16a69d6a8667789b26100b6`.
-  The checkout already had unrelated uncommitted work and was not modified.
+- At the time of the experiment, `moon.work` resolved that package to the
+  adjacent `../starshine-mb` workspace member.
+- Historical adjacent Starshine-MB commit:
+  `da15411f5bc171f2f16a69d6a8667789b26100b6`. The checkout already had
+  unrelated uncommitted work and was not modified.
 - Starshine package version at that checkout: `0.1.1`.
 - Latest remote default branch observed through `git ls-remote` on 2026-08-15:
   `master` at `ecb3946c7c51bc146b5acca8736b37f33a327603`.

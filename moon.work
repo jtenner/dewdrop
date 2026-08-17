@@ -1,4 +1,4 @@
 members = [
   ".",
-  "../starshine-mb",
+  "starshine-mb",
 ]

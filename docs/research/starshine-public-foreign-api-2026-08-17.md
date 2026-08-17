@@ -8,9 +8,9 @@ model and add a second schema that the compiler would have to maintain.
 
 ## Audited source
 
-The remote `jtenner/starshine-mb` default branch was cloned on August 17, 2026 at
-commit `a15644be6434e26eafd00db1eaf49b2a0a58803a`. The package remains version
-`0.1.1`.
+Dewdrop now pins `jtenner/starshine-mb` as the `starshine-mb/` Git submodule at
+commit `f05592f55d7765eaa634b2e474d4ab3a19abd356`. The package remains version
+`0.1.1`. This revision includes Starshine's generated complete raw WasmGC FFI.
 
 The generated public interfaces inspected were:
 
@@ -47,22 +47,19 @@ The adjacent packages expose the required module operations:
 
 ## Generated direct ABI
 
-The Dewdrop generator will consume pinned `.mbti` snapshots and emit two matching
-artifacts:
+Starshine now owns the raw WasmGC FFI generator under `starshine-mb/ffi/`. It
+forwards every supported concrete public function from the importable Starshine
+packages and roots each forwarding function with `#export_name`.
 
-1. MoonBit `#export_name` wrappers in `src/starshine_guest`;
-2. Dew foreign types and functions with the exact linked signatures.
+The generated export manifest gives stable linker-facing names such as
+`Module::new`, `Instruction::i32_const`, and `binary::encode_module`. Colliding
+methods include their package name. Dewdrop's submodule-safe helper builds the
+final provider at `starshine-mb/dist/ffi/starshine-ffi.wasm` with
+`tools/starshine-ffi.sh build` and verifies generated files with
+`tools/starshine-ffi.sh check`.
 
-The ABI remains version 1 while Dewdrop is unreleased. Generated names must be
-stable and derived from the Starshine package, type, member, and overload shape.
-
-The first generated set should cover the exact transitive members used by:
-
-- `src/backend`;
-- `src/core_linker`;
-- binary encode/decode;
-- module validation;
-- selected final module passes.
+Dewdrop must generate only the matching Dew foreign declarations and exact
+signature audit. It must not regenerate or mirror Starshine's MoonBit wrappers.
 
 ## Representation bridges
 
@@ -97,10 +94,11 @@ mismatch, validation failure, or malformed result bridge must fail visibly.
 
 ## Acceptance order
 
-1. Vendor the four pinned `.mbti` snapshots and provenance.
-2. Generate the exact used type and function closure.
-3. Generate MoonBit guest wrappers and Dew declarations.
-4. Extend signature-audit tests to every generated export.
+1. Build and verify `starshine-mb/dist/ffi/starshine-ffi.wasm` from the pinned
+   submodule.
+2. Consume Starshine's generated export-name metadata.
+3. Generate the matching Dew foreign declarations for the exact used subset.
+4. Extend signature-audit tests to every selected export.
 5. Build a direct typed module containing one exported `main` function.
 6. Validate and encode it through Starshine.
 7. Link it into the source-Bytes smoke compiler.

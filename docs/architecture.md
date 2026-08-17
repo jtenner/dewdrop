@@ -56,8 +56,8 @@ import lower packages for manifest construction, source-diagnostic rendering,
 custom-section policy, and specialized output framing while those responsibilities
 are migrated or intentionally retained.
 
-Starshine is a sibling MoonBit workspace package used only by `src/backend` to
-construct, validate, and encode WebAssembly.
+Starshine is pinned as the `starshine-mb/` Git submodule and MoonBit workspace
+member. `src/backend` uses it to construct, validate, and encode WebAssembly.
 
 ## Compiler phase map
 

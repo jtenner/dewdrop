@@ -1,5 +1,21 @@
 # Third-party notices
 
+## Starshine
+
+Dewdrop pins Starshine as the `starshine-mb/` Git submodule from:
+
+```text
+https://github.com/jtenner/starshine-mb
+```
+
+The pinned revision is:
+
+```text
+f05592f55d7765eaa634b2e474d4ab3a19abd356
+```
+
+The upstream license text is retained in `starshine-mb/LICENSE`.
+
 ## BLAKE3
 
 Dew's portable cache-pack BLAKE3 implementation follows the public BLAKE3

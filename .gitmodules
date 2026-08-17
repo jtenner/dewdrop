@@ -1,0 +1,3 @@
+[submodule "starshine-mb"]
+	path = starshine-mb
+	url = https://github.com/jtenner/starshine-mb.git

@@ -11,11 +11,11 @@ Date: 2026-07-28
 
 ## Relevant backend support
 
-The current Starshine sibling repository supports all of the relevant low-level mechanisms:
+The pinned `starshine-mb/` submodule supports all of the relevant low-level mechanisms:
 
-- `Instruction::call_ref` and `Instruction::return_call_ref` in `../starshine-mb/src/lib/types.mbt`.
-- `hot_build_call_ref` and `hot_build_return_call_ref` in `../starshine-mb/src/ir/hot_builders.mbt`.
-- `Instruction::struct_get` in `../starshine-mb/src/lib/types.mbt`.
+- `Instruction::call_ref` and `Instruction::return_call_ref` in `starshine-mb/src/lib/types.mbt`.
+- `hot_build_call_ref` and `hot_build_return_call_ref` in `starshine-mb/src/ir/hot_builders.mbt`.
+- `Instruction::struct_get` in `starshine-mb/src/lib/types.mbt`.
 - `call_indirect` and `br_table` are also represented and lowered by Starshine.
 
 The WebAssembly core specification defines `call_ref` as invoking a typed function reference operand. It defines `call_indirect` in terms of a table lookup, a reference cast, and `call_ref`.

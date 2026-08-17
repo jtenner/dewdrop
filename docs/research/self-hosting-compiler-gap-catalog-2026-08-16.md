@@ -388,9 +388,9 @@ to implement them to self-host:
 
 ## Proposed implementation order
 
-1. **Freeze the linked Starshine foreign ABI.** Pin the public `.mbti`
-   interfaces, generate direct typed object-model exports and Dew declarations,
-   and include the interface digests and compiled guest bytes in compiler
+1. **Freeze the linked Starshine foreign ABI.** Build the pinned submodule's
+   generated raw WasmGC FFI, generate matching Dew declarations from its export
+   metadata, and include interface digests and provider bytes in compiler
    fingerprints.
 2. **Decide SH-09 and SH-10 only when the port reaches them.** Add tuples or
    ordinary loops only if the measured rewrite cost justifies them.

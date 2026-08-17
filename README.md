@@ -189,25 +189,28 @@ wasm-tools --version
 
 Use current stable tool releases. Dew targets evolving WasmGC functionality, so a very old runtime may reject otherwise valid output.
 
-### 2. Clone Starshine and Dewdrop beside each other
+### 2. Clone Dewdrop with Starshine
 
-The MoonBit workspace currently expects Starshine to be a sibling checkout of Dewdrop:
-
-```text
-some-parent-directory/
-├── starshine-mb/
-└── dewdrop/
-```
-
-Create that layout:
+Starshine is an official Dewdrop Git submodule and MoonBit workspace member.
+Clone both repositories in one command:
 
 ```sh
-mkdir dew-work
-cd dew-work
-
-git clone https://github.com/jtenner/starshine-mb.git
-git clone https://github.com/jtenner/dewdrop.git
+git clone --recurse-submodules https://github.com/jtenner/dewdrop.git
 cd dewdrop
+```
+
+For an existing Dewdrop checkout, initialize or refresh the pinned Starshine
+revision with:
+
+```sh
+git submodule update --init --recursive
+```
+
+The pinned Starshine raw WasmGC FFI can be checked or built with:
+
+```sh
+tools/starshine-ffi.sh check
+tools/starshine-ffi.sh build
 ```
 
 ### 3. Verify the checkout

@@ -120,15 +120,16 @@ section constructors, index wrappers, instruction constructors, `Module::new`,
 and immutable `Module::with_*_sec` helpers. The `binary`, `validate`, and
 `passes` packages expose the required module-level operations.
 
-Generate exact `#export_name` wrappers and matching Dew foreign declarations
-from pinned `.mbti` interface snapshots. Generate typed bridge helpers only where
-Dew and MoonBit container or error representations differ. In particular, use
-small typed array/builders and result inspectors rather than introducing a
-second command language.
+The pinned Starshine submodule now generates and owns the complete raw WasmGC
+`#export_name` wrapper package under `starshine-mb/ffi/`. Dewdrop must consume
+its export metadata and generate only matching Dew declarations plus typed
+bridge helpers where Dew and MoonBit container or error representations differ.
+In particular, use small typed array/builders and result inspectors rather than
+introducing a second command language.
 
-The generated guest bytes, the pinned Starshine commit and package interface
-digests, and every declared export signature must be inputs to the compiler
-fingerprint. The build must fail on a missing export, signature mismatch,
+The generated provider bytes, the pinned Starshine submodule commit and package
+interface digests, and every selected export signature must be inputs to the
+compiler fingerprint. The build must fail on a missing export, signature mismatch,
 validation failure, malformed result bridge, or provider digest mismatch.
 
 ## 4. P0 policy: compiler digests and caches
@@ -178,7 +179,7 @@ foreign linking.
 
 ## Recommended order
 
-1. Pin the Starshine `.mbti` interfaces and generate the direct typed foreign ABI.
+1. Build the pinned Starshine raw WasmGC FFI and generate matching Dew declarations.
 2. Extend the source-Bytes smoke compiler through that linked Starshine guest.
 3. Port tokenizer and parser against the now-frozen in-memory source boundary.
 4. Port semantic and backend phases in dependency order.
