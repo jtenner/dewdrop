@@ -62,7 +62,7 @@ requests before this layer.
 
 ### Whole-build compiler fingerprint
 
-The compiler-source fingerprint memo now uses a checksummed canonical V4 binary artifact. The fast path now:
+The compiler-source fingerprint memo now uses a checksummed canonical version 1 binary artifact. The fast path now:
 
 1. walks only the compiler-relevant path classes to obtain an exact sorted path
    list;

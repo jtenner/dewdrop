@@ -29,10 +29,10 @@ The default native path stores complete modules as `BMOD` entries in one
 `.dew/cache/packs/v1-<graph>.dwp` file. `--no-cache-pack` retains the legacy path:
 
 ```text
-.dew/cache/body-inference/v4-<key>.dbi
+.dew/cache/body-inference/v1-<key>.dbi
 ```
 
-The V4 semantic key is SHA-256 over:
+The version 1 semantic key is SHA-256 over:
 
 - the private schema/domain marker;
 - default-preamble policy;
@@ -51,7 +51,7 @@ stored together as one `BFAM` pack entry. `--no-cache-pack` retains the legacy
 path:
 
 ```text
-.dew/cache/body-inference-families/v2-<context-fingerprint>.dbf
+.dew/cache/body-inference-families/v1-<context-fingerprint>.dbf
 ```
 
 One atomic bundle avoids hundreds of small file opens and publications. Entries
@@ -107,7 +107,7 @@ covered across changed preceding expression ranges.
 
 ## Payloads and fail-visible publication
 
-Complete-module payload V2 and family-bundle V2 use canonical direct binary
+Complete-module and family-bundle version 1 payloads use canonical direct binary
 schemas inside the shared checksummed artifact container. Family fingerprints
 are raw sorted 32-byte digests followed by fixed offset/length index records and
 concatenated bounded family sections. Lookup binary-searches the index and
@@ -143,9 +143,9 @@ DEW_BODY_FAMILY_CACHE=1 tools/dew check ...
 
 Without either option, `--cache-report` prints `body inference cache: disabled`.
 
-The compiler host request is V6. The family-cache policy introduced by V4, the
-planning-cache policy added by V5, and the aligned pack/exact-program policies
-added by V6 are transported explicitly to the MoonBit compiler process.
+The compiler host request is version 1. Family-cache, planning-cache, aligned
+pack, and exact-program policies are transported explicitly to the MoonBit
+compiler process.
 
 Without family reuse, `--cache-report` prints:
 

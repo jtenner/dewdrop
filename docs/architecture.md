@@ -373,7 +373,7 @@ The persistent cache stores checksummed serialized frozen interfaces. Corrupt,
 incompatible, or identity-mismatched entries fail visibly. The cache
 architecture is generalized around `InterfaceBundleCacheKey` and
 `InterfaceBundlePolicy`: `interface_cache_envelope.mbt` owns the compatible
-legacy V13 standard and V2 workspace envelopes, `interface_bundle_cache.mbt`
+version 1 standard and workspace envelopes, `interface_bundle_cache.mbt`
 owns provenance and module selection, `cache_pack.mbt` owns default unified I/O,
 and `cached_analysis.mbt` owns semantic analysis using cached slots. One bundle
 selects compiler-owned standard modules and verified external dependencies.

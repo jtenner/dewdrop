@@ -52,7 +52,7 @@ cleanup passes needed by this experiment.
 - Existing WASI staging is a fast, bounded one-page implementation for only
   `fd_read` and `fd_write`. It uses offsets 0..65535 and exports memory only when
   those paths are reachable. The generic bridge must preserve this fast path.
-- The CLI compile request is version 7. It carries ordered provider/path pairs.
+- The CLI compile request is version 1. It carries ordered provider/path pairs.
   Exact output cache context includes each provider and the BLAKE3 digest of the
   linked Wasm bytes.
 
@@ -173,9 +173,13 @@ error.
 
 Memory and table policy:
 
-- Existing Dew memories keep their relative order and occupy the earliest
-  available defined-memory indices, so a Dew host/WASI memory remains memory 0
-  when the guest has no memory imports.
+- Existing Dew memories keep their relative order and normally occupy the
+  earliest available defined-memory indices, so a Dew host/WASI memory remains
+  memory 0 when the guest has no memory imports.
+- A linked provider named `wpsi` is the explicit exception: its defined memories
+  are placed before Dew memories so the WPSI provider keeps memory 0. WPSI
+  providers with imported memories are rejected because their memory-zero
+  ownership would be ambiguous after static linking.
 - Guest and dependency memories remain separate and all explicit and implicit
   memory immediates are remapped. The String adapter gets a private fixed
   one-page scratch memory.

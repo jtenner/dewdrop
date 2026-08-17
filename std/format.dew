@@ -1,0 +1,38 @@
+pub enum FormatEncodeError {
+  Validation(FormatValidationErr)
+  EncodingFailed
+}
+
+pub enum FormatDecodeError {
+  FileTooLarge(U32, U32)
+  InvalidUtf8
+  InvalidSyntax(String)
+  UnsupportedVersion(U32)
+  UnexpectedEnd(U32)
+  InvalidTag(U32, U32)
+  InvalidLength(U32, U32)
+  ChecksumMismatch
+  TrailingData(U32)
+}
+
+pub enum FormatValidationErr {
+  MissingField(String)
+  UnknownField(String)
+  InvalidField(String)
+  LimitExceeded(String, U32, U32)
+  ByteLimitExceeded(String, U64, U64)
+  Duplicate(String)
+  OutOfOrder(String)
+  UnsupportedVersion(U32)
+  ChecksumMismatch
+}
+
+pub trait Validate<t_err> {
+  fn validate(self) -> Result<Unit, t_err>
+}
+
+pub fn validate<t_err, t: Validate<t_err>>(
+  value: t,
+) -> Result<Unit, t_err> {
+  value.validate()
+}

@@ -34,7 +34,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 66)
+  assert_eq(wildcard_paths.length(), 82)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -56,13 +56,29 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[32], "std/io.dew")
   assert_eq(wildcard_paths[33], "std/testing.dew")
   assert_eq(wildcard_paths[34], "std/json.dew")
-  assert_eq(wildcard_paths[35], "std/bloom_filter.dew")
-  assert_eq(wildcard_paths[36], "std/blake3.dew")
-  assert_eq(wildcard_paths[37], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[39], "std/string_fixed_array.dew")
-  assert_eq(wildcard_paths[43], "std/text.dew")
-  assert_eq(wildcard_paths[45], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[65], "std/f64x2.dew")
+  assert_eq(wildcard_paths[35], "std/encode.dew")
+  assert_eq(wildcard_paths[36], "std/decode.dew")
+  assert_eq(wildcard_paths[37], "std/format.dew")
+  assert_eq(wildcard_paths[38], "std/semver.dew")
+  assert_eq(wildcard_paths[39], "std/package.dew")
+  assert_eq(wildcard_paths[40], "std/package/artifact.dew")
+  assert_eq(wildcard_paths[41], "std/bloom_filter.dew")
+  assert_eq(wildcard_paths[42], "std/blake3.dew")
+  assert_eq(wildcard_paths[43], "std/integrity/sha256.dew")
+  assert_eq(wildcard_paths[44], "std/path.dew")
+  assert_eq(wildcard_paths[45], "std/fs.dew")
+  assert_eq(wildcard_paths[46], "std/process.dew")
+  assert_eq(wildcard_paths[47], "std/fs/wasi.dew")
+  assert_eq(wildcard_paths[48], "std/fs/wpsi.dew")
+  assert_eq(wildcard_paths[49], "std/process/wasi.dew")
+  assert_eq(wildcard_paths[50], "std/process/wpsi.dew")
+  assert_eq(wildcard_paths[51], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[53], "std/string_fixed_array.dew")
+  assert_eq(wildcard_paths[57], "std/text.dew")
+  assert_eq(wildcard_paths[58], "std/encoding/utf8.dew")
+  assert_eq(wildcard_paths[59], "std/wasm/wasi.dew")
+  assert_eq(wildcard_paths[61], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[81], "std/f64x2.dew")
 }
 
 ///|
@@ -185,6 +201,40 @@ test "standard import prepass selects BLAKE3 dependencies" {
 }
 
 ///|
+test "standard import prepass selects SHA-256 dependencies" {
+  let module_id = 1005UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.integrity.sha256\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      8, false, false, false, false, false, false, true, true, false, false, false,
+      32768, 0,
+    ),
+  )
+}
+
+///|
+test "standard import prepass selects filesystem and process adapters" {
+  let module_id = 1006UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.fs.wasi\nopen dew.std.process.wpsi\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      15, false, false, false, false, false, false, true, true, true, false, false,
+      5193728, 0,
+    ),
+  )
+}
+
+///|
 test "standard import prepass selects JSON dependencies" {
   let module_id = 1001UL
   assert_eq(
@@ -230,6 +280,23 @@ test "standard import prepass selects text iteration dependencies" {
     ]),
     (
       17, false, false, false, false, false, false, true, true, false, false, false,
+      0, 0,
+    ),
+  )
+}
+
+///|
+test "standard import prepass selects UTF8 codec dependencies" {
+  let module_id = 1007UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.encoding.utf8\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      43, false, false, false, false, false, false, true, true, false, false, false,
       0, 0,
     ),
   )

@@ -1,0 +1,417 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.ordering
+open dew.std.string
+open dew.std.string_builder
+
+pub enum SemVerIdentifier {
+  Numeric(U32)
+  Text(String)
+}
+
+pub struct SemVer {
+  major: U32
+  minor: U32
+  patch: U32
+  prerelease: Array<SemVerIdentifier>
+  build: Array<String>
+  text: String
+}
+
+pub enum SemVerParseError {
+  Empty
+  TooLong(U32, U32)
+  InvalidCore
+  InvalidNumber(U32)
+  NumberOverflow(U32)
+  LeadingZero(U32)
+  EmptyIdentifier(U32)
+  InvalidIdentifier(U32, U8)
+  DuplicatePrerelease
+  DuplicateBuild
+}
+
+pub fn semver_max_bytes() -> U32 {
+  255u32
+}
+
+fn semver_unit() -> Unit {
+}
+
+fn semver_is_digit(byte: U8) -> Bool {
+  byte >= 48u8 && byte <= 57u8
+}
+
+fn semver_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn semver_is_identifier_byte(byte: U8) -> Bool {
+  semver_is_digit(byte) ||
+  (byte >= 65u8 && byte <= 90u8) ||
+  (byte >= 97u8 && byte <= 122u8) ||
+  byte == 45u8
+}
+
+fn semver_find_byte(value: String, start: U32, end: U32, byte: U8) -> Option<U32> {
+  while start {
+    index if index < end => if value.byte_at(index) == byte {
+      break Option::Some(index)
+    } else {
+      continue index + 1u32
+    }
+    _ => break Option::None
+  }
+}
+
+fn semver_parse_u32(value: String, start: U32, end: U32) -> Result<U32, SemVerParseError> {
+  if start == end {
+    Result::Err(SemVerParseError::InvalidNumber(start))
+  } else if end - start > 1u32 && value.byte_at(start) == 48u8 {
+    Result::Err(SemVerParseError::LeadingZero(start))
+  } else {
+    let mut number = 0u32
+    while start {
+      index if index < end => {
+        let byte = value.byte_at(index)
+        if !semver_is_digit(byte) {
+          break Result::Err(SemVerParseError::InvalidNumber(index))
+        } else {
+          let digit = semver_u8_to_u32(byte - 48u8)
+          if number > 429496729u32 ||
+            (number == 429496729u32 && digit > 5u32) {
+            break Result::Err(SemVerParseError::NumberOverflow(index))
+          } else {
+            number = number * 10u32 + digit
+            continue index + 1u32
+          }
+        }
+      }
+      _ => break Result::Ok(number)
+    }
+  }
+}
+
+fn semver_identifier_kind_from(
+  value: String,
+  index: U32,
+  end: U32,
+  kind: U32,
+) -> U32 {
+  if index >= end {
+    kind
+  } else {
+    let byte = value.byte_at(index)
+    let next = if !semver_is_identifier_byte(byte) {
+      2u32
+    } else if kind == 0u32 && !semver_is_digit(byte) {
+      1u32
+    } else {
+      kind
+    }
+    semver_identifier_kind_from(value, index + 1u32, end, next)
+  }
+}
+
+fn semver_identifier_kind(value: String, start: U32, end: U32) -> U32 {
+  semver_identifier_kind_from(value, start, end, 0u32)
+}
+
+fn semver_parse_identifiers_from(
+  value: String,
+  item_start: U32,
+  index: U32,
+  end: U32,
+  numeric_rules: Bool,
+  output: Array<SemVerIdentifier>,
+) -> Result<Array<SemVerIdentifier>, SemVerParseError> {
+  if index > end {
+    Result::Ok(output)
+  } else if index < end && value.byte_at(index) != 46u8 {
+    semver_parse_identifiers_from(value, item_start, index + 1u32, end, numeric_rules, output)
+  } else if index == item_start {
+    Result::Err(SemVerParseError::EmptyIdentifier(index))
+  } else {
+    let kind = semver_identifier_kind(value, item_start, index)
+    if kind == 2u32 {
+      Result::Err(SemVerParseError::InvalidIdentifier(item_start, value.byte_at(item_start)))
+    } else if kind == 0u32 && numeric_rules {
+      match semver_parse_u32(value, item_start, index) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(number) => {
+          output.push(SemVerIdentifier::Numeric(number))
+          semver_parse_identifiers_from(value, index + 1u32, index + 1u32, end, numeric_rules, output)
+        }
+      }
+    } else {
+      output.push(SemVerIdentifier::Text(value.slice(item_start, index)))
+      semver_parse_identifiers_from(value, index + 1u32, index + 1u32, end, numeric_rules, output)
+    }
+  }
+}
+
+fn semver_parse_identifiers(
+  value: String,
+  start: U32,
+  end: U32,
+  numeric_rules: Bool,
+) -> Result<Array<SemVerIdentifier>, SemVerParseError> {
+  if start == end {
+    Result::Err(SemVerParseError::EmptyIdentifier(start))
+  } else {
+    semver_parse_identifiers_from(value, start, start, end, numeric_rules, Array::new())
+  }
+}
+
+fn semver_identifiers_to_strings(values: Array<SemVerIdentifier>) -> Array<String> {
+  let output = Array::with_capacity(values.length())
+  while 0u32 {
+    index if index < values.length() => {
+      match values.get_unchecked(index) {
+        SemVerIdentifier::Numeric(number) => {
+          let builder = StringBuilder::new()
+          builder.append_u32(number)
+          output.push(builder.finish())
+        }
+        SemVerIdentifier::Text(text) => output.push(text)
+      }
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+fn semver_finish_parse(
+  value: String,
+  length: U32,
+  core_end: U32,
+  prerelease_start: U32,
+  build_start: U32,
+) -> Result<SemVer, SemVerParseError> {
+  match semver_find_byte(value, 0u32, core_end, 46u8) {
+    Option::None => Result::Err(SemVerParseError::InvalidCore)
+    Option::Some(first_dot) => match semver_find_byte(value, first_dot + 1u32, core_end, 46u8) {
+      Option::None => Result::Err(SemVerParseError::InvalidCore)
+      Option::Some(second_dot) => if semver_find_byte(value, second_dot + 1u32, core_end, 46u8) is Option::Some(_) {
+        Result::Err(SemVerParseError::InvalidCore)
+      } else {
+        match semver_parse_u32(value, 0u32, first_dot) {
+          Result::Err(error) => Result::Err(error)
+          Result::Ok(major) => match semver_parse_u32(value, first_dot + 1u32, second_dot) {
+            Result::Err(error) => Result::Err(error)
+            Result::Ok(minor) => match semver_parse_u32(value, second_dot + 1u32, core_end) {
+              Result::Err(error) => Result::Err(error)
+              Result::Ok(patch) => {
+                let prerelease_end = if build_start < length {
+                  build_start - 1u32
+                } else {
+                  length
+                }
+                let prerelease_result = if prerelease_start < length {
+                  semver_parse_identifiers(value, prerelease_start, prerelease_end, true)
+                } else {
+                  Result::Ok(Array::new())
+                }
+                match prerelease_result {
+                  Result::Err(error) => Result::Err(error)
+                  Result::Ok(prerelease) => {
+                    let build_result = if build_start < length {
+                      semver_parse_identifiers(value, build_start, length, false)
+                    } else {
+                      Result::Ok(Array::new())
+                    }
+                    match build_result {
+                      Result::Err(error) => Result::Err(error)
+                      Result::Ok(build_values) => Result::Ok(SemVer::{
+                        major: major
+                        minor: minor
+                        patch: patch
+                        prerelease: prerelease
+                        build: semver_identifiers_to_strings(build_values)
+                        text: value
+                      })
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn semver_parse_without_build(
+  value: String,
+  length: U32,
+  main_end: U32,
+  build_start: U32,
+) -> Result<SemVer, SemVerParseError> {
+  match semver_find_byte(value, 0u32, main_end, 45u8) {
+    Option::Some(dash) => semver_finish_parse(value, length, dash, dash + 1u32, build_start)
+    Option::None => semver_finish_parse(value, length, main_end, length, build_start)
+  }
+}
+
+pub fn semver_parse(value: String) -> Result<SemVer, SemVerParseError> {
+  let length = value.byte_length()
+  if length == 0u32 {
+    Result::Err(SemVerParseError::Empty)
+  } else if length > semver_max_bytes() {
+    Result::Err(SemVerParseError::TooLong(length, semver_max_bytes()))
+  } else {
+    match semver_find_byte(value, 0u32, length, 43u8) {
+      Option::None => semver_parse_without_build(value, length, length, length)
+      Option::Some(plus) => if semver_find_byte(value, plus + 1u32, length, 43u8) is Option::Some(_) {
+        Result::Err(SemVerParseError::DuplicateBuild)
+      } else {
+        semver_parse_without_build(value, length, plus, plus + 1u32)
+      }
+    }
+  }
+}
+
+pub fn semver_parse_bytes(value: Bytes) -> Result<SemVer, SemVerParseError> {
+  if value.is_valid_utf8() {
+    semver_parse(value.to_string())
+  } else {
+    Result::Err(SemVerParseError::InvalidIdentifier(0u32, 0u8))
+  }
+}
+
+pub fn semver(major: U32, minor: U32, patch: U32) -> SemVer {
+  let builder = StringBuilder::new()
+  builder.append_u32(major)
+  builder.append(".")
+  builder.append_u32(minor)
+  builder.append(".")
+  builder.append_u32(patch)
+  SemVer::{
+    major: major
+    minor: minor
+    patch: patch
+    prerelease: Array::new()
+    build: Array::new()
+    text: builder.finish()
+  }
+}
+
+impl SemVer {
+  fn major(self) -> U32 {
+    self.major
+  }
+  fn minor(self) -> U32 {
+    self.minor
+  }
+  fn patch(self) -> U32 {
+    self.patch
+  }
+  fn prerelease(self) -> Array<SemVerIdentifier> {
+    self.prerelease
+  }
+  fn build(self) -> Array<String> {
+    self.build
+  }
+  fn is_prerelease(self) -> Bool {
+    self.prerelease.length() > 0u32
+  }
+  fn to_string(self) -> String {
+    self.text
+  }
+}
+
+fn semver_compare_text(left: String, right: String) -> Ordering {
+  string_comparator().compare(left, right)
+}
+
+fn semver_compare_identifier(left: SemVerIdentifier, right: SemVerIdentifier) -> Ordering {
+  match left {
+    SemVerIdentifier::Numeric(left_number) => match right {
+      SemVerIdentifier::Numeric(right_number) => if left_number < right_number {
+        Ordering::Less
+      } else if left_number > right_number {
+        Ordering::Greater
+      } else {
+        Ordering::Equal
+      }
+      SemVerIdentifier::Text(_) => Ordering::Less
+    }
+    SemVerIdentifier::Text(left_text) => match right {
+      SemVerIdentifier::Numeric(_) => Ordering::Greater
+      SemVerIdentifier::Text(right_text) => semver_compare_text(left_text, right_text)
+    }
+  }
+}
+
+pub fn semver_compare(left: SemVer, right: SemVer) -> Ordering {
+  if left.major < right.major {
+    Ordering::Less
+  } else if left.major > right.major {
+    Ordering::Greater
+  } else if left.minor < right.minor {
+    Ordering::Less
+  } else if left.minor > right.minor {
+    Ordering::Greater
+  } else if left.patch < right.patch {
+    Ordering::Less
+  } else if left.patch > right.patch {
+    Ordering::Greater
+  } else if left.prerelease.length() == 0u32 && right.prerelease.length() == 0u32 {
+    Ordering::Equal
+  } else if left.prerelease.length() == 0u32 {
+    Ordering::Greater
+  } else if right.prerelease.length() == 0u32 {
+    Ordering::Less
+  } else {
+    let limit = if left.prerelease.length() < right.prerelease.length() {
+      left.prerelease.length()
+    } else {
+      right.prerelease.length()
+    }
+    while 0u32 {
+      index if index < limit => {
+        let compared = semver_compare_identifier(
+          left.prerelease.get_unchecked(index),
+          right.prerelease.get_unchecked(index),
+        )
+        if compared is Ordering::Equal {
+          continue index + 1u32
+        } else {
+          break compared
+        }
+      }
+      _ => if left.prerelease.length() < right.prerelease.length() {
+        break Ordering::Less
+      } else if left.prerelease.length() > right.prerelease.length() {
+        break Ordering::Greater
+      } else {
+        break Ordering::Equal
+      }
+    }
+  }
+}
+
+pub fn semver_same_precedence(left: SemVer, right: SemVer) -> Bool {
+  semver_compare(left, right) is Ordering::Equal
+}
+
+pub fn semver_caret_matches(base: SemVer, candidate: SemVer) -> Bool {
+  if semver_compare(candidate, base) is Ordering::Less {
+    false
+  } else if candidate.is_prerelease() && !semver_same_precedence(candidate, base) {
+    false
+  } else if base.major > 0u32 {
+    candidate.major == base.major
+  } else if base.minor > 0u32 {
+    candidate.major == 0u32 && candidate.minor == base.minor
+  } else {
+    candidate.major == 0u32 && candidate.minor == 0u32 && candidate.patch == base.patch
+  }
+}
+
+pub fn semver_tilde_matches(base: SemVer, candidate: SemVer) -> Bool {
+  !(semver_compare(candidate, base) is Ordering::Less) &&
+  (!candidate.is_prerelease() || semver_same_precedence(candidate, base)) &&
+  candidate.major == base.major && candidate.minor == base.minor
+}

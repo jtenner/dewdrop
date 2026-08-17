@@ -44,7 +44,7 @@ pub fn append_wasm_abi_section(
 ) -> Bytes {
   let payload = Buffer()
   payload.write_bytes(b"DWA1")
-  payload.write_bytes(b"\x02\x01\x01\x01\x01")
+  payload.write_bytes(b"\x01\x01\x01\x01\x01")
   write_wasm_abi_string(payload, interface_.path)
   write_wasm_abi_string(payload, interface_.interface_fingerprint)
   write_wasm_u32_le(payload, interface_.dependencies.length())

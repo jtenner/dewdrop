@@ -9,6 +9,18 @@ pub struct BodyInferenceCacheStatus {
 }
 
 ///|
+pub fn BodyInferenceCacheStatus::disabled() -> BodyInferenceCacheStatus {
+  {
+    enabled: false,
+    hits: 0,
+    misses: 0,
+    family_enabled: false,
+    family_hits: 0,
+    family_misses: 0,
+  }
+}
+
+///|
 pub fn BodyInferenceCacheStatus::label(
   self : BodyInferenceCacheStatus,
 ) -> String {
@@ -56,7 +68,7 @@ fn body_inference_cache_directory() -> String {
 
 ///|
 fn body_inference_cache_file(key : String) -> String {
-  interface_cache_join(body_inference_cache_directory(), "v4-" + key + ".dbi")
+  interface_cache_join(body_inference_cache_directory(), "v1-" + key + ".dbi")
 }
 
 ///|
@@ -68,7 +80,7 @@ fn body_inference_family_cache_directory() -> String {
 fn body_inference_family_cache_file(key : String) -> String {
   interface_cache_join(
     body_inference_family_cache_directory(),
-    "v2-" + key + ".dbf",
+    "v1-" + key + ".dbf",
   )
 }
 
@@ -155,7 +167,7 @@ fn body_inference_module_value_source_digest(
   declaration_sources : Array[Bytes?],
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_FAMILY_MODULE_VALUES_V2\x00")
+  output.write_bytes(b"DEW_BODY_FAMILY_MODULE_VALUES_V1\x00")
   for body in collected.bodies {
     if body.kind is @semantic.ModuleLetBody {
       body_family_write_u64(output, body.declaration)
@@ -180,7 +192,7 @@ fn body_inference_family_context_digest(
 ) -> Result[FixedArray[Byte], String] {
   let collected = program.modules[module_index]
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_FAMILY_CONTEXT_V2_MUTABLE_FIELDS\x00")
+  output.write_bytes(b"DEW_BODY_FAMILY_CONTEXT_V1_MUTABLE_FIELDS\x00")
   let interface_digest = match
     body_inference_interface_digest(frozen, module_index) {
     Ok(value) => value
@@ -268,7 +280,7 @@ fn body_inference_family_cache_keys(
     }
     let source = @crypto.sha256(family_source)
     let key_output = Buffer()
-    key_output.write_bytes(b"DEW_BODY_FAMILY_KEY_V2_MUTABLE_FIELDS\x00")
+    key_output.write_bytes(b"DEW_BODY_FAMILY_KEY_V1_MUTABLE_FIELDS\x00")
     key_output.write_byte(if program.default_preamble { 1 } else { 0 })
     interface_cache_write_string(key_output, program.module_paths[module_index])
     body_family_write_u64(key_output, body.id)
@@ -321,7 +333,7 @@ fn body_inference_interface_digest(
   module_index : Int,
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_INFERENCE_INTERFACE_V2\x00")
+  output.write_bytes(b"DEW_BODY_INFERENCE_INTERFACE_V1\x00")
   interface_cache_write_string(
     output,
     frozen.interfaces[module_index].interface_fingerprint,
@@ -356,7 +368,7 @@ fn body_inference_cache_key_digest(
   interface_ : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V4_MUTABLE_FIELDS\x00")
+  output.write_bytes(b"DEW_BODY_INFERENCE_KEY_V1_MUTABLE_FIELDS\x00")
   output.write_byte(if program.default_preamble { 1 } else { 0 })
   interface_cache_write_string(output, program.module_paths[module_index])
   for byte in source {

@@ -1,0 +1,106 @@
+open dew.std.bytes
+open dew.std.string
+open dew.std.string_builder
+
+pub enum PathError {
+  Empty
+  Absolute
+  ParentEscape
+  EmptySegment
+  Nul
+  Backslash
+  TooLong
+}
+
+pub struct RelativePath {
+  value: String
+}
+
+fn path_has_nul_or_backslash(value: String) -> Option<PathError> {
+  let bytes = value.as_bytes()
+  while 0u32 {
+    index if index < bytes.byte_length() => {
+      let byte = bytes.byte_at(index)
+      if byte == 0u8 {
+        break Option::Some(PathError::Nul)
+      } else if byte == 92u8 {
+        break Option::Some(PathError::Backslash)
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break Option::None
+  }
+}
+
+pub fn relative_path(value: String) -> Result<RelativePath, PathError> {
+  if value.byte_length() == 0u32 {
+    Result::Err(PathError::Empty)
+  } else if value.byte_length() > 4096u32 {
+    Result::Err(PathError::TooLong)
+  } else if value.byte_at(0u32) == 47u8 {
+    Result::Err(PathError::Absolute)
+  } else {
+    match path_has_nul_or_backslash(value) {
+      Option::Some(error) => Result::Err(error)
+      Option::None => {
+        let bytes = value.as_bytes()
+        let mut segment_start = 0u32
+        while 0u32 {
+          index if index <= bytes.byte_length() => {
+            if index == bytes.byte_length() || bytes.byte_at(index) == 47u8 {
+              let length = index - segment_start
+              if length == 0u32 {
+                break Result::Err(PathError::EmptySegment)
+              } else if length == 1u32 && bytes.byte_at(segment_start) == 46u8 {
+                break Result::Err(PathError::EmptySegment)
+              } else if length == 2u32 &&
+                bytes.byte_at(segment_start) == 46u8 &&
+                bytes.byte_at(segment_start + 1u32) == 46u8 {
+                break Result::Err(PathError::ParentEscape)
+              } else if index == bytes.byte_length() {
+                break Result::Ok(RelativePath::{
+                  value: value
+                })
+              } else {
+                segment_start = index + 1u32
+                continue index + 1u32
+              }
+            } else {
+              continue index + 1u32
+            }
+          }
+          _ => break Result::Err(PathError::EmptySegment)
+        }
+      }
+    }
+  }
+}
+
+impl RelativePath {
+  fn to_string(self) -> String {
+    self.value
+  }
+  fn as_bytes(self) -> Bytes {
+    self.value.as_bytes()
+  }
+  fn byte_length(self) -> U32 {
+    self.value.byte_length()
+  }
+  fn join(self, child: String) -> Result<RelativePath, PathError> {
+    match relative_path(child) {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(valid_child) => {
+        let builder = StringBuilder::with_capacity(
+          self.value.byte_length() + 1u32 + valid_child.value.byte_length(),
+        )
+        builder.append(self.value)
+        builder.append_ascii(47u8)
+        builder.append(valid_child.value)
+        Result::Ok(RelativePath::{
+          value: builder.finish()
+        })
+      }
+    }
+  }
+}

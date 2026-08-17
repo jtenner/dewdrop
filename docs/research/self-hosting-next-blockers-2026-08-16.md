@@ -3,21 +3,23 @@
 ## Status after the compiler-library tranche
 
 The Array, FixedArray equality, deterministic Show, integer builder output,
-diagnostic rendering, Arena, BLAKE3, and standalone no-provider linker work is
-complete.
+diagnostic rendering, Arena, BLAKE3, explicit UTF-8 codec, and standalone
+no-provider linker work is complete.
 
-The next work is not another broad standard-library batch. It is the runtime and
-bootstrap boundary needed to run a Dew compiler, plus the production Starshine
-foreign ABI.
+The path, filesystem, process, SHA-256, UTF-8, WPSI adapter, package-codec, and
+source-Bytes request tranches are now complete. The next work is the generated
+production Starshine object-model ABI and the compiler port.
 
 ## 1. P0: compiler host boundary
 
-The raw ABI foundation is now implemented: `dew.std.wasm.wasi` exposes all 46
-Preview 1 functions and exports linear memory for reachable calls. The remaining
-blocker is the bounded GC-facing host layer. Ordinary compiler code still cannot
-read arguments or environment values, open paths, inspect files, create
-directories, rename files, remove owned cache entries, or return typed host
-errors without manually constructing Preview 1 linear-memory records.
+Implemented on August 17, 2026. `dew.std.path`, `dew.std.fs`, and
+`dew.std.process` provide the bounded provider-neutral surface.
+`dew.std.fs.wasi` and `dew.std.process.wasi` use Preview 1 Memory32 marshalling;
+`dew.std.fs.wpsi` and `dew.std.process.wpsi` use the WPSI 0.1 GC `array_i8`
+profile through a checked-in static-link adapter. Compiler code can now read
+arguments and environment values, inspect and modify files, publish atomically,
+write separate output streams, and exit through typed errors and explicit
+capabilities.
 
 The audited production compiler has 89 direct host calls:
 
@@ -43,11 +45,12 @@ The 21 environment writes are not host requirements. The Dew port should replace
 them with one explicit immutable `CompilerSessionConfig` passed to loader and
 cache code.
 
-### Required implementation batch
+### Delivered implementation batch
 
-Add a compiler-owned `dew.std.host` module backed by the completed
-`dew.std.wasm.wasi` package and bounded WasmGC/linear-memory bridges. The launcher preopens one workspace root; compiler paths are normalized
-relative paths under that root.
+The launcher preopens one workspace root; compiler paths are normalized relative
+paths under that root. WPSI callers may instead select a scratch or indexed
+preopen capability. See
+[`self-hosting-host-modules-2026-08-17.md`](self-hosting-host-modules-2026-08-17.md).
 
 Minimum operations:
 
@@ -62,8 +65,8 @@ Minimum operations:
 - separate stdout and stderr writes;
 - explicit process exit.
 
-Every ordinary failure returns a typed `HostError` containing the operation and
-stable WASI errno. Only broken compiler invariants trap. Files larger than U32
+Every ordinary failure returns a typed `FsError` or `ProcessError` containing the
+operation and stable provider error code. Only broken compiler invariants trap. Files larger than U32
 must return an explicit size error.
 
 Process spawning, recursive general-purpose deletion, package download, WAT
@@ -71,36 +74,27 @@ rendering, and Node execution remain launcher work.
 
 ## 2. P0: source-Bytes bootstrap request
 
-The current private compile request is version 7. It contains source file paths
-and static-link provider paths. This still makes the self-hosted compiler repeat
-host discovery and file reads, and it carries cache policy through environment
-mutation.
+**Current state:** implemented on August 17, 2026.
 
-Freeze a new request before porting the CLI:
+The private version 1 request now carries ordered logical source paths with exact
+source Bytes, exact static-provider Wasm Bytes, dependency interface
+expectations, an exact 32-byte bootstrap standard-library identity, an explicit
+`CompilerSessionConfig`, compiler fingerprint Bytes, and status-only or output-file
+response policy.
 
-```text
-version
-command and output kind
-root module
-ordered modules {
-  module name
-  ordered files { logical path, source Bytes }
-}
-ordered dependency interface expectations
-ordered static providers { logical name, exact Wasm Bytes }
-selected standard sources or exact bootstrap standard identity
-explicit CompilerSessionConfig
-compiler fingerprint Bytes
-output path or response mode
-```
+The codec enforces a 256 MiB request limit plus module, file, source, dependency,
+provider, string, and fingerprint bounds. It rejects invalid tags, invalid UTF-8
+names and paths, unsafe logical paths, duplicate records, truncation, and trailing
+data. Source and provider payloads remain arbitrary Bytes.
 
-Required bounds include total request bytes, module count, files per module,
-individual source bytes, provider bytes, string bytes, and trailing-data
-rejection. UTF-8 is strict for names and logical paths; source bodies and Wasm
-remain arbitrary Bytes.
+The compiler request path constructs `ManifestFile` values directly from supplied
+Bytes. It performs no source or provider file reads, does not mutate environment
+variables, and uses an explicit uncached compiler pipeline for the first fixed
+point. `tools/check-compile-request.sh` verifies valid Wasm and byte-identical
+output from two physical directories while hostile ambient cache settings are
+ignored.
 
-The request must not contain package-discovery instructions. The launcher owns
-manifest resolution, package integrity, source ordering, and provider selection.
+See [`../compile-request.md`](../compile-request.md).
 
 ## 3. P0: production Starshine foreign ABI
 
@@ -120,23 +114,22 @@ They name 671 distinct Starshine members. The remaining foreign package calls
 also include five validation calls, three encodes, two decodes, and one module
 pass.
 
-Two designs are possible:
+The production boundary will mirror Starshine's public object model directly.
+The public `lib` interface already provides stable nominal Core Wasm types,
+section constructors, index wrappers, instruction constructors, `Module::new`,
+and immutable `Module::with_*_sec` helpers. The `binary`, `validate`, and
+`passes` packages expose the required module-level operations.
 
-1. Generate hundreds of exact foreign exports and Dew declarations mirroring the
-   Starshine object model.
-2. Define a small versioned command-tape ABI over packed byte arrays. Dew owns
-   deterministic operation order; the compiled guest executes Starshine
-   construction, validation, decode/encode, and the required linker operations.
+Generate exact `#export_name` wrappers and matching Dew foreign declarations
+from pinned `.mbti` interface snapshots. Generate typed bridge helpers only where
+Dew and MoonBit container or error representations differ. In particular, use
+small typed array/builders and result inspectors rather than introducing a
+second command language.
 
-Use option 2. It keeps the typed foreign surface small, avoids one cross-module
-call for every instruction node, and makes the exact ABI easy to fingerprint.
-The tape must have bounded counts, strict tags, exact integer widths, no native
-pointers, typed error envelopes, and byte-identical repeated output.
-
-The compiled guest bytes, tape schema version, and every declared export
-signature must be inputs to the compiler fingerprint. The build must fail on a
-missing export, signature mismatch, malformed response, validation failure, or
-provider digest mismatch.
+The generated guest bytes, the pinned Starshine commit and package interface
+digests, and every declared export signature must be inputs to the compiler
+fingerprint. The build must fail on a missing export, signature mismatch,
+validation failure, malformed result bridge, or provider digest mismatch.
 
 ## 4. P0 policy: compiler digests and caches
 
@@ -179,17 +172,15 @@ foreign linking.
   promote them to P1 automatically.
 - Process launch, package acquisition, recursive traversal/removal, lockfile
   updates, and WAT rendering remain in the launcher.
-- SHA-256 remains necessary for package integrity only; the launcher can own it.
+- SHA-256 package integrity may remain launcher-owned even though Dew now provides it.
 - A Dew-native Starshine rewrite is not required.
 - Persistent caches are not required for the first fixed point.
 
 ## Recommended order
 
-1. Freeze the source-Bytes request and explicit `CompilerSessionConfig`.
-2. Implement `dew.std.host` and its WASI bridge tests.
-3. Freeze and generate the Starshine command-tape foreign ABI.
-4. Build a linked smoke compiler that reads one request and emits one module.
-5. Port tokenizer and parser against in-memory source Bytes.
-6. Port semantic and backend phases in dependency order.
-7. Add the cache-disabled A→B→C harness.
-8. Restore BLAKE3-based persistent caches after byte identity is stable.
+1. Pin the Starshine `.mbti` interfaces and generate the direct typed foreign ABI.
+2. Extend the source-Bytes smoke compiler through that linked Starshine guest.
+3. Port tokenizer and parser against the now-frozen in-memory source boundary.
+4. Port semantic and backend phases in dependency order.
+5. Add the cache-disabled A→B→C harness.
+6. Restore BLAKE3-based persistent caches after byte identity is stable.

@@ -1,0 +1,82 @@
+open dew.std.bytes
+open dew.std.encoding.utf8
+open dew.std.string
+
+fn assert_utf8_invalid(value: Bytes, expected: U32, message: String) -> Unit {
+  assert(
+    decode(value) is Result::Err(Utf8DecodeError::InvalidSequence(expected)),
+    message,
+  )
+}
+
+test "UTF8 encode preserves exact bytes" {
+  assert(encode("").equals(b""), "empty UTF8 encode")
+  assert(encode("ASCII").equals(b"ASCII"), "ASCII UTF8 encode")
+  assert(
+    encode("λ 🌍").equals(b"\xCE\xBB \xF0\x9F\x8C\x8D"),
+    "multi-byte UTF8 encode",
+  )
+  assert(
+    encode_view("prefix-value".view(7u32, 5u32)).equals(b"value"),
+    "StringView UTF8 encode",
+  )
+}
+
+test "UTF8 strict decode accepts every scalar width" {
+  let encoded = b"A\xC2\xA2\xE2\x82\xAC\xF0\x90\x8D\x88"
+  assert(
+    decode(encoded) is Result::Ok("A¢€𐍈"),
+    "strict UTF8 decode changed valid text",
+  )
+  assert(validate(encoded) is Result::Ok(_), "valid UTF8 failed validation")
+}
+
+test "UTF8 strict decode reports the first malformed sequence" {
+  assert_utf8_invalid(b"\xFF", 0u32, "invalid leading byte")
+  assert_utf8_invalid(b"a\x80", 1u32, "unexpected continuation")
+  assert_utf8_invalid(b"a\xC2", 1u32, "truncated two-byte scalar")
+  assert_utf8_invalid(b"\xE2\x28\xA1", 0u32, "invalid three-byte continuation")
+  assert_utf8_invalid(b"\xF0\x9F\x92", 0u32, "truncated four-byte scalar")
+}
+
+test "UTF8 strict decode rejects overlong, surrogate, and out-of-range scalars" {
+  assert_utf8_invalid(b"\xC0\x80", 0u32, "overlong two-byte scalar")
+  assert_utf8_invalid(b"\xE0\x80\x80", 0u32, "overlong three-byte scalar")
+  assert_utf8_invalid(b"\xED\xA0\x80", 0u32, "UTF16 surrogate scalar")
+  assert_utf8_invalid(b"\xF4\x90\x80\x80", 0u32, "scalar above Unicode limit")
+  assert_utf8_invalid(b"\xF5\x80\x80\x80", 0u32, "invalid four-byte lead")
+}
+
+test "UTF8 lossy decode preserves valid text" {
+  assert(decode_lossy(b"").equals(""), "empty lossy UTF8 decode")
+  assert(
+    decode_lossy(b"A\xC2\xA2\xE2\x82\xAC\xF0\x90\x8D\x88").equals("A¢€𐍈"),
+    "valid lossy UTF8 decode changed text",
+  )
+}
+
+test "UTF8 lossy decode replaces malformed subsequences" {
+  assert(decode_lossy(b"a\xFFb").equals("a�b"), "invalid lead replacement")
+  assert(
+    decode_lossy(b"\xE2\x28\xA1").equals("�(�"),
+    "separated malformed subsequences",
+  )
+  assert(
+    decode_lossy(b"\xF0\x9F\x92").equals("�"),
+    "truncated subsequence replacement",
+  )
+  assert(
+    decode_lossy(b"\xE0\x80\x80").equals("�"),
+    "overlong subsequence replacement",
+  )
+}
+
+test "UTF8 round trips embedded NUL and boundary scalars" {
+  let encoded = b"\x00\x7F\xC2\x80\xED\x9F\xBF\xEE\x80\x80\xF4\x8F\xBF\xBF"
+  match decode(encoded) {
+    Result::Ok(decoded) => {
+      assert(encode(decoded).equals(encoded), "UTF8 boundary round trip")
+    }
+    Result::Err(_) => assert(false, "valid UTF8 boundary text was rejected")
+  }
+}

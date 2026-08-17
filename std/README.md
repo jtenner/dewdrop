@@ -32,7 +32,20 @@ dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.iter            eager consuming iterator combinators over Iter<t>
 dew.std.math            explicit checked/wrapping integer and IEEE float math
 dew.std.io              portable byte Reader/Writer contracts and in-memory streams
+dew.std.path            validated workspace-relative paths
+dew.std.fs              provider-neutral filesystem contract
+dew.std.fs.wasi         WASI Preview 1 filesystem adapter
+dew.std.fs.wpsi         WPSI 0.1 filesystem adapter
+dew.std.process         provider-neutral process contract
+dew.std.process.wasi    WASI Preview 1 process adapter
+dew.std.process.wpsi    WPSI 0.1 process adapter
 dew.std.json            strict bounded JSON values, I/O facades, and serialization
+dew.std.encode          fallible receiver-based Bytes encoding evidence
+dew.std.decode          fallible Bytes decoding evidence
+dew.std.format          package format errors and validation evidence
+dew.std.semver          bounded Semantic Versioning 2.0.0 and package ranges
+dew.std.package         dew.json, dew.lock, and dew.modules.json formats
+dew.std.package.artifact installed DEWPKG1 package capsule format
 dew.std.bloom_filter    allocation-free U64 probabilistic membership prefilter
 dew.std.testing         explicit assertion helpers over compiler-owned test primitives
 dew.std.option          ambient generic Option<t>
@@ -57,7 +70,9 @@ dew.std.string                      String and StringView
 dew.std.string_builder              consuming StringBuilder
 dew.std.bytes                       immutable Bytes ranges and search
 dew.std.bytes_builder               consuming BytesBuilder
+dew.std.encoding.utf8               strict and lossy UTF-8 codecs
 dew.std.blake3                       portable BLAKE3-256
+dew.std.integrity.sha256              portable one-shot SHA-256
 dew.std.wasi                        Preview 1 Bytes I/O
 dew.std.wasm.wasi                   raw complete Preview 1 imports
 dew.std.wasm.intrinsics             explicit compiler-known WebAssembly intrinsics
@@ -69,7 +84,9 @@ The ambient `Hash` trait provides `hash(self) -> U64` plus collision equality th
 
 `FixedArray<t>` uses carrier-specialized unboxed WasmGC backing and implements structural Eq/Ne when `t: Eq`. `get(index)` returns `Option<t>`; index syntax, indexed setting, `set`, `get_unchecked`, and `set_unchecked` trap on out-of-bounds indices. Growable `Array<t>` uses the same six carrier families and adds make/reserve/shrink/truncate/copy/extend, strict fill/copy/slice ranges, deque-like mutation, immutable variants, splice, search, structural equality, callbacks, stable sorting, flattening, and value/key/entry iterators. Bulk construction and movement lower to WasmGC `array.new`, `array.copy`, and `array.fill`; removed reference slots are cleared. The compiler-support `Arena<t>` facade keeps dense I32 IDs, reserves `-1` for missing values, rejects other negative IDs, and adds checkpoints, rollback, and spans without weakening Array's U32 boundary. See [`docs/research/array-api-and-performance-2026-08-16.md`](../docs/research/array-api-and-performance-2026-08-16.md). `container[key]` and block-item-only `container[key] = value` select the ambient `IndexedGet<key, value>` and `IndexedSet<key, value>` traits, so the syntax is not array-specific.
 
-`StringBuilder` appends every signed and unsigned integer width directly as decimal text, including exact signed minima, without constructing a temporary String. `dew.std.blake3` provides deterministic one-shot BLAKE3-256 over Bytes plus the first little-endian U32 lookup lane used by compiler cache packs.
+`dew.std.encode` defines `Encode<t_err>` with fallible receiver-based `encode(self) -> Result<Bytes, t_err>`. `dew.std.decode` defines fallible decoding from Bytes. Package values validate before encoding, and package decoders return errors instead of exposing a trusted trapping path. `SemVer` retains prerelease and build identifiers, compares by Semantic Versioning 2.0.0 precedence, and supports exact, caret, tilde, wildcard, and Git package requirements. Package codecs impose explicit limits from 1 MiB for `dew.json` through 256 MiB for installed capsules.
+
+`StringBuilder` appends every signed and unsigned integer width directly as decimal text, including exact signed minima, without constructing a temporary String. `dew.std.encoding.utf8` provides zero-copy String/StringView encoding, strict validation and decoding with the first malformed byte offset, and deterministic lossy decoding with U+FFFD replacement. `dew.std.blake3` provides deterministic one-shot BLAKE3-256 over Bytes plus the first little-endian U32 lookup lane used by compiler cache packs. `dew.std.integrity.sha256` provides portable one-shot SHA-256 over Bytes and returns 32 digest bytes as `FixedArray<U8>`.
 
 `BytesBuilder` remains the name of the one-shot, consuming construction type. A future `Buffer` would imply a reusable mutable/random-access abstraction and should be designed separately rather than aliasing the builder.
 
@@ -155,6 +172,8 @@ WASI marshalling uses the 65,520 data bytes remaining in one reusable 64 KiB lin
 
 `dew.std.testing` adds explicit-message Boolean, equality, ordering, Option-shape, and Result-shape assertions. It delegates failure to the ambient compiler-owned `assert`, so test-mode dynamic messages and production zero-I/O traps remain unchanged. Test discovery, `_test.dew`, `expect_trap`, filters, and metadata remain compiler/tooling features rather than library APIs.
 
+`dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. WPSI adapters use the GC `array_i8` profile through the checked-in `fixtures/wpsi/wpsi-adapter.wasm` provider; link it with `--link-wasm wpsi fixtures/wpsi/wpsi-adapter.wasm`.
+
 `dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the GC-Bytes adapter and `dew.std.wasm.wasi` is the separate raw Preview 1 surface.
 
 `dew.std.json` implements strict RFC 8259 parsing in Dew source. `JsonValue::Number` preserves the exact validated lexeme; arrays and object members preserve source order; duplicate keys are rejected during parsing and serialization; UTF-8, escapes, surrogate pairs, trailing input, nesting, value count, input bytes, and decoded string bytes have explicit policies and errors. Compact-owning `json_parse` remains the default. `json_parse_retained` explicitly shares clean String and number ranges with the whole input, and `json_parse_document` retains both the source and strict tree so source-preserving output is explicit. `json_parse_raw_document` validates and retains only source until explicit materialization. Specialized `json_validate` skips eager value construction. `JsonNumber` validates constructed lexemes once, and parsed validated-number modes avoid repeated serialization validation; legacy Number(String) remains checked. Canonical parse modes also produce `JsonString` provenance so clean parsed strings skip serialization rescans while escaped strings remain checked. `json_parse_reader`/`json_write` compose with portable `Reader`/`Writer`; they are bounded whole-value facades rather than a separate token-stream parser. Whitespace, string-special, and scalar-delimiter scans use generated `U8x16` operations, `u32_ctz`, and generic GC-backed text load bridges. Regenerate its bootstrap mirror with `python3 tools/generate_json_std.py`.
@@ -169,9 +188,13 @@ After editing the text or WASI standard sources, regenerate their portable boots
 
 ```text
 python3 tools/generate_string_std.py
+python3 tools/generate_utf8_std.py
 python3 tools/generate_wasi_std.py
 python3 tools/generate_wasm_intrinsics_std.py
 python3 tools/generate_bloom_filter_std.py
+python3 tools/generate_sha256_std.py
+python3 tools/generate_host_std.py
+python3 tools/generate_wpsi_adapter.py
 python3 tools/generate_json_std.py
 ```
 

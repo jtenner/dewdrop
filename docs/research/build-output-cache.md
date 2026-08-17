@@ -18,7 +18,7 @@ output destinations share one artifact.
 
 ## Compiler fingerprint fast path
 
-Compiler-source content hashes use a checksummed V4 binary memo under the configured cache root. On
+Compiler-source content hashes use a checksummed version 1 binary memo under the configured cache root. On
 an ordinary hit, the host:
 
 1. walks only compiler-relevant path classes (`*.mbt`, package descriptors,
@@ -36,7 +36,7 @@ checksum-invalid memos are rebuilt rather than trusted. This removes repeated
 `Path.resolve`, recursive glob, and content hashing from the common hit while
 retaining conservative source invalidation.
 
-Each host `.dba` entry is a single atomically published V2 binary envelope inside the common `DEWART\0\1` container. Its fixed body contains emit
+Each host `.dba` entry is a single atomically published version 1 binary envelope inside the common `DEWART\0\1` container. Its fixed body contains emit
 kind, raw request key, raw payload digest, U64 payload size, and payload. The native compiler also stores exact successful check/HIR/lowering/Wasm results in the unified aligned `.dwp` pack; this path is used when the host output cache is bypassed or for `check`. Missing entries are misses;
 malformed, mismatched, truncated, or checksum-invalid entries are fail-visible
 corruption and are never treated as misses. Cache hits are atomically copied to
@@ -47,7 +47,7 @@ installed-package caches.
 `tools/benchmark-build-output-cache.py` measured ten warmed builds of a 422-byte
 Wasm fixture:
 
-| Path | Before V3 fast path | After V3 fast path |
+| Path | Before memo fast path | After version 1 memo fast path |
 | --- | ---: | ---: |
 | verified output-cache hit median | 88.465 ms | 43.832 ms |
 | ordinary compile with output cache disabled | 100.160 ms | 98.705 ms |

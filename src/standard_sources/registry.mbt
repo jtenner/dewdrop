@@ -10,10 +10,13 @@ pub fn standard_source_paths() -> Array[String] {
     "std/collections/deque.dew", "std/ordering.dew", "std/collections/binary_heap.dew",
     "std/collections/priority_queue.dew", "std/collections/red_black_tree.dew", "std/collections/ordered_map.dew",
     "std/collections/ordered_set.dew", "std/show.dew", "std/disposable.dew", "std/iter.dew",
-    "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/bloom_filter.dew",
-    "std/blake3.dew", "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew",
+    "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/encode.dew",
+    "std/decode.dew", "std/format.dew", "std/semver.dew", "std/package.dew", "std/package/artifact.dew",
+    "std/bloom_filter.dew", "std/blake3.dew", "std/integrity/sha256.dew", "std/path.dew",
+    "std/fs.dew", "std/process.dew", "std/fs/wasi.dew", "std/fs/wpsi.dew", "std/process/wasi.dew",
+    "std/process/wpsi.dew", "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew",
     "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew",
-    "std/wasm/wasi.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/encoding/utf8.dew", "std/wasm/wasi.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
   ]
   for
     name in [
@@ -67,8 +70,22 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/io.dew" => Some(standard_io_source())
     "std/testing.dew" => Some(standard_testing_source())
     "std/json.dew" => Some(standard_json_source())
+    "std/encode.dew" => Some(standard_encode_source())
+    "std/decode.dew" => Some(standard_decode_source())
+    "std/format.dew" => Some(standard_format_source())
+    "std/semver.dew" => Some(standard_semver_source())
+    "std/package.dew" => Some(standard_package_source())
+    "std/package/artifact.dew" => Some(standard_package_artifact_source())
     "std/bloom_filter.dew" => Some(standard_bloom_filter_source())
     "std/blake3.dew" => Some(standard_blake3_source())
+    "std/integrity/sha256.dew" => Some(standard_sha256_source())
+    "std/path.dew" => Some(standard_path_source())
+    "std/fs.dew" => Some(standard_fs_source())
+    "std/process.dew" => Some(standard_process_source())
+    "std/fs/wasi.dew" => Some(standard_fs_wasi_source())
+    "std/fs/wpsi.dew" => Some(standard_fs_wpsi_source())
+    "std/process/wasi.dew" => Some(standard_process_wasi_source())
+    "std/process/wpsi.dew" => Some(standard_process_wpsi_source())
     "std/iter.dew" => Some(standard_iter_source())
     "std/text_runtime.dew" => Some(standard_text_sources()[0])
     "std/string.dew" => Some(standard_text_sources()[1])
@@ -77,6 +94,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/bytes_builder.dew" => Some(standard_text_sources()[3])
     "std/bytes.dew" => Some(standard_text_sources()[4])
     "std/text.dew" => Some(standard_text_iteration_source())
+    "std/encoding/utf8.dew" => Some(standard_utf8_source())
     "std/wasm/wasi.dew" => Some(standard_wasm_wasi_source())
     "std/wasi.dew" => Some(standard_wasi_source())
     "std/wasm/intrinsics.dew" => Some(standard_wasm_intrinsics_source())

@@ -14,7 +14,7 @@ export function testIdentity(test) {
 export function decodeDewTestMetadata(sectionBytes) {
   const metadata = decoder.decode(sectionBytes);
   const metadataLines = metadata.split("\n");
-  if (metadataLines.shift() !== "DEW_TESTS_V3") {
+  if (metadataLines.shift() !== "DEW_TESTS_V1") {
     throw new Error("unsupported Dew test metadata format");
   }
   const identities = new Set();

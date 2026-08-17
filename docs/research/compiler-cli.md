@@ -4,7 +4,7 @@
 
 `tools/dew` provides deterministic `check`, `build`, `run`, and `test` commands
 over explicitly ordered source paths and statically linked module groups. The
-explicit-file test command is driven by compiler-owned V3 metadata. The CLI
+explicit-file test command is driven by compiler-owned version 1 metadata. The CLI
 resolves the compiler-owned `dew.std` package from ordered package roots, loads
 the exact import-selected source subset from disk, and reuses content-addressed
 persistent standard and versioned external dependency frozen interfaces. It

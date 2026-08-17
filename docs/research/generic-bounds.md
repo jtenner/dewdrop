@@ -36,16 +36,12 @@ used by implementation heads. Resolved bounds are aligned in
 
 ## Cache format
 
-The private frozen-interface payload first advanced from V7 to V8 for aligned
-`generic_bound_types`, then to V9 when imported call checking required one bound
-span per frozen generic parameter. V10 adds the owner generic-parameter span to
-every frozen implementation so imported generic evidence can instantiate and
-enforce its own prerequisites. V11 retained that layout while adding package-
-ownership validation for frozen implementation evidence. V13 adds canonical
-resolved explicit-call type arguments required when an in-memory or restored
-root interface proceeds into body inference. The outer persistent envelope and
-filenames now use `v13-<fingerprint>.dwi`; older artifacts are ignored by
-construction rather than decoded under a newer policy.
+The pre-release frozen-interface payload is version 1. It contains aligned
+`generic_bound_types`, one bound span per frozen generic parameter, owner generic
+spans for implementations, package-ownership validation, and canonical resolved
+explicit-call type arguments. The outer persistent envelope and filenames use
+`v1-<fingerprint>.dwi`. Breaking pre-release schema changes replace version 1 in
+place; stale artifacts are ignored by construction.
 
 ## Call-site obligation checking
 
@@ -160,7 +156,7 @@ A nominal argument carried through an ordinary generic specialization uses the c
 
 Tests cover function, builtin, and trait declarations; ordered multi-bound
 parsing; nested applied bounds adjacent to the outer `>`; unbounded parameters;
-flat HIR retention; trait-namespace resolution; byte-identical V13
+flat HIR retention; trait-namespace resolution; byte-identical version 1
 frozen-interface serialization/deserialization; local and imported call-bound
 checking; local, transitive, operator, and imported generic-implementation
 prerequisites; symbolic generic-body operators, methods, applied trait arguments,

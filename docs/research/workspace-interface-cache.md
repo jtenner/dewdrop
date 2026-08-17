@@ -11,10 +11,10 @@ entries in one `.dew/cache/packs/v1-<graph>.dwp` file. `--no-cache-pack` retains
 the legacy path:
 
 ```text
-.dew/cache/workspace-interfaces/v2-<key>.dwi
+.dew/cache/workspace-interfaces/v1-<key>.dwi
 ```
 
-The semantic key remains SHA-256 over a private V2 marker, the exact module source fingerprint, and sorted direct dependency records. The aligned pack adds full BLAKE3 owner, producer-context, content, and payload binding. The source fingerprint commits to:
+The semantic key remains SHA-256 over a private version 1 marker, the exact module source fingerprint, and sorted direct dependency records. The aligned pack adds full BLAKE3 owner, producer-context, content, and payload binding. The source fingerprint commits to:
 
 - logical module path;
 - stable manifest-derived module ID;
@@ -27,7 +27,7 @@ Module IDs remain in the source key because frozen declaration identities are ma
 
 ## Validation and publication
 
-Workspace artifacts reuse the deterministic frozen-interface V13 serializer and checksum envelope, but contain exactly one module. Lookup validates:
+Workspace artifacts reuse the deterministic frozen-interface version 1 serializer and checksum envelope, but contain exactly one module. Lookup validates:
 
 - envelope checksum and schema;
 - exactly one decoded module;

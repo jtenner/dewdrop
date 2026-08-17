@@ -30,11 +30,11 @@ Legacy artifact sizes from those generated workloads were:
 | Artifact set | Files | Bytes |
 | --- | ---: | ---: |
 | legacy development parse-event JSON envelopes | 143 | 516,007 |
-| standard-interface V12 binary envelope | 1 | 379,462 |
-| workspace-interface V1/V12 binary envelopes | 99 | 154,066 |
-| complete-body V3 JSON envelopes | 3 | 1,327,016 |
-| family V1 JSON bundles | 2 | 217,453 |
-| build-output V1 JSON-header artifact | 1 | 633 |
+| older standard-interface binary envelope | 1 | 379,462 |
+| older workspace-interface binary envelopes | 99 | 154,066 |
+| older complete-body JSON envelopes | 3 | 1,327,016 |
+| older family JSON bundles | 2 | 217,453 |
+| older build-output JSON-header artifact | 1 | 633 |
 
 All baseline cached and uncached comparison outputs were byte-identical.
 
@@ -47,12 +47,12 @@ The original shared container starts with `DEWART\0\1`, then stores artifact kin
 | Artifact | Kind | Current version/path |
 | --- | ---: | --- |
 | parser events | 1 | V1, `parse-events/v1-*.dpe` |
-| standard/external interfaces | 2 | V13, `interfaces/v13-*.dwi` |
-| workspace interfaces | 3 | V2, `workspace-interfaces/v2-*.dwi` |
-| complete inferred bodies | 4 | V4 key/envelope with V2 payload, `body-inference/v4-*.dbi` |
-| declaration-family bundle | 5 | V2, `body-inference-families/v2-*.dbf` |
-| whole-build output | 6 | V2, `builds/v2-*.dba` |
-| compiler fingerprint memo | 7 | V4, `compiler-fingerprint-v4.dbm` |
+| standard/external interfaces | 2 | V1, `interfaces/v1-*.dwi` |
+| workspace interfaces | 3 | V1, `workspace-interfaces/v1-*.dwi` |
+| complete inferred bodies | 4 | V1, `body-inference/v1-*.dbi` |
+| declaration-family bundle | 5 | V1, `body-inference-families/v1-*.dbf` |
+| whole-build output | 6 | V1, `builds/v1-*.dba` |
+| compiler fingerprint memo | 7 | V1, `compiler-fingerprint-v1.dbm` |
 | module type layouts | 8 | V1, `type-layouts/v1-*.dtl` |
 | baseline WasmGC fragments | 9 | V1, `wasmgc-fragments/v1-*.dwf` |
 
@@ -92,7 +92,7 @@ Every requested size gate passes: parser/body/family payloads are far below 60%,
 | frozen-interface encode | 8.68 ms | 6.11 ms | 1.42x |
 | frozen-interface decode | 9.72 ms | 6.83 ms | 1.42x |
 
-Parser, body, family, and mixed-family timing gates pass. The strict requested 2x/4x interface timing gate does not: V12 was already a custom binary serializer rather than JSON. V13 still reduces bytes by 29.1%, improves both isolated phases, and substantially reduces end-to-end warm workspace time. The interface cache remains enabled because its existing semantic benefit is preserved; no claim is made that this one numeric gate passed.
+Parser, body, family, and mixed-family timing gates pass. The strict requested 2x/4x interface timing gate does not: the baseline was already a custom binary serializer rather than JSON. The current version 1 format still reduces bytes by 29.1%, improves both isolated phases, and substantially reduces end-to-end warm workspace time. The interface cache remains enabled because its existing semantic benefit is preserved; no claim is made that this one numeric gate passed.
 
 ## End-to-end results
 

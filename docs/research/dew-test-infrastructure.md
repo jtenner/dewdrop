@@ -18,7 +18,7 @@ __dew_test_<ordinal>
 
 The reserved prefix is compiler-owned, and source byte offsets are not part of the export identity. Default compilation analyzes `_test.dew` bodies but excludes every callable originating in those files from callable reachability and exports. `WasmGCPlanningOptions::test_mode()` makes test-file callables roots and exports explicit `test` declarations. Test-file declarations are never frozen as package interface values. Ordinary-file type and body resolution cannot see test-only values, nominal types, traits, or impl evidence; test files retain access to their own test-only declarations. Production physical planning also omits test-only nominal layouts and refuses to follow reachability edges into test callables. A `test` declaration in any other filename is diagnosed.
 
-The standard runner compiles each sorted `_test.dew` source as a distinct manifest file. After Starshine validation and encoding, the compiler appends one deterministic `dew.tests` Wasm custom section carrying the versioned `DEW_TESTS_V3` payload: export names, logical modules, logical file paths, exact strict-UTF-8 display names, and optional expected-trap categories. Stable identity is module + logical file + display name. Collection diagnoses duplicate file/display-name pairs within one module, and the runner rejects duplicate complete metadata identities. Source scanning, assembled-offset reconstruction, and metadata sidecars are no longer used. Production binaries contain no `dew.tests` section.
+The standard runner compiles each sorted `_test.dew` source as a distinct manifest file. After Starshine validation and encoding, the compiler appends one deterministic `dew.tests` Wasm custom section carrying the version 1 `DEW_TESTS_V1` payload: export names, logical modules, logical file paths, exact strict-UTF-8 display names, and optional expected-trap categories. Stable identity is module + logical file + display name. Collection diagnoses duplicate file/display-name pairs within one module, and the runner rejects duplicate complete metadata identities. Source scanning, assembled-offset reconstruction, and metadata sidecars are no longer used. Production binaries contain no `dew.tests` section.
 
 The runner supports exact `--module`, `--file`, and `--name` filters, an identity substring `--filter`, and metadata-only `--list`. Filters compose deterministically and selecting no tests is an error.
 
@@ -34,7 +34,7 @@ test "divide by zero" expect_trap "integer-divide-by-zero" {
 
 Collection accepts only `unreachable`, `memory-out-of-bounds`,
 `array-out-of-bounds`, `integer-divide-by-zero`, `integer-overflow`, and
-`invalid-conversion-to-integer`. The V3 metadata transports the category. The
+`invalid-conversion-to-integer`. The version 1 metadata transports the category. The
 runner counts a matching normalized Wasm trap as a pass and continues with the
 remaining tests; no trap, a different trap, an unknown runtime message, or a
 JavaScript exception remains a visible failure.
@@ -82,6 +82,6 @@ The generated suite covers every currently public `dew.std.string` operation, as
 - Dynamic assertion messages use stdout by design. A test that deliberately writes unrelated stdout before an unexpected assertion currently contributes those bytes to the reported assertion output; a future framed test-output protocol may separate them if workloads require it.
 - Test bodies are analyzed in normal compilation but emitted only in explicit test mode.
 - Frozen interfaces exclude test-only implementation evidence, and production reachability/startup exclude test-only callables, nominal layouts, module values, and initialization steps.
-- The initial custom-section payload retains the textual V3 record encoding; a denser binary payload is unnecessary until measurements justify a version change.
+- The version 1 custom-section payload retains the textual record encoding; a denser binary payload is unnecessary until measurements justify a version change.
 - Async tests, fixtures, parameterized tests, snapshots, coverage, and benchmark tests are deferred; metadata-driven filtering and expected traps are implemented.
 - **Optional arguments are a future language improvement.** They are not part of the initial test or assertion syntax; APIs must currently supply every declared argument explicitly.

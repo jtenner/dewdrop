@@ -101,7 +101,7 @@ fn selected_standard_modules(
             import_.path.length() == 2 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {
-            text_mask = 31
+            text_mask = 63
             wasi = true
             lane_mask = 1048575
             wasm_intrinsics = true
@@ -109,12 +109,20 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 16383
+            collection_mask = 536854527
             show = true
             disposable = true
             math = true
             io = true
             testing = true
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "encoding" {
+            match import_.path[3] {
+              "utf8" => text_mask = text_mask | 43
+              _ => ()
+            }
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -128,6 +136,71 @@ fn selected_standard_modules(
               "red_black_tree" => collection_mask = collection_mask | 144
               "ordered_map" => collection_mask = collection_mask | 400
               "ordered_set" => collection_mask = collection_mask | 656
+              _ => ()
+            }
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "fs" {
+            match import_.path[3] {
+              "wasi" => {
+                text_mask = text_mask | 15
+                fixed_array = true
+                wasm_intrinsics = true
+                collection_mask = collection_mask | 737280
+              }
+              "wpsi" => {
+                text_mask = text_mask | 15
+                fixed_array = true
+                collection_mask = collection_mask | 1245184
+              }
+              _ => ()
+            }
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "process" {
+            match import_.path[3] {
+              "wasi" => {
+                text_mask = text_mask | 13
+                array = true
+                wasm_intrinsics = true
+                collection_mask = collection_mask | 2375680
+              }
+              "wpsi" => {
+                text_mask = text_mask | 13
+                fixed_array = true
+                array = true
+                collection_mask = collection_mask | 4456448
+              }
+              _ => ()
+            }
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "package" {
+            match import_.path[3] {
+              "artifact" => {
+                text_mask = text_mask | 15
+                fixed_array = true
+                array = true
+                io = true
+                wasm_intrinsics = true
+                lane_mask = lane_mask | 2048
+                collection_mask = collection_mask | 125868048
+              }
+              _ => ()
+            }
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "integrity" {
+            match import_.path[3] {
+              "sha256" => {
+                text_mask = text_mask | 8
+                fixed_array = true
+                collection_mask = collection_mask | 32768
+              }
               _ => ()
             }
           } else if import_.path.length() == 4 &&
@@ -173,6 +246,21 @@ fn selected_standard_modules(
                 text_mask = text_mask | 12
               }
               "testing" => testing = true
+              "path" => {
+                text_mask = text_mask | 11
+                fixed_array = true
+                collection_mask = collection_mask | 65536
+              }
+              "fs" => {
+                text_mask = text_mask | 11
+                fixed_array = true
+                collection_mask = collection_mask | 196608
+              }
+              "process" => {
+                text_mask = text_mask | 9
+                array = true
+                collection_mask = collection_mask | 262144
+              }
               "bloom_filter" => collection_mask = collection_mask | 4096
               "blake3" => {
                 text_mask = text_mask | 8
@@ -189,6 +277,33 @@ fn selected_standard_modules(
                 wasm_intrinsics = true
                 lane_mask = lane_mask | 2048
                 collection_mask = collection_mask | 6144
+              }
+              "encode" => {
+                text_mask = text_mask | 8
+                collection_mask = collection_mask | 134217728
+              }
+              "decode" => {
+                text_mask = text_mask | 8
+                collection_mask = collection_mask | 268435456
+              }
+              "format" => {
+                text_mask = text_mask | 8
+                collection_mask = collection_mask | 8388608
+              }
+              "semver" => {
+                text_mask = text_mask | 11
+                fixed_array = true
+                array = true
+                collection_mask = collection_mask | 25165840
+              }
+              "package" => {
+                text_mask = text_mask | 15
+                fixed_array = true
+                array = true
+                io = true
+                wasm_intrinsics = true
+                lane_mask = lane_mask | 2048
+                collection_mask = collection_mask | 461379600
               }
               "queue" => collection_mask = collection_mask | 2
               "ordering" => collection_mask = collection_mask | 16

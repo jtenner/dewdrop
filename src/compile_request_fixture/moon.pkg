@@ -1,0 +1,7 @@
+import {
+  "jtenner/dewdrop/compile_request",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+pkgtype(kind: "executable")

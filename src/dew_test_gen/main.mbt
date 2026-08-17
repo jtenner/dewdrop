@@ -54,7 +54,7 @@ fn build_dew_test_metadata(
   logical_names : Array[Array[String]],
 ) -> Bytes {
   let output = Buffer(size_hint=128)
-  output.write_string_utf8("DEW_TESTS_V3\n")
+  output.write_string_utf8("DEW_TESTS_V1\n")
   let mut ordinal = 0
   for module_index, collected in program.modules {
     for test_ in collected.tests {

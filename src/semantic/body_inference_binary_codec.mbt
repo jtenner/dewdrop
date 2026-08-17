@@ -1,12 +1,12 @@
 ///|
 /// Direct binary schemas for complete and declaration-family inference artifacts.
-let inferred_module_payload_version = 2U
+let inferred_module_payload_version = 1U
 
 ///|
-let inferred_family_payload_version = 2U
+let inferred_family_payload_version = 1U
 
 ///|
-let inferred_family_bundle_payload_version = 2U
+let inferred_family_bundle_payload_version = 1U
 
 ///|
 let inference_binary_maximum_items = 0x01000000
@@ -2261,7 +2261,7 @@ fn ib_validate_module_bodies(value : InferredModuleBodies) -> Bool {
 }
 
 ///|
-/// Serializes one complete inferred module directly as canonical V2 binary.
+/// Serializes one complete inferred module directly as canonical V1 binary.
 pub fn serialize_inferred_module_bodies(
   inferred : InferredModuleBodies,
 ) -> Result[Bytes, String] {

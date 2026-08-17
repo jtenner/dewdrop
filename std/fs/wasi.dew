@@ -1,0 +1,305 @@
+import dew.std.wasm.wasi as @wasi
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.path
+open dew.std.fs
+open dew.std.wasm.intrinsics
+
+pub struct WasiFileSystem {
+  root: U32
+}
+
+fn wasi_fs_unit() -> Unit {
+}
+
+pub fn wasi_file_system(root: U32) -> WasiFileSystem {
+  WasiFileSystem::{
+    root: root
+  }
+}
+
+fn wasi_fs_error_kind(code: U32) -> FsErrorKind {
+  match code {
+    2u32 => FsErrorKind::PermissionDenied
+    63u32 => FsErrorKind::PermissionDenied
+    20u32 => FsErrorKind::AlreadyExists
+    22u32 => FsErrorKind::FileTooLarge
+    61u32 => FsErrorKind::FileTooLarge
+    28u32 => FsErrorKind::InvalidPath
+    37u32 => FsErrorKind::InvalidPath
+    31u32 => FsErrorKind::IsDirectory
+    44u32 => FsErrorKind::NotFound
+    51u32 => FsErrorKind::NoSpace
+    54u32 => FsErrorKind::NotDirectory
+    55u32 => FsErrorKind::NotEmpty
+    58u32 => FsErrorKind::Unsupported
+    69u32 => FsErrorKind::ReadOnly
+    _ => FsErrorKind::Backend
+  }
+}
+
+fn wasi_fs_error(operation: FsOperation, path: RelativePath, code: U32) -> FsError {
+  FsError::{
+    operation: operation
+    path: path.to_string()
+    kind: wasi_fs_error_kind(code)
+    code: code
+  }
+}
+
+fn wasi_copy_path(path: RelativePath, pointer: U32) -> U32 {
+  let bytes = path.as_bytes()
+  while 0u32 {
+    index if index < bytes.byte_length() => {
+      wasm_u8_store(pointer + index, bytes.byte_at(index))
+      continue index + 1u32
+    }
+    _ => break bytes.byte_length()
+  }
+}
+
+fn wasi_copy_bytes(value: Bytes, start: U32, pointer: U32, length: U32) -> Unit {
+  while 0u32 {
+    index if index < length => {
+      wasm_u8_store(pointer + index, value.byte_at(start + index))
+      continue index + 1u32
+    }
+    _ => break wasi_fs_unit()
+  }
+}
+
+fn wasi_read_memory(pointer: U32, length: U32, builder: BytesBuilder) -> Unit {
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(wasm_u8_load(pointer + index))
+      continue index + 1u32
+    }
+    _ => break wasi_fs_unit()
+  }
+}
+
+fn wasi_fs_u64_to_u32(value: U64) -> U32 {
+  value.into()
+}
+
+fn wasi_fs_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn wasi_read_rights() -> U64 {
+  2097154u64
+}
+
+fn wasi_write_rights() -> U64 {
+  6291536u64
+}
+
+impl FileSystem for WasiFileSystem {
+  fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError> {
+    let path_pointer = 128u32
+    let length = wasi_copy_path(path, path_pointer)
+    let error = @wasi.path_filestat_get(self.root, 0u32, path_pointer, length, 0u32)
+    if error == 44u32 {
+      Result::Ok(PathKind::Missing)
+    } else if error != 0u32 {
+      Result::Err(wasi_fs_error(FsOperation::Stat, path, error))
+    } else {
+      match wasm_u8_load(16u32) {
+        3u8 => Result::Ok(PathKind::Directory)
+        4u8 => Result::Ok(PathKind::File)
+        7u8 => Result::Ok(PathKind::Symlink)
+        _ => Result::Ok(PathKind::Other)
+      }
+    }
+  }
+
+  fn read_file(self, path: RelativePath, max_bytes: U32) -> Result<Bytes, FsError> {
+    let path_pointer = 128u32
+    let path_length = wasi_copy_path(path, path_pointer)
+    let open_error = @wasi.path_open(
+      self.root,
+      0u32,
+      path_pointer,
+      path_length,
+      0u32,
+      wasi_read_rights(),
+      0u64,
+      0u32,
+      0u32,
+    )
+    if open_error != 0u32 {
+      Result::Err(wasi_fs_error(FsOperation::Read, path, open_error))
+    } else {
+      let fd = wasm_u32_load(0u32)
+      let stat_error = @wasi.fd_filestat_get(fd, 0u32)
+      if stat_error != 0u32 {
+        @wasi.fd_close(fd)
+        Result::Err(wasi_fs_error(FsOperation::Stat, path, stat_error))
+      } else {
+        let size = wasm_u64_load(32u32)
+        if size > wasi_fs_u32_to_u64(max_bytes) {
+          @wasi.fd_close(fd)
+          Result::Err(wasi_fs_error(FsOperation::Read, path, 22u32))
+        } else {
+          let expected = wasi_fs_u64_to_u32(size)
+          let builder = BytesBuilder::with_capacity(expected)
+          while 0u32 {
+            total if total < expected => {
+              let window = if expected - total < 49152u32 {
+                expected - total
+              } else {
+                49152u32
+              }
+              wasm_u32_store(0u32, 16u32)
+              wasm_u32_store(4u32, window)
+              let read_error = @wasi.fd_read(fd, 0u32, 1u32, 8u32)
+              let count = wasm_u32_load(8u32)
+              if read_error != 0u32 {
+                @wasi.fd_close(fd)
+                break Result::Err(wasi_fs_error(FsOperation::Read, path, read_error))
+              } else if count == 0u32 {
+                @wasi.fd_close(fd)
+                break Result::Ok(builder.finish())
+              } else if count > window {
+                @wasi.fd_close(fd)
+                break Result::Err(wasi_fs_error(FsOperation::Read, path, 29u32))
+              } else {
+                wasi_read_memory(16u32, count, builder)
+                continue total + count
+              }
+            }
+            _ => {
+              @wasi.fd_close(fd)
+              break Result::Ok(builder.finish())
+            }
+          }
+        }
+      }
+    }
+  }
+
+  fn write_file(self, path: RelativePath, value: Bytes) -> Result<Unit, FsError> {
+    let path_pointer = 128u32
+    let path_length = wasi_copy_path(path, path_pointer)
+    let open_error = @wasi.path_open(
+      self.root,
+      0u32,
+      path_pointer,
+      path_length,
+      9u32,
+      wasi_write_rights(),
+      0u64,
+      0u32,
+      0u32,
+    )
+    if open_error != 0u32 {
+      Result::Err(wasi_fs_error(FsOperation::Write, path, open_error))
+    } else {
+      let fd = wasm_u32_load(0u32)
+      let length = value.byte_length()
+      while 0u32 {
+        total if total < length => {
+          let window = if length - total < 49152u32 {
+            length - total
+          } else {
+            49152u32
+          }
+          wasi_copy_bytes(value, total, 16u32, window)
+          wasm_u32_store(0u32, 16u32)
+          wasm_u32_store(4u32, window)
+          let write_error = @wasi.fd_write(fd, 0u32, 1u32, 8u32)
+          let count = wasm_u32_load(8u32)
+          if write_error != 0u32 || count == 0u32 || count > window {
+            @wasi.fd_close(fd)
+            let reported_error = if write_error == 0u32 {
+              29u32
+            } else {
+              write_error
+            }
+            break Result::Err(
+              wasi_fs_error(FsOperation::Write, path, reported_error),
+            )
+          } else {
+            continue total + count
+          }
+        }
+        _ => {
+          let sync_error = @wasi.fd_sync(fd)
+          let close_error = @wasi.fd_close(fd)
+          if sync_error != 0u32 {
+            break Result::Err(wasi_fs_error(FsOperation::Sync, path, sync_error))
+          } else if close_error != 0u32 {
+            break Result::Err(wasi_fs_error(FsOperation::Close, path, close_error))
+          } else {
+            break Result::Ok(wasi_fs_unit())
+          }
+        }
+      }
+    }
+  }
+
+  fn create_directory(self, path: RelativePath) -> Result<Unit, FsError> {
+    let pointer = 128u32
+    let length = wasi_copy_path(path, pointer)
+    let error = @wasi.path_create_directory(self.root, pointer, length)
+    if error == 0u32 || error == 20u32 {
+      Result::Ok(wasi_fs_unit())
+    } else {
+      Result::Err(wasi_fs_error(FsOperation::CreateDirectory, path, error))
+    }
+  }
+
+  fn rename(self, source: RelativePath, destination: RelativePath) -> Result<Unit, FsError> {
+    let source_pointer = 128u32
+    let source_length = wasi_copy_path(source, source_pointer)
+    let destination_pointer = source_pointer + source_length
+    let destination_length = wasi_copy_path(destination, destination_pointer)
+    let error = @wasi.path_rename(
+      self.root,
+      source_pointer,
+      source_length,
+      self.root,
+      destination_pointer,
+      destination_length,
+    )
+    if error == 0u32 {
+      Result::Ok(wasi_fs_unit())
+    } else {
+      Result::Err(wasi_fs_error(FsOperation::Rename, source, error))
+    }
+  }
+
+  fn remove_file(self, path: RelativePath) -> Result<Unit, FsError> {
+    let pointer = 128u32
+    let length = wasi_copy_path(path, pointer)
+    let error = @wasi.path_unlink_file(self.root, pointer, length)
+    if error == 0u32 || error == 44u32 {
+      Result::Ok(wasi_fs_unit())
+    } else {
+      Result::Err(wasi_fs_error(FsOperation::RemoveFile, path, error))
+    }
+  }
+
+  fn remove_directory(self, path: RelativePath) -> Result<Unit, FsError> {
+    let pointer = 128u32
+    let length = wasi_copy_path(path, pointer)
+    let error = @wasi.path_remove_directory(self.root, pointer, length)
+    if error == 0u32 || error == 44u32 {
+      Result::Ok(wasi_fs_unit())
+    } else {
+      Result::Err(wasi_fs_error(FsOperation::RemoveDirectory, path, error))
+    }
+  }
+
+  fn atomic_write(
+    self,
+    temporary: RelativePath,
+    destination: RelativePath,
+    value: Bytes,
+  ) -> Result<Unit, FsError> {
+    match self.write_file(temporary, value) {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(_) => self.rename(temporary, destination)
+    }
+  }
+}

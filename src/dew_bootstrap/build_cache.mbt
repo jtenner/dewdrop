@@ -138,7 +138,7 @@ fn bootstrap_build_cache_plan(
     emit,
     report,
     key,
-    artifact: bootstrap_join(root, "v3-" + key + ".dba"),
+    artifact: bootstrap_join(root, "v1-" + key + ".dba"),
   }
 }
 

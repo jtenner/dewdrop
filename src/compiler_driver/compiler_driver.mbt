@@ -54,6 +54,44 @@ pub struct CompilerCompilation {
 }
 
 ///|
+pub fn compile_manifest_uncached(
+  manifest : @semantic.ProgramManifest,
+  standard_sources : @semantic.StandardLibrarySources,
+  options : CompilerPipelineOptions,
+) -> CompilerCompilation {
+  let program = @semantic.collect_program_manifest_with_standard_sources(
+    options.module_id_base,
+    manifest,
+    standard_sources,
+    options.default_preamble,
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let planning_options = match options.planning_mode {
+    CompilerProductionPlanning =>
+      @semantic.WasmGCPlanningOptions::optimized_subtype_families()
+    CompilerTestPlanning => @semantic.WasmGCPlanningOptions::test_mode()
+  }
+  let link = @semantic.plan_program_wasmgc_link_with_options(
+    analyzed,
+    lowering,
+    options.root_module_index,
+    planning_options,
+  )
+  {
+    program,
+    analyzed,
+    lowering,
+    link,
+    cache_status: @standard_loader.InterfaceBundleCacheStatus::disabled(),
+    body_cache_status: @standard_loader.BodyInferenceCacheStatus::disabled(),
+    planning_cache_status: @standard_loader.PlanningCacheStatus::disabled(),
+    parse_event_cache_status: @standard_loader.ParseEventCacheWasDisabled(0),
+    cache_pack_status: "disabled",
+  }
+}
+
+///|
 pub fn compile_manifest(
   manifest : @semantic.ProgramManifest,
   loaded : @standard_loader.StandardLibraryLoad,

@@ -1,0 +1,131 @@
+open dew.std.bytes
+open dew.std.path
+open dew.std.string
+
+pub enum FsOperation {
+  Stat
+  Read
+  Write
+  CreateDirectory
+  Rename
+  RemoveFile
+  RemoveDirectory
+  Sync
+  Close
+}
+
+pub enum FsErrorKind {
+  NotFound
+  PermissionDenied
+  AlreadyExists
+  NotDirectory
+  IsDirectory
+  NotEmpty
+  InvalidPath
+  FileTooLarge
+  NoSpace
+  ReadOnly
+  Unsupported
+  Backend
+}
+
+pub struct FsError {
+  operation: FsOperation
+  path: String
+  kind: FsErrorKind
+  code: U32
+}
+
+pub enum PathKind {
+  Missing
+  File
+  Directory
+  Symlink
+  Other
+}
+
+pub trait FileSystem {
+  fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError>
+  fn read_file(self, path: RelativePath, max_bytes: U32) -> Result<Bytes, FsError>
+  fn write_file(self, path: RelativePath, value: Bytes) -> Result<Unit, FsError>
+  fn create_directory(self, path: RelativePath) -> Result<Unit, FsError>
+  fn rename(self, source: RelativePath, destination: RelativePath) -> Result<Unit, FsError>
+  fn remove_file(self, path: RelativePath) -> Result<Unit, FsError>
+  fn remove_directory(self, path: RelativePath) -> Result<Unit, FsError>
+  fn atomic_write(
+    self,
+    temporary: RelativePath,
+    destination: RelativePath,
+    value: Bytes,
+  ) -> Result<Unit, FsError>
+}
+
+pub fn fs_path_kind<f: FileSystem>(
+  filesystem: f,
+  path: RelativePath,
+) -> Result<PathKind, FsError> {
+  filesystem.path_kind(path)
+}
+
+pub fn fs_read_file<f: FileSystem>(
+  filesystem: f,
+  path: RelativePath,
+  max_bytes: U32,
+) -> Result<Bytes, FsError> {
+  filesystem.read_file(path, max_bytes)
+}
+
+pub fn fs_write_file<f: FileSystem>(
+  filesystem: f,
+  path: RelativePath,
+  value: Bytes,
+) -> Result<Unit, FsError> {
+  filesystem.write_file(path, value)
+}
+
+pub fn fs_create_directories<f: FileSystem>(
+  filesystem: f,
+  path: RelativePath,
+) -> Result<Unit, FsError> {
+  let source = path.to_string()
+  while 0u32 {
+    index if index <= source.byte_length() => {
+      if index == source.byte_length() || source.byte_at(index) == 47u8 {
+        let prefix = source.slice(0u32, index)
+        match relative_path(prefix) {
+          Result::Err(_) => break Result::Err(FsError::{
+            operation: FsOperation::CreateDirectory
+            path: source
+            kind: FsErrorKind::InvalidPath
+            code: 0u32
+          })
+          Result::Ok(current) =>
+            match filesystem.create_directory(current) {
+              Result::Err(error) => break Result::Err(error)
+              Result::Ok(_) =>
+                if index == source.byte_length() {
+                  break Result::Ok(fs_unit())
+                } else {
+                  continue index + 1u32
+                }
+            }
+        }
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break Result::Ok(fs_unit())
+  }
+}
+
+fn fs_unit() -> Unit {
+}
+
+pub fn fs_atomic_write<f: FileSystem>(
+  filesystem: f,
+  temporary: RelativePath,
+  destination: RelativePath,
+  value: Bytes,
+) -> Result<Unit, FsError> {
+  filesystem.atomic_write(temporary, destination, value)
+}

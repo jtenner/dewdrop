@@ -40,17 +40,17 @@ Ordinary orphan syntax is rejected with `OrphanTraitImpl` at the exact implement
 
 ## Frozen interfaces and cache hardening
 
-Interface freezing independently rechecks package ownership before exporting implementation records, so an erroneous provider cannot leak evidence merely because interface collection precedes body inference. The V13 private frozen-interface decoder also rejects serialized interfaces containing orphan implementation evidence. Its implementation-head traversal is bounded and validates decoded type IDs and applied-type spans before indexing the resolved arena, so a malformed ownership record returns a cache error instead of aborting the compiler. This protects cache-hit behavior from stale or manually constructed artifacts even when no provider body analysis runs.
+Interface freezing independently rechecks package ownership before exporting implementation records, so an erroneous provider cannot leak evidence merely because interface collection precedes body inference. The version 1 private frozen-interface decoder also rejects serialized interfaces containing orphan implementation evidence. Its implementation-head traversal is bounded and validates decoded type IDs and applied-type spans before indexing the resolved arena, so a malformed ownership record returns a cache error instead of aborting the compiler. This protects cache-hit behavior from stale or manually constructed artifacts even when no provider body analysis runs.
 
-V13 uses:
+Version 1 uses:
 
 ```text
-DEW_FROZEN_INTERFACES_V13\0
-DEW_STD_INTERFACE_CACHE_V13\0
-.dew/cache/interfaces/v13-<bundle-fingerprint>.dwi
+DEW_FROZEN_INTERFACES_V1\0
+DEW_STD_INTERFACE_CACHE_V1\0
+.dew/cache/interfaces/v1-<bundle-fingerprint>.dwi
 ```
 
-V10 artifacts are ignored by filename and rejected by payload/envelope magic.
+Stale pre-release artifacts are ignored by filename and rejected by payload or envelope magic.
 
 ## Backend consequence
 
@@ -66,7 +66,7 @@ Coverage includes:
 - module-local `foreign impl` execution and non-export;
 - exact source labels for both foreign declarations;
 - exclusion before imported coherence;
-- V13 cache decoder rejection of injected orphan evidence and malformed implementation type IDs without process aborts;
+- version 1 cache decoder rejection of injected orphan evidence and malformed implementation type IDs without process aborts;
 - local implementation methods over imported nominal receivers;
 - deterministic Node and Wago runtime execution;
 - reversed snapshot compilation reproducibility.

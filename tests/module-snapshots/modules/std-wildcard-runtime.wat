@@ -35,31 +35,33 @@
   (type (;25;) (func (param eqref eqref eqref i32) (result eqref)))
   (type (;26;) (func (param (ref 3) (ref 2) (ref 2)) (result (ref 1))))
   (type (;27;) (func (param i32 i32 i32 i32) (result i32)))
-  (type (;28;) (func (param i32 eqref) (result i32)))
-  (type (;29;) (func (result i32)))
-  (type (;30;) (array (mut v128)))
-  (type (;31;) (struct (field (ref 30)) (field i32) (field i32)))
-  (type (;32;) (struct (field (ref 30)) (field i32) (field i32)))
-  (type (;33;) (struct (field (ref 30)) (field i32) (field i32)))
-  (type (;34;) (struct (field (mut (ref 30))) (field (mut i32)) (field (mut i32))))
-  (type (;35;) (struct (field (mut (ref 30))) (field (mut i32)) (field (mut i32))))
+  (type (;28;) (func (param i32 i32 i32 i32) (result i32)))
+  (type (;29;) (func (param i32 eqref) (result i32)))
+  (type (;30;) (func (result i32)))
+  (type (;31;) (array (mut v128)))
+  (type (;32;) (struct (field (ref 31)) (field i32) (field i32)))
+  (type (;33;) (struct (field (ref 31)) (field i32) (field i32)))
+  (type (;34;) (struct (field (ref 31)) (field i32) (field i32)))
+  (type (;35;) (struct (field (mut (ref 31))) (field (mut i32)) (field (mut i32))))
+  (type (;36;) (struct (field (mut (ref 31))) (field (mut i32)) (field (mut i32))))
   (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 27)))
+  (import "wasi_snapshot_preview1" "fd_write" (func (;1;) (type 28)))
   (memory (;0;) 1)
-  (export "main" (func 2))
+  (export "main" (func 3))
   (export "memory" (memory 0))
-  (func (;1;) (type 28) (param i32 eqref) (result i32)
-    (local (ref 32) (ref 30) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
+  (func (;2;) (type 29) (param i32 eqref) (result i32)
+    (local (ref 33) (ref 31) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
     local.get 1
-    ref.cast (ref 32)
+    ref.cast (ref 33)
     local.set 2
     local.get 2
-    struct.get 32 0
+    struct.get 33 0
     local.set 3
     local.get 2
-    struct.get 32 1
+    struct.get 33 1
     local.set 4
     local.get 2
-    struct.get 32 2
+    struct.get 33 2
     local.set 5
     i32.const 0
     local.set 6
@@ -111,7 +113,7 @@
               local.get 9
               i32.const 4
               i32.shr_u
-              array.get 30
+              array.get 31
               v128.store
               i32.const 16
               local.get 8
@@ -124,7 +126,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 30
+              array.get 31
               v128.store
               i32.const 16
               local.get 8
@@ -137,7 +139,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 30
+              array.get 31
               v128.store
               i32.const 16
               local.get 8
@@ -150,7 +152,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 30
+              array.get 31
               v128.store
               local.get 8
               i32.const 64
@@ -173,14 +175,14 @@
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 30
+                array.get 31
                 local.set 11
               else
                 local.get 3
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 30
+                array.get 31
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -194,7 +196,7 @@
                 i32.shr_u
                 i32.const 1
                 i32.add
-                array.get 30
+                array.get 31
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -223,7 +225,7 @@
             local.get 9
             i32.const 4
             i32.shr_u
-            array.get 30
+            array.get 31
             local.get 9
             i32.const 15
             i32.and
@@ -265,7 +267,7 @@
             i32.const 0
             i32.const 1
             i32.const 8
-            call 0
+            call 1
             i32.const 0
             i32.ne
             if ;; label = @5
@@ -300,13 +302,13 @@
     end
     local.get 6
   )
-  (func (;2;) (type 29) (result i32)
+  (func (;3;) (type 30) (result i32)
     i32.const 1
     v128.const i32x4 0x646c6977 0x64726163 0x0000000a 0x00000000
-    array.new_fixed 30 1
+    array.new_fixed 31 1
     i32.const 0
     i32.const 9
-    struct.new 32
-    call 1
+    struct.new 33
+    call 2
   )
 )

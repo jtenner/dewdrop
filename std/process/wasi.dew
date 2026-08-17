@@ -1,0 +1,230 @@
+import dew.std.wasm.wasi as @wasi
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.process
+open dew.std.string
+open dew.std.wasm.intrinsics
+
+pub struct WasiProcess {
+}
+
+pub fn wasi_process() -> WasiProcess {
+  WasiProcess::{}
+}
+
+fn wasi_process_error(
+  operation: ProcessOperation,
+  kind: ProcessErrorKind,
+  code: U32,
+) -> ProcessError {
+  ProcessError::{
+    operation: operation
+    kind: kind
+    code: code
+  }
+}
+
+fn wasi_process_backend_error(operation: ProcessOperation, code: U32) -> ProcessError {
+  wasi_process_error(operation, ProcessErrorKind::Backend, code)
+}
+
+fn wasi_memory_string(pointer: U32, length: U32) -> Result<String, ProcessError> {
+  let builder = BytesBuilder::with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(wasm_u8_load(pointer + index))
+      continue index + 1u32
+    }
+    _ => {
+      let value = builder.finish()
+      if value.is_valid_utf8() {
+        break Result::Ok(value.to_string())
+      } else {
+        break Result::Err(
+          wasi_process_error(ProcessOperation::Arguments, ProcessErrorKind::InvalidUtf8, 25u32),
+        )
+      }
+    }
+  }
+}
+
+fn wasi_find_zero(pointer: U32, limit: U32) -> Option<U32> {
+  while 0u32 {
+    index if index < limit => {
+      if wasm_u8_load(pointer + index) == 0u8 {
+        break Option::Some(index)
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break Option::None
+  }
+}
+
+fn wasi_process_write(
+  descriptor: U32,
+  operation: ProcessOperation,
+  value: Bytes,
+) -> Result<U32, ProcessError> {
+  let length = value.byte_length()
+  while 0u32 {
+    total if total < length => {
+      let window = if length - total < 49152u32 {
+        length - total
+      } else {
+        49152u32
+      }
+      while 0u32 {
+        index if index < window => {
+          wasm_u8_store(16u32 + index, value.byte_at(total + index))
+          continue index + 1u32
+        }
+        _ => break 0u32
+      }
+      wasm_u32_store(0u32, 16u32)
+      wasm_u32_store(4u32, window)
+      let error = @wasi.fd_write(descriptor, 0u32, 1u32, 8u32)
+      let count = wasm_u32_load(8u32)
+      if error != 0u32 || count == 0u32 || count > window {
+        break Result::Err(
+          wasi_process_backend_error(operation, if error == 0u32 {
+            29u32
+          } else {
+            error
+          }),
+        )
+      } else {
+        continue total + count
+      }
+    }
+    _ => break Result::Ok(length)
+  }
+}
+
+impl Process for WasiProcess {
+  fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError> {
+    let error = @wasi.args_sizes_get(0u32, 4u32)
+    if error != 0u32 {
+      Result::Err(wasi_process_backend_error(ProcessOperation::Arguments, error))
+    } else {
+      let count = wasm_u32_load(0u32)
+      let bytes = wasm_u32_load(4u32)
+      if count > max_count || bytes > max_bytes || count > 4096u32 || bytes > 49152u32 {
+        Result::Err(
+          wasi_process_error(ProcessOperation::Arguments, ProcessErrorKind::LimitExceeded, 61u32),
+        )
+      } else {
+        let pointer_table = 16u32
+        let text_start = pointer_table + count * 4u32
+        let get_error = @wasi.args_get(pointer_table, text_start)
+        if get_error != 0u32 {
+          Result::Err(wasi_process_backend_error(ProcessOperation::Arguments, get_error))
+        } else {
+          let output = Array::with_capacity(count)
+          while 0u32 {
+            index if index < count => {
+              let pointer = wasm_u32_load(pointer_table + index * 4u32)
+              match wasi_find_zero(pointer, text_start + bytes - pointer) {
+                Option::None => break Result::Err(
+                  wasi_process_backend_error(ProcessOperation::Arguments, 28u32),
+                )
+                Option::Some(length) =>
+                  match wasi_memory_string(pointer, length) {
+                    Result::Err(read_error) => break Result::Err(read_error)
+                    Result::Ok(value) => {
+                      output.push(value)
+                      continue index + 1u32
+                    }
+                  }
+              }
+            }
+            _ => break Result::Ok(output)
+          }
+        }
+      }
+    }
+  }
+
+  fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError> {
+    let error = @wasi.environ_sizes_get(0u32, 4u32)
+    if error != 0u32 {
+      Result::Err(wasi_process_backend_error(ProcessOperation::Environment, error))
+    } else {
+      let count = wasm_u32_load(0u32)
+      let bytes = wasm_u32_load(4u32)
+      if count > 4096u32 || bytes > max_bytes || bytes > 49152u32 {
+        Result::Err(
+          wasi_process_error(ProcessOperation::Environment, ProcessErrorKind::LimitExceeded, 61u32),
+        )
+      } else {
+        let pointer_table = 16u32
+        let text_start = pointer_table + count * 4u32
+        let get_error = @wasi.environ_get(pointer_table, text_start)
+        if get_error != 0u32 {
+          Result::Err(wasi_process_backend_error(ProcessOperation::Environment, get_error))
+        } else {
+          while 0u32 {
+            index if index < count => {
+              let pointer = wasm_u32_load(pointer_table + index * 4u32)
+              match wasi_find_zero(pointer, text_start + bytes - pointer) {
+                Option::None => break Result::Err(
+                  wasi_process_backend_error(ProcessOperation::Environment, 28u32),
+                )
+                Option::Some(length) => {
+                  let mut equal = 4294967295u32
+                  while 0u32 {
+                    offset if offset < length => {
+                      if wasm_u8_load(pointer + offset) == 61u8 {
+                        equal = offset
+                        break offset
+                      } else {
+                        continue offset + 1u32
+                      }
+                    }
+                    _ => break 0u32
+                  }
+                  if equal != 4294967295u32 && equal == name.byte_length() {
+                    let name_bytes = name.as_bytes()
+                    let mut matches = true
+                    while 0u32 {
+                      offset if offset < equal => {
+                        matches = matches && wasm_u8_load(pointer + offset) == name_bytes.byte_at(offset)
+                        continue offset + 1u32
+                      }
+                      _ => break 0u32
+                    }
+                    if matches {
+                      match wasi_memory_string(pointer + equal + 1u32, length - equal - 1u32) {
+                        Result::Err(read_error) => break Result::Err(read_error)
+                        Result::Ok(value) => break Result::Ok(Option::Some(value))
+                      }
+                    } else {
+                      continue index + 1u32
+                    }
+                  } else {
+                    continue index + 1u32
+                  }
+                }
+              }
+            }
+            _ => break Result::Ok(Option::None)
+          }
+        }
+      }
+    }
+  }
+
+  fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError> {
+    wasi_process_write(1u32, ProcessOperation::StandardOutput, value)
+  }
+
+  fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError> {
+    wasi_process_write(2u32, ProcessOperation::StandardError, value)
+  }
+
+  fn exit(self, status: U32) -> Never {
+    @wasi.proc_exit(status)
+    unreachable()
+  }
+}

@@ -29,8 +29,13 @@ python3 tools/generate_io_std.py --check
 python3 tools/generate_testing_std.py --check
 python3 tools/generate_bloom_filter_std.py --check
 python3 tools/generate_blake3_std.py --check
+python3 tools/generate_sha256_std.py --check
+python3 tools/generate_host_std.py --check
+python3 tools/generate_package_std.py --check
+python3 tools/generate_wpsi_adapter.py --check
 python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check
+python3 tools/generate_utf8_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs

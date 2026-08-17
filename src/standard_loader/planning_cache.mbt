@@ -8,6 +8,17 @@ pub struct PlanningCacheStatus {
 } derive(Eq, Debug)
 
 ///|
+pub fn PlanningCacheStatus::disabled() -> PlanningCacheStatus {
+  {
+    enabled: false,
+    layout_hits: 0,
+    layout_misses: 0,
+    fragment_hits: 0,
+    fragment_misses: 0,
+  }
+}
+
+///|
 pub fn PlanningCacheStatus::label(self : PlanningCacheStatus) -> String {
   if !self.enabled {
     "disabled"

@@ -435,6 +435,71 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
 }
 
 ///|
+test "Core Wasm linker keeps WPSI provider memory at index zero" {
+  let dew = core_link_test_dew_module()
+    .with_import_sec(
+      @lib.ImportSec::new([
+        @lib.Import::new(
+          @lib.Name::from_string("link:wpsi"),
+          @lib.Name::from_string("module_new"),
+          @lib.ExternType::func(@lib.TypeIdx::new(1U)),
+        ),
+      ]),
+    )
+    .with_mem_sec(
+      @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(1U, Some(1U)))]),
+    )
+  let guest = core_link_test_guest_module()
+    .with_mem_sec(
+      @lib.MemSec::new([@lib.MemType::new(@lib.Limits::i32(2U, Some(2U)))]),
+    )
+    .with_code_sec(
+      @lib.CodeSec::new([
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([
+            @lib.Instruction::i32_const(@lib.I32::new(0)),
+            @lib.Instruction::i32_load(
+              @lib.MemArg::new(@lib.U32::new(2U), None, @lib.U64::new(0UL)),
+            ),
+            @lib.Instruction::drop(),
+            @lib.Instruction::i32_const(@lib.I32::new(7)),
+            @lib.Instruction::struct_new(@lib.TypeIdx::new(0U)),
+          ]),
+        ),
+      ]),
+    )
+  let linked = link_core_wasm_gc_modules(
+    @binary.encode_module(dew).unwrap(),
+    [{ provider: "wpsi", bytes: @binary.encode_module(guest).unwrap() }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  let mut guest_uses_memory_zero = false
+  match module_.code_sec {
+    Some(@lib.CodeSec(functions)) =>
+      match functions[0] {
+        @lib.Func(_, @lib.Expr(instructions)) =>
+          for instruction in instructions {
+            match instruction {
+              @lib.I32Load(@lib.MemArg(_, None, _)) =>
+                guest_uses_memory_zero = true
+              _ => ()
+            }
+          }
+      }
+    None => fail("expected WPSI guest function")
+  }
+  assert_true(guest_uses_memory_zero)
+}
+
+///|
 test "Core Wasm linker reports missing providers" {
   let dew = @binary.encode_module(core_link_test_dew_module()).unwrap()
   match link_core_wasm_gc_modules(dew, []) {

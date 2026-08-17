@@ -49,8 +49,8 @@ Dew already has most of the semantic foundation needed for its own compiler:
 - mutable locals, mutable fields, arrays, maps, sets, iterators, closures, and
   function values;
 - multi-file and multi-module compilation;
-- fixed-width arithmetic, Bytes, strings, builders, JSON, binary codecs, and
-  BLAKE3 source code;
+- fixed-width arithmetic, Bytes, strings, builders, strict/lossy UTF-8, JSON,
+  binary codecs, and BLAKE3 source code;
 - functional loops, pattern matching, deterministic cleanup, and Wasm
   intrinsics.
 
@@ -76,11 +76,15 @@ fixed-point compiler.
 
 ### SH-01 — Compiler host boundary
 
-**Current state:** unsupported from ordinary Dew source.
+**Current state:** implemented on August 17, 2026.
 
-`std/wasi.dew` exposes only `fd_read` and `fd_write`. `std/io.dew` provides
-host-independent Reader and Writer traits, but it intentionally has no paths,
-files, arguments, environment, or process exit.
+The module split is `dew.std.path`, `dew.std.fs`,
+`dew.std.fs.wasi`, `dew.std.fs.wpsi`, `dew.std.process`,
+`dew.std.process.wasi`, and `dew.std.process.wpsi`. `std/wasi.dew` exposes only
+high-level `fd_read` and `fd_write`; `std/io.dew` provides host-independent
+Reader and Writer traits, but it intentionally has no paths, files, arguments,
+environment, or process exit. See
+[`self-hosting-host-modules-2026-08-17.md`](self-hosting-host-modules-2026-08-17.md).
 
 The MoonBit compiler and loader currently call `@fs` 27 times and `@sys` 62
 times in the audited compiler scope. The complete bootstrap command needs more.
@@ -138,25 +142,19 @@ feature.
 
 ### SH-03 — Bootstrap source and standard-library provisioning
 
-**Current state:** the MoonBit launcher discovers files, packages, standard
-sources, lock records, and static-link inputs before it invokes the compiler.
+**Current state:** implemented on August 17, 2026.
 
-Compiler A must receive a complete deterministic input set without first
-requiring a Dew-native package manager.
+The bounded private version 1 request carries ordered modules and logical paths,
+exact source Bytes, the root module, an exact bootstrap standard-library BLAKE3
+identity, dependency interface expectations, exact static-provider Wasm Bytes,
+an explicit `CompilerSessionConfig`, compiler fingerprint Bytes, and response
+policy.
 
-**Minimum solution:** keep a small launcher that sends a versioned request with:
-
-- ordered modules;
-- ordered logical file paths and source Bytes, or paths available through SH-01;
-- the root module;
-- standard-library source identity;
-- dependency interface expectations;
-- static-link provider names and module Bytes;
-- cache policy and compiler fingerprint.
-
-The existing private compile-request protocol is a useful starting point, but a
-source-Bytes form avoids making package discovery part of the first self-hosted
-compiler.
+The MoonBit compiler consumes the source and provider payloads directly. It does
+not repeat package discovery or file reads. The first fixed-point request path
+uses the explicit uncached compiler pipeline and does not mutate cache
+environment variables. Package discovery, integrity checks, source ordering,
+provider selection, downloads, and process launch remain launcher work.
 
 ## P1 required library gaps
 
@@ -230,18 +228,26 @@ level, code, and message text without interpolation.
 
 ### SH-08 — Hashing needed by compiler and package artifacts
 
-**Current state:** the portable BLAKE3-256 implementation is now available as
+**Current state:** implemented. Portable BLAKE3-256 is available as
 `dew.std.blake3`, including the first little-endian U32 lookup lane used by
-cache packs. Official short, block, chunk, and tree vectors pass in Node and
-Wago. The complete bootstrap command still uses SHA-256 for package integrity.
-
-**Full-command requirement:** either:
-
-- add Dew-native SHA-256; or
-- leave package integrity and capsule management in the bootstrap launcher for
-  the first fixed point.
+cache packs. Portable SHA-256 is available as `dew.std.integrity.sha256` and is
+checked against all 65 NIST CAVS short-message vectors. Package acquisition and
+capsule policy may still remain in the bootstrap launcher for the first fixed
+point.
 
 No general cryptography framework is required for self-hosting.
+
+### SH-08A — Explicit UTF-8 codec
+
+**Current state:** implemented on August 17, 2026. The original audit treated
+String/Bytes conversion as sufficient, but the production compiler has 61 direct
+UTF-8 package calls: 39 encodes, 17 lossy decodes, and five strict decodes.
+
+`dew.std.encoding.utf8` now provides zero-copy String and StringView encoding,
+strict validation and decoding with the first malformed byte offset, and
+deterministic U+FFFD lossy decoding. It rejects overlong forms, surrogate
+scalars, values above U+10FFFF, invalid continuation bytes, and truncation. See
+[`self-hosting-utf8-stdlib-2026-08-17.md`](self-hosting-utf8-stdlib-2026-08-17.md).
 
 ## P1 port-enabling language gaps
 
@@ -382,27 +388,21 @@ to implement them to self-host:
 
 ## Proposed implementation order
 
-1. **Freeze the bootstrap request.** Define the exact data passed from the small
-   launcher to compiler A.
-2. **Add SH-01.** Prove argument, file, output, environment, and exit behavior in
-   a tiny Dew program.
-3. **Add SH-04 through SH-08.** Port compiler-grade arenas, sorting, rendering,
-   and BLAKE3 before large semantic modules.
-4. **Decide SH-09 and SH-10.** Either implement tuples and ordinary loops or
-   publish mandatory translation patterns and accept the larger port.
-5. **Freeze the linked Starshine foreign ABI.** Pin the compiled binary, expose
-   the typed imports needed by the backend, and include its bytes in compiler
+1. **Freeze the linked Starshine foreign ABI.** Pin the public `.mbti`
+   interfaces, generate direct typed object-model exports and Dew declarations,
+   and include the interface digests and compiled guest bytes in compiler
    fingerprints.
-6. **Port tokenizer and parser.** Keep binary parser-event compatibility only if
-   it materially shortens bootstrap work.
-7. **Port semantic phases in dependency order.** Collection, types, imports,
+2. **Decide SH-09 and SH-10 only when the port reaches them.** Add tuples or
+   ordinary loops only if the measured rewrite cost justifies them.
+3. **Port tokenizer and parser.** Consume the frozen in-memory source Bytes.
+4. **Port semantic phases in dependency order.** Collection, types, imports,
    names, inference, flow, layouts, specialization, optimization, and linking.
-8. **Port backend calls to the linked Starshine foreign ABI.** Keep linker-owned
-   composition deterministic.
-9. **Port cache codecs, loader, driver, and compiler-facing CLI.** Keep package
+5. **Port backend calls to the linked direct Starshine object-model ABI.** Keep
+   linker-owned composition deterministic.
+6. **Port cache codecs, loader, driver, and compiler-facing CLI.** Keep package
    acquisition and process launch outside if necessary.
-10. **Run the fixed point.** MoonBit Dewdrop builds A; A builds B; B builds C;
-    B and C must be byte-identical.
+7. **Run the fixed point.** MoonBit Dewdrop builds A; A builds B; B builds C;
+   B and C must be byte-identical.
 
 ## Required acceptance tests
 

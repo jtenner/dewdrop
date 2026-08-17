@@ -30,7 +30,7 @@ default unfiltered suite.
 
 The runner discovers `std/tests/*_test.dew` in sorted manifest order and passes the files individually to the compiler. It compiles them with `WasmGCPlanningOptions::test_mode()` through the complete Dew and Starshine pipeline, instantiates the WasmGC module in Node, and invokes every compiler-described test export. It reports all failing display names and logical files in one run. Normal compilation analyzes but does not emit or export tests.
 
-Test exports use deterministic manifest ordinals such as `__dew_test_0`; source byte offsets are no longer part of their identity. The compiler appends one `dew.tests` Wasm custom section whose versioned `DEW_TESTS_V3` payload contains each export, logical module, logical source path, strict-UTF-8 display name, and optional expected-trap category. Stable logical identity is `module + file + display name`. Collection diagnoses duplicate file/display-name pairs within a module, while the runner also rejects duplicate complete identities in metadata. The Node runner reads the custom section from the compiled module and does not scan Dew source or consume a sidecar.
+Test exports use deterministic manifest ordinals such as `__dew_test_0`; source byte offsets are no longer part of their identity. The compiler appends one `dew.tests` Wasm custom section whose version 1 `DEW_TESTS_V1` payload contains each export, logical module, logical source path, strict-UTF-8 display name, and optional expected-trap category. Stable logical identity is `module + file + display name`. Collection diagnoses duplicate file/display-name pairs within a module, while the runner also rejects duplicate complete identities in metadata. The Node runner reads the custom section from the compiled module and does not scan Dew source or consume a sidecar.
 
 Expected traps are declaration metadata rather than source-runner conventions:
 
@@ -64,7 +64,7 @@ memory from this test-only transport.
 `builtin_traps.dew` is compiled separately to verify that false assertions, `unreachable()`, out-of-bounds typed memory access, invalid, reversed, or out-of-bounds String/StringView/Bytes ranges, invalid StringBuilder ASCII/scalar/checked input, and every post-`finish()` StringBuilder/BytesBuilder operation—including use through aliases and repeated finish—produce Wasm runtime traps. Every public export in the dedicated trap artifact is required to trap, so new probes remain visible without a runner allowlist.
 
 `tools/dew test` creates a temporary self-describing Wasm artifact under `.tmp`,
-invokes the same V3 Node runner, and removes the artifact after the run. Explicit-file mode requires at least one `_test.dew` input. Package mode discovers root-package tests from `dew.json`; `--manifest dew.modules.json` supports explicit statically linked multi-module test graphs. Both modes support package-wide metadata filters.
+invokes the same version 1 Node runner, and removes the artifact after the run. Explicit-file mode requires at least one `_test.dew` input. Package mode discovers root-package tests from `dew.json`; `--manifest dew.modules.json` supports explicit statically linked multi-module test graphs. Both modes support package-wide metadata filters.
 
 Generated standard-suite files are:
 

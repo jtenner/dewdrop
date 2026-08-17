@@ -4,6 +4,7 @@ import {
   "jtenner/dewdrop/standard_loader",
   "jtenner/dewdrop/compiler_driver",
   "jtenner/dewdrop/core_linker",
+  "jtenner/dewdrop/compile_request",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
   "moonbitlang/core/debug",

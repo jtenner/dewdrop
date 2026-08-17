@@ -218,7 +218,7 @@ fn bootstrap_hash_u32(hash : @crypto.SHA256, value : Int) -> Unit {
 ///|
 fn bootstrap_package_integrity(package_ : BootstrapPackage) -> String {
   let hash = @crypto.SHA256::new()
-  hash.update(b"DEW_PACKAGE_INTEGRITY_V2\x00")
+  hash.update(b"DEW_PACKAGE_INTEGRITY_V1\x00")
   bootstrap_write_hash_string(hash, package_.name)
   bootstrap_write_hash_string(hash, package_.version)
   bootstrap_write_hash_string(
@@ -422,7 +422,7 @@ fn bootstrap_load_package_manifest(
   let modules : Array[(String, Array[String])] = []
   let expectations : Array[(String, String)] = []
   let dependency_hash = @crypto.SHA256::new()
-  dependency_hash.update(b"DEW_DEPENDENCY_INTERFACE_KEY_V2\x00")
+  dependency_hash.update(b"DEW_DEPENDENCY_INTERFACE_KEY_V1\x00")
   for entry in ordered {
     let package_ = entry.0
     let lock = entry.1

@@ -141,17 +141,17 @@ def main() -> None:
         "private_body_change_family_hits": family_hits,
         "private_body_change_family_misses": family_misses,
         "root_body_change_report": root_report.strip().splitlines(),
-        "module_artifacts": len(list((CACHE / "body-inference").glob("v4-*.dbi"))),
+        "module_artifacts": len(list((CACHE / "body-inference").glob("v1-*.dbi"))),
         "family_artifacts": len(
-            list((CACHE / "body-inference-families").glob("v2-*.dbf"))
+            list((CACHE / "body-inference-families").glob("v1-*.dbf"))
         ),
         "module_artifact_bytes": sum(
             path.stat().st_size
-            for path in (CACHE / "body-inference").glob("v4-*.dbi")
+            for path in (CACHE / "body-inference").glob("v1-*.dbi")
         ),
         "family_artifact_bytes": sum(
             path.stat().st_size
-            for path in (CACHE / "body-inference-families").glob("v2-*.dbf")
+            for path in (CACHE / "body-inference-families").glob("v1-*.dbf")
         ),
         "changed_output_matches_uncached": True,
     }

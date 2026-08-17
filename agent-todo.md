@@ -4,8 +4,8 @@
 
 ## P1 — self-hosting
 
-1. Add compiler host APIs for arguments, environment, file-system reads/writes, exit status, and output; keep only a small bootstrap launcher outside Dew.
-2. Link the compiled Starshine binary through Dew foreign imports, freeze its typed ABI, and include its exact bytes in deterministic compiler fingerprints.
+1. Pin the Starshine `.mbti` interfaces, generate direct typed guest exports and Dew foreign declarations for the public module-building API, and include the interface digests and exact guest bytes in deterministic compiler fingerprints.
+2. Build one linked smoke compiler that reads the frozen source-Bytes request and emits one module.
 3. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
 4. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
 

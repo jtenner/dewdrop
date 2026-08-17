@@ -1,0 +1,191 @@
+open dew.std.bytes
+open dew.std.string
+open dew.std.string_builder
+
+pub enum Utf8DecodeError {
+  InvalidSequence(U32)
+} derive(Eq)
+
+fn utf8_is_continuation(byte: U8) -> Bool {
+  byte >= 128u8 && byte <= 191u8
+}
+
+fn utf8_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn utf8_valid_sequence_width(value: Bytes, index: U32) -> U32 {
+  let length = value.byte_length()
+  let remaining = length - index
+  let first = value.byte_at(index)
+  if first <= 127u8 {
+    1u32
+  } else if first >= 194u8 && first <= 223u8 {
+    if remaining >= 2u32 && utf8_is_continuation(value.byte_at(index + 1u32)) {
+      2u32
+    } else {
+      0u32
+    }
+  } else if first >= 224u8 && first <= 239u8 {
+    if remaining < 3u32 {
+      0u32
+    } else {
+      let second = value.byte_at(index + 1u32)
+      let third = value.byte_at(index + 2u32)
+      if utf8_is_continuation(second) &&
+        utf8_is_continuation(third) &&
+        (first != 224u8 || second >= 160u8) &&
+        (first != 237u8 || second < 160u8) {
+        3u32
+      } else {
+        0u32
+      }
+    }
+  } else if first >= 240u8 && first <= 244u8 {
+    if remaining < 4u32 {
+      0u32
+    } else {
+      let second = value.byte_at(index + 1u32)
+      let third = value.byte_at(index + 2u32)
+      let fourth = value.byte_at(index + 3u32)
+      if utf8_is_continuation(second) &&
+        utf8_is_continuation(third) &&
+        utf8_is_continuation(fourth) &&
+        (first != 240u8 || second >= 144u8) &&
+        (first != 244u8 || second < 144u8) {
+        4u32
+      } else {
+        0u32
+      }
+    }
+  } else {
+    0u32
+  }
+}
+
+fn utf8_first_invalid_index(value: Bytes) -> U32 {
+  let length = value.byte_length()
+  while 0u32 {
+    index if index < length => {
+      let width = utf8_valid_sequence_width(value, index)
+      if width == 0u32 {
+        break index
+      } else {
+        continue index + width
+      }
+    }
+    _ => break 4294967295u32
+  }
+}
+
+fn utf8_expected_sequence_width(first: U8) -> U32 {
+  if first >= 194u8 && first <= 223u8 {
+    2u32
+  } else if first >= 224u8 && first <= 239u8 {
+    3u32
+  } else if first >= 240u8 && first <= 244u8 {
+    4u32
+  } else {
+    1u32
+  }
+}
+
+fn utf8_invalid_sequence_width(value: Bytes, index: U32) -> U32 {
+  let length = value.byte_length()
+  let expected = utf8_expected_sequence_width(value.byte_at(index))
+  if expected == 1u32 {
+    1u32
+  } else {
+    while 1u32 {
+      width if width < expected && width < length - index && utf8_is_continuation(value.byte_at(index + width)) => {
+        continue width + 1u32
+      }
+      width => break width
+    }
+  }
+}
+
+fn utf8_append_valid_scalar(
+  builder: StringBuilder,
+  value: Bytes,
+  index: U32,
+  width: U32,
+) -> Unit {
+  let first = utf8_u8_to_u32(value.byte_at(index))
+  if width == 1u32 {
+    builder.append_ascii(value.byte_at(index))
+  } else if width == 2u32 {
+    let second = utf8_u8_to_u32(value.byte_at(index + 1u32))
+    builder.append_scalar(
+      ((first & 31u32) << 6u32) |
+      (second & 63u32),
+    )
+  } else if width == 3u32 {
+    let second = utf8_u8_to_u32(value.byte_at(index + 1u32))
+    let third = utf8_u8_to_u32(value.byte_at(index + 2u32))
+    builder.append_scalar(
+      ((first & 15u32) << 12u32) |
+      ((second & 63u32) << 6u32) |
+      (third & 63u32),
+    )
+  } else {
+    let second = utf8_u8_to_u32(value.byte_at(index + 1u32))
+    let third = utf8_u8_to_u32(value.byte_at(index + 2u32))
+    let fourth = utf8_u8_to_u32(value.byte_at(index + 3u32))
+    builder.append_scalar(
+      ((first & 7u32) << 18u32) |
+      ((second & 63u32) << 12u32) |
+      ((third & 63u32) << 6u32) |
+      (fourth & 63u32),
+    )
+  }
+}
+
+pub fn encode(value: String) -> Bytes {
+  value.as_bytes()
+}
+
+pub fn encode_view(value: StringView) -> Bytes {
+  value.as_bytes()
+}
+
+fn utf8_unit() -> Unit {
+}
+
+pub fn validate(value: Bytes) -> Result<Unit, Utf8DecodeError> {
+  if value.is_valid_utf8() {
+    Result::Ok(utf8_unit())
+  } else {
+    Result::Err(Utf8DecodeError::InvalidSequence(utf8_first_invalid_index(value)))
+  }
+}
+
+pub fn decode(value: Bytes) -> Result<String, Utf8DecodeError> {
+  if value.is_valid_utf8() {
+    Result::Ok(value.to_string())
+  } else {
+    Result::Err(Utf8DecodeError::InvalidSequence(utf8_first_invalid_index(value)))
+  }
+}
+
+pub fn decode_lossy(value: Bytes) -> String {
+  if value.is_valid_utf8() {
+    value.to_string()
+  } else {
+    let builder = StringBuilder::with_capacity(value.byte_length())
+    let length = value.byte_length()
+    while 0u32 {
+      index if index < length => {
+        let width = utf8_valid_sequence_width(value, index)
+        if width == 0u32 {
+          builder.append_scalar(65533u32)
+          continue index + utf8_invalid_sequence_width(value, index)
+        } else {
+          utf8_append_valid_scalar(builder, value, index, width)
+          continue index + width
+        }
+      }
+      _ => break builder.finish()
+    }
+  }
+}

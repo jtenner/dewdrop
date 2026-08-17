@@ -112,9 +112,10 @@ test "dew std wildcard selects every wildcard standard module deterministically"
     ]),
   )
   assert_eq(program.diagnostics.length(), 0)
-  assert_eq(program.modules.length(), 55)
+  assert_eq(program.modules.length(), 71)
   assert_true(program.module_index("dew.std.string") is Some(_))
   assert_true(program.module_index("dew.std.text") is Some(_))
+  assert_true(program.module_index("dew.std.encoding.utf8") is Some(_))
   assert_true(program.module_index("dew.std.array") is Some(_))
   assert_true(program.module_index("dew.std.map") is Some(_))
   assert_true(program.module_index("dew.std.set") is Some(_))
@@ -124,6 +125,20 @@ test "dew std wildcard selects every wildcard standard module deterministically"
   assert_true(program.module_index("dew.std.testing") is Some(_))
   assert_true(program.module_index("dew.std.bloom_filter") is Some(_))
   assert_true(program.module_index("dew.std.blake3") is Some(_))
+  assert_true(program.module_index("dew.std.integrity.sha256") is Some(_))
+  assert_true(program.module_index("dew.std.encode") is Some(_))
+  assert_true(program.module_index("dew.std.decode") is Some(_))
+  assert_true(program.module_index("dew.std.format") is Some(_))
+  assert_true(program.module_index("dew.std.semver") is Some(_))
+  assert_true(program.module_index("dew.std.package") is Some(_))
+  assert_true(program.module_index("dew.std.package.artifact") is Some(_))
+  assert_true(program.module_index("dew.std.path") is Some(_))
+  assert_true(program.module_index("dew.std.fs") is Some(_))
+  assert_true(program.module_index("dew.std.fs.wasi") is Some(_))
+  assert_true(program.module_index("dew.std.fs.wpsi") is Some(_))
+  assert_true(program.module_index("dew.std.process") is Some(_))
+  assert_true(program.module_index("dew.std.process.wasi") is Some(_))
+  assert_true(program.module_index("dew.std.process.wpsi") is Some(_))
   assert_true(program.module_index("dew.std.json") is Some(_))
   assert_true(program.module_index("dew.std.wasm.intrinsics") is Some(_))
   assert_true(program.module_index("dew.std.wasi") is Some(_))
@@ -131,7 +146,30 @@ test "dew std wildcard selects every wildcard standard module deterministically"
   assert_true(program.module_index("dew.std.f64x2") is Some(_))
   let graph = build_module_dependency_graph(program)
   assert_eq(graph.diagnostics.length(), 0)
-  assert_eq(graph.dependencies[0].length, 53)
+  assert_eq(graph.dependencies[0].length, 68)
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.frozen.import_diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].names.diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+}
+
+///|
+test "frozen interfaces skip module-local foreign library namespaces" {
+  let program = collect_program_manifest(
+    1196UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open app.bridge\npub fn main() -> U32 {\n  answer()\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.bridge", [
+        ManifestFile::new(
+          "bridge.dew", b"foreign type Handle\nforeign impl \"provider\" as Provider {\n  fn open() -> Handle = \"open\"\n}\npub fn answer() -> U32 {\n  42u32\n}\n",
+        ),
+      ]),
+    ]),
+  )
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics.length(), 0)
   assert_eq(analyzed.modules[0].names.diagnostics.length(), 0)

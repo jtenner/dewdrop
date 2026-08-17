@@ -129,85 +129,160 @@ fn print_usage() -> Unit {
 }
 
 ///|
+fn compile_request_root_index(
+  request : @compile_request.CompilerRequest,
+) -> Int {
+  for index, module_ in request.modules {
+    if module_.name == request.root_module {
+      return index
+    }
+  }
+  abort("validated compile request has no root module")
+}
+
+///|
+fn compile_request_manifest(
+  request : @compile_request.CompilerRequest,
+) -> @semantic.ProgramManifest {
+  let modules : Array[@semantic.ManifestModule] = []
+  for module_ in request.modules {
+    let files : Array[@semantic.ManifestFile] = []
+    for file in module_.files {
+      files.push(@semantic.ManifestFile::new(file.logical_path, file.source))
+    }
+    modules.push(@semantic.ManifestModule::new(module_.name, files))
+  }
+  @semantic.ProgramManifest::new(modules)
+}
+
+///|
+fn run_source_compile_request(
+  request : @compile_request.CompilerRequest,
+) -> Unit {
+  let expected_standard = match request.standard_library {
+    @compile_request.CompilerBootstrapStandard(identity) => identity
+  }
+  let actual_standard = @compile_request.bootstrap_standard_library_identity()
+  if !@compile_request.bytes_equal(expected_standard, actual_standard) {
+    cli_fail("compile request bootstrap standard identity mismatch")
+  }
+  let manifest = compile_request_manifest(request)
+  let root_module_index = compile_request_root_index(request)
+  let options = if request.config.test_mode {
+    @compiler_driver.CompilerPipelineOptions::test_mode(
+      4000UL,
+      root_module_index,
+      request.config.default_preamble,
+    )
+  } else {
+    @compiler_driver.CompilerPipelineOptions::production(
+      4000UL,
+      root_module_index,
+      request.config.default_preamble,
+    )
+  }
+  let compiled = @compiler_driver.compile_manifest_uncached(
+    manifest,
+    @semantic.StandardLibrarySources::bootstrap(),
+    options,
+  )
+  for dependency in request.dependency_interfaces {
+    let mut dependency_index = -1
+    for candidate, module_ in request.modules {
+      if module_.name == dependency.module_name {
+        dependency_index = candidate
+        break
+      }
+    }
+    if dependency_index < 0 {
+      cli_fail(
+        "unavailable dependency interface module \{dependency.module_name}",
+      )
+    }
+    let actual = compiled.analyzed.frozen.interfaces[dependency_index].interface_fingerprint
+    if actual != dependency.fingerprint {
+      cli_fail(
+        "dependency interface mismatch for \{dependency.module_name}: expected \{dependency.fingerprint}, got \{actual}",
+      )
+    }
+  }
+  let diagnostic_status = report_compilation_diagnostics(
+    compiled.program,
+    compiled.analyzed,
+    compiled.lowering,
+    compiled.link,
+  )
+  if diagnostic_status.0 {
+    @sys.exit(1)
+  }
+  if request.config.cache_report {
+    println("parse event cache: disabled")
+    println("standard interface cache: disabled")
+    println("body inference cache: disabled")
+    println("layout and fragment cache: disabled")
+    println("compilation cache pack: disabled")
+  }
+  match request.command {
+    @compile_request.CompilerCheck =>
+      println(
+        "checked \{request.modules.fold(init=0, fn(total, module_) { total + module_.files.length() })} Dew source file(s) in \{request.modules.length()} module(s)",
+      )
+    @compile_request.CompilerBuild => {
+      let result = match request.output_kind {
+        @compile_request.CompilerHirOutput =>
+          render_program_hir(compiled.program)
+        @compile_request.CompilerLoweringOutput =>
+          render_program_lowering(compiled.program, compiled.lowering)
+        @compile_request.CompilerWasmOutput => {
+          let libraries : Array[@core_linker.CoreWasmLibrary] = []
+          for provider in request.static_providers {
+            libraries.push({ provider: provider.name, bytes: provider.wasm })
+          }
+          let encoded = match compiled.emit_linked_binary(libraries) {
+            Ok(binary) => binary
+            Err(error) => {
+              cli_error(error)
+              @sys.exit(1)
+              b""
+            }
+          }
+          let with_abi = @backend.append_wasm_abi_section(
+            encoded,
+            compiled.analyzed.frozen.interfaces[root_module_index],
+          )
+          @backend.append_wasm_metrics_section(
+            with_abi,
+            compiled.link.materialized_specialization_count(),
+          )
+        }
+      }
+      match request.response {
+        @compile_request.CompilerOutputFile(path) =>
+          write_cli_output(path, result)
+        @compile_request.CompilerStatusOnly =>
+          abort("validated build request has no output file")
+      }
+    }
+  }
+  ignore(request.compiler_fingerprint)
+}
+
+///|
 fn main {
   let process_args = @sys.get_cli_args()
-  let args = if process_args.length() == 3 &&
-    process_args[1] == "--compile-request" {
-    let request = match parse_compile_request(cli_read_file(process_args[2])) {
+  if process_args.length() == 3 && process_args[1] == "--compile-request" {
+    let request = match
+      @compile_request.decode(cli_read_file(process_args[2])) {
       Ok(value) => value
       Err(error) => {
         cli_fail(error)
         abort("unreachable compile request failure")
       }
     }
-    @sys.set_env_var(
-      "DEW_INTERFACE_CACHE",
-      if request.interface_cache {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    @sys.set_env_var(
-      "DEW_DEPENDENCY_INTERFACE_KEY",
-      request.dependency_cache_key,
-    )
-    @sys.set_env_var(
-      "DEW_PARSE_EVENT_CACHE",
-      if request.parse_event_cache {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    @sys.set_env_var(
-      "DEW_BODY_CACHE",
-      if request.body_cache {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    @sys.set_env_var(
-      "DEW_BODY_FAMILY_CACHE",
-      if request.body_family_cache {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    @sys.set_env_var(
-      "DEW_PLAN_CACHE",
-      if request.planning_cache {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    @sys.set_env_var(
-      "DEW_CACHE_PACK",
-      if request.cache_pack {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    @sys.set_env_var(
-      "DEW_PROGRAM_CACHE",
-      if request.program_cache {
-        "1"
-      } else {
-        "0"
-      },
-    )
-    let arguments : Array[String] = [process_args[0]]
-    for argument in request.cli_arguments() {
-      arguments.push(argument)
-    }
-    arguments
-  } else {
-    process_args
+    run_source_compile_request(request)
+    return
   }
+  let args = process_args
   if args.length() < 3 {
     print_usage()
     @sys.exit(2)

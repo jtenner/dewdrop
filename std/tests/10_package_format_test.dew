@@ -1,0 +1,195 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.decode
+open dew.std.encode
+open dew.std.format
+open dew.std.ordering
+open dew.std.package
+open dew.std.package.artifact
+open dew.std.semver
+open dew.std.string
+
+fn package_test_version(value: String) -> SemVer {
+  match semver_parse(value) {
+    Result::Ok(version) => version
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn package_test_hex() -> String {
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+}
+
+fn package_test_integrity() -> String {
+  "sha256-".concat(package_test_hex())
+}
+
+fn package_test_encode<t: Encode<FormatEncodeError>>(value: t) -> Bytes {
+  match value.encode() {
+    Result::Ok(bytes) => bytes
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn package_test_decode_manifest(bytes: Bytes) -> PackageManifest {
+  match Decode::decode(bytes) {
+    Result::Ok(decoded) => decoded
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn package_test_decode_lock(bytes: Bytes) -> PackageLock {
+  match Decode::decode(bytes) {
+    Result::Ok(decoded) => decoded
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn package_test_decode_modules(bytes: Bytes) -> ModuleManifest {
+  match Decode::decode(bytes) {
+    Result::Ok(decoded) => decoded
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn package_test_decode_artifact(bytes: Bytes) -> PackageArtifact {
+  match Decode::decode(bytes) {
+    Result::Ok(decoded) => decoded
+    Result::Err(_) => unreachable()
+  }
+}
+
+test "SemVer parses canonical versions and precedence" {
+  let version = package_test_version("1.2.3-alpha.1+build.5")
+  assert(version.major() == 1u32, "SemVer major changed")
+  assert(version.minor() == 2u32, "SemVer minor changed")
+  assert(version.patch() == 3u32, "SemVer patch changed")
+  assert(version.to_string().equals("1.2.3-alpha.1+build.5"), "SemVer rendering changed")
+  assert(
+    semver_compare(package_test_version("1.0.0-alpha"), package_test_version("1.0.0-alpha.1")) is Ordering::Less,
+    "SemVer prerelease ordering changed",
+  )
+  assert(
+    semver_compare(package_test_version("1.0.0-rc.1"), package_test_version("1.0.0")) is Ordering::Less,
+    "SemVer release ordering changed",
+  )
+}
+
+test "SemVer rejects malformed and overflowing versions" {
+  assert(semver_parse("1.0") is Result::Err(_), "short SemVer accepted")
+  assert(semver_parse("01.0.0") is Result::Err(SemVerParseError::LeadingZero(_)), "leading zero accepted")
+  assert(semver_parse("4294967296.0.0") is Result::Err(SemVerParseError::NumberOverflow(_)), "overflowing SemVer accepted")
+  assert(semver_parse("1.0.0-alpha..one") is Result::Err(SemVerParseError::EmptyIdentifier(_)), "empty identifier accepted")
+}
+
+test "package requirements implement exact caret tilde wildcard and Git forms" {
+  let one_two_three = package_test_version("1.2.3")
+  let one_nine = package_test_version("1.9.0")
+  let two = package_test_version("2.0.0")
+  match package_requirement_parse("^1.2.3") {
+    Result::Ok(requirement) => {
+      assert(package_requirement_matches(requirement, one_nine), "caret rejected compatible version")
+      assert(!package_requirement_matches(requirement, two), "caret accepted next major")
+    }
+    Result::Err(_) => assert(false, "caret requirement failed")
+  }
+  match package_requirement_parse("~1.2.3") {
+    Result::Ok(requirement) => {
+      assert(package_requirement_matches(requirement, package_test_version("1.2.9")), "tilde rejected patch")
+      assert(!package_requirement_matches(requirement, package_test_version("1.3.0")), "tilde accepted next minor")
+    }
+    Result::Err(_) => assert(false, "tilde requirement failed")
+  }
+  assert(package_requirement_parse("1.2.3") is Result::Ok(PackageRequirement::Exact(_)), "exact requirement failed")
+  assert(package_requirement_parse("*") is Result::Ok(PackageRequirement::Any), "wildcard requirement failed")
+  assert(package_requirement_parse("git+https://example.test/repo.git#abc123") is Result::Ok(PackageRequirement::Git(_)), "Git requirement failed")
+  assert(semver_same_precedence(one_two_three, package_test_version("1.2.3+other")), "build metadata changed precedence")
+}
+
+test "dew.json package manifests encode decode and validate" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@scope/first", PackageRequirement::Caret(package_test_version("1.2.3"))))
+  dependencies.push(package_dependency("@scope/second", PackageRequirement::Any))
+  let manifest = package_manifest("@scope/app", package_test_version("1.0.0"), dependencies)
+  assert(manifest.validate() is Result::Ok(_), "package manifest validation failed")
+  let encoded = package_test_encode(manifest)
+  assert(encoded.byte_length() <= package_manifest_max_bytes(), "package manifest limit failed")
+  let decoded = package_test_decode_manifest(encoded)
+  assert(decoded.name().equals("@scope/app"), "package manifest name changed")
+  assert(decoded.dependencies().length() == 2u32, "package dependencies changed")
+  let invalid = package_manifest("invalid", package_test_version("1.0.0"), Array::new())
+  assert(invalid.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid package manifest encoded")
+  assert(package_manifest_try_decode(b"{\"name\":1}") is Result::Err(_), "malformed package manifest accepted")
+  match package_manifest_try_decode(b"{\"name\":\"@scope/app\",\"version\":\"1.0.0\",\"dependencies\":{\"@scope/second\":\"*\",\"@scope/first\":\"^1.2.3\"}}") {
+    Result::Ok(unordered) => {
+      assert(unordered.validate() is Result::Ok(_), "unordered dependency object was invalid")
+      assert(
+        package_test_encode(unordered).equals(b"{\"name\":\"@scope/app\",\"version\":\"1.0.0\",\"dependencies\":{\"@scope/first\":\"^1.2.3\",\"@scope/second\":\"*\"}}\n"),
+        "dependency encoding was not canonical",
+      )
+    }
+    Result::Err(_) => assert(false, "unordered dependency object was rejected")
+  }
+}
+
+test "dew.lock files encode decode and reject duplicate packages" {
+  let entries = Array::new()
+  entries.push(locked_package(
+    "@scope/library",
+    package_test_version("1.2.3"),
+    "file:packages/library",
+    "packages/library",
+    package_test_integrity(),
+    package_test_hex(),
+  ))
+  let lock = package_lock(entries)
+  assert(lock.validate() is Result::Ok(_), "lock validation failed")
+  let decoded = package_test_decode_lock(package_test_encode(lock))
+  assert(decoded.packages().length() == 1u32, "lock package changed")
+  entries.push(entries.get_unchecked(0u32))
+  assert(package_lock(entries).validate() is Result::Err(FormatValidationErr::Duplicate(_)), "duplicate lock package accepted")
+}
+
+test "dew.modules.json graphs preserve module and file order" {
+  let files = Array::new()
+  files.push("src/first.dew")
+  files.push("src/second.dew")
+  let modules = Array::new()
+  modules.push(module_manifest_entry("scope.app", files))
+  let manifest = module_manifest("scope.app", modules)
+  assert(manifest.validate() is Result::Ok(_), "module manifest validation failed")
+  let decoded = package_test_decode_modules(package_test_encode(manifest))
+  assert(decoded.root().equals("scope.app"), "root module changed")
+  assert(decoded.modules().get_unchecked(0u32).files().get_unchecked(1u32).equals("src/second.dew"), "file order changed")
+}
+
+test "installed package artifacts encode decode and verify checksums" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@scope/library", PackageRequirement::Exact(package_test_version("1.2.3"))))
+  let files = Array::new()
+  files.push(package_artifact_file("src/main.dew", b"pub fn main() -> I32 {\n  42\n}\n"))
+  let artifact = package_artifact(
+    "@scope/app",
+    package_test_version("1.0.0"),
+    "file:packages/app",
+    package_test_integrity(),
+    package_test_hex(),
+    dependencies,
+    files,
+  )
+  assert(artifact.validate() is Result::Ok(_), "artifact validation failed")
+  let encoded = package_test_encode(artifact)
+  let decoded = package_test_decode_artifact(encoded)
+  assert(decoded.files().length() == 1u32, "artifact files changed")
+  assert(decoded.files().get_unchecked(0u32).contents().starts_with(b"pub fn"), "artifact contents changed")
+  let corrupted = encoded.subarray(0u32, 8u32).concat(b"x").concat(encoded.subarray(9u32, encoded.byte_length()))
+  assert(package_artifact_try_decode(corrupted) is Result::Err(FormatDecodeError::ChecksumMismatch), "artifact checksum was ignored")
+}
+
+test "package format limits are explicit" {
+  assert(package_manifest_max_bytes() == 1048576u32, "manifest limit changed")
+  assert(package_lock_max_bytes() == 8388608u32, "lock limit changed")
+  assert(module_manifest_max_bytes() == 4194304u32, "module graph limit changed")
+  assert(package_artifact_max_bytes() == 268435456u32, "artifact limit changed")
+  assert(package_artifact_max_source_bytes() == 16777216u32, "source limit changed")
+}

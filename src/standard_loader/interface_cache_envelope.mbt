@@ -6,10 +6,10 @@ let standard_interface_artifact_kind = 2
 let workspace_interface_artifact_kind = 3
 
 ///|
-let standard_interface_envelope_version = 13U
+let standard_interface_envelope_version = 1U
 
 ///|
-let workspace_interface_envelope_version = 2U
+let workspace_interface_envelope_version = 1U
 
 ///|
 fn interface_cache_key_provenance(key : String) -> FixedArray[Byte] {

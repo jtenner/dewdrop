@@ -13,6 +13,11 @@ pub struct InterfaceBundleCacheStatus {
 }
 
 ///|
+pub fn InterfaceBundleCacheStatus::disabled() -> InterfaceBundleCacheStatus {
+  { enabled: false, hits: 0, misses: 0 }
+}
+
+///|
 pub fn InterfaceBundleCacheStatus::label(
   self : InterfaceBundleCacheStatus,
 ) -> String {
@@ -139,7 +144,7 @@ fn ensure_interface_cache_root(path : String) -> Result[Unit, String] {
 fn interface_cache_file(key : InterfaceBundleCacheKey) -> String {
   interface_cache_join(
     interface_cache_join(interface_cache_root(), "interfaces"),
-    "v13-" + key.fingerprint + ".dwi",
+    "v1-" + key.fingerprint + ".dwi",
   )
 }
 
@@ -152,7 +157,7 @@ fn workspace_interface_cache_directory() -> String {
 fn workspace_interface_cache_file(key : String) -> String {
   interface_cache_join(
     workspace_interface_cache_directory(),
-    "v2-" + key + ".dwi",
+    "v1-" + key + ".dwi",
   )
 }
 
@@ -174,7 +179,7 @@ fn workspace_interface_source_fingerprint(
 ) -> String {
   let module_ = program.modules[module_index]
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SOURCE_V2\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SOURCE_V1\x00")
   interface_cache_write_string(output, program.module_paths[module_index])
   let module_id = module_.module_id
   for shift in [0, 8, 16, 24, 32, 40, 48, 56] {
@@ -200,7 +205,7 @@ fn workspace_interface_cache_key_from_dependency_records(
 ) -> String {
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V2_MUTABLE_FIELDS\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_MUTABLE_FIELDS\x00")
   interface_cache_write_string(output, source_fingerprint)
   for record in dependency_records {
     interface_cache_write_string(output, record)
@@ -507,7 +512,7 @@ fn workspace_interface_scc_cache_key(
   source_records.sort()
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V2_MUTABLE_FIELDS\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_MUTABLE_FIELDS\x00")
   for record in source_records {
     interface_cache_write_string(output, record)
   }

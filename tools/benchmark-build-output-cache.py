@@ -63,7 +63,7 @@ def main() -> None:
         path.read_bytes() == warm.read_bytes()
         for path in TMP.glob("*.wasm")
     )
-    artifacts = list((cache / "builds").glob("v2-*.dba"))
+    artifacts = list((cache / "builds").glob("v1-*.dba"))
     print(json.dumps({
         "samples": args.samples,
         "cache_hit_median_ms": round(hit, 3),

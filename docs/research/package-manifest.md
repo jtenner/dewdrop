@@ -2,8 +2,11 @@
 
 ## Status
 
-Implemented for `dew check`, `build`, `test`, and `run`. Package intent and
-resolution state are separate:
+Implemented for `dew check`, `build`, `test`, and `run`. Dew-native bounded
+codecs and validation are also available through `dew.std.package` and
+`dew.std.package.artifact`; see
+[`package-formats-and-semver-2026-08-17.md`](package-formats-and-semver-2026-08-17.md).
+Package intent and resolution state are separate:
 
 - `dew.json` contains only package identity, version, and dependency requests;
 - `dew.lock` contains exact resolved package locations and compatibility data;
@@ -29,8 +32,8 @@ definition and cannot contain package identity or dependency records.
 ```
 
 `name` and `version` are required. `dependencies` is optional and defaults to an
-empty object. Package names use `@scope/name`; package versions are exact semantic
-versions. Dependency values accept exact versions, `^` ranges, `~` ranges, `*`,
+empty object. Package names use `@scope/name`; package versions are exact bounded
+Semantic Versioning 2.0.0 values represented by `dew.std.semver`. Dependency values accept exact versions, `^` ranges, `~` ranges, `*`,
 or Git URLs. Duplicate JSON keys, unknown fields, invalid package names, invalid
 versions, and invalid requirements fail before source collection.
 
@@ -115,14 +118,14 @@ tools/dew package-integrity path/to/package
 tools/dew package-integrity path/to/package/dew.json
 ```
 
-Package integrity V2 hashes package identity/version, derived module identity,
+Package integrity version 1 hashes package identity/version, derived module identity,
 ordered conventional logical paths and exact source bytes, and sorted dependency
 requests. It intentionally does not hash `dew.lock`: changing only where an
 identical dependency is materialized does not change package source identity.
 
 The persistent interface-cache key separately hashes every resolved dependency's
 name, exact version, source, package integrity, and expected interface fingerprint.
-Changing lock resolution or dependency content therefore creates a different V13
+Changing lock resolution or dependency content therefore creates a different version 1
 cache artifact.
 
 ## Explicit module manifests

@@ -1,12 +1,12 @@
 # Compiler host request protocol
 
-The compiler accepts one versioned binary request for matching internal tools.
-The MoonBit `src/dew_bootstrap` command now owns the user-facing bootstrap path
-and invokes the MoonBit compiler command directly after resolving package and
-cache policy. It does not duplicate cache-pack parsing outside MoonBit.
+The compiler accepts one bounded binary request from a matching internal launcher.
+The launcher resolves packages, verifies integrity, orders sources, selects static
+providers, and sends exact source and Wasm bytes. The compiler does not repeat
+package discovery or source-file reads.
 
-This protocol is private to matching Dewdrop toolchain versions. It is not a
-language-level package format or a stable third-party API.
+This protocol is private to matching Dewdrop toolchains. It is not a stable
+third-party API.
 
 ## Invocation
 
@@ -14,63 +14,126 @@ language-level package format or a stable third-party API.
 moon run --target native --release src/dew_cli -- --compile-request REQUEST
 ```
 
-A request-producing internal tool creates `REQUEST`, waits for the compiler
-process, and removes the request file. The user-facing MoonBit bootstrap uses the
-direct MoonBit compiler command path instead.
+The compiler reads `REQUEST` once. Build responses are written to the explicit
+output path in the request. Check responses return status and diagnostics only.
 
-## Version 7 encoding
+## Version policy
 
-All integers are unsigned 32-bit little-endian values. Strings are a byte length
-followed by UTF-8 bytes. Arrays are a count followed by their elements.
+The request version is **1**. Until Dewdrop is released, incompatible changes
+replace version 1 in place. No legacy pre-release reader is retained.
+
+## Scalar encoding
+
+- Integers are unsigned 32-bit little-endian values.
+- Booleans are `u32`: `0` false and `1` true.
+- Strings are a `u32` byte length followed by strict UTF-8 bytes.
+- Byte payloads are a `u32` byte length followed by arbitrary bytes.
+- Arrays are a `u32` count followed by ordered elements.
+- No padding is present.
+- Trailing bytes are rejected.
+
+## Version 1 layout
 
 ```text
-magic                         u32 = 0x44574352
-version                       u32 = 7
-command                       u32 (0 check, 1 build)
-requested output              u32 (0 Wasm, 1 HIR, 2 lowering)
-output path                   string
-root module                   string
-modules                       array {
-  module name                 string
-  ordered source paths        array<string>
+magic                          u32 = 0x44574352
+version                        u32 = 1
+command                        u32 (0 check, 1 build)
+output kind                    u32 (0 Wasm, 1 HIR, 2 lowering)
+response mode                  u32 (0 status only, 1 output file)
+if response mode = 1:
+  output path                  string
+root module                    string
+modules                        array {
+  module name                  string
+  files                        array {
+    logical path               string
+    exact source               bytes
+  }
 }
-dependency expectations       array {
-  module name                 string
-  interface fingerprint       string
+dependency expectations        array {
+  module name                  string
+  interface fingerprint        string: 64 lowercase hexadecimal bytes
 }
-static Core Wasm links         array {
-  provider                    string
-  Wasm file path              string
+static providers               array {
+  provider name                string
+  exact Core Wasm              bytes
 }
-standard-library policy       u32 (0 ordered on-disk root, 1 bootstrap bytes)
-standard-library root         string
-use default preamble          bool-as-u32
-use parse-event cache         bool-as-u32
-use interface cache           bool-as-u32
-use body-inference cache      bool-as-u32
-use body-family cache         bool-as-u32
-use layout/fragment cache     bool-as-u32
-use unified cache pack        bool-as-u32
-use exact program cache       bool-as-u32
-report cache status           bool-as-u32
-build mode                    u32 (0 production, 1 test planning; reserved by CLI)
-dependency cache provenance   string
+standard-library mode          u32 (0 embedded bootstrap standard sources)
+standard-library identity      bytes: exactly 32-byte BLAKE3 digest
+optimization mode              u32 (0 optimized)
+diagnostics mode               u32 (0 deterministic text)
+test mode                      bool-as-u32
+use default preamble           bool-as-u32
+cache policy                   u32 (0 all persistent caches disabled)
+report cache status            bool-as-u32
+compiler fingerprint           bytes
 ```
 
-Module, file, and static-link order are semantic input and must be preserved. Static-link entries become repeated `--link-wasm PROVIDER FILE` CLI arguments. The exact output cache binds each provider name and the BLAKE3 digest of its Wasm bytes. The Python host
-owns package resolution, lockfile verification, source-path selection, and host
-execution. The request contains the resulting compiler inputs and expectations;
-it does not ask the MoonBit compiler to resolve packages.
+Check requests must use Wasm output kind and status-only response mode. Build
+requests must use output-file response mode.
 
-The MoonBit compiler validates the magic, exact version, enum ranges, counts,
-lengths, and trailing bytes before reading sources or entering compiler phases.
-Malformed and incompatible requests fail visibly. The host also supplies an
-exact compiler-source fingerprint through `DEW_COMPILER_FINGERPRINT`; every pack
-entry context binds that producer identity.
+The embedded standard-library identity is BLAKE3 over a domain separator, the
+ordered standard source path registry, and each exact source payload. A mismatch
+fails before compiler phases begin.
 
-## Evolution
+`CompilerSessionConfig` owns optimization, diagnostics, test planning, default
+preamble selection, cache policy, and cache reporting. The source-Bytes request
+path does not mutate environment variables. The first fixed point supports only
+optimized compilation, deterministic text diagnostics, and disabled persistent
+caches.
 
-A protocol change that alters field meaning or ordering increments the version.
-New bootstrap implementations should construct this request from their package
-model directly. A future Dew-native host can use the same boundary without
-reproducing Python-specific argument or environment policy.
+## Bounds
+
+| Item | Limit |
+|---|---:|
+| Complete request | 256 MiB |
+| Modules | 1,024 |
+| Files per module | 4,096 |
+| Files in the request | 65,536 |
+| One source payload | 16 MiB |
+| Dependency expectations | 4,096 |
+| Static providers | 64 |
+| One provider payload | 64 MiB |
+| Module/provider names | 255 bytes |
+| Logical/output paths | 4,096 bytes |
+| Compiler fingerprint | 4,096 bytes |
+
+Every module must contain at least one file. Module names, file paths, dependency
+modules, and provider names must be unique in their local collection. Logical
+source paths must be relative and normalized. Source and provider payloads may
+contain any bytes, including invalid UTF-8.
+
+## Order and ownership
+
+Module, file, dependency, and static-provider order is semantic input and is
+preserved exactly.
+
+The launcher owns:
+
+- manifest and lockfile resolution;
+- package integrity checks;
+- source discovery and ordering;
+- standard-library and provider selection;
+- downloads and process launch;
+- request and response file cleanup.
+
+The compiler owns:
+
+- request validation;
+- parsing the supplied in-memory source bytes;
+- dependency-interface checks;
+- semantic analysis and code generation;
+- deterministic static linking;
+- diagnostics and output publication.
+
+## Implementation and tests
+
+The shared MoonBit model and codec are in `src/compile_request`. The current
+MoonBit compiler consumes the decoded manifest directly through
+`ManifestFile(logical_path, source)`. It does not materialize source or provider
+payloads as temporary files.
+
+`CompilerPipelineOptions` has an uncached entry point used by this request path.
+Ambient cache environment variables are ignored. `tools/check-compile-request.sh`
+runs the same request in two physical directories, validates both Wasm outputs,
+checks byte identity, and verifies that no cache directory was created.

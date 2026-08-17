@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V13\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1\x00"
 
 ///|
 fn cache_write_int(output : @cache_binary.Writer, value : Int) -> Unit {
@@ -471,7 +471,7 @@ pub fn frozen_interface_body_evidence_fingerprint(
     implementations,
   }
   let output = @cache_binary.Writer::new()
-  output.write_raw(b"DEW_BODY_EVIDENCE_INTERFACE_V2\x00")
+  output.write_raw(b"DEW_BODY_EVIDENCE_INTERFACE_V1\x00")
   match cache_write_interface(output, normalized) {
     Err(error) => Err(error)
     Ok(_) => Ok(@crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes())))

@@ -1,0 +1,1016 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.decode
+open dew.std.encode
+open dew.std.format
+open dew.std.json
+open dew.std.ordering
+open dew.std.semver
+open dew.std.string
+
+pub enum PackageRequirement {
+  Any
+  Exact(SemVer)
+  Caret(SemVer)
+  Tilde(SemVer)
+  Git(String)
+}
+
+pub struct PackageDependency {
+  name: String
+  requirement: PackageRequirement
+}
+
+pub struct PackageManifest {
+  name: String
+  version: SemVer
+  dependencies: Array<PackageDependency>
+}
+
+pub struct LockedPackage {
+  name: String
+  version: SemVer
+  source: String
+  path: String
+  integrity: String
+  interface_fingerprint: String
+}
+
+pub struct PackageLock {
+  packages: Array<LockedPackage>
+}
+
+pub struct ModuleManifestEntry {
+  name: String
+  files: Array<String>
+}
+
+pub struct ModuleManifest {
+  root: String
+  modules: Array<ModuleManifestEntry>
+}
+
+pub fn package_manifest_max_bytes() -> U32 {
+  1048576u32
+}
+
+pub fn package_lock_max_bytes() -> U32 {
+  8388608u32
+}
+
+pub fn module_manifest_max_bytes() -> U32 {
+  4194304u32
+}
+
+pub fn package_max_dependencies() -> U32 {
+  256u32
+}
+
+pub fn package_lock_max_packages() -> U32 {
+  4096u32
+}
+
+pub fn module_manifest_max_modules() -> U32 {
+  1024u32
+}
+
+pub fn module_manifest_max_files_per_module() -> U32 {
+  4096u32
+}
+
+pub fn package_name_max_bytes() -> U32 {
+  255u32
+}
+
+pub fn package_requirement_max_bytes() -> U32 {
+  2048u32
+}
+
+pub fn package_path_max_bytes() -> U32 {
+  4096u32
+}
+
+fn package_unit() -> Unit {
+}
+
+fn package_is_name_byte(byte: U8) -> Bool {
+  (byte >= 97u8 && byte <= 122u8) ||
+  (byte >= 48u8 && byte <= 57u8) ||
+  byte == 45u8 || byte == 95u8 || byte == 46u8
+}
+
+pub fn package_name_is_valid(name: String) -> Bool {
+  let length = name.byte_length()
+  if length < 4u32 || length > package_name_max_bytes() || name.byte_at(0u32) != 64u8 {
+    false
+  } else {
+    let mut slash = 4294967295u32
+    let valid = while 1u32 {
+      index if index < length => {
+        let byte = name.byte_at(index)
+        if byte == 47u8 {
+          if slash != 4294967295u32 || index == 1u32 || index + 1u32 == length {
+            break false
+          } else {
+            slash = index
+            continue index + 1u32
+          }
+        } else if !package_is_name_byte(byte) {
+          break false
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break true
+    }
+    valid && slash != 4294967295u32
+  }
+}
+
+fn package_string_has_nul(value: String) -> Bool {
+  while 0u32 {
+    index if index < value.byte_length() => if value.byte_at(index) == 0u8 {
+      break true
+    } else {
+      continue index + 1u32
+    }
+    _ => break false
+  }
+}
+
+pub fn package_requirement_parse(value: String) -> Result<PackageRequirement, FormatValidationErr> {
+  if value.byte_length() == 0u32 || value.byte_length() > package_requirement_max_bytes() {
+    Result::Err(FormatValidationErr::InvalidField("dependency requirement"))
+  } else if value.equals("*") {
+    Result::Ok(PackageRequirement::Any)
+  } else if value.starts_with("git+") {
+    match value.find("#") {
+      Option::Some(index) if index > 4u32 && index + 1u32 < value.byte_length() && !package_string_has_nul(value) =>
+        Result::Ok(PackageRequirement::Git(value))
+      _ => Result::Err(FormatValidationErr::InvalidField("Git dependency requirement"))
+    }
+  } else if value.byte_at(0u32) == 94u8 {
+    match semver_parse(value.slice(1u32, value.byte_length())) {
+      Result::Ok(version) => Result::Ok(PackageRequirement::Caret(version))
+      Result::Err(_) => Result::Err(FormatValidationErr::InvalidField("caret dependency requirement"))
+    }
+  } else if value.byte_at(0u32) == 126u8 {
+    match semver_parse(value.slice(1u32, value.byte_length())) {
+      Result::Ok(version) => Result::Ok(PackageRequirement::Tilde(version))
+      Result::Err(_) => Result::Err(FormatValidationErr::InvalidField("tilde dependency requirement"))
+    }
+  } else {
+    match semver_parse(value) {
+      Result::Ok(version) => Result::Ok(PackageRequirement::Exact(version))
+      Result::Err(_) => Result::Err(FormatValidationErr::InvalidField("exact dependency requirement"))
+    }
+  }
+}
+
+pub fn package_requirement_to_string(value: PackageRequirement) -> String {
+  match value {
+    PackageRequirement::Any => "*"
+    PackageRequirement::Exact(version) => version.to_string()
+    PackageRequirement::Caret(version) => "^".concat(version.to_string())
+    PackageRequirement::Tilde(version) => "~".concat(version.to_string())
+    PackageRequirement::Git(source) => source
+  }
+}
+
+pub fn package_requirement_matches(requirement: PackageRequirement, version: SemVer) -> Bool {
+  match requirement {
+    PackageRequirement::Any => !version.is_prerelease()
+    PackageRequirement::Exact(expected) => semver_same_precedence(expected, version)
+    PackageRequirement::Caret(base) => semver_caret_matches(base, version)
+    PackageRequirement::Tilde(base) => semver_tilde_matches(base, version)
+    PackageRequirement::Git(_) => true
+  }
+}
+
+pub fn package_dependency(name: String, requirement: PackageRequirement) -> PackageDependency {
+  PackageDependency::{
+    name: name
+    requirement: requirement
+  }
+}
+
+impl PackageDependency {
+  fn name(self) -> String {
+    self.name
+  }
+  fn requirement(self) -> PackageRequirement {
+    self.requirement
+  }
+}
+
+pub fn package_manifest(
+  name: String,
+  version: SemVer,
+  dependencies: Array<PackageDependency>,
+) -> PackageManifest {
+  PackageManifest::{
+    name: name
+    version: version
+    dependencies: dependencies
+  }
+}
+
+impl PackageManifest {
+  fn name(self) -> String {
+    self.name
+  }
+  fn version(self) -> SemVer {
+    self.version
+  }
+  fn dependencies(self) -> Array<PackageDependency> {
+    self.dependencies
+  }
+}
+
+pub fn locked_package(
+  name: String,
+  version: SemVer,
+  source: String,
+  path: String,
+  integrity: String,
+  interface_fingerprint: String,
+) -> LockedPackage {
+  LockedPackage::{
+    name: name
+    version: version
+    source: source
+    path: path
+    integrity: integrity
+    interface_fingerprint: interface_fingerprint
+  }
+}
+
+impl LockedPackage {
+  fn name(self) -> String {
+    self.name
+  }
+  fn version(self) -> SemVer {
+    self.version
+  }
+  fn source(self) -> String {
+    self.source
+  }
+  fn path(self) -> String {
+    self.path
+  }
+  fn integrity(self) -> String {
+    self.integrity
+  }
+  fn interface_fingerprint(self) -> String {
+    self.interface_fingerprint
+  }
+}
+
+pub fn package_lock(packages: Array<LockedPackage>) -> PackageLock {
+  PackageLock::{
+    packages: packages
+  }
+}
+
+impl PackageLock {
+  fn packages(self) -> Array<LockedPackage> {
+    self.packages
+  }
+}
+
+pub fn module_manifest_entry(name: String, files: Array<String>) -> ModuleManifestEntry {
+  ModuleManifestEntry::{
+    name: name
+    files: files
+  }
+}
+
+impl ModuleManifestEntry {
+  fn name(self) -> String {
+    self.name
+  }
+  fn files(self) -> Array<String> {
+    self.files
+  }
+}
+
+pub fn module_manifest(root: String, modules: Array<ModuleManifestEntry>) -> ModuleManifest {
+  ModuleManifest::{
+    root: root
+    modules: modules
+  }
+}
+
+impl ModuleManifest {
+  fn root(self) -> String {
+    self.root
+  }
+  fn modules(self) -> Array<ModuleManifestEntry> {
+    self.modules
+  }
+}
+
+fn package_json_limits(max_bytes: U32, max_values: U32) -> JsonLimits {
+  JsonLimits::{
+    max_input_bytes: max_bytes
+    max_depth: 16u32
+    max_values: max_values
+    max_string_bytes: package_path_max_bytes()
+  }
+}
+
+fn package_json_parse(bytes: Bytes, max_bytes: U32, max_values: U32) -> Result<JsonValue, FormatDecodeError> {
+  if bytes.byte_length() > max_bytes {
+    Result::Err(FormatDecodeError::FileTooLarge(bytes.byte_length(), max_bytes))
+  } else {
+    match json_parse_bytes_with_limits(bytes, package_json_limits(max_bytes, max_values)) {
+      Result::Ok(value) => Result::Ok(value)
+      Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("invalid JSON"))
+    }
+  }
+}
+
+fn package_json_string(value: Option<JsonValue>, field: String) -> Result<String, FormatDecodeError> {
+  match value {
+    Option::Some(JsonValue::String(text)) => Result::Ok(text)
+    Option::Some(JsonValue::ValidatedString(text)) => Result::Ok(text.string())
+    _ => Result::Err(FormatDecodeError::InvalidSyntax(field))
+  }
+}
+
+fn package_json_object(value: JsonValue, field: String) -> Result<Array<JsonMember>, FormatDecodeError> {
+  match value {
+    JsonValue::Object(members) => Result::Ok(members)
+    _ => Result::Err(FormatDecodeError::InvalidSyntax(field))
+  }
+}
+
+fn package_json_array(value: Option<JsonValue>, field: String) -> Result<Array<JsonValue>, FormatDecodeError> {
+  match value {
+    Option::Some(JsonValue::Array(values)) => Result::Ok(values)
+    _ => Result::Err(FormatDecodeError::InvalidSyntax(field))
+  }
+}
+
+fn package_allowed2(first: String, second: String) -> Array<String> {
+  let output = Array::new()
+  output.push(first)
+  output.push(second)
+  output
+}
+
+fn package_allowed3(first: String, second: String, third: String) -> Array<String> {
+  let output = package_allowed2(first, second)
+  output.push(third)
+  output
+}
+
+fn package_allowed6(
+  first: String,
+  second: String,
+  third: String,
+  fourth: String,
+  fifth: String,
+  sixth: String,
+) -> Array<String> {
+  let output = package_allowed3(first, second, third)
+  output.push(fourth)
+  output.push(fifth)
+  output.push(sixth)
+  output
+}
+
+fn package_json_known(members: Array<JsonMember>, allowed: Array<String>) -> Bool {
+  while 0u32 {
+    index if index < members.length() => {
+      let key = members.get_unchecked(index).key
+      let found = while 0u32 {
+        allowed_index if allowed_index < allowed.length() => {
+          let allowed_key = allowed[allowed_index]
+          if package_string_compare(key, allowed_key) is Ordering::Equal {
+            break true
+          } else {
+            continue allowed_index + 1u32
+          }
+        }
+        _ => break false
+      }
+      if !found {
+        break false
+      } else {
+        continue index + 1u32
+      }
+    }
+    _ => break true
+  }
+}
+
+fn package_string_compare(left: String, right: String) -> Ordering {
+  string_comparator().compare(left, right)
+}
+
+fn package_is_hex(value: String, length: U32) -> Bool {
+  if value.byte_length() != length {
+    false
+  } else {
+    while 0u32 {
+      index if index < length => {
+        let byte = value.byte_at(index)
+        if (byte >= 48u8 && byte <= 57u8) || (byte >= 97u8 && byte <= 102u8) {
+          continue index + 1u32
+        } else {
+          break false
+        }
+      }
+      _ => break true
+    }
+  }
+}
+
+fn package_relative_path_is_valid(value: String) -> Bool {
+  value.byte_length() > 0u32 &&
+  value.byte_length() <= package_path_max_bytes() &&
+  value.byte_at(0u32) != 47u8 &&
+  !value.contains("\\") &&
+  !value.contains("\x00") &&
+  !value.equals("..") &&
+  !value.starts_with("../") &&
+  !value.contains("/../") &&
+  !value.ends_with("/..")
+}
+
+fn package_manifest_dependencies(
+  values: Array<JsonMember>,
+  index: U32,
+  output: Array<PackageDependency>,
+) -> Result<Array<PackageDependency>, FormatDecodeError> {
+  if index >= values.length() {
+    Result::Ok(output)
+  } else {
+    let member = values.get_unchecked(index)
+    let requirement_text = match member.value {
+      JsonValue::String(text) => Result::Ok(text)
+      JsonValue::ValidatedString(text) => Result::Ok(text.string())
+      _ => Result::Err(FormatDecodeError::InvalidSyntax("dependency requirement"))
+    }
+    match requirement_text {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(text) => match package_requirement_parse(text) {
+        Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("dependency requirement"))
+        Result::Ok(requirement) => {
+          output.push(package_dependency(member.key, requirement))
+          package_manifest_dependencies(values, index + 1u32, output)
+        }
+      }
+    }
+  }
+}
+
+fn package_manifest_finish(
+  members: Array<JsonMember>,
+  name: String,
+  version: SemVer,
+) -> Result<PackageManifest, FormatDecodeError> {
+  match json_object_get(members, "dependencies") {
+    Option::None => Result::Ok(package_manifest(name, version, Array::new()))
+    Option::Some(JsonValue::Object(values)) => if values.length() > package_max_dependencies() {
+      Result::Err(FormatDecodeError::InvalidLength(values.length(), package_max_dependencies()))
+    } else {
+      match package_manifest_dependencies(values, 0u32, Array::new()) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(dependencies) => Result::Ok(package_manifest(name, version, dependencies))
+      }
+    }
+    _ => Result::Err(FormatDecodeError::InvalidSyntax("package dependencies"))
+  }
+}
+
+pub fn package_manifest_try_decode(bytes: Bytes) -> Result<PackageManifest, FormatDecodeError> {
+  match package_json_parse(bytes, package_manifest_max_bytes(), 4096u32) {
+    Result::Err(error) => Result::Err(error)
+    Result::Ok(value) => match package_json_object(value, "package manifest root") {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(members) => if !package_json_known(members, package_allowed3("name", "version", "dependencies")) {
+        Result::Err(FormatDecodeError::InvalidSyntax("unknown package manifest field"))
+      } else {
+        match package_json_string(json_object_get(members, "name"), "package name") {
+          Result::Err(error) => Result::Err(error)
+          Result::Ok(name) => match package_json_string(json_object_get(members, "version"), "package version") {
+            Result::Err(error) => Result::Err(error)
+            Result::Ok(version_text) => match semver_parse(version_text) {
+              Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package version"))
+              Result::Ok(version) => package_manifest_finish(members, name, version)
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn package_json_output(value: JsonValue, max_bytes: U32) -> Result<Bytes, FormatEncodeError> {
+  match json_stringify_with_limits(value, 16u32, max_bytes - 1u32) {
+    Result::Ok(text) => Result::Ok(text.concat("\n").as_bytes())
+    Result::Err(_) => Result::Err(FormatEncodeError::EncodingFailed)
+  }
+}
+
+fn package_manifest_dependency_seen(
+  dependencies: Array<PackageDependency>,
+  limit: U32,
+  name: String,
+) -> Bool {
+  if limit == 0u32 {
+    false
+  } else if dependencies.get_unchecked(limit - 1u32).name().equals(name) {
+    true
+  } else {
+    package_manifest_dependency_seen(dependencies, limit - 1u32, name)
+  }
+}
+
+fn package_manifest_validate_dependencies(
+  dependencies: Array<PackageDependency>,
+  index: U32,
+) -> Result<Unit, FormatValidationErr> {
+  if index >= dependencies.length() {
+    Result::Ok(package_unit())
+  } else {
+    let dependency = dependencies.get_unchecked(index)
+    let name = dependency.name()
+    if !package_name_is_valid(name) {
+      Result::Err(FormatValidationErr::InvalidField("dependency name"))
+    } else if package_manifest_dependency_seen(dependencies, index, name) {
+      Result::Err(FormatValidationErr::Duplicate(name))
+    } else {
+      package_manifest_validate_dependencies(dependencies, index + 1u32)
+    }
+  }
+}
+
+fn package_manifest_dependency_after(name: String, previous: String) -> Bool {
+  previous.byte_length() == 0u32 || package_string_compare(previous, name) is Ordering::Less
+}
+
+fn package_manifest_min_dependency(
+  dependencies: Array<PackageDependency>,
+  index: U32,
+  previous: String,
+  best: U32,
+) -> U32 {
+  if index >= dependencies.length() {
+    best
+  } else {
+    let name = dependencies.get_unchecked(index).name()
+    let next = if package_manifest_dependency_after(name, previous) &&
+      (best >= dependencies.length() || package_string_compare(name, dependencies.get_unchecked(best).name()) is Ordering::Less) {
+      index
+    } else {
+      best
+    }
+    package_manifest_min_dependency(dependencies, index + 1u32, previous, next)
+  }
+}
+
+fn package_manifest_encode_dependencies(
+  dependencies: Array<PackageDependency>,
+  output: Array<JsonMember>,
+  previous: String,
+  remaining: U32,
+) -> Unit {
+  if remaining == 0u32 {
+    package_unit()
+  } else {
+    let index = package_manifest_min_dependency(dependencies, 0u32, previous, dependencies.length())
+    let dependency = dependencies.get_unchecked(index)
+    let name = dependency.name()
+    output.push(json_member(name, JsonValue::String(package_requirement_to_string(dependency.requirement()))))
+    package_manifest_encode_dependencies(dependencies, output, name, remaining - 1u32)
+  }
+}
+
+impl Encode<FormatEncodeError> for PackageManifest {
+  fn encode(self) -> Result<Bytes, FormatEncodeError> {
+    match self.validate() {
+      Result::Err(error) => Result::Err(FormatEncodeError::Validation(error))
+      Result::Ok(_) => {
+        let dependencies = json_object()
+        package_manifest_encode_dependencies(self.dependencies, dependencies, "", self.dependencies.length())
+        let fields = json_object()
+        fields.push(json_member("name", JsonValue::String(self.name)))
+        fields.push(json_member("version", JsonValue::String(self.version.to_string())))
+        fields.push(json_member("dependencies", JsonValue::Object(dependencies)))
+        package_json_output(JsonValue::Object(fields), package_manifest_max_bytes())
+      }
+    }
+  }
+}
+
+impl Decode<PackageManifest, FormatDecodeError> for PackageManifest {
+  fn decode(bytes: Bytes) -> Result<PackageManifest, FormatDecodeError> {
+    package_manifest_try_decode(bytes)
+  }
+}
+
+impl Validate<FormatValidationErr> for PackageManifest {
+  fn validate(self) -> Result<Unit, FormatValidationErr> {
+    if !package_name_is_valid(self.name) {
+      Result::Err(FormatValidationErr::InvalidField("package name"))
+    } else if self.dependencies.length() > package_max_dependencies() {
+      Result::Err(FormatValidationErr::LimitExceeded("dependencies", self.dependencies.length(), package_max_dependencies()))
+    } else {
+      package_manifest_validate_dependencies(self.dependencies, 0u32)
+    }
+  }
+}
+
+fn package_locked_from_fields(fields: Array<JsonMember>) -> Result<LockedPackage, FormatDecodeError> {
+  if !package_json_known(fields, package_allowed6("name", "version", "source", "path", "integrity", "interface")) {
+    Result::Err(FormatDecodeError::InvalidSyntax("unknown locked package field"))
+  } else {
+    match package_json_string(json_object_get(fields, "name"), "locked package name") {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(name) => match package_json_string(json_object_get(fields, "version"), "locked package version") {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(version_text) => match semver_parse(version_text) {
+          Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("locked package version"))
+          Result::Ok(version) => match package_json_string(json_object_get(fields, "source"), "locked package source") {
+            Result::Err(error) => Result::Err(error)
+            Result::Ok(source) => match package_json_string(json_object_get(fields, "path"), "locked package path") {
+              Result::Err(error) => Result::Err(error)
+              Result::Ok(path) => match package_json_string(json_object_get(fields, "integrity"), "locked package integrity") {
+                Result::Err(error) => Result::Err(error)
+                Result::Ok(integrity) => match package_json_string(json_object_get(fields, "interface"), "locked package interface") {
+                  Result::Err(error) => Result::Err(error)
+                  Result::Ok(interface_) => Result::Ok(locked_package(name, version, source, path, integrity, interface_))
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn package_lock_entries(
+  entries: Array<JsonValue>,
+  index: U32,
+  output: Array<LockedPackage>,
+) -> Result<PackageLock, FormatDecodeError> {
+  if index >= entries.length() {
+    Result::Ok(package_lock(output))
+  } else {
+    match package_json_object(entries.get_unchecked(index), "locked package") {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(fields) => match package_locked_from_fields(fields) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(item) => {
+          output.push(item)
+          package_lock_entries(entries, index + 1u32, output)
+        }
+      }
+    }
+  }
+}
+
+pub fn package_lock_try_decode(bytes: Bytes) -> Result<PackageLock, FormatDecodeError> {
+  match package_json_parse(bytes, package_lock_max_bytes(), 65536u32) {
+    Result::Err(error) => Result::Err(error)
+    Result::Ok(value) => match package_json_object(value, "lockfile root") {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(members) => if !package_json_known(members, package_allowed2("lockfileVersion", "packages")) ||
+        !(json_object_get(members, "lockfileVersion") is Option::Some(JsonValue::Number("1"))) {
+        Result::Err(FormatDecodeError::UnsupportedVersion(0u32))
+      } else {
+        match package_json_array(json_object_get(members, "packages"), "lockfile packages") {
+          Result::Err(error) => Result::Err(error)
+          Result::Ok(entries) => if entries.length() > package_lock_max_packages() {
+            Result::Err(FormatDecodeError::InvalidLength(entries.length(), package_lock_max_packages()))
+          } else {
+            package_lock_entries(entries, 0u32, Array::with_capacity(entries.length()))
+          }
+        }
+      }
+    }
+  }
+}
+
+fn package_lock_validate_entries(
+  packages: Array<LockedPackage>,
+  index: U32,
+) -> Result<Unit, FormatValidationErr> {
+  if index >= packages.length() {
+    Result::Ok(package_unit())
+  } else {
+    let item = packages.get_unchecked(index)
+    let item_name = item.name()
+    let item_source = item.source()
+    let item_path = item.path()
+    let item_integrity = item.integrity()
+    let item_interface = item.interface_fingerprint()
+    if !package_name_is_valid(item_name) || !package_relative_path_is_valid(item_path) ||
+      !item_integrity.starts_with("sha256-") || item_integrity.byte_length() != 71u32 ||
+      !package_is_hex(item_integrity.slice(7u32, 71u32), 64u32) || !package_is_hex(item_interface, 64u32) ||
+      item_source.byte_length() == 0u32 || item_source.byte_length() > package_requirement_max_bytes() {
+      Result::Err(FormatValidationErr::InvalidField("locked package"))
+    } else {
+      let duplicate = while 0u32 {
+        earlier if earlier < index => if packages.get_unchecked(earlier).name().equals(item_name) {
+          break true
+        } else {
+          continue earlier + 1u32
+        }
+        _ => break false
+      }
+      if duplicate {
+        Result::Err(FormatValidationErr::Duplicate(item_name))
+      } else {
+        package_lock_validate_entries(packages, index + 1u32)
+      }
+    }
+  }
+}
+
+impl Encode<FormatEncodeError> for PackageLock {
+  fn encode(self) -> Result<Bytes, FormatEncodeError> {
+    match self.validate() {
+      Result::Err(error) => Result::Err(FormatEncodeError::Validation(error))
+      Result::Ok(_) => {
+        let entries = json_array()
+        while 0u32 {
+          index if index < self.packages.length() => {
+            let item = self.packages.get_unchecked(index)
+            let item_name = item.name()
+            let item_version = item.version()
+            let item_source = item.source()
+            let item_path = item.path()
+            let item_integrity = item.integrity()
+            let item_interface = item.interface_fingerprint()
+            let fields = json_object()
+            fields.push(json_member("name", JsonValue::String(item_name)))
+            fields.push(json_member("version", JsonValue::String(item_version.to_string())))
+            fields.push(json_member("source", JsonValue::String(item_source)))
+            fields.push(json_member("path", JsonValue::String(item_path)))
+            fields.push(json_member("integrity", JsonValue::String(item_integrity)))
+            fields.push(json_member("interface", JsonValue::String(item_interface)))
+            entries.push(JsonValue::Object(fields))
+            continue index + 1u32
+          }
+          _ => break package_unit()
+        }
+        let fields = json_object()
+        fields.push(json_member("lockfileVersion", JsonValue::Number("1")))
+        fields.push(json_member("packages", JsonValue::Array(entries)))
+        package_json_output(JsonValue::Object(fields), package_lock_max_bytes())
+      }
+    }
+  }
+}
+
+impl Decode<PackageLock, FormatDecodeError> for PackageLock {
+  fn decode(bytes: Bytes) -> Result<PackageLock, FormatDecodeError> {
+    package_lock_try_decode(bytes)
+  }
+}
+
+impl Validate<FormatValidationErr> for PackageLock {
+  fn validate(self) -> Result<Unit, FormatValidationErr> {
+    if self.packages.length() > package_lock_max_packages() {
+      Result::Err(FormatValidationErr::LimitExceeded("locked packages", self.packages.length(), package_lock_max_packages()))
+    } else {
+      package_lock_validate_entries(self.packages, 0u32)
+    }
+  }
+}
+
+fn module_manifest_files(
+  values: Array<JsonValue>,
+  index: U32,
+  output: Array<String>,
+) -> Result<Array<String>, FormatDecodeError> {
+  if index >= values.length() {
+    Result::Ok(output)
+  } else {
+    match values.get_unchecked(index) {
+      JsonValue::String(path) => {
+        output.push(path)
+        module_manifest_files(values, index + 1u32, output)
+      }
+      JsonValue::ValidatedString(path) => {
+        output.push(path.string())
+        module_manifest_files(values, index + 1u32, output)
+      }
+      _ => Result::Err(FormatDecodeError::InvalidSyntax("module file path"))
+    }
+  }
+}
+
+fn module_manifest_modules(
+  entries: Array<JsonValue>,
+  index: U32,
+  output: Array<ModuleManifestEntry>,
+) -> Result<Array<ModuleManifestEntry>, FormatDecodeError> {
+  if index >= entries.length() {
+    Result::Ok(output)
+  } else {
+    match package_json_object(entries.get_unchecked(index), "module") {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(fields) => if !package_json_known(fields, package_allowed2("name", "files")) {
+        Result::Err(FormatDecodeError::InvalidSyntax("unknown module field"))
+      } else {
+        match package_json_string(json_object_get(fields, "name"), "module name") {
+          Result::Err(error) => Result::Err(error)
+          Result::Ok(name) => match package_json_array(json_object_get(fields, "files"), "module files") {
+            Result::Err(error) => Result::Err(error)
+            Result::Ok(files) => if files.length() > module_manifest_max_files_per_module() {
+              Result::Err(FormatDecodeError::InvalidLength(files.length(), module_manifest_max_files_per_module()))
+            } else {
+              match module_manifest_files(files, 0u32, Array::with_capacity(files.length())) {
+                Result::Err(error) => Result::Err(error)
+                Result::Ok(paths) => {
+                  output.push(module_manifest_entry(name, paths))
+                  module_manifest_modules(entries, index + 1u32, output)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+pub fn module_manifest_try_decode(bytes: Bytes) -> Result<ModuleManifest, FormatDecodeError> {
+  match package_json_parse(bytes, module_manifest_max_bytes(), 131072u32) {
+    Result::Err(error) => Result::Err(error)
+    Result::Ok(value) => match package_json_object(value, "module manifest root") {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(members) => if !package_json_known(members, package_allowed2("root", "modules")) {
+        Result::Err(FormatDecodeError::InvalidSyntax("unknown module manifest field"))
+      } else {
+        match package_json_string(json_object_get(members, "root"), "root module") {
+          Result::Err(error) => Result::Err(error)
+          Result::Ok(root) => match package_json_array(json_object_get(members, "modules"), "modules") {
+            Result::Err(error) => Result::Err(error)
+            Result::Ok(entries) => if entries.length() > module_manifest_max_modules() {
+              Result::Err(FormatDecodeError::InvalidLength(entries.length(), module_manifest_max_modules()))
+            } else {
+              match module_manifest_modules(entries, 0u32, Array::with_capacity(entries.length())) {
+                Result::Err(error) => Result::Err(error)
+                Result::Ok(modules) => Result::Ok(module_manifest(root, modules))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn module_name_is_valid(name: String) -> Bool {
+  if name.byte_length() == 0u32 || name.byte_length() > package_name_max_bytes() || name.byte_at(0u32) == 46u8 || name.ends_with(".") {
+    false
+  } else {
+    while 0u32 {
+      index if index < name.byte_length() => {
+        let byte = name.byte_at(index)
+        if (byte >= 97u8 && byte <= 122u8) || (byte >= 48u8 && byte <= 57u8) || byte == 95u8 || byte == 46u8 {
+          continue index + 1u32
+        } else {
+          break false
+        }
+      }
+      _ => break !name.contains("..")
+    }
+  }
+}
+
+fn module_manifest_name_seen(
+  modules: Array<ModuleManifestEntry>,
+  limit: U32,
+  name: String,
+) -> Bool {
+  if limit == 0u32 {
+    false
+  } else if modules.get_unchecked(limit - 1u32).name().equals(name) {
+    true
+  } else {
+    module_manifest_name_seen(modules, limit - 1u32, name)
+  }
+}
+
+fn module_manifest_file_seen(files: Array<String>, limit: U32, path: String) -> Bool {
+  if limit == 0u32 {
+    false
+  } else if files.get_unchecked(limit - 1u32).equals(path) {
+    true
+  } else {
+    module_manifest_file_seen(files, limit - 1u32, path)
+  }
+}
+
+fn module_manifest_validate_files(
+  files: Array<String>,
+  index: U32,
+) -> Result<Unit, FormatValidationErr> {
+  if index >= files.length() {
+    Result::Ok(package_unit())
+  } else {
+    let path = files.get_unchecked(index)
+    if !package_relative_path_is_valid(path) || !path.ends_with(".dew") {
+      Result::Err(FormatValidationErr::InvalidField("module file path"))
+    } else if module_manifest_file_seen(files, index, path) {
+      Result::Err(FormatValidationErr::Duplicate(path))
+    } else {
+      module_manifest_validate_files(files, index + 1u32)
+    }
+  }
+}
+
+fn module_manifest_validate_modules(
+  modules: Array<ModuleManifestEntry>,
+  index: U32,
+  root: String,
+  root_found: Bool,
+) -> Result<Unit, FormatValidationErr> {
+  if index >= modules.length() {
+    if root_found {
+      Result::Ok(package_unit())
+    } else {
+      Result::Err(FormatValidationErr::MissingField("root module entry"))
+    }
+  } else {
+    let module_ = modules.get_unchecked(index)
+    let name = module_.name()
+    let files = module_.files()
+    if !module_name_is_valid(name) || files.length() == 0u32 || files.length() > module_manifest_max_files_per_module() {
+      Result::Err(FormatValidationErr::InvalidField("module"))
+    } else if module_manifest_name_seen(modules, index, name) {
+      Result::Err(FormatValidationErr::Duplicate(name))
+    } else {
+      match module_manifest_validate_files(files, 0u32) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(_) => module_manifest_validate_modules(
+          modules,
+          index + 1u32,
+          root,
+          root_found || name.equals(root),
+        )
+      }
+    }
+  }
+}
+
+impl Encode<FormatEncodeError> for ModuleManifest {
+  fn encode(self) -> Result<Bytes, FormatEncodeError> {
+    match self.validate() {
+      Result::Err(error) => Result::Err(FormatEncodeError::Validation(error))
+      Result::Ok(_) => {
+        let entries = json_array()
+        while 0u32 {
+          index if index < self.modules.length() => {
+            let module_ = self.modules.get_unchecked(index)
+            let module_files = module_.files()
+            let files = json_array()
+            while 0u32 {
+              file_index if file_index < module_files.length() => {
+                files.push(JsonValue::String(module_files.get_unchecked(file_index)))
+                continue file_index + 1u32
+              }
+              _ => break package_unit()
+            }
+            let fields = json_object()
+            fields.push(json_member("name", JsonValue::String(module_.name)))
+            fields.push(json_member("files", JsonValue::Array(files)))
+            entries.push(JsonValue::Object(fields))
+            continue index + 1u32
+          }
+          _ => break package_unit()
+        }
+        let fields = json_object()
+        fields.push(json_member("root", JsonValue::String(self.root)))
+        fields.push(json_member("modules", JsonValue::Array(entries)))
+        package_json_output(JsonValue::Object(fields), module_manifest_max_bytes())
+      }
+    }
+  }
+}
+
+impl Decode<ModuleManifest, FormatDecodeError> for ModuleManifest {
+  fn decode(bytes: Bytes) -> Result<ModuleManifest, FormatDecodeError> {
+    module_manifest_try_decode(bytes)
+  }
+}
+
+impl Validate<FormatValidationErr> for ModuleManifest {
+  fn validate(self) -> Result<Unit, FormatValidationErr> {
+    if !module_name_is_valid(self.root) {
+      Result::Err(FormatValidationErr::InvalidField("root module"))
+    } else if self.modules.length() == 0u32 || self.modules.length() > module_manifest_max_modules() {
+      Result::Err(FormatValidationErr::LimitExceeded("modules", self.modules.length(), module_manifest_max_modules()))
+    } else {
+      module_manifest_validate_modules(self.modules, 0u32, self.root, false)
+    }
+  }
+}

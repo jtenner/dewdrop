@@ -22,14 +22,14 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 ### P1 — self-hosting
 
-1. Add the narrow host boundary required by a Dew compiler: arguments, environment, file-system reads/writes, exit status, and output. A small MoonBit or JavaScript launcher may remain during bootstrap.
-2. Link the compiled Starshine binary through Dew foreign imports, freeze its typed ABI, and include its exact bytes in deterministic compiler fingerprints.
-3. Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
-4. Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
+1. [x] Freeze the bounded source-Bytes version 1 compiler request and explicit `CompilerSessionConfig`; consume source and provider bytes directly with caches disabled and no environment mutation.
+2. [ ] Generate a direct typed Dew foreign ABI from pinned Starshine `.mbti` interfaces, link the compiled guest, and include its exact bytes and interface digests in deterministic compiler fingerprints.
+3. [ ] Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
+4. [ ] Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
 
 The audited hard blockers, missing compiler-library operations, bootstrap-only boundaries, and optional port-enabling language additions are cataloged in [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](research/self-hosting-compiler-gap-catalog-2026-08-16.md). Items described there as port-enabling do not become P1 automatically; promote them only when the port chooses that path.
 
-Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, and Dew-native BLAKE3 are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
+Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, Dew-native BLAKE3 and SHA-256, capability-based WASI/WPSI filesystem and process adapters, bounded SemVer, and Dew-native package file codecs are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
 
 ### P2 — deferred until self-hosting
 
@@ -183,7 +183,7 @@ deferred until self-hosting.
 - [x] Implement Dew-native JSON with strict UTF-8, exact number lexemes, deterministic serialization, bounded Reader/Writer and value APIs, source-level Bytes/String SIMD scanning, validated-String no-escape parsing, fixed parser and writer state, explicit retained-source and raw validated documents, specialized validation, parsed validate-once JsonNumber and escape-proven JsonString values, exact Bloom-assisted wide-object duplicate checks, allocation-free index traversal, validated clean-span output, and direct conformance coverage. Slice-reparse typed decoding, one-shot structural indexing, and unconditional exact-Set tracking were measured and rejected; future typed decoding must share one cursor/event pass.
 - [ ] Implement Dew-native TOML, beginning with the package-manifest subset and deterministic duplicate/dotted-key behavior.
 - [ ] Implement a versioned bounded YAML subset only after JSON and TOML stabilize.
-- [ ] Define the boundaries among non-secret fast hashes, constant-time primitives, and password/KDF APIs before adding cryptography modules.
+- [ ] Define the boundaries among non-secret fast hashes, integrity hashes such as SHA-256, constant-time primitives, and password/KDF APIs before adding secret-key cryptography modules.
 - [ ] Select reviewed algorithms, version parameters, use secure randomness where required, and add known-answer, differential, malformed-input, resource, and side-channel-aware tests.
 - [ ] Implement bounded HTTP message semantics and parsing separately from host transport adapters.
 - [ ] Define URL ownership, TLS, redirects, decompression, timeout/cancellation, and client/server scope before stabilizing HTTP APIs.

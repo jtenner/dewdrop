@@ -6,10 +6,10 @@ let body_inference_artifact_kind = 4
 let body_family_artifact_kind = 5
 
 ///|
-let body_inference_envelope_version = 2U
+let body_inference_envelope_version = 1U
 
 ///|
-let body_family_envelope_version = 2U
+let body_family_envelope_version = 1U
 
 ///|
 fn wrap_body_inference_cache_payload(

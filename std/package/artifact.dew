@@ -1,0 +1,511 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.decode
+open dew.std.encode
+open dew.std.fixed_array
+open dew.std.format
+open dew.std.integrity.sha256
+open dew.std.package
+open dew.std.semver
+open dew.std.string
+
+pub struct PackageArtifactFile {
+  path: String
+  contents: Bytes
+}
+
+pub struct PackageArtifact {
+  name: String
+  version: SemVer
+  source: String
+  integrity: String
+  interface_fingerprint: String
+  dependencies: Array<PackageDependency>
+  files: Array<PackageArtifactFile>
+}
+
+struct PackageArtifactReader {
+  bytes: Bytes
+  mut offset: U32
+  mut failed: Bool
+}
+
+pub fn package_artifact_max_bytes() -> U32 {
+  268435456u32
+}
+
+pub fn package_artifact_max_source_bytes() -> U32 {
+  16777216u32
+}
+
+pub fn package_artifact_max_files() -> U32 {
+  65536u32
+}
+
+pub fn package_artifact_file(path: String, contents: Bytes) -> PackageArtifactFile {
+  PackageArtifactFile::{
+    path: path
+    contents: contents
+  }
+}
+
+impl PackageArtifactFile {
+  fn path(self) -> String {
+    self.path
+  }
+  fn contents(self) -> Bytes {
+    self.contents
+  }
+}
+
+pub fn package_artifact(
+  name: String,
+  version: SemVer,
+  source: String,
+  integrity: String,
+  interface_fingerprint: String,
+  dependencies: Array<PackageDependency>,
+  files: Array<PackageArtifactFile>,
+) -> PackageArtifact {
+  PackageArtifact::{
+    name: name
+    version: version
+    source: source
+    integrity: integrity
+    interface_fingerprint: interface_fingerprint
+    dependencies: dependencies
+    files: files
+  }
+}
+
+impl PackageArtifact {
+  fn name(self) -> String {
+    self.name
+  }
+  fn version(self) -> SemVer {
+    self.version
+  }
+  fn source(self) -> String {
+    self.source
+  }
+  fn integrity(self) -> String {
+    self.integrity
+  }
+  fn interface_fingerprint(self) -> String {
+    self.interface_fingerprint
+  }
+  fn dependencies(self) -> Array<PackageDependency> {
+    self.dependencies
+  }
+  fn files(self) -> Array<PackageArtifactFile> {
+    self.files
+  }
+}
+
+fn package_artifact_unit() -> Unit {
+}
+
+fn package_artifact_u32_to_u8(value: U32) -> U8 {
+  value.into()
+}
+
+fn package_artifact_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn package_artifact_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn package_artifact_write_u32(output: BytesBuilder, value: U32) -> Unit {
+  output.append_byte(package_artifact_u32_to_u8(value & 255u32))
+  output.append_byte(package_artifact_u32_to_u8((value >> 8u32) & 255u32))
+  output.append_byte(package_artifact_u32_to_u8((value >> 16u32) & 255u32))
+  output.append_byte(package_artifact_u32_to_u8((value >> 24u32) & 255u32))
+}
+
+fn package_artifact_write_bytes(output: BytesBuilder, value: Bytes) -> Unit {
+  package_artifact_write_u32(output, value.byte_length())
+  output.append(value)
+}
+
+fn package_artifact_write_string(output: BytesBuilder, value: String) -> Unit {
+  package_artifact_write_bytes(output, value.as_bytes())
+}
+
+fn package_artifact_read_u32(reader: PackageArtifactReader) -> U32 {
+  if reader.failed || reader.offset > reader.bytes.byte_length() || reader.bytes.byte_length() - reader.offset < 4u32 {
+    reader.failed = true
+    0u32
+  } else {
+    let offset = reader.offset
+    reader.offset = offset + 4u32
+    let first = package_artifact_u8_to_u32(reader.bytes.byte_at(offset))
+    let second = package_artifact_u8_to_u32(reader.bytes.byte_at(offset + 1u32))
+    let third = package_artifact_u8_to_u32(reader.bytes.byte_at(offset + 2u32))
+    let fourth = package_artifact_u8_to_u32(reader.bytes.byte_at(offset + 3u32))
+    first | (second << 8u32) | (third << 16u32) | (fourth << 24u32)
+  }
+}
+
+fn package_artifact_read_bytes(reader: PackageArtifactReader, limit: U32) -> Bytes {
+  let length = package_artifact_read_u32(reader)
+  if reader.failed || length > limit || reader.offset > reader.bytes.byte_length() || length > reader.bytes.byte_length() - reader.offset {
+    reader.failed = true
+    b""
+  } else {
+    let start = reader.offset
+    reader.offset = start + length
+    reader.bytes.slice(start, start + length)
+  }
+}
+
+fn package_artifact_read_string(reader: PackageArtifactReader, limit: U32) -> String {
+  let value = package_artifact_read_bytes(reader, limit)
+  if reader.failed || !value.is_valid_utf8() {
+    reader.failed = true
+    ""
+  } else {
+    value.to_string()
+  }
+}
+
+fn package_artifact_digest_matches(payload: Bytes, encoded: Bytes) -> Bool {
+  let digest = sha256(payload)
+  while 0u32 {
+    index if index < 32u32 => if encoded.byte_at(payload.byte_length() + index) == digest.get_unchecked(index) {
+      continue index + 1u32
+    } else {
+      break false
+    }
+    _ => break true
+  }
+}
+
+fn package_artifact_is_hex(value: String, length: U32) -> Bool {
+  if value.byte_length() != length {
+    false
+  } else {
+    while 0u32 {
+      index if index < length => {
+        let byte = value.byte_at(index)
+        if (byte >= 48u8 && byte <= 57u8) || (byte >= 97u8 && byte <= 102u8) {
+          continue index + 1u32
+        } else {
+          break false
+        }
+      }
+      _ => break true
+    }
+  }
+}
+
+fn package_artifact_path_is_valid(value: String) -> Bool {
+  value.byte_length() > 0u32 &&
+  value.byte_length() <= package_path_max_bytes() &&
+  value.byte_at(0u32) != 47u8 &&
+  !value.contains("\\") &&
+  !value.contains("\x00") &&
+  !value.equals("..") &&
+  !value.starts_with("../") &&
+  !value.contains("/../") &&
+  !value.ends_with("/..")
+}
+
+fn package_artifact_read_dependencies(
+  reader: PackageArtifactReader,
+  count: U32,
+  index: U32,
+  output: Array<PackageDependency>,
+) -> Result<Array<PackageDependency>, FormatDecodeError> {
+  if index >= count {
+    Result::Ok(output)
+  } else {
+    let name = package_artifact_read_string(reader, package_name_max_bytes())
+    let requirement_text = package_artifact_read_string(reader, package_requirement_max_bytes())
+    if reader.failed {
+      Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
+    } else {
+      match package_requirement_parse(requirement_text) {
+        Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package artifact dependency"))
+        Result::Ok(requirement) => {
+          output.push(package_dependency(name, requirement))
+          package_artifact_read_dependencies(reader, count, index + 1u32, output)
+        }
+      }
+    }
+  }
+}
+
+fn package_artifact_read_files(
+  reader: PackageArtifactReader,
+  count: U32,
+  index: U32,
+  output: Array<PackageArtifactFile>,
+) -> Result<Array<PackageArtifactFile>, FormatDecodeError> {
+  if index >= count {
+    Result::Ok(output)
+  } else {
+    let path = package_artifact_read_string(reader, package_path_max_bytes())
+    let contents = package_artifact_read_bytes(reader, package_artifact_max_source_bytes())
+    if reader.failed {
+      Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
+    } else {
+      output.push(package_artifact_file(path, contents))
+      package_artifact_read_files(reader, count, index + 1u32, output)
+    }
+  }
+}
+
+fn package_artifact_finish_decode(
+  payload: Bytes,
+  reader: PackageArtifactReader,
+  name: String,
+  version: SemVer,
+  source: String,
+  integrity: String,
+  interface_: String,
+) -> Result<PackageArtifact, FormatDecodeError> {
+  let dependency_count = package_artifact_read_u32(reader)
+  if dependency_count > package_max_dependencies() {
+    Result::Err(FormatDecodeError::InvalidLength(dependency_count, package_max_dependencies()))
+  } else {
+    match package_artifact_read_dependencies(reader, dependency_count, 0u32, Array::with_capacity(dependency_count)) {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(dependencies) => {
+        let file_count = package_artifact_read_u32(reader)
+        if file_count > package_artifact_max_files() {
+          Result::Err(FormatDecodeError::InvalidLength(file_count, package_artifact_max_files()))
+        } else {
+          match package_artifact_read_files(reader, file_count, 0u32, Array::with_capacity(file_count)) {
+            Result::Err(error) => Result::Err(error)
+            Result::Ok(files) => if reader.failed {
+              Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
+            } else if reader.offset != payload.byte_length() {
+              Result::Err(FormatDecodeError::TrailingData(reader.offset))
+            } else {
+              Result::Ok(package_artifact(name, version, source, integrity, interface_, dependencies, files))
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+pub fn package_artifact_try_decode(bytes: Bytes) -> Result<PackageArtifact, FormatDecodeError> {
+  let length = bytes.byte_length()
+  if length > package_artifact_max_bytes() {
+    Result::Err(FormatDecodeError::FileTooLarge(length, package_artifact_max_bytes()))
+  } else if length < 40u32 || !bytes.subarray(0u32, 8u32).equals(b"DEWPKG1\x00") {
+    Result::Err(FormatDecodeError::InvalidSyntax("package artifact magic"))
+  } else {
+    let payload = bytes.slice(0u32, length - 32u32)
+    if !package_artifact_digest_matches(payload, bytes) {
+      Result::Err(FormatDecodeError::ChecksumMismatch)
+    } else {
+      let reader = PackageArtifactReader::{
+        bytes: payload
+        offset: 8u32
+        failed: false
+      }
+      let name = package_artifact_read_string(reader, package_name_max_bytes())
+      let version_text = package_artifact_read_string(reader, semver_max_bytes())
+      let source = package_artifact_read_string(reader, package_requirement_max_bytes())
+      let integrity = package_artifact_read_string(reader, 71u32)
+      let interface_ = package_artifact_read_string(reader, 64u32)
+      if reader.failed {
+        Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
+      } else {
+        match semver_parse(version_text) {
+          Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package artifact version"))
+          Result::Ok(version) => package_artifact_finish_decode(
+            payload, reader, name, version, source, integrity, interface_,
+          )
+        }
+      }
+    }
+  }
+}
+
+fn package_artifact_dependency_size(
+  values: Array<PackageDependency>,
+  index: U32,
+) -> U64 {
+  if index >= values.length() {
+    0u64
+  } else {
+    let dependency = values.get_unchecked(index)
+    8u64 + package_artifact_u32_to_u64(dependency.name().byte_length()) +
+    package_artifact_u32_to_u64(package_requirement_to_string(dependency.requirement()).byte_length()) +
+    package_artifact_dependency_size(values, index + 1u32)
+  }
+}
+
+fn package_artifact_file_size(
+  values: Array<PackageArtifactFile>,
+  index: U32,
+) -> U64 {
+  if index >= values.length() {
+    0u64
+  } else {
+    let file = values.get_unchecked(index)
+    8u64 + package_artifact_u32_to_u64(file.path().byte_length()) +
+    package_artifact_u32_to_u64(file.contents().byte_length()) +
+    package_artifact_file_size(values, index + 1u32)
+  }
+}
+
+fn package_artifact_encoded_size(value: PackageArtifact) -> U64 {
+  68u64 + package_artifact_u32_to_u64(value.name.byte_length()) +
+  package_artifact_u32_to_u64(value.version.to_string().byte_length()) +
+  package_artifact_u32_to_u64(value.source.byte_length()) +
+  package_artifact_u32_to_u64(value.integrity.byte_length()) +
+  package_artifact_u32_to_u64(value.interface_fingerprint.byte_length()) +
+  package_artifact_dependency_size(value.dependencies, 0u32) +
+  package_artifact_file_size(value.files, 0u32)
+}
+
+fn package_artifact_dependency_seen(
+  values: Array<PackageDependency>,
+  limit: U32,
+  name: String,
+) -> Bool {
+  if limit == 0u32 {
+    false
+  } else if values.get_unchecked(limit - 1u32).name().equals(name) {
+    true
+  } else {
+    package_artifact_dependency_seen(values, limit - 1u32, name)
+  }
+}
+
+fn package_artifact_validate_dependencies(
+  values: Array<PackageDependency>,
+  index: U32,
+) -> Result<Unit, FormatValidationErr> {
+  if index >= values.length() {
+    Result::Ok(package_artifact_unit())
+  } else {
+    let name = values.get_unchecked(index).name()
+    if !package_name_is_valid(name) {
+      Result::Err(FormatValidationErr::InvalidField("artifact dependency"))
+    } else if package_artifact_dependency_seen(values, index, name) {
+      Result::Err(FormatValidationErr::Duplicate(name))
+    } else {
+      package_artifact_validate_dependencies(values, index + 1u32)
+    }
+  }
+}
+
+fn package_artifact_file_seen(
+  values: Array<PackageArtifactFile>,
+  limit: U32,
+  path: String,
+) -> Bool {
+  if limit == 0u32 {
+    false
+  } else if values.get_unchecked(limit - 1u32).path().equals(path) {
+    true
+  } else {
+    package_artifact_file_seen(values, limit - 1u32, path)
+  }
+}
+
+fn package_artifact_validate_files(
+  values: Array<PackageArtifactFile>,
+  index: U32,
+) -> Result<Unit, FormatValidationErr> {
+  if index >= values.length() {
+    Result::Ok(package_artifact_unit())
+  } else {
+    let file = values.get_unchecked(index)
+    let path = file.path()
+    if !package_artifact_path_is_valid(path) || file.contents().byte_length() > package_artifact_max_source_bytes() {
+      Result::Err(FormatValidationErr::InvalidField("artifact file"))
+    } else if package_artifact_file_seen(values, index, path) {
+      Result::Err(FormatValidationErr::Duplicate(path))
+    } else {
+      package_artifact_validate_files(values, index + 1u32)
+    }
+  }
+}
+
+impl Encode<FormatEncodeError> for PackageArtifact {
+  fn encode(self) -> Result<Bytes, FormatEncodeError> {
+    match self.validate() {
+      Result::Err(error) => Result::Err(FormatEncodeError::Validation(error))
+      Result::Ok(_) => {
+        let output = BytesBuilder::new()
+        output.append(b"DEWPKG1\x00")
+        package_artifact_write_string(output, self.name)
+        package_artifact_write_string(output, self.version.to_string())
+        package_artifact_write_string(output, self.source)
+        package_artifact_write_string(output, self.integrity)
+        package_artifact_write_string(output, self.interface_fingerprint)
+        package_artifact_write_u32(output, self.dependencies.length())
+        while 0u32 {
+          index if index < self.dependencies.length() => {
+            let dependency = self.dependencies.get_unchecked(index)
+            package_artifact_write_string(output, dependency.name())
+            package_artifact_write_string(output, package_requirement_to_string(dependency.requirement()))
+            continue index + 1u32
+          }
+          _ => break package_artifact_unit()
+        }
+        package_artifact_write_u32(output, self.files.length())
+        while 0u32 {
+          index if index < self.files.length() => {
+            let file = self.files.get_unchecked(index)
+            package_artifact_write_string(output, file.path())
+            package_artifact_write_bytes(output, file.contents())
+            continue index + 1u32
+          }
+          _ => break package_artifact_unit()
+        }
+        let payload = output.finish()
+        let complete = BytesBuilder::with_capacity(payload.byte_length() + 32u32)
+        complete.append(payload)
+        let digest = sha256(payload)
+        while 0u32 {
+          index if index < 32u32 => {
+            complete.append_byte(digest.get_unchecked(index))
+            continue index + 1u32
+          }
+          _ => break package_artifact_unit()
+        }
+        Result::Ok(complete.finish())
+      }
+    }
+  }
+}
+
+impl Decode<PackageArtifact, FormatDecodeError> for PackageArtifact {
+  fn decode(bytes: Bytes) -> Result<PackageArtifact, FormatDecodeError> {
+    package_artifact_try_decode(bytes)
+  }
+}
+
+impl Validate<FormatValidationErr> for PackageArtifact {
+  fn validate(self) -> Result<Unit, FormatValidationErr> {
+    if !package_name_is_valid(self.name) || self.source.byte_length() == 0u32 ||
+      self.source.byte_length() > package_requirement_max_bytes() ||
+      !self.integrity.starts_with("sha256-") || self.integrity.byte_length() != 71u32 ||
+      !package_artifact_is_hex(self.integrity.slice(7u32, 71u32), 64u32) ||
+      !package_artifact_is_hex(self.interface_fingerprint, 64u32) {
+      Result::Err(FormatValidationErr::InvalidField("package artifact provenance"))
+    } else if package_artifact_encoded_size(self) > 268435456u64 {
+      Result::Err(FormatValidationErr::ByteLimitExceeded("package artifact bytes", package_artifact_encoded_size(self), 268435456u64))
+    } else if self.dependencies.length() > package_max_dependencies() {
+      Result::Err(FormatValidationErr::LimitExceeded("artifact dependencies", self.dependencies.length(), package_max_dependencies()))
+    } else if self.files.length() == 0u32 || self.files.length() > package_artifact_max_files() {
+      Result::Err(FormatValidationErr::LimitExceeded("artifact files", self.files.length(), package_artifact_max_files()))
+    } else {
+      match package_artifact_validate_dependencies(self.dependencies, 0u32) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(_) => package_artifact_validate_files(self.files, 0u32)
+      }
+    }
+  }
+}

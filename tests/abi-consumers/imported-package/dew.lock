@@ -6,8 +6,8 @@
       "version": "1.0.0",
       "source": "file:dependency",
       "path": "dependency",
-      "integrity": "sha256-9d2e9f14f671b98f23d6ba2edffd4c5c822a971d9c8777ca826e5b6192b414cd",
-      "interface": "5e1503b84743ecb01807446637cccb7227b5cca8e08c72bc1fe2480a30e6014b"
+      "integrity": "sha256-3e7a3664ebe8b0d4aa7b5b91be63b83e16899a5f58b2ff0a2696faa02f921b46",
+      "interface": "960a10a2d1e24a79257c23580595b15822f664cb3ac14d6af8980012259564c0"
     }
   ]
 }

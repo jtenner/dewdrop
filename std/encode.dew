@@ -1,0 +1,5 @@
+open dew.std.bytes
+
+pub trait Encode<t_err> {
+  fn encode(self) -> Result<Bytes, t_err>
+}

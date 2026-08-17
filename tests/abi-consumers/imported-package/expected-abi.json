@@ -1,30 +1,30 @@
 {
   "schema": 1,
   "versions": {
-    "language": 2,
+    "language": 1,
     "closure": 1,
     "genericCarrier": 1,
     "box": 1,
     "callbackWrapper": 1
   },
   "path": "fixture.application",
-  "interfaceFingerprint": "76ac0d3c571b64871213749dcc9029f7a44646524de117d87175787c8fbdc6f3",
+  "interfaceFingerprint": "37e198ed82c19e275ff40728ee82380a9d0ad7ef8414c5a762c87d6fe34e7487",
   "dependencies": [
     {
       "path": "dew.std.option",
-      "contentFingerprint": "b493f1a8f25d171980074187c5d5aa687f10c54ba0434cf9fdd448eadb7617f2"
+      "contentFingerprint": "56693c65ea8f8e5f1dffe6e0423526c980d2a7123363056a383d70b724af275a"
     },
     {
       "path": "dew.std.result",
-      "contentFingerprint": "b6e5ba067907d1928961487c27b8d35c8738d11f2a9ad58883dba702f74b0ec2"
+      "contentFingerprint": "e7f23ab44f4ae7881c51c7deea14d5bc294725430d7419b15408796260a607a6"
     },
     {
       "path": "dew.std.preamble",
-      "contentFingerprint": "5e7bd9d01e6a5f660b3de5e60dac45856fb288ec00689bcfa9ab834b20b59108"
+      "contentFingerprint": "74d9f0cc0bdda12e2ce7f7283e05e7368ad61db16086efead047bc3f956f6abc"
     },
     {
       "path": "fixture.package_callback",
-      "contentFingerprint": "500cae8014fab14272211bb1278f77397d9f3be2e509046e3d1cd401052827aa"
+      "contentFingerprint": "b31e1dd024f836271bc89f325fdceb6a81afe36b53de48e91209d4be57eaccb6"
     }
   ]
 }

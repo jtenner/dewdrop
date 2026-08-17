@@ -4,10 +4,10 @@ import { decodeDewTestMetadata, testIdentity } from "./metadata.mjs";
 
 const bytes = (text) => Buffer.from(text, "utf8");
 
-test("decode V3 Unicode names and expected traps", () => {
+test("decode V1 Unicode names and expected traps", () => {
   const tests = decodeDewTestMetadata(
     bytes(
-      "DEW_TESTS_V3\n" +
+      "DEW_TESTS_V1\n" +
         "__dew_test_0\tdew.std\tstd/tests/core_test.dew\tcf80\t756e726561636861626c65\n",
     ),
   );
@@ -28,20 +28,20 @@ test("decode V3 Unicode names and expected traps", () => {
 
 test("reject unsupported metadata versions", () => {
   assert.throws(
-    () => decodeDewTestMetadata(bytes("DEW_TESTS_V2\n")),
+    () => decodeDewTestMetadata(bytes("DEW_TESTS_V0\n")),
     /unsupported Dew test metadata format/,
   );
 });
 
 test("reject malformed records and hexadecimal fields", () => {
   assert.throws(
-    () => decodeDewTestMetadata(bytes("DEW_TESTS_V3\nbad\n")),
+    () => decodeDewTestMetadata(bytes("DEW_TESTS_V1\nbad\n")),
     /invalid Dew test metadata record/,
   );
   assert.throws(
     () =>
       decodeDewTestMetadata(
-        bytes("DEW_TESTS_V3\n__dew_test_0\tm\tf_test.dew\tzz\t\n"),
+        bytes("DEW_TESTS_V1\n__dew_test_0\tm\tf_test.dew\tzz\t\n"),
       ),
     /invalid name hex/,
   );
@@ -52,7 +52,7 @@ test("reject duplicate complete identities", () => {
     () =>
       decodeDewTestMetadata(
         bytes(
-          "DEW_TESTS_V3\n" +
+          "DEW_TESTS_V1\n" +
             "__dew_test_0\tm\tf_test.dew\t73616d65\t\n" +
             "__dew_test_1\tm\tf_test.dew\t73616d65\t\n",
         ),
@@ -62,6 +62,6 @@ test("reject duplicate complete identities", () => {
 });
 
 test("reject non-UTF-8 custom section payloads", () => {
-  const payload = Buffer.concat([bytes("DEW_TESTS_V3\n"), Buffer.from([0xff])]);
+  const payload = Buffer.concat([bytes("DEW_TESTS_V1\n"), Buffer.from([0xff])]);
   assert.throws(() => decodeDewTestMetadata(payload), /encoded data was not valid/);
 });

@@ -343,7 +343,7 @@ DEW_CACHE_DIR=.tmp/dew-body-family-fresh-cache tools/dew build \
 cmp .tmp/dew-body-family-incremental.wasm .tmp/dew-body-family-fresh.wasm
 grep -q '^body inference cache: module hits [1-9][0-9]*, module misses 1, family hits 3, family misses 1$' \
   .tmp/dew-body-family-incremental.txt
-test "$(find .tmp/dew-body-family-cache/body-inference-families -name 'v2-*.dbf' | wc -l)" -eq 1
+test "$(find .tmp/dew-body-family-cache/body-inference-families -name 'v1-*.dbf' | wc -l)" -eq 1
 rm -rf .tmp/dew-body-family-cache/body-inference
 family_cache_file=$(find \
   .tmp/dew-body-family-cache/body-inference-families \
@@ -754,7 +754,7 @@ grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-external-package-cache-miss.txt
 grep -q '^standard interface cache: hits [1-9][0-9]*, misses 0$' \
   .tmp/dew-external-package-cache-hit.txt
-test "$(find .tmp/dew-external-package-cache/interfaces -name 'v13-*.dwi' | wc -l)" -eq 1
+test "$(find .tmp/dew-external-package-cache/interfaces -name 'v1-*.dwi' | wc -l)" -eq 1
 rm -rf .tmp/dew-artifact-only .tmp/dew-artifact-cache
 cp -R tests/abi-consumers/imported-package .tmp/dew-artifact-only
 DEW_CACHE_DIR=.tmp/dew-artifact-cache tools/dew build \
@@ -816,7 +816,7 @@ DEW_CACHE_DIR=.tmp/dew-external-package-cache tools/dew check \
   > .tmp/dew-external-package-cache-changed.txt
 grep -q '^standard interface cache: hits 0, misses [1-9][0-9]*$' \
   .tmp/dew-external-package-cache-changed.txt
-test "$(find .tmp/dew-external-package-cache/interfaces -name 'v13-*.dwi' | wc -l)" -eq 2
+test "$(find .tmp/dew-external-package-cache/interfaces -name 'v1-*.dwi' | wc -l)" -eq 2
 tools/dew build \
   --manifest tests/abi-consumers/imported-package/dew.json \
   -o .tmp/dew-imported-package-provider.wasm
@@ -844,7 +844,7 @@ node tools/dew-wasm-consumer.mjs \
   .tmp/dew-aggregate-callback-consumer.wasm \
   run i32 \
   fixture.application \
-  76ac0d3c571b64871213749dcc9029f7a44646524de117d87175787c8fbdc6f3 \
+  37e198ed82c19e275ff40728ee82380a9d0ad7ef8414c5a762c87d6fe34e7487 \
   > .tmp/dew-imported-package-consumer.json
 if node tools/dew-wasm-consumer.mjs \
   .tmp/dew-imported-package-provider.wasm \

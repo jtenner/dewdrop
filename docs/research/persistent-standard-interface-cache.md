@@ -24,7 +24,7 @@ Source order comes from `required_standard_library_source_paths`; neither hashin
 - the selected standard source set changes;
 - the private cache-key ABI marker is bumped.
 
-For versioned external dependencies, `dew.json` records only package identity/version and semantic-version or Git dependency requests. Sibling `dew.lock` records each exact resolved name/version/source/materialized path, `sha256-<hex>` package source integrity, and expected 64-hex transitive interface fingerprint. Package integrity V2 hashes identity, derived module path, conventionally discovered source paths/bytes, and dependency requests independently of lockfile placement. After freezing or cache injection, the compiler compares each resolved dependency module's transitive interface fingerprint with the lock expectation before lowering or linking. The resolver validates the complete acyclic locked dependency closure before compilation and derives a domain-separated dependency-interface key from exact lock records, combined with the standard-source fingerprint.
+For versioned external dependencies, `dew.json` records only package identity/version and semantic-version or Git dependency requests. Sibling `dew.lock` records each exact resolved name/version/source/materialized path, `sha256-<hex>` package source integrity, and expected 64-hex transitive interface fingerprint. Package integrity version 1 hashes identity, derived module path, conventionally discovered source paths/bytes, and dependency requests independently of lockfile placement. After freezing or cache injection, the compiler compares each resolved dependency module's transitive interface fingerprint with the lock expectation before lowering or linking. The resolver validates the complete acyclic locked dependency closure before compilation and derives a domain-separated dependency-interface key from exact lock records, combined with the standard-source fingerprint.
 
 Generated `--bootstrap-std` providers are intentionally not cacheable. Bootstrap mode remains an independent comparison path.
 
@@ -35,7 +35,7 @@ The package capsule key is independently domain-separated over exact locked pack
 `serialize_frozen_interfaces` writes a private deterministic binary format beginning with:
 
 ```text
-DEW_FROZEN_INTERFACES_V13\0
+DEW_FROZEN_INTERFACES_V1\0
 ```
 
 It serializes diagnostics-free `FrozenModuleInterface` records, including:
@@ -56,7 +56,7 @@ No maps, addresses, filesystem paths, or worker-order values enter the artifact.
 The serialized payload is wrapped in a second cache-file envelope:
 
 ```text
-DEW_STD_INTERFACE_CACHE_V13\0
+DEW_STD_INTERFACE_CACHE_V1\0
 SHA-256(payload)
 payload
 ```
@@ -79,7 +79,7 @@ The payload binds artifact version, exact lock identity/version/source/integrity
 The default locations are:
 
 ```text
-.dew/cache/interfaces/v13-<bundle-fingerprint>.dwi
+.dew/cache/interfaces/v1-<bundle-fingerprint>.dwi
 .dew/cache/packages/v1-<package-artifact-key>.dpa
 ```
 
@@ -124,7 +124,7 @@ Permanent coverage includes:
 - explicit disabled mode;
 - fail-visible corrupt cache behavior;
 - source-content invalidation producing a second cache artifact;
-- versioned external package miss/hit behavior and `v13-*.dwi` filenames;
+- versioned external package miss/hit behavior and `v1-*.dwi` filenames;
 - installed package capsule publication, source-tree removal, verified atomic recovery, and byte-identical pre/post-recovery Wasm;
 - fail-visible corrupt package capsules and refusal to overwrite nonempty partial package trees;
 - rejection of injected ordinary orphan evidence before a cache hit can expose it;
@@ -134,7 +134,7 @@ Permanent coverage includes:
 - byte-identical Wasm between cache miss, cache hit, on-disk uncached, and generated bootstrap providers;
 - the complete Node/Wago module snapshot suite with cache-enabled native generation.
 
-Release-mode native phase benchmarks after the V13 binary migration measure:
+Release-mode native phase benchmarks for the version 1 binary format measure:
 
 ```text
 serialize all frozen interfaces       4.63 ms ± 0.17 ms

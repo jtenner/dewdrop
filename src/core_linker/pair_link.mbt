@@ -340,6 +340,14 @@ fn core_pair_link(
   let imported_function_count = next[0]
   let imported_table_count = next[1]
   let imported_memory_count = next[2]
+  let preserve_wpsi_memory_zero = provider == "wpsi"
+  if preserve_wpsi_memory_zero && imported_memory_count != 0 {
+    return Err(
+      CoreWasmUnsupportedImport(
+        "WPSI-linked providers require a defined guest memory 0 without memory imports",
+      ),
+    )
+  }
   let imported_global_count = next[3]
   let imported_tag_count = next[4]
   core_append_defined_indices(
@@ -366,19 +374,35 @@ fn core_pair_link(
     core_tables(guest).length(),
     imported_table_count + core_tables(dew).length(),
   )
-  core_append_defined_indices(
-    dew_memory_indices,
-    dew_counts.memories,
-    core_memories(dew).length(),
-    imported_memory_count,
-  )
-  core_append_defined_indices(
-    guest_memory_indices,
-    guest_counts.memories,
-    core_memories(guest).length(),
-    imported_memory_count + core_memories(dew).length(),
-  )
+  if preserve_wpsi_memory_zero {
+    core_append_defined_indices(
+      guest_memory_indices,
+      guest_counts.memories,
+      core_memories(guest).length(),
+      imported_memory_count,
+    )
+    core_append_defined_indices(
+      dew_memory_indices,
+      dew_counts.memories,
+      core_memories(dew).length(),
+      imported_memory_count + core_memories(guest).length(),
+    )
+  } else {
+    core_append_defined_indices(
+      dew_memory_indices,
+      dew_counts.memories,
+      core_memories(dew).length(),
+      imported_memory_count,
+    )
+    core_append_defined_indices(
+      guest_memory_indices,
+      guest_counts.memories,
+      core_memories(guest).length(),
+      imported_memory_count + core_memories(dew).length(),
+    )
+  }
   if options.preserve_dew_memory_zero &&
+    !preserve_wpsi_memory_zero &&
     dew_memory_indices.length() > 0 &&
     dew_memory_indices[0] != 0 {
     return Err(
@@ -531,11 +555,20 @@ fn core_pair_link(
     tables.push(core_remap_table(guest_map, table))
   }
   let memories = []
-  for memory in core_memories(dew) {
-    memories.push(memory)
-  }
-  for memory in core_memories(guest) {
-    memories.push(memory)
+  if preserve_wpsi_memory_zero {
+    for memory in core_memories(guest) {
+      memories.push(memory)
+    }
+    for memory in core_memories(dew) {
+      memories.push(memory)
+    }
+  } else {
+    for memory in core_memories(dew) {
+      memories.push(memory)
+    }
+    for memory in core_memories(guest) {
+      memories.push(memory)
+    }
   }
   if string_adapter_imports.length() > 0 {
     memories.push(@lib.MemType::new(@lib.Limits::i32(1U, Some(1U))))

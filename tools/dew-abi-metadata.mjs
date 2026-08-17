@@ -62,7 +62,7 @@ export function decodeDewAbi(module) {
     callbackWrapper: input.readByte(),
   };
   const supportedVersions = {
-    language: 2,
+    language: 1,
     closure: 1,
     genericCarrier: 1,
     box: 1,

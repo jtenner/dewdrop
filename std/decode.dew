@@ -1,0 +1,5 @@
+open dew.std.bytes
+
+pub trait Decode<t, t_err> {
+  fn decode(bytes: Bytes) -> Result<t, t_err>
+}

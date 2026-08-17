@@ -1,0 +1,62 @@
+open dew.std.array
+open dew.std.bytes
+
+pub enum ProcessOperation {
+  Arguments
+  Environment
+  StandardOutput
+  StandardError
+  Exit
+}
+
+pub enum ProcessErrorKind {
+  Missing
+  InvalidUtf8
+  LimitExceeded
+  Unsupported
+  Backend
+}
+
+pub struct ProcessError {
+  operation: ProcessOperation
+  kind: ProcessErrorKind
+  code: U32
+}
+
+pub trait Process {
+  fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError>
+  fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError>
+  fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError>
+  fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError>
+  fn exit(self, status: U32) -> Never
+}
+
+pub fn process_arguments<p: Process>(
+  process: p,
+  max_count: U32,
+  max_bytes: U32,
+) -> Result<Array<String>, ProcessError> {
+  process.arguments(max_count, max_bytes)
+}
+
+pub fn process_environment<p: Process>(
+  process: p,
+  name: String,
+  max_bytes: U32,
+) -> Result<Option<String>, ProcessError> {
+  process.environment(name, max_bytes)
+}
+
+pub fn process_write_stdout<p: Process>(
+  process: p,
+  value: Bytes,
+) -> Result<U32, ProcessError> {
+  process.write_stdout(value)
+}
+
+pub fn process_write_stderr<p: Process>(
+  process: p,
+  value: Bytes,
+) -> Result<U32, ProcessError> {
+  process.write_stderr(value)
+}

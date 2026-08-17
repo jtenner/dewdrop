@@ -1,0 +1,296 @@
+open dew.std.fixed_array
+open dew.std.bytes
+
+fn sha256_unit() -> Unit {
+}
+
+fn sha256_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn sha256_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn sha256_u64_to_u32(value: U64) -> U32 {
+  value.into()
+}
+
+fn sha256_u64_to_u8(value: U64) -> U8 {
+  value.into()
+}
+
+fn sha256_rotate_right(value: U32, count: U32) -> U32 {
+  (value >> count) | (value << (32u32 - count))
+}
+
+fn sha256_round_constant(index: U32) -> U32 {
+  match index {
+    0u32 => 1116352408u32
+    1u32 => 1899447441u32
+    2u32 => 3049323471u32
+    3u32 => 3921009573u32
+    4u32 => 961987163u32
+    5u32 => 1508970993u32
+    6u32 => 2453635748u32
+    7u32 => 2870763221u32
+    8u32 => 3624381080u32
+    9u32 => 310598401u32
+    10u32 => 607225278u32
+    11u32 => 1426881987u32
+    12u32 => 1925078388u32
+    13u32 => 2162078206u32
+    14u32 => 2614888103u32
+    15u32 => 3248222580u32
+    16u32 => 3835390401u32
+    17u32 => 4022224774u32
+    18u32 => 264347078u32
+    19u32 => 604807628u32
+    20u32 => 770255983u32
+    21u32 => 1249150122u32
+    22u32 => 1555081692u32
+    23u32 => 1996064986u32
+    24u32 => 2554220882u32
+    25u32 => 2821834349u32
+    26u32 => 2952996808u32
+    27u32 => 3210313671u32
+    28u32 => 3336571891u32
+    29u32 => 3584528711u32
+    30u32 => 113926993u32
+    31u32 => 338241895u32
+    32u32 => 666307205u32
+    33u32 => 773529912u32
+    34u32 => 1294757372u32
+    35u32 => 1396182291u32
+    36u32 => 1695183700u32
+    37u32 => 1986661051u32
+    38u32 => 2177026350u32
+    39u32 => 2456956037u32
+    40u32 => 2730485921u32
+    41u32 => 2820302411u32
+    42u32 => 3259730800u32
+    43u32 => 3345764771u32
+    44u32 => 3516065817u32
+    45u32 => 3600352804u32
+    46u32 => 4094571909u32
+    47u32 => 275423344u32
+    48u32 => 430227734u32
+    49u32 => 506948616u32
+    50u32 => 659060556u32
+    51u32 => 883997877u32
+    52u32 => 958139571u32
+    53u32 => 1322822218u32
+    54u32 => 1537002063u32
+    55u32 => 1747873779u32
+    56u32 => 1955562222u32
+    57u32 => 2024104815u32
+    58u32 => 2227730452u32
+    59u32 => 2361852424u32
+    60u32 => 2428436474u32
+    61u32 => 2756734187u32
+    62u32 => 3204031479u32
+    63u32 => 3329325298u32
+    _ => unreachable()
+  }
+}
+
+fn sha256_initial_state() -> FixedArray<U32> {
+  let state = FixedArray::make(8u32, 0u32)
+  state.set_unchecked(0u32, 1779033703u32)
+  state.set_unchecked(1u32, 3144134277u32)
+  state.set_unchecked(2u32, 1013904242u32)
+  state.set_unchecked(3u32, 2773480762u32)
+  state.set_unchecked(4u32, 1359893119u32)
+  state.set_unchecked(5u32, 2600822924u32)
+  state.set_unchecked(6u32, 528734635u32)
+  state.set_unchecked(7u32, 1541459225u32)
+  state
+}
+
+fn sha256_padded_byte(
+  input: Bytes,
+  input_length: U64,
+  index: U64,
+  padded_length: U64,
+  bit_length: U64,
+) -> U8 {
+  if index < input_length {
+    let input_index = sha256_u64_to_u32(index)
+    input.byte_at(input_index)
+  } else if index == input_length {
+    128u8
+  } else if index >= padded_length - 8u64 {
+    let length_index = index - (padded_length - 8u64)
+    let shift = (7u64 - length_index) * 8u64
+    sha256_u64_to_u8((bit_length >> shift) & 255u64)
+  } else {
+    0u8
+  }
+}
+
+fn sha256_prepare_schedule(
+  schedule: FixedArray<U32>,
+  input: Bytes,
+  input_length: U64,
+  block_index: U32,
+  padded_length: U64,
+  bit_length: U64,
+) -> Unit {
+  let block_start = sha256_u32_to_u64(block_index)
+  let start = block_start * 64u64
+  while 0u32 {
+    word_index if word_index < 16u32 => {
+      let byte_index = word_index * 4u32
+      let byte_offset = sha256_u32_to_u64(byte_index)
+      let first = sha256_u8_to_u32(
+        sha256_padded_byte(
+          input,
+          input_length,
+          start + byte_offset,
+          padded_length,
+          bit_length,
+        ),
+      )
+      let second = sha256_u8_to_u32(
+        sha256_padded_byte(
+          input,
+          input_length,
+          start + byte_offset + 1u64,
+          padded_length,
+          bit_length,
+        ),
+      )
+      let third = sha256_u8_to_u32(
+        sha256_padded_byte(
+          input,
+          input_length,
+          start + byte_offset + 2u64,
+          padded_length,
+          bit_length,
+        ),
+      )
+      let fourth = sha256_u8_to_u32(
+        sha256_padded_byte(
+          input,
+          input_length,
+          start + byte_offset + 3u64,
+          padded_length,
+          bit_length,
+        ),
+      )
+      schedule.set_unchecked(
+        word_index,
+        (first << 24u32) | (second << 16u32) | (third << 8u32) | fourth,
+      )
+      continue word_index + 1u32
+    }
+    _ => break sha256_unit()
+  }
+  while 16u32 {
+    word_index if word_index < 64u32 => {
+      let before_15 = schedule.get_unchecked(word_index - 15u32)
+      let before_2 = schedule.get_unchecked(word_index - 2u32)
+      let sigma_0 = sha256_rotate_right(before_15, 7u32) ^
+        sha256_rotate_right(before_15, 18u32) ^ (before_15 >> 3u32)
+      let sigma_1 = sha256_rotate_right(before_2, 17u32) ^
+        sha256_rotate_right(before_2, 19u32) ^ (before_2 >> 10u32)
+      schedule.set_unchecked(
+        word_index,
+        schedule.get_unchecked(word_index - 16u32) + sigma_0 +
+        schedule.get_unchecked(word_index - 7u32) + sigma_1,
+      )
+      continue word_index + 1u32
+    }
+    _ => break sha256_unit()
+  }
+}
+
+fn sha256_compress(state: FixedArray<U32>, schedule: FixedArray<U32>) -> Unit {
+  let mut a = state.get_unchecked(0u32)
+  let mut b = state.get_unchecked(1u32)
+  let mut c = state.get_unchecked(2u32)
+  let mut d = state.get_unchecked(3u32)
+  let mut e = state.get_unchecked(4u32)
+  let mut f = state.get_unchecked(5u32)
+  let mut g = state.get_unchecked(6u32)
+  let mut h = state.get_unchecked(7u32)
+  while 0u32 {
+    round if round < 64u32 => {
+      let sum_1 = sha256_rotate_right(e, 6u32) ^
+        sha256_rotate_right(e, 11u32) ^ sha256_rotate_right(e, 25u32)
+      let choose = (e & f) ^ ((e ^ 4294967295u32) & g)
+      let temporary_1 = h + sum_1 + choose + sha256_round_constant(round) +
+        schedule.get_unchecked(round)
+      let sum_0 = sha256_rotate_right(a, 2u32) ^
+        sha256_rotate_right(a, 13u32) ^ sha256_rotate_right(a, 22u32)
+      let majority = (a & b) ^ (a & c) ^ (b & c)
+      let temporary_2 = sum_0 + majority
+      h = g
+      g = f
+      f = e
+      e = d + temporary_1
+      d = c
+      c = b
+      b = a
+      a = temporary_1 + temporary_2
+      continue round + 1u32
+    }
+    _ => break sha256_unit()
+  }
+  state.set_unchecked(0u32, state.get_unchecked(0u32) + a)
+  state.set_unchecked(1u32, state.get_unchecked(1u32) + b)
+  state.set_unchecked(2u32, state.get_unchecked(2u32) + c)
+  state.set_unchecked(3u32, state.get_unchecked(3u32) + d)
+  state.set_unchecked(4u32, state.get_unchecked(4u32) + e)
+  state.set_unchecked(5u32, state.get_unchecked(5u32) + f)
+  state.set_unchecked(6u32, state.get_unchecked(6u32) + g)
+  state.set_unchecked(7u32, state.get_unchecked(7u32) + h)
+}
+
+fn sha256_u32_to_u8(value: U32) -> U8 {
+  value.into()
+}
+
+pub fn sha256(input: Bytes) -> FixedArray<U8> {
+  let input_length_u32 = input.byte_length()
+  let input_length = sha256_u32_to_u64(input_length_u32)
+  let bit_length = input_length * 8u64
+  let remainder = input_length_u32 % 64u32
+  let block_count = (input_length_u32 / 64u32) + if remainder <= 55u32 {
+    1u32
+  } else {
+    2u32
+  }
+  let block_count_u64 = sha256_u32_to_u64(block_count)
+  let padded_length = block_count_u64 * 64u64
+  let state = sha256_initial_state()
+  let schedule = FixedArray::make(64u32, 0u32)
+  while 0u32 {
+    block_index if block_index < block_count => {
+      sha256_prepare_schedule(
+        schedule,
+        input,
+        input_length,
+        block_index,
+        padded_length,
+        bit_length,
+      )
+      sha256_compress(state, schedule)
+      continue block_index + 1u32
+    }
+    _ => break sha256_unit()
+  }
+  let digest = FixedArray::make(32u32, 0u8)
+  while 0u32 {
+    word_index if word_index < 8u32 => {
+      let word = state.get_unchecked(word_index)
+      let offset = word_index * 4u32
+      digest.set_unchecked(offset, sha256_u32_to_u8((word >> 24u32) & 255u32))
+      digest.set_unchecked(offset + 1u32, sha256_u32_to_u8((word >> 16u32) & 255u32))
+      digest.set_unchecked(offset + 2u32, sha256_u32_to_u8((word >> 8u32) & 255u32))
+      digest.set_unchecked(offset + 3u32, sha256_u32_to_u8(word & 255u32))
+      continue word_index + 1u32
+    }
+    _ => break digest
+  }
+}

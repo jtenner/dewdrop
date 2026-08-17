@@ -1,0 +1,137 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.fs
+open dew.std.path
+open dew.std.process
+open dew.std.testing
+
+fn host_test_path(value: String) -> RelativePath {
+  expect_result_ok(relative_path(value), "valid relative path was rejected")
+}
+
+struct HostTestFileSystem {
+  value: Bytes
+}
+
+impl FileSystem for HostTestFileSystem {
+  fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError> {
+    if path.to_string().equals("missing") {
+      Result::Ok(PathKind::Missing)
+    } else {
+      Result::Ok(PathKind::File)
+    }
+  }
+  fn read_file(self, path: RelativePath, max_bytes: U32) -> Result<Bytes, FsError> {
+    if self.value.byte_length() <= max_bytes {
+      Result::Ok(self.value)
+    } else {
+      Result::Err(FsError::{
+        operation: FsOperation::Read
+        path: path.to_string()
+        kind: FsErrorKind::FileTooLarge
+        code: 1u32
+      })
+    }
+  }
+  fn write_file(self, path: RelativePath, value: Bytes) -> Result<Unit, FsError> {
+    Result::Ok(host_test_unit())
+  }
+  fn create_directory(self, path: RelativePath) -> Result<Unit, FsError> {
+    Result::Ok(host_test_unit())
+  }
+  fn rename(self, source: RelativePath, destination: RelativePath) -> Result<Unit, FsError> {
+    Result::Ok(host_test_unit())
+  }
+  fn remove_file(self, path: RelativePath) -> Result<Unit, FsError> {
+    Result::Ok(host_test_unit())
+  }
+  fn remove_directory(self, path: RelativePath) -> Result<Unit, FsError> {
+    Result::Ok(host_test_unit())
+  }
+  fn atomic_write(
+    self,
+    temporary: RelativePath,
+    destination: RelativePath,
+    value: Bytes,
+  ) -> Result<Unit, FsError> {
+    Result::Ok(host_test_unit())
+  }
+}
+
+fn host_test_unit() -> Unit {
+}
+
+struct HostTestProcess {
+}
+
+impl Process for HostTestProcess {
+  fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError> {
+    let output = Array::new()
+    output.push("dew")
+    Result::Ok(output)
+  }
+  fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError> {
+    if name.equals("MODE") {
+      Result::Ok(Option::Some("test"))
+    } else {
+      Result::Ok(Option::None)
+    }
+  }
+  fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError> {
+    Result::Ok(value.byte_length())
+  }
+  fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError> {
+    Result::Ok(value.byte_length())
+  }
+  fn exit(self, status: U32) -> Never {
+    unreachable()
+  }
+}
+
+test "relative paths reject authority escapes" {
+  assert(relative_path("") is Result::Err(PathError::Empty), "empty path accepted")
+  assert(relative_path("/root") is Result::Err(PathError::Absolute), "absolute path accepted")
+  assert(relative_path("../root") is Result::Err(PathError::ParentEscape), "parent escape accepted")
+  assert(relative_path("a//b") is Result::Err(PathError::EmptySegment), "empty segment accepted")
+  assert(relative_path("a\\b") is Result::Err(PathError::Backslash), "backslash accepted")
+}
+
+test "relative paths join validated children" {
+  let root = host_test_path("cache")
+  match root.join("packs/v1.dwp") {
+    Result::Ok(path) => assert(path.to_string().equals("cache/packs/v1.dwp"), "joined path changed")
+    Result::Err(_) => assert(false, "valid child path was rejected")
+  }
+}
+
+test "filesystem contract dispatches without ambient host state" {
+  let filesystem = HostTestFileSystem::{
+    value: b"compiler"
+  }
+  assert(
+    fs_path_kind(filesystem, host_test_path("missing")) is Result::Ok(PathKind::Missing),
+    "filesystem path kind changed",
+  )
+  match fs_read_file(filesystem, host_test_path("compiler.dew"), 8u32) {
+    Result::Ok(value) => assert(value.equals(b"compiler"), "filesystem read changed")
+    Result::Err(_) => assert(false, "filesystem read failed")
+  }
+  assert(
+    fs_read_file(filesystem, host_test_path("compiler.dew"), 7u32) is Result::Err(_),
+    "filesystem read limit was ignored",
+  )
+}
+
+test "process contract keeps arguments environment and streams explicit" {
+  let process = HostTestProcess::{}
+  match process_arguments(process, 4u32, 64u32) {
+    Result::Ok(values) => assert(values.length() == 1u32, "argument count changed")
+    Result::Err(_) => assert(false, "arguments failed")
+  }
+  assert(
+    process_environment(process, "MODE", 64u32) is Result::Ok(Option::Some("test")),
+    "environment lookup changed",
+  )
+  assert(process_write_stdout(process, b"out") is Result::Ok(3u32), "stdout write changed")
+  assert(process_write_stderr(process, b"err") is Result::Ok(3u32), "stderr write changed")
+}
