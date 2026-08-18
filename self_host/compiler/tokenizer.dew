@@ -1,6 +1,7 @@
 open dew.std.array
 open dew.std.bytes
 open dew.std.bytes_builder
+open dew.std.math
 open dew.std.string
 open dew.std.string_builder
 
@@ -82,6 +83,7 @@ pub enum SelfHostLexError {
   UnexpectedUnit(U32)
   InvalidAtIdentifier
   InvalidInteger(String)
+  InvalidFloat(String)
   InvalidEscape(U32)
   UnterminatedString
 }
@@ -92,9 +94,19 @@ pub enum SelfHostTokenKind {
   Keyword(SelfHostKeyword)
   Identifier(String)
   AtIdentifier(String)
+  I8(U64)
+  I16(U64)
   I32(U64)
+  I64(U64)
+  U8(U64)
+  U16(U64)
+  U32(U64)
+  U64(U64)
+  F32(F32)
+  F64(F64)
   StringLiteral(Bytes)
   BytesLiteral(Bytes)
+  MultilineString(Bytes)
   Error(SelfHostLexError)
 }
 
@@ -190,10 +202,75 @@ fn self_host_utf8_width(source: Bytes, index: U32) -> U32 {
   }
 }
 
+fn self_host_wtf8_codepoint(source: Bytes, index: U32, width: U32) -> U32 {
+  let first = self_host_u8_to_u32(source.byte_at(index))
+  if width == 1u32 {
+    first
+  } else if width == 2u32 {
+    ((first & 31u32) << 6u32) |
+      (self_host_u8_to_u32(source.byte_at(index + 1u32)) & 63u32)
+  } else if width == 3u32 {
+    ((first & 15u32) << 12u32) |
+      ((self_host_u8_to_u32(source.byte_at(index + 1u32)) & 63u32) << 6u32) |
+      (self_host_u8_to_u32(source.byte_at(index + 2u32)) & 63u32)
+  } else {
+    ((first & 7u32) << 18u32) |
+      ((self_host_u8_to_u32(source.byte_at(index + 1u32)) & 63u32) << 12u32) |
+      ((self_host_u8_to_u32(source.byte_at(index + 2u32)) & 63u32) << 6u32) |
+      (self_host_u8_to_u32(source.byte_at(index + 3u32)) & 63u32)
+  }
+}
+
+fn self_host_unicode_whitespace(value: U32) -> Bool {
+  match value {
+    9u32 => true
+    10u32 => true
+    11u32 => true
+    12u32 => true
+    13u32 => true
+    32u32 => true
+    133u32 => true
+    160u32 => true
+    5760u32 => true
+    8192u32 => true
+    8193u32 => true
+    8194u32 => true
+    8195u32 => true
+    8196u32 => true
+    8197u32 => true
+    8198u32 => true
+    8199u32 => true
+    8200u32 => true
+    8201u32 => true
+    8202u32 => true
+    8232u32 => true
+    8233u32 => true
+    8239u32 => true
+    8287u32 => true
+    12288u32 => true
+    _ => false
+  }
+}
+
+fn self_host_surrogate(value: U32) -> Bool {
+  value >= 55296u32 && value <= 57343u32
+}
+
 fn self_host_identifier_start(source: Bytes, index: U32) -> Bool {
   let value = source.byte_at(index)
-  self_host_ascii_letter(value) || value == 95u8 ||
-    (value >= 128u8 && self_host_utf8_width(source, index) > 0u32)
+  if self_host_ascii_letter(value) || value == 95u8 {
+    true
+  } else if value >= 128u8 {
+    let width = self_host_utf8_width(source, index)
+    if width == 0u32 {
+      false
+    } else {
+      let codepoint = self_host_wtf8_codepoint(source, index, width)
+      !self_host_surrogate(codepoint) && !self_host_unicode_whitespace(codepoint)
+    }
+  } else {
+    false
+  }
 }
 
 fn self_host_identifier_continue(source: Bytes, index: U32) -> Bool {
@@ -256,34 +333,56 @@ width
   }
 }
 
-fn self_host_scan_integer(
+struct SelfHostDecimalScan {
+  value: F64
+  valid: Bool
+}
+
+struct SelfHostExponentScan {
+  magnitude: U32
+  negative: Bool
+  present: Bool
+  valid: Bool
+}
+
+fn self_host_u32_to_f64(value: U32) -> F64 {
+  value.into()
+}
+
+fn self_host_f64_to_f32(value: F64) -> F32 {
+  value.into()
+}
+
+fn self_host_scan_decimal_digits(
   tokenizer: SelfHostTokenizer,
-  output: Array<SelfHostToken>,
-  offset: U32,
-) -> Unit {
-  let start = tokenizer.position
-  let mut magnitude = 0u64
-  let mut valid = true
+  fractional: Bool,
+  initial: F64,
+) -> SelfHostDecimalScan {
+  let mut value = initial
+  let mut scale = 1.0f64
   let mut saw_digit = false
   let mut previous_underscore = false
+  let mut valid = true
   while tokenizer.position {
     index if index < tokenizer.source.byte_length() => {
-      let value = tokenizer.source.byte_at(index)
-      if self_host_ascii_digit(value) {
-        let digit = self_host_u8_to_u64(value - 48u8)
-        if magnitude > (18446744073709551615u64 - digit) / 10u64 {
-          valid = false
+      let unit = tokenizer.source.byte_at(index)
+      if self_host_ascii_digit(unit) {
+        let digit = self_host_u32_to_f64(self_host_u8_to_u32(unit - 48u8))
+        if fractional {
+          scale = scale * 10.0f64
+          value = value + digit / scale
         } else {
-          magnitude = magnitude * 10u64 + digit
+          value = value * 10.0f64 + digit
         }
         saw_digit = true
         previous_underscore = false
         tokenizer.position = index + 1u32
         continue tokenizer.position
-      } else if value == 95u8 {
+      } else if unit == 95u8 {
         if !saw_digit || previous_underscore {
-valid = false
-} else { }
+          valid = false
+        } else {
+        }
         previous_underscore = true
         tokenizer.position = index + 1u32
         continue tokenizer.position
@@ -293,19 +392,770 @@ valid = false
     }
     index => break index
   }
-  if previous_underscore {
-valid = false
-} else { }
-  let text = tokenizer.source.slice(start, tokenizer.position).to_string()
-  if valid && magnitude <= 2147483648u64 {
-    self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::I32(magnitude), offset)
+  SelfHostDecimalScan::{
+    value: value
+    valid: valid && saw_digit && !previous_underscore
+  }
+}
+
+fn self_host_pow10(exponent: U32) -> F64 {
+  match exponent {
+    0u32 => 1.0f64
+    1u32 => 1.0e1f64
+    2u32 => 1.0e2f64
+    3u32 => 1.0e3f64
+    4u32 => 1.0e4f64
+    8u32 => 1.0e8f64
+    16u32 => 1.0e16f64
+    32u32 => 1.0e32f64
+    64u32 => 1.0e64f64
+    128u32 => 1.0e128f64
+    256u32 => 1.0e256f64
+    292u32 => 1.0e292f64
+    308u32 => 1.0e308f64
+    _ => {
+      let mut power = 10.0f64
+      let mut result = 1.0f64
+      let _ = while exponent {
+        remaining if remaining > 0u32 => {
+          if (remaining & 1u32) == 1u32 {
+            result = result * power
+          } else {
+          }
+          power = power * power
+          continue remaining >> 1u32
+        }
+        _ => break result
+      }
+      result
+    }
+  }
+}
+
+fn self_host_scale_decimal(value: F64, exponent: U32, negative: Bool) -> F64 {
+  let mut result = value
+  let _ = while exponent {
+    remaining if remaining > 0u32 => {
+      let chunk = if remaining > 308u32 {
+        308u32
+      } else {
+        remaining
+      }
+      let factor = self_host_pow10(chunk)
+      if negative {
+        result = result / factor
+      } else {
+        result = result * factor
+      }
+      continue remaining - chunk
+    }
+    _ => break result
+  }
+  result
+}
+
+struct SelfHostBigUInt {
+  limbs: Array<U32>
+}
+
+struct SelfHostDyadic {
+  significand: U64
+  exponent: I32
+}
+
+fn self_host_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn self_host_u64_to_u32(value: U64) -> U32 {
+  value.into()
+}
+
+fn self_host_u32_to_i32(value: U32) -> I32 {
+  value.into()
+}
+
+fn self_host_tokenizer_i32_to_u32(value: I32) -> U32 {
+  value.into()
+}
+
+fn self_host_big_zero() -> SelfHostBigUInt {
+  let limbs = Array::new()
+  limbs.push(0u32)
+  SelfHostBigUInt::{
+    limbs: limbs
+  }
+}
+
+fn self_host_big_from_u64(value: U64) -> SelfHostBigUInt {
+  let limbs = Array::new()
+  limbs.push(self_host_u64_to_u32(value & 4294967295u64))
+  let high = value >> 32u64
+  if high > 0u64 {
+    limbs.push(self_host_u64_to_u32(high))
   } else {
-    self_host_tokenizer_emit(
-      tokenizer,
-      output,
-      SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger(text)),
-      offset,
-    )
+  }
+  SelfHostBigUInt::{
+    limbs: limbs
+  }
+}
+
+fn self_host_big_copy(value: SelfHostBigUInt) -> SelfHostBigUInt {
+  let limbs = Array::with_capacity(value.limbs.length())
+  while 0u32 {
+    index if index < value.limbs.length() => {
+      limbs.push(value.limbs.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  SelfHostBigUInt::{
+    limbs: limbs
+  }
+}
+
+fn self_host_big_mul_small(value: SelfHostBigUInt, factor: U32) -> Unit {
+  let mut carry = 0u64
+  while 0u32 {
+    index if index < value.limbs.length() => {
+      let product = self_host_u32_to_u64(value.limbs.get_unchecked(index)) * self_host_u32_to_u64(factor) + carry
+      value.limbs.set_unchecked(index, self_host_u64_to_u32(product & 4294967295u64))
+      carry = product >> 32u64
+      continue index + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  if carry > 0u64 {
+    value.limbs.push(self_host_u64_to_u32(carry))
+  } else {
+  }
+}
+
+fn self_host_big_add_small(value: SelfHostBigUInt, addend: U32) -> Unit {
+  let mut carry = self_host_u32_to_u64(addend)
+  let _ = while 0u32 {
+    index if carry > 0u64 && index < value.limbs.length() => {
+      let sum = self_host_u32_to_u64(value.limbs.get_unchecked(index)) + carry
+      value.limbs.set_unchecked(index, self_host_u64_to_u32(sum & 4294967295u64))
+      carry = sum >> 32u64
+      continue index + 1u32
+    }
+    _ => break carry
+  }
+  if carry > 0u64 {
+    value.limbs.push(self_host_u64_to_u32(carry))
+  } else {
+  }
+}
+
+fn self_host_big_mul_pow5(value: SelfHostBigUInt, exponent: U32) -> Unit {
+  let _ = while exponent {
+    remaining if remaining > 0u32 => {
+      self_host_big_mul_small(value, 5u32)
+      continue remaining - 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+}
+
+fn self_host_big_shift_left(value: SelfHostBigUInt, shift: U32) -> SelfHostBigUInt {
+  if shift == 0u32 {
+    self_host_big_copy(value)
+  } else {
+    let word_shift = shift / 32u32
+    let bit_shift = shift % 32u32
+    let limbs = Array::with_capacity(value.limbs.length() + word_shift + 1u32)
+    while 0u32 {
+      index if index < word_shift => {
+        limbs.push(0u32)
+        continue index + 1u32
+      }
+      _ => break self_host_tokenizer_unit()
+    }
+    let mut carry = 0u64
+    while 0u32 {
+      index if index < value.limbs.length() => {
+        let unit = self_host_u32_to_u64(value.limbs.get_unchecked(index))
+        let combined = if bit_shift == 0u32 {
+          unit
+        } else {
+          (unit << self_host_u32_to_u64(bit_shift)) | carry
+        }
+        limbs.push(self_host_u64_to_u32(combined & 4294967295u64))
+        carry = if bit_shift == 0u32 {
+          0u64
+        } else {
+          combined >> 32u64
+        }
+        continue index + 1u32
+      }
+      _ => break self_host_tokenizer_unit()
+    }
+    if carry > 0u64 {
+      limbs.push(self_host_u64_to_u32(carry))
+    } else {
+    }
+    SelfHostBigUInt::{
+    limbs: limbs
+  }
+  }
+}
+
+fn self_host_big_compare(left: SelfHostBigUInt, right: SelfHostBigUInt) -> I32 {
+  if left.limbs.length() < right.limbs.length() {
+    -1i32
+  } else if left.limbs.length() > right.limbs.length() {
+    1i32
+  } else {
+    while left.limbs.length() {
+      remaining if remaining > 0u32 => {
+        let index = remaining - 1u32
+        let left_unit = left.limbs.get_unchecked(index)
+        let right_unit = right.limbs.get_unchecked(index)
+        if left_unit < right_unit {
+          return -1i32
+        } else if left_unit > right_unit {
+          return 1i32
+        } else {
+        }
+        continue index
+      }
+      _ => break self_host_tokenizer_unit()
+    }
+    0i32
+  }
+}
+
+fn self_host_big_decimal(source: Bytes, start: U32, end: U32) -> SelfHostBigUInt {
+  let value = self_host_big_zero()
+  while start {
+    index if index < end => {
+      let unit = source.byte_at(index)
+      if self_host_ascii_digit(unit) {
+        self_host_big_mul_small(value, 10u32)
+        self_host_big_add_small(value, self_host_u8_to_u32(unit - 48u8))
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break value
+  }
+}
+
+fn self_host_f64_dyadic(bits: U64) -> SelfHostDyadic {
+  let exponent_field = self_host_u64_to_u32((bits >> 52u64) & 2047u64)
+  let fraction = bits & 4503599627370495u64
+  if exponent_field == 0u32 {
+    SelfHostDyadic::{
+      significand: fraction
+      exponent: -1074i32
+    }
+  } else {
+    SelfHostDyadic::{
+      significand: 4503599627370496u64 | fraction
+      exponent: self_host_u32_to_i32(exponent_field) - 1075i32
+    }
+  }
+}
+
+fn self_host_decimal_compare_dyadic(
+  decimal: SelfHostBigUInt,
+  decimal_exponent: I32,
+  dyadic_significand: U64,
+  dyadic_exponent: I32,
+) -> I32 {
+  let left = self_host_big_copy(decimal)
+  let right = self_host_big_from_u64(dyadic_significand)
+  let mut left_shift = 0i32
+  let mut right_shift = dyadic_exponent
+  if decimal_exponent >= 0i32 {
+    self_host_big_mul_pow5(left, self_host_tokenizer_i32_to_u32(decimal_exponent))
+    left_shift = decimal_exponent
+  } else {
+    let denominator_exponent = self_host_tokenizer_i32_to_u32(-decimal_exponent)
+    self_host_big_mul_pow5(right, denominator_exponent)
+    right_shift = right_shift + self_host_u32_to_i32(denominator_exponent)
+  }
+  let minimum_shift = if left_shift < right_shift {
+    left_shift
+  } else {
+    right_shift
+  }
+  let shifted_left = self_host_big_shift_left(left, self_host_tokenizer_i32_to_u32(left_shift - minimum_shift))
+  let shifted_right = self_host_big_shift_left(right, self_host_tokenizer_i32_to_u32(right_shift - minimum_shift))
+  self_host_big_compare(shifted_left, shifted_right)
+}
+
+struct SelfHostDecimalInfo {
+  exponent: I32
+  digit_count: U32
+}
+
+fn self_host_decimal_exponent(
+  source: Bytes,
+  start: U32,
+  end: U32,
+  exponent: SelfHostExponentScan,
+) -> SelfHostDecimalInfo {
+  let mut fraction_digits = 0u32
+  let mut digit_count = 0u32
+  let mut after_dot = false
+  let _ = while start {
+    index if index < end => {
+      let unit = source.byte_at(index)
+      if unit == 46u8 {
+        after_dot = true
+      } else if self_host_ascii_digit(unit) {
+        digit_count = digit_count + 1u32
+        if after_dot {
+          fraction_digits = fraction_digits + 1u32
+        } else {
+        }
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break digit_count
+  }
+  let explicit = if exponent.present {
+    if exponent.negative {
+      -self_host_u32_to_i32(exponent.magnitude)
+    } else {
+      self_host_u32_to_i32(exponent.magnitude)
+    }
+  } else {
+    0i32
+  }
+  SelfHostDecimalInfo::{
+    exponent: explicit - self_host_u32_to_i32(fraction_digits)
+    digit_count: digit_count
+  }
+}
+
+fn self_host_midpoint(lower_bits: U64) -> SelfHostDyadic {
+  let lower = self_host_f64_dyadic(lower_bits)
+  let upper = self_host_f64_dyadic(lower_bits + 1u64)
+  let minimum = if lower.exponent < upper.exponent {
+    lower.exponent
+  } else {
+    upper.exponent
+  }
+  let lower_shift = self_host_tokenizer_i32_to_u32(lower.exponent - minimum)
+  let upper_shift = self_host_tokenizer_i32_to_u32(upper.exponent - minimum)
+  SelfHostDyadic::{
+    significand: (lower.significand << self_host_u32_to_u64(lower_shift)) + (upper.significand << self_host_u32_to_u64(upper_shift))
+    exponent: minimum - 1i32
+  }
+}
+
+fn self_host_round_decimal_exact(
+  source: Bytes,
+  start: U32,
+  end: U32,
+  exponent: SelfHostExponentScan,
+  approximate: F64,
+) -> F64 {
+  let decimal_info = self_host_decimal_exponent(source, start, end, exponent)
+  let decimal_exponent = decimal_info.exponent
+  let digit_count = decimal_info.digit_count
+  if digit_count <= 15u32 && decimal_exponent > -23i32 && decimal_exponent < 23i32 {
+    approximate
+  } else if digit_count > 768u32 || decimal_exponent < -400i32 || decimal_exponent > 400i32 {
+    approximate
+  } else {
+    let decimal = self_host_big_decimal(source, start, end)
+    let mut bits = f64_to_bits(approximate)
+    if bits >= 9218868437227405312u64 {
+      bits = 9218868437227405311u64
+    } else {
+    }
+    let mut comparison = self_host_decimal_compare_dyadic(decimal, decimal_exponent, self_host_f64_dyadic(bits).significand, self_host_f64_dyadic(bits).exponent)
+    let _ = while 0u32 {
+      count if comparison < 0i32 && bits > 0u64 && count < 8u32 => {
+        bits = bits - 1u64
+        let candidate = self_host_f64_dyadic(bits)
+        comparison = self_host_decimal_compare_dyadic(decimal, decimal_exponent, candidate.significand, candidate.exponent)
+        continue count + 1u32
+      }
+      _ => break bits
+    }
+    let _ = while 0u32 {
+      count if comparison > 0i32 && bits < 9218868437227405311u64 && count < 8u32 => {
+        let next = self_host_f64_dyadic(bits + 1u64)
+        let next_comparison = self_host_decimal_compare_dyadic(decimal, decimal_exponent, next.significand, next.exponent)
+        if next_comparison < 0i32 {
+          break bits
+        } else {
+          bits = bits + 1u64
+          comparison = next_comparison
+          continue count + 1u32
+        }
+      }
+      _ => break bits
+    }
+    if comparison == 0i32 {
+      f64_from_bits(bits)
+    } else {
+      let lower_bits = if comparison < 0i32 {
+        bits - 1u64
+      } else {
+        bits
+      }
+      let midpoint = self_host_midpoint(lower_bits)
+      let midpoint_comparison = self_host_decimal_compare_dyadic(decimal, decimal_exponent, midpoint.significand, midpoint.exponent)
+      if midpoint_comparison < 0i32 || (midpoint_comparison == 0i32 && (lower_bits & 1u64) == 0u64) {
+        f64_from_bits(lower_bits)
+      } else {
+        f64_from_bits(lower_bits + 1u64)
+      }
+    }
+  }
+}
+
+fn self_host_decimal_value(
+  source: Bytes,
+  start: U32,
+  end: U32,
+  exponent: SelfHostExponentScan,
+) -> F64 {
+  let mut significand = 0u64
+  let mut fraction_digits = 0u32
+  let mut skipped_digits = 0u32
+  let mut after_dot = false
+  let mut storing = true
+  let _ = while start {
+    index if index < end => {
+      let unit = source.byte_at(index)
+      if unit == 46u8 {
+        after_dot = true
+      } else if self_host_ascii_digit(unit) {
+        if after_dot {
+          fraction_digits = fraction_digits + 1u32
+        } else {
+        }
+        let digit = self_host_u8_to_u64(unit - 48u8)
+        if storing && significand <= (18446744073709551615u64 - digit) / 10u64 {
+          significand = significand * 10u64 + digit
+        } else {
+          storing = false
+          skipped_digits = skipped_digits + 1u32
+        }
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break significand
+  }
+  let _ = while fraction_digits {
+    remaining if remaining > 0u32 && skipped_digits == 0u32 && (significand % 10u64) == 0u64 => {
+      significand = significand / 10u64
+      fraction_digits = remaining - 1u32
+      continue fraction_digits
+    }
+    _ => break significand
+  }
+  let base_exponent = if exponent.present {
+    exponent.magnitude
+  } else {
+    0u32
+  }
+  let positive_shift = skipped_digits + if exponent.present && !exponent.negative {
+    base_exponent
+  } else {
+    0u32
+  }
+  let negative_shift_magnitude = fraction_digits + if exponent.present && exponent.negative {
+    base_exponent
+  } else {
+    0u32
+  }
+  let decimal_shift = if positive_shift >= negative_shift_magnitude {
+    positive_shift - negative_shift_magnitude
+  } else {
+    negative_shift_magnitude - positive_shift
+  }
+  let negative_shift = positive_shift < negative_shift_magnitude
+  let approximate = self_host_scale_decimal(significand.into(), decimal_shift, negative_shift)
+  self_host_round_decimal_exact(source, start, end, exponent, approximate)
+}
+
+fn self_host_scan_exponent(tokenizer: SelfHostTokenizer) -> SelfHostExponentScan {
+  if tokenizer.position >= tokenizer.source.byte_length() {
+    SelfHostExponentScan::{
+      magnitude: 0u32
+      negative: false
+      present: false
+      valid: true
+    }
+  } else {
+    let unit = tokenizer.source.byte_at(tokenizer.position)
+    if unit != 101u8 && unit != 69u8 {
+      SelfHostExponentScan::{
+      magnitude: 0u32
+      negative: false
+      present: false
+      valid: true
+    }
+    } else {
+      tokenizer.position = tokenizer.position + 1u32
+      let mut negative = false
+      if tokenizer.position < tokenizer.source.byte_length() {
+        let sign = tokenizer.source.byte_at(tokenizer.position)
+        if sign == 43u8 || sign == 45u8 {
+          negative = sign == 45u8
+          tokenizer.position = tokenizer.position + 1u32
+        } else {
+        }
+      } else {
+      }
+      let mut exponent = 0u32
+      let mut saw_digit = false
+      let mut previous_underscore = false
+      let mut valid = true
+      while tokenizer.position {
+        index if index < tokenizer.source.byte_length() => {
+          let digit = tokenizer.source.byte_at(index)
+          if self_host_ascii_digit(digit) {
+            if exponent < 10000u32 {
+              exponent = exponent * 10u32 + self_host_u8_to_u32(digit - 48u8)
+              if exponent > 10000u32 {
+                exponent = 10000u32
+              } else {
+              }
+            } else {
+            }
+            saw_digit = true
+            previous_underscore = false
+            tokenizer.position = index + 1u32
+            continue tokenizer.position
+          } else if digit == 95u8 {
+            if !saw_digit || previous_underscore {
+              valid = false
+            } else {
+            }
+            previous_underscore = true
+            tokenizer.position = index + 1u32
+            continue tokenizer.position
+          } else {
+            break index
+          }
+        }
+        index => break index
+      }
+      SelfHostExponentScan::{
+        magnitude: exponent
+        negative: negative
+        present: true
+        valid: valid && saw_digit && !previous_underscore
+      }
+    }
+  }
+}
+
+fn self_host_scan_numeric_width(tokenizer: SelfHostTokenizer) -> U32 {
+  if tokenizer.position >= tokenizer.source.byte_length() {
+    0u32
+  } else {
+    let first = tokenizer.source.byte_at(tokenizer.position)
+    tokenizer.position = tokenizer.position + 1u32
+    if first == 56u8 {
+      8u32
+    } else if first == 49u8 && tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 54u8 {
+      tokenizer.position = tokenizer.position + 1u32
+      16u32
+    } else if first == 51u8 && tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 50u8 {
+      tokenizer.position = tokenizer.position + 1u32
+      32u32
+    } else if first == 54u8 && tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 52u8 {
+      tokenizer.position = tokenizer.position + 1u32
+      64u32
+    } else {
+      0u32
+    }
+  }
+}
+
+fn self_host_integer_kind(
+  magnitude: U64,
+  width: U32,
+  unsigned: Bool,
+) -> SelfHostTokenKind {
+  if unsigned {
+    match width {
+      8u32 => SelfHostTokenKind::U8(magnitude)
+      16u32 => SelfHostTokenKind::U16(magnitude)
+      32u32 => SelfHostTokenKind::U32(magnitude)
+      _ => SelfHostTokenKind::U64(magnitude)
+    }
+  } else {
+    match width {
+      8u32 => SelfHostTokenKind::I8(magnitude)
+      16u32 => SelfHostTokenKind::I16(magnitude)
+      32u32 => SelfHostTokenKind::I32(magnitude)
+      _ => SelfHostTokenKind::I64(magnitude)
+    }
+  }
+}
+
+fn self_host_integer_in_range(magnitude: U64, width: U32, unsigned: Bool) -> Bool {
+  if unsigned {
+    match width {
+      8u32 => magnitude <= 255u64
+      16u32 => magnitude <= 65535u64
+      32u32 => magnitude <= 4294967295u64
+      _ => true
+    }
+  } else {
+    match width {
+      8u32 => magnitude <= 128u64
+      16u32 => magnitude <= 32768u64
+      32u32 => magnitude <= 2147483648u64
+      _ => magnitude <= 9223372036854775808u64
+    }
+  }
+}
+
+fn self_host_scan_number(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  offset: U32,
+  leading_dot: Bool,
+) -> Unit {
+  let start = tokenizer.position
+  let mut magnitude = 0u64
+  let mut magnitude_valid = true
+  let mut value = 0.0f64
+  let mut valid = true
+  let mut has_dot = leading_dot
+  if leading_dot {
+    tokenizer.position = tokenizer.position + 1u32
+  } else {
+    let mut saw_digit = false
+    let mut previous_underscore = false
+    while tokenizer.position {
+      index if index < tokenizer.source.byte_length() => {
+        let unit = tokenizer.source.byte_at(index)
+        if self_host_ascii_digit(unit) {
+          let digit_u64 = self_host_u8_to_u64(unit - 48u8)
+          if magnitude > (18446744073709551615u64 - digit_u64) / 10u64 {
+            magnitude_valid = false
+          } else {
+            magnitude = magnitude * 10u64 + digit_u64
+          }
+          let digit_f64 = self_host_u32_to_f64(self_host_u8_to_u32(unit - 48u8))
+          value = value * 10.0f64 + digit_f64
+          saw_digit = true
+          previous_underscore = false
+          tokenizer.position = index + 1u32
+          continue tokenizer.position
+        } else if unit == 95u8 {
+          if !saw_digit || previous_underscore {
+            valid = false
+          } else {
+          }
+          previous_underscore = true
+          tokenizer.position = index + 1u32
+          continue tokenizer.position
+        } else {
+          break index
+        }
+      }
+      index => break index
+    }
+    valid = valid && saw_digit && !previous_underscore && magnitude_valid
+  }
+  if !leading_dot && tokenizer.position + 1u32 < tokenizer.source.byte_length() &&
+    tokenizer.source.byte_at(tokenizer.position) == 46u8 &&
+    self_host_ascii_digit(tokenizer.source.byte_at(tokenizer.position + 1u32)) {
+    has_dot = true
+    tokenizer.position = tokenizer.position + 1u32
+  } else {
+  }
+  if has_dot {
+    let fraction = self_host_scan_decimal_digits(tokenizer, true, value)
+    valid = valid && fraction.valid
+    let mantissa_end = tokenizer.position
+    let exponent = self_host_scan_exponent(tokenizer)
+    if exponent.present && !exponent.valid {
+      valid = false
+    } else {
+      value = self_host_decimal_value(tokenizer.source, start, mantissa_end, exponent)
+    }
+    if exponent.present && !exponent.valid {
+      valid = false
+    } else {
+    }
+    let mut width = 64u32
+    if tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 70u8 {
+      tokenizer.position = tokenizer.position + 1u32
+      width = 32u32
+    } else if tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 102u8 {
+      tokenizer.position = tokenizer.position + 1u32
+      width = self_host_scan_numeric_width(tokenizer)
+      if width != 32u32 && width != 64u32 {
+        valid = false
+      } else {
+      }
+    } else {
+    }
+    if valid {
+      if width == 32u32 {
+        let narrowed = self_host_f64_to_f32(value)
+        self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::F32(narrowed), offset)
+      } else {
+        self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::F64(value), offset)
+      }
+    } else {
+      let text = tokenizer.source.slice(start, tokenizer.position).to_string()
+      self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidFloat(text)), offset)
+    }
+  } else if tokenizer.position < tokenizer.source.byte_length() &&
+    (tokenizer.source.byte_at(tokenizer.position) == 101u8 ||
+    tokenizer.source.byte_at(tokenizer.position) == 69u8 ||
+    tokenizer.source.byte_at(tokenizer.position) == 70u8) {
+    if tokenizer.source.byte_at(tokenizer.position) == 70u8 {
+      tokenizer.position = tokenizer.position + 1u32
+    } else {
+      let _ = self_host_scan_exponent(tokenizer)
+    }
+    let text = tokenizer.source.slice(start, tokenizer.position).to_string()
+    self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidFloat(text)), offset)
+  } else {
+    let mut width = 32u32
+    let mut unsigned = false
+    let mut suffix_valid = true
+    if tokenizer.position < tokenizer.source.byte_length() {
+      let suffix = tokenizer.source.byte_at(tokenizer.position)
+      if suffix == 105u8 || suffix == 117u8 {
+        unsigned = suffix == 117u8
+        tokenizer.position = tokenizer.position + 1u32
+        width = self_host_scan_numeric_width(tokenizer)
+        if width == 0u32 {
+          suffix_valid = false
+        } else {
+        }
+      } else if suffix == 85u8 {
+        unsigned = true
+        tokenizer.position = tokenizer.position + 1u32
+        if tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 76u8 {
+          tokenizer.position = tokenizer.position + 1u32
+          width = 64u32
+        } else {
+          width = 32u32
+        }
+      } else if suffix == 76u8 {
+        tokenizer.position = tokenizer.position + 1u32
+        width = 64u32
+      } else {
+      }
+    } else {
+    }
+    if valid && suffix_valid && self_host_integer_in_range(magnitude, width, unsigned) {
+      self_host_tokenizer_emit(tokenizer, output, self_host_integer_kind(magnitude, width, unsigned), offset)
+    } else {
+      let text = tokenizer.source.slice(start, tokenizer.position).to_string()
+      self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger(text)), offset)
+    }
   }
 }
 
@@ -362,13 +1212,24 @@ builder.append_byte(0u8)
 builder.append_byte(8u8)
 } else if escaped == 102u8 {
 builder.append_byte(12u8)
-} else if escaped == 120u8 && tokenizer.position + 2u32 <= tokenizer.source.byte_length() {
+} else if escaped == 120u8 {
+            if tokenizer.position >= tokenizer.source.byte_length() {
+              self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidEscape(escaped.into())), offset)
+              return
+            } else {
+            }
             let high = self_host_hex(tokenizer.source.byte_at(tokenizer.position))
-            let low = self_host_hex(tokenizer.source.byte_at(tokenizer.position + 1u32))
+            tokenizer.position = tokenizer.position + 1u32
+            if tokenizer.position >= tokenizer.source.byte_length() {
+              self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidEscape(escaped.into())), offset)
+              return
+            } else {
+            }
+            let low = self_host_hex(tokenizer.source.byte_at(tokenizer.position))
+            tokenizer.position = tokenizer.position + 1u32
             if high < 16u32 && low < 16u32 {
               let byte = self_host_u32_to_u8((high << 4u32) | low)
               builder.append_byte(byte)
-              tokenizer.position = tokenizer.position + 2u32
             } else {
               self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidEscape(escaped.into())), offset)
               return
@@ -411,6 +1272,55 @@ width
     }
   } else {
     self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::UnterminatedString), offset)
+  }
+}
+
+fn self_host_scan_multiline_string(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  offset: U32,
+) -> Unit {
+  tokenizer.position = tokenizer.position + 2u32
+  let builder = BytesBuilder::new()
+  while tokenizer.position {
+    index if index < tokenizer.source.byte_length() => {
+      let unit = tokenizer.source.byte_at(index)
+      if unit == 10u8 || unit == 13u8 {
+        let newline_offset = index
+        tokenizer.position = index + 1u32
+        if unit == 13u8 && tokenizer.position < tokenizer.source.byte_length() && tokenizer.source.byte_at(tokenizer.position) == 10u8 {
+          tokenizer.position = tokenizer.position + 1u32
+        } else {
+        }
+        while tokenizer.position {
+          space if space < tokenizer.source.byte_length() &&
+            (tokenizer.source.byte_at(space) == 32u8 || tokenizer.source.byte_at(space) == 9u8) => {
+            tokenizer.position = space + 1u32
+            continue tokenizer.position
+          }
+          _ => break tokenizer.position
+        }
+        if tokenizer.position + 1u32 < tokenizer.source.byte_length() &&
+          tokenizer.source.byte_at(tokenizer.position) == 35u8 &&
+          tokenizer.source.byte_at(tokenizer.position + 1u32) == 124u8 {
+          builder.append_byte(10u8)
+          tokenizer.position = tokenizer.position + 2u32
+          continue tokenizer.position
+        } else {
+          self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::MultilineString(builder.finish()), offset)
+          self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Newline, newline_offset)
+          return
+        }
+      } else {
+        builder.append_byte(unit)
+        tokenizer.position = index + 1u32
+        continue tokenizer.position
+      }
+    }
+    _ => {
+      self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::MultilineString(builder.finish()), offset)
+      return
+    }
   }
 }
 
@@ -534,6 +1444,9 @@ pub fn self_host_tokenize(source: Bytes) -> Array<SelfHostToken> {
       let value = source.byte_at(index)
       if value == 32u8 || value == 9u8 || value == 11u8 || value == 12u8 {
         tokenizer.position = index + 1u32
+      } else if value >= 128u8 && self_host_utf8_width(source, index) > 0u32 &&
+        self_host_unicode_whitespace(self_host_wtf8_codepoint(source, index, self_host_utf8_width(source, index))) {
+        tokenizer.position = index + self_host_utf8_width(source, index)
       } else if value == 47u8 && index + 1u32 < source.byte_length() && source.byte_at(index + 1u32) == 47u8 {
         tokenizer.position = index + 2u32
         while tokenizer.position {
@@ -549,6 +1462,8 @@ pub fn self_host_tokenize(source: Bytes) -> Array<SelfHostToken> {
 tokenizer.position = tokenizer.position + 1u32
 } else { }
         self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Newline, index)
+      } else if value == 35u8 && index + 1u32 < source.byte_length() && source.byte_at(index + 1u32) == 124u8 {
+        self_host_scan_multiline_string(tokenizer, output, index)
       } else if value == 98u8 && index + 1u32 < source.byte_length() && source.byte_at(index + 1u32) == 34u8 {
         tokenizer.position = index + 1u32
         self_host_scan_string(tokenizer, output, index, true)
@@ -569,10 +1484,19 @@ tokenizer.position = tokenizer.position + 1u32
           Option::None => self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Identifier(name), index)
         }
       } else if self_host_ascii_digit(value) {
-        self_host_scan_integer(tokenizer, output, index)
+        self_host_scan_number(tokenizer, output, index, false)
+      } else if value == 46u8 && index + 1u32 < source.byte_length() && self_host_ascii_digit(source.byte_at(index + 1u32)) {
+        self_host_scan_number(tokenizer, output, index, true)
       } else if value >= 128u8 {
-        tokenizer.position = index + 1u32
-        self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::UnexpectedUnit(1114112u32 + self_host_u8_to_u32(value))), index)
+        let width = self_host_utf8_width(source, index)
+        if width == 0u32 {
+          tokenizer.position = index + 1u32
+          self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::UnexpectedUnit(1114112u32 + self_host_u8_to_u32(value))), index)
+        } else {
+          let codepoint = self_host_wtf8_codepoint(source, index, width)
+          tokenizer.position = index + width
+          self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::UnexpectedUnit(codepoint)), index)
+        }
       } else {
         self_host_scan_symbol(tokenizer, output, index)
       }

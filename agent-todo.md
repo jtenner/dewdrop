@@ -4,7 +4,7 @@
 
 ## P1 — self-hosting
 
-1. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
+1. Port the parser, semantic analysis, optimization, backend, cache codecs, and compiler driver to Dew in dependency order. The in-memory source-Bytes tokenizer port is complete.
 2. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
 
 Use [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md) for the audited host, Wasm, collection, and port-surface gaps. Port-enabling options in that catalog remain decisions, not active backlog items, until explicitly selected.

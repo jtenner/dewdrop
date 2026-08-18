@@ -79,7 +79,7 @@ That repair exposed a second Starshine cleanup bug. A retained declaration-only 
 
 Starshine commits `664cafba9` and `c544a96d3` add the typed bridges and canonical generated interface; both are pushed to `master`. The regenerated provider SHA-256 is `b0108c45dd634f9f3c9c971663ee3a3016ab9c35488573b7fe375d6a0f041f63`.
 
-The compiler fingerprint is BLAKE3-256 over a canonical prefix containing the submodule revision, four interface SHA-256 digests, and every selected export name and signature, followed by the exact provider bytes. With the first tokenizer/parser slice linked, the source-request compiler builds byte-identically at 887,505 bytes with SHA-256 `7083bfdaa3130fde088f17918deb99491090928bc729ae414d06a1e5cc0a1df5`. It emits a 28-byte validated module containing `i32.const 73`, with SHA-256 `abaf57175758ac133a309c4700feface2a9ad611b3eb0fe926d1036bee80e288`. The harness rejects both a one-byte compiler-fingerprint mutation and an unbounded `0xffffffff` module count.
+The compiler fingerprint is BLAKE3-256 over a canonical prefix containing the submodule revision, four interface SHA-256 digests, and every selected export name and signature, followed by the exact provider bytes. With the complete in-memory tokenizer and first parser slice linked, the source-request compiler builds byte-identically at 898,311 bytes with SHA-256 `130e30b3e5d5b8d76620a589328092f92eaa33f5d00a5d2287e877e7e496e576`. It emits a 28-byte validated module containing `i32.const 73`, with SHA-256 `abaf57175758ac133a309c4700feface2a9ad611b3eb0fe926d1036bee80e288`. The harness rejects both a one-byte compiler-fingerprint mutation and an unbounded `0xffffffff` module count.
 
 ## Reproduction
 

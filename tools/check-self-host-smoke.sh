@@ -11,6 +11,7 @@ tools/dew test \
   self_host/compiler/tokenizer.dew \
   self_host/compiler/parser.dew \
   self_host/compiler/tokenizer_test.dew \
+  self_host/compiler/tokenizer_parity_test.dew \
   self_host/compiler/parser_test.dew
 
 rm -rf "$work"
