@@ -36,12 +36,14 @@ fn unreachable_items_source(item_count : Int) -> Bytes {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "flow exhaustiveness handles 1024 enum variants iteratively" {
   let (_, _, _, flows) = flow_test_module(301UL, flow_enum_source(1024, false))
   assert_eq(flows.diagnostics.length(), 0)
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "flow redundancy handles 1024 ordered arms iteratively" {
   let (_, _, _, flows) = flow_test_module(302UL, flow_enum_source(1024, true))
   let mut redundant_count = 0
@@ -55,6 +57,7 @@ test "flow redundancy handles 1024 ordered arms iteratively" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "flow sequencing reports 1024 unreachable block items iteratively" {
   let (_, _, _, flows) = flow_test_module(303UL, unreachable_items_source(1024))
   let mut unreachable_count = 0

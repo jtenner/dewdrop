@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "String StringView and Bytes Hash evidence lowers into map use" {
   let program = collect_program_manifest(
     2643UL,

@@ -23,6 +23,7 @@ fn deep_generic_call_source(depth : Int) -> Bytes {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "generic call instantiation remains iterative through 1024 applied types" {
   let collected = collect_bytes(108UL, deep_generic_call_source(1024))
   let resolved = resolve_module_types(collected)
@@ -54,6 +55,7 @@ test "generic call instantiation remains iterative through 1024 applied types" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "call inference artifacts are independent of body job order" {
   let collected = collect_bytes(
     109UL, b"builtin convert(value: I32) -> I64 = \"i32_to_i64\"\nbuiltin convert(value: F32) -> F64 = \"f32_to_f64\"\nfn identity<t>(value: t) -> t {\n  value\n}\nfn first() -> I64 {\n  convert(1)\n}\nfn second() -> Bool {\n  identity(true)\n}\n",

@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "text comparators remain explicit and lower through ordering evidence" {
   let program = collect_program_manifest(
     2640UL,

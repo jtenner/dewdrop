@@ -7,9 +7,7 @@ if [[ "$mode" != quick && "$mode" != full ]]; then echo "usage: tools/check-moon
 
 if [[ $mode == "quick" ]]; then
   echo "== Dew tests: native =="
-  moon test --target native \
-    src/tokenizer src/parser src/standard_sources src/semantic src/backend \
-    src/standard_loader src/compiler_driver
+  tools/test-native.sh
 else
   targets=(native wasm-gc js wasm)
   processors=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')
@@ -74,4 +72,3 @@ else
     exit 1
   fi
 fi
-

@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "set standard source has stable compiler-owned identities" {
   let module_id = standard_library_module_id(12)
   let collected = collect_program_files_with_frozen_standard_imports(
@@ -29,6 +30,7 @@ test "set standard source has stable compiler-owned identities" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "compiler-owned Set selects Hash evidence" {
   let program = collect_program_manifest(
     2614UL,
@@ -61,6 +63,7 @@ test "compiler-owned Set selects Hash evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "Set empty and every mutation method infer without diagnostics" {
   let program = collect_program_manifest(
     2619UL,
@@ -79,6 +82,7 @@ test "Set empty and every mutation method infer without diagnostics" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "Set rejects keys without Hash evidence" {
   let program = collect_program_manifest(
     2620UL,

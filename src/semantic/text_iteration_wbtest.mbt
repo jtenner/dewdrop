@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "code point iterators retain stable text module identities" {
   let program = collect_program_manifest(
     2641UL,

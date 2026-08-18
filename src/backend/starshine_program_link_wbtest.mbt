@@ -27,6 +27,7 @@ fn backend_program_link_pipeline() -> (
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "array scratch allocation does not suppress later Set scratch locals" {
   let program = @semantic.collect_program_manifest(
     2396UL,
@@ -48,6 +49,7 @@ test "array scratch allocation does not suppress later Set scratch locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "wasm intrinsics are imported through an at alias" {
   let program = @semantic.collect_program_manifest(
     2397UL,
@@ -72,6 +74,7 @@ test "wasm intrinsics are imported through an at alias" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "generic Unit specialization omits carrier parameters consistently" {
   let program = @semantic.collect_program_manifest(
     2398UL,
@@ -93,6 +96,7 @@ test "generic Unit specialization omits carrier parameters consistently" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module GC-backed String call and UTF8 runtime validate" {
   let program = @semantic.collect_program_manifest(
     2399UL,
@@ -122,6 +126,7 @@ test "cross module GC-backed String call and UTF8 runtime validate" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module StringView feeds linked StringBuilder" {
   let program = @semantic.collect_program_manifest(
     2398UL,
@@ -151,6 +156,7 @@ test "cross module StringView feeds linked StringBuilder" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module Bytes find result preserves its exact nominal ABI" {
   let program = @semantic.collect_program_manifest(
     2395UL,
@@ -180,6 +186,7 @@ test "cross module Bytes find result preserves its exact nominal ABI" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module WASI Bytes marshalling preserves imports and memory" {
   let program = @semantic.collect_program_manifest(
     2395UL,
@@ -215,6 +222,7 @@ test "cross module WASI Bytes marshalling preserves imports and memory" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module String and StringView matching preserves byte offsets" {
   let program = @semantic.collect_program_manifest(
     2394UL,
@@ -244,6 +252,7 @@ test "cross module String and StringView matching preserves byte offsets" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module text ranges feed flat concatenation" {
   let program = @semantic.collect_program_manifest(
     2396UL,
@@ -273,6 +282,7 @@ test "cross module text ranges feed flat concatenation" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module BytesBuilder result feeds checked String conversion" {
   let program = @semantic.collect_program_manifest(
     2397UL,
@@ -302,6 +312,7 @@ test "cross module BytesBuilder result feeds checked String conversion" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module scalar call emits one valid linked module" {
   let (_, _, lowering, link) = backend_program_link_pipeline()
   assert_eq(link.diagnostics.length(), 0)
@@ -335,6 +346,7 @@ test "cross module scalar call emits one valid linked module" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "linked module exports only public functions from the root module" {
   let (program, _, lowering, link) = backend_program_link_pipeline()
   let run = program.modules[0].lookup_value("run").unwrap()
@@ -362,6 +374,7 @@ test "linked module exports only public functions from the root module" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "linked program emits struct construction and field access" {
   let program = @semantic.collect_program_manifest(
     2420UL,
@@ -387,6 +400,7 @@ test "linked program emits struct construction and field access" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "wide imported enum construction validates through Starshine" {
   let library = Buffer(size_hint=1024)
   library.write_string_utf8("pub enum Message {\n  Idle\n")
@@ -428,6 +442,7 @@ test "wide imported enum construction validates through Starshine" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "shared exact enum shapes construct and match nonrepresentative variants" {
   let program = @semantic.collect_program_manifest(
     24142UL,
@@ -458,6 +473,7 @@ test "shared exact enum shapes construct and match nonrepresentative variants" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "dense enum tag dispatch validates with optimized subtype dispatch" {
   let program = @semantic.collect_program_manifest(
     24143UL,
@@ -488,6 +504,7 @@ test "dense enum tag dispatch validates with optimized subtype dispatch" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported struct variant match validates with the subtype representation" {
   let program = @semantic.collect_program_manifest(
     24144UL,
@@ -519,6 +536,7 @@ test "imported struct variant match validates with the subtype representation" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported enum match validates with the subtype representation" {
   let program = @semantic.collect_program_manifest(
     24145UL,
@@ -554,6 +572,7 @@ test "imported enum match validates with the subtype representation" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported enum construction validates with the subtype representation" {
   let program = @semantic.collect_program_manifest(
     2415UL,
@@ -589,6 +608,7 @@ test "imported enum construction validates with the subtype representation" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported struct construction and field access emit external type indices" {
   let program = @semantic.collect_program_manifest(
     2425UL,
@@ -619,6 +639,7 @@ test "imported struct construction and field access emit external type indices" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported aggregate signatures emit typed cross module references" {
   let program = @semantic.collect_program_manifest(
     2430UL,
@@ -648,6 +669,7 @@ test "imported aggregate signatures emit typed cross module references" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "aggregate fields may reference earlier dependency types" {
   let program = @semantic.collect_program_manifest(
     2440UL,
@@ -671,6 +693,7 @@ test "aggregate fields may reference earlier dependency types" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module recursive aggregate SCC emits one valid recursive group" {
   let program = @semantic.collect_program_manifest(
     2445UL,
@@ -707,6 +730,7 @@ test "cross module recursive aggregate SCC emits one valid recursive group" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "recursive nominal values survive generic arrays and aggregate fields" {
   let stages = backend_test_single_module_stages(
     2446UL, b"open dew.std.array\npub enum Node {\n  Leaf(I32)\n  Branch(Array<Node>)\n}\npub struct Holder {\n  values: Array<Node>\n}\nfn build() -> Holder {\n  let children = Array::new()\n  children.push(Node::Leaf(42))\n  let roots = Array::new()\n  roots.push(Node::Branch(children))\n  Holder::{\n    values: roots\n  }\n}\npub fn main() -> I32 {\n  match build().values.get_unchecked(0u32) {\n    Node::Branch(children) => {\n      match children.get_unchecked(0u32) {\n        Node::Leaf(value) => value\n        _ => 0\n      }\n    }\n    _ => 0\n  }\n}\n",
@@ -718,6 +742,7 @@ test "recursive nominal values survive generic arrays and aggregate fields" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cross module recursive SCC emits valid forward calls" {
   let program = @semantic.collect_program_manifest(
     2450UL,
@@ -743,6 +768,7 @@ test "cross module recursive SCC emits valid forward calls" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "local implementation methods cast imported nominal arguments" {
   let program = @semantic.collect_program_manifest(
     2475UL,
@@ -770,6 +796,7 @@ test "local implementation methods cast imported nominal arguments" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "local implementation methods accept imported nominal aggregate fields" {
   let program = @semantic.collect_program_manifest(
     2476UL,
@@ -797,6 +824,7 @@ test "local implementation methods accept imported nominal aggregate fields" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "generic bound calls cast specialized nominal parameters" {
   let program = @semantic.collect_program_manifest(
     2479UL,
@@ -821,6 +849,7 @@ test "generic bound calls cast specialized nominal parameters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public generic evidence fallbacks retain source bound order" {
   let program = @semantic.collect_program_manifest(
     2480UL,
@@ -868,6 +897,7 @@ test "public generic evidence fallbacks retain source bound order" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public generic evidence fallbacks dispatch bound operators" {
   let program = @semantic.collect_program_manifest(
     2481UL,
@@ -910,6 +940,7 @@ test "public generic evidence fallbacks dispatch bound operators" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "concrete bounded generic function references preserve evidence" {
   let program = @semantic.collect_program_manifest(
     2484UL,
@@ -935,6 +966,7 @@ test "concrete bounded generic function references preserve evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "unbounded generic function references keep the singleton fast path" {
   let program = @semantic.collect_program_manifest(
     2487UL,
@@ -957,6 +989,7 @@ test "unbounded generic function references keep the singleton fast path" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "erased trait dictionaries capture caller runtime prerequisites" {
   let program = @semantic.collect_program_manifest(
     2488UL,
@@ -1008,6 +1041,7 @@ test "erased trait dictionaries capture caller runtime prerequisites" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported erased trait dictionaries capture caller runtime prerequisites" {
   let program = @semantic.collect_program_manifest(
     2489UL,
@@ -1045,6 +1079,7 @@ test "imported erased trait dictionaries capture caller runtime prerequisites" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "escaping bounded function references capture runtime evidence" {
   let program = @semantic.collect_program_manifest(
     2485UL,
@@ -1085,6 +1120,7 @@ test "escaping bounded function references capture runtime evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "escaping bounded imported function references capture runtime evidence" {
   let program = @semantic.collect_program_manifest(
     2486UL,
@@ -1125,6 +1161,7 @@ test "escaping bounded imported function references capture runtime evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public runtime evidence forwards through imported recursive generics" {
   let program = @semantic.collect_program_manifest(
     2482UL,
@@ -1179,6 +1216,7 @@ test "public runtime evidence forwards through imported recursive generics" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public runtime evidence forwards recursive static prerequisite trees" {
   let program = @semantic.collect_program_manifest(
     2483UL,
@@ -1203,6 +1241,7 @@ test "public runtime evidence forwards recursive static prerequisite trees" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "open generic prerequisite dictionaries emit valid adapters" {
   let program = @semantic.collect_program_manifest(
     2477UL,
@@ -1228,6 +1267,7 @@ test "open generic prerequisite dictionaries emit valid adapters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported open generic dictionaries share canonical trait layouts" {
   let program = @semantic.collect_program_manifest(
     2478UL,
@@ -1256,6 +1296,7 @@ test "imported open generic dictionaries share canonical trait layouts" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program emitter includes unreferenced aggregate type groups" {
   let program = @semantic.collect_program_manifest(
     2500UL,

@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "Show standard module has stable identity and generic evidence lowering" {
   let program = collect_program_manifest(
     2639UL,

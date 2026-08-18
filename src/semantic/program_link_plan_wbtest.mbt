@@ -19,6 +19,7 @@ fn scalar_link_program() -> (CollectedProgram, AnalyzedProgramSemantics) {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program link assigns dependency-first scalar function indices" {
   let (program, analyzed) = scalar_link_program()
   let lowering = plan_program_lowering(program, analyzed)
@@ -39,6 +40,7 @@ test "program link assigns dependency-first scalar function indices" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program test export ordinals follow manifest module order" {
   let program = collect_program_manifest(
     2150UL,
@@ -72,6 +74,7 @@ test "program test export ordinals follow manifest module order" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program link assigns stable indices inside a module cycle" {
   let program = collect_program_manifest(
     2200UL,
@@ -107,6 +110,7 @@ test "program link assigns stable indices inside a module cycle" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker rebases imported aggregate signatures" {
   let program = collect_program_manifest(
     2230UL,
@@ -140,6 +144,7 @@ test "program linker rebases imported aggregate signatures" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker merges cross module recursive type groups" {
   let program = collect_program_manifest(
     2240UL,
@@ -173,6 +178,7 @@ test "program linker merges cross module recursive type groups" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program enum fragments use subtype bases and direct payload subtypes" {
   let program = collect_program_manifest(
     2244UL,
@@ -205,6 +211,7 @@ test "program enum fragments use subtype bases and direct payload subtypes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "unused generic structs are eliminated before program linking" {
   let program = collect_program_manifest(
     2245UL,
@@ -225,6 +232,7 @@ test "unused generic structs are eliminated before program linking" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker exports one erased fallback for public generics" {
   let program = collect_program_manifest(
     2240UL,
@@ -268,6 +276,7 @@ test "program linker exports one erased fallback for public generics" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker adapts exact references to erased generic fallbacks" {
   let program = collect_program_manifest(
     2242UL,
@@ -303,6 +312,7 @@ test "program linker adapts exact references to erased generic fallbacks" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker exports boxed scalar adapters for erased generics" {
   let program = collect_program_manifest(
     2244UL,
@@ -363,6 +373,7 @@ test "program linker exports boxed scalar adapters for erased generics" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker plans recursive aggregate erased adapters" {
   let program = collect_program_manifest(
     2246UL,
@@ -398,6 +409,7 @@ test "program linker plans recursive aggregate erased adapters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker plans recursive enum erased adapters" {
   let program = collect_program_manifest(
     2247UL,
@@ -445,6 +457,7 @@ test "program linker plans recursive enum erased adapters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker plans cyclic nominal erased adapters" {
   let program = collect_program_manifest(
     2248UL,
@@ -480,6 +493,7 @@ test "program linker plans cyclic nominal erased adapters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker plans structural callback erased adapters" {
   let program = collect_program_manifest(
     2247UL,
@@ -514,6 +528,7 @@ test "program linker plans structural callback erased adapters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker coalesces generic specializations by physical carrier" {
   let program = collect_program_manifest(
     2245UL,
@@ -545,6 +560,7 @@ test "program linker coalesces generic specializations by physical carrier" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker materializes generic control-flow specializations" {
   let program = collect_program_manifest(
     2250UL,
@@ -577,6 +593,7 @@ test "program linker materializes generic control-flow specializations" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program linker eliminates unused physical aggregate types" {
   let program = collect_program_manifest(
     2300UL,
@@ -597,6 +614,7 @@ test "program linker eliminates unused physical aggregate types" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program lowering specializes generic parameter selectors" {
   let program = collect_program_manifest(
     2275UL,
@@ -624,6 +642,7 @@ test "program lowering specializes generic parameter selectors" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program lowering directizes transparent callback wrappers" {
   let program = collect_program_manifest(
     2280UL,
@@ -652,6 +671,7 @@ test "program lowering directizes transparent callback wrappers" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public callback summaries discard only total effect-free preludes" {
   let program = collect_program_manifest(
     22801UL,
@@ -696,6 +716,7 @@ test "public callback summaries discard only total effect-free preludes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public callback summaries retain trapping preludes" {
   let program = collect_program_manifest(
     22802UL,
@@ -726,6 +747,7 @@ test "public callback summaries retain trapping preludes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public callback summaries retain escaping and multiply called values" {
   let program = collect_program_manifest(
     22803UL,
@@ -761,6 +783,7 @@ test "public callback summaries retain escaping and multiply called values" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program link unifies closure bases and named singletons across modules" {
   let program = collect_program_manifest(
     2285UL,
@@ -804,6 +827,7 @@ test "program link unifies closure bases and named singletons across modules" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program link plans deterministic named function singleton globals" {
   let program = collect_program_manifest(
     2290UL,
@@ -831,6 +855,7 @@ test "program link plans deterministic named function singleton globals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program specializations distinguish and forward trait evidence" {
   let program = collect_program_manifest(
     2262UL,
@@ -886,6 +911,7 @@ test "program specializations distinguish and forward trait evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "closed generic trait coercion forwarding erases dynamic artifacts" {
   let program = collect_program_manifest(
     21965UL,
@@ -973,6 +999,7 @@ fn open_generic_selector_chain_test_source(depth : Int) -> Bytes {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "deep generic trait selector chains devirtualize completely" {
   let program = collect_program_manifest(
     21965UL,
@@ -1010,6 +1037,7 @@ test "deep generic trait selector chains devirtualize completely" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "open generic trait branches materialize exact specialization dictionaries" {
   let program = collect_program_manifest(
     21966UL,
@@ -1078,6 +1106,7 @@ test "open generic trait branches materialize exact specialization dictionaries"
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public bound call fallbacks remain evidence carrying without scalar adapters" {
   let program = collect_program_manifest(
     21970UL,
@@ -1127,6 +1156,7 @@ test "public bound call fallbacks remain evidence carrying without scalar adapte
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public generic fallbacks forward runtime evidence through nested calls" {
   let program = collect_program_manifest(
     21971UL,
@@ -1187,6 +1217,7 @@ test "public generic fallbacks forward runtime evidence through nested calls" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "external generic fallback forwards runtime prerequisites through static evidence" {
   let program = collect_program_manifest(
     21972UL,
@@ -1221,6 +1252,7 @@ test "external generic fallback forwards runtime prerequisites through static ev
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "external generic fallback forwards recursive static prerequisite trees" {
   let program = collect_program_manifest(
     21974UL,
@@ -1282,6 +1314,7 @@ test "external generic fallback forwards recursive static prerequisite trees" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "external generic fallback captures erased concrete runtime prerequisites" {
   let program = collect_program_manifest(
     21973UL,
@@ -1388,6 +1421,7 @@ test "external generic fallback captures erased concrete runtime prerequisites" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "bounded generic function references capture caller runtime evidence" {
   let program = collect_program_manifest(
     21975UL,
@@ -1438,6 +1472,7 @@ test "bounded generic function references capture caller runtime evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "open generic trait dictionaries preserve recursive prerequisite evidence" {
   let program = collect_program_manifest(
     21968UL,
@@ -1468,6 +1503,7 @@ test "open generic trait dictionaries preserve recursive prerequisite evidence" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported open generic trait branches link exact dictionaries" {
   let program = collect_program_manifest(
     21969UL,
@@ -1518,6 +1554,7 @@ test "imported open generic trait branches link exact dictionaries" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "generic trait coercions accept nominal implementation evidence" {
   let program = collect_program_manifest(
     21967UL,
@@ -1581,6 +1618,7 @@ test "generic trait coercions accept nominal implementation evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "transparent runtime trait wrappers devirtualize exact call-site evidence" {
   let program = collect_program_manifest(
     2197UL,
@@ -1620,6 +1658,7 @@ test "transparent runtime trait wrappers devirtualize exact call-site evidence" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "exact runtime trait flows erase generic prerequisite forwarding chains" {
   let program = collect_program_manifest(
     21975UL,
@@ -1687,6 +1726,7 @@ test "exact runtime trait flows erase generic prerequisite forwarding chains" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "runtime trait flow joins retain differing implementation evidence" {
   let program = collect_program_manifest(
     21976UL,
@@ -1722,6 +1762,7 @@ test "runtime trait flow joins retain differing implementation evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public runtime trait summaries discard total effect-free preludes" {
   let program = collect_program_manifest(
     21977UL,
@@ -1760,6 +1801,7 @@ test "public runtime trait summaries discard total effect-free preludes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "public runtime trait summaries retain trapping preludes" {
   let program = collect_program_manifest(
     21978UL,
@@ -1798,6 +1840,7 @@ test "public runtime trait summaries retain trapping preludes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "runtime trait link executes imported traits and implementations" {
   let program = collect_program_manifest(
     2198UL,
@@ -1886,6 +1929,7 @@ test "runtime trait link executes imported traits and implementations" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "runtime trait dictionaries distinguish generic prerequisite evidence" {
   let program = collect_program_manifest(
     21985UL,
@@ -1920,6 +1964,7 @@ test "runtime trait dictionaries distinguish generic prerequisite evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "runtime trait link maps typed dictionary signatures" {
   let program = collect_program_manifest(
     2199UL,

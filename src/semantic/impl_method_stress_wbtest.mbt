@@ -67,6 +67,7 @@ fn deeply_specialized_impl_source(depth : Int) -> Bytes {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "impl indexing handles 512 stable nominal buckets" {
   let collected = collect_bytes(801UL, many_impl_buckets_source(512))
   let resolved = resolve_module_types(collected)
@@ -77,6 +78,7 @@ test "impl indexing handles 512 stable nominal buckets" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "impl specificity is iterative through 512 applied levels" {
   let (collected, _, _, inferred) = call_test_module(
     803UL,
@@ -94,6 +96,7 @@ test "impl specificity is iterative through 512 applied levels" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "method inference handles 512 methods and calls iteratively" {
   let (collected, _, _, inferred) = call_test_module(
     802UL,

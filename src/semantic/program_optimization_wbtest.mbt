@@ -18,6 +18,7 @@ fn optimization_test_body_tail(
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "constant folding rewrites exact primitive operations only in the copy" {
   let program = collect_program_manifest(
     22805UL,
@@ -72,6 +73,7 @@ test "constant folding rewrites exact primitive operations only in the copy" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "immutable call summaries inline selectors and constant functions" {
   let program = collect_program_manifest(
     22806UL,
@@ -123,6 +125,7 @@ test "immutable call summaries inline selectors and constant functions" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "scalar replacement selects fresh struct fields while preserving all inputs" {
   let program = collect_program_manifest(
     22809UL,
@@ -174,6 +177,7 @@ test "scalar replacement selects fresh struct fields while preserving all inputs
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "mutable field writes block immutable-field optimizations" {
   let program = collect_program_manifest(
     22830UL,
@@ -213,6 +217,7 @@ test "mutable field writes block immutable-field optimizations" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "adjacent nonescaping struct locals scalar replace" {
   let program = collect_program_manifest(
     22810UL,
@@ -284,6 +289,7 @@ test "adjacent nonescaping struct locals scalar replace" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "fresh tuple variant payload projections eliminate nonescaping enums" {
   let program = collect_program_manifest(
     22815UL,
@@ -372,6 +378,7 @@ test "fresh tuple variant payload projections eliminate nonescaping enums" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "nested fresh enum payload patterns eliminate aggregate wrappers" {
   let program = collect_program_manifest(
     22817UL,
@@ -411,6 +418,7 @@ test "nested fresh enum payload patterns eliminate aggregate wrappers" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "constructor-resolved alternative payload patterns eliminate variants" {
   let program = collect_program_manifest(
     22818UL,
@@ -447,6 +455,7 @@ test "constructor-resolved alternative payload patterns eliminate variants" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "constant matching-constructor guards preserve payload elimination" {
   let program = collect_program_manifest(
     22819UL,
@@ -483,6 +492,7 @@ test "constant matching-constructor guards preserve payload elimination" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "constant-false catchalls do not intercept fresh payload elimination" {
   let program = collect_program_manifest(
     22821UL,
@@ -519,6 +529,7 @@ test "constant-false catchalls do not intercept fresh payload elimination" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "known fresh variants eliminate independent catchall selection" {
   let program = collect_program_manifest(
     22822UL,
@@ -557,6 +568,7 @@ test "known fresh variants eliminate independent catchall selection" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "binding catchall may forward the exact fresh variant" {
   let program = collect_program_manifest(
     22824UL,
@@ -599,6 +611,7 @@ test "binding catchall may forward the exact fresh variant" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "binding catchalls scalarize nested payload matches" {
   let program = collect_program_manifest(
     22827UL,
@@ -635,6 +648,7 @@ test "binding catchalls scalarize nested payload matches" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "external nonconstant guards collapse identical payload arms" {
   let program = collect_program_manifest(
     22830UL,
@@ -671,6 +685,7 @@ test "external nonconstant guards collapse identical payload arms" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "composite pure guards collapse identical payload arms" {
   let program = collect_program_manifest(
     22831UL,
@@ -707,6 +722,7 @@ test "composite pure guards collapse identical payload arms" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "stable guarded struct variants collapse identical fields" {
   let program = collect_program_manifest(
     22832UL,
@@ -743,6 +759,7 @@ test "stable guarded struct variants collapse identical fields" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "payload-dependent pure guards collapse identical payload arms" {
   let program = collect_program_manifest(
     22833UL,
@@ -779,6 +796,7 @@ test "payload-dependent pure guards collapse identical payload arms" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "retained variants share guarded payload extraction" {
   let program = collect_program_manifest(
     22844UL,
@@ -822,6 +840,7 @@ test "retained variants share guarded payload extraction" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "retained struct variants share guarded field extraction" {
   let program = collect_program_manifest(
     22845UL,
@@ -865,6 +884,7 @@ test "retained struct variants share guarded field extraction" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "retained nested variants share guarded payload extraction" {
   let program = collect_program_manifest(
     22846UL,
@@ -908,6 +928,7 @@ test "retained nested variants share guarded payload extraction" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "retained alternative variants share guarded payload extraction" {
   let program = collect_program_manifest(
     22847UL,
@@ -951,6 +972,7 @@ test "retained alternative variants share guarded payload extraction" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "nonconstant payload guards retain conditional scalar results" {
   let program = collect_program_manifest(
     22841UL,
@@ -995,6 +1017,7 @@ test "nonconstant payload guards retain conditional scalar results" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "nonconstant payload guards preserve ordered scalar chains" {
   let program = collect_program_manifest(
     22842UL,
@@ -1035,6 +1058,7 @@ test "nonconstant payload guards preserve ordered scalar chains" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "effectful nonconstant payload guards remain conservative" {
   let program = collect_program_manifest(
     22843UL,
@@ -1068,6 +1092,7 @@ test "effectful nonconstant payload guards remain conservative" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "fresh payload bindings inline exact primitive scalar transforms" {
   let program = collect_program_manifest(
     22834UL,
@@ -1104,6 +1129,7 @@ test "fresh payload bindings inline exact primitive scalar transforms" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "fresh payload bindings inline immutable scalar transform chains" {
   let program = collect_program_manifest(
     22839UL,
@@ -1140,6 +1166,7 @@ test "fresh payload bindings inline immutable scalar transform chains" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "effectful payload result blocks remain conservative" {
   let program = collect_program_manifest(
     22840UL,
@@ -1173,6 +1200,7 @@ test "effectful payload result blocks remain conservative" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "struct variant fields inline exact primitive scalar transforms" {
   let program = collect_program_manifest(
     22835UL,
@@ -1209,6 +1237,7 @@ test "struct variant fields inline exact primitive scalar transforms" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "let-bound fresh payloads inline exact scalar transforms" {
   let program = collect_program_manifest(
     22836UL,
@@ -1255,6 +1284,7 @@ test "let-bound fresh payloads inline exact scalar transforms" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "single-field reference and generic boxes scalar replace when nonescaping" {
   let program = collect_program_manifest(
     22814UL,
@@ -1323,6 +1353,7 @@ test "single-field reference and generic boxes scalar replace when nonescaping" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "direct distinct struct reads synthesize component locals" {
   let program = collect_program_manifest(
     22820UL,
@@ -1365,6 +1396,7 @@ test "direct distinct struct reads synthesize component locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "mixed source aliases and direct reads share component locals" {
   let program = collect_program_manifest(
     22825UL,
@@ -1407,6 +1439,7 @@ test "mixed source aliases and direct reads share component locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "direct distinct reference fields synthesize nominal component locals" {
   let program = collect_program_manifest(
     22823UL,
@@ -1446,6 +1479,7 @@ test "direct distinct reference fields synthesize nominal component locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "direct distinct generic fields synthesize erased component locals" {
   let program = collect_program_manifest(
     22826UL,
@@ -1488,6 +1522,7 @@ test "direct distinct generic fields synthesize erased component locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "fresh nominal reference fields synthesize exact component locals" {
   let program = collect_program_manifest(
     22828UL,
@@ -1530,6 +1565,7 @@ test "fresh nominal reference fields synthesize exact component locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "nominal module values synthesize exact component locals" {
   let program = collect_program_manifest(
     22829UL,
@@ -1572,6 +1608,7 @@ test "nominal module values synthesize exact component locals" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "sole-use struct fields scalar replace across fresh if joins" {
   let program = collect_program_manifest(
     22813UL,
@@ -1657,6 +1694,7 @@ test "sole-use struct fields scalar replace across fresh if joins" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "sole-use struct fields scalar replace across fresh match joins" {
   let program = collect_program_manifest(
     22816UL,
@@ -1722,6 +1760,7 @@ test "sole-use struct fields scalar replace across fresh match joins" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "component aliases scalar replace reordered and one-missing struct fields" {
   let program = collect_program_manifest(
     22812UL,
@@ -1812,6 +1851,7 @@ test "component aliases scalar replace reordered and one-missing struct fields" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "repeated same-field struct locals scalar replace into the existing local" {
   let program = collect_program_manifest(
     22811UL,
@@ -1893,6 +1933,7 @@ test "repeated same-field struct locals scalar replace into the existing local" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "immutable local aliases coalesce into source storage" {
   let program = collect_program_manifest(
     22838UL,
@@ -2035,6 +2076,7 @@ test "immutable local aliases coalesce into source storage" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "reference alias coalescing rejects mutation and captures" {
   let program = collect_program_manifest(
     22839UL,
@@ -2068,6 +2110,7 @@ test "reference alias coalescing rejects mutation and captures" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "common field extraction reuses immutable scalar loads only in the copy" {
   let program = collect_program_manifest(
     22808UL,
@@ -2132,6 +2175,7 @@ test "common field extraction reuses immutable scalar loads only in the copy" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "common field extraction reuses exact nested reference loads" {
   let program = collect_program_manifest(
     22837UL,
@@ -2168,6 +2212,7 @@ test "common field extraction reuses exact nested reference loads" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private unit enum locals specialize to scalar tags" {
   let program = collect_program_manifest(
     22841UL,
@@ -2237,6 +2282,7 @@ test "private unit enum locals specialize to scalar tags" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private unit enum parameters specialize with complete direct call evidence" {
   let program = collect_program_manifest(
     22843UL,
@@ -2283,6 +2329,7 @@ test "private unit enum parameters specialize with complete direct call evidence
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private unit enum results specialize with complete direct consumer evidence" {
   let program = collect_program_manifest(
     22845UL,
@@ -2324,6 +2371,7 @@ test "private unit enum results specialize with complete direct consumer evidenc
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private unit enum result specialization rejects incomplete consumer evidence" {
   let program = collect_program_manifest(
     22846UL,
@@ -2353,6 +2401,7 @@ test "private unit enum result specialization rejects incomplete consumer eviden
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private unit enum parameter specialization rejects incomplete call evidence" {
   let program = collect_program_manifest(
     22844UL,
@@ -2400,6 +2449,7 @@ test "private unit enum parameter specialization rejects incomplete call evidenc
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private scalar payload enum parameters and results specialize with complete evidence" {
   let program = collect_program_manifest(
     22847UL,
@@ -2463,6 +2513,7 @@ test "private scalar payload enum parameters and results specialize with complet
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private scalar payload enum specialization rejects unsupported payload evidence" {
   let program = collect_program_manifest(
     22848UL,
@@ -2492,6 +2543,7 @@ test "private scalar payload enum specialization rejects unsupported payload evi
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "scalar unit enum specialization rejects public payload guarded and escaping locals" {
   let program = collect_program_manifest(
     22842UL,
@@ -2532,6 +2584,7 @@ test "scalar unit enum specialization rejects public payload guarded and escapin
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "tail calls mark scalar direct calls across branch tails" {
   let program = collect_program_manifest(
     22840UL,
@@ -2585,6 +2638,7 @@ test "tail calls mark scalar direct calls across branch tails" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "tail recursion marks only exact non-generic scalar self calls in tail position" {
   let program = collect_program_manifest(
     22807UL,
@@ -2637,6 +2691,7 @@ test "tail recursion marks only exact non-generic scalar self calls in tail posi
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program optimization preserves its unoptimized input" {
   let program = collect_program_manifest(
     22804UL,

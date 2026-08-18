@@ -1,4 +1,5 @@
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "lowering plans remain iterative through 1024 prefixes" {
   let collected = collect_bytes(905UL, deeply_prefixed_let(1024))
   let resolved = resolve_module_types(collected)
@@ -28,6 +29,7 @@ test "lowering plans remain iterative through 1024 prefixes" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "lowering plans retain 512 exact method targets" {
   let collected = collect_bytes(906UL, many_inherent_methods_source(512))
   let resolved = resolve_module_types(collected)

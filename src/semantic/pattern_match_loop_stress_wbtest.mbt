@@ -22,6 +22,7 @@ fn deep_generic_pattern_source(depth : Int) -> Bytes {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "pattern inference remains iterative through 512 generic payload levels" {
   let collected = collect_bytes(149UL, deep_generic_pattern_source(512))
   let resolved = resolve_module_types(collected)
@@ -67,6 +68,7 @@ fn many_loop_arms_source(arm_count : Int) -> Bytes {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "functional loop inference remains iterative across 512 arms" {
   let collected = collect_bytes(150UL, many_loop_arms_source(512))
   let resolved = resolve_module_types(collected)

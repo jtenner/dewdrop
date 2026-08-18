@@ -33,6 +33,7 @@ fn imported_semantic_program(
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported transparent aliases support qualified and instance methods" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run() -> Counter {\n  Counter::empty().add(2u64)\n}\n",
@@ -48,6 +49,7 @@ test "imported transparent aliases support qualified and instance methods" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported method-local bounds select generic method evidence" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run() -> Bool {\n  Filter::empty().add(7u64).contains(7u64)\n}\n",
@@ -62,6 +64,7 @@ test "imported method-local bounds select generic method evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported generic function calls select external declaration evidence" {
   let (program, frozen, imports, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run() -> I32 {\n  identity(7)\n}\n", b"pub fn identity<t>(value: t) -> t {\n  value\n}\n",
@@ -97,6 +100,7 @@ test "imported generic function calls select external declaration evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported explicit calls and trait method generics retain exact arguments" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(item: Item) -> I32 {\n  phantom::<Bool>() + item.keep::<I32>(41)\n}\n",
@@ -128,6 +132,7 @@ test "imported explicit calls and trait method generics retain exact arguments" 
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "bare imported enum patterns infer from the expected type" {
   let (_, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn read(value: OptionI32) -> I32 {\n  match value {\n    None => 0\n    Some(item) => item\n    Named {\n      value\n    } => value\n  }\n}\n",
@@ -158,6 +163,7 @@ test "bare imported enum patterns infer from the expected type" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported enum construction retains external variant IDs" {
   let (_, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn idle() -> Message {\n  Message::Idle\n}\npub fn number(value: I32) -> Message {\n  Message::Number(value)\n}\npub fn move(x: I32, y: I32) -> Message {\n  Message::Move::{\n    y: y\n    x: x\n  }\n}\n",
@@ -187,6 +193,7 @@ test "imported enum construction retains external variant IDs" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported struct construction and field access retain external IDs" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn make(value: I32) -> Item {\n  Item::{\n    value: value\n  }\n}\npub fn read(value: Item) -> I32 {\n  value.value\n}\n",
@@ -215,6 +222,7 @@ test "imported struct construction and field access retain external IDs" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported mutable struct fields retain mutability" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn write(box: Box<I32>, value: I32) -> Unit {\n  box.value = value\n}\npub fn read(box: Box<I32>) -> I32 {\n  box.value\n}\n",
@@ -237,6 +245,7 @@ test "imported mutable struct fields retain mutability" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported nominal signatures unify with consumer signature types" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(value: Item) -> Item {\n  keep(value)\n}\n", b"pub struct Item {}\npub fn keep(value: Item) -> Item {\n  value\n}\n",
@@ -258,6 +267,7 @@ test "imported nominal signatures unify with consumer signature types" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported named functions resolve as first-class references" {
   let (_, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn select() -> fn(I32) -> I32 {\n  increment\n}\n", b"pub fn increment(value: I32) -> I32 {\n  value + 1\n}\n",
@@ -277,6 +287,7 @@ test "imported named functions resolve as first-class references" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported function signatures retain canonical structural types" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(value: fn(I32) -> I64) -> fn(I32) -> I64 {\n  keep(value)\n}\n",
@@ -307,6 +318,7 @@ test "imported function signatures retain canonical structural types" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported transparent aliases normalize in consumer signatures" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(value: Count) -> Count {\n  keep(value)\n}\n",
@@ -325,6 +337,7 @@ test "imported transparent aliases normalize in consumer signatures" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported generic aliases substitute consumer type arguments" {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn run(value: Wrapped<I32>) -> Wrapped<I32> {\n  keep(value)\n}\n",
@@ -357,6 +370,7 @@ test "imported generic aliases substitute consumer type arguments" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "local value declarations shadow imported public values" {
   let (program, _, _, names, inferred) = imported_semantic_program(
     b"open app.library\nfn identity(value: I32) -> I32 {\n  value\n}\npub fn run() -> I32 {\n  identity(7)\n}\n",
@@ -375,6 +389,7 @@ test "local value declarations shadow imported public values" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported aggregate field cursor preserves declaration grouping" {
   let (_, frozen, imports, _, _) = imported_semantic_program(
     b"open app.library\npub fn run() -> I32 {\n  1\n}\n", b"pub struct First {\n  first: I32\n}\nstruct Hidden {\n  hidden: I32\n}\npub fn divider() -> I32 {\n  0\n}\npub struct Second {\n  second: I64\n}\n",
@@ -394,6 +409,7 @@ test "imported aggregate field cursor preserves declaration grouping" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported implementation evidence is translated into consumer types" {
   let (_, frozen, imports, _, _) = imported_semantic_program(
     b"open app.library\npub fn run() -> I32 {\n  1\n}\n", b"pub struct Item {}\npub trait Mark {\n  fn mark(self) -> I32\n}\nimpl Mark for Item {\n  fn mark(self) -> I32 {\n    1\n  }\n}\n",
@@ -432,6 +448,7 @@ test "imported implementation evidence is translated into consumer types" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported generic derived evidence retains prerequisites and dispatch" {
   let (_, frozen, imports, names, inferred) = imported_semantic_program(
     b"open app.library\npub fn same(left: Box<I32>, right: Box<I32>) -> Bool {\n  left == right && left.hash_eq(right)\n}\npub fn write(value: Box<I32>) -> Unit {\n  debug(value)\n}\n",
@@ -454,6 +471,7 @@ test "imported generic derived evidence retains prerequisites and dispatch" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "private derived evidence is not exported" {
   let program = collect_program_manifest(
     1843UL,
@@ -481,6 +499,7 @@ test "private derived evidence is not exported" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "implementation evidence over private local heads is not exported" {
   let program = collect_program_manifest(
     1842UL,
@@ -508,6 +527,7 @@ test "implementation evidence over private local heads is not exported" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "test-only implementation evidence is absent from imported scopes" {
   let program = collect_program_manifest(
     1840UL,
@@ -539,6 +559,7 @@ test "test-only implementation evidence is absent from imported scopes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported callable collisions form expected-type overload sets" {
   let program = collect_program_manifest(
     1850UL,
@@ -585,6 +606,7 @@ test "imported callable collisions form expected-type overload sets" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "qualified imports do not add unqualified values" {
   let program = collect_program_manifest(
     1880UL,
@@ -610,6 +632,7 @@ test "qualified imports do not add unqualified values" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "opens do not create module aliases" {
   let program = collect_program_manifest(
     1882UL,
@@ -635,6 +658,7 @@ test "opens do not create module aliases" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "duplicate import aliases are diagnosed deterministically" {
   let program = collect_program_manifest(
     1885UL,
@@ -661,6 +685,7 @@ test "duplicate import aliases are diagnosed deterministically" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "explicit import aliases select external calls" {
   let program = collect_program_manifest(
     1890UL,
@@ -691,6 +716,7 @@ test "explicit import aliases select external calls" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "default import aliases use the final module segment" {
   let program = collect_program_manifest(
     1895UL,
@@ -712,6 +738,7 @@ test "default import aliases use the final module segment" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program semantic analysis retains manifest order and external calls" {
   let program = collect_program_manifest(
     1900UL,
@@ -744,6 +771,7 @@ test "program semantic analysis retains manifest order and external calls" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "ordinary orphan implementations are rejected before export" {
   let program = collect_program_manifest(
     1850UL,
@@ -788,6 +816,7 @@ test "ordinary orphan implementations are rejected before export" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "orphan ownership is independent of manifest module order" {
   let check = fn(reverse : Bool) raise {
     let orphan = ManifestModule::new("app.orphan", [
@@ -842,6 +871,7 @@ test "orphan ownership is independent of manifest module order" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "foreign orphan implementations remain module-local evidence" {
   let program = collect_program_manifest(
     1860UL,
@@ -873,6 +903,7 @@ test "foreign orphan implementations remain module-local evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "trait or nominal package ownership permits ordinary implementations" {
   let program = collect_program_manifest(
     1870UL,
@@ -907,6 +938,7 @@ test "trait or nominal package ownership permits ordinary implementations" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "compiler preamble traits remain standard-owned in ordinary modules" {
   let program = collect_program_manifest(
     1859UL,
@@ -945,6 +977,7 @@ test "compiler preamble traits remain standard-owned in ordinary modules" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "external traits on primitives require foreign implementation syntax" {
   let program = collect_program_manifest(
     1880UL,

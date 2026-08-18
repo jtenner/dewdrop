@@ -24,5 +24,7 @@ if [[ "$mode" == quick ]]; then
   exit 0
 fi
 
+tools/test-integration-native.sh
+tools/test-stress-native.sh
 tools/check-cli-cache-abi.sh
 tools/check-suites.sh

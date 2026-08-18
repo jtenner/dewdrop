@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "stack standard module has stable identities and lowering" {
   let program = collect_program_manifest(
     2630UL,

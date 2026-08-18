@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "collection distinguishes qualified and open imports" {
   let module_id = 1000UL
   let file = make_program_file_id(module_id, 0)
@@ -31,6 +32,7 @@ test "collection distinguishes qualified and open imports" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "collection retains explicit import aliases" {
   let module_id = 1001UL
   let file = make_program_file_id(module_id, 0)
@@ -54,6 +56,7 @@ test "collection retains explicit import aliases" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "collection retains wildcard import prefixes" {
   let module_id = 1001UL
   let file = make_program_file_id(module_id, 0)
@@ -75,6 +78,7 @@ test "collection retains wildcard import prefixes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard imports append deterministic compiler-owned modules" {
   let program = collect_program_manifest(
     1190UL,
@@ -100,6 +104,7 @@ test "standard imports append deterministic compiler-owned modules" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "dew std wildcard selects every wildcard standard module deterministically" {
   let program = collect_program_manifest(
     1191UL,
@@ -154,6 +159,7 @@ test "dew std wildcard selects every wildcard standard module deterministically"
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen interfaces skip module-local foreign library namespaces" {
   let program = collect_program_manifest(
     1196UL,
@@ -177,6 +183,7 @@ test "frozen interfaces skip module-local foreign library namespaces" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "wildcard imports expand over deterministic manifest module paths" {
   let program = collect_program_manifest(
     1195UL,
@@ -204,6 +211,7 @@ test "wildcard imports expand over deterministic manifest module paths" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "missing wildcard import prefixes are diagnosed canonically" {
   let program = collect_program_manifest(
     1196UL,
@@ -222,6 +230,7 @@ test "missing wildcard import prefixes are diagnosed canonically" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "caller standard sources override bootstrap bytes without changing identities" {
   let manifest = ProgramManifest::new([
     ManifestModule::new("app.main", [
@@ -257,6 +266,7 @@ test "caller standard sources override bootstrap bytes without changing identiti
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "no default preamble retains explicit standard imports only" {
   let without_default = collect_program_manifest_with_standard_sources(
     1193UL,
@@ -290,6 +300,7 @@ test "no default preamble retains explicit standard imports only" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "manifest assigns deterministic module and file identities" {
   let program = collect_program_manifest(
     1200UL,
@@ -326,6 +337,7 @@ test "manifest assigns deterministic module and file identities" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "module graph resolves imports and groups cycles deterministically" {
   let program = collect_program_manifest(
     1300UL,
@@ -370,6 +382,7 @@ test "module graph resolves imports and groups cycles deterministically" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen interfaces retain only public user declarations and signatures" {
   let collected = collect_program_bytes(
     1400UL, b"pub struct Item {}\nstruct Hidden {}\npub trait Read {\n  fn read(self) -> I32\n}\npub fn expose(value: I32) -> I32 {\n  value\n}\nfn hidden(value: I32) -> I32 {\n  value\n}\nimpl Add for I32 {\n  fn add(self, right: I32) -> I32 {\n    i32_add(self, right)\n  }\n}\n",
@@ -394,6 +407,7 @@ test "frozen interfaces retain only public user declarations and signatures" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen interfaces exclude test-only implementation evidence" {
   let module_id = 1425UL
   let collected = collect_program_files(module_id, [
@@ -420,6 +434,7 @@ test "frozen interfaces exclude test-only implementation evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen interfaces retain public fields and enum variants" {
   let collected = collect_program_bytes(
     1450UL, b"pub struct Box<t> {\n  value: t\n}\npub enum Maybe<t> {\n  None\n  Some(t)\n  Named {\n    value: t\n  }\n}\nstruct Hidden {\n  value: I32\n}\n",
@@ -441,6 +456,7 @@ test "frozen interfaces retain public fields and enum variants" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "program interfaces freeze in graph order and remain manifest indexed" {
   let program = collect_program_manifest(
     1500UL,
@@ -470,6 +486,7 @@ test "program interfaces freeze in graph order and remain manifest indexed" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "interface value inference is required only by exported lets" {
   let function_only = collect_program_manifest(
     1550UL,
@@ -531,6 +548,7 @@ test "interface value inference is required only by exported lets" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "imported public types and traits resolve in consumer signatures" {
   let program = collect_program_manifest(
     1600UL,
@@ -574,6 +592,7 @@ test "imported public types and traits resolve in consumer signatures" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen callable ABI fingerprints ignore external module ID assignment" {
   let freeze = fn(seed : ModuleId) -> String {
     let program = collect_program_manifest(
@@ -601,6 +620,7 @@ test "frozen callable ABI fingerprints ignore external module ID assignment" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen callable ABI fingerprints are stable and signature sensitive" {
   let freeze = fn(seed : ModuleId, source : Bytes) -> String {
     let program = collect_program_manifest(
@@ -629,6 +649,7 @@ test "frozen callable ABI fingerprints are stable and signature sensitive" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "nominal declaration ABI fingerprints are stable and content sensitive" {
   let freeze = fn(seed : ModuleId, source : Bytes) -> String {
     let program = collect_program_manifest(
@@ -654,6 +675,7 @@ test "nominal declaration ABI fingerprints are stable and content sensitive" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "generic bounds participate in callable and implementation fingerprints" {
   let freeze_callable = fn(seed : ModuleId, bound : String) -> String {
     let source = Buffer()
@@ -705,6 +727,7 @@ test "generic bounds participate in callable and implementation fingerprints" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "frozen interfaces retain conditional derived evidence" {
   let program = collect_program_manifest(
     1667UL,
@@ -735,6 +758,7 @@ test "frozen interfaces retain conditional derived evidence" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "module interface fingerprints ignore private implementation changes" {
   let freeze = fn(source : Bytes) -> String {
     let program = collect_program_manifest(
@@ -753,6 +777,7 @@ test "module interface fingerprints ignore private implementation changes" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "module interface fingerprints include transitive dependency content" {
   let freeze = fn(field_type : Bytes) -> String {
     let library = Buffer()
@@ -778,6 +803,7 @@ test "module interface fingerprints include transitive dependency content" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "cyclic module interfaces resolve imported nominal signatures" {
   let program = collect_program_manifest(
     1700UL,

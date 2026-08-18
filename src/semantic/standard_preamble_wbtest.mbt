@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard preamble is a deterministic declaration prefix" {
   let source = b"pub fn identity(value: I32) -> I32 {\n  value\n}\n"
   let collected = collect_bytes_with_standard_preamble(995UL, source)
@@ -14,6 +15,7 @@ test "standard preamble is a deterministic declaration prefix" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "required on-disk standard paths are selective and deterministic" {
   let scalar = ProgramManifest::new([
     ManifestModule::new("app.main", [
@@ -82,6 +84,7 @@ test "required on-disk standard paths are selective and deterministic" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects split module bits" {
   let module_id = 993UL
   assert_eq(
@@ -99,6 +102,7 @@ test "standard import prepass selects split module bits" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects raw WebAssembly WASI" {
   let module_id = 1004UL
   assert_eq(
@@ -116,6 +120,7 @@ test "standard import prepass selects raw WebAssembly WASI" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects scalar math dependencies" {
   let module_id = 998UL
   assert_eq(
@@ -133,6 +138,7 @@ test "standard import prepass selects scalar math dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects portable IO dependencies" {
   let module_id = 999UL
   assert_eq(
@@ -150,6 +156,7 @@ test "standard import prepass selects portable IO dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects testing dependencies" {
   let module_id = 1000UL
   assert_eq(
@@ -167,6 +174,7 @@ test "standard import prepass selects testing dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects Bloom filter" {
   let module_id = 1002UL
   assert_eq(
@@ -184,6 +192,7 @@ test "standard import prepass selects Bloom filter" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects BLAKE3 dependencies" {
   let module_id = 1003UL
   assert_eq(
@@ -201,6 +210,7 @@ test "standard import prepass selects BLAKE3 dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects SHA-256 dependencies" {
   let module_id = 1005UL
   assert_eq(
@@ -218,6 +228,7 @@ test "standard import prepass selects SHA-256 dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects filesystem and process adapters" {
   let module_id = 1006UL
   assert_eq(
@@ -235,6 +246,7 @@ test "standard import prepass selects filesystem and process adapters" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects JSON dependencies" {
   let module_id = 1001UL
   assert_eq(
@@ -252,6 +264,7 @@ test "standard import prepass selects JSON dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects generic iterator dependencies" {
   let module_id = 997UL
   assert_eq(
@@ -269,6 +282,7 @@ test "standard import prepass selects generic iterator dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects text iteration dependencies" {
   let module_id = 996UL
   assert_eq(
@@ -286,6 +300,7 @@ test "standard import prepass selects text iteration dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects UTF8 codec dependencies" {
   let module_id = 1007UL
   assert_eq(
@@ -303,6 +318,7 @@ test "standard import prepass selects UTF8 codec dependencies" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects Show and builder dependency" {
   let module_id = 994UL
   assert_eq(
@@ -320,6 +336,7 @@ test "standard import prepass selects Show and builder dependency" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects Disposable" {
   let module_id = 995UL
   assert_eq(
@@ -337,6 +354,7 @@ test "standard import prepass selects Disposable" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "standard import prepass selects lane module bits" {
   let module_id = 992UL
   assert_eq(
@@ -354,6 +372,7 @@ test "standard import prepass selects lane module bits" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "one imported lane interface is selected without unrelated lane APIs" {
   let program = collect_program_manifest(
     991UL,
@@ -386,6 +405,7 @@ test "one imported lane interface is selected without unrelated lane APIs" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "immutable text interfaces do not expose public builder modules" {
   let string_only = collect_program_manifest(
     989UL,
@@ -421,6 +441,7 @@ test "immutable text interfaces do not expose public builder modules" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "explicit text and WASI imports select frozen standard modules once" {
   let program = collect_program_manifest(
     994UL,
@@ -447,6 +468,7 @@ test "explicit text and WASI imports select frozen standard modules once" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "single-module phase helper never injects optional standard sources" {
   let collected = collect_program_bytes(
     987UL, b"open dew.std.string_builder\npub fn build() -> StringBuilder {\n  StringBuilder::new()\n}\n",
@@ -463,6 +485,7 @@ test "single-module phase helper never injects optional standard sources" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "ambient preamble resolves Fibonacci operators" {
   let collected = collect_bytes_with_standard_preamble(
     996UL, b"pub fn fib(value: I32) -> I32 {\n  if value <= 1 {\n    value\n  } else {\n    fib(value - 1) + fib(value - 2)\n  }\n}\n",

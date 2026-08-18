@@ -939,6 +939,34 @@ Before a broad compiler/backend contribution is considered ready, run:
 tools/check.sh
 ```
 
+For the normal native Dewdrop test lane, run:
+
+```sh
+tools/test-native.sh
+```
+
+Run the large compiler stress cases separately:
+
+```sh
+tools/test-stress-native.sh
+```
+
+Run complete compiler and backend integration cases separately:
+
+```sh
+tools/test-integration-native.sh
+```
+
+Run the pinned Starshine tests only when the Starshine integration changes:
+
+```sh
+tools/test-starshine-native.sh
+```
+
+Do not use `moon test --target native` as the normal Dewdrop command. Moon runs
+that command for both members of `moon.work`, including the complete Starshine
+test suite.
+
 If you cannot run the full suite, say so clearly and list what remains unverified.
 
 ### 7. Keep documentation synchronized

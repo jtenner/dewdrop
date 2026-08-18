@@ -55,6 +55,7 @@ fn nested_member_source(depth : Int, objects : Bool) -> Bytes {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "construction inference handles 512 fields with stable targets" {
   let (collected, _, _, inferred) = call_test_module(
     501UL,
@@ -68,6 +69,7 @@ test "construction inference handles 512 fields with stable targets" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "member worklist handles 512 nested expected objects iteratively" {
   let (_, _, _, inferred) = call_test_module(
     502UL,
@@ -85,6 +87,7 @@ test "member worklist handles 512 nested expected objects iteratively" {
 }
 
 ///|
+#skip("large compiler stress case; run tools/test-stress-native.sh")
 test "member worklist handles a 512-field access chain iteratively" {
   let (_, resolved, _, inferred) = call_test_module(
     503UL,

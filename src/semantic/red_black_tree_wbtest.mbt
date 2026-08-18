@@ -1,4 +1,5 @@
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "red black tree standard module has stable identities and generic lowering" {
   let program = collect_program_manifest(
     2636UL,
