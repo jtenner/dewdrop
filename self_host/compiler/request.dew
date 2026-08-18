@@ -6,7 +6,7 @@ open dew.std.string
 fn self_host_unit() -> Unit {
 }
 
-fn self_host_u8_to_u32(value: U8) -> U32 {
+fn self_host_request_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
@@ -39,10 +39,10 @@ fn self_host_reader_u32(reader: SelfHostRequestReader) -> U32 {
     self_host_reader_fail(reader, "truncated compile request")
     0u32
   } else {
-    let value = self_host_u8_to_u32(reader.bytes.byte_at(reader.offset)) |
-      (self_host_u8_to_u32(reader.bytes.byte_at(reader.offset + 1u32)) << 8u32) |
-      (self_host_u8_to_u32(reader.bytes.byte_at(reader.offset + 2u32)) << 16u32) |
-      (self_host_u8_to_u32(reader.bytes.byte_at(reader.offset + 3u32)) << 24u32)
+    let value = self_host_request_u8_to_u32(reader.bytes.byte_at(reader.offset)) |
+      (self_host_request_u8_to_u32(reader.bytes.byte_at(reader.offset + 1u32)) << 8u32) |
+      (self_host_request_u8_to_u32(reader.bytes.byte_at(reader.offset + 2u32)) << 16u32) |
+      (self_host_request_u8_to_u32(reader.bytes.byte_at(reader.offset + 3u32)) << 24u32)
     reader.offset = reader.offset + 4u32
     value
   }
@@ -246,52 +246,5 @@ pub fn decode_self_host_compile_request(
             })
           }
       }
-  }
-}
-
-pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
-  let prefix = b"pub fn main() -> I32"
-  if !source.starts_with(prefix) {
-    return Result::Err("smoke compiler requires pub fn main() -> I32")
-  } else {
-  }
-  match source.find_byte(123u8) {
-    Option::None => Result::Err("smoke compiler source has no function body")
-    Option::Some(body_start) => {
-      let index = while body_start + 1u32 {
-        current if current < source.byte_length() &&
-          (source.byte_at(current) == 32u8 ||
-          source.byte_at(current) == 9u8 ||
-          source.byte_at(current) == 10u8 ||
-          source.byte_at(current) == 13u8) => continue current + 1u32
-        current => break current
-      }
-      let mut value = 0u32
-      let mut digits = 0u32
-      let _end = while index {
-        current if current < source.byte_length() => {
-          let byte = source.byte_at(current)
-          if byte >= 48u8 && byte <= 57u8 {
-            let digit = self_host_u8_to_u32(byte - 48u8)
-            if value > 214748364u32 ||
-              (value == 214748364u32 && digit > 7u32) {
-              return Result::Err("smoke compiler I32 literal is out of range")
-            } else {
-            }
-            value = value * 10u32 + digit
-            digits = digits + 1u32
-            continue current + 1u32
-          } else {
-            break current
-          }
-        }
-        current => break current
-      }
-      if digits == 0u32 {
-        Result::Err("smoke compiler function body has no I32 literal")
-      } else {
-        Result::Ok(value.into())
-      }
-    }
   }
 }

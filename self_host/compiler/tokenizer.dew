@@ -1,0 +1,583 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.string
+open dew.std.string_builder
+
+pub enum SelfHostKeyword {
+  Fn
+  Test
+  Pub
+  Builtin
+  Foreign
+  Impl
+  Trait
+  For
+  Enum
+  Struct
+  Type
+  Let
+  Using
+  Mut
+  If
+  Else
+  Match
+  Is
+  While
+  Loop
+  Return
+  Defer
+  Break
+  Continue
+  True
+  False
+  As
+  In
+  Where
+  Open
+  Import
+  Export
+  Package
+} derive(Eq)
+
+pub enum SelfHostSymbol {
+  LeftParen
+  RightParen
+  LeftBrace
+  RightBrace
+  LeftBracket
+  RightBracket
+  Caret
+  Plus
+  Minus
+  Star
+  Slash
+  Exponent
+  Percent
+  Colon
+  DoubleColon
+  Equal
+  EqualEqual
+  FatArrow
+  BangEqual
+  LessEqual
+  GreaterEqual
+  ShiftLeft
+  ShiftRight
+  LogicalAnd
+  LogicalOr
+  Comma
+  Semicolon
+  Dot
+  Ellipsis
+  Less
+  Greater
+  Arrow
+  Bang
+  Ampersand
+  Pipe
+} derive(Eq)
+
+pub enum SelfHostLexError {
+  UnexpectedUnit(U32)
+  InvalidAtIdentifier
+  InvalidInteger(String)
+  InvalidEscape(U32)
+  UnterminatedString
+}
+
+pub enum SelfHostTokenKind {
+  Newline
+  Symbol(SelfHostSymbol)
+  Keyword(SelfHostKeyword)
+  Identifier(String)
+  AtIdentifier(String)
+  I32(U64)
+  StringLiteral(Bytes)
+  BytesLiteral(Bytes)
+  Error(SelfHostLexError)
+}
+
+pub struct SelfHostToken {
+  kind: SelfHostTokenKind
+  offset: U32
+  index: U32
+}
+
+fn self_host_tokenizer_unit() -> Unit {
+}
+
+fn self_host_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+fn self_host_u8_to_u64(value: U8) -> U64 {
+  value.into()
+}
+
+fn self_host_u32_to_u8(value: U32) -> U8 {
+  value.into()
+}
+
+impl SelfHostToken {
+  fn has_location(self, offset: U32, index: U32) -> Bool {
+    self.offset == offset && self.index == index
+  }
+}
+
+struct SelfHostTokenizer {
+  source: Bytes
+  mut position: U32
+  mut next_index: U32
+}
+
+fn self_host_tokenizer_emit(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  kind: SelfHostTokenKind,
+  offset: U32,
+) -> Unit {
+  output.push(SelfHostToken::{
+    kind: kind
+    offset: offset
+    index: tokenizer.next_index
+  })
+  tokenizer.next_index = tokenizer.next_index + 1u32
+}
+
+fn self_host_ascii_letter(value: U8) -> Bool {
+  (value >= 65u8 && value <= 90u8) || (value >= 97u8 && value <= 122u8)
+}
+
+fn self_host_ascii_digit(value: U8) -> Bool {
+  value >= 48u8 && value <= 57u8
+}
+
+fn self_host_utf8_continuation(value: U8) -> Bool {
+  value >= 128u8 && value <= 191u8
+}
+
+fn self_host_utf8_width(source: Bytes, index: U32) -> U32 {
+  let remaining = source.byte_length() - index
+  let first = source.byte_at(index)
+  if first <= 127u8 {
+    1u32
+  } else if first >= 194u8 && first <= 223u8 &&
+    remaining >= 2u32 && self_host_utf8_continuation(source.byte_at(index + 1u32)) {
+    2u32
+  } else if first >= 224u8 && first <= 239u8 && remaining >= 3u32 {
+    let second = source.byte_at(index + 1u32)
+    if self_host_utf8_continuation(second) &&
+      self_host_utf8_continuation(source.byte_at(index + 2u32)) &&
+      (first != 224u8 || second >= 160u8) {
+      3u32
+    } else {
+      0u32
+    }
+  } else if first >= 240u8 && first <= 244u8 && remaining >= 4u32 {
+    let second = source.byte_at(index + 1u32)
+    if self_host_utf8_continuation(second) &&
+      self_host_utf8_continuation(source.byte_at(index + 2u32)) &&
+      self_host_utf8_continuation(source.byte_at(index + 3u32)) &&
+      (first != 240u8 || second >= 144u8) &&
+      (first != 244u8 || second <= 143u8) {
+      4u32
+    } else {
+      0u32
+    }
+  } else {
+    0u32
+  }
+}
+
+fn self_host_identifier_start(source: Bytes, index: U32) -> Bool {
+  let value = source.byte_at(index)
+  self_host_ascii_letter(value) || value == 95u8 ||
+    (value >= 128u8 && self_host_utf8_width(source, index) > 0u32)
+}
+
+fn self_host_identifier_continue(source: Bytes, index: U32) -> Bool {
+  self_host_identifier_start(source, index) || self_host_ascii_digit(source.byte_at(index))
+}
+
+fn self_host_keyword(value: String) -> Option<SelfHostKeyword> {
+  match value {
+    "fn" => Option::Some(SelfHostKeyword::Fn)
+    "test" => Option::Some(SelfHostKeyword::Test)
+    "pub" => Option::Some(SelfHostKeyword::Pub)
+    "builtin" => Option::Some(SelfHostKeyword::Builtin)
+    "foreign" => Option::Some(SelfHostKeyword::Foreign)
+    "impl" => Option::Some(SelfHostKeyword::Impl)
+    "trait" => Option::Some(SelfHostKeyword::Trait)
+    "for" => Option::Some(SelfHostKeyword::For)
+    "enum" => Option::Some(SelfHostKeyword::Enum)
+    "struct" => Option::Some(SelfHostKeyword::Struct)
+    "type" => Option::Some(SelfHostKeyword::Type)
+    "let" => Option::Some(SelfHostKeyword::Let)
+    "using" => Option::Some(SelfHostKeyword::Using)
+    "mut" => Option::Some(SelfHostKeyword::Mut)
+    "if" => Option::Some(SelfHostKeyword::If)
+    "else" => Option::Some(SelfHostKeyword::Else)
+    "match" => Option::Some(SelfHostKeyword::Match)
+    "is" => Option::Some(SelfHostKeyword::Is)
+    "while" => Option::Some(SelfHostKeyword::While)
+    "loop" => Option::Some(SelfHostKeyword::Loop)
+    "return" => Option::Some(SelfHostKeyword::Return)
+    "defer" => Option::Some(SelfHostKeyword::Defer)
+    "break" => Option::Some(SelfHostKeyword::Break)
+    "continue" => Option::Some(SelfHostKeyword::Continue)
+    "true" => Option::Some(SelfHostKeyword::True)
+    "false" => Option::Some(SelfHostKeyword::False)
+    "as" => Option::Some(SelfHostKeyword::As)
+    "in" => Option::Some(SelfHostKeyword::In)
+    "where" => Option::Some(SelfHostKeyword::Where)
+    "open" => Option::Some(SelfHostKeyword::Open)
+    "import" => Option::Some(SelfHostKeyword::Import)
+    "export" => Option::Some(SelfHostKeyword::Export)
+    "package" => Option::Some(SelfHostKeyword::Package)
+    _ => Option::None
+  }
+}
+
+fn self_host_scan_identifier(tokenizer: SelfHostTokenizer) -> String {
+  let start = tokenizer.position
+  while tokenizer.position {
+    index if index < tokenizer.source.byte_length() &&
+      self_host_identifier_continue(tokenizer.source, index) => {
+      let width = self_host_utf8_width(tokenizer.source, index)
+      tokenizer.position = index + if width == 0u32 {
+1u32
+} else {
+width
+}
+      continue tokenizer.position
+    }
+    _ => break tokenizer.source.slice(start, tokenizer.position).to_string()
+  }
+}
+
+fn self_host_scan_integer(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  offset: U32,
+) -> Unit {
+  let start = tokenizer.position
+  let mut magnitude = 0u64
+  let mut valid = true
+  let mut saw_digit = false
+  let mut previous_underscore = false
+  while tokenizer.position {
+    index if index < tokenizer.source.byte_length() => {
+      let value = tokenizer.source.byte_at(index)
+      if self_host_ascii_digit(value) {
+        let digit = self_host_u8_to_u64(value - 48u8)
+        if magnitude > (18446744073709551615u64 - digit) / 10u64 {
+          valid = false
+        } else {
+          magnitude = magnitude * 10u64 + digit
+        }
+        saw_digit = true
+        previous_underscore = false
+        tokenizer.position = index + 1u32
+        continue tokenizer.position
+      } else if value == 95u8 {
+        if !saw_digit || previous_underscore {
+valid = false
+} else { }
+        previous_underscore = true
+        tokenizer.position = index + 1u32
+        continue tokenizer.position
+      } else {
+        break index
+      }
+    }
+    index => break index
+  }
+  if previous_underscore {
+valid = false
+} else { }
+  let text = tokenizer.source.slice(start, tokenizer.position).to_string()
+  if valid && magnitude <= 2147483648u64 {
+    self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::I32(magnitude), offset)
+  } else {
+    self_host_tokenizer_emit(
+      tokenizer,
+      output,
+      SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger(text)),
+      offset,
+    )
+  }
+}
+
+fn self_host_hex(value: U8) -> U32 {
+  if value >= 48u8 && value <= 57u8 {
+self_host_u8_to_u32(value - 48u8)
+} else if value >= 65u8 && value <= 70u8 {
+self_host_u8_to_u32(value - 55u8)
+} else if value >= 97u8 && value <= 102u8 {
+self_host_u8_to_u32(value - 87u8)
+} else {
+4294967295u32
+}
+}
+
+fn self_host_scan_string(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  offset: U32,
+  bytes_literal: Bool,
+) -> Unit {
+  tokenizer.position = tokenizer.position + 1u32
+  let builder = BytesBuilder::new()
+  let mut done = false
+  while tokenizer.position {
+    index if index < tokenizer.source.byte_length() && !done => {
+      let value = tokenizer.source.byte_at(index)
+      if value == 34u8 {
+        tokenizer.position = index + 1u32
+        done = true
+        break index
+      } else if value == 10u8 || value == 13u8 {
+        break index
+      } else if value == 92u8 {
+        if index + 1u32 >= tokenizer.source.byte_length() {
+          tokenizer.position = tokenizer.source.byte_length()
+          break tokenizer.position
+        } else {
+          let escaped = tokenizer.source.byte_at(index + 1u32)
+          tokenizer.position = index + 2u32
+          if escaped == 34u8 {
+builder.append_byte(34u8)
+} else if escaped == 92u8 {
+builder.append_byte(92u8)
+} else if escaped == 110u8 {
+builder.append_byte(10u8)
+} else if escaped == 114u8 {
+builder.append_byte(13u8)
+} else if escaped == 116u8 {
+builder.append_byte(9u8)
+} else if escaped == 48u8 {
+builder.append_byte(0u8)
+} else if escaped == 98u8 {
+builder.append_byte(8u8)
+} else if escaped == 102u8 {
+builder.append_byte(12u8)
+} else if escaped == 120u8 && tokenizer.position + 2u32 <= tokenizer.source.byte_length() {
+            let high = self_host_hex(tokenizer.source.byte_at(tokenizer.position))
+            let low = self_host_hex(tokenizer.source.byte_at(tokenizer.position + 1u32))
+            if high < 16u32 && low < 16u32 {
+              let byte = self_host_u32_to_u8((high << 4u32) | low)
+              builder.append_byte(byte)
+              tokenizer.position = tokenizer.position + 2u32
+            } else {
+              self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidEscape(escaped.into())), offset)
+              return
+            }
+          } else {
+            self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidEscape(escaped.into())), offset)
+            return
+          }
+          continue tokenizer.position
+        }
+      } else {
+        let width = self_host_utf8_width(tokenizer.source, index)
+        let count = if width == 0u32 {
+1u32
+} else {
+width
+}
+        builder.append(tokenizer.source.slice(index, index + count))
+        tokenizer.position = index + count
+        continue tokenizer.position
+      }
+    }
+    index => break index
+  }
+  if done {
+    if bytes_literal {
+      self_host_tokenizer_emit(
+        tokenizer,
+        output,
+        SelfHostTokenKind::BytesLiteral(builder.finish()),
+        offset,
+      )
+    } else {
+      self_host_tokenizer_emit(
+        tokenizer,
+        output,
+        SelfHostTokenKind::StringLiteral(builder.finish()),
+        offset,
+      )
+    }
+  } else {
+    self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::UnterminatedString), offset)
+  }
+}
+
+fn self_host_scan_symbol(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  offset: U32,
+) -> Unit {
+  let source = tokenizer.source
+  let value = source.byte_at(tokenizer.position)
+  let next = if tokenizer.position + 1u32 < source.byte_length() {
+    source.byte_at(tokenizer.position + 1u32)
+  } else {
+    0u8
+  }
+  let third = if tokenizer.position + 2u32 < source.byte_length() {
+    source.byte_at(tokenizer.position + 2u32)
+  } else {
+    0u8
+  }
+  let mut width = 1u32
+  let kind = match value {
+    40u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen)
+    41u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen)
+    123u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace)
+    125u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace)
+    91u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket)
+    93u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::RightBracket)
+    94u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::Caret)
+    43u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::Plus)
+    45u8 => if next == 62u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Arrow)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Minus)
+    }
+    42u8 => if next == 42u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Exponent)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Star)
+    }
+    47u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::Slash)
+    37u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::Percent)
+    58u8 => if next == 58u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::DoubleColon)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Colon)
+    }
+    61u8 => if next == 61u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::EqualEqual)
+    } else if next == 62u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::FatArrow)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Equal)
+    }
+    33u8 => if next == 61u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::BangEqual)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Bang)
+    }
+    60u8 => if next == 61u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::LessEqual)
+    } else if next == 60u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::ShiftLeft)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Less)
+    }
+    62u8 => if next == 61u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::GreaterEqual)
+    } else if next == 62u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::ShiftRight)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Greater)
+    }
+    38u8 => if next == 38u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::LogicalAnd)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Ampersand)
+    }
+    124u8 => if next == 124u8 {
+      width = 2u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::LogicalOr)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Pipe)
+    }
+    46u8 => if next == 46u8 && third == 46u8 {
+      width = 3u32
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Ellipsis)
+    } else {
+      SelfHostTokenKind::Symbol(SelfHostSymbol::Dot)
+    }
+    44u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::Comma)
+    59u8 => SelfHostTokenKind::Symbol(SelfHostSymbol::Semicolon)
+    _ => SelfHostTokenKind::Error(
+      SelfHostLexError::UnexpectedUnit(self_host_u8_to_u32(value)),
+    )
+  }
+  tokenizer.position = tokenizer.position + width
+  self_host_tokenizer_emit(tokenizer, output, kind, offset)
+}
+
+pub fn self_host_tokenize(source: Bytes) -> Array<SelfHostToken> {
+  let tokenizer = SelfHostTokenizer::{
+    source: source
+    position: 0u32
+    next_index: 0u32
+  }
+  let output = Array::new()
+  while tokenizer.position {
+    index if index < source.byte_length() => {
+      let value = source.byte_at(index)
+      if value == 32u8 || value == 9u8 || value == 11u8 || value == 12u8 {
+        tokenizer.position = index + 1u32
+      } else if value == 47u8 && index + 1u32 < source.byte_length() && source.byte_at(index + 1u32) == 47u8 {
+        tokenizer.position = index + 2u32
+        while tokenizer.position {
+          comment if comment < source.byte_length() && source.byte_at(comment) != 10u8 && source.byte_at(comment) != 13u8 => {
+            tokenizer.position = comment + 1u32
+            continue tokenizer.position
+          }
+          _ => break self_host_tokenizer_unit()
+        }
+      } else if value == 10u8 || value == 13u8 {
+        tokenizer.position = index + 1u32
+        if value == 13u8 && tokenizer.position < source.byte_length() && source.byte_at(tokenizer.position) == 10u8 {
+tokenizer.position = tokenizer.position + 1u32
+} else { }
+        self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Newline, index)
+      } else if value == 98u8 && index + 1u32 < source.byte_length() && source.byte_at(index + 1u32) == 34u8 {
+        tokenizer.position = index + 1u32
+        self_host_scan_string(tokenizer, output, index, true)
+      } else if value == 34u8 {
+        self_host_scan_string(tokenizer, output, index, false)
+      } else if value == 64u8 {
+        tokenizer.position = index + 1u32
+        if tokenizer.position < source.byte_length() && self_host_identifier_start(source, tokenizer.position) {
+          let name = self_host_scan_identifier(tokenizer)
+          self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::AtIdentifier(name), index)
+        } else {
+          self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidAtIdentifier), index)
+        }
+      } else if self_host_identifier_start(source, index) {
+        let name = self_host_scan_identifier(tokenizer)
+        match self_host_keyword(name) {
+          Option::Some(keyword) => self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Keyword(keyword), index)
+          Option::None => self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Identifier(name), index)
+        }
+      } else if self_host_ascii_digit(value) {
+        self_host_scan_integer(tokenizer, output, index)
+      } else if value >= 128u8 {
+        tokenizer.position = index + 1u32
+        self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::UnexpectedUnit(1114112u32 + self_host_u8_to_u32(value))), index)
+      } else {
+        self_host_scan_symbol(tokenizer, output, index)
+      }
+      continue tokenizer.position
+    }
+    _ => break output
+  }
+}

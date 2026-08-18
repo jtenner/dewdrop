@@ -1,0 +1,53 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.result
+open dew.std.string
+
+fn self_host_parser_u64_to_i32(value: U64) -> I32 {
+  value.into()
+}
+
+fn self_host_parser_compact(tokens: Array<SelfHostToken>) -> Array<SelfHostToken> {
+  let output = Array::with_capacity(tokens.length())
+  while 0u32 {
+    index if index < tokens.length() => {
+      let token = tokens.get_unchecked(index)
+      if token.kind is SelfHostTokenKind::Newline {
+      } else {
+        output.push(token)
+      }
+      continue index + 1u32
+    }
+    _ => break output
+  }
+}
+
+pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
+  let tokens = self_host_parser_compact(self_host_tokenize(source))
+  if tokens.length() != 10u32 {
+    return Result::Err("smoke parser requires one complete main function")
+  } else {
+  }
+  if !(tokens.get_unchecked(0u32).kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Pub)) ||
+    !(tokens.get_unchecked(1u32).kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Fn)) ||
+    !(tokens.get_unchecked(2u32).kind is SelfHostTokenKind::Identifier("main")) ||
+    !(tokens.get_unchecked(3u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen)) ||
+    !(tokens.get_unchecked(4u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen)) ||
+    !(tokens.get_unchecked(5u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::Arrow)) ||
+    !(tokens.get_unchecked(6u32).kind is SelfHostTokenKind::Identifier("I32")) ||
+    !(tokens.get_unchecked(7u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace)) ||
+    !(tokens.get_unchecked(9u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace)) {
+    return Result::Err("smoke parser expected pub fn main() -> I32 { literal }")
+  } else {
+  }
+  match tokens.get_unchecked(8u32).kind {
+    SelfHostTokenKind::I32(value) =>
+      if value <= 2147483647u64 {
+        Result::Ok(self_host_parser_u64_to_i32(value))
+      } else {
+        Result::Err("smoke parser positive I32 literal is out of range")
+      }
+    SelfHostTokenKind::Error(_) => Result::Err("smoke parser received a lexical error")
+    _ => Result::Err("smoke parser expected one I32 literal body")
+  }
+}

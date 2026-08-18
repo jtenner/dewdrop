@@ -1,0 +1,96 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.testing
+
+fn tokenizer_test_kind(tokens: Array<SelfHostToken>, index: U32) -> SelfHostTokenKind {
+  tokens.get_unchecked(index).kind
+}
+
+test "self-host tokenizer recognizes longest symbol matches" {
+  let tokens = self_host_tokenize(b"=== => != <= >= << >> && || ... ->")
+  assert(tokens.length() == 12u32, "wrong symbol token count")
+  assert(tokenizer_test_kind(tokens, 0u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::EqualEqual), "missing ==")
+  assert(tokenizer_test_kind(tokens, 1u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::Equal), "missing trailing =")
+  assert(tokenizer_test_kind(tokens, 2u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::FatArrow), "missing =>")
+  assert(tokenizer_test_kind(tokens, 5u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::GreaterEqual), "missing >=")
+  assert(tokenizer_test_kind(tokens, 9u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::LogicalOr), "missing ||")
+  assert(tokenizer_test_kind(tokens, 10u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::Ellipsis), "missing ...")
+  assert(tokenizer_test_kind(tokens, 11u32) is SelfHostTokenKind::Symbol(SelfHostSymbol::Arrow), "missing ->")
+}
+
+test "self-host tokenizer separates keywords and identifiers" {
+  let tokens = self_host_tokenize(b"fn using is defer open global ordinary")
+  assert(tokens.length() == 7u32, "wrong keyword token count")
+  assert(tokenizer_test_kind(tokens, 0u32) is SelfHostTokenKind::Keyword(SelfHostKeyword::Fn), "fn is not a keyword")
+  assert(tokenizer_test_kind(tokens, 1u32) is SelfHostTokenKind::Keyword(SelfHostKeyword::Using), "using is not a keyword")
+  assert(tokenizer_test_kind(tokens, 2u32) is SelfHostTokenKind::Keyword(SelfHostKeyword::Is), "is is not a keyword")
+  assert(tokenizer_test_kind(tokens, 3u32) is SelfHostTokenKind::Keyword(SelfHostKeyword::Defer), "defer is not a keyword")
+  assert(tokenizer_test_kind(tokens, 4u32) is SelfHostTokenKind::Keyword(SelfHostKeyword::Open), "open is not a keyword")
+  assert(tokenizer_test_kind(tokens, 5u32) is SelfHostTokenKind::Identifier("global"), "global should remain an identifier")
+  assert(tokenizer_test_kind(tokens, 6u32) is SelfHostTokenKind::Identifier("ordinary"), "ordinary should remain an identifier")
+}
+
+test "self-host tokenizer decodes string escapes and preserves malformed bytes" {
+  let tokens = self_host_tokenize(b"\"line\\n\xFF\" b\"\x00\\xFF\"")
+  assert(tokens.length() == 2u32, "wrong string token count")
+  match tokenizer_test_kind(tokens, 0u32) {
+    SelfHostTokenKind::StringLiteral(value) =>
+      assert(value.equals(b"line\n\xFF"), "wrong string bytes")
+    _ => assert(false, "expected string literal")
+  }
+  match tokenizer_test_kind(tokens, 1u32) {
+    SelfHostTokenKind::BytesLiteral(value) =>
+      assert(value.equals(b"\x00\xFF"), "wrong byte literal")
+    _ => assert(false, "expected byte literal")
+  }
+}
+
+test "self-host tokenizer reports malformed bytes outside strings" {
+  let tokens = self_host_tokenize(b"\xFF")
+  assert(tokens.length() == 1u32, "wrong malformed token count")
+  assert(
+    tokenizer_test_kind(tokens, 0u32) is SelfHostTokenKind::Error(
+      SelfHostLexError::UnexpectedUnit(1114367u32),
+    ),
+    "malformed source byte was not preserved",
+  )
+}
+
+test "self-host tokenizer keeps CRLF offsets and stable indexes" {
+  let tokens = self_host_tokenize(b"a\r\nb")
+  assert(tokens.length() == 3u32, "wrong token count")
+  let first = tokens.get_unchecked(0u32)
+  let newline = tokens.get_unchecked(1u32)
+  let last = tokens.get_unchecked(2u32)
+  assert(first.has_location(0u32, 0u32), "wrong first token location")
+  assert(newline.has_location(1u32, 1u32), "wrong newline location")
+  assert(last.has_location(3u32, 2u32), "wrong last token location")
+}
+
+test "self-host tokenizer validates integer separators and range" {
+  let tokens = self_host_tokenize(b"0 2_147_483_648 2147483649 1__2 3_")
+  assert(tokens.length() == 5u32, "wrong integer token count")
+  assert(tokenizer_test_kind(tokens, 0u32) is SelfHostTokenKind::I32(0u64), "wrong zero")
+  assert(tokenizer_test_kind(tokens, 1u32) is SelfHostTokenKind::I32(2147483648u64), "wrong signed-min magnitude")
+  assert(tokenizer_test_kind(tokens, 2u32) is SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger("2147483649")), "accepted overflow")
+  assert(tokenizer_test_kind(tokens, 3u32) is SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger("1__2")), "accepted repeated separator")
+  assert(tokenizer_test_kind(tokens, 4u32) is SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger("3_")), "accepted trailing separator")
+}
+
+test "self-host tokenizer handles Unicode identifiers and comments" {
+  let tokens = self_host_tokenize(b"λ // ignored\r\nname")
+  assert(tokens.length() == 3u32, "wrong Unicode/comment token count")
+  assert(tokenizer_test_kind(tokens, 0u32) is SelfHostTokenKind::Identifier("λ"), "wrong Unicode identifier")
+  assert(tokenizer_test_kind(tokens, 1u32) is SelfHostTokenKind::Newline, "comment lost newline")
+  assert(tokenizer_test_kind(tokens, 2u32) is SelfHostTokenKind::Identifier("name"), "tokenization did not resume")
+}
+
+test "self-host tokenizer reports bad at identifiers and unterminated strings" {
+  let tokens = self_host_tokenize(b"@ 42 \"bad\nnext")
+  assert(tokens.length() == 5u32, "wrong recovery token count")
+  assert(tokenizer_test_kind(tokens, 0u32) is SelfHostTokenKind::Error(SelfHostLexError::InvalidAtIdentifier), "accepted bad @ name")
+  assert(tokenizer_test_kind(tokens, 1u32) is SelfHostTokenKind::I32(42u64), "did not recover after @")
+  assert(tokenizer_test_kind(tokens, 2u32) is SelfHostTokenKind::Error(SelfHostLexError::UnterminatedString), "missed unterminated string")
+  assert(tokenizer_test_kind(tokens, 3u32) is SelfHostTokenKind::Newline, "unterminated string consumed newline")
+  assert(tokenizer_test_kind(tokens, 4u32) is SelfHostTokenKind::Identifier("next"), "did not recover after string")
+}

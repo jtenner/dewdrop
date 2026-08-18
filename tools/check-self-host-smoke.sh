@@ -7,6 +7,11 @@ work=$root/.tmp/self-host-smoke
 
 tools/starshine-ffi.sh build
 python3 tools/generate_starshine_ffi_consumer.py --check
+tools/dew test \
+  self_host/compiler/tokenizer.dew \
+  self_host/compiler/parser.dew \
+  self_host/compiler/tokenizer_test.dew \
+  self_host/compiler/parser_test.dew
 
 rm -rf "$work"
 mkdir -p "$work/a" "$work/b" "$work/reject-fingerprint" "$work/reject-count"
@@ -14,6 +19,8 @@ mkdir -p "$work/a" "$work/b" "$work/reject-fingerprint" "$work/reject-count"
 sources=(
   self_host/starshine/ffi.dew
   self_host/starshine/fingerprint.dew
+  self_host/compiler/tokenizer.dew
+  self_host/compiler/parser.dew
   self_host/compiler/request.dew
   self_host/compiler/starshine_module.dew
   self_host/compiler/main.dew
