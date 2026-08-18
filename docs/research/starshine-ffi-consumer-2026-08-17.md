@@ -58,7 +58,11 @@ Coverage includes:
 - linker marker binding, `ref.null` type remapping, and both nullability-mismatch directions;
 - all 3,350 generated Starshine declarations and a zero-entry unsupported list.
 
-The complete Starshine provider still exposes a separate pre-existing linker validation problem: Starshine reports `func[15771]: type mismatch` for the linked candidate, while `wasm-tools validate --features all` accepts the encoded candidate. This is not caused by nullable signatures; the tiny non-null `I32::new` consumer reproduces it. The synthetic exact-nullability linker tests pass.
+The production provider now links with normal Starshine validation and post-link cleanup enabled. The earlier `func[15771]: type mismatch` was a Starshine validator bug: MoonBit emitted two separately indexed but structurally equivalent mutable `f64` array types, and ordinary defined-reference matching followed only declared subtype chains. Starshine commit `a7f0b6b05` adds canonical structural equivalence before subtype traversal.
+
+That repair exposed a second Starshine cleanup bug. A retained declaration-only element segment contained both live and dead functions; RUME converted the dead function's `-1` remap into an invalid unsigned function index. Starshine commit `f9e312013` tracks declaration-only versus runtime element use and prunes dead declaration entries before remapping survivors. Both commits are pushed to `starshine-mb` `master`.
+
+At pinned Starshine revision `f9e31201392df4a08586e2a71f3ffa342d8422bd`, the regenerated provider SHA-256 is `6acfccb8afcb1e9d296d99ed7e5f4611e30fd0f7ceb65112bd8c667ba878681b`. Two complete linked smoke builds are byte-identical at 680,107 bytes and SHA-256 `1fc978dd89dc8abd58c50dc7d67d880dc2841cb57d8bad7c58497cf153144c14`; `wasm-tools validate --features all` accepts the result.
 
 ## Reproduction
 

@@ -98,9 +98,9 @@ See [`../compile-request.md`](../compile-request.md).
 
 ## 3. P0: production Starshine foreign ABI
 
-The static-link mechanism is implemented, but the production guest ABI is not.
-`src/starshine_guest/main.mbt` currently exports only `module_new` and
-`module_new_named` for linker coverage.
+**Current state:** the pinned production provider builds, all 3,350 raw function exports have exact Dew carrier declarations, and the complete provider now links, cleans up, validates, and emits byte-identical smoke modules. Starshine fixes `a7f0b6b05` and `f9e312013` closed canonical defined-type equivalence and declaration-only element remapping bugs found by the first production link.
+
+The remaining ABI-freeze work is to select the exact compiler-used export subset, add typed container/result bridges where raw carriers are insufficient, and include the submodule revision, selected signatures, interface digests, and exact provider bytes in deterministic compiler fingerprints. `src/starshine_guest/main.mbt` remains the small historical linker fixture with only `module_new` and `module_new_named`; self-hosting uses the generated `starshine-mb/ffi` provider instead.
 
 The production backend and linker still contain 8,820 direct Starshine package
 references:
