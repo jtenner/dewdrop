@@ -137,3 +137,11 @@ payloads as temporary files.
 Ambient cache environment variables are ignored. `tools/check-compile-request.sh`
 runs the same request in two physical directories, validates both Wasm outputs,
 checks byte identity, and verifies that no cache directory was created.
+
+The first Dew consumer is under `self_host/compiler/`. It decodes the same version
+1 framing, requires a build request with a Starshine provider, verifies the
+pinned BLAKE3 compiler fingerprint, parses the bounded `pub fn main() -> I32`
+smoke source, and emits one module through the linked Starshine object model.
+`tools/check-self-host-smoke.sh` builds that compiler twice, runs it in two
+physical directories, checks compiler and output byte identity, validates both
+outputs, and rejects a modified fingerprint.

@@ -4,21 +4,33 @@ Date: 2026-08-17
 
 ## Result
 
-Dewdrop now generates raw Dew declarations by inspecting every function export in the pinned Starshine WasmGC FFI module.
+Dewdrop now inspects every function export in the pinned Starshine WasmGC FFI module and generates raw Dew declarations only for the exact compiler-used subset.
 
 Inputs:
 
 - `starshine-mb/dist/ffi/starshine-ffi.wasm`
 - `starshine-mb/ffi/src/ffi/export-names.generated.json`
 
+Inputs and selection:
+
+- `self_host/starshine/ffi-used.json`
+- `starshine-mb/src/lib/pkg.generated.mbti`
+- `starshine-mb/src/binary/pkg.generated.mbti`
+- `starshine-mb/src/validate/pkg.generated.mbti`
+- `starshine-mb/src/ffi_bridge/pkg.generated.mbti`
+
 Outputs:
 
 - `self_host/starshine/ffi.dew`
 - `self_host/starshine/ffi-bindings.json`
+- `self_host/starshine/fingerprint-prefix.bin`
+- `self_host/starshine/fingerprint.dew`
 
 The generator checks that the binary function-export set exactly matches Starshine's export-name metadata. It reads each exported Core Wasm function signature and maps primitive carriers directly. Each concrete WasmGC reference type gets a Dew foreign marker type. Nullable signatures use `NullableRef<StarshineRefN>` and preserve the same underlying marker identity.
 
-The current provider has 3,350 function exports. Dew declares all 3,350. The 170 nullable signatures that were initially blocked now lower to exact `(ref null N)` parameters and results.
+At pinned Starshine revision `c544a96d367351145aecdbbc9c6e40e6095e13ca`, the provider has 3,366 concrete function exports. The typed bridge API was introduced in `664cafba9`; `c544a96d3` keeps its generated interface in Moon's canonical form. Dew declares the exact 32 exports used by the linked smoke compiler. Nullable signatures lower to exact `(ref null N)` parameters and results.
+
+Starshine's `ffi_bridge` package provides typed mutable builders for `Array[ValType]`, `Array[RecType]`, `Array[TypeIdx]`, `Array[Instruction]`, and `Array[Func]`, plus an empty module constructor, validation, and encoded-byte inspection. This keeps the boundary on the public object model without adding a command language.
 
 ## Nullable foreign references
 
@@ -56,13 +68,18 @@ Coverage includes:
 - direct `ref.null`, `ref.is_null`, and `ref.as_non_null` emission;
 - runtime null observation and `ref.as_non_null` trapping in Node and Wago;
 - linker marker binding, `ref.null` type remapping, and both nullability-mismatch directions;
-- all 3,350 generated Starshine declarations and a zero-entry unsupported list.
+- exact ordered selection of 32 declarations from 3,366 available provider exports;
+- rejection of missing or duplicate selected exports;
+- interface and selected-signature fingerprint-prefix changes;
+- typed Starshine array and encoded-result bridges.
 
 The production provider now links with normal Starshine validation and post-link cleanup enabled. The earlier `func[15771]: type mismatch` was a Starshine validator bug: MoonBit emitted two separately indexed but structurally equivalent mutable `f64` array types, and ordinary defined-reference matching followed only declared subtype chains. Starshine commit `a7f0b6b05` adds canonical structural equivalence before subtype traversal.
 
 That repair exposed a second Starshine cleanup bug. A retained declaration-only element segment contained both live and dead functions; RUME converted the dead function's `-1` remap into an invalid unsigned function index. Starshine commit `f9e312013` tracks declaration-only versus runtime element use and prunes dead declaration entries before remapping survivors. Both commits are pushed to `starshine-mb` `master`.
 
-At pinned Starshine revision `f9e31201392df4a08586e2a71f3ffa342d8422bd`, the regenerated provider SHA-256 is `6acfccb8afcb1e9d296d99ed7e5f4611e30fd0f7ceb65112bd8c667ba878681b`. Two complete linked smoke builds are byte-identical at 680,107 bytes and SHA-256 `1fc978dd89dc8abd58c50dc7d67d880dc2841cb57d8bad7c58497cf153144c14`; `wasm-tools validate --features all` accepts the result.
+Starshine commits `664cafba9` and `c544a96d3` add the typed bridges and canonical generated interface; both are pushed to `master`. The regenerated provider SHA-256 is `b0108c45dd634f9f3c9c971663ee3a3016ab9c35488573b7fe375d6a0f041f63`.
+
+The compiler fingerprint is BLAKE3-256 over a canonical prefix containing the submodule revision, four interface SHA-256 digests, and every selected export name and signature, followed by the exact provider bytes. The linked source-request compiler builds byte-identically at 876,766 bytes with SHA-256 `5a871558c614efaa720f069ce7ed8abf6e9fe0b0335c4a7e3bb43a3e9d555649`. It emits a 28-byte validated module containing `i32.const 73`, with SHA-256 `abaf57175758ac133a309c4700feface2a9ad611b3eb0fe926d1036bee80e288`. The harness rejects both a one-byte compiler-fingerprint mutation and an unbounded `0xffffffff` module count.
 
 ## Reproduction
 
@@ -70,6 +87,12 @@ At pinned Starshine revision `f9e31201392df4a08586e2a71f3ffa342d8422bd`, the reg
 tools/starshine-ffi.sh build
 python3 tools/generate_starshine_ffi_consumer.py
 python3 tools/generate_starshine_ffi_consumer.py --check
-tools/dew check self_host/starshine/ffi.dew self_host/starshine/smoke.dew
-tools/module-snapshots/run.sh --fixture wasmgc/nullable-ref-as-non-null-trap
+PYTHONPATH=tools python3 tools/test_starshine_ffi_consumer.py
+tools/dew check \
+  self_host/starshine/ffi.dew \
+  self_host/starshine/fingerprint.dew \
+  self_host/compiler/request.dew \
+  self_host/compiler/starshine_module.dew \
+  self_host/compiler/main.dew
+tools/check-self-host-smoke.sh
 ```

@@ -1,0 +1,94 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.fixed_array
+open dew.std.fs
+open dew.std.fs.wasi
+open dew.std.path
+open dew.std.process
+open dew.std.process.wasi
+open dew.std.result
+open dew.std.string
+
+fn self_host_error(process: WasiProcess, message: String) -> U32 {
+  let _written = process_write_stderr(
+    process,
+    "self-host smoke: ".concat(message).concat("\n").as_bytes(),
+  )
+  1u32
+}
+
+fn self_host_fingerprint_matches(
+  expected: FixedArray<U8>,
+  actual: Bytes,
+) -> Bool {
+  if actual.byte_length() != expected.length() {
+    false
+  } else {
+    while 0u32 {
+      index if index < expected.length() => {
+        if expected.get_unchecked(index) != actual.byte_at(index) {
+          break false
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break true
+    }
+  }
+}
+
+pub fn main() -> U32 {
+  let process = wasi_process()
+  match process_arguments(process, 8u32, 4096u32) {
+    Result::Err(_) => self_host_error(process, "cannot read process arguments")
+    Result::Ok(arguments) => {
+      if arguments.length() != 2u32 {
+        self_host_error(process, "usage: COMPILER REQUEST")
+      } else {
+        match relative_path(arguments.get_unchecked(1u32)) {
+          Result::Err(_) => self_host_error(process, "request path is not relative")
+          Result::Ok(request_path) => {
+            let filesystem = wasi_file_system(3u32)
+            match fs_read_file(filesystem, request_path, 268435456u32) {
+              Result::Err(_) => self_host_error(process, "cannot read compile request")
+              Result::Ok(request_bytes) =>
+                match decode_self_host_compile_request(request_bytes) {
+                  Result::Err(error) => self_host_error(process, error)
+                  Result::Ok(request) => {
+                    let fingerprint = starshine_compiler_fingerprint(
+                      request.starshine_provider,
+                    )
+                    if !self_host_fingerprint_matches(
+                      fingerprint,
+                      request.compiler_fingerprint,
+                    ) {
+                      self_host_error(process, "compiler fingerprint mismatch")
+                    } else {
+                      match parse_self_host_i32_source(request.source) {
+                        Result::Err(error) => self_host_error(process, error)
+                        Result::Ok(value) =>
+                          match build_self_host_i32_module(value) {
+                            Result::Err(error) => self_host_error(process, error)
+                            Result::Ok(output) =>
+                              match relative_path(request.output_path) {
+                                Result::Err(_) =>
+                                  self_host_error(process, "output path is not relative")
+                                Result::Ok(output_path) =>
+                                  match fs_write_file(filesystem, output_path, output) {
+                                    Result::Err(_) =>
+                                      self_host_error(process, "cannot write output module")
+                                    Result::Ok(_) => 0u32
+                                  }
+                              }
+                          }
+                      }
+                    }
+                  }
+                }
+            }
+          }
+        }
+      }
+    }
+  }
+}

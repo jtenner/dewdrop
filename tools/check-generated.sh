@@ -32,6 +32,7 @@ python3 tools/generate_blake3_std.py --check
 python3 tools/generate_sha256_std.py --check
 python3 tools/generate_host_std.py --check
 python3 tools/generate_package_std.py --check
+PYTHONPATH=tools python3 tools/test_starshine_ffi_consumer.py
 tools/check-facet.sh
 python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check
@@ -43,6 +44,7 @@ node --check tools/dew-abi-metadata.mjs
 node --check tools/dew-abi.mjs
 node --check tools/dew-wasm-consumer.mjs
 node --check tools/wasm-metrics.mjs
+node --check tools/run-dew-wasi.mjs
 moon test --target native src/dew_bootstrap
 python3 tools/cli-fixtures.py
 

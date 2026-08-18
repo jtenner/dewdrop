@@ -98,9 +98,9 @@ See [`../compile-request.md`](../compile-request.md).
 
 ## 3. P0: production Starshine foreign ABI
 
-**Current state:** the pinned production provider builds, all 3,350 raw function exports have exact Dew carrier declarations, and the complete provider now links, cleans up, validates, and emits byte-identical smoke modules. Starshine fixes `a7f0b6b05` and `f9e312013` closed canonical defined-type equivalence and declaration-only element remapping bugs found by the first production link.
+**Current state:** completed on August 18, 2026. The pinned production provider builds with 3,366 concrete exports. Dewdrop selects an exact 32-export compiler subset, generates exact carrier declarations, and uses Starshine's typed `ffi_bridge` array, module, validation, and encoded-byte adapters from commit `664cafba9`. Starshine fixes `a7f0b6b05` and `f9e312013` closed the canonical defined-type equivalence and declaration-only element remapping bugs found by the first production link.
 
-The remaining ABI-freeze work is to select the exact compiler-used export subset, add typed container/result bridges where raw carriers are insufficient, and include the submodule revision, selected signatures, interface digests, and exact provider bytes in deterministic compiler fingerprints. `src/starshine_guest/main.mbt` remains the small historical linker fixture with only `module_new` and `module_new_named`; self-hosting uses the generated `starshine-mb/ffi` provider instead.
+The deterministic BLAKE3 compiler fingerprint covers the pinned submodule revision, SHA-256 digests of the `lib`, `binary`, `validate`, and `ffi_bridge` interfaces, every selected export name and signature, and the exact provider bytes. The linked Dew smoke compiler reads the frozen source-Bytes request through WASI, verifies that fingerprint, parses the bounded `pub fn main() -> I32` smoke source, builds and validates one Starshine module, and writes byte-identical Wasm output in two physical directories. `src/starshine_guest/main.mbt` remains the small historical linker fixture; self-hosting uses the generated `starshine-mb/ffi` provider.
 
 The production backend and linker still contain 8,820 direct Starshine package
 references:
@@ -179,9 +179,7 @@ foreign linking.
 
 ## Recommended order
 
-1. Build the pinned Starshine raw WasmGC FFI and generate matching Dew declarations.
-2. Extend the source-Bytes smoke compiler through that linked Starshine guest.
-3. Port tokenizer and parser against the now-frozen in-memory source boundary.
-4. Port semantic and backend phases in dependency order.
-5. Add the cache-disabled A→B→C harness.
-6. Restore BLAKE3-based persistent caches after byte identity is stable.
+1. Port tokenizer and parser against the now-frozen in-memory source boundary.
+2. Port semantic and backend phases in dependency order.
+3. Add the cache-disabled A→B→C harness.
+4. Restore BLAKE3-based persistent caches after byte identity is stable.

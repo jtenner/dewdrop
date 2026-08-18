@@ -1,0 +1,90 @@
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.result
+open dew.std.wasm.intrinsics
+
+fn self_host_i32_to_u32(value: I32) -> U32 {
+  value.into()
+}
+
+fn self_host_i32_to_u8(value: I32) -> U8 {
+  value.into()
+}
+
+pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
+  let parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
+  let results = StarshineFfi.ffi_ffi_bridge_val_types_new()
+  StarshineFfi.ffi_ffi_bridge_val_types_push(
+    results,
+    StarshineFfi.ffi_lib_ValType_i32(),
+  )
+  let function_type = StarshineFfi.ffi_lib_CompType_func(parameters, results)
+  let subtype = StarshineFfi.ffi_lib_SubType_comp_type(
+    function_type,
+    wasm_ref_null(),
+  )
+  let rec_type = StarshineFfi.ffi_lib_RecType_new(subtype)
+  let rec_types = StarshineFfi.ffi_ffi_bridge_rec_types_new()
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(rec_types, rec_type)
+  let type_section = StarshineFfi.ffi_lib_TypeSec_new(rec_types)
+
+  let type_indices = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+  StarshineFfi.ffi_ffi_bridge_type_indices_push(
+    type_indices,
+    StarshineFfi.ffi_lib_TypeIdx_new(0i32),
+  )
+  let function_section = StarshineFfi.ffi_lib_FuncSec_new(type_indices)
+
+  let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    instructions,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(value),
+    ),
+  )
+  let expression = StarshineFfi.ffi_lib_Expr_new(instructions)
+  let function_ = StarshineFfi.ffi_lib_Func_new(
+    StarshineFfi.ffi_lib_Locals_empty(),
+    expression,
+  )
+  let functions = StarshineFfi.ffi_ffi_bridge_funcs_new()
+  StarshineFfi.ffi_ffi_bridge_funcs_push(functions, function_)
+  let code_section = StarshineFfi.ffi_lib_CodeSec_new(functions)
+
+  let module_ = StarshineFfi.ffi_lib_Module_with_code_sec(
+    StarshineFfi.ffi_lib_Module_with_func_sec(
+      StarshineFfi.ffi_lib_Module_with_type_sec(
+        StarshineFfi.ffi_ffi_bridge_module_new(),
+        type_section,
+      ),
+      function_section,
+    ),
+    code_section,
+  )
+  if StarshineFfi.ffi_ffi_bridge_validate_module(module_) == 0i32 {
+    Result::Err("Starshine rejected the smoke compiler output module")
+  } else {
+    let encoded = StarshineFfi.ffi_ffi_bridge_encode_module(module_)
+    if StarshineFfi.ffi_ffi_bridge_EncodedModule_is_ok(encoded) == 0i32 {
+      Result::Err("Starshine could not encode the smoke compiler output module")
+    } else {
+      let length = self_host_i32_to_u32(
+        StarshineFfi.ffi_ffi_bridge_EncodedModule_byte_length(encoded),
+      )
+      let output = BytesBuilder::with_capacity(length)
+      while 0u32 {
+        index if index < length => {
+          let byte = self_host_i32_to_u8(
+            StarshineFfi.ffi_ffi_bridge_EncodedModule_byte_at(
+              encoded,
+              index.into(),
+            ),
+          )
+          output.append_byte(byte)
+          continue index + 1u32
+        }
+        _ => break Result::Ok(output.finish())
+      }
+    }
+  }
+}

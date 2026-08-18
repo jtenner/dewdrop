@@ -1,0 +1,297 @@
+open dew.std.bytes
+open dew.std.option
+open dew.std.result
+open dew.std.string
+
+fn self_host_unit() -> Unit {
+}
+
+fn self_host_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+
+struct SelfHostRequestReader {
+  bytes: Bytes
+  mut offset: U32
+  mut error: Option<String>
+}
+
+pub struct SelfHostCompileRequest {
+  output_path: String
+  source: Bytes
+  starshine_provider: Bytes
+  compiler_fingerprint: Bytes
+}
+
+fn self_host_reader_fail(reader: SelfHostRequestReader, message: String) -> Unit {
+  if reader.error is Option::None {
+    reader.error = Option::Some(message)
+  } else {
+  }
+}
+
+fn self_host_reader_remaining(reader: SelfHostRequestReader) -> U32 {
+  reader.bytes.byte_length() - reader.offset
+}
+
+fn self_host_reader_u32(reader: SelfHostRequestReader) -> U32 {
+  if self_host_reader_remaining(reader) < 4u32 {
+    self_host_reader_fail(reader, "truncated compile request")
+    0u32
+  } else {
+    let value = self_host_u8_to_u32(reader.bytes.byte_at(reader.offset)) |
+      (self_host_u8_to_u32(reader.bytes.byte_at(reader.offset + 1u32)) << 8u32) |
+      (self_host_u8_to_u32(reader.bytes.byte_at(reader.offset + 2u32)) << 16u32) |
+      (self_host_u8_to_u32(reader.bytes.byte_at(reader.offset + 3u32)) << 24u32)
+    reader.offset = reader.offset + 4u32
+    value
+  }
+}
+
+fn self_host_reader_count(
+  reader: SelfHostRequestReader,
+  maximum: U32,
+  kind: String,
+) -> U32 {
+  let value = self_host_reader_u32(reader)
+  if value > maximum {
+    self_host_reader_fail(reader, kind.concat(" exceeds its count bound"))
+    0u32
+  } else {
+    value
+  }
+}
+
+fn self_host_reader_bool(reader: SelfHostRequestReader, kind: String) -> Bool {
+  match self_host_reader_u32(reader) {
+    0u32 => false
+    1u32 => true
+    _ => {
+      self_host_reader_fail(reader, kind.concat(" is not a Boolean flag"))
+      false
+    }
+  }
+}
+
+fn self_host_reader_bytes(
+  reader: SelfHostRequestReader,
+  maximum: U32,
+  kind: String,
+) -> Bytes {
+  let length = self_host_reader_u32(reader)
+  if length > maximum {
+    self_host_reader_fail(reader, kind.concat(" exceeds its byte bound"))
+    b""
+  } else if length > self_host_reader_remaining(reader) {
+    self_host_reader_fail(reader, kind.concat(" has an invalid byte range"))
+    b""
+  } else {
+    let value = reader.bytes.slice(reader.offset, reader.offset + length)
+    reader.offset = reader.offset + length
+    value
+  }
+}
+
+fn self_host_reader_string(
+  reader: SelfHostRequestReader,
+  maximum: U32,
+  kind: String,
+) -> String {
+  let value = self_host_reader_bytes(reader, maximum, kind)
+  if value.is_valid_utf8() {
+    value.to_string()
+  } else {
+    self_host_reader_fail(reader, kind.concat(" is not UTF-8"))
+    ""
+  }
+}
+
+fn self_host_reader_expect(
+  reader: SelfHostRequestReader,
+  expected: U32,
+  kind: String,
+) -> Unit {
+  if self_host_reader_u32(reader) != expected {
+    self_host_reader_fail(reader, "unsupported ".concat(kind))
+  } else {
+  }
+}
+
+fn self_host_skip_dependencies(reader: SelfHostRequestReader) -> Unit {
+  let count = self_host_reader_count(reader, 4096u32, "dependency count")
+  while 0u32 {
+    index if index < count => {
+      let _module = self_host_reader_string(reader, 255u32, "dependency module")
+      let _fingerprint = self_host_reader_string(reader, 64u32, "dependency fingerprint")
+      continue index + 1u32
+    }
+    _ => break self_host_unit()
+  }
+}
+
+fn self_host_read_providers(reader: SelfHostRequestReader) -> Option<Bytes> {
+  let count = self_host_reader_count(reader, 64u32, "provider count")
+  let mut starshine = Option::None
+  while 0u32 {
+    index if index < count => {
+      let name = self_host_reader_string(reader, 255u32, "provider name")
+      let wasm = self_host_reader_bytes(reader, 67108864u32, "provider Wasm")
+      if name.equals("starshine") {
+        if starshine is Option::Some(_) {
+          self_host_reader_fail(reader, "duplicate starshine provider")
+        } else {
+          starshine = Option::Some(wasm)
+        }
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break starshine
+  }
+}
+
+pub fn decode_self_host_compile_request(
+  bytes: Bytes,
+) -> Result<SelfHostCompileRequest, String> {
+  if bytes.byte_length() > 268435456u32 {
+    return Result::Err("compile request exceeds 256 MiB")
+  } else {
+  }
+  let reader = SelfHostRequestReader::{
+    bytes: bytes
+    offset: 0u32
+    error: Option::None
+  }
+  self_host_reader_expect(reader, 1146569554u32, "compile request magic")
+  self_host_reader_expect(reader, 1u32, "compile request version")
+  self_host_reader_expect(reader, 1u32, "compile request command")
+  self_host_reader_expect(reader, 0u32, "compile request output kind")
+  self_host_reader_expect(reader, 1u32, "compile request response mode")
+  let output_path = self_host_reader_string(reader, 4096u32, "output path")
+  let root_module = self_host_reader_string(reader, 255u32, "root module")
+  if output_path.byte_length() == 0u32 || root_module.byte_length() == 0u32 {
+    self_host_reader_fail(reader, "compile request output and root module must not be empty")
+  } else {
+  }
+  let module_count = self_host_reader_count(reader, 1024u32, "module count")
+  if module_count == 0u32 {
+    self_host_reader_fail(reader, "compile request has no modules")
+  } else {
+  }
+  let mut total_files = 0u32
+  let mut root_source = Option::None
+  while 0u32 {
+    module_index if module_index < module_count => {
+      let module_name = self_host_reader_string(reader, 255u32, "module name")
+      let file_count = self_host_reader_count(reader, 4096u32, "file count")
+      if file_count == 0u32 || total_files > 65536u32 - file_count {
+        self_host_reader_fail(reader, "compile request file count is outside its bound")
+      } else {
+        total_files = total_files + file_count
+      }
+      while 0u32 {
+        file_index if file_index < file_count => {
+          let _logical_path = self_host_reader_string(reader, 4096u32, "logical path")
+          let source = self_host_reader_bytes(reader, 16777216u32, "source")
+          if module_name.equals(root_module) && root_source is Option::None {
+            root_source = Option::Some(source)
+          } else {
+          }
+          continue file_index + 1u32
+        }
+        _ => break self_host_unit()
+      }
+      continue module_index + 1u32
+    }
+    _ => break self_host_unit()
+  }
+  self_host_skip_dependencies(reader)
+  let starshine = self_host_read_providers(reader)
+  self_host_reader_expect(reader, 0u32, "standard-library mode")
+  let identity = self_host_reader_bytes(reader, 32u32, "standard-library identity")
+  if identity.byte_length() != 32u32 {
+    self_host_reader_fail(reader, "invalid standard-library identity")
+  } else {
+  }
+  self_host_reader_expect(reader, 0u32, "optimization mode")
+  self_host_reader_expect(reader, 0u32, "diagnostics mode")
+  let _test_mode = self_host_reader_bool(reader, "test mode")
+  let _default_preamble = self_host_reader_bool(reader, "default preamble")
+  self_host_reader_expect(reader, 0u32, "cache policy")
+  let _cache_report = self_host_reader_bool(reader, "cache report")
+  let compiler_fingerprint = self_host_reader_bytes(
+    reader,
+    4096u32,
+    "compiler fingerprint",
+  )
+  if compiler_fingerprint.byte_length() == 0u32 {
+    self_host_reader_fail(reader, "compiler fingerprint must not be empty")
+  } else if reader.offset != reader.bytes.byte_length() {
+    self_host_reader_fail(reader, "trailing bytes in compile request")
+  } else {
+  }
+  match reader.error {
+    Option::Some(error) => Result::Err(error)
+    Option::None =>
+      match root_source {
+        Option::None => Result::Err("root module has no source file")
+        Option::Some(source) =>
+          match starshine {
+            Option::None => Result::Err("compile request has no starshine provider")
+            Option::Some(provider) => Result::Ok(SelfHostCompileRequest::{
+              output_path: output_path
+              source: source
+              starshine_provider: provider
+              compiler_fingerprint: compiler_fingerprint
+            })
+          }
+      }
+  }
+}
+
+pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
+  let prefix = b"pub fn main() -> I32"
+  if !source.starts_with(prefix) {
+    return Result::Err("smoke compiler requires pub fn main() -> I32")
+  } else {
+  }
+  match source.find_byte(123u8) {
+    Option::None => Result::Err("smoke compiler source has no function body")
+    Option::Some(body_start) => {
+      let index = while body_start + 1u32 {
+        current if current < source.byte_length() &&
+          (source.byte_at(current) == 32u8 ||
+          source.byte_at(current) == 9u8 ||
+          source.byte_at(current) == 10u8 ||
+          source.byte_at(current) == 13u8) => continue current + 1u32
+        current => break current
+      }
+      let mut value = 0u32
+      let mut digits = 0u32
+      let _end = while index {
+        current if current < source.byte_length() => {
+          let byte = source.byte_at(current)
+          if byte >= 48u8 && byte <= 57u8 {
+            let digit = self_host_u8_to_u32(byte - 48u8)
+            if value > 214748364u32 ||
+              (value == 214748364u32 && digit > 7u32) {
+              return Result::Err("smoke compiler I32 literal is out of range")
+            } else {
+            }
+            value = value * 10u32 + digit
+            digits = digits + 1u32
+            continue current + 1u32
+          } else {
+            break current
+          }
+        }
+        current => break current
+      }
+      if digits == 0u32 {
+        Result::Err("smoke compiler function body has no I32 literal")
+      } else {
+        Result::Ok(value.into())
+      }
+    }
+  }
+}

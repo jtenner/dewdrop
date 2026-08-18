@@ -23,7 +23,7 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 ### P1 — self-hosting
 
 1. [x] Freeze the bounded source-Bytes version 1 compiler request and explicit `CompilerSessionConfig`; consume source and provider bytes directly with caches disabled and no environment mutation.
-2. [ ] Consume the pinned Starshine submodule's generated raw WasmGC FFI, generate the matching Dew declarations, link the provider, and include its exact bytes and interface digests in deterministic compiler fingerprints.
+2. [x] Consume the pinned Starshine submodule's generated raw WasmGC FFI through an exact 32-export compiler subset, typed container/result bridges, and a BLAKE3 compiler fingerprint over the pinned revision, interface digests, selected signatures, and exact provider bytes; build a linked source-Bytes smoke compiler that emits byte-identical validated modules.
 3. [ ] Port the tokenizer, parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order.
 4. [ ] Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
 

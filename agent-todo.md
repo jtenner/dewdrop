@@ -4,10 +4,8 @@
 
 ## P1 — self-hosting
 
-1. Build the pinned `starshine-mb/ffi` raw WasmGC provider, generate Dew declarations from Starshine's export metadata for the exact used subset, and include the submodule revision, interface digests, and exact provider bytes in deterministic compiler fingerprints.
-2. Build one linked smoke compiler that reads the frozen source-Bytes request and emits one module.
-3. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
-4. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
+1. Port tokenizer, parser, semantic analysis, optimization, backend, cache codecs, and the compiler driver to Dew in dependency order.
+2. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
 
 Use [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md) for the audited host, Wasm, collection, and port-surface gaps. Port-enabling options in that catalog remain decisions, not active backlog items, until explicitly selected.
 

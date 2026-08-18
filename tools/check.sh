@@ -18,6 +18,7 @@ moon fmt --check
 tools/check-generated.sh
 tools/check-moon-targets.sh "$mode"
 tools/check-compile-request.sh
+tools/check-self-host-smoke.sh
 
 if [[ "$mode" == quick ]]; then
   echo "quick Dew validation passed"
