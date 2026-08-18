@@ -928,6 +928,43 @@ fn BasicBodyInferencer::body_trait_declaration(
 }
 
 ///|
+fn BasicBodyInferencer::nullable_ref_argument(
+  self : BasicBodyInferencer,
+  type_ : BodyTypeId,
+) -> BodyTypeId? {
+  let representative = self.solver.representative_type(type_)
+  match self.solver.type_term(representative) {
+    BodyAppliedType(base, arguments) if arguments.length == 1 =>
+      match self.solver.type_term(self.solver.representative_type(base)) {
+        BodyResolvedType(resolved_base) =>
+          match self.resolved.types[resolved_base] {
+            NominalType(declaration) if declaration ==
+              standard_nullable_ref_type_declaration() =>
+              Some(self.solver.type_arguments[arguments.start])
+            _ => None
+          }
+        _ => None
+      }
+    BodyResolvedType(resolved_type) =>
+      match self.resolved.types[resolved_type] {
+        AppliedType(base, arguments) if arguments.length == 1 =>
+          match self.resolved.types[base] {
+            NominalType(declaration) if declaration ==
+              standard_nullable_ref_type_declaration() =>
+              Some(
+                self.solver.resolved_type(
+                  self.resolved.type_arguments[arguments.start],
+                ),
+              )
+            _ => None
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
 fn BasicBodyInferencer::trait_object_assignable(
   self : BasicBodyInferencer,
   actual : BodyTypeId,
@@ -955,6 +992,12 @@ fn BasicBodyInferencer::assignable_viable(
 ) -> Bool {
   if self.is_never_type(actual) {
     return true
+  }
+  match self.nullable_ref_argument(expected) {
+    Some(argument) if !self.body_type_is_unresolved(actual) &&
+      self.nullable_ref_argument(actual) is None =>
+      return self.solver.unify(actual, argument, origin)
+    _ => ()
   }
   match self.body_trait_declaration(expected) {
     Some(trait_declaration) =>
@@ -1015,6 +1058,14 @@ fn BasicBodyInferencer::constrain_expression_assignable(
   if self.is_never_type(actual) {
     return
   }
+  match self.nullable_ref_argument(expected) {
+    Some(argument) if !self.body_type_is_unresolved(actual) &&
+      self.nullable_ref_argument(actual) is None => {
+      self.constrain(actual, argument, origin)
+      return
+    }
+    _ => ()
+  }
   match self.body_trait_declaration(expected) {
     Some(trait_declaration) => {
       if self.body_type_is_unresolved(actual) {
@@ -1057,8 +1108,14 @@ fn BasicBodyInferencer::constrain_assignable(
   expected : BodyTypeId,
   origin : TypeConstraintOrigin,
 ) -> Unit {
-  if !self.is_never_type(actual) {
-    self.constrain(actual, expected, origin)
+  if self.is_never_type(actual) {
+    return
+  }
+  match self.nullable_ref_argument(expected) {
+    Some(argument) if !self.body_type_is_unresolved(actual) &&
+      self.nullable_ref_argument(actual) is None =>
+      self.constrain(actual, argument, origin)
+    _ => self.constrain(actual, expected, origin)
   }
 }
 

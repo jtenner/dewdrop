@@ -1,0 +1,335 @@
+---
+import DewCode from "../components/DewCode.astro";
+import Layout from "../layouts/Layout.astro";
+import structSource from "../../examples/direct-struct.dew?raw";
+import structWasm from "../../examples/direct-struct.annotated.wat?raw";
+import optionResultSource from "../../examples/option-result.dew?raw";
+import optionResultWasm from "../../examples/option-result.annotated.wat?raw";
+
+const optionResultFunctionTypes = optionResultWasm.indexOf("  (type (;5 maybe_type;)");
+const optionResultTypeExcerpt = `${optionResultWasm.slice(0, optionResultFunctionTypes).trimEnd()}\n)`;
+
+const principles = [
+  {
+    number: "01",
+    title: "Built for WebAssembly",
+    body: "Dewdrop makes core WebAssembly GC modules. The WebAssembly type model is part of the Dew language design.",
+  },
+  {
+    number: "02",
+    title: "You can inspect the output",
+    body: "You can see which GC objects the compiler makes, which functions enter or leave the module, and which runtime code it adds.",
+  },
+  {
+    number: "03",
+    title: "Small language, strong compiler",
+    body: "Dew keeps its rules focused. Dewdrop does type checks, code optimization, and static linking.",
+  },
+];
+
+const mappings = [
+  {
+    title: "A struct keeps its fields",
+    summary: "Dew struct → Wasm GC struct",
+    dew: `pub struct Pair {
+  left: I32
+  right: I32
+}`,
+    wasm: `(type (;0 Pair;)
+  (struct
+    (field (;left;) i32)
+    (field (;right;) i32)))`,
+  },
+  {
+    title: "A new value uses struct.new",
+    summary: "Pair value → new Wasm struct",
+    dew: `Pair::{
+  right: 22
+  left: 20
+}`,
+    wasm: `i32.const 20 (;Pair.left;)
+i32.const 22 (;Pair.right;)
+struct.new 0 (;Pair;)`,
+  },
+  {
+    title: "A field read uses struct.get",
+    summary: "Dew field read → Wasm field read",
+    dew: `value.left`,
+    wasm: `local.get 0
+struct.get 0 0 (;Pair.left;)`,
+  },
+  {
+    title: "A public function becomes an export",
+    summary: "Public Dew function → Wasm export",
+    dew: `pub fn main() -> I32`,
+    wasm: `(export "main" (func 1))`,
+  },
+];
+
+const evidence = [
+  {
+    title: "Pair needs no extra runtime",
+    body: "The Pair module uses a GC struct, struct.new, and struct.get. It has no linear memory and no runtime import.",
+  },
+  {
+    title: "Unused code stays out",
+    body: "Dewdrop checks which types and functions the program uses. It does not put unused items in the final module.",
+  },
+  {
+    title: "Build output stays stable",
+    body: "Compiler tests build the same source more than once. They require the same Wasm bytes and the same WAT text.",
+  },
+];
+---
+
+<Layout
+  title="Dewdrop — Map types directly to Wasm"
+  description="Dew is a small typed language that maps its types to WebAssembly GC types that you can inspect."
+>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="wordmark" href="#top" aria-label="Dewdrop home">dewdrop</a>
+      <nav aria-label="Main navigation">
+        <a href="https://docs.dewdrop.sh">Docs</a>
+        <a href="https://drops.dewdrop.sh">Packages</a>
+        <a href="https://github.com/jtenner/dewdrop">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">A SMALL LANGUAGE FOR WEBASSEMBLY</p>
+        <h1 id="hero-title">Map types directly to Wasm.</h1>
+        <p class="hero-summary">
+          Dew is a small typed language for WebAssembly. Dewdrop maps Dew types to
+          WebAssembly GC types. You can inspect the output and see how your code works.
+        </p>
+        <div class="hero-actions">
+          <a class="button button--primary" href="#install">Get started</a>
+          <a class="text-link" href="#source-output">View the type map <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="source-output shell" id="source-output" aria-labelledby="source-output-title">
+      <div class="section-heading section-heading--centered">
+        <p class="eyebrow">EXAMPLE 1: STRUCT</p>
+        <h2 id="source-output-title">See how a struct maps to Wasm</h2>
+        <p>
+          Dewdrop maps `Pair` to one WebAssembly GC struct. The notes in the WAT show
+          the Dew type and field names.
+        </p>
+      </div>
+
+      <div class="source-output-grid">
+        <article class="source-pane" aria-labelledby="dew-source-title">
+          <h3 class="code-caption" id="dew-source-title">DEW SOURCE</h3>
+          <DewCode code={structSource} label="direct-struct.dew" meta="source" />
+        </article>
+        <article class="source-pane" aria-labelledby="wasm-output-title">
+          <h3 class="code-caption" id="wasm-output-title">ANNOTATED WAT</h3>
+          <DewCode code={structWasm} label="direct-struct.wat" language="wasm" meta="names added" />
+        </article>
+      </div>
+
+      <p class="mapping-note"><span>Dew `Pair`</span><b aria-hidden="true">→</b><span>WebAssembly GC struct</span></p>
+      <p class="verification-note">
+        This is real compiler output. The notes add names only. They do not change any
+        type, field, function, or instruction.
+      </p>
+
+      <div class="type-example type-example--secondary" id="option-result">
+        <div class="section-heading section-heading--centered">
+          <p class="eyebrow">EXAMPLE 2: OPTION AND RESULT</p>
+          <h2>See how value cases map to Wasm</h2>
+          <p>
+            A tag is a small number that tells Wasm which case the value uses. A payload
+            field holds the value for `Some`, `Ok`, or `Err`.
+          </p>
+        </div>
+
+        <div class="case-map" aria-label="Option and Result tag values">
+          <article>
+            <h3>Option&lt;I32&gt;</h3>
+            <p><code>None</code> uses tag <code>0</code>.</p>
+            <p><code>Some(value)</code> uses tag <code>1</code> and one <code>i32</code> value.</p>
+          </article>
+          <article>
+            <h3>Result&lt;I32, I32&gt;</h3>
+            <p><code>Ok(value)</code> uses tag <code>0</code> and one <code>i32</code> value.</p>
+            <p><code>Err(value)</code> uses tag <code>1</code> and one <code>i32</code> value.</p>
+          </article>
+        </div>
+
+        <div class="source-output-grid source-output-grid--secondary">
+          <article class="source-pane" aria-labelledby="option-result-source-title">
+            <h3 class="code-caption" id="option-result-source-title">DEW SOURCE</h3>
+            <DewCode code={optionResultSource} label="option-result.dew" meta="source" />
+          </article>
+          <article class="source-pane" aria-labelledby="option-result-output-title">
+            <h3 class="code-caption" id="option-result-output-title">ANNOTATED WAT TYPES</h3>
+            <DewCode code={optionResultTypeExcerpt} label="option-result.wat" language="wasm" meta="type section" />
+          </article>
+        </div>
+
+        <p class="verification-note">
+          The type section is from real compiler output. The complete module is in the
+          website example files. The notes add names only.
+        </p>
+      </div>
+    </section>
+
+    <section class="principles" aria-labelledby="principles-title">
+      <div class="content-shell">
+        <div class="section-heading">
+          <p class="eyebrow">HOW DEW WORKS</p>
+          <h2 id="principles-title">Keep WebAssembly easy to see</h2>
+          <p>Dew gives you useful language features without hiding the output.</p>
+        </div>
+
+        <ol class="feature-list">
+          {principles.map((principle) => (
+            <li>
+              <span class="feature-number">{principle.number}</span>
+              <h3>{principle.title}</h3>
+              <p>{principle.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="mappings content-shell" aria-labelledby="mappings-title">
+      <div class="section-heading">
+        <p class="eyebrow">DIRECT TYPE MAPS</p>
+        <h2 id="mappings-title">Follow each Dew item into Wasm</h2>
+        <p>These four maps come from the first example.</p>
+      </div>
+
+      <div class="mapping-grid">
+        {mappings.map((mapping) => (
+          <article class="mapping-card">
+            <div class="mapping-card__heading">
+              <h3>{mapping.title}</h3>
+              <p>{mapping.summary}</p>
+            </div>
+            <div class="mapping-code">
+              <div>
+                <p class="code-caption">DEW</p>
+                <DewCode code={mapping.dew} compact meta="source" />
+              </div>
+              <span class="mapping-arrow" aria-hidden="true">→</span>
+              <div>
+                <p class="code-caption">WAT</p>
+                <DewCode code={mapping.wasm} language="wasm" compact meta="output" />
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="why-dew" aria-labelledby="why-title">
+      <div class="content-shell why-dew__inner">
+        <p class="eyebrow">WHY DEW?</p>
+        <h2 id="why-title">Why make one more language?</h2>
+        <div class="why-dew__copy">
+          <p>
+            Many languages can make WebAssembly. Dew has one target: modern
+            WebAssembly. The target is part of the language design.
+          </p>
+          <p>
+            Dew gives you clear syntax and useful types. It also lets you inspect the
+            Wasm that runs. WebAssembly does not disappear behind the compiler.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="evidence content-shell" aria-labelledby="evidence-title">
+      <div class="section-heading">
+        <p class="eyebrow">CHECK THE OUTPUT</p>
+        <h2 id="evidence-title">The module shows where the work happens</h2>
+        <p>You do not have to trust a speed claim. You can inspect what Dewdrop makes.</p>
+      </div>
+
+      <div class="evidence-grid">
+        {evidence.map((item) => (
+          <article>
+            <h3>{item.title}</h3>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </div>
+
+      <div class="capability-list" aria-label="Current compiler capabilities">
+        <span>Core WebAssembly GC</span>
+        <span>WASI Preview 1 input and output</span>
+        <span>Static module linking</span>
+        <span>Stable WAT test files</span>
+      </div>
+
+      <p class="project-status">
+        <strong>Project status:</strong> Dew is in active development. It does not have
+        a stable release. The syntax, APIs, and Wasm output can change.
+      </p>
+    </section>
+
+    <section class="install" id="install" aria-labelledby="install-title">
+      <div class="install-inner">
+        <p class="eyebrow">TRY THE COMPILER</p>
+        <h2 id="install-title">Build a Wasm module</h2>
+        <p>Clone Dewdrop. Run the quick checks. Then print the WAT for your Dew code.</p>
+        <div class="command" data-copy-command>
+          <span class="prompt" aria-hidden="true">$</span>
+          <code>git clone --recurse-submodules https://github.com/jtenner/dewdrop.git</code>
+          <button type="button" aria-label="Copy clone command" data-copy-button>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>
+          </button>
+        </div>
+        <a class="text-link install-link" href="https://docs.dewdrop.sh">Read the start guide <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div class="footer-brand">
+        <a class="wordmark" href="#top">dewdrop</a>
+        <p>A small typed language that maps to modern WebAssembly.</p>
+      </div>
+      <div class="footer-links">
+        <div>
+          <h2>PROJECT</h2>
+          <a href="https://github.com/jtenner/dewdrop">Repository</a>
+          <a href="https://github.com/jtenner/dewdrop/blob/main/docs/roadmap.md">Roadmap</a>
+          <a href="https://github.com/jtenner/dewdrop/releases">Releases</a>
+        </div>
+        <div>
+          <h2>LEARN</h2>
+          <a href="https://docs.dewdrop.sh">Documentation</a>
+          <a href="https://github.com/jtenner/dewdrop/blob/main/docs/spec.md">Language spec</a>
+          <a href="https://github.com/jtenner/dewdrop/tree/main/tests/module-snapshots">Compiler examples</a>
+        </div>
+      </div>
+      <a class="back-to-top" href="#top">Back to top ↑</a>
+      <p class="copyright">© 2026 Dewdrop contributors. Apache-2.0 / MIT.</p>
+    </div>
+  </footer>
+
+  <script>
+    const copyButton = document.querySelector<HTMLButtonElement>("[data-copy-button]");
+    copyButton?.addEventListener("click", async () => {
+      const command = document.querySelector("[data-copy-command] code")?.textContent ?? "";
+      await navigator.clipboard.writeText(command);
+      copyButton.dataset.copied = "true";
+      copyButton.setAttribute("aria-label", "Copied");
+      window.setTimeout(() => {
+        delete copyButton.dataset.copied;
+        copyButton.setAttribute("aria-label", "Copy clone command");
+      }, 1600);
+    });
+  </script>
+</Layout>

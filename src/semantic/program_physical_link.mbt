@@ -22,7 +22,9 @@ fn program_erased_adapter_reference_type(type_ : PlannedWasmValueType) -> Bool {
     | WasmFunctionRefValue(_)
     | WasmNominalRefValue(_)
     | WasmExternalNominalRefValue(_)
-    | WasmFixedArrayRefValue(_) => true
+    | WasmFixedArrayRefValue(_)
+    | WasmNullableNominalRefValue(_)
+    | WasmNullableExternalNominalRefValue(_) => true
     _ => false
   }
 }
@@ -516,13 +518,20 @@ fn program_cross_module_type_groups(
     }
     for index in 0..<physical.fields.length {
       match module_.fields[physical.fields.start + index].storage {
-        WasmNominalRefStorage(WasmModuleTypeReference(local_type_index)) =>
-          add_local(local_type_index)
-        WasmNominalRefStorage(WasmRecursiveTypeReference(group_member)) => {
+        WasmNominalRefStorage(WasmModuleTypeReference(local_type_index))
+        | WasmNullableNominalRefStorage(
+          WasmModuleTypeReference(local_type_index)
+        ) => add_local(local_type_index)
+        WasmNominalRefStorage(WasmRecursiveTypeReference(group_member))
+        | WasmNullableNominalRefStorage(
+          WasmRecursiveTypeReference(group_member)
+        ) => {
           let group = module_.type_groups[physical.group_index]
           add_local(group.first_type_index + group_member)
         }
-        WasmExternalNominalRefStorage(declaration) => add_external(declaration)
+        WasmExternalNominalRefStorage(declaration)
+        | WasmNullableExternalNominalRefStorage(declaration) =>
+          add_external(declaration)
         _ => ()
       }
     }
@@ -708,6 +717,57 @@ fn planned_program_function_types_equal(
           return false
         }
       (WasmExternalNominalRefValue(left), WasmNominalRefValue(right)) =>
+        if Some(left) !=
+          planned_program_local_nominal_declaration(
+            modules,
+            pair.right_module,
+            right,
+          ) {
+          return false
+        }
+      (
+        WasmNullableExternalNominalRefValue(left),
+        WasmNullableExternalNominalRefValue(right),
+      ) => if left != right { return false }
+      (WasmNullableNominalRefValue(left), WasmNullableNominalRefValue(right)) => {
+        let left_declaration = match
+          planned_program_local_nominal_declaration(
+            modules,
+            pair.left_module,
+            left,
+          ) {
+          Some(value) => value
+          None => return false
+        }
+        let right_declaration = match
+          planned_program_local_nominal_declaration(
+            modules,
+            pair.right_module,
+            right,
+          ) {
+          Some(value) => value
+          None => return false
+        }
+        if left_declaration != right_declaration {
+          return false
+        }
+      }
+      (
+        WasmNullableNominalRefValue(left),
+        WasmNullableExternalNominalRefValue(right),
+      ) =>
+        if planned_program_local_nominal_declaration(
+            modules,
+            pair.left_module,
+            left,
+          ) !=
+          Some(right) {
+          return false
+        }
+      (
+        WasmNullableExternalNominalRefValue(left),
+        WasmNullableNominalRefValue(right),
+      ) =>
         if Some(left) !=
           planned_program_local_nominal_declaration(
             modules,

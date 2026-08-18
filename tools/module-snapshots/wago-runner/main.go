@@ -340,6 +340,13 @@ func normalizeTrap(err error) (string, bool) {
 			strings.Contains(message, "stack fence breached") {
 			return "array-out-of-bounds", true
 		}
+		if strings.Contains(message, "null") &&
+			(strings.Contains(message, "reference") ||
+				strings.Contains(message, "pointer") ||
+				strings.Contains(message, "dereferenc") ||
+				strings.Contains(message, "ref.as_non_null")) {
+			return "null-reference", true
+		}
 		return "", false
 	}
 }

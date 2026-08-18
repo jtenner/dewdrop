@@ -7,6 +7,9 @@ enum StandardBuiltinOperation {
   WasmArrayLen
   WasmArrayGet
   WasmArraySet
+  WasmRefNull
+  WasmRefIsNull
+  WasmRefAsNonNull
   FixedArrayMake
   FixedArrayLength
   FixedArrayGet
@@ -562,6 +565,11 @@ fn standard_set_operation(declaration : DeclId) -> StandardBuiltinOperation {
 }
 
 ///|
+pub fn standard_nullable_ref_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(9), 1)
+}
+
+///|
 fn standard_wasm_intrinsics_operation(
   declaration : DeclId,
 ) -> StandardBuiltinOperation {
@@ -569,10 +577,13 @@ fn standard_wasm_intrinsics_operation(
     return NoStandardBuiltinOperation
   }
   match semantic_id_local(declaration) {
-    2 => WasmArrayNew
-    3 => WasmArrayLen
-    4 => WasmArrayGet
-    5 => WasmArraySet
+    3 => WasmArrayNew
+    4 => WasmArrayLen
+    5 => WasmArrayGet
+    6 => WasmArraySet
+    7 => WasmRefNull
+    8 => WasmRefIsNull
+    9 => WasmRefAsNonNull
     _ => NoStandardBuiltinOperation
   }
 }

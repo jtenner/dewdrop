@@ -450,6 +450,14 @@ fn pb_write_storage_type(
       writer.write_byte(15)
       ib_write_int(writer, carrier)
     }
+    WasmNullableNominalRefStorage(reference) => {
+      writer.write_byte(16)
+      pb_write_type_reference(writer, reference)
+    }
+    WasmNullableExternalNominalRefStorage(declaration) => {
+      writer.write_byte(17)
+      ib_write_id(writer, declaration)
+    }
   }
 }
 
@@ -475,6 +483,8 @@ fn pb_read_storage_type(
     13 => WasmNominalRefStorage(pb_read_type_reference(reader, field))
     14 => WasmExternalNominalRefStorage(ib_read_id(reader, field))
     15 => WasmFixedArrayRefStorage(ib_read_int(reader, field))
+    16 => WasmNullableNominalRefStorage(pb_read_type_reference(reader, field))
+    17 => WasmNullableExternalNominalRefStorage(ib_read_id(reader, field))
     _ => {
       reader.fail(field, "unknown Wasm storage discriminant")
       WasmI32Storage
@@ -670,6 +680,14 @@ fn pb_write_value_type(
       writer.write_byte(10)
       ib_write_int(writer, carrier)
     }
+    WasmNullableNominalRefValue(index) => {
+      writer.write_byte(11)
+      ib_write_int(writer, index)
+    }
+    WasmNullableExternalNominalRefValue(declaration) => {
+      writer.write_byte(12)
+      ib_write_id(writer, declaration)
+    }
   }
 }
 
@@ -690,6 +708,8 @@ fn pb_read_value_type(
     8 => WasmNominalRefValue(ib_read_int(reader, field))
     9 => WasmExternalNominalRefValue(ib_read_id(reader, field))
     10 => WasmFixedArrayRefValue(ib_read_int(reader, field))
+    11 => WasmNullableNominalRefValue(ib_read_int(reader, field))
+    12 => WasmNullableExternalNominalRefValue(ib_read_id(reader, field))
     _ => {
       reader.fail(field, "unknown Wasm value-type discriminant")
       WasmI32Value

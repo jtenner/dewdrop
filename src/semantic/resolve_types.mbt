@@ -722,6 +722,54 @@ fn TypeResolver::imported_alias_binding(
 }
 
 ///|
+fn TypeResolver::declaration_is_foreign_type(
+  self : TypeResolver,
+  declaration : DeclId,
+) -> Bool {
+  match self.collected.declaration(declaration) {
+    Some(TopLevelReference(value)) => return value.kind == ForeignTypeDecl
+    Some(MethodReference(_)) => return false
+    None => ()
+  }
+  match self.imports {
+    Some(scope) =>
+      match scope.declaration_bindings.get(declaration) {
+        Some(index) if index >= 0 && index < scope.declarations.length() =>
+          scope.declarations[index].source_kind == ForeignTypeDecl
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
+fn TypeResolver::nullable_ref_intrinsic_owner(
+  _self : TypeResolver,
+  owner : DeclId,
+) -> Bool {
+  match standard_wasm_intrinsics_operation(owner) {
+    WasmRefNull | WasmRefIsNull | WasmRefAsNonNull => true
+    _ => false
+  }
+}
+
+///|
+fn TypeResolver::valid_nullable_ref_argument(
+  self : TypeResolver,
+  owner : DeclId,
+  argument : ResolvedTypeId,
+) -> Bool {
+  if argument == self.interner.error_type {
+    return true
+  }
+  match self.interner.types[argument] {
+    NominalType(declaration) => self.declaration_is_foreign_type(declaration)
+    GenericParameterType(_) => self.nullable_ref_intrinsic_owner(owner)
+    _ => false
+  }
+}
+
+///|
 fn TypeResolver::finish_applied_type(
   self : TypeResolver,
   owner : DeclId,
@@ -789,6 +837,18 @@ fn TypeResolver::finish_applied_type(
     self.application_scratch.push(
       self.syntax_types[self.collected.type_arguments[index]],
     )
+  }
+  match self.interner.types[base] {
+    NominalType(declaration) if declaration ==
+      standard_nullable_ref_type_declaration() => {
+      let argument = self.application_scratch[0]
+      if !self.valid_nullable_ref_argument(owner, argument) {
+        self.diagnose(NullableRefRequiresForeignType(argument, owner, offset))
+        self.syntax_types[syntax] = self.interner.error_type
+        return
+      }
+    }
+    _ => ()
   }
   self.syntax_types[syntax] = self.interner.intern_applied(
     base,
@@ -1129,9 +1189,10 @@ fn TypeDiagnostic::rank(self : TypeDiagnostic) -> Int {
     ExpectedTraitType(_, _, _) => 5
     TypeArityMismatch(_, _, _, _, _) => 6
     TypeNotApplicable(_, _, _) => 7
-    SelfOutsideContext(_, _) => 8
-    AliasCycle(_, _) => 9
-    AliasExpansionLimit(_, _, _) => 10
+    NullableRefRequiresForeignType(_, _, _) => 8
+    SelfOutsideContext(_, _) => 9
+    AliasCycle(_, _) => 10
+    AliasExpansionLimit(_, _, _) => 11
   }
 }
 

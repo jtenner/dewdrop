@@ -1,0 +1,14 @@
+open dew.std.wasm.intrinsics
+
+foreign type Handle
+
+fn missing() -> NullableRef<Handle> {
+  wasm_ref_null()
+}
+
+fn consume(value: Handle) -> Unit {
+}
+
+pub fn main() -> Unit {
+  consume(wasm_ref_as_non_null(missing()))
+}

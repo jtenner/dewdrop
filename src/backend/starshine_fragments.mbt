@@ -18,6 +18,13 @@ fn starshine_nominal_ref(type_index : @lib.TypeIdx) -> @lib.ValType {
 }
 
 ///|
+fn starshine_nullable_nominal_ref(type_index : @lib.TypeIdx) -> @lib.ValType {
+  @lib.ValType::ref_type(
+    @lib.RefType::new(true, @lib.HeapType::new(type_index)),
+  )
+}
+
+///|
 fn starshine_function_ref(type_index : @lib.TypeIdx) -> @lib.ValType {
   @lib.ValType::ref_type(
     @lib.RefType::new(true, @lib.HeapType::new(type_index)),
@@ -55,6 +62,12 @@ fn starshine_storage_type(
       @lib.StorageType::val_type(
         starshine_nominal_ref(starshine_type_index(reference)),
       )
+    @semantic.WasmNullableNominalRefStorage(reference) =>
+      @lib.StorageType::val_type(
+        starshine_nullable_nominal_ref(starshine_type_index(reference)),
+      )
+    @semantic.WasmNullableExternalNominalRefStorage(_) =>
+      @lib.StorageType::val_type(@lib.ValType::eqref_null())
   }
 }
 
@@ -74,6 +87,12 @@ fn starshine_value_type(value : @semantic.PlannedWasmValueType) -> @lib.ValType 
       starshine_function_ref(@lib.TypeIdx::new(index.reinterpret_as_uint()))
     @semantic.WasmNominalRefValue(index) =>
       starshine_nominal_ref(@lib.TypeIdx::new(index.reinterpret_as_uint()))
+    @semantic.WasmNullableNominalRefValue(index) =>
+      starshine_nullable_nominal_ref(
+        @lib.TypeIdx::new(index.reinterpret_as_uint()),
+      )
+    @semantic.WasmNullableExternalNominalRefValue(_) =>
+      @lib.ValType::eqref_null()
   }
 }
 
@@ -87,8 +106,10 @@ fn starshine_physical_subtype(
   for index in 0..<type_.fields.length {
     let field = planned.fields[type_.fields.start + index]
     match field.storage {
-      @semantic.WasmNominalRefStorage(@semantic.WasmRecursiveTypeReference(_)) =>
-        has_recursive_reference = true
+      @semantic.WasmNominalRefStorage(@semantic.WasmRecursiveTypeReference(_))
+      | @semantic.WasmNullableNominalRefStorage(
+        @semantic.WasmRecursiveTypeReference(_)
+      ) => has_recursive_reference = true
       _ => ()
     }
     fields.push(

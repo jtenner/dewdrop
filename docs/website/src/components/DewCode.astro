@@ -1,0 +1,39 @@
+---
+import {
+  highlightCode,
+  type CodeLanguage,
+} from "../utils/dewdrop-highlight";
+
+interface Props {
+  code: string;
+  label?: string;
+  numbered?: boolean;
+  compact?: boolean;
+  language?: CodeLanguage;
+  meta?: string;
+}
+
+const {
+  code,
+  label = "main.dew",
+  numbered = false,
+  compact = false,
+  language = "dew",
+  meta = "dewdrop v0.1",
+} = Astro.props;
+const highlighted = await highlightCode(code, language);
+---
+
+<div class:list={["code-block", { numbered, compact }]}>
+  <div class="code-block__bar">
+    <span class="code-block__lights" aria-hidden="true">
+      <i></i><i></i><i></i>
+    </span>
+    <span class="code-block__label">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3-4 5 4 5M10 3l4 5-4 5"/><path d="m9.5 1-3 14"/></svg>
+      {label}
+    </span>
+    <span class="code-block__version">{meta}</span>
+  </div>
+  <div class="code-block__body dew-code" set:html={highlighted}></div>
+</div>

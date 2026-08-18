@@ -2864,6 +2864,49 @@ fn program_runtime_trait_fallback_evidence(
 ///|
 /// Runs module-local WasmGC fragment jobs in dependency-SCC order while
 /// retaining manifest-indexed outputs.
+fn program_generic_enum_instantiations(
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+) -> Map[DeclId, Array[Array[Int]]] {
+  let counts : Map[DeclId, Int] = Map::default()
+  for module_ in lowering.modules {
+    for layout in module_.type_layouts.layouts {
+      match layout.kind {
+        PlannedEnumLayout(_) if layout.generic_parameters.length > 0 =>
+          counts[layout.declaration] = layout.generic_parameters.length
+        _ => ()
+      }
+    }
+  }
+  let output : Map[DeclId, Array[Array[Int]]] = Map::default()
+  for interface_ in analyzed.frozen.interfaces {
+    wasmgc_collect_generic_enum_instantiations_into(
+      interface_.resolved_types,
+      counts,
+      output,
+    )
+  }
+  output
+}
+
+///|
+fn program_module_has_specialized_generic_enum(
+  module_ : PlannedModuleLowering,
+  instantiations : Map[DeclId, Array[Array[Int]]],
+) -> Bool {
+  for layout in module_.type_layouts.layouts {
+    if layout.generic_parameters.length > 0 &&
+      instantiations.contains(layout.declaration) {
+      match layout.kind {
+        PlannedEnumLayout(_) => return true
+        _ => ()
+      }
+    }
+  }
+  false
+}
+
+///|
 fn plan_program_wasmgc_fragments_for_root(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
@@ -2937,6 +2980,9 @@ fn plan_program_wasmgc_fragments_for_root(
     lowering,
     options.emit_tests,
   )
+  let generic_enum_instantiations = program_generic_enum_instantiations(
+    analyzed, lowering,
+  )
   let program_function_value_roots : Map[DeclId, Bool] = Map::default()
   for module_ in lowering.modules {
     for expression in module_.expressions {
@@ -2950,7 +2996,16 @@ fn plan_program_wasmgc_fragments_for_root(
   for scc in lowering.graph.sccs {
     for index in 0..<scc.length {
       let module_index = lowering.graph.scc_modules[scc.start + index]
-      match cached_modules[module_index] {
+      let specialized_generic_enums = program_module_has_specialized_generic_enum(
+        lowering.modules[module_index],
+        generic_enum_instantiations,
+      )
+      let cached = if specialized_generic_enums {
+        None
+      } else {
+        cached_modules[module_index]
+      }
+      match cached {
         Some(cached) => slots[module_index] = Some(cached)
         None => {
           let fresh = plan_module_wasmgc_fragments_with_options_and_roots(
@@ -2961,8 +3016,11 @@ fn plan_program_wasmgc_fragments_for_root(
             program_roots,
             program_function_value_roots,
             extra_runtime_traits_by_module[module_index],
+            generic_enum_instantiations,
           )
-          store_fresh(module_index, fresh)
+          if !specialized_generic_enums {
+            store_fresh(module_index, fresh)
+          }
           slots[module_index] = Some(fresh)
         }
       }

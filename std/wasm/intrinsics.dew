@@ -3,6 +3,7 @@
 // Each declaration preserves the exact Dew carrier signature of its source builtin.
 
 pub struct WasmArray<t> {}
+pub struct NullableRef<t> {}
 
 // Compatibility spelling for the first published intrinsic.
 pub builtin i64_trunc_i32(value: I64) -> I32 = "dew_i64_into_i32"
@@ -12,6 +13,11 @@ pub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = "array_ne
 pub builtin wasm_array_len<t>(value: WasmArray<t>) -> U32 = "array_len"
 pub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = "array_get"
 pub builtin wasm_array_set<t>(value: WasmArray<t>, index: U32, item: t) -> Unit = "array_set"
+
+// WasmGC nullable foreign references
+pub builtin wasm_ref_null<t>() -> NullableRef<t> = "ref_null"
+pub builtin wasm_ref_is_null<t>(value: NullableRef<t>) -> Bool = "ref_is_null"
+pub builtin wasm_ref_as_non_null<t>(value: NullableRef<t>) -> t = "ref_as_non_null"
 
 // backend-only Core operations
 pub builtin wasm_core_i32_lt(left: I32, right: I32) -> Bool = "i32_lt"

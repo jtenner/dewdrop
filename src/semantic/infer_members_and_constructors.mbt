@@ -283,7 +283,10 @@ fn BasicBodyInferencer::infer_construct_expression(
   self.consume_member_root(target)
   match self.names.expression_references[target] {
     ModuleTypeNameReference(declaration) => {
-      if self.declaration_is_struct(declaration) {
+      if declaration == standard_nullable_ref_type_declaration() {
+        self.diagnose(InvalidConstructionTarget(expression, offset))
+        self.fail_expression_selection(expression)
+      } else if self.declaration_is_struct(declaration) {
         self.select_struct_construction(expression, fields, declaration, offset)
       } else {
         self.diagnose(InvalidConstructionTarget(expression, offset))

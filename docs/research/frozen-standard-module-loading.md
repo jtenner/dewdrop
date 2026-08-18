@@ -87,7 +87,7 @@ pub enum Result<t, e> {
 }
 ```
 
-Generic enum payload positions use deterministic erased physical fields for the six Wasm carriers (`i32`, `i64`, `f32`, `f64`, `v128`, nullable `eqref`). Constructors initialize the inferred carrier and deterministic zero/null defaults for the others; pattern lowering reads only the inferred carrier. This supports scalar, packed, SIMD, and reference payloads without per-instantiation type-index ordering. Generic functions and generic structs remain separate later ABI work.
+Generic enum payloads use one compact physical subtype for each carrier form that the program needs. A subtype stores the tag and only its selected payload carriers. Constructors do not initialize unused zero or null slots, and patterns select the subtype that matches the inferred payload shapes. This supports scalar, packed, SIMD, and reference payloads without wrapper objects.
 
 ## Reachability and artifact elimination
 

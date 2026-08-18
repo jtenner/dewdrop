@@ -1,0 +1,15 @@
+pub fn maybe(enabled: Bool) -> Option<I32> {
+  if enabled {
+    Option::Some(42)
+  } else {
+    Option::None
+  }
+}
+
+pub fn divide(value: I32, divisor: I32) -> Result<I32, I32> {
+  if divisor == 0 {
+    Result::Err(value)
+  } else {
+    Result::Ok(value / divisor)
+  }
+}

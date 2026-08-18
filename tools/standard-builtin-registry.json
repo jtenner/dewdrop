@@ -5,11 +5,15 @@
     "wasm_intrinsics": {
       "slot": 9,
       "path": "dew.std.wasm.intrinsics",
+      "nullable_ref_type": 1,
       "operations": {
-        "WasmArrayNew": [2],
-        "WasmArrayLen": [3],
-        "WasmArrayGet": [4],
-        "WasmArraySet": [5]
+        "WasmArrayNew": [3],
+        "WasmArrayLen": [4],
+        "WasmArrayGet": [5],
+        "WasmArraySet": [6],
+        "WasmRefNull": [7],
+        "WasmRefIsNull": [8],
+        "WasmRefAsNonNull": [9]
       }
     },
     "fixed_array": {

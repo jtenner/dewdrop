@@ -35,10 +35,10 @@ dew.std.io              portable byte Reader/Writer contracts and in-memory stre
 dew.std.path            validated workspace-relative paths
 dew.std.fs              provider-neutral filesystem contract
 dew.std.fs.wasi         WASI Preview 1 filesystem adapter
-dew.std.fs.wpsi         WPSI 0.1 filesystem adapter
+dew.std.fs.facet         Facet 0.1 filesystem adapter
 dew.std.process         provider-neutral process contract
 dew.std.process.wasi    WASI Preview 1 process adapter
-dew.std.process.wpsi    WPSI 0.1 process adapter
+dew.std.process.facet    Facet 0.1 process adapter
 dew.std.json            strict bounded JSON values, I/O facades, and serialization
 dew.std.encode          fallible receiver-based Bytes encoding evidence
 dew.std.decode          fallible Bytes decoding evidence
@@ -100,7 +100,17 @@ import dew.std.wasm.intrinsics as @wasm
 let narrowed = @wasm.i64_trunc_i32(value)
 ```
 
-The module is generated from the compiler's backend inline-builtin surface. It exposes every currently source-addressable scalar, conversion, memory, packed-lane, and SIMD operation with a `wasm_`-prefixed public name, while retaining `i64_trunc_i32` as the first-published compatibility spelling. It also exposes `wasm_bytes_load_u8x16(Bytes, U32)`, a bounds-checked representation bridge that loads sixteen logical bytes from GC-backed `Bytes`; unlike `wasm_v128_load(U32)`, it does not address linear memory. The generator fails when a backend inline builtin lacks a declaration, and the bootstrap source is generated from the same output. General reference, GC, table, and host-boundary operations remain absent until Dew exposes corresponding safe carrier types and signatures.
+The module is generated from the compiler's backend inline-builtin surface. It exposes every currently source-addressable scalar, conversion, memory, packed-lane, and SIMD operation with a `wasm_`-prefixed public name, while retaining `i64_trunc_i32` as the first-published compatibility spelling. It also exposes `wasm_bytes_load_u8x16(Bytes, U32)`, a bounds-checked representation bridge that loads sixteen logical bytes from GC-backed `Bytes`; unlike `wasm_v128_load(U32)`, it does not address linear memory. The generator fails when a backend inline builtin lacks a declaration, and the bootstrap source is generated from the same output.
+
+`NullableRef<t>` represents exact nullable WasmGC foreign references. Its type argument must be one foreign nominal type; primitive, structural, and nested nullable arguments are rejected. A non-null foreign `t` widens to `NullableRef<t>` without an emitted instruction. Nullable-to-non-null conversion stays explicit and traps on null:
+
+```dew
+let missing = @wasm.wasm_ref_null<ForeignValue>()
+let is_missing = @wasm.wasm_ref_is_null(missing)
+let value = @wasm.wasm_ref_as_non_null(maybe_value)
+```
+
+These operations lower directly to `ref.null`, `ref.is_null`, and `ref.as_non_null`. Other general GC, table, and host-boundary operations remain absent until Dew exposes corresponding safe carrier types and signatures.
 
 All public standard modules may be selected explicitly:
 
@@ -172,7 +182,7 @@ WASI marshalling uses the 65,520 data bytes remaining in one reusable 64 KiB lin
 
 `dew.std.testing` adds explicit-message Boolean, equality, ordering, Option-shape, and Result-shape assertions. It delegates failure to the ambient compiler-owned `assert`, so test-mode dynamic messages and production zero-I/O traps remain unchanged. Test discovery, `_test.dew`, `expect_trap`, filters, and metadata remain compiler/tooling features rather than library APIs.
 
-`dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. WPSI adapters use the GC `array_i8` profile through the checked-in `fixtures/wpsi/wpsi-adapter.wasm` provider; link it with `--link-wasm wpsi fixtures/wpsi/wpsi-adapter.wasm`.
+`dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. Facet adapters use the GC `array_i8` profile through the checked-in `fixtures/facet/facet-adapter.wasm` provider; link it with `--link-wasm facet fixtures/facet/facet-adapter.wasm`. Facet filesystem access starts with `facet_preopen_file_system(index)`. Facet argument and environment reads use strict UTF-8 length/copy imports.
 
 `dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the GC-Bytes adapter and `dew.std.wasm.wasi` is the separate raw Preview 1 surface.
 
@@ -194,7 +204,7 @@ python3 tools/generate_wasm_intrinsics_std.py
 python3 tools/generate_bloom_filter_std.py
 python3 tools/generate_sha256_std.py
 python3 tools/generate_host_std.py
-python3 tools/generate_wpsi_adapter.py
+python3 tools/generate_facet_adapter.py
 python3 tools/generate_json_std.py
 ```
 

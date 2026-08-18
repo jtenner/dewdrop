@@ -37,7 +37,7 @@ fn compile_request_test_request() -> CompilerRequest {
     ],
     static_providers: [
       { name: "starshine", wasm: b"\x00asm\xff\x00provider" },
-      { name: "wpsi", wasm: b"\x00asm\x01\x00\x00\x00" },
+      { name: "facet", wasm: b"\x00asm\x01\x00\x00\x00" },
     ],
     standard_library: CompilerBootstrapStandard(
       bootstrap_standard_library_identity(),

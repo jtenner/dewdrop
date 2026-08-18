@@ -32,7 +32,7 @@ python3 tools/generate_blake3_std.py --check
 python3 tools/generate_sha256_std.py --check
 python3 tools/generate_host_std.py --check
 python3 tools/generate_package_std.py --check
-python3 tools/generate_wpsi_adapter.py --check
+tools/check-facet.sh
 python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check
 python3 tools/generate_utf8_std.py --check

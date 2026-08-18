@@ -10,9 +10,9 @@ SOURCES = [
     ("standard_fs_source", ROOT / "std/fs.dew"),
     ("standard_process_source", ROOT / "std/process.dew"),
     ("standard_fs_wasi_source", ROOT / "std/fs/wasi.dew"),
-    ("standard_fs_wpsi_source", ROOT / "std/fs/wpsi.dew"),
+    ("standard_fs_facet_source", ROOT / "std/fs/facet.dew"),
     ("standard_process_wasi_source", ROOT / "std/process/wasi.dew"),
-    ("standard_process_wpsi_source", ROOT / "std/process/wpsi.dew"),
+    ("standard_process_facet_source", ROOT / "std/process/facet.dew"),
 ]
 TARGET = ROOT / "src/standard_sources/standard_host_sources.mbt"
 

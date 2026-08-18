@@ -56,7 +56,8 @@ A failed compilation has compiler errors and no output module:
   object, or `null`.
 - `output: null` means compilation failed and no WAT was produced.
 - Trap names are stable harness categories such as `unreachable`,
-  `memory-out-of-bounds`, `array-out-of-bounds`, and `integer-divide-by-zero`.
+  `memory-out-of-bounds`, `array-out-of-bounds`, `null-reference`, and
+  `integer-divide-by-zero`.
 
 The return value of `main` is ignored. Fixtures that need an observable runtime
 result write it to stdout. For example, `text/concat` writes the concatenated

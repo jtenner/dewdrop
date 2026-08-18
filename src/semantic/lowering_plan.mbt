@@ -69,6 +69,9 @@ pub enum PlannedExpressionKind {
   )
   PlannedIndexCall(DeclId, ExprId, ExprId, HirSpan)
   PlannedIndexSetCall(DeclId, ExprId, ExprId, ExprId, HirSpan)
+  PlannedWasmRefNull
+  PlannedWasmRefIsNull(ExprId)
+  PlannedWasmRefAsNonNull(ExprId)
   PlannedFixedArrayMake(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArrayLength(ExprId, PlannedValueShape)
   PlannedFixedArrayGet(ExprId, ExprId, PlannedValueShape)
@@ -462,13 +465,13 @@ fn planned_error_block_item() -> PlannedBlockItem {
 }
 
 ///|
-fn planned_resolved_value_shape(
-  resolved : ResolvedModuleTypes,
+pub fn planned_value_shape_from_resolved_types(
+  types : Array[ResolvedType],
   root : ResolvedTypeId,
 ) -> PlannedValueShape {
   let mut current = root
   while true {
-    match resolved.types[current] {
+    match types[current] {
       ErrorType => return ErrorPlannedValueShape
       PrimitiveType(UnitType) => return UnitPlannedValueShape
       PrimitiveType(BoolType | I32Type) => return I32PlannedValueShape
@@ -520,6 +523,14 @@ fn planned_resolved_value_shape(
     }
   }
   ErrorPlannedValueShape
+}
+
+///|
+fn planned_resolved_value_shape(
+  resolved : ResolvedModuleTypes,
+  root : ResolvedTypeId,
+) -> PlannedValueShape {
+  planned_value_shape_from_resolved_types(resolved.types, root)
 }
 
 ///|
@@ -1036,6 +1047,9 @@ fn plan_expression_kind(
               PlannedCircularBufferPeekBack(base, element_shape)
             _ =>
               match planned_fixed_array_operation(declaration) {
+                WasmRefNull => PlannedWasmRefNull
+                WasmRefIsNull => PlannedWasmRefIsNull(base)
+                WasmRefAsNonNull => PlannedWasmRefAsNonNull(base)
                 WasmArrayNew | FixedArrayMake => {
                   let item = collected.expression_children[arguments.start + 1]
                   PlannedFixedArrayMake(

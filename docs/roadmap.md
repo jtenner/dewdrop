@@ -29,7 +29,7 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 The audited hard blockers, missing compiler-library operations, bootstrap-only boundaries, and optional port-enabling language additions are cataloged in [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](research/self-hosting-compiler-gap-catalog-2026-08-16.md). Items described there as port-enabling do not become P1 automatically; promote them only when the port chooses that path.
 
-Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, Dew-native BLAKE3 and SHA-256, capability-based WASI/WPSI filesystem and process adapters, bounded SemVer, and Dew-native package file codecs are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
+Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, Dew-native BLAKE3 and SHA-256, capability-based WASI/Facet filesystem and process adapters, bounded SemVer, and Dew-native package file codecs are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
 
 ### P2 — deferred until self-hosting
 

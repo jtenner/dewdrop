@@ -231,6 +231,14 @@ function normalizedTrap(error) {
   if (message.includes("divide by zero")) return "integer-divide-by-zero";
   if (message.includes("integer overflow")) return "integer-overflow";
   if (message.includes("invalid conversion to integer")) return "invalid-conversion-to-integer";
+  if (
+    message.includes("dereferencing a null pointer") ||
+    message.includes("null reference") ||
+    message.includes("null pointer") ||
+    message.includes("ref.as_non_null")
+  ) {
+    return "null-reference";
+  }
   return null;
 }
 

@@ -152,6 +152,11 @@ def rendered_source() -> str:
     lines.extend(
         [
             "///|",
+            "pub fn standard_nullable_ref_type_declaration() -> DeclId {",
+            f"  make_semantic_id(standard_library_module_id({wasm_intrinsics['slot']}), {wasm_intrinsics['nullable_ref_type']})",
+            "}",
+            "",
+            "///|",
             *if_multiline_operation_signature("standard_wasm_intrinsics"),
             f"  if semantic_id_module(declaration) != standard_library_module_id({wasm_intrinsics['slot']}) {{",
             "    return NoStandardBuiltinOperation",

@@ -1,0 +1,14 @@
+open dew.std.wasm.intrinsics
+
+foreign type NullableRefTestMarker
+
+fn nullable_ref_test_null() -> NullableRef<NullableRefTestMarker> {
+  wasm_ref_null()
+}
+
+test "nullable foreign reference null is observable" {
+  assert(
+    wasm_ref_is_null(nullable_ref_test_null()),
+    "ref.null must be reported as null",
+  )
+}

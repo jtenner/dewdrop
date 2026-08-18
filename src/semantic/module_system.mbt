@@ -386,13 +386,13 @@ pub fn required_standard_library_source_paths(
     required.push("std/fs/wasi.dew")
   }
   if (collection_mask & 1048576) != 0 {
-    required.push("std/fs/wpsi.dew")
+    required.push("std/fs/facet.dew")
   }
   if (collection_mask & 2097152) != 0 {
     required.push("std/process/wasi.dew")
   }
   if (collection_mask & 4194304) != 0 {
-    required.push("std/process/wpsi.dew")
+    required.push("std/process/facet.dew")
   }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
@@ -984,13 +984,13 @@ pub fn collect_program_manifest_with_standard_sources(
   if (selected_collection_mask & 1048576) != 0 {
     let module_id = standard_library_module_id(60)
     let module_index = modules.length()
-    first_module["dew.std.fs.wpsi"] = module_index
-    module_paths.push("dew.std.fs.wpsi")
+    first_module["dew.std.fs.facet"] = module_index
+    module_paths.push("dew.std.fs.facet")
     modules.push(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id, "std/fs/wpsi.dew", standard_sources, false, false,
+          module_id, "std/fs/facet.dew", standard_sources, false, false,
         ),
       ),
     )
@@ -1012,13 +1012,13 @@ pub fn collect_program_manifest_with_standard_sources(
   if (selected_collection_mask & 4194304) != 0 {
     let module_id = standard_library_module_id(62)
     let module_index = modules.length()
-    first_module["dew.std.process.wpsi"] = module_index
-    module_paths.push("dew.std.process.wpsi")
+    first_module["dew.std.process.facet"] = module_index
+    module_paths.push("dew.std.process.facet")
     modules.push(
       collect_program_files_with_frozen_standard_imports(
         module_id,
         standard_library_program_files(
-          module_id, "std/process/wpsi.dew", standard_sources, false, false,
+          module_id, "std/process/facet.dew", standard_sources, false, false,
         ),
       ),
     )

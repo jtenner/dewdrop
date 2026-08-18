@@ -3,3 +3,7 @@ import {
 }
 
 pkgtype(kind: "foreign_library")
+
+options(
+  targets: { "main.mbt": [ "wasm-gc" ] },
+)

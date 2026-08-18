@@ -1,0 +1,6 @@
+// Compile-time consumer smoke for the generated Starshine FFI declarations.
+
+pub fn starshine_i32_const_smoke() -> StarshineRef0 {
+  let value = StarshineFfi.ffi_lib_I32_new(42i32)
+  StarshineFfi.ffi_lib_Instruction_i32_const(value)
+}

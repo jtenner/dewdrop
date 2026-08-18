@@ -984,6 +984,11 @@ fn BasicBodyInferencer::infer_struct_pattern(
   self.pattern_types[base - self.body.patterns.start] = expected
   match self.names.pattern_references[base] {
     PatternTypeReference(declaration) => {
+      if declaration == standard_nullable_ref_type_declaration() {
+        self.diagnose(InvalidPatternConstructor(pattern, offset))
+        self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+        return
+      }
       let is_struct = if semantic_id_module(declaration) ==
         self.collected.module_id {
         match self.collected.declaration(declaration) {

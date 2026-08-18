@@ -124,7 +124,7 @@ Dewdrop currently includes, among other things:
 - WASI Preview 1 standard input and output.
 - Source-level tests with deterministic compiler-produced metadata.
 - Portable one-shot SHA-256 in `dew.std.integrity.sha256`, checked against the NIST CAVS short-message corpus.
-- Capability-based relative paths, filesystem, and process contracts with WASI Preview 1 and WPSI 0.1 adapters.
+- Capability-based relative paths, filesystem, and process contracts with WASI Preview 1 and Facet 0.1 adapters.
 - Deterministic WAT snapshots and Wasm execution tests.
 - File-aware deterministic diagnostics with line/column positions, excerpts, carets, and related-location labels.
 

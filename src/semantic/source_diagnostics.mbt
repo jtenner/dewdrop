@@ -262,6 +262,7 @@ fn TypeDiagnostic::primary_location(
     | ExpectedTraitType(_, value, _)
     | TypeArityMismatch(_, _, _, value, _)
     | TypeNotApplicable(_, value, _)
+    | NullableRefRequiresForeignType(_, value, _)
     | SelfOutsideContext(value, _)
     | AliasExpansionLimit(value, _, _) => value
     AliasCycle(span, _) =>

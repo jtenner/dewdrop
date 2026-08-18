@@ -62,28 +62,46 @@ test "generated standard builtin registry matches collected bootstrap declaratio
     .unwrap()]
   assert_eq(wasm_intrinsics.module_id, standard_library_module_id(9))
   assert_standard_registry_declaration(wasm_intrinsics, 0, "WasmArray")
-  assert_standard_registry_declaration(wasm_intrinsics, 2, "wasm_array_new")
+  assert_standard_registry_declaration(wasm_intrinsics, 1, "NullableRef")
+  assert_standard_registry_declaration(wasm_intrinsics, 3, "wasm_array_new")
+  assert_standard_registry_declaration(wasm_intrinsics, 7, "wasm_ref_null")
   assert_eq(
     standard_fixed_array_type_declaration(),
     make_semantic_id(wasm_intrinsics.module_id, 0),
   )
   assert_eq(
+    standard_nullable_ref_type_declaration(),
+    make_semantic_id(wasm_intrinsics.module_id, 1),
+  )
+  assert_eq(
     standard_wasm_intrinsics_operation(
-      make_semantic_id(wasm_intrinsics.module_id, 2),
+      make_semantic_id(wasm_intrinsics.module_id, 3),
     ),
     WasmArrayNew,
   )
   assert_eq(
     standard_wasm_intrinsics_operation(
-      make_semantic_id(wasm_intrinsics.module_id, 4),
+      make_semantic_id(wasm_intrinsics.module_id, 5),
     ),
     WasmArrayGet,
   )
   assert_eq(
     standard_wasm_intrinsics_operation(
-      make_semantic_id(wasm_intrinsics.module_id, 5),
+      make_semantic_id(wasm_intrinsics.module_id, 6),
     ),
     WasmArraySet,
+  )
+  assert_eq(
+    standard_wasm_intrinsics_operation(
+      make_semantic_id(wasm_intrinsics.module_id, 7),
+    ),
+    WasmRefNull,
+  )
+  assert_eq(
+    standard_wasm_intrinsics_operation(
+      make_semantic_id(wasm_intrinsics.module_id, 9),
+    ),
+    WasmRefAsNonNull,
   )
 
   let stack = program.modules[program

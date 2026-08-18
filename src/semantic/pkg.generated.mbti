@@ -119,6 +119,8 @@ pub fn plan_unoptimized_program_lowering(CollectedProgram, AnalyzedProgramSemant
 
 pub fn plan_unoptimized_program_lowering_with_type_layouts(CollectedProgram, AnalyzedProgramSemantics, Array[PlannedModuleTypeLayouts]) -> PlannedProgramLowering
 
+pub fn planned_value_shape_from_resolved_types(Array[ResolvedType], Int) -> PlannedValueShape
+
 pub fn program_resolved_trait_evidence_identity(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, HirSpan, Int) -> (UInt64, String)?
 
 pub fn program_runtime_trait_evidence_parameter(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, Int) -> (UInt64, Int)?
@@ -199,6 +201,8 @@ pub fn standard_map_type_declaration() -> UInt64
 
 pub fn standard_map_value_iterator_type_declaration() -> UInt64
 
+pub fn standard_nullable_ref_type_declaration() -> UInt64
+
 pub fn standard_option_none_variant() -> UInt64
 
 pub fn standard_option_some_variant() -> UInt64
@@ -228,6 +232,12 @@ pub fn validate_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result[
 pub fn wasmgc_capture_cell_slot(PlannedValueShape) -> Int
 
 pub fn wasmgc_capture_cell_storage(Int) -> PlannedWasmStorageType
+
+pub fn wasmgc_collect_generic_enum_instantiations_into(ResolvedModuleTypes, Map[UInt64, Int], Map[UInt64, Array[Array[Int]]]) -> Unit
+
+pub fn wasmgc_fixed_array_carrier(PlannedValueShape) -> Int
+
+pub fn wasmgc_fixed_array_carrier_for_resolved_type(Array[ResolvedType], Int) -> Int
 
 pub fn wasmgc_trait_evidence_key(PlannedModuleLowering, Int) -> String
 
@@ -277,6 +287,7 @@ pub enum BindingSpace {
   ModuleValue
   TraitMethod
   ImplMethod
+  ForeignLibraryMember
   StructField
   EnumVariant
   VariantField
@@ -460,6 +471,7 @@ pub enum BodyNameReference {
   ImportedValueNameReference(Int)
   ImportedModuleValueNameReference(UInt64)
   ImportedModuleNameReference(Int)
+  ForeignLibraryNameReference(UInt64)
   PrimitiveTypeNameReference(PrimitiveType)
   ModuleTypeNameReference(UInt64)
   ModuleTraitNameReference(UInt64)
@@ -470,6 +482,7 @@ pub enum BodyPatternReference {
   NoPatternReference
   ErrorPatternReference
   PatternBindingReference(Int)
+  PatternImportedModuleReference(Int)
   PatternTypeReference(UInt64)
   PatternTraitReference(UInt64)
   PatternVariantReference(Int)
@@ -482,6 +495,7 @@ pub enum BodyResolutionDiagnostic {
   AmbiguousImportedQualifiedRoot(Int, Int, UInt64)
   UnknownQualifiedRoot(Int, Int, UInt64)
   UnknownImportAlias(Int, Int, UInt64)
+  UnknownPatternImportAlias(Int, Int, UInt64)
   UnknownPatternConstructor(Int, Int, UInt64)
   DuplicatePatternBinding(Int, UInt64, UInt64)
   AlternativeMissingBinding(Int, Int, UInt64)
@@ -521,6 +535,8 @@ pub enum CollectedDeclKind {
   FunctionDecl
   TestDecl
   ImplDecl
+  ForeignTypeDecl
+  ForeignLibraryDecl
   StructDecl
   EnumDecl
   TypeAliasDecl
@@ -544,9 +560,28 @@ pub struct CollectedField {
   id : UInt64
   declaration : UInt64
   variant : UInt64?
+  mutable_ : Bool
   name : Int
   type_ : Int
   offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedForeignFunction {
+  declaration : UInt64
+  library : UInt64
+  export_name : Bytes
+  export_name_offset : UInt64
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedForeignLibrary {
+  declaration : UInt64
+  logical_name : Bytes
+  logical_name_offset : UInt64
+  members : HirSpan
+} derive(Eq, @debug.Debug)
+
+pub struct CollectedForeignType {
+  declaration : UInt64
 } derive(Eq, @debug.Debug)
 
 pub struct CollectedGenericParameter {
@@ -592,6 +627,7 @@ pub struct CollectedMethod {
 pub enum CollectedMethodKind {
   TraitMethodDecl
   ImplMethodDecl
+  ForeignLibraryMemberDecl
 } derive(Eq, @debug.Debug)
 
 pub struct CollectedModule {
@@ -621,6 +657,9 @@ pub struct CollectedModule {
   lets : Array[CollectedLet]
   aliases : Array[CollectedAlias]
   impls : Array[CollectedImpl]
+  foreign_types : Array[CollectedForeignType]
+  foreign_libraries : Array[CollectedForeignLibrary]
+  foreign_functions : Array[CollectedForeignFunction]
   type_syntax : Array[HirTypeSyntax]
   type_syntax_files : Array[UInt64]
   type_arguments : Array[Int]
@@ -654,6 +693,7 @@ pub struct CollectedModule {
   trait_bindings : Map[Int, UInt64]
   value_bindings : Map[Int, ValueBinding]
   value_binding_candidates : Array[ValueBindingCandidate]
+  foreign_library_by_alias : Map[Int, UInt64]
 }
 pub fn CollectedModule::block_location(Self, Int) -> SourceLocation?
 pub fn CollectedModule::body_location(Self, UInt64) -> SourceLocation?
@@ -665,7 +705,11 @@ pub fn CollectedModule::declaration_location(Self, UInt64) -> SourceLocation?
 pub fn CollectedModule::expression_location(Self, Int) -> SourceLocation?
 pub fn CollectedModule::file_is_test(Self, UInt64) -> Bool
 pub fn CollectedModule::find_name(Self, String) -> Int?
+pub fn CollectedModule::foreign_function(Self, UInt64) -> CollectedForeignFunction?
+pub fn CollectedModule::foreign_library(Self, UInt64) -> CollectedForeignLibrary?
+pub fn CollectedModule::foreign_library_member(Self, UInt64, Int) -> UInt64?
 pub fn CollectedModule::generic_parameters_of(Self, UInt64) -> HirSpan
+pub fn CollectedModule::lookup_foreign_library(Self, Int) -> UInt64?
 pub fn CollectedModule::lookup_trait(Self, String) -> UInt64?
 pub fn CollectedModule::lookup_type(Self, String) -> UInt64?
 pub fn CollectedModule::lookup_value(Self, String) -> UInt64?
@@ -736,6 +780,10 @@ pub enum CollectionDiagnostic {
   TestDeclarationOutsideTestFile(UInt64, UInt64)
   UnknownDerivedTrait(String, UInt64, UInt64)
   DuplicateDerivedTrait(String, UInt64, UInt64, UInt64)
+  EmptyForeignLogicalName(UInt64, UInt64)
+  InvalidUtf8ForeignLogicalName(UInt64, UInt64)
+  EmptyForeignExportName(UInt64, UInt64)
+  InvalidUtf8ForeignExportName(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
 pub struct CompilerDiagnosticLabel {
@@ -822,6 +870,7 @@ pub struct FrozenInterfaceField {
   field : UInt64
   declaration : UInt64
   variant : UInt64?
+  mutable_ : Bool
   name : String
   type_ : Int
   location : SourceLocation
@@ -1019,6 +1068,7 @@ pub struct HirObjectField {
 pub enum HirPattern {
   HirWildcardPattern(UInt64)
   HirBindingPattern(Int, UInt64)
+  HirImportAliasPattern(Int, UInt64)
   HirRestPattern(UInt64)
   HirLiteralPattern(Int, UInt64)
   HirQualifiedPattern(Int, Int, UInt64)
@@ -1054,6 +1104,7 @@ pub struct HirSpan {
 
 pub enum HirTypeSyntax {
   NamedTypeSyntax(Int, UInt64)
+  QualifiedTypeSyntax(Int, Int, UInt64, UInt64)
   AppliedTypeSyntax(Int, HirSpan, UInt64)
   FunctionTypeSyntax(HirSpan, Int, UInt64)
 } derive(Eq, @debug.Debug)
@@ -1201,7 +1252,7 @@ pub enum InferredExpressionSelection {
   StructConstructionSelection(UInt64, HirSpan)
   VariantConstructionSelection(UInt64, HirSpan)
   UnitVariantValueSelection(UInt64, HirSpan)
-  FieldAccessSelection(UInt64)
+  FieldAccessSelection(UInt64, Bool)
   ImportedModuleValueSelection(UInt64)
   FunctionReferenceSelection(UInt64, HirSpan)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -1427,9 +1478,12 @@ pub fn ModuleImplIndex::trait_method_dispatch_span(Self, UInt64, Int, Bool) -> H
 pub struct ModuleImportScope {
   module_id : UInt64
   declarations : Array[ImportedDeclarationBinding]
+  declaration_bindings : Map[UInt64, Int]
   imported_interfaces : Array[Int]
   type_bindings : Map[String, Int]
   trait_bindings : Map[String, Int]
+  module_type_bindings : Array[Map[String, Int]]
+  module_trait_bindings : Array[Map[String, Int]]
   value_bindings : Map[String, ImportedValueBinding]
   module_value_bindings : Array[Map[String, ImportedValueBinding]]
   module_let_bindings : Array[Map[String, ImportedModuleValueBinding]]
@@ -1441,6 +1495,9 @@ pub struct ModuleImportScope {
 }
 pub fn ModuleImportScope::lookup_alias(Self, String) -> Int?
 pub fn ModuleImportScope::lookup_module_callable(Self, Int, String) -> Int?
+pub fn ModuleImportScope::lookup_module_declaration(Self, Int, String, FrozenInterfaceDeclarationKind) -> ImportedDeclarationBinding?
+pub fn ModuleImportScope::lookup_module_trait(Self, Int, String) -> ImportedDeclarationBinding?
+pub fn ModuleImportScope::lookup_module_type(Self, Int, String) -> ImportedDeclarationBinding?
 pub fn ModuleImportScope::lookup_module_value(Self, Int, String) -> UInt64?
 pub fn ModuleImportScope::lookup_opened_value(Self, String) -> UInt64?
 pub fn ModuleImportScope::lookup_trait(Self, String) -> ImportedDeclarationBinding?
@@ -1527,6 +1584,7 @@ pub struct PlannedCallable {
 
 pub enum PlannedCallableKind {
   PlannedBuiltinCallable(Bytes)
+  PlannedForeignCallable(Bytes, Bytes)
   PlannedFunctionCallable(UInt64)
   PlannedTraitMethodCallable(UInt64)
   PlannedImplMethodCallable(UInt64, UInt64?)
@@ -1594,11 +1652,13 @@ pub enum PlannedExpressionKind {
   PlannedBoundOperatorCall(UInt64, Int, HirBinaryOperator, Int, Int, HirSpan)
   PlannedIndexCall(UInt64, Int, Int, HirSpan)
   PlannedIndexSetCall(UInt64, Int, Int, Int, HirSpan)
+  PlannedWasmRefNull
+  PlannedWasmRefIsNull(Int)
+  PlannedWasmRefAsNonNull(Int)
   PlannedFixedArrayMake(Int, Int, PlannedValueShape)
   PlannedFixedArrayLength(Int, PlannedValueShape)
   PlannedFixedArrayGet(Int, Int, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
-  PlannedFixedArraySet(Int, Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
   PlannedArrayNew(Int, PlannedValueShape)
   PlannedArrayWithCapacity(Int, Int, PlannedValueShape)
@@ -1614,6 +1674,15 @@ pub enum PlannedExpressionKind {
   PlannedArrayIter(Int, Int, PlannedValueShape)
   PlannedArrayIterHasNext(Int)
   PlannedArrayIterNext(Int, PlannedValueShape)
+  PlannedArrayMake(Int, Int, Int, PlannedValueShape)
+  PlannedArrayReserve(Int, Int, Int, PlannedValueShape)
+  PlannedArrayShrinkToFit(Int, Int, PlannedValueShape)
+  PlannedArrayTruncate(Int, Int, Int, PlannedValueShape)
+  PlannedArrayCopy(Int, Int, PlannedValueShape)
+  PlannedArrayCopyWithin(Int, Int, Int, Int, Int, PlannedValueShape)
+  PlannedArrayFill(Int, Int, Int, Int, Int, PlannedValueShape)
+  PlannedArraySlice(Int, Int, Int, Int, PlannedValueShape)
+  PlannedArrayExtend(Int, Int, Int, PlannedValueShape)
   PlannedStackIsEmpty(Int)
   PlannedStackPeek(Int, PlannedValueShape)
   PlannedQueueDequeue(Int, PlannedValueShape)
@@ -1670,13 +1739,15 @@ pub enum PlannedExpressionKind {
   PlannedParameterSelect(HirSpan, Int)
   PlannedFunctionValueCall(Int, HirSpan, Int)
   PlannedDynamicTraitCall(UInt64, UInt64, Int, Int, HirSpan, HirSpan)
-  PlannedFieldGet(UInt64, Int)
+  PlannedFieldGet(UInt64, Int, Bool)
+  PlannedFieldSet(UInt64, Int, Int)
 } derive(Eq, @debug.Debug)
 
 pub struct PlannedFieldLayout {
   field : UInt64
   declaration : UInt64
   variant : UInt64?
+  mutable_ : Bool
   name : String
   index : Int
   type_ : Int
@@ -1876,6 +1947,7 @@ pub struct PlannedNominalLayout {
 pub enum PlannedNominalLayoutKind {
   PlannedStructLayout(HirSpan)
   PlannedEnumLayout(HirSpan)
+  PlannedForeignTypeLayout
 } derive(Eq, @debug.Debug)
 
 pub struct PlannedObjectField {
@@ -2041,6 +2113,7 @@ pub struct PlannedProgramWasmGCLink {
   type_lookup : Map[UInt64, Int]
   module_lookup : Map[UInt64, Int]
   erased_box_type_indices : Array[Int]
+  fixed_array_type_base : Int
   type_count : Int
   imported_function_count : Int
   defined_function_count : Int
@@ -2179,7 +2252,7 @@ pub struct PlannedWasmFunctionFragment {
 } derive(Eq, @debug.Debug)
 
 pub enum PlannedWasmFunctionKind {
-  PlannedWasmImportedFunction(Bytes)
+  PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(UInt64)
@@ -2205,6 +2278,7 @@ pub struct PlannedWasmPhysicalType {
 
 pub enum PlannedWasmPhysicalTypeKind {
   PlannedWasmStructType(UInt64)
+  PlannedWasmForeignMarkerType(UInt64)
   PlannedWasmEnumBaseType(UInt64)
   PlannedWasmEnumSubtypeType(UInt64, UInt64, Int)
   PlannedWasmClosureType
@@ -2236,6 +2310,9 @@ pub enum PlannedWasmStorageType {
   WasmFunctionRefStorage(Int)
   WasmNominalRefStorage(PlannedWasmTypeReference)
   WasmExternalNominalRefStorage(UInt64)
+  WasmFixedArrayRefStorage(Int)
+  WasmNullableNominalRefStorage(PlannedWasmTypeReference)
+  WasmNullableExternalNominalRefStorage(UInt64)
 } derive(Eq, @debug.Debug)
 
 pub struct PlannedWasmTraitDictionary {
@@ -2285,6 +2362,9 @@ pub enum PlannedWasmValueType {
   WasmFunctionRefValue(Int)
   WasmNominalRefValue(Int)
   WasmExternalNominalRefValue(UInt64)
+  WasmFixedArrayRefValue(Int)
+  WasmNullableNominalRefValue(Int)
+  WasmNullableExternalNominalRefValue(UInt64)
 } derive(Eq, @debug.Debug)
 
 pub struct PlannedWasmVariantField {
@@ -2396,6 +2476,7 @@ pub struct ResolvedImportedField {
   field : UInt64
   declaration : UInt64
   variant : UInt64?
+  mutable_ : Bool
   name : String
   type_ : Int
 } derive(Eq, @debug.Debug)
@@ -2589,6 +2670,7 @@ pub enum TypeDiagnostic {
   ExpectedTraitType(Int, UInt64, UInt64)
   TypeArityMismatch(Int, Int, Int, UInt64, UInt64)
   TypeNotApplicable(Int, UInt64, UInt64)
+  NullableRefRequiresForeignType(Int, UInt64, UInt64)
   SelfOutsideContext(UInt64, UInt64)
   AliasCycle(HirSpan, UInt64)
   AliasExpansionLimit(UInt64, Int, UInt64)
@@ -2621,6 +2703,22 @@ pub struct WasmGCPlanningOptions {
 pub fn WasmGCPlanningOptions::optimized_subtype_families() -> Self
 pub fn WasmGCPlanningOptions::subtype_families() -> Self
 pub fn WasmGCPlanningOptions::test_mode() -> Self
+
+pub struct WasmImportIdentity {
+  module_name : Bytes
+  field : Bytes
+  kind : WasmImportKind
+} derive(Eq, @debug.Debug)
+pub fn WasmImportIdentity::host(Bytes) -> Self
+pub fn WasmImportIdentity::lookup_name(Self) -> Bytes
+pub fn WasmImportIdentity::static_link(Bytes, Bytes) -> Self
+pub fn WasmImportIdentity::wasi(Bytes) -> Self
+
+pub enum WasmImportKind {
+  HostWasmImport
+  StaticLinkWasmImport
+  WasiWasmImport
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 pub type BlockId = Int

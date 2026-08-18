@@ -174,13 +174,11 @@ error.
 
 Memory and table policy:
 
-- Existing Dew memories keep their relative order and normally occupy the
-  earliest available defined-memory indices, so a Dew host/WASI memory remains
-  memory 0 when the guest has no memory imports.
-- A linked provider named `wpsi` is the explicit exception: its defined memories
-  are placed before Dew memories so the WPSI provider keeps memory 0. WPSI
-  providers with imported memories are rejected because their memory-zero
-  ownership would be ambiguous after static linking.
+- Existing Dew memories keep their relative order and occupy the earliest
+  available defined-memory indices, so a Dew host/WASI memory remains memory 0
+  when the guest has no memory imports.
+- Facet uses the ordinary Dew-first policy. Its linear-memory imports select an
+  explicit memory index, and the GC-array adapter does not require memory 0.
 - Guest and dependency memories remain separate and all explicit and implicit
   memory immediates are remapped. The String adapter gets a private fixed
   one-page scratch memory.

@@ -79,8 +79,8 @@ fixed-point compiler.
 **Current state:** implemented on August 17, 2026.
 
 The module split is `dew.std.path`, `dew.std.fs`,
-`dew.std.fs.wasi`, `dew.std.fs.wpsi`, `dew.std.process`,
-`dew.std.process.wasi`, and `dew.std.process.wpsi`. `std/wasi.dew` exposes only
+`dew.std.fs.wasi`, `dew.std.fs.facet`, `dew.std.process`,
+`dew.std.process.wasi`, and `dew.std.process.facet`. `std/wasi.dew` exposes only
 high-level `fd_read` and `fd_write`; `std/io.dew` provides host-independent
 Reader and Writer traits, but it intentionally has no paths, files, arguments,
 environment, or process exit. See

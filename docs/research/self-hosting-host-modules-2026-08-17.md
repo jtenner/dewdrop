@@ -1,5 +1,7 @@
 # Self-hosting host modules — August 17, 2026
 
+Updated on August 18, 2026 for the Facet provider and current `facet-spec` ABI.
+
 ## Decision
 
 Do not add one broad `dew.std.host` module. Split pure contracts from host
@@ -9,10 +11,10 @@ adapters:
 dew.std.path
 dew.std.fs
 dew.std.fs.wasi
-dew.std.fs.wpsi
+dew.std.fs.facet
 dew.std.process
 dew.std.process.wasi
-dew.std.process.wpsi
+dew.std.process.facet
 ```
 
 `dew.std.path` owns relative path validation and normalization without host
@@ -21,7 +23,7 @@ contracts, and composed operations such as bounded complete reads and atomic
 publication. `dew.std.process` owns ordered arguments, environment lookup,
 stdout, stderr, and explicit exit.
 
-The WASI and WPSI modules are adapters. Compiler code receives filesystem and
+The WASI and Facet modules are adapters. Compiler code receives filesystem and
 process capabilities explicitly and does not select a host with ambient global
 state. This split was implemented on August 17, 2026.
 
@@ -48,26 +50,26 @@ rendering, and runtime selection remain launcher work.
 
 ## Linker memory policy
 
-The Core Wasm linker normally keeps Dew-defined memories before guest-defined
-memories. A provider named `wpsi` is different: the provider's defined memories
-must precede Dew memories so WPSI keeps memory 0. Every explicit and implicit
-memory use is remapped through the same index map.
+The Core Wasm linker keeps Dew-defined memories before guest-defined memories and
+remaps every explicit and implicit memory use through the same index map. Facet
+has no memory-zero exception. The Facet ABI passes an explicit memory index to
+every linear-memory operation, and the GC-array profile used here requires no
+linear-memory index.
 
-WPSI providers with imported memories are rejected. Supporting that shape would
-require deterministic interleaving and coalescing rules for imported memories,
-which are not defined by the current foreign-provider ABI.
+## Facet source and adapter boundary
 
-## WPSI source and adapter boundary
-
-The exact WPSI import names and signatures come from `github:jtenner/wpsi` at
-commit `0eb37b13def5785fe904ac5ed73a94c297a736f1`. The WPSI 0.1 draft uses
-ordinary imports from module `wpsi`, explicit memory indexes, and
+The exact Facet import names and signatures come from `github:jtenner/facet-spec` at
+commit `c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab`. The Facet 0.1 draft uses
+ordinary imports from module `facet`, explicit memory indexes, and
 representation-specific function names.
 
-Dew uses WPSI's GC `array_i8` profile. The checked-in
-`fixtures/wpsi/wpsi-adapter.wasm` converts WPSI multi-value results into exact
+Dew uses Facet's GC `array_i8` profile. The checked-in
+`fixtures/facet/facet-adapter.wasm` converts Facet multi-value results into exact
 GC result structs that Dew foreign nominal types can bind through the static
-linker. `tools/generate_wpsi_adapter.py` validates and reproduces the fixture.
+linker. The adapter uses strict UTF-8 argument and environment length/copy
+imports. Scratch filesystem allocation and string-resource handles are absent;
+filesystem access starts from an indexed preopen. `tools/generate_facet_adapter.py`
+validates and reproduces the fixture.
 
 ## Validation
 
@@ -77,7 +79,7 @@ Permanent coverage includes:
 - provider-neutral filesystem and process trait dispatch;
 - selective and wildcard standard-module loading;
 - frozen-interface handling for module-local foreign library namespaces;
-- WPSI provider memory-zero ordering in the Core Wasm linker;
-- reproducible validation of the WPSI adapter module;
-- linked Dew/WPSI smoke-module validation;
+- ordinary Dew-first memory ordering for Facet providers;
+- reproducible validation of the Facet adapter module;
+- linked Dew/Facet smoke-module validation;
 - all 65 NIST CAVS SHA-256 short-message vectors.

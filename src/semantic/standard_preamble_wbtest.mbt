@@ -71,9 +71,9 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[45], "std/fs.dew")
   assert_eq(wildcard_paths[46], "std/process.dew")
   assert_eq(wildcard_paths[47], "std/fs/wasi.dew")
-  assert_eq(wildcard_paths[48], "std/fs/wpsi.dew")
+  assert_eq(wildcard_paths[48], "std/fs/facet.dew")
   assert_eq(wildcard_paths[49], "std/process/wasi.dew")
-  assert_eq(wildcard_paths[50], "std/process/wpsi.dew")
+  assert_eq(wildcard_paths[50], "std/process/facet.dew")
   assert_eq(wildcard_paths[51], "std/text_runtime.dew")
   assert_eq(wildcard_paths[53], "std/string_fixed_array.dew")
   assert_eq(wildcard_paths[57], "std/text.dew")
@@ -235,7 +235,7 @@ test "standard import prepass selects filesystem and process adapters" {
     selected_standard_modules([
       ProgramFile::new(
         make_program_file_id(module_id, 0),
-        b"open dew.std.fs.wasi\nopen dew.std.process.wpsi\npub fn run() -> Unit {\n}\n",
+        b"open dew.std.fs.wasi\nopen dew.std.process.facet\npub fn run() -> Unit {\n}\n",
       ),
     ]),
     (

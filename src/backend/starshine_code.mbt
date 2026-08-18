@@ -262,6 +262,7 @@ priv enum StarshineEmitTask {
     @semantic.PlannedValueShape,
     Int
   )
+  FinishStarshineRefIntrinsic(Int)
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineArray(
     Int,
@@ -415,7 +416,9 @@ fn starshine_shape_matches_storage(
         | @semantic.WasmNullableEqRefStorage
         | @semantic.WasmNominalRefStorage(_)
         | @semantic.WasmExternalNominalRefStorage(_)
-        | @semantic.WasmFixedArrayRefStorage(_) => true
+        | @semantic.WasmFixedArrayRefStorage(_)
+        | @semantic.WasmNullableNominalRefStorage(_)
+        | @semantic.WasmNullableExternalNominalRefStorage(_) => true
         _ => false
       }
     @semantic.ErrorPlannedValueShape
@@ -450,8 +453,15 @@ fn starshine_default_storage_instructions(
     @semantic.WasmStringRefStorage
     | @semantic.WasmNullableEqRefStorage
     | @semantic.WasmNominalRefStorage(_)
-    | @semantic.WasmExternalNominalRefStorage(_) =>
+    | @semantic.WasmExternalNominalRefStorage(_)
+    | @semantic.WasmNullableExternalNominalRefStorage(_) =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq()))]
+    @semantic.WasmNullableNominalRefStorage(reference) =>
+      [
+        @lib.Instruction::ref_null(
+          @lib.HeapType::new(starshine_type_index(reference)),
+        ),
+      ]
     @semantic.WasmFixedArrayRefStorage(_) => [@lib.Instruction::unreachable_()]
     @semantic.WasmNullableFunctionRefStorage =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::func()))]
@@ -721,6 +731,14 @@ fn starshine_inline_builtin_instructions(
     Ok([@lib.Instruction::drop()])
   } else if name == b"dew_reinterpret" {
     Ok([])
+  } else if name == b"ref_null" {
+    Ok([
+      @lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::none())),
+    ])
+  } else if name == b"ref_is_null" {
+    Ok([@lib.Instruction::ref_is_null()])
+  } else if name == b"ref_as_non_null" {
+    Ok([@lib.Instruction::ref_as_non_null()])
   } else if name == b"i32_add" {
     Ok([@lib.Instruction::i32_add()])
   } else if name == b"i32_sub" {
@@ -1230,6 +1248,105 @@ fn starshine_struct_physical_type(
 }
 
 ///|
+priv enum StarshineVariantExpectedFields {
+  StarshineExpectedTupleFields(Array[@semantic.PlannedValueShape])
+  StarshineExpectedStructFields(
+    Array[@semantic.FieldId],
+    Array[@semantic.PlannedValueShape]
+  )
+  StarshineExpectedUnitFields
+}
+
+///|
+fn starshine_variant_physical_matches(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  physical : @semantic.PlannedWasmPhysicalType,
+  expected : StarshineVariantExpectedFields,
+) -> Bool {
+  match expected {
+    StarshineExpectedTupleFields(shapes) => {
+      let mut expected_count = 0
+      for shape in shapes {
+        if starshine_shape_value_type(shape) is Some(_) {
+          expected_count += 1
+        }
+      }
+      if physical.fields.length - 1 != expected_count {
+        return false
+      }
+      for index in 1..<physical.fields.length {
+        let field = planned.fields[physical.fields.start + index]
+        match field.role {
+          @semantic.WasmTuplePayloadField(_, source_index) if source_index >= 0 &&
+            source_index < shapes.length() &&
+            starshine_shape_matches_storage(shapes[source_index], field.storage) =>
+            ()
+          _ => return false
+        }
+      }
+      true
+    }
+    StarshineExpectedStructFields(field_ids, shapes) => {
+      for source_index in 0..<field_ids.length() {
+        if source_index >= shapes.length() ||
+          starshine_shape_value_type(shapes[source_index]) is None {
+          continue
+        }
+        let mut found = false
+        for index in 1..<physical.fields.length {
+          let field = planned.fields[physical.fields.start + index]
+          match field.role {
+            @semantic.WasmStructPayloadField(field_id) if field_id ==
+              field_ids[source_index] &&
+              starshine_shape_matches_storage(
+                shapes[source_index],
+                field.storage,
+              ) => {
+              found = true
+              break
+            }
+            _ => ()
+          }
+        }
+        if !found {
+          return false
+        }
+      }
+      true
+    }
+    StarshineExpectedUnitFields => physical.fields.length == 1
+  }
+}
+
+///|
+fn starshine_variant_payload_physical_type_for_fields(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  variant : @semantic.VariantId,
+  expected : StarshineVariantExpectedFields,
+) -> @semantic.PlannedWasmPhysicalType? {
+  match planned.payload_type_index_of(variant) {
+    Some(index) =>
+      for type_ in planned.physical_types {
+        if type_.type_index == index &&
+          starshine_variant_physical_matches(planned, type_, expected) {
+          return Some(type_)
+        }
+      }
+    None => ()
+  }
+  for type_ in planned.physical_types {
+    match type_.kind {
+      @semantic.PlannedWasmEnumSubtypeType(_, candidate, _) if candidate ==
+        variant &&
+        starshine_variant_physical_matches(planned, type_, expected) =>
+        return Some(type_)
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn starshine_variant_payload_physical_type(
   planned : @semantic.PlannedModuleWasmGCFragments,
   variant : @semantic.VariantId,
@@ -1291,57 +1408,17 @@ fn starshine_struct_get_instruction(
 }
 
 ///|
-fn starshine_ordered_variant_object_values(
-  lowering : @semantic.PlannedModuleLowering,
-  planned : @semantic.PlannedModuleWasmGCFragments,
-  variant : @semantic.VariantId,
-  fields : @semantic.HirSpan,
-) -> Array[@semantic.ExprId]? {
-  let values : Array[@semantic.ExprId] = []
-  let variant_fields = planned.variant_fields_of(variant)
-  if variant_fields.length() <= 8 {
-    for planned_field in variant_fields {
-      let field = match planned_field.role {
-        @semantic.WasmStructPayloadField(field) => field
-        _ => return None
-      }
-      let mut value = -1
-      for source_index in 0..<fields.length {
-        let object_field = lowering.object_fields[fields.start + source_index]
-        if object_field.field == field {
-          value = object_field.value
-          break
-        }
-      }
-      if value < 0 {
-        return None
-      }
-      values.push(value)
-    }
-    return Some(values)
-  }
-  let lookup : Map[@semantic.FieldId, @semantic.ExprId] = Map::default()
-  for source_index in 0..<fields.length {
-    let object_field = lowering.object_fields[fields.start + source_index]
-    lookup[object_field.field] = object_field.value
-  }
-  for planned_field in variant_fields {
-    let field = match planned_field.role {
-      @semantic.WasmStructPayloadField(field) => field
-      _ => return None
-    }
-    match lookup.get(field) {
-      Some(value) => values.push(value)
-      None => return None
-    }
-  }
-  Some(values)
-}
-
-///|
 fn starshine_match_cast(type_index : Int) -> @lib.Instruction {
   @lib.Instruction::ref_cast(
     false,
+    @lib.HeapType::new(@lib.TypeIdx::new(type_index.reinterpret_as_uint())),
+  )
+}
+
+///|
+fn starshine_nullable_match_cast(type_index : Int) -> @lib.Instruction {
+  @lib.Instruction::ref_cast(
+    true,
     @lib.HeapType::new(@lib.TypeIdx::new(type_index.reinterpret_as_uint())),
   )
 }
@@ -1374,6 +1451,29 @@ fn starshine_append_storage_cast(
         Some(link) =>
           match link.type_lookup.get(declaration) {
             Some(type_index) => output.push(starshine_match_cast(type_index))
+            None => ()
+          }
+        None => ()
+      }
+    @semantic.WasmNullableNominalRefStorage(reference) => {
+      let local_type_index = match reference {
+        @semantic.WasmModuleTypeReference(value) => value
+        @semantic.WasmRecursiveTypeReference(value) =>
+          module_plan.type_groups[physical.group_index].first_type_index + value
+      }
+      let type_index = starshine_local_physical_type_index(
+        program, owner_module, local_type_index,
+      )
+      if type_index >= 0 {
+        output.push(starshine_nullable_match_cast(type_index))
+      }
+    }
+    @semantic.WasmNullableExternalNominalRefStorage(declaration) =>
+      match program {
+        Some(link) =>
+          match link.type_lookup.get(declaration) {
+            Some(type_index) =>
+              output.push(starshine_nullable_match_cast(type_index))
             None => ()
           }
         None => ()
@@ -1955,8 +2055,64 @@ fn starshine_general_match_pattern_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, pattern))
             }
+            let expected_fields = match source.source {
+              @semantic.HirQualifiedPattern(_, _, _)
+              | @semantic.HirBindingPattern(_, _) => StarshineExpectedUnitFields
+              @semantic.HirTuplePattern(_, arguments, _) => {
+                let shapes : Array[@semantic.PlannedValueShape] = []
+                for source_index in 0..<arguments.length {
+                  let child = lowering.pattern_children[arguments.start +
+                    source_index]
+                  shapes.push(
+                    starshine_specialized_shape(
+                      lowering,
+                      generic_specialization,
+                      lowering.patterns[child].type_,
+                      lowering.patterns[child].shape,
+                    ),
+                  )
+                }
+                StarshineExpectedTupleFields(shapes)
+              }
+              @semantic.HirStructPattern(_, pattern_fields, _, _, _) => {
+                let field_ids : Array[@semantic.FieldId] = []
+                let shapes : Array[@semantic.PlannedValueShape] = []
+                for field_offset in 0..<pattern_fields.length {
+                  let pattern_field = lowering.pattern_fields[pattern_fields.start +
+                    field_offset]
+                  let mut field_id = 0UL
+                  for candidate in variant_plan.variant_fields_of(variant) {
+                    match candidate.role {
+                      @semantic.WasmStructPayloadField(value) =>
+                        match variant_plan.field_name_of(value) {
+                          Some(name) if name == pattern_field.name =>
+                            field_id = value
+                          _ => ()
+                        }
+                      _ => ()
+                    }
+                  }
+                  if field_id == 0UL {
+                    return Err(UnsupportedExpression(body.body, pattern))
+                  }
+                  field_ids.push(field_id)
+                  shapes.push(
+                    starshine_specialized_shape(
+                      lowering,
+                      generic_specialization,
+                      lowering.patterns[pattern_field.pattern].type_,
+                      lowering.patterns[pattern_field.pattern].shape,
+                    ),
+                  )
+                }
+                StarshineExpectedStructFields(field_ids, shapes)
+              }
+              _ => return Err(UnsupportedExpression(body.body, pattern))
+            }
             let physical = match
-              starshine_variant_payload_physical_type(variant_plan, variant) {
+              starshine_variant_payload_physical_type_for_fields(
+                variant_plan, variant, expected_fields,
+              ) {
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, pattern))
             }
@@ -1971,7 +2127,9 @@ fn starshine_general_match_pattern_instructions(
               @semantic.HirQualifiedPattern(_, _, _)
               | @semantic.HirBindingPattern(_, _) => ()
               @semantic.HirTuplePattern(_, arguments, _) =>
-                for field in variant_plan.variant_fields_of(variant) {
+                for field_offset in 1..<physical.fields.length {
+                  let field = variant_plan.fields[physical.fields.start +
+                    field_offset]
                   let source_index = match field.role {
                     @semantic.WasmTuplePayloadField(_, source_index) =>
                       source_index
@@ -2005,8 +2163,10 @@ fn starshine_general_match_pattern_instructions(
                 for field_offset in 0..<pattern_fields.length {
                   let pattern_field = lowering.pattern_fields[pattern_fields.start +
                     field_offset]
-                  let mut selected : @semantic.PlannedWasmVariantField? = None
-                  for candidate in variant_plan.variant_fields_of(variant) {
+                  let mut selected : @semantic.PlannedWasmField? = None
+                  for physical_offset in 1..<physical.fields.length {
+                    let candidate = variant_plan.fields[physical.fields.start +
+                      physical_offset]
                     match candidate.role {
                       @semantic.WasmStructPayloadField(field) =>
                         match variant_plan.field_name_of(field) {
@@ -2245,8 +2405,24 @@ fn starshine_simple_match_pattern_instructions(
     @semantic.HirQualifiedPattern(_, _, _)
     | @semantic.HirBindingPattern(_, _) => ()
     @semantic.HirTuplePattern(_, arguments, _) => {
+      let expected_shapes : Array[@semantic.PlannedValueShape] = []
+      for source_index in 0..<arguments.length {
+        let child = lowering.pattern_children[arguments.start + source_index]
+        expected_shapes.push(
+          starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            lowering.patterns[child].type_,
+            lowering.patterns[child].shape,
+          ),
+        )
+      }
       let physical = match
-        starshine_variant_payload_physical_type(variant_plan, variant) {
+        starshine_variant_payload_physical_type_for_fields(
+          variant_plan,
+          variant,
+          StarshineExpectedTupleFields(expected_shapes),
+        ) {
         Some(value) => value
         None => return Err(UnsupportedExpression(body.body, pattern))
       }
@@ -2255,7 +2431,8 @@ fn starshine_simple_match_pattern_instructions(
           link.physical_type_index(owner_module, physical.type_index)
         None => physical.type_index
       }
-      for field in variant_plan.variant_fields_of(variant) {
+      for field_offset in 1..<physical.fields.length {
+        let field = variant_plan.fields[physical.fields.start + field_offset]
         let source_index = match field.role {
           @semantic.WasmTuplePayloadField(_, source_index) => source_index
           _ => return Err(UnsupportedExpression(body.body, pattern))
@@ -2303,8 +2480,41 @@ fn starshine_simple_match_pattern_instructions(
       }
     }
     @semantic.HirStructPattern(_, pattern_fields, _, _, _) => {
+      let expected_field_ids : Array[@semantic.FieldId] = []
+      let expected_shapes : Array[@semantic.PlannedValueShape] = []
+      for pattern_offset in 0..<pattern_fields.length {
+        let pattern_field = lowering.pattern_fields[pattern_fields.start +
+          pattern_offset]
+        let mut field_id = 0UL
+        for candidate in variant_plan.variant_fields_of(variant) {
+          match candidate.role {
+            @semantic.WasmStructPayloadField(value) =>
+              match variant_plan.field_name_of(value) {
+                Some(name) if name == pattern_field.name => field_id = value
+                _ => ()
+              }
+            _ => ()
+          }
+        }
+        if field_id == 0UL {
+          return Err(UnsupportedExpression(body.body, pattern))
+        }
+        expected_field_ids.push(field_id)
+        expected_shapes.push(
+          starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            lowering.patterns[pattern_field.pattern].type_,
+            lowering.patterns[pattern_field.pattern].shape,
+          ),
+        )
+      }
       let physical = match
-        starshine_variant_payload_physical_type(variant_plan, variant) {
+        starshine_variant_payload_physical_type_for_fields(
+          variant_plan,
+          variant,
+          StarshineExpectedStructFields(expected_field_ids, expected_shapes),
+        ) {
         Some(value) => value
         None => return Err(UnsupportedExpression(body.body, pattern))
       }
@@ -2328,8 +2538,10 @@ fn starshine_simple_match_pattern_instructions(
           child_local.type_,
           child_local.shape,
         )
-        let mut selected_field : @semantic.PlannedWasmVariantField? = None
-        for candidate in variant_plan.variant_fields_of(variant) {
+        let mut selected_field : @semantic.PlannedWasmField? = None
+        for physical_offset in 1..<physical.fields.length {
+          let candidate = variant_plan.fields[physical.fields.start +
+            physical_offset]
           match candidate.role {
             @semantic.WasmStructPayloadField(field) =>
               match variant_plan.field_name_of(field) {
@@ -2513,6 +2725,58 @@ fn starshine_body_value_type(
     }
   } else {
     -1
+  }
+  if resolved_type >= 0 && resolved_type < lowering.resolved_types.length() {
+    match lowering.resolved_types[resolved_type] {
+      @semantic.AppliedType(base, arguments) if arguments.length == 1 =>
+        match lowering.resolved_types[base] {
+          @semantic.NominalType(declaration) if declaration ==
+            @semantic.standard_nullable_ref_type_declaration() => {
+            let argument = lowering.resolved_type_arguments[arguments.start]
+            match lowering.resolved_types[argument] {
+              @semantic.NominalType(foreign_declaration) => {
+                let emitted_type = if @semantic.semantic_id_module(
+                    foreign_declaration,
+                  ) ==
+                  lowering.module_id {
+                  match planned.type_index_of(foreign_declaration) {
+                    Some(index) =>
+                      match program {
+                        Some(link) => {
+                          let module_index = link.module_lookup
+                            .get(lowering.module_id)
+                            .unwrap()
+                          link.physical_type_index(module_index, index)
+                        }
+                        None => index
+                      }
+                    None => -1
+                  }
+                } else {
+                  match program {
+                    Some(link) =>
+                      match link.type_lookup.get(foreign_declaration) {
+                        Some(index) => index
+                        None => -1
+                      }
+                    None => -1
+                  }
+                }
+                if emitted_type >= 0 {
+                  return Some(
+                    starshine_nullable_nominal_ref(
+                      @lib.TypeIdx::new(emitted_type.reinterpret_as_uint()),
+                    ),
+                  )
+                }
+              }
+              _ => ()
+            }
+          }
+          _ => ()
+        }
+      _ => ()
+    }
   }
   let fixed_carrier = starshine_fixed_array_carrier_for_resolved(
     lowering, resolved_type,
@@ -4381,7 +4645,9 @@ fn starshine_program_adapter_value_code(
     | @semantic.WasmFunctionRefValue(_)
     | @semantic.WasmNominalRefValue(_)
     | @semantic.WasmExternalNominalRefValue(_)
-    | @semantic.WasmFixedArrayRefValue(_) => 5
+    | @semantic.WasmFixedArrayRefValue(_)
+    | @semantic.WasmNullableNominalRefValue(_)
+    | @semantic.WasmNullableExternalNominalRefValue(_) => 5
   }
 }
 
@@ -5589,6 +5855,20 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
             tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedWasmRefNull =>
+            results.push([
+              @lib.Instruction::ref_null(
+                @lib.HeapType::abs(@lib.AbsHeapType::none()),
+              ),
+            ])
+          @semantic.PlannedWasmRefIsNull(value) => {
+            tasks.push(FinishStarshineRefIntrinsic(1))
+            tasks.push(EmitStarshineExpression(value))
+          }
+          @semantic.PlannedWasmRefAsNonNull(value) => {
+            tasks.push(FinishStarshineRefIntrinsic(2))
+            tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedFixedArrayMake(length, value, shape) => {
             let element_shape = starshine_specialized_shape(
@@ -6879,13 +7159,33 @@ fn starshine_emit_body_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
+            let expected_shapes : Array[@semantic.PlannedValueShape] = []
+            for source_index in 0..<arguments.length {
+              let value = lowering.expression_children[arguments.start +
+                source_index]
+              let value_source = lowering.expressions[value]
+              expected_shapes.push(
+                starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  value_source.type_,
+                  value_source.shape,
+                ),
+              )
+            }
             let physical = match
-              starshine_variant_payload_physical_type(variant_plan, variant) {
+              starshine_variant_payload_physical_type_for_fields(
+                variant_plan,
+                variant,
+                StarshineExpectedTupleFields(expected_shapes),
+              ) {
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
             let values : Array[StarshineEmitTask] = []
-            for field in variant_plan.variant_fields_of(variant) {
+            for field_offset in 1..<physical.fields.length {
+              let field = variant_plan.fields[physical.fields.start +
+                field_offset]
               let value = match field.role {
                 @semantic.WasmTuplePayloadField(_, source_index) =>
                   lowering.expression_children[arguments.start + source_index]
@@ -6938,17 +7238,52 @@ fn starshine_emit_body_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
+            let expected_fields : Array[@semantic.FieldId] = []
+            let expected_shapes : Array[@semantic.PlannedValueShape] = []
+            for source_index in 0..<fields.length {
+              let object_field = lowering.object_fields[fields.start +
+                source_index]
+              let value_source = lowering.expressions[object_field.value]
+              expected_fields.push(object_field.field)
+              expected_shapes.push(
+                starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  value_source.type_,
+                  value_source.shape,
+                ),
+              )
+            }
             let physical = match
-              starshine_variant_payload_physical_type(variant_plan, variant) {
+              starshine_variant_payload_physical_type_for_fields(
+                variant_plan,
+                variant,
+                StarshineExpectedStructFields(expected_fields, expected_shapes),
+              ) {
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
-            let values = match
-              starshine_ordered_variant_object_values(
-                lowering, variant_plan, variant, fields,
-              ) {
-              Some(values) => values
-              None => return Err(UnsupportedExpression(body.body, expression))
+            let values : Array[@semantic.ExprId] = []
+            for field_offset in 1..<physical.fields.length {
+              let physical_field = variant_plan.fields[physical.fields.start +
+                field_offset]
+              let field_id = match physical_field.role {
+                @semantic.WasmStructPayloadField(value) => value
+                _ => return Err(UnsupportedExpression(body.body, expression))
+              }
+              let mut value = -1
+              for source_index in 0..<fields.length {
+                let object_field = lowering.object_fields[fields.start +
+                  source_index]
+                if object_field.field == field_id {
+                  value = object_field.value
+                  break
+                }
+              }
+              if value < 0 {
+                return Err(UnsupportedExpression(body.body, expression))
+              }
+              values.push(value)
             }
             tasks.push(
               FinishStarshineEnumSubtype(
@@ -6960,11 +7295,12 @@ fn starshine_emit_body_instructions(
                 values.length(),
               ),
             )
-            let variant_fields = variant_plan.variant_fields_of(variant)
             let mut value_index = values.length()
             while value_index > 0 {
               value_index -= 1
-              let field = variant_fields[value_index]
+              let field = variant_plan.fields[physical.fields.start +
+                value_index +
+                1]
               let value = values[value_index]
               let value_source = lowering.expressions[value]
               if starshine_shape_matches_storage(
@@ -7368,6 +7704,17 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
+      FinishStarshineRefIntrinsic(operation) => {
+        let output = results.pop().unwrap()
+        if operation == 1 {
+          output.push(@lib.Instruction::ref_is_null())
+        } else if operation == 2 {
+          output.push(@lib.Instruction::ref_as_non_null())
+        } else {
+          abort("unknown nullable-reference intrinsic")
+        }
+        results.push(output)
+      }
       FinishStarshineFixedArray(
         operation,
         shape,
@@ -7444,7 +7791,11 @@ fn starshine_emit_body_instructions(
           let some_variant = @semantic.standard_option_some_variant()
           let none_variant = @semantic.standard_option_none_variant()
           let some_physical = match
-            starshine_variant_payload_physical_type(option_plan, some_variant) {
+            starshine_variant_payload_physical_type_for_fields(
+              option_plan,
+              some_variant,
+              StarshineExpectedTupleFields([shape]),
+            ) {
             Some(value) => value
             None => return Err(UnsupportedExpression(body.body, -1))
           }
@@ -7484,7 +7835,9 @@ fn starshine_emit_body_instructions(
           let success : Array[@lib.Instruction] = [
             @lib.Instruction::i32_const(@lib.I32::new(some_tag)),
           ]
-          for field in option_plan.variant_fields_of(some_variant) {
+          for field_offset in 1..<some_physical.fields.length {
+            let field = option_plan.fields[some_physical.fields.start +
+              field_offset]
             if starshine_shape_matches_storage(shape, field.storage) {
               append_starshine_instructions(success, load_backing)
               success.push(
@@ -8677,8 +9030,10 @@ fn starshine_emit_body_instructions(
           let (link, option_module_index, option_module_plan) = option_plan.unwrap()
           let some_variant = @semantic.standard_option_some_variant()
           let some_physical = match
-            starshine_variant_payload_physical_type(
-              option_module_plan, some_variant,
+            starshine_variant_payload_physical_type_for_fields(
+              option_module_plan,
+              some_variant,
+              StarshineExpectedTupleFields([value_shape]),
             ) {
             Some(value) => value
             None => return Err(UnsupportedExpression(body.body, -206))
@@ -8694,7 +9049,9 @@ fn starshine_emit_body_instructions(
               ),
             ),
           )
-          for field in option_module_plan.variant_fields_of(some_variant) {
+          for field_offset in 1..<some_physical.fields.length {
+            let field = option_module_plan.fields[some_physical.fields.start +
+              field_offset]
             if starshine_shape_matches_storage(value_shape, field.storage) {
               found.push(
                 @lib.Instruction::local_get(
@@ -9857,6 +10214,15 @@ fn starshine_append_module_result_cast(
                 ),
               ),
             )
+          @semantic.WasmNullableNominalRefValue(index) =>
+            instructions.push(
+              @lib.Instruction::ref_cast(
+                true,
+                @lib.HeapType::new(
+                  @lib.TypeIdx::new(index.reinterpret_as_uint()),
+                ),
+              ),
+            )
           _ => ()
         }
       }
@@ -9875,6 +10241,7 @@ fn starshine_append_program_argument_cast(
     return
   }
   let fragments = planned.modules[function_.module_index]
+  let mut nullable = false
   let final_index = match
     fragments.function_value_types[function_.parameters.start + parameter_index] {
     @semantic.WasmNominalRefValue(index) =>
@@ -9883,12 +10250,20 @@ fn starshine_append_program_argument_cast(
       planned.type_lookup.get(declaration).unwrap()
     @semantic.WasmFixedArrayRefValue(carrier) =>
       planned.fixed_array_type_base + carrier
+    @semantic.WasmNullableNominalRefValue(index) => {
+      nullable = true
+      planned.physical_type_index(function_.module_index, index)
+    }
+    @semantic.WasmNullableExternalNominalRefValue(declaration) => {
+      nullable = true
+      planned.type_lookup.get(declaration).unwrap()
+    }
     _ => -1
   }
   if final_index >= 0 {
     instructions.push(
       @lib.Instruction::ref_cast(
-        false,
+        nullable,
         @lib.HeapType::new(@lib.TypeIdx::new(final_index.reinterpret_as_uint())),
       ),
     )
@@ -9905,6 +10280,7 @@ fn starshine_append_program_result_cast(
     return
   }
   let fragments = planned.modules[function_.module_index]
+  let mut nullable = false
   let final_index = match
     fragments.function_value_types[function_.results.start] {
     @semantic.WasmNominalRefValue(index) =>
@@ -9913,12 +10289,20 @@ fn starshine_append_program_result_cast(
       planned.type_lookup.get(declaration).unwrap()
     @semantic.WasmFixedArrayRefValue(carrier) =>
       planned.fixed_array_type_base + carrier
+    @semantic.WasmNullableNominalRefValue(index) => {
+      nullable = true
+      planned.physical_type_index(function_.module_index, index)
+    }
+    @semantic.WasmNullableExternalNominalRefValue(declaration) => {
+      nullable = true
+      planned.type_lookup.get(declaration).unwrap()
+    }
     _ => -1
   }
   if final_index >= 0 {
     instructions.push(
       @lib.Instruction::ref_cast(
-        false,
+        nullable,
         @lib.HeapType::new(@lib.TypeIdx::new(final_index.reinterpret_as_uint())),
       ),
     )
@@ -10270,6 +10654,31 @@ fn starshine_program_storage_type(
           ),
         ),
       )
+    @semantic.WasmNullableNominalRefStorage(reference) =>
+      @lib.StorageType::val_type(
+        match reference {
+          @semantic.WasmModuleTypeReference(index) =>
+            starshine_nullable_nominal_ref(
+              @lib.TypeIdx::new(
+                planned
+                .physical_type_index(module_index, index)
+                .reinterpret_as_uint(),
+              ),
+            )
+          @semantic.WasmRecursiveTypeReference(index) =>
+            starshine_nullable_nominal_ref(
+              @lib.TypeIdx::rec(index.reinterpret_as_uint()),
+            )
+        },
+      )
+    @semantic.WasmNullableExternalNominalRefStorage(declaration) =>
+      @lib.StorageType::val_type(
+        starshine_nullable_nominal_ref(
+          @lib.TypeIdx::new(
+            planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
+          ),
+        ),
+      )
   }
 }
 
@@ -10311,6 +10720,18 @@ fn starshine_program_value_type(
       starshine_nominal_ref(
         @lib.TypeIdx::new(
           (planned.fixed_array_type_base + carrier).reinterpret_as_uint(),
+        ),
+      )
+    @semantic.WasmNullableNominalRefValue(index) =>
+      starshine_nullable_nominal_ref(
+        @lib.TypeIdx::new(
+          planned.physical_type_index(module_index, index).reinterpret_as_uint(),
+        ),
+      )
+    @semantic.WasmNullableExternalNominalRefValue(declaration) =>
+      starshine_nullable_nominal_ref(
+        @lib.TypeIdx::new(
+          planned.type_lookup.get(declaration).unwrap().reinterpret_as_uint(),
         ),
       )
   }
@@ -10385,6 +10806,34 @@ fn starshine_program_group_storage_type(
       nominal(planned.type_lookup.get(declaration).unwrap())
     @semantic.WasmFixedArrayRefStorage(carrier) =>
       nominal(planned.fixed_array_type_base + carrier)
+    @semantic.WasmNullableNominalRefStorage(reference) => {
+      let module_ = planned.modules[node.module_index]
+      let physical = module_.physical_types[node.fragment_index]
+      let local_type_index = match reference {
+        @semantic.WasmModuleTypeReference(index) => index
+        @semantic.WasmRecursiveTypeReference(index) =>
+          module_.type_groups[physical.group_index].first_type_index + index
+      }
+      @lib.StorageType::val_type(
+        starshine_nullable_nominal_ref(
+          starshine_program_group_type_index(
+            planned.physical_type_index(node.module_index, local_type_index),
+            group.first_type_index,
+            group.types.length,
+          ),
+        ),
+      )
+    }
+    @semantic.WasmNullableExternalNominalRefStorage(declaration) =>
+      @lib.StorageType::val_type(
+        starshine_nullable_nominal_ref(
+          starshine_program_group_type_index(
+            planned.type_lookup.get(declaration).unwrap(),
+            group.first_type_index,
+            group.types.length,
+          ),
+        ),
+      )
   }
 }
 
@@ -10474,8 +10923,10 @@ fn starshine_program_physical_subtype(
   for index in 0..<type_.fields.length {
     let field = module_.fields[type_.fields.start + index]
     match field.storage {
-      @semantic.WasmNominalRefStorage(@semantic.WasmRecursiveTypeReference(_)) =>
-        has_recursive_reference = true
+      @semantic.WasmNominalRefStorage(@semantic.WasmRecursiveTypeReference(_))
+      | @semantic.WasmNullableNominalRefStorage(
+        @semantic.WasmRecursiveTypeReference(_)
+      ) => has_recursive_reference = true
       _ => ()
     }
     fields.push(

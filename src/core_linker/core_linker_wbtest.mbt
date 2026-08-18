@@ -9,6 +9,16 @@ fn core_link_test_ref(index : Int) -> @lib.ValType {
 }
 
 ///|
+fn core_link_test_nullable_ref(index : Int) -> @lib.ValType {
+  @lib.ValType::ref_type(
+    @lib.RefType::new(
+      true,
+      @lib.HeapType::new(@lib.TypeIdx::new(index.reinterpret_as_uint())),
+    ),
+  )
+}
+
+///|
 fn core_link_test_dew_module() -> @lib.Module {
   let marker = @lib.RecType::new(
     @lib.SubType::comp_type(@lib.CompType::struct_([])),
@@ -103,6 +113,219 @@ test "Core Wasm linker replaces a nominal marker with the guest concrete type" {
       assert_eq(index, 0U)
     }
     _ => fail("expected remapped Dew export")
+  }
+}
+
+///|
+fn core_link_test_nullable_dew_module() -> @lib.Module {
+  let marker = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::struct_([])),
+  )
+  let imported_signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([], [core_link_test_nullable_ref(0)]),
+    ),
+  )
+  let defined_signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([], [core_link_test_nullable_ref(0)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(
+    @lib.TypeSec::new([marker, imported_signature, defined_signature]),
+  )
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:starshine"),
+        @lib.Name::from_string("maybe"),
+        @lib.ExternType::func(@lib.TypeIdx::new(1U)),
+      ),
+    ]),
+  )
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(2U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("make_null"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(1U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::ref_null(@lib.HeapType::new(@lib.TypeIdx::new(0U))),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_nullable_guest_module() -> @lib.Module {
+  let concrete = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([], [core_link_test_nullable_ref(0)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([concrete, signature]))
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(1U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("maybe"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::ref_null(@lib.HeapType::new(@lib.TypeIdx::new(0U))),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_non_nullable_maybe_dew_module() -> @lib.Module {
+  let marker = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::struct_([])),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::func([], [core_link_test_ref(0)])),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([marker, signature]))
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:starshine"),
+        @lib.Name::from_string("maybe"),
+        @lib.ExternType::func(@lib.TypeIdx::new(1U)),
+      ),
+    ]),
+  )
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("make"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_non_nullable_maybe_guest_module() -> @lib.Module {
+  let concrete = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::func([], [core_link_test_ref(0)])),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([concrete, signature]))
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(1U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("maybe"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::i32_const(@lib.I32::new(7)),
+          @lib.Instruction::struct_new(@lib.TypeIdx::new(0U)),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "Core Wasm linker binds nullable markers and remaps ref.null" {
+  let dew = @binary.encode_module(core_link_test_nullable_dew_module()).unwrap()
+  let guest = @binary.encode_module(core_link_test_nullable_guest_module()).unwrap()
+  let linked = link_core_wasm_gc_modules(
+    dew,
+    [{ provider: "starshine", bytes: guest }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  match module_.code_sec {
+    Some(@lib.CodeSec([@lib.Func(_, @lib.Expr(instructions)), _])) =>
+      match instructions {
+        [
+          @lib.RefNull(
+            @lib.HeapTypeRefType(_, _, @lib.HeapType(@lib.TypeIdx(index)))
+          ),
+        ] => assert_eq(index, 0U)
+        _ => fail("expected remapped Dew ref.null")
+      }
+    _ => fail("expected Dew and guest functions")
+  }
+}
+
+///|
+test "Core Wasm linker rejects nullable Dew and non-null guest mismatch" {
+  let dew = @binary.encode_module(core_link_test_nullable_dew_module()).unwrap()
+  let guest = @binary.encode_module(
+    core_link_test_non_nullable_maybe_guest_module(),
+  ).unwrap()
+  match
+    link_core_wasm_gc_modules(dew, [{ provider: "starshine", bytes: guest }]) {
+    Err(CoreWasmSignatureMismatch("starshine", "maybe")) => ()
+    _ => fail("expected nullable-to-non-null signature mismatch")
+  }
+}
+
+///|
+test "Core Wasm linker rejects non-null Dew and nullable guest mismatch" {
+  let dew = @binary.encode_module(
+    core_link_test_non_nullable_maybe_dew_module(),
+  ).unwrap()
+  let guest = @binary.encode_module(core_link_test_nullable_guest_module()).unwrap()
+  match
+    link_core_wasm_gc_modules(dew, [{ provider: "starshine", bytes: guest }]) {
+    Err(CoreWasmSignatureMismatch("starshine", "maybe")) => ()
+    _ => fail("expected non-null-to-nullable signature mismatch")
   }
 }
 
@@ -435,12 +658,12 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
 }
 
 ///|
-test "Core Wasm linker keeps WPSI provider memory at index zero" {
+test "Core Wasm linker keeps Dew memory zero for Facet providers" {
   let dew = core_link_test_dew_module()
     .with_import_sec(
       @lib.ImportSec::new([
         @lib.Import::new(
-          @lib.Name::from_string("link:wpsi"),
+          @lib.Name::from_string("link:facet"),
           @lib.Name::from_string("module_new"),
           @lib.ExternType::func(@lib.TypeIdx::new(1U)),
         ),
@@ -471,7 +694,7 @@ test "Core Wasm linker keeps WPSI provider memory at index zero" {
     )
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(dew).unwrap(),
-    [{ provider: "wpsi", bytes: @binary.encode_module(guest).unwrap() }],
+    [{ provider: "facet", bytes: @binary.encode_module(guest).unwrap() }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -481,22 +704,22 @@ test "Core Wasm linker keeps WPSI provider memory at index zero" {
   ).unwrap()
   let module_ = @binary.decode_module(linked).unwrap()
   assert_eq(@validate.validate_module(module_), Ok(()))
-  let mut guest_uses_memory_zero = false
+  let mut guest_uses_memory_one = false
   match module_.code_sec {
     Some(@lib.CodeSec(functions)) =>
       match functions[0] {
         @lib.Func(_, @lib.Expr(instructions)) =>
           for instruction in instructions {
             match instruction {
-              @lib.I32Load(@lib.MemArg(_, None, _)) =>
-                guest_uses_memory_zero = true
+              @lib.I32Load(@lib.MemArg(_, Some(@lib.MemIdx(1U)), _)) =>
+                guest_uses_memory_one = true
               _ => ()
             }
           }
       }
-    None => fail("expected WPSI guest function")
+    None => fail("expected Facet guest function")
   }
-  assert_true(guest_uses_memory_zero)
+  assert_true(guest_uses_memory_one)
 }
 
 ///|

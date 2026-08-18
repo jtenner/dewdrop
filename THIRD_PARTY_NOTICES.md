@@ -40,19 +40,19 @@ The upstream file identifies the vectors as NIST CAVS 11.0 data. The
 pyca/cryptography project is available under either the Apache License 2.0 or
 the BSD 3-Clause License. Dewdrop uses the Apache License 2.0 option.
 
-## WPSI
+## Facet
 
-Dew's WPSI 0.1 filesystem/process adapter and checked-in Core Wasm adapter
+Dew's Facet 0.1 filesystem/process adapter and checked-in Core Wasm adapter
 follow the specification from:
 
 ```text
-https://github.com/jtenner/wpsi
+https://github.com/jtenner/facet-spec
 ```
 
 The source was audited at commit:
 
 ```text
-0eb37b13def5785fe904ac5ed73a94c297a736f1
+c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab
 ```
 
 MIT License

@@ -22,6 +22,8 @@ pub enum PlannedWasmStorageType {
   WasmNominalRefStorage(PlannedWasmTypeReference)
   WasmExternalNominalRefStorage(DeclId)
   WasmFixedArrayRefStorage(Int)
+  WasmNullableNominalRefStorage(PlannedWasmTypeReference)
+  WasmNullableExternalNominalRefStorage(DeclId)
 } derive(Eq, Debug)
 
 ///|
@@ -133,6 +135,8 @@ pub enum PlannedWasmValueType {
   WasmNominalRefValue(Int)
   WasmExternalNominalRefValue(DeclId)
   WasmFixedArrayRefValue(Int)
+  WasmNullableNominalRefValue(Int)
+  WasmNullableExternalNominalRefValue(DeclId)
 } derive(Eq, Debug)
 
 ///|
@@ -478,6 +482,7 @@ pub fn PlannedModuleWasmGCFragments::function_of(
 priv struct WasmPhysicalTypeSource {
   kind : PlannedWasmPhysicalTypeKind
   offset : UInt64
+  generic_carriers : Array[Int]
 }
 
 ///|
@@ -732,6 +737,7 @@ fn wasmgc_variant_shapes_equal(
 }
 
 ///|
+#warnings("-unused_value")
 fn wasmgc_physical_type_count_with_options(
   layouts : PlannedModuleTypeLayouts,
   options : WasmGCPlanningOptions,
@@ -741,8 +747,41 @@ fn wasmgc_physical_type_count_with_options(
     options,
     Map::default(),
     false,
+    Map::default(),
   )
   sources.length()
+}
+
+///|
+fn wasmgc_physical_type_count_with_instantiations(
+  layouts : PlannedModuleTypeLayouts,
+  options : WasmGCPlanningOptions,
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+) -> Int {
+  let (sources, _, _) = wasmgc_build_physical_sources(
+    layouts,
+    options,
+    Map::default(),
+    false,
+    generic_enum_instantiations,
+  )
+  sources.length()
+}
+
+///|
+fn wasmgc_variant_uses_same_generic_carriers(
+  left : Array[Int],
+  right : Array[Int],
+) -> Bool {
+  if left.length() != right.length() {
+    return false
+  }
+  for index in 0..<left.length() {
+    if left[index] != right[index] {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -751,6 +790,7 @@ fn wasmgc_build_physical_sources(
   options : WasmGCPlanningOptions,
   required_declarations : Map[DeclId, Bool],
   prune_unrequired : Bool,
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
 ) -> (Array[WasmPhysicalTypeSource], Array[Int], Array[Int]) {
   let sources : Array[WasmPhysicalTypeSource] = []
   let entity_by_declaration = Array::make(
@@ -771,16 +811,19 @@ fn wasmgc_build_physical_sources(
         sources.push({
           kind: PlannedWasmStructType(layout.declaration),
           offset: layout.offset,
+          generic_carriers: [],
         })
       PlannedForeignTypeLayout =>
         sources.push({
           kind: PlannedWasmForeignMarkerType(layout.declaration),
           offset: layout.offset,
+          generic_carriers: [],
         })
       PlannedEnumLayout(variants) => {
         sources.push({
           kind: PlannedWasmEnumBaseType(layout.declaration),
           offset: layout.offset,
+          generic_carriers: [],
         })
         for index in 0..<variants.length {
           let variant = layouts.variants[variants.start + index]
@@ -789,36 +832,70 @@ fn wasmgc_build_physical_sources(
             source_by_variant[semantic_id_local(variant.variant)] = root
             continue
           }
-          let mut shared = -1
-          if options.enum_shape_sharing == ShareExactEnumShapes {
+          let instantiations = match
+            generic_enum_instantiations.get(layout.declaration) {
+            Some(values) if layout.generic_parameters.length > 0 &&
+              values.length() > 0 => values
+            _ => [[]]
+          }
+          for carriers in instantiations {
+            let mut duplicate = -1
             for source_index, source in sources {
               match source.kind {
-                PlannedWasmEnumSubtypeType(owner, candidate, _) =>
-                  if owner == layout.declaration &&
-                    wasmgc_variant_shapes_equal(
-                      layouts,
-                      candidate,
-                      variant.variant,
-                    ) {
-                    shared = source_index
-                    break
-                  }
+                PlannedWasmEnumSubtypeType(owner, candidate, _) if owner ==
+                  layout.declaration &&
+                  candidate == variant.variant &&
+                  wasmgc_variant_uses_same_generic_carriers(
+                    source.generic_carriers,
+                    carriers,
+                  ) => {
+                  duplicate = source_index
+                  break
+                }
                 _ => ()
               }
             }
+            if duplicate >= 0 {
+              if source_by_variant[semantic_id_local(variant.variant)] < 0 {
+                source_by_variant[semantic_id_local(variant.variant)] = duplicate
+              }
+              continue
+            }
+            let mut shared = -1
+            if layout.generic_parameters.length == 0 &&
+              options.enum_shape_sharing == ShareExactEnumShapes {
+              for source_index, source in sources {
+                match source.kind {
+                  PlannedWasmEnumSubtypeType(owner, candidate, _) =>
+                    if owner == layout.declaration &&
+                      wasmgc_variant_shapes_equal(
+                        layouts,
+                        candidate,
+                        variant.variant,
+                      ) {
+                      shared = source_index
+                      break
+                    }
+                  _ => ()
+                }
+              }
+            }
+            if shared < 0 {
+              shared = sources.length()
+              sources.push({
+                kind: PlannedWasmEnumSubtypeType(
+                  layout.declaration,
+                  variant.variant,
+                  variant.tag,
+                ),
+                offset: variant.offset,
+                generic_carriers: carriers.copy(),
+              })
+            }
+            if source_by_variant[semantic_id_local(variant.variant)] < 0 {
+              source_by_variant[semantic_id_local(variant.variant)] = shared
+            }
           }
-          if shared < 0 {
-            shared = sources.length()
-            sources.push({
-              kind: PlannedWasmEnumSubtypeType(
-                layout.declaration,
-                variant.variant,
-                variant.tag,
-              ),
-              offset: variant.offset,
-            })
-          }
-          source_by_variant[semantic_id_local(variant.variant)] = shared
         }
       }
     }
@@ -843,6 +920,86 @@ fn wasmgc_nominal_declaration(
     }
   }
   None
+}
+
+///|
+pub fn wasmgc_collect_generic_enum_instantiations_into(
+  resolved : ResolvedModuleTypes,
+  generic_parameter_counts : Map[DeclId, Int],
+  output : Map[DeclId, Array[Array[Int]]],
+) -> Unit {
+  for type_ in resolved.types {
+    let (base, arguments) = match type_ {
+      AppliedType(base, arguments) => (base, arguments)
+      _ => continue
+    }
+    let declaration = match wasmgc_nominal_declaration(resolved, base) {
+      Some(value) => value
+      None => continue
+    }
+    let expected = match generic_parameter_counts.get(declaration) {
+      Some(value) => value
+      None => continue
+    }
+    if arguments.length != expected {
+      continue
+    }
+    let carriers : Array[Int] = []
+    for index in 0..<arguments.length {
+      carriers.push(
+        wasmgc_fixed_array_carrier_for_resolved_type(
+          resolved.types,
+          resolved.type_arguments[arguments.start + index],
+        ),
+      )
+    }
+    let demands = match output.get(declaration) {
+      Some(values) => values
+      None => {
+        let values : Array[Array[Int]] = []
+        output[declaration] = values
+        values
+      }
+    }
+    let mut duplicate = false
+    for demand in demands {
+      if demand.length() != carriers.length() {
+        continue
+      }
+      let mut same = true
+      for index in 0..<demand.length() {
+        if demand[index] != carriers[index] {
+          same = false
+          break
+        }
+      }
+      if same {
+        duplicate = true
+        break
+      }
+    }
+    if !duplicate {
+      demands.push(carriers)
+    }
+  }
+}
+
+///|
+fn wasmgc_collect_generic_enum_instantiations(
+  resolved : ResolvedModuleTypes,
+  layouts : PlannedModuleTypeLayouts,
+) -> Map[DeclId, Array[Array[Int]]] {
+  let counts : Map[DeclId, Int] = Map::default()
+  for layout in layouts.layouts {
+    match layout.kind {
+      PlannedEnumLayout(_) if layout.generic_parameters.length > 0 =>
+        counts[layout.declaration] = layout.generic_parameters.length
+      _ => ()
+    }
+  }
+  let output : Map[DeclId, Array[Array[Int]]] = Map::default()
+  wasmgc_collect_generic_enum_instantiations_into(resolved, counts, output)
+  output
 }
 
 ///|
@@ -1101,6 +1258,38 @@ fn wasmgc_storage_type(
       }
       AppliedType(base, arguments) =>
         match resolved.types[base] {
+          NominalType(declaration) if declaration ==
+            standard_nullable_ref_type_declaration() &&
+            arguments.length == 1 => {
+            let argument = resolved.type_arguments[arguments.start]
+            match resolved.types[argument] {
+              NominalType(foreign_declaration) => {
+                if semantic_id_module(foreign_declaration) != resolved.module_id {
+                  return Some(
+                    WasmNullableExternalNominalRefStorage(foreign_declaration),
+                  )
+                }
+                let local_index = semantic_id_local(foreign_declaration)
+                if local_index >= 0 &&
+                  local_index < type_index_by_declaration.length() {
+                  let index = type_index_by_declaration[local_index]
+                  if index >= 0 {
+                    let reference = if group_index_by_type[index] ==
+                      current_group {
+                      WasmRecursiveTypeReference(
+                        index - group_first_type_indices[current_group],
+                      )
+                    } else {
+                      WasmModuleTypeReference(index)
+                    }
+                    return Some(WasmNullableNominalRefStorage(reference))
+                  }
+                }
+                return Some(WasmNullableEqRefStorage)
+              }
+              _ => return Some(WasmNullableEqRefStorage)
+            }
+          }
           NominalType(declaration) if declaration ==
             standard_fixed_array_type_declaration() &&
             arguments.length == 1 => {
@@ -1459,6 +1648,44 @@ fn wasmgc_append_erased_generic_fields(
 }
 
 ///|
+fn wasmgc_append_specialized_generic_field(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+  generic_parameters : HirSpan,
+  carriers : Array[Int],
+  fields : Array[PlannedWasmField],
+  role : PlannedWasmFieldRole,
+  mutable_ : Bool,
+  offset : UInt64,
+) -> Unit {
+  if carriers.length() == 0 {
+    wasmgc_append_erased_generic_fields(fields, role, mutable_, offset)
+    return
+  }
+  let carrier = match resolved.types[type_] {
+    GenericParameterType(parameter) => {
+      let relative = semantic_id_local(parameter) - generic_parameters.start
+      if relative < 0 || relative >= carriers.length() {
+        5
+      } else {
+        carriers[relative]
+      }
+    }
+    _ => 5
+  }
+  if carrier < 0 {
+    return
+  }
+  wasmgc_append_field_with_mutability(
+    fields,
+    role,
+    wasmgc_capture_cell_storage(carrier),
+    mutable_,
+    offset,
+  )
+}
+
+///|
 fn wasmgc_append_physical_type_fields(
   resolved : ResolvedModuleTypes,
   layouts : PlannedModuleTypeLayouts,
@@ -1594,6 +1821,7 @@ fn wasmgc_append_physical_type_fields(
         source.offset,
       )
       let source_variant = layouts.variants[semantic_id_local(variant)]
+      let source_layout = layouts.layout_of(source_variant.declaration).unwrap()
       match source_variant.payload {
         PlannedUnitVariantLayout => ()
         PlannedTupleVariantLayout(types) =>
@@ -1601,7 +1829,11 @@ fn wasmgc_append_physical_type_fields(
             let payload_type = layouts.payload_types[types.start + index]
             let role = WasmTuplePayloadField(variant, index)
             if wasmgc_is_erased_generic_storage(resolved, payload_type) {
-              wasmgc_append_erased_generic_fields(
+              wasmgc_append_specialized_generic_field(
+                resolved,
+                payload_type,
+                source_layout.generic_parameters,
+                source.generic_carriers,
                 target,
                 role,
                 false,
@@ -1629,7 +1861,11 @@ fn wasmgc_append_physical_type_fields(
             let field = layouts.fields[fields.start + index]
             let role = WasmStructPayloadField(field.field)
             if wasmgc_is_erased_generic_storage(resolved, field.type_) {
-              wasmgc_append_erased_generic_fields(
+              wasmgc_append_specialized_generic_field(
+                resolved,
+                field.type_,
+                source_layout.generic_parameters,
+                source.generic_carriers,
                 target,
                 role,
                 false,
@@ -1681,7 +1917,9 @@ fn wasmgc_capture_value_type(
     | WasmNullableFunctionRefStorage
     | WasmFunctionRefStorage(_)
     | WasmNominalRefStorage(_)
-    | WasmExternalNominalRefStorage(_) => WasmNullableEqRefValue
+    | WasmExternalNominalRefStorage(_)
+    | WasmNullableNominalRefStorage(_)
+    | WasmNullableExternalNominalRefStorage(_) => WasmNullableEqRefValue
     WasmFixedArrayRefStorage(carrier) => WasmFixedArrayRefValue(carrier)
   }
 }
@@ -1920,6 +2158,30 @@ fn wasmgc_value_type(
       }
       AppliedType(base, arguments) =>
         match resolved.types[base] {
+          NominalType(declaration) if declaration ==
+            standard_nullable_ref_type_declaration() &&
+            arguments.length == 1 => {
+            let argument = resolved.type_arguments[arguments.start]
+            match resolved.types[argument] {
+              NominalType(foreign_declaration) => {
+                if semantic_id_module(foreign_declaration) != resolved.module_id {
+                  return Some(
+                    WasmNullableExternalNominalRefValue(foreign_declaration),
+                  )
+                }
+                let local_index = semantic_id_local(foreign_declaration)
+                if local_index >= 0 &&
+                  local_index < type_index_by_declaration.length() {
+                  let index = type_index_by_declaration[local_index]
+                  if index >= 0 {
+                    return Some(WasmNullableNominalRefValue(index))
+                  }
+                }
+                return Some(WasmNullableEqRefValue)
+              }
+              _ => return Some(WasmNullableEqRefValue)
+            }
+          }
           NominalType(declaration) if declaration ==
             standard_fixed_array_type_declaration() &&
             arguments.length == 1 => {
@@ -2732,7 +2994,7 @@ fn wasmgc_trait_implementation_receiver(
 }
 
 ///|
-fn plan_module_wasmgc_fragments_in_orders(
+fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
   imports : ResolvedModuleImports?,
@@ -2742,6 +3004,7 @@ fn plan_module_wasmgc_fragments_in_orders(
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
 ) -> PlannedModuleWasmGCFragments {
   if resolved.module_id != lowering.module_id {
     abort("WasmGC fragment inputs belong to different modules")
@@ -2775,6 +3038,7 @@ fn plan_module_wasmgc_fragments_in_orders(
     options,
     required_declarations,
     program_roots.length() > 0,
+    generic_enum_instantiations,
   )
   let effective_type_order = if program_roots.length() > 0 {
     let order : Array[Int] = []
@@ -4134,6 +4398,33 @@ fn plan_module_wasmgc_fragments_in_orders(
 }
 
 ///|
+#warnings("-unused_value")
+fn plan_module_wasmgc_fragments_in_orders(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+  imports : ResolvedModuleImports?,
+  options : WasmGCPlanningOptions,
+  type_order : Array[Int],
+  function_order : Array[Int],
+  program_roots : Map[DeclId, Bool],
+  program_function_value_roots : Map[DeclId, Bool],
+  extra_runtime_traits : Array[DeclId],
+) -> PlannedModuleWasmGCFragments {
+  plan_module_wasmgc_fragments_in_orders_with_instantiations(
+    resolved,
+    lowering,
+    imports,
+    options,
+    type_order,
+    function_order,
+    program_roots,
+    program_function_value_roots,
+    extra_runtime_traits,
+    wasmgc_collect_generic_enum_instantiations(resolved, lowering.type_layouts),
+  )
+}
+
+///|
 fn plan_module_wasmgc_fragments_with_options_and_roots(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
@@ -4142,12 +4433,14 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
 ) -> PlannedModuleWasmGCFragments {
   let type_order : Array[Int] = []
   for
-    index in 0..<wasmgc_physical_type_count_with_options(
+    index in 0..<wasmgc_physical_type_count_with_instantiations(
       lowering.type_layouts,
       options,
+      generic_enum_instantiations,
     ) {
     type_order.push(index)
   }
@@ -4155,9 +4448,9 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   for index in 0..<lowering.functions.callables.length() {
     function_order.push(index)
   }
-  plan_module_wasmgc_fragments_in_orders(
+  plan_module_wasmgc_fragments_in_orders_with_instantiations(
     resolved, lowering, imports, options, type_order, function_order, program_roots,
-    program_function_value_roots, extra_runtime_traits,
+    program_function_value_roots, extra_runtime_traits, generic_enum_instantiations,
   )
 }
 
@@ -4175,6 +4468,7 @@ fn plan_module_wasmgc_fragments_with_options(
     Map::default(),
     Map::default(),
     [],
+    wasmgc_collect_generic_enum_instantiations(resolved, lowering.type_layouts),
   )
 }
 

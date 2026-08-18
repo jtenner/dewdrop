@@ -1019,6 +1019,95 @@ fn starshine_program_adapter_generic_shape(
 }
 
 ///|
+fn starshine_program_adapter_resolved_shape(
+  lowering : @semantic.PlannedModuleLowering,
+  root : @semantic.ResolvedTypeId,
+) -> @semantic.PlannedValueShape {
+  @semantic.planned_value_shape_from_resolved_types(
+    lowering.resolved_types,
+    root,
+  )
+}
+
+///|
+fn starshine_program_adapter_variant_expected_fields(
+  lowering : @semantic.PlannedModuleLowering,
+  fragments : @semantic.PlannedModuleWasmGCFragments,
+  function_ : @semantic.PlannedProgramWasmFunction,
+  callable : @semantic.PlannedCallable,
+  layout : @semantic.PlannedNominalLayout,
+  variant : @semantic.PlannedVariantLayout,
+  actual_arguments : Array[@semantic.ResolvedTypeId],
+  erased : Bool,
+) -> StarshineVariantExpectedFields {
+  match variant.payload {
+    @semantic.PlannedUnitVariantLayout => StarshineExpectedUnitFields
+    @semantic.PlannedTupleVariantLayout(types) => {
+      let shapes : Array[@semantic.PlannedValueShape] = []
+      for index in 0..<types.length {
+        let field_type = lowering.type_layouts.payload_types[types.start + index]
+        let selected_type = if erased {
+          field_type
+        } else {
+          starshine_program_adapter_explicit_argument(
+            lowering, layout, actual_arguments, field_type,
+          )
+        }
+        let shape = if erased {
+          starshine_program_adapter_resolved_shape(lowering, selected_type)
+        } else {
+          match
+            starshine_program_adapter_generic_shape(
+              lowering, fragments, function_, callable, selected_type,
+            ) {
+            Some(value) => value
+            None =>
+              starshine_program_adapter_resolved_shape(lowering, selected_type)
+          }
+        }
+        shapes.push(shape)
+      }
+      StarshineExpectedTupleFields(shapes)
+    }
+    @semantic.PlannedStructVariantLayout(fields) => {
+      let field_ids : Array[@semantic.FieldId] = []
+      let shapes : Array[@semantic.PlannedValueShape] = []
+      for index in 0..<fields.length {
+        let field = lowering.type_layouts.fields[fields.start + index]
+        let selected_type = if erased {
+          field.type_
+        } else {
+          starshine_program_adapter_explicit_argument(
+            lowering,
+            layout,
+            actual_arguments,
+            field.type_,
+          )
+        }
+        field_ids.push(field.field)
+        shapes.push(
+          if erased {
+            starshine_program_adapter_resolved_shape(lowering, selected_type)
+          } else {
+            match
+              starshine_program_adapter_generic_shape(
+                lowering, fragments, function_, callable, selected_type,
+              ) {
+              Some(value) => value
+              None =>
+                starshine_program_adapter_resolved_shape(
+                  lowering, selected_type,
+                )
+            }
+          },
+        )
+      }
+      StarshineExpectedStructFields(field_ids, shapes)
+    }
+  }
+}
+
+///|
 fn starshine_program_adapter_field_layout(
   lowering : @semantic.PlannedModuleLowering,
   layout : @semantic.PlannedNominalLayout,
@@ -1208,22 +1297,60 @@ fn starshine_program_append_nominal_enum_adapter(
   while variant_offset > 0 {
     variant_offset -= 1
     let variant = lowering.type_layouts.variants[variants.start + variant_offset]
-    let physical = match
-      starshine_variant_payload_physical_type(fragments, variant.variant) {
+    let actual_fields = starshine_program_adapter_variant_expected_fields(
+      lowering, fragments, function_, callable, layout, variant, actual_arguments,
+      false,
+    )
+    let erased_fields = starshine_program_adapter_variant_expected_fields(
+      lowering, fragments, function_, callable, layout, variant, actual_arguments,
+      true,
+    )
+    let source_physical = match
+      starshine_variant_payload_physical_type_for_fields(
+        fragments,
+        variant.variant,
+        if to_erased {
+          actual_fields
+        } else {
+          erased_fields
+        },
+      ) {
       Some(value) => value
       None => {
         ignore(active.pop())
         return false
       }
     }
-    let subtype = planned.physical_type_index(
+    let target_physical = match
+      starshine_variant_payload_physical_type_for_fields(
+        fragments,
+        variant.variant,
+        if to_erased {
+          erased_fields
+        } else {
+          actual_fields
+        },
+      ) {
+      Some(value) => value
+      None => {
+        ignore(active.pop())
+        return false
+      }
+    }
+    let source_subtype = planned.physical_type_index(
       function_.module_index,
-      physical.type_index,
+      source_physical.type_index,
+    )
+    let target_subtype = planned.physical_type_index(
+      function_.module_index,
+      target_physical.type_index,
     )
     let branch : Array[@lib.Instruction] = [
       @lib.Instruction::i32_const(@lib.I32::new(variant.tag)),
     ]
-    for target_field in fragments.variant_fields_of(variant.variant) {
+    for target_offset in 0..<target_physical.fields.length {
+      let target_field = fragments.fields[target_physical.fields.start +
+        target_offset]
       let field_type = match (variant.payload, target_field.role) {
         (
           @semantic.PlannedTupleVariantLayout(types),
@@ -1276,7 +1403,7 @@ fn starshine_program_append_nominal_enum_adapter(
             let source_field = match
               starshine_program_adapter_source_field(
                 fragments,
-                physical,
+                source_physical,
                 target_field.role,
                 shape,
               ) {
@@ -1291,10 +1418,10 @@ fn starshine_program_append_nominal_enum_adapter(
                 @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
               ),
             )
-            branch.push(starshine_match_cast(subtype))
+            branch.push(starshine_match_cast(source_subtype))
             branch.push(
               starshine_struct_get_instruction(
-                subtype,
+                source_subtype,
                 source_field.physical_index,
                 source_field.storage,
               ),
@@ -1325,7 +1452,7 @@ fn starshine_program_append_nominal_enum_adapter(
             let source_field = match
               starshine_program_adapter_eq_field(
                 fragments,
-                physical,
+                source_physical,
                 target_field.role,
               ) {
               Some(value) => value
@@ -1339,10 +1466,10 @@ fn starshine_program_append_nominal_enum_adapter(
                 @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
               ),
             )
-            branch.push(starshine_match_cast(subtype))
+            branch.push(starshine_match_cast(source_subtype))
             branch.push(
               starshine_struct_get_instruction(
-                subtype,
+                source_subtype,
                 source_field.physical_index,
                 source_field.storage,
               ),
@@ -1383,10 +1510,10 @@ fn starshine_program_append_nominal_enum_adapter(
                         @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
                       ),
                     )
-                    branch.push(starshine_match_cast(subtype))
+                    branch.push(starshine_match_cast(source_subtype))
                     branch.push(
                       starshine_struct_get_instruction(
-                        subtype,
+                        source_subtype,
                         target_field.physical_index,
                         target_field.storage,
                       ),
@@ -1453,10 +1580,10 @@ fn starshine_program_append_nominal_enum_adapter(
                   @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
                 ),
               )
-              branch.push(starshine_match_cast(subtype))
+              branch.push(starshine_match_cast(source_subtype))
               branch.push(
                 starshine_struct_get_instruction(
-                  subtype,
+                  source_subtype,
                   target_field.physical_index,
                   target_field.storage,
                 ),
@@ -1474,10 +1601,10 @@ fn starshine_program_append_nominal_enum_adapter(
                   @lib.LocalIdx::new(source_local.reinterpret_as_uint()),
                 ),
               )
-              branch.push(starshine_match_cast(subtype))
+              branch.push(starshine_match_cast(source_subtype))
               branch.push(
                 starshine_struct_get_instruction(
-                  subtype,
+                  source_subtype,
                   target_field.physical_index,
                   target_field.storage,
                 ),
@@ -1489,7 +1616,7 @@ fn starshine_program_append_nominal_enum_adapter(
     }
     branch.push(
       @lib.Instruction::struct_new(
-        @lib.TypeIdx::new(subtype.reinterpret_as_uint()),
+        @lib.TypeIdx::new(target_subtype.reinterpret_as_uint()),
       ),
     )
     let condition : Array[@lib.Instruction] = [
@@ -1885,9 +2012,11 @@ fn starshine_program_erased_adapter_cast_index(
   match type_ {
     @semantic.WasmFunctionRefValue(local_type) =>
       planned.signature_type_index(module_index, local_type)
-    @semantic.WasmNominalRefValue(local_type) =>
+    @semantic.WasmNominalRefValue(local_type)
+    | @semantic.WasmNullableNominalRefValue(local_type) =>
       planned.physical_type_index(module_index, local_type)
-    @semantic.WasmExternalNominalRefValue(declaration) =>
+    @semantic.WasmExternalNominalRefValue(declaration)
+    | @semantic.WasmNullableExternalNominalRefValue(declaration) =>
       match planned.type_lookup.get(declaration) {
         Some(type_index) => type_index
         None => -1

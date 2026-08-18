@@ -324,8 +324,16 @@ fn starshine_array_append_option(
   } else {
     @semantic.standard_option_none_variant()
   }
-  let physical = match
-    starshine_variant_payload_physical_type(option_plan, variant) {
+  let selected_physical = if present {
+    starshine_variant_payload_physical_type_for_fields(
+      option_plan,
+      variant,
+      StarshineExpectedTupleFields([shape]),
+    )
+  } else {
+    starshine_variant_payload_physical_type(option_plan, variant)
+  }
+  let physical = match selected_physical {
     Some(value) => value
     None => return Err(UnsupportedExpression(0UL, -405))
   }
@@ -339,7 +347,8 @@ fn starshine_array_append_option(
     ),
   )
   if present {
-    for field in option_plan.variant_fields_of(variant) {
+    for field_offset in 1..<physical.fields.length {
+      let field = option_plan.fields[physical.fields.start + field_offset]
       if starshine_shape_matches_storage(shape, field.storage) {
         append_starshine_instructions(output, value)
       } else {

@@ -6,7 +6,7 @@ The Array, FixedArray equality, deterministic Show, integer builder output,
 diagnostic rendering, Arena, BLAKE3, explicit UTF-8 codec, and standalone
 no-provider linker work is complete.
 
-The path, filesystem, process, SHA-256, UTF-8, WPSI adapter, package-codec, and
+The path, filesystem, process, SHA-256, UTF-8, Facet adapter, package-codec, and
 source-Bytes request tranches are now complete. The next work is the generated
 production Starshine object-model ABI and the compiler port.
 
@@ -15,7 +15,7 @@ production Starshine object-model ABI and the compiler port.
 Implemented on August 17, 2026. `dew.std.path`, `dew.std.fs`, and
 `dew.std.process` provide the bounded provider-neutral surface.
 `dew.std.fs.wasi` and `dew.std.process.wasi` use Preview 1 Memory32 marshalling;
-`dew.std.fs.wpsi` and `dew.std.process.wpsi` use the WPSI 0.1 GC `array_i8`
+`dew.std.fs.facet` and `dew.std.process.facet` use the Facet 0.1 GC `array_i8`
 profile through a checked-in static-link adapter. Compiler code can now read
 arguments and environment values, inspect and modify files, publish atomically,
 write separate output streams, and exit through typed errors and explicit
@@ -48,8 +48,8 @@ cache code.
 ### Delivered implementation batch
 
 The launcher preopens one workspace root; compiler paths are normalized relative
-paths under that root. WPSI callers may instead select a scratch or indexed
-preopen capability. See
+paths under that root. Facet callers select an indexed preopen capability; the
+Facet ABI does not allocate a mandatory scratch filesystem. See
 [`self-hosting-host-modules-2026-08-17.md`](self-hosting-host-modules-2026-08-17.md).
 
 Minimum operations:

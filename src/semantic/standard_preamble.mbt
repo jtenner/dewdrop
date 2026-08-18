@@ -149,7 +149,7 @@ fn selected_standard_modules(
                 wasm_intrinsics = true
                 collection_mask = collection_mask | 737280
               }
-              "wpsi" => {
+              "facet" => {
                 text_mask = text_mask | 15
                 fixed_array = true
                 collection_mask = collection_mask | 1245184
@@ -167,7 +167,7 @@ fn selected_standard_modules(
                 wasm_intrinsics = true
                 collection_mask = collection_mask | 2375680
               }
-              "wpsi" => {
+              "facet" => {
                 text_mask = text_mask | 13
                 fixed_array = true
                 array = true
