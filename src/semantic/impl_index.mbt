@@ -370,6 +370,7 @@ fn resolved_impl_target_head(
       GenericParameterType(_)
       | TraitType(_)
       | SelfType(_)
+      | ProductType(_)
       | FunctionType(_, _) => return (ErrorImplTargetHead, false)
     }
   }
@@ -391,6 +392,7 @@ fn resolved_impl_trait_head(
       | GenericParameterType(_)
       | NominalType(_)
       | SelfType(_)
+      | ProductType(_)
       | FunctionType(_, _) => return (None, false)
     }
   }
@@ -1011,6 +1013,14 @@ fn ImplPatternScratch::import_pattern(
           self.values[source] = result
           self.results.push(result)
         }
+        ProductType(fields) => {
+          self.push_task(source, 2, self.results.length())
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_task(resolved.type_arguments[fields.start + index], 0, 0)
+          }
+        }
         AppliedType(base, arguments) => {
           self.push_task(source, 1, self.results.length())
           let mut index = arguments.length
@@ -1036,7 +1046,7 @@ fn ImplPatternScratch::import_pattern(
           self.results.push(result)
         }
       }
-    } else {
+    } else if state == 1 {
       let arguments = match resolved.types[source] {
         AppliedType(_, arguments) => arguments
         _ => abort("impl pattern import expected an applied type")
@@ -1054,6 +1064,20 @@ fn ImplPatternScratch::import_pattern(
       while self.results.length() > result_start {
         self.results.pop() |> ignore
       }
+      self.results.push(result)
+    } else {
+      let fields = match resolved.types[source] {
+        ProductType(fields) => fields
+        _ => abort("impl pattern import expected a product type")
+      }
+      self.arguments.clear()
+      for index in 0..<fields.length {
+        self.arguments.push(self.results[result_start + index])
+      }
+      let result = self.solver.product_type(self.arguments)
+      self.marks[source] = self.generation
+      self.values[source] = result
+      self.results.truncate(result_start)
       self.results.push(result)
     }
   }
@@ -1078,6 +1102,10 @@ fn impl_type_contains_generic(
     visited[type_] = true
     match resolved.types[type_] {
       GenericParameterType(_) => return true
+      ProductType(fields) =>
+        for index in 0..<fields.length {
+          work.push(resolved.type_arguments[fields.start + index])
+        }
       AppliedType(base, arguments) => {
         work.push(base)
         for index in 0..<arguments.length {

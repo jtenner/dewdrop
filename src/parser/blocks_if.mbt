@@ -62,11 +62,124 @@ fn Parser::finish_block_item_line(
 }
 
 ///|
+priv enum ProductBinding {
+  NamedProductBinding(String, UInt64)
+  IgnoredProductBinding
+  NestedProductBinding(Array[ProductBinding], UInt64)
+}
+
+///|
+fn Parser::parse_product_binding_after_left(
+  self : Parser,
+  open_offset : UInt64,
+) -> Result[ProductBinding, RecoveryFailure] {
+  let fields : Array[ProductBinding] = []
+  self.skip_newlines()
+  while true {
+    let field = match self.peek_token() {
+      None => return Err(expression_failure(UnclosedGroup(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Identifier("_") => {
+            self.consume_lookahead()
+            IgnoredProductBinding
+          }
+          @tokenizer.Identifier(name) => {
+            self.consume_lookahead()
+            NamedProductBinding(name, token.offset())
+          }
+          @tokenizer.Symbol(@tokenizer.LeftParen) => {
+            let nested_offset = token.offset()
+            self.consume_lookahead()
+            match self.parse_product_binding_after_left(nested_offset) {
+              Ok(value) => value
+              Err(error) => return Err(error)
+            }
+          }
+          _ =>
+            return Err(
+              expression_failure(ExpectedBlockBindingName(Some(token))),
+            )
+        }
+    }
+    fields.push(field)
+    self.skip_newlines()
+    match self.peek_token() {
+      None => return Err(expression_failure(UnclosedGroup(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Comma) => {
+            self.consume_lookahead()
+            self.skip_newlines()
+            match self.peek_token() {
+              Some(close) =>
+                match close.kind() {
+                  @tokenizer.Symbol(@tokenizer.RightParen) => {
+                    self.consume_lookahead()
+                    if fields.length() < 2 || fields.length() > 32 {
+                      return Err(
+                        expression_failure(
+                          InvalidProductArity(fields.length(), open_offset),
+                        ),
+                      )
+                    }
+                    return Ok(NestedProductBinding(fields, open_offset))
+                  }
+                  _ => ()
+                }
+              None => return Err(expression_failure(UnclosedGroup(open_offset)))
+            }
+          }
+          @tokenizer.Symbol(@tokenizer.RightParen) => {
+            self.consume_lookahead()
+            if fields.length() < 2 || fields.length() > 32 {
+              return Err(
+                expression_failure(
+                  InvalidProductArity(fields.length(), open_offset),
+                ),
+              )
+            }
+            return Ok(NestedProductBinding(fields, open_offset))
+          }
+          _ => return Err(expression_failure(ExpectedBlockEqual(Some(token))))
+        }
+    }
+  } nobreak {
+    abort("unreachable product binding parser termination")
+  }
+}
+
+///|
+fn append_product_binding_items(
+  output : Array[BlockItem],
+  mutable_ : Bool,
+  binding : ProductBinding,
+  target : Expr,
+  let_offset : UInt64,
+) -> Unit {
+  match binding {
+    NamedProductBinding(name, offset) =>
+      output.push(LetItem(mutable_, name, offset, target, let_offset))
+    IgnoredProductBinding => ()
+    NestedProductBinding(fields, offset) =>
+      for index, field in fields {
+        append_product_binding_items(
+          output,
+          mutable_,
+          field,
+          ProductFieldExpr(target, index, fields.length(), offset),
+          let_offset,
+        )
+      }
+  }
+}
+
+///|
 fn Parser::parse_block_let_item(
   self : Parser,
   open_offset : UInt64,
   let_offset : UInt64,
-) -> Result[BlockItem, RecoveryFailure] {
+) -> Result[Array[BlockItem], RecoveryFailure] {
   let mutable_ = match self.peek_token() {
     Some(token) =>
       match token.kind() {
@@ -78,13 +191,20 @@ fn Parser::parse_block_let_item(
       }
     None => false
   }
-  let (name, name_offset) = match self.peek_token() {
+  let binding = match self.peek_token() {
     Some(token) =>
       match token.kind() {
         @tokenizer.Identifier(name) => {
+          self.consume_lookahead()
+          NamedProductBinding(name, token.offset())
+        }
+        @tokenizer.Symbol(@tokenizer.LeftParen) => {
           let offset = token.offset()
           self.consume_lookahead()
-          (name, offset)
+          match self.parse_product_binding_after_left(offset) {
+            Ok(value) => value
+            Err(error) => return Err(error)
+          }
         }
         @tokenizer.Error(error) => {
           let offset = token.offset()
@@ -114,7 +234,26 @@ fn Parser::parse_block_let_item(
     Err(error) => return Err(error)
   }
   match self.finish_block_item_line(open_offset) {
-    Ok(_) => Ok(LetItem(mutable_, name, name_offset, value, let_offset))
+    Ok(_) => {
+      let items : Array[BlockItem] = []
+      match binding {
+        NamedProductBinding(name, offset) =>
+          items.push(LetItem(mutable_, name, offset, value, let_offset))
+        IgnoredProductBinding => ()
+        NestedProductBinding(_, offset) => {
+          let hidden = "\u{0}product\{let_offset}"
+          items.push(LetItem(false, hidden, offset, value, let_offset))
+          append_product_binding_items(
+            items,
+            mutable_,
+            binding,
+            NameExpr(hidden, offset),
+            let_offset,
+          )
+        }
+      }
+      Ok(items)
+    }
     Err(error) => Err(error)
   }
 }
@@ -198,10 +337,19 @@ fn Parser::parse_block_after_left_brace(
       }
       @tokenizer.Keyword(@tokenizer.Let) => {
         self.consume_lookahead()
-        match self.parse_block_let_item(open_offset, offset) {
+        let parsed = match self.parse_block_let_item(open_offset, offset) {
           Ok(value) => value
           Err(error) => return Err(error)
         }
+        for value in parsed {
+          match deferred_using_violation(value, cleanups) {
+            Some(error) => return Err(expression_failure(error))
+            None => ()
+          }
+          defer_transform_block_item(items, value, cleanups, 0)
+        }
+        self.skip_newlines()
+        continue
       }
       @tokenizer.Keyword(@tokenizer.Return) => {
         self.consume_lookahead()

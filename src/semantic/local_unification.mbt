@@ -17,6 +17,9 @@ let zonk_finish_application = 1
 let zonk_finish_function = 2
 
 ///|
+let zonk_finish_product = 3
+
+///|
 pub struct InferenceSnapshot {
   undo_start : Int
   variable_count : Int
@@ -188,6 +191,18 @@ pub fn LocalTypeSolver::fresh_variable(self : LocalTypeSolver) -> BodyTypeId {
   self.variable_bindings.push(-1)
   self.variable_types.push(type_)
   type_
+}
+
+///|
+pub fn LocalTypeSolver::product_type(
+  self : LocalTypeSolver,
+  fields : Array[BodyTypeId],
+) -> BodyTypeId {
+  let start = self.type_arguments.length()
+  for field in fields {
+    self.type_arguments.push(field)
+  }
+  self.push_type_term(BodyProductType({ start, length: fields.length() }))
 }
 
 ///|
@@ -364,6 +379,22 @@ fn LocalTypeSolver::occurs_in(
     if current < -1 {
       let resolved_id = self.decoded_resolved_type(current)
       match self.resolved.types[resolved_id] {
+        ProductType(fields) => {
+          self.ensure_occurs_resolved_marks()
+          if self.occurs_resolved_marks[resolved_id] == self.occurs_generation {
+            continue
+          }
+          self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.occurs_stack.push(
+              self.resolved_type(
+                self.resolved.type_arguments[fields.start + index],
+              ),
+            )
+          }
+        }
         AppliedType(base, arguments) => {
           self.ensure_occurs_resolved_marks()
           if self.occurs_resolved_marks[resolved_id] == self.occurs_generation {
@@ -411,6 +442,13 @@ fn LocalTypeSolver::occurs_in(
         if self.find_variable_root(variable) == variable_root {
           return true
         }
+      BodyProductType(fields) => {
+        let mut index = fields.length
+        while index > 0 {
+          index -= 1
+          self.occurs_stack.push(self.type_arguments[fields.start + index])
+        }
+      }
       BodyAppliedType(base, arguments) => {
         let mut index = arguments.length
         while index > 0 {
@@ -494,6 +532,72 @@ fn LocalTypeSolver::push_unification_pair(
 ) -> Unit {
   self.unify_left.push(left)
   self.unify_right.push(right)
+}
+
+///|
+fn LocalTypeSolver::push_body_product_pairs(
+  self : LocalTypeSolver,
+  left : HirSpan,
+  right : HirSpan,
+) -> Bool {
+  if left.length != right.length {
+    return false
+  }
+  let mut index = left.length
+  while index > 0 {
+    index -= 1
+    self.push_unification_pair(
+      self.type_arguments[left.start + index],
+      self.type_arguments[right.start + index],
+    )
+  }
+  true
+}
+
+///|
+fn LocalTypeSolver::push_resolved_product_pairs(
+  self : LocalTypeSolver,
+  left : HirSpan,
+  right : HirSpan,
+) -> Bool {
+  if left.length != right.length {
+    return false
+  }
+  let mut index = left.length
+  while index > 0 {
+    index -= 1
+    self.push_unification_pair(
+      self.resolved_type(self.resolved.type_arguments[left.start + index]),
+      self.resolved_type(self.resolved.type_arguments[right.start + index]),
+    )
+  }
+  true
+}
+
+///|
+fn LocalTypeSolver::push_mixed_product_pairs(
+  self : LocalTypeSolver,
+  body : HirSpan,
+  resolved : HirSpan,
+  body_on_left : Bool,
+) -> Bool {
+  if body.length != resolved.length {
+    return false
+  }
+  let mut index = body.length
+  while index > 0 {
+    index -= 1
+    let body_type = self.type_arguments[body.start + index]
+    let resolved_type = self.resolved_type(
+      self.resolved.type_arguments[resolved.start + index],
+    )
+    if body_on_left {
+      self.push_unification_pair(body_type, resolved_type)
+    } else {
+      self.push_unification_pair(resolved_type, body_type)
+    }
+  }
+  true
 }
 
 ///|
@@ -730,6 +834,8 @@ pub fn LocalTypeSolver::unify(
             self.resolved.types[left_resolved],
             self.resolved.types[right_resolved],
           ) {
+          (ProductType(left_fields), ProductType(right_fields)) =>
+            self.push_resolved_product_pairs(left_fields, right_fields)
           (
             AppliedType(left_base, left_arguments),
             AppliedType(right_base, right_arguments),
@@ -746,6 +852,8 @@ pub fn LocalTypeSolver::unify(
             )
           _ => false
         }
+      (BodyProductType(left_fields), BodyProductType(right_fields)) =>
+        self.push_body_product_pairs(left_fields, right_fields)
       (
         BodyAppliedType(left_base, left_arguments),
         BodyAppliedType(right_base, right_arguments),
@@ -760,6 +868,18 @@ pub fn LocalTypeSolver::unify(
         self.push_body_function_pairs(
           left_parameters, left_result, right_parameters, right_result,
         )
+      (BodyProductType(body_fields), BodyResolvedType(resolved_type)) =>
+        match self.resolved.types[resolved_type] {
+          ProductType(resolved_fields) =>
+            self.push_mixed_product_pairs(body_fields, resolved_fields, true)
+          _ => false
+        }
+      (BodyResolvedType(resolved_type), BodyProductType(body_fields)) =>
+        match self.resolved.types[resolved_type] {
+          ProductType(resolved_fields) =>
+            self.push_mixed_product_pairs(body_fields, resolved_fields, false)
+          _ => false
+        }
       (
         BodyAppliedType(body_base, body_arguments),
         BodyResolvedType(resolved_type),
@@ -928,7 +1048,7 @@ pub fn LocalTypeSolver::zonk_type(
     return representative
   }
   match self.types[representative] {
-    BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
+    BodyProductType(_) | BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
     _ => return representative
   }
   self.next_zonk_generation()
@@ -952,6 +1072,22 @@ pub fn LocalTypeSolver::zonk_type(
         continue
       }
       match self.types[current] {
+        BodyProductType(fields) => {
+          self.push_zonk_task(
+            current,
+            zonk_finish_product,
+            self.zonk_results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_zonk_task(
+              self.type_arguments[fields.start + index],
+              zonk_visit,
+              0,
+            )
+          }
+        }
         BodyAppliedType(base, arguments) => {
           self.push_zonk_task(
             current,
@@ -1029,7 +1165,7 @@ pub fn LocalTypeSolver::zonk_type(
       self.zonk_values[current] = result
       self.zonk_results.truncate(result_start)
       self.zonk_results.push(result)
-    } else {
+    } else if state == zonk_finish_function {
       let (original_parameters, original_result) = match self.types[current] {
         BodyFunctionType(parameters, result) => (parameters, result)
         _ => abort("zonk finish expected a function type")
@@ -1066,6 +1202,35 @@ pub fn LocalTypeSolver::zonk_type(
       self.zonk_values[current] = result
       self.zonk_results.truncate(result_start)
       self.zonk_results.push(result)
+    } else {
+      let original = match self.types[current] {
+        BodyProductType(fields) => fields
+        _ => abort("zonk finish expected a product type")
+      }
+      self.zonk_application_scratch.clear()
+      let mut poisoned = false
+      let mut unchanged = true
+      for index in 0..<original.length {
+        let field = self.zonk_results[result_start + index]
+        if field == self.error_type() {
+          poisoned = true
+        }
+        if field != self.type_arguments[original.start + index] {
+          unchanged = false
+        }
+        self.zonk_application_scratch.push(field)
+      }
+      let result = if poisoned {
+        self.error_type()
+      } else if unchanged {
+        current
+      } else {
+        self.product_type(self.zonk_application_scratch)
+      }
+      self.zonk_marks[current] = self.zonk_generation
+      self.zonk_values[current] = result
+      self.zonk_results.truncate(result_start)
+      self.zonk_results.push(result)
     }
   }
   guard self.zonk_results.length() == 1 else {
@@ -1085,7 +1250,7 @@ pub fn LocalTypeSolver::has_unresolved_variable(
   }
   match self.types[representative] {
     BodyVariableType(_) => return true
-    BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
+    BodyProductType(_) | BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
     BodyErrorType | BodyResolvedType(_) => return false
   }
   self.next_occurs_generation()
@@ -1096,6 +1261,22 @@ pub fn LocalTypeSolver::has_unresolved_variable(
     if current < -1 {
       let resolved_id = self.decoded_resolved_type(current)
       match self.resolved.types[resolved_id] {
+        ProductType(fields) => {
+          self.ensure_occurs_resolved_marks()
+          if self.occurs_resolved_marks[resolved_id] == self.occurs_generation {
+            continue
+          }
+          self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.occurs_stack.push(
+              self.resolved_type(
+                self.resolved.type_arguments[fields.start + index],
+              ),
+            )
+          }
+        }
         AppliedType(base, arguments) => {
           self.ensure_occurs_resolved_marks()
           if self.occurs_resolved_marks[resolved_id] == self.occurs_generation {
@@ -1123,6 +1304,13 @@ pub fn LocalTypeSolver::has_unresolved_variable(
     self.occurs_local_marks[current] = self.occurs_generation
     match self.types[current] {
       BodyVariableType(_) => return true
+      BodyProductType(fields) => {
+        let mut index = fields.length
+        while index > 0 {
+          index -= 1
+          self.occurs_stack.push(self.type_arguments[fields.start + index])
+        }
+      }
       BodyAppliedType(base, arguments) => {
         let mut index = arguments.length
         while index > 0 {

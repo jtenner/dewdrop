@@ -1232,6 +1232,7 @@ fn wasmgc_storage_type(
       GenericParameterType(_)
       | TraitType(_)
       | SelfType(_)
+      | ProductType(_)
       | FunctionType(_, _) => return Some(WasmNullableEqRefStorage)
       NominalType(declaration) => {
         if declaration == standard_fixed_array_type_declaration() {
@@ -1939,8 +1940,10 @@ pub fn wasmgc_capture_cell_slot(shape : PlannedValueShape) -> Int {
     F32PlannedValueShape => 2
     F64PlannedValueShape => 3
     V128PlannedValueShape => 4
-    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
-      5
+    RefPlannedValueShape
+    | GenericPlannedValueShape
+    | ProductPlannedValueShape(_)
+    | ErrorPlannedValueShape => 5
   }
 }
 
@@ -1977,8 +1980,10 @@ fn wasmgc_capture_storage(
     F32PlannedValueShape => Some(WasmF32Storage)
     F64PlannedValueShape => Some(WasmF64Storage)
     V128PlannedValueShape => Some(WasmV128Storage)
-    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
-      Some(WasmNullableEqRefStorage)
+    RefPlannedValueShape
+    | GenericPlannedValueShape
+    | ProductPlannedValueShape(_)
+    | ErrorPlannedValueShape => Some(WasmNullableEqRefStorage)
   }
 }
 
@@ -2031,7 +2036,11 @@ pub fn wasmgc_fixed_array_carrier_for_resolved_type(
       | F32x4Type
       | F64x2Type
     ) => 4
-    AppliedType(_, _) | NominalType(_) | FunctionType(_, _) | TraitType(_) => 5
+    ProductType(_)
+    | AppliedType(_, _)
+    | NominalType(_)
+    | FunctionType(_, _)
+    | TraitType(_) => 5
     GenericParameterType(_) | SelfType(_) | ErrorType => 5
     PrimitiveType(UnitType | NeverType) => -1
     PrimitiveType(
@@ -2054,8 +2063,10 @@ pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int {
     F32PlannedValueShape => 2
     F64PlannedValueShape => 3
     V128PlannedValueShape => 4
-    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
-      5
+    RefPlannedValueShape
+    | GenericPlannedValueShape
+    | ProductPlannedValueShape(_)
+    | ErrorPlannedValueShape => 5
     UnitPlannedValueShape | NeverPlannedValueShape => -1
   }
 }
@@ -2131,7 +2142,7 @@ fn wasmgc_value_type(
         }
         return Some(WasmNullableEqRefValue)
       }
-      GenericParameterType(_) | TraitType(_) =>
+      GenericParameterType(_) | TraitType(_) | ProductType(_) =>
         return Some(WasmNullableEqRefValue)
       SelfType(_) =>
         if self_type >= 0 {
@@ -2423,6 +2434,60 @@ fn wasmgc_builtin_import_identity(name : Bytes) -> WasmImportIdentity {
 }
 
 ///|
+fn wasmgc_append_shape_value_types(
+  output : Array[PlannedWasmValueType],
+  shape : PlannedValueShape,
+) -> Unit {
+  match shape {
+    ProductPlannedValueShape(fields) =>
+      for field in fields {
+        wasmgc_append_shape_value_types(output, field)
+      }
+    UnitPlannedValueShape | NeverPlannedValueShape => ()
+    I8PlannedValueShape
+    | I16PlannedValueShape
+    | I32PlannedValueShape
+    | U8PlannedValueShape
+    | U16PlannedValueShape
+    | U32PlannedValueShape
+    | Swar32PlannedValueShape => output.push(WasmI32Value)
+    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape =>
+      output.push(WasmI64Value)
+    F32PlannedValueShape => output.push(WasmF32Value)
+    F64PlannedValueShape => output.push(WasmF64Value)
+    V128PlannedValueShape => output.push(WasmV128Value)
+    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
+      output.push(WasmNullableEqRefValue)
+  }
+}
+
+///|
+fn wasmgc_append_resolved_abi_type(
+  output : Array[PlannedWasmValueType],
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedTypeId,
+  self_type : ResolvedTypeId,
+  type_index_by_declaration : Array[Int],
+  function_type_by_resolved : Array[Int],
+  closure_abi : Bool,
+) -> Unit {
+  let shape = planned_resolved_value_shape(resolved, type_)
+  match shape {
+    ProductPlannedValueShape(_) =>
+      wasmgc_append_shape_value_types(output, shape)
+    _ =>
+      match
+        wasmgc_value_type(
+          resolved, type_, self_type, type_index_by_declaration, function_type_by_resolved,
+          closure_abi,
+        ) {
+        Some(value) => output.push(value)
+        None => ()
+      }
+  }
+}
+
+///|
 fn wasmgc_plan_function_job(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
@@ -2435,6 +2500,8 @@ fn wasmgc_plan_function_job(
   for index in 0..<callable.parameters.length {
     let parameter = functions.parameters[callable.parameters.start + index]
     match parameter.shape {
+      ProductPlannedValueShape(_) =>
+        wasmgc_append_shape_value_types(parameters, parameter.shape)
       I32PlannedValueShape => parameters.push(WasmI32Value)
       I64PlannedValueShape => parameters.push(WasmI64Value)
       _ =>
@@ -2454,6 +2521,8 @@ fn wasmgc_plan_function_job(
   }
   let results : Array[PlannedWasmValueType] = []
   match callable.result_shape {
+    ProductPlannedValueShape(_) =>
+      wasmgc_append_shape_value_types(results, callable.result_shape)
     I32PlannedValueShape => results.push(WasmI32Value)
     I64PlannedValueShape => results.push(WasmI64Value)
     _ =>
@@ -2667,6 +2736,7 @@ fn wasmgc_trait_evidence_shape_code(shape : PlannedValueShape) -> Int {
     RefPlannedValueShape => 15
     GenericPlannedValueShape => 16
     NeverPlannedValueShape => 17
+    ProductPlannedValueShape(_) => 18
   }
 }
 
@@ -3399,32 +3469,25 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       FunctionType(parameters, result) => {
         let parameter_start = function_value_types.length()
         for index in 0..<parameters.length {
-          match
-            wasmgc_value_type(
-              resolved,
-              resolved.type_arguments[parameters.start + index],
-              -1,
-              type_index_by_declaration,
-              function_type_by_resolved,
-              closure_abi,
-            ) {
-            Some(value) => function_value_types.push(value)
-            None => ()
-          }
+          wasmgc_append_resolved_abi_type(
+            function_value_types,
+            resolved,
+            resolved.type_arguments[parameters.start + index],
+            -1,
+            type_index_by_declaration,
+            function_type_by_resolved,
+            closure_abi,
+          )
         }
         let parameter_span = {
           start: parameter_start,
           length: function_value_types.length() - parameter_start,
         }
         let result_start = function_value_types.length()
-        match
-          wasmgc_value_type(
-            resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
-            closure_abi,
-          ) {
-          Some(value) => function_value_types.push(value)
-          None => ()
-        }
+        wasmgc_append_resolved_abi_type(
+          function_value_types, resolved, result, -1, type_index_by_declaration,
+          function_type_by_resolved, closure_abi,
+        )
         function_types.push({
           resolved_type: type_id,
           signature_type_index: function_type_by_resolved[type_id],
@@ -3454,32 +3517,25 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       let parameter_start = function_value_types.length()
       function_value_types.push(WasmNullableEqRefValue)
       for index in 0..<parameters.length {
-        match
-          wasmgc_value_type(
-            resolved,
-            resolved.type_arguments[parameters.start + index],
-            -1,
-            type_index_by_declaration,
-            function_type_by_resolved,
-            closure_abi,
-          ) {
-          Some(value) => function_value_types.push(value)
-          None => ()
-        }
+        wasmgc_append_resolved_abi_type(
+          function_value_types,
+          resolved,
+          resolved.type_arguments[parameters.start + index],
+          -1,
+          type_index_by_declaration,
+          function_type_by_resolved,
+          closure_abi,
+        )
       }
       let parameter_span = {
         start: parameter_start,
         length: function_value_types.length() - parameter_start,
       }
       let result_start = function_value_types.length()
-      match
-        wasmgc_value_type(
-          resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
-          closure_abi,
-        ) {
-        Some(value) => function_value_types.push(value)
-        None => ()
-      }
+      wasmgc_append_resolved_abi_type(
+        function_value_types, resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
+        closure_abi,
+      )
       function_types.push({
         resolved_type: -1,
         signature_type_index,
@@ -3530,32 +3586,25 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       _ => abort("lambda function type is not structural")
     }
     for parameter_index in 0..<parameters.length {
-      match
-        wasmgc_value_type(
-          resolved,
-          resolved.type_arguments[parameters.start + parameter_index],
-          -1,
-          type_index_by_declaration,
-          function_type_by_resolved,
-          closure_abi,
-        ) {
-        Some(value) => function_value_types.push(value)
-        None => ()
-      }
+      wasmgc_append_resolved_abi_type(
+        function_value_types,
+        resolved,
+        resolved.type_arguments[parameters.start + parameter_index],
+        -1,
+        type_index_by_declaration,
+        function_type_by_resolved,
+        closure_abi,
+      )
     }
     let parameter_span = {
       start: parameter_start,
       length: function_value_types.length() - parameter_start,
     }
     let result_start = function_value_types.length()
-    match
-      wasmgc_value_type(
-        resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
-        closure_abi,
-      ) {
-      Some(value) => function_value_types.push(value)
-      None => ()
-    }
+    wasmgc_append_resolved_abi_type(
+      function_value_types, resolved, result, -1, type_index_by_declaration, function_type_by_resolved,
+      closure_abi,
+    )
     function_types.push({
       resolved_type: -1,
       signature_type_index,
@@ -4158,6 +4207,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       match lowering.expressions[expression].kind {
         PlannedFixedArrayMake(_, _, _)
         | PlannedFixedArrayLength(_, _)
+        | PlannedArrayLiteral(_, _, _)
         | PlannedArrayNew(_, _)
         | PlannedArrayWithCapacity(_, _, _)
         | PlannedArrayGet(_, _, _, _)
@@ -4203,11 +4253,71 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           uses_fixed_array_runtime = true
           break
         }
+        PlannedFieldGet(_, _, _) =>
+          if lowering.expressions[expression].shape
+            is ProductPlannedValueShape(_) {
+            uses_fixed_array_runtime = true
+            break
+          }
+        PlannedFieldSet(_, _, value) =>
+          if lowering.expressions[value].shape is ProductPlannedValueShape(_) {
+            uses_fixed_array_runtime = true
+            break
+          }
+        PlannedStructNew(_, _, fields)
+        | PlannedVariantStructNew(_, _, fields) => {
+          for field_index in 0..<fields.length {
+            let value = lowering.object_fields[fields.start + field_index].value
+            if lowering.expressions[value].shape is ProductPlannedValueShape(_) {
+              uses_fixed_array_runtime = true
+              break
+            }
+          }
+          if uses_fixed_array_runtime {
+            break
+          }
+        }
+        PlannedVariantTupleNew(_, _, arguments) => {
+          for argument_index in 0..<arguments.length {
+            let value = lowering.expression_children[arguments.start +
+              argument_index]
+            if lowering.expressions[value].shape is ProductPlannedValueShape(_) {
+              uses_fixed_array_runtime = true
+              break
+            }
+          }
+          if uses_fixed_array_runtime {
+            break
+          }
+        }
         _ => ()
       }
     }
     if uses_fixed_array_runtime {
       break
+    }
+  }
+  if !uses_fixed_array_runtime {
+    for capture in lowering.captures {
+      if capture.shape is ProductPlannedValueShape(_) {
+        uses_fixed_array_runtime = true
+        break
+      }
+    }
+  }
+  if !uses_fixed_array_runtime {
+    for step in lowering.initialization.steps {
+      let body_id = match step.kind {
+        PlannedInitializeModuleValue(_, body, _) => body
+        PlannedCyclicModuleValues(_) => continue
+      }
+      let body_index = semantic_id_local(body_id)
+      if body_index >= 0 &&
+        body_index < lowering.bodies.length() &&
+        lowering.bodies[body_index].result_shape is ProductPlannedValueShape(_) {
+        uses_fixed_array_runtime = true
+        break
+      }
     }
   }
   let mut uses_map_runtime = false

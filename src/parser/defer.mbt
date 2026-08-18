@@ -106,6 +106,19 @@ fn defer_transform_expression(
     | NameExpr(_, _)
     | ImportAliasExpr(_, _)
     | LambdaExpr(_, _, _, _) => expression
+    ProductExpr(elements, offset) | ArrayExpr(elements, offset) => {
+      let transformed : Array[Expr] = []
+      for element in elements {
+        transformed.push(
+          defer_transform_expression(element, cleanups, loop_depth),
+        )
+      }
+      match expression {
+        ProductExpr(_, _) => ProductExpr(transformed, offset)
+        ArrayExpr(_, _) => ArrayExpr(transformed, offset)
+        _ => abort("collection expression changed shape")
+      }
+    }
     ObjectExpr(fields, offset) => {
       let transformed : Array[ObjectField] = []
       for field in fields {
@@ -241,6 +254,13 @@ fn defer_transform_expression(
       QualifiedExpr(
         defer_transform_expression(base, cleanups, loop_depth),
         name,
+        offset,
+      )
+    ProductFieldExpr(base, index, arity, offset) =>
+      ProductFieldExpr(
+        defer_transform_expression(base, cleanups, loop_depth),
+        index,
+        arity,
         offset,
       )
     IndexExpr(base, index, offset) =>
@@ -478,6 +498,15 @@ fn deferred_expression_dispose_offset(
       }
       None
     }
+    ProductExpr(elements, _) | ArrayExpr(elements, _) => {
+      for element in elements {
+        match deferred_expression_dispose_offset(element, name) {
+          Some(offset) => return Some(offset)
+          None => ()
+        }
+      }
+      None
+    }
     LambdaExpr(parameters, _, body, _) => {
       for parameter in parameters {
         if parameter.name == name {
@@ -534,7 +563,8 @@ fn deferred_expression_dispose_offset(
     IsExpr(scrutinee, _, _)
     | PrefixExpr(_, scrutinee, _)
     | FieldExpr(scrutinee, _, _)
-    | QualifiedExpr(scrutinee, _, _) =>
+    | QualifiedExpr(scrutinee, _, _)
+    | ProductFieldExpr(scrutinee, _, _, _) =>
       deferred_expression_dispose_offset(scrutinee, name)
     BreakExpr(value, _) | ContinueExpr(value, _) =>
       deferred_expression_dispose_offset(value, name)

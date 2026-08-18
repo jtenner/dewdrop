@@ -306,8 +306,10 @@ fn BodyFlowAnalyzer::expression_is_never(
   let mut type_ = self.inferred.expression_types[expression]
   while true {
     match self.inferred.type_term(type_) {
-      BodyErrorType | BodyVariableType(_) | BodyFunctionType(_, _) =>
-        return false
+      BodyErrorType
+      | BodyVariableType(_)
+      | BodyProductType(_)
+      | BodyFunctionType(_, _) => return false
       BodyAppliedType(base, _) => type_ = base
       BodyResolvedType(resolved_type) => {
         let mut current = resolved_type
@@ -511,7 +513,7 @@ fn BodyFlowAnalyzer::coverage_domain(
   while true {
     match self.inferred.type_term(current) {
       BodyErrorType | BodyVariableType(_) => return ErrorCoverageDomain
-      BodyFunctionType(_, _) => return OpenCoverageDomain
+      BodyProductType(_) | BodyFunctionType(_, _) => return OpenCoverageDomain
       BodyAppliedType(base, _) => current = base
       BodyResolvedType(resolved_type) => {
         let mut resolved_current = resolved_type
@@ -519,6 +521,7 @@ fn BodyFlowAnalyzer::coverage_domain(
           match self.resolved.types[resolved_current] {
             ErrorType | GenericParameterType(_) | TraitType(_) | SelfType(_) =>
               return ErrorCoverageDomain
+            ProductType(_) => return OpenCoverageDomain
             PrimitiveType(BoolType) => return BoolCoverageDomain
             PrimitiveType(_) => return OpenCoverageDomain
             NominalType(declaration) =>
@@ -954,6 +957,11 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
       | HirNameExpr(_, _)
       | HirImportAliasExpr(_, _)
       | HirLambdaExpr(_, _) => self.terminal_flow(expression)
+      HirProductExpr(elements, _) | HirArrayExpr(elements, _) =>
+        flow_sequence(
+          self.sequence_expression_children(elements),
+          self.terminal_flow(expression),
+        )
       HirObjectExpr(fields, _) => {
         let mut prefix = flow(flow_falls_through)
         for index in 0..<fields.length {
@@ -1032,7 +1040,9 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
         )
         flow_sequence(prefix, self.terminal_flow(expression))
       }
-      HirFieldExpr(base, _, _) | HirQualifiedExpr(base, _, _) =>
+      HirFieldExpr(base, _, _)
+      | HirQualifiedExpr(base, _, _)
+      | HirProductFieldExpr(base, _, _, _) =>
         flow_sequence(
           self.expression_flow(base),
           self.terminal_flow(expression),

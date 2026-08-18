@@ -621,6 +621,10 @@ fn program_link_type_is_symbolic(
       match module_.types[current] {
         BodyResolvedType(value) => resolved_pending.push(value)
         BodyVariableType(_) | BodyErrorType => return true
+        BodyProductType(fields) =>
+          for index in 0..<fields.length {
+            body_pending.push(module_.type_arguments[fields.start + index])
+          }
         BodyAppliedType(base, arguments) => {
           body_pending.push(base)
           for index in 0..<arguments.length {
@@ -642,6 +646,12 @@ fn program_link_type_is_symbolic(
     }
     match module_.resolved_types[current] {
       GenericParameterType(_) => return true
+      ProductType(fields) =>
+        for index in 0..<fields.length {
+          resolved_pending.push(
+            module_.resolved_type_arguments[fields.start + index],
+          )
+        }
       AppliedType(base, arguments) => {
         resolved_pending.push(base)
         for index in 0..<arguments.length {

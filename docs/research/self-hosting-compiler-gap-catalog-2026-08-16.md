@@ -316,18 +316,20 @@ functional-loop translation style before semantic work begins.
 ### SH-11 — Small literal and assignment conveniences
 
 The compiler uses byte scalar literals, array literals, compound assignments,
-string interpolation, and object-field shorthand. Dew can rewrite each form:
+string interpolation, and object-field shorthand. Array literals are now
+implemented with inferred element types, expected-type empty literals, and
+exact-capacity lowering. Dew can still rewrite the remaining forms:
 
 - `b'\n'` to `10u8`;
-- `[a, b]` to an Array builder;
 - `count += 1` to `count = count + 1`;
 - interpolation to StringBuilder/Show;
 - `{ field, }` to `{ field: field }`.
 
-These conveniences are not required before compiler A. Add them only if the
-port shows that generated boilerplate obscures correctness. Array literals are
-the most useful candidate because Wasm construction and diagnostics use many
-small ordered instruction/value lists.
+The remaining conveniences are not required before compiler A. Add them only
+if the port shows that generated boilerplate obscures correctness. First-class
+products and array literals now cover the parser port's common ordered return
+values and instruction/value lists; see
+[`product-types-and-array-literals-2026-08-18.md`](product-types-and-array-literals-2026-08-18.md).
 
 ## Bootstrap-only gaps
 

@@ -9,6 +9,7 @@ pub enum BodyTypeTerm {
   BodyErrorType
   BodyResolvedType(ResolvedTypeId)
   BodyVariableType(TypeVariableId)
+  BodyProductType(HirSpan)
   BodyAppliedType(BodyTypeId, HirSpan)
   BodyFunctionType(HirSpan, BodyTypeId)
 } derive(Eq, Debug, ToJson, FromJson)

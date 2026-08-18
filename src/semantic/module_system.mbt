@@ -1735,8 +1735,18 @@ fn callable_abi_write_shape(output : Buffer, shape : PlannedValueShape) -> Unit 
     V128PlannedValueShape => 15
     Swar32PlannedValueShape => 16
     Swar64PlannedValueShape => 17
+    ProductPlannedValueShape(_) => 18
   }
   callable_abi_write_int(output, tag)
+  match shape {
+    ProductPlannedValueShape(fields) => {
+      callable_abi_write_int(output, fields.length())
+      for field in fields {
+        callable_abi_write_shape(output, field)
+      }
+    }
+    _ => ()
+  }
 }
 
 ///|
@@ -1848,6 +1858,15 @@ fn callable_abi_write_type(
       SelfType(declaration) => {
         callable_abi_write_int(output, 5)
         callable_abi_write_declaration_identity(output, identities, declaration)
+      }
+      ProductType(fields) => {
+        callable_abi_write_int(output, 8)
+        callable_abi_write_int(output, fields.length)
+        let mut index = fields.length
+        while index > 0 {
+          index -= 1
+          types.push(resolved.type_arguments[fields.start + index])
+        }
       }
       AppliedType(base, arguments) => {
         callable_abi_write_int(output, 6)
@@ -2374,6 +2393,46 @@ fn frozen_body_type_to_resolved(
   match inferred.type_term(root) {
     BodyErrorType | BodyVariableType(_) => resolved.error_type
     BodyResolvedType(type_) => type_
+    BodyProductType(fields) => {
+      let resolved_fields : Array[ResolvedTypeId] = []
+      for index in 0..<fields.length {
+        resolved_fields.push(
+          frozen_body_type_to_resolved(
+            resolved,
+            inferred,
+            inferred.type_arguments[fields.start + index],
+          ),
+        )
+      }
+      for index, existing in resolved.types {
+        match existing {
+          ProductType(candidate_fields) if candidate_fields.length ==
+            resolved_fields.length() => {
+            let mut same = true
+            for field_index in 0..<candidate_fields.length {
+              if resolved.type_arguments[candidate_fields.start + field_index] !=
+                resolved_fields[field_index] {
+                same = false
+                break
+              }
+            }
+            if same {
+              return index
+            }
+          }
+          _ => ()
+        }
+      }
+      let start = resolved.type_arguments.length()
+      for field in resolved_fields {
+        resolved.type_arguments.push(field)
+      }
+      let result = resolved.types.length()
+      resolved.types.push(
+        ProductType({ start, length: resolved_fields.length() }),
+      )
+      result
+    }
     BodyAppliedType(base, arguments) => {
       let resolved_base = frozen_body_type_to_resolved(resolved, inferred, base)
       let resolved_arguments : Array[ResolvedTypeId] = []
@@ -2662,6 +2721,18 @@ fn frozen_impl_type_is_visible(
       NominalType(declaration) | TraitType(declaration) =>
         return semantic_id_module(declaration) != resolved.module_id ||
           exported.contains(declaration)
+      ProductType(fields) => {
+        for index in 0..<fields.length {
+          if !frozen_impl_type_is_visible(
+              resolved,
+              resolved.type_arguments[fields.start + index],
+              exported,
+            ) {
+            return false
+          }
+        }
+        return true
+      }
       AppliedType(base, arguments) => {
         for index in 0..<arguments.length {
           if !frozen_impl_type_is_visible(

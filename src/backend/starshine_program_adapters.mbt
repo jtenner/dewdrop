@@ -1025,6 +1025,7 @@ fn starshine_program_adapter_resolved_shape(
 ) -> @semantic.PlannedValueShape {
   @semantic.planned_value_shape_from_resolved_types(
     lowering.resolved_types,
+    lowering.resolved_type_arguments,
     root,
   )
 }

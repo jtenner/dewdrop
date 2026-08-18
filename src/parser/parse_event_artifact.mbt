@@ -495,6 +495,14 @@ fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
       parse_write_offset(writer, offset)
       parse_write_offset(writer, name_offset)
     }
+    ProductType(fields, offset) => {
+      writer.write_byte(4)
+      writer.write_var_u64(fields.length().to_uint64())
+      for field in fields {
+        parse_write_type(writer, field)
+      }
+      parse_write_offset(writer, offset)
+    }
     AppliedType(base, arguments, offset) => {
       writer.write_byte(1)
       parse_write_type(writer, base)
@@ -570,6 +578,19 @@ fn parse_read_type(
         parse_read_offset(reader, field + ".offset"),
         parse_read_offset(reader, field + ".name_offset"),
       )
+    4 => {
+      let count = reader.read_count(
+        parse_event_maximum_items,
+        field + ".field_count",
+      )
+      let fields : Array[TypeExpr] = []
+      for index in 0..<count {
+        fields.push(
+          parse_read_type(reader, field + ".field[\{index}]", depth + 1),
+        )
+      }
+      ProductType(fields, parse_read_offset(reader, field + ".offset"))
+    }
     _ => {
       reader.fail(field, "unknown type discriminant")
       NamedType("", 0UL)
@@ -1001,6 +1022,16 @@ fn parse_write_expr(writer : @cache_binary.Writer, value : Expr) -> Unit {
       writer.write_string(value)
       parse_write_offset(writer, offset)
     }
+    ProductExpr(elements, offset) => {
+      writer.write_byte(32)
+      parse_write_exprs(writer, elements)
+      parse_write_offset(writer, offset)
+    }
+    ArrayExpr(elements, offset) => {
+      writer.write_byte(33)
+      parse_write_exprs(writer, elements)
+      parse_write_offset(writer, offset)
+    }
     LambdaExpr(parameters, result, body, offset) => {
       writer.write_byte(15)
       parse_write_fn_parameters(writer, parameters)
@@ -1103,6 +1134,13 @@ fn parse_write_expr(writer : @cache_binary.Writer, value : Expr) -> Unit {
       writer.write_byte(31)
       parse_write_expr(writer, target)
       parse_write_expr(writer, index)
+      parse_write_offset(writer, offset)
+    }
+    ProductFieldExpr(target, index, arity, offset) => {
+      writer.write_byte(34)
+      parse_write_expr(writer, target)
+      writer.write_var_u64(index.to_uint64())
+      writer.write_var_u64(arity.to_uint64())
       parse_write_offset(writer, offset)
     }
   }
@@ -1302,6 +1340,23 @@ fn parse_read_expr(
       IndexExpr(
         parse_read_expr(reader, field + ".target", depth + 1),
         parse_read_expr(reader, field + ".index", depth + 1),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    32 =>
+      ProductExpr(
+        parse_read_exprs(reader, field + ".elements", depth + 1),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    33 =>
+      ArrayExpr(
+        parse_read_exprs(reader, field + ".elements", depth + 1),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    34 =>
+      ProductFieldExpr(
+        parse_read_expr(reader, field + ".target", depth + 1),
+        reader.read_count(32, field + ".index"),
+        reader.read_count(32, field + ".arity"),
         parse_read_offset(reader, field + ".offset"),
       )
     _ => {
@@ -2519,6 +2574,11 @@ fn parse_write_expression_error(
       parse_write_optional_token(writer, token)
       parse_write_offset(writer, offset)
     }
+    ExpectedArrayDelimiter(token, offset) => {
+      writer.write_byte(42)
+      parse_write_optional_token(writer, token)
+      parse_write_offset(writer, offset)
+    }
     ExpectedObjectField(token, offset) => {
       writer.write_byte(5)
       parse_write_optional_token(writer, token)
@@ -2658,6 +2718,15 @@ fn parse_write_expression_error(
     }
     UnclosedGroup(offset) => {
       writer.write_byte(34)
+      parse_write_offset(writer, offset)
+    }
+    InvalidProductArity(arity, offset) => {
+      writer.write_byte(43)
+      writer.write_var_u64(arity.to_uint64())
+      parse_write_offset(writer, offset)
+    }
+    UnclosedArray(offset) => {
+      writer.write_byte(44)
       parse_write_offset(writer, offset)
     }
     UnclosedCall(offset) => {
@@ -2832,6 +2901,17 @@ fn parse_read_expression_error(
         reader.read_string(parse_event_maximum_text, field + ".name"),
         parse_read_offset(reader, field + ".offset"),
       )
+    42 =>
+      ExpectedArrayDelimiter(
+        parse_read_optional_token(reader, field + ".token"),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    43 =>
+      InvalidProductArity(
+        reader.read_count(32, field + ".arity"),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    44 => UnclosedArray(parse_read_offset(reader, field + ".offset"))
     _ => {
       reader.fail(field, "unknown expression-error discriminant")
       MissingOperand(0UL)
@@ -2906,6 +2986,15 @@ fn parse_write_declaration_error(
     }
     EmptyTupleVariant(offset) => {
       writer.write_byte(14)
+      parse_write_offset(writer, offset)
+    }
+    InvalidProductTypeArity(arity, offset) => {
+      writer.write_byte(22)
+      writer.write_var_u64(arity.to_uint64())
+      parse_write_offset(writer, offset)
+    }
+    UnclosedProductType(offset) => {
+      writer.write_byte(23)
       parse_write_offset(writer, offset)
     }
     PublicImplNotAllowed(offset) => {
@@ -2998,6 +3087,12 @@ fn parse_read_declaration_error(
       ForeignLibraryMemberBodyNotAllowed(
         parse_read_offset(reader, field + ".offset"),
       )
+    22 =>
+      InvalidProductTypeArity(
+        reader.read_count(32, field + ".arity"),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    23 => UnclosedProductType(parse_read_offset(reader, field + ".offset"))
     _ => {
       reader.fail(field, "unknown declaration-error discriminant")
       ImportAfterDeclaration(0UL)

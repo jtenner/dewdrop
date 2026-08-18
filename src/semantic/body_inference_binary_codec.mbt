@@ -167,8 +167,18 @@ fn ib_write_shape(
       RefPlannedValueShape => 15
       GenericPlannedValueShape => 16
       NeverPlannedValueShape => 17
+      ProductPlannedValueShape(_) => 18
     },
   )
+  match value {
+    ProductPlannedValueShape(fields) => {
+      writer.write_var_u64(fields.length().to_uint64())
+      for field in fields {
+        ib_write_shape(writer, field)
+      }
+    }
+    _ => ()
+  }
 }
 
 ///|
@@ -195,6 +205,14 @@ fn ib_read_shape(
     15 => RefPlannedValueShape
     16 => GenericPlannedValueShape
     17 => NeverPlannedValueShape
+    18 => {
+      let count = reader.read_count(64, field + ".field_count")
+      let fields : Array[PlannedValueShape] = []
+      for index in 0..<count {
+        fields.push(ib_read_shape(reader, field + ".field[\{index}]"))
+      }
+      ProductPlannedValueShape(fields)
+    }
     _ => {
       reader.fail(field, "unknown value-shape discriminant")
       ErrorPlannedValueShape
@@ -216,6 +234,10 @@ fn ib_write_body_type(
     BodyVariableType(variable) => {
       writer.write_byte(2)
       ib_write_int(writer, variable)
+    }
+    BodyProductType(fields) => {
+      writer.write_byte(5)
+      ib_write_span(writer, fields)
     }
     BodyAppliedType(base, arguments) => {
       writer.write_byte(3)
@@ -243,6 +265,7 @@ fn ib_read_body_type(
       BodyAppliedType(ib_read_int(reader, field), ib_read_span(reader, field))
     4 =>
       BodyFunctionType(ib_read_span(reader, field), ib_read_int(reader, field))
+    5 => BodyProductType(ib_read_span(reader, field))
     _ => {
       reader.fail(field, "unknown body-type discriminant")
       BodyErrorType
@@ -2162,6 +2185,10 @@ fn ib_validate_type_graph(
   }
   for index, type_ in types {
     match type_ {
+      BodyProductType(span) =>
+        if !ib_span_valid(span, arguments.length()) {
+          return false
+        }
       BodyAppliedType(base, span) =>
         if !ib_type_valid(base, types.length()) ||
           !ib_span_valid(span, arguments.length()) {

@@ -1139,6 +1139,17 @@ fn BodyNameResolver::schedule_expression_children(
     HirLambdaExpr(lambda, _) => self.snapshot_lambda_environment(lambda)
     HirNameExpr(name, offset) =>
       self.resolve_expression_name(expression, name, offset, expectation)
+    HirProductExpr(elements, _) | HirArrayExpr(elements, _) => {
+      let mut index = elements.length
+      while index > 0 {
+        index -= 1
+        self.push_task(
+          name_task_visit_expression,
+          self.collected.expression_children[elements.start + index],
+          name_expect_value,
+        )
+      }
+    }
     HirImportAliasExpr(name, offset) =>
       match self.imports {
         Some(imports) =>
@@ -1231,7 +1242,9 @@ fn BodyNameResolver::schedule_expression_children(
       self.transfer_targets[self.expression_index(expression)] = target
       self.push_task(name_task_visit_expression, value, name_expect_value)
     }
-    HirPrefixExpr(_, value, _) | HirFieldExpr(value, _, _) =>
+    HirPrefixExpr(_, value, _)
+    | HirFieldExpr(value, _, _)
+    | HirProductFieldExpr(value, _, _, _) =>
       self.push_task(name_task_visit_expression, value, name_expect_value)
     HirQualifiedExpr(value, property, offset) => {
       if expectation == name_expect_qualified_root {

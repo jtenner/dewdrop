@@ -439,6 +439,19 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
   for index in 1..<type_length {
     match job.types[index] {
       BodyVariableType(_) => ()
+      BodyProductType(fields) => {
+        if !body_family_span_is_valid(fields, job.type_arguments.length()) {
+          return false
+        }
+        for field_index in fields.start..<(fields.start + fields.length) {
+          if !body_family_type_is_valid(
+              job.type_arguments[field_index],
+              type_length,
+            ) {
+            return false
+          }
+        }
+      }
       BodyAppliedType(base, arguments) => {
         if !body_family_type_is_valid(base, type_length) ||
           !body_family_span_is_valid(arguments, job.type_arguments.length()) {

@@ -149,6 +149,7 @@ pub enum ResolvedType {
   NominalType(DeclId)
   TraitType(DeclId)
   SelfType(DeclId)
+  ProductType(HirSpan)
   AppliedType(ResolvedTypeId, HirSpan)
   FunctionType(HirSpan, ResolvedTypeId)
 } derive(Eq, Debug)
@@ -259,7 +260,7 @@ pub fn ResolvedModuleTypes::arguments(
   type_ : ResolvedTypeId,
 ) -> ArrayView[ResolvedTypeId] {
   match self.types[type_] {
-    AppliedType(_, span) | FunctionType(span, _) =>
+    ProductType(span) | AppliedType(_, span) | FunctionType(span, _) =>
       self.type_arguments[span.start:span.start + span.length]
     _ => self.type_arguments[0:0]
   }
@@ -430,6 +431,52 @@ fn ResolvedTypeInterner::intern_self(
     SelfType(declaration),
     type_hash_mix(0x610001, declaration.hash()),
   )
+}
+
+///|
+fn ResolvedTypeInterner::product_matches(
+  self : ResolvedTypeInterner,
+  candidate : ResolvedTypeId,
+  fields : Array[ResolvedTypeId],
+) -> Bool {
+  match self.types[candidate] {
+    ProductType(span) => {
+      if span.length != fields.length() {
+        return false
+      }
+      for index in 0..<fields.length() {
+        if self.arguments[span.start + index] != fields[index] {
+          return false
+        }
+      }
+      true
+    }
+    _ => false
+  }
+}
+
+///|
+fn ResolvedTypeInterner::intern_product(
+  self : ResolvedTypeInterner,
+  fields : Array[ResolvedTypeId],
+) -> ResolvedTypeId {
+  let mut hash = 0x730001
+  for field in fields {
+    hash = type_hash_mix(hash, self.hashes[field])
+  }
+  hash = type_hash_mix(hash, fields.length())
+  let mut candidate = self.buckets.get(hash).unwrap_or(-1)
+  while candidate >= 0 {
+    if self.product_matches(candidate, fields) {
+      return candidate
+    }
+    candidate = self.next[candidate]
+  }
+  let start = self.arguments.length()
+  for field in fields {
+    self.arguments.push(field)
+  }
+  self.insert(ProductType({ start, length: fields.length() }), hash)
 }
 
 ///|

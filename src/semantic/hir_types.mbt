@@ -17,6 +17,7 @@ fn empty_hir_span(at : Int) -> HirSpan {
 pub enum HirTypeSyntax {
   NamedTypeSyntax(NameId, UInt64)
   QualifiedTypeSyntax(NameId, NameId, UInt64, UInt64)
+  ProductTypeSyntax(HirSpan, UInt64)
   AppliedTypeSyntax(HirTypeId, HirSpan, UInt64)
   FunctionTypeSyntax(HirSpan, HirTypeId, UInt64)
 } derive(Eq, Debug)
@@ -26,6 +27,7 @@ pub fn HirTypeSyntax::offset(self : HirTypeSyntax) -> UInt64 {
   match self {
     NamedTypeSyntax(_, offset)
     | QualifiedTypeSyntax(_, _, offset, _)
+    | ProductTypeSyntax(_, offset)
     | AppliedTypeSyntax(_, _, offset)
     | FunctionTypeSyntax(_, _, offset) => offset
   }
@@ -74,6 +76,18 @@ fn CollectionBuilder::lower_type(
           self.type_syntax_files.push(self.current_file)
           results.push(id)
         }
+        @parser.ProductType(fields, _) => {
+          sources.push(source)
+          states.push(1)
+          result_starts.push(results.length())
+          let mut index = fields.length()
+          while index > 0 {
+            index -= 1
+            sources.push(fields[index])
+            states.push(0)
+            result_starts.push(0)
+          }
+        }
         @parser.AppliedType(base, arguments, _) => {
           sources.push(source)
           states.push(1)
@@ -107,6 +121,22 @@ fn CollectionBuilder::lower_type(
       }
     } else {
       match source {
+        @parser.ProductType(fields, offset) => {
+          let field_start = self.type_arguments.length()
+          for index in 0..<fields.length() {
+            self.type_arguments.push(results[result_start + index])
+          }
+          let id = self.type_syntax.length()
+          self.type_syntax.push(
+            ProductTypeSyntax(
+              { start: field_start, length: fields.length() },
+              offset,
+            ),
+          )
+          self.type_syntax_files.push(self.current_file)
+          results.truncate(result_start)
+          results.push(id)
+        }
         @parser.AppliedType(_, arguments, offset) => {
           let base = results[result_start]
           let argument_start = self.type_arguments.length()

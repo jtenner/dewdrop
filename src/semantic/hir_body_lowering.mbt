@@ -175,6 +175,15 @@ fn CollectionBuilder::visit_expr_source(
       ignore(self.emit_expr(HirNameExpr(self.intern(name), offset)))
     @parser.ImportAliasExpr(name, offset) =>
       ignore(self.emit_expr(HirImportAliasExpr(self.intern(name), offset)))
+    @parser.ProductExpr(elements, _) | @parser.ArrayExpr(elements, _) => {
+      let start = self.body_expr_results.length()
+      self.push_body_task(body_finish_expr, source_index, start, 0)
+      let mut index = elements.length()
+      while index > 0 {
+        index -= 1
+        self.schedule_expr(elements[index])
+      }
+    }
     @parser.LambdaExpr(parameters, return_type, body, offset) =>
       ignore(
         self.emit_expr(
@@ -244,7 +253,8 @@ fn CollectionBuilder::visit_expr_source(
     | @parser.ContinueExpr(value, _)
     | @parser.PrefixExpr(_, value, _)
     | @parser.FieldExpr(value, _, _)
-    | @parser.QualifiedExpr(value, _, _) => {
+    | @parser.QualifiedExpr(value, _, _)
+    | @parser.ProductFieldExpr(value, _, _, _) => {
       let start = self.body_expr_results.length()
       self.push_body_task(body_finish_expr, source_index, start, 0)
       self.schedule_expr(value)
@@ -296,6 +306,21 @@ fn CollectionBuilder::finish_expr_source(
 ) -> Unit {
   let source = self.body_expr_sources[source_index]
   let expression = match source {
+    @parser.ProductExpr(elements, offset)
+    | @parser.ArrayExpr(elements, offset) => {
+      let start = self.expression_children.length()
+      for index in 0..<elements.length() {
+        self.expression_children.push(
+          self.body_expr_results[first_start + index],
+        )
+      }
+      let span = { start, length: elements.length() }
+      match source {
+        @parser.ProductExpr(_, _) => HirProductExpr(span, offset)
+        @parser.ArrayExpr(_, _) => HirArrayExpr(span, offset)
+        _ => abort("collection expression changed shape")
+      }
+    }
     @parser.ObjectExpr(fields, offset) =>
       HirObjectExpr(self.append_object_fields(fields, first_start), offset)
     @parser.ConstructExpr(_, fields, offset) => {
@@ -385,6 +410,13 @@ fn CollectionBuilder::finish_expr_source(
       HirQualifiedExpr(
         self.body_expr_results[first_start],
         self.intern(name),
+        offset,
+      )
+    @parser.ProductFieldExpr(_, index, arity, offset) =>
+      HirProductFieldExpr(
+        self.body_expr_results[first_start],
+        index,
+        arity,
         offset,
       )
     @parser.IndexExpr(_, _, offset) =>

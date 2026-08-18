@@ -189,41 +189,14 @@ fn starshine_specialized_shape(
     Some(value) => value
     None => return fallback
   }
-  match fallback {
-    @semantic.GenericPlannedValueShape if specialization.specialization_shapes.length ==
-      1 =>
-      return specialization.shapes[specialization.specialization_shapes.start]
-    _ => ()
-  }
-  let resolved_type = if type_ < -1 {
-    -type_ - 2
-  } else if type_ >= 0 && type_ < lowering.types.length() {
-    match lowering.types[type_] {
-      @semantic.BodyResolvedType(type_) => type_
-      _ => return fallback
-    }
-  } else {
-    return fallback
-  }
-  if resolved_type < 0 || resolved_type >= lowering.resolved_types.length() {
-    return fallback
-  }
-  let parameter = match lowering.resolved_types[resolved_type] {
-    @semantic.GenericParameterType(parameter) => parameter
-    _ => return fallback
-  }
-  let parameter_local = @semantic.semantic_id_local(parameter)
-  if parameter_local < specialization.generic_parameters.start ||
-    parameter_local >=
-    specialization.generic_parameters.start +
-    specialization.generic_parameters.length {
-    return fallback
-  }
-  let relative = parameter_local - specialization.generic_parameters.start
-  if relative < 0 || relative >= specialization.specialization_shapes.length {
-    return fallback
-  }
-  specialization.shapes[specialization.specialization_shapes.start + relative]
+  @semantic.specialize_planned_body_value_shape(
+    lowering,
+    type_,
+    fallback,
+    specialization.generic_parameters,
+    specialization.shapes,
+    specialization.specialization_shapes,
+  )
 }
 
 ///|
@@ -235,7 +208,7 @@ priv enum StarshineEmitTask {
   EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineLocalSet(Int, Int, @semantic.ExprId)
-  FinishStarshineCaptureSet(Int, Int)
+  FinishStarshineCaptureSet(Int, Int, @semantic.ExprId, Int)
   FinishStarshineCall(
     @semantic.DeclId,
     @semantic.ExprId,
@@ -251,6 +224,7 @@ priv enum StarshineEmitTask {
     @semantic.HirSpan
   )
   FinishStarshineParameterSelect(Int, Int)
+  FinishStarshineProduct(Int)
   FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
   FinishStarshineClosureCall(
@@ -264,6 +238,7 @@ priv enum StarshineEmitTask {
   )
   FinishStarshineRefIntrinsic(Int)
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
+  FinishStarshineArrayLiteral(@semantic.PlannedValueShape, Int, Int, Int, Int)
   FinishStarshineArray(
     Int,
     @semantic.PlannedValueShape?,
@@ -313,6 +288,8 @@ priv enum StarshineEmitTask {
     Int,
     Int
   )
+  FinishStarshineProductBox(@semantic.PlannedValueShape, Int)
+  FinishStarshineProductUnbox(@semantic.PlannedValueShape, Int)
   FinishStarshineStructNew(
     @semantic.PlannedProgramWasmGCLink?,
     Int,
@@ -341,8 +318,12 @@ priv enum StarshineEmitTask {
     Int,
     Int
   )
-  FinishStarshineControlTransfer(@semantic.ControlId, Bool)
-  FinishStarshineIf(@semantic.PlannedValueShape)
+  FinishStarshineControlTransfer(
+    @semantic.ControlId,
+    Bool,
+    @semantic.PlannedValueShape
+  )
+  FinishStarshineIf(@semantic.PlannedValueShape, Int)
   FinishStarshinePrefix(
     @semantic.HirPrefixOperator,
     @semantic.PlannedValueShape
@@ -419,6 +400,11 @@ fn starshine_shape_matches_storage(
         | @semantic.WasmFixedArrayRefStorage(_)
         | @semantic.WasmNullableNominalRefStorage(_)
         | @semantic.WasmNullableExternalNominalRefStorage(_) => true
+        _ => false
+      }
+    @semantic.ProductPlannedValueShape(_) =>
+      match storage {
+        @semantic.WasmNullableEqRefStorage => true
         _ => false
       }
     @semantic.ErrorPlannedValueShape
@@ -553,6 +539,110 @@ fn starshine_text_constant_instructions(
 }
 
 ///|
+fn starshine_shape_leaf_count(shape : @semantic.PlannedValueShape) -> Int {
+  match shape {
+    @semantic.ProductPlannedValueShape(fields) => {
+      let mut count = 0
+      for field in fields {
+        count += starshine_shape_leaf_count(field)
+      }
+      count
+    }
+    @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape => 0
+    _ => 1
+  }
+}
+
+///|
+fn starshine_append_shape_value_types(
+  output : Array[@lib.ValType],
+  shape : @semantic.PlannedValueShape,
+) -> Unit {
+  match shape {
+    @semantic.ProductPlannedValueShape(fields) =>
+      for field in fields {
+        starshine_append_shape_value_types(output, field)
+      }
+    _ =>
+      match starshine_shape_value_type(shape) {
+        Some(type_) => output.push(type_)
+        None => ()
+      }
+  }
+}
+
+///|
+fn starshine_append_product_local_gets(
+  output : Array[@lib.Instruction],
+  first : Int,
+  shape : @semantic.PlannedValueShape,
+) -> Unit {
+  let count = starshine_shape_leaf_count(shape)
+  for index in 0..<count {
+    output.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new((first + index).reinterpret_as_uint()),
+      ),
+    )
+  }
+}
+
+///|
+fn starshine_append_product_local_sets(
+  output : Array[@lib.Instruction],
+  first : Int,
+  shape : @semantic.PlannedValueShape,
+) -> Unit {
+  let mut count = starshine_shape_leaf_count(shape)
+  while count > 0 {
+    count -= 1
+    output.push(
+      @lib.Instruction::local_set(
+        @lib.LocalIdx::new((first + count).reinterpret_as_uint()),
+      ),
+    )
+  }
+}
+
+///|
+fn starshine_append_shape_drops(
+  output : Array[@lib.Instruction],
+  shape : @semantic.PlannedValueShape,
+) -> Unit {
+  for _ in 0..<starshine_shape_leaf_count(shape) {
+    output.push(@lib.Instruction::drop())
+  }
+}
+
+///|
+fn starshine_product_projection_root(
+  lowering : @semantic.PlannedModuleLowering,
+  expression : @semantic.ExprId,
+) -> (Int, Int)? {
+  let mut current = expression
+  let mut offset = 0
+  while current >= 0 && current < lowering.expressions.length() {
+    match lowering.expressions[current].kind {
+      @semantic.PlannedLocalGet(local_id) => return Some((local_id, offset))
+      @semantic.PlannedProductField(base, index, arity) =>
+        match lowering.expressions[base].shape {
+          @semantic.ProductPlannedValueShape(fields) if fields.length() == arity &&
+            index >= 0 &&
+            index < fields.length() => {
+            for field_index in 0..<index {
+              offset += starshine_shape_leaf_count(fields[field_index])
+            }
+            current = base
+          }
+          _ => return None
+        }
+      _ => return None
+    }
+  }
+  None
+}
+
+///|
 fn starshine_shape_value_type(
   shape : @semantic.PlannedValueShape,
 ) -> @lib.ValType? {
@@ -573,6 +663,7 @@ fn starshine_shape_value_type(
     @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape =>
       Some(@lib.ValType::eqref_null())
     @semantic.ErrorPlannedValueShape
+    | @semantic.ProductPlannedValueShape(_)
     | @semantic.UnitPlannedValueShape
     | @semantic.NeverPlannedValueShape => None
   }
@@ -1267,7 +1358,8 @@ fn starshine_variant_physical_matches(
     StarshineExpectedTupleFields(shapes) => {
       let mut expected_count = 0
       for shape in shapes {
-        if starshine_shape_value_type(shape) is Some(_) {
+        if starshine_shape_value_type(shape) is Some(_) ||
+          shape is @semantic.ProductPlannedValueShape(_) {
           expected_count += 1
         }
       }
@@ -1289,7 +1381,10 @@ fn starshine_variant_physical_matches(
     StarshineExpectedStructFields(field_ids, shapes) => {
       for source_index in 0..<field_ids.length() {
         if source_index >= shapes.length() ||
-          starshine_shape_value_type(shapes[source_index]) is None {
+          (
+            starshine_shape_value_type(shapes[source_index]) is None &&
+            !(shapes[source_index] is @semantic.ProductPlannedValueShape(_))
+          ) {
           continue
         }
         let mut found = false
@@ -1793,6 +1888,9 @@ fn starshine_pattern_uses_general_emission(
   while pending.length() > 0 {
     let pattern = pending.pop().unwrap()
     let planned = lowering.patterns[pattern]
+    if planned.shape is @semantic.ProductPlannedValueShape(_) {
+      return true
+    }
     match planned.selected_constructor {
       @semantic.StructInferredPatternConstructor(_, _) => return true
       _ => ()
@@ -1802,6 +1900,10 @@ fn starshine_pattern_uses_general_emission(
       @semantic.HirTuplePattern(_, arguments, _) =>
         for index in 0..<arguments.length {
           let child = lowering.pattern_children[arguments.start + index]
+          if lowering.patterns[child].shape
+            is @semantic.ProductPlannedValueShape(_) {
+            return true
+          }
           match lowering.patterns[child].source {
             @semantic.HirWildcardPattern(_)
             | @semantic.HirBindingPattern(_, _)
@@ -1812,6 +1914,10 @@ fn starshine_pattern_uses_general_emission(
       @semantic.HirStructPattern(_, fields, _, _, _) =>
         for index in 0..<fields.length {
           let child = lowering.pattern_fields[fields.start + index].pattern
+          if lowering.patterns[child].shape
+            is @semantic.ProductPlannedValueShape(_) {
+            return true
+          }
           match lowering.patterns[child].source {
             @semantic.HirWildcardPattern(_)
             | @semantic.HirBindingPattern(_, _)
@@ -1882,6 +1988,7 @@ fn starshine_general_match_pattern_instructions(
   body : @semantic.PlannedBodyLowering,
   root : @semantic.PatternId,
   scratch_local : Int,
+  product_ref_scratch : Int,
   local_indices : Array[Int],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
@@ -1934,17 +2041,54 @@ fn starshine_general_match_pattern_instructions(
                   local_indices[local_id] < 0 {
                   return Err(InvalidLocal(body.body, local_id))
                 }
+                let local_info = lowering.locals[body.locals.start + local_id]
+                let local_shape = starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  local_info.type_,
+                  local_info.shape,
+                )
                 append_starshine_instructions(output, value)
-                starshine_append_precise_nominal_local_cast(
-                  lowering, planned, program, body, local_id, -1, output,
-                )
-                output.push(
-                  @lib.Instruction::local_set(
-                    @lib.LocalIdx::new(
-                      local_indices[local_id].reinterpret_as_uint(),
+                if local_shape is @semantic.ProductPlannedValueShape(_) {
+                  if product_ref_scratch < 0 {
+                    return Err(UnsupportedExpression(body.body, -428))
+                  }
+                  output.push(
+                    @lib.Instruction::local_set(
+                      @lib.LocalIdx::new(
+                        product_ref_scratch.reinterpret_as_uint(),
+                      ),
                     ),
-                  ),
-                )
+                  )
+                  match
+                    starshine_append_product_unbox(
+                      output,
+                      planned,
+                      program,
+                      body.body,
+                      product_ref_scratch,
+                      local_shape,
+                    ) {
+                    Ok(_) => ()
+                    Err(error) => return Err(error)
+                  }
+                  starshine_append_product_local_sets(
+                    output,
+                    local_indices[local_id],
+                    local_shape,
+                  )
+                } else {
+                  starshine_append_precise_nominal_local_cast(
+                    lowering, planned, program, body, local_id, -1, output,
+                  )
+                  output.push(
+                    @lib.Instruction::local_set(
+                      @lib.LocalIdx::new(
+                        local_indices[local_id].reinterpret_as_uint(),
+                      ),
+                    ),
+                  )
+                }
               }
               _ => ()
             }
@@ -2600,6 +2744,7 @@ fn starshine_match_pattern_instructions(
   body : @semantic.PlannedBodyLowering,
   pattern : @semantic.PatternId,
   scratch_local : Int,
+  product_ref_scratch : Int,
   local_indices : Array[Int],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
@@ -2609,7 +2754,7 @@ fn starshine_match_pattern_instructions(
   if starshine_pattern_uses_general_emission(lowering, pattern) {
     starshine_general_match_pattern_instructions(
       lowering, planned, program, program_module_index, body, pattern, scratch_local,
-      local_indices, generic_specialization,
+      product_ref_scratch, local_indices, generic_specialization,
     )
   } else {
     starshine_simple_match_pattern_instructions(
@@ -3068,6 +3213,7 @@ fn starshine_local_slot_carrier(
         None => Some(StarshineEqRefLocalSlot)
       }
     @semantic.ErrorPlannedValueShape
+    | @semantic.ProductPlannedValueShape(_)
     | @semantic.UnitPlannedValueShape
     | @semantic.NeverPlannedValueShape => None
   }
@@ -3140,23 +3286,31 @@ fn starshine_body_locals(
           planned_local.type_,
           planned_local.shape,
         )
-        let parameter_type = if specialized_shape != planned_local.shape {
-          starshine_shape_value_type(specialized_shape)
-        } else {
-          starshine_body_value_type(
-            lowering,
-            planned,
-            program,
-            planned_local.type_,
-            planned_local.shape,
-          )
-        }
-        match parameter_type {
-          Some(_) => {
+        match specialized_shape {
+          @semantic.ProductPlannedValueShape(_) => {
             local_indices[local_id] = parameter_count
-            parameter_count += 1
+            parameter_count += starshine_shape_leaf_count(specialized_shape)
           }
-          None => ()
+          _ => {
+            let parameter_type = if specialized_shape != planned_local.shape {
+              starshine_shape_value_type(specialized_shape)
+            } else {
+              starshine_body_value_type(
+                lowering,
+                planned,
+                program,
+                planned_local.type_,
+                planned_local.shape,
+              )
+            }
+            match parameter_type {
+              Some(_) => {
+                local_indices[local_id] = parameter_count
+                parameter_count += 1
+              }
+              None => ()
+            }
+          }
         }
       }
       @semantic.LetLocal | @semantic.PatternLocal => {
@@ -3166,10 +3320,33 @@ fn starshine_body_locals(
         let cell_slot = starshine_local_capture_cell_slot(
           lowering, body, local_id,
         )
+        let specialized_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          planned_local.type_,
+          planned_local.shape,
+        )
+        if specialized_shape is @semantic.ProductPlannedValueShape(_) {
+          local_indices[local_id] = parameter_count + body_local_types.length()
+          let start = body_local_types.length()
+          if cell_slot >= 0 {
+            body_local_types.push(@lib.ValType::eqref_null())
+            body_local_types.push(@lib.ValType::eqref_null())
+          }
+          starshine_append_shape_value_types(
+            body_local_types, specialized_shape,
+          )
+          for _ in start..<body_local_types.length() {
+            slot_carriers.push(StarshineUniqueLocalSlot(local_id))
+            slot_last_uses.push(-1)
+            slot_reusable.push(false)
+          }
+          continue
+        }
         let local_type = if cell_slot >= 0 {
           Some(@lib.ValType::eqref_null())
-        } else if !(planned_local.shape is @semantic.RefPlannedValueShape) {
-          starshine_shape_value_type(planned_local.shape)
+        } else if !(specialized_shape is @semantic.RefPlannedValueShape) {
+          starshine_shape_value_type(specialized_shape)
         } else {
           match
             starshine_precise_nominal_local_type_index(
@@ -3270,6 +3447,15 @@ fn starshine_body_locals(
   let mut map_entry_scratch_index = -1
   let mut map_previous_scratch_index = -1
   let mut map_growth_index_scratch_index = -1
+  for
+    pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
+    if lowering.patterns[pattern].shape is @semantic.ProductPlannedValueShape(_) {
+      fixed_array_ref_scratch_index = parameter_count +
+        body_local_types.length()
+      body_local_types.push(@lib.ValType::eqref_null())
+      break
+    }
+  }
   let mut maximum_control = -1
   for
     expression in body.expressions.start..<(body.expressions.start +
@@ -3296,20 +3482,33 @@ fn starshine_body_locals(
           state_source.type_,
           state_source.shape,
         )
-        match
-          starshine_body_value_type(
-            lowering,
-            planned,
-            program,
-            state_source.type_,
-            state_shape,
-          ) {
-          Some(type_) => {
+        match state_shape {
+          @semantic.ProductPlannedValueShape(_) => {
             control_state_local_indices[control] = parameter_count +
               body_local_types.length()
-            body_local_types.push(type_)
+            starshine_append_shape_value_types(body_local_types, state_shape)
+            if fixed_array_ref_scratch_index < 0 {
+              fixed_array_ref_scratch_index = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::eqref_null())
+            }
           }
-          None => ()
+          _ =>
+            match
+              starshine_body_value_type(
+                lowering,
+                planned,
+                program,
+                state_source.type_,
+                state_shape,
+              ) {
+              Some(type_) => {
+                control_state_local_indices[control] = parameter_count +
+                  body_local_types.length()
+                body_local_types.push(type_)
+              }
+              None => ()
+            }
         }
         let result_source = lowering.expressions[expression]
         let result_shape = starshine_specialized_shape(
@@ -3318,20 +3517,28 @@ fn starshine_body_locals(
           result_source.type_,
           result_source.shape,
         )
-        match
-          starshine_body_value_type(
-            lowering,
-            planned,
-            program,
-            result_source.type_,
-            result_shape,
-          ) {
-          Some(type_) => {
+        match result_shape {
+          @semantic.ProductPlannedValueShape(_) => {
             control_result_local_indices[control] = parameter_count +
               body_local_types.length()
-            body_local_types.push(type_)
+            starshine_append_shape_value_types(body_local_types, result_shape)
           }
-          None => ()
+          _ =>
+            match
+              starshine_body_value_type(
+                lowering,
+                planned,
+                program,
+                result_source.type_,
+                result_shape,
+              ) {
+              Some(type_) => {
+                control_result_local_indices[control] = parameter_count +
+                  body_local_types.length()
+                body_local_types.push(type_)
+              }
+              None => ()
+            }
         }
       }
       @semantic.PlannedDirectCall(declaration, _, _, _)
@@ -3381,6 +3588,20 @@ fn starshine_body_locals(
           body_local_types.length()
         body_local_types.push(@lib.ValType::eqref_null())
       }
+      @semantic.PlannedIfExpression(_, _, _) => {
+        let result_source = lowering.expressions[expression]
+        let result_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          result_source.type_,
+          result_source.shape,
+        )
+        if result_shape is @semantic.ProductPlannedValueShape(_) {
+          match_result_local_indices[expression] = parameter_count +
+            body_local_types.length()
+          starshine_append_shape_value_types(body_local_types, result_shape)
+        }
+      }
       @semantic.PlannedMatchExpression(scrutinee, _) => {
         let scrutinee_source = lowering.expressions[scrutinee]
         let scrutinee_shape = starshine_specialized_shape(
@@ -3408,26 +3629,113 @@ fn starshine_body_locals(
           result_source.type_,
           result_source.shape,
         )
-        match starshine_shape_value_type(result_shape) {
-          Some(type_) => {
+        match result_shape {
+          @semantic.ProductPlannedValueShape(_) => {
             match_result_local_indices[expression] = parameter_count +
               body_local_types.length()
-            body_local_types.push(type_)
+            starshine_append_shape_value_types(body_local_types, result_shape)
           }
-          None => ()
+          _ =>
+            match starshine_shape_value_type(result_shape) {
+              Some(type_) => {
+                match_result_local_indices[expression] = parameter_count +
+                  body_local_types.length()
+                body_local_types.push(type_)
+              }
+              None => ()
+            }
+        }
+      }
+      @semantic.PlannedStructNew(_, _, fields)
+      | @semantic.PlannedVariantStructNew(_, _, fields) =>
+        for field_index in 0..<fields.length {
+          let value = lowering.object_fields[fields.start + field_index].value
+          let value_source = lowering.expressions[value]
+          let value_shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            value_source.type_,
+            value_source.shape,
+          )
+          if value_shape is @semantic.ProductPlannedValueShape(_) &&
+            match_result_local_indices[value] < 0 {
+            match_result_local_indices[value] = parameter_count +
+              body_local_types.length()
+            starshine_append_shape_value_types(body_local_types, value_shape)
+          }
+        }
+      @semantic.PlannedVariantTupleNew(_, _, arguments) =>
+        for argument_index in 0..<arguments.length {
+          let value = lowering.expression_children[arguments.start +
+            argument_index]
+          let value_source = lowering.expressions[value]
+          let value_shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            value_source.type_,
+            value_source.shape,
+          )
+          if value_shape is @semantic.ProductPlannedValueShape(_) &&
+            match_result_local_indices[value] < 0 {
+            match_result_local_indices[value] = parameter_count +
+              body_local_types.length()
+            starshine_append_shape_value_types(body_local_types, value_shape)
+          }
+        }
+      @semantic.PlannedFieldSet(_, _, value) => {
+        let value_source = lowering.expressions[value]
+        let value_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          value_source.type_,
+          value_source.shape,
+        )
+        if value_shape is @semantic.ProductPlannedValueShape(_) &&
+          match_result_local_indices[value] < 0 {
+          match_result_local_indices[value] = parameter_count +
+            body_local_types.length()
+          starshine_append_shape_value_types(body_local_types, value_shape)
+        }
+      }
+      @semantic.PlannedCaptureGet(_)
+      | @semantic.PlannedFieldGet(_, _, _)
+      | @semantic.PlannedModuleValueGet(_, _) =>
+        if lowering.expressions[expression].shape
+          is @semantic.ProductPlannedValueShape(_) &&
+          fixed_array_ref_scratch_index < 0 {
+          fixed_array_ref_scratch_index = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+      @semantic.PlannedCaptureSet(_, value) => {
+        let value_source = lowering.expressions[value]
+        let value_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          value_source.type_,
+          value_source.shape,
+        )
+        if value_shape is @semantic.ProductPlannedValueShape(_) {
+          match_result_local_indices[expression] = parameter_count +
+            body_local_types.length()
+          starshine_append_shape_value_types(body_local_types, value_shape)
         }
       }
       @semantic.PlannedFixedArrayMake(_, _, _)
-      | @semantic.PlannedFixedArrayGet(_, _, _) =>
+      | @semantic.PlannedFixedArrayGet(_, _, _) => {
         if fixed_array_ref_scratch_index < 0 {
           fixed_array_ref_scratch_index = parameter_count +
             body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if fixed_array_i32_scratch_index < 0 {
           fixed_array_i32_scratch_index = parameter_count +
             body_local_types.length()
           body_local_types.push(@lib.ValType::i32())
         }
-      @semantic.PlannedArrayWithCapacity(_, _, _)
+      }
+      @semantic.PlannedArrayLiteral(_, _, _)
+      | @semantic.PlannedArrayWithCapacity(_, _, _)
       | @semantic.PlannedArrayGet(_, _, _, _)
       | @semantic.PlannedArrayGetUnchecked(_, _, _)
       | @semantic.PlannedArraySet(_, _, _, _)
@@ -3470,6 +3778,8 @@ fn starshine_body_locals(
           fixed_array_ref_scratch_index = parameter_count +
             body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
+        }
+        if fixed_array_i32_scratch_index < 0 {
           fixed_array_i32_scratch_index = parameter_count +
             body_local_types.length()
           body_local_types.push(@lib.ValType::i32())
@@ -3479,6 +3789,33 @@ fn starshine_body_locals(
           body_local_types.push(@lib.ValType::eqref_null())
         }
         match lowering.expressions[expression].kind {
+          @semantic.PlannedArrayLiteral(elements, element_type, shape) =>
+            if elements.length > 0 {
+              let element_shape = starshine_specialized_shape(
+                lowering, generic_specialization, element_type, shape,
+              )
+              match element_shape {
+                @semantic.ProductPlannedValueShape(_) => {
+                  map_value_local_indices[expression] = parameter_count +
+                    body_local_types.length()
+                  body_local_types.push(@lib.ValType::eqref_null())
+                  match_result_local_indices[expression] = parameter_count +
+                    body_local_types.length()
+                  starshine_append_shape_value_types(
+                    body_local_types, element_shape,
+                  )
+                }
+                _ =>
+                  match starshine_shape_value_type(element_shape) {
+                    Some(type_) => {
+                      map_value_local_indices[expression] = parameter_count +
+                        body_local_types.length()
+                      body_local_types.push(type_)
+                    }
+                    None => ()
+                  }
+              }
+            }
           @semantic.PlannedArraySet(_, _, value, shape)
           | @semantic.PlannedArraySetUnchecked(_, _, value, shape)
           | @semantic.PlannedArrayPush(_, value, shape)
@@ -3772,7 +4109,9 @@ fn starshine_value_carrier(shape : @semantic.PlannedValueShape) -> Int {
     @semantic.F32PlannedValueShape => 2
     @semantic.F64PlannedValueShape => 3
     @semantic.V128PlannedValueShape => 4
-    @semantic.RefPlannedValueShape | @semantic.GenericPlannedValueShape => 5
+    @semantic.RefPlannedValueShape
+    | @semantic.GenericPlannedValueShape
+    | @semantic.ProductPlannedValueShape(_) => 5
     _ => -1
   }
 }
@@ -4448,6 +4787,50 @@ fn starshine_capture_cell_reference_instructions(
 }
 
 ///|
+fn starshine_product_box_from_locals(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  body_id : @semantic.BodyId,
+  first_local : Int,
+  shape : @semantic.PlannedValueShape,
+) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
+  let leaves : Array[@semantic.PlannedValueShape] = []
+  starshine_product_leaf_shapes(shape, leaves)
+  let output : Array[@lib.Instruction] = []
+  for index, leaf in leaves {
+    output.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new((first_local + index).reinterpret_as_uint()),
+      ),
+    )
+    let slot = starshine_product_box_slot(leaf)
+    if slot >= 0 {
+      let erased_type = match program {
+        Some(link) if slot < link.erased_box_type_indices.length() =>
+          link.erased_box_type_indices[slot]
+        _ => -1
+      }
+      if erased_type < 0 {
+        return Err(UnsupportedExpression(body_id, -422))
+      }
+      output.push(
+        @lib.Instruction::struct_new(
+          @lib.TypeIdx::new(erased_type.reinterpret_as_uint()),
+        ),
+      )
+    }
+  }
+  let box_type = starshine_fixed_array_base_for_body(planned, program) + 5
+  output.push(
+    @lib.Instruction::array_new_fixed(
+      @lib.TypeIdx::new(box_type.reinterpret_as_uint()),
+      @lib.U32::new(leaves.length().reinterpret_as_uint()),
+    ),
+  )
+  Ok(output)
+}
+
+///|
 fn starshine_capture_source_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -4456,6 +4839,7 @@ fn starshine_capture_source_instructions(
   current_lambda : @semantic.LambdaId,
   source : @semantic.LambdaCaptureSource,
   local_indices : Array[Int],
+  generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.PlannedBodyLowering,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let direct_local = match source {
@@ -4467,6 +4851,31 @@ fn starshine_capture_source_instructions(
   if direct_local >= 0 {
     if direct_local >= local_indices.length() || local_indices[direct_local] < 0 {
       return Err(InvalidLocal(body.body, direct_local))
+    }
+    let local_info = lowering.locals[body.locals.start + direct_local]
+    let local_shape = starshine_specialized_shape(
+      lowering,
+      generic_specialization,
+      local_info.type_,
+      local_info.shape,
+    )
+    if starshine_local_capture_cell_slot(lowering, body, direct_local) >= 0 {
+      return Ok([
+        @lib.Instruction::local_get(
+          @lib.LocalIdx::new(local_indices[direct_local].reinterpret_as_uint()),
+        ),
+      ])
+    }
+    match local_shape {
+      @semantic.ProductPlannedValueShape(_) =>
+        return starshine_product_box_from_locals(
+          planned,
+          program,
+          body.body,
+          local_indices[direct_local],
+          local_shape,
+        )
+      _ => ()
     }
     return Ok([
       @lib.Instruction::local_get(
@@ -4671,9 +5080,76 @@ fn starshine_program_adapter_shape_code(
     @semantic.V128PlannedValueShape => 4
     @semantic.RefPlannedValueShape
     | @semantic.GenericPlannedValueShape
+    | @semantic.ProductPlannedValueShape(_)
     | @semantic.ErrorPlannedValueShape => 5
     @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape => -1
   }
+}
+
+///|
+fn starshine_program_append_shape_codes(
+  shape : @semantic.PlannedValueShape,
+  output : Array[Int],
+) -> Unit {
+  match shape {
+    @semantic.ProductPlannedValueShape(fields) =>
+      for field in fields {
+        starshine_program_append_shape_codes(field, output)
+      }
+    @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape => ()
+    _ => output.push(starshine_program_adapter_shape_code(shape))
+  }
+}
+
+///|
+fn starshine_program_append_specialized_resolved_codes(
+  lowering : @semantic.PlannedModuleLowering,
+  specialization : StarshineGenericSpecialization,
+  type_ : @semantic.ResolvedTypeId,
+  output : Array[Int],
+) -> Unit {
+  if type_ >= 0 && type_ < lowering.resolved_types.length() {
+    match lowering.resolved_types[type_] {
+      @semantic.GenericParameterType(parameter) => {
+        let parameter_index = @semantic.semantic_id_local(parameter)
+        if parameter_index >= specialization.generic_parameters.start &&
+          parameter_index <
+          specialization.generic_parameters.start +
+          specialization.generic_parameters.length {
+          let relative = parameter_index -
+            specialization.generic_parameters.start
+          if relative < specialization.specialization_shapes.length {
+            starshine_program_append_shape_codes(
+              specialization.shapes[specialization.specialization_shapes.start +
+              relative],
+              output,
+            )
+            return
+          }
+        }
+      }
+      @semantic.ProductType(fields) => {
+        for index in 0..<fields.length {
+          starshine_program_append_specialized_resolved_codes(
+            lowering,
+            specialization,
+            lowering.resolved_type_arguments[fields.start + index],
+            output,
+          )
+        }
+        return
+      }
+      _ => ()
+    }
+  }
+  starshine_program_append_shape_codes(
+    @semantic.planned_value_shape_from_resolved_types(
+      lowering.resolved_types,
+      lowering.resolved_type_arguments,
+      type_,
+    ),
+    output,
+  )
 }
 
 ///|
@@ -4780,52 +5256,20 @@ fn starshine_program_specialized_closure_signatures(
     @semantic.FunctionType(parameters, result) => (parameters, result)
     _ => return None
   }
-  let local_signature = module_.function_type_by_resolved[function_type]
-  let mut fragment = None
-  for candidate in module_.function_types {
-    if candidate.signature_type_index == local_signature {
-      fragment = Some(candidate)
-      break
-    }
-  }
-  let fragment = match fragment {
-    Some(value) => value
-    None => return None
-  }
+  ignore(module_)
   let parameter_codes : Array[Int] = []
-  let mut runtime_index = 0
   for index in 0..<resolved_parameters.length {
-    let resolved_parameter = lowering.resolved_type_arguments[resolved_parameters.start +
-      index]
-    let fallback = if runtime_index < fragment.parameters.length {
-      starshine_program_adapter_value_code(
-        module_.function_value_types[fragment.parameters.start + runtime_index],
-      )
-    } else {
-      -1
-    }
-    let code = starshine_program_specialized_type_code(
-      lowering, specialization, resolved_parameter, fallback,
+    starshine_program_append_specialized_resolved_codes(
+      lowering,
+      specialization,
+      lowering.resolved_type_arguments[resolved_parameters.start + index],
+      parameter_codes,
     )
-    if code >= 0 {
-      parameter_codes.push(code)
-      runtime_index += 1
-    }
   }
   let result_codes : Array[Int] = []
-  let fallback_result = if fragment.results.length == 1 {
-    starshine_program_adapter_value_code(
-      module_.function_value_types[fragment.results.start],
-    )
-  } else {
-    -1
-  }
-  let result_code = starshine_program_specialized_type_code(
-    lowering, specialization, resolved_result, fallback_result,
+  starshine_program_append_specialized_resolved_codes(
+    lowering, specialization, resolved_result, result_codes,
   )
-  if result_code >= 0 {
-    result_codes.push(result_code)
-  }
   let direct = starshine_program_find_signature_by_codes(
     planned, parameter_codes, result_codes,
   )
@@ -5504,12 +5948,40 @@ fn starshine_emit_body_instructions(
             if current_lambda < 0 {
               return Err(UnsupportedExpression(body.body, expression))
             }
-            results.push(
-              starshine_capture_get_instructions(
-                lowering, planned, program, program_module_index, current_lambda,
-                capture,
-              ),
+            let output = starshine_capture_get_instructions(
+              lowering, planned, program, program_module_index, current_lambda, capture,
             )
+            let capture_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              source.type_,
+              source.shape,
+            )
+            if capture_shape is @semantic.ProductPlannedValueShape(_) {
+              if fixed_array_ref_scratch_index < 0 {
+                return Err(UnsupportedExpression(body.body, -423))
+              }
+              output.push(
+                @lib.Instruction::local_set(
+                  @lib.LocalIdx::new(
+                    fixed_array_ref_scratch_index.reinterpret_as_uint(),
+                  ),
+                ),
+              )
+              match
+                starshine_append_product_unbox(
+                  output,
+                  planned,
+                  program,
+                  body.body,
+                  fixed_array_ref_scratch_index,
+                  capture_shape,
+                ) {
+                Ok(_) => ()
+                Err(error) => return Err(error)
+              }
+            }
+            results.push(output)
           }
           @semantic.PlannedLambdaClosure(lambda, captures) => {
             let function_index = starshine_lambda_function_index(
@@ -5542,6 +6014,7 @@ fn starshine_emit_body_instructions(
                   current_lambda,
                   lowering.captures[global_capture].source,
                   local_indices,
+                  generic_specialization,
                   body,
                 ) {
                 Ok(instructions) =>
@@ -5585,7 +6058,14 @@ fn starshine_emit_body_instructions(
             }
           }
           @semantic.PlannedCaptureSet(capture, value) => {
-            tasks.push(FinishStarshineCaptureSet(current_lambda, capture))
+            tasks.push(
+              FinishStarshineCaptureSet(
+                current_lambda,
+                capture,
+                value,
+                match_result_local_indices[expression],
+              ),
+            )
             tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedLocalGet(local_id) => {
@@ -5612,6 +6092,66 @@ fn starshine_emit_body_instructions(
               local_indices[local_id] < 0 {
               return Err(InvalidLocal(body.body, local_id))
             }
+            let local_info = lowering.locals[body.locals.start + local_id]
+            let local_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              local_info.type_,
+              local_info.shape,
+            )
+            let cell_slot = starshine_local_capture_cell_slot(
+              lowering, body, local_id,
+            )
+            if local_shape is @semantic.ProductPlannedValueShape(_) {
+              let output : Array[@lib.Instruction] = []
+              if cell_slot >= 0 {
+                let cell_type = starshine_capture_cell_type_index(
+                  planned, program, program_module_index, cell_slot,
+                )
+                output.push(
+                  @lib.Instruction::local_get(
+                    @lib.LocalIdx::new(
+                      local_indices[local_id].reinterpret_as_uint(),
+                    ),
+                  ),
+                )
+                output.push(starshine_match_cast(cell_type))
+                output.push(
+                  starshine_struct_get_instruction(
+                    cell_type,
+                    0,
+                    @semantic.wasmgc_capture_cell_storage(cell_slot),
+                  ),
+                )
+                output.push(
+                  @lib.Instruction::local_set(
+                    @lib.LocalIdx::new(
+                      (local_indices[local_id] + 1).reinterpret_as_uint(),
+                    ),
+                  ),
+                )
+                match
+                  starshine_append_product_unbox(
+                    output,
+                    planned,
+                    program,
+                    body.body,
+                    local_indices[local_id] + 1,
+                    local_shape,
+                  ) {
+                  Ok(_) => ()
+                  Err(error) => return Err(error)
+                }
+              } else {
+                starshine_append_product_local_gets(
+                  output,
+                  local_indices[local_id],
+                  local_shape,
+                )
+              }
+              results.push(output)
+              continue
+            }
             let output = [
               @lib.Instruction::local_get(
                 @lib.LocalIdx::new(
@@ -5619,9 +6159,6 @@ fn starshine_emit_body_instructions(
                 ),
               ),
             ]
-            let cell_slot = starshine_local_capture_cell_slot(
-              lowering, body, local_id,
-            )
             if cell_slot >= 0 {
               let cell_type = starshine_capture_cell_type_index(
                 planned, program, program_module_index, cell_slot,
@@ -5664,6 +6201,7 @@ fn starshine_emit_body_instructions(
                   source.type_,
                   source.shape,
                 ),
+                match_result_local_indices[expression],
               ),
             )
             tasks.push(EmitStarshineExpression(alternative))
@@ -5929,6 +6467,56 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
             tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedProductNew(elements) => {
+            tasks.push(FinishStarshineProduct(elements.length))
+            let mut index = elements.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[elements.start + index],
+                ),
+              )
+            }
+          }
+          @semantic.PlannedArrayLiteral(elements, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
+            match element_shape {
+              @semantic.ProductPlannedValueShape(_) =>
+                tasks.push(
+                  FinishStarshineArrayLiteral(
+                    element_shape,
+                    elements.length,
+                    map_ref_scratch_index,
+                    map_value_local_indices[expression],
+                    match_result_local_indices[expression],
+                  ),
+                )
+              _ =>
+                tasks.push(
+                  FinishStarshineArray(
+                    48,
+                    Some(element_shape),
+                    elements.length,
+                    fixed_array_ref_scratch_index,
+                    map_ref_scratch_index,
+                    fixed_array_i32_scratch_index,
+                    map_value_local_indices[expression],
+                  ),
+                )
+            }
+            let mut index = elements.length
+            while index > 0 {
+              index -= 1
+              tasks.push(
+                EmitStarshineExpression(
+                  lowering.expression_children[elements.start + index],
+                ),
+              )
+            }
           }
           @semantic.PlannedArrayNew(element_type, shape) => {
             let element_shape = starshine_specialized_shape(
@@ -7106,6 +7694,14 @@ fn starshine_emit_body_instructions(
                   value_shape,
                   planned_field.storage,
                 ) {
+                if value_shape is @semantic.ProductPlannedValueShape(_) {
+                  tasks.push(
+                    FinishStarshineProductBox(
+                      value_shape,
+                      match_result_local_indices[value],
+                    ),
+                  )
+                }
                 tasks.push(EmitStarshineExpression(value))
               } else {
                 tasks.push(EmitStarshineDefaultStorage(planned_field.storage))
@@ -7219,6 +7815,26 @@ fn starshine_emit_body_instructions(
             let mut value_index = values.length()
             while value_index > 0 {
               value_index -= 1
+              match values[value_index] {
+                EmitStarshineExpression(value) => {
+                  let value_source = lowering.expressions[value]
+                  let value_shape = starshine_specialized_shape(
+                    lowering,
+                    generic_specialization,
+                    value_source.type_,
+                    value_source.shape,
+                  )
+                  if value_shape is @semantic.ProductPlannedValueShape(_) {
+                    tasks.push(
+                      FinishStarshineProductBox(
+                        value_shape,
+                        match_result_local_indices[value],
+                      ),
+                    )
+                  }
+                }
+                _ => ()
+              }
               tasks.push(values[value_index])
             }
           }
@@ -7303,15 +7919,21 @@ fn starshine_emit_body_instructions(
                 1]
               let value = values[value_index]
               let value_source = lowering.expressions[value]
-              if starshine_shape_matches_storage(
-                  starshine_specialized_shape(
-                    lowering,
-                    generic_specialization,
-                    value_source.type_,
-                    value_source.shape,
-                  ),
-                  field.storage,
-                ) {
+              let value_shape = starshine_specialized_shape(
+                lowering,
+                generic_specialization,
+                value_source.type_,
+                value_source.shape,
+              )
+              if starshine_shape_matches_storage(value_shape, field.storage) {
+                if value_shape is @semantic.ProductPlannedValueShape(_) {
+                  tasks.push(
+                    FinishStarshineProductBox(
+                      value_shape,
+                      match_result_local_indices[value],
+                    ),
+                  )
+                }
                 tasks.push(EmitStarshineExpression(value))
               } else {
                 tasks.push(EmitStarshineDefaultStorage(field.storage))
@@ -7362,11 +7984,35 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(initial))
           }
           @semantic.PlannedBreakExpression(control, value) => {
-            tasks.push(FinishStarshineControlTransfer(control, true))
+            let value_source = lowering.expressions[value]
+            tasks.push(
+              FinishStarshineControlTransfer(
+                control,
+                true,
+                starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  value_source.type_,
+                  value_source.shape,
+                ),
+              ),
+            )
             tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedContinueExpression(control, value) => {
-            tasks.push(FinishStarshineControlTransfer(control, false))
+            let value_source = lowering.expressions[value]
+            tasks.push(
+              FinishStarshineControlTransfer(
+                control,
+                false,
+                starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  value_source.type_,
+                  value_source.shape,
+                ),
+              ),
+            )
             tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedPrefixExpression(operator, operand) => {
@@ -7382,6 +8028,31 @@ fn starshine_emit_body_instructions(
               }
               _ => return Err(UnsupportedExpression(body.body, expression))
             }
+          @semantic.PlannedProductField(_, _, _) => {
+            let (local_id, leaf_offset) = match
+              starshine_product_projection_root(lowering, expression) {
+              Some(value) => value
+              None => return Err(UnsupportedExpression(body.body, expression))
+            }
+            if local_id < 0 ||
+              local_id >= local_indices.length() ||
+              local_indices[local_id] < 0 {
+              return Err(InvalidLocal(body.body, local_id))
+            }
+            let shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              source.type_,
+              source.shape,
+            )
+            let output : Array[@lib.Instruction] = []
+            starshine_append_product_local_gets(
+              output,
+              local_indices[local_id] + leaf_offset,
+              shape,
+            )
+            results.push(output)
+          }
           @semantic.PlannedFieldGet(field, base, _) => {
             let owner_module = match program {
               Some(link) =>
@@ -7450,6 +8121,13 @@ fn starshine_emit_body_instructions(
               | @semantic.PlannedMatchExpression(_, _) => true
               _ => false
             }
+            if field_shape is @semantic.ProductPlannedValueShape(_) {
+              tasks.push(
+                FinishStarshineProductUnbox(
+                  field_shape, fixed_array_ref_scratch_index,
+                ),
+              )
+            }
             tasks.push(
               FinishStarshineFieldGet(
                 type_index, physical_index, storage, needs_cast,
@@ -7511,6 +8189,14 @@ fn starshine_emit_body_instructions(
               tasks.push(
                 FinishStarshineFieldSet(type_index, physical_index, needs_cast),
               )
+              if field_shape is @semantic.ProductPlannedValueShape(_) {
+                tasks.push(
+                  FinishStarshineProductBox(
+                    field_shape,
+                    match_result_local_indices[value],
+                  ),
+                )
+              }
               tasks.push(EmitStarshineExpression(value))
               tasks.push(EmitStarshineExpression(base))
             }
@@ -7533,6 +8219,36 @@ fn starshine_emit_body_instructions(
                           return Err(
                             UnsupportedExpression(body.body, expression),
                           )
+                      }
+                    }
+                    let value_shape = starshine_specialized_shape(
+                      lowering,
+                      generic_specialization,
+                      source.type_,
+                      source.shape,
+                    )
+                    if value_shape is @semantic.ProductPlannedValueShape(_) {
+                      if fixed_array_ref_scratch_index < 0 {
+                        return Err(UnsupportedExpression(body.body, -427))
+                      }
+                      output.push(
+                        @lib.Instruction::local_set(
+                          @lib.LocalIdx::new(
+                            fixed_array_ref_scratch_index.reinterpret_as_uint(),
+                          ),
+                        ),
+                      )
+                      match
+                        starshine_append_product_unbox(
+                          output,
+                          planned,
+                          program,
+                          body.body,
+                          fixed_array_ref_scratch_index,
+                          value_shape,
+                        ) {
+                        Ok(_) => ()
+                        Err(error) => return Err(error)
                       }
                     }
                     results.push(output)
@@ -7585,13 +8301,47 @@ fn starshine_emit_body_instructions(
           let cell_type = starshine_capture_cell_type_index(
             planned, program, program_module_index, cell_slot,
           )
-          output.push(
-            @lib.Instruction::local_get(
-              @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
-            ),
+          let local_info = lowering.locals[body.locals.start + local_id]
+          let local_shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            local_info.type_,
+            local_info.shape,
           )
-          output.push(starshine_match_cast(cell_type))
-          append_starshine_instructions(output, value)
+          if local_shape is @semantic.ProductPlannedValueShape(_) {
+            append_starshine_instructions(output, value)
+            starshine_append_product_local_sets(
+              output,
+              local_index + 2,
+              local_shape,
+            )
+            output.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
+              ),
+            )
+            output.push(starshine_match_cast(cell_type))
+            match
+              starshine_product_box_from_locals(
+                planned,
+                program,
+                body.body,
+                local_index + 2,
+                local_shape,
+              ) {
+              Ok(instructions) =>
+                append_starshine_instructions(output, instructions)
+              Err(error) => return Err(error)
+            }
+          } else {
+            output.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
+              ),
+            )
+            output.push(starshine_match_cast(cell_type))
+            append_starshine_instructions(output, value)
+          }
           output.push(
             @lib.Instruction::struct_set(
               @lib.TypeIdx::new(cell_type.reinterpret_as_uint()),
@@ -7600,6 +8350,20 @@ fn starshine_emit_body_instructions(
           )
         } else {
           append_starshine_instructions(output, value)
+          let local_info = lowering.locals[body.locals.start + local_id]
+          let local_shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            local_info.type_,
+            local_info.shape,
+          )
+          if local_shape is @semantic.ProductPlannedValueShape(_) {
+            starshine_append_product_local_sets(
+              output, local_index, local_shape,
+            )
+            results.push(output)
+            continue
+          }
           starshine_append_precise_nominal_local_cast(
             lowering, planned, program, body, local_id, source_expression, output,
           )
@@ -7611,7 +8375,7 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineCaptureSet(lambda, capture) => {
+      FinishStarshineCaptureSet(lambda, capture, value_expression, scratch) => {
         let value = results.pop().unwrap()
         if lambda < 0 || lambda >= lowering.lambdas.length() {
           return Err(UnsupportedExpression(body.body, -201))
@@ -7629,11 +8393,49 @@ fn starshine_emit_body_instructions(
         let cell_type = starshine_capture_cell_type_index(
           planned, program, program_module_index, slot,
         )
-        let output = starshine_capture_cell_reference_instructions(
-          lowering, planned, program, program_module_index, lambda, capture,
+        let value_source = lowering.expressions[value_expression]
+        let value_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          value_source.type_,
+          value_source.shape,
         )
-        output.push(starshine_match_cast(cell_type))
-        append_starshine_instructions(output, value)
+        let output : Array[@lib.Instruction] = []
+        if value_shape is @semantic.ProductPlannedValueShape(_) {
+          if scratch < 0 {
+            return Err(UnsupportedExpression(body.body, -424))
+          }
+          append_starshine_instructions(output, value)
+          starshine_append_product_local_sets(output, scratch, value_shape)
+          append_starshine_instructions(
+            output,
+            starshine_capture_cell_reference_instructions(
+              lowering, planned, program, program_module_index, lambda, capture,
+            ),
+          )
+          output.push(starshine_match_cast(cell_type))
+          match
+            starshine_product_box_from_locals(
+              planned,
+              program,
+              body.body,
+              scratch,
+              value_shape,
+            ) {
+            Ok(instructions) =>
+              append_starshine_instructions(output, instructions)
+            Err(error) => return Err(error)
+          }
+        } else {
+          append_starshine_instructions(
+            output,
+            starshine_capture_cell_reference_instructions(
+              lowering, planned, program, program_module_index, lambda, capture,
+            ),
+          )
+          output.push(starshine_match_cast(cell_type))
+          append_starshine_instructions(output, value)
+        }
         output.push(
           @lib.Instruction::struct_set(
             @lib.TypeIdx::new(cell_type.reinterpret_as_uint()),
@@ -7665,9 +8467,59 @@ fn starshine_emit_body_instructions(
                 local_indices[local_id] < 0 {
                 return Err(InvalidLocal(body.body, local_id))
               }
+              let local_info = lowering.locals[body.locals.start + local_id]
+              let local_shape = starshine_specialized_shape(
+                lowering,
+                generic_specialization,
+                local_info.type_,
+                local_info.shape,
+              )
               let cell_slot = starshine_local_capture_cell_slot(
                 lowering, body, local_id,
               )
+              if local_shape is @semantic.ProductPlannedValueShape(_) {
+                if cell_slot >= 0 {
+                  starshine_append_product_local_sets(
+                    output,
+                    local_indices[local_id] + 2,
+                    local_shape,
+                  )
+                  match
+                    starshine_product_box_from_locals(
+                      planned,
+                      program,
+                      body.body,
+                      local_indices[local_id] + 2,
+                      local_shape,
+                    ) {
+                    Ok(instructions) =>
+                      append_starshine_instructions(output, instructions)
+                    Err(error) => return Err(error)
+                  }
+                  let cell_type = starshine_capture_cell_type_index(
+                    planned, program, program_module_index, cell_slot,
+                  )
+                  output.push(
+                    @lib.Instruction::struct_new(
+                      @lib.TypeIdx::new(cell_type.reinterpret_as_uint()),
+                    ),
+                  )
+                  output.push(
+                    @lib.Instruction::local_set(
+                      @lib.LocalIdx::new(
+                        local_indices[local_id].reinterpret_as_uint(),
+                      ),
+                    ),
+                  )
+                } else {
+                  starshine_append_product_local_sets(
+                    output,
+                    local_indices[local_id],
+                    local_shape,
+                  )
+                }
+                continue
+              }
               if cell_slot >= 0 {
                 let cell_type = starshine_capture_cell_type_index(
                   planned, program, program_module_index, cell_slot,
@@ -7693,12 +8545,11 @@ fn starshine_emit_body_instructions(
             @semantic.PlannedReturnItem(_) =>
               output.push(@lib.Instruction::return_())
             @semantic.PlannedExpressionItem(expression) =>
-              if index + 1 < source.items.length &&
-                starshine_shape_value_type(
+              if index + 1 < source.items.length {
+                starshine_append_shape_drops(
+                  output,
                   lowering.expressions[expression].shape,
                 )
-                is Some(_) {
-                output.push(@lib.Instruction::drop())
               }
           }
         }
@@ -7885,6 +8736,29 @@ fn starshine_emit_body_instructions(
           return Err(UnsupportedExpression(body.body, -1))
         }
         results.push(output)
+      }
+      FinishStarshineArrayLiteral(
+        shape,
+        count,
+        backing_local,
+        value_local,
+        product_local
+      ) => {
+        let fragments = pop_starshine_fragments(results, count)
+        match
+          starshine_finish_array_literal(
+            planned,
+            program,
+            body.body,
+            shape,
+            fragments,
+            backing_local,
+            value_local,
+            product_local,
+          ) {
+          Ok(output) => results.push(output)
+          Err(error) => return Err(error)
+        }
       }
       FinishStarshineArray(
         operation,
@@ -9245,6 +10119,14 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
+      FinishStarshineProduct(count) => {
+        let fragments = pop_starshine_fragments(results, count)
+        let output : Array[@lib.Instruction] = []
+        for fragment in fragments {
+          append_starshine_instructions(output, fragment)
+        }
+        results.push(output)
+      }
       FinishStarshineParameterSelect(count, selected) => {
         let fragments = pop_starshine_fragments(results, count)
         let output : Array[@lib.Instruction] = []
@@ -9350,6 +10232,7 @@ fn starshine_emit_body_instructions(
               current_lambda,
               lowering.captures[global_capture].source,
               local_indices,
+              generic_specialization,
               body,
             ) {
             Ok(instructions) =>
@@ -9488,6 +10371,50 @@ fn starshine_emit_body_instructions(
         )
         if result_cast_type >= 0 {
           output.push(starshine_match_cast(result_cast_type))
+        }
+        results.push(output)
+      }
+      FinishStarshineProductBox(shape, scratch) => {
+        if scratch < 0 {
+          return Err(UnsupportedExpression(body.body, -425))
+        }
+        let output = results.pop().unwrap()
+        starshine_append_product_local_sets(output, scratch, shape)
+        match
+          starshine_product_box_from_locals(
+            planned,
+            program,
+            body.body,
+            scratch,
+            shape,
+          ) {
+          Ok(instructions) =>
+            append_starshine_instructions(output, instructions)
+          Err(error) => return Err(error)
+        }
+        results.push(output)
+      }
+      FinishStarshineProductUnbox(shape, scratch) => {
+        if scratch < 0 {
+          return Err(UnsupportedExpression(body.body, -426))
+        }
+        let output = results.pop().unwrap()
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        match
+          starshine_append_product_unbox(
+            output,
+            planned,
+            program,
+            body.body,
+            scratch,
+            shape,
+          ) {
+          Ok(_) => ()
+          Err(error) => return Err(error)
         }
         results.push(output)
       }
@@ -9642,6 +10569,13 @@ fn starshine_emit_body_instructions(
           ),
         )
         let result_local = match_result_local_indices[expression]
+        let result_source = lowering.expressions[expression]
+        let result_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          result_source.type_,
+          result_source.shape,
+        )
         let dense_arm_by_tag = Array::make(arms.length, -1)
         let scalar_scrutinee = match lowering.expressions[expression].kind {
           @semantic.PlannedMatchExpression(scrutinee, _) =>
@@ -9716,6 +10650,7 @@ fn starshine_emit_body_instructions(
                 body,
                 arm.pattern,
                 scratch_local,
+                fixed_array_ref_scratch_index,
                 local_indices,
                 generic_specialization,
               ) {
@@ -9729,11 +10664,17 @@ fn starshine_emit_body_instructions(
             }
             append_starshine_instructions(bindings, arm_bodies[arm_index])
             if result_local >= 0 {
-              bindings.push(
-                @lib.Instruction::local_set(
-                  @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
-                ),
-              )
+              if result_shape is @semantic.ProductPlannedValueShape(_) {
+                starshine_append_product_local_sets(
+                  bindings, result_local, result_shape,
+                )
+              } else {
+                bindings.push(
+                  @lib.Instruction::local_set(
+                    @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
+                  ),
+                )
+              }
             }
             case_instructions[tag] = bindings
           }
@@ -9793,6 +10734,7 @@ fn starshine_emit_body_instructions(
                 body,
                 arm.pattern,
                 scratch_local,
+                fixed_array_ref_scratch_index,
                 local_indices,
                 generic_specialization,
               ) {
@@ -9801,11 +10743,17 @@ fn starshine_emit_body_instructions(
             }
             let success = arm_bodies[arm_index]
             if result_local >= 0 {
-              success.push(
-                @lib.Instruction::local_set(
-                  @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
-                ),
-              )
+              if result_shape is @semantic.ProductPlannedValueShape(_) {
+                starshine_append_product_local_sets(
+                  success, result_local, result_shape,
+                )
+              } else {
+                success.push(
+                  @lib.Instruction::local_set(
+                    @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
+                  ),
+                )
+              }
             }
             match arm_guards[arm_index] {
               Some(guard_instructions) => {
@@ -9834,7 +10782,13 @@ fn starshine_emit_body_instructions(
           )
         }
         if result_local >= 0 {
-          output.push(starshine_match_local_get(result_local))
+          if result_shape is @semantic.ProductPlannedValueShape(_) {
+            starshine_append_product_local_gets(
+              output, result_local, result_shape,
+            )
+          } else {
+            output.push(starshine_match_local_get(result_local))
+          }
         }
         results.push(output)
       }
@@ -9852,12 +10806,29 @@ fn starshine_emit_body_instructions(
           arms.length + guard_count + 1,
         )
         let output = fragments[0]
+        let initial = match lowering.expressions[expression].kind {
+          @semantic.PlannedWhileExpression(_, value, _) => value
+          _ => return Err(UnsupportedExpression(body.body, expression))
+        }
+        let initial_source = lowering.expressions[initial]
+        let state_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          initial_source.type_,
+          initial_source.shape,
+        )
         if state_local >= 0 {
-          output.push(
-            @lib.Instruction::local_set(
-              @lib.LocalIdx::new(state_local.reinterpret_as_uint()),
-            ),
-          )
+          if state_shape is @semantic.ProductPlannedValueShape(_) {
+            starshine_append_product_local_sets(
+              output, state_local, state_shape,
+            )
+          } else {
+            output.push(
+              @lib.Instruction::local_set(
+                @lib.LocalIdx::new(state_local.reinterpret_as_uint()),
+              ),
+            )
+          }
         }
         let arm_bodies : Array[Array[@lib.Instruction]] = []
         let arm_guards : Array[Array[@lib.Instruction]?] = []
@@ -9878,6 +10849,12 @@ fn starshine_emit_body_instructions(
         for arm_index in 0..<arms.length {
           let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
             arm_index]]
+          let pattern_state_local = if state_shape
+            is @semantic.ProductPlannedValueShape(_) {
+            fixed_array_ref_scratch_index
+          } else {
+            state_local
+          }
           let (condition, bindings) = match
             starshine_match_pattern_instructions(
               lowering,
@@ -9886,7 +10863,8 @@ fn starshine_emit_body_instructions(
               program_module_index,
               body,
               arm.pattern,
-              state_local,
+              pattern_state_local,
+              fixed_array_ref_scratch_index,
               local_indices,
               generic_specialization,
             ) {
@@ -9913,13 +10891,38 @@ fn starshine_emit_body_instructions(
           append_starshine_instructions(dispatch, condition)
         }
         dispatch.push(@lib.Instruction::unreachable_())
-        let loop_body : Array[@lib.Instruction] = [
+        let loop_body : Array[@lib.Instruction] = []
+        if state_shape is @semantic.ProductPlannedValueShape(_) {
+          if fixed_array_ref_scratch_index < 0 {
+            return Err(UnsupportedExpression(body.body, -429))
+          }
+          match
+            starshine_product_box_from_locals(
+              planned,
+              program,
+              body.body,
+              state_local,
+              state_shape,
+            ) {
+            Ok(instructions) =>
+              append_starshine_instructions(loop_body, instructions)
+            Err(error) => return Err(error)
+          }
+          loop_body.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(
+                fixed_array_ref_scratch_index.reinterpret_as_uint(),
+              ),
+            ),
+          )
+        }
+        loop_body.push(
           @lib.Instruction::block(
             @lib.BlockType::void_(),
             @lib.Expr::new(dispatch),
           ),
-          @lib.Instruction::unreachable_(),
-        ]
+        )
+        loop_body.push(@lib.Instruction::unreachable_())
         starshine_resolve_control_transfers(loop_body, control)
         output.push(
           @lib.Instruction::block(
@@ -9934,11 +10937,24 @@ fn starshine_emit_body_instructions(
           ),
         )
         if result_local >= 0 {
-          output.push(
-            @lib.Instruction::local_get(
-              @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
-            ),
+          let result_source = lowering.expressions[expression]
+          let result_shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            result_source.type_,
+            result_source.shape,
           )
+          if result_shape is @semantic.ProductPlannedValueShape(_) {
+            starshine_append_product_local_gets(
+              output, result_local, result_shape,
+            )
+          } else {
+            output.push(
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(result_local.reinterpret_as_uint()),
+              ),
+            )
+          }
         } else {
           match lowering.expressions[expression].shape {
             @semantic.NeverPlannedValueShape =>
@@ -9948,7 +10964,7 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineControlTransfer(control, break_) => {
+      FinishStarshineControlTransfer(control, break_, shape) => {
         if control < 0 || control >= control_state_local_indices.length() {
           return Err(UnsupportedExpression(body.body, body.expressions.start))
         }
@@ -9959,11 +10975,15 @@ fn starshine_emit_body_instructions(
           control_state_local_indices[control]
         }
         if target_local >= 0 {
-          output.push(
-            @lib.Instruction::local_set(
-              @lib.LocalIdx::new(target_local.reinterpret_as_uint()),
-            ),
-          )
+          if shape is @semantic.ProductPlannedValueShape(_) {
+            starshine_append_product_local_sets(output, target_local, shape)
+          } else {
+            output.push(
+              @lib.Instruction::local_set(
+                @lib.LocalIdx::new(target_local.reinterpret_as_uint()),
+              ),
+            )
+          }
         }
         output.push(
           @lib.Instruction::br(
@@ -9972,19 +10992,35 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
-      FinishStarshineIf(shape) => {
+      FinishStarshineIf(shape, result_local) => {
         let alternative = results.pop().unwrap()
         let consequent = results.pop().unwrap()
         let condition = results.pop().unwrap()
         let output : Array[@lib.Instruction] = []
         append_starshine_instructions(output, condition)
-        output.push(
-          @lib.Instruction::if_(
-            starshine_block_type(shape),
-            consequent,
-            Some(alternative),
-          ),
-        )
+        if shape is @semantic.ProductPlannedValueShape(_) {
+          if result_local < 0 {
+            return Err(UnsupportedExpression(body.body, -501))
+          }
+          starshine_append_product_local_sets(consequent, result_local, shape)
+          starshine_append_product_local_sets(alternative, result_local, shape)
+          output.push(
+            @lib.Instruction::if_(
+              @lib.BlockType::void_(),
+              consequent,
+              Some(alternative),
+            ),
+          )
+          starshine_append_product_local_gets(output, result_local, shape)
+        } else {
+          output.push(
+            @lib.Instruction::if_(
+              starshine_block_type(shape),
+              consequent,
+              Some(alternative),
+            ),
+          )
+        }
         results.push(output)
       }
       FinishStarshinePrefix(operator, shape) => {

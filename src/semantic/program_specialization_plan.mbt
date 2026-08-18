@@ -350,6 +350,8 @@ fn program_reachable_callable_roots(
         body.expressions.length) {
         match module_.expressions[expression].kind {
           PlannedStructNew(declaration, _, _) => reachable[declaration] = true
+          PlannedArrayLiteral(_, _, _) =>
+            reachable[standard_array_type_declaration()] = true
           PlannedFixedArrayMake(_, _, _)
           | PlannedFixedArrayLength(_, _)
           | PlannedFixedArrayGet(_, _, _)
@@ -646,8 +648,10 @@ fn program_specialization_value_type(
     F32PlannedValueShape => Some(WasmF32Value)
     F64PlannedValueShape => Some(WasmF64Value)
     V128PlannedValueShape => Some(WasmV128Value)
-    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
-      Some(WasmNullableEqRefValue)
+    RefPlannedValueShape
+    | GenericPlannedValueShape
+    | ProductPlannedValueShape(_)
+    | ErrorPlannedValueShape => Some(WasmNullableEqRefValue)
   }
 }
 
@@ -690,7 +694,69 @@ fn program_generic_parameter_shape(
       }
       None
     }
+    ProductType(fields) => {
+      let field_shapes : Array[PlannedValueShape] = []
+      let mut specialized = false
+      for index in 0..<fields.length {
+        let field_type = resolved.type_arguments[fields.start + index]
+        match
+          program_generic_parameter_shape(
+            resolved, field_type, generic_parameters, shapes, shape_span,
+          ) {
+          Some(shape) => {
+            field_shapes.push(shape)
+            specialized = true
+          }
+          None =>
+            field_shapes.push(
+              planned_value_shape_from_resolved_types(
+                resolved.types,
+                resolved.type_arguments,
+                field_type,
+              ),
+            )
+        }
+      }
+      if specialized {
+        Some(ProductPlannedValueShape(field_shapes))
+      } else {
+        None
+      }
+    }
     _ => None
+  }
+}
+
+///|
+fn program_specialization_shape_width(shape : PlannedValueShape) -> Int {
+  match shape {
+    ProductPlannedValueShape(fields) => {
+      let mut width = 0
+      for field in fields {
+        width += program_specialization_shape_width(field)
+      }
+      width
+    }
+    UnitPlannedValueShape | NeverPlannedValueShape => 0
+    _ => 1
+  }
+}
+
+///|
+fn program_append_specialization_value_types(
+  output : Array[PlannedWasmValueType],
+  shape : PlannedValueShape,
+) -> Unit {
+  match shape {
+    ProductPlannedValueShape(fields) =>
+      for field in fields {
+        program_append_specialization_value_types(output, field)
+      }
+    _ =>
+      match program_specialization_value_type(shape) {
+        Some(value) => output.push(value)
+        None => ()
+      }
   }
 }
 
@@ -1240,8 +1306,10 @@ fn materialize_program_generic_specialization(
     let parameter = lowering.modules[owner_index].functions.parameters[callable.parameters.start +
       index]
     let generic_parameters = program_callable_generic_parameters(callable)
-    let base_value = if parameter.shape != UnitPlannedValueShape &&
-      parameter.shape != NeverPlannedValueShape {
+    let base_parameter_width = program_specialization_shape_width(
+      parameter.shape,
+    )
+    let base_value = if base_parameter_width == 1 {
       Some(
         module_.function_value_types[base.parameters.start +
         base_parameter_index],
@@ -1280,25 +1348,27 @@ fn materialize_program_generic_specialization(
       module_.specialization_shapes,
       specialization_shapes,
     )
-    if parameter.shape != UnitPlannedValueShape &&
-      parameter.shape != NeverPlannedValueShape {
+    if base_parameter_width > 0 {
       match specialized_fixed_array {
         Some(value) => module_.function_value_types.push(value)
         None =>
           match specialized {
             Some(shape) =>
-              match program_specialization_value_type(shape) {
-                Some(value) => module_.function_value_types.push(value)
-                None => ()
-              }
-            None =>
-              module_.function_value_types.push(
-                module_.function_value_types[base.parameters.start +
-                base_parameter_index],
+              program_append_specialization_value_types(
+                module_.function_value_types,
+                shape,
               )
+            None =>
+              for offset in 0..<base_parameter_width {
+                module_.function_value_types.push(
+                  module_.function_value_types[base.parameters.start +
+                  base_parameter_index +
+                  offset],
+                )
+              }
           }
       }
-      base_parameter_index += 1
+      base_parameter_index += base_parameter_width
     }
   }
   let source_parameter_count = module_.function_value_types.length() -
@@ -1365,10 +1435,10 @@ fn materialize_program_generic_specialization(
     None =>
       match specialized_result {
         Some(shape) =>
-          match program_specialization_value_type(shape) {
-            Some(value) => module_.function_value_types.push(value)
-            None => ()
-          }
+          program_append_specialization_value_types(
+            module_.function_value_types,
+            shape,
+          )
         None =>
           for index in 0..<base.results.length {
             module_.function_value_types.push(

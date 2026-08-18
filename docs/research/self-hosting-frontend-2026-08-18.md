@@ -23,7 +23,7 @@ The linked Dew compiler now tokenizes and parses its bootstrap source instead of
 
 `self_host/compiler/parser.dew` consumes those tokens for the first bootstrap grammar: one public, zero-argument `main` function returning `I32` with one positive I32 literal body. It rejects lexical errors, extra declarations, parameters, wrong return types, incomplete syntax, and positive overflow.
 
-The in-memory source-Bytes tokenizer port now covers the complete production token surface used by the compiler request. Descriptor streaming and `SourceIo` are intentionally outside this boundary because the frozen request already supplies bounded source bytes. Remaining frontend work is parser parity: the full expression, pattern, type, declaration, recovery, and parse-event surface.
+The in-memory source-Bytes tokenizer port now covers the complete production token surface used by the compiler request. Descriptor streaming and `SourceIo` are intentionally outside this boundary because the frozen request already supplies bounded source bytes. Dew now also has first-class product types/values, one-shot destructuring, Wasm multivalue lowering, and inferred exact-capacity array literals. These remove the main language-model blockers found during the first direct parser translation. Remaining frontend work is parser parity: the full expression, pattern, type, declaration, recovery, and parse-event surface.
 
 ## Performance
 

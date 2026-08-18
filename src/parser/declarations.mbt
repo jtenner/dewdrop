@@ -12,6 +12,7 @@ pub enum DeclarationVisibility {
 pub enum TypeExpr {
   NamedType(String, UInt64)
   QualifiedType(String, String, UInt64, UInt64)
+  ProductType(Array[TypeExpr], UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
   FunctionType(Array[TypeExpr], TypeExpr, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
@@ -21,6 +22,7 @@ pub fn TypeExpr::offset(self : TypeExpr) -> UInt64 {
   match self {
     NamedType(_, offset)
     | QualifiedType(_, _, offset, _)
+    | ProductType(_, offset)
     | AppliedType(_, _, offset)
     | FunctionType(_, _, offset) => offset
   }
@@ -221,6 +223,8 @@ pub enum DeclarationError {
   UnclosedTupleVariant(UInt64)
   UnclosedStructVariant(UInt64)
   EmptyTupleVariant(UInt64)
+  InvalidProductTypeArity(Int, UInt64)
+  UnclosedProductType(UInt64)
   PublicImplNotAllowed(UInt64)
   ForeignImplRequiresTrait(UInt64)
   PublicForeignLibraryNotAllowed(UInt64)
@@ -251,6 +255,8 @@ pub fn DeclarationError::offset(self : DeclarationError) -> UInt64 {
     | UnclosedTupleVariant(offset)
     | UnclosedStructVariant(offset)
     | EmptyTupleVariant(offset)
+    | InvalidProductTypeArity(_, offset)
+    | UnclosedProductType(offset)
     | PublicImplNotAllowed(offset)
     | ForeignImplRequiresTrait(offset)
     | PublicForeignLibraryNotAllowed(offset)
@@ -484,6 +490,56 @@ fn Parser::parse_function_type(
 }
 
 ///|
+fn Parser::parse_product_type(
+  self : Parser,
+  state : TypeCloserState,
+  open_offset : UInt64,
+) -> Result[TypeExpr, RecoveryFailure] {
+  let fields : Array[TypeExpr] = []
+  self.skip_newlines()
+  while true {
+    match self.peek_token() {
+      None => return Err(declaration_failure(UnclosedProductType(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.RightParen) => {
+            self.consume_lookahead()
+            if fields.length() < 2 || fields.length() > 32 {
+              return Err(
+                declaration_failure(
+                  InvalidProductTypeArity(fields.length(), open_offset),
+                ),
+              )
+            }
+            return Ok(ProductType(fields, open_offset))
+          }
+          _ => ()
+        }
+    }
+    let field = match self.parse_type_inner(state) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    fields.push(field)
+    self.skip_newlines()
+    match self.peek_token() {
+      None => return Err(declaration_failure(UnclosedProductType(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Comma) => {
+            self.consume_lookahead()
+            self.skip_newlines()
+          }
+          @tokenizer.Symbol(@tokenizer.RightParen) => ()
+          _ => return Err(self.declaration_error(TypeArgumentSeparatorOrClose))
+        }
+    }
+  } nobreak {
+    abort("unreachable product type parser termination")
+  }
+}
+
+///|
 fn Parser::parse_type_inner(
   self : Parser,
   state : TypeCloserState,
@@ -495,6 +551,11 @@ fn Parser::parse_type_inner(
           let offset = token.offset()
           self.consume_lookahead()
           return self.parse_function_type(state, offset)
+        }
+        @tokenizer.Symbol(@tokenizer.LeftParen) => {
+          let offset = token.offset()
+          self.consume_lookahead()
+          return self.parse_product_type(state, offset)
         }
         _ => ()
       }

@@ -17,6 +17,39 @@ fn nested_else_if_expression(depth : Int) -> Bytes {
 }
 
 ///|
+test "product destructuring evaluates once and lowers to hidden projections" {
+  match
+    Parser::from_bytes(
+      b"fn use() -> I32 {\n  let (first, (second, _),) = pair()\n  first\n}\n",
+    ).parse_declaration() {
+    Ok(Function({ body: block, .. })) => {
+      assert_eq(block.items.length(), 4)
+      match block.items[0] {
+        LetItem(false, hidden, _, CallExpr(NameExpr("pair", _), [], _), _) =>
+          assert_true(hidden.has_prefix("\u{0}product"))
+        _ => fail("expected hidden product binding")
+      }
+      match block.items[1] {
+        LetItem(false, "first", _, ProductFieldExpr(NameExpr(_, _), 0, 2, _), _) =>
+          ()
+        _ => fail("expected first product projection")
+      }
+      match block.items[2] {
+        LetItem(
+          false,
+          "second",
+          _,
+          ProductFieldExpr(ProductFieldExpr(NameExpr(_, _), 1, 2, _), 0, 2, _),
+          _
+        ) => ()
+        _ => fail("expected nested product projection")
+      }
+    }
+    _ => fail("expected destructuring block")
+  }
+}
+
+///|
 test "using desugars acquisition binding and automatic disposal" {
   match
     Parser::from_bytes(

@@ -75,6 +75,7 @@ fn TypeResolver::new(
   imports : ModuleImportScope?,
 ) -> TypeResolver {
   let interner = ResolvedTypeInterner::new()
+  ignore(interner.intern_nominal(standard_array_type_declaration()))
   let generic_parameter_types : Array[ResolvedTypeId] = []
   for parameter in collected.generic_parameters {
     generic_parameter_types.push(interner.intern_generic(parameter.id))
@@ -268,6 +269,24 @@ fn TypeResolver::import_interface_type(
           self.import_type_memos[source_interface][source_type] = imported
           self.import_results.push(imported)
         }
+        ProductType(fields) => {
+          self.push_import_type_task(
+            source_interface,
+            source_type,
+            3,
+            self.import_results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_import_type_task(
+              source_interface,
+              source.type_arguments[fields.start + index],
+              0,
+              0,
+            )
+          }
+        }
         AppliedType(base, arguments) => {
           self.push_import_type_task(
             source_interface,
@@ -326,7 +345,7 @@ fn TypeResolver::import_interface_type(
       self.import_type_memos[source_interface][source_type] = imported
       self.import_results.truncate(result_start)
       self.import_results.push(imported)
-    } else {
+    } else if state == 2 {
       let parameters = match source.types[source_type] {
         FunctionType(parameters, _) => parameters
         _ => abort("imported type finish task is not a function")
@@ -340,6 +359,23 @@ fn TypeResolver::import_interface_type(
       let imported = self.interner.intern_function(
         self.import_application_scratch,
         self.import_results[result_start + parameters.length],
+      )
+      self.import_type_memos[source_interface][source_type] = imported
+      self.import_results.truncate(result_start)
+      self.import_results.push(imported)
+    } else {
+      let fields = match source.types[source_type] {
+        ProductType(fields) => fields
+        _ => abort("imported type finish task is not a product")
+      }
+      self.import_application_scratch.clear()
+      for index in 0..<fields.length {
+        self.import_application_scratch.push(
+          self.import_results[result_start + index],
+        )
+      }
+      let imported = self.interner.intern_product(
+        self.import_application_scratch,
       )
       self.import_type_memos[source_interface][source_type] = imported
       self.import_results.truncate(result_start)
@@ -439,6 +475,7 @@ fn TypeResolver::constructor_arity(
       Some(self.declaration_arity(declaration))
     GenericParameterType(_)
     | SelfType(_)
+    | ProductType(_)
     | AppliedType(_, _)
     | FunctionType(_, _) => None
   }
@@ -883,6 +920,33 @@ fn TypeResolver::resolve_syntax(
         self.syntax_types[current] = self.resolve_qualified_type(
           owner, module_alias, name, offset, name_offset, current_expectation, constructor_position,
         )
+      ProductTypeSyntax(fields, _) =>
+        if state == 0 {
+          self.push_type_task(
+            current, 1, current_expectation, constructor_position,
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_type_task(
+              self.collected.type_arguments[fields.start + index],
+              0,
+              any_type_name,
+              false,
+            )
+          }
+        } else {
+          self.application_scratch.clear()
+          for index in 0..<fields.length {
+            self.application_scratch.push(
+              self.syntax_types[self.collected.type_arguments[fields.start +
+              index]],
+            )
+          }
+          self.syntax_types[current] = self.interner.intern_product(
+            self.application_scratch,
+          )
+        }
       AppliedTypeSyntax(base, arguments, offset) =>
         if state == 0 {
           self.push_type_task(

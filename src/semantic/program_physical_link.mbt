@@ -88,6 +88,29 @@ fn program_erased_box_slot_for_shape(shape : PlannedValueShape) -> Int {
 }
 
 ///|
+fn program_mark_product_erased_boxes(
+  shape : PlannedValueShape,
+  used : Array[Bool],
+) -> Unit {
+  match shape {
+    ProductPlannedValueShape(fields) =>
+      for field in fields {
+        program_mark_product_erased_boxes(field, used)
+      }
+    GenericPlannedValueShape =>
+      for slot in 0..<used.length() {
+        used[slot] = true
+      }
+    _ => {
+      let slot = program_erased_box_slot_for_shape(shape)
+      if slot >= 0 {
+        used[slot] = true
+      }
+    }
+  }
+}
+
+///|
 fn program_erased_box_slot_for_value(type_ : PlannedWasmValueType) -> Int {
   match type_ {
     WasmI32Value => 0
@@ -1062,11 +1085,91 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let erased_box_used = Array::make(5, false)
-  for module_ in fragments.modules {
+  for module_index, module_ in fragments.modules {
     for method_info in module_.trait_methods {
       let slot = wasmgc_trait_receiver_box_slot(method_info.receiver_shape)
       if slot >= 0 {
         erased_box_used[slot] = true
+      }
+    }
+    let module_lowering = lowering.modules[module_index]
+    for capture in module_lowering.captures {
+      match capture.shape {
+        ProductPlannedValueShape(_) =>
+          program_mark_product_erased_boxes(capture.shape, erased_box_used)
+        _ => ()
+      }
+    }
+    for step in module_lowering.initialization.steps {
+      let body_id = match step.kind {
+        PlannedInitializeModuleValue(_, body, _) => body
+        PlannedCyclicModuleValues(_) => continue
+      }
+      let body_index = semantic_id_local(body_id)
+      if body_index >= 0 && body_index < module_lowering.bodies.length() {
+        match module_lowering.bodies[body_index].result_shape {
+          ProductPlannedValueShape(_) =>
+            program_mark_product_erased_boxes(
+              module_lowering.bodies[body_index].result_shape,
+              erased_box_used,
+            )
+          _ => ()
+        }
+      }
+    }
+    for expression in module_lowering.expressions {
+      match expression.kind {
+        PlannedArrayLiteral(_, _, shape) =>
+          match shape {
+            ProductPlannedValueShape(_) =>
+              program_mark_product_erased_boxes(shape, erased_box_used)
+            _ => ()
+          }
+        PlannedFieldGet(_, _, _) =>
+          match expression.shape {
+            ProductPlannedValueShape(_) =>
+              program_mark_product_erased_boxes(
+                expression.shape,
+                erased_box_used,
+              )
+            _ => ()
+          }
+        PlannedFieldSet(_, _, value) =>
+          match module_lowering.expressions[value].shape {
+            ProductPlannedValueShape(_) =>
+              program_mark_product_erased_boxes(
+                module_lowering.expressions[value].shape,
+                erased_box_used,
+              )
+            _ => ()
+          }
+        PlannedStructNew(_, _, fields)
+        | PlannedVariantStructNew(_, _, fields) =>
+          for field_index in 0..<fields.length {
+            let value = module_lowering.object_fields[fields.start + field_index].value
+            match module_lowering.expressions[value].shape {
+              ProductPlannedValueShape(_) =>
+                program_mark_product_erased_boxes(
+                  module_lowering.expressions[value].shape,
+                  erased_box_used,
+                )
+              _ => ()
+            }
+          }
+        PlannedVariantTupleNew(_, _, arguments) =>
+          for argument_index in 0..<arguments.length {
+            let value = module_lowering.expression_children[arguments.start +
+              argument_index]
+            match module_lowering.expressions[value].shape {
+              ProductPlannedValueShape(_) =>
+                program_mark_product_erased_boxes(
+                  module_lowering.expressions[value].shape,
+                  erased_box_used,
+                )
+              _ => ()
+            }
+          }
+        _ => ()
       }
     }
   }

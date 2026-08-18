@@ -17,6 +17,7 @@ pub enum PlannedValueShape {
   V128PlannedValueShape
   RefPlannedValueShape
   GenericPlannedValueShape
+  ProductPlannedValueShape(Array[PlannedValueShape])
   NeverPlannedValueShape
 } derive(Eq, Debug, ToJson, FromJson)
 
@@ -44,6 +45,8 @@ pub enum PlannedExpressionKind {
   PlannedModuleValueGet(DeclId, DeclId)
   PlannedFunctionReference(DeclId, HirSpan)
   PlannedLambdaClosure(LambdaId, HirSpan)
+  PlannedProductNew(HirSpan)
+  PlannedArrayLiteral(HirSpan, BodyTypeId, PlannedValueShape)
   PlannedDirectLambdaCall(LambdaId, HirSpan, HirSpan)
   PlannedStructNew(DeclId, HirSpan, HirSpan)
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
@@ -208,6 +211,7 @@ pub enum PlannedExpressionKind {
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
   PlannedDynamicTraitCall(DeclId, DeclId, Int, ExprId, HirSpan, HirSpan)
   PlannedFieldGet(FieldId, ExprId, Bool)
+  PlannedProductField(ExprId, Int, Int)
   PlannedFieldSet(FieldId, ExprId, ExprId)
 } derive(Eq, Debug)
 
@@ -467,6 +471,7 @@ fn planned_error_block_item() -> PlannedBlockItem {
 ///|
 pub fn planned_value_shape_from_resolved_types(
   types : Array[ResolvedType],
+  type_arguments : Array[ResolvedTypeId],
   root : ResolvedTypeId,
 ) -> PlannedValueShape {
   let mut current = root
@@ -516,6 +521,19 @@ pub fn planned_value_shape_from_resolved_types(
         | BytesBuilderType
       ) => return RefPlannedValueShape
       PrimitiveType(NeverType) => return NeverPlannedValueShape
+      ProductType(fields) => {
+        let shapes : Array[PlannedValueShape] = []
+        for index in 0..<fields.length {
+          shapes.push(
+            planned_value_shape_from_resolved_types(
+              types,
+              type_arguments,
+              type_arguments[fields.start + index],
+            ),
+          )
+        }
+        return ProductPlannedValueShape(shapes)
+      }
       NominalType(_) | TraitType(_) | FunctionType(_, _) =>
         return RefPlannedValueShape
       GenericParameterType(_) | SelfType(_) => return GenericPlannedValueShape
@@ -526,11 +544,119 @@ pub fn planned_value_shape_from_resolved_types(
 }
 
 ///|
+fn specialized_resolved_value_shape(
+  lowering : PlannedModuleLowering,
+  type_ : ResolvedTypeId,
+  generic_parameters : HirSpan,
+  shapes : Array[PlannedValueShape],
+  shape_span : HirSpan,
+  fallback : PlannedValueShape,
+) -> PlannedValueShape {
+  if type_ < 0 || type_ >= lowering.resolved_types.length() {
+    return fallback
+  }
+  match lowering.resolved_types[type_] {
+    GenericParameterType(parameter) => {
+      let parameter_local = semantic_id_local(parameter)
+      if parameter_local >= generic_parameters.start &&
+        parameter_local < generic_parameters.start + generic_parameters.length {
+        let relative = parameter_local - generic_parameters.start
+        if relative >= 0 && relative < shape_span.length {
+          return shapes[shape_span.start + relative]
+        }
+      }
+      fallback
+    }
+    ProductType(fields) => {
+      let fallback_fields = match fallback {
+        ProductPlannedValueShape(values) => Some(values)
+        _ => None
+      }
+      let result : Array[PlannedValueShape] = []
+      for index in 0..<fields.length {
+        let field_type = lowering.resolved_type_arguments[fields.start + index]
+        let field_fallback = match fallback_fields {
+          Some(values) if index < values.length() => values[index]
+          _ =>
+            planned_value_shape_from_resolved_types(
+              lowering.resolved_types,
+              lowering.resolved_type_arguments,
+              field_type,
+            )
+        }
+        result.push(
+          specialized_resolved_value_shape(
+            lowering, field_type, generic_parameters, shapes, shape_span, field_fallback,
+          ),
+        )
+      }
+      ProductPlannedValueShape(result)
+    }
+    _ => fallback
+  }
+}
+
+///|
+pub fn specialize_planned_body_value_shape(
+  lowering : PlannedModuleLowering,
+  type_ : BodyTypeId,
+  fallback : PlannedValueShape,
+  generic_parameters : HirSpan,
+  shapes : Array[PlannedValueShape],
+  shape_span : HirSpan,
+) -> PlannedValueShape {
+  if type_ < -1 {
+    return specialized_resolved_value_shape(
+      lowering,
+      -type_ - 2,
+      generic_parameters,
+      shapes,
+      shape_span,
+      fallback,
+    )
+  }
+  if type_ < 0 || type_ >= lowering.types.length() {
+    return fallback
+  }
+  match lowering.types[type_] {
+    BodyResolvedType(resolved_type) =>
+      specialized_resolved_value_shape(
+        lowering, resolved_type, generic_parameters, shapes, shape_span, fallback,
+      )
+    BodyProductType(fields) => {
+      let fallback_fields = match fallback {
+        ProductPlannedValueShape(values) => Some(values)
+        _ => None
+      }
+      let result : Array[PlannedValueShape] = []
+      for index in 0..<fields.length {
+        let field_type = lowering.type_arguments[fields.start + index]
+        let field_fallback = match fallback_fields {
+          Some(values) if index < values.length() => values[index]
+          _ => fallback
+        }
+        result.push(
+          specialize_planned_body_value_shape(
+            lowering, field_type, field_fallback, generic_parameters, shapes, shape_span,
+          ),
+        )
+      }
+      ProductPlannedValueShape(result)
+    }
+    _ => fallback
+  }
+}
+
+///|
 fn planned_resolved_value_shape(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
 ) -> PlannedValueShape {
-  planned_value_shape_from_resolved_types(resolved.types, root)
+  planned_value_shape_from_resolved_types(
+    resolved.types,
+    resolved.type_arguments,
+    root,
+  )
 }
 
 ///|
@@ -544,6 +670,19 @@ fn planned_value_shape(
     match inferred.type_term(type_) {
       BodyErrorType => return ErrorPlannedValueShape
       BodyVariableType(_) => return ErrorPlannedValueShape
+      BodyProductType(fields) => {
+        let shapes : Array[PlannedValueShape] = []
+        for index in 0..<fields.length {
+          shapes.push(
+            planned_value_shape(
+              resolved,
+              inferred,
+              inferred.type_arguments[fields.start + index],
+            ),
+          )
+        }
+        return ProductPlannedValueShape(shapes)
+      }
       BodyFunctionType(_, _) => return RefPlannedValueShape
       BodyAppliedType(base, _) => type_ = base
       BodyResolvedType(resolved_type) =>
@@ -565,6 +704,26 @@ fn planned_body_type_matches_resolved(
   }
   match inferred.type_term(body_type) {
     BodyResolvedType(value) => value == resolved_type
+    BodyProductType(body_fields) =>
+      match resolved.types[resolved_type] {
+        ProductType(resolved_fields) => {
+          if body_fields.length != resolved_fields.length {
+            return false
+          }
+          for index in 0..<body_fields.length {
+            if !planned_body_type_matches_resolved(
+                resolved,
+                inferred,
+                inferred.type_arguments[body_fields.start + index],
+                resolved.type_arguments[resolved_fields.start + index],
+              ) {
+              return false
+            }
+          }
+          true
+        }
+        _ => false
+      }
     BodyFunctionType(body_parameters, body_result) =>
       match resolved.types[resolved_type] {
         FunctionType(resolved_parameters, resolved_result) => {
@@ -664,7 +823,10 @@ fn planned_nominal_declaration(
           }
         }
       }
-      BodyErrorType | BodyVariableType(_) | BodyFunctionType(_, _) => return 0UL
+      BodyErrorType
+      | BodyVariableType(_)
+      | BodyProductType(_)
+      | BodyFunctionType(_, _) => return 0UL
     }
   }
   0UL
@@ -698,6 +860,25 @@ fn planned_call_receiver(
   match collected.expressions[target] {
     HirFieldExpr(receiver, _, _) => receiver
     _ => -1
+  }
+}
+
+///|
+fn planned_array_element_type(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  expression : ExprId,
+) -> BodyTypeId {
+  match inferred.type_term(inferred.expression_types[expression]) {
+    BodyAppliedType(_, arguments) if arguments.length == 1 =>
+      inferred.type_arguments[arguments.start]
+    BodyResolvedType(type_) =>
+      match resolved.types[type_] {
+        AppliedType(_, arguments) if arguments.length == 1 =>
+          -resolved.type_arguments[arguments.start] - 2
+        _ => 0
+      }
+    _ => 0
   }
 }
 
@@ -822,6 +1003,19 @@ fn plan_expression_kind(
         | NoNameReference => PlannedConsumedExpression
       }
     HirImportAliasExpr(_, _) => PlannedConsumedExpression
+    HirProductExpr(elements, _) => PlannedProductNew(elements)
+    HirProductFieldExpr(base, index, arity, _) =>
+      PlannedProductField(base, index, arity)
+    HirArrayExpr(elements, _) => {
+      let element_type = planned_array_element_type(
+        resolved, inferred, expression,
+      )
+      PlannedArrayLiteral(
+        elements,
+        element_type,
+        planned_value_shape(resolved, inferred, element_type),
+      )
+    }
     HirLambdaExpr(lambda, _) =>
       PlannedLambdaClosure(lambda, names.lambda(lambda).unwrap().captures)
     HirObjectExpr(_, _) | HirConstructExpr(_, _, _) => PlannedPoisonExpression

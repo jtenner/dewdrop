@@ -1,6 +1,6 @@
 # Dew implementation roadmap
 
-> Living roadmap as of August 16, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
+> Living roadmap as of August 18, 2026. This file records current product direction. Completed work is summarized compactly; detailed implementation history and measurements live in [`docs/spec.md`](spec.md), [`docs/architecture.md`](architecture.md), and [`docs/research/`](research/). [`agent-todo.md`](../agent-todo.md) is the execution-only backlog and contains no completed entries.
 
 ## Current baseline
 
@@ -8,7 +8,7 @@ Dew is an executable, statically linked WasmGC language implementation with:
 
 - a streaming WTF-8 tokenizer and non-backtracking parser;
 - deterministic multi-file and multi-module collection, diagnostics, frozen interfaces, package manifests, lock records, and dependency SCCs;
-- local and imported types, traits, implementations, generic bounds, evidence-aware specialization, runtime trait values, closures, mutable captures, alias-visible mutable struct fields, module state, and recursive physical type groups;
+- local and imported types, structural product types, inferred array literals, traits, implementations, generic bounds, evidence-aware specialization, runtime trait values, closures, mutable captures, alias-visible mutable struct fields, module state, and recursive physical type groups;
 - fixed-width scalar, packed-lane, SIMD, strict UTF-8 text, Bytes, strict bounded JSON, WASI Preview 1, test metadata, and deterministic Starshine validation/encoding;
 - Eq, Debug, Hash, and Show derivation; explicit Show and Disposable evidence; deterministic `defer` and `using`;
 - carrier-specialized FixedArray and Array, explicit iterators, Stack, Queue, CircularBuffer, Deque, Map, Set, allocation-free Bloom filters, BinaryHeap, PriorityQueue, red-black trees, ordered maps, and ordered sets;
@@ -24,12 +24,12 @@ Suite totals are intentionally not copied into prose. Test runners discover the 
 
 1. [x] Freeze the bounded source-Bytes version 1 compiler request and explicit `CompilerSessionConfig`; consume source and provider bytes directly with caches disabled and no environment mutation.
 2. [x] Consume the pinned Starshine submodule's generated raw WasmGC FFI through an exact 32-export compiler subset, typed container/result bridges, and a BLAKE3 compiler fingerprint over the pinned revision, interface digests, selected signatures, and exact provider bytes; build a linked source-Bytes smoke compiler that emits byte-identical validated modules.
-3. [ ] Port the parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order. The complete in-memory source-Bytes tokenizer surface is now ported and tested.
+3. [ ] Port the parser, semantic phases, optimizer, backend, cache codecs, and compiler driver to Dew in dependency order. The complete in-memory source-Bytes tokenizer is ported. Product types, one-shot product destructuring, Wasm multivalue lowering, boundary boxing, and exact-capacity array literals now provide the language support required for the parser port.
 4. [ ] Require the fixed-point bootstrap: the MoonBit compiler builds compiler A, compiler A builds compiler B, compiler B builds compiler C, and B/C are byte-identical.
 
 The audited hard blockers, missing compiler-library operations, bootstrap-only boundaries, and optional port-enabling language additions are cataloged in [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](research/self-hosting-compiler-gap-catalog-2026-08-16.md). Items described there as port-enabling do not become P1 automatically; promote them only when the port chooses that path.
 
-Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, Dew-native BLAKE3 and SHA-256, capability-based WASI/Facet filesystem and process adapters, bounded SemVer, and Dew-native package file codecs are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
+Indexed implementation uniqueness, mutable struct fields, complete `@alias` namespace lookup, compiler-grade Array and Arena operations, structural FixedArray equality, deterministic collection/sum rendering, bounded compiler diagnostics, direct integer builder output, Dew-native BLAKE3 and SHA-256, capability-based WASI/Facet filesystem and process adapters, bounded SemVer, Dew-native package file codecs, first-class product values, and array literals are finished P1 foundations. Exact aliases now qualify values, functions, types, traits, enum constructors and patterns, implementation heads, and static implementation methods without opening their names.
 
 ### P2 — deferred until self-hosting
 

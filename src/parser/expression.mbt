@@ -367,26 +367,6 @@ fn reduce_for_is(
 }
 
 ///|
-fn end_group(
-  values : Array[Expr],
-  operator_codes : Array[Int],
-  operator_offsets : Array[UInt64],
-) -> Result[Unit, RecoveryFailure] {
-  while operator_codes.length() > 0 {
-    if operator_codes[operator_codes.length() - 1] == pending_group_code {
-      ignore(operator_codes.pop())
-      ignore(operator_offsets.pop())
-      return Ok(())
-    }
-    match reduce_top(values, operator_codes, operator_offsets) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
-  }
-  Err(expression_failure(InvalidOperatorState(0UL)))
-}
-
-///|
 fn finish_expression(
   values : Array[Expr],
   operator_codes : Array[Int],
@@ -549,6 +529,69 @@ fn Parser::parse_index_access(
   }
   values.push(IndexExpr(target, index, open_offset))
   Ok(())
+}
+
+///|
+fn Parser::consume_right_bracket(self : Parser) -> Bool {
+  match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.RightBracket) => {
+          self.consume_lookahead()
+          true
+        }
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
+fn Parser::parse_array_literal(
+  self : Parser,
+  open_offset : UInt64,
+) -> Result[Expr, RecoveryFailure] {
+  let elements : Array[Expr] = []
+  self.skip_newlines()
+  if self.consume_right_bracket() {
+    return Ok(ArrayExpr(elements, open_offset))
+  }
+  while true {
+    let element = match self.parse_expression_recoverable() {
+      Ok(value) => value
+      Err(error) => return Err(error.inside_bracket())
+    }
+    elements.push(element)
+    self.skip_newlines()
+    match self.peek_token() {
+      None => return Err(expression_failure(UnclosedArray(open_offset)))
+      Some(token) =>
+        match token.kind() {
+          @tokenizer.Symbol(@tokenizer.Comma) => {
+            self.consume_lookahead()
+            self.skip_newlines()
+            if self.consume_right_bracket() {
+              return Ok(ArrayExpr(elements, open_offset))
+            }
+            if self.peek_token() is None {
+              return Err(expression_failure(UnclosedArray(open_offset)))
+            }
+          }
+          @tokenizer.Symbol(@tokenizer.RightBracket) => {
+            self.consume_lookahead()
+            return Ok(ArrayExpr(elements, open_offset))
+          }
+          _ =>
+            return Err(
+              expression_failure(
+                ExpectedArrayDelimiter(Some(token), open_offset),
+              ),
+            )
+        }
+    }
+  } nobreak {
+    abort("unreachable array literal parser termination")
+  }
 }
 
 ///|
@@ -755,6 +798,9 @@ fn Parser::parse_expression_context(
   let values : Array[Expr] = []
   let operator_codes : Array[Int] = []
   let operator_offsets : Array[UInt64] = []
+  let group_value_starts : Array[Int] = []
+  let group_element_counts : Array[Int] = []
+  let group_offsets : Array[UInt64] = []
   let mut mode = SeekingUnaryValue
   let mut nested_groups = 0
   while true {
@@ -839,6 +885,42 @@ fn Parser::parse_expression_context(
                 values.push(expression)
                 mode = SeekingBinaryOperator
               }
+              @tokenizer.Symbol(@tokenizer.RightParen) if nested_groups > 0 &&
+                group_element_counts[group_element_counts.length() - 1] > 0 => {
+                let frame = group_value_starts.length() - 1
+                let start = group_value_starts.pop().unwrap()
+                let arity = group_element_counts.pop().unwrap()
+                let open_offset = group_offsets.pop().unwrap()
+                if arity < 2 || arity > 32 {
+                  return Err(
+                    expression_failure(InvalidProductArity(arity, open_offset)).inside_parentheses_count(
+                      nested_groups,
+                    ),
+                  )
+                }
+                if values.length() != start + arity ||
+                  operator_codes.length() == 0 ||
+                  operator_codes[operator_codes.length() - 1] !=
+                  pending_group_code {
+                  return Err(
+                    expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
+                      nested_groups,
+                    ),
+                  )
+                }
+                ignore(operator_codes.pop())
+                ignore(operator_offsets.pop())
+                let elements : Array[Expr] = []
+                for index in start..<values.length() {
+                  elements.push(values[index])
+                }
+                values.truncate(start)
+                values.push(ProductExpr(elements, open_offset))
+                ignore(frame)
+                self.consume_lookahead()
+                nested_groups -= 1
+                mode = SeekingBinaryOperator
+              }
               @tokenizer.Symbol(symbol) =>
                 match prefix_operator(symbol) {
                   Some(operator) => {
@@ -852,7 +934,22 @@ fn Parser::parse_expression_context(
                         self.consume_lookahead()
                         operator_codes.push(pending_group_code)
                         operator_offsets.push(offset)
+                        group_value_starts.push(values.length())
+                        group_element_counts.push(0)
+                        group_offsets.push(offset)
                         nested_groups += 1
+                      }
+                      @tokenizer.LeftBracket => {
+                        self.consume_lookahead()
+                        let array = match self.parse_array_literal(offset) {
+                          Ok(value) => value
+                          Err(error) =>
+                            return Err(
+                              error.inside_parentheses_count(nested_groups),
+                            )
+                        }
+                        values.push(array)
+                        mode = SeekingBinaryOperator
                       }
                       @tokenizer.LeftBrace => {
                         if expression_stops_at(
@@ -1088,13 +1185,85 @@ fn Parser::parse_expression_context(
                   Err(error) => return Err(error.inside_bracket())
                 }
               }
+              @tokenizer.Symbol(@tokenizer.Comma) if nested_groups > 0 => {
+                while operator_codes.length() > 0 &&
+                      operator_codes[operator_codes.length() - 1] !=
+                      pending_group_code {
+                  match reduce_top(values, operator_codes, operator_offsets) {
+                    Ok(_) => ()
+                    Err(error) =>
+                      return Err(error.inside_parentheses_count(nested_groups))
+                  }
+                }
+                let frame = group_value_starts.length() - 1
+                let completed = group_element_counts[frame] + 1
+                if values.length() != group_value_starts[frame] + completed {
+                  return Err(
+                    expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
+                      nested_groups,
+                    ),
+                  )
+                }
+                group_element_counts[frame] = completed
+                self.consume_lookahead()
+                self.skip_newlines()
+                mode = SeekingUnaryValue
+              }
               @tokenizer.Symbol(@tokenizer.RightParen) if nested_groups > 0 => {
                 self.consume_lookahead()
-                match end_group(values, operator_codes, operator_offsets) {
-                  Ok(_) => nested_groups -= 1
-                  Err(error) =>
-                    return Err(error.inside_parentheses_count(nested_groups))
+                while operator_codes.length() > 0 &&
+                      operator_codes[operator_codes.length() - 1] !=
+                      pending_group_code {
+                  match reduce_top(values, operator_codes, operator_offsets) {
+                    Ok(_) => ()
+                    Err(error) =>
+                      return Err(error.inside_parentheses_count(nested_groups))
+                  }
                 }
+                if operator_codes.length() == 0 {
+                  return Err(
+                    expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
+                      nested_groups,
+                    ),
+                  )
+                }
+                ignore(operator_codes.pop())
+                ignore(operator_offsets.pop())
+                let frame = group_value_starts.length() - 1
+                let start = group_value_starts.pop().unwrap()
+                let prior = group_element_counts.pop().unwrap()
+                let open_offset = group_offsets.pop().unwrap()
+                if prior > 0 {
+                  let arity = prior + 1
+                  if arity < 2 || arity > 32 {
+                    return Err(
+                      expression_failure(
+                        InvalidProductArity(arity, open_offset),
+                      ).inside_parentheses_count(nested_groups),
+                    )
+                  }
+                  if values.length() != start + arity {
+                    return Err(
+                      expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
+                        nested_groups,
+                      ),
+                    )
+                  }
+                  let elements : Array[Expr] = []
+                  for index in start..<values.length() {
+                    elements.push(values[index])
+                  }
+                  values.truncate(start)
+                  values.push(ProductExpr(elements, open_offset))
+                } else if values.length() != start + 1 {
+                  return Err(
+                    expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
+                      nested_groups,
+                    ),
+                  )
+                }
+                ignore(frame)
+                nested_groups -= 1
               }
               @tokenizer.Symbol(symbol) =>
                 match binary_operator(symbol) {

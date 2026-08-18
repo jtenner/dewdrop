@@ -4,12 +4,33 @@ package "jtenner/dewdrop/parser"
 import {
   "jtenner/dewdrop/tokenizer",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
+pub fn derived_enum_debug_impl(EnumDeclaration, UInt64) -> ImplDeclaration
+
+pub fn derived_enum_eq_impls(EnumDeclaration, UInt64) -> Array[ImplDeclaration]
+
+pub fn derived_enum_hash_impl(EnumDeclaration, UInt64) -> ImplDeclaration
+
+pub fn derived_enum_show_impl(EnumDeclaration, UInt64) -> ImplDeclaration
+
+pub fn derived_struct_debug_impl(StructDeclaration, UInt64) -> ImplDeclaration
+
+pub fn derived_struct_eq_impls(StructDeclaration, UInt64) -> Array[ImplDeclaration]
+
+pub fn derived_struct_hash_impl(StructDeclaration, UInt64) -> ImplDeclaration
+
+pub fn derived_struct_show_impl(StructDeclaration, UInt64) -> ImplDeclaration
+
+pub fn deserialize_parse_events(Bytes) -> Result[Array[ParseEvent], String]
+
 pub fn parse(Iter[@tokenizer.Token]) -> Iter[ParseEvent]
 
 pub fn parse_bytes(Bytes) -> Iter[ParseEvent]
+
+pub fn serialize_parse_events(Array[ParseEvent]) -> Result[Bytes, String]
 
 // Errors
 
@@ -34,19 +55,21 @@ pub enum BinaryOperator {
   Divide
   Remainder
   Exponentiate
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Block {
   items : Array[BlockItem]
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Block::tail_expression(Self) -> Expr?
 
 pub enum BlockItem {
   LetItem(Bool, String, UInt64, Expr, UInt64)
   ReturnItem(Expr?, UInt64)
+  AssignmentItem(Expr, Expr, UInt64)
+  IndexSetItem(Expr, Expr, UInt64)
   ExpressionItem(Expr, UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn BlockItem::offset(Self) -> UInt64
 
 pub struct BuiltinDeclaration {
@@ -58,7 +81,7 @@ pub struct BuiltinDeclaration {
   return_type : TypeExpr
   builtin_name : Bytes
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum Declaration {
   Import(ImportDeclaration)
@@ -68,10 +91,12 @@ pub enum Declaration {
   Function(FunctionDeclaration)
   Test(TestDeclaration)
   Impl(ImplDeclaration)
+  ForeignType(ForeignTypeDeclaration)
+  ForeignLibrary(ForeignLibraryDeclaration)
   Struct(StructDeclaration)
   Enum(EnumDeclaration)
   TypeAlias(TypeAliasDeclaration)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Declaration::offset(Self) -> UInt64
 
 pub enum DeclarationError {
@@ -90,14 +115,23 @@ pub enum DeclarationError {
   UnclosedTupleVariant(UInt64)
   UnclosedStructVariant(UInt64)
   EmptyTupleVariant(UInt64)
+  InvalidProductTypeArity(Int, UInt64)
+  UnclosedProductType(UInt64)
   PublicImplNotAllowed(UInt64)
   ForeignImplRequiresTrait(UInt64)
-} derive(Eq, @debug.Debug)
+  PublicForeignLibraryNotAllowed(UInt64)
+  PublicForeignLibraryMemberNotAllowed(UInt64)
+  GenericForeignLibraryMemberNotAllowed(UInt64)
+  ReceiverForeignLibraryMemberNotAllowed(UInt64)
+  ForeignLibraryMemberBodyNotAllowed(UInt64)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DeclarationError::offset(Self) -> UInt64
 
 pub enum DeclarationExpectation {
   DeclarationKeyword
-  ImportKeyword
   ImportPathSegment
+  ImportAlias
+  ImportWildcard
   BuiltinName
   BindingName
   TraitName
@@ -114,14 +148,23 @@ pub enum DeclarationExpectation {
   VariantTypeSeparatorOrClose
   FunctionName
   TestName
+  TestExpectedTrap
   FunctionBodyNewline
   ImplMemberKeyword
+  ForeignTypeName
+  ForeignLibraryName
+  ForeignLibraryAlias
+  ForeignLibraryMemberKeyword
+  ForeignLibraryExportName
   ForOrLeftBrace
   TraitMethodKeyword
   TraitMethodName
   TraitBodyNewline
   TypeParameter
   TypeParameterSeparatorOrClose
+  TypeBound
+  DeriveName
+  DeriveSeparatorOrClose
   TypeArgumentSeparatorOrClose
   LeftParen
   LeftBrace
@@ -133,19 +176,24 @@ pub enum DeclarationExpectation {
   Equal
   BuiltinString
   LineEnd
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum DeclarationVisibility {
   ModuleVisible
   Public
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct DeriveRequest {
+  name : String
+  offset : UInt64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum DiagnosticSeverity {
   Error
   Warning
   Info
   Hint
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn DiagnosticSeverity::from_rank(Int) -> Self
 pub fn DiagnosticSeverity::rank(Self) -> Int
 
@@ -155,14 +203,15 @@ pub struct EnumDeclaration {
   name_offset : UInt64
   type_parameters : Array[TypeParameter]
   variants : Array[EnumVariant]
+  derives : Array[DeriveRequest]
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum EnumVariant {
   UnitVariant(String, UInt64)
   TupleVariant(String, Array[TypeExpr], UInt64)
   StructVariant(String, Array[StructField], UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn EnumVariant::name(Self) -> String
 pub fn EnumVariant::offset(Self) -> UInt64
 
@@ -181,22 +230,29 @@ pub enum Expr {
   StringExpr(Bytes, UInt64)
   BytesExpr(Bytes, UInt64)
   NameExpr(String, UInt64)
-  IntrinsicExpr(String, UInt64)
+  ImportAliasExpr(String, UInt64)
+  ProductExpr(Array[Expr], UInt64)
+  ArrayExpr(Array[Expr], UInt64)
+  LambdaExpr(Array[FnParameter], TypeExpr, Block, UInt64)
   ObjectExpr(Array[ObjectField], UInt64)
   ConstructExpr(Expr, Array[ObjectField], UInt64)
   BlockExpr(Block)
   IfExpr(Expr, Block, Expr?, UInt64)
   MatchExpr(Expr, Array[PatternArm], UInt64)
+  IsExpr(Expr, Pattern, UInt64)
   WhileExpr(Expr, Array[PatternArm], UInt64)
   BreakExpr(Expr, UInt64)
   ContinueExpr(Expr, UInt64)
   PrefixExpr(PrefixOperator, Expr, UInt64)
   BinaryExpr(BinaryOperator, Expr, Expr, UInt64)
   CallExpr(Expr, Array[Expr], UInt64)
+  ExplicitTypeCallExpr(Expr, Array[TypeExpr], Array[Expr], UInt64)
   FieldExpr(Expr, String, UInt64)
   QualifiedExpr(Expr, String, UInt64)
+  ProductFieldExpr(Expr, Int, Int, UInt64)
   IndexExpr(Expr, Expr, UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Expr::desugar_is(Self) -> Self
 pub fn Expr::offset(Self) -> UInt64
 
 pub enum ExpressionError {
@@ -205,11 +261,13 @@ pub enum ExpressionError {
   ExpectedFieldName(@tokenizer.Token?)
   ExpectedQualifiedName(@tokenizer.Token?)
   ExpectedRightBracket(@tokenizer.Token?, UInt64)
+  ExpectedArrayDelimiter(@tokenizer.Token?, UInt64)
   ExpectedObjectField(@tokenizer.Token?, UInt64)
   ExpectedObjectColon(@tokenizer.Token?, UInt64)
   ExpectedObjectFieldNewline(@tokenizer.Token?, UInt64)
   ExpectedBlockNewline(@tokenizer.Token?, UInt64)
   ExpectedBlockItemNewline(@tokenizer.Token?, UInt64)
+  ExpectedAssignmentTarget(@tokenizer.Token, UInt64)
   ExpectedBlockBindingName(@tokenizer.Token?)
   ExpectedBlockEqual(@tokenizer.Token?)
   ExpectedIfBody(@tokenizer.Token?, UInt64)
@@ -224,6 +282,9 @@ pub enum ExpressionError {
   ExpectedWhileArmNewline(@tokenizer.Token?, UInt64)
   ExpectedBreakValue(@tokenizer.Token?, UInt64)
   ExpectedContinueValue(@tokenizer.Token?, UInt64)
+  ExpectedLambdaSyntax(DeclarationExpectation, @tokenizer.Token?, UInt64)
+  UnexpectedLambdaTypeCloser(UInt64, UInt64)
+  InvalidLambdaSyntax(UInt64)
   MatchPatternError(PatternError)
   UnclosedObject(UInt64)
   UnclosedBlock(UInt64)
@@ -231,18 +292,49 @@ pub enum ExpressionError {
   UnclosedWhile(UInt64)
   ChainedComparison(UInt64)
   UnclosedGroup(UInt64)
+  InvalidProductArity(Int, UInt64)
+  UnclosedArray(UInt64)
   UnclosedCall(UInt64)
   UnclosedIndex(UInt64)
   MissingOperand(UInt64)
   LexicalError(@tokenizer.LexError, UInt64)
   InvalidOperatorState(UInt64)
-} derive(Eq, @debug.Debug)
+  UsingDoubleDispose(String, UInt64)
+  UsingValueEscape(String, UInt64)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ExpressionError::offset(Self) -> UInt64
 
 pub struct FnParameter {
   name : String
   type_ : TypeExpr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct ForeignLibraryDeclaration {
+  logical_name : Bytes
+  logical_name_offset : UInt64
+  namespace_alias : String
+  alias_offset : UInt64
+  members : Array[ForeignLibraryMember]
+  offset : UInt64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct ForeignLibraryMember {
+  name : String
+  name_offset : UInt64
+  parameters : Array[FnParameter]
+  return_type : TypeExpr
+  export_name : Bytes
+  export_name_offset : UInt64
+  offset : UInt64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct ForeignTypeDeclaration {
+  visibility : DeclarationVisibility
+  name : String
+  name_offset : UInt64
+  offset : UInt64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct FunctionDeclaration {
   visibility : DeclarationVisibility
@@ -254,7 +346,7 @@ pub struct FunctionDeclaration {
   return_type : TypeExpr
   body : Block
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn FunctionDeclaration::has_receiver(Self) -> Bool
 
 pub struct ImplDeclaration {
@@ -264,13 +356,16 @@ pub struct ImplDeclaration {
   target_type : TypeExpr
   methods : Array[FunctionDeclaration]
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct ImportDeclaration {
-  global_ : Bool
+  open_ : Bool
   path : Array[String]
+  wildcard : Bool
+  import_alias : String?
+  import_alias_offset : UInt64
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct LetDeclaration {
   visibility : DeclarationVisibility
@@ -279,23 +374,23 @@ pub struct LetDeclaration {
   name_offset : UInt64
   value : Expr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct ObjectField {
   name : String
   value : Expr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct ParseDiagnostic {
   severity : DiagnosticSeverity
   error : DeclarationError
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum ParseEvent {
   Declaration(Declaration)
   Diagnostic(ParseDiagnostic)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Parser {
   tokens : Iter[@tokenizer.Token]
@@ -315,13 +410,14 @@ pub fn Parser::take_token(Self) -> @tokenizer.Token?
 pub enum Pattern {
   WildcardPattern(UInt64)
   BindingPattern(String, UInt64)
+  ImportAliasPattern(String, UInt64)
   RestPattern(UInt64)
   LiteralPattern(Expr, UInt64)
   QualifiedPattern(Pattern, String, UInt64)
   TuplePattern(Pattern, Array[Pattern], UInt64)
   StructPattern(Pattern, Array[PatternField], UInt64?, UInt64)
   AlternativePattern(Pattern, Array[Pattern], UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Pattern::offset(Self) -> UInt64
 
 pub struct PatternArm {
@@ -329,7 +425,7 @@ pub struct PatternArm {
   guard_condition : Expr?
   body : Expr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum PatternError {
   ExpectedPattern(@tokenizer.Token?)
@@ -344,24 +440,25 @@ pub enum PatternError {
   UnclosedStructPattern(UInt64)
   EmptyTuplePattern(UInt64)
   PatternLexicalError(@tokenizer.LexError, UInt64)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PatternError::offset(Self) -> UInt64
 
 pub struct PatternField {
   name : String
   pattern : Pattern
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum PrefixOperator {
   Positive
   Negative
   LogicalNot
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct ReceiverParameter {
   explicit_type : TypeExpr?
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct StructDeclaration {
   visibility : DeclarationVisibility
@@ -369,22 +466,25 @@ pub struct StructDeclaration {
   name_offset : UInt64
   type_parameters : Array[TypeParameter]
   fields : Array[StructField]
+  derives : Array[DeriveRequest]
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct StructField {
+  mutable_ : Bool
   name : String
   type_ : TypeExpr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct TestDeclaration {
   name : Bytes
   name_offset : UInt64
+  expected_trap : Bytes?
   return_type : TypeExpr
   body : Block
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct TraitDeclaration {
   visibility : DeclarationVisibility
@@ -393,16 +493,17 @@ pub struct TraitDeclaration {
   type_parameters : Array[TypeParameter]
   methods : Array[TraitMethod]
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct TraitMethod {
   name : String
   name_offset : UInt64
+  type_parameters : Array[TypeParameter]
   receiver : ReceiverParameter?
   parameters : Array[FnParameter]
   return_type : TypeExpr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn TraitMethod::has_receiver(Self) -> Bool
 
 pub struct TypeAliasDeclaration {
@@ -412,18 +513,22 @@ pub struct TypeAliasDeclaration {
   type_parameters : Array[TypeParameter]
   target : TypeExpr
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum TypeExpr {
   NamedType(String, UInt64)
+  QualifiedType(String, String, UInt64, UInt64)
+  ProductType(Array[TypeExpr], UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
-} derive(Eq, @debug.Debug)
+  FunctionType(Array[TypeExpr], TypeExpr, UInt64)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn TypeExpr::offset(Self) -> UInt64
 
 pub struct TypeParameter {
   name : String
+  bounds : Array[TypeExpr]
   offset : UInt64
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

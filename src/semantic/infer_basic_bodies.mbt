@@ -8,6 +8,9 @@ let instantiate_finish_application = 1
 let instantiate_finish_function = 2
 
 ///|
+let instantiate_finish_product = 3
+
+///|
 let import_value_visit = 0
 
 ///|
@@ -15,6 +18,9 @@ let import_value_finish_application = 1
 
 ///|
 let import_value_finish_function = 2
+
+///|
+let import_value_finish_product = 3
 
 ///|
 let empty_body_type_array : Array[BodyTypeId] = []
@@ -160,6 +166,14 @@ fn BodyJobTypeImporter::import_type(
     }
     if state == 0 {
       match job.types[source] {
+        BodyProductType(fields) => {
+          self.push(source, 3, self.results.length())
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push(job.type_arguments[fields.start + index], 0, 0)
+          }
+        }
         BodyAppliedType(base, arguments) => {
           self.push(source, 1, self.results.length())
           let mut index = arguments.length
@@ -196,7 +210,7 @@ fn BodyJobTypeImporter::import_type(
       let result = self.solver.applied_type(base, self.arguments)
       self.results.truncate(result_start)
       self.results.push(result)
-    } else {
+    } else if state == 2 {
       let parameters = match job.types[source] {
         BodyFunctionType(parameters, _) => parameters
         _ => abort("body-job import expected a function type")
@@ -209,6 +223,18 @@ fn BodyJobTypeImporter::import_type(
         self.arguments,
         self.results[result_start + parameters.length],
       )
+      self.results.truncate(result_start)
+      self.results.push(result)
+    } else {
+      let fields = match job.types[source] {
+        BodyProductType(fields) => fields
+        _ => abort("body-job import expected a product type")
+      }
+      self.arguments.clear()
+      for index in 0..<fields.length {
+        self.arguments.push(self.results[result_start + index])
+      }
+      let result = self.solver.product_type(self.arguments)
       self.results.truncate(result_start)
       self.results.push(result)
     }
@@ -428,6 +454,22 @@ fn ModuleValueImporter::import_type(
         continue
       }
       match self.values.types[source] {
+        BodyProductType(fields) => {
+          self.push_task(
+            source,
+            import_value_finish_product,
+            self.results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_task(
+              self.values.type_arguments[fields.start + index],
+              import_value_visit,
+              0,
+            )
+          }
+        }
         BodyAppliedType(base, arguments) => {
           self.push_task(
             source,
@@ -486,7 +528,7 @@ fn ModuleValueImporter::import_type(
       self.cached[source] = result
       self.results.truncate(result_start)
       self.results.push(result)
-    } else {
+    } else if state == import_value_finish_function {
       let parameters = match self.values.types[source] {
         BodyFunctionType(parameters, _) => parameters
         _ => abort("module value import expected a function type")
@@ -499,6 +541,20 @@ fn ModuleValueImporter::import_type(
         self.arguments,
         self.results[result_start + parameters.length],
       )
+      self.marks[source] = self.generation
+      self.cached[source] = result
+      self.results.truncate(result_start)
+      self.results.push(result)
+    } else {
+      let fields = match self.values.types[source] {
+        BodyProductType(fields) => fields
+        _ => abort("module value import expected a product type")
+      }
+      self.arguments.clear()
+      for index in 0..<fields.length {
+        self.arguments.push(self.results[result_start + index])
+      }
+      let result = self.solver.product_type(self.arguments)
       self.marks[source] = self.generation
       self.cached[source] = result
       self.results.truncate(result_start)
@@ -1574,6 +1630,21 @@ fn BasicBodyInferencer::ensure_member_storage(
 }
 
 ///|
+fn BasicBodyInferencer::standard_array_constructor_type(
+  self : BasicBodyInferencer,
+) -> BodyTypeId {
+  for index, type_ in self.resolved.types {
+    match type_ {
+      NominalType(declaration) if declaration ==
+        standard_array_type_declaration() =>
+        return self.solver.resolved_type(index)
+      _ => ()
+    }
+  }
+  self.solver.error_type()
+}
+
+///|
 fn BasicBodyInferencer::initialize_expression_types(
   self : BasicBodyInferencer,
 ) -> Unit {
@@ -1638,6 +1709,21 @@ fn BasicBodyInferencer::initialize_expression_types(
       HirBoolExpr(_, _) => self.primitive(BoolType)
       HirStringExpr(_, _) => self.primitive(StringType)
       HirBytesExpr(_, _) => self.primitive(BytesType)
+      HirProductExpr(fields, _) => {
+        let types : Array[BodyTypeId] = []
+        for index in 0..<fields.length {
+          types.push(
+            self.expression_type(
+              self.collected.expression_children[fields.start + index],
+            ),
+          )
+        }
+        self.solver.product_type(types)
+      }
+      HirArrayExpr(_, _) =>
+        self.solver.applied_type(self.standard_array_constructor_type(), [
+          self.solver.fresh_variable(),
+        ])
       HirNameExpr(name, _) =>
         match self.names.expression_references[expression] {
           LocalNameReference(local_id) => self.local_types[local_id]
@@ -1995,6 +2081,22 @@ fn BasicBodyInferencer::instantiate_signature_type(
           self.call_scratch.instantiation_values[source] = result
           self.call_scratch.instantiation_results.push(result)
         }
+        ProductType(fields) => {
+          self.push_instantiation_task(
+            source,
+            instantiate_finish_product,
+            self.call_scratch.instantiation_results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_instantiation_task(
+              self.resolved.type_arguments[fields.start + index],
+              instantiate_visit,
+              0,
+            )
+          }
+        }
         AppliedType(base, arguments) => {
           self.push_instantiation_task(
             source,
@@ -2079,7 +2181,7 @@ fn BasicBodyInferencer::instantiate_signature_type(
       self.call_scratch.instantiation_values[source] = result
       self.call_scratch.instantiation_results.truncate(result_start)
       self.call_scratch.instantiation_results.push(result)
-    } else {
+    } else if state == instantiate_finish_function {
       let (parameters, source_result) = match self.resolved.types[source] {
         FunctionType(parameters, result) => (parameters, result)
         _ => abort("signature instantiation expected a function type")
@@ -2109,6 +2211,32 @@ fn BasicBodyInferencer::instantiate_signature_type(
           self.call_scratch.instantiation_arguments,
           instantiated_result,
         )
+      }
+      self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
+      self.call_scratch.instantiation_values[source] = result
+      self.call_scratch.instantiation_results.truncate(result_start)
+      self.call_scratch.instantiation_results.push(result)
+    } else {
+      let fields = match self.resolved.types[source] {
+        ProductType(fields) => fields
+        _ => abort("signature instantiation expected a product type")
+      }
+      self.call_scratch.instantiation_arguments.clear()
+      let mut unchanged = true
+      for index in 0..<fields.length {
+        let field = self.call_scratch.instantiation_results[result_start + index]
+        if field !=
+          self.solver.resolved_type(
+            self.resolved.type_arguments[fields.start + index],
+          ) {
+          unchanged = false
+        }
+        self.call_scratch.instantiation_arguments.push(field)
+      }
+      let result = if unchanged {
+        self.solver.resolved_type(source)
+      } else {
+        self.solver.product_type(self.call_scratch.instantiation_arguments)
       }
       self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
       self.call_scratch.instantiation_values[source] = result
@@ -2560,6 +2688,36 @@ fn BasicBodyInferencer::constrain_control_results(
 }
 
 ///|
+fn BasicBodyInferencer::constrain_product_field_expression(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  base : ExprId,
+  index : Int,
+  arity : Int,
+  offset : UInt64,
+) -> Unit {
+  if index < 0 || index >= arity || arity < 2 || arity > 32 {
+    self.solver.poison_type(self.expression_type(expression))
+    return
+  }
+  let fields : Array[BodyTypeId] = []
+  for _ in 0..<arity {
+    fields.push(self.solver.fresh_variable())
+  }
+  let product = self.solver.product_type(fields)
+  self.constrain(
+    self.expression_type(base),
+    product,
+    expression_type_origin(expression, offset),
+  )
+  self.constrain(
+    self.expression_type(expression),
+    fields[index],
+    expression_type_origin(expression, offset),
+  )
+}
+
+///|
 fn BasicBodyInferencer::constrain_expressions(
   self : BasicBodyInferencer,
 ) -> Unit {
@@ -2581,7 +2739,27 @@ fn BasicBodyInferencer::constrain_expressions(
       | HirStringExpr(_, _)
       | HirBytesExpr(_, _)
       | HirNameExpr(_, _)
-      | HirImportAliasExpr(_, _) => ()
+      | HirImportAliasExpr(_, _)
+      | HirProductExpr(_, _) => ()
+      HirArrayExpr(elements, offset) => {
+        let expression_type = self.solver.representative_type(
+          self.expression_type(expression),
+        )
+        let element_type = match self.solver.type_term(expression_type) {
+          BodyAppliedType(_, arguments) if arguments.length == 1 =>
+            self.solver.type_arguments[arguments.start]
+          _ => self.solver.error_type()
+        }
+        for index in 0..<elements.length {
+          self.constrain(
+            self.expression_type(
+              self.collected.expression_children[elements.start + index],
+            ),
+            element_type,
+            expression_type_origin(expression, offset),
+          )
+        }
+      }
       HirLambdaExpr(_, _) => ()
       HirBreakExpr(value, offset) =>
         self.constrain_transfer_expression(expression, value, true, offset)
@@ -2597,6 +2775,10 @@ fn BasicBodyInferencer::constrain_expressions(
       HirBinaryExpr(operator, left, right, offset) =>
         self.constrain_binary_expression(
           expression, operator, left, right, offset,
+        )
+      HirProductFieldExpr(base, index, arity, offset) =>
+        self.constrain_product_field_expression(
+          expression, base, index, arity, offset,
         )
       HirConstructExpr(_, _, _)
       | HirQualifiedExpr(_, _, _)
@@ -3100,6 +3282,15 @@ fn append_module_value_job(
     match job.types[local_type_id] {
       BodyVariableType(variable) =>
         values.types.push(BodyVariableType(variable))
+      BodyProductType(fields) => {
+        let start = values.type_arguments.length()
+        for index in 0..<fields.length {
+          values.type_arguments.push(
+            remap_job_type(job.type_arguments[fields.start + index], type_start),
+          )
+        }
+        values.types.push(BodyProductType({ start, length: fields.length }))
+      }
       BodyAppliedType(base, arguments) => {
         let start = values.type_arguments.length()
         for index in 0..<arguments.length {
@@ -3428,6 +3619,18 @@ fn merge_body_inference_jobs(
     for local_type_id in 1..<job.types.length() {
       match job.types[local_type_id] {
         BodyVariableType(variable) => types.push(BodyVariableType(variable))
+        BodyProductType(fields) => {
+          let start = type_arguments.length()
+          for index in 0..<fields.length {
+            type_arguments.push(
+              remap_job_type(
+                job.type_arguments[fields.start + index],
+                type_start,
+              ),
+            )
+          }
+          types.push(BodyProductType({ start, length: fields.length }))
+        }
         BodyAppliedType(base, arguments) => {
           let start = type_arguments.length()
           for index in 0..<arguments.length {
@@ -3644,6 +3847,18 @@ fn merge_body_inference_jobs(
     for local_type_id in 1..<job.types.length() {
       match job.types[local_type_id] {
         BodyVariableType(variable) => types.push(BodyVariableType(variable))
+        BodyProductType(fields) => {
+          let start = type_arguments.length()
+          for index in 0..<fields.length {
+            type_arguments.push(
+              remap_job_type(
+                job.type_arguments[fields.start + index],
+                type_start,
+              ),
+            )
+          }
+          types.push(BodyProductType({ start, length: fields.length }))
+        }
         BodyAppliedType(base, arguments) => {
           let start = type_arguments.length()
           for index in 0..<arguments.length {

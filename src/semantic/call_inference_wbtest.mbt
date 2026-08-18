@@ -554,7 +554,10 @@ test "body inference never mutates the frozen resolved type interner" {
   assert_eq(resolved.syntax_types, frozen_syntax)
   for term in inferred.types {
     match term {
-      BodyVariableType(_) | BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
+      BodyVariableType(_)
+      | BodyProductType(_)
+      | BodyAppliedType(_, _)
+      | BodyFunctionType(_, _) => ()
       BodyErrorType | BodyResolvedType(_) => ()
     }
   }

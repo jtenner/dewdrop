@@ -661,6 +661,7 @@ fn starshine_program_global_value_type(
     @semantic.V128PlannedValueShape => @lib.ValType::v128()
     @semantic.RefPlannedValueShape
     | @semantic.GenericPlannedValueShape
+    | @semantic.ProductPlannedValueShape(_)
     | @semantic.ErrorPlannedValueShape => @lib.ValType::eqref_null()
     @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape =>
       @lib.ValType::bottom()
@@ -710,6 +711,7 @@ fn starshine_program_global_default(
       ]
     @semantic.RefPlannedValueShape
     | @semantic.GenericPlannedValueShape
+    | @semantic.ProductPlannedValueShape(_)
     | @semantic.ErrorPlannedValueShape =>
       [@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::none()))]
     @semantic.UnitPlannedValueShape | @semantic.NeverPlannedValueShape => []
@@ -867,6 +869,11 @@ fn emit_starshine_program_initializer_body(
     body,
     0,
   )
+  let mut product_scratch_index = -1
+  if initializer.shape is @semantic.ProductPlannedValueShape(_) {
+    product_scratch_index = body_local_types.length()
+    starshine_append_shape_value_types(body_local_types, initializer.shape)
+  }
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     module_lowering,
     Some(planned),
@@ -908,6 +915,25 @@ fn emit_starshine_program_initializer_body(
       None,
     ) {
     Ok(instructions) => {
+      if initializer.shape is @semantic.ProductPlannedValueShape(_) {
+        starshine_append_product_local_sets(
+          instructions,
+          product_scratch_index,
+          initializer.shape,
+        )
+        match
+          starshine_product_box_from_locals(
+            module_fragments,
+            Some(planned),
+            body.body,
+            product_scratch_index,
+            initializer.shape,
+          ) {
+          Ok(box_instructions) =>
+            append_starshine_instructions(instructions, box_instructions)
+          Err(error) => return Err(error)
+        }
+      }
       if initializer.global_index >= 0 {
         instructions.push(
           @lib.Instruction::global_set(

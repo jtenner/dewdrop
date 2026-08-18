@@ -30,6 +30,28 @@ test "public builtin declaration preserves complete signature" {
 }
 
 ///|
+test "product types preserve order nesting and trailing commas" {
+  match
+    parse_test_declaration(
+      b"builtin split(value: U64) -> (U32, (U16, U8), U32,) = \"split\"",
+    ) {
+    Ok(Builtin(declaration)) =>
+      assert_eq(
+        declaration.return_type,
+        ProductType(
+          [
+            NamedType("U32", 30UL),
+            ProductType([NamedType("U16", 36UL), NamedType("U8", 41UL)], 35UL),
+            NamedType("U32", 46UL),
+          ],
+          29UL,
+        ),
+      )
+    _ => fail("expected product return type")
+  }
+}
+
+///|
 test "function types preserve parameter and result structure" {
   match
     parse_test_declaration(

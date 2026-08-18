@@ -222,6 +222,15 @@ fn BasicBodyInferencer::mark_compact_type(
     }
     self.compact_marks[type_] = true
     match self.solver.types[type_] {
+      BodyProductType(fields) => {
+        let mut index = fields.length
+        while index > 0 {
+          index -= 1
+          self.compact_stack.push(
+            self.solver.type_arguments[fields.start + index],
+          )
+        }
+      }
       BodyAppliedType(base, arguments) => {
         let mut index = arguments.length
         while index > 0 {
@@ -401,6 +410,19 @@ fn BasicBodyInferencer::build_compact_types(self : BasicBodyInferencer) -> Unit 
     match self.solver.types[old_id] {
       BodyVariableType(variable) =>
         self.compact_types.push(BodyVariableType(variable))
+      BodyProductType(fields) => {
+        let start = self.compact_arguments.length()
+        for index in 0..<fields.length {
+          self.compact_arguments.push(
+            self.compact_type_id(
+              self.solver.type_arguments[fields.start + index],
+            ),
+          )
+        }
+        self.compact_types.push(
+          BodyProductType({ start, length: fields.length }),
+        )
+      }
       BodyAppliedType(base, arguments) => {
         let start = self.compact_arguments.length()
         for index in 0..<arguments.length {

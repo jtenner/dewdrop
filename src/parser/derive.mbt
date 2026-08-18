@@ -127,6 +127,14 @@ fn derived_type_mentions_parameter(
   match type_ {
     NamedType(name, _) => name == parameter
     QualifiedType(_, _, _, _) => false
+    ProductType(fields, _) => {
+      for field in fields {
+        if derived_type_mentions_parameter(field, parameter) {
+          return true
+        }
+      }
+      false
+    }
     AppliedType(base, arguments, _) => {
       if derived_type_mentions_parameter(base, parameter) {
         return true

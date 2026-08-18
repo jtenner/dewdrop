@@ -16,6 +16,34 @@ fn repeated_test_expression(term_count : Int, operator : String) -> Bytes {
 }
 
 ///|
+fn flat_array_test_expression(length : Int) -> Bytes {
+  let output = Buffer(size_hint=length * 2 + 2)
+  output.write_byte(b'[')
+  for index in 0..<length {
+    if index > 0 {
+      output.write_byte(b',')
+    }
+    output.write_byte(b'1')
+  }
+  output.write_byte(b']')
+  output.to_bytes()
+}
+
+///|
+fn flat_product_test_expression(length : Int) -> Bytes {
+  let output = Buffer(size_hint=length * 2 + 2)
+  output.write_byte(b'(')
+  for index in 0..<length {
+    if index > 0 {
+      output.write_byte(b',')
+    }
+    output.write_byte(b'1')
+  }
+  output.write_byte(b')')
+  output.to_bytes()
+}
+
+///|
 fn nested_group_test_expression(depth : Int) -> Bytes {
   let output = Buffer(size_hint=depth * 2 + 1)
   for _ in 0..<depth {
@@ -138,6 +166,79 @@ test "comparison operators cannot be chained" {
   assert_eq(parse_test_expression(b"a == b != c"), Err(ChainedComparison(7UL)))
   assert_eq(parse_test_expression(b"a < b == c"), Err(ChainedComparison(6UL)))
   assert_eq(parse_test_expression(b"a == b < c"), Err(ChainedComparison(7UL)))
+}
+
+///|
+test "product expressions preserve order nesting and trailing commas" {
+  assert_eq(
+    parse_test_expression(b"(1, true, (2, 3),)"),
+    Ok(
+      ProductExpr(
+        [
+          I32Expr(1UL, 1UL),
+          BoolExpr(true, 4UL),
+          ProductExpr([I32Expr(2UL, 11UL), I32Expr(3UL, 14UL)], 10UL),
+        ],
+        0UL,
+      ),
+    ),
+  )
+}
+
+///|
+test "array literals preserve order nesting and trailing commas" {
+  assert_eq(
+    parse_test_expression(b"[1, true, [2, 3],]"),
+    Ok(
+      ArrayExpr(
+        [
+          I32Expr(1UL, 1UL),
+          BoolExpr(true, 4UL),
+          ArrayExpr([I32Expr(2UL, 11UL), I32Expr(3UL, 14UL)], 10UL),
+        ],
+        0UL,
+      ),
+    ),
+  )
+  assert_eq(parse_test_expression(b"[]"), Ok(ArrayExpr([], 0UL)))
+}
+
+///|
+test "product and array literal boundaries are deterministic" {
+  assert_eq(parse_test_expression(b"(1,)"), Err(InvalidProductArity(1, 0UL)))
+  assert_eq(
+    parse_test_expression(flat_product_test_expression(33)),
+    Err(InvalidProductArity(33, 0UL)),
+  )
+  match parse_test_expression(b"[1,,2]") {
+    Err(ExpectedValue(Some(token))) =>
+      match token.kind() {
+        @tokenizer.Symbol(@tokenizer.Comma) => ()
+        _ => fail("expected duplicate comma token")
+      }
+    _ => fail("expected duplicate array delimiter error")
+  }
+}
+
+///|
+test "large flat array literals parse iteratively" {
+  match parse_test_expression(flat_array_test_expression(10000)) {
+    Ok(ArrayExpr(elements, 0UL)) => assert_eq(elements.length(), 10000)
+    _ => fail("expected large flat array literal")
+  }
+}
+
+///|
+test "array literals report deterministic delimiters" {
+  match parse_test_expression(b"[1 2]") {
+    Err(ExpectedArrayDelimiter(Some(token), 0UL)) =>
+      match token.kind() {
+        @tokenizer.I32(2UL) => ()
+        _ => fail("expected second element at array delimiter error")
+      }
+    _ => fail("expected deterministic array delimiter error")
+  }
+  assert_eq(parse_test_expression(b"[1,"), Err(UnclosedArray(0UL)))
 }
 
 ///|

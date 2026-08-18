@@ -14,6 +14,9 @@ let normalize_finish_alias_expansion = 3
 let normalize_finish_function = 4
 
 ///|
+let normalize_finish_product = 5
+
+///|
 let substitute_visit = 0
 
 ///|
@@ -21,6 +24,9 @@ let substitute_finish_application = 1
 
 ///|
 let substitute_finish_function = 2
+
+///|
+let substitute_finish_product = 3
 
 ///|
 fn TypeResolver::ensure_normalization_slots(self : TypeResolver) -> Unit {
@@ -141,6 +147,22 @@ fn TypeResolver::substitute_alias_target(
           self.substitution_values[current] = result
           self.substitution_results.push(result)
         }
+        ProductType(fields) => {
+          self.push_substitution_task(
+            current,
+            substitute_finish_product,
+            self.substitution_results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_substitution_task(
+              self.interner.arguments[fields.start + index],
+              substitute_visit,
+              0,
+            )
+          }
+        }
         AppliedType(base, span) => {
           self.push_substitution_task(
             current,
@@ -199,12 +221,14 @@ fn TypeResolver::substitute_alias_target(
       self.substitution_values[current] = result
       self.substitution_results.truncate(result_start)
       self.substitution_results.push(result)
-    } else {
+    } else if state == substitute_finish_function {
       let parameter_count = match self.interner.types[current] {
         FunctionType(parameters, _) => parameters.length
         _ => abort("function substitution task expected a function type")
       }
       self.finish_substituted_function(current, result_start, parameter_count)
+    } else {
+      self.finish_substituted_product(current, result_start)
     }
   }
   guard self.substitution_results.length() == 1 else {
@@ -267,6 +291,22 @@ fn TypeResolver::substitute_imported_alias_target(
           self.substitution_values[current] = result
           self.substitution_results.push(result)
         }
+        ProductType(fields) => {
+          self.push_substitution_task(
+            current,
+            substitute_finish_product,
+            self.substitution_results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_substitution_task(
+              self.interner.arguments[fields.start + index],
+              substitute_visit,
+              0,
+            )
+          }
+        }
         AppliedType(base, span) => {
           self.push_substitution_task(
             current,
@@ -325,12 +365,14 @@ fn TypeResolver::substitute_imported_alias_target(
       self.substitution_values[current] = result
       self.substitution_results.truncate(result_start)
       self.substitution_results.push(result)
-    } else {
+    } else if state == substitute_finish_function {
       let parameter_count = match self.interner.types[current] {
         FunctionType(parameters, _) => parameters.length
         _ => abort("function substitution task expected a function type")
       }
       self.finish_substituted_function(current, result_start, parameter_count)
+    } else {
+      self.finish_substituted_product(current, result_start)
     }
   }
   guard self.substitution_results.length() == 1 else {
@@ -366,6 +408,29 @@ fn TypeResolver::can_expand_alias(
 }
 
 ///|
+fn TypeResolver::finish_substituted_product(
+  self : TypeResolver,
+  original : ResolvedTypeId,
+  result_start : Int,
+) -> Unit {
+  self.substitution_application_scratch.clear()
+  append_int_result_range(
+    self.substitution_results,
+    result_start,
+    self.substitution_results.length(),
+    self.substitution_application_scratch,
+  )
+  let result = self.interner.intern_product(
+    self.substitution_application_scratch,
+  )
+  self.ensure_substitution_slots()
+  self.substitution_marks[original] = self.substitution_generation
+  self.substitution_values[original] = result
+  self.substitution_results.truncate(result_start)
+  self.substitution_results.push(result)
+}
+
+///|
 fn TypeResolver::finish_substituted_function(
   self : TypeResolver,
   original : ResolvedTypeId,
@@ -387,6 +452,35 @@ fn TypeResolver::finish_substituted_function(
   self.substitution_values[original] = result
   self.substitution_results.truncate(result_start)
   self.substitution_results.push(result)
+}
+
+///|
+fn TypeResolver::finish_normal_product(
+  self : TypeResolver,
+  original : ResolvedTypeId,
+  result_start : Int,
+) -> Unit {
+  self.normalization_application_scratch.clear()
+  let mut poisoned = false
+  for index in result_start..<self.normalization_results.length() {
+    let field = self.normalization_results[index]
+    if field == self.interner.error_type {
+      poisoned = true
+    }
+    self.normalization_application_scratch.push(field)
+  }
+  let result = if poisoned {
+    self.interner.error_type
+  } else {
+    self.interner.intern_product(self.normalization_application_scratch)
+  }
+  self.ensure_normalization_slots()
+  self.normalizations[original] = result
+  if result >= 0 && self.normalizations[result] < 0 {
+    self.normalizations[result] = result
+  }
+  self.normalization_results.truncate(result_start)
+  self.normalization_results.push(result)
 }
 
 ///|
@@ -546,6 +640,22 @@ fn TypeResolver::normalize_type(
               self.normalization_results.push(current)
             }
           }
+        ProductType(fields) => {
+          self.push_normalization_task(
+            current,
+            normalize_finish_product,
+            self.normalization_results.length(),
+          )
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push_normalization_task(
+              self.interner.arguments[fields.start + index],
+              normalize_visit,
+              0,
+            )
+          }
+        }
         AppliedType(base, span) =>
           match self.alias_index_for_constructor(base) {
             Some(_) => {
@@ -610,6 +720,8 @@ fn TypeResolver::normalize_type(
         _ => abort("function normalization task expected a function type")
       }
       self.finish_normal_function(current, result_start, parameter_count)
+    } else if state == normalize_finish_product {
+      self.finish_normal_product(current, result_start)
     } else {
       let result = self.normalization_results[result_start]
       self.normalizations[current] = result

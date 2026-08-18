@@ -168,6 +168,10 @@ fn cache_write_resolved_type(
       cache_write_int(output, 5)
       cache_write_u64(output, declaration)
     }
+    ProductType(fields) => {
+      cache_write_int(output, 8)
+      cache_write_span(output, fields)
+    }
     AppliedType(base, arguments) => {
       cache_write_int(output, 6)
       cache_write_int(output, base)
@@ -303,8 +307,18 @@ fn cache_write_shape(
       RefPlannedValueShape => 15
       GenericPlannedValueShape => 16
       NeverPlannedValueShape => 17
+      ProductPlannedValueShape(_) => 18
     },
   )
+  match value {
+    ProductPlannedValueShape(fields) => {
+      cache_write_int(output, fields.length())
+      for field in fields {
+        cache_write_shape(output, field)
+      }
+    }
+    _ => ()
+  }
 }
 
 ///|
@@ -652,6 +666,7 @@ fn FrozenInterfaceCacheReader::read_resolved_type(
     5 => SelfType(self.read_u64())
     6 => AppliedType(self.read_int(), self.read_span())
     7 => FunctionType(self.read_span(), self.read_int())
+    8 => ProductType(self.read_span())
     _ => {
       self.fail("unknown resolved type in frozen-interface cache")
       ErrorType
@@ -779,6 +794,14 @@ fn FrozenInterfaceCacheReader::read_shape(
     15 => RefPlannedValueShape
     16 => GenericPlannedValueShape
     17 => NeverPlannedValueShape
+    18 => {
+      let count = self.read_count(64, "product shape field")
+      let fields : Array[PlannedValueShape] = []
+      for _ in 0..<count {
+        fields.push(self.read_shape())
+      }
+      ProductPlannedValueShape(fields)
+    }
     _ => {
       self.fail("unknown value shape in frozen-interface cache")
       ErrorPlannedValueShape
