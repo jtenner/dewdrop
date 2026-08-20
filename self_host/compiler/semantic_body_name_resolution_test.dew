@@ -1,0 +1,637 @@
+open dew.std.option
+open dew.std.string_builder
+open dew.std.testing
+
+fn self_host_name_ref_is_local(
+  reference: SelfHostBodyNameReference,
+  local: U32,
+) -> Bool {
+  match reference {
+    SelfHostBodyNameReference::LocalNameReference(value) => value == local
+    _ => false
+  }
+}
+
+fn self_host_name_ref_is_module_value(
+  reference: SelfHostBodyNameReference,
+  name: U32,
+) -> Bool {
+  match reference {
+    SelfHostBodyNameReference::ModuleValueNameReference(value) => value == name
+    _ => false
+  }
+}
+
+fn self_host_name_ref_code(reference: SelfHostBodyNameReference) -> U32 {
+  match reference {
+    SelfHostBodyNameReference::NoNameReference => 0u32
+    SelfHostBodyNameReference::ErrorNameReference => 1u32
+    SelfHostBodyNameReference::LocalNameReference(local) => 10u32 + local
+    SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => 100u32 + capture
+    SelfHostBodyNameReference::ModuleValueNameReference(_) => 200u32
+    SelfHostBodyNameReference::ImportedModuleValueNameReference(_) => 201u32
+    SelfHostBodyNameReference::ImportedModuleNameReference(_) => 202u32
+    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => 203u32
+    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => 204u32
+    SelfHostBodyNameReference::ModuleTypeNameReference(_) => 205u32
+    SelfHostBodyNameReference::ModuleTraitNameReference(_) => 206u32
+    SelfHostBodyNameReference::VariantNameReference(_) => 207u32
+  }
+}
+
+fn self_host_u32_message(prefix: String, value: U32) -> String {
+  let builder = StringBuilder::new()
+  builder.append(prefix)
+  builder.append_u32(value)
+  builder.finish()
+}
+
+fn self_host_name_ref_is_capture(
+  reference: SelfHostBodyNameReference,
+  capture: U32,
+) -> Bool {
+  match reference {
+    SelfHostBodyNameReference::LambdaCaptureNameReference(value) => value == capture
+    _ => false
+  }
+}
+
+fn self_host_empty_resolved_body_names() -> SelfHostResolvedBodyNames {
+  SelfHostResolvedBodyNames::{
+    body: 0u64
+    locals: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    controls: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    diagnostics: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+  }
+}
+
+fn self_host_empty_resolved_lambda_names() -> SelfHostResolvedLambdaNames {
+  SelfHostResolvedLambdaNames::{
+    lambda: 0u32
+    locals: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    controls: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    captures: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    diagnostics: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+  }
+}
+
+fn self_host_body_root_block_id(body: SelfHostHirBody) -> U32 {
+  match body.root {
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => block
+    _ => 4294967295u32
+  }
+}
+
+fn self_host_lambda_name_expression(
+  collected: SelfHostCollectedModule,
+  lambda: SelfHostHirLambda,
+  spelling: String,
+) -> U32 {
+  let mut expression = lambda.body.expressions.start
+  let end = lambda.body.expressions.start + lambda.body.expressions.length
+  while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::NameExpr(name, _) => if collected.name(name) == spelling {
+          break current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break 4294967295u32
+    }
+  }
+}
+
+fn self_host_first_body_expression(
+  collected: SelfHostCollectedModule,
+  body: SelfHostHirBody,
+) -> U32 {
+  let block = self_host_body_root_block_id(body)
+  let item = collected.blocks[block].items.start
+  match collected.block_items[item] {
+    SelfHostHirBlockItem::ExpressionItem(expression, _) => expression
+    _ => 4294967295u32
+  }
+}
+
+test "body names resolve parameters sequential lets shadowing and module values" {
+  let collected = self_host_collect_bytes(
+    3000u64,
+    b"let answer = 1\nfn choose(value: I32) -> I32 {\n  let first = value\n  let mut value = first\n  value + answer\n}\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 0u32, "name diagnostics")
+  let body = collected.bodies[1u32]
+  let info = match names.body(body.id) {
+    Option::Some(value) => value
+    Option::None => self_host_empty_resolved_body_names()
+  }
+  assert(info.locals.length == 3u32, "local count")
+  assert(names.parameter_locals[0u32] == 0u32, "parameter local")
+  let block = self_host_body_root_block_id(body)
+  let items = collected.blocks[block].items
+  let first_initializer = match collected.block_items[items.start] {
+    SelfHostHirBlockItem::LetItem(_, _, _, value, _) => value
+    _ => 4294967295u32
+  }
+  match collected.expressions[first_initializer] {
+    SelfHostHirExpr::NameExpr(name, _) => assert(
+      collected.name(name) == "value",
+      collected.name(name),
+    )
+    _ => assert(false, "first initializer shape")
+  }
+  let value_name = match collected.expressions[first_initializer] {
+    SelfHostHirExpr::NameExpr(name, _) => name
+    _ => 4294967295u32
+  }
+  let first_name = match collected.block_items[items.start] {
+    SelfHostHirBlockItem::LetItem(_, name, _, _, _) => name
+    _ => 4294967295u32
+  }
+  assert(value_name != first_name, "distinct value and first names")
+  let parameter_code = self_host_name_ref_code(
+    names.expression_references[first_initializer],
+  )
+  assert(
+    parameter_code == 10u32,
+    self_host_u32_message("parameter reference code ", parameter_code),
+  )
+  let shadow_initializer = match collected.block_items[self_host_u32_add(items.start, 1u32)] {
+    SelfHostHirBlockItem::LetItem(_, _, _, value, _) => value
+    _ => 4294967295u32
+  }
+  assert(first_initializer != shadow_initializer, "distinct initializers")
+  assert(
+    self_host_name_ref_is_local(
+      names.expression_references[shadow_initializer],
+      1u32,
+    ),
+    "sequential let reference",
+  )
+  let final_expression = match collected.block_items[self_host_u32_add(items.start, 2u32)] {
+    SelfHostHirBlockItem::ExpressionItem(value, _) => value
+    _ => 4294967295u32
+  }
+  match collected.expressions[final_expression] {
+    SelfHostHirExpr::BinaryExpr(_, local, module_value, _) => {
+      assert(
+        self_host_name_ref_is_local(names.expression_references[local], 2u32),
+        "shadow local",
+      )
+      let answer = match collected.find_name("answer") {
+        Option::Some(value) => value
+        Option::None => 4294967295u32
+      }
+      assert(
+        self_host_name_ref_is_module_value(
+          names.expression_references[module_value],
+          answer,
+        ),
+        "module value",
+      )
+    }
+    _ => assert(false, "final binary expression")
+  }
+}
+
+test "body names diagnose unknown values and preserve known names" {
+  let collected = self_host_collect_bytes(
+    3001u64,
+    b"let answer = 1\nfn use() -> I32 {\n  answer + missing\n}\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 1u32, "unknown count")
+  match names.diagnostics[0u32] {
+    SelfHostBodyResolutionDiagnostic::UnknownValueName(name, _, _) => assert(
+      collected.name(name) == "missing",
+      "unknown spelling",
+    )
+    _ => assert(false, "unknown diagnostic")
+  }
+}
+
+test "alternative patterns share bindings and diagnose mismatched sets" {
+  let valid = self_host_collect_bytes(
+    3002u64,
+    b"enum State {\n  A(I32)\n  B(I32)\n}\nfn read(state: State) -> I32 {\n  match state {\n    A(value), B(value) if value > 0 => value\n    _ => 0\n  }\n}\n",
+  )
+  let valid_names = self_host_resolve_module_names(valid)
+  assert(valid_names.diagnostics.length() == 0u32, "valid alternatives")
+  let body = valid.bodies[0u32]
+  let info = match valid_names.body(body.id) {
+    Option::Some(value) => value
+    Option::None => self_host_empty_resolved_body_names()
+  }
+  assert(info.locals.length == 2u32, "shared alternative local")
+
+  let invalid = self_host_collect_bytes(
+    3003u64,
+    b"enum State {\n  A(I32, I32)\n  B(I32)\n}\nfn read(state: State) -> I32 {\n  match state {\n    A(left, left), B(right) => 0\n  }\n}\n",
+  )
+  let invalid_names = self_host_resolve_module_names(invalid)
+  let mut duplicate = 0u32
+  let mut missing = 0u32
+  let mut extra = 0u32
+  for diagnostic in invalid_names.diagnostics {
+    match diagnostic {
+      SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(_, _, _) => {
+        duplicate = duplicate + 1u32
+      }
+      SelfHostBodyResolutionDiagnostic::AlternativeMissingBinding(_, _, _) => {
+        missing = missing + 1u32
+      }
+      SelfHostBodyResolutionDiagnostic::AlternativeExtraBinding(_, _, _) => {
+        extra = extra + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(duplicate == 1u32, "duplicate binding")
+  assert(missing == 1u32, "missing binding")
+  assert(extra == 1u32, "extra binding")
+}
+
+test "functional loops resolve nearest break and continue targets" {
+  let collected = self_host_collect_bytes(
+    3004u64,
+    b"enum State {\n  Next(I32)\n  Done(I32)\n}\nfn run(initial: State) -> I32 {\n  while initial {\n    Next(value) => {\n      let nested = while value {\n        _ => break value\n      }\n      continue nested\n    }\n    Done(value) => break value\n  }\n}\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  let mut unknown_values = 0u32
+  let mut unknown_patterns = 0u32
+  let mut loop_transfers = 0u32
+  for diagnostic in names.diagnostics {
+    match diagnostic {
+      SelfHostBodyResolutionDiagnostic::UnknownValueName(name, _, offset) => {
+        unknown_values = unknown_values + 1u32
+        let builder = StringBuilder::new()
+        builder.append(collected.name(name))
+        builder.append(" at ")
+        builder.append_u32(offset)
+        assert(false, builder.finish())
+      }
+      SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(_, _, _) => {
+        unknown_patterns = unknown_patterns + 1u32
+      }
+      SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(_, _) => {
+        loop_transfers = loop_transfers + 1u32
+      }
+      SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(_, _) => {
+        loop_transfers = loop_transfers + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(unknown_values == 0u32, "loop unknown values")
+  assert(unknown_patterns == 0u32, "loop unknown patterns")
+  assert(loop_transfers == 0u32, "loop transfer diagnostics")
+  let info = match names.body(collected.bodies[0u32].id) {
+    Option::Some(value) => value
+    Option::None => self_host_empty_resolved_body_names()
+  }
+  assert(info.controls.length == 2u32, "loop control count")
+  let mut outer = 0u32
+  let mut inner = 0u32
+  for target in names.transfer_targets {
+    if target == 0u32 {
+      outer = outer + 1u32
+    } else if target == 1u32 {
+      inner = inner + 1u32
+    }
+  }
+  assert(outer == 2u32, "outer transfers")
+  assert(inner == 1u32, "inner transfer")
+}
+
+test "lambda names resolve direct and transitive captures" {
+  let collected = self_host_collect_bytes(
+    3005u64,
+    b"fn make(seed: I32) -> I32 {\n  let outer = fn(offset: I32) -> I32 {\n    let inner = fn(value: I32) -> I32 {\n      value + offset + seed\n    }\n    0\n  }\n  0\n}\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 0u32, "lambda diagnostics")
+  let outer = match names.lambda(0u32) {
+    Option::Some(value) => value
+    Option::None => self_host_empty_resolved_lambda_names()
+  }
+  let inner = match names.lambda(1u32) {
+    Option::Some(value) => value
+    Option::None => outer
+  }
+  assert(outer.captures.length == 1u32, "routed outer capture")
+  assert(inner.captures.length == 2u32, "inner captures")
+  let seed = match names.lambda_capture(0u32, 0u32) {
+    Option::Some(value) => value
+    Option::None => names.captures[0u32]
+  }
+  match seed.source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(_, local) => assert(
+      local == 0u32,
+      "root seed local",
+    )
+    _ => assert(false, "root capture source")
+  }
+  let inner_lambda = collected.lambdas[1u32]
+  let value_expression = self_host_lambda_name_expression(
+    collected,
+    inner_lambda,
+    "value",
+  )
+  let offset_expression = self_host_lambda_name_expression(
+    collected,
+    inner_lambda,
+    "offset",
+  )
+  let seed_expression = self_host_lambda_name_expression(
+    collected,
+    inner_lambda,
+    "seed",
+  )
+  assert(
+    self_host_name_ref_is_local(
+      names.expression_references[value_expression],
+      0u32,
+    ),
+    "lambda parameter reference",
+  )
+  assert(
+    self_host_name_ref_is_capture(
+      names.expression_references[offset_expression],
+      0u32,
+    ),
+    "lambda parent capture reference",
+  )
+  assert(
+    self_host_name_ref_is_capture(
+      names.expression_references[seed_expression],
+      1u32,
+    ),
+    "lambda root capture reference",
+  )
+}
+
+test "opened imported values and exact aliases resolve in bodies" {
+  let program = self_host_collect_program_manifest(
+    3010u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.consumer"
+          files: [
+            SelfHostManifestFile::{
+              path: "consumer.dew"
+              source: b"open app.library\nimport app.library as @api\npub fn run() -> I32 {\n  answer + @api.answer\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.library"
+          files: [
+            SelfHostManifestFile::{
+              path: "library.dew"
+              source: b"pub let answer = 42\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  let collected = program.modules.at(0u32)
+  let names = self_host_resolve_module_names_with_imports(
+    collected,
+    frozen.import_scopes.at(0u32),
+  )
+  assert(names.diagnostics.length() == 0u32, "imported body diagnostics")
+  let root = self_host_first_body_expression(collected, collected.bodies[0u32])
+  match collected.expressions[root] {
+    SelfHostHirExpr::BinaryExpr(_, opened, qualified, _) => {
+      assert(
+        names.expression_references[opened] is SelfHostBodyNameReference::ImportedModuleValueNameReference(_),
+        "opened value reference",
+      )
+      match collected.expressions[qualified] {
+        SelfHostHirExpr::QualifiedExpr(alias, _, _) => assert(
+          names.expression_references[alias] is SelfHostBodyNameReference::ImportedModuleNameReference(_),
+          "exact alias reference",
+        )
+        _ => assert(false, "qualified imported value")
+      }
+    }
+    _ => assert(false, "imported value expression")
+  }
+}
+
+test "exact import aliases resolve qualified pattern roots" {
+  let program = self_host_collect_program_manifest(
+    3015u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.consumer"
+          files: [
+            SelfHostManifestFile::{
+              path: "consumer.dew"
+              source: b"import app.library as @api\npub fn read(value: @api.Message) -> I32 {\n  match value {\n    @api.Message::Value(item) => item\n  }\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.library"
+          files: [
+            SelfHostManifestFile::{
+              path: "library.dew"
+              source: b"pub enum Message {\n  Value(I32)\n}\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  let names = self_host_resolve_module_names_with_imports(
+    program.modules.at(0u32),
+    frozen.import_scopes.at(0u32),
+  )
+  assert(names.diagnostics.length() == 0u32, "qualified pattern diagnostics")
+}
+
+test "opened imported value ambiguity is deterministic" {
+  let program = self_host_collect_program_manifest(
+    3020u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.consumer"
+          files: [
+            SelfHostManifestFile::{
+              path: "consumer.dew"
+              source: b"open app.first\nopen app.second\npub fn run() -> I32 {\n  answer\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.first"
+          files: [
+            SelfHostManifestFile::{
+              path: "first.dew"
+              source: b"pub let answer = 1\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.second"
+          files: [
+            SelfHostManifestFile::{
+              path: "second.dew"
+              source: b"pub let answer = 2\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  assert(frozen.import_diagnostics.length() == 1u32, "scope ambiguity")
+  let names = self_host_resolve_module_names_with_imports(
+    program.modules.at(0u32),
+    frozen.import_scopes.at(0u32),
+  )
+  assert(names.diagnostics.length() == 1u32, "body ambiguity")
+  match names.diagnostics[0u32] {
+    SelfHostBodyResolutionDiagnostic::AmbiguousImportedValueName(_, _, _) => {}
+    _ => assert(false, "ambiguous imported value diagnostic")
+  }
+}
+
+test "body jobs merge in body identity order" {
+  let collected = self_host_collect_bytes(
+    3025u64,
+    b"let first = missing_first\nfn second(value: I32) -> I32 {\n  let next = value\n  next\n}\nlet third = missing_third\n",
+  )
+  let forward = self_host_resolve_module_names_in_order(
+    collected,
+    [0u32, 1u32, 2u32],
+  )
+  let reverse = self_host_resolve_module_names_in_order(
+    collected,
+    [2u32, 1u32, 0u32],
+  )
+  assert(
+    forward.diagnostics.length() == reverse.diagnostics.length(),
+    "order diagnostic count",
+  )
+  assert(
+    forward.locals.length() == reverse.locals.length(),
+    "order local count",
+  )
+  let mut expression = 0u32
+  while expression {
+    current => if current < collected.expressions.length() {
+      assert(
+        self_host_name_ref_code(forward.expression_references[current]) ==
+          self_host_name_ref_code(reverse.expression_references[current]),
+        "order expression reference",
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+test "out of loop transfers remain diagnostics" {
+  let collected = self_host_collect_bytes(
+    3026u64,
+    b"let stopped = break 1\nlet continued = continue 2\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 2u32, "transfer diagnostic count")
+  let mut breaks = 0u32
+  let mut continues = 0u32
+  for diagnostic in names.diagnostics {
+    match diagnostic {
+      SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(_, _) => {
+        breaks = breaks + 1u32
+      }
+      SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(_, _) => {
+        continues = continues + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(breaks == 1u32, "break diagnostic")
+  assert(continues == 1u32, "continue diagnostic")
+}
+
+fn self_host_deep_local_source(count: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  builder.append("fn deep(initial: I32) -> I32 {\n")
+  let mut index = 0u32
+  while index {
+    current => if current < count {
+      builder.append("  let value_")
+      builder.append_u32(current)
+      builder.append(" = ")
+      if current == 0u32 {
+        builder.append("initial")
+      } else {
+        builder.append("value_")
+        builder.append_u32(current - 1u32)
+      }
+      builder.append("\n")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("  value_")
+  builder.append_u32(count - 1u32)
+  builder.append("\n}\n")
+  builder.finish().as_bytes()
+}
+
+test "body name resolution remains iterative for 1024 locals" {
+  let collected = self_host_collect_bytes(
+    3030u64,
+    self_host_deep_local_source(1024u32),
+  )
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 0u32, "deep diagnostics")
+  let info = match names.body(collected.bodies[0u32].id) {
+    Option::Some(value) => value
+    Option::None => self_host_empty_resolved_body_names()
+  }
+  assert(info.locals.length == 1025u32, "deep local count")
+}

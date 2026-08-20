@@ -63,6 +63,9 @@ module values, fields, variants, implementation evidence, ABI fingerprints,
 content fingerprints, persistent interface codecs, and cache admission remain
 in the later interface and backend tranches.
 
-Imported value and callable namespaces also remain for body name resolution.
-The next dependency phase is deterministic derive expansion followed by body
-name resolution and imported value bindings.
+Opened imported value names and exact module aliases are now consumed by body
+name resolution. See
+[`self-host-body-name-resolution-2026-08-20.md`](self-host-body-name-resolution-2026-08-20.md).
+Full callable recipes, inferred module values, fields, variants, and
+implementation evidence remain for imported semantic resolution and inference.
+The next dependency phase is deterministic derive expansion.

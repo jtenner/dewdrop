@@ -58,15 +58,18 @@ signature freezing are now ported. See
 [`self-host-module-interfaces-2026-08-20.md`](self-host-module-interfaces-2026-08-20.md).
 
 Nullable foreign-reference validation still requires standard semantic identity
-support. Derive requests are collected but are not expanded. Body names,
-imported values and callables, inference, trait evidence, flow, lowering,
-layouts, specialization, WasmGC planning, linking, encoding, and the Dew
-compiler driver remain to port.
+support. Body names, imported value names, lexical scopes, pattern bindings,
+loop controls, and lambda captures are now ported. See
+[`self-host-body-name-resolution-2026-08-20.md`](self-host-body-name-resolution-2026-08-20.md).
+
+Derive requests are collected but are not expanded. Imported callable recipes,
+inference, trait evidence, flow, lowering, layouts, specialization, WasmGC
+planning, linking, encoding, and the Dew compiler driver remain to port.
 
 ## Next phase
 
 1. Expand deterministic derive requests.
-2. Port imported value and callable bindings.
-3. Port body name resolution before inference.
-4. Add full fields, variants, implementation evidence, fingerprints, and cache
-   codecs to frozen interfaces when their dependent phases are available.
+2. Port imported callable, field, variant, and implementation recipes.
+3. Port inference and local unification.
+4. Add complete fingerprints and cache codecs to frozen interfaces when their
+   dependent phases are available.

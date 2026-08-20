@@ -9,9 +9,10 @@ no-provider linker work is complete.
 The path, filesystem, process, SHA-256, UTF-8, Facet adapter, package-codec, and
 source-Bytes request tranches are complete. The generated production Starshine
 object-model ABI, tokenizer, parser, semantic collection, flat HIR, local and
-imported type resolution, alias normalization, and signature-level module
-interfaces are also complete. The next compiler work is derive expansion,
-imported value/callable scopes, and body name resolution.
+imported type resolution, alias normalization, signature-level module
+interfaces, imported value names, lexical scopes, pattern bindings, loop
+controls, and lambda captures are also complete. The next compiler work is
+derive expansion, imported semantic recipes, inference, and local unification.
 
 ## 1. P0: compiler host boundary
 

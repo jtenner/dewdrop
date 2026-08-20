@@ -29,6 +29,8 @@ semantic_sources=(
   self_host/compiler/semantic_type_resolution.dew
   self_host/compiler/semantic_alias_resolution.dew
   self_host/compiler/semantic_program_interfaces.dew
+  self_host/compiler/semantic_body_names.dew
+  self_host/compiler/semantic_body_name_resolution.dew
 )
 
 tools/dew test \
@@ -50,7 +52,8 @@ tools/dew test \
   self_host/compiler/semantic_body_test.dew \
   self_host/compiler/semantic_type_resolution_test.dew \
   self_host/compiler/semantic_module_interfaces_test.dew \
-  self_host/compiler/semantic_program_interfaces_test.dew
+  self_host/compiler/semantic_program_interfaces_test.dew \
+  self_host/compiler/semantic_body_name_resolution_test.dew
 
 python3 tools/check-self-host-parser.py
 python3 tools/check-self-host-semantics.py

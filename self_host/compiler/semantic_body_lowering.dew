@@ -510,27 +510,26 @@ impl SelfHostCollectionBuilder {
   }
 
   fn lower_block(self, source: SelfHostBlock) -> U32 {
-    let item_start = self.block_items.length()
+    let lowered_items = []
     for item in source.items {
       match item {
         SelfHostBlockItem::LetItem(mutable_, name, name_offset, value, offset) => {
           let value_id = self.lower_expression(value)
-          self.block_items.push(
-            SelfHostHirBlockItem::LetItem(
-              mutable_,
-              self.intern(name),
-              name_offset,
-              value_id,
-              offset,
-            ),
+          let lowered = SelfHostHirBlockItem::LetItem(
+            mutable_,
+            self.intern(name),
+            name_offset,
+            value_id,
+            offset,
           )
+          lowered_items.push(lowered)
         }
         SelfHostBlockItem::ReturnItem(value, offset) => {
           let value_id = match value {
             Option::Some(expression) => self.lower_expression(expression)
             Option::None => 4294967295u32
           }
-          self.block_items.push(
+          lowered_items.push(
             SelfHostHirBlockItem::ReturnItem(value_id, offset),
           )
         }
@@ -540,7 +539,7 @@ impl SelfHostCollectionBuilder {
           let expression = self.emit_expression(
             SelfHostHirExpr::AssignmentExpr(target_id, value_id, offset),
           )
-          self.block_items.push(
+          lowered_items.push(
             SelfHostHirBlockItem::ExpressionItem(expression, offset),
           )
         }
@@ -558,7 +557,7 @@ impl SelfHostCollectionBuilder {
                   offset,
                 ),
               )
-              self.block_items.push(
+              lowered_items.push(
                 SelfHostHirBlockItem::ExpressionItem(expression, offset),
               )
             }
@@ -568,21 +567,23 @@ impl SelfHostCollectionBuilder {
               let expression = self.emit_expression(
                 SelfHostHirExpr::AssignmentExpr(target_id, value_id, offset),
               )
-              self.block_items.push(
+              lowered_items.push(
                 SelfHostHirBlockItem::ExpressionItem(expression, offset),
               )
             }
           }
         }
         SelfHostBlockItem::ExpressionItem(value, offset) => {
-          self.block_items.push(
-            SelfHostHirBlockItem::ExpressionItem(
-              self.lower_expression(value),
-              offset,
-            ),
+          let expression = self.lower_expression(value)
+          lowered_items.push(
+            SelfHostHirBlockItem::ExpressionItem(expression, offset),
           )
         }
       }
+    }
+    let item_start = self.block_items.length()
+    for item in lowered_items {
+      self.block_items.push(item)
       self.block_item_files.push(self.current_file)
     }
     let id = self.blocks.length()

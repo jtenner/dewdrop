@@ -1,0 +1,2539 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.string
+
+fn self_host_body_name_fail() -> Unit {
+  let empty = self_host_u32_slots(0u32, 0u32)
+  let _ = empty[0u32]
+}
+
+fn self_host_empty_u32_u32_map() -> Map<U32, U32> {
+  Map::empty()
+}
+
+fn self_host_empty_u32_bool_map() -> Map<U32, Bool> {
+  Map::empty()
+}
+
+let self_host_name_expect_value = 0u32
+let self_host_name_expect_qualified_root = 1u32
+let self_host_name_expect_call_target = 2u32
+
+let self_host_name_task_visit_expression = 0u32
+let self_host_name_task_visit_block_items = 1u32
+let self_host_name_task_bind_let = 2u32
+let self_host_name_task_exit_scope = 3u32
+let self_host_name_task_visit_arm_list = 4u32
+let self_host_name_task_visit_arm = 5u32
+let self_host_name_task_enter_control = 6u32
+let self_host_name_task_exit_control = 7u32
+
+struct SelfHostLambdaVisibleBinding {
+  name: U32
+  source: SelfHostLambdaCaptureSource
+  mutable_: Bool
+}
+
+struct SelfHostLambdaLexicalEnvironment {
+  bindings: Array<SelfHostLambdaVisibleBinding>
+}
+
+struct SelfHostLambdaEnvironmentSlots {
+  present: Array<Bool>
+  values: Array<SelfHostLambdaLexicalEnvironment>
+}
+
+impl SelfHostLambdaEnvironmentSlots {
+  fn new(length: U32) -> SelfHostLambdaEnvironmentSlots {
+    let present = self_host_bool_slots(length, false)
+    let values = []
+    let mut index = 0u32
+    while index {
+      current => if current < length {
+        values.push(
+          SelfHostLambdaLexicalEnvironment::{
+            bindings: []
+          },
+        )
+        continue current + 1u32
+      } else {
+        break SelfHostLambdaEnvironmentSlots::{
+          present: present
+          values: values
+        }
+      }
+    }
+  }
+
+  fn set(
+    self,
+    lambda: U32,
+    environment: SelfHostLambdaLexicalEnvironment,
+  ) -> Unit {
+    if lambda >= self.values.length() || self.present[lambda] {
+      self_host_body_name_fail()
+    }
+    self.values[lambda] = environment
+    self.present[lambda] = true
+  }
+
+  fn get(self, lambda: U32) -> SelfHostLambdaLexicalEnvironment {
+    if lambda >= self.values.length() || !self.present[lambda] {
+      self_host_body_name_fail()
+    }
+    self.values[lambda]
+  }
+}
+
+struct SelfHostBodyNameJobResult {
+  locals: Array<SelfHostBodyLocal>
+  controls: Array<SelfHostBodyControl>
+  captures: Array<SelfHostLambdaCapture>
+  expression_references: Array<SelfHostBodyNameReference>
+  pattern_references: Array<SelfHostBodyPatternReference>
+  parameter_span: SelfHostHirSpan
+  parameter_locals: Array<U32>
+  block_item_locals: Array<U32>
+  transfer_targets: Array<U32>
+  expression_controls: Array<U32>
+  diagnostics: Array<SelfHostBodyResolutionDiagnostic>
+  lambda_environment_ids: Array<U32>
+  lambda_environments: Array<SelfHostLambdaLexicalEnvironment>
+}
+
+impl SelfHostBodyNameJobResult {
+  fn expression_reference_at(
+    self,
+    index: U32,
+  ) -> SelfHostBodyNameReference {
+    self.expression_references[index]
+  }
+
+  fn pattern_reference_at(
+    self,
+    index: U32,
+  ) -> SelfHostBodyPatternReference {
+    self.pattern_references[index]
+  }
+
+  fn transfer_target_at(self, index: U32) -> U32 {
+    self.transfer_targets[index]
+  }
+
+  fn expression_control_at(self, index: U32) -> U32 {
+    self.expression_controls[index]
+  }
+
+  fn block_item_local_at(self, index: U32) -> U32 {
+    self.block_item_locals[index]
+  }
+
+  fn parameter_span_value(self) -> SelfHostHirSpan {
+    self.parameter_span
+  }
+
+  fn parameter_local_at(self, index: U32) -> U32 {
+    self.parameter_locals[index]
+  }
+
+  fn local_count(self) -> U32 {
+    self.locals.length()
+  }
+
+  fn local_at(self, index: U32) -> SelfHostBodyLocal {
+    self.locals[index]
+  }
+
+  fn control_count(self) -> U32 {
+    self.controls.length()
+  }
+
+  fn control_at(self, index: U32) -> SelfHostBodyControl {
+    self.controls[index]
+  }
+
+  fn diagnostic_count(self) -> U32 {
+    self.diagnostics.length()
+  }
+
+  fn diagnostic_at(self, index: U32) -> SelfHostBodyResolutionDiagnostic {
+    self.diagnostics[index]
+  }
+
+  fn lambda_environment_count(self) -> U32 {
+    self.lambda_environment_ids.length()
+  }
+
+  fn lambda_environment_id_at(self, index: U32) -> U32 {
+    self.lambda_environment_ids[index]
+  }
+
+  fn lambda_environment_at(
+    self,
+    index: U32,
+  ) -> SelfHostLambdaLexicalEnvironment {
+    self.lambda_environments[index]
+  }
+
+  fn capture_count(self) -> U32 {
+    self.captures.length()
+  }
+
+  fn capture_at(self, index: U32) -> SelfHostLambdaCapture {
+    self.captures[index]
+  }
+}
+
+struct SelfHostBodyNameTask {
+  kind: U32
+  first: U32
+  second: U32
+}
+
+struct SelfHostBodyNameResolver {
+  collected: SelfHostCollectedModule
+  imports: Option<SelfHostModuleImportScope>
+  body: SelfHostHirBody
+  lambda: U32
+  outer_environment: SelfHostLambdaLexicalEnvironment
+  variant_names: Map<U32, Bool>
+  locals: Array<SelfHostBodyLocal>
+  controls: Array<SelfHostBodyControl>
+  captures: Array<SelfHostLambdaCapture>
+  capture_lookup: Map<U32, U32>
+  expression_references: Array<SelfHostBodyNameReference>
+  pattern_references: Array<SelfHostBodyPatternReference>
+  parameter_span: SelfHostHirSpan
+  parameter_locals: Array<U32>
+  block_item_locals: Array<U32>
+  transfer_targets: Array<U32>
+  expression_controls: Array<U32>
+  diagnostics: Array<SelfHostBodyResolutionDiagnostic>
+  current_locals: Map<U32, U32>
+  scope_markers: Array<U32>
+  scope_names: Array<U32>
+  scope_locals: Array<U32>
+  scope_previous: Array<U32>
+  control_stack: Array<U32>
+  tasks: Array<SelfHostBodyNameTask>
+  pattern_stack: Array<U32>
+  pattern_contexts: Array<Bool>
+  binding_names: Array<U32>
+  binding_patterns: Array<U32>
+  binding_offsets: Array<U32>
+  canonical_names: Array<U32>
+  canonical_locals: Array<U32>
+  canonical_offsets: Array<U32>
+  alternative_seen: Array<Bool>
+  pattern_literal_expressions: Array<U32>
+  lambda_environment_ids: Array<U32>
+  lambda_environments: Array<SelfHostLambdaLexicalEnvironment>
+}
+
+impl SelfHostBodyNameResolver {
+  fn new_with_context(
+    collected: SelfHostCollectedModule,
+    imports: Option<SelfHostModuleImportScope>,
+    body: SelfHostHirBody,
+    lambda: U32,
+    parameter_span: SelfHostHirSpan,
+    outer_environment: SelfHostLambdaLexicalEnvironment,
+    variant_names: Map<U32, Bool>,
+  ) -> SelfHostBodyNameResolver {
+    SelfHostBodyNameResolver::{
+      collected: collected
+      imports: imports
+      body: body
+      lambda: lambda
+      outer_environment: outer_environment
+      variant_names: variant_names
+      locals: []
+      controls: []
+      captures: []
+      capture_lookup: self_host_empty_u32_u32_map()
+      expression_references: self_host_empty_body_name_references(
+        body.expressions.length,
+      )
+      pattern_references: self_host_empty_body_pattern_references(
+        body.patterns.length,
+      )
+      parameter_span: parameter_span
+      parameter_locals: self_host_u32_slots(
+        parameter_span.length,
+        4294967295u32,
+      )
+      block_item_locals: self_host_u32_slots(
+        body.block_items.length,
+        4294967295u32,
+      )
+      transfer_targets: self_host_u32_slots(
+        body.expressions.length,
+        4294967295u32,
+      )
+      expression_controls: self_host_u32_slots(
+        body.expressions.length,
+        4294967295u32,
+      )
+      diagnostics: []
+      current_locals: self_host_empty_u32_u32_map()
+      scope_markers: []
+      scope_names: []
+      scope_locals: []
+      scope_previous: []
+      control_stack: []
+      tasks: []
+      pattern_stack: []
+      pattern_contexts: []
+      binding_names: []
+      binding_patterns: []
+      binding_offsets: []
+      canonical_names: []
+      canonical_locals: []
+      canonical_offsets: []
+      alternative_seen: []
+      pattern_literal_expressions: []
+      lambda_environment_ids: []
+      lambda_environments: []
+    }
+  }
+
+  fn new(
+    collected: SelfHostCollectedModule,
+    imports: Option<SelfHostModuleImportScope>,
+    body: SelfHostHirBody,
+    variant_names: Map<U32, Bool>,
+  ) -> SelfHostBodyNameResolver {
+    SelfHostBodyNameResolver::new_with_context(
+      collected,
+      imports,
+      body,
+      4294967295u32,
+      collected.parameters_of(body.declaration),
+      SelfHostLambdaLexicalEnvironment::{
+        bindings: []
+      },
+      variant_names,
+    )
+  }
+
+  fn new_lambda(
+    collected: SelfHostCollectedModule,
+    imports: Option<SelfHostModuleImportScope>,
+    lambda: SelfHostHirLambda,
+    outer_environment: SelfHostLambdaLexicalEnvironment,
+    variant_names: Map<U32, Bool>,
+  ) -> SelfHostBodyNameResolver {
+    let root = collected.bodies[self_host_semantic_id_local(lambda.root_body)]
+    let body = SelfHostHirBody::{
+      id: lambda.root_body
+      declaration: root.declaration
+      kind: root.kind
+      root: SelfHostHirBodyRoot::BlockBodyRoot(lambda.body.root)
+      expressions: lambda.body.expressions
+      expression_children: lambda.body.expression_children
+      blocks: lambda.body.blocks
+      block_items: lambda.body.block_items
+      patterns: lambda.body.patterns
+      pattern_children: lambda.body.pattern_children
+      pattern_arms: lambda.body.pattern_arms
+      arm_children: lambda.body.arm_children
+      object_fields: lambda.body.object_fields
+      pattern_fields: lambda.body.pattern_fields
+      offset: lambda.offset
+    }
+    SelfHostBodyNameResolver::new_with_context(
+      collected,
+      imports,
+      body,
+      lambda.id,
+      lambda.parameters,
+      outer_environment,
+      variant_names,
+    )
+  }
+
+  fn expression_index(self, expression: U32) -> U32 {
+    expression - self.body.expressions.start
+  }
+
+  fn pattern_index(self, pattern: U32) -> U32 {
+    pattern - self.body.patterns.start
+  }
+
+  fn block_item_index(self, item: U32) -> U32 {
+    item - self.body.block_items.start
+  }
+
+  fn diagnose(self, diagnostic: SelfHostBodyResolutionDiagnostic) -> Unit {
+    self.diagnostics.push(diagnostic)
+  }
+
+  fn push_task(self, kind: U32, first: U32, second: U32) -> Unit {
+    let task = SelfHostBodyNameTask::{
+      kind: kind
+      first: first
+      second: second
+    }
+    self.tasks.push(task)
+  }
+
+  fn enter_scope(self) -> Unit {
+    self.scope_markers.push(self.scope_names.length())
+  }
+
+  fn bind_existing_local(self, name: U32, local: U32) -> Unit {
+    let previous = match self.current_locals.get(name) {
+      Option::Some(value) => value
+      Option::None => 4294967295u32
+    }
+    self.scope_names.push(name)
+    self.scope_locals.push(local)
+    self.scope_previous.push(previous)
+    self.current_locals.set(name, local)
+  }
+
+  fn exit_scope(self) -> Unit {
+    let start = match self.scope_markers.pop() {
+      Option::Some(value) => value
+      Option::None => {
+        self_host_body_name_fail()
+        4294967295u32
+      }
+    }
+    while self.scope_names.length() {
+      length => if length > start {
+        let name = match self.scope_names.pop() {
+          Option::Some(value) => value
+          Option::None => 4294967295u32
+        }
+        let _ = self.scope_locals.pop()
+        let previous = match self.scope_previous.pop() {
+          Option::Some(value) => value
+          Option::None => 4294967295u32
+        }
+        self.current_locals.set(name, previous)
+        continue self.scope_names.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn allocate_local(
+    self,
+    name: U32,
+    kind: SelfHostBodyLocalKind,
+    mutable_: Bool,
+    source: U32,
+    offset: U32,
+  ) -> U32 {
+    let id = self.locals.length()
+    let local = SelfHostBodyLocal::{
+      id: id
+      name: name
+      kind: kind
+      mutable_: mutable_
+      source: source
+      offset: offset
+    }
+    self.locals.push(local)
+    id
+  }
+
+  fn bind_parameters(self) -> Unit {
+    let mut local_index = 0u32
+    while local_index {
+      current => if current < self.parameter_span.length {
+        let parameter_index = self.parameter_span.start + current
+        let name = if self.lambda != 4294967295u32 {
+          self.collected.lambda_parameters[parameter_index].name
+        } else {
+          self.collected.parameters[parameter_index].name
+        }
+        let offset = if self.lambda != 4294967295u32 {
+          self.collected.lambda_parameters[parameter_index].offset
+        } else {
+          self.collected.parameters[parameter_index].offset
+        }
+        let local = self.allocate_local(
+          name,
+          SelfHostBodyLocalKind::ParameterLocal,
+          false,
+          parameter_index,
+          offset,
+        )
+        self.parameter_locals[current] = local
+        self.bind_existing_local(name, local)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn set_expression_reference(
+    self,
+    expression: U32,
+    reference: SelfHostBodyNameReference,
+  ) -> Unit {
+    self.expression_references[self.expression_index(expression)] = reference
+  }
+
+  fn set_pattern_reference(
+    self,
+    pattern: U32,
+    reference: SelfHostBodyPatternReference,
+  ) -> Unit {
+    self.pattern_references[self.pattern_index(pattern)] = reference
+  }
+
+  fn declaration_visible(self, declaration: U64) -> Bool {
+    self.collected.declaration_is_test_only(self.body.declaration) ||
+      !self.collected.declaration_is_test_only(declaration)
+  }
+
+  fn module_value_visible(self, name: U32) -> Bool {
+    match self.collected.value_bindings.get(name) {
+      Option::Some(binding) => {
+        let mut candidate = binding.head
+        while candidate {
+          current => if current < self.collected.value_binding_candidates.length() {
+            let value = self.collected.value_binding_candidates[current]
+            if self.declaration_visible(value.declaration) {
+              break true
+            }
+            match value.next {
+              Option::Some(next) => continue next
+              Option::None => break false
+            }
+          } else {
+            break false
+          }
+        }
+      }
+      Option::None => false
+    }
+  }
+
+  fn capture_outer_name(
+    self,
+    expression: U32,
+    name: U32,
+    offset: U32,
+  ) -> Bool {
+    if self.lambda == 4294967295u32 {
+      return false
+    }
+    let mut index = self.outer_environment.bindings.length()
+    while index {
+      current => if current > 0u32 {
+        let next = current - 1u32
+        let binding = self.outer_environment.bindings[next]
+        if self_host_u32_equal(binding.name, name) {
+          let capture = match self.capture_lookup.get(name) {
+            Option::Some(existing) => existing
+            Option::None => {
+              let id = self.captures.length()
+              let value = SelfHostLambdaCapture::{
+                id: id
+                lambda: self.lambda
+                name: name
+                source: binding.source
+                mutable_: binding.mutable_
+                offset: offset
+              }
+              self.captures.push(value)
+              self.capture_lookup.set(name, id)
+              id
+            }
+          }
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::LambdaCaptureNameReference(capture),
+          )
+          break true
+        }
+        continue next
+      } else {
+        break false
+      }
+    }
+  }
+
+  fn snapshot_lambda_environment(self, lambda: U32) -> Unit {
+    let bindings = []
+    for binding in self.outer_environment.bindings {
+      bindings.push(binding)
+    }
+    let mut index = 0u32
+    while index {
+      current => if current < self.scope_names.length() {
+        let local = self.scope_locals[current]
+        let info = self.locals[local]
+        let source = if self.lambda == 4294967295u32 {
+          SelfHostLambdaCaptureSource::BodyLocalCapture(self.body.id, local)
+        } else {
+          SelfHostLambdaCaptureSource::LambdaLocalCapture(self.lambda, local)
+        }
+        let binding = SelfHostLambdaVisibleBinding::{
+          name: self.scope_names[current]
+          source: source
+          mutable_: info.mutable_
+        }
+        bindings.push(binding)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.lambda_environment_ids.push(lambda)
+    self.lambda_environments.push(
+      SelfHostLambdaLexicalEnvironment::{
+        bindings: bindings
+      },
+    )
+  }
+
+  fn resolve_expression_name(
+    self,
+    expression: U32,
+    name: U32,
+    offset: U32,
+    expectation: U32,
+  ) -> Unit {
+    match self.current_locals.get(name) {
+      Option::Some(local) => if local != 4294967295u32 {
+        self.set_expression_reference(
+          expression,
+          SelfHostBodyNameReference::LocalNameReference(local),
+        )
+        return
+      }
+      Option::None => {}
+    }
+    if self.capture_outer_name(expression, name, offset) {
+      return
+    }
+    let spelling = self.collected.name(name)
+    if expectation == self_host_name_expect_qualified_root {
+      match self.collected.type_bindings.get(name) {
+        Option::Some(declaration) => if self.declaration_visible(declaration) {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ModuleTypeNameReference(declaration),
+          )
+          return
+        }
+        Option::None => {}
+      }
+      match self.collected.trait_bindings.get(name) {
+        Option::Some(declaration) => if self.declaration_visible(declaration) {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ModuleTraitNameReference(declaration),
+          )
+          return
+        }
+        Option::None => {}
+      }
+      match self.collected.foreign_library_by_alias.get(name) {
+        Option::Some(declaration) => if self.declaration_visible(declaration) {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ForeignLibraryNameReference(declaration),
+          )
+          return
+        }
+        Option::None => {}
+      }
+      if self.module_value_visible(name) {
+        self.set_expression_reference(
+          expression,
+          SelfHostBodyNameReference::ModuleValueNameReference(name),
+        )
+        return
+      }
+      match self_host_primitive_type_from_name(spelling) {
+        Option::Some(primitive) => {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::PrimitiveTypeNameReference(primitive),
+          )
+          return
+        }
+        Option::None => {}
+      }
+      match self.imports {
+        Option::Some(imports) => {
+          match imports.lookup_type(spelling) {
+            Option::Some(binding) => {
+              self.set_expression_reference(
+                expression,
+                SelfHostBodyNameReference::ModuleTypeNameReference(
+                  binding.declaration,
+                ),
+              )
+              return
+            }
+            Option::None => {}
+          }
+          match imports.lookup_trait(spelling) {
+            Option::Some(binding) => {
+              self.set_expression_reference(
+                expression,
+                SelfHostBodyNameReference::ModuleTraitNameReference(
+                  binding.declaration,
+                ),
+              )
+              return
+            }
+            Option::None => {}
+          }
+          match imports.lookup_opened_value(spelling) {
+            Option::Some(declaration) => {
+              self.set_expression_reference(
+                expression,
+                SelfHostBodyNameReference::ImportedModuleValueNameReference(
+                  declaration,
+                ),
+              )
+              return
+            }
+            Option::None => {}
+          }
+          if imports.opened_value_is_ambiguous(spelling) ||
+            imports.type_is_ambiguous(spelling) ||
+            imports.trait_is_ambiguous(spelling) {
+            self.diagnose(
+              SelfHostBodyResolutionDiagnostic::AmbiguousImportedQualifiedRoot(
+                name,
+                expression,
+                offset,
+              ),
+            )
+            self.set_expression_reference(
+              expression,
+              SelfHostBodyNameReference::ErrorNameReference,
+            )
+            return
+          }
+        }
+        Option::None => {}
+      }
+      self.diagnose(
+        SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(
+          name,
+          expression,
+          offset,
+        ),
+      )
+      self.set_expression_reference(
+        expression,
+        SelfHostBodyNameReference::ErrorNameReference,
+      )
+      return
+    }
+    match self.collected.foreign_library_by_alias.get(name) {
+      Option::Some(declaration) => if self.declaration_visible(declaration) {
+        self.set_expression_reference(
+          expression,
+          SelfHostBodyNameReference::ForeignLibraryNameReference(declaration),
+        )
+        return
+      }
+      Option::None => {}
+    }
+    if self.module_value_visible(name) {
+      self.set_expression_reference(
+        expression,
+        SelfHostBodyNameReference::ModuleValueNameReference(name),
+      )
+      return
+    }
+    match self.imports {
+      Option::Some(imports) => {
+        match imports.lookup_opened_value(spelling) {
+          Option::Some(declaration) => {
+            self.set_expression_reference(
+              expression,
+              SelfHostBodyNameReference::ImportedModuleValueNameReference(
+                declaration,
+              ),
+            )
+            return
+          }
+          Option::None => {}
+        }
+        if imports.opened_value_is_ambiguous(spelling) {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::AmbiguousImportedValueName(
+              name,
+              expression,
+              offset,
+            ),
+          )
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ErrorNameReference,
+          )
+          return
+        }
+      }
+      Option::None => {}
+    }
+    if expectation == self_host_name_expect_call_target {
+      match self.collected.type_bindings.get(name) {
+        Option::Some(declaration) => if self.declaration_visible(declaration) {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ModuleTypeNameReference(declaration),
+          )
+          return
+        }
+        Option::None => {}
+      }
+      match self.collected.trait_bindings.get(name) {
+        Option::Some(declaration) => if self.declaration_visible(declaration) {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ModuleTraitNameReference(declaration),
+          )
+          return
+        }
+        Option::None => {}
+      }
+      match self.imports {
+        Option::Some(imports) => {
+          match imports.lookup_type(spelling) {
+            Option::Some(binding) => {
+              self.set_expression_reference(
+                expression,
+                SelfHostBodyNameReference::ModuleTypeNameReference(
+                  binding.declaration,
+                ),
+              )
+              return
+            }
+            Option::None => {}
+          }
+          match imports.lookup_trait(spelling) {
+            Option::Some(binding) => {
+              self.set_expression_reference(
+                expression,
+                SelfHostBodyNameReference::ModuleTraitNameReference(
+                  binding.declaration,
+                ),
+              )
+              return
+            }
+            Option::None => {}
+          }
+        }
+        Option::None => {}
+      }
+    }
+    if self.variant_names.contains_key(name) {
+      self.set_expression_reference(
+        expression,
+        SelfHostBodyNameReference::VariantNameReference(name),
+      )
+      return
+    }
+    self.diagnose(
+      SelfHostBodyResolutionDiagnostic::UnknownValueName(
+        name,
+        expression,
+        offset,
+      ),
+    )
+    self.set_expression_reference(
+      expression,
+      SelfHostBodyNameReference::ErrorNameReference,
+    )
+  }
+
+  fn known_pattern_constructor(self, name: U32) -> Bool {
+    if self.collected.type_bindings.contains_key(name) ||
+      self.collected.trait_bindings.contains_key(name) ||
+      self.variant_names.contains_key(name) {
+      return true
+    }
+    let spelling = self.collected.name(name)
+    match self.imports {
+      Option::Some(imports) => imports.lookup_type(spelling) is Option::Some(_) ||
+        imports.lookup_trait(spelling) is Option::Some(_)
+      Option::None => false
+    }
+  }
+
+  fn resolve_pattern_constructor(
+    self,
+    pattern: U32,
+    name: U32,
+    offset: U32,
+  ) -> Unit {
+    match self.collected.type_bindings.get(name) {
+      Option::Some(declaration) => {
+        self.set_pattern_reference(
+          pattern,
+          SelfHostBodyPatternReference::PatternTypeReference(declaration),
+        )
+        return
+      }
+      Option::None => {}
+    }
+    match self.collected.trait_bindings.get(name) {
+      Option::Some(declaration) => {
+        self.set_pattern_reference(
+          pattern,
+          SelfHostBodyPatternReference::PatternTraitReference(declaration),
+        )
+        return
+      }
+      Option::None => {}
+    }
+    let spelling = self.collected.name(name)
+    match self.imports {
+      Option::Some(imports) => {
+        match imports.lookup_type(spelling) {
+          Option::Some(binding) => {
+            self.set_pattern_reference(
+              pattern,
+              SelfHostBodyPatternReference::PatternTypeReference(
+                binding.declaration,
+              ),
+            )
+            return
+          }
+          Option::None => {}
+        }
+        match imports.lookup_trait(spelling) {
+          Option::Some(binding) => {
+            self.set_pattern_reference(
+              pattern,
+              SelfHostBodyPatternReference::PatternTraitReference(
+                binding.declaration,
+              ),
+            )
+            return
+          }
+          Option::None => {}
+        }
+      }
+      Option::None => {}
+    }
+    if self.variant_names.contains_key(name) {
+      self.set_pattern_reference(
+        pattern,
+        SelfHostBodyPatternReference::PatternVariantReference(name),
+      )
+    } else {
+      self.diagnose(
+        SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(
+          name,
+          pattern,
+          offset,
+        ),
+      )
+      self.set_pattern_reference(
+        pattern,
+        SelfHostBodyPatternReference::ErrorPatternReference,
+      )
+    }
+  }
+}
+
+impl SelfHostBodyNameResolver {
+  fn collect_pattern_alternative(self, root: U32) -> Unit {
+    self.pattern_stack.clear()
+    self.pattern_contexts.clear()
+    self.binding_names.clear()
+    self.binding_patterns.clear()
+    self.binding_offsets.clear()
+    self.pattern_stack.push(root)
+    self.pattern_contexts.push(true)
+    while self.pattern_stack.length() {
+      length => if length > 0u32 {
+        let pattern = match self.pattern_stack.pop() {
+          Option::Some(value) => value
+          Option::None => 4294967295u32
+        }
+        let binding_context = match self.pattern_contexts.pop() {
+          Option::Some(value) => value
+          Option::None => false
+        }
+        match self.collected.patterns[pattern] {
+          SelfHostHirPattern::WildcardPattern(_) => {}
+          SelfHostHirPattern::RestPattern(_) => {}
+          SelfHostHirPattern::ImportAliasPattern(name, offset) => match self.imports {
+            Option::Some(imports) => match imports.lookup_alias(
+              self.collected.name(name),
+            ) {
+              Option::Some(interface_index) => self.set_pattern_reference(
+                pattern,
+                SelfHostBodyPatternReference::PatternImportedModuleReference(
+                  interface_index,
+                ),
+              )
+              Option::None => {
+                self.diagnose(
+                  SelfHostBodyResolutionDiagnostic::UnknownPatternImportAlias(
+                    name,
+                    pattern,
+                    offset,
+                  ),
+                )
+                self.set_pattern_reference(
+                  pattern,
+                  SelfHostBodyPatternReference::ErrorPatternReference,
+                )
+              }
+            }
+            Option::None => {
+              self.diagnose(
+                SelfHostBodyResolutionDiagnostic::UnknownPatternImportAlias(
+                  name,
+                  pattern,
+                  offset,
+                ),
+              )
+              self.set_pattern_reference(
+                pattern,
+                SelfHostBodyPatternReference::ErrorPatternReference,
+              )
+            }
+          }
+          SelfHostHirPattern::BindingPattern(name, offset) => if !binding_context ||
+            self.known_pattern_constructor(name) {
+            self.resolve_pattern_constructor(pattern, name, offset)
+          } else {
+            self.binding_names.push(name)
+            self.binding_patterns.push(pattern)
+            self.binding_offsets.push(offset)
+          }
+          SelfHostHirPattern::LiteralPattern(expression, _) => self.pattern_literal_expressions.push(
+            expression,
+          )
+          SelfHostHirPattern::QualifiedPattern(base, property, offset) => {
+            match self.collected.patterns[base] {
+              SelfHostHirPattern::ImportAliasPattern(alias_name, _) => match self.imports {
+                Option::Some(imports) => match imports.lookup_alias(
+                  self.collected.name(alias_name),
+                ) {
+                  Option::Some(interface_index) => match imports.lookup_module_type(
+                    interface_index,
+                    self.collected.name(property),
+                  ) {
+                    Option::Some(binding) => self.set_pattern_reference(
+                      pattern,
+                      SelfHostBodyPatternReference::PatternTypeReference(
+                        binding.declaration,
+                      ),
+                    )
+                    Option::None => match imports.lookup_module_trait(
+                      interface_index,
+                      self.collected.name(property),
+                    ) {
+                      Option::Some(binding) => self.set_pattern_reference(
+                        pattern,
+                        SelfHostBodyPatternReference::PatternTraitReference(
+                          binding.declaration,
+                        ),
+                      )
+                      Option::None => {
+                        self.diagnose(
+                          SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(
+                            property,
+                            pattern,
+                            offset,
+                          ),
+                        )
+                        self.set_pattern_reference(
+                          pattern,
+                          SelfHostBodyPatternReference::ErrorPatternReference,
+                        )
+                      }
+                    }
+                  }
+                  Option::None => self.set_pattern_reference(
+                    pattern,
+                    SelfHostBodyPatternReference::ErrorPatternReference,
+                  )
+                }
+                Option::None => self.set_pattern_reference(
+                  pattern,
+                  SelfHostBodyPatternReference::ErrorPatternReference,
+                )
+              }
+              _ => self.set_pattern_reference(
+                pattern,
+                SelfHostBodyPatternReference::PatternQualifiedReference(
+                  property,
+                ),
+              )
+            }
+            self.pattern_stack.push(base)
+            self.pattern_contexts.push(false)
+          }
+          SelfHostHirPattern::TuplePattern(base, arguments, _) => {
+            let mut index = arguments.length
+            while index {
+              current => if current > 0u32 {
+                let next = current - 1u32
+                self.pattern_stack.push(
+                  self.collected.pattern_children[arguments.start + next],
+                )
+                self.pattern_contexts.push(true)
+                continue next
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self.pattern_stack.push(base)
+            self.pattern_contexts.push(false)
+          }
+          SelfHostHirPattern::StructPattern(base, fields, _, _, _) => {
+            let mut index = fields.length
+            while index {
+              current => if current > 0u32 {
+                let next = current - 1u32
+                self.pattern_stack.push(
+                  self.collected.pattern_fields[fields.start + next].pattern,
+                )
+                self.pattern_contexts.push(true)
+                continue next
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self.pattern_stack.push(base)
+            self.pattern_contexts.push(false)
+          }
+          SelfHostHirPattern::AlternativePattern(first, remaining, _) => {
+            let mut index = remaining.length
+            while index {
+              current => if current > 0u32 {
+                let next = current - 1u32
+                self.pattern_stack.push(
+                  self.collected.pattern_children[remaining.start + next],
+                )
+                self.pattern_contexts.push(true)
+                continue next
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self.pattern_stack.push(first)
+            self.pattern_contexts.push(true)
+          }
+        }
+        continue self.pattern_stack.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn binding_first_index(self, before: U32, name: U32) -> U32 {
+    let mut index = 0u32
+    while index {
+      current => if current < before {
+        if self.binding_names[current] == name {
+          break current
+        }
+        continue current + 1u32
+      } else {
+        break 4294967295u32
+      }
+    }
+  }
+
+  fn canonical_index(self, name: U32) -> U32 {
+    let mut index = 0u32
+    while index {
+      current => if current < self.canonical_names.length() {
+        if self.canonical_names[current] == name {
+          break current
+        }
+        continue current + 1u32
+      } else {
+        break 4294967295u32
+      }
+    }
+  }
+
+  fn install_canonical_pattern_bindings(self) -> Unit {
+    let mut index = 0u32
+    while index {
+      current => if current < self.binding_names.length() {
+        let name = self.binding_names[current]
+        let first = self.binding_first_index(current, name)
+        if first != 4294967295u32 {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(
+              name,
+              self.binding_offsets[first],
+              self.binding_offsets[current],
+            ),
+          )
+          self.set_pattern_reference(
+            self.binding_patterns[current],
+            SelfHostBodyPatternReference::ErrorPatternReference,
+          )
+        } else {
+          let local = self.allocate_local(
+            name,
+            SelfHostBodyLocalKind::PatternLocal,
+            false,
+            self.binding_patterns[current],
+            self.binding_offsets[current],
+          )
+          self.canonical_names.push(name)
+          self.canonical_locals.push(local)
+          self.canonical_offsets.push(self.binding_offsets[current])
+          self.set_pattern_reference(
+            self.binding_patterns[current],
+            SelfHostBodyPatternReference::PatternBindingReference(local),
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn install_alternative_pattern_bindings(
+    self,
+    alternative: U32,
+  ) -> Unit {
+    self.alternative_seen.clear()
+    let mut index = 0u32
+    while index {
+      current => if current < self.canonical_names.length() {
+        self.alternative_seen.push(false)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < self.binding_names.length() {
+        let name = self.binding_names[current]
+        let first = self.binding_first_index(current, name)
+        if first != 4294967295u32 {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(
+              name,
+              self.binding_offsets[first],
+              self.binding_offsets[current],
+            ),
+          )
+          self.set_pattern_reference(
+            self.binding_patterns[current],
+            SelfHostBodyPatternReference::ErrorPatternReference,
+          )
+        } else {
+          let canonical = self.canonical_index(name)
+          if canonical == 4294967295u32 {
+            self.diagnose(
+              SelfHostBodyResolutionDiagnostic::AlternativeExtraBinding(
+                name,
+                alternative,
+                self.binding_offsets[current],
+              ),
+            )
+            self.set_pattern_reference(
+              self.binding_patterns[current],
+              SelfHostBodyPatternReference::ErrorPatternReference,
+            )
+          } else {
+            self.alternative_seen[canonical] = true
+            self.set_pattern_reference(
+              self.binding_patterns[current],
+              SelfHostBodyPatternReference::PatternBindingReference(
+                self.canonical_locals[canonical],
+              ),
+            )
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < self.canonical_names.length() {
+        if !self.alternative_seen[current] {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::AlternativeMissingBinding(
+              self.canonical_names[current],
+              alternative,
+              self_host_hir_pattern_offset(
+                self.collected.patterns[alternative],
+              ),
+            ),
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn resolve_arm_pattern(self, root: U32) -> Unit {
+    self.canonical_names.clear()
+    self.canonical_locals.clear()
+    self.canonical_offsets.clear()
+    self.pattern_literal_expressions.clear()
+    match self.collected.patterns[root] {
+      SelfHostHirPattern::AlternativePattern(first, remaining, _) => {
+        self.collect_pattern_alternative(first)
+        self.install_canonical_pattern_bindings()
+        let mut index = 0u32
+        while index {
+          current => if current < remaining.length {
+            let alternative = self.collected.pattern_children[
+              remaining.start + current
+            ]
+            self.collect_pattern_alternative(alternative)
+            self.install_alternative_pattern_bindings(alternative)
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      _ => {
+        self.collect_pattern_alternative(root)
+        self.install_canonical_pattern_bindings()
+      }
+    }
+    let mut index = 0u32
+    while index {
+      current => if current < self.canonical_names.length() {
+        self.bind_existing_local(
+          self.canonical_names[current],
+          self.canonical_locals[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn sort_diagnostics(self) -> Unit {
+    let mut index = 1u32
+    while index {
+      current => if current < self.diagnostics.length() {
+        let value = self.diagnostics[current]
+        let mut destination = current
+        while destination {
+          at => if at > 0u32 {
+            let previous = self.diagnostics[at - 1u32]
+            let previous_offset = self_host_body_diagnostic_offset(previous)
+            let value_offset = self_host_body_diagnostic_offset(value)
+            let move_previous = previous_offset > value_offset ||
+              previous_offset == value_offset &&
+              self_host_body_diagnostic_rank(previous) >
+              self_host_body_diagnostic_rank(value)
+            if move_previous {
+              self.diagnostics[at] = previous
+              destination = at - 1u32
+              continue destination
+            }
+            break self_host_semantic_unit()
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self.diagnostics[destination] = value
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+}
+
+impl SelfHostBodyNameResolver {
+  fn schedule_expression_children(
+    self,
+    expression: U32,
+    expectation: U32,
+  ) -> Unit {
+    match self.collected.expressions[expression] {
+      SelfHostHirExpr::I8Expr(_, _) => {}
+      SelfHostHirExpr::I16Expr(_, _) => {}
+      SelfHostHirExpr::I32Expr(_, _) => {}
+      SelfHostHirExpr::I64Expr(_, _) => {}
+      SelfHostHirExpr::U8Expr(_, _) => {}
+      SelfHostHirExpr::U16Expr(_, _) => {}
+      SelfHostHirExpr::U32Expr(_, _) => {}
+      SelfHostHirExpr::U64Expr(_, _) => {}
+      SelfHostHirExpr::F32Expr(_, _) => {}
+      SelfHostHirExpr::F64Expr(_, _) => {}
+      SelfHostHirExpr::BoolExpr(_, _) => {}
+      SelfHostHirExpr::StringExpr(_, _) => {}
+      SelfHostHirExpr::BytesExpr(_, _) => {}
+      SelfHostHirExpr::LambdaExpr(lambda, _) => self.snapshot_lambda_environment(
+        lambda,
+      )
+      SelfHostHirExpr::NameExpr(name, offset) => self.resolve_expression_name(
+        expression,
+        name,
+        offset,
+        expectation,
+      )
+      SelfHostHirExpr::ProductExpr(elements, _) => self.schedule_expression_span(
+        elements,
+      )
+      SelfHostHirExpr::ArrayExpr(elements, _) => self.schedule_expression_span(
+        elements,
+      )
+      SelfHostHirExpr::ImportAliasExpr(name, offset) => match self.imports {
+        Option::Some(imports) => match imports.lookup_alias(
+          self.collected.name(name),
+        ) {
+          Option::Some(interface_index) => self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ImportedModuleNameReference(
+              interface_index,
+            ),
+          )
+          Option::None => {
+            self.diagnose(
+              SelfHostBodyResolutionDiagnostic::UnknownImportAlias(
+                name,
+                expression,
+                offset,
+              ),
+            )
+            self.set_expression_reference(
+              expression,
+              SelfHostBodyNameReference::ErrorNameReference,
+            )
+          }
+        }
+        Option::None => {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::UnknownImportAlias(
+              name,
+              expression,
+              offset,
+            ),
+          )
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::ErrorNameReference,
+          )
+        }
+      }
+      SelfHostHirExpr::ObjectExpr(fields, _) => {
+        let mut index = fields.length
+        while index {
+          current => if current > 0u32 {
+            let next = current - 1u32
+            self.push_task(
+              self_host_name_task_visit_expression,
+              self.collected.object_fields[fields.start + next].value,
+              self_host_name_expect_value,
+            )
+            continue next
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      SelfHostHirExpr::ConstructExpr(target, fields, _) => {
+        let mut index = fields.length
+        while index {
+          current => if current > 0u32 {
+            let next = current - 1u32
+            self.push_task(
+              self_host_name_task_visit_expression,
+              self.collected.object_fields[fields.start + next].value,
+              self_host_name_expect_value,
+            )
+            continue next
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self.push_task(
+          self_host_name_task_visit_expression,
+          target,
+          self_host_name_expect_qualified_root,
+        )
+      }
+      SelfHostHirExpr::BlockExpr(block, _) => {
+        let items = self.collected.blocks[block].items
+        self.enter_scope()
+        self.push_task(self_host_name_task_exit_scope, 0u32, 0u32)
+        self.push_task(
+          self_host_name_task_visit_block_items,
+          items.start,
+          items.length,
+        )
+      }
+      SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
+        if alternative != 4294967295u32 {
+          self.push_task(
+            self_host_name_task_visit_expression,
+            alternative,
+            self_host_name_expect_value,
+          )
+        }
+        self.schedule_block(block)
+        self.push_task(
+          self_host_name_task_visit_expression,
+          condition,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::MatchExpr(scrutinee, arms, _) => {
+        self.push_task(
+          self_host_name_task_visit_arm_list,
+          arms.start,
+          arms.length,
+        )
+        self.push_task(
+          self_host_name_task_visit_expression,
+          scrutinee,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::WhileExpr(initial, arms, offset) => {
+        let control = self.controls.length()
+        let info = SelfHostBodyControl::{
+          id: control
+          kind: SelfHostBodyControlKind::FunctionalWhileControl
+          expression: expression
+          offset: offset
+        }
+        self.controls.push(info)
+        self.expression_controls[self.expression_index(expression)] = control
+        self.push_task(self_host_name_task_exit_control, control, 0u32)
+        self.push_task(
+          self_host_name_task_visit_arm_list,
+          arms.start,
+          arms.length,
+        )
+        self.push_task(self_host_name_task_enter_control, control, 0u32)
+        self.push_task(
+          self_host_name_task_visit_expression,
+          initial,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::BreakExpr(value, offset) => {
+        let target = if self.control_stack.length() > 0u32 {
+          self.control_stack[self.control_stack.length() - 1u32]
+        } else {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(
+              expression,
+              offset,
+            ),
+          )
+          4294967295u32
+        }
+        self.transfer_targets[self.expression_index(expression)] = target
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::ContinueExpr(value, offset) => {
+        let target = if self.control_stack.length() > 0u32 {
+          self.control_stack[self.control_stack.length() - 1u32]
+        } else {
+          self.diagnose(
+            SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(
+              expression,
+              offset,
+            ),
+          )
+          4294967295u32
+        }
+        self.transfer_targets[self.expression_index(expression)] = target
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::PrefixExpr(_, value, _) => self.push_task(
+        self_host_name_task_visit_expression,
+        value,
+        self_host_name_expect_value,
+      )
+      SelfHostHirExpr::FieldExpr(value, _, _) => self.push_task(
+        self_host_name_task_visit_expression,
+        value,
+        self_host_name_expect_value,
+      )
+      SelfHostHirExpr::ProductFieldExpr(value, _, _, _) => self.push_task(
+        self_host_name_task_visit_expression,
+        value,
+        self_host_name_expect_value,
+      )
+      SelfHostHirExpr::QualifiedExpr(value, property, offset) => {
+        if expectation == self_host_name_expect_qualified_root {
+          match self.collected.expressions[value] {
+            SelfHostHirExpr::ImportAliasExpr(alias_name, _) => match self.imports {
+              Option::Some(imports) => match imports.lookup_alias(
+                self.collected.name(alias_name),
+              ) {
+                Option::Some(interface_index) => match imports.lookup_module_type(
+                  interface_index,
+                  self.collected.name(property),
+                ) {
+                  Option::Some(binding) => self.set_expression_reference(
+                    expression,
+                    SelfHostBodyNameReference::ModuleTypeNameReference(
+                      binding.declaration,
+                    ),
+                  )
+                  Option::None => match imports.lookup_module_trait(
+                    interface_index,
+                    self.collected.name(property),
+                  ) {
+                    Option::Some(binding) => self.set_expression_reference(
+                      expression,
+                      SelfHostBodyNameReference::ModuleTraitNameReference(
+                        binding.declaration,
+                      ),
+                    )
+                    Option::None => {
+                      self.diagnose(
+                        SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(
+                          property,
+                          expression,
+                          offset,
+                        ),
+                      )
+                      self.set_expression_reference(
+                        expression,
+                        SelfHostBodyNameReference::ErrorNameReference,
+                      )
+                    }
+                  }
+                }
+                Option::None => {}
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_qualified_root,
+        )
+      }
+      SelfHostHirExpr::BinaryExpr(_, left, right, _) => {
+        self.push_task(
+          self_host_name_task_visit_expression,
+          right,
+          self_host_name_expect_value,
+        )
+        self.push_task(
+          self_host_name_task_visit_expression,
+          left,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::IndexExpr(left, right, _) => {
+        self.push_task(
+          self_host_name_task_visit_expression,
+          right,
+          self_host_name_expect_value,
+        )
+        self.push_task(
+          self_host_name_task_visit_expression,
+          left,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::AssignmentExpr(target, value, _) => {
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+        self.push_task(
+          self_host_name_task_visit_expression,
+          target,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::IndexSetExpr(base, index, value, _) => {
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+        self.push_task(
+          self_host_name_task_visit_expression,
+          index,
+          self_host_name_expect_value,
+        )
+        self.push_task(
+          self_host_name_task_visit_expression,
+          base,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirExpr::CallExpr(target, arguments, _) => {
+        let mut index = arguments.length
+        while index {
+          current => if current > 0u32 {
+            let next = current - 1u32
+            self.push_task(
+              self_host_name_task_visit_expression,
+              self.collected.expression_children[arguments.start + next],
+              self_host_name_expect_value,
+            )
+            continue next
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self.push_task(
+          self_host_name_task_visit_expression,
+          target,
+          self_host_name_expect_call_target,
+        )
+      }
+    }
+  }
+
+  fn schedule_expression_span(self, span: SelfHostHirSpan) -> Unit {
+    let mut index = span.length
+    while index {
+      current => if current > 0u32 {
+        let next = current - 1u32
+        self.push_task(
+          self_host_name_task_visit_expression,
+          self.collected.expression_children[span.start + next],
+          self_host_name_expect_value,
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn schedule_block(self, block: U32) -> Unit {
+    let items = self.collected.blocks[block].items
+    self.enter_scope()
+    self.push_task(self_host_name_task_exit_scope, 0u32, 0u32)
+    self.push_task(
+      self_host_name_task_visit_block_items,
+      items.start,
+      items.length,
+    )
+  }
+
+  fn visit_block_items(self, item: U32, remaining: U32) -> Unit {
+    if remaining == 0u32 {
+      return
+    }
+    self.push_task(
+      self_host_name_task_visit_block_items,
+      item + 1u32,
+      remaining - 1u32,
+    )
+    match self.collected.block_items[item] {
+      SelfHostHirBlockItem::LetItem(_, _, _, value, _) => {
+        self.push_task(self_host_name_task_bind_let, item, 0u32)
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirBlockItem::ReturnItem(value, _) => if value != 4294967295u32 {
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+      }
+      SelfHostHirBlockItem::ExpressionItem(value, _) => self.push_task(
+        self_host_name_task_visit_expression,
+        value,
+        self_host_name_expect_value,
+      )
+    }
+  }
+
+  fn bind_let(self, item: U32) -> Unit {
+    match self.collected.block_items[item] {
+      SelfHostHirBlockItem::LetItem(mutable_, name, name_offset, _, _) => {
+        let local = self.allocate_local(
+          name,
+          SelfHostBodyLocalKind::LetLocal,
+          mutable_,
+          item,
+          name_offset,
+        )
+        self.block_item_locals[self.block_item_index(item)] = local
+        self.bind_existing_local(name, local)
+      }
+      _ => self_host_body_name_fail()
+    }
+  }
+
+  fn visit_arm_list(self, start: U32, remaining: U32) -> Unit {
+    if remaining == 0u32 {
+      return
+    }
+    self.push_task(
+      self_host_name_task_visit_arm_list,
+      start + 1u32,
+      remaining - 1u32,
+    )
+    self.push_task(
+      self_host_name_task_visit_arm,
+      self.collected.arm_children[start],
+      0u32,
+    )
+  }
+
+  fn visit_arm(self, arm_id: U32) -> Unit {
+    let arm = self.collected.pattern_arms[arm_id]
+    self.enter_scope()
+    self.resolve_arm_pattern(arm.pattern)
+    let task_base = self.tasks.length()
+    self.push_task(
+      self_host_name_task_visit_expression,
+      arm.body,
+      self_host_name_expect_value,
+    )
+    if !self_host_u32_equal(
+      arm.guard_condition,
+      4294967295u32,
+    ) {
+      self.push_task(
+        self_host_name_task_visit_expression,
+        arm.guard_condition,
+        self_host_name_expect_value,
+      )
+    }
+    let mut index = self.pattern_literal_expressions.length()
+    while index {
+      current => if current > 0u32 {
+        let next = current - 1u32
+        self.push_task(
+          self_host_name_task_visit_expression,
+          self.pattern_literal_expressions[next],
+          self_host_name_expect_value,
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    while self.tasks.length() {
+      length => if length > task_base {
+        let task = match self.tasks.pop() {
+          Option::Some(value) => value
+          Option::None => SelfHostBodyNameTask::{
+            kind: 4294967295u32
+            first: 4294967295u32
+            second: 4294967295u32
+          }
+        }
+        self.execute_task(task)
+        continue self.tasks.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.exit_scope()
+  }
+
+  fn execute_task(self, task: SelfHostBodyNameTask) -> Unit {
+    if task.kind == self_host_name_task_visit_expression {
+      self.schedule_expression_children(task.first, task.second)
+    } else if task.kind == self_host_name_task_visit_block_items {
+      self.visit_block_items(task.first, task.second)
+    } else if task.kind == self_host_name_task_bind_let {
+      self.bind_let(task.first)
+    } else if task.kind == self_host_name_task_exit_scope {
+      self.exit_scope()
+    } else if task.kind == self_host_name_task_visit_arm_list {
+      self.visit_arm_list(task.first, task.second)
+    } else if task.kind == self_host_name_task_visit_arm {
+      self.visit_arm(task.first)
+    } else if task.kind == self_host_name_task_enter_control {
+      self.control_stack.push(task.first)
+    } else if task.kind == self_host_name_task_exit_control {
+      let control = match self.control_stack.pop() {
+        Option::Some(value) => value
+        Option::None => {
+          self_host_body_name_fail()
+          4294967295u32
+        }
+      }
+      if control != task.first {
+        self_host_body_name_fail()
+      }
+    } else {
+      self_host_body_name_fail()
+    }
+  }
+
+  fn run(self) -> SelfHostBodyNameJobResult {
+    self.enter_scope()
+    self.bind_parameters()
+    match self.body.root {
+      SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => self.push_task(
+        self_host_name_task_visit_expression,
+        expression,
+        self_host_name_expect_value,
+      )
+      SelfHostHirBodyRoot::BlockBodyRoot(block) => self.schedule_block(block)
+    }
+    while self.tasks.length() {
+      length => if length > 0u32 {
+        let task = match self.tasks.pop() {
+          Option::Some(value) => value
+          Option::None => SelfHostBodyNameTask::{
+            kind: 4294967295u32
+            first: 4294967295u32
+            second: 4294967295u32
+          }
+        }
+        self.execute_task(task)
+        continue self.tasks.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.exit_scope()
+    if self.scope_markers.length() != 0u32 ||
+      self.control_stack.length() != 0u32 ||
+      self.scope_locals.length() != 0u32 {
+      self_host_body_name_fail()
+    }
+    self.sort_diagnostics()
+    SelfHostBodyNameJobResult::{
+      locals: self.locals
+      controls: self.controls
+      captures: self.captures
+      expression_references: self.expression_references
+      pattern_references: self.pattern_references
+      parameter_span: self.parameter_span
+      parameter_locals: self.parameter_locals
+      block_item_locals: self.block_item_locals
+      transfer_targets: self.transfer_targets
+      expression_controls: self.expression_controls
+      diagnostics: self.diagnostics
+      lambda_environment_ids: self.lambda_environment_ids
+      lambda_environments: self.lambda_environments
+    }
+  }
+}
+
+fn self_host_body_variant_names(
+  collected: SelfHostCollectedModule,
+) -> Map<U32, Bool> {
+  let names = self_host_empty_u32_bool_map()
+  for variant in collected.variants {
+    names.set(variant.name, true)
+  }
+  names
+}
+
+fn self_host_install_lambda_environments(
+  slots: SelfHostLambdaEnvironmentSlots,
+  job: SelfHostBodyNameJobResult,
+) -> Unit {
+  let mut index = 0u32
+  while index {
+    current => if current < job.lambda_environment_count() {
+      slots.set(
+        job.lambda_environment_id_at(current),
+        job.lambda_environment_at(current),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_capture_source_owned_by(
+  source: SelfHostLambdaCaptureSource,
+  lambda: U32,
+) -> Bool {
+  match source {
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(owner, _) => owner == lambda
+    SelfHostLambdaCaptureSource::BodyLocalCapture(_, _) => false
+  }
+}
+
+struct SelfHostBodyNameMergeBuilder {
+  collected: SelfHostCollectedModule
+  bodies: Array<SelfHostResolvedBodyNames>
+  lambdas: Array<SelfHostResolvedLambdaNames>
+  locals: Array<SelfHostBodyLocal>
+  controls: Array<SelfHostBodyControl>
+  captures: Array<SelfHostLambdaCapture>
+  expression_references: Array<SelfHostBodyNameReference>
+  pattern_references: Array<SelfHostBodyPatternReference>
+  parameter_locals: Array<U32>
+  lambda_parameter_locals: Array<U32>
+  block_item_locals: Array<U32>
+  transfer_targets: Array<U32>
+  expression_controls: Array<U32>
+  diagnostics: Array<SelfHostBodyResolutionDiagnostic>
+}
+
+impl SelfHostBodyNameMergeBuilder {
+  fn new(collected: SelfHostCollectedModule) -> SelfHostBodyNameMergeBuilder {
+    SelfHostBodyNameMergeBuilder::{
+      collected: collected
+      bodies: []
+      lambdas: []
+      locals: []
+      controls: []
+      captures: []
+      expression_references: self_host_empty_body_name_references(
+        collected.expressions.length(),
+      )
+      pattern_references: self_host_empty_body_pattern_references(
+        collected.patterns.length(),
+      )
+      parameter_locals: self_host_u32_slots(
+        collected.parameters.length(),
+        4294967295u32,
+      )
+      lambda_parameter_locals: self_host_u32_slots(
+        collected.lambda_parameters.length(),
+        4294967295u32,
+      )
+      block_item_locals: self_host_u32_slots(
+        collected.block_items.length(),
+        4294967295u32,
+      )
+      transfer_targets: self_host_u32_slots(
+        collected.expressions.length(),
+        4294967295u32,
+      )
+      expression_controls: self_host_u32_slots(
+        collected.expressions.length(),
+        4294967295u32,
+      )
+      diagnostics: []
+    }
+  }
+
+  fn expression_reference_at(
+    self,
+    expression: U32,
+  ) -> SelfHostBodyNameReference {
+    self.expression_references[expression]
+  }
+
+  fn resolve_and_merge_body(
+    self,
+    imports: Option<SelfHostModuleImportScope>,
+    variant_names: Map<U32, Bool>,
+    slots: SelfHostLambdaEnvironmentSlots,
+    body: SelfHostHirBody,
+  ) -> Unit {
+    let job = SelfHostBodyNameResolver::new(
+      self.collected,
+      imports,
+      body,
+      variant_names,
+    ).run()
+    let mut index = 0u32
+    while index {
+      current => if current < job.lambda_environment_count() {
+        slots.set(
+          job.lambda_environment_id_at(current),
+          job.lambda_environment_at(current),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < body.expressions.length {
+        let destination = body.expressions.start + current
+        self.expression_references[destination] = job.expression_reference_at(
+          current,
+        )
+        self.transfer_targets[destination] = job.transfer_target_at(current)
+        self.expression_controls[destination] = job.expression_control_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < body.patterns.length {
+        self.pattern_references[body.patterns.start + current] = job.pattern_reference_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < body.block_items.length {
+        self.block_item_locals[body.block_items.start + current] = job.block_item_local_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let parameter_span = job.parameter_span_value()
+    index = 0u32
+    while index {
+      current => if current < parameter_span.length {
+        self.parameter_locals[self_host_u32_add(parameter_span.start, current)] = job.parameter_local_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let local_start = self.locals.length()
+    index = 0u32
+    while index {
+      current => if current < job.local_count() {
+        self.locals.push(job.local_at(current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let control_start = self.controls.length()
+    index = 0u32
+    while index {
+      current => if current < job.control_count() {
+        self.controls.push(job.control_at(current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let diagnostic_start = self.diagnostics.length()
+    index = 0u32
+    while index {
+      current => if current < job.diagnostic_count() {
+        self.diagnostics.push(job.diagnostic_at(current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let info = SelfHostResolvedBodyNames::{
+      body: body.id
+      locals: SelfHostHirSpan::{
+        start: local_start
+        length: self.locals.length() - local_start
+      }
+      controls: SelfHostHirSpan::{
+        start: control_start
+        length: self.controls.length() - control_start
+      }
+      diagnostics: SelfHostHirSpan::{
+        start: diagnostic_start
+        length: self.diagnostics.length() - diagnostic_start
+      }
+    }
+    self.bodies.push(info)
+  }
+
+  fn resolve_and_merge_lambda(
+    self,
+    imports: Option<SelfHostModuleImportScope>,
+    variant_names: Map<U32, Bool>,
+    slots: SelfHostLambdaEnvironmentSlots,
+    lambda: SelfHostHirLambda,
+    pending_owners: Array<U32>,
+    pending_captures: Array<SelfHostLambdaCapture>,
+  ) -> Unit {
+    let job = SelfHostBodyNameResolver::new_lambda(
+      self.collected,
+      imports,
+      lambda,
+      slots.get(lambda.id),
+      variant_names,
+    ).run()
+    let local_start = self.locals.length()
+    let mut index = 0u32
+    while index {
+      current => if current < job.local_count() {
+        self.locals.push(job.local_at(current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let control_start = self.controls.length()
+    index = 0u32
+    while index {
+      current => if current < job.control_count() {
+        self.controls.push(job.control_at(current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let capture_start = self.captures.length()
+    let mut pending = 0u32
+    while pending {
+      current => if current < pending_owners.length() {
+        if pending_owners[current] == lambda.id {
+          let source = pending_captures[current]
+          let capture = SelfHostLambdaCapture::{
+            id: self.captures.length() - capture_start
+            lambda: lambda.id
+            name: source.name
+            source: source.source
+            mutable_: source.mutable_
+            offset: source.offset
+          }
+          self.captures.push(capture)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let diagnostic_start = self.diagnostics.length()
+    index = 0u32
+    while index {
+      current => if current < job.diagnostic_count() {
+        self.diagnostics.push(job.diagnostic_at(current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let root = self.collected.bodies[
+      self_host_semantic_id_local(lambda.root_body)
+    ]
+    index = 0u32
+    while index {
+      current => if current < lambda.body.expressions.length {
+        let destination = lambda.body.expressions.start + current
+        self.expression_references[destination] = job.expression_reference_at(
+          current,
+        )
+        self.transfer_targets[destination] = job.transfer_target_at(current)
+        self.expression_controls[destination] = job.expression_control_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < lambda.body.patterns.length {
+        self.pattern_references[lambda.body.patterns.start + current] = job.pattern_reference_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    while index {
+      current => if current < lambda.body.block_items.length {
+        self.block_item_locals[lambda.body.block_items.start + current] = job.block_item_local_at(
+          current,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let parameter_span = job.parameter_span_value()
+    index = 0u32
+    while index {
+      current => if current < parameter_span.length {
+        self.lambda_parameter_locals[
+          self_host_u32_add(parameter_span.start, current)
+        ] = job.parameter_local_at(current)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let info = SelfHostResolvedLambdaNames::{
+      lambda: lambda.id
+      locals: SelfHostHirSpan::{
+        start: local_start
+        length: self.locals.length() - local_start
+      }
+      controls: SelfHostHirSpan::{
+        start: control_start
+        length: self.controls.length() - control_start
+      }
+      captures: SelfHostHirSpan::{
+        start: capture_start
+        length: self.captures.length() - capture_start
+      }
+      diagnostics: SelfHostHirSpan::{
+        start: diagnostic_start
+        length: self.diagnostics.length() - diagnostic_start
+      }
+    }
+    self.lambdas.push(info)
+  }
+
+  fn finish(self) -> SelfHostResolvedModuleNames {
+    let module_id = self.collected.module_id
+    let bodies = self.bodies
+    let lambdas = self.lambdas
+    let locals = self.locals
+    let controls = self.controls
+    let captures = self.captures
+    let expression_references = self.expression_references
+    let pattern_references = self.pattern_references
+    let parameter_locals = self.parameter_locals
+    let lambda_parameter_locals = self.lambda_parameter_locals
+    let block_item_locals = self.block_item_locals
+    let transfer_targets = self.transfer_targets
+    let expression_controls = self.expression_controls
+    let diagnostics = self.diagnostics
+    SelfHostResolvedModuleNames::{
+      module_id: module_id
+      bodies: bodies
+      lambdas: lambdas
+      locals: locals
+      controls: controls
+      captures: captures
+      expression_references: expression_references
+      pattern_references: pattern_references
+      parameter_locals: parameter_locals
+      lambda_parameter_locals: lambda_parameter_locals
+      block_item_locals: block_item_locals
+      transfer_targets: transfer_targets
+      expression_controls: expression_controls
+      diagnostics: diagnostics
+    }
+  }
+}
+
+fn self_host_pending_capture_contains(
+  owners: Array<U32>,
+  captures: Array<SelfHostLambdaCapture>,
+  owner: U32,
+  source: SelfHostLambdaCaptureSource,
+) -> Bool {
+  let mut index = 0u32
+  while index {
+    current => if current < owners.length() {
+      if owners[current] == owner && self_host_lambda_capture_source_equal(
+        captures[current].source,
+        source,
+      ) {
+        break true
+      }
+      continue current + 1u32
+    } else {
+      break false
+    }
+  }
+}
+
+fn self_host_record_pending_capture(
+  owners: Array<U32>,
+  captures: Array<SelfHostLambdaCapture>,
+  owner: U32,
+  capture: SelfHostLambdaCapture,
+) -> Unit {
+  if !self_host_pending_capture_contains(
+    owners,
+    captures,
+    owner,
+    capture.source,
+  ) {
+    owners.push(owner)
+    captures.push(capture)
+  }
+}
+
+fn self_host_resolve_module_names_with_optional_imports_in_order(
+  collected: SelfHostCollectedModule,
+  imports: Option<SelfHostModuleImportScope>,
+  order: Array<U32>,
+) -> SelfHostResolvedModuleNames {
+  if order.length() != collected.bodies.length() {
+    self_host_body_name_fail()
+  }
+  let seen = self_host_bool_slots(collected.bodies.length(), false)
+  for body_index in order {
+    if body_index >= collected.bodies.length() || seen[body_index] {
+      self_host_body_name_fail()
+    }
+    seen[body_index] = true
+  }
+  let variant_names = self_host_body_variant_names(collected)
+  let slots = SelfHostLambdaEnvironmentSlots::new(collected.lambdas.length())
+  let builder = SelfHostBodyNameMergeBuilder::new(collected)
+  let mut body_index = 0u32
+  while body_index {
+    current => if current < collected.bodies.length() {
+      let body = collected.bodies[current]
+      builder.resolve_and_merge_body(
+        imports,
+        variant_names,
+        slots,
+        body,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let pending_owners = []
+  let pending_captures = []
+  let mut lambda_index = 0u32
+  while lambda_index {
+    current => if current < collected.lambdas.length() {
+      let lambda = collected.lambdas[current]
+      let job = SelfHostBodyNameResolver::new_lambda(
+        collected,
+        imports,
+        lambda,
+        slots.get(current),
+        variant_names,
+      ).run()
+      self_host_install_lambda_environments(slots, job)
+      let mut capture_index = 0u32
+      while capture_index {
+        capture_at => if capture_at < job.capture_count() {
+          let capture = job.capture_at(capture_at)
+          self_host_record_pending_capture(
+            pending_owners,
+            pending_captures,
+            current,
+            capture,
+          )
+          let mut ancestor = lambda.parent
+          while ancestor {
+            owner => if owner != 4294967295u32 &&
+              !self_host_capture_source_owned_by(capture.source, owner) {
+              self_host_record_pending_capture(
+                pending_owners,
+                pending_captures,
+                owner,
+                capture,
+              )
+              continue collected.lambdas[owner].parent
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue capture_at + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  lambda_index = 0u32
+  while lambda_index {
+    current => if current < collected.lambdas.length() {
+      let lambda = collected.lambdas[current]
+      builder.resolve_and_merge_lambda(
+        imports,
+        variant_names,
+        slots,
+        lambda,
+        pending_owners,
+        pending_captures,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.finish()
+}
+
+fn self_host_resolve_module_names_in_order(
+  collected: SelfHostCollectedModule,
+  order: Array<U32>,
+) -> SelfHostResolvedModuleNames {
+  self_host_resolve_module_names_with_optional_imports_in_order(
+    collected,
+    Option::None,
+    order,
+  )
+}
+
+fn self_host_resolve_module_names_with_imports(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostModuleImportScope,
+) -> SelfHostResolvedModuleNames {
+  if !self_host_u64_equal(collected.module_id, imports.module_id) {
+    self_host_body_name_fail()
+  }
+  let order = []
+  let mut index = 0u32
+  while index {
+    current => if current < collected.bodies.length() {
+      order.push(current)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_resolve_module_names_with_optional_imports_in_order(
+    collected,
+    Option::Some(imports),
+    order,
+  )
+}
+
+fn self_host_resolve_module_names(
+  collected: SelfHostCollectedModule,
+) -> SelfHostResolvedModuleNames {
+  let order = []
+  let mut index = 0u32
+  while index {
+    current => if current < collected.bodies.length() {
+      order.push(current)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_resolve_module_names_in_order(collected, order)
+}

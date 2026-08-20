@@ -214,6 +214,7 @@ pub enum SelfHostImportScopeDiagnostic {
   DuplicateImportedAlias(U64, String, U64, U32)
   AmbiguousImportedType(U64, String, U64, U64)
   AmbiguousImportedTrait(U64, String, U64, U64)
+  AmbiguousImportedValue(U64, String, U64, U64)
 }
 
 pub struct SelfHostImportedDeclarationBinding {
@@ -233,6 +234,7 @@ pub struct SelfHostModuleImportScope {
   imported_interfaces: Array<U32>
   type_bindings: Map<String, U32>
   trait_bindings: Map<String, U32>
+  value_bindings: Map<String, U32>
   alias_bindings: Map<String, U32>
   interfaces: SelfHostFrozenInterfaceList
   diagnostics: Array<SelfHostImportScopeDiagnostic>
@@ -305,6 +307,24 @@ impl SelfHostModuleImportScope {
         Option::None
       }
       Option::None => Option::None
+    }
+  }
+
+  fn lookup_opened_value(self, name: String) -> Option<U64> {
+    match self.value_bindings.get(name) {
+      Option::Some(index) => if index < 4294967294u32 {
+        Option::Some(self.declarations[index].declaration)
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn opened_value_is_ambiguous(self, name: String) -> Bool {
+    match self.value_bindings.get(name) {
+      Option::Some(index) => index == 4294967294u32
+      Option::None => false
     }
   }
 
@@ -388,6 +408,18 @@ impl SelfHostModuleImportScope {
       SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
     )
   }
+
+  fn lookup_module_value(
+    self,
+    interface_index: U32,
+    name: String,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    self.lookup_module_declaration(
+      interface_index,
+      name,
+      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    )
+  }
 }
 
 struct SelfHostImportScopeBuilder {
@@ -398,6 +430,7 @@ struct SelfHostImportScopeBuilder {
   imported_interfaces: Array<U32>
   type_bindings: Map<String, U32>
   trait_bindings: Map<String, U32>
+  value_bindings: Map<String, U32>
   alias_bindings: Map<String, U32>
   interfaces: SelfHostFrozenInterfaceList
   diagnostics: Array<SelfHostImportScopeDiagnostic>
@@ -419,6 +452,7 @@ impl SelfHostImportScopeBuilder {
       imported_interfaces: []
       type_bindings: self_host_empty_string_u32_map()
       trait_bindings: self_host_empty_string_u32_map()
+      value_bindings: self_host_empty_string_u32_map()
       alias_bindings: self_host_empty_string_u32_map()
       interfaces: interfaces
       diagnostics: []
@@ -475,7 +509,7 @@ impl SelfHostImportScopeBuilder {
     } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
       self.type_bindings
     } else {
-      return
+      self.value_bindings
     }
     let index = self.register_declaration(interface_index, declaration)
     match table.get(declaration.name) {
@@ -496,9 +530,18 @@ impl SelfHostImportScopeBuilder {
                 declaration.declaration,
               ),
             )
-          } else {
+          } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
             self.diagnostics.push(
               SelfHostImportScopeDiagnostic::AmbiguousImportedType(
+                self.module_id,
+                declaration.name,
+                previous.declaration,
+                declaration.declaration,
+              ),
+            )
+          } else {
+            self.diagnostics.push(
+              SelfHostImportScopeDiagnostic::AmbiguousImportedValue(
                 self.module_id,
                 declaration.name,
                 previous.declaration,
@@ -593,6 +636,7 @@ impl SelfHostImportScopeBuilder {
       imported_interfaces: self.imported_interfaces
       type_bindings: self.type_bindings
       trait_bindings: self.trait_bindings
+      value_bindings: self.value_bindings
       alias_bindings: self.alias_bindings
       interfaces: self.interfaces
       diagnostics: self.diagnostics

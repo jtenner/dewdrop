@@ -1,0 +1,311 @@
+open dew.std.array
+open dew.std.option
+
+pub enum SelfHostBodyLocalKind {
+  ParameterLocal
+  LetLocal
+  PatternLocal
+}
+
+pub struct SelfHostBodyLocal {
+  id: U32
+  name: U32
+  kind: SelfHostBodyLocalKind
+  mutable_: Bool
+  source: U32
+  offset: U32
+}
+
+pub enum SelfHostBodyNameReference {
+  NoNameReference
+  ErrorNameReference
+  LocalNameReference(U32)
+  LambdaCaptureNameReference(U32)
+  ModuleValueNameReference(U32)
+  ImportedModuleValueNameReference(U64)
+  ImportedModuleNameReference(U32)
+  ForeignLibraryNameReference(U64)
+  PrimitiveTypeNameReference(SelfHostPrimitiveType)
+  ModuleTypeNameReference(U64)
+  ModuleTraitNameReference(U64)
+  VariantNameReference(U32)
+}
+
+pub enum SelfHostBodyPatternReference {
+  NoPatternReference
+  ErrorPatternReference
+  PatternBindingReference(U32)
+  PatternImportedModuleReference(U32)
+  PatternTypeReference(U64)
+  PatternTraitReference(U64)
+  PatternVariantReference(U32)
+  PatternQualifiedReference(U32)
+}
+
+pub enum SelfHostBodyControlKind {
+  FunctionalWhileControl
+}
+
+pub struct SelfHostBodyControl {
+  id: U32
+  kind: SelfHostBodyControlKind
+  expression: U32
+  offset: U32
+}
+
+pub enum SelfHostBodyResolutionDiagnostic {
+  UnknownValueName(U32, U32, U32)
+  AmbiguousImportedValueName(U32, U32, U32)
+  AmbiguousImportedQualifiedRoot(U32, U32, U32)
+  UnknownQualifiedRoot(U32, U32, U32)
+  UnknownImportAlias(U32, U32, U32)
+  UnknownPatternImportAlias(U32, U32, U32)
+  UnknownPatternConstructor(U32, U32, U32)
+  DuplicatePatternBinding(U32, U32, U32)
+  AlternativeMissingBinding(U32, U32, U32)
+  AlternativeExtraBinding(U32, U32, U32)
+  BreakOutsideLoop(U32, U32)
+  ContinueOutsideLoop(U32, U32)
+}
+
+impl SelfHostBodyResolutionDiagnostic {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostBodyResolutionDiagnostic::UnknownValueName(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::AmbiguousImportedValueName(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::AmbiguousImportedQualifiedRoot(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::UnknownImportAlias(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::UnknownPatternImportAlias(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(_, _, duplicate_offset) => duplicate_offset
+      SelfHostBodyResolutionDiagnostic::AlternativeMissingBinding(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::AlternativeExtraBinding(_, _, offset) => offset
+      SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(_, offset) => offset
+      SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(_, offset) => offset
+    }
+  }
+
+  fn rank(self) -> U32 {
+    match self {
+      SelfHostBodyResolutionDiagnostic::UnknownValueName(_, _, _) => 0u32
+      SelfHostBodyResolutionDiagnostic::AmbiguousImportedValueName(_, _, _) => 1u32
+      SelfHostBodyResolutionDiagnostic::AmbiguousImportedQualifiedRoot(_, _, _) => 2u32
+      SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(_, _, _) => 3u32
+      SelfHostBodyResolutionDiagnostic::UnknownImportAlias(_, _, _) => 4u32
+      SelfHostBodyResolutionDiagnostic::UnknownPatternImportAlias(_, _, _) => 5u32
+      SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(_, _, _) => 6u32
+      SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(_, _, _) => 7u32
+      SelfHostBodyResolutionDiagnostic::AlternativeMissingBinding(_, _, _) => 8u32
+      SelfHostBodyResolutionDiagnostic::AlternativeExtraBinding(_, _, _) => 9u32
+      SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(_, _) => 10u32
+      SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(_, _) => 11u32
+    }
+  }
+}
+
+fn self_host_body_diagnostic_offset(
+  diagnostic: SelfHostBodyResolutionDiagnostic,
+) -> U32 {
+  diagnostic.offset()
+}
+
+fn self_host_body_diagnostic_rank(
+  diagnostic: SelfHostBodyResolutionDiagnostic,
+) -> U32 {
+  diagnostic.rank()
+}
+
+fn self_host_hir_pattern_offset(pattern: SelfHostHirPattern) -> U32 {
+  pattern.offset()
+}
+
+pub struct SelfHostResolvedBodyNames {
+  body: U64
+  locals: SelfHostHirSpan
+  controls: SelfHostHirSpan
+  diagnostics: SelfHostHirSpan
+}
+
+pub enum SelfHostLambdaCaptureSource {
+  BodyLocalCapture(U64, U32)
+  LambdaLocalCapture(U32, U32)
+}
+
+pub struct SelfHostLambdaCapture {
+  id: U32
+  lambda: U32
+  name: U32
+  source: SelfHostLambdaCaptureSource
+  mutable_: Bool
+  offset: U32
+}
+
+pub struct SelfHostResolvedLambdaNames {
+  lambda: U32
+  locals: SelfHostHirSpan
+  controls: SelfHostHirSpan
+  captures: SelfHostHirSpan
+  diagnostics: SelfHostHirSpan
+}
+
+pub struct SelfHostResolvedModuleNames {
+  module_id: U64
+  bodies: Array<SelfHostResolvedBodyNames>
+  lambdas: Array<SelfHostResolvedLambdaNames>
+  locals: Array<SelfHostBodyLocal>
+  controls: Array<SelfHostBodyControl>
+  captures: Array<SelfHostLambdaCapture>
+  expression_references: Array<SelfHostBodyNameReference>
+  pattern_references: Array<SelfHostBodyPatternReference>
+  parameter_locals: Array<U32>
+  lambda_parameter_locals: Array<U32>
+  block_item_locals: Array<U32>
+  transfer_targets: Array<U32>
+  expression_controls: Array<U32>
+  diagnostics: Array<SelfHostBodyResolutionDiagnostic>
+}
+
+impl SelfHostResolvedModuleNames {
+  fn expression_reference_at(
+    self,
+    expression: U32,
+  ) -> SelfHostBodyNameReference {
+    self.expression_references[expression]
+  }
+
+  fn body(self, body: U64) -> Option<SelfHostResolvedBodyNames> {
+    if self_host_semantic_id_module(body) != self.module_id {
+      Option::None
+    } else {
+      let index = self_host_semantic_id_local(body)
+      if index < self.bodies.length() {
+        Option::Some(self.bodies[index])
+      } else {
+        Option::None
+      }
+    }
+  }
+
+  fn lambda(self, lambda: U32) -> Option<SelfHostResolvedLambdaNames> {
+    if lambda < self.lambdas.length() {
+      Option::Some(self.lambdas[lambda])
+    } else {
+      Option::None
+    }
+  }
+
+  fn local_info(
+    self,
+    body: U64,
+    local: U32,
+  ) -> Option<SelfHostBodyLocal> {
+    match self.body(body) {
+      Option::Some(info) => if local < info.locals.length {
+        Option::Some(
+          self.locals[self_host_u32_add(info.locals.start, local)],
+        )
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn lambda_local_info(
+    self,
+    lambda: U32,
+    local: U32,
+  ) -> Option<SelfHostBodyLocal> {
+    match self.lambda(lambda) {
+      Option::Some(info) => if local < info.locals.length {
+        Option::Some(
+          self.locals[self_host_u32_add(info.locals.start, local)],
+        )
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn lambda_capture(
+    self,
+    lambda: U32,
+    capture: U32,
+  ) -> Option<SelfHostLambdaCapture> {
+    match self.lambda(lambda) {
+      Option::Some(info) => if capture < info.captures.length {
+        Option::Some(
+          self.captures[self_host_u32_add(info.captures.start, capture)],
+        )
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn control(
+    self,
+    body: U64,
+    control: U32,
+  ) -> Option<SelfHostBodyControl> {
+    match self.body(body) {
+      Option::Some(info) => if control < info.controls.length {
+        Option::Some(
+          self.controls[self_host_u32_add(info.controls.start, control)],
+        )
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+}
+
+fn self_host_empty_body_name_references(
+  length: U32,
+) -> Array<SelfHostBodyNameReference> {
+  let values = []
+  let mut index = 0u32
+  while index {
+    current => if current < length {
+      values.push(SelfHostBodyNameReference::NoNameReference)
+      continue current + 1u32
+    } else {
+      break values
+    }
+  }
+}
+
+fn self_host_empty_body_pattern_references(
+  length: U32,
+) -> Array<SelfHostBodyPatternReference> {
+  let values = []
+  let mut index = 0u32
+  while index {
+    current => if current < length {
+      values.push(SelfHostBodyPatternReference::NoPatternReference)
+      continue current + 1u32
+    } else {
+      break values
+    }
+  }
+}
+
+fn self_host_lambda_capture_source_equal(
+  left: SelfHostLambdaCaptureSource,
+  right: SelfHostLambdaCaptureSource,
+) -> Bool {
+  match left {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(body, local) => match right {
+      SelfHostLambdaCaptureSource::BodyLocalCapture(other_body, other_local) => self_host_u64_equal(body, other_body) && local == other_local
+      _ => false
+    }
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, local) => match right {
+      SelfHostLambdaCaptureSource::LambdaLocalCapture(other_lambda, other_local) => lambda == other_lambda && local == other_local
+      _ => false
+    }
+  }
+}
