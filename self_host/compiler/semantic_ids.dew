@@ -1,0 +1,31 @@
+
+pub struct SelfHostSourceLocation {
+  file: U64
+  offset: U32
+}
+
+fn self_host_make_semantic_id(
+  module_id: U64,
+  local_index: U32,
+) -> U64 {
+  (module_id << 32u64) | u32_into_u64(local_index)
+}
+
+fn self_host_make_file_id(
+  module_id: U64,
+  local_index: U32,
+) -> U64 {
+  self_host_make_semantic_id(module_id, local_index)
+}
+
+fn self_host_semantic_id_module(id: U64) -> U64 {
+  id >> 32u64
+}
+
+fn self_host_semantic_id_local(id: U64) -> U32 {
+  u64_into_u32(id & 4294967295u64)
+}
+
+fn self_host_file_id_module(file: U64) -> U64 {
+  self_host_semantic_id_module(file)
+}

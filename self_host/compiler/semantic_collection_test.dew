@@ -1,0 +1,315 @@
+open dew.std.option
+open dew.std.testing
+open dew.std.string_builder
+
+fn self_host_collection_has_duplicate(
+  collected: SelfHostCollectedModule,
+  space: SelfHostBindingSpace,
+) -> Bool {
+  for diagnostic in collected.diagnostics {
+    match diagnostic {
+      SelfHostCollectionDiagnostic::DuplicateName(value) => match space {
+        SelfHostBindingSpace::ModuleType => if value.space is SelfHostBindingSpace::ModuleType {
+          return true
+        }
+        SelfHostBindingSpace::ModuleTrait => if value.space is SelfHostBindingSpace::ModuleTrait {
+          return true
+        }
+        SelfHostBindingSpace::ModuleValue => if value.space is SelfHostBindingSpace::ModuleValue {
+          return true
+        }
+        SelfHostBindingSpace::GenericParameter => if value.space is SelfHostBindingSpace::GenericParameter {
+          return true
+        }
+        SelfHostBindingSpace::Parameter => if value.space is SelfHostBindingSpace::Parameter {
+          return true
+        }
+        _ => {}
+      }
+      _ => {}
+    }
+  }
+  false
+}
+
+test "semantic collection assigns deterministic source-order identities" {
+  let collected = self_host_collect_bytes(
+    7u64,
+    b"trait Convert<t> {\n  fn convert(self, value: t) -> t\n}\nimpl<t> Convert<t> for Box<t> {\n  fn convert(self, value: t) -> t {\n    value\n  }\n}\nstruct Pair<t> {\n  first: t\n  second: t\n}\nenum Maybe<t> {\n  None\n  Some(t)\n  Named {\n    value: t\n  }\n}\nfn identity<t>(value: t) -> t {\n  value\n}\ntype Alias<t> = Pair<t>\nlet answer = 42\n",
+  )
+  assert(collected.declarations.length() == 7u32, "declaration count")
+  assert(collected.methods.length() == 2u32, "method count")
+  assert(collected.fields.length() == 3u32, "field count")
+  assert(collected.variants.length() == 3u32, "variant count")
+  assert(collected.generic_parameters.length() == 6u32, "generic count")
+  assert(collected.parameters.length() == 5u32, "parameter count")
+  assert(collected.callables.length() == 3u32, "callable count")
+  assert(collected.lets.length() == 1u32, "let count")
+  assert(collected.impls.length() == 1u32, "impl count")
+  assert(collected.aliases.length() == 1u32, "alias count")
+  assert(
+    self_host_semantic_id_module(collected.declarations[0u32].id) == 7u64,
+    "declaration module",
+  )
+  assert(
+    self_host_semantic_id_local(collected.declarations[0u32].id) == 0u32,
+    "first declaration local",
+  )
+  assert(
+    self_host_semantic_id_local(collected.methods[0u32].id) == 1u32,
+    "trait method local",
+  )
+  assert(collected.diagnostics.length() == 0u32, "unexpected diagnostics")
+}
+
+test "semantic collection interns repeated names once" {
+  let collected = self_host_collect_bytes(
+    1u64,
+    b"struct Pair<t> {\n  first: t\n  second: t\n}\nfn first<t>(first: t) -> t {\n  first\n}\n",
+  )
+  let first = match collected.find_name("first") {
+    Option::Some(value) => value
+    Option::None => 4294967295u32
+  }
+  let t = match collected.find_name("t") {
+    Option::Some(value) => value
+    Option::None => 4294967295u32
+  }
+  assert(collected.name(first) == "first", "first name")
+  assert(collected.name(t) == "t", "generic name")
+  assert(self_host_u32_equal(collected.fields[0u32].name, first), "field intern")
+  assert(self_host_u32_equal(collected.declarations[1u32].name, first), "declaration intern")
+  assert(self_host_u32_equal(collected.parameters[0u32].name, first), "parameter intern")
+}
+
+test "semantic collection lowers nested signature types child first" {
+  let collected = self_host_collect_bytes(
+    2u64,
+    b"type Rows<t> = Result<List<t>>\nfn map<t>(rows: Result<List<t>>) -> Result<List<t>> {\n  rows\n}\n",
+  )
+  assert(collected.aliases.length() == 1u32, "alias missing")
+  let target = collected.aliases[0u32].target
+  match collected.type_syntax[target] {
+    SelfHostHirTypeSyntax::AppliedTypeSyntax(base, arguments, _) => {
+      match collected.type_syntax[base] {
+        SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => assert(
+          collected.name(name) == "Result",
+          "outer type",
+        )
+        _ => assert(false, "expected named outer type")
+      }
+      assert(arguments.length == 1u32, "outer argument count")
+      let list = collected.type_arguments[arguments.start]
+      match collected.type_syntax[list] {
+        SelfHostHirTypeSyntax::AppliedTypeSyntax(list_base, list_arguments, _) => {
+          match collected.type_syntax[list_base] {
+            SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => assert(
+              collected.name(name) == "List",
+              "inner type",
+            )
+            _ => assert(false, "expected named inner type")
+          }
+          assert(list_arguments.length == 1u32, "inner argument count")
+        }
+        _ => assert(false, "expected applied inner type")
+      }
+    }
+    _ => assert(false, "expected applied alias target")
+  }
+}
+
+test "semantic collection keeps module namespaces separate" {
+  let collected = self_host_collect_bytes(
+    3u64,
+    b"struct Item {}\ntrait Item {}\nfn Item() -> Unit {}\nstruct Item {}\ntrait Item {}\nlet Item = 1\n",
+  )
+  assert(collected.lookup_type("Item") is Option::Some(_), "type lookup")
+  assert(collected.lookup_trait("Item") is Option::Some(_), "trait lookup")
+  assert(collected.lookup_value("Item") is Option::Some(_), "value lookup")
+  assert(
+    self_host_collection_has_duplicate(collected, SelfHostBindingSpace::ModuleType),
+    "type duplicate",
+  )
+  assert(
+    self_host_collection_has_duplicate(collected, SelfHostBindingSpace::ModuleTrait),
+    "trait duplicate",
+  )
+  assert(
+    self_host_collection_has_duplicate(collected, SelfHostBindingSpace::ModuleValue),
+    "value duplicate",
+  )
+}
+
+test "semantic collection keeps builtin overloads in source order" {
+  let collected = self_host_collect_bytes(
+    4u64,
+    b"builtin convert(value: I32) -> I64 = \"i32_to_i64\"\nbuiltin convert(value: F32) -> F64 = \"f32_to_f64\"\n",
+  )
+  let name = match collected.find_name("convert") {
+    Option::Some(value) => value
+    Option::None => 4294967295u32
+  }
+  let binding = match collected.value_bindings.get(name) {
+    Option::Some(value) => value
+    Option::None => SelfHostValueBinding::{
+      head: 0u32
+      tail: 0u32
+      kind: SelfHostCollectedDeclKind::BuiltinDecl
+      offset: 0u32
+    }
+  }
+  assert(binding.head == 0u32, "overload head")
+  assert(binding.tail == 1u32, "overload tail")
+  assert(
+    self_host_u64_equal(
+      collected.value_binding_candidates[0u32].declaration,
+      collected.declarations[0u32].id,
+    ),
+    "first overload",
+  )
+  assert(
+    collected.value_binding_candidates[0u32].next is Option::Some(1u32),
+    "overload link",
+  )
+  assert(collected.diagnostics.length() == 0u32, "overload diagnostic")
+}
+
+test "semantic collection preserves parser diagnostics and recovers" {
+  let collected = self_host_collect_bytes(
+    5u64,
+    b"type Before = I32\nnot a declaration\ntype After = I64\n",
+  )
+  assert(collected.declarations.length() == 2u32, "recovered declaration count")
+  assert(collected.diagnostics.length() == 1u32, "parse diagnostic count")
+  assert(collected.lookup_type("Before") is Option::Some(_), "Before missing")
+  assert(collected.lookup_type("After") is Option::Some(_), "After missing")
+}
+
+test "semantic collection lowers bodies patterns assignments and lambdas" {
+  let collected = self_host_collect_bytes(
+    6u64,
+    b"fn run(value: Option<I32>) -> I32 {\n  let mut total = 0\n  total = match value {\n    Option::Some(item) => item\n    Option::None => 0\n  }\n  let add = fn(delta: I32) -> I32 {\n    total + delta\n  }\n  add(total)\n}\n",
+  )
+  assert(collected.bodies.length() == 1u32, "body count")
+  assert(collected.lambdas.length() == 1u32, "lambda count")
+  assert(collected.blocks.length() >= 2u32, "block count")
+  assert(collected.patterns.length() >= 4u32, "pattern count")
+  assert(collected.pattern_arms.length() == 2u32, "arm count")
+  assert(collected.expressions.length() > 8u32, "expression count")
+  assert(collected.diagnostics.length() == 0u32, "body diagnostics")
+}
+
+test "semantic collection shares one namespace across ordered files" {
+  let module_id = 9u64
+  let collected = self_host_collect_files(module_id, [
+    SelfHostProgramFile::{
+      id: self_host_make_file_id(module_id, 0u32)
+      path: "first.dew"
+      source: b"fn double(value: I32) -> I32 {\n  value + value\n}\n"
+      test_only: false
+    },
+    SelfHostProgramFile::{
+      id: self_host_make_file_id(module_id, 1u32)
+      path: "second.dew"
+      source: b"pub fn run(value: I32) -> I32 {\n  double(value)\n}\n"
+      test_only: false
+    },
+  ])
+  assert(collected.files.length() == 2u32, "file count")
+  assert(collected.declarations.length() == 2u32, "declaration count")
+  assert(
+    self_host_u64_equal(
+      collected.declaration_files[0u32],
+      self_host_make_file_id(module_id, 0u32),
+    ),
+    "first declaration file",
+  )
+  assert(
+    self_host_u64_equal(
+      collected.declaration_files[1u32],
+      self_host_make_file_id(module_id, 1u32),
+    ),
+    "second declaration file",
+  )
+  assert(collected.diagnostics.length() == 0u32, "multi-file diagnostics")
+}
+
+fn self_host_deep_alias_source(depth: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  builder.append("type Deep<t> = ")
+  let _ = while 0u32 {
+    index => if index < depth {
+      builder.append("Box<")
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("t")
+  let _ = while 0u32 {
+    index => if index < depth {
+      builder.append(">")
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("\n")
+  builder.finish().as_bytes()
+}
+
+test "semantic type HIR lowering remains iterative at depth 1024" {
+  let collected = self_host_collect_bytes(
+    11u64,
+    self_host_deep_alias_source(1024u32),
+  )
+  assert(collected.diagnostics.length() == 0u32, "deep type diagnostics")
+  assert(collected.aliases.length() == 1u32, "deep alias count")
+  assert(collected.type_syntax.length() == 2049u32, "deep type node count")
+}
+
+test "semantic collection diagnoses duplicate owner names" {
+  let collected = self_host_collect_bytes(
+    12u64,
+    b"struct Pair<t, t> {\n  value: t\n  value: t\n}\nenum Maybe {\n  None\n  None\n}\ntrait Read {\n  fn read(value: I32) -> I32\n  fn read(value: I32) -> I32\n}\nfn duplicate(value: I32, value: I32) -> I32 {\n  value\n}\n",
+  )
+  assert(collected.diagnostics.length() == 5u32, "owner duplicate count")
+}
+
+test "semantic collection records foreign declarations" {
+  let collected = self_host_collect_bytes(
+    13u64,
+    b"pub foreign type Handle\nforeign impl \"host\" as host {\n  fn read(value: I32) -> I32 = \"read\"\n}\n",
+  )
+  assert(collected.foreign_types.length() == 1u32, "foreign type")
+  assert(collected.foreign_libraries.length() == 1u32, "foreign library")
+  assert(collected.foreign_functions.length() == 1u32, "foreign function")
+  assert(collected.diagnostics.length() == 0u32, "foreign diagnostics")
+}
+
+test "semantic collection retains explicit call type arguments" {
+  let collected = self_host_collect_bytes(
+    14u64,
+    b"fn identity<t>(value: t) -> t {\n  value\n}\nfn run() -> I32 {\n  identity::<I32>(42)\n}\n",
+  )
+  assert(
+    collected.explicit_call_type_arguments.length() == 1u32,
+    "explicit type argument count",
+  )
+  assert(collected.diagnostics.length() == 0u32, "explicit call diagnostics")
+}
+
+test "semantic collection validates tests and derive requests" {
+  let module_id = 10u64
+  let collected = self_host_collect_files(module_id, [
+    SelfHostProgramFile::{
+      id: self_host_make_file_id(module_id, 0u32)
+      path: "value_test.dew"
+      source: b"struct Value {} derive(Eq, Eq, Unknown)\ntest \"same\" expect_trap \"bad-trap\" {}\ntest \"same\" {}\n"
+      test_only: true
+    },
+  ])
+  assert(collected.tests.length() == 2u32, "test count")
+  assert(collected.derives.length() == 1u32, "valid derive count")
+  assert(collected.diagnostics.length() == 4u32, "validation diagnostic count")
+}

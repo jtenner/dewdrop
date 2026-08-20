@@ -1,0 +1,13 @@
+open dew.std.testing
+
+test "semantic IDs preserve module and local indexes" {
+  let id = self_host_make_semantic_id(7u64, 42u32)
+  assert(self_host_semantic_id_module(id) == 7u64, "module ID")
+  assert(self_host_semantic_id_local(id) == 42u32, "local ID")
+}
+
+test "file IDs use the semantic ID layout" {
+  let file = self_host_make_file_id(9u64, 3u32)
+  assert(self_host_file_id_module(file) == 9u64, "file module")
+  assert(self_host_semantic_id_local(file) == 3u32, "file local")
+}

@@ -18,6 +18,13 @@ parser_sources=(
   self_host/compiler/parser_declarations.dew
   self_host/compiler/parser.dew
 )
+semantic_sources=(
+  self_host/compiler/semantic_ids.dew
+  self_host/compiler/semantic_hir.dew
+  self_host/compiler/semantic_model.dew
+  self_host/compiler/semantic_collection.dew
+  self_host/compiler/semantic_body_lowering.dew
+)
 
 tools/dew test \
   "${parser_sources[@]}" \
@@ -30,7 +37,15 @@ tools/dew test \
   self_host/compiler/parser_defer_test.dew \
   self_host/compiler/parser_test.dew
 
+tools/dew test \
+  "${parser_sources[@]}" \
+  "${semantic_sources[@]}" \
+  self_host/compiler/semantic_ids_test.dew \
+  self_host/compiler/semantic_collection_test.dew \
+  self_host/compiler/semantic_body_test.dew
+
 python3 tools/check-self-host-parser.py
+python3 tools/check-self-host-semantics.py
 
 rm -rf "$work"
 mkdir -p "$work/a" "$work/b" "$work/reject-fingerprint" "$work/reject-count"
@@ -39,6 +54,7 @@ sources=(
   self_host/starshine/ffi.dew
   self_host/starshine/fingerprint.dew
   "${parser_sources[@]}"
+  "${semantic_sources[@]}"
   self_host/compiler/request.dew
   self_host/compiler/starshine_module.dew
   self_host/compiler/main.dew

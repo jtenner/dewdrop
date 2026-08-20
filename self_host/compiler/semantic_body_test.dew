@@ -1,0 +1,201 @@
+open dew.std.testing
+
+fn self_host_body_root_expression(body: SelfHostHirBody) -> U32 {
+  match body.root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => value
+    SelfHostHirBodyRoot::BlockBodyRoot(_) => 4294967295u32
+  }
+}
+
+fn self_host_body_root_block(body: SelfHostHirBody) -> U32 {
+  match body.root {
+    SelfHostHirBodyRoot::BlockBodyRoot(value) => value
+    SelfHostHirBodyRoot::ExpressionBodyRoot(_) => 4294967295u32
+  }
+}
+
+test "semantic body HIR assigns stable source-order body IDs" {
+  let collected = self_host_collect_bytes(
+    21u64,
+    b"let answer = left + right * 2\ntrait Empty {\n  fn read(self) -> I32\n}\nfn choose(value: I32) -> I32 {\n  let next = value + 1\n  next\n}\nimpl State {\n  fn step(self) -> State {\n    self\n  }\n}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "body diagnostics")
+  assert(collected.bodies.length() == 3u32, "body count")
+  assert(
+    self_host_semantic_id_local(collected.bodies[0u32].id) == 0u32,
+    "first body ID",
+  )
+  assert(
+    self_host_semantic_id_local(collected.bodies[2u32].id) == 2u32,
+    "last body ID",
+  )
+  assert(
+    collected.bodies[0u32].kind is SelfHostHirBodyKind::ModuleLetBody,
+    "let body kind",
+  )
+  assert(
+    collected.bodies[1u32].kind is SelfHostHirBodyKind::FunctionBody,
+    "function body kind",
+  )
+  assert(
+    collected.bodies[2u32].kind is SelfHostHirBodyKind::ImplMethodBody,
+    "impl body kind",
+  )
+}
+
+test "semantic body HIR emits expression children before parents" {
+  let collected = self_host_collect_bytes(
+    22u64,
+    b"let answer = left + right * 2\n",
+  )
+  let root = self_host_body_root_expression(collected.bodies[0u32])
+  match collected.expressions[root] {
+    SelfHostHirExpr::BinaryExpr(
+      SelfHostHirBinaryOperator::Add,
+      left,
+      multiply,
+      _,
+    ) => {
+      assert(left < root, "left child order")
+      assert(multiply < root, "right child order")
+      match collected.expressions[multiply] {
+        SelfHostHirExpr::BinaryExpr(
+          SelfHostHirBinaryOperator::Multiply,
+          right,
+          literal,
+          _,
+        ) => {
+          assert(right < multiply, "multiply left order")
+          assert(literal < multiply, "multiply right order")
+        }
+        _ => assert(false, "missing multiply")
+      }
+    }
+    _ => assert(false, "missing add")
+  }
+}
+
+test "semantic lambda bodies use isolated source-order HIR spans" {
+  let collected = self_host_collect_bytes(
+    23u64,
+    b"fn make() -> fn(I32) -> fn(I32) -> I32 {\n  fn(first: I32) -> fn(I32) -> I32 {\n    fn(second: I32) -> I32 {\n      first + second\n    }\n  }\n}\n",
+  )
+  assert(collected.lambdas.length() == 2u32, "lambda count")
+  let outer = collected.lambdas[0u32]
+  let nested = collected.lambdas[1u32]
+  assert(self_host_u32_equal(outer.parent, 4294967295u32), "outer parent")
+  assert(self_host_u32_equal(nested.parent, 0u32), "nested parent")
+  assert(
+    self_host_u64_equal(outer.root_body, collected.bodies[0u32].id),
+    "outer root body",
+  )
+  assert(
+    self_host_u64_equal(nested.root_body, collected.bodies[0u32].id),
+    "nested root body",
+  )
+  assert(self_host_u32_equal(outer.parameters.length, 1u32), "outer parameter count")
+  assert(self_host_u32_equal(nested.parameters.length, 1u32), "nested parameter count")
+  assert(
+    self_host_u32_greater(
+      nested.body.expressions.start,
+      outer.body.expressions.start,
+    ),
+    "nested expression order",
+  )
+}
+
+test "semantic function blocks lower contiguous let and return items" {
+  let collected = self_host_collect_bytes(
+    24u64,
+    b"fn choose(value: I32) -> I32 {\n  let next = value + 1\n  return next\n}\n",
+  )
+  let root = self_host_body_root_block(collected.bodies[0u32])
+  let items = collected.blocks[root].items
+  assert(self_host_u32_equal(items.length, 2u32), "block item count")
+  match collected.block_items[items.start] {
+    SelfHostHirBlockItem::LetItem(false, name, _, _, _) => assert(
+      collected.name(name) == "next",
+      "let name",
+    )
+    _ => assert(false, "missing let item")
+  }
+  match collected.block_items[self_host_u32_add(items.start, 1u32)] {
+    SelfHostHirBlockItem::ReturnItem(value, _) => assert(
+      value < 4294967295u32,
+      "return value",
+    )
+    _ => assert(false, "missing return item")
+  }
+}
+
+test "semantic match and while expressions share pattern arm arenas" {
+  let collected = self_host_collect_bytes(
+    25u64,
+    b"let matched = match state {\n  Some(value), Ok(value) if ready => value\n  _ => 0\n}\nlet looped = while initial {\n  Next(value) => continue value\n  Done(value) => break value\n}\n",
+  )
+  let match_root = self_host_body_root_expression(collected.bodies[0u32])
+  match collected.expressions[match_root] {
+    SelfHostHirExpr::MatchExpr(_, arms, _) => assert(
+      arms.length == 2u32,
+      "match arm count",
+    )
+    _ => assert(false, "missing match")
+  }
+  let while_root = self_host_body_root_expression(collected.bodies[1u32])
+  match collected.expressions[while_root] {
+    SelfHostHirExpr::WhileExpr(_, arms, _) => {
+      assert(arms.length == 2u32, "while arm count")
+      let first = collected.pattern_arms[
+        collected.arm_children[arms.start]
+      ]
+      let second = collected.pattern_arms[
+        collected.arm_children[arms.start + 1u32]
+      ]
+      match collected.expressions[first.body] {
+        SelfHostHirExpr::ContinueExpr(_, _) => {}
+        _ => assert(false, "missing continue")
+      }
+      match collected.expressions[second.body] {
+        SelfHostHirExpr::BreakExpr(_, _) => {}
+        _ => assert(false, "missing break")
+      }
+    }
+    _ => assert(false, "missing while")
+  }
+}
+
+test "semantic body HIR preserves literals objects calls and indexes" {
+  let collected = self_host_collect_bytes(
+    26u64,
+    b"let object = {\n  text: \"value\"\n  count: 1U\n  intrinsic: @operation\n}\nlet message = Message::Data::{\n  value: item\n}.value(1)\nlet indexed = values[\n  1 + 2\n]\n",
+  )
+  assert(collected.bodies.length() == 3u32, "body count")
+  match collected.expressions[
+    self_host_body_root_expression(collected.bodies[0u32])
+  ] {
+    SelfHostHirExpr::ObjectExpr(fields, _) => assert(
+      fields.length == 3u32,
+      "object field count",
+    )
+    _ => assert(false, "missing object")
+  }
+  match collected.expressions[
+    self_host_body_root_expression(collected.bodies[1u32])
+  ] {
+    SelfHostHirExpr::CallExpr(_, arguments, _) => assert(
+      arguments.length == 1u32,
+      "call argument count",
+    )
+    _ => assert(false, "missing call")
+  }
+  match collected.expressions[
+    self_host_body_root_expression(collected.bodies[2u32])
+  ] {
+    SelfHostHirExpr::IndexExpr(_, index, _) => match collected.expressions[index] {
+      SelfHostHirExpr::BinaryExpr(SelfHostHirBinaryOperator::Add, _, _, _) => {}
+      _ => assert(false, "missing binary index")
+    }
+    _ => assert(false, "missing index")
+  }
+  assert(collected.diagnostics.length() == 0u32, "body diagnostics")
+}

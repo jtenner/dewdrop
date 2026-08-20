@@ -583,6 +583,7 @@ fn self_host_parse_expression_context(
               Option::Some(value) => value
               Option::None => break Option::None
             }
+            self_host_parser_skip_newlines(parser)
             if !self_host_parser_consume_symbol(
               parser,
               SelfHostSymbol::RightBracket,

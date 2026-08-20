@@ -1,0 +1,1651 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.map
+open dew.std.option
+open dew.std.string
+open dew.std.string_builder
+
+pub struct SelfHostProgramFile {
+  id: U64
+  path: String
+  source: Bytes
+  test_only: Bool
+}
+
+fn self_host_semantic_unit() -> Unit {
+}
+
+fn self_host_empty_name_lookup() -> Map<String, U32> {
+  Map::empty()
+}
+
+fn self_host_empty_id_lookup() -> Map<U32, U64> {
+  Map::empty()
+}
+
+fn self_host_empty_value_bindings() -> Map<U32, SelfHostValueBinding> {
+  Map::empty()
+}
+
+fn self_host_empty_derive_seen() -> Map<String, U32> {
+  Map::empty()
+}
+
+fn self_host_test_declaration_name(index: U32) -> String {
+  let builder = StringBuilder::new()
+  builder.append("__dew_test_")
+  builder.append_u32(index)
+  builder.finish()
+}
+
+// These typed boundaries work around incomplete expected-type propagation for
+// fields read from arena structs. Equality itself still uses the language
+// operators and the standard Eq/Ne implementations.
+fn self_host_u32_equal(left: U32, right: U32) -> Bool {
+  left == right
+}
+
+fn self_host_u32_greater(left: U32, right: U32) -> Bool {
+  left > right
+}
+
+fn self_host_u32_add(left: U32, right: U32) -> U32 {
+  left + right
+}
+
+fn self_host_u64_equal(left: U64, right: U64) -> Bool {
+  left == right
+}
+
+fn self_host_u64_not_equal(left: U64, right: U64) -> Bool {
+  left != right
+}
+
+fn self_host_string_not_equal(left: String, right: String) -> Bool {
+  left != right
+}
+
+fn self_host_bytes_equal(left: Bytes, right: Bytes) -> Bool {
+  left == right
+}
+
+fn self_host_bytes_not_equal(left: Bytes, right: Bytes) -> Bool {
+  left != right
+}
+
+fn self_host_bytes_empty(value: Bytes) -> Bool {
+  value.byte_length() == 0u32
+}
+
+pub struct SelfHostCollectionBuilder {
+  module_id: U64
+  mut current_file: U64
+  mut current_file_test_only: Bool
+  files: Array<U64>
+  file_paths: Array<String>
+  file_sources: Array<Bytes>
+  test_files: Array<U64>
+  declaration_files: Array<U64>
+  body_files: Array<U64>
+  names: Array<String>
+  declarations: Array<SelfHostCollectedDeclaration>
+  methods: Array<SelfHostCollectedMethod>
+  declaration_locations: Array<U32>
+  fields: Array<SelfHostCollectedField>
+  variants: Array<SelfHostCollectedVariant>
+  generic_parameters: Array<SelfHostCollectedGenericParameter>
+  parameters: Array<SelfHostCollectedParameter>
+  generic_parameter_spans: Array<SelfHostHirSpan>
+  generic_bounds: Array<U32>
+  parameter_spans: Array<SelfHostHirSpan>
+  callables: Array<SelfHostCollectedCallable>
+  tests: Array<SelfHostCollectedTest>
+  imports: Array<SelfHostCollectedImport>
+  builtins: Array<SelfHostCollectedBuiltin>
+  lets: Array<SelfHostCollectedLet>
+  aliases: Array<SelfHostCollectedAlias>
+  derives: Array<SelfHostCollectedDeriveRequest>
+  impls: Array<SelfHostCollectedImpl>
+  foreign_types: Array<SelfHostCollectedForeignType>
+  foreign_libraries: Array<SelfHostCollectedForeignLibrary>
+  foreign_functions: Array<SelfHostCollectedForeignFunction>
+  type_syntax: Array<SelfHostHirTypeSyntax>
+  type_syntax_files: Array<U64>
+  type_arguments: Array<U32>
+  lambda_parameters: Array<SelfHostHirLambdaParameter>
+  lambda_parameter_files: Array<U64>
+  lambdas: Array<SelfHostHirLambda>
+  pending_lambda_parameters: Array<SelfHostHirSpan>
+  pending_lambda_return_types: Array<U32>
+  pending_lambda_bodies: Array<SelfHostBlock>
+  pending_lambda_files: Array<U64>
+  pending_lambda_offsets: Array<U32>
+  pending_lambda_parents: Array<U32>
+  pending_lambda_root_bodies: Array<U64>
+  mut current_lambda: U32
+  mut current_root_body: U64
+  bodies: Array<SelfHostHirBody>
+  body_by_declaration: Array<Option<U32>>
+  expressions: Array<SelfHostHirExpr>
+  expression_files: Array<U64>
+  expression_children: Array<U32>
+  explicit_call_type_argument_spans: Array<SelfHostHirSpan>
+  explicit_call_type_arguments: Array<U32>
+  blocks: Array<SelfHostHirBlock>
+  block_files: Array<U64>
+  block_items: Array<SelfHostHirBlockItem>
+  block_item_files: Array<U64>
+  object_fields: Array<SelfHostHirObjectField>
+  object_field_files: Array<U64>
+  patterns: Array<SelfHostHirPattern>
+  pattern_files: Array<U64>
+  pattern_children: Array<U32>
+  pattern_fields: Array<SelfHostHirPatternField>
+  pattern_field_files: Array<U64>
+  pattern_arms: Array<SelfHostHirPatternArm>
+  pattern_arm_files: Array<U64>
+  arm_children: Array<U32>
+  diagnostics: Array<SelfHostCollectionDiagnostic>
+  name_lookup: Map<String, U32>
+  type_bindings: Map<U32, U64>
+  trait_bindings: Map<U32, U64>
+  value_bindings: Map<U32, SelfHostValueBinding>
+  value_binding_candidates: Array<SelfHostValueBindingCandidate>
+  foreign_library_by_alias: Map<U32, U64>
+  mut next_declaration_local: U32
+  type_source_scratch: Array<SelfHostTypeExpr>
+  type_state_scratch: Array<U32>
+  type_result_start_scratch: Array<U32>
+  type_result_scratch: Array<U32>
+  type_list_scratch: Array<U32>
+}
+
+impl SelfHostCollectionBuilder {
+  fn new(module_id: U64) -> SelfHostCollectionBuilder {
+    SelfHostCollectionBuilder::{
+      module_id: module_id
+      current_file: self_host_make_file_id(module_id, 0u32)
+      current_file_test_only: false
+      files: []
+      file_paths: []
+      file_sources: []
+      test_files: []
+      declaration_files: []
+      body_files: []
+      names: []
+      declarations: []
+      methods: []
+      declaration_locations: []
+      fields: []
+      variants: []
+      generic_parameters: []
+      parameters: []
+      generic_parameter_spans: []
+      generic_bounds: []
+      parameter_spans: []
+      callables: []
+      tests: []
+      imports: []
+      builtins: []
+      lets: []
+      aliases: []
+      derives: []
+      impls: []
+      foreign_types: []
+      foreign_libraries: []
+      foreign_functions: []
+      type_syntax: []
+      type_syntax_files: []
+      type_arguments: []
+      lambda_parameters: []
+      lambda_parameter_files: []
+      lambdas: []
+      pending_lambda_parameters: []
+      pending_lambda_return_types: []
+      pending_lambda_bodies: []
+      pending_lambda_files: []
+      pending_lambda_offsets: []
+      pending_lambda_parents: []
+      pending_lambda_root_bodies: []
+      current_lambda: 4294967295u32
+      current_root_body: 0u64
+      bodies: []
+      body_by_declaration: []
+      expressions: []
+      expression_files: []
+      expression_children: []
+      explicit_call_type_argument_spans: []
+      explicit_call_type_arguments: []
+      blocks: []
+      block_files: []
+      block_items: []
+      block_item_files: []
+      object_fields: []
+      object_field_files: []
+      patterns: []
+      pattern_files: []
+      pattern_children: []
+      pattern_fields: []
+      pattern_field_files: []
+      pattern_arms: []
+      pattern_arm_files: []
+      arm_children: []
+      diagnostics: []
+      name_lookup: self_host_empty_name_lookup()
+      type_bindings: self_host_empty_id_lookup()
+      trait_bindings: self_host_empty_id_lookup()
+      value_bindings: self_host_empty_value_bindings()
+      value_binding_candidates: []
+      foreign_library_by_alias: self_host_empty_id_lookup()
+      next_declaration_local: 0u32
+      type_source_scratch: []
+      type_state_scratch: []
+      type_result_start_scratch: []
+      type_result_scratch: []
+      type_list_scratch: []
+    }
+  }
+
+  fn intern(self, name: String) -> U32 {
+    match self.name_lookup.get(name) {
+      Option::Some(id) => id
+      Option::None => {
+        let id = self.names.length()
+        self.names.push(name)
+        self.name_lookup.set(name, id)
+        id
+      }
+    }
+  }
+
+  fn next_declaration_id(self) -> U64 {
+    let id = self_host_make_semantic_id(
+      self.module_id,
+      self.next_declaration_local,
+    )
+    self.next_declaration_local = self.next_declaration_local + 1u32
+    self.declaration_files.push(self.current_file)
+    self.generic_parameter_spans.push(
+      self_host_empty_hir_span(self.generic_parameters.length()),
+    )
+    self.parameter_spans.push(
+      self_host_empty_hir_span(self.parameters.length()),
+    )
+    self.body_by_declaration.push(Option::None)
+    id
+  }
+
+  fn collected_declaration_offset(self, declaration: U64) -> U32 {
+    let location = self.declaration_locations[
+      self_host_semantic_id_local(declaration)
+    ]
+    if location < 2147483648u32 {
+      self.declarations[location].offset
+    } else {
+      self.methods[location & 2147483647u32].offset
+    }
+  }
+
+  fn record_duplicate(
+    self,
+    space: SelfHostBindingSpace,
+    name: U32,
+    first: U64,
+    first_file: U64,
+    first_offset: U32,
+    duplicate: U64,
+    duplicate_offset: U32,
+  ) -> Unit {
+    self.diagnostics.push(
+      SelfHostCollectionDiagnostic::DuplicateName(
+        SelfHostDuplicateNameDiagnostic::{
+          space: space
+          name: name
+          first: first
+          duplicate: duplicate
+          first_file: first_file
+          duplicate_file: self.current_file
+          first_offset: first_offset
+          duplicate_offset: duplicate_offset
+        },
+      ),
+    )
+  }
+
+  fn add_declaration(
+    self,
+    kind: SelfHostCollectedDeclKind,
+    name: Option<String>,
+    visibility: SelfHostSemanticVisibility,
+    offset: U32,
+  ) -> SelfHostCollectedDeclaration {
+    let id = self.next_declaration_id()
+    let name_id = match name {
+      Option::Some(value) => self.intern(value)
+      Option::None => 4294967295u32
+    }
+    let declaration = SelfHostCollectedDeclaration::{
+      id: id
+      kind: kind
+      name: name_id
+      visibility: visibility
+      offset: offset
+    }
+    let location = self.declarations.length()
+    self.declarations.push(declaration)
+    self.declaration_locations.push(location)
+    declaration
+  }
+
+  fn add_method(
+    self,
+    parent: U64,
+    kind: SelfHostCollectedMethodKind,
+    name: String,
+    visibility: SelfHostSemanticVisibility,
+    offset: U32,
+  ) -> SelfHostCollectedMethod {
+    let method = SelfHostCollectedMethod::{
+      id: self.next_declaration_id()
+      parent: parent
+      kind: kind
+      name: self.intern(name)
+      visibility: visibility
+      offset: offset
+    }
+    let location = self.methods.length()
+    self.methods.push(method)
+    self.declaration_locations.push(2147483648u32 | location)
+    method
+  }
+
+  fn bind_unique_module_name(
+    self,
+    space: SelfHostBindingSpace,
+    bindings: Map<U32, U64>,
+    name: U32,
+    declaration: U64,
+    offset: U32,
+  ) -> Unit {
+    match bindings.get(name) {
+      Option::Some(first) => self.record_duplicate(
+        space,
+        name,
+        first,
+        self.declaration_files[self_host_semantic_id_local(first)],
+        self.collected_declaration_offset(first),
+        declaration,
+        offset,
+      )
+      Option::None => bindings.set(name, declaration)
+    }
+  }
+
+  fn bind_value_name(
+    self,
+    kind: SelfHostCollectedDeclKind,
+    name: U32,
+    declaration: U64,
+    offset: U32,
+  ) -> Unit {
+    match self.value_bindings.get(name) {
+      Option::Some(binding) => {
+        if kind is SelfHostCollectedDeclKind::BuiltinDecl &&
+          binding.kind is SelfHostCollectedDeclKind::BuiltinDecl {
+          let candidate = self.value_binding_candidates.length()
+          self.value_binding_candidates[binding.tail].next = Option::Some(candidate)
+          self.value_binding_candidates.push(
+            SelfHostValueBindingCandidate::{
+              declaration: declaration
+              next: Option::None
+            },
+          )
+          binding.tail = candidate
+        } else {
+          let first = self.value_binding_candidates[binding.head].declaration
+          self.record_duplicate(
+            SelfHostBindingSpace::ModuleValue,
+            name,
+            first,
+            self.declaration_files[self_host_semantic_id_local(first)],
+            binding.offset,
+            declaration,
+            offset,
+          )
+        }
+      }
+      Option::None => {
+        let candidate = self.value_binding_candidates.length()
+        self.value_binding_candidates.push(
+          SelfHostValueBindingCandidate::{
+            declaration: declaration
+            next: Option::None
+          },
+        )
+        self.value_bindings.set(
+          name,
+          SelfHostValueBinding::{
+            head: candidate
+            tail: candidate
+            kind: kind
+            offset: offset
+          },
+        )
+      }
+    }
+  }
+
+  fn lower_type(self, root: SelfHostTypeExpr) -> U32 {
+    let sources = self.type_source_scratch
+    let states = self.type_state_scratch
+    let starts = self.type_result_start_scratch
+    let results = self.type_result_scratch
+    sources.clear()
+    states.clear()
+    starts.clear()
+    results.clear()
+    sources.push(root)
+    states.push(0u32)
+    starts.push(0u32)
+    let _ = while 0u32 {
+      _ => if sources.length() > 0u32 {
+        let source = match sources.pop() {
+          Option::Some(value) => value
+          Option::None => {
+            return 0u32
+          }
+        }
+        let state = match states.pop() {
+          Option::Some(value) => value
+          Option::None => {
+            return 0u32
+          }
+        }
+        let result_start = match starts.pop() {
+          Option::Some(value) => value
+          Option::None => {
+            return 0u32
+          }
+        }
+        if state == 0u32 {
+          match source {
+            SelfHostTypeExpr::NamedType(name, offset) => {
+              let id = self.type_syntax.length()
+              self.type_syntax.push(
+                SelfHostHirTypeSyntax::NamedTypeSyntax(
+                  self.intern(name),
+                  offset,
+                ),
+              )
+              self.type_syntax_files.push(self.current_file)
+              results.push(id)
+            }
+            SelfHostTypeExpr::QualifiedType(alias, name, offset, name_offset) => {
+              let id = self.type_syntax.length()
+              self.type_syntax.push(
+                SelfHostHirTypeSyntax::QualifiedTypeSyntax(
+                  self.intern(alias),
+                  self.intern(name),
+                  offset,
+                  name_offset,
+                ),
+              )
+              self.type_syntax_files.push(self.current_file)
+              results.push(id)
+            }
+            SelfHostTypeExpr::ProductType(fields, _) => {
+              sources.push(source)
+              states.push(1u32)
+              starts.push(results.length())
+              let _ = while fields.length() {
+                0u32 => break self_host_semantic_unit()
+                index => {
+                  sources.push(fields[index - 1u32])
+                  states.push(0u32)
+                  starts.push(0u32)
+                  continue index - 1u32
+                }
+              }
+            }
+            SelfHostTypeExpr::AppliedType(base, arguments, _) => {
+              sources.push(source)
+              states.push(1u32)
+              starts.push(results.length())
+              let _ = while arguments.length() {
+                0u32 => break self_host_semantic_unit()
+                index => {
+                  sources.push(arguments[index - 1u32])
+                  states.push(0u32)
+                  starts.push(0u32)
+                  continue index - 1u32
+                }
+              }
+              sources.push(base)
+              states.push(0u32)
+              starts.push(0u32)
+            }
+            SelfHostTypeExpr::FunctionType(parameters, result, _) => {
+              sources.push(source)
+              states.push(1u32)
+              starts.push(results.length())
+              sources.push(result)
+              states.push(0u32)
+              starts.push(0u32)
+              let _ = while parameters.length() {
+                0u32 => break self_host_semantic_unit()
+                index => {
+                  sources.push(parameters[index - 1u32])
+                  states.push(0u32)
+                  starts.push(0u32)
+                  continue index - 1u32
+                }
+              }
+            }
+          }
+        } else {
+          match source {
+            SelfHostTypeExpr::ProductType(fields, offset) => {
+              let argument_start = self.type_arguments.length()
+              let _ = while 0u32 {
+                index => if index < fields.length() {
+                  self.type_arguments.push(results[result_start + index])
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              let id = self.type_syntax.length()
+              self.type_syntax.push(
+                SelfHostHirTypeSyntax::ProductTypeSyntax(
+                  SelfHostHirSpan::{
+                    start: argument_start
+                    length: fields.length()
+                  },
+                  offset,
+                ),
+              )
+              self.type_syntax_files.push(self.current_file)
+              results.truncate(result_start)
+              results.push(id)
+            }
+            SelfHostTypeExpr::AppliedType(_, arguments, offset) => {
+              let base = results[result_start]
+              let argument_start = self.type_arguments.length()
+              let _ = while 0u32 {
+                index => if index < arguments.length() {
+                  self.type_arguments.push(results[result_start + index + 1u32])
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              let id = self.type_syntax.length()
+              self.type_syntax.push(
+                SelfHostHirTypeSyntax::AppliedTypeSyntax(
+                  base,
+                  SelfHostHirSpan::{
+                    start: argument_start
+                    length: arguments.length()
+                  },
+                  offset,
+                ),
+              )
+              self.type_syntax_files.push(self.current_file)
+              results.truncate(result_start)
+              results.push(id)
+            }
+            SelfHostTypeExpr::FunctionType(parameters, _, offset) => {
+              let parameter_start = self.type_arguments.length()
+              let _ = while 0u32 {
+                index => if index < parameters.length() {
+                  self.type_arguments.push(results[result_start + index])
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              let result = results[result_start + parameters.length()]
+              let id = self.type_syntax.length()
+              self.type_syntax.push(
+                SelfHostHirTypeSyntax::FunctionTypeSyntax(
+                  SelfHostHirSpan::{
+                    start: parameter_start
+                    length: parameters.length()
+                  },
+                  result,
+                  offset,
+                ),
+              )
+              self.type_syntax_files.push(self.current_file)
+              results.truncate(result_start)
+              results.push(id)
+            }
+            _ => {}
+          }
+        }
+        continue 0u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    results[0u32]
+  }
+
+  fn lower_type_list(self, source: Array<SelfHostTypeExpr>) -> SelfHostHirSpan {
+    let lowered = self.type_list_scratch
+    lowered.clear()
+    for type_ in source {
+      lowered.push(self.lower_type(type_))
+    }
+    let start = self.type_arguments.length()
+    for type_ in lowered {
+      self.type_arguments.push(type_)
+    }
+    SelfHostHirSpan::{
+      start: start
+      length: lowered.length()
+    }
+  }
+
+  fn collect_generic_parameters(
+    self,
+    declaration: U64,
+    parameters: Array<SelfHostTypeParameter>,
+  ) -> Unit {
+    let start = self.generic_parameters.length()
+    let mut index = 0u32
+    for parameter in parameters {
+      let name = self.intern(parameter.name)
+      let id = self_host_make_semantic_id(
+        self.module_id,
+        self.generic_parameters.length(),
+      )
+      match self.first_generic_parameter_index(declaration, name) {
+        Option::Some(previous) => {
+          let candidate = self.generic_parameters[previous]
+          self.record_duplicate(
+            SelfHostBindingSpace::GenericParameter,
+            name,
+            candidate.id,
+            self.current_file,
+            candidate.offset,
+            id,
+            parameter.offset,
+          )
+        }
+        Option::None => {}
+      }
+      let bound_start = self.generic_bounds.length()
+      let _ = while 0u32 {
+        bound_index => if bound_index < parameter.bound_count() {
+          self.generic_bounds.push(
+            self.lower_type(parameter.bound_at(bound_index)),
+          )
+          continue bound_index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let collected_parameter = SelfHostCollectedGenericParameter::{
+        id: id
+        declaration: declaration
+        index: index
+        name: name
+        bounds: SelfHostHirSpan::{
+          start: bound_start
+          length: self.generic_bounds.length() - bound_start
+        }
+        offset: parameter.offset
+      }
+      self.generic_parameters.push(collected_parameter)
+      index = index + 1u32
+    }
+    self.generic_parameter_spans[
+      self_host_semantic_id_local(declaration)
+    ] = SelfHostHirSpan::{
+      start: start
+      length: self.generic_parameters.length() - start
+    }
+  }
+
+  fn collect_parameters(
+    self,
+    declaration: U64,
+    receiver: Option<SelfHostReceiverParameter>,
+    parameters: Array<SelfHostFnParameter>,
+  ) -> Unit {
+    let start = self.parameters.length()
+    let mut parameter_index = 0u32
+    match receiver {
+      Option::Some(value) => {
+        let collected_receiver = SelfHostCollectedParameter::{
+          id: self_host_make_semantic_id(
+            self.module_id,
+            self.parameters.length(),
+          )
+          declaration: declaration
+          index: parameter_index
+          kind: SelfHostCollectedParameterKind::ReceiverParameterDecl
+          name: self.intern("self")
+          type_: match value.explicit_type {
+            Option::Some(type_) => self.lower_type(type_)
+            Option::None => 4294967295u32
+          }
+          offset: value.offset
+        }
+        self.parameters.push(collected_receiver)
+        parameter_index = parameter_index + 1u32
+      }
+      Option::None => {}
+    }
+    for parameter in parameters {
+      let name = self.intern(parameter.name)
+      let id = self_host_make_semantic_id(
+        self.module_id,
+        self.parameters.length(),
+      )
+      match self.first_parameter_index(declaration, name) {
+        Option::Some(previous) => {
+          let candidate = self.parameters[previous]
+          self.record_duplicate(
+            SelfHostBindingSpace::Parameter,
+            name,
+            candidate.id,
+            self.current_file,
+            candidate.offset,
+            id,
+            parameter.offset,
+          )
+        }
+        Option::None => {}
+      }
+      let collected_parameter = SelfHostCollectedParameter::{
+        id: id
+        declaration: declaration
+        index: parameter_index
+        kind: SelfHostCollectedParameterKind::ValueParameterDecl
+        name: name
+        type_: self.lower_type(parameter.type_)
+        offset: parameter.offset
+      }
+      self.parameters.push(collected_parameter)
+      parameter_index = parameter_index + 1u32
+    }
+    self.parameter_spans[
+      self_host_semantic_id_local(declaration)
+    ] = SelfHostHirSpan::{
+      start: start
+      length: self.parameters.length() - start
+    }
+  }
+
+  fn collect_named_fields(
+    self,
+    declaration: U64,
+    variant: Option<U64>,
+    fields: Array<SelfHostStructField>,
+    space: SelfHostBindingSpace,
+  ) -> Unit {
+    let start = self.fields.length()
+    for field in fields {
+      let name = self.intern(field.name)
+      let id = self_host_make_semantic_id(self.module_id, self.fields.length())
+      match self.first_field_index(start, name) {
+        Option::Some(previous) => {
+          let candidate = self.fields[previous]
+          self.record_duplicate(
+            space,
+            name,
+            candidate.id,
+            self.current_file,
+            candidate.offset,
+            id,
+            field.offset,
+          )
+        }
+        Option::None => {}
+      }
+      self.fields.push(
+        SelfHostCollectedField::{
+          id: id
+          declaration: declaration
+          variant: variant
+          mutable_: field.mutable_
+          name: name
+          type_: self.lower_type(field.type_)
+          offset: field.offset
+        },
+      )
+    }
+  }
+
+  fn first_generic_parameter_index(
+    self,
+    declaration: U64,
+    name: U32,
+  ) -> Option<U32> {
+    let mut index = 0u32
+    for candidate in self.generic_parameters {
+      match self_host_u64_equal(candidate.declaration, declaration) &&
+        self_host_u32_equal(candidate.name, name) {
+        true => {
+          return Option::Some(index)
+        }
+        false => {}
+      }
+      index = index + 1u32
+    }
+    Option::None
+  }
+
+  fn first_parameter_index(
+    self,
+    declaration: U64,
+    name: U32,
+  ) -> Option<U32> {
+    let mut index = 0u32
+    for candidate in self.parameters {
+      match self_host_u64_equal(candidate.declaration, declaration) &&
+        self_host_u32_equal(candidate.name, name) {
+        true => {
+          return Option::Some(index)
+        }
+        false => {}
+      }
+      index = index + 1u32
+    }
+    Option::None
+  }
+
+  fn first_field_index(self, start: U32, name: U32) -> Option<U32> {
+    let mut index = 0u32
+    for candidate in self.fields {
+      match index >= start && self_host_u32_equal(candidate.name, name) {
+        true => {
+          return Option::Some(index)
+        }
+        false => {}
+      }
+      index = index + 1u32
+    }
+    Option::None
+  }
+
+  fn first_variant_index(
+    self,
+    declaration: U64,
+    name: U32,
+  ) -> Option<U32> {
+    let mut index = 0u32
+    for candidate in self.variants {
+      match self_host_u64_equal(candidate.declaration, declaration) &&
+        self_host_u32_equal(candidate.name, name) {
+        true => {
+          return Option::Some(index)
+        }
+        false => {}
+      }
+      index = index + 1u32
+    }
+    Option::None
+  }
+
+  fn first_method_name(
+    self,
+    parent: U64,
+    name: U32,
+    exclude: U64,
+  ) -> Option<U32> {
+    let mut index = 0u32
+    for candidate in self.methods {
+      match self_host_u64_equal(candidate.parent, parent) &&
+        self_host_u32_equal(candidate.name, name) &&
+        self_host_u64_not_equal(candidate.id, exclude) {
+        true => {
+          return Option::Some(index)
+        }
+        false => {}
+      }
+      index = index + 1u32
+    }
+    Option::None
+  }
+
+  fn collect_builtin(self, value: SelfHostBuiltinDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::BuiltinDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_value_name(
+      SelfHostCollectedDeclKind::BuiltinDecl,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    self.collect_parameters(declaration.id, Option::None, value.parameters)
+    self.callables.push(
+      SelfHostCollectedCallable::{
+        declaration: declaration.id
+        return_type: self.lower_type(value.return_type)
+      },
+    )
+    self.builtins.push(
+      SelfHostCollectedBuiltin::{
+        declaration: declaration.id
+        builtin_name: value.builtin_name
+      },
+    )
+  }
+
+  fn collect_let(self, value: SelfHostLetDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::LetDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_value_name(
+      SelfHostCollectedDeclKind::LetDecl,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.lets.push(
+      SelfHostCollectedLet::{
+        declaration: declaration.id
+        mutable_: value.mutable_
+      },
+    )
+    self.lower_expression_body(
+      declaration.id,
+      SelfHostHirBodyKind::ModuleLetBody,
+      value.value,
+      value.offset,
+    )
+  }
+
+  fn collect_trait(self, value: SelfHostTraitDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::TraitDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_unique_module_name(
+      SelfHostBindingSpace::ModuleTrait,
+      self.trait_bindings,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    for source_method in value.methods {
+      let method = self.add_method(
+        declaration.id,
+        SelfHostCollectedMethodKind::TraitMethodDecl,
+        source_method.name,
+        SelfHostSemanticVisibility::ModuleVisible,
+        source_method.offset,
+      )
+      match self.first_method_name(
+        declaration.id,
+        method.name,
+        method.id,
+      ) {
+        Option::Some(first_index) => {
+          let first = self.methods[first_index]
+          self.record_duplicate(
+            SelfHostBindingSpace::TraitMethod,
+            method.name,
+            first.id,
+            self.current_file,
+            first.offset,
+            method.id,
+            source_method.name_offset,
+          )
+        }
+        Option::None => {}
+      }
+      self.collect_generic_parameters(method.id, source_method.type_parameters)
+      self.collect_parameters(
+        method.id,
+        source_method.receiver,
+        source_method.parameters,
+      )
+      self.callables.push(
+        SelfHostCollectedCallable::{
+          declaration: method.id
+          return_type: self.lower_type(source_method.return_type)
+        },
+      )
+    }
+  }
+
+  fn collect_function(self, value: SelfHostFunctionDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::FunctionDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_value_name(
+      SelfHostCollectedDeclKind::FunctionDecl,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    self.collect_parameters(declaration.id, value.receiver, value.parameters)
+    self.callables.push(
+      SelfHostCollectedCallable::{
+        declaration: declaration.id
+        return_type: self.lower_type(value.return_type)
+      },
+    )
+    self.lower_block_body(
+      declaration.id,
+      SelfHostHirBodyKind::FunctionBody,
+      value.body,
+      value.offset,
+    )
+  }
+
+  fn collect_test(self, value: SelfHostTestDeclaration) -> Unit {
+    if !self.current_file_test_only {
+      self.diagnostics.push(
+        SelfHostCollectionDiagnostic::TestDeclarationOutsideTestFile(
+          self.current_file,
+          value.offset,
+        ),
+      )
+    }
+    match value.expected_trap {
+      Option::Some(expected) => if self_host_bytes_not_equal(expected, b"unreachable") &&
+        self_host_bytes_not_equal(expected, b"memory-out-of-bounds") &&
+        self_host_bytes_not_equal(expected, b"array-out-of-bounds") &&
+        self_host_bytes_not_equal(expected, b"integer-divide-by-zero") &&
+        self_host_bytes_not_equal(expected, b"integer-overflow") &&
+        self_host_bytes_not_equal(expected, b"invalid-conversion-to-integer") {
+        self.diagnostics.push(
+          SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(
+            self.current_file,
+            expected,
+            value.offset,
+          ),
+        )
+      }
+      Option::None => {}
+    }
+    for test_ in self.tests {
+      if self_host_u64_equal(test_.file, self.current_file) &&
+        self_host_bytes_equal(test_.display_name, value.name) {
+        self.diagnostics.push(
+          SelfHostCollectionDiagnostic::DuplicateTestIdentity(
+            SelfHostDuplicateTestIdentityDiagnostic::{
+              file: self.current_file
+              display_name: value.name
+              first_offset: test_.offset
+              duplicate_offset: value.offset
+            },
+          ),
+        )
+      }
+    }
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::TestDecl,
+      Option::Some(self_host_test_declaration_name(self.tests.length())),
+      SelfHostSemanticVisibility::ModuleVisible,
+      value.offset,
+    )
+    self.callables.push(
+      SelfHostCollectedCallable::{
+        declaration: declaration.id
+        return_type: self.lower_type(value.return_type)
+      },
+    )
+    self.tests.push(
+      SelfHostCollectedTest::{
+        declaration: declaration.id
+        display_name: value.name
+        expected_trap: value.expected_trap
+        file: self.current_file
+        offset: value.offset
+      },
+    )
+    self.lower_block_body(
+      declaration.id,
+      SelfHostHirBodyKind::FunctionBody,
+      value.body,
+      value.offset,
+    )
+  }
+
+  fn collect_foreign_type(self, value: SelfHostForeignTypeDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::ForeignTypeDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_unique_module_name(
+      SelfHostBindingSpace::ModuleType,
+      self.type_bindings,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.foreign_types.push(
+      SelfHostCollectedForeignType::{
+        declaration: declaration.id
+      },
+    )
+  }
+
+  fn collect_foreign_library(
+    self,
+    value: SelfHostForeignLibraryDeclaration,
+  ) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::ForeignLibraryDecl,
+      Option::Some(value.namespace_alias),
+      SelfHostSemanticVisibility::ModuleVisible,
+      value.offset,
+    )
+    self.bind_value_name(
+      SelfHostCollectedDeclKind::ForeignLibraryDecl,
+      declaration.name,
+      declaration.id,
+      value.alias_offset,
+    )
+    match self.foreign_library_by_alias.get(declaration.name) {
+      Option::Some(first) => self.record_duplicate(
+        SelfHostBindingSpace::ModuleValue,
+        declaration.name,
+        first,
+        self.declaration_files[self_host_semantic_id_local(first)],
+        self.collected_declaration_offset(first),
+        declaration.id,
+        value.alias_offset,
+      )
+      Option::None => self.foreign_library_by_alias.set(
+        declaration.name,
+        declaration.id,
+      )
+    }
+    if self_host_bytes_empty(value.logical_name) {
+      self.diagnostics.push(
+        SelfHostCollectionDiagnostic::EmptyForeignLogicalName(
+          self.current_file,
+          value.logical_name_offset,
+        ),
+      )
+    }
+    let member_start = self.foreign_functions.length()
+    for source_member in value.members {
+      let method = self.add_method(
+        declaration.id,
+        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl,
+        source_member.name,
+        SelfHostSemanticVisibility::ModuleVisible,
+        source_member.offset,
+      )
+      match self.first_method_name(
+        declaration.id,
+        method.name,
+        method.id,
+      ) {
+        Option::Some(first_index) => {
+          let first = self.methods[first_index]
+          self.record_duplicate(
+            SelfHostBindingSpace::ForeignLibraryMember,
+            method.name,
+            first.id,
+            self.current_file,
+            first.offset,
+            method.id,
+            source_member.name_offset,
+          )
+        }
+        Option::None => {}
+      }
+      self.collect_parameters(method.id, Option::None, source_member.parameters)
+      self.callables.push(
+        SelfHostCollectedCallable::{
+          declaration: method.id
+          return_type: self.lower_type(source_member.return_type)
+        },
+      )
+      if self_host_bytes_empty(source_member.export_name) {
+        self.diagnostics.push(
+          SelfHostCollectionDiagnostic::EmptyForeignExportName(
+            self.current_file,
+            source_member.export_name_offset,
+          ),
+        )
+      }
+      self.foreign_functions.push(
+        SelfHostCollectedForeignFunction::{
+          declaration: method.id
+          library: declaration.id
+          export_name: source_member.export_name
+          export_name_offset: source_member.export_name_offset
+        },
+      )
+    }
+    self.foreign_libraries.push(
+      SelfHostCollectedForeignLibrary::{
+        declaration: declaration.id
+        logical_name: value.logical_name
+        logical_name_offset: value.logical_name_offset
+        members: SelfHostHirSpan::{
+          start: member_start
+          length: self.foreign_functions.length() - member_start
+        }
+      },
+    )
+  }
+
+  fn collect_impl(self, value: SelfHostImplDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::ImplDecl,
+      Option::None,
+      SelfHostSemanticVisibility::ModuleVisible,
+      value.offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    let trait_type = match value.trait_type {
+      Option::Some(type_) => Option::Some(self.lower_type(type_))
+      Option::None => Option::None
+    }
+    let target_type = self.lower_type(value.target_type)
+    let collected_impl = SelfHostCollectedImpl::{
+      declaration: declaration.id
+      foreign_: value.foreign_
+      trait_type: trait_type
+      target_type: target_type
+    }
+    self.impls.push(collected_impl)
+    for source_method in value.methods {
+      let method = self.add_method(
+        declaration.id,
+        SelfHostCollectedMethodKind::ImplMethodDecl,
+        source_method.name,
+        SelfHostSemanticVisibility::ModuleVisible,
+        source_method.offset,
+      )
+      match self.first_method_name(
+        declaration.id,
+        method.name,
+        method.id,
+      ) {
+        Option::Some(first_index) => {
+          let first = self.methods[first_index]
+          self.record_duplicate(
+            SelfHostBindingSpace::ImplMethod,
+            method.name,
+            first.id,
+            self.current_file,
+            first.offset,
+            method.id,
+            source_method.name_offset,
+          )
+        }
+        Option::None => {}
+      }
+      self.collect_generic_parameters(method.id, source_method.type_parameters)
+      self.collect_parameters(
+        method.id,
+        source_method.receiver,
+        source_method.parameters,
+      )
+      let return_type = self.lower_type(source_method.return_type)
+      let callable = SelfHostCollectedCallable::{
+        declaration: method.id
+        return_type: return_type
+      }
+      self.callables.push(callable)
+      self.lower_block_body(
+        method.id,
+        SelfHostHirBodyKind::ImplMethodBody,
+        source_method.body,
+        source_method.offset,
+      )
+    }
+  }
+
+  fn collect_derives(
+    self,
+    declaration: U64,
+    derives: Array<SelfHostDeriveRequest>,
+  ) -> Unit {
+    let seen = self_host_empty_derive_seen()
+    for derive in derives {
+      match seen.get(derive.name) {
+        Option::Some(first) => self.diagnostics.push(
+          SelfHostCollectionDiagnostic::DuplicateDerivedTrait(
+            derive.name,
+            self.current_file,
+            first,
+            derive.offset,
+          ),
+        )
+        Option::None => {
+          seen.set(derive.name, derive.offset)
+          if self_host_string_not_equal(derive.name, "Eq") &&
+            self_host_string_not_equal(derive.name, "Debug") &&
+            self_host_string_not_equal(derive.name, "Hash") &&
+            self_host_string_not_equal(derive.name, "Show") {
+            self.diagnostics.push(
+              SelfHostCollectionDiagnostic::UnknownDerivedTrait(
+                derive.name,
+                self.current_file,
+                derive.offset,
+              ),
+            )
+          } else {
+            self.derives.push(
+              SelfHostCollectedDeriveRequest::{
+                declaration: declaration
+                trait_name: derive.name
+                offset: derive.offset
+              },
+            )
+          }
+        }
+      }
+    }
+  }
+
+  fn collect_struct(self, value: SelfHostStructDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::StructDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_unique_module_name(
+      SelfHostBindingSpace::ModuleType,
+      self.type_bindings,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    self.collect_named_fields(
+      declaration.id,
+      Option::None,
+      value.fields,
+      SelfHostBindingSpace::StructField,
+    )
+    self.collect_derives(declaration.id, value.derives)
+  }
+
+  fn collect_enum(self, value: SelfHostEnumDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::EnumDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_unique_module_name(
+      SelfHostBindingSpace::ModuleType,
+      self.type_bindings,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    let variant_start = self.variants.length()
+    for source_variant in value.variants {
+      let name = match source_variant {
+        SelfHostEnumVariant::UnitVariant(name, _) => name
+        SelfHostEnumVariant::TupleVariant(name, _, _) => name
+        SelfHostEnumVariant::StructVariant(name, _, _) => name
+      }
+      let offset = match source_variant {
+        SelfHostEnumVariant::UnitVariant(_, offset) => offset
+        SelfHostEnumVariant::TupleVariant(_, _, offset) => offset
+        SelfHostEnumVariant::StructVariant(_, _, offset) => offset
+      }
+      let kind = match source_variant {
+        SelfHostEnumVariant::UnitVariant(_, _) => SelfHostCollectedVariantKind::UnitVariantDecl
+        SelfHostEnumVariant::TupleVariant(_, _, _) => SelfHostCollectedVariantKind::TupleVariantDecl
+        SelfHostEnumVariant::StructVariant(_, _, _) => SelfHostCollectedVariantKind::StructVariantDecl
+      }
+      let name_id = self.intern(name)
+      let id = self_host_make_semantic_id(self.module_id, self.variants.length())
+      match self.first_variant_index(declaration.id, name_id) {
+        Option::Some(previous) => {
+          let candidate = self.variants[previous]
+          self.record_duplicate(
+            SelfHostBindingSpace::EnumVariant,
+            name_id,
+            candidate.id,
+            self.current_file,
+            candidate.offset,
+            id,
+            offset,
+          )
+        }
+        Option::None => {}
+      }
+      let payload = match source_variant {
+        SelfHostEnumVariant::TupleVariant(_, types, _) => self.lower_type_list(types)
+        _ => self_host_empty_hir_span(self.type_arguments.length())
+      }
+      self.variants.push(
+        SelfHostCollectedVariant::{
+          id: id
+          declaration: declaration.id
+          kind: kind
+          name: name_id
+          payload_types: payload
+          offset: offset
+        },
+      )
+      match source_variant {
+        SelfHostEnumVariant::StructVariant(_, fields, _) => self.collect_named_fields(
+          declaration.id,
+          Option::Some(id),
+          fields,
+          SelfHostBindingSpace::VariantField,
+        )
+        _ => {}
+      }
+    }
+    self.collect_derives(declaration.id, value.derives)
+  }
+
+  fn collect_type_alias(self, value: SelfHostTypeAliasDeclaration) -> Unit {
+    let declaration = self.add_declaration(
+      SelfHostCollectedDeclKind::TypeAliasDecl,
+      Option::Some(value.name),
+      self_host_semantic_visibility(value.visibility),
+      value.offset,
+    )
+    self.bind_unique_module_name(
+      SelfHostBindingSpace::ModuleType,
+      self.type_bindings,
+      declaration.name,
+      declaration.id,
+      value.name_offset,
+    )
+    self.collect_generic_parameters(declaration.id, value.type_parameters)
+    self.aliases.push(
+      SelfHostCollectedAlias::{
+        declaration: declaration.id
+        target: self.lower_type(value.target)
+      },
+    )
+  }
+
+  fn collect_import(self, value: SelfHostImportDeclaration) -> Unit {
+    let builder = StringBuilder::new()
+    let mut segment_index = 0u32
+    for segment in value.path {
+      if segment_index > 0u32 {
+        builder.append(".")
+      }
+      builder.append(segment)
+      segment_index = segment_index + 1u32
+    }
+    let alias = if value.wildcard || value.open_ {
+      Option::None
+    } else {
+      match value.import_alias {
+        Option::Some(name) => Option::Some(name)
+        Option::None => Option::Some(value.path[value.path.length() - 1u32])
+      }
+    }
+    self.imports.push(
+      SelfHostCollectedImport::{
+        path: builder.finish()
+        open_: value.open_
+        wildcard: value.wildcard
+        import_alias: alias
+        import_alias_offset: value.import_alias_offset
+        file: self.current_file
+        offset: value.offset
+      },
+    )
+  }
+
+  fn collect_declaration(self, declaration: SelfHostDeclaration) -> Unit {
+    match declaration {
+      SelfHostDeclaration::Import(value) => self.collect_import(value)
+      SelfHostDeclaration::Builtin(value) => self.collect_builtin(value)
+      SelfHostDeclaration::Let(value) => self.collect_let(value)
+      SelfHostDeclaration::Trait(value) => self.collect_trait(value)
+      SelfHostDeclaration::Function(value) => self.collect_function(value)
+      SelfHostDeclaration::Test(value) => self.collect_test(value)
+      SelfHostDeclaration::Impl(value) => self.collect_impl(value)
+      SelfHostDeclaration::ForeignType(value) => self.collect_foreign_type(value)
+      SelfHostDeclaration::ForeignLibrary(value) => self.collect_foreign_library(value)
+      SelfHostDeclaration::Struct(value) => self.collect_struct(value)
+      SelfHostDeclaration::Enum(value) => self.collect_enum(value)
+      SelfHostDeclaration::TypeAlias(value) => self.collect_type_alias(value)
+    }
+  }
+
+  fn collect_file(self, file: SelfHostProgramFile) -> Unit {
+    if self_host_u64_not_equal(self_host_file_id_module(file.id), self.module_id) {
+      return
+    }
+    self.current_file = file.id
+    self.current_file_test_only = file.test_only
+    self.files.push(file.id)
+    self.file_paths.push(file.path)
+    self.file_sources.push(file.source)
+    if file.test_only {
+      self.test_files.push(file.id)
+    }
+    let parsed = self_host_parse_module(file.source)
+    for event in parsed.events {
+      match event {
+        SelfHostParseEvent::Declaration(declaration) => self.collect_declaration(declaration)
+        SelfHostParseEvent::Diagnostic(diagnostic) => self.diagnostics.push(
+          SelfHostCollectionDiagnostic::ParseDiagnostic(
+            self.current_file,
+            diagnostic,
+          ),
+        )
+      }
+    }
+  }
+
+  fn finish(self) -> SelfHostCollectedModule {
+    SelfHostCollectedModule::{
+      module_id: self.module_id
+      files: self.files
+      file_paths: self.file_paths
+      file_sources: self.file_sources
+      test_files: self.test_files
+      declaration_files: self.declaration_files
+      body_files: self.body_files
+      names: self.names
+      declarations: self.declarations
+      methods: self.methods
+      declaration_locations: self.declaration_locations
+      fields: self.fields
+      variants: self.variants
+      generic_parameters: self.generic_parameters
+      parameters: self.parameters
+      generic_parameter_spans: self.generic_parameter_spans
+      generic_bounds: self.generic_bounds
+      parameter_spans: self.parameter_spans
+      callables: self.callables
+      tests: self.tests
+      imports: self.imports
+      builtins: self.builtins
+      lets: self.lets
+      aliases: self.aliases
+      derives: self.derives
+      impls: self.impls
+      foreign_types: self.foreign_types
+      foreign_libraries: self.foreign_libraries
+      foreign_functions: self.foreign_functions
+      type_syntax: self.type_syntax
+      type_syntax_files: self.type_syntax_files
+      type_arguments: self.type_arguments
+      lambda_parameters: self.lambda_parameters
+      lambda_parameter_files: self.lambda_parameter_files
+      lambdas: self.lambdas
+      bodies: self.bodies
+      body_by_declaration: self.body_by_declaration
+      expressions: self.expressions
+      expression_files: self.expression_files
+      expression_children: self.expression_children
+      explicit_call_type_argument_spans: self.explicit_call_type_argument_spans
+      explicit_call_type_arguments: self.explicit_call_type_arguments
+      blocks: self.blocks
+      block_files: self.block_files
+      block_items: self.block_items
+      block_item_files: self.block_item_files
+      object_fields: self.object_fields
+      object_field_files: self.object_field_files
+      patterns: self.patterns
+      pattern_files: self.pattern_files
+      pattern_children: self.pattern_children
+      pattern_fields: self.pattern_fields
+      pattern_field_files: self.pattern_field_files
+      pattern_arms: self.pattern_arms
+      pattern_arm_files: self.pattern_arm_files
+      arm_children: self.arm_children
+      diagnostics: self.diagnostics
+      name_lookup: self.name_lookup
+      type_bindings: self.type_bindings
+      trait_bindings: self.trait_bindings
+      value_bindings: self.value_bindings
+      value_binding_candidates: self.value_binding_candidates
+      foreign_library_by_alias: self.foreign_library_by_alias
+    }
+  }
+}
+
+fn self_host_collect_files(
+  module_id: U64,
+  files: Array<SelfHostProgramFile>,
+) -> SelfHostCollectedModule {
+  let builder = SelfHostCollectionBuilder::new(module_id)
+  for file in files {
+    builder.collect_file(file)
+  }
+  builder.finish()
+}
+
+fn self_host_collect_bytes(
+  module_id: U64,
+  source: Bytes,
+) -> SelfHostCollectedModule {
+  self_host_collect_files(module_id, [
+    SelfHostProgramFile::{
+      id: self_host_make_file_id(module_id, 0u32)
+      path: ""
+      source: source
+      test_only: false
+    },
+  ])
+}

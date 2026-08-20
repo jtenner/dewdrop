@@ -69,7 +69,7 @@ Dew syntax graph directly and does not require that persistence format.
 
 ## Next phase
 
-Start semantic collection in Dew: declaration indexing, import tables, name
-resolution inputs, and deterministic duplicate-name diagnostics. Keep the
-MoonBit semantic artifacts as the parity oracle until the Dew collector and
-resolver agree on the complete parser corpus.
+Semantic collection and flat HIR landed later on August 20, 2026. See
+[`self-host-semantic-collection-2026-08-20.md`](self-host-semantic-collection-2026-08-20.md).
+The next phase is derive expansion, resolved type interning, signature
+resolution, alias-cycle diagnostics, and normalization.

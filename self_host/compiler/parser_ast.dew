@@ -62,6 +62,16 @@ pub struct SelfHostTypeParameter {
   offset: U32
 }
 
+impl SelfHostTypeParameter {
+  fn bound_count(self) -> U32 {
+    self.bounds.length()
+  }
+
+  fn bound_at(self, index: U32) -> SelfHostTypeExpr {
+    self.bounds[index]
+  }
+}
+
 pub struct SelfHostDeriveRequest {
   name: String
   offset: U32

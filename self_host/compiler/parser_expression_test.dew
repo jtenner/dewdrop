@@ -24,6 +24,13 @@ test "self-host parser parses calls fields and indexes" {
   }
 }
 
+test "self-host parser parses multiline indexes" {
+  assert(
+    self_host_parse_expression_source(b"values[\n  index\n]") is Result::Ok(SelfHostExpr::IndexExpr(_, _, _)),
+    "multiline index failed",
+  )
+}
+
 test "self-host parser parses arrays and products" {
   assert(
     self_host_parse_expression_source(b"[1, 2, 3]") is Result::Ok(SelfHostExpr::ArrayExpr(_, _)),

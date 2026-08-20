@@ -1,0 +1,352 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.map
+open dew.std.option
+open dew.std.string
+
+pub enum SelfHostCollectedDeclKind {
+  BuiltinDecl
+  LetDecl
+  TraitDecl
+  FunctionDecl
+  TestDecl
+  ImplDecl
+  ForeignTypeDecl
+  ForeignLibraryDecl
+  StructDecl
+  EnumDecl
+  TypeAliasDecl
+}
+
+pub enum SelfHostCollectedMethodKind {
+  TraitMethodDecl
+  ImplMethodDecl
+  ForeignLibraryMemberDecl
+}
+
+pub enum SelfHostCollectedVariantKind {
+  UnitVariantDecl
+  TupleVariantDecl
+  StructVariantDecl
+}
+
+pub enum SelfHostCollectedParameterKind {
+  ReceiverParameterDecl
+  ValueParameterDecl
+}
+
+pub enum SelfHostSemanticVisibility {
+  ModuleVisible
+  Public
+}
+
+fn self_host_semantic_visibility(
+  visibility: SelfHostDeclarationVisibility,
+) -> SelfHostSemanticVisibility {
+  match visibility {
+    SelfHostDeclarationVisibility::ModuleVisible => SelfHostSemanticVisibility::ModuleVisible
+    SelfHostDeclarationVisibility::Public => SelfHostSemanticVisibility::Public
+  }
+}
+
+pub struct SelfHostCollectedDeclaration {
+  id: U64
+  kind: SelfHostCollectedDeclKind
+  name: U32
+  visibility: SelfHostSemanticVisibility
+  offset: U32
+}
+
+pub struct SelfHostCollectedMethod {
+  id: U64
+  parent: U64
+  kind: SelfHostCollectedMethodKind
+  name: U32
+  visibility: SelfHostSemanticVisibility
+  offset: U32
+}
+
+pub enum SelfHostCollectedDeclarationReference {
+  TopLevel(SelfHostCollectedDeclaration)
+  Method(SelfHostCollectedMethod)
+}
+
+pub struct SelfHostCollectedField {
+  id: U64
+  declaration: U64
+  variant: Option<U64>
+  mutable_: Bool
+  name: U32
+  type_: U32
+  offset: U32
+}
+
+pub struct SelfHostCollectedVariant {
+  id: U64
+  declaration: U64
+  kind: SelfHostCollectedVariantKind
+  name: U32
+  payload_types: SelfHostHirSpan
+  offset: U32
+}
+
+pub struct SelfHostCollectedGenericParameter {
+  id: U64
+  declaration: U64
+  index: U32
+  name: U32
+  bounds: SelfHostHirSpan
+  offset: U32
+}
+
+pub struct SelfHostCollectedParameter {
+  id: U64
+  declaration: U64
+  index: U32
+  kind: SelfHostCollectedParameterKind
+  name: U32
+  type_: U32
+  offset: U32
+}
+
+pub struct SelfHostCollectedCallable {
+  declaration: U64
+  return_type: U32
+}
+
+pub struct SelfHostCollectedTest {
+  declaration: U64
+  display_name: Bytes
+  expected_trap: Option<Bytes>
+  file: U64
+  offset: U32
+}
+
+pub struct SelfHostCollectedImport {
+  path: String
+  open_: Bool
+  wildcard: Bool
+  import_alias: Option<String>
+  import_alias_offset: U32
+  file: U64
+  offset: U32
+}
+
+pub struct SelfHostCollectedBuiltin {
+  declaration: U64
+  builtin_name: Bytes
+}
+
+pub struct SelfHostCollectedLet {
+  declaration: U64
+  mutable_: Bool
+}
+
+pub struct SelfHostCollectedAlias {
+  declaration: U64
+  target: U32
+}
+
+pub struct SelfHostCollectedDeriveRequest {
+  declaration: U64
+  trait_name: String
+  offset: U32
+}
+
+pub struct SelfHostCollectedImpl {
+  declaration: U64
+  foreign_: Bool
+  trait_type: Option<U32>
+  target_type: U32
+}
+
+pub struct SelfHostCollectedForeignType {
+  declaration: U64
+}
+
+pub struct SelfHostCollectedForeignLibrary {
+  declaration: U64
+  logical_name: Bytes
+  logical_name_offset: U32
+  members: SelfHostHirSpan
+}
+
+pub struct SelfHostCollectedForeignFunction {
+  declaration: U64
+  library: U64
+  export_name: Bytes
+  export_name_offset: U32
+}
+
+pub enum SelfHostBindingSpace {
+  ModuleType
+  ModuleTrait
+  ModuleValue
+  TraitMethod
+  ImplMethod
+  ForeignLibraryMember
+  StructField
+  EnumVariant
+  VariantField
+  GenericParameter
+  Parameter
+}
+
+pub struct SelfHostDuplicateNameDiagnostic {
+  space: SelfHostBindingSpace
+  name: U32
+  first: U64
+  duplicate: U64
+  first_file: U64
+  duplicate_file: U64
+  first_offset: U32
+  duplicate_offset: U32
+}
+
+pub struct SelfHostDuplicateTestIdentityDiagnostic {
+  file: U64
+  display_name: Bytes
+  first_offset: U32
+  duplicate_offset: U32
+}
+
+pub enum SelfHostCollectionDiagnostic {
+  ParseDiagnostic(U64, SelfHostParseDiagnostic)
+  DuplicateName(SelfHostDuplicateNameDiagnostic)
+  DuplicateTestIdentity(SelfHostDuplicateTestIdentityDiagnostic)
+  InvalidExpectedTestTrap(U64, Bytes, U32)
+  TestDeclarationOutsideTestFile(U64, U32)
+  UnknownDerivedTrait(String, U64, U32)
+  DuplicateDerivedTrait(String, U64, U32, U32)
+  EmptyForeignLogicalName(U64, U32)
+  EmptyForeignExportName(U64, U32)
+}
+
+pub struct SelfHostValueBindingCandidate {
+  declaration: U64
+  mut next: Option<U32>
+}
+
+pub struct SelfHostValueBinding {
+  head: U32
+  mut tail: U32
+  kind: SelfHostCollectedDeclKind
+  offset: U32
+}
+
+pub struct SelfHostCollectedModule {
+  module_id: U64
+  files: Array<U64>
+  file_paths: Array<String>
+  file_sources: Array<Bytes>
+  test_files: Array<U64>
+  declaration_files: Array<U64>
+  body_files: Array<U64>
+  names: Array<String>
+  declarations: Array<SelfHostCollectedDeclaration>
+  methods: Array<SelfHostCollectedMethod>
+  declaration_locations: Array<U32>
+  fields: Array<SelfHostCollectedField>
+  variants: Array<SelfHostCollectedVariant>
+  generic_parameters: Array<SelfHostCollectedGenericParameter>
+  parameters: Array<SelfHostCollectedParameter>
+  generic_parameter_spans: Array<SelfHostHirSpan>
+  generic_bounds: Array<U32>
+  parameter_spans: Array<SelfHostHirSpan>
+  callables: Array<SelfHostCollectedCallable>
+  tests: Array<SelfHostCollectedTest>
+  imports: Array<SelfHostCollectedImport>
+  builtins: Array<SelfHostCollectedBuiltin>
+  lets: Array<SelfHostCollectedLet>
+  aliases: Array<SelfHostCollectedAlias>
+  derives: Array<SelfHostCollectedDeriveRequest>
+  impls: Array<SelfHostCollectedImpl>
+  foreign_types: Array<SelfHostCollectedForeignType>
+  foreign_libraries: Array<SelfHostCollectedForeignLibrary>
+  foreign_functions: Array<SelfHostCollectedForeignFunction>
+  type_syntax: Array<SelfHostHirTypeSyntax>
+  type_syntax_files: Array<U64>
+  type_arguments: Array<U32>
+  lambda_parameters: Array<SelfHostHirLambdaParameter>
+  lambda_parameter_files: Array<U64>
+  lambdas: Array<SelfHostHirLambda>
+  bodies: Array<SelfHostHirBody>
+  body_by_declaration: Array<Option<U32>>
+  expressions: Array<SelfHostHirExpr>
+  expression_files: Array<U64>
+  expression_children: Array<U32>
+  explicit_call_type_argument_spans: Array<SelfHostHirSpan>
+  explicit_call_type_arguments: Array<U32>
+  blocks: Array<SelfHostHirBlock>
+  block_files: Array<U64>
+  block_items: Array<SelfHostHirBlockItem>
+  block_item_files: Array<U64>
+  object_fields: Array<SelfHostHirObjectField>
+  object_field_files: Array<U64>
+  patterns: Array<SelfHostHirPattern>
+  pattern_files: Array<U64>
+  pattern_children: Array<U32>
+  pattern_fields: Array<SelfHostHirPatternField>
+  pattern_field_files: Array<U64>
+  pattern_arms: Array<SelfHostHirPatternArm>
+  pattern_arm_files: Array<U64>
+  arm_children: Array<U32>
+  diagnostics: Array<SelfHostCollectionDiagnostic>
+  name_lookup: Map<String, U32>
+  type_bindings: Map<U32, U64>
+  trait_bindings: Map<U32, U64>
+  value_bindings: Map<U32, SelfHostValueBinding>
+  value_binding_candidates: Array<SelfHostValueBindingCandidate>
+  foreign_library_by_alias: Map<U32, U64>
+}
+
+impl SelfHostCollectedModule {
+  fn find_name(self, name: String) -> Option<U32> {
+    self.name_lookup.get(name)
+  }
+
+  fn name(self, id: U32) -> String {
+    self.names[id]
+  }
+
+  fn lookup_type(self, name: String) -> Option<U64> {
+    match self.find_name(name) {
+      Option::Some(id) => self.type_bindings.get(id)
+      Option::None => Option::None
+    }
+  }
+
+  fn lookup_trait(self, name: String) -> Option<U64> {
+    match self.find_name(name) {
+      Option::Some(id) => self.trait_bindings.get(id)
+      Option::None => Option::None
+    }
+  }
+
+  fn lookup_value(self, name: String) -> Option<U64> {
+    match self.find_name(name) {
+      Option::Some(id) => match self.value_bindings.get(id) {
+        Option::Some(binding) => Option::Some(
+          self.value_binding_candidates[binding.head].declaration,
+        )
+        Option::None => Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn generic_parameters_of(
+    self,
+    declaration: U64,
+  ) -> SelfHostHirSpan {
+    self.generic_parameter_spans[self_host_semantic_id_local(declaration)]
+  }
+
+  fn parameters_of(
+    self,
+    declaration: U64,
+  ) -> SelfHostHirSpan {
+    self.parameter_spans[self_host_semantic_id_local(declaration)]
+  }
+
+}

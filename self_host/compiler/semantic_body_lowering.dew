@@ -1,0 +1,837 @@
+open dew.std.array
+open dew.std.option
+
+fn self_host_empty_semantic_ids() -> Array<U32> {
+  []
+}
+
+impl SelfHostCollectionBuilder {
+  fn emit_expression(self, value: SelfHostHirExpr) -> U32 {
+    let id = self.expressions.length()
+    self.expressions.push(value)
+    self.expression_files.push(self.current_file)
+    self.explicit_call_type_argument_spans.push(
+      self_host_empty_hir_span(self.explicit_call_type_arguments.length()),
+    )
+    id
+  }
+
+  fn emit_pattern(self, value: SelfHostHirPattern) -> U32 {
+    let id = self.patterns.length()
+    self.patterns.push(value)
+    self.pattern_files.push(self.current_file)
+    id
+  }
+
+  fn append_expression_list(
+    self,
+    values: Array<SelfHostExpr>,
+  ) -> SelfHostHirSpan {
+    let lowered = self_host_empty_semantic_ids()
+    for value in values {
+      lowered.push(self.lower_expression(value))
+    }
+    let start = self.expression_children.length()
+    for value in lowered {
+      self.expression_children.push(value)
+    }
+    SelfHostHirSpan::{
+      start: start
+      length: lowered.length()
+    }
+  }
+
+  fn append_object_fields(
+    self,
+    fields: Array<SelfHostObjectField>,
+  ) -> SelfHostHirSpan {
+    let lowered = self_host_empty_semantic_ids()
+    for field in fields {
+      lowered.push(self.lower_expression(field.value))
+    }
+    let start = self.object_fields.length()
+    let mut field_index = 0u32
+    for field in fields {
+      self.object_fields.push(
+        SelfHostHirObjectField::{
+          name: self.intern(field.name)
+          value: lowered[field_index]
+          offset: field.offset
+        },
+      )
+      self.object_field_files.push(self.current_file)
+      field_index = field_index + 1u32
+    }
+    SelfHostHirSpan::{
+      start: start
+      length: fields.length()
+    }
+  }
+
+  fn record_lambda(
+    self,
+    parameters: Array<SelfHostFnParameter>,
+    return_type: SelfHostTypeExpr,
+    body: SelfHostBlock,
+    offset: U32,
+  ) -> U32 {
+    let id = self.pending_lambda_bodies.length()
+    let parameter_start = self.lambda_parameters.length()
+    for parameter in parameters {
+      self.lambda_parameters.push(
+        SelfHostHirLambdaParameter::{
+          name: self.intern(parameter.name)
+          type_: self.lower_type(parameter.type_)
+          offset: parameter.offset
+        },
+      )
+      self.lambda_parameter_files.push(self.current_file)
+    }
+    self.pending_lambda_parameters.push(
+      SelfHostHirSpan::{
+        start: parameter_start
+        length: self.lambda_parameters.length() - parameter_start
+      },
+    )
+    self.pending_lambda_return_types.push(self.lower_type(return_type))
+    self.pending_lambda_bodies.push(body)
+    self.pending_lambda_files.push(self.current_file)
+    self.pending_lambda_offsets.push(offset)
+    self.pending_lambda_parents.push(self.current_lambda)
+    self.pending_lambda_root_bodies.push(self.current_root_body)
+    id
+  }
+
+  fn lower_is_expression(
+    self,
+    scrutinee: SelfHostExpr,
+    pattern: SelfHostPattern,
+    guard: Option<SelfHostExpr>,
+    offset: U32,
+  ) -> U32 {
+    let scrutinee_id = self.lower_expression(scrutinee)
+    let pattern_id = self.lower_pattern(pattern)
+    let guard_id = match guard {
+      Option::Some(value) => self.lower_expression(value)
+      Option::None => 4294967295u32
+    }
+    let true_id = self.emit_expression(SelfHostHirExpr::BoolExpr(true, offset))
+    let false_id = self.emit_expression(SelfHostHirExpr::BoolExpr(false, offset))
+    let first_arm = self.pattern_arms.length()
+    self.pattern_arms.push(
+      SelfHostHirPatternArm::{
+        pattern: pattern_id
+        guard_condition: guard_id
+        body: true_id
+        offset: offset
+      },
+    )
+    self.pattern_arm_files.push(self.current_file)
+    let wildcard = self.emit_pattern(
+      SelfHostHirPattern::WildcardPattern(offset),
+    )
+    self.pattern_arms.push(
+      SelfHostHirPatternArm::{
+        pattern: wildcard
+        guard_condition: 4294967295u32
+        body: false_id
+        offset: offset
+      },
+    )
+    self.pattern_arm_files.push(self.current_file)
+    let child_start = self.arm_children.length()
+    self.arm_children.push(first_arm)
+    self.arm_children.push(first_arm + 1u32)
+    self.emit_expression(
+      SelfHostHirExpr::MatchExpr(
+        scrutinee_id,
+        SelfHostHirSpan::{
+          start: child_start
+          length: 2u32
+        },
+        offset,
+      ),
+    )
+  }
+
+  fn lower_expression(self, source: SelfHostExpr) -> U32 {
+    match source {
+      SelfHostExpr::I8Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::I8Expr(value, offset),
+      )
+      SelfHostExpr::I16Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::I16Expr(value, offset),
+      )
+      SelfHostExpr::I32Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::I32Expr(value, offset),
+      )
+      SelfHostExpr::I64Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::I64Expr(value, offset),
+      )
+      SelfHostExpr::U8Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::U8Expr(value, offset),
+      )
+      SelfHostExpr::U16Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::U16Expr(value, offset),
+      )
+      SelfHostExpr::U32Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::U32Expr(value, offset),
+      )
+      SelfHostExpr::U64Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::U64Expr(value, offset),
+      )
+      SelfHostExpr::F32Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::F32Expr(value, offset),
+      )
+      SelfHostExpr::F64Expr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::F64Expr(value, offset),
+      )
+      SelfHostExpr::BoolExpr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::BoolExpr(value, offset),
+      )
+      SelfHostExpr::StringExpr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::StringExpr(value, offset),
+      )
+      SelfHostExpr::BytesExpr(value, offset) => self.emit_expression(
+        SelfHostHirExpr::BytesExpr(value, offset),
+      )
+      SelfHostExpr::NameExpr(name, offset) => self.emit_expression(
+        SelfHostHirExpr::NameExpr(self.intern(name), offset),
+      )
+      SelfHostExpr::ImportAliasExpr(name, offset) => self.emit_expression(
+        SelfHostHirExpr::ImportAliasExpr(self.intern(name), offset),
+      )
+      SelfHostExpr::ProductExpr(elements, offset) => self.emit_expression(
+        SelfHostHirExpr::ProductExpr(
+          self.append_expression_list(elements),
+          offset,
+        ),
+      )
+      SelfHostExpr::ArrayExpr(elements, offset) => self.emit_expression(
+        SelfHostHirExpr::ArrayExpr(
+          self.append_expression_list(elements),
+          offset,
+        ),
+      )
+      SelfHostExpr::LambdaExpr(parameters, return_type, body, offset) => self.emit_expression(
+        SelfHostHirExpr::LambdaExpr(
+          self.record_lambda(parameters, return_type, body, offset),
+          offset,
+        ),
+      )
+      SelfHostExpr::ObjectExpr(fields, offset) => self.emit_expression(
+        SelfHostHirExpr::ObjectExpr(self.append_object_fields(fields), offset),
+      )
+      SelfHostExpr::ConstructExpr(target, fields, offset) => {
+        let target_id = self.lower_expression(target)
+        let field_span = self.append_object_fields(fields)
+        self.emit_expression(
+          SelfHostHirExpr::ConstructExpr(target_id, field_span, offset),
+        )
+      }
+      SelfHostExpr::BlockExpr(block) => {
+        let offset = block.offset
+        self.emit_expression(
+          SelfHostHirExpr::BlockExpr(self.lower_block(block), offset),
+        )
+      }
+      SelfHostExpr::IfExpr(condition, block, alternative, offset) => {
+        let condition_id = self.lower_expression(condition)
+        let block_id = self.lower_block(block)
+        let alternative_id = match alternative {
+          Option::Some(value) => self.lower_expression(value)
+          Option::None => 4294967295u32
+        }
+        self.emit_expression(
+          SelfHostHirExpr::IfExpr(
+            condition_id,
+            block_id,
+            alternative_id,
+            offset,
+          ),
+        )
+      }
+      SelfHostExpr::MatchExpr(scrutinee, arms, offset) => {
+        let scrutinee_id = self.lower_expression(scrutinee)
+        let arm_span = self.lower_pattern_arms(arms)
+        self.emit_expression(
+          SelfHostHirExpr::MatchExpr(scrutinee_id, arm_span, offset),
+        )
+      }
+      SelfHostExpr::IsExpr(scrutinee, pattern, offset) => self.lower_is_expression(
+        scrutinee,
+        pattern,
+        Option::None,
+        offset,
+      )
+      SelfHostExpr::IsGuardExpr(scrutinee, pattern, guard, offset) => self.lower_is_expression(
+        scrutinee,
+        pattern,
+        Option::Some(guard),
+        offset,
+      )
+      SelfHostExpr::WhileExpr(scrutinee, arms, offset) => {
+        let scrutinee_id = self.lower_expression(scrutinee)
+        let arm_span = self.lower_pattern_arms(arms)
+        self.emit_expression(
+          SelfHostHirExpr::WhileExpr(scrutinee_id, arm_span, offset),
+        )
+      }
+      SelfHostExpr::BreakExpr(value, offset) => {
+        let value_id = self.lower_expression(value)
+        self.emit_expression(SelfHostHirExpr::BreakExpr(value_id, offset))
+      }
+      SelfHostExpr::ContinueExpr(value, offset) => {
+        let value_id = self.lower_expression(value)
+        self.emit_expression(SelfHostHirExpr::ContinueExpr(value_id, offset))
+      }
+      SelfHostExpr::PrefixExpr(operator, value, offset) => {
+        let value_id = self.lower_expression(value)
+        self.emit_expression(
+          SelfHostHirExpr::PrefixExpr(
+            self_host_hir_prefix_operator(operator),
+            value_id,
+            offset,
+          ),
+        )
+      }
+      SelfHostExpr::BinaryExpr(operator, left, right, offset) => {
+        let left_id = self.lower_expression(left)
+        let right_id = self.lower_expression(right)
+        self.emit_expression(
+          SelfHostHirExpr::BinaryExpr(
+            self_host_hir_binary_operator(operator),
+            left_id,
+            right_id,
+            offset,
+          ),
+        )
+      }
+      SelfHostExpr::CallExpr(target, arguments, offset) => {
+        let target_id = self.lower_expression(target)
+        let arguments = self.append_expression_list(arguments)
+        self.emit_expression(
+          SelfHostHirExpr::CallExpr(target_id, arguments, offset),
+        )
+      }
+      SelfHostExpr::ExplicitTypeCallExpr(target, type_arguments, arguments, offset) => {
+        let target_id = self.lower_expression(target)
+        let arguments = self.append_expression_list(arguments)
+        let expression = self.emit_expression(
+          SelfHostHirExpr::CallExpr(target_id, arguments, offset),
+        )
+        let type_start = self.explicit_call_type_arguments.length()
+        for type_ in type_arguments {
+          self.explicit_call_type_arguments.push(self.lower_type(type_))
+        }
+        self.explicit_call_type_argument_spans[expression] = SelfHostHirSpan::{
+          start: type_start
+          length: self.explicit_call_type_arguments.length() - type_start
+        }
+        expression
+      }
+      SelfHostExpr::FieldExpr(target, name, offset) => {
+        let target_id = self.lower_expression(target)
+        self.emit_expression(
+          SelfHostHirExpr::FieldExpr(target_id, self.intern(name), offset),
+        )
+      }
+      SelfHostExpr::QualifiedExpr(target, name, offset) => {
+        let target_id = self.lower_expression(target)
+        self.emit_expression(
+          SelfHostHirExpr::QualifiedExpr(target_id, self.intern(name), offset),
+        )
+      }
+      SelfHostExpr::ProductFieldExpr(target, index, arity, offset) => {
+        let target_id = self.lower_expression(target)
+        self.emit_expression(
+          SelfHostHirExpr::ProductFieldExpr(
+            target_id,
+            index,
+            arity,
+            offset,
+          ),
+        )
+      }
+      SelfHostExpr::IndexExpr(target, index, offset) => {
+        let target_id = self.lower_expression(target)
+        let index_id = self.lower_expression(index)
+        self.emit_expression(
+          SelfHostHirExpr::IndexExpr(target_id, index_id, offset),
+        )
+      }
+    }
+  }
+
+  fn lower_pattern(self, source: SelfHostPattern) -> U32 {
+    match source {
+      SelfHostPattern::WildcardPattern(offset) => self.emit_pattern(
+        SelfHostHirPattern::WildcardPattern(offset),
+      )
+      SelfHostPattern::BindingPattern(name, offset) => self.emit_pattern(
+        SelfHostHirPattern::BindingPattern(self.intern(name), offset),
+      )
+      SelfHostPattern::ImportAliasPattern(name, offset) => self.emit_pattern(
+        SelfHostHirPattern::ImportAliasPattern(self.intern(name), offset),
+      )
+      SelfHostPattern::RestPattern(offset) => self.emit_pattern(
+        SelfHostHirPattern::RestPattern(offset),
+      )
+      SelfHostPattern::LiteralPattern(expression, offset) => self.emit_pattern(
+        SelfHostHirPattern::LiteralPattern(
+          self.lower_expression(expression),
+          offset,
+        ),
+      )
+      SelfHostPattern::QualifiedPattern(base, name, offset) => {
+        let base_id = self.lower_pattern(base)
+        self.emit_pattern(
+          SelfHostHirPattern::QualifiedPattern(
+            base_id,
+            self.intern(name),
+            offset,
+          ),
+        )
+      }
+      SelfHostPattern::TuplePattern(base, arguments, offset) => {
+        let base_id = self.lower_pattern(base)
+        let lowered = self_host_empty_semantic_ids()
+        for argument in arguments {
+          lowered.push(self.lower_pattern(argument))
+        }
+        let start = self.pattern_children.length()
+        for argument in lowered {
+          self.pattern_children.push(argument)
+        }
+        self.emit_pattern(
+          SelfHostHirPattern::TuplePattern(
+            base_id,
+            SelfHostHirSpan::{
+              start: start
+              length: lowered.length()
+            },
+            offset,
+          ),
+        )
+      }
+      SelfHostPattern::StructPattern(base, fields, rest, offset) => {
+        let base_id = self.lower_pattern(base)
+        let lowered = self_host_empty_semantic_ids()
+        for field in fields {
+          lowered.push(self.lower_pattern(field.pattern))
+        }
+        let start = self.pattern_fields.length()
+        let mut field_index = 0u32
+        for field in fields {
+          self.pattern_fields.push(
+            SelfHostHirPatternField::{
+              name: self.intern(field.name)
+              pattern: lowered[field_index]
+              offset: field.offset
+            },
+          )
+          self.pattern_field_files.push(self.current_file)
+          field_index = field_index + 1u32
+        }
+        let has_rest = rest is Option::Some(_)
+        let rest_offset = match rest {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        self.emit_pattern(
+          SelfHostHirPattern::StructPattern(
+            base_id,
+            SelfHostHirSpan::{
+              start: start
+              length: fields.length()
+            },
+            has_rest,
+            rest_offset,
+            offset,
+          ),
+        )
+      }
+      SelfHostPattern::AlternativePattern(first, remaining, offset) => {
+        let first_id = self.lower_pattern(first)
+        let lowered = self_host_empty_semantic_ids()
+        for pattern in remaining {
+          lowered.push(self.lower_pattern(pattern))
+        }
+        let start = self.pattern_children.length()
+        for pattern in lowered {
+          self.pattern_children.push(pattern)
+        }
+        self.emit_pattern(
+          SelfHostHirPattern::AlternativePattern(
+            first_id,
+            SelfHostHirSpan::{
+              start: start
+              length: lowered.length()
+            },
+            offset,
+          ),
+        )
+      }
+    }
+  }
+
+  fn lower_pattern_arms(
+    self,
+    arms: Array<SelfHostPatternArm>,
+  ) -> SelfHostHirSpan {
+    let lowered = self_host_empty_semantic_ids()
+    for arm in arms {
+      let pattern = self.lower_pattern(arm.pattern)
+      let guard = match arm.guard_condition {
+        Option::Some(value) => self.lower_expression(value)
+        Option::None => 4294967295u32
+      }
+      let body = self.lower_expression(arm.body)
+      let id = self.pattern_arms.length()
+      self.pattern_arms.push(
+        SelfHostHirPatternArm::{
+          pattern: pattern
+          guard_condition: guard
+          body: body
+          offset: arm.offset
+        },
+      )
+      self.pattern_arm_files.push(self.current_file)
+      lowered.push(id)
+    }
+    let start = self.arm_children.length()
+    for arm in lowered {
+      self.arm_children.push(arm)
+    }
+    SelfHostHirSpan::{
+      start: start
+      length: lowered.length()
+    }
+  }
+
+  fn lower_block(self, source: SelfHostBlock) -> U32 {
+    let item_start = self.block_items.length()
+    for item in source.items {
+      match item {
+        SelfHostBlockItem::LetItem(mutable_, name, name_offset, value, offset) => {
+          let value_id = self.lower_expression(value)
+          self.block_items.push(
+            SelfHostHirBlockItem::LetItem(
+              mutable_,
+              self.intern(name),
+              name_offset,
+              value_id,
+              offset,
+            ),
+          )
+        }
+        SelfHostBlockItem::ReturnItem(value, offset) => {
+          let value_id = match value {
+            Option::Some(expression) => self.lower_expression(expression)
+            Option::None => 4294967295u32
+          }
+          self.block_items.push(
+            SelfHostHirBlockItem::ReturnItem(value_id, offset),
+          )
+        }
+        SelfHostBlockItem::AssignmentItem(target, value, offset) => {
+          let target_id = self.lower_expression(target)
+          let value_id = self.lower_expression(value)
+          let expression = self.emit_expression(
+            SelfHostHirExpr::AssignmentExpr(target_id, value_id, offset),
+          )
+          self.block_items.push(
+            SelfHostHirBlockItem::ExpressionItem(expression, offset),
+          )
+        }
+        SelfHostBlockItem::IndexSetItem(target, value, offset) => {
+          match target {
+            SelfHostExpr::IndexExpr(base, index, _) => {
+              let base_id = self.lower_expression(base)
+              let index_id = self.lower_expression(index)
+              let value_id = self.lower_expression(value)
+              let expression = self.emit_expression(
+                SelfHostHirExpr::IndexSetExpr(
+                  base_id,
+                  index_id,
+                  value_id,
+                  offset,
+                ),
+              )
+              self.block_items.push(
+                SelfHostHirBlockItem::ExpressionItem(expression, offset),
+              )
+            }
+            _ => {
+              let target_id = self.lower_expression(target)
+              let value_id = self.lower_expression(value)
+              let expression = self.emit_expression(
+                SelfHostHirExpr::AssignmentExpr(target_id, value_id, offset),
+              )
+              self.block_items.push(
+                SelfHostHirBlockItem::ExpressionItem(expression, offset),
+              )
+            }
+          }
+        }
+        SelfHostBlockItem::ExpressionItem(value, offset) => {
+          self.block_items.push(
+            SelfHostHirBlockItem::ExpressionItem(
+              self.lower_expression(value),
+              offset,
+            ),
+          )
+        }
+      }
+      self.block_item_files.push(self.current_file)
+    }
+    let id = self.blocks.length()
+    self.blocks.push(
+      SelfHostHirBlock::{
+        items: SelfHostHirSpan::{
+          start: item_start
+          length: self.block_items.length() - item_start
+        }
+        offset: source.offset
+      },
+    )
+    self.block_files.push(self.current_file)
+    id
+  }
+
+  fn append_body(
+    self,
+    declaration: U64,
+    kind: SelfHostHirBodyKind,
+    root: SelfHostHirBodyRoot,
+    expression_start: U32,
+    expression_child_start: U32,
+    block_start: U32,
+    block_item_start: U32,
+    pattern_start: U32,
+    pattern_child_start: U32,
+    arm_start: U32,
+    arm_child_start: U32,
+    object_field_start: U32,
+    pattern_field_start: U32,
+    offset: U32,
+  ) -> Unit {
+    let body_index = self.bodies.length()
+    self.body_files.push(self.current_file)
+    self.bodies.push(
+      SelfHostHirBody::{
+        id: self_host_make_semantic_id(self.module_id, body_index)
+        declaration: declaration
+        kind: kind
+        root: root
+        expressions: SelfHostHirSpan::{
+          start: expression_start
+          length: self.expressions.length() - expression_start
+        }
+        expression_children: SelfHostHirSpan::{
+          start: expression_child_start
+          length: self.expression_children.length() - expression_child_start
+        }
+        blocks: SelfHostHirSpan::{
+          start: block_start
+          length: self.blocks.length() - block_start
+        }
+        block_items: SelfHostHirSpan::{
+          start: block_item_start
+          length: self.block_items.length() - block_item_start
+        }
+        patterns: SelfHostHirSpan::{
+          start: pattern_start
+          length: self.patterns.length() - pattern_start
+        }
+        pattern_children: SelfHostHirSpan::{
+          start: pattern_child_start
+          length: self.pattern_children.length() - pattern_child_start
+        }
+        pattern_arms: SelfHostHirSpan::{
+          start: arm_start
+          length: self.pattern_arms.length() - arm_start
+        }
+        arm_children: SelfHostHirSpan::{
+          start: arm_child_start
+          length: self.arm_children.length() - arm_child_start
+        }
+        object_fields: SelfHostHirSpan::{
+          start: object_field_start
+          length: self.object_fields.length() - object_field_start
+        }
+        pattern_fields: SelfHostHirSpan::{
+          start: pattern_field_start
+          length: self.pattern_fields.length() - pattern_field_start
+        }
+        offset: offset
+      },
+    )
+    self.body_by_declaration[
+      self_host_semantic_id_local(declaration)
+    ] = Option::Some(body_index)
+  }
+
+  fn lower_expression_body(
+    self,
+    declaration: U64,
+    kind: SelfHostHirBodyKind,
+    source: SelfHostExpr,
+    offset: U32,
+  ) -> Unit {
+    self.current_lambda = 4294967295u32
+    self.current_root_body = self_host_make_semantic_id(
+      self.module_id,
+      self.bodies.length(),
+    )
+    let expression_start = self.expressions.length()
+    let expression_child_start = self.expression_children.length()
+    let block_start = self.blocks.length()
+    let block_item_start = self.block_items.length()
+    let pattern_start = self.patterns.length()
+    let pattern_child_start = self.pattern_children.length()
+    let arm_start = self.pattern_arms.length()
+    let arm_child_start = self.arm_children.length()
+    let object_field_start = self.object_fields.length()
+    let pattern_field_start = self.pattern_fields.length()
+    let root = self.lower_expression(source)
+    self.append_body(
+      declaration,
+      kind,
+      SelfHostHirBodyRoot::ExpressionBodyRoot(root),
+      expression_start,
+      expression_child_start,
+      block_start,
+      block_item_start,
+      pattern_start,
+      pattern_child_start,
+      arm_start,
+      arm_child_start,
+      object_field_start,
+      pattern_field_start,
+      offset,
+    )
+    self.lower_pending_lambda_bodies()
+  }
+
+  fn lower_block_body(
+    self,
+    declaration: U64,
+    kind: SelfHostHirBodyKind,
+    source: SelfHostBlock,
+    offset: U32,
+  ) -> Unit {
+    self.current_lambda = 4294967295u32
+    self.current_root_body = self_host_make_semantic_id(
+      self.module_id,
+      self.bodies.length(),
+    )
+    let expression_start = self.expressions.length()
+    let expression_child_start = self.expression_children.length()
+    let block_start = self.blocks.length()
+    let block_item_start = self.block_items.length()
+    let pattern_start = self.patterns.length()
+    let pattern_child_start = self.pattern_children.length()
+    let arm_start = self.pattern_arms.length()
+    let arm_child_start = self.arm_children.length()
+    let object_field_start = self.object_fields.length()
+    let pattern_field_start = self.pattern_fields.length()
+    let root = self.lower_block(source)
+    self.append_body(
+      declaration,
+      kind,
+      SelfHostHirBodyRoot::BlockBodyRoot(root),
+      expression_start,
+      expression_child_start,
+      block_start,
+      block_item_start,
+      pattern_start,
+      pattern_child_start,
+      arm_start,
+      arm_child_start,
+      object_field_start,
+      pattern_field_start,
+      offset,
+    )
+    self.lower_pending_lambda_bodies()
+  }
+
+  fn lower_pending_lambda_bodies(self) -> Unit {
+    let _ = while self.lambdas.length() {
+      index => if index < self.pending_lambda_bodies.length() {
+        self.current_file = self.pending_lambda_files[index]
+        self.current_lambda = index
+        self.current_root_body = self.pending_lambda_root_bodies[index]
+        let expression_start = self.expressions.length()
+        let expression_child_start = self.expression_children.length()
+        let block_start = self.blocks.length()
+        let block_item_start = self.block_items.length()
+        let pattern_start = self.patterns.length()
+        let pattern_child_start = self.pattern_children.length()
+        let arm_start = self.pattern_arms.length()
+        let arm_child_start = self.arm_children.length()
+        let object_field_start = self.object_fields.length()
+        let pattern_field_start = self.pattern_fields.length()
+        let root = self.lower_block(self.pending_lambda_bodies[index])
+        self.lambdas.push(
+          SelfHostHirLambda::{
+            id: index
+            parent: self.pending_lambda_parents[index]
+            root_body: self.pending_lambda_root_bodies[index]
+            parameters: self.pending_lambda_parameters[index]
+            return_type: self.pending_lambda_return_types[index]
+            body: SelfHostHirLambdaBody::{
+              root: root
+              expressions: SelfHostHirSpan::{
+                start: expression_start
+                length: self.expressions.length() - expression_start
+              }
+              expression_children: SelfHostHirSpan::{
+                start: expression_child_start
+                length: self.expression_children.length() - expression_child_start
+              }
+              blocks: SelfHostHirSpan::{
+                start: block_start
+                length: self.blocks.length() - block_start
+              }
+              block_items: SelfHostHirSpan::{
+                start: block_item_start
+                length: self.block_items.length() - block_item_start
+              }
+              patterns: SelfHostHirSpan::{
+                start: pattern_start
+                length: self.patterns.length() - pattern_start
+              }
+              pattern_children: SelfHostHirSpan::{
+                start: pattern_child_start
+                length: self.pattern_children.length() - pattern_child_start
+              }
+              pattern_arms: SelfHostHirSpan::{
+                start: arm_start
+                length: self.pattern_arms.length() - arm_start
+              }
+              arm_children: SelfHostHirSpan::{
+                start: arm_child_start
+                length: self.arm_children.length() - arm_child_start
+              }
+              object_fields: SelfHostHirSpan::{
+                start: object_field_start
+                length: self.object_fields.length() - object_field_start
+              }
+              pattern_fields: SelfHostHirSpan::{
+                start: pattern_field_start
+                length: self.pattern_fields.length() - pattern_field_start
+              }
+            }
+            file: self.pending_lambda_files[index]
+            offset: self.pending_lambda_offsets[index]
+          },
+        )
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.current_lambda = 4294967295u32
+  }
+}

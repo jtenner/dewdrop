@@ -181,7 +181,9 @@ foreign linking.
 
 The complete tokenizer and parser port finished on August 20, 2026. It parses the standard library, self-host sources, and successful module fixtures through the frozen in-memory source boundary.
 
-1. Port semantic declaration collection, imports, and name-resolution inputs.
+Semantic declaration collection and flat HIR finished on August 20, 2026.
+
+1. Port derive expansion, resolved types, alias normalization, module interfaces, imports, and body-name resolution.
 2. Port inference, flow, layouts, specialization, optimization, and backend phases in dependency order.
 3. Add the cache-disabled A→B→C harness.
 4. Restore BLAKE3-based persistent caches, including parser-event persistence, after byte identity is stable.
