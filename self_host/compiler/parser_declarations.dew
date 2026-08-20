@@ -1,0 +1,1037 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+fn self_host_empty_strings() -> Array<String> {
+  Array::new()
+}
+
+fn self_host_no_string() -> Option<String> {
+  Option::None
+}
+
+fn self_host_empty_foreign_members() -> Array<SelfHostForeignLibraryMember> {
+  Array::new()
+}
+
+fn self_host_empty_parse_events() -> Array<SelfHostParseEvent> {
+  Array::new()
+}
+
+fn self_host_parse_import_after_keyword(
+  parser: SelfHostParser,
+  open_: Bool,
+  declaration_offset: U32,
+) -> Option<SelfHostDeclaration> {
+  let path = self_host_empty_strings()
+  let mut wildcard = false
+  let path_ok = while 0u32 {
+    _ => {
+      match self_host_parser_peek(parser) {
+        Option::Some(token) => match token.kind {
+          SelfHostTokenKind::Identifier(segment) => {
+            path.push(segment)
+            parser.index = parser.index + 1u32
+          }
+          SelfHostTokenKind::Keyword(SelfHostKeyword::Package) => {
+            path.push("package")
+            parser.index = parser.index + 1u32
+          }
+          _ => {
+            self_host_parser_fail_expected(
+              parser,
+              SelfHostDeclarationExpectation::ImportPathSegment,
+            )
+            break false
+          }
+        }
+        Option::None => {
+          self_host_parser_fail_expected(
+            parser,
+            SelfHostDeclarationExpectation::ImportPathSegment,
+          )
+          break false
+        }
+      }
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::Dot) {
+        if self_host_parser_consume_symbol(parser, SelfHostSymbol::Star) {
+          wildcard = true
+          break true
+        } else {
+          continue 0u32
+        }
+      } else {
+        break true
+      }
+    }
+  }
+  if !path_ok {
+    return Option::None
+  } else {
+  }
+  let mut import_alias = self_host_no_string()
+  let mut import_alias_offset = declaration_offset
+  if self_host_parser_consume_keyword(parser, SelfHostKeyword::As) {
+    if wildcard || open_ {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::ImportAlias,
+      )
+      return Option::None
+    } else {
+    }
+    match self_host_parser_peek(parser) {
+      Option::Some(token) => match token.kind {
+        SelfHostTokenKind::AtIdentifier(name) => {
+          parser.index = parser.index + 1u32
+          import_alias = Option::Some(name)
+          import_alias_offset = token.offset
+        }
+        _ => {
+          self_host_parser_fail_expected(
+            parser,
+            SelfHostDeclarationExpectation::ImportAlias,
+          )
+          return Option::None
+        }
+      }
+      Option::None => {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::ImportAlias,
+        )
+        return Option::None
+      }
+    }
+  } else {
+  }
+  if wildcard && !open_ {
+    self_host_parser_fail_expected(
+      parser,
+      SelfHostDeclarationExpectation::ImportWildcard,
+    )
+    return Option::None
+  } else if !self_host_parser_finish_line(parser) {
+    return Option::None
+  } else {
+  }
+  Option::Some(
+    SelfHostDeclaration::Import(SelfHostImportDeclaration::{
+      open_: open_
+      path: path
+      wildcard: wildcard
+      import_alias: import_alias
+      import_alias_offset: import_alias_offset
+      offset: declaration_offset
+    }),
+  )
+}
+
+fn self_host_parse_plain_parameters(
+  parser: SelfHostParser,
+) -> Option<Array<SelfHostFnParameter>> {
+  match self_host_parse_function_parameters(parser, false) {
+    Option::Some(parsed) => {
+      let (_, parameters) = parsed
+      Option::Some(parameters)
+    }
+    Option::None => Option::None
+  }
+}
+
+fn self_host_parse_builtin_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::BuiltinName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftParen,
+    SelfHostDeclarationExpectation::LeftParen,
+  ) {
+    return Option::None
+  } else {
+  }
+  let parameters = match self_host_parse_plain_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Arrow,
+    SelfHostDeclarationExpectation::Arrow,
+  ) {
+    return Option::None
+  } else {
+  }
+  let return_type = match self_host_parse_type(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Equal,
+    SelfHostDeclarationExpectation::Equal,
+  ) {
+    return Option::None
+  } else {
+  }
+  let builtin_name = match self_host_parser_peek(parser) {
+    Option::Some(token) => match token.kind {
+      SelfHostTokenKind::StringLiteral(value) => {
+        parser.index = parser.index + 1u32
+        value
+      }
+      _ => {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::BuiltinString,
+        )
+        return Option::None
+      }
+    }
+    Option::None => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::BuiltinString,
+      )
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(
+      SelfHostDeclaration::Builtin(SelfHostBuiltinDeclaration::{
+        visibility: visibility
+        name: name
+        name_offset: name_offset
+        type_parameters: type_parameters
+        parameters: parameters
+        return_type: return_type
+        builtin_name: builtin_name
+        offset: declaration_offset
+      }),
+    )
+  }
+}
+
+fn self_host_parse_let_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostDeclaration> {
+  let mutable_ = self_host_parser_consume_keyword(
+    parser,
+    SelfHostKeyword::Mut,
+  )
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::BindingName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Equal,
+    SelfHostDeclarationExpectation::Equal,
+  ) {
+    return Option::None
+  } else {
+  }
+  let value = match self_host_parse_expression_context(parser, 0u32, false) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostDeclaration::Let(SelfHostLetDeclaration::{
+      visibility: visibility
+      mutable_: mutable_
+      name: name
+      name_offset: name_offset
+      value: value
+      offset: declaration_offset
+    }))
+  }
+}
+
+fn self_host_parse_trait_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::TraitName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let methods = self_host_empty_trait_methods()
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    if !self_host_parser_expect_newline(
+      parser,
+      SelfHostDeclarationExpectation::TraitBodyNewline,
+    ) {
+      return Option::None
+    } else {
+    }
+    self_host_parser_skip_newlines(parser)
+    let parsed = while 0u32 {
+      _ => {
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightBrace,
+        ) {
+          break true
+        } else {
+        }
+        let method_offset = self_host_parser_offset(parser)
+        if !self_host_parser_expect_keyword(
+          parser,
+          SelfHostKeyword::Fn,
+          SelfHostDeclarationExpectation::TraitMethodKeyword,
+        ) {
+          break false
+        } else {
+        }
+        let method_pair = match self_host_parser_identifier(
+          parser,
+          SelfHostDeclarationExpectation::TraitMethodName,
+        ) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        let (method_name, method_name_offset) = method_pair
+        let method_type_parameters = match self_host_parse_optional_type_parameters(
+          parser,
+        ) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::LeftParen,
+          SelfHostDeclarationExpectation::LeftParen,
+        ) {
+          break false
+        } else {
+        }
+        let parsed_parameters = match self_host_parse_function_parameters(
+          parser,
+          true,
+        ) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        let (receiver, parameters) = parsed_parameters
+        if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::Arrow,
+          SelfHostDeclarationExpectation::Arrow,
+        ) {
+          break false
+        } else {
+        }
+        let return_type = match self_host_parse_type(parser) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        if !self_host_parser_consume_newline(parser) {
+          self_host_parser_fail_expected(
+            parser,
+            SelfHostDeclarationExpectation::LineEnd,
+          )
+          break false
+        } else {
+        }
+        methods.push(SelfHostTraitMethod::{
+          name: method_name
+          name_offset: method_name_offset
+          type_parameters: method_type_parameters
+          receiver: receiver
+          parameters: parameters
+          return_type: return_type
+          offset: method_offset
+        })
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      }
+    }
+    if !parsed {
+      return Option::None
+    } else {
+    }
+  } else {
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(
+      SelfHostDeclaration::Trait(SelfHostTraitDeclaration::{
+        visibility: visibility
+        name: name
+        name_offset: name_offset
+        type_parameters: type_parameters
+        methods: methods
+        offset: declaration_offset
+      }),
+    )
+  }
+}
+
+fn self_host_parse_foreign_type(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::ForeignTypeName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(
+      SelfHostDeclaration::ForeignType(SelfHostForeignTypeDeclaration::{
+        visibility: visibility
+        name: name
+        name_offset: name_offset
+        offset: declaration_offset
+      }),
+    )
+  }
+}
+
+fn self_host_parse_foreign_library(
+  parser: SelfHostParser,
+  declaration_offset: U32,
+) -> Option<SelfHostDeclaration> {
+  let logical_token = match self_host_parser_peek(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::ForeignLibraryName,
+      )
+      return Option::None
+    }
+  }
+  let logical_name = match logical_token.kind {
+    SelfHostTokenKind::StringLiteral(value) => {
+      parser.index = parser.index + 1u32
+      value
+    }
+    _ => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::ForeignLibraryName,
+      )
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_keyword(
+    parser,
+    SelfHostKeyword::As,
+    SelfHostDeclarationExpectation::ForeignLibraryAlias,
+  ) {
+    return Option::None
+  } else {
+  }
+  let alias_pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::ForeignLibraryAlias,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (namespace_alias, alias_offset) = alias_pair
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let members = self_host_empty_foreign_members()
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    if !self_host_parser_expect_newline(
+      parser,
+      SelfHostDeclarationExpectation::FunctionBodyNewline,
+    ) {
+      return Option::None
+    } else {
+    }
+    self_host_parser_skip_newlines(parser)
+    let parsed = while 0u32 {
+      _ => {
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightBrace,
+        ) {
+          break true
+        } else {
+        }
+        let member_offset = self_host_parser_offset(parser)
+        if self_host_parser_consume_keyword(parser, SelfHostKeyword::Pub) {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::PublicForeignLibraryMemberNotAllowed(
+              member_offset,
+            ),
+          )
+          break false
+        } else if !self_host_parser_expect_keyword(
+          parser,
+          SelfHostKeyword::Fn,
+          SelfHostDeclarationExpectation::ForeignLibraryMemberKeyword,
+        ) {
+          break false
+        } else {
+        }
+        let member_pair = match self_host_parser_identifier(
+          parser,
+          SelfHostDeclarationExpectation::FunctionName,
+        ) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        let (member_name, member_name_offset) = member_pair
+        if self_host_parser_at_symbol(parser, SelfHostSymbol::Less) {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::GenericForeignLibraryMemberNotAllowed(
+              self_host_parser_offset(parser),
+            ),
+          )
+          break false
+        } else if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::LeftParen,
+          SelfHostDeclarationExpectation::LeftParen,
+        ) {
+          break false
+        } else {
+        }
+        let parameters = match self_host_parse_plain_parameters(parser) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::Arrow,
+          SelfHostDeclarationExpectation::Arrow,
+        ) {
+          break false
+        } else {
+        }
+        let return_type = match self_host_parse_type(parser) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        if self_host_parser_at_symbol(parser, SelfHostSymbol::LeftBrace) {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::ForeignLibraryMemberBodyNotAllowed(
+              self_host_parser_offset(parser),
+            ),
+          )
+          break false
+        } else if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::Equal,
+          SelfHostDeclarationExpectation::Equal,
+        ) {
+          break false
+        } else {
+        }
+        let export_token = match self_host_parser_peek(parser) {
+          Option::Some(value) => value
+          Option::None => {
+            self_host_parser_fail_expected(
+              parser,
+              SelfHostDeclarationExpectation::ForeignLibraryExportName,
+            )
+            break false
+          }
+        }
+        let export_name = match export_token.kind {
+          SelfHostTokenKind::StringLiteral(value) => {
+            parser.index = parser.index + 1u32
+            value
+          }
+          _ => {
+            self_host_parser_fail_expected(
+              parser,
+              SelfHostDeclarationExpectation::ForeignLibraryExportName,
+            )
+            break false
+          }
+        }
+        if !self_host_parser_finish_line(parser) {
+          break false
+        } else {
+        }
+        members.push(SelfHostForeignLibraryMember::{
+          name: member_name
+          name_offset: member_name_offset
+          parameters: parameters
+          return_type: return_type
+          export_name: export_name
+          export_name_offset: export_token.offset
+          offset: member_offset
+        })
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      }
+    }
+    if !parsed {
+      return Option::None
+    } else {
+    }
+  } else {
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(
+      SelfHostDeclaration::ForeignLibrary(
+        SelfHostForeignLibraryDeclaration::{
+          logical_name: logical_name
+          logical_name_offset: logical_token.offset
+          namespace_alias: namespace_alias
+          alias_offset: alias_offset
+          members: members
+          offset: declaration_offset
+        },
+      ),
+    )
+  }
+}
+
+fn self_host_parse_declaration(
+  parser: SelfHostParser,
+) -> Option<SelfHostDeclaration> {
+  self_host_parser_skip_newlines(parser)
+  let mut visibility = SelfHostDeclarationVisibility::ModuleVisible
+  let mut declaration_offset = self_host_parser_offset(parser)
+  match self_host_parser_peek(parser) {
+    Option::Some(token) => match token.kind {
+      SelfHostTokenKind::Keyword(SelfHostKeyword::Open) => {
+        parser.index = parser.index + 1u32
+        return self_host_parse_import_after_keyword(
+          parser,
+          true,
+          token.offset,
+        )
+      }
+      SelfHostTokenKind::Keyword(SelfHostKeyword::Import) => {
+        parser.index = parser.index + 1u32
+        return self_host_parse_import_after_keyword(
+          parser,
+          false,
+          token.offset,
+        )
+      }
+      SelfHostTokenKind::Keyword(SelfHostKeyword::Pub) => {
+        parser.index = parser.index + 1u32
+        visibility = SelfHostDeclarationVisibility::Public
+        declaration_offset = token.offset
+      }
+      _ => {}
+    }
+    Option::None => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::DeclarationKeyword,
+      )
+      return Option::None
+    }
+  }
+  let token = match self_host_parser_peek(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::DeclarationKeyword,
+      )
+      return Option::None
+    }
+  }
+  match token.kind {
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Builtin) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_builtin_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      )
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Let) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_let_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      )
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Trait) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_trait_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      )
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Struct) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_struct_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      ) {
+        Option::Some(value) =>
+          Option::Some(SelfHostDeclaration::Struct(value))
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Enum) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_enum_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      ) {
+        Option::Some(value) =>
+          Option::Some(SelfHostDeclaration::Enum(value))
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Type) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_type_alias_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      ) {
+        Option::Some(value) =>
+          Option::Some(SelfHostDeclaration::TypeAlias(value))
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Fn) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_function_after_keyword(
+        parser,
+        visibility,
+        declaration_offset,
+      ) {
+        Option::Some(value) =>
+          Option::Some(SelfHostDeclaration::Function(value))
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Test) => {
+      if visibility is SelfHostDeclarationVisibility::Public {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::DeclarationKeyword,
+        )
+        Option::None
+      } else {
+        parser.index = parser.index + 1u32
+        match self_host_parse_test_after_keyword(parser, declaration_offset) {
+          Option::Some(value) =>
+            Option::Some(SelfHostDeclaration::Test(value))
+          Option::None => Option::None
+        }
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Impl) => {
+      if visibility is SelfHostDeclarationVisibility::Public {
+        self_host_parser_fail(
+          parser,
+          SelfHostParseError::PublicImplNotAllowed(declaration_offset),
+        )
+        Option::None
+      } else {
+        parser.index = parser.index + 1u32
+        match self_host_parse_impl_after_keyword(
+          parser,
+          false,
+          declaration_offset,
+        ) {
+          Option::Some(value) =>
+            Option::Some(SelfHostDeclaration::Impl(value))
+          Option::None => Option::None
+        }
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Foreign) => {
+      parser.index = parser.index + 1u32
+      if self_host_parser_consume_keyword(parser, SelfHostKeyword::Type) {
+        self_host_parse_foreign_type(
+          parser,
+          visibility,
+          declaration_offset,
+        )
+      } else if self_host_parser_consume_keyword(
+        parser,
+        SelfHostKeyword::Impl,
+      ) {
+        match self_host_parser_peek(parser) {
+          Option::Some(next) => match next.kind {
+            SelfHostTokenKind::StringLiteral(_) => if visibility is SelfHostDeclarationVisibility::Public {
+              self_host_parser_fail(
+                parser,
+                SelfHostParseError::PublicForeignLibraryNotAllowed(
+                  declaration_offset,
+                ),
+              )
+              Option::None
+            } else {
+              self_host_parse_foreign_library(parser, declaration_offset)
+            }
+            _ => if visibility is SelfHostDeclarationVisibility::Public {
+              self_host_parser_fail(
+                parser,
+                SelfHostParseError::PublicImplNotAllowed(
+                  declaration_offset,
+                ),
+              )
+              Option::None
+            } else {
+              match self_host_parse_impl_after_keyword(
+                parser,
+                true,
+                declaration_offset,
+              ) {
+                Option::Some(value) =>
+                  Option::Some(SelfHostDeclaration::Impl(value))
+                Option::None => Option::None
+              }
+            }
+          }
+          Option::None => {
+            self_host_parser_fail_expected(
+              parser,
+              SelfHostDeclarationExpectation::DeclarationKeyword,
+            )
+            Option::None
+          }
+        }
+      } else {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::DeclarationKeyword,
+        )
+        Option::None
+      }
+    }
+    _ => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::DeclarationKeyword,
+      )
+      Option::None
+    }
+  }
+}
+
+fn self_host_token_starts_declaration(token: SelfHostToken) -> Bool {
+  match token.kind {
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Pub) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Open) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Import) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Builtin) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Let) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Trait) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Struct) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Enum) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Type) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Fn) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Test) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Impl) => true
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Foreign) => true
+    _ => false
+  }
+}
+
+fn self_host_parser_recover_declaration(parser: SelfHostParser) -> Unit {
+  let mut braces = 0u32
+  let mut parentheses = 0u32
+  let mut brackets = 0u32
+  let _ = while 0u32 {
+    _ => match self_host_parser_take(parser) {
+      Option::Some(token) => {
+        match token.kind {
+          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => {
+            braces = braces + 1u32
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace) => if braces > 0u32 {
+            braces = braces - 1u32
+          } else {
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+            parentheses = parentheses + 1u32
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen) => if parentheses > 0u32 {
+            parentheses = parentheses - 1u32
+          } else {
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket) => {
+            brackets = brackets + 1u32
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::RightBracket) => if brackets > 0u32 {
+            brackets = brackets - 1u32
+          } else {
+          }
+          SelfHostTokenKind::Newline => if braces == 0u32 &&
+            parentheses == 0u32 && brackets == 0u32 {
+            break self_host_parser_unit()
+          } else {
+          }
+          _ => {}
+        }
+        continue 0u32
+      }
+      Option::None => break self_host_parser_unit()
+    }
+  }
+  self_host_parser_skip_newlines(parser)
+  let _ = while 0u32 {
+    _ => match self_host_parser_peek(parser) {
+      Option::Some(token) => if self_host_token_starts_declaration(token) {
+        break self_host_parser_unit()
+      } else {
+        let _ = while 0u32 {
+          _ => match self_host_parser_take(parser) {
+            Option::Some(value) => if value.kind is SelfHostTokenKind::Newline {
+              break self_host_parser_unit()
+            } else {
+              continue 0u32
+            }
+            Option::None => break self_host_parser_unit()
+          }
+        }
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      }
+      Option::None => break self_host_parser_unit()
+    }
+  }
+}
+
+pub fn self_host_parse_module(source: Bytes) -> SelfHostParsedModule {
+  let parser = self_host_parser_new(source)
+  let events = self_host_empty_parse_events()
+  let mut preamble_open = true
+  let _ = while 0u32 {
+    _ => {
+      self_host_parser_skip_newlines(parser)
+      if parser.index >= parser.tokens.length() {
+        break self_host_parser_unit()
+      } else {
+      }
+      parser.diagnostic = Option::None
+      match self_host_parse_declaration(parser) {
+        Option::Some(declaration) => match declaration {
+          SelfHostDeclaration::Import(import_) => if preamble_open {
+            events.push(
+              SelfHostParseEvent::Declaration(
+                SelfHostDeclaration::Import(import_),
+              ),
+            )
+          } else {
+            events.push(
+              SelfHostParseEvent::Diagnostic(SelfHostParseDiagnostic::{
+                severity: SelfHostDiagnosticSeverity::Error
+                error: SelfHostParseError::ImportAfterDeclaration(
+                  import_.offset,
+                )
+              }),
+            )
+          }
+          _ => {
+            preamble_open = false
+            events.push(SelfHostParseEvent::Declaration(declaration))
+          }
+        }
+        Option::None => {
+          let diagnostic = match parser.diagnostic {
+            Option::Some(value) => value
+            Option::None => SelfHostParseDiagnostic::{
+              severity: SelfHostDiagnosticSeverity::Error
+              error: SelfHostParseError::ExpectedDeclaration(
+                SelfHostDeclarationExpectation::DeclarationKeyword,
+                self_host_parser_peek(parser),
+                self_host_parser_offset(parser),
+              )
+            }
+          }
+          events.push(SelfHostParseEvent::Diagnostic(diagnostic))
+          self_host_parser_recover_declaration(parser)
+        }
+      }
+      continue 0u32
+    }
+  }
+  SelfHostParsedModule::{
+    events: events
+  }
+}

@@ -1,5 +1,4 @@
-open dew.std.array
-open dew.std.bytes
+open dew.std.option
 open dew.std.result
 open dew.std.string
 
@@ -7,43 +6,59 @@ fn self_host_parser_u64_to_i32(value: U64) -> I32 {
   value.into()
 }
 
-fn self_host_parser_compact(tokens: Array<SelfHostToken>) -> Array<SelfHostToken> {
-  let output = Array::with_capacity(tokens.length())
-  for token in tokens {
-    if token.kind is SelfHostTokenKind::Newline {
-    } else {
-      output.push(token)
-    }
-  }
-  output
-}
-
-pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
-  let tokens = self_host_parser_compact(self_host_tokenize(source))
-  if tokens.length() != 10u32 {
-    return Result::Err("smoke parser requires one complete main function")
+fn self_host_smoke_body_value(body: SelfHostBlock) -> Result<I32, String> {
+  if body.items.length() != 1u32 {
+    Result::Err("smoke parser expected one positive I32 literal body")
   } else {
-  }
-  if !(tokens.get_unchecked(0u32).kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Pub)) ||
-    !(tokens.get_unchecked(1u32).kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Fn)) ||
-    !(tokens.get_unchecked(2u32).kind is SelfHostTokenKind::Identifier("main")) ||
-    !(tokens.get_unchecked(3u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen)) ||
-    !(tokens.get_unchecked(4u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen)) ||
-    !(tokens.get_unchecked(5u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::Arrow)) ||
-    !(tokens.get_unchecked(6u32).kind is SelfHostTokenKind::Identifier("I32")) ||
-    !(tokens.get_unchecked(7u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace)) ||
-    !(tokens.get_unchecked(9u32).kind is SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace)) {
-    return Result::Err("smoke parser expected pub fn main() -> I32 { literal }")
-  } else {
-  }
-  match tokens.get_unchecked(8u32).kind {
-    SelfHostTokenKind::I32(value) =>
-      if value <= 2147483647u64 {
+    match body.items.get_unchecked(0u32) {
+      SelfHostBlockItem::ExpressionItem(
+        SelfHostExpr::I32Expr(value, _),
+        _,
+      ) => if value <= 2147483647u64 {
         Result::Ok(self_host_parser_u64_to_i32(value))
       } else {
         Result::Err("smoke parser positive I32 literal is out of range")
       }
-    SelfHostTokenKind::Error(_) => Result::Err("smoke parser received a lexical error")
-    _ => Result::Err("smoke parser expected one I32 literal body")
+      _ => Result::Err("smoke parser expected one positive I32 literal body")
+    }
+  }
+}
+
+fn self_host_smoke_function_value(
+  function: SelfHostFunctionDeclaration,
+) -> Result<I32, String> {
+  if !(function.visibility is SelfHostDeclarationVisibility::Public) {
+    return Result::Err("smoke parser expected public main")
+  } else if !function.name.equals("main") {
+    return Result::Err("smoke parser expected main")
+  } else if function.type_parameters.length() != 0u32 {
+    return Result::Err("smoke parser main must not be generic")
+  } else if function.receiver is Option::Some(_) {
+    return Result::Err("smoke parser main must not have a receiver")
+  } else if function.parameters.length() != 0u32 {
+    return Result::Err("smoke parser main must not have parameters")
+  } else {
+  }
+  match function.return_type {
+    SelfHostTypeExpr::NamedType("I32", _) =>
+      self_host_smoke_body_value(function.body)
+    _ => Result::Err("smoke parser expected I32 return type")
+  }
+}
+
+pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
+  let module_ = self_host_parse_module(source)
+  if module_.events.length() != 1u32 {
+    Result::Err("smoke parser requires one complete main function")
+  } else {
+    match module_.events.get_unchecked(0u32) {
+      SelfHostParseEvent::Diagnostic(_) =>
+        Result::Err("smoke parser received a parser diagnostic")
+      SelfHostParseEvent::Declaration(declaration) => match declaration {
+        SelfHostDeclaration::Function(function) =>
+          self_host_smoke_function_value(function)
+        _ => Result::Err("smoke parser expected one function declaration")
+      }
+    }
   }
 }

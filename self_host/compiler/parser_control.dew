@@ -1,0 +1,1238 @@
+open dew.std.array
+open dew.std.option
+open dew.std.string
+open dew.std.string_builder
+
+fn self_host_empty_block_items() -> Array<SelfHostBlockItem> {
+  Array::new()
+}
+
+fn self_host_empty_pattern_arms() -> Array<SelfHostPatternArm> {
+  Array::new()
+}
+
+fn self_host_empty_function_parameters() -> Array<SelfHostFnParameter> {
+  Array::new()
+}
+
+fn self_host_no_expression() -> Option<SelfHostExpr> {
+  Option::None
+}
+
+fn self_host_no_receiver() -> Option<SelfHostReceiverParameter> {
+  Option::None
+}
+
+fn self_host_empty_block(offset: U32) -> SelfHostBlock {
+  SelfHostBlock::{
+    items: self_host_empty_block_items()
+    offset: offset
+  }
+}
+
+fn self_host_parse_function_parameters(
+  parser: SelfHostParser,
+  allow_receiver: Bool,
+) -> Option<(Option<SelfHostReceiverParameter>, Array<SelfHostFnParameter>)> {
+  let parameters = self_host_empty_function_parameters()
+  let mut receiver = self_host_no_receiver()
+  self_host_parser_skip_newlines(parser)
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+    return Option::Some((receiver, parameters))
+  } else {
+  }
+  let result = while 0u32 {
+    _ => {
+      let pair = match self_host_parser_identifier(
+        parser,
+        SelfHostDeclarationExpectation::ParameterName,
+      ) {
+        Option::Some(value) => value
+        Option::None => break Option::None
+      }
+      let (name, offset) = pair
+      if name.equals("self") && allow_receiver {
+        if receiver is Option::Some(_) || parameters.length() > 0u32 {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::ReceiverMustBeFirst(offset),
+          )
+          break Option::None
+        } else {
+        }
+        let explicit_type = if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::Colon,
+        ) {
+          self_host_parse_type(parser)
+        } else {
+          Option::None
+        }
+        if parser.diagnostic is Option::Some(_) {
+          break Option::None
+        } else {
+        }
+        receiver = Option::Some(SelfHostReceiverParameter::{
+          explicit_type: explicit_type
+          offset: offset
+        })
+      } else {
+        if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::Colon,
+          SelfHostDeclarationExpectation::Colon,
+        ) {
+          break Option::None
+        } else {
+        }
+        match self_host_parse_type(parser) {
+          Option::Some(type_) => parameters.push(SelfHostFnParameter::{
+            name: name
+            type_: type_
+            offset: offset
+          })
+          Option::None => break Option::None
+        }
+      }
+      self_host_parser_skip_newlines(parser)
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+        break Option::Some((receiver, parameters))
+      } else if self_host_parser_consume_symbol(
+        parser,
+        SelfHostSymbol::Comma,
+      ) {
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightParen,
+        ) {
+          break Option::Some((receiver, parameters))
+        } else {
+          continue 0u32
+        }
+      } else {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::ParameterSeparatorOrClose,
+        )
+        break Option::None
+      }
+    }
+  }
+  result
+}
+
+fn self_host_parse_lambda_expression(
+  parser: SelfHostParser,
+  offset: U32,
+) -> Option<SelfHostExpr> {
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftParen,
+    SelfHostDeclarationExpectation::LeftParen,
+  ) {
+    return Option::None
+  } else {
+  }
+  let parsed = match self_host_parse_function_parameters(parser, false) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (_, parameters) = parsed
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Arrow,
+    SelfHostDeclarationExpectation::Arrow,
+  ) {
+    return Option::None
+  } else {
+  }
+  let return_type = match self_host_parse_type(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  match self_host_parse_block_after_left(parser, body_offset) {
+    Option::Some(body) => Option::Some(
+      SelfHostExpr::LambdaExpr(parameters, return_type, body, offset),
+    )
+    Option::None => Option::None
+  }
+}
+
+struct SelfHostDeferredCleanup {
+  name: String
+  offset: U32
+}
+
+fn self_host_empty_cleanups() -> Array<SelfHostDeferredCleanup> {
+  Array::new()
+}
+
+fn self_host_cleanup_call(cleanup: SelfHostDeferredCleanup) -> SelfHostExpr {
+  SelfHostExpr::CallExpr(
+    SelfHostExpr::NameExpr(cleanup.name, cleanup.offset),
+    self_host_empty_expressions(),
+    cleanup.offset,
+  )
+}
+
+fn self_host_append_cleanups(
+  items: Array<SelfHostBlockItem>,
+  cleanups: Array<SelfHostDeferredCleanup>,
+) -> Unit {
+  let _ = while cleanups.length() {
+    remaining if remaining > 0u32 => {
+      let cleanup = cleanups.get_unchecked(remaining - 1u32)
+      items.push(
+        SelfHostBlockItem::ExpressionItem(
+          self_host_cleanup_call(cleanup),
+          cleanup.offset,
+        ),
+      )
+      continue remaining - 1u32
+    }
+    _ => break self_host_parser_unit()
+  }
+}
+
+fn self_host_register_cleanup(
+  items: Array<SelfHostBlockItem>,
+  cleanups: Array<SelfHostDeferredCleanup>,
+  value: SelfHostExpr,
+  offset: U32,
+) -> Unit {
+  let name = self_host_product_name("$defer_", offset)
+  let body_items = self_host_empty_block_items()
+  body_items.push(SelfHostBlockItem::ExpressionItem(value, offset))
+  let lambda = SelfHostExpr::LambdaExpr(
+    self_host_empty_function_parameters(),
+    SelfHostTypeExpr::NamedType("Unit", offset),
+    SelfHostBlock::{
+      items: body_items
+      offset: offset
+    },
+    offset,
+  )
+  items.push(
+    SelfHostBlockItem::LetItem(false, name, offset, lambda, offset),
+  )
+  cleanups.push(SelfHostDeferredCleanup::{
+    name: name
+    offset: offset
+  })
+}
+
+fn self_host_finalize_deferred_block(
+  items: Array<SelfHostBlockItem>,
+  cleanups: Array<SelfHostDeferredCleanup>,
+  offset: U32,
+) -> SelfHostBlock {
+  if cleanups.length() == 0u32 || items.length() == 0u32 {
+    return SelfHostBlock::{
+      items: items
+      offset: offset
+    }
+  } else {
+  }
+  match items.get_unchecked(items.length() - 1u32) {
+    SelfHostBlockItem::ReturnItem(_, _) => {}
+    SelfHostBlockItem::ExpressionItem(
+      SelfHostExpr::BreakExpr(_, _),
+      _,
+    ) => {}
+    SelfHostBlockItem::ExpressionItem(
+      SelfHostExpr::ContinueExpr(_, _),
+      _,
+    ) => {}
+    SelfHostBlockItem::ExpressionItem(value, item_offset) => {
+      let _ = items.pop()
+      let name = self_host_product_name("$defer_result_", item_offset)
+      items.push(
+        SelfHostBlockItem::LetItem(
+          false,
+          name,
+          item_offset,
+          value,
+          item_offset,
+        ),
+      )
+      self_host_append_cleanups(items, cleanups)
+      items.push(
+        SelfHostBlockItem::ExpressionItem(
+          SelfHostExpr::NameExpr(name, item_offset),
+          item_offset,
+        ),
+      )
+    }
+    _ => self_host_append_cleanups(items, cleanups)
+  }
+  SelfHostBlock::{
+    items: items
+    offset: offset
+  }
+}
+
+enum SelfHostProductBinding {
+  NamedProductBinding(String, U32)
+  IgnoredProductBinding
+  NestedProductBinding(Array<SelfHostProductBinding>, U32)
+}
+
+fn self_host_empty_product_bindings() -> Array<SelfHostProductBinding> {
+  Array::new()
+}
+
+fn self_host_product_name(prefix: String, offset: U32) -> String {
+  let builder = StringBuilder::new()
+  builder.append(prefix)
+  builder.append_u32(offset)
+  builder.finish()
+}
+
+fn self_host_parse_product_binding_after_left(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<SelfHostProductBinding> {
+  let fields = self_host_empty_product_bindings()
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => {
+      let field = match self_host_parser_peek(parser) {
+        Option::Some(token) => match token.kind {
+          SelfHostTokenKind::Identifier("_") => {
+            parser.index = parser.index + 1u32
+            SelfHostProductBinding::IgnoredProductBinding
+          }
+          SelfHostTokenKind::Identifier(name) => {
+            parser.index = parser.index + 1u32
+            SelfHostProductBinding::NamedProductBinding(name, token.offset)
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+            parser.index = parser.index + 1u32
+            match self_host_parse_product_binding_after_left(
+              parser,
+              token.offset,
+            ) {
+              Option::Some(value) => value
+              Option::None => break Option::None
+            }
+          }
+          _ => {
+            self_host_parser_fail_expected(
+              parser,
+              SelfHostDeclarationExpectation::BindingName,
+            )
+            break Option::None
+          }
+        }
+        Option::None => {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::UnclosedExpression(
+              "product binding",
+              open_offset,
+            ),
+          )
+          break Option::None
+        }
+      }
+      fields.push(field)
+      self_host_parser_skip_newlines(parser)
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+        if fields.length() < 2u32 || fields.length() > 32u32 {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::InvalidProductArity(
+              fields.length(),
+              open_offset,
+            ),
+          )
+          break Option::None
+        } else {
+          break Option::Some(
+            SelfHostProductBinding::NestedProductBinding(
+              fields,
+              open_offset,
+            ),
+          )
+        }
+      } else if self_host_parser_consume_symbol(
+        parser,
+        SelfHostSymbol::Comma,
+      ) {
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightParen,
+        ) {
+          if fields.length() < 2u32 || fields.length() > 32u32 {
+            self_host_parser_fail(
+              parser,
+              SelfHostParseError::InvalidProductArity(
+                fields.length(),
+                open_offset,
+              ),
+            )
+            break Option::None
+          } else {
+            break Option::Some(
+              SelfHostProductBinding::NestedProductBinding(
+                fields,
+                open_offset,
+              ),
+            )
+          }
+        } else {
+          continue 0u32
+        }
+      } else {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::Equal,
+        )
+        break Option::None
+      }
+    }
+  }
+  result
+}
+
+fn self_host_append_product_bindings(
+  items: Array<SelfHostBlockItem>,
+  mutable_: Bool,
+  binding: SelfHostProductBinding,
+  target: SelfHostExpr,
+  let_offset: U32,
+) -> Unit {
+  match binding {
+    SelfHostProductBinding::NamedProductBinding(name, offset) => items.push(
+      SelfHostBlockItem::LetItem(
+        mutable_,
+        name,
+        offset,
+        target,
+        let_offset,
+      ),
+    )
+    SelfHostProductBinding::IgnoredProductBinding => {}
+    SelfHostProductBinding::NestedProductBinding(fields, offset) => {
+      let _ = while 0u32 {
+        index if index < fields.length() => {
+          self_host_append_product_bindings(
+            items,
+            mutable_,
+            fields.get_unchecked(index),
+            SelfHostExpr::ProductFieldExpr(
+              target,
+              index,
+              fields.length(),
+              offset,
+            ),
+            let_offset,
+          )
+          continue index + 1u32
+        }
+        _ => break self_host_parser_unit()
+      }
+    }
+  }
+}
+
+fn self_host_parse_block_let(
+  parser: SelfHostParser,
+  items: Array<SelfHostBlockItem>,
+  let_offset: U32,
+) -> Bool {
+  let mutable_ = self_host_parser_consume_keyword(
+    parser,
+    SelfHostKeyword::Mut,
+  )
+  let binding = match self_host_parser_peek(parser) {
+    Option::Some(token) => match token.kind {
+      SelfHostTokenKind::Identifier("_") => {
+        parser.index = parser.index + 1u32
+        SelfHostProductBinding::IgnoredProductBinding
+      }
+      SelfHostTokenKind::Identifier(name) => {
+        parser.index = parser.index + 1u32
+        SelfHostProductBinding::NamedProductBinding(name, token.offset)
+      }
+      SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+        parser.index = parser.index + 1u32
+        match self_host_parse_product_binding_after_left(parser, token.offset) {
+          Option::Some(value) => value
+          Option::None => {
+            return false
+          }
+        }
+      }
+      _ => {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::BindingName,
+        )
+        return false
+      }
+    }
+    Option::None => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::BindingName,
+      )
+      return false
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Equal,
+    SelfHostDeclarationExpectation::Equal,
+  ) {
+    return false
+  } else {
+  }
+  let value = match self_host_parse_expression_context(parser, 0u32, false) {
+    Option::Some(value) => value
+    Option::None => {
+            return false
+          }
+  }
+  match binding {
+    SelfHostProductBinding::NamedProductBinding(name, offset) => items.push(
+      SelfHostBlockItem::LetItem(
+        mutable_,
+        name,
+        offset,
+        value,
+        let_offset,
+      ),
+    )
+    SelfHostProductBinding::IgnoredProductBinding => {}
+    SelfHostProductBinding::NestedProductBinding(_, offset) => {
+      let hidden = self_host_product_name("$product_", let_offset)
+      items.push(
+        SelfHostBlockItem::LetItem(
+          false,
+          hidden,
+          offset,
+          value,
+          let_offset,
+        ),
+      )
+      self_host_append_product_bindings(
+        items,
+        mutable_,
+        binding,
+        SelfHostExpr::NameExpr(hidden, offset),
+        let_offset,
+      )
+    }
+  }
+  true
+}
+
+fn self_host_parse_block_after_left(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<SelfHostBlock> {
+  let items = self_host_empty_block_items()
+  let cleanups = self_host_empty_cleanups()
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    return Option::Some(SelfHostBlock::{
+      items: items
+      offset: open_offset
+    })
+  } else {
+  }
+  if !self_host_parser_consume_newline(parser) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "block body newline",
+        self_host_parser_peek(parser),
+        open_offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => {
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+        break Option::Some(
+          self_host_finalize_deferred_block(items, cleanups, open_offset),
+        )
+      } else {
+      }
+      let token = match self_host_parser_peek(parser) {
+        Option::Some(value) => value
+        Option::None => {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::UnclosedExpression("block", open_offset),
+          )
+          break Option::None
+        }
+      }
+      if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Using) {
+        parser.index = parser.index + 1u32
+        let pair = match self_host_parser_identifier(
+          parser,
+          SelfHostDeclarationExpectation::BindingName,
+        ) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+        let (name, name_offset) = pair
+        if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::Equal,
+          SelfHostDeclarationExpectation::Equal,
+        ) {
+          break Option::None
+        } else {
+        }
+        let value = match self_host_parse_expression_context(
+          parser,
+          0u32,
+          false,
+        ) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+        if !self_host_parser_finish_line(parser) {
+          break Option::None
+        } else {
+        }
+        items.push(
+          SelfHostBlockItem::LetItem(
+            false,
+            name,
+            name_offset,
+            value,
+            token.offset,
+          ),
+        )
+        self_host_register_cleanup(
+          items,
+          cleanups,
+          SelfHostExpr::CallExpr(
+            SelfHostExpr::FieldExpr(
+              SelfHostExpr::NameExpr(name, name_offset),
+              "dispose",
+              token.offset,
+            ),
+            self_host_empty_expressions(),
+            token.offset,
+          ),
+          token.offset,
+        )
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      } else if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Defer) {
+        parser.index = parser.index + 1u32
+        let value = match self_host_parse_expression_context(
+          parser,
+          0u32,
+          false,
+        ) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+        if !self_host_parser_finish_line(parser) {
+          break Option::None
+        } else {
+        }
+        self_host_register_cleanup(
+          items,
+          cleanups,
+          value,
+          token.offset,
+        )
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      } else if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Let) {
+        parser.index = parser.index + 1u32
+        if !self_host_parse_block_let(parser, items, token.offset) {
+          break Option::None
+        } else {
+        }
+      } else if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Return) {
+        parser.index = parser.index + 1u32
+        if self_host_parser_consume_newline(parser) {
+          self_host_append_cleanups(items, cleanups)
+          items.push(
+            SelfHostBlockItem::ReturnItem(Option::None, token.offset),
+          )
+          self_host_parser_skip_newlines(parser)
+          continue 0u32
+        } else {
+          let value = match self_host_parse_expression_context(
+            parser,
+            0u32,
+            false,
+          ) {
+            Option::Some(value) => value
+            Option::None => break Option::None
+          }
+          if cleanups.length() == 0u32 {
+            items.push(
+              SelfHostBlockItem::ReturnItem(
+                Option::Some(value),
+                token.offset,
+              ),
+            )
+          } else {
+            let name = self_host_product_name(
+              "$defer_result_",
+              token.offset,
+            )
+            items.push(
+              SelfHostBlockItem::LetItem(
+                false,
+                name,
+                token.offset,
+                value,
+                token.offset,
+              ),
+            )
+            self_host_append_cleanups(items, cleanups)
+            items.push(
+              SelfHostBlockItem::ReturnItem(
+                Option::Some(
+                  SelfHostExpr::NameExpr(name, token.offset),
+                ),
+                token.offset,
+              ),
+            )
+          }
+        }
+      } else {
+        let expression = match self_host_parse_expression_context(
+          parser,
+          0u32,
+          false,
+        ) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+        if self_host_parser_consume_symbol(parser, SelfHostSymbol::Equal) {
+          let equal_offset = token.offset
+          let value = match self_host_parse_expression_context(
+            parser,
+            0u32,
+            false,
+          ) {
+            Option::Some(value) => value
+            Option::None => break Option::None
+          }
+          match expression {
+            SelfHostExpr::IndexExpr(_, _, _) => items.push(
+              SelfHostBlockItem::IndexSetItem(
+                expression,
+                value,
+                equal_offset,
+              ),
+            )
+            SelfHostExpr::NameExpr(_, _) => items.push(
+              SelfHostBlockItem::AssignmentItem(
+                expression,
+                value,
+                equal_offset,
+              ),
+            )
+            SelfHostExpr::FieldExpr(_, _, _) => items.push(
+              SelfHostBlockItem::AssignmentItem(
+                expression,
+                value,
+                equal_offset,
+              ),
+            )
+            _ => {
+              self_host_parser_fail(
+                parser,
+                SelfHostParseError::ExpectedDelimiter(
+                  "assignment target",
+                  Option::Some(token),
+                  equal_offset,
+                ),
+              )
+              break Option::None
+            }
+          }
+        } else {
+          items.push(
+            SelfHostBlockItem::ExpressionItem(expression, token.offset),
+          )
+        }
+      }
+      if !self_host_parser_finish_line(parser) {
+        break Option::None
+      } else {
+      }
+      self_host_parser_skip_newlines(parser)
+      continue 0u32
+    }
+  }
+  result
+}
+
+fn self_host_parse_if_expression(
+  parser: SelfHostParser,
+  offset: U32,
+) -> Option<SelfHostExpr> {
+  let condition = match self_host_parse_expression_context(parser, 0u32, true) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "if body",
+        self_host_parser_peek(parser),
+        offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  let body = match self_host_parse_block_after_left(parser, body_offset) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let alternative = if self_host_parser_consume_keyword(
+    parser,
+    SelfHostKeyword::Else,
+  ) {
+    if self_host_parser_consume_keyword(parser, SelfHostKeyword::If) {
+      self_host_parse_if_expression(parser, self_host_parser_offset(parser))
+    } else {
+      let alternative_offset = self_host_parser_offset(parser)
+      if !self_host_parser_consume_symbol(
+        parser,
+        SelfHostSymbol::LeftBrace,
+      ) {
+        self_host_parser_fail(
+          parser,
+          SelfHostParseError::ExpectedDelimiter(
+            "else body",
+            self_host_parser_peek(parser),
+            offset,
+          ),
+        )
+        self_host_no_expression()
+      } else {
+        match self_host_parse_block_after_left(parser, alternative_offset) {
+          Option::Some(value) =>
+            Option::Some(SelfHostExpr::BlockExpr(value))
+          Option::None => Option::None
+        }
+      }
+    }
+  } else {
+    Option::None
+  }
+  if parser.diagnostic is Option::Some(_) {
+    Option::None
+  } else {
+    let original_condition = condition
+    match condition {
+      SelfHostExpr::IsExpr(scrutinee, pattern, is_offset) => {
+        let fallback = match alternative {
+          Option::Some(value) => value
+          Option::None => SelfHostExpr::BlockExpr(
+            self_host_empty_block(offset),
+          )
+        }
+        let arms = self_host_empty_pattern_arms()
+        arms.push(SelfHostPatternArm::{
+          pattern: pattern
+          guard_condition: Option::None
+          body: SelfHostExpr::BlockExpr(body)
+          offset: pattern.offset()
+        })
+        arms.push(SelfHostPatternArm::{
+          pattern: SelfHostPattern::WildcardPattern(is_offset)
+          guard_condition: Option::None
+          body: fallback
+          offset: is_offset
+        })
+        Option::Some(
+          SelfHostExpr::MatchExpr(scrutinee, arms, is_offset),
+        )
+      }
+      SelfHostExpr::IsGuardExpr(
+        scrutinee,
+        pattern,
+        guard,
+        is_offset,
+      ) => {
+        let fallback = match alternative {
+          Option::Some(value) => value
+          Option::None => SelfHostExpr::BlockExpr(
+            self_host_empty_block(offset),
+          )
+        }
+        let arms = self_host_empty_pattern_arms()
+        arms.push(SelfHostPatternArm::{
+          pattern: pattern
+          guard_condition: Option::Some(guard)
+          body: SelfHostExpr::BlockExpr(body)
+          offset: pattern.offset()
+        })
+        arms.push(SelfHostPatternArm::{
+          pattern: SelfHostPattern::WildcardPattern(is_offset)
+          guard_condition: Option::None
+          body: fallback
+          offset: is_offset
+        })
+        Option::Some(
+          SelfHostExpr::MatchExpr(scrutinee, arms, is_offset),
+        )
+      }
+      _ => Option::Some(
+        SelfHostExpr::IfExpr(
+          original_condition,
+          body,
+          alternative,
+          offset,
+        ),
+      )
+    }
+  }
+}
+
+fn self_host_parse_arm_pattern(
+  parser: SelfHostParser,
+) -> Option<SelfHostPattern> {
+  let first = match self_host_parse_pattern_context(parser, false, false) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let alternatives = self_host_empty_patterns()
+  let _ = while 0u32 {
+    _ => if self_host_parser_consume_symbol(parser, SelfHostSymbol::Comma) {
+      self_host_parser_skip_newlines(parser)
+      match self_host_parse_pattern_context(parser, false, false) {
+        Option::Some(value) => {
+          alternatives.push(value)
+          continue 0u32
+        }
+        Option::None => break self_host_parser_unit()
+      }
+    } else {
+      break self_host_parser_unit()
+    }
+  }
+  if parser.diagnostic is Option::Some(_) {
+    Option::None
+  } else if alternatives.length() == 0u32 {
+    Option::Some(first)
+  } else {
+    Option::Some(
+      SelfHostPattern::AlternativePattern(
+        first,
+        alternatives,
+        first.offset(),
+      ),
+    )
+  }
+}
+
+fn self_host_parse_pattern_arms(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<Array<SelfHostPatternArm>> {
+  let arms = self_host_empty_pattern_arms()
+  if !self_host_parser_consume_newline(parser) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "pattern arm body newline",
+        self_host_parser_peek(parser),
+        open_offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => {
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+        break Option::Some(arms)
+      } else {
+      }
+      let pattern = match self_host_parse_arm_pattern(parser) {
+        Option::Some(value) => value
+        Option::None => break Option::None
+      }
+      let guard_condition = if self_host_parser_consume_keyword(
+        parser,
+        SelfHostKeyword::If,
+      ) {
+        self_host_parse_expression_context(parser, 0u32, false)
+      } else {
+        Option::None
+      }
+      if parser.diagnostic is Option::Some(_) {
+        break Option::None
+      } else if !self_host_parser_consume_symbol(
+        parser,
+        SelfHostSymbol::FatArrow,
+      ) {
+        self_host_parser_fail(
+          parser,
+          SelfHostParseError::ExpectedDelimiter(
+            "pattern arm =>",
+            self_host_parser_peek(parser),
+            open_offset,
+          ),
+        )
+        break Option::None
+      } else {
+      }
+      self_host_parser_skip_newlines(parser)
+      let body_offset = self_host_parser_offset(parser)
+      let body = if self_host_parser_consume_symbol(
+        parser,
+        SelfHostSymbol::LeftBrace,
+      ) {
+        match self_host_parse_block_after_left(parser, body_offset) {
+          Option::Some(value) => SelfHostExpr::BlockExpr(value)
+          Option::None => break Option::None
+        }
+      } else {
+        match self_host_parse_expression_context(parser, 0u32, false) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+      }
+      arms.push(SelfHostPatternArm::{
+        pattern: pattern
+        guard_condition: guard_condition
+        body: body
+        offset: pattern.offset()
+      })
+      if !self_host_parser_finish_line(parser) {
+        break Option::None
+      } else {
+      }
+      self_host_parser_skip_newlines(parser)
+      continue 0u32
+    }
+  }
+  result
+}
+
+fn self_host_parse_match_expression(
+  parser: SelfHostParser,
+  offset: U32,
+) -> Option<SelfHostExpr> {
+  let scrutinee = match self_host_parse_expression_context(parser, 0u32, true) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "match body",
+        self_host_parser_peek(parser),
+        offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  match self_host_parse_pattern_arms(parser, body_offset) {
+    Option::Some(arms) => Option::Some(
+      SelfHostExpr::MatchExpr(scrutinee, arms, offset),
+    )
+    Option::None => Option::None
+  }
+}
+
+fn self_host_parse_while_expression(
+  parser: SelfHostParser,
+  offset: U32,
+) -> Option<SelfHostExpr> {
+  let scrutinee = match self_host_parse_expression_context(parser, 0u32, true) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "while body",
+        self_host_parser_peek(parser),
+        offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  match self_host_parse_pattern_arms(parser, body_offset) {
+    Option::Some(arms) => Option::Some(
+      SelfHostExpr::WhileExpr(scrutinee, arms, offset),
+    )
+    Option::None => Option::None
+  }
+}
+
+fn self_host_for_next_expression(name: String, offset: U32) -> SelfHostExpr {
+  SelfHostExpr::CallExpr(
+    SelfHostExpr::FieldExpr(
+      SelfHostExpr::NameExpr(name, offset),
+      "next",
+      offset,
+    ),
+    self_host_empty_expressions(),
+    offset,
+  )
+}
+
+fn self_host_parse_for_expression(
+  parser: SelfHostParser,
+  offset: U32,
+) -> Option<SelfHostExpr> {
+  let pattern = match self_host_parse_pattern_context(parser, false, false) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_keyword(
+    parser,
+    SelfHostKeyword::In,
+    SelfHostDeclarationExpectation::ForOrLeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let iterable = match self_host_parse_expression_context(parser, 0u32, true) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "for body",
+        self_host_parser_peek(parser),
+        offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  let body = match self_host_parse_block_after_left(parser, body_offset) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let iterator_name = "$for_iter"
+  let iterator_value = SelfHostExpr::CallExpr(
+    SelfHostExpr::FieldExpr(iterable, "iter", offset),
+    self_host_empty_expressions(),
+    offset,
+  )
+  body.items.push(
+    SelfHostBlockItem::ExpressionItem(
+      SelfHostExpr::ContinueExpr(
+        self_host_for_next_expression(iterator_name, offset),
+        offset,
+      ),
+      offset,
+    ),
+  )
+  let some_target = SelfHostPattern::QualifiedPattern(
+    SelfHostPattern::BindingPattern("Option", offset),
+    "Some",
+    offset,
+  )
+  let some_pattern = SelfHostPattern::TuplePattern(
+    some_target,
+    [pattern],
+    offset,
+  )
+  let none_pattern = SelfHostPattern::QualifiedPattern(
+    SelfHostPattern::BindingPattern("Option", offset),
+    "None",
+    offset,
+  )
+  let while_arms = self_host_empty_pattern_arms()
+  while_arms.push(SelfHostPatternArm::{
+    pattern: some_pattern
+    guard_condition: Option::None
+    body: SelfHostExpr::BlockExpr(body)
+    offset: offset
+  })
+  while_arms.push(SelfHostPatternArm::{
+    pattern: none_pattern
+    guard_condition: Option::None
+    body: SelfHostExpr::BreakExpr(
+      SelfHostExpr::BlockExpr(self_host_empty_block(offset)),
+      offset,
+    )
+    offset: offset
+  })
+  let outer_items = self_host_empty_block_items()
+  outer_items.push(
+    SelfHostBlockItem::LetItem(
+      false,
+      iterator_name,
+      offset,
+      iterator_value,
+      offset,
+    ),
+  )
+  outer_items.push(
+    SelfHostBlockItem::ExpressionItem(
+      SelfHostExpr::WhileExpr(
+        self_host_for_next_expression(iterator_name, offset),
+        while_arms,
+        offset,
+      ),
+      offset,
+    ),
+  )
+  Option::Some(
+    SelfHostExpr::BlockExpr(SelfHostBlock::{
+      items: outer_items
+      offset: offset
+    }),
+  )
+}

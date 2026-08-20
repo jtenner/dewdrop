@@ -1,0 +1,40 @@
+open dew.std.testing
+
+fn self_host_declaration_count(module_: SelfHostParsedModule) -> U32 {
+  let mut count = 0u32
+  for event in module_.events {
+    if event is SelfHostParseEvent::Declaration(_) {
+      count = count + 1u32
+    } else {
+    }
+  }
+  count
+}
+
+fn self_host_diagnostic_count(module_: SelfHostParsedModule) -> U32 {
+  let mut count = 0u32
+  for event in module_.events {
+    if event is SelfHostParseEvent::Diagnostic(_) {
+      count = count + 1u32
+    } else {
+    }
+  }
+  count
+}
+
+test "self-host parser parses declaration families" {
+  let module_ = self_host_parse_module(b"open dew.std.array\nimport app.model as @model\npub type Id = U32\npub struct Pair<t> {\n  left: t\n  right: t\n} derive(Eq)\npub enum Maybe<t> {\n  None\n  Some(t)\n  Named {\n    value: t\n  }\n} derive(Eq)\npub trait Read<t> {\n  fn read(self) -> t\n}\npub fn identity<t>(value: t) -> t {\n  value\n}\nlet answer = 42\nbuiltin trap() -> Unit = \"dew_trap\"\ntest \"works\" {\n  assert(true, \"ok\")\n}\nimpl<t> Read<t> for Pair<t> {\n  fn read(self) -> t {\n    self.left\n  }\n}\nforeign type Handle\nforeign impl \"host\" as host {\n  fn call(value: I32) -> I32 = \"call\"\n}\n")
+  assert(self_host_diagnostic_count(module_) == 0u32, "declaration diagnostics")
+  assert(self_host_declaration_count(module_) == 13u32, "wrong declaration count")
+}
+
+test "self-host parser recovers between declarations" {
+  let module_ = self_host_parse_module(b"pub struct Broken { nope\npub fn good() -> I32 {\n  1\n}\n")
+  assert(self_host_diagnostic_count(module_) == 1u32, "missing diagnostic")
+  assert(self_host_declaration_count(module_) == 1u32, "did not recover")
+}
+
+test "self-host parser rejects imports after declarations" {
+  let module_ = self_host_parse_module(b"let value = 1\nopen dew.std.array\n")
+  assert(self_host_diagnostic_count(module_) == 1u32, "late import accepted")
+}

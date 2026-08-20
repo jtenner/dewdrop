@@ -179,7 +179,9 @@ foreign linking.
 
 ## Recommended order
 
-1. Port tokenizer and parser against the now-frozen in-memory source boundary.
-2. Port semantic and backend phases in dependency order.
+The complete tokenizer and parser port finished on August 20, 2026. It parses the standard library, self-host sources, and successful module fixtures through the frozen in-memory source boundary.
+
+1. Port semantic declaration collection, imports, and name-resolution inputs.
+2. Port inference, flow, layouts, specialization, optimization, and backend phases in dependency order.
 3. Add the cache-disabled A→B→C harness.
-4. Restore BLAKE3-based persistent caches after byte identity is stable.
+4. Restore BLAKE3-based persistent caches, including parser-event persistence, after byte identity is stable.

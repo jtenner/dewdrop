@@ -1,0 +1,834 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.result
+open dew.std.string
+
+fn self_host_empty_expressions() -> Array<SelfHostExpr> {
+  Array::new()
+}
+
+fn self_host_empty_object_fields() -> Array<SelfHostObjectField> {
+  Array::new()
+}
+
+fn self_host_empty_parameters() -> Array<SelfHostFnParameter> {
+  Array::new()
+}
+
+fn self_host_binary_operator(
+  symbol: SelfHostSymbol,
+) -> Option<SelfHostBinaryOperator> {
+  match symbol {
+    SelfHostSymbol::LogicalOr =>
+      Option::Some(SelfHostBinaryOperator::LogicalOr)
+    SelfHostSymbol::LogicalAnd =>
+      Option::Some(SelfHostBinaryOperator::LogicalAnd)
+    SelfHostSymbol::Pipe => Option::Some(SelfHostBinaryOperator::BitOr)
+    SelfHostSymbol::Caret => Option::Some(SelfHostBinaryOperator::BitXor)
+    SelfHostSymbol::Ampersand => Option::Some(SelfHostBinaryOperator::BitAnd)
+    SelfHostSymbol::EqualEqual => Option::Some(SelfHostBinaryOperator::Equal)
+    SelfHostSymbol::BangEqual => Option::Some(SelfHostBinaryOperator::NotEqual)
+    SelfHostSymbol::Less => Option::Some(SelfHostBinaryOperator::Less)
+    SelfHostSymbol::LessEqual => Option::Some(SelfHostBinaryOperator::LessEqual)
+    SelfHostSymbol::Greater => Option::Some(SelfHostBinaryOperator::Greater)
+    SelfHostSymbol::GreaterEqual =>
+      Option::Some(SelfHostBinaryOperator::GreaterEqual)
+    SelfHostSymbol::ShiftLeft => Option::Some(SelfHostBinaryOperator::ShiftLeft)
+    SelfHostSymbol::ShiftRight =>
+      Option::Some(SelfHostBinaryOperator::ShiftRight)
+    SelfHostSymbol::Plus => Option::Some(SelfHostBinaryOperator::Add)
+    SelfHostSymbol::Minus => Option::Some(SelfHostBinaryOperator::Subtract)
+    SelfHostSymbol::Star => Option::Some(SelfHostBinaryOperator::Multiply)
+    SelfHostSymbol::Slash => Option::Some(SelfHostBinaryOperator::Divide)
+    SelfHostSymbol::Percent => Option::Some(SelfHostBinaryOperator::Remainder)
+    SelfHostSymbol::Exponent =>
+      Option::Some(SelfHostBinaryOperator::Exponentiate)
+    _ => Option::None
+  }
+}
+
+fn self_host_binary_precedence(operator: SelfHostBinaryOperator) -> U32 {
+  match operator {
+    SelfHostBinaryOperator::LogicalOr => 3u32
+    SelfHostBinaryOperator::LogicalAnd => 4u32
+    SelfHostBinaryOperator::BitOr => 5u32
+    SelfHostBinaryOperator::BitXor => 6u32
+    SelfHostBinaryOperator::BitAnd => 7u32
+    SelfHostBinaryOperator::Equal => 8u32
+    SelfHostBinaryOperator::NotEqual => 8u32
+    SelfHostBinaryOperator::Less => 9u32
+    SelfHostBinaryOperator::LessEqual => 9u32
+    SelfHostBinaryOperator::Greater => 9u32
+    SelfHostBinaryOperator::GreaterEqual => 9u32
+    SelfHostBinaryOperator::ShiftLeft => 10u32
+    SelfHostBinaryOperator::ShiftRight => 10u32
+    SelfHostBinaryOperator::Add => 11u32
+    SelfHostBinaryOperator::Subtract => 11u32
+    SelfHostBinaryOperator::Multiply => 12u32
+    SelfHostBinaryOperator::Divide => 12u32
+    SelfHostBinaryOperator::Remainder => 12u32
+    SelfHostBinaryOperator::Exponentiate => 13u32
+  }
+}
+
+fn self_host_is_comparison(operator: SelfHostBinaryOperator) -> Bool {
+  match operator {
+    SelfHostBinaryOperator::Equal => true
+    SelfHostBinaryOperator::NotEqual => true
+    SelfHostBinaryOperator::Less => true
+    SelfHostBinaryOperator::LessEqual => true
+    SelfHostBinaryOperator::Greater => true
+    SelfHostBinaryOperator::GreaterEqual => true
+    _ => false
+  }
+}
+
+fn self_host_expression_is_comparison(expression: SelfHostExpr) -> Bool {
+  match expression {
+    SelfHostExpr::BinaryExpr(operator, _, _, _) =>
+      self_host_is_comparison(operator)
+    _ => false
+  }
+}
+
+fn self_host_parser_fail_expression(parser: SelfHostParser) -> Unit {
+  self_host_parser_fail(
+    parser,
+    SelfHostParseError::ExpectedExpression(
+      self_host_parser_peek(parser),
+      self_host_parser_offset(parser),
+    ),
+  )
+}
+
+fn self_host_expression_stops(
+  token: SelfHostToken,
+  stop_left_brace: Bool,
+) -> Bool {
+  match token.kind {
+    SelfHostTokenKind::Newline => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::Comma) => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen) => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::RightBracket) => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace) => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::FatArrow) => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::Equal) => true
+    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => stop_left_brace
+    _ => false
+  }
+}
+
+fn self_host_parse_call_arguments(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<Array<SelfHostExpr>> {
+  let arguments = self_host_empty_expressions()
+  self_host_parser_skip_newlines(parser)
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+    return Option::Some(arguments)
+  } else {
+  }
+  let result = while 0u32 {
+    _ => match self_host_parse_expression_context(parser, 0u32, false) {
+      Option::Some(argument) => {
+        arguments.push(argument)
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+          break Option::Some(arguments)
+        } else if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::Comma,
+        ) {
+          self_host_parser_skip_newlines(parser)
+          if self_host_parser_consume_symbol(
+            parser,
+            SelfHostSymbol::RightParen,
+          ) {
+            break Option::Some(arguments)
+          } else {
+            continue 0u32
+          }
+        } else {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::ExpectedDelimiter(
+              "call separator or )",
+              self_host_parser_peek(parser),
+              open_offset,
+            ),
+          )
+          break Option::None
+        }
+      }
+      Option::None => break Option::None
+    }
+  }
+  result
+}
+
+fn self_host_parse_array_expression(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<SelfHostExpr> {
+  let values = self_host_empty_expressions()
+  self_host_parser_skip_newlines(parser)
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBracket) {
+    return Option::Some(SelfHostExpr::ArrayExpr(values, open_offset))
+  } else {
+  }
+  let result = while 0u32 {
+    _ => match self_host_parse_expression_context(parser, 0u32, false) {
+      Option::Some(value) => {
+        values.push(value)
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightBracket,
+        ) {
+          break Option::Some(SelfHostExpr::ArrayExpr(values, open_offset))
+        } else if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::Comma,
+        ) {
+          self_host_parser_skip_newlines(parser)
+          if self_host_parser_consume_symbol(
+            parser,
+            SelfHostSymbol::RightBracket,
+          ) {
+            break Option::Some(SelfHostExpr::ArrayExpr(values, open_offset))
+          } else {
+            continue 0u32
+          }
+        } else {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::ExpectedDelimiter(
+              "array separator or ]",
+              self_host_parser_peek(parser),
+              open_offset,
+            ),
+          )
+          break Option::None
+        }
+      }
+      Option::None => break Option::None
+    }
+  }
+  result
+}
+
+fn self_host_parse_group_expression(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<SelfHostExpr> {
+  self_host_parser_skip_newlines(parser)
+  let first = match self_host_parse_expression_context(parser, 0u32, false) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  self_host_parser_skip_newlines(parser)
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+    return Option::Some(first)
+  } else if !self_host_parser_consume_symbol(
+    parser,
+    SelfHostSymbol::Comma,
+  ) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "product separator or )",
+        self_host_parser_peek(parser),
+        open_offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  let values = self_host_empty_expressions()
+  values.push(first)
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => match self_host_parse_expression_context(parser, 0u32, false) {
+      Option::Some(value) => {
+        values.push(value)
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+          if values.length() < 2u32 || values.length() > 32u32 {
+            self_host_parser_fail(
+              parser,
+              SelfHostParseError::InvalidProductArity(
+                values.length(),
+                open_offset,
+              ),
+            )
+            break Option::None
+          } else {
+            break Option::Some(
+              SelfHostExpr::ProductExpr(values, open_offset),
+            )
+          }
+        } else if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::Comma,
+        ) {
+          self_host_parser_skip_newlines(parser)
+          if self_host_parser_consume_symbol(
+            parser,
+            SelfHostSymbol::RightParen,
+          ) {
+            if values.length() < 2u32 || values.length() > 32u32 {
+              self_host_parser_fail(
+                parser,
+                SelfHostParseError::InvalidProductArity(
+                  values.length(),
+                  open_offset,
+                ),
+              )
+              break Option::None
+            } else {
+              break Option::Some(
+                SelfHostExpr::ProductExpr(values, open_offset),
+              )
+            }
+          } else {
+            continue 0u32
+          }
+        } else {
+          self_host_parser_fail(
+            parser,
+            SelfHostParseError::ExpectedDelimiter(
+              "product separator or )",
+              self_host_parser_peek(parser),
+              open_offset,
+            ),
+          )
+          break Option::None
+        }
+      }
+      Option::None => break Option::None
+    }
+  }
+  result
+}
+
+fn self_host_parse_object_fields(
+  parser: SelfHostParser,
+  open_offset: U32,
+) -> Option<Array<SelfHostObjectField>> {
+  let fields = self_host_empty_object_fields()
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    return Option::Some(fields)
+  } else {
+  }
+  if !self_host_parser_consume_newline(parser) {
+    self_host_parser_fail(
+      parser,
+      SelfHostParseError::ExpectedDelimiter(
+        "object body newline",
+        self_host_parser_peek(parser),
+        open_offset,
+      ),
+    )
+    return Option::None
+  } else {
+  }
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => {
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+        break Option::Some(fields)
+      } else {
+      }
+      let pair = match self_host_parser_identifier(
+        parser,
+        SelfHostDeclarationExpectation::BindingName,
+      ) {
+        Option::Some(value) => value
+        Option::None => break Option::None
+      }
+      let (name, offset) = pair
+      if !self_host_parser_expect_symbol(
+        parser,
+        SelfHostSymbol::Colon,
+        SelfHostDeclarationExpectation::Colon,
+      ) {
+        break Option::None
+      } else {
+      }
+      match self_host_parse_expression_context(parser, 0u32, false) {
+        Option::Some(value) => fields.push(SelfHostObjectField::{
+          name: name
+          value: value
+          offset: offset
+        })
+        Option::None => break Option::None
+      }
+      if !self_host_parser_finish_line(parser) {
+        break Option::None
+      } else {
+      }
+      self_host_parser_skip_newlines(parser)
+      continue 0u32
+    }
+  }
+  result
+}
+
+fn self_host_parse_explicit_type_arguments(
+  parser: SelfHostParser,
+) -> Option<Array<SelfHostTypeExpr>> {
+  let arguments = self_host_empty_types()
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => match self_host_parse_type(parser) {
+      Option::Some(value) => {
+        arguments.push(value)
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_type_closer(parser) {
+          break Option::Some(arguments)
+        } else if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::Comma,
+        ) {
+          self_host_parser_skip_newlines(parser)
+          if self_host_parser_consume_type_closer(parser) {
+            break Option::Some(arguments)
+          } else {
+            continue 0u32
+          }
+        } else {
+          self_host_parser_fail_expected(
+            parser,
+            SelfHostDeclarationExpectation::TypeArgumentSeparatorOrClose,
+          )
+          break Option::None
+        }
+      }
+      Option::None => break Option::None
+    }
+  }
+  result
+}
+
+fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
+  let token = match self_host_parser_peek(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      self_host_parser_fail_expression(parser)
+      return Option::None
+    }
+  }
+  match token.kind {
+    SelfHostTokenKind::Newline => {
+      self_host_parser_fail_expression(parser)
+      Option::None
+    }
+    SelfHostTokenKind::Error(error) => {
+      parser.index = parser.index + 1u32
+      self_host_parser_fail(
+        parser,
+        SelfHostParseError::Lexical(error, token.offset),
+      )
+      Option::None
+    }
+    SelfHostTokenKind::Symbol(SelfHostSymbol::Plus) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_primary(parser) {
+        Option::Some(value) => Option::Some(
+          SelfHostExpr::PrefixExpr(
+            SelfHostPrefixOperator::Positive,
+            value,
+            token.offset,
+          ),
+        )
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Symbol(SelfHostSymbol::Minus) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_primary(parser) {
+        Option::Some(value) => Option::Some(
+          SelfHostExpr::PrefixExpr(
+            SelfHostPrefixOperator::Negative,
+            value,
+            token.offset,
+          ),
+        )
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Symbol(SelfHostSymbol::Bang) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_primary(parser) {
+        Option::Some(value) => Option::Some(
+          SelfHostExpr::PrefixExpr(
+            SelfHostPrefixOperator::LogicalNot,
+            value,
+            token.offset,
+          ),
+        )
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_group_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_array_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_object_fields(parser, token.offset) {
+        Option::Some(fields) => Option::Some(
+          SelfHostExpr::ObjectExpr(fields, token.offset),
+        )
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Fn) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_lambda_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::If) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_if_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Match) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_match_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::While) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_while_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::For) => {
+      parser.index = parser.index + 1u32
+      self_host_parse_for_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Break) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_expression_context(parser, 0u32, false) {
+        Option::Some(value) => Option::Some(
+          SelfHostExpr::BreakExpr(value, token.offset),
+        )
+        Option::None => Option::None
+      }
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Continue) => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_expression_context(parser, 0u32, false) {
+        Option::Some(value) => Option::Some(
+          SelfHostExpr::ContinueExpr(value, token.offset),
+        )
+        Option::None => Option::None
+      }
+    }
+    _ => match self_host_token_expression(token) {
+      Option::Some(value) => {
+        parser.index = parser.index + 1u32
+        Option::Some(value)
+      }
+      Option::None => {
+        self_host_parser_fail_expression(parser)
+        Option::None
+      }
+    }
+  }
+}
+
+fn self_host_parse_expression_context(
+  parser: SelfHostParser,
+  minimum_precedence: U32,
+  stop_left_brace: Bool,
+) -> Option<SelfHostExpr> {
+  self_host_parser_skip_newlines(parser)
+  let mut left = match self_host_parse_primary(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let result = while 0u32 {
+    _ => match self_host_parser_peek(parser) {
+      Option::None => break Option::Some(left)
+      Option::Some(token) => if self_host_expression_stops(
+        token,
+        stop_left_brace,
+      ) {
+        break Option::Some(left)
+      } else {
+        match token.kind {
+          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+            parser.index = parser.index + 1u32
+            match self_host_parse_call_arguments(parser, token.offset) {
+              Option::Some(arguments) => {
+                left = SelfHostExpr::CallExpr(left, arguments, token.offset)
+                continue 0u32
+              }
+              Option::None => break Option::None
+            }
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket) => {
+            parser.index = parser.index + 1u32
+            let index = match self_host_parse_expression_context(
+              parser,
+              0u32,
+              false,
+            ) {
+              Option::Some(value) => value
+              Option::None => break Option::None
+            }
+            if !self_host_parser_consume_symbol(
+              parser,
+              SelfHostSymbol::RightBracket,
+            ) {
+              self_host_parser_fail(
+                parser,
+                SelfHostParseError::ExpectedDelimiter(
+                  "]",
+                  self_host_parser_peek(parser),
+                  token.offset,
+                ),
+              )
+              break Option::None
+            } else {
+            }
+            left = SelfHostExpr::IndexExpr(left, index, token.offset)
+            continue 0u32
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::Dot) => {
+            parser.index = parser.index + 1u32
+            self_host_parser_skip_newlines(parser)
+            match self_host_parser_identifier(
+              parser,
+              SelfHostDeclarationExpectation::BindingName,
+            ) {
+              Option::Some(pair) => {
+                let (name, _) = pair
+                left = match left {
+                  SelfHostExpr::ImportAliasExpr(_, _) =>
+                    SelfHostExpr::QualifiedExpr(left, name, token.offset)
+                  _ => SelfHostExpr::FieldExpr(left, name, token.offset)
+                }
+                continue 0u32
+              }
+              Option::None => break Option::None
+            }
+          }
+          SelfHostTokenKind::Symbol(SelfHostSymbol::DoubleColon) => {
+            parser.index = parser.index + 1u32
+            self_host_parser_skip_newlines(parser)
+            if self_host_parser_consume_symbol(
+              parser,
+              SelfHostSymbol::LeftBrace,
+            ) {
+              match self_host_parse_object_fields(parser, token.offset) {
+                Option::Some(fields) => {
+                  left = SelfHostExpr::ConstructExpr(
+                    left,
+                    fields,
+                    token.offset,
+                  )
+                  continue 0u32
+                }
+                Option::None => break Option::None
+              }
+            } else if self_host_parser_consume_symbol(
+              parser,
+              SelfHostSymbol::Less,
+            ) {
+              let type_arguments = match self_host_parse_explicit_type_arguments(
+                parser,
+              ) {
+                Option::Some(value) => value
+                Option::None => break Option::None
+              }
+              self_host_parser_skip_newlines(parser)
+              let call_offset = self_host_parser_offset(parser)
+              if !self_host_parser_consume_symbol(
+                parser,
+                SelfHostSymbol::LeftParen,
+              ) {
+                self_host_parser_fail(
+                  parser,
+                  SelfHostParseError::ExpectedDelimiter(
+                    "explicit type call (",
+                    self_host_parser_peek(parser),
+                    call_offset,
+                  ),
+                )
+                break Option::None
+              } else {
+              }
+              match self_host_parse_call_arguments(parser, call_offset) {
+                Option::Some(arguments) => {
+                  left = SelfHostExpr::ExplicitTypeCallExpr(
+                    left,
+                    type_arguments,
+                    arguments,
+                    call_offset,
+                  )
+                  continue 0u32
+                }
+                Option::None => break Option::None
+              }
+            } else {
+              match self_host_parser_identifier(
+                parser,
+                SelfHostDeclarationExpectation::BindingName,
+              ) {
+                Option::Some(pair) => {
+                  let (name, _) = pair
+                  left = SelfHostExpr::QualifiedExpr(
+                    left,
+                    name,
+                    token.offset,
+                  )
+                  continue 0u32
+                }
+                Option::None => break Option::None
+              }
+            }
+          }
+          SelfHostTokenKind::Keyword(SelfHostKeyword::Is) => {
+            if 8u32 < minimum_precedence {
+              break Option::Some(left)
+            } else {
+            }
+            parser.index = parser.index + 1u32
+            match self_host_parse_pattern_context(
+              parser,
+              false,
+              stop_left_brace,
+            ) {
+              Option::Some(pattern) => {
+                left = SelfHostExpr::IsExpr(left, pattern, token.offset)
+                continue 0u32
+              }
+              Option::None => break Option::None
+            }
+          }
+          SelfHostTokenKind::Symbol(symbol) => match self_host_binary_operator(
+            symbol,
+          ) {
+            Option::Some(operator) => {
+              let precedence = self_host_binary_precedence(operator)
+              if precedence < minimum_precedence {
+                break Option::Some(left)
+              } else if self_host_is_comparison(operator) &&
+                self_host_expression_is_comparison(left) {
+                self_host_parser_fail(
+                  parser,
+                  SelfHostParseError::ChainedComparison(token.offset),
+                )
+                break Option::None
+              } else {
+              }
+              parser.index = parser.index + 1u32
+              let next_precedence = if operator is SelfHostBinaryOperator::Exponentiate {
+                precedence
+              } else {
+                precedence + 1u32
+              }
+              match self_host_parse_expression_context(
+                parser,
+                next_precedence,
+                stop_left_brace,
+              ) {
+                Option::Some(right) => {
+                  if operator is SelfHostBinaryOperator::LogicalAnd &&
+                    stop_left_brace {
+                    let original_left = left
+                    left = match left {
+                      SelfHostExpr::IsExpr(
+                        scrutinee,
+                        pattern,
+                        is_offset,
+                      ) => SelfHostExpr::IsGuardExpr(
+                        scrutinee,
+                        pattern,
+                        right,
+                        is_offset,
+                      )
+                      SelfHostExpr::IsGuardExpr(
+                        scrutinee,
+                        pattern,
+                        existing,
+                        is_offset,
+                      ) => SelfHostExpr::IsGuardExpr(
+                        scrutinee,
+                        pattern,
+                        SelfHostExpr::BinaryExpr(
+                          SelfHostBinaryOperator::LogicalAnd,
+                          existing,
+                          right,
+                          token.offset,
+                        ),
+                        is_offset,
+                      )
+                      _ => SelfHostExpr::BinaryExpr(
+                        operator,
+                        original_left,
+                        right,
+                        token.offset,
+                      )
+                    }
+                  } else {
+                    left = SelfHostExpr::BinaryExpr(
+                      operator,
+                      left,
+                      right,
+                      token.offset,
+                    )
+                  }
+                  continue 0u32
+                }
+                Option::None => break Option::None
+              }
+            }
+            Option::None => break Option::Some(left)
+          }
+          _ => break Option::Some(left)
+        }
+      }
+    }
+  }
+  result
+}
+
+pub fn self_host_parse_expression_source(
+  source: Bytes,
+) -> Result<SelfHostExpr, SelfHostParseError> {
+  let parser = self_host_parser_new(source)
+  match self_host_parse_expression_context(parser, 0u32, false) {
+    Option::Some(expression) => {
+      self_host_parser_skip_newlines(parser)
+      if parser.index != parser.tokens.length() {
+        self_host_parser_fail(
+          parser,
+          SelfHostParseError::ExpectedDelimiter(
+            "end of expression",
+            self_host_parser_peek(parser),
+            self_host_parser_offset(parser),
+          ),
+        )
+      } else {
+      }
+      match parser.diagnostic {
+        Option::Some(diagnostic) => Result::Err(diagnostic.error)
+        Option::None => Result::Ok(expression)
+      }
+    }
+    Option::None => match parser.diagnostic {
+      Option::Some(diagnostic) => Result::Err(diagnostic.error)
+      Option::None => Result::Err(
+        SelfHostParseError::ExpectedExpression(Option::None, 0u32),
+      )
+    }
+  }
+}

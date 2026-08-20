@@ -1,0 +1,38 @@
+open dew.std.testing
+
+fn self_host_defer_has_diagnostic(module_: SelfHostParsedModule) -> Bool {
+  for event in module_.events {
+    if event is SelfHostParseEvent::Diagnostic(_) {
+      return true
+    } else {
+    }
+  }
+  false
+}
+
+test "self-host parser accepts using cleanup" {
+  assert(
+    !self_host_defer_has_diagnostic(
+      self_host_parse_module(b"fn run() -> Unit {\n  using resource = acquire()\n  use(resource)\n}\n"),
+    ),
+    "using parse failed",
+  )
+}
+
+test "self-host parser accepts deferred LIFO cleanup" {
+  assert(
+    !self_host_defer_has_diagnostic(
+      self_host_parse_module(b"fn run() -> I32 {\n  defer first()\n  defer second()\n  tail()\n}\n"),
+    ),
+    "defer parse failed",
+  )
+}
+
+test "self-host parser accepts deferred return cleanup" {
+  assert(
+    !self_host_defer_has_diagnostic(
+      self_host_parse_module(b"fn run() -> I32 {\n  defer cleanup()\n  return value()\n}\n"),
+    ),
+    "deferred return failed",
+  )
+}

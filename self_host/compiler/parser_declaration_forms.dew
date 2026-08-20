@@ -1,0 +1,784 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+fn self_host_empty_derives() -> Array<SelfHostDeriveRequest> {
+  Array::new()
+}
+
+fn self_host_empty_struct_fields() -> Array<SelfHostStructField> {
+  Array::new()
+}
+
+fn self_host_empty_enum_variants() -> Array<SelfHostEnumVariant> {
+  Array::new()
+}
+
+fn self_host_empty_functions() -> Array<SelfHostFunctionDeclaration> {
+  Array::new()
+}
+
+fn self_host_empty_trait_methods() -> Array<SelfHostTraitMethod> {
+  Array::new()
+}
+
+fn self_host_parse_optional_derives(
+  parser: SelfHostParser,
+) -> Option<Array<SelfHostDeriveRequest>> {
+  let requests = self_host_empty_derives()
+  match self_host_parser_peek(parser) {
+    Option::Some(token) => match token.kind {
+      SelfHostTokenKind::Identifier("derive") => {
+        parser.index = parser.index + 1u32
+      }
+      _ => {
+        return Option::Some(requests)
+      }
+    }
+    Option::None => {
+      return Option::Some(requests)
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftParen,
+    SelfHostDeclarationExpectation::LeftParen,
+  ) {
+    return Option::None
+  } else {
+  }
+  self_host_parser_skip_newlines(parser)
+  let result = while 0u32 {
+    _ => {
+      let pair = match self_host_parser_identifier(
+        parser,
+        SelfHostDeclarationExpectation::DeriveName,
+      ) {
+        Option::Some(value) => value
+        Option::None => break Option::None
+      }
+      let (name, offset) = pair
+      requests.push(SelfHostDeriveRequest::{
+        name: name
+        offset: offset
+      })
+      self_host_parser_skip_newlines(parser)
+      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+        break Option::Some(requests)
+      } else if self_host_parser_consume_symbol(
+        parser,
+        SelfHostSymbol::Comma,
+      ) {
+        self_host_parser_skip_newlines(parser)
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightParen,
+        ) {
+          break Option::Some(requests)
+        } else {
+          continue 0u32
+        }
+      } else {
+        self_host_parser_fail_expected(
+          parser,
+          SelfHostDeclarationExpectation::DeriveSeparatorOrClose,
+        )
+        break Option::None
+      }
+    }
+  }
+  result
+}
+
+fn self_host_parse_function_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostFunctionDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::FunctionName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftParen,
+    SelfHostDeclarationExpectation::LeftParen,
+  ) {
+    return Option::None
+  } else {
+  }
+  let parsed_parameters = match self_host_parse_function_parameters(
+    parser,
+    true,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (receiver, parameters) = parsed_parameters
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Arrow,
+    SelfHostDeclarationExpectation::Arrow,
+  ) {
+    return Option::None
+  } else {
+  }
+  let return_type = match self_host_parse_type(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let body = match self_host_parse_block_after_left(parser, body_offset) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostFunctionDeclaration::{
+      visibility: visibility
+      name: name
+      name_offset: name_offset
+      type_parameters: type_parameters
+      receiver: receiver
+      parameters: parameters
+      return_type: return_type
+      body: body
+      offset: declaration_offset
+    })
+  }
+}
+
+fn self_host_parse_test_after_keyword(
+  parser: SelfHostParser,
+  declaration_offset: U32,
+) -> Option<SelfHostTestDeclaration> {
+  let name_token = match self_host_parser_peek(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::TestName,
+      )
+      return Option::None
+    }
+  }
+  let name = match name_token.kind {
+    SelfHostTokenKind::StringLiteral(value) => {
+      parser.index = parser.index + 1u32
+      value
+    }
+    _ => {
+      self_host_parser_fail_expected(
+        parser,
+        SelfHostDeclarationExpectation::TestName,
+      )
+      return Option::None
+    }
+  }
+  let expected_trap = match self_host_parser_peek(parser) {
+    Option::Some(token) => match token.kind {
+      SelfHostTokenKind::Identifier("expect_trap") => {
+        parser.index = parser.index + 1u32
+        match self_host_parser_peek(parser) {
+          Option::Some(value_token) => match value_token.kind {
+            SelfHostTokenKind::StringLiteral(value) => {
+              parser.index = parser.index + 1u32
+              Option::Some(value)
+            }
+            _ => {
+              self_host_parser_fail_expected(
+                parser,
+                SelfHostDeclarationExpectation::TestExpectedTrap,
+              )
+              return Option::None
+            }
+          }
+          Option::None => {
+            self_host_parser_fail_expected(
+              parser,
+              SelfHostDeclarationExpectation::TestExpectedTrap,
+            )
+            return Option::None
+          }
+        }
+      }
+      _ => Option::None
+    }
+    Option::None => Option::None
+  }
+  let body_offset = self_host_parser_offset(parser)
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let body = match self_host_parse_block_after_left(parser, body_offset) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostTestDeclaration::{
+      name: name
+      name_offset: name_token.offset
+      expected_trap: expected_trap
+      return_type: SelfHostTypeExpr::NamedType("Unit", declaration_offset)
+      body: body
+      offset: declaration_offset
+    })
+  }
+}
+
+fn self_host_parse_impl_after_keyword(
+  parser: SelfHostParser,
+  foreign_: Bool,
+  declaration_offset: U32,
+) -> Option<SelfHostImplDeclaration> {
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let first_type = match self_host_parse_type(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let mut trait_type = self_host_no_type()
+  let target_type = if self_host_parser_consume_keyword(
+    parser,
+    SelfHostKeyword::For,
+  ) {
+    trait_type = Option::Some(first_type)
+    match self_host_parse_type(parser) {
+      Option::Some(value) => value
+      Option::None => {
+      return Option::None
+    }
+    }
+  } else if self_host_parser_at_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+  ) {
+    if foreign_ {
+      self_host_parser_fail(
+        parser,
+        SelfHostParseError::ForeignImplRequiresTrait(declaration_offset),
+      )
+      return Option::None
+    } else {
+      first_type
+    }
+  } else {
+    self_host_parser_fail_expected(
+      parser,
+      SelfHostDeclarationExpectation::ForOrLeftBrace,
+    )
+    return Option::None
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let methods = self_host_empty_functions()
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    if !self_host_parser_expect_newline(
+      parser,
+      SelfHostDeclarationExpectation::FunctionBodyNewline,
+    ) {
+      return Option::None
+    } else {
+    }
+    self_host_parser_skip_newlines(parser)
+    let parsed = while 0u32 {
+      _ => {
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightBrace,
+        ) {
+          break true
+        } else {
+        }
+        let method_offset = self_host_parser_offset(parser)
+        if !self_host_parser_expect_keyword(
+          parser,
+          SelfHostKeyword::Fn,
+          SelfHostDeclarationExpectation::ImplMemberKeyword,
+        ) {
+          break false
+        } else {
+        }
+        match self_host_parse_function_after_keyword(
+          parser,
+          SelfHostDeclarationVisibility::ModuleVisible,
+          method_offset,
+        ) {
+          Option::Some(value) => methods.push(value)
+          Option::None => break false
+        }
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      }
+    }
+    if !parsed {
+      return Option::None
+    } else {
+    }
+  } else {
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostImplDeclaration::{
+      foreign_: foreign_
+      type_parameters: type_parameters
+      trait_type: trait_type
+      target_type: target_type
+      methods: methods
+      offset: declaration_offset
+    })
+  }
+}
+
+fn self_host_parse_struct_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostStructDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::StructName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let fields = self_host_empty_struct_fields()
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    if !self_host_parser_expect_newline(
+      parser,
+      SelfHostDeclarationExpectation::StructBodyNewline,
+    ) {
+      return Option::None
+    } else {
+    }
+    self_host_parser_skip_newlines(parser)
+    let parsed = while 0u32 {
+      _ => {
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightBrace,
+        ) {
+          break true
+        } else {
+        }
+        let mutable_ = self_host_parser_consume_keyword(
+          parser,
+          SelfHostKeyword::Mut,
+        )
+        let field_pair = match self_host_parser_identifier(
+          parser,
+          SelfHostDeclarationExpectation::StructFieldName,
+        ) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        let (field_name, field_offset) = field_pair
+        if !self_host_parser_expect_symbol(
+          parser,
+          SelfHostSymbol::Colon,
+          SelfHostDeclarationExpectation::Colon,
+        ) {
+          break false
+        } else {
+        }
+        match self_host_parse_type(parser) {
+          Option::Some(type_) => fields.push(SelfHostStructField::{
+            mutable_: mutable_
+            name: field_name
+            type_: type_
+            offset: field_offset
+          })
+          Option::None => break false
+        }
+        if !self_host_parser_finish_line(parser) {
+          break false
+        } else {
+        }
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      }
+    }
+    if !parsed {
+      return Option::None
+    } else {
+    }
+  } else {
+  }
+  let derives = match self_host_parse_optional_derives(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostStructDeclaration::{
+      visibility: visibility
+      name: name
+      name_offset: name_offset
+      type_parameters: type_parameters
+      fields: fields
+      derives: derives
+      offset: declaration_offset
+    })
+  }
+}
+
+fn self_host_parse_enum_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostEnumDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::EnumName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::LeftBrace,
+    SelfHostDeclarationExpectation::LeftBrace,
+  ) {
+    return Option::None
+  } else {
+  }
+  let variants = self_host_empty_enum_variants()
+  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+    if !self_host_parser_expect_newline(
+      parser,
+      SelfHostDeclarationExpectation::EnumBodyNewline,
+    ) {
+      return Option::None
+    } else {
+    }
+    self_host_parser_skip_newlines(parser)
+    let parsed = while 0u32 {
+      _ => {
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::RightBrace,
+        ) {
+          break true
+        } else {
+        }
+        let variant_pair = match self_host_parser_identifier(
+          parser,
+          SelfHostDeclarationExpectation::EnumVariantName,
+        ) {
+          Option::Some(value) => value
+          Option::None => break false
+        }
+        let (variant_name, variant_offset) = variant_pair
+        if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::LeftParen,
+        ) {
+          let types = self_host_empty_types()
+          self_host_parser_skip_newlines(parser)
+          if self_host_parser_consume_symbol(
+            parser,
+            SelfHostSymbol::RightParen,
+          ) {
+            self_host_parser_fail(
+              parser,
+              SelfHostParseError::EmptyTupleVariant(variant_offset),
+            )
+            break false
+          } else {
+          }
+          let tuple_ok = while 0u32 {
+            _ => match self_host_parse_type(parser) {
+              Option::Some(type_) => {
+                types.push(type_)
+                self_host_parser_skip_newlines(parser)
+                if self_host_parser_consume_symbol(
+                  parser,
+                  SelfHostSymbol::RightParen,
+                ) {
+                  break true
+                } else if self_host_parser_consume_symbol(
+                  parser,
+                  SelfHostSymbol::Comma,
+                ) {
+                  self_host_parser_skip_newlines(parser)
+                  if self_host_parser_consume_symbol(
+                    parser,
+                    SelfHostSymbol::RightParen,
+                  ) {
+                    break true
+                  } else {
+                    continue 0u32
+                  }
+                } else {
+                  self_host_parser_fail_expected(
+                    parser,
+                    SelfHostDeclarationExpectation::VariantTypeSeparatorOrClose,
+                  )
+                  break false
+                }
+              }
+              Option::None => break false
+            }
+          }
+          if !tuple_ok {
+            break false
+          } else {
+            variants.push(
+              SelfHostEnumVariant::TupleVariant(
+                variant_name,
+                types,
+                variant_offset,
+              ),
+            )
+          }
+        } else if self_host_parser_consume_symbol(
+          parser,
+          SelfHostSymbol::LeftBrace,
+        ) {
+          let fields = self_host_empty_struct_fields()
+          if !self_host_parser_consume_symbol(
+            parser,
+            SelfHostSymbol::RightBrace,
+          ) {
+            if !self_host_parser_expect_newline(
+              parser,
+              SelfHostDeclarationExpectation::EnumVariantBodyNewline,
+            ) {
+              break false
+            } else {
+            }
+            self_host_parser_skip_newlines(parser)
+            let fields_ok = while 0u32 {
+              _ => {
+                if self_host_parser_consume_symbol(
+                  parser,
+                  SelfHostSymbol::RightBrace,
+                ) {
+                  break true
+                } else {
+                }
+                let field_pair = match self_host_parser_identifier(
+                  parser,
+                  SelfHostDeclarationExpectation::EnumVariantFieldName,
+                ) {
+                  Option::Some(value) => value
+                  Option::None => break false
+                }
+                let (field_name, field_offset) = field_pair
+                if !self_host_parser_expect_symbol(
+                  parser,
+                  SelfHostSymbol::Colon,
+                  SelfHostDeclarationExpectation::Colon,
+                ) {
+                  break false
+                } else {
+                }
+                match self_host_parse_type(parser) {
+                  Option::Some(type_) => fields.push(SelfHostStructField::{
+                    mutable_: false
+                    name: field_name
+                    type_: type_
+                    offset: field_offset
+                  })
+                  Option::None => break false
+                }
+                if !self_host_parser_finish_line(parser) {
+                  break false
+                } else {
+                }
+                self_host_parser_skip_newlines(parser)
+                continue 0u32
+              }
+            }
+            if !fields_ok {
+              break false
+            } else {
+            }
+          } else {
+          }
+          variants.push(
+            SelfHostEnumVariant::StructVariant(
+              variant_name,
+              fields,
+              variant_offset,
+            ),
+          )
+        } else if self_host_parser_consume_newline(parser) {
+          variants.push(
+            SelfHostEnumVariant::UnitVariant(
+              variant_name,
+              variant_offset,
+            ),
+          )
+          self_host_parser_skip_newlines(parser)
+          continue 0u32
+        } else {
+          self_host_parser_fail_expected(
+            parser,
+            SelfHostDeclarationExpectation::EnumVariantPayloadOrLineEnd,
+          )
+          break false
+        }
+        if !self_host_parser_finish_line(parser) {
+          break false
+        } else {
+        }
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
+      }
+    }
+    if !parsed {
+      return Option::None
+    } else {
+    }
+  } else {
+  }
+  let derives = match self_host_parse_optional_derives(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostEnumDeclaration::{
+      visibility: visibility
+      name: name
+      name_offset: name_offset
+      type_parameters: type_parameters
+      variants: variants
+      derives: derives
+      offset: declaration_offset
+    })
+  }
+}
+
+fn self_host_parse_type_alias_after_keyword(
+  parser: SelfHostParser,
+  visibility: SelfHostDeclarationVisibility,
+  declaration_offset: U32,
+) -> Option<SelfHostTypeAliasDeclaration> {
+  let pair = match self_host_parser_identifier(
+    parser,
+    SelfHostDeclarationExpectation::TypeAliasName,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  let (name, name_offset) = pair
+  let type_parameters = match self_host_parse_optional_type_parameters(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_expect_symbol(
+    parser,
+    SelfHostSymbol::Equal,
+    SelfHostDeclarationExpectation::Equal,
+  ) {
+    return Option::None
+  } else {
+  }
+  self_host_parser_skip_newlines(parser)
+  let target = match self_host_parse_type(parser) {
+    Option::Some(value) => value
+    Option::None => {
+      return Option::None
+    }
+  }
+  if !self_host_parser_finish_line(parser) {
+    Option::None
+  } else {
+    Option::Some(SelfHostTypeAliasDeclaration::{
+      visibility: visibility
+      name: name
+      name_offset: name_offset
+      type_parameters: type_parameters
+      target: target
+      offset: declaration_offset
+    })
+  }
+}

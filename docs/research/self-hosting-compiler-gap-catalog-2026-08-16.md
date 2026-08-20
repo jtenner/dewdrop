@@ -280,8 +280,7 @@ tuple machinery.
 
 ### SH-10 — Conventional iteration
 
-**Current state:** Dew has functional pattern `while`, Array iterators, and
-iterator traits. It has no ordinary Boolean `while` or executable `for` loop.
+**Current state:** implemented for the parser port. Dew retains functional pattern `while`, and `for pattern in iterable { ... }` now lowers through Rust-style `Iter.next() -> Option<t>` without per-element allocation after Starshine optimization. Ordinary Boolean `while` remains deferred because the full Dew parser port did not require it.
 
 The audited compiler contains approximately:
 
@@ -390,21 +389,12 @@ to implement them to self-host:
 
 ## Proposed implementation order
 
-1. **Freeze the linked Starshine foreign ABI.** Build the pinned submodule's
-   generated raw WasmGC FFI, generate matching Dew declarations from its export
-   metadata, and include interface digests and provider bytes in compiler
-   fingerprints.
-2. **Decide SH-09 and SH-10 only when the port reaches them.** Add tuples or
-   ordinary loops only if the measured rewrite cost justifies them.
-3. **Port tokenizer and parser.** Consume the frozen in-memory source Bytes.
-4. **Port semantic phases in dependency order.** Collection, types, imports,
-   names, inference, flow, layouts, specialization, optimization, and linking.
-5. **Port backend calls to the linked direct Starshine object-model ABI.** Keep
-   linker-owned composition deterministic.
-6. **Port cache codecs, loader, driver, and compiler-facing CLI.** Keep package
-   acquisition and process launch outside if necessary.
-7. **Run the fixed point.** MoonBit Dewdrop builds A; A builds B; B builds C;
-   B and C must be byte-identical.
+The linked Starshine ABI, product values, allocation-free `for`, tokenizer, and full parser are complete.
+
+1. **Port semantic phases in dependency order.** Start with declaration collection, imports, and names; then types, inference, flow, layouts, specialization, optimization, and linking.
+2. **Port backend calls to the linked direct Starshine object-model ABI.** Keep linker-owned composition deterministic.
+3. **Port cache codecs, loader, driver, and compiler-facing CLI.** Keep package acquisition and process launch outside if necessary. Parser-event persistence belongs to this cache tranche; the first fixed point uses the in-memory syntax graph.
+4. **Run the fixed point.** MoonBit Dewdrop builds A; A builds B; B builds C; B and C must be byte-identical.
 
 ## Required acceptance tests
 

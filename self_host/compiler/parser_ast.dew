@@ -1,0 +1,532 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+pub enum SelfHostDeclarationVisibility {
+  ModuleVisible
+  Public
+}
+
+pub enum SelfHostPrefixOperator {
+  Positive
+  Negative
+  LogicalNot
+}
+
+pub enum SelfHostBinaryOperator {
+  LogicalOr
+  LogicalAnd
+  BitOr
+  BitXor
+  BitAnd
+  Equal
+  NotEqual
+  Less
+  LessEqual
+  Greater
+  GreaterEqual
+  ShiftLeft
+  ShiftRight
+  Add
+  Subtract
+  Multiply
+  Divide
+  Remainder
+  Exponentiate
+}
+
+pub enum SelfHostTypeExpr {
+  NamedType(String, U32)
+  QualifiedType(String, String, U32, U32)
+  ProductType(Array<SelfHostTypeExpr>, U32)
+  AppliedType(SelfHostTypeExpr, Array<SelfHostTypeExpr>, U32)
+  FunctionType(Array<SelfHostTypeExpr>, SelfHostTypeExpr, U32)
+}
+
+impl SelfHostTypeExpr {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostTypeExpr::NamedType(_, offset) => offset
+      SelfHostTypeExpr::QualifiedType(_, _, offset, _) => offset
+      SelfHostTypeExpr::ProductType(_, offset) => offset
+      SelfHostTypeExpr::AppliedType(_, _, offset) => offset
+      SelfHostTypeExpr::FunctionType(_, _, offset) => offset
+    }
+  }
+}
+
+pub struct SelfHostTypeParameter {
+  name: String
+  bounds: Array<SelfHostTypeExpr>
+  offset: U32
+}
+
+pub struct SelfHostDeriveRequest {
+  name: String
+  offset: U32
+}
+
+pub struct SelfHostFnParameter {
+  name: String
+  type_: SelfHostTypeExpr
+  offset: U32
+}
+
+pub struct SelfHostReceiverParameter {
+  explicit_type: Option<SelfHostTypeExpr>
+  offset: U32
+}
+
+pub struct SelfHostObjectField {
+  name: String
+  value: SelfHostExpr
+  offset: U32
+}
+
+pub struct SelfHostPatternField {
+  name: String
+  pattern: SelfHostPattern
+  offset: U32
+}
+
+pub enum SelfHostPattern {
+  WildcardPattern(U32)
+  BindingPattern(String, U32)
+  ImportAliasPattern(String, U32)
+  RestPattern(U32)
+  LiteralPattern(SelfHostExpr, U32)
+  QualifiedPattern(SelfHostPattern, String, U32)
+  TuplePattern(SelfHostPattern, Array<SelfHostPattern>, U32)
+  StructPattern(SelfHostPattern, Array<SelfHostPatternField>, Option<U32>, U32)
+  AlternativePattern(SelfHostPattern, Array<SelfHostPattern>, U32)
+}
+
+impl SelfHostPattern {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostPattern::WildcardPattern(offset) => offset
+      SelfHostPattern::BindingPattern(_, offset) => offset
+      SelfHostPattern::ImportAliasPattern(_, offset) => offset
+      SelfHostPattern::RestPattern(offset) => offset
+      SelfHostPattern::LiteralPattern(_, offset) => offset
+      SelfHostPattern::QualifiedPattern(_, _, offset) => offset
+      SelfHostPattern::TuplePattern(_, _, offset) => offset
+      SelfHostPattern::StructPattern(_, _, _, offset) => offset
+      SelfHostPattern::AlternativePattern(_, _, offset) => offset
+    }
+  }
+}
+
+pub struct SelfHostPatternArm {
+  pattern: SelfHostPattern
+  guard_condition: Option<SelfHostExpr>
+  body: SelfHostExpr
+  offset: U32
+}
+
+pub enum SelfHostExpr {
+  I8Expr(U64, U32)
+  I16Expr(U64, U32)
+  I32Expr(U64, U32)
+  I64Expr(U64, U32)
+  U8Expr(U64, U32)
+  U16Expr(U64, U32)
+  U32Expr(U64, U32)
+  U64Expr(U64, U32)
+  F32Expr(F32, U32)
+  F64Expr(F64, U32)
+  BoolExpr(Bool, U32)
+  StringExpr(Bytes, U32)
+  BytesExpr(Bytes, U32)
+  NameExpr(String, U32)
+  ImportAliasExpr(String, U32)
+  ProductExpr(Array<SelfHostExpr>, U32)
+  ArrayExpr(Array<SelfHostExpr>, U32)
+  LambdaExpr(Array<SelfHostFnParameter>, SelfHostTypeExpr, SelfHostBlock, U32)
+  ObjectExpr(Array<SelfHostObjectField>, U32)
+  ConstructExpr(SelfHostExpr, Array<SelfHostObjectField>, U32)
+  BlockExpr(SelfHostBlock)
+  IfExpr(SelfHostExpr, SelfHostBlock, Option<SelfHostExpr>, U32)
+  MatchExpr(SelfHostExpr, Array<SelfHostPatternArm>, U32)
+  IsExpr(SelfHostExpr, SelfHostPattern, U32)
+  IsGuardExpr(SelfHostExpr, SelfHostPattern, SelfHostExpr, U32)
+  WhileExpr(SelfHostExpr, Array<SelfHostPatternArm>, U32)
+  BreakExpr(SelfHostExpr, U32)
+  ContinueExpr(SelfHostExpr, U32)
+  PrefixExpr(SelfHostPrefixOperator, SelfHostExpr, U32)
+  BinaryExpr(SelfHostBinaryOperator, SelfHostExpr, SelfHostExpr, U32)
+  CallExpr(SelfHostExpr, Array<SelfHostExpr>, U32)
+  ExplicitTypeCallExpr(SelfHostExpr, Array<SelfHostTypeExpr>, Array<SelfHostExpr>, U32)
+  FieldExpr(SelfHostExpr, String, U32)
+  QualifiedExpr(SelfHostExpr, String, U32)
+  ProductFieldExpr(SelfHostExpr, U32, U32, U32)
+  IndexExpr(SelfHostExpr, SelfHostExpr, U32)
+}
+
+impl SelfHostExpr {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostExpr::I8Expr(_, offset) => offset
+      SelfHostExpr::I16Expr(_, offset) => offset
+      SelfHostExpr::I32Expr(_, offset) => offset
+      SelfHostExpr::I64Expr(_, offset) => offset
+      SelfHostExpr::U8Expr(_, offset) => offset
+      SelfHostExpr::U16Expr(_, offset) => offset
+      SelfHostExpr::U32Expr(_, offset) => offset
+      SelfHostExpr::U64Expr(_, offset) => offset
+      SelfHostExpr::F32Expr(_, offset) => offset
+      SelfHostExpr::F64Expr(_, offset) => offset
+      SelfHostExpr::BoolExpr(_, offset) => offset
+      SelfHostExpr::StringExpr(_, offset) => offset
+      SelfHostExpr::BytesExpr(_, offset) => offset
+      SelfHostExpr::NameExpr(_, offset) => offset
+      SelfHostExpr::ImportAliasExpr(_, offset) => offset
+      SelfHostExpr::ProductExpr(_, offset) => offset
+      SelfHostExpr::ArrayExpr(_, offset) => offset
+      SelfHostExpr::LambdaExpr(_, _, _, offset) => offset
+      SelfHostExpr::ObjectExpr(_, offset) => offset
+      SelfHostExpr::ConstructExpr(_, _, offset) => offset
+      SelfHostExpr::BlockExpr(block) => block.offset
+      SelfHostExpr::IfExpr(_, _, _, offset) => offset
+      SelfHostExpr::MatchExpr(_, _, offset) => offset
+      SelfHostExpr::IsExpr(_, _, offset) => offset
+      SelfHostExpr::IsGuardExpr(_, _, _, offset) => offset
+      SelfHostExpr::WhileExpr(_, _, offset) => offset
+      SelfHostExpr::BreakExpr(_, offset) => offset
+      SelfHostExpr::ContinueExpr(_, offset) => offset
+      SelfHostExpr::PrefixExpr(_, _, offset) => offset
+      SelfHostExpr::BinaryExpr(_, _, _, offset) => offset
+      SelfHostExpr::CallExpr(_, _, offset) => offset
+      SelfHostExpr::ExplicitTypeCallExpr(_, _, _, offset) => offset
+      SelfHostExpr::FieldExpr(_, _, offset) => offset
+      SelfHostExpr::QualifiedExpr(_, _, offset) => offset
+      SelfHostExpr::ProductFieldExpr(_, _, _, offset) => offset
+      SelfHostExpr::IndexExpr(_, _, offset) => offset
+    }
+  }
+}
+
+pub enum SelfHostBlockItem {
+  LetItem(Bool, String, U32, SelfHostExpr, U32)
+  ReturnItem(Option<SelfHostExpr>, U32)
+  AssignmentItem(SelfHostExpr, SelfHostExpr, U32)
+  IndexSetItem(SelfHostExpr, SelfHostExpr, U32)
+  ExpressionItem(SelfHostExpr, U32)
+}
+
+pub struct SelfHostBlock {
+  items: Array<SelfHostBlockItem>
+  offset: U32
+}
+
+pub struct SelfHostBuiltinDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  parameters: Array<SelfHostFnParameter>
+  return_type: SelfHostTypeExpr
+  builtin_name: Bytes
+  offset: U32
+}
+
+pub struct SelfHostImportDeclaration {
+  open_: Bool
+  path: Array<String>
+  wildcard: Bool
+  import_alias: Option<String>
+  import_alias_offset: U32
+  offset: U32
+}
+
+pub struct SelfHostLetDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  mutable_: Bool
+  name: String
+  name_offset: U32
+  value: SelfHostExpr
+  offset: U32
+}
+
+pub struct SelfHostTraitMethod {
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  receiver: Option<SelfHostReceiverParameter>
+  parameters: Array<SelfHostFnParameter>
+  return_type: SelfHostTypeExpr
+  offset: U32
+}
+
+pub struct SelfHostTraitDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  methods: Array<SelfHostTraitMethod>
+  offset: U32
+}
+
+pub struct SelfHostFunctionDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  receiver: Option<SelfHostReceiverParameter>
+  parameters: Array<SelfHostFnParameter>
+  return_type: SelfHostTypeExpr
+  body: SelfHostBlock
+  offset: U32
+}
+
+pub struct SelfHostTestDeclaration {
+  name: Bytes
+  name_offset: U32
+  expected_trap: Option<Bytes>
+  return_type: SelfHostTypeExpr
+  body: SelfHostBlock
+  offset: U32
+}
+
+pub struct SelfHostImplDeclaration {
+  foreign_: Bool
+  type_parameters: Array<SelfHostTypeParameter>
+  trait_type: Option<SelfHostTypeExpr>
+  target_type: SelfHostTypeExpr
+  methods: Array<SelfHostFunctionDeclaration>
+  offset: U32
+}
+
+pub struct SelfHostForeignTypeDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  offset: U32
+}
+
+pub struct SelfHostForeignLibraryMember {
+  name: String
+  name_offset: U32
+  parameters: Array<SelfHostFnParameter>
+  return_type: SelfHostTypeExpr
+  export_name: Bytes
+  export_name_offset: U32
+  offset: U32
+}
+
+pub struct SelfHostForeignLibraryDeclaration {
+  logical_name: Bytes
+  logical_name_offset: U32
+  namespace_alias: String
+  alias_offset: U32
+  members: Array<SelfHostForeignLibraryMember>
+  offset: U32
+}
+
+pub struct SelfHostStructField {
+  mutable_: Bool
+  name: String
+  type_: SelfHostTypeExpr
+  offset: U32
+}
+
+pub struct SelfHostStructDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  fields: Array<SelfHostStructField>
+  derives: Array<SelfHostDeriveRequest>
+  offset: U32
+}
+
+pub enum SelfHostEnumVariant {
+  UnitVariant(String, U32)
+  TupleVariant(String, Array<SelfHostTypeExpr>, U32)
+  StructVariant(String, Array<SelfHostStructField>, U32)
+}
+
+pub struct SelfHostEnumDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  variants: Array<SelfHostEnumVariant>
+  derives: Array<SelfHostDeriveRequest>
+  offset: U32
+}
+
+pub struct SelfHostTypeAliasDeclaration {
+  visibility: SelfHostDeclarationVisibility
+  name: String
+  name_offset: U32
+  type_parameters: Array<SelfHostTypeParameter>
+  target: SelfHostTypeExpr
+  offset: U32
+}
+
+pub enum SelfHostDeclaration {
+  Import(SelfHostImportDeclaration)
+  Builtin(SelfHostBuiltinDeclaration)
+  Let(SelfHostLetDeclaration)
+  Trait(SelfHostTraitDeclaration)
+  Function(SelfHostFunctionDeclaration)
+  Test(SelfHostTestDeclaration)
+  Impl(SelfHostImplDeclaration)
+  ForeignType(SelfHostForeignTypeDeclaration)
+  ForeignLibrary(SelfHostForeignLibraryDeclaration)
+  Struct(SelfHostStructDeclaration)
+  Enum(SelfHostEnumDeclaration)
+  TypeAlias(SelfHostTypeAliasDeclaration)
+}
+
+pub enum SelfHostDeclarationExpectation {
+  DeclarationKeyword
+  ImportPathSegment
+  ImportAlias
+  ImportWildcard
+  BuiltinName
+  BindingName
+  TraitName
+  StructName
+  StructFieldName
+  StructBodyNewline
+  EnumName
+  TypeAliasName
+  EnumBodyNewline
+  EnumVariantName
+  EnumVariantPayloadOrLineEnd
+  EnumVariantBodyNewline
+  EnumVariantFieldName
+  VariantTypeSeparatorOrClose
+  FunctionName
+  TestName
+  TestExpectedTrap
+  FunctionBodyNewline
+  ImplMemberKeyword
+  ForeignTypeName
+  ForeignLibraryName
+  ForeignLibraryAlias
+  ForeignLibraryMemberKeyword
+  ForeignLibraryExportName
+  ForOrLeftBrace
+  TraitMethodKeyword
+  TraitMethodName
+  TraitBodyNewline
+  TypeParameter
+  TypeParameterSeparatorOrClose
+  TypeBound
+  DeriveName
+  DeriveSeparatorOrClose
+  TypeArgumentSeparatorOrClose
+  LeftParen
+  LeftBrace
+  ParameterName
+  Colon
+  ParameterSeparatorOrClose
+  Type
+  Arrow
+  Equal
+  BuiltinString
+  LineEnd
+}
+
+pub enum SelfHostParseError {
+  ExpectedDeclaration(SelfHostDeclarationExpectation, Option<SelfHostToken>, U32)
+  ExpectedExpression(Option<SelfHostToken>, U32)
+  ExpectedPattern(Option<SelfHostToken>, U32)
+  Lexical(SelfHostLexError, U32)
+  ImportAfterDeclaration(U32)
+  ReceiverMustBeFirst(U32)
+  InvalidReceiverType(SelfHostTypeExpr, U32)
+  UnexpectedTypeCloser(U32)
+  UnclosedTrait(U32)
+  UnclosedFunction(U32)
+  UnclosedImpl(U32)
+  UnclosedStruct(U32)
+  UnclosedEnum(U32)
+  UnclosedTupleVariant(U32)
+  UnclosedStructVariant(U32)
+  EmptyTupleVariant(U32)
+  InvalidProductTypeArity(U32, U32)
+  UnclosedProductType(U32)
+  PublicImplNotAllowed(U32)
+  ForeignImplRequiresTrait(U32)
+  PublicForeignLibraryNotAllowed(U32)
+  PublicForeignLibraryMemberNotAllowed(U32)
+  GenericForeignLibraryMemberNotAllowed(U32)
+  ReceiverForeignLibraryMemberNotAllowed(U32)
+  ForeignLibraryMemberBodyNotAllowed(U32)
+  ExpectedDelimiter(String, Option<SelfHostToken>, U32)
+  UnclosedExpression(String, U32)
+  ChainedComparison(U32)
+  InvalidProductArity(U32, U32)
+  RestPatternNotAllowed(U32)
+  DuplicateRestPattern(U32)
+  EmptyTuplePattern(U32)
+  UsingDoubleDispose(String, U32)
+  UsingValueEscape(String, U32)
+}
+
+impl SelfHostParseError {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostParseError::ExpectedDeclaration(_, _, offset) => offset
+      SelfHostParseError::ExpectedExpression(_, offset) => offset
+      SelfHostParseError::ExpectedPattern(_, offset) => offset
+      SelfHostParseError::Lexical(_, offset) => offset
+      SelfHostParseError::ImportAfterDeclaration(offset) => offset
+      SelfHostParseError::ReceiverMustBeFirst(offset) => offset
+      SelfHostParseError::InvalidReceiverType(_, offset) => offset
+      SelfHostParseError::UnexpectedTypeCloser(offset) => offset
+      SelfHostParseError::UnclosedTrait(offset) => offset
+      SelfHostParseError::UnclosedFunction(offset) => offset
+      SelfHostParseError::UnclosedImpl(offset) => offset
+      SelfHostParseError::UnclosedStruct(offset) => offset
+      SelfHostParseError::UnclosedEnum(offset) => offset
+      SelfHostParseError::UnclosedTupleVariant(offset) => offset
+      SelfHostParseError::UnclosedStructVariant(offset) => offset
+      SelfHostParseError::EmptyTupleVariant(offset) => offset
+      SelfHostParseError::InvalidProductTypeArity(_, offset) => offset
+      SelfHostParseError::UnclosedProductType(offset) => offset
+      SelfHostParseError::PublicImplNotAllowed(offset) => offset
+      SelfHostParseError::ForeignImplRequiresTrait(offset) => offset
+      SelfHostParseError::PublicForeignLibraryNotAllowed(offset) => offset
+      SelfHostParseError::PublicForeignLibraryMemberNotAllowed(offset) => offset
+      SelfHostParseError::GenericForeignLibraryMemberNotAllowed(offset) => offset
+      SelfHostParseError::ReceiverForeignLibraryMemberNotAllowed(offset) => offset
+      SelfHostParseError::ForeignLibraryMemberBodyNotAllowed(offset) => offset
+      SelfHostParseError::ExpectedDelimiter(_, _, offset) => offset
+      SelfHostParseError::UnclosedExpression(_, offset) => offset
+      SelfHostParseError::ChainedComparison(offset) => offset
+      SelfHostParseError::InvalidProductArity(_, offset) => offset
+      SelfHostParseError::RestPatternNotAllowed(offset) => offset
+      SelfHostParseError::DuplicateRestPattern(offset) => offset
+      SelfHostParseError::EmptyTuplePattern(offset) => offset
+      SelfHostParseError::UsingDoubleDispose(_, offset) => offset
+      SelfHostParseError::UsingValueEscape(_, offset) => offset
+    }
+  }
+}
+
+pub enum SelfHostDiagnosticSeverity {
+  Error
+  Warning
+  Info
+  Hint
+}
+
+pub struct SelfHostParseDiagnostic {
+  severity: SelfHostDiagnosticSeverity
+  error: SelfHostParseError
+}
+
+pub enum SelfHostParseEvent {
+  Declaration(SelfHostDeclaration)
+  Diagnostic(SelfHostParseDiagnostic)
+}
+
+pub struct SelfHostParsedModule {
+  events: Array<SelfHostParseEvent>
+}

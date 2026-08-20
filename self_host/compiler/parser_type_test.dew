@@ -1,0 +1,39 @@
+open dew.std.result
+open dew.std.testing
+
+test "self-host parser parses named and qualified types" {
+  assert(
+    self_host_parse_type_source(b"I32") is Result::Ok(SelfHostTypeExpr::NamedType("I32", 0u32)),
+    "named type failed",
+  )
+  assert(
+    self_host_parse_type_source(b"@model.Node") is Result::Ok(SelfHostTypeExpr::QualifiedType("model", "Node", 0u32, 7u32)),
+    "qualified type failed",
+  )
+}
+
+test "self-host parser parses applied nested types" {
+  match self_host_parse_type_source(b"Map<String, Array<Option<I32>>>") {
+    Result::Ok(SelfHostTypeExpr::AppliedType(
+      SelfHostTypeExpr::NamedType("Map", _),
+      arguments,
+      _,
+    )) => assert(arguments.length() == 2u32, "wrong applied arity")
+    _ => assert(false, "nested applied type failed")
+  }
+}
+
+test "self-host parser parses products and function types" {
+  match self_host_parse_type_source(b"fn(I32, (Bool, String)) -> Array<U8>") {
+    Result::Ok(SelfHostTypeExpr::FunctionType(parameters, _, _)) =>
+      assert(parameters.length() == 2u32, "wrong function arity")
+    _ => assert(false, "function type failed")
+  }
+}
+
+test "self-host parser rejects invalid product arity" {
+  assert(
+    self_host_parse_type_source(b"(I32)") is Result::Err(_),
+    "accepted one-field product",
+  )
+}

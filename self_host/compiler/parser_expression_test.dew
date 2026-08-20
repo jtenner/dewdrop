@@ -1,0 +1,72 @@
+open dew.std.result
+open dew.std.testing
+
+test "self-host parser preserves binary precedence" {
+  match self_host_parse_expression_source(b"1 + 2 * 3") {
+    Result::Ok(SelfHostExpr::BinaryExpr(
+      SelfHostBinaryOperator::Add,
+      _,
+      SelfHostExpr::BinaryExpr(SelfHostBinaryOperator::Multiply, _, _, _),
+      _,
+    )) => {}
+    _ => assert(false, "wrong precedence")
+  }
+}
+
+test "self-host parser parses calls fields and indexes" {
+  match self_host_parse_expression_source(b"values.get(1)[0].field") {
+    Result::Ok(SelfHostExpr::FieldExpr(
+      SelfHostExpr::IndexExpr(SelfHostExpr::CallExpr(_, arguments, _), _, _),
+      "field",
+      _,
+    )) => assert(arguments.length() == 1u32, "wrong call arity")
+    _ => assert(false, "postfix expression failed")
+  }
+}
+
+test "self-host parser parses arrays and products" {
+  assert(
+    self_host_parse_expression_source(b"[1, 2, 3]") is Result::Ok(SelfHostExpr::ArrayExpr(_, _)),
+    "array failed",
+  )
+  assert(
+    self_host_parse_expression_source(b"(1, true, value)") is Result::Ok(SelfHostExpr::ProductExpr(_, _)),
+    "product failed",
+  )
+}
+
+test "self-host parser parses if match and while" {
+  assert(
+    self_host_parse_expression_source(b"if ready {\n  1\n} else {\n  2\n}") is Result::Ok(SelfHostExpr::IfExpr(_, _, Option::Some(_), _)),
+    "if failed",
+  )
+  assert(
+    self_host_parse_expression_source(b"match value {\n  Option::Some(item) => item\n  Option::None => 0\n}") is Result::Ok(SelfHostExpr::MatchExpr(_, _, _)),
+    "match failed",
+  )
+  assert(
+    self_host_parse_expression_source(b"while state {\n  value => break value\n}") is Result::Ok(SelfHostExpr::WhileExpr(_, _, _)),
+    "while failed",
+  )
+}
+
+test "self-host parser desugars if-is bindings" {
+  assert(
+    self_host_parse_expression_source(b"if value is Option::Some(bound) && bound > 0 {\n  bound\n} else {\n  0\n}") is Result::Ok(SelfHostExpr::MatchExpr(_, _, _)),
+    "if-is desugaring failed",
+  )
+}
+
+test "self-host parser desugars for expressions" {
+  assert(
+    self_host_parse_expression_source(b"for value in values {\n  consume(value)\n}") is Result::Ok(SelfHostExpr::BlockExpr(_)),
+    "for failed",
+  )
+}
+
+test "self-host parser parses lambdas" {
+  assert(
+    self_host_parse_expression_source(b"fn(value: I32) -> I32 {\n  value\n}") is Result::Ok(SelfHostExpr::LambdaExpr(_, _, _, _)),
+    "lambda failed",
+  )
+}

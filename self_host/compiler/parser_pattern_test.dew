@@ -1,0 +1,38 @@
+open dew.std.result
+open dew.std.testing
+
+test "self-host parser parses constructor patterns" {
+  match self_host_parse_pattern_source(b"Option::Some(value)") {
+    Result::Ok(SelfHostPattern::TuplePattern(
+      SelfHostPattern::QualifiedPattern(_, "Some", _),
+      arguments,
+      _,
+    )) => assert(arguments.length() == 1u32, "wrong tuple pattern arity")
+    _ => assert(false, "constructor pattern failed")
+  }
+}
+
+test "self-host parser parses rest patterns" {
+  match self_host_parse_pattern_source(b"List::Cons(head, ...)") {
+    Result::Ok(SelfHostPattern::TuplePattern(_, arguments, _)) => {
+      assert(arguments.length() == 2u32, "wrong rest pattern arity")
+      assert(arguments.get_unchecked(1u32) is SelfHostPattern::RestPattern(_), "missing rest pattern")
+    }
+    _ => assert(false, "rest pattern failed")
+  }
+}
+
+test "self-host parser parses multiline struct patterns" {
+  match self_host_parse_pattern_source(b"Message::Data {\n  value\n  ...\n}") {
+    Result::Ok(SelfHostPattern::StructPattern(_, fields, Option::Some(_), _)) =>
+      assert(fields.length() == 1u32, "wrong struct field count")
+    _ => assert(false, "struct pattern failed")
+  }
+}
+
+test "self-host parser rejects bare rest patterns" {
+  assert(
+    self_host_parse_pattern_source(b"...") is Result::Err(_),
+    "accepted bare rest pattern",
+  )
+}
