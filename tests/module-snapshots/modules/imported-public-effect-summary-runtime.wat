@@ -25,6 +25,7 @@
   (export "main" (func 9))
   (func (;0;) (type 7) (param (ref 0)) (result i32)
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
   )
   (func (;1;) (type 8) (result i32)

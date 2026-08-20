@@ -35,10 +35,9 @@ fn is_second(value: String) -> Bool {
 }
 
 fn sum_i32(iter: ArrayIter<I32>, sum: I32) -> I32 {
-  if iter.has_next() {
-    sum_i32(iter, sum + iter.next())
-  } else {
-    sum
+  match iter.next() {
+    Option::Some(value) => sum_i32(iter, sum + value)
+    Option::None => sum
   }
 }
 

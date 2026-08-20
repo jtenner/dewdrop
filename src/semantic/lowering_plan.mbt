@@ -94,6 +94,7 @@ pub enum PlannedExpressionKind {
   PlannedArrayIter(ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayIterHasNext(ExprId)
   PlannedArrayIterNext(ExprId, PlannedValueShape)
+  PlannedArrayIterNextOption(ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayMake(ExprId, ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayReserve(ExprId, ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayShrinkToFit(ExprId, BodyTypeId, PlannedValueShape)
@@ -189,8 +190,11 @@ pub enum PlannedExpressionKind {
   PlannedMapEntries(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedMapIterHasNext(ExprId, Int, PlannedValueShape, PlannedValueShape)
   PlannedMapKeyIterNext(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapKeyIterNextOption(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedMapValueIterNext(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapValueIterNextOption(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedMapEntryIterNext(ExprId, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryIterNextOption(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedMapEntryKey(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedMapEntryValue(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedSetEmpty(PlannedValueShape, DeclId, DeclId)
@@ -204,6 +208,7 @@ pub enum PlannedExpressionKind {
   PlannedSetIter(ExprId, PlannedValueShape)
   PlannedSetIterHasNext(ExprId, PlannedValueShape)
   PlannedSetIterNext(ExprId, PlannedValueShape)
+  PlannedSetIterNextOption(ExprId, PlannedValueShape)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedTailCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
@@ -1353,6 +1358,10 @@ fn plan_expression_kind(
                           inferred.expression_types[expression],
                         ),
                       )
+                    ArrayIterNextOption =>
+                      PlannedArrayIterNextOption(
+                        base, element_type, element_shape,
+                      )
                     ArrayMake =>
                       PlannedArrayMake(
                         base,
@@ -1471,12 +1480,24 @@ fn plan_expression_kind(
                           PlannedMapKeyIterNext(
                             base, key_shape, map_value_shape,
                           )
+                        MapKeyIterNextOption =>
+                          PlannedMapKeyIterNextOption(
+                            base, key_shape, map_value_shape,
+                          )
                         MapValueIterNext =>
                           PlannedMapValueIterNext(
                             base, key_shape, map_value_shape,
                           )
+                        MapValueIterNextOption =>
+                          PlannedMapValueIterNextOption(
+                            base, key_shape, map_value_shape,
+                          )
                         MapEntryIterNext =>
                           PlannedMapEntryIterNext(
+                            base, key_shape, map_value_shape,
+                          )
+                        MapEntryIterNextOption =>
+                          PlannedMapEntryIterNextOption(
                             base, key_shape, map_value_shape,
                           )
                         MapEntryKey =>
@@ -1515,6 +1536,8 @@ fn plan_expression_kind(
                             SetIterHasNext =>
                               PlannedSetIterHasNext(base, key_shape)
                             SetIterNext => PlannedSetIterNext(base, key_shape)
+                            SetIterNextOption =>
+                              PlannedSetIterNextOption(base, key_shape)
                             _ =>
                               PlannedDirectCall(
                                 declaration, receiver, arguments, type_arguments,

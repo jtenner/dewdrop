@@ -22,19 +22,20 @@ test "map standard source has stable compiler-owned identities" {
     semantic_id_local(collected.lookup_value("map_singleton").unwrap()),
     1,
   )
-  assert_eq(collected.callables.length(), 44)
+  assert_eq(collected.callables.length(), 45)
   assert_eq(semantic_id_local(collected.callables[7].declaration), 9)
   assert_eq(semantic_id_local(collected.callables[15].declaration), 17)
   assert_eq(semantic_id_local(collected.callables[16].declaration), 18)
-  assert_eq(semantic_id_local(collected.callables[17].declaration), 20)
-  assert_eq(semantic_id_local(collected.callables[18].declaration), 22)
+  assert_eq(semantic_id_local(collected.callables[17].declaration), 19)
+  assert_eq(semantic_id_local(collected.callables[18].declaration), 21)
   assert_eq(semantic_id_local(collected.callables[19].declaration), 23)
   assert_eq(semantic_id_local(collected.callables[20].declaration), 24)
   assert_eq(semantic_id_local(collected.callables[21].declaration), 25)
-  assert_eq(semantic_id_local(collected.callables[22].declaration), 30)
-  assert_eq(semantic_id_local(collected.callables[32].declaration), 40)
-  assert_eq(semantic_id_local(collected.callables[33].declaration), 42)
-  assert_eq(semantic_id_local(collected.callables[43].declaration), 56)
+  assert_eq(semantic_id_local(collected.callables[22].declaration), 26)
+  assert_eq(semantic_id_local(collected.callables[23].declaration), 31)
+  assert_eq(semantic_id_local(collected.callables[33].declaration), 41)
+  assert_eq(semantic_id_local(collected.callables[34].declaration), 43)
+  assert_eq(semantic_id_local(collected.callables[44].declaration), 57)
 }
 
 ///|

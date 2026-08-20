@@ -489,16 +489,19 @@
   (func (;4;) (type 15) (param (ref 14)) (result (ref 12))
     local.get 0
     local.get 0
+    ref.cast (ref 14)
     struct.get 14 0
     i32.const 1
     i32.add
     struct.set 14 0
     local.get 0
+    ref.cast (ref 14)
     struct.get 14 1
     ref.cast (ref 12)
   )
   (func (;5;) (type 16) (param (ref 14)) (result i32)
     local.get 0
+    ref.cast (ref 14)
     struct.get 14 0
     i32.const 1
     i32.eq
@@ -515,6 +518,7 @@
     end
     local.get 0
     local.get 0
+    ref.cast (ref 14)
     struct.get 14 0
     i32.const 1
     i32.add
@@ -600,6 +604,7 @@
     i32.eq
     if (result i32) ;; label = @1
       local.get 0
+      ref.cast (ref 12)
       struct.get 12 0
       i32.const 43
       i32.eq
@@ -608,6 +613,7 @@
     end
     if (result i32) ;; label = @1
       local.get 3
+      ref.cast (ref 12)
       struct.get 12 1
       i64.const 44
       i64.eq
@@ -616,6 +622,7 @@
     end
     if (result i32) ;; label = @1
       local.get 4
+      ref.cast (ref 12)
       struct.get 12 5
       v128.const i32x4 0x65746661 0x00000072 0x00000000 0x00000000
       array.new_fixed 20 1

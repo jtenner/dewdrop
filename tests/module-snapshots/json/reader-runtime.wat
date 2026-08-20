@@ -9,195 +9,206 @@
   (type (;7;) (array (mut i16)))
   (type (;8;) (func (param i32 i32) (result i32)))
   (type (;9;) (sub (struct (field i32))))
-  (type (;10;) (sub final 9 (struct (field i32) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref))))
-  (type (;11;) (sub (struct (field i32))))
-  (type (;12;) (sub final 11 (struct (field i32) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref))))
-  (type (;13;) (sub final 11 (struct (field i32) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref))))
-  (type (;14;) (struct (field (mut eqref)) (field (mut i32)) (field (mut i32))))
-  (type (;15;) (sub (struct (field funcref))))
-  (type (;16;) (func (param eqref) (result eqref)))
-  (type (;17;) (func (param eqref i32) (result eqref)))
-  (type (;18;) (func (param eqref) (result (ref 14))))
-  (type (;19;) (func (param eqref eqref) (result eqref)))
-  (type (;20;) (func (param eqref)))
-  (type (;21;) (func (param eqref i32)))
-  (type (;22;) (func (param eqref) (result i32)))
-  (type (;23;) (func (param eqref i32) (result i32)))
-  (type (;24;) (func (param eqref eqref i32) (result eqref)))
-  (type (;25;) (func (param eqref eqref) (result (ref 14))))
-  (type (;26;) (func (param eqref eqref eqref) (result eqref)))
-  (type (;27;) (func (param eqref eqref)))
-  (type (;28;) (func (param eqref eqref i32)))
-  (type (;29;) (func (param eqref eqref) (result i32)))
-  (type (;30;) (func (param eqref eqref i32) (result i32)))
-  (type (;31;) (func (param eqref eqref eqref i32) (result eqref)))
-  (type (;32;) (func (param eqref i32) (result v128)))
-  (type (;33;) (func (param eqref i32) (result v128)))
-  (type (;34;) (func (param eqref) (result i32)))
-  (type (;35;) (func (param eqref) (result eqref)))
-  (type (;36;) (func (param eqref eqref) (result i32)))
-  (type (;37;) (func (param eqref) (result i64)))
-  (type (;38;) (func (param eqref i32) (result i32)))
-  (type (;39;) (func (param eqref i32 i32) (result eqref)))
+  (type (;10;) (sub final 9 (struct (field i32) (field i32))))
+  (type (;11;) (sub final 9 (struct (field i32) (field eqref))))
+  (type (;12;) (sub (struct (field i32))))
+  (type (;13;) (sub final 12 (struct (field i32) (field eqref))))
+  (type (;14;) (sub final 12 (struct (field i32) (field i32))))
+  (type (;15;) (sub final 12 (struct (field i32))))
+  (type (;16;) (sub final 12 (struct (field i32) (field eqref))))
+  (type (;17;) (sub final 12 (struct (field i32) (field eqref))))
+  (type (;18;) (sub final 12 (struct (field i32) (field eqref))))
+  (type (;19;) (struct (field (mut eqref)) (field (mut i32)) (field (mut i32))))
+  (type (;20;) (struct (field eqref) (field (mut i32))))
+  (type (;21;) (sub (struct (field funcref))))
+  (type (;22;) (func (param eqref) (result eqref)))
+  (type (;23;) (func (param eqref i32) (result eqref)))
+  (type (;24;) (func (param eqref) (result (ref 19))))
+  (type (;25;) (func (param eqref eqref) (result eqref)))
+  (type (;26;) (func (param eqref)))
+  (type (;27;) (func (param eqref i32)))
+  (type (;28;) (func (param eqref) (result i32)))
+  (type (;29;) (func (param eqref i32) (result i32)))
+  (type (;30;) (func (param eqref eqref i32) (result eqref)))
+  (type (;31;) (func (param eqref eqref) (result (ref 19))))
+  (type (;32;) (func (param eqref eqref eqref) (result eqref)))
+  (type (;33;) (func (param eqref eqref)))
+  (type (;34;) (func (param eqref eqref i32)))
+  (type (;35;) (func (param eqref eqref) (result i32)))
+  (type (;36;) (func (param eqref eqref i32) (result i32)))
+  (type (;37;) (func (param eqref eqref eqref i32) (result eqref)))
+  (type (;38;) (func (param eqref i32) (result v128)))
+  (type (;39;) (func (param eqref i32) (result v128)))
   (type (;40;) (func (param eqref) (result i32)))
   (type (;41;) (func (param eqref) (result eqref)))
-  (type (;42;) (func (result eqref)))
-  (type (;43;) (func (param i32) (result eqref)))
-  (type (;44;) (func (param eqref) (result i32)))
-  (type (;45;) (func (param eqref eqref)))
-  (type (;46;) (func (param eqref eqref)))
-  (type (;47;) (func (param eqref i32)))
-  (type (;48;) (func (param eqref i32)))
-  (type (;49;) (func (param eqref) (result eqref)))
-  (type (;50;) (func (result eqref)))
-  (type (;51;) (func (param i32) (result eqref)))
+  (type (;42;) (func (param eqref eqref) (result i32)))
+  (type (;43;) (func (param eqref) (result i64)))
+  (type (;44;) (func (param eqref i32) (result i32)))
+  (type (;45;) (func (param eqref i32 i32) (result eqref)))
+  (type (;46;) (func (param eqref) (result i32)))
+  (type (;47;) (func (param eqref) (result eqref)))
+  (type (;48;) (func (result eqref)))
+  (type (;49;) (func (param i32) (result eqref)))
+  (type (;50;) (func (param eqref) (result i32)))
+  (type (;51;) (func (param eqref eqref)))
   (type (;52;) (func (param eqref eqref)))
-  (type (;53;) (func (param eqref) (result eqref)))
-  (type (;54;) (func (param eqref) (result i32)))
-  (type (;55;) (func (param eqref) (result i32)))
-  (type (;56;) (func (param eqref eqref) (result i32)))
-  (type (;57;) (func (param eqref i32) (result i32)))
-  (type (;58;) (func (param eqref i32 i32) (result eqref)))
-  (type (;59;) (func (result eqref)))
-  (type (;60;) (func (param i32) (result eqref)))
-  (type (;61;) (func (param eqref eqref)))
-  (type (;62;) (func (param eqref) (result eqref)))
-  (type (;63;) (func (param eqref) (result i32)))
-  (type (;64;) (func (param eqref) (result i32)))
-  (type (;65;) (func (param eqref eqref) (result i32)))
-  (type (;66;) (func (param eqref i32) (result i32)))
-  (type (;67;) (func (param eqref i32 i32) (result eqref)))
-  (type (;68;) (sub (struct (field i32))))
-  (type (;69;) (sub final 68 (struct (field i32) (field i32))))
-  (type (;70;) (struct (field eqref) (field (ref 0))))
-  (type (;71;) (struct (field eqref) (field (ref 0))))
-  (type (;72;) (func (param eqref eqref) (result (ref 11))))
-  (type (;73;) (func (param eqref i32 i32) (result (ref 11))))
-  (type (;74;) (func (param eqref) (result (ref 70))))
-  (type (;75;) (func (param (ref 70) i32) (result (ref 11))))
-  (type (;76;) (func (result (ref 71))))
-  (type (;77;) (func (param i32) (result (ref 71))))
-  (type (;78;) (func (param (ref 71)) (result i32)))
-  (type (;79;) (func (param (ref 71)) (result i32)))
-  (type (;80;) (func (param (ref 71)) (result (ref 11))))
-  (type (;81;) (func (param (ref 71) eqref) (result (ref 11))))
-  (type (;82;) (func (param eqref i32 i32) (result (ref 11))))
-  (type (;83;) (func (param eqref eqref) (result (ref 11))))
-  (type (;84;) (func (param i64) (result i64)))
-  (type (;85;) (func (param i64 i64) (result i64)))
-  (type (;86;) (func (param i64 i64) (result i32)))
-  (type (;87;) (func (param eqref) (result i64)))
-  (type (;88;) (func (param eqref) (result i32)))
-  (type (;89;) (func (param eqref) (result eqref)))
-  (type (;90;) (func (param eqref eqref) (result i32)))
-  (type (;91;) (func (param eqref i32) (result i32)))
-  (type (;92;) (func (param eqref i32 i32) (result eqref)))
-  (type (;93;) (func (param eqref) (result i32)))
-  (type (;94;) (func (param eqref) (result eqref)))
+  (type (;53;) (func (param eqref i32)))
+  (type (;54;) (func (param eqref i32)))
+  (type (;55;) (func (param eqref) (result eqref)))
+  (type (;56;) (func (result eqref)))
+  (type (;57;) (func (param i32) (result eqref)))
+  (type (;58;) (func (param eqref eqref)))
+  (type (;59;) (func (param eqref) (result eqref)))
+  (type (;60;) (func (param eqref) (result i32)))
+  (type (;61;) (func (param eqref) (result i32)))
+  (type (;62;) (func (param eqref eqref) (result i32)))
+  (type (;63;) (func (param eqref i32) (result i32)))
+  (type (;64;) (func (param eqref i32 i32) (result eqref)))
+  (type (;65;) (func (result eqref)))
+  (type (;66;) (func (param i32) (result eqref)))
+  (type (;67;) (func (param eqref eqref)))
+  (type (;68;) (func (param eqref) (result eqref)))
+  (type (;69;) (func (param eqref) (result i32)))
+  (type (;70;) (func (param eqref) (result i32)))
+  (type (;71;) (func (param eqref eqref) (result i32)))
+  (type (;72;) (func (param eqref i32) (result i32)))
+  (type (;73;) (func (param eqref i32 i32) (result eqref)))
+  (type (;74;) (sub (struct (field i32))))
+  (type (;75;) (sub final 74 (struct (field i32) (field i32))))
+  (type (;76;) (struct (field eqref) (field (ref 0))))
+  (type (;77;) (struct (field eqref) (field (ref 0))))
+  (type (;78;) (func (param eqref eqref) (result (ref 12))))
+  (type (;79;) (func (param eqref i32 i32) (result (ref 12))))
+  (type (;80;) (func (param eqref) (result (ref 76))))
+  (type (;81;) (func (param (ref 76) i32) (result (ref 12))))
+  (type (;82;) (func (result (ref 77))))
+  (type (;83;) (func (param i32) (result (ref 77))))
+  (type (;84;) (func (param (ref 77)) (result i32)))
+  (type (;85;) (func (param (ref 77)) (result i32)))
+  (type (;86;) (func (param (ref 77)) (result (ref 12))))
+  (type (;87;) (func (param (ref 77) eqref) (result (ref 12))))
+  (type (;88;) (func (param eqref i32 i32) (result (ref 12))))
+  (type (;89;) (func (param eqref eqref) (result (ref 12))))
+  (type (;90;) (func (param i64) (result i64)))
+  (type (;91;) (func (param i64 i64) (result i64)))
+  (type (;92;) (func (param i64 i64) (result i32)))
+  (type (;93;) (func (param eqref) (result i64)))
+  (type (;94;) (func (param eqref) (result i32)))
   (type (;95;) (func (param eqref) (result eqref)))
-  (type (;96;) (func (result eqref)))
-  (type (;97;) (func (param eqref) (result i32)))
-  (type (;98;) (func (param eqref eqref)))
-  (type (;99;) (func (param eqref eqref)))
-  (type (;100;) (func (param eqref i32)))
-  (type (;101;) (func (param eqref i32)))
-  (type (;102;) (func (param eqref) (result eqref)))
-  (type (;103;) (sub (struct (field i32))))
-  (type (;104;) (sub final 103 (struct (field i32) (field i32))))
-  (type (;105;) (sub final 103 (struct (field i32) (field eqref))))
-  (type (;106;) (struct (field eqref)))
-  (type (;107;) (sub final 103 (struct (field i32) (field (ref 106)))))
-  (type (;108;) (struct (field eqref) (field i32)))
-  (type (;109;) (sub final 103 (struct (field i32) (field (ref 108)))))
-  (type (;110;) (sub final 103 (struct (field i32) (field (ref 14)))))
-  (type (;111;) (sub final 103 (struct (field i32) (field (ref 14)))))
-  (type (;112;) (struct (field eqref) (field (ref 103))))
-  (type (;113;) (struct (field eqref) (field i32)))
-  (type (;114;) (struct (field i32) (field i32) (field i32) (field i32)))
-  (type (;115;) (sub (struct (field i32))))
-  (type (;116;) (sub final 115 (struct (field i32) (field i32))))
-  (type (;117;) (sub final 115 (struct (field i32) (field i32) (field i8))))
-  (type (;118;) (sub final 115 (struct (field i32) (field i32) (field eqref))))
-  (type (;119;) (sub (struct (field i32))))
-  (type (;120;) (sub final 119 (struct (field i32) (field eqref))))
+  (type (;96;) (func (param eqref eqref) (result i32)))
+  (type (;97;) (func (param eqref i32) (result i32)))
+  (type (;98;) (func (param eqref i32 i32) (result eqref)))
+  (type (;99;) (func (param eqref) (result i32)))
+  (type (;100;) (func (param eqref) (result eqref)))
+  (type (;101;) (func (param eqref) (result eqref)))
+  (type (;102;) (func (result eqref)))
+  (type (;103;) (func (param eqref) (result i32)))
+  (type (;104;) (func (param eqref eqref)))
+  (type (;105;) (func (param eqref eqref)))
+  (type (;106;) (func (param eqref i32)))
+  (type (;107;) (func (param eqref i32)))
+  (type (;108;) (func (param eqref) (result eqref)))
+  (type (;109;) (sub (struct (field i32))))
+  (type (;110;) (sub final 109 (struct (field i32) (field i32))))
+  (type (;111;) (sub final 109 (struct (field i32) (field eqref))))
+  (type (;112;) (struct (field eqref)))
+  (type (;113;) (sub final 109 (struct (field i32) (field (ref 112)))))
+  (type (;114;) (struct (field eqref) (field i32)))
+  (type (;115;) (sub final 109 (struct (field i32) (field (ref 114)))))
+  (type (;116;) (sub final 109 (struct (field i32) (field (ref 19)))))
+  (type (;117;) (sub final 109 (struct (field i32) (field (ref 19)))))
+  (type (;118;) (struct (field eqref) (field (ref 109))))
+  (type (;119;) (struct (field eqref) (field i32)))
+  (type (;120;) (struct (field i32) (field i32) (field i32) (field i32)))
   (type (;121;) (sub (struct (field i32))))
-  (type (;122;) (sub final 121 (struct (field i32) (field (ref 68)))))
-  (type (;123;) (sub final 121 (struct (field i32) (field (ref 115)))))
-  (type (;124;) (sub (struct (field i32))))
-  (type (;125;) (sub final 124 (struct (field i32) (field (ref 68)))))
-  (type (;126;) (sub final 124 (struct (field i32) (field (ref 119)))))
-  (type (;127;) (struct (field eqref) (field eqref) (field (ref 0)) (field (ref 114)) (field i32) (field i32) (field i32)))
-  (type (;128;) (struct (field eqref) (field i32) (field i32) (field (ref 0)) (field (ref 5))))
-  (type (;129;) (func (param eqref) (result eqref)))
-  (type (;130;) (func))
-  (type (;131;) (func (result (ref 114))))
-  (type (;132;) (func (param (ref 127)) (result i32)))
-  (type (;133;) (func (param (ref 127) i32)))
-  (type (;134;) (func (param (ref 127)) (result i32)))
-  (type (;135;) (func (param (ref 127) i32)))
-  (type (;136;) (func (param i32) (result i32)))
-  (type (;137;) (func (param i32) (result i32)))
-  (type (;138;) (func (param eqref i32) (result i32)))
-  (type (;139;) (func (param eqref i32) (result i32)))
-  (type (;140;) (func (param eqref i32) (result i32)))
-  (type (;141;) (func (param i32) (result i32)))
-  (type (;142;) (func (param eqref i32) (result i32)))
-  (type (;143;) (func (param (ref 127))))
-  (type (;144;) (func (param i32) (result i32)))
-  (type (;145;) (func (param i32) (result i32)))
-  (type (;146;) (func (param eqref i32 i32) (result i32)))
-  (type (;147;) (func (param eqref i32 i32) (result (ref 9))))
-  (type (;148;) (func (param eqref i32 i32) (result (ref 9))))
-  (type (;149;) (func (param eqref i32 i32) (result (ref 9))))
-  (type (;150;) (func (param eqref i32 i32) (result i32)))
+  (type (;122;) (sub final 121 (struct (field i32) (field i32))))
+  (type (;123;) (sub final 121 (struct (field i32) (field i32) (field i8))))
+  (type (;124;) (sub final 121 (struct (field i32) (field i32) (field eqref))))
+  (type (;125;) (sub (struct (field i32))))
+  (type (;126;) (sub final 125 (struct (field i32) (field eqref))))
+  (type (;127;) (sub (struct (field i32))))
+  (type (;128;) (sub final 127 (struct (field i32) (field (ref 74)))))
+  (type (;129;) (sub final 127 (struct (field i32) (field (ref 121)))))
+  (type (;130;) (sub (struct (field i32))))
+  (type (;131;) (sub final 130 (struct (field i32) (field (ref 74)))))
+  (type (;132;) (sub final 130 (struct (field i32) (field (ref 125)))))
+  (type (;133;) (struct (field eqref) (field eqref) (field (ref 0)) (field (ref 120)) (field i32) (field i32) (field i32)))
+  (type (;134;) (struct (field eqref) (field i32) (field i32) (field (ref 0)) (field (ref 5))))
+  (type (;135;) (func (param eqref) (result eqref)))
+  (type (;136;) (func))
+  (type (;137;) (func (result (ref 120))))
+  (type (;138;) (func (param (ref 133)) (result i32)))
+  (type (;139;) (func (param (ref 133) i32)))
+  (type (;140;) (func (param (ref 133)) (result i32)))
+  (type (;141;) (func (param (ref 133) i32)))
+  (type (;142;) (func (param i32) (result i32)))
+  (type (;143;) (func (param i32) (result i32)))
+  (type (;144;) (func (param eqref i32) (result i32)))
+  (type (;145;) (func (param eqref i32) (result i32)))
+  (type (;146;) (func (param eqref i32) (result i32)))
+  (type (;147;) (func (param i32) (result i32)))
+  (type (;148;) (func (param eqref i32) (result i32)))
+  (type (;149;) (func (param (ref 133))))
+  (type (;150;) (func (param i32) (result i32)))
   (type (;151;) (func (param i32) (result i32)))
-  (type (;152;) (func (param eqref i32) (result (ref 9))))
-  (type (;153;) (func (param (ref 127) eqref i32 i32) (result i32)))
-  (type (;154;) (func (param (ref 127)) (result (ref 11))))
-  (type (;155;) (func (param (ref 127)) (result (ref 11))))
-  (type (;156;) (func (param (ref 127) eqref (ref 103)) (result (ref 11))))
-  (type (;157;) (func (param (ref 127)) (result (ref 11))))
-  (type (;158;) (func (param (ref 127)) (result (ref 11))))
-  (type (;159;) (func (param (ref 127) i32) (result (ref 11))))
-  (type (;160;) (func (param eqref eqref) (result i32)))
-  (type (;161;) (func (param eqref) (result i64)))
-  (type (;162;) (func (param (ref 14) i32 eqref) (result i32)))
-  (type (;163;) (func (param (ref 14) eqref) (result i32)))
-  (type (;164;) (func (param i64) (result i32)))
-  (type (;165;) (func (param i64) (result i32)))
-  (type (;166;) (func (param i64 i64 i64 i64 i32 i64) (result i32)))
-  (type (;167;) (func (param (ref 127) i32) (result (ref 11))))
-  (type (;168;) (func (param (ref 127) i32) (result (ref 11))))
-  (type (;169;) (func (param eqref (ref 114) i32 i32 i32) (result (ref 11))))
-  (type (;170;) (func (param eqref (ref 114)) (result (ref 11))))
-  (type (;171;) (func (param eqref i32 (ref 114)) (result (ref 11))))
-  (type (;172;) (func (param eqref i32) (result (ref 11))))
-  (type (;173;) (func (param (ref 128) i32)))
-  (type (;174;) (func (param (ref 128) i32 eqref)))
-  (type (;175;) (func (param (ref 128) i32)))
-  (type (;176;) (func (param (ref 128) eqref)))
-  (type (;177;) (func (param (ref 128) eqref)))
-  (type (;178;) (func (param i32) (result i32)))
-  (type (;179;) (func (param (ref 128) eqref)))
-  (type (;180;) (func (param (ref 128) (ref 108))))
-  (type (;181;) (func (param (ref 128) (ref 103) i32)))
-  (type (;182;) (func (param (ref 103) i32 i32) (result (ref 11))))
-  (type (;183;) (func (param eqref (ref 103) i32 i32) (result (ref 11))))
-  (type (;184;) (func (param eqref (ref 103)) (result (ref 11))))
-  (type (;185;) (func (param eqref i32) (result (ref 11))))
-  (type (;186;) (func (param eqref (ref 103)) (result (ref 11))))
-  (type (;187;) (func (param eqref i32 (ref 114)) (result (ref 11))))
-  (type (;188;) (func (param eqref (ref 103) i32 i32) (result (ref 11))))
-  (type (;189;) (func (param i32 i32 i32 i32) (result i32)))
-  (type (;190;) (func (param i32 eqref) (result i32)))
-  (type (;191;) (func (result i32)))
-  (type (;192;) (array (mut v128)))
-  (type (;193;) (struct (field (ref 192)) (field i32) (field i32)))
-  (type (;194;) (struct (field (ref 192)) (field i32) (field i32)))
-  (type (;195;) (struct (field (ref 192)) (field i32) (field i32)))
-  (type (;196;) (struct (field (mut (ref 192))) (field (mut i32)) (field (mut i32))))
-  (type (;197;) (struct (field (mut (ref 192))) (field (mut i32)) (field (mut i32))))
-  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 189)))
+  (type (;152;) (func (param eqref i32 i32) (result i32)))
+  (type (;153;) (func (param eqref i32 i32) (result (ref 9))))
+  (type (;154;) (func (param eqref i32 i32) (result (ref 9))))
+  (type (;155;) (func (param eqref i32 i32) (result (ref 9))))
+  (type (;156;) (func (param eqref i32 i32) (result i32)))
+  (type (;157;) (func (param i32) (result i32)))
+  (type (;158;) (func (param eqref i32) (result (ref 9))))
+  (type (;159;) (func (param (ref 133) eqref i32 i32) (result i32)))
+  (type (;160;) (func (param (ref 133)) (result (ref 12))))
+  (type (;161;) (func (param (ref 133)) (result (ref 12))))
+  (type (;162;) (func (param (ref 133) eqref (ref 109)) (result (ref 12))))
+  (type (;163;) (func (param (ref 133)) (result (ref 12))))
+  (type (;164;) (func (param (ref 133)) (result (ref 12))))
+  (type (;165;) (func (param (ref 133) i32) (result (ref 12))))
+  (type (;166;) (func (param eqref eqref) (result i32)))
+  (type (;167;) (func (param eqref) (result i64)))
+  (type (;168;) (func (param (ref 19) i32 eqref) (result i32)))
+  (type (;169;) (func (param (ref 19) eqref) (result i32)))
+  (type (;170;) (func (param i64) (result i32)))
+  (type (;171;) (func (param i64) (result i32)))
+  (type (;172;) (func (param i64 i64 i64 i64 i32 i64) (result i32)))
+  (type (;173;) (func (param (ref 133) i32) (result (ref 12))))
+  (type (;174;) (func (param (ref 133) i32) (result (ref 12))))
+  (type (;175;) (func (param eqref (ref 120) i32 i32 i32) (result (ref 12))))
+  (type (;176;) (func (param eqref (ref 120)) (result (ref 12))))
+  (type (;177;) (func (param eqref i32 (ref 120)) (result (ref 12))))
+  (type (;178;) (func (param eqref i32) (result (ref 12))))
+  (type (;179;) (func (param (ref 134) i32)))
+  (type (;180;) (func (param (ref 134) i32 eqref)))
+  (type (;181;) (func (param (ref 134) i32)))
+  (type (;182;) (func (param (ref 134) eqref)))
+  (type (;183;) (func (param (ref 134) eqref)))
+  (type (;184;) (func (param i32) (result i32)))
+  (type (;185;) (func (param (ref 134) eqref)))
+  (type (;186;) (func (param (ref 134) (ref 114))))
+  (type (;187;) (func (param (ref 134) (ref 109) i32)))
+  (type (;188;) (func (param (ref 109) i32 i32) (result (ref 12))))
+  (type (;189;) (func (param eqref (ref 109) i32 i32) (result (ref 12))))
+  (type (;190;) (func (param eqref (ref 109)) (result (ref 12))))
+  (type (;191;) (func (param eqref i32) (result (ref 12))))
+  (type (;192;) (func (param eqref (ref 109)) (result (ref 12))))
+  (type (;193;) (func (param eqref i32 (ref 120)) (result (ref 12))))
+  (type (;194;) (func (param eqref (ref 109) i32 i32) (result (ref 12))))
+  (type (;195;) (func (param i32 i32 i32 i32) (result i32)))
+  (type (;196;) (func (param i32 eqref) (result i32)))
+  (type (;197;) (func (result i32)))
+  (type (;198;) (struct (field (mut eqref)) (field (mut i32))))
+  (type (;199;) (struct))
+  (type (;200;) (struct (field (mut eqref)) (field (mut i32))))
+  (type (;201;) (struct (field (mut eqref)) (field (mut i32))))
+  (type (;202;) (struct (field (mut eqref)) (field (mut i32))))
+  (type (;203;) (array (mut v128)))
+  (type (;204;) (struct (field (ref 203)) (field i32) (field i32)))
+  (type (;205;) (struct (field (ref 203)) (field i32) (field i32)))
+  (type (;206;) (struct (field (ref 203)) (field i32) (field i32)))
+  (type (;207;) (struct (field (mut (ref 203))) (field (mut i32)) (field (mut i32))))
+  (type (;208;) (struct (field (mut (ref 203))) (field (mut i32)) (field (mut i32))))
+  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 195)))
   (memory (;0;) 1)
   (export "main" (func 124))
   (export "memory" (memory 0))
@@ -210,20 +221,20 @@
       i32.eqz
     end
   )
-  (func (;2;) (type 32) (param eqref i32) (result v128)
-    (local (ref 194) (ref 192) i32 v128)
+  (func (;2;) (type 38) (param eqref i32) (result v128)
+    (local (ref 205) (ref 203) i32 v128)
     local.get 0
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 2
     local.get 1
     local.get 2
-    struct.get 194 2
+    struct.get 205 2
     i32.gt_u
     if ;; label = @1
       unreachable
     end
     local.get 2
-    struct.get 194 2
+    struct.get 205 2
     local.get 1
     i32.sub
     i32.const 16
@@ -232,10 +243,10 @@
       unreachable
     end
     local.get 2
-    struct.get 194 0
+    struct.get 205 0
     local.set 3
     local.get 2
-    struct.get 194 1
+    struct.get 205 1
     local.get 1
     i32.add
     local.set 4
@@ -248,14 +259,14 @@
       local.get 4
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.set 5
     else
       local.get 3
       local.get 4
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 4
       i32.const 15
@@ -269,7 +280,7 @@
       i32.shr_u
       i32.const 1
       i32.add
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 4
       i32.const 15
@@ -285,20 +296,20 @@
     end
     local.get 5
   )
-  (func (;3;) (type 33) (param eqref i32) (result v128)
-    (local (ref 193) (ref 192) i32 v128)
+  (func (;3;) (type 39) (param eqref i32) (result v128)
+    (local (ref 204) (ref 203) i32 v128)
     local.get 0
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 2
     local.get 1
     local.get 2
-    struct.get 193 2
+    struct.get 204 2
     i32.gt_u
     if ;; label = @1
       unreachable
     end
     local.get 2
-    struct.get 193 2
+    struct.get 204 2
     local.get 1
     i32.sub
     i32.const 16
@@ -307,10 +318,10 @@
       unreachable
     end
     local.get 2
-    struct.get 193 0
+    struct.get 204 0
     local.set 3
     local.get 2
-    struct.get 193 1
+    struct.get 204 1
     local.get 1
     i32.add
     local.set 4
@@ -323,14 +334,14 @@
       local.get 4
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.set 5
     else
       local.get 3
       local.get 4
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 4
       i32.const 15
@@ -344,7 +355,7 @@
       i32.shr_u
       i32.const 1
       i32.add
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 4
       i32.const 15
@@ -360,52 +371,52 @@
     end
     local.get 5
   )
-  (func (;4;) (type 34) (param eqref) (result i32)
+  (func (;4;) (type 40) (param eqref) (result i32)
     local.get 0
-    ref.cast (ref 193)
-    struct.get 193 2
+    ref.cast (ref 204)
+    struct.get 204 2
   )
-  (func (;5;) (type 35) (param eqref) (result eqref)
-    (local (ref 193))
+  (func (;5;) (type 41) (param eqref) (result eqref)
+    (local (ref 204))
     local.get 0
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.tee 1
-    struct.get 193 0
+    struct.get 204 0
     local.get 1
-    struct.get 193 1
+    struct.get 204 1
     local.get 1
-    struct.get 193 2
-    struct.new 194
+    struct.get 204 2
+    struct.new 205
   )
-  (func (;6;) (type 36) (param eqref eqref) (result i32)
-    (local (ref 193) (ref 193) (ref 192) (ref 192) i32 i32 i32 i32 v128 v128)
+  (func (;6;) (type 42) (param eqref eqref) (result i32)
+    (local (ref 204) (ref 204) (ref 203) (ref 203) i32 i32 i32 i32 v128 v128)
     local.get 0
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 2
     local.get 1
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 3
     local.get 2
-    struct.get 193 2
+    struct.get 204 2
     local.tee 6
     local.get 3
-    struct.get 193 2
+    struct.get 204 2
     i32.ne
     if ;; label = @1
       i32.const 0
       return
     end
     local.get 2
-    struct.get 193 0
+    struct.get 204 0
     local.set 4
     local.get 3
-    struct.get 193 0
+    struct.get 204 0
     local.set 5
     local.get 2
-    struct.get 193 1
+    struct.get 204 1
     local.set 7
     local.get 3
-    struct.get 193 1
+    struct.get 204 1
     local.set 8
     i32.const 0
     local.set 9
@@ -432,14 +443,14 @@
           local.get 7
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           local.set 10
         else
           local.get 4
           local.get 7
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 7
           i32.const 15
@@ -453,7 +464,7 @@
           i32.shr_u
           i32.const 1
           i32.add
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 7
           i32.const 15
@@ -476,14 +487,14 @@
           local.get 8
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           local.set 11
         else
           local.get 5
           local.get 8
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 8
           i32.const 15
@@ -497,7 +508,7 @@
           i32.shr_u
           i32.const 1
           i32.add
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 8
           i32.const 15
@@ -537,7 +548,7 @@
       local.get 7
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 7
       i32.const 15
       i32.and
@@ -548,7 +559,7 @@
       local.get 8
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 8
       i32.const 15
       i32.and
@@ -576,19 +587,19 @@
     end
     i32.const 1
   )
-  (func (;7;) (type 37) (param eqref) (result i64)
-    (local (ref 193) (ref 192) i32 i32 i32 i64)
+  (func (;7;) (type 43) (param eqref) (result i64)
+    (local (ref 204) (ref 203) i32 i32 i32 i64)
     local.get 0
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 1
     local.get 1
-    struct.get 193 0
+    struct.get 204 0
     local.set 2
     local.get 1
-    struct.get 193 1
+    struct.get 204 1
     local.set 3
     local.get 1
-    struct.get 193 2
+    struct.get 204 2
     local.set 4
     i32.const 0
     local.set 5
@@ -607,7 +618,7 @@
       local.get 3
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 3
       i32.const 15
       i32.and
@@ -631,23 +642,23 @@
     end
     local.get 6
   )
-  (func (;8;) (type 38) (param eqref i32) (result i32)
-    (local (ref 193) (ref 192) i32)
+  (func (;8;) (type 44) (param eqref i32) (result i32)
+    (local (ref 204) (ref 203) i32)
     local.get 0
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 2
     local.get 1
     local.get 2
-    struct.get 193 2
+    struct.get 204 2
     i32.ge_u
     if ;; label = @1
       unreachable
     end
     local.get 2
-    struct.get 193 0
+    struct.get 204 0
     local.set 3
     local.get 2
-    struct.get 193 1
+    struct.get 204 1
     local.get 1
     i32.add
     local.set 4
@@ -655,7 +666,7 @@
     local.get 4
     i32.const 4
     i32.shr_u
-    array.get 192
+    array.get 203
     local.get 4
     i32.const 15
     i32.and
@@ -663,13 +674,13 @@
     i8x16.swizzle
     i8x16.extract_lane_u 0
   )
-  (func (;9;) (type 39) (param eqref i32 i32) (result eqref)
-    (local (ref 193) (ref 192) i32 i32 i32 i32)
+  (func (;9;) (type 45) (param eqref i32 i32) (result eqref)
+    (local (ref 204) (ref 203) i32 i32 i32 i32)
     local.get 0
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 3
     local.get 3
-    struct.get 193 2
+    struct.get 204 2
     local.set 5
     local.get 1
     local.get 5
@@ -686,10 +697,10 @@
       unreachable
     end
     local.get 3
-    struct.get 193 0
+    struct.get 204 0
     local.set 4
     local.get 3
-    struct.get 193 1
+    struct.get 204 1
     local.get 1
     i32.add
     local.set 6
@@ -705,7 +716,7 @@
       local.get 6
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 6
       i32.const 15
       i32.and
@@ -734,7 +745,7 @@
       local.get 6
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 6
       i32.const 15
       i32.and
@@ -753,37 +764,37 @@
     end
     local.get 4
     local.get 3
-    struct.get 193 1
+    struct.get 204 1
     local.get 1
     i32.add
     local.get 2
-    struct.new 195
+    struct.new 206
   )
-  (func (;10;) (type 40) (param eqref) (result i32)
+  (func (;10;) (type 46) (param eqref) (result i32)
     local.get 0
-    ref.cast (ref 195)
-    struct.get 195 2
+    ref.cast (ref 206)
+    struct.get 206 2
   )
-  (func (;11;) (type 41) (param eqref) (result eqref)
-    (local (ref 195))
+  (func (;11;) (type 47) (param eqref) (result eqref)
+    (local (ref 206))
     local.get 0
-    ref.cast (ref 195)
+    ref.cast (ref 206)
     local.tee 1
-    struct.get 195 0
+    struct.get 206 0
     local.get 1
-    struct.get 195 1
+    struct.get 206 1
     local.get 1
-    struct.get 195 2
-    struct.new 193
+    struct.get 206 2
+    struct.new 204
   )
-  (func (;12;) (type 42) (result eqref)
+  (func (;12;) (type 48) (result eqref)
     i32.const 4
-    array.new_default 192
+    array.new_default 203
     i32.const 0
     i32.const 0
-    struct.new 196
+    struct.new 207
   )
-  (func (;13;) (type 43) (param i32) (result eqref)
+  (func (;13;) (type 49) (param i32) (result eqref)
     local.get 0
     i32.const 4
     i32.shr_u
@@ -793,50 +804,50 @@
     i32.const 0
     i32.ne
     i32.add
-    array.new_default 192
+    array.new_default 203
     i32.const 0
     i32.const 0
-    struct.new 196
+    struct.new 207
   )
-  (func (;14;) (type 44) (param eqref) (result i32)
-    (local (ref 196))
+  (func (;14;) (type 50) (param eqref) (result i32)
+    (local (ref 207))
     local.get 0
-    ref.cast (ref 196)
+    ref.cast (ref 207)
     local.tee 1
-    struct.get 196 2
+    struct.get 207 2
     if ;; label = @1
       unreachable
     end
     local.get 1
-    struct.get 196 1
+    struct.get 207 1
   )
-  (func (;15;) (type 45) (param eqref eqref)
-    (local (ref 196) (ref 193) (ref 192) (ref 192) i32 i32 i32 i32 i32 i32 (ref 192) i32 i32 i32 i32 i32 v128 v128)
+  (func (;15;) (type 51) (param eqref eqref)
+    (local (ref 207) (ref 204) (ref 203) (ref 203) i32 i32 i32 i32 i32 i32 (ref 203) i32 i32 i32 i32 i32 v128 v128)
     local.get 0
-    ref.cast (ref 196)
+    ref.cast (ref 207)
     local.set 2
     local.get 2
-    struct.get 196 2
+    struct.get 207 2
     if ;; label = @1
       unreachable
     end
     local.get 1
-    ref.cast (ref 193)
+    ref.cast (ref 204)
     local.set 3
     local.get 2
-    struct.get 196 0
+    struct.get 207 0
     local.set 4
     local.get 3
-    struct.get 193 0
+    struct.get 204 0
     local.set 5
     local.get 2
-    struct.get 196 1
+    struct.get 207 1
     local.set 6
     local.get 3
-    struct.get 193 1
+    struct.get 204 1
     local.set 7
     local.get 3
-    struct.get 193 2
+    struct.get 204 2
     local.set 8
     local.get 6
     local.get 8
@@ -876,7 +887,7 @@
         local.set 11
       end
       local.get 11
-      array.new_default 192
+      array.new_default 203
       local.set 12
       i32.const 0
       local.set 13
@@ -898,8 +909,8 @@
           local.get 13
           local.get 4
           local.get 13
-          array.get 192
-          array.set 192
+          array.get 203
+          array.set 203
           local.get 13
           i32.const 1
           i32.add
@@ -909,7 +920,7 @@
       end
       local.get 2
       local.get 12
-      struct.set 196 0
+      struct.set 207 0
       local.get 12
       local.set 4
     end
@@ -944,14 +955,14 @@
             local.get 15
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.set 18
           else
             local.get 5
             local.get 15
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 15
             i32.const 15
@@ -965,7 +976,7 @@
             i32.shr_u
             i32.const 1
             i32.add
-            array.get 192
+            array.get 203
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 15
             i32.const 15
@@ -989,7 +1000,7 @@
             i32.const 4
             i32.shr_u
             local.get 18
-            array.set 192
+            array.set 203
           else
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 16
@@ -1006,7 +1017,7 @@
             local.get 16
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.get 18
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 16
@@ -1017,7 +1028,7 @@
             i8x16.swizzle
             local.get 19
             v128.bitselect
-            array.set 192
+            array.set 203
             local.get 4
             local.get 16
             i32.const 4
@@ -1040,10 +1051,10 @@
             i32.shr_u
             i32.const 1
             i32.add
-            array.get 192
+            array.get 203
             local.get 19
             v128.bitselect
-            array.set 192
+            array.set 203
           end
           local.get 14
           i32.const 16
@@ -1055,7 +1066,7 @@
         local.get 15
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 15
         i32.const 15
         i32.and
@@ -1073,7 +1084,7 @@
         local.get 16
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
         local.get 16
         i32.const 15
@@ -1081,7 +1092,7 @@
         i8x16.splat
         i8x16.eq
         v128.bitselect
-        array.set 192
+        array.set 203
         local.get 14
         i32.const 1
         i32.add
@@ -1091,35 +1102,35 @@
     end
     local.get 2
     local.get 9
-    struct.set 196 1
+    struct.set 207 1
   )
-  (func (;16;) (type 46) (param eqref eqref)
-    (local (ref 196) (ref 195) (ref 192) (ref 192) i32 i32 i32 i32 i32 i32 (ref 192) i32 i32 i32 i32 i32 v128 v128)
+  (func (;16;) (type 52) (param eqref eqref)
+    (local (ref 207) (ref 206) (ref 203) (ref 203) i32 i32 i32 i32 i32 i32 (ref 203) i32 i32 i32 i32 i32 v128 v128)
     local.get 0
-    ref.cast (ref 196)
+    ref.cast (ref 207)
     local.set 2
     local.get 2
-    struct.get 196 2
+    struct.get 207 2
     if ;; label = @1
       unreachable
     end
     local.get 1
-    ref.cast (ref 195)
+    ref.cast (ref 206)
     local.set 3
     local.get 2
-    struct.get 196 0
+    struct.get 207 0
     local.set 4
     local.get 3
-    struct.get 195 0
+    struct.get 206 0
     local.set 5
     local.get 2
-    struct.get 196 1
+    struct.get 207 1
     local.set 6
     local.get 3
-    struct.get 195 1
+    struct.get 206 1
     local.set 7
     local.get 3
-    struct.get 195 2
+    struct.get 206 2
     local.set 8
     local.get 6
     local.get 8
@@ -1159,7 +1170,7 @@
         local.set 11
       end
       local.get 11
-      array.new_default 192
+      array.new_default 203
       local.set 12
       i32.const 0
       local.set 13
@@ -1181,8 +1192,8 @@
           local.get 13
           local.get 4
           local.get 13
-          array.get 192
-          array.set 192
+          array.get 203
+          array.set 203
           local.get 13
           i32.const 1
           i32.add
@@ -1192,7 +1203,7 @@
       end
       local.get 2
       local.get 12
-      struct.set 196 0
+      struct.set 207 0
       local.get 12
       local.set 4
     end
@@ -1227,14 +1238,14 @@
             local.get 15
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.set 18
           else
             local.get 5
             local.get 15
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 15
             i32.const 15
@@ -1248,7 +1259,7 @@
             i32.shr_u
             i32.const 1
             i32.add
-            array.get 192
+            array.get 203
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 15
             i32.const 15
@@ -1272,7 +1283,7 @@
             i32.const 4
             i32.shr_u
             local.get 18
-            array.set 192
+            array.set 203
           else
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 16
@@ -1289,7 +1300,7 @@
             local.get 16
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.get 18
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 16
@@ -1300,7 +1311,7 @@
             i8x16.swizzle
             local.get 19
             v128.bitselect
-            array.set 192
+            array.set 203
             local.get 4
             local.get 16
             i32.const 4
@@ -1323,10 +1334,10 @@
             i32.shr_u
             i32.const 1
             i32.add
-            array.get 192
+            array.get 203
             local.get 19
             v128.bitselect
-            array.set 192
+            array.set 203
           end
           local.get 14
           i32.const 16
@@ -1338,7 +1349,7 @@
         local.get 15
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 15
         i32.const 15
         i32.and
@@ -1356,7 +1367,7 @@
         local.get 16
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
         local.get 16
         i32.const 15
@@ -1364,7 +1375,7 @@
         i8x16.splat
         i8x16.eq
         v128.bitselect
-        array.set 192
+        array.set 203
         local.get 14
         i32.const 1
         i32.add
@@ -1374,10 +1385,10 @@
     end
     local.get 2
     local.get 9
-    struct.set 196 1
+    struct.set 207 1
   )
-  (func (;17;) (type 47) (param eqref i32)
-    (local (ref 196) (ref 192) i32 i32 i32 (ref 192) i32)
+  (func (;17;) (type 53) (param eqref i32)
+    (local (ref 207) (ref 203) i32 i32 i32 (ref 203) i32)
     local.get 1
     i32.const 127
     i32.gt_u
@@ -1385,18 +1396,18 @@
       unreachable
     end
     local.get 0
-    ref.cast (ref 196)
+    ref.cast (ref 207)
     local.set 2
     local.get 2
-    struct.get 196 2
+    struct.get 207 2
     if ;; label = @1
       unreachable
     end
     local.get 2
-    struct.get 196 0
+    struct.get 207 0
     local.set 3
     local.get 2
-    struct.get 196 1
+    struct.get 207 1
     local.tee 4
     i32.const 1
     i32.add
@@ -1425,7 +1436,7 @@
         local.set 6
       end
       local.get 6
-      array.new_default 192
+      array.new_default 203
       local.set 7
       i32.const 0
       local.set 8
@@ -1447,8 +1458,8 @@
           local.get 8
           local.get 3
           local.get 8
-          array.get 192
-          array.set 192
+          array.get 203
+          array.set 203
           local.get 8
           i32.const 1
           i32.add
@@ -1458,7 +1469,7 @@
       end
       local.get 2
       local.get 7
-      struct.set 196 0
+      struct.set 207 0
       local.get 7
       local.set 3
     end
@@ -1472,7 +1483,7 @@
     local.get 4
     i32.const 4
     i32.shr_u
-    array.get 192
+    array.get 203
     v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
     local.get 4
     i32.const 15
@@ -1480,26 +1491,26 @@
     i8x16.splat
     i8x16.eq
     v128.bitselect
-    array.set 192
+    array.set 203
     local.get 2
     local.get 5
-    struct.set 196 1
+    struct.set 207 1
   )
-  (func (;18;) (type 48) (param eqref i32)
-    (local (ref 196) (ref 192) i32 i32 i32 i32 i32 (ref 192) i32 i32 i32 i32 i32 i32)
+  (func (;18;) (type 54) (param eqref i32)
+    (local (ref 207) (ref 203) i32 i32 i32 i32 i32 (ref 203) i32 i32 i32 i32 i32 i32)
     local.get 0
-    ref.cast (ref 196)
+    ref.cast (ref 207)
     local.set 2
     local.get 2
-    struct.get 196 2
+    struct.get 207 2
     if ;; label = @1
       unreachable
     end
     local.get 2
-    struct.get 196 0
+    struct.get 207 0
     local.set 3
     local.get 2
-    struct.get 196 1
+    struct.get 207 1
     local.set 4
     local.get 1
     i32.const 127
@@ -1643,7 +1654,7 @@
         local.set 8
       end
       local.get 8
-      array.new_default 192
+      array.new_default 203
       local.set 9
       i32.const 0
       local.set 10
@@ -1665,8 +1676,8 @@
           local.get 10
           local.get 3
           local.get 10
-          array.get 192
-          array.set 192
+          array.get 203
+          array.set 203
           local.get 10
           i32.const 1
           i32.add
@@ -1676,7 +1687,7 @@
       end
       local.get 2
       local.get 9
-      struct.set 196 0
+      struct.set 207 0
       local.get 9
       local.set 3
     end
@@ -1692,7 +1703,7 @@
     local.get 15
     i32.const 4
     i32.shr_u
-    array.get 192
+    array.get 203
     v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
     local.get 15
     i32.const 15
@@ -1700,7 +1711,7 @@
     i8x16.splat
     i8x16.eq
     v128.bitselect
-    array.set 192
+    array.set 203
     local.get 5
     i32.const 1
     i32.gt_u
@@ -1719,7 +1730,7 @@
       local.get 15
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 15
       i32.const 15
@@ -1727,7 +1738,7 @@
       i8x16.splat
       i8x16.eq
       v128.bitselect
-      array.set 192
+      array.set 203
     end
     local.get 5
     i32.const 2
@@ -1747,7 +1758,7 @@
       local.get 15
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 15
       i32.const 15
@@ -1755,7 +1766,7 @@
       i8x16.splat
       i8x16.eq
       v128.bitselect
-      array.set 192
+      array.set 203
     end
     local.get 5
     i32.const 3
@@ -1775,7 +1786,7 @@
       local.get 15
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
       local.get 15
       i32.const 15
@@ -1783,40 +1794,40 @@
       i8x16.splat
       i8x16.eq
       v128.bitselect
-      array.set 192
+      array.set 203
     end
     local.get 2
     local.get 6
-    struct.set 196 1
+    struct.set 207 1
   )
-  (func (;19;) (type 49) (param eqref) (result eqref)
-    (local (ref 196))
+  (func (;19;) (type 55) (param eqref) (result eqref)
+    (local (ref 207))
     local.get 0
-    ref.cast (ref 196)
+    ref.cast (ref 207)
     local.set 1
     local.get 1
-    struct.get 196 2
+    struct.get 207 2
     if ;; label = @1
       unreachable
     end
     local.get 1
     i32.const 1
-    struct.set 196 2
+    struct.set 207 2
     local.get 1
-    struct.get 196 0
+    struct.get 207 0
     i32.const 0
     local.get 1
-    struct.get 196 1
-    struct.new 193
+    struct.get 207 1
+    struct.new 204
   )
-  (func (;20;) (type 50) (result eqref)
+  (func (;20;) (type 56) (result eqref)
     i32.const 4
-    array.new_default 192
+    array.new_default 203
     i32.const 0
     i32.const 0
-    struct.new 197
+    struct.new 208
   )
-  (func (;21;) (type 51) (param i32) (result eqref)
+  (func (;21;) (type 57) (param i32) (result eqref)
     local.get 0
     i32.const 4
     i32.shr_u
@@ -1826,38 +1837,38 @@
     i32.const 0
     i32.ne
     i32.add
-    array.new_default 192
+    array.new_default 203
     i32.const 0
     i32.const 0
-    struct.new 197
+    struct.new 208
   )
-  (func (;22;) (type 52) (param eqref eqref)
-    (local (ref 197) (ref 194) (ref 192) (ref 192) i32 i32 i32 i32 i32 i32 (ref 192) i32 i32 i32 i32 i32 v128 v128)
+  (func (;22;) (type 58) (param eqref eqref)
+    (local (ref 208) (ref 205) (ref 203) (ref 203) i32 i32 i32 i32 i32 i32 (ref 203) i32 i32 i32 i32 i32 v128 v128)
     local.get 0
-    ref.cast (ref 197)
+    ref.cast (ref 208)
     local.set 2
     local.get 2
-    struct.get 197 2
+    struct.get 208 2
     if ;; label = @1
       unreachable
     end
     local.get 1
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 3
     local.get 2
-    struct.get 197 0
+    struct.get 208 0
     local.set 4
     local.get 3
-    struct.get 194 0
+    struct.get 205 0
     local.set 5
     local.get 2
-    struct.get 197 1
+    struct.get 208 1
     local.set 6
     local.get 3
-    struct.get 194 1
+    struct.get 205 1
     local.set 7
     local.get 3
-    struct.get 194 2
+    struct.get 205 2
     local.set 8
     local.get 6
     local.get 8
@@ -1897,7 +1908,7 @@
         local.set 11
       end
       local.get 11
-      array.new_default 192
+      array.new_default 203
       local.set 12
       i32.const 0
       local.set 13
@@ -1919,8 +1930,8 @@
           local.get 13
           local.get 4
           local.get 13
-          array.get 192
-          array.set 192
+          array.get 203
+          array.set 203
           local.get 13
           i32.const 1
           i32.add
@@ -1930,7 +1941,7 @@
       end
       local.get 2
       local.get 12
-      struct.set 197 0
+      struct.set 208 0
       local.get 12
       local.set 4
     end
@@ -1965,14 +1976,14 @@
             local.get 15
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.set 18
           else
             local.get 5
             local.get 15
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 15
             i32.const 15
@@ -1986,7 +1997,7 @@
             i32.shr_u
             i32.const 1
             i32.add
-            array.get 192
+            array.get 203
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 15
             i32.const 15
@@ -2010,7 +2021,7 @@
             i32.const 4
             i32.shr_u
             local.get 18
-            array.set 192
+            array.set 203
           else
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 16
@@ -2027,7 +2038,7 @@
             local.get 16
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.get 18
             v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
             local.get 16
@@ -2038,7 +2049,7 @@
             i8x16.swizzle
             local.get 19
             v128.bitselect
-            array.set 192
+            array.set 203
             local.get 4
             local.get 16
             i32.const 4
@@ -2061,10 +2072,10 @@
             i32.shr_u
             i32.const 1
             i32.add
-            array.get 192
+            array.get 203
             local.get 19
             v128.bitselect
-            array.set 192
+            array.set 203
           end
           local.get 14
           i32.const 16
@@ -2076,7 +2087,7 @@
         local.get 15
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 15
         i32.const 15
         i32.and
@@ -2094,7 +2105,7 @@
         local.get 16
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
         local.get 16
         i32.const 15
@@ -2102,7 +2113,7 @@
         i8x16.splat
         i8x16.eq
         v128.bitselect
-        array.set 192
+        array.set 203
         local.get 14
         i32.const 1
         i32.add
@@ -2112,46 +2123,46 @@
     end
     local.get 2
     local.get 9
-    struct.set 197 1
+    struct.set 208 1
   )
-  (func (;23;) (type 53) (param eqref) (result eqref)
-    (local (ref 197))
+  (func (;23;) (type 59) (param eqref) (result eqref)
+    (local (ref 208))
     local.get 0
-    ref.cast (ref 197)
+    ref.cast (ref 208)
     local.set 1
     local.get 1
-    struct.get 197 2
+    struct.get 208 2
     if ;; label = @1
       unreachable
     end
     local.get 1
     i32.const 1
-    struct.set 197 2
+    struct.set 208 2
     local.get 1
-    struct.get 197 0
+    struct.get 208 0
     i32.const 0
     local.get 1
-    struct.get 197 1
-    struct.new 194
+    struct.get 208 1
+    struct.new 205
   )
-  (func (;24;) (type 54) (param eqref) (result i32)
+  (func (;24;) (type 60) (param eqref) (result i32)
     local.get 0
-    ref.cast (ref 194)
-    struct.get 194 2
+    ref.cast (ref 205)
+    struct.get 205 2
   )
-  (func (;25;) (type 55) (param eqref) (result i32)
-    (local (ref 194) (ref 192) i32 i32 i32 i32 i32 i32)
+  (func (;25;) (type 61) (param eqref) (result i32)
+    (local (ref 205) (ref 203) i32 i32 i32 i32 i32 i32)
     local.get 0
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 1
     local.get 1
-    struct.get 194 0
+    struct.get 205 0
     local.set 2
     local.get 1
-    struct.get 194 1
+    struct.get 205 1
     local.set 4
     local.get 1
-    struct.get 194 2
+    struct.get 205 2
     local.get 4
     i32.add
     local.set 3
@@ -2178,7 +2189,7 @@
         local.get 4
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         i8x16.bitmask
         i32.eqz
         if ;; label = @3
@@ -2193,7 +2204,7 @@
       local.get 4
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 4
       i32.const 15
       i32.and
@@ -2237,7 +2248,7 @@
         i32.add
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 4
         i32.const 1
         i32.add
@@ -2281,7 +2292,7 @@
         i32.add
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 4
         i32.const 1
         i32.add
@@ -2297,7 +2308,7 @@
         i32.add
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 4
         i32.const 2
         i32.add
@@ -2397,7 +2408,7 @@
         i32.add
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 4
         i32.const 1
         i32.add
@@ -2413,7 +2424,7 @@
         i32.add
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 4
         i32.const 2
         i32.add
@@ -2429,7 +2440,7 @@
         i32.add
         i32.const 4
         i32.shr_u
-        array.get 192
+        array.get 203
         local.get 4
         i32.const 3
         i32.add
@@ -2525,35 +2536,35 @@
     end
     i32.const 1
   )
-  (func (;26;) (type 56) (param eqref eqref) (result i32)
-    (local (ref 194) (ref 194) (ref 192) (ref 192) i32 i32 i32 i32 v128 v128)
+  (func (;26;) (type 62) (param eqref eqref) (result i32)
+    (local (ref 205) (ref 205) (ref 203) (ref 203) i32 i32 i32 i32 v128 v128)
     local.get 0
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 2
     local.get 1
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 3
     local.get 2
-    struct.get 194 2
+    struct.get 205 2
     local.tee 6
     local.get 3
-    struct.get 194 2
+    struct.get 205 2
     i32.ne
     if ;; label = @1
       i32.const 0
       return
     end
     local.get 2
-    struct.get 194 0
+    struct.get 205 0
     local.set 4
     local.get 3
-    struct.get 194 0
+    struct.get 205 0
     local.set 5
     local.get 2
-    struct.get 194 1
+    struct.get 205 1
     local.set 7
     local.get 3
-    struct.get 194 1
+    struct.get 205 1
     local.set 8
     i32.const 0
     local.set 9
@@ -2580,14 +2591,14 @@
           local.get 7
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           local.set 10
         else
           local.get 4
           local.get 7
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 7
           i32.const 15
@@ -2601,7 +2612,7 @@
           i32.shr_u
           i32.const 1
           i32.add
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 7
           i32.const 15
@@ -2624,14 +2635,14 @@
           local.get 8
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           local.set 11
         else
           local.get 5
           local.get 8
           i32.const 4
           i32.shr_u
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 8
           i32.const 15
@@ -2645,7 +2656,7 @@
           i32.shr_u
           i32.const 1
           i32.add
-          array.get 192
+          array.get 203
           v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
           local.get 8
           i32.const 15
@@ -2685,7 +2696,7 @@
       local.get 7
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 7
       i32.const 15
       i32.and
@@ -2696,7 +2707,7 @@
       local.get 8
       i32.const 4
       i32.shr_u
-      array.get 192
+      array.get 203
       local.get 8
       i32.const 15
       i32.and
@@ -2724,23 +2735,23 @@
     end
     i32.const 1
   )
-  (func (;27;) (type 57) (param eqref i32) (result i32)
-    (local (ref 194) (ref 192) i32)
+  (func (;27;) (type 63) (param eqref i32) (result i32)
+    (local (ref 205) (ref 203) i32)
     local.get 0
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 2
     local.get 1
     local.get 2
-    struct.get 194 2
+    struct.get 205 2
     i32.ge_u
     if ;; label = @1
       unreachable
     end
     local.get 2
-    struct.get 194 0
+    struct.get 205 0
     local.set 3
     local.get 2
-    struct.get 194 1
+    struct.get 205 1
     local.get 1
     i32.add
     local.set 4
@@ -2748,7 +2759,7 @@
     local.get 4
     i32.const 4
     i32.shr_u
-    array.get 192
+    array.get 203
     local.get 4
     i32.const 15
     i32.and
@@ -2756,13 +2767,13 @@
     i8x16.swizzle
     i8x16.extract_lane_u 0
   )
-  (func (;28;) (type 58) (param eqref i32 i32) (result eqref)
-    (local (ref 194) i32)
+  (func (;28;) (type 64) (param eqref i32 i32) (result eqref)
+    (local (ref 205) i32)
     local.get 0
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 3
     local.get 3
-    struct.get 194 2
+    struct.get 205 2
     local.set 4
     local.get 1
     local.get 4
@@ -2779,55 +2790,55 @@
       unreachable
     end
     local.get 3
-    struct.get 194 0
+    struct.get 205 0
     local.get 3
-    struct.get 194 1
+    struct.get 205 1
     local.get 1
     i32.add
     local.get 2
-    struct.new 194
+    struct.new 205
   )
-  (func (;29;) (type 59) (result eqref)
+  (func (;29;) (type 65) (result eqref)
     call 20
   )
-  (func (;30;) (type 60) (param i32) (result eqref)
+  (func (;30;) (type 66) (param i32) (result eqref)
     local.get 0
     call 21
   )
-  (func (;31;) (type 61) (param eqref eqref)
+  (func (;31;) (type 67) (param eqref eqref)
     local.get 0
     local.get 1
     call 22
   )
-  (func (;32;) (type 62) (param eqref) (result eqref)
+  (func (;32;) (type 68) (param eqref) (result eqref)
     local.get 0
     call 23
   )
-  (func (;33;) (type 63) (param eqref) (result i32)
+  (func (;33;) (type 69) (param eqref) (result i32)
     local.get 0
     call 24
   )
-  (func (;34;) (type 64) (param eqref) (result i32)
+  (func (;34;) (type 70) (param eqref) (result i32)
     local.get 0
     call 25
   )
-  (func (;35;) (type 65) (param eqref eqref) (result i32)
+  (func (;35;) (type 71) (param eqref eqref) (result i32)
     local.get 0
     local.get 1
     call 26
   )
-  (func (;36;) (type 66) (param eqref i32) (result i32)
+  (func (;36;) (type 72) (param eqref i32) (result i32)
     local.get 0
     local.get 1
     call 27
   )
-  (func (;37;) (type 67) (param eqref i32 i32) (result eqref)
+  (func (;37;) (type 73) (param eqref i32 i32) (result eqref)
     local.get 0
     local.get 1
     local.get 2
     call 28
   )
-  (func (;38;) (type 74) (param eqref) (result (ref 70))
+  (func (;38;) (type 80) (param eqref) (result (ref 76))
     (local eqref i32)
     local.get 0
     i32.const 1
@@ -2836,19 +2847,21 @@
     local.get 2
     array.new 0
     ref.cast (ref 0)
-    struct.new 70
-    ref.cast (ref 70)
+    struct.new 76
+    ref.cast (ref 76)
   )
-  (func (;39;) (type 75) (param (ref 70) i32) (result (ref 11))
+  (func (;39;) (type 81) (param (ref 76) i32) (result (ref 12))
     (local i32 i32 i32 i32)
     local.get 0
-    struct.get 70 1
+    ref.cast (ref 76)
+    struct.get 76 1
     ref.cast (ref 0)
     i32.const 0
     array.get 0
     local.set 2
     local.get 0
-    struct.get 70 0
+    ref.cast (ref 76)
+    struct.get 76 0
     call 33
     local.set 3
     local.get 2
@@ -2856,14 +2869,9 @@
     i32.gt_u
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 2
-      struct.new 68
-      struct.new 13
+      struct.new 74
+      struct.new 16
     else
       local.get 1
       i32.const 0
@@ -2877,16 +2885,11 @@
       end
       if (result eqref) ;; label = @2
         i32.const 0
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-        array.new_fixed 192 0
+        array.new_fixed 203 0
         i32.const 0
         i32.const 0
-        struct.new 194
-        struct.new 12
+        struct.new 205
+        struct.new 13
       else
         local.get 3
         local.get 2
@@ -2902,7 +2905,8 @@
         end
         local.set 5
         local.get 0
-        struct.get 70 1
+        ref.cast (ref 76)
+        struct.get 76 1
         ref.cast (ref 0)
         i32.const 0
         local.get 2
@@ -2910,27 +2914,23 @@
         i32.add
         array.set 0
         i32.const 0
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 0
-        struct.get 70 0
+        ref.cast (ref 76)
+        struct.get 76 0
         local.get 2
         local.get 5
         call 37
-        struct.new 12
+        struct.new 13
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;40;) (type 76) (result (ref 71))
+  (func (;40;) (type 82) (result (ref 77))
     i32.const 0
     call 41
-    ref.cast (ref 71)
+    ref.cast (ref 77)
   )
-  (func (;41;) (type 77) (param i32) (result (ref 71))
+  (func (;41;) (type 83) (param i32) (result (ref 77))
     (local eqref i32)
     local.get 0
     call 30
@@ -2940,72 +2940,61 @@
     local.get 2
     array.new 0
     ref.cast (ref 0)
-    struct.new 71
-    ref.cast (ref 71)
+    struct.new 77
+    ref.cast (ref 77)
   )
-  (func (;42;) (type 78) (param (ref 71)) (result i32)
+  (func (;42;) (type 84) (param (ref 77)) (result i32)
     local.get 0
-    struct.get 71 1
+    ref.cast (ref 77)
+    struct.get 77 1
     ref.cast (ref 0)
     i32.const 1
     array.get 0
   )
-  (func (;43;) (type 79) (param (ref 71)) (result i32)
+  (func (;43;) (type 85) (param (ref 77)) (result i32)
     local.get 0
-    struct.get 71 1
+    ref.cast (ref 77)
+    struct.get 77 1
     ref.cast (ref 0)
     i32.const 0
     array.get 0
     i32.const 0
     i32.ne
   )
-  (func (;44;) (type 80) (param (ref 71)) (result (ref 11))
+  (func (;44;) (type 86) (param (ref 77)) (result (ref 12))
     local.get 0
     call 43
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 3
-      struct.new 68
-      struct.new 13
+      struct.new 74
+      struct.new 16
     else
       local.get 0
-      struct.get 71 1
+      ref.cast (ref 77)
+      struct.get 77 1
       ref.cast (ref 0)
       i32.const 0
       i32.const 1
       array.set 0
       i32.const 0
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       local.get 0
-      struct.get 71 0
+      ref.cast (ref 77)
+      struct.get 77 0
       call 32
-      struct.new 12
+      struct.new 13
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;45;) (type 81) (param (ref 71) eqref) (result (ref 11))
+  (func (;45;) (type 87) (param (ref 77) eqref) (result (ref 12))
     (local i32 i32)
     local.get 0
     call 43
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 3
-      struct.new 68
-      struct.new 13
+      struct.new 74
+      struct.new 16
     else
       local.get 1
       call 33
@@ -3020,21 +3009,18 @@
       i32.gt_u
       if (result eqref) ;; label = @2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 4
-        struct.new 68
-        struct.new 13
+        struct.new 74
+        struct.new 16
       else
         local.get 0
-        struct.get 71 0
+        ref.cast (ref 77)
+        struct.get 77 0
         local.get 1
         call 31
         local.get 0
-        struct.get 71 1
+        ref.cast (ref 77)
+        struct.get 77 1
         ref.cast (ref 0)
         i32.const 1
         local.get 3
@@ -3043,31 +3029,21 @@
         array.set 0
         i32.const 0
         local.get 2
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-        ref.null eq
-        struct.new 12
+        struct.new 14
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;46;) (type 82) (param eqref i32 i32) (result (ref 11))
-    (local eqref i32 eqref i32 (ref 68) eqref i32 eqref)
+  (func (;46;) (type 88) (param eqref i32 i32) (result (ref 12))
+    (local eqref i32 eqref i32 (ref 74) eqref i32 eqref)
     local.get 1
     i32.const 0
     i32.eq
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 1
-      struct.new 68
-      struct.new 13
+      struct.new 74
+      struct.new 16
     else
       call 29
       local.set 3
@@ -3081,7 +3057,7 @@
               local.get 9
               local.set 4
               local.get 0
-              ref.cast (ref 70)
+              ref.cast (ref 76)
               local.get 1
               call 39
               local.set 8
@@ -3090,13 +3066,13 @@
                   block ;; label = @8
                     block ;; label = @9
                       local.get 8
-                      ref.cast (ref 11)
-                      struct.get 11 0
+                      ref.cast (ref 12)
+                      struct.get 12 0
                       br_table 0 (;@9;) 1 (;@8;) 2 (;@7;)
                     end
                     local.get 8
-                    ref.cast (ref 12)
-                    struct.get 12 6
+                    ref.cast (ref 13)
+                    struct.get 13 1
                     local.set 5
                     local.get 5
                     call 33
@@ -3106,14 +3082,9 @@
                     i32.eq
                     if ;; label = @9
                       i32.const 0
-                      i32.const 0
-                      i64.const 0
-                      f32.const 0x0p+0 (;=0;)
-                      f64.const 0x0p+0 (;=0;)
-                      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                       local.get 3
                       call 32
-                      struct.new 12
+                      struct.new 13
                       local.set 10
                       br 7 (;@2;)
                     else
@@ -3122,14 +3093,9 @@
                       i32.gt_u
                       if ;; label = @10
                         i32.const 1
-                        i32.const 0
-                        i64.const 0
-                        f32.const 0x0p+0 (;=0;)
-                        f64.const 0x0p+0 (;=0;)
-                        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                         i32.const 2
-                        struct.new 68
-                        struct.new 13
+                        struct.new 74
+                        struct.new 16
                         local.set 10
                         br 8 (;@2;)
                       else
@@ -3147,14 +3113,9 @@
                         end
                         if ;; label = @11
                           i32.const 1
-                          i32.const 0
-                          i64.const 0
-                          f32.const 0x0p+0 (;=0;)
-                          f64.const 0x0p+0 (;=0;)
-                          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                           i32.const 4
-                          struct.new 68
-                          struct.new 13
+                          struct.new 74
+                          struct.new 16
                           local.set 10
                           br 9 (;@2;)
                         else
@@ -3172,18 +3133,13 @@
                     br 2 (;@6;)
                   end
                   local.get 8
-                  ref.cast (ref 13)
-                  struct.get 13 6
-                  ref.cast (ref 68)
+                  ref.cast (ref 16)
+                  struct.get 16 1
+                  ref.cast (ref 74)
                   local.set 7
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   local.get 7
-                  struct.new 13
+                  struct.new 16
                   local.set 10
                   br 5 (;@2;)
                   br 1 (;@6;)
@@ -3200,10 +3156,10 @@
       end
       local.get 10
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;47;) (type 83) (param eqref eqref) (result (ref 11))
-    (local i32 i32 eqref i32 (ref 68) eqref i32 eqref)
+  (func (;47;) (type 89) (param eqref eqref) (result (ref 12))
+    (local i32 i32 eqref i32 (ref 74) eqref i32 eqref)
     local.get 1
     call 33
     local.set 2
@@ -3228,7 +3184,7 @@
               call 37
               local.set 4
               local.get 0
-              ref.cast (ref 71)
+              ref.cast (ref 77)
               local.get 4
               call 45
               local.set 7
@@ -3237,27 +3193,22 @@
                   block ;; label = @8
                     block ;; label = @9
                       local.get 7
-                      ref.cast (ref 11)
-                      struct.get 11 0
+                      ref.cast (ref 12)
+                      struct.get 12 0
                       br_table 0 (;@9;) 1 (;@8;) 2 (;@7;)
                     end
                     local.get 7
-                    ref.cast (ref 12)
-                    struct.get 12 1
+                    ref.cast (ref 14)
+                    struct.get 14 1
                     local.set 5
                     local.get 5
                     i32.const 0
                     i32.eq
                     if ;; label = @9
                       i32.const 1
-                      i32.const 0
-                      i64.const 0
-                      f32.const 0x0p+0 (;=0;)
-                      f64.const 0x0p+0 (;=0;)
-                      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                       i32.const 1
-                      struct.new 68
-                      struct.new 13
+                      struct.new 74
+                      struct.new 16
                       local.set 9
                       br 8 (;@1;)
                     else
@@ -3268,14 +3219,9 @@
                       i32.gt_u
                       if ;; label = @10
                         i32.const 1
-                        i32.const 0
-                        i64.const 0
-                        f32.const 0x0p+0 (;=0;)
-                        f64.const 0x0p+0 (;=0;)
-                        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                         i32.const 2
-                        struct.new 68
-                        struct.new 13
+                        struct.new 74
+                        struct.new 16
                         local.set 9
                         br 9 (;@1;)
                       else
@@ -3289,18 +3235,13 @@
                     br 2 (;@6;)
                   end
                   local.get 7
-                  ref.cast (ref 13)
-                  struct.get 13 6
-                  ref.cast (ref 68)
+                  ref.cast (ref 16)
+                  struct.get 16 1
+                  ref.cast (ref 74)
                   local.set 6
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   local.get 6
-                  struct.new 13
+                  struct.new 16
                   local.set 9
                   br 6 (;@1;)
                   br 1 (;@6;)
@@ -3314,12 +3255,7 @@
           if ;; label = @4
             i32.const 0
             local.get 2
-            i64.const 0
-            f32.const 0x0p+0 (;=0;)
-            f64.const 0x0p+0 (;=0;)
-            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-            ref.null eq
-            struct.new 12
+            struct.new 14
             local.set 9
             br 3 (;@1;)
             br 1 (;@3;)
@@ -3331,9 +3267,9 @@
       unreachable
     end
     local.get 9
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;48;) (type 84) (param i64) (result i64)
+  (func (;48;) (type 90) (param i64) (result i64)
     i64.const 1
     local.get 0
     i64.const 63
@@ -3348,13 +3284,13 @@
     i64.shl
     i64.or
   )
-  (func (;49;) (type 85) (param i64 i64) (result i64)
+  (func (;49;) (type 91) (param i64 i64) (result i64)
     local.get 0
     local.get 1
     call 48
     i64.or
   )
-  (func (;50;) (type 86) (param i64 i64) (result i32)
+  (func (;50;) (type 92) (param i64 i64) (result i32)
     (local i64)
     local.get 1
     call 48
@@ -3365,43 +3301,43 @@
     local.get 2
     i64.eq
   )
-  (func (;51;) (type 87) (param eqref) (result i64)
+  (func (;51;) (type 93) (param eqref) (result i64)
     local.get 0
     call 7
   )
-  (func (;52;) (type 88) (param eqref) (result i32)
+  (func (;52;) (type 94) (param eqref) (result i32)
     local.get 0
     call 4
   )
-  (func (;53;) (type 89) (param eqref) (result eqref)
+  (func (;53;) (type 95) (param eqref) (result eqref)
     local.get 0
     call 5
   )
-  (func (;54;) (type 90) (param eqref eqref) (result i32)
+  (func (;54;) (type 96) (param eqref eqref) (result i32)
     local.get 0
     local.get 1
     call 6
   )
-  (func (;55;) (type 91) (param eqref i32) (result i32)
+  (func (;55;) (type 97) (param eqref i32) (result i32)
     local.get 0
     local.get 1
     call 8
   )
-  (func (;56;) (type 92) (param eqref i32 i32) (result eqref)
+  (func (;56;) (type 98) (param eqref i32 i32) (result eqref)
     local.get 0
     local.get 1
     local.get 2
     call 9
   )
-  (func (;57;) (type 93) (param eqref) (result i32)
+  (func (;57;) (type 99) (param eqref) (result i32)
     local.get 0
     call 10
   )
-  (func (;58;) (type 94) (param eqref) (result eqref)
+  (func (;58;) (type 100) (param eqref) (result eqref)
     local.get 0
     call 11
   )
-  (func (;59;) (type 95) (param eqref) (result eqref)
+  (func (;59;) (type 101) (param eqref) (result eqref)
     (local eqref)
     local.get 0
     call 57
@@ -3413,89 +3349,93 @@
     local.get 1
     call 19
   )
-  (func (;60;) (type 96) (result eqref)
+  (func (;60;) (type 102) (result eqref)
     call 12
   )
-  (func (;61;) (type 97) (param eqref) (result i32)
+  (func (;61;) (type 103) (param eqref) (result i32)
     local.get 0
     call 14
   )
-  (func (;62;) (type 98) (param eqref eqref)
+  (func (;62;) (type 104) (param eqref eqref)
     local.get 0
     local.get 1
     call 15
   )
-  (func (;63;) (type 99) (param eqref eqref)
+  (func (;63;) (type 105) (param eqref eqref)
     local.get 0
     local.get 1
     call 16
   )
-  (func (;64;) (type 100) (param eqref i32)
+  (func (;64;) (type 106) (param eqref i32)
     local.get 0
     local.get 1
     call 17
   )
-  (func (;65;) (type 101) (param eqref i32)
+  (func (;65;) (type 107) (param eqref i32)
     local.get 0
     local.get 1
     call 18
   )
-  (func (;66;) (type 102) (param eqref) (result eqref)
+  (func (;66;) (type 108) (param eqref) (result eqref)
     local.get 0
     call 19
   )
-  (func (;67;) (type 129) (param eqref) (result eqref)
-    (local (ref 194))
+  (func (;67;) (type 135) (param eqref) (result eqref)
+    (local (ref 205))
     local.get 0
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.tee 1
-    struct.get 194 0
+    struct.get 205 0
     local.get 1
-    struct.get 194 1
+    struct.get 205 1
     local.get 1
-    struct.get 194 2
-    struct.new 193
+    struct.get 205 2
+    struct.new 204
   )
-  (func (;68;) (type 130))
-  (func (;69;) (type 131) (result (ref 114))
+  (func (;68;) (type 136))
+  (func (;69;) (type 137) (result (ref 120))
     i32.const 16777216
     i32.const 128
     i32.const 1048576
     i32.const 16777216
-    struct.new 114
-    ref.cast (ref 114)
+    struct.new 120
+    ref.cast (ref 120)
   )
-  (func (;70;) (type 132) (param (ref 127)) (result i32)
+  (func (;70;) (type 138) (param (ref 133)) (result i32)
     local.get 0
-    struct.get 127 2
+    ref.cast (ref 133)
+    struct.get 133 2
     ref.cast (ref 0)
     i32.const 0
     array.get 0
   )
-  (func (;71;) (type 133) (param (ref 127) i32)
+  (func (;71;) (type 139) (param (ref 133) i32)
     local.get 0
-    struct.get 127 2
+    ref.cast (ref 133)
+    struct.get 133 2
     ref.cast (ref 0)
     i32.const 0
     local.get 1
     array.set 0
   )
-  (func (;72;) (type 134) (param (ref 127)) (result i32)
+  (func (;72;) (type 140) (param (ref 133)) (result i32)
     local.get 0
-    struct.get 127 2
+    ref.cast (ref 133)
+    struct.get 133 2
     ref.cast (ref 0)
     i32.const 1
     array.get 0
   )
-  (func (;73;) (type 135) (param (ref 127) i32)
+  (func (;73;) (type 141) (param (ref 133) i32)
     local.get 0
-    struct.get 127 2
+    ref.cast (ref 133)
+    struct.get 133 2
     ref.cast (ref 0)
     i32.const 1
     local.get 1
     array.set 0
   )
-  (func (;74;) (type 136) (param i32) (result i32)
+  (func (;74;) (type 142) (param i32) (result i32)
     local.get 0
     i32.const 32
     i32.eq
@@ -3521,11 +3461,11 @@
       i32.eq
     end
   )
-  (func (;75;) (type 137) (param i32) (result i32)
+  (func (;75;) (type 143) (param i32) (result i32)
     local.get 0
     i32.ctz
   )
-  (func (;76;) (type 138) (param eqref i32) (result i32)
+  (func (;76;) (type 144) (param eqref i32) (result i32)
     (local i32 i32 i32 v128 v128 i32 i32 i32 i32)
     local.get 0
     call 33
@@ -3632,7 +3572,7 @@
     end
     local.get 10
   )
-  (func (;77;) (type 139) (param eqref i32) (result i32)
+  (func (;77;) (type 145) (param eqref i32) (result i32)
     (local i32 i32 i32 v128 v128 i32 i32 i32 i32 i32)
     local.get 0
     call 52
@@ -3751,7 +3691,7 @@
     end
     local.get 11
   )
-  (func (;78;) (type 140) (param eqref i32) (result i32)
+  (func (;78;) (type 146) (param eqref i32) (result i32)
     (local i32 i32 i32 v128 v128 i32 i32 i32 i32 i32)
     local.get 0
     call 33
@@ -3870,7 +3810,7 @@
     end
     local.get 11
   )
-  (func (;79;) (type 141) (param i32) (result i32)
+  (func (;79;) (type 147) (param i32) (result i32)
     local.get 0
     call 74
     if (result i32) ;; label = @1
@@ -3895,7 +3835,7 @@
       i32.eq
     end
   )
-  (func (;80;) (type 142) (param eqref i32) (result i32)
+  (func (;80;) (type 148) (param eqref i32) (result i32)
     (local i32 i32 i32 v128 v128 i32 i32 i32 i32)
     local.get 0
     call 33
@@ -4017,16 +3957,17 @@
     end
     local.get 10
   )
-  (func (;81;) (type 143) (param (ref 127))
+  (func (;81;) (type 149) (param (ref 133))
     local.get 0
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     local.get 0
     call 70
     call 76
     call 71
   )
-  (func (;82;) (type 144) (param i32) (result i32)
+  (func (;82;) (type 150) (param i32) (result i32)
     local.get 0
     i32.const 48
     i32.ge_u
@@ -4038,7 +3979,7 @@
       i32.const 0
     end
   )
-  (func (;83;) (type 145) (param i32) (result i32)
+  (func (;83;) (type 151) (param i32) (result i32)
     local.get 0
     i32.const 49
     i32.ge_u
@@ -4050,7 +3991,7 @@
       i32.const 0
     end
   )
-  (func (;84;) (type 146) (param eqref i32 i32) (result i32)
+  (func (;84;) (type 152) (param eqref i32 i32) (result i32)
     (local i32 i32 i32 i32)
     local.get 1
     local.set 5
@@ -4098,7 +4039,7 @@
     end
     local.get 6
   )
-  (func (;85;) (type 147) (param eqref i32 i32) (result (ref 9))
+  (func (;85;) (type 153) (param eqref i32 i32) (result (ref 9))
     local.get 1
     local.get 2
     i32.ge_u
@@ -4135,11 +4076,6 @@
           local.get 1
           i32.const 1
           i32.add
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-          ref.null eq
           struct.new 10
         end
       else
@@ -4155,11 +4091,6 @@
           i32.add
           local.get 2
           call 84
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-          ref.null eq
           struct.new 10
         else
           i32.const 0
@@ -4169,7 +4100,7 @@
     end
     ref.cast (ref 9)
   )
-  (func (;86;) (type 148) (param eqref i32 i32) (result (ref 9))
+  (func (;86;) (type 154) (param eqref i32 i32) (result (ref 9))
     (local i32)
     local.get 1
     local.get 2
@@ -4212,26 +4143,16 @@
         i32.add
         local.get 2
         call 84
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-        ref.null eq
         struct.new 10
       end
     else
       i32.const 1
       local.get 1
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-      ref.null eq
       struct.new 10
     end
     ref.cast (ref 9)
   )
-  (func (;87;) (type 149) (param eqref i32 i32) (result (ref 9))
+  (func (;87;) (type 155) (param eqref i32 i32) (result (ref 9))
     (local i32 i32)
     local.get 1
     local.get 2
@@ -4312,26 +4233,16 @@
         i32.add
         local.get 2
         call 84
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-        ref.null eq
         struct.new 10
       end
     else
       i32.const 1
       local.get 1
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-      ref.null eq
       struct.new 10
     end
     ref.cast (ref 9)
   )
-  (func (;88;) (type 150) (param eqref i32 i32) (result i32)
+  (func (;88;) (type 156) (param eqref i32 i32) (result i32)
     (local i32 i32 i32 i32 eqref i32 eqref i32 eqref i32)
     local.get 1
     local.get 2
@@ -4441,7 +4352,7 @@
       local.get 12
     end
   )
-  (func (;89;) (type 151) (param i32) (result i32)
+  (func (;89;) (type 157) (param i32) (result i32)
     local.get 0
     i32.const 48
     i32.ge_u
@@ -4498,7 +4409,7 @@
       end
     end
   )
-  (func (;90;) (type 152) (param eqref i32) (result (ref 9))
+  (func (;90;) (type 158) (param eqref i32) (result (ref 9))
     (local i32 i32 i32 i32)
     local.get 1
     local.get 0
@@ -4586,17 +4497,12 @@
         i32.or
         local.get 5
         i32.or
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-        ref.null eq
         struct.new 10
       end
     end
     ref.cast (ref 9)
   )
-  (func (;91;) (type 153) (param (ref 127) eqref i32 i32) (result i32)
+  (func (;91;) (type 159) (param (ref 133) eqref i32 i32) (result i32)
     (local i32)
     local.get 1
     call 61
@@ -4609,8 +4515,9 @@
     else
       local.get 4
       local.get 0
-      struct.get 127 3
-      struct.get 114 3
+      ref.cast (ref 133)
+      struct.get 133 3
+      struct.get 120 3
       i32.gt_u
     end
     if (result i32) ;; label = @1
@@ -4620,8 +4527,9 @@
       local.get 2
       i32.sub
       local.get 0
-      struct.get 127 3
-      struct.get 114 3
+      ref.cast (ref 133)
+      struct.get 133 3
+      struct.get 120 3
       local.get 4
       i32.sub
       i32.gt_u
@@ -4635,7 +4543,8 @@
       if ;; label = @2
         local.get 1
         local.get 0
-        struct.get 127 1
+        ref.cast (ref 133)
+        struct.get 133 1
         local.get 2
         local.get 3
         local.get 2
@@ -4647,13 +4556,14 @@
       i32.const 1
     end
   )
-  (func (;92;) (type 154) (param (ref 127)) (result (ref 11))
+  (func (;92;) (type 160) (param (ref 133)) (result (ref 12))
     (local i32 i32 i32 i32 i32 eqref eqref i32 i32 i32 i32 i32 i32 i32 i32 eqref eqref i32 eqref)
     local.get 0
     call 70
     local.set 1
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     call 33
     local.set 2
     local.get 1
@@ -4661,44 +4571,37 @@
     i32.ge_u
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 5
       local.get 1
-      struct.new 116
-      struct.new 13
+      struct.new 122
+      struct.new 16
     else
       local.get 0
-      struct.get 127 0
+      ref.cast (ref 133)
+      struct.get 133 0
       local.get 1
       call 36
       i32.const 34
       i32.ne
       if (result eqref) ;; label = @2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 6
         local.get 1
         local.get 0
-        struct.get 127 0
+        ref.cast (ref 133)
+        struct.get 133 0
         local.get 1
         call 36
-        struct.new 117
-        struct.new 13
+        struct.new 123
+        struct.new 16
       else
         local.get 1
         i32.const 1
         i32.add
         local.set 3
         local.get 0
-        struct.get 127 1
+        ref.cast (ref 133)
+        struct.get 133 1
         local.get 3
         call 77
         local.set 4
@@ -4707,18 +4610,14 @@
         i32.ge_u
         if (result eqref) ;; label = @3
           i32.const 1
-          i32.const 0
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
           i32.const 5
           local.get 2
-          struct.new 116
-          struct.new 13
+          struct.new 122
+          struct.new 16
         else
           local.get 0
-          struct.get 127 0
+          ref.cast (ref 133)
+          struct.get 133 0
           local.get 4
           call 36
           i32.const 34
@@ -4730,20 +4629,16 @@
             local.set 5
             local.get 5
             local.get 0
-            struct.get 127 3
-            struct.get 114 3
+            ref.cast (ref 133)
+            struct.get 133 3
+            struct.get 120 3
             i32.gt_u
             if (result eqref) ;; label = @5
               i32.const 1
-              i32.const 0
-              i64.const 0
-              f32.const 0x0p+0 (;=0;)
-              f64.const 0x0p+0 (;=0;)
-              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
               i32.const 3
               local.get 4
-              struct.new 116
-              struct.new 13
+              struct.new 122
+              struct.new 16
             else
               local.get 0
               local.get 4
@@ -4751,57 +4646,45 @@
               i32.add
               call 71
               local.get 0
-              struct.get 127 1
+              ref.cast (ref 133)
+              struct.get 133 1
               local.get 3
               local.get 5
               call 56
               local.set 6
               local.get 0
-              struct.get 127 4
+              ref.cast (ref 133)
+              struct.get 133 4
               if (result eqref) ;; label = @6
                 i32.const 0
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 local.get 6
                 call 59
                 i32.const 0
-                struct.new 113
-                struct.new 12
+                struct.new 119
+                struct.new 13
               else
                 i32.const 0
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 local.get 6
                 call 58
                 i32.const 0
-                struct.new 113
-                struct.new 12
+                struct.new 119
+                struct.new 13
               end
             end
           else
             local.get 0
-            struct.get 127 0
+            ref.cast (ref 133)
+            struct.get 133 0
             local.get 4
             call 36
             i32.const 32
             i32.lt_u
             if (result eqref) ;; label = @5
               i32.const 1
-              i32.const 0
-              i64.const 0
-              f32.const 0x0p+0 (;=0;)
-              f64.const 0x0p+0 (;=0;)
-              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
               i32.const 9
               local.get 4
-              struct.new 116
-              struct.new 13
+              struct.new 122
+              struct.new 16
             else
               call 60
               local.set 7
@@ -4819,7 +4702,8 @@
                     i32.eq
                     if ;; label = @9
                       local.get 0
-                      struct.get 127 1
+                      ref.cast (ref 133)
+                      struct.get 133 1
                       local.get 9
                       call 77
                       local.set 10
@@ -4828,15 +4712,10 @@
                       i32.ge_u
                       if ;; label = @10
                         i32.const 1
-                        i32.const 0
-                        i64.const 0
-                        f32.const 0x0p+0 (;=0;)
-                        f64.const 0x0p+0 (;=0;)
-                        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                         i32.const 5
                         local.get 2
-                        struct.new 116
-                        struct.new 13
+                        struct.new 122
+                        struct.new 16
                         local.set 19
                         br 4 (;@6;)
                       else
@@ -4850,21 +4729,17 @@
                       call 1
                       if ;; label = @10
                         i32.const 1
-                        i32.const 0
-                        i64.const 0
-                        f32.const 0x0p+0 (;=0;)
-                        f64.const 0x0p+0 (;=0;)
-                        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                         i32.const 3
                         local.get 10
-                        struct.new 116
-                        struct.new 13
+                        struct.new 122
+                        struct.new 16
                         local.set 19
                         br 4 (;@6;)
                       else
                       end
                       local.get 0
-                      struct.get 127 0
+                      ref.cast (ref 133)
+                      struct.get 133 0
                       local.get 10
                       call 36
                       local.set 11
@@ -4878,16 +4753,11 @@
                         i32.add
                         call 71
                         i32.const 0
-                        i32.const 0
-                        i64.const 0
-                        f32.const 0x0p+0 (;=0;)
-                        f64.const 0x0p+0 (;=0;)
-                        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                         local.get 7
                         call 66
                         i32.const 1
-                        struct.new 113
-                        struct.new 12
+                        struct.new 119
+                        struct.new 13
                         local.set 19
                         br 4 (;@6;)
                       else
@@ -4896,15 +4766,10 @@
                         i32.lt_u
                         if ;; label = @11
                           i32.const 1
-                          i32.const 0
-                          i64.const 0
-                          f32.const 0x0p+0 (;=0;)
-                          f64.const 0x0p+0 (;=0;)
-                          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                           i32.const 9
                           local.get 10
-                          struct.new 116
-                          struct.new 13
+                          struct.new 122
+                          struct.new 16
                           local.set 19
                           br 5 (;@6;)
                         else
@@ -4913,16 +4778,11 @@
                           i32.ne
                           if ;; label = @12
                             i32.const 1
-                            i32.const 0
-                            i64.const 0
-                            f32.const 0x0p+0 (;=0;)
-                            f64.const 0x0p+0 (;=0;)
-                            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                             i32.const 6
                             local.get 10
                             local.get 11
-                            struct.new 117
-                            struct.new 13
+                            struct.new 123
+                            struct.new 16
                             local.set 19
                             br 6 (;@6;)
                           else
@@ -4933,20 +4793,16 @@
                             i32.ge_u
                             if ;; label = @13
                               i32.const 1
-                              i32.const 0
-                              i64.const 0
-                              f32.const 0x0p+0 (;=0;)
-                              f64.const 0x0p+0 (;=0;)
-                              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                               i32.const 5
                               local.get 2
-                              struct.new 116
-                              struct.new 13
+                              struct.new 122
+                              struct.new 16
                               local.set 19
                               br 7 (;@6;)
                             else
                               local.get 0
-                              struct.get 127 0
+                              ref.cast (ref 133)
+                              struct.get 133 0
                               local.get 10
                               i32.const 1
                               i32.add
@@ -5055,7 +4911,8 @@
                                           i32.eq
                                           if ;; label = @20
                                             local.get 0
-                                            struct.get 127 0
+                                            ref.cast (ref 133)
+                                            struct.get 133 0
                                             local.get 10
                                             i32.const 2
                                             i32.add
@@ -5071,15 +4928,10 @@
                                                     br_table 0 (;@24;) 1 (;@23;) 2 (;@22;)
                                                   end
                                                   i32.const 1
-                                                  i32.const 0
-                                                  i64.const 0
-                                                  f32.const 0x0p+0 (;=0;)
-                                                  f64.const 0x0p+0 (;=0;)
-                                                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                                                   i32.const 10
                                                   local.get 10
-                                                  struct.new 116
-                                                  struct.new 13
+                                                  struct.new 122
+                                                  struct.new 16
                                                   local.set 19
                                                   br 17 (;@6;)
                                                   br 2 (;@21;)
@@ -5112,7 +4964,8 @@
                                                     i32.const 1
                                                   else
                                                     local.get 0
-                                                    struct.get 127 0
+                                                    ref.cast (ref 133)
+                                                    struct.get 133 0
                                                     local.get 14
                                                     call 36
                                                     i32.const 92
@@ -5122,7 +4975,8 @@
                                                     i32.const 1
                                                   else
                                                     local.get 0
-                                                    struct.get 127 0
+                                                    ref.cast (ref 133)
+                                                    struct.get 133 0
                                                     local.get 14
                                                     i32.const 1
                                                     i32.add
@@ -5132,21 +4986,17 @@
                                                   end
                                                   if ;; label = @24
                                                     i32.const 1
-                                                    i32.const 0
-                                                    i64.const 0
-                                                    f32.const 0x0p+0 (;=0;)
-                                                    f64.const 0x0p+0 (;=0;)
-                                                    v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                                                     i32.const 10
                                                     local.get 10
-                                                    struct.new 116
-                                                    struct.new 13
+                                                    struct.new 122
+                                                    struct.new 16
                                                     local.set 19
                                                     br 18 (;@6;)
                                                   else
                                                   end
                                                   local.get 0
-                                                  struct.get 127 0
+                                                  ref.cast (ref 133)
+                                                  struct.get 133 0
                                                   local.get 14
                                                   i32.const 2
                                                   i32.add
@@ -5199,15 +5049,10 @@
                                                     i32.const 1
                                                     if ;; label = @25
                                                       i32.const 1
-                                                      i32.const 0
-                                                      i64.const 0
-                                                      f32.const 0x0p+0 (;=0;)
-                                                      f64.const 0x0p+0 (;=0;)
-                                                      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                                                       i32.const 10
                                                       local.get 10
-                                                      struct.new 116
-                                                      struct.new 13
+                                                      struct.new 122
+                                                      struct.new 16
                                                       local.set 19
                                                       br 19 (;@6;)
                                                       br 1 (;@24;)
@@ -5227,15 +5072,10 @@
                                                   end
                                                   if ;; label = @24
                                                     i32.const 1
-                                                    i32.const 0
-                                                    i64.const 0
-                                                    f32.const 0x0p+0 (;=0;)
-                                                    f64.const 0x0p+0 (;=0;)
-                                                    v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                                                     i32.const 10
                                                     local.get 10
-                                                    struct.new 116
-                                                    struct.new 13
+                                                    struct.new 122
+                                                    struct.new 16
                                                     local.set 19
                                                     br 18 (;@6;)
                                                   else
@@ -5256,15 +5096,10 @@
                                             end
                                           else
                                             i32.const 1
-                                            i32.const 0
-                                            i64.const 0
-                                            f32.const 0x0p+0 (;=0;)
-                                            f64.const 0x0p+0 (;=0;)
-                                            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                                             i32.const 9
                                             local.get 10
-                                            struct.new 116
-                                            struct.new 13
+                                            struct.new 122
+                                            struct.new 16
                                             local.set 19
                                             br 14 (;@6;)
                                           end
@@ -5277,20 +5112,16 @@
                               local.get 7
                               call 61
                               local.get 0
-                              struct.get 127 3
-                              struct.get 114 3
+                              ref.cast (ref 133)
+                              struct.get 133 3
+                              struct.get 120 3
                               i32.gt_u
                               if ;; label = @14
                                 i32.const 1
-                                i32.const 0
-                                i64.const 0
-                                f32.const 0x0p+0 (;=0;)
-                                f64.const 0x0p+0 (;=0;)
-                                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                                 i32.const 3
                                 local.get 10
-                                struct.new 116
-                                struct.new 13
+                                struct.new 122
+                                struct.new 16
                                 local.set 19
                                 br 8 (;@6;)
                               else
@@ -5316,10 +5147,10 @@
         end
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;93;) (type 155) (param (ref 127)) (result (ref 11))
-    (local (ref 113) (ref 115) eqref eqref)
+  (func (;93;) (type 161) (param (ref 133)) (result (ref 12))
+    (local (ref 119) (ref 121) eqref eqref)
     local.get 0
     call 92
     local.set 3
@@ -5328,56 +5159,47 @@
         block ;; label = @3
           block ;; label = @4
             local.get 3
-            ref.cast (ref 11)
-            struct.get 11 0
+            ref.cast (ref 12)
+            struct.get 12 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
           local.get 3
-          ref.cast (ref 12)
-          struct.get 12 6
-          ref.cast (ref 113)
+          ref.cast (ref 13)
+          struct.get 13 1
+          ref.cast (ref 119)
           local.set 1
           i32.const 0
-          i32.const 0
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
           local.get 1
-          ref.cast (ref 113)
-          struct.get 113 0
-          struct.new 12
+          ref.cast (ref 119)
+          struct.get 119 0
+          struct.new 13
           local.set 4
           br 2 (;@1;)
         end
         local.get 3
-        ref.cast (ref 13)
-        struct.get 13 6
-        ref.cast (ref 115)
+        ref.cast (ref 16)
+        struct.get 16 1
+        ref.cast (ref 121)
         local.set 2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 2
-        struct.new 13
+        struct.new 16
         local.set 4
         br 1 (;@1;)
       end
       unreachable
     end
     local.get 4
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;94;) (type 156) (param (ref 127) eqref (ref 103)) (result (ref 11))
+  (func (;94;) (type 162) (param (ref 133) eqref (ref 109)) (result (ref 12))
     (local i32 i32)
     local.get 0
     call 70
     local.set 3
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     call 33
     local.set 4
     local.get 3
@@ -5395,18 +5217,14 @@
     end
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 5
       local.get 4
-      struct.new 116
-      struct.new 13
+      struct.new 122
+      struct.new 16
     else
       local.get 0
-      struct.get 127 0
+      ref.cast (ref 133)
+      struct.get 133 0
       local.get 3
       local.get 1
       call 33
@@ -5417,15 +5235,10 @@
       call 1
       if (result eqref) ;; label = @2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 7
         local.get 3
-        struct.new 116
-        struct.new 13
+        struct.new 122
+        struct.new 16
       else
         local.get 0
         local.get 3
@@ -5434,29 +5247,26 @@
         i32.add
         call 71
         i32.const 0
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 2
-        struct.new 12
+        struct.new 13
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;95;) (type 157) (param (ref 127)) (result (ref 11))
+  (func (;95;) (type 163) (param (ref 133)) (result (ref 12))
     (local i32 i32 eqref)
     local.get 0
     call 70
     local.set 1
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     local.get 1
     call 80
     local.set 2
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     local.get 1
     local.get 2
     call 88
@@ -5464,21 +5274,17 @@
     call 1
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 8
       local.get 1
-      struct.new 116
-      struct.new 13
+      struct.new 122
+      struct.new 16
     else
       local.get 0
       local.get 2
       call 71
       local.get 0
-      struct.get 127 1
+      ref.cast (ref 133)
+      struct.get 133 1
       local.get 1
       local.get 2
       local.get 1
@@ -5486,33 +5292,24 @@
       call 56
       local.set 3
       local.get 0
-      struct.get 127 4
+      ref.cast (ref 133)
+      struct.get 133 4
       if (result eqref) ;; label = @2
         i32.const 0
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 3
         call 59
-        struct.new 12
+        struct.new 13
       else
         i32.const 0
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 3
         call 58
-        struct.new 12
+        struct.new 13
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;96;) (type 158) (param (ref 127)) (result (ref 11))
-    (local eqref (ref 115) eqref eqref)
+  (func (;96;) (type 164) (param (ref 133)) (result (ref 12))
+    (local eqref (ref 121) eqref eqref)
     local.get 0
     call 95
     local.set 3
@@ -5521,72 +5318,58 @@
         block ;; label = @3
           block ;; label = @4
             local.get 3
-            ref.cast (ref 11)
-            struct.get 11 0
+            ref.cast (ref 12)
+            struct.get 12 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
           local.get 3
-          ref.cast (ref 12)
-          struct.get 12 6
+          ref.cast (ref 13)
+          struct.get 13 1
           local.set 1
           local.get 0
-          struct.get 127 5
+          ref.cast (ref 133)
+          struct.get 133 5
           if (result eqref) ;; label = @4
             i32.const 0
-            i32.const 0
-            i64.const 0
-            f32.const 0x0p+0 (;=0;)
-            f64.const 0x0p+0 (;=0;)
-            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
             i32.const 3
             local.get 1
-            struct.new 106
-            ref.cast (ref 106)
-            struct.new 107
-            struct.new 12
+            struct.new 112
+            ref.cast (ref 112)
+            struct.new 113
+            struct.new 13
           else
             i32.const 0
-            i32.const 0
-            i64.const 0
-            f32.const 0x0p+0 (;=0;)
-            f64.const 0x0p+0 (;=0;)
-            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
             i32.const 2
             local.get 1
-            struct.new 105
-            struct.new 12
+            struct.new 111
+            struct.new 13
           end
           local.set 4
           br 2 (;@1;)
         end
         local.get 3
-        ref.cast (ref 13)
-        struct.get 13 6
-        ref.cast (ref 115)
+        ref.cast (ref 16)
+        struct.get 16 1
+        ref.cast (ref 121)
         local.set 2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         local.get 2
-        struct.new 13
+        struct.new 16
         local.set 4
         br 1 (;@1;)
       end
       unreachable
     end
     local.get 4
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;97;) (type 159) (param (ref 127) i32) (result (ref 11))
-    (local eqref (ref 115) (ref 103) i32 i32 eqref i32 eqref eqref eqref i32 eqref)
+  (func (;97;) (type 165) (param (ref 133) i32) (result (ref 12))
+    (local eqref (ref 121) (ref 109) i32 i32 eqref i32 eqref eqref eqref i32 eqref)
     i32.const 0
     array.new_default 5
     i32.const 0
     i32.const 0
-    struct.new 14
+    struct.new 19
     local.set 2
     local.get 0
     local.get 0
@@ -5599,12 +5382,14 @@
     local.get 0
     call 70
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     call 33
     i32.lt_u
     if (result i32) ;; label = @1
       local.get 0
-      struct.get 127 0
+      ref.cast (ref 133)
+      struct.get 133 0
       local.get 0
       call 70
       call 36
@@ -5621,16 +5406,11 @@
       i32.add
       call 71
       i32.const 0
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 6
       local.get 2
-      ref.cast (ref 14)
-      struct.new 110
-      struct.new 12
+      ref.cast (ref 19)
+      struct.new 116
+      struct.new 13
     else
       i32.const 1
       local.set 12
@@ -5652,45 +5432,45 @@
                   block ;; label = @8
                     block ;; label = @9
                       local.get 11
-                      ref.cast (ref 11)
-                      struct.get 11 0
+                      ref.cast (ref 12)
+                      struct.get 12 0
                       br_table 0 (;@9;) 1 (;@8;) 2 (;@7;)
                     end
                     local.get 11
-                    ref.cast (ref 12)
-                    struct.get 12 6
-                    ref.cast (ref 103)
+                    ref.cast (ref 13)
+                    struct.get 13 1
+                    ref.cast (ref 109)
                     local.set 4
                     local.get 2
                     local.get 4
                     local.set 10
                     local.set 7
                     local.get 7
-                    ref.cast (ref 14)
-                    struct.get 14 1
+                    ref.cast (ref 19)
+                    struct.get 19 1
                     local.get 7
-                    ref.cast (ref 14)
-                    struct.get 14 2
+                    ref.cast (ref 19)
+                    struct.get 19 2
                     i32.eq
                     if ;; label = @9
                       local.get 7
-                      ref.cast (ref 14)
-                      struct.get 14 2
+                      ref.cast (ref 19)
+                      struct.get 19 2
                       i32.eqz
                       if (result i32) ;; label = @10
                         i32.const 4
                       else
                         local.get 7
-                        ref.cast (ref 14)
-                        struct.get 14 2
+                        ref.cast (ref 19)
+                        struct.get 19 2
                         i32.const 2
                         i32.mul
                       end
                       local.set 8
                       local.get 8
                       local.get 7
-                      ref.cast (ref 14)
-                      struct.get 14 2
+                      ref.cast (ref 19)
+                      struct.get 19 2
                       i32.le_u
                       if ;; label = @10
                         unreachable
@@ -5702,57 +5482,52 @@
                       ref.cast (ref 5)
                       i32.const 0
                       local.get 7
-                      ref.cast (ref 14)
-                      struct.get 14 0
+                      ref.cast (ref 19)
+                      struct.get 19 0
                       ref.cast (ref 5)
                       i32.const 0
                       local.get 7
-                      ref.cast (ref 14)
-                      struct.get 14 1
+                      ref.cast (ref 19)
+                      struct.get 19 1
                       array.copy 5 5
                       local.get 7
-                      ref.cast (ref 14)
+                      ref.cast (ref 19)
                       local.get 9
-                      struct.set 14 0
+                      struct.set 19 0
                       local.get 7
-                      ref.cast (ref 14)
+                      ref.cast (ref 19)
                       local.get 9
                       ref.cast (ref 5)
                       array.len
-                      struct.set 14 2
+                      struct.set 19 2
                     end
                     local.get 7
-                    ref.cast (ref 14)
-                    struct.get 14 0
+                    ref.cast (ref 19)
+                    struct.get 19 0
                     ref.cast (ref 5)
                     local.get 7
-                    ref.cast (ref 14)
-                    struct.get 14 1
+                    ref.cast (ref 19)
+                    struct.get 19 1
                     local.get 10
                     array.set 5
                     local.get 7
-                    ref.cast (ref 14)
+                    ref.cast (ref 19)
                     local.get 7
-                    ref.cast (ref 14)
-                    struct.get 14 1
+                    ref.cast (ref 19)
+                    struct.get 19 1
                     i32.const 1
                     i32.add
-                    struct.set 14 1
+                    struct.set 19 1
                     br 2 (;@6;)
                   end
                   local.get 11
-                  ref.cast (ref 13)
-                  struct.get 13 6
-                  ref.cast (ref 115)
+                  ref.cast (ref 16)
+                  struct.get 16 1
+                  ref.cast (ref 121)
                   local.set 3
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   local.get 3
-                  struct.new 13
+                  struct.new 16
                   local.set 13
                   br 5 (;@2;)
                   br 1 (;@6;)
@@ -5766,26 +5541,23 @@
               local.set 5
               local.get 5
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               call 33
               i32.ge_u
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 5
                 local.get 5
-                struct.new 116
-                struct.new 13
+                struct.new 122
+                struct.new 16
                 local.set 13
                 br 4 (;@2;)
               else
               end
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               local.get 5
               call 36
               local.set 6
@@ -5799,16 +5571,11 @@
                 i32.add
                 call 71
                 i32.const 0
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 6
                 local.get 2
-                ref.cast (ref 14)
-                struct.new 110
-                struct.new 12
+                ref.cast (ref 19)
+                struct.new 116
+                struct.new 13
                 local.set 13
                 br 4 (;@2;)
               else
@@ -5825,16 +5592,11 @@
                   call 81
                 else
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   i32.const 6
                   local.get 5
                   local.get 6
-                  struct.new 117
-                  struct.new 13
+                  struct.new 123
+                  struct.new 16
                   local.set 13
                   br 5 (;@2;)
                 end
@@ -5852,18 +5614,18 @@
       end
       local.get 13
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;98;) (type 160) (param eqref eqref) (result i32)
+  (func (;98;) (type 166) (param eqref eqref) (result i32)
     local.get 0
     local.get 1
     call 54
   )
-  (func (;99;) (type 161) (param eqref) (result i64)
+  (func (;99;) (type 167) (param eqref) (result i64)
     local.get 0
     call 51
   )
-  (func (;100;) (type 162) (param (ref 14) i32 eqref) (result i32)
+  (func (;100;) (type 168) (param (ref 19) i32 eqref) (result i32)
     (local i32 eqref i32 eqref i32 i32)
     i32.const 0
     local.set 7
@@ -5884,20 +5646,20 @@
               local.set 4
               local.get 5
               local.get 4
-              ref.cast (ref 14)
-              struct.get 14 1
+              ref.cast (ref 19)
+              struct.get 19 1
               i32.ge_u
               if ;; label = @6
                 unreachable
               end
               local.get 4
-              ref.cast (ref 14)
-              struct.get 14 0
+              ref.cast (ref 19)
+              struct.get 19 0
               ref.cast (ref 5)
               local.get 5
               array.get 5
-              ref.cast (ref 112)
-              struct.get 112 0
+              ref.cast (ref 118)
+              struct.get 118 0
               local.get 2
               call 98
               if ;; label = @6
@@ -5929,20 +5691,20 @@
     end
     local.get 8
   )
-  (func (;101;) (type 163) (param (ref 14) eqref) (result i32)
+  (func (;101;) (type 169) (param (ref 19) eqref) (result i32)
     local.get 0
-    ref.cast (ref 14)
+    ref.cast (ref 19)
     local.get 0
-    ref.cast (ref 14)
-    struct.get 14 1
+    ref.cast (ref 19)
+    struct.get 19 1
     local.get 1
     call 100
   )
-  (func (;102;) (type 164) (param i64) (result i32)
+  (func (;102;) (type 170) (param i64) (result i32)
     local.get 0
     i32.wrap_i64
   )
-  (func (;103;) (type 165) (param i64) (result i32)
+  (func (;103;) (type 171) (param i64) (result i32)
     local.get 0
     i64.const 43
     i64.shr_u
@@ -5950,7 +5712,7 @@
     i64.and
     call 102
   )
-  (func (;104;) (type 166) (param i64 i64 i64 i64 i32 i64) (result i32)
+  (func (;104;) (type 172) (param i64 i64 i64 i64 i32 i64) (result i32)
     local.get 4
     i32.const 0
     i32.eq
@@ -5982,13 +5744,13 @@
       end
     end
   )
-  (func (;105;) (type 167) (param (ref 127) i32) (result (ref 11))
-    (local eqref i64 i64 i64 i64 i32 eqref (ref 115) eqref i32 i32 i64 i32 (ref 112) i64 i32 i32 i32 i32 (ref 103) (ref 115) (ref 103) i32 i32 eqref eqref eqref i32 eqref i32 eqref eqref eqref i32 eqref)
+  (func (;105;) (type 173) (param (ref 133) i32) (result (ref 12))
+    (local eqref i64 i64 i64 i64 i32 eqref (ref 121) eqref i32 i32 i64 i32 (ref 118) i64 i32 i32 i32 i32 (ref 109) (ref 121) (ref 109) i32 i32 eqref eqref eqref i32 eqref i32 eqref eqref eqref i32 eqref)
     i32.const 0
     array.new_default 5
     i32.const 0
     i32.const 0
-    struct.new 14
+    struct.new 19
     local.set 2
     i64.const 0
     local.set 3
@@ -6009,12 +5771,14 @@
     local.get 0
     call 70
     local.get 0
-    struct.get 127 0
+    ref.cast (ref 133)
+    struct.get 133 0
     call 33
     i32.lt_u
     if (result i32) ;; label = @1
       local.get 0
-      struct.get 127 0
+      ref.cast (ref 133)
+      struct.get 133 0
       local.get 0
       call 70
       call 36
@@ -6031,16 +5795,11 @@
       i32.add
       call 71
       i32.const 0
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 7
       local.get 2
-      ref.cast (ref 14)
-      struct.new 111
-      struct.new 12
+      ref.cast (ref 19)
+      struct.new 117
+      struct.new 13
     else
       i32.const 1
       local.set 35
@@ -6056,45 +5815,38 @@
               local.set 7
               local.get 7
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               call 33
               i32.ge_u
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 5
                 local.get 7
-                struct.new 116
-                struct.new 13
+                struct.new 122
+                struct.new 16
                 local.set 36
                 br 4 (;@2;)
               else
               end
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               local.get 7
               call 36
               i32.const 34
               i32.ne
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 6
                 local.get 7
                 local.get 0
-                struct.get 127 0
+                ref.cast (ref 133)
+                struct.get 133 0
                 local.get 7
                 call 36
-                struct.new 117
-                struct.new 13
+                struct.new 123
+                struct.new 16
                 local.set 36
                 br 4 (;@2;)
               else
@@ -6107,31 +5859,26 @@
                   block ;; label = @8
                     block ;; label = @9
                       local.get 26
-                      ref.cast (ref 11)
-                      struct.get 11 0
+                      ref.cast (ref 12)
+                      struct.get 12 0
                       br_table 0 (;@9;) 1 (;@8;) 2 (;@7;)
                     end
                     local.get 26
-                    ref.cast (ref 12)
-                    struct.get 12 6
+                    ref.cast (ref 13)
+                    struct.get 13 1
                     local.set 8
                     local.get 8
                     local.set 27
                     br 2 (;@6;)
                   end
                   local.get 26
-                  ref.cast (ref 13)
-                  struct.get 13 6
-                  ref.cast (ref 115)
+                  ref.cast (ref 16)
+                  struct.get 16 1
+                  ref.cast (ref 121)
                   local.set 9
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   local.get 9
-                  struct.new 13
+                  struct.new 16
                   local.set 36
                   br 5 (;@2;)
                   local.set 27
@@ -6142,8 +5889,8 @@
               local.get 27
               local.set 10
               local.get 2
-              ref.cast (ref 14)
-              struct.get 14 1
+              ref.cast (ref 19)
+              struct.get 19 1
               local.set 11
               local.get 11
               i32.const 16
@@ -6180,24 +5927,24 @@
                           local.set 28
                           local.get 29
                           local.get 28
-                          ref.cast (ref 14)
-                          struct.get 14 1
+                          ref.cast (ref 19)
+                          struct.get 19 1
                           i32.ge_u
                           if ;; label = @12
                             unreachable
                           end
                           local.get 28
-                          ref.cast (ref 14)
-                          struct.get 14 0
+                          ref.cast (ref 19)
+                          struct.get 19 0
                           ref.cast (ref 5)
                           local.get 29
                           array.get 5
-                          ref.cast (ref 112)
-                          ref.cast (ref 112)
+                          ref.cast (ref 118)
+                          ref.cast (ref 118)
                           local.set 15
                           local.get 15
-                          ref.cast (ref 112)
-                          struct.get 112 0
+                          ref.cast (ref 118)
+                          struct.get 118 0
                           call 99
                           local.set 16
                           local.get 16
@@ -6278,7 +6025,7 @@
                 call 104
                 if (result i32) ;; label = @7
                   local.get 2
-                  ref.cast (ref 14)
+                  ref.cast (ref 19)
                   local.get 10
                   call 101
                 else
@@ -6286,7 +6033,7 @@
                 end
               else
                 local.get 2
-                ref.cast (ref 14)
+                ref.cast (ref 19)
                 local.get 10
                 call 101
               end
@@ -6294,16 +6041,11 @@
               local.get 19
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 11
                 local.get 7
                 local.get 10
-                struct.new 118
-                struct.new 13
+                struct.new 124
+                struct.new 16
                 local.set 36
                 br 4 (;@2;)
               else
@@ -6368,45 +6110,38 @@
               local.set 20
               local.get 20
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               call 33
               i32.ge_u
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 5
                 local.get 20
-                struct.new 116
-                struct.new 13
+                struct.new 122
+                struct.new 16
                 local.set 36
                 br 4 (;@2;)
               else
               end
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               local.get 20
               call 36
               i32.const 58
               i32.ne
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 6
                 local.get 20
                 local.get 0
-                struct.get 127 0
+                ref.cast (ref 133)
+                struct.get 133 0
                 local.get 20
                 call 36
-                struct.new 117
-                struct.new 13
+                struct.new 123
+                struct.new 16
                 local.set 36
                 br 4 (;@2;)
               else
@@ -6429,32 +6164,27 @@
                   block ;; label = @8
                     block ;; label = @9
                       local.get 32
-                      ref.cast (ref 11)
-                      struct.get 11 0
+                      ref.cast (ref 12)
+                      struct.get 12 0
                       br_table 0 (;@9;) 1 (;@8;) 2 (;@7;)
                     end
                     local.get 32
-                    ref.cast (ref 12)
-                    struct.get 12 6
-                    ref.cast (ref 103)
+                    ref.cast (ref 13)
+                    struct.get 13 1
+                    ref.cast (ref 109)
                     local.set 21
                     local.get 21
                     local.set 33
                     br 2 (;@6;)
                   end
                   local.get 32
-                  ref.cast (ref 13)
-                  struct.get 13 6
-                  ref.cast (ref 115)
+                  ref.cast (ref 16)
+                  struct.get 16 1
+                  ref.cast (ref 121)
                   local.set 22
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   local.get 22
-                  struct.new 13
+                  struct.new 16
                   local.set 36
                   br 5 (;@2;)
                   local.set 33
@@ -6463,41 +6193,41 @@
                 unreachable
               end
               local.get 33
-              ref.cast (ref 103)
+              ref.cast (ref 109)
               local.set 23
               local.get 2
               local.get 10
               local.get 23
-              ref.cast (ref 103)
-              struct.new 112
+              ref.cast (ref 109)
+              struct.new 118
               local.set 34
               local.set 28
               local.get 28
-              ref.cast (ref 14)
-              struct.get 14 1
+              ref.cast (ref 19)
+              struct.get 19 1
               local.get 28
-              ref.cast (ref 14)
-              struct.get 14 2
+              ref.cast (ref 19)
+              struct.get 19 2
               i32.eq
               if ;; label = @6
                 local.get 28
-                ref.cast (ref 14)
-                struct.get 14 2
+                ref.cast (ref 19)
+                struct.get 19 2
                 i32.eqz
                 if (result i32) ;; label = @7
                   i32.const 4
                 else
                   local.get 28
-                  ref.cast (ref 14)
-                  struct.get 14 2
+                  ref.cast (ref 19)
+                  struct.get 19 2
                   i32.const 2
                   i32.mul
                 end
                 local.set 29
                 local.get 29
                 local.get 28
-                ref.cast (ref 14)
-                struct.get 14 2
+                ref.cast (ref 19)
+                struct.get 19 2
                 i32.le_u
                 if ;; label = @7
                   unreachable
@@ -6509,42 +6239,42 @@
                 ref.cast (ref 5)
                 i32.const 0
                 local.get 28
-                ref.cast (ref 14)
-                struct.get 14 0
+                ref.cast (ref 19)
+                struct.get 19 0
                 ref.cast (ref 5)
                 i32.const 0
                 local.get 28
-                ref.cast (ref 14)
-                struct.get 14 1
+                ref.cast (ref 19)
+                struct.get 19 1
                 array.copy 5 5
                 local.get 28
-                ref.cast (ref 14)
+                ref.cast (ref 19)
                 local.get 30
-                struct.set 14 0
+                struct.set 19 0
                 local.get 28
-                ref.cast (ref 14)
+                ref.cast (ref 19)
                 local.get 30
                 ref.cast (ref 5)
                 array.len
-                struct.set 14 2
+                struct.set 19 2
               end
               local.get 28
-              ref.cast (ref 14)
-              struct.get 14 0
+              ref.cast (ref 19)
+              struct.get 19 0
               ref.cast (ref 5)
               local.get 28
-              ref.cast (ref 14)
-              struct.get 14 1
+              ref.cast (ref 19)
+              struct.get 19 1
               local.get 34
               array.set 5
               local.get 28
-              ref.cast (ref 14)
+              ref.cast (ref 19)
               local.get 28
-              ref.cast (ref 14)
-              struct.get 14 1
+              ref.cast (ref 19)
+              struct.get 19 1
               i32.const 1
               i32.add
-              struct.set 14 1
+              struct.set 19 1
               local.get 0
               call 81
               local.get 0
@@ -6552,26 +6282,23 @@
               local.set 24
               local.get 24
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               call 33
               i32.ge_u
               if ;; label = @6
                 i32.const 1
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 5
                 local.get 24
-                struct.new 116
-                struct.new 13
+                struct.new 122
+                struct.new 16
                 local.set 36
                 br 4 (;@2;)
               else
               end
               local.get 0
-              struct.get 127 0
+              ref.cast (ref 133)
+              struct.get 133 0
               local.get 24
               call 36
               local.set 25
@@ -6585,16 +6312,11 @@
                 i32.add
                 call 71
                 i32.const 0
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 i32.const 7
                 local.get 2
-                ref.cast (ref 14)
-                struct.new 111
-                struct.new 12
+                ref.cast (ref 19)
+                struct.new 117
+                struct.new 13
                 local.set 36
                 br 4 (;@2;)
               else
@@ -6611,16 +6333,11 @@
                   call 81
                 else
                   i32.const 1
-                  i32.const 0
-                  i64.const 0
-                  f32.const 0x0p+0 (;=0;)
-                  f64.const 0x0p+0 (;=0;)
-                  v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                   i32.const 6
                   local.get 24
                   local.get 25
-                  struct.new 117
-                  struct.new 13
+                  struct.new 123
+                  struct.new 16
                   local.set 36
                   br 5 (;@2;)
                 end
@@ -6638,45 +6355,37 @@
       end
       local.get 36
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;106;) (type 168) (param (ref 127) i32) (result (ref 11))
-    (local i32 i32 (ref 113) (ref 115) eqref eqref)
+  (func (;106;) (type 174) (param (ref 133) i32) (result (ref 12))
+    (local i32 i32 (ref 119) (ref 121) eqref eqref)
     local.get 1
     local.get 0
-    struct.get 127 3
-    struct.get 114 1
+    ref.cast (ref 133)
+    struct.get 133 3
+    struct.get 120 1
     i32.gt_u
     if (result eqref) ;; label = @1
       i32.const 1
-      i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
       i32.const 1
       local.get 1
-      struct.new 116
-      struct.new 13
+      struct.new 122
+      struct.new 16
     else
       local.get 0
       call 72
       local.get 0
-      struct.get 127 3
-      struct.get 114 2
+      ref.cast (ref 133)
+      struct.get 133 3
+      struct.get 120 2
       i32.ge_u
       if (result eqref) ;; label = @2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 2
         local.get 0
         call 70
-        struct.new 116
-        struct.new 13
+        struct.new 122
+        struct.new 16
       else
         local.get 0
         local.get 0
@@ -6691,23 +6400,20 @@
         local.set 2
         local.get 2
         local.get 0
-        struct.get 127 0
+        ref.cast (ref 133)
+        struct.get 133 0
         call 33
         i32.ge_u
         if (result eqref) ;; label = @3
           i32.const 1
-          i32.const 0
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
           i32.const 5
           local.get 2
-          struct.new 116
-          struct.new 13
+          struct.new 122
+          struct.new 16
         else
           local.get 0
-          struct.get 127 0
+          ref.cast (ref 133)
+          struct.get 133 0
           local.get 2
           call 36
           local.set 3
@@ -6717,12 +6423,12 @@
           if (result eqref) ;; label = @4
             local.get 0
             v128.const i32x4 0x6c6c756e 0x00000000 0x00000000 0x00000000
-            array.new_fixed 192 1
+            array.new_fixed 203 1
             i32.const 0
             i32.const 4
-            struct.new 194
+            struct.new 205
             i32.const 0
-            struct.new 103
+            struct.new 109
             call 94
           else
             local.get 3
@@ -6731,13 +6437,13 @@
             if (result eqref) ;; label = @5
               local.get 0
               v128.const i32x4 0x65757274 0x00000000 0x00000000 0x00000000
-              array.new_fixed 192 1
+              array.new_fixed 203 1
               i32.const 0
               i32.const 4
-              struct.new 194
+              struct.new 205
               i32.const 1
               i32.const 1
-              struct.new 104
+              struct.new 110
               call 94
             else
               local.get 3
@@ -6746,13 +6452,13 @@
               if (result eqref) ;; label = @6
                 local.get 0
                 v128.const i32x4 0x736c6166 0x00000065 0x00000000 0x00000000
-                array.new_fixed 192 1
+                array.new_fixed 203 1
                 i32.const 0
                 i32.const 5
-                struct.new 194
+                struct.new 205
                 i32.const 1
                 i32.const 0
-                struct.new 104
+                struct.new 110
                 call 94
               else
                 local.get 3
@@ -6767,65 +6473,51 @@
                       block ;; label = @10
                         block ;; label = @11
                           local.get 6
-                          ref.cast (ref 11)
-                          struct.get 11 0
+                          ref.cast (ref 12)
+                          struct.get 12 0
                           br_table 0 (;@11;) 1 (;@10;) 2 (;@9;)
                         end
                         local.get 6
-                        ref.cast (ref 12)
-                        struct.get 12 6
-                        ref.cast (ref 113)
+                        ref.cast (ref 13)
+                        struct.get 13 1
+                        ref.cast (ref 119)
                         local.set 4
                         local.get 0
-                        struct.get 127 6
+                        ref.cast (ref 133)
+                        struct.get 133 6
                         if (result eqref) ;; label = @11
                           i32.const 0
-                          i32.const 0
-                          i64.const 0
-                          f32.const 0x0p+0 (;=0;)
-                          f64.const 0x0p+0 (;=0;)
-                          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                           i32.const 5
                           local.get 4
-                          ref.cast (ref 113)
-                          struct.get 113 0
+                          ref.cast (ref 119)
+                          struct.get 119 0
                           local.get 4
-                          ref.cast (ref 113)
-                          struct.get 113 1
-                          struct.new 108
-                          ref.cast (ref 108)
-                          struct.new 109
-                          struct.new 12
+                          ref.cast (ref 119)
+                          struct.get 119 1
+                          struct.new 114
+                          ref.cast (ref 114)
+                          struct.new 115
+                          struct.new 13
                         else
                           i32.const 0
-                          i32.const 0
-                          i64.const 0
-                          f32.const 0x0p+0 (;=0;)
-                          f64.const 0x0p+0 (;=0;)
-                          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                           i32.const 4
                           local.get 4
-                          ref.cast (ref 113)
-                          struct.get 113 0
-                          struct.new 105
-                          struct.new 12
+                          ref.cast (ref 119)
+                          struct.get 119 0
+                          struct.new 111
+                          struct.new 13
                         end
                         local.set 7
                         br 2 (;@8;)
                       end
                       local.get 6
-                      ref.cast (ref 13)
-                      struct.get 13 6
-                      ref.cast (ref 115)
+                      ref.cast (ref 16)
+                      struct.get 16 1
+                      ref.cast (ref 121)
                       local.set 5
                       i32.const 1
-                      i32.const 0
-                      i64.const 0
-                      f32.const 0x0p+0 (;=0;)
-                      f64.const 0x0p+0 (;=0;)
-                      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                       local.get 5
-                      struct.new 13
+                      struct.new 16
                       local.set 7
                       br 1 (;@8;)
                     end
@@ -6863,16 +6555,11 @@
                         call 96
                       else
                         i32.const 1
-                        i32.const 0
-                        i64.const 0
-                        f32.const 0x0p+0 (;=0;)
-                        f64.const 0x0p+0 (;=0;)
-                        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                         i32.const 6
                         local.get 2
                         local.get 3
-                        struct.new 117
-                        struct.new 13
+                        struct.new 123
+                        struct.new 16
                       end
                     end
                   end
@@ -6883,28 +6570,24 @@
         end
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;107;) (type 169) (param eqref (ref 114) i32 i32 i32) (result (ref 11))
-    (local i32 (ref 127) (ref 115) (ref 103) eqref i32 eqref eqref)
+  (func (;107;) (type 175) (param eqref (ref 120) i32 i32 i32) (result (ref 12))
+    (local i32 (ref 133) (ref 121) (ref 109) eqref i32 eqref eqref)
     local.get 0
     call 52
     local.set 5
     local.get 5
     local.get 1
-    struct.get 114 0
+    ref.cast (ref 120)
+    struct.get 120 0
     i32.gt_u
     if (result eqref) ;; label = @1
       i32.const 1
       i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-      i32.const 0
       local.get 5
-      struct.new 116
-      struct.new 13
+      struct.new 122
+      struct.new 16
     else
       local.get 0
       call 53
@@ -6916,11 +6599,11 @@
       array.new 0
       ref.cast (ref 0)
       local.get 1
-      ref.cast (ref 114)
+      ref.cast (ref 120)
       local.get 2
       local.get 3
       local.get 4
-      struct.new 127
+      struct.new 133
       local.set 6
       local.get 6
       i32.const 0
@@ -6931,14 +6614,14 @@
           block ;; label = @4
             block ;; label = @5
               local.get 11
-              ref.cast (ref 11)
-              struct.get 11 0
+              ref.cast (ref 12)
+              struct.get 12 0
               br_table 0 (;@5;) 1 (;@4;) 2 (;@3;)
             end
             local.get 11
-            ref.cast (ref 12)
-            struct.get 12 6
-            ref.cast (ref 103)
+            ref.cast (ref 13)
+            struct.get 13 1
+            ref.cast (ref 109)
             local.set 8
             local.get 6
             call 81
@@ -6948,42 +6631,27 @@
             i32.eq
             if (result eqref) ;; label = @5
               i32.const 0
-              i32.const 0
-              i64.const 0
-              f32.const 0x0p+0 (;=0;)
-              f64.const 0x0p+0 (;=0;)
-              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
               local.get 8
-              struct.new 12
+              struct.new 13
             else
               i32.const 1
-              i32.const 0
-              i64.const 0
-              f32.const 0x0p+0 (;=0;)
-              f64.const 0x0p+0 (;=0;)
-              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
               i32.const 12
               local.get 6
               call 70
-              struct.new 116
-              struct.new 13
+              struct.new 122
+              struct.new 16
             end
             local.set 12
             br 2 (;@2;)
           end
           local.get 11
-          ref.cast (ref 13)
-          struct.get 13 6
-          ref.cast (ref 115)
+          ref.cast (ref 16)
+          struct.get 16 1
+          ref.cast (ref 121)
           local.set 7
           i32.const 1
-          i32.const 0
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
           local.get 7
-          struct.new 13
+          struct.new 16
           local.set 12
           br 1 (;@2;)
         end
@@ -6991,28 +6659,24 @@
       end
       local.get 12
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;108;) (type 170) (param eqref (ref 114)) (result (ref 11))
+  (func (;108;) (type 176) (param eqref (ref 120)) (result (ref 12))
     (local i32)
     local.get 0
     call 33
     local.set 2
     local.get 2
     local.get 1
-    struct.get 114 0
+    ref.cast (ref 120)
+    struct.get 120 0
     i32.gt_u
     if (result eqref) ;; label = @1
       i32.const 1
       i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-      i32.const 0
       local.get 2
-      struct.new 116
-      struct.new 13
+      struct.new 122
+      struct.new 16
     else
       local.get 0
       call 34
@@ -7020,14 +6684,9 @@
       call 1
       if (result eqref) ;; label = @2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 4
-        struct.new 115
-        struct.new 13
+        struct.new 121
+        struct.new 16
       else
         local.get 0
         call 67
@@ -7038,11 +6697,12 @@
         call 107
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;109;) (type 173) (param (ref 128) i32)
+  (func (;109;) (type 179) (param (ref 134) i32)
     local.get 0
-    struct.get 128 3
+    ref.cast (ref 134)
+    struct.get 134 3
     ref.cast (ref 0)
     i32.const 0
     array.get 0
@@ -7050,7 +6710,8 @@
     i32.eq
     if ;; label = @1
       local.get 0
-      struct.get 128 3
+      ref.cast (ref 134)
+      struct.get 134 3
       ref.cast (ref 0)
       i32.const 0
       local.get 1
@@ -7058,9 +6719,10 @@
     else
     end
   )
-  (func (;110;) (type 174) (param (ref 128) i32 eqref)
+  (func (;110;) (type 180) (param (ref 134) i32 eqref)
     local.get 0
-    struct.get 128 3
+    ref.cast (ref 134)
+    struct.get 134 3
     ref.cast (ref 0)
     i32.const 0
     array.get 0
@@ -7068,13 +6730,15 @@
     i32.eq
     if ;; label = @1
       local.get 0
-      struct.get 128 4
+      ref.cast (ref 134)
+      struct.get 134 4
       ref.cast (ref 5)
       i32.const 0
       local.get 2
       array.set 5
       local.get 0
-      struct.get 128 3
+      ref.cast (ref 134)
+      struct.get 134 3
       ref.cast (ref 0)
       i32.const 0
       local.get 1
@@ -7082,9 +6746,10 @@
     else
     end
   )
-  (func (;111;) (type 175) (param (ref 128) i32)
+  (func (;111;) (type 181) (param (ref 134) i32)
     local.get 0
-    struct.get 128 3
+    ref.cast (ref 134)
+    struct.get 134 3
     ref.cast (ref 0)
     i32.const 0
     array.get 0
@@ -7093,10 +6758,12 @@
     if ;; label = @1
     else
       local.get 0
-      struct.get 128 0
+      ref.cast (ref 134)
+      struct.get 134 0
       call 61
       local.get 0
-      struct.get 128 2
+      ref.cast (ref 134)
+      struct.get 134 2
       i32.ge_u
       if ;; label = @2
         local.get 0
@@ -7104,23 +6771,26 @@
         call 109
       else
         local.get 0
-        struct.get 128 0
+        ref.cast (ref 134)
+        struct.get 134 0
         local.get 1
         call 64
       end
     end
   )
-  (func (;112;) (type 176) (param (ref 128) eqref)
+  (func (;112;) (type 182) (param (ref 134) eqref)
     (local i32 i32)
     local.get 0
-    struct.get 128 0
+    ref.cast (ref 134)
+    struct.get 134 0
     call 61
     local.set 2
     local.get 1
     call 52
     local.set 3
     local.get 0
-    struct.get 128 3
+    ref.cast (ref 134)
+    struct.get 134 3
     ref.cast (ref 0)
     i32.const 0
     array.get 0
@@ -7130,14 +6800,16 @@
     else
       local.get 2
       local.get 0
-      struct.get 128 2
+      ref.cast (ref 134)
+      struct.get 134 2
       i32.gt_u
       if (result i32) ;; label = @2
         i32.const 1
       else
         local.get 3
         local.get 0
-        struct.get 128 2
+        ref.cast (ref 134)
+        struct.get 134 2
         local.get 2
         i32.sub
         i32.gt_u
@@ -7148,23 +6820,26 @@
         call 109
       else
         local.get 0
-        struct.get 128 0
+        ref.cast (ref 134)
+        struct.get 134 0
         local.get 1
         call 62
       end
     end
   )
-  (func (;113;) (type 177) (param (ref 128) eqref)
+  (func (;113;) (type 183) (param (ref 134) eqref)
     (local i32 i32)
     local.get 0
-    struct.get 128 0
+    ref.cast (ref 134)
+    struct.get 134 0
     call 61
     local.set 2
     local.get 1
     call 57
     local.set 3
     local.get 0
-    struct.get 128 3
+    ref.cast (ref 134)
+    struct.get 134 3
     ref.cast (ref 0)
     i32.const 0
     array.get 0
@@ -7174,14 +6849,16 @@
     else
       local.get 2
       local.get 0
-      struct.get 128 2
+      ref.cast (ref 134)
+      struct.get 134 2
       i32.gt_u
       if (result i32) ;; label = @2
         i32.const 1
       else
         local.get 3
         local.get 0
-        struct.get 128 2
+        ref.cast (ref 134)
+        struct.get 134 2
         local.get 2
         i32.sub
         i32.gt_u
@@ -7192,13 +6869,14 @@
         call 109
       else
         local.get 0
-        struct.get 128 0
+        ref.cast (ref 134)
+        struct.get 134 0
         local.get 1
         call 63
       end
     end
   )
-  (func (;114;) (type 178) (param i32) (result i32)
+  (func (;114;) (type 184) (param i32) (result i32)
     local.get 0
     i32.const 10
     i32.lt_u
@@ -7216,7 +6894,7 @@
       i32.and
     end
   )
-  (func (;115;) (type 179) (param (ref 128) eqref)
+  (func (;115;) (type 185) (param (ref 134) eqref)
     (local eqref i32 i32 i32 i32 i32 i32 i32 i32)
     local.get 0
     i32.const 34
@@ -7243,7 +6921,8 @@
             i32.lt_u
             if (result i32) ;; label = @5
               local.get 0
-              struct.get 128 3
+              ref.cast (ref 134)
+              struct.get 134 3
               ref.cast (ref 0)
               i32.const 0
               array.get 0
@@ -7430,13 +7109,15 @@
     i32.const 34
     call 111
   )
-  (func (;116;) (type 180) (param (ref 128) (ref 108))
+  (func (;116;) (type 186) (param (ref 134) (ref 114))
     local.get 1
-    struct.get 108 1
+    ref.cast (ref 114)
+    struct.get 114 1
     if ;; label = @1
       local.get 0
       local.get 1
-      struct.get 108 0
+      ref.cast (ref 114)
+      struct.get 114 0
       call 115
     else
       local.get 0
@@ -7444,17 +7125,19 @@
       call 111
       local.get 0
       local.get 1
-      struct.get 108 0
+      ref.cast (ref 114)
+      struct.get 114 0
       call 112
       local.get 0
       i32.const 34
       call 111
     end
   )
-  (func (;117;) (type 181) (param (ref 128) (ref 103) i32)
-    (local i32 eqref eqref (ref 106) eqref (ref 108) eqref i32 i32 eqref i64 i64 i64 i64 i32 i32 i32 (ref 112) i64 i32 i32 eqref i32 eqref i32 i32 eqref)
+  (func (;117;) (type 187) (param (ref 134) (ref 109) i32)
+    (local i32 eqref eqref (ref 112) eqref (ref 114) eqref i32 i32 eqref i64 i64 i64 i64 i32 i32 i32 (ref 118) i64 i32 i32 eqref i32 eqref i32 i32 eqref)
     local.get 0
-    struct.get 128 3
+    ref.cast (ref 134)
+    struct.get 134 3
     ref.cast (ref 0)
     i32.const 0
     array.get 0
@@ -7465,7 +7148,8 @@
     else
       local.get 2
       local.get 0
-      struct.get 128 1
+      ref.cast (ref 134)
+      struct.get 134 1
       i32.gt_u
       if ;; label = @2
         local.get 0
@@ -7485,46 +7169,46 @@
                         block ;; label = @11
                           block ;; label = @12
                             local.get 29
-                            ref.cast (ref 103)
-                            struct.get 103 0
+                            ref.cast (ref 109)
+                            struct.get 109 0
                             br_table 0 (;@12;) 1 (;@11;) 2 (;@10;) 3 (;@9;) 4 (;@8;) 5 (;@7;) 6 (;@6;) 7 (;@5;) 8 (;@4;)
                           end
                           local.get 0
                           v128.const i32x4 0x6c6c756e 0x00000000 0x00000000 0x00000000
-                          array.new_fixed 192 1
+                          array.new_fixed 203 1
                           i32.const 0
                           i32.const 4
-                          struct.new 193
+                          struct.new 204
                           call 112
                           br 8 (;@3;)
                         end
                         local.get 29
-                        ref.cast (ref 104)
-                        struct.get 104 1
+                        ref.cast (ref 110)
+                        struct.get 110 1
                         local.set 3
                         local.get 3
                         if ;; label = @11
                           local.get 0
                           v128.const i32x4 0x65757274 0x00000000 0x00000000 0x00000000
-                          array.new_fixed 192 1
+                          array.new_fixed 203 1
                           i32.const 0
                           i32.const 4
-                          struct.new 193
+                          struct.new 204
                           call 112
                         else
                           local.get 0
                           v128.const i32x4 0x736c6166 0x00000065 0x00000000 0x00000000
-                          array.new_fixed 192 1
+                          array.new_fixed 203 1
                           i32.const 0
                           i32.const 5
-                          struct.new 193
+                          struct.new 204
                           call 112
                         end
                         br 7 (;@3;)
                       end
                       local.get 29
-                      ref.cast (ref 105)
-                      struct.get 105 1
+                      ref.cast (ref 111)
+                      struct.get 111 1
                       local.set 4
                       local.get 4
                       call 53
@@ -7547,20 +7231,20 @@
                       br 6 (;@3;)
                     end
                     local.get 29
-                    ref.cast (ref 107)
-                    struct.get 107 1
-                    ref.cast (ref 106)
+                    ref.cast (ref 113)
+                    struct.get 113 1
+                    ref.cast (ref 112)
                     local.set 6
                     local.get 0
                     local.get 6
-                    ref.cast (ref 106)
-                    struct.get 106 0
+                    ref.cast (ref 112)
+                    struct.get 112 0
                     call 112
                     br 5 (;@3;)
                   end
                   local.get 29
-                  ref.cast (ref 105)
-                  struct.get 105 1
+                  ref.cast (ref 111)
+                  struct.get 111 1
                   local.set 7
                   local.get 0
                   local.get 7
@@ -7568,9 +7252,9 @@
                   br 4 (;@3;)
                 end
                 local.get 29
-                ref.cast (ref 109)
-                struct.get 109 1
-                ref.cast (ref 108)
+                ref.cast (ref 115)
+                struct.get 115 1
+                ref.cast (ref 114)
                 local.set 8
                 local.get 0
                 local.get 8
@@ -7578,15 +7262,15 @@
                 br 3 (;@3;)
               end
               local.get 29
-              ref.cast (ref 110)
-              struct.get 110 1
+              ref.cast (ref 116)
+              struct.get 116 1
               local.set 9
               local.get 0
               i32.const 91
               call 111
               local.get 9
-              ref.cast (ref 14)
-              struct.get 14 1
+              ref.cast (ref 19)
+              struct.get 19 1
               local.set 10
               i32.const 0
               local.set 27
@@ -7602,7 +7286,8 @@
                       i32.lt_u
                       if (result i32) ;; label = @10
                         local.get 0
-                        struct.get 128 3
+                        ref.cast (ref 134)
+                        struct.get 134 3
                         ref.cast (ref 0)
                         i32.const 0
                         array.get 0
@@ -7628,19 +7313,19 @@
                         local.set 24
                         local.get 25
                         local.get 24
-                        ref.cast (ref 14)
-                        struct.get 14 1
+                        ref.cast (ref 19)
+                        struct.get 19 1
                         i32.ge_u
                         if ;; label = @11
                           unreachable
                         end
                         local.get 24
-                        ref.cast (ref 14)
-                        struct.get 14 0
+                        ref.cast (ref 19)
+                        struct.get 19 0
                         ref.cast (ref 5)
                         local.get 25
                         array.get 5
-                        ref.cast (ref 103)
+                        ref.cast (ref 109)
                         local.get 2
                         i32.const 1
                         i32.add
@@ -7671,8 +7356,8 @@
               br 2 (;@3;)
             end
             local.get 29
-            ref.cast (ref 111)
-            struct.get 111 1
+            ref.cast (ref 117)
+            struct.get 117 1
             local.set 12
             local.get 0
             i32.const 123
@@ -7686,8 +7371,8 @@
             i64.const 0
             local.set 16
             local.get 12
-            ref.cast (ref 14)
-            struct.get 14 1
+            ref.cast (ref 19)
+            struct.get 19 1
             local.set 17
             local.get 17
             i32.const 16
@@ -7707,7 +7392,8 @@
                     i32.lt_u
                     if (result i32) ;; label = @9
                       local.get 0
-                      struct.get 128 3
+                      ref.cast (ref 134)
+                      struct.get 134 3
                       ref.cast (ref 0)
                       i32.const 0
                       array.get 0
@@ -7723,26 +7409,26 @@
                       local.set 24
                       local.get 25
                       local.get 24
-                      ref.cast (ref 14)
-                      struct.get 14 1
+                      ref.cast (ref 19)
+                      struct.get 19 1
                       i32.ge_u
                       if ;; label = @10
                         unreachable
                       end
                       local.get 24
-                      ref.cast (ref 14)
-                      struct.get 14 0
+                      ref.cast (ref 19)
+                      struct.get 19 0
                       ref.cast (ref 5)
                       local.get 25
                       array.get 5
-                      ref.cast (ref 112)
-                      ref.cast (ref 112)
+                      ref.cast (ref 118)
+                      ref.cast (ref 118)
                       local.set 20
                       local.get 18
                       if (result i64) ;; label = @10
                         local.get 20
-                        ref.cast (ref 112)
-                        struct.get 112 0
+                        ref.cast (ref 118)
+                        struct.get 118 0
                         call 99
                       else
                         i64.const 0
@@ -7767,22 +7453,22 @@
                         call 104
                         if (result i32) ;; label = @11
                           local.get 12
-                          ref.cast (ref 14)
+                          ref.cast (ref 19)
                           local.get 19
                           local.get 20
-                          ref.cast (ref 112)
-                          struct.get 112 0
+                          ref.cast (ref 118)
+                          struct.get 118 0
                           call 100
                         else
                           i32.const 0
                         end
                       else
                         local.get 12
-                        ref.cast (ref 14)
+                        ref.cast (ref 19)
                         local.get 19
                         local.get 20
-                        ref.cast (ref 112)
-                        struct.get 112 0
+                        ref.cast (ref 118)
+                        struct.get 118 0
                         call 100
                       end
                       local.set 23
@@ -7791,8 +7477,8 @@
                         local.get 0
                         i32.const 4
                         local.get 20
-                        ref.cast (ref 112)
-                        struct.get 112 0
+                        ref.cast (ref 118)
+                        struct.get 118 0
                         call 110
                       else
                         local.get 22
@@ -7859,16 +7545,16 @@
                         end
                         local.get 0
                         local.get 20
-                        ref.cast (ref 112)
-                        struct.get 112 0
+                        ref.cast (ref 118)
+                        struct.get 118 0
                         call 115
                         local.get 0
                         i32.const 58
                         call 111
                         local.get 0
                         local.get 20
-                        ref.cast (ref 112)
-                        struct.get 112 1
+                        ref.cast (ref 118)
+                        struct.get 118 1
                         local.get 2
                         i32.const 1
                         i32.add
@@ -7904,8 +7590,8 @@
       end
     end
   )
-  (func (;118;) (type 182) (param (ref 103) i32 i32) (result (ref 11))
-    (local eqref (ref 128) eqref i32)
+  (func (;118;) (type 188) (param (ref 109) i32 i32) (result (ref 12))
+    (local eqref (ref 134) eqref i32)
     i32.const 1
     local.set 6
     i32.const 0
@@ -7919,14 +7605,14 @@
     ref.cast (ref 0)
     i32.const 1
     local.set 6
-    array.new_fixed 192 0
+    array.new_fixed 203 0
     i32.const 0
     i32.const 0
-    struct.new 193
+    struct.new 204
     local.get 6
     array.new 5
     ref.cast (ref 5)
-    struct.new 128
+    struct.new 134
     local.set 4
     local.get 4
     local.get 0
@@ -7941,13 +7627,8 @@
     if (result eqref) ;; label = @1
       i32.const 1
       i32.const 0
-      i64.const 0
-      f32.const 0x0p+0 (;=0;)
-      f64.const 0x0p+0 (;=0;)
-      v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-      i32.const 0
-      struct.new 119
-      struct.new 13
+      struct.new 125
+      struct.new 16
     else
       local.get 3
       ref.cast (ref 0)
@@ -7957,20 +7638,15 @@
       i32.eq
       if (result eqref) ;; label = @2
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 2
         local.get 4
-        ref.cast (ref 128)
-        struct.get 128 4
+        ref.cast (ref 134)
+        struct.get 134 4
         ref.cast (ref 5)
         i32.const 0
         array.get 5
-        struct.new 120
-        struct.new 13
+        struct.new 126
+        struct.new 16
       else
         local.get 3
         ref.cast (ref 0)
@@ -7980,14 +7656,9 @@
         i32.eq
         if (result eqref) ;; label = @3
           i32.const 1
-          i32.const 0
-          i64.const 0
-          f32.const 0x0p+0 (;=0;)
-          f64.const 0x0p+0 (;=0;)
-          v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
           i32.const 1
-          struct.new 119
-          struct.new 13
+          struct.new 125
+          struct.new 16
         else
           local.get 3
           ref.cast (ref 0)
@@ -7997,60 +7668,51 @@
           i32.eq
           if (result eqref) ;; label = @4
             i32.const 1
-            i32.const 0
-            i64.const 0
-            f32.const 0x0p+0 (;=0;)
-            f64.const 0x0p+0 (;=0;)
-            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
             i32.const 3
             local.get 4
-            ref.cast (ref 128)
-            struct.get 128 4
+            ref.cast (ref 134)
+            struct.get 134 4
             ref.cast (ref 5)
             i32.const 0
             array.get 5
-            struct.new 120
-            struct.new 13
+            struct.new 126
+            struct.new 16
           else
             i32.const 0
-            i32.const 0
-            i64.const 0
-            f32.const 0x0p+0 (;=0;)
-            f64.const 0x0p+0 (;=0;)
-            v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
             local.get 4
-            ref.cast (ref 128)
-            struct.get 128 0
+            ref.cast (ref 134)
+            struct.get 134 0
             call 66
-            struct.new 12
+            struct.new 13
           end
         end
       end
     end
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;119;) (type 185) (param eqref i32) (result (ref 11))
+  (func (;119;) (type 191) (param eqref i32) (result (ref 12))
     local.get 0
     local.get 1
     call 69
     call 121
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;120;) (type 186) (param eqref (ref 103)) (result (ref 11))
+  (func (;120;) (type 192) (param eqref (ref 109)) (result (ref 12))
     local.get 0
     local.get 1
-    ref.cast (ref 103)
+    ref.cast (ref 109)
     i32.const 128
     i32.const 16777216
     call 122
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;121;) (type 187) (param eqref i32 (ref 114)) (result (ref 11))
-    (local eqref eqref (ref 115) (ref 103) eqref eqref eqref eqref)
+  (func (;121;) (type 193) (param eqref i32 (ref 120)) (result (ref 12))
+    (local eqref eqref (ref 121) (ref 109) eqref eqref eqref eqref)
     local.get 0
     local.get 1
     local.get 2
-    struct.get 114 0
+    ref.cast (ref 120)
+    struct.get 120 0
     call 46
     local.set 9
     block ;; label = @1
@@ -8058,17 +7720,17 @@
         block ;; label = @3
           block ;; label = @4
             local.get 9
-            ref.cast (ref 11)
-            struct.get 11 0
+            ref.cast (ref 12)
+            struct.get 12 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
           local.get 9
-          ref.cast (ref 12)
-          struct.get 12 6
+          ref.cast (ref 13)
+          struct.get 13 1
           local.set 4
           local.get 4
           local.get 2
-          ref.cast (ref 114)
+          ref.cast (ref 120)
           call 108
           local.set 7
           block ;; label = @4
@@ -8076,42 +7738,32 @@
               block ;; label = @6
                 block ;; label = @7
                   local.get 7
-                  ref.cast (ref 11)
-                  struct.get 11 0
+                  ref.cast (ref 12)
+                  struct.get 12 0
                   br_table 0 (;@7;) 1 (;@6;) 2 (;@5;)
                 end
                 local.get 7
-                ref.cast (ref 12)
-                struct.get 12 6
-                ref.cast (ref 103)
+                ref.cast (ref 13)
+                struct.get 13 1
+                ref.cast (ref 109)
                 local.set 6
                 i32.const 0
-                i32.const 0
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
                 local.get 6
-                struct.new 12
+                struct.new 13
                 local.set 8
                 br 2 (;@4;)
               end
               local.get 7
-              ref.cast (ref 13)
-              struct.get 13 6
-              ref.cast (ref 115)
+              ref.cast (ref 16)
+              struct.get 16 1
+              ref.cast (ref 121)
               local.set 5
               i32.const 1
-              i32.const 0
-              i64.const 0
-              f32.const 0x0p+0 (;=0;)
-              f64.const 0x0p+0 (;=0;)
-              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
               i32.const 1
               local.get 5
-              ref.cast (ref 115)
-              struct.new 123
-              struct.new 13
+              ref.cast (ref 121)
+              struct.new 129
+              struct.new 16
               local.set 8
               br 1 (;@4;)
             end
@@ -8122,32 +7774,27 @@
           br 2 (;@1;)
         end
         local.get 9
-        ref.cast (ref 13)
-        struct.get 13 6
+        ref.cast (ref 16)
+        struct.get 16 1
         local.set 3
         i32.const 1
         i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-        i32.const 0
         local.get 3
-        ref.cast (ref 68)
-        struct.new 122
-        struct.new 13
+        ref.cast (ref 74)
+        struct.new 128
+        struct.new 16
         local.set 10
         br 1 (;@1;)
       end
       unreachable
     end
     local.get 10
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;122;) (type 188) (param eqref (ref 103) i32 i32) (result (ref 11))
-    (local (ref 119) eqref eqref i32 eqref eqref eqref eqref)
+  (func (;122;) (type 194) (param eqref (ref 109) i32 i32) (result (ref 12))
+    (local (ref 125) eqref eqref i32 eqref eqref eqref eqref)
     local.get 1
-    ref.cast (ref 103)
+    ref.cast (ref 109)
     local.get 2
     local.get 3
     call 118
@@ -8157,13 +7804,13 @@
         block ;; label = @3
           block ;; label = @4
             local.get 10
-            ref.cast (ref 11)
-            struct.get 11 0
+            ref.cast (ref 12)
+            struct.get 12 0
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
           local.get 10
-          ref.cast (ref 12)
-          struct.get 12 6
+          ref.cast (ref 13)
+          struct.get 13 1
           local.set 5
           local.get 0
           local.get 5
@@ -8175,40 +7822,30 @@
               block ;; label = @6
                 block ;; label = @7
                   local.get 8
-                  ref.cast (ref 11)
-                  struct.get 11 0
+                  ref.cast (ref 12)
+                  struct.get 12 0
                   br_table 0 (;@7;) 1 (;@6;) 2 (;@5;)
                 end
                 local.get 8
-                ref.cast (ref 12)
-                struct.get 12 1
+                ref.cast (ref 14)
+                struct.get 14 1
                 local.set 7
                 i32.const 0
                 local.get 7
-                i64.const 0
-                f32.const 0x0p+0 (;=0;)
-                f64.const 0x0p+0 (;=0;)
-                v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-                ref.null eq
-                struct.new 12
+                struct.new 14
                 local.set 9
                 br 2 (;@4;)
               end
               local.get 8
-              ref.cast (ref 13)
-              struct.get 13 6
+              ref.cast (ref 16)
+              struct.get 16 1
               local.set 6
               i32.const 1
               i32.const 0
-              i64.const 0
-              f32.const 0x0p+0 (;=0;)
-              f64.const 0x0p+0 (;=0;)
-              v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-              i32.const 0
               local.get 6
-              ref.cast (ref 68)
-              struct.new 125
-              struct.new 13
+              ref.cast (ref 74)
+              struct.new 131
+              struct.new 16
               local.set 9
               br 1 (;@4;)
             end
@@ -8219,42 +7856,37 @@
           br 2 (;@1;)
         end
         local.get 10
-        ref.cast (ref 13)
-        struct.get 13 6
-        ref.cast (ref 119)
+        ref.cast (ref 16)
+        struct.get 16 1
+        ref.cast (ref 125)
         local.set 4
         i32.const 1
-        i32.const 0
-        i64.const 0
-        f32.const 0x0p+0 (;=0;)
-        f64.const 0x0p+0 (;=0;)
-        v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
         i32.const 1
         local.get 4
-        ref.cast (ref 119)
-        struct.new 126
-        struct.new 13
+        ref.cast (ref 125)
+        struct.new 132
+        struct.new 16
         local.set 11
         br 1 (;@1;)
       end
       unreachable
     end
     local.get 11
-    ref.cast (ref 11)
+    ref.cast (ref 12)
   )
-  (func (;123;) (type 190) (param i32 eqref) (result i32)
-    (local (ref 194) (ref 192) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
+  (func (;123;) (type 196) (param i32 eqref) (result i32)
+    (local (ref 205) (ref 203) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
     local.get 1
-    ref.cast (ref 194)
+    ref.cast (ref 205)
     local.set 2
     local.get 2
-    struct.get 194 0
+    struct.get 205 0
     local.set 3
     local.get 2
-    struct.get 194 1
+    struct.get 205 1
     local.set 4
     local.get 2
-    struct.get 194 2
+    struct.get 205 2
     local.set 5
     i32.const 0
     local.set 6
@@ -8306,7 +7938,7 @@
               local.get 9
               i32.const 4
               i32.shr_u
-              array.get 192
+              array.get 203
               v128.store
               i32.const 16
               local.get 8
@@ -8319,7 +7951,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 192
+              array.get 203
               v128.store
               i32.const 16
               local.get 8
@@ -8332,7 +7964,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 192
+              array.get 203
               v128.store
               i32.const 16
               local.get 8
@@ -8345,7 +7977,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 192
+              array.get 203
               v128.store
               local.get 8
               i32.const 64
@@ -8368,14 +8000,14 @@
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 192
+                array.get 203
                 local.set 11
               else
                 local.get 3
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 192
+                array.get 203
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -8389,7 +8021,7 @@
                 i32.shr_u
                 i32.const 1
                 i32.add
-                array.get 192
+                array.get 203
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -8418,7 +8050,7 @@
             local.get 9
             i32.const 4
             i32.shr_u
-            array.get 192
+            array.get 203
             local.get 9
             i32.const 15
             i32.and
@@ -8495,37 +8127,37 @@
     end
     local.get 6
   )
-  (func (;124;) (type 191) (result i32)
+  (func (;124;) (type 197) (result i32)
     (local eqref eqref eqref eqref i32 eqref i32 eqref i32)
     v128.const i32x4 0x7572745b 0x756e2c65 0x005d6c6c 0x00000000
-    array.new_fixed 192 1
+    array.new_fixed 203 1
     i32.const 0
     i32.const 11
-    struct.new 194
+    struct.new 205
     call 38
     i32.const 3
     call 119
     local.set 7
     block ;; label = @1
       local.get 7
-      ref.cast (ref 11)
-      struct.get 11 0
+      ref.cast (ref 12)
+      struct.get 12 0
       i32.const 0
       i32.eq
       if (result i32) ;; label = @2
         local.get 7
-        ref.cast (ref 12)
-        struct.get 12 6
-        ref.cast (ref 103)
-        struct.get 103 0
+        ref.cast (ref 13)
+        struct.get 13 1
+        ref.cast (ref 109)
+        struct.get 109 0
         i32.const 6
         i32.eq
         if (result i32) ;; label = @3
           local.get 7
-          ref.cast (ref 12)
-          struct.get 12 6
-          ref.cast (ref 110)
-          struct.get 110 1
+          ref.cast (ref 13)
+          struct.get 13 1
+          ref.cast (ref 116)
+          struct.get 116 1
           local.set 0
           i32.const 1
         else
@@ -8536,8 +8168,8 @@
       end
       if ;; label = @2
         local.get 0
-        ref.cast (ref 14)
-        struct.get 14 1
+        ref.cast (ref 19)
+        struct.get 19 1
         i32.const 2
         i32.eq
         if ;; label = @3
@@ -8546,20 +8178,20 @@
           local.get 1
           i32.const 6
           local.get 0
-          ref.cast (ref 14)
-          struct.new 110
+          ref.cast (ref 19)
+          struct.new 116
           call 120
           local.set 5
           block ;; label = @4
             local.get 5
-            ref.cast (ref 11)
-            struct.get 11 0
+            ref.cast (ref 12)
+            struct.get 12 0
             i32.const 0
             i32.eq
             if (result i32) ;; label = @5
               local.get 5
-              ref.cast (ref 12)
-              struct.get 12 1
+              ref.cast (ref 14)
+              struct.get 14 1
               i32.const 11
               i32.eq
             else
@@ -8567,35 +8199,35 @@
             end
             if ;; label = @5
               local.get 1
-              ref.cast (ref 71)
+              ref.cast (ref 77)
               call 44
               local.set 3
               block ;; label = @6
                 local.get 3
-                ref.cast (ref 11)
-                struct.get 11 0
+                ref.cast (ref 12)
+                struct.get 12 0
                 i32.const 0
                 i32.eq
                 if ;; label = @7
                   local.get 3
-                  ref.cast (ref 12)
-                  struct.get 12 6
+                  ref.cast (ref 13)
+                  struct.get 13 1
                   local.set 2
                   local.get 2
                   v128.const i32x4 0x7572745b 0x756e2c65 0x005d6c6c 0x00000000
-                  array.new_fixed 192 1
+                  array.new_fixed 203 1
                   i32.const 0
                   i32.const 11
-                  struct.new 194
+                  struct.new 205
                   call 35
                   if ;; label = @8
                     i32.const 1
                     v128.const i32x4 0x6e6f736a 0x6165723a 0x2d726564 0x74697277
                     v128.const i32x4 0x00007265 0x00000000 0x00000000 0x00000000
-                    array.new_fixed 192 2
+                    array.new_fixed 203 2
                     i32.const 0
                     i32.const 18
-                    struct.new 194
+                    struct.new 205
                     call 123
                     local.set 4
                     br 2 (;@6;)
@@ -8605,10 +8237,10 @@
                 if ;; label = @7
                   i32.const 1
                   v128.const i32x4 0x4c494146 0x00000000 0x00000000 0x00000000
-                  array.new_fixed 192 1
+                  array.new_fixed 203 1
                   i32.const 0
                   i32.const 4
-                  struct.new 194
+                  struct.new 205
                   call 123
                   local.set 4
                   br 1 (;@6;)
@@ -8623,10 +8255,10 @@
             if ;; label = @5
               i32.const 1
               v128.const i32x4 0x4c494146 0x00000000 0x00000000 0x00000000
-              array.new_fixed 192 1
+              array.new_fixed 203 1
               i32.const 0
               i32.const 4
-              struct.new 194
+              struct.new 205
               call 123
               local.set 6
               br 1 (;@4;)
@@ -8642,10 +8274,10 @@
       if ;; label = @2
         i32.const 1
         v128.const i32x4 0x4c494146 0x00000000 0x00000000 0x00000000
-        array.new_fixed 192 1
+        array.new_fixed 203 1
         i32.const 0
         i32.const 4
-        struct.new 194
+        struct.new 205
         call 123
         local.set 8
         br 1 (;@1;)

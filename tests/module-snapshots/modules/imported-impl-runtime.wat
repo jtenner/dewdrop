@@ -17,6 +17,7 @@
   (export "memory" (memory 0))
   (func (;1;) (type 1) (param (ref 0)) (result i32)
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     i32.const 1
     i32.add

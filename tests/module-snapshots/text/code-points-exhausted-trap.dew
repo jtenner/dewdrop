@@ -1,5 +1,0 @@
-open dew.std.text
-
-pub fn main() -> U32 {
-  "".code_points().next()
-}

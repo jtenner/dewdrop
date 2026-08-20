@@ -142,16 +142,16 @@ test "generated standard builtin registry matches collected bootstrap declaratio
     make_semantic_id(map.module_id, 18),
   )
   assert_eq(
-    standard_map_operation(make_semantic_id(map.module_id, 20)),
+    standard_map_operation(make_semantic_id(map.module_id, 21)),
     MapGetUnchecked,
   )
-  assert_eq(standard_map_operation(make_semantic_id(map.module_id, 22)), MapSet)
+  assert_eq(standard_map_operation(make_semantic_id(map.module_id, 23)), MapSet)
   assert_eq(
-    standard_map_operation(make_semantic_id(map.module_id, 23)),
+    standard_map_operation(make_semantic_id(map.module_id, 24)),
     MapEmpty,
   )
   assert_eq(
-    standard_map_operation(make_semantic_id(map.module_id, 25)),
+    standard_map_operation(make_semantic_id(map.module_id, 26)),
     MapClear,
   )
 

@@ -122,8 +122,8 @@ BODIES: dict[str, str] = {
     "sort": "let output = values()\n  output.sort()\n  output.length()",
     "flat": "let nested = nested_values()\n  nested.push(values())\n  nested.push(values())\n  nested.flat().length()",
     "flat_map": "pair().flat_map(expand).length()",
-    "keys": "let iter = values().keys()\n  let mut total = 0u32\n  while true {\n    true if iter.has_next() => {\n      total = total + iter.next()\n      continue true\n    }\n    _ => break total\n  }",
-    "entries": "let iter = values().entries()\n  while 0u32 {\n    index if index < 128u32 => {\n      iter.next()\n      continue index + 1u32\n    }\n    _ => break 128u32\n  }",
+    "keys": "let iter = values().keys()\n  let mut total = 0u32\n  while iter.next() {\n    Option::Some(value) => {\n      total = total + value\n      continue iter.next()\n    }\n    Option::None => break total\n  }",
+    "entries": "let iter = values().entries()\n  let mut index = 0u32\n  while iter.next() {\n    Option::Some(_) => {\n      index = index + 1u32\n      continue iter.next()\n    }\n    Option::None => break index\n  }",
 }
 
 HELPERS = """

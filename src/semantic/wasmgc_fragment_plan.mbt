@@ -1105,6 +1105,34 @@ fn wasmgc_required_nominal_declarations(
               break
             }
           }
+        PlannedArrayLiteral(_, _, _)
+        | PlannedArrayNew(_, _)
+        | PlannedArrayWithCapacity(_, _, _)
+        | PlannedArrayGet(_, _, _, _)
+        | PlannedArrayGetUnchecked(_, _, _)
+        | PlannedArraySet(_, _, _, _)
+        | PlannedArraySetUnchecked(_, _, _, _)
+        | PlannedArrayPush(_, _, _)
+        | PlannedArrayPop(_, _, _)
+        | PlannedArrayMake(_, _, _, _)
+        | PlannedArrayReserve(_, _, _, _)
+        | PlannedArrayShrinkToFit(_, _, _)
+        | PlannedArrayTruncate(_, _, _, _)
+        | PlannedArrayCopy(_, _, _)
+        | PlannedArrayCopyWithin(_, _, _, _, _, _)
+        | PlannedArrayFill(_, _, _, _, _, _)
+        | PlannedArraySlice(_, _, _, _, _)
+        | PlannedArrayExtend(_, _, _, _)
+        | PlannedArrayClear(_, _, _) =>
+          required[standard_array_type_declaration()] = true
+        PlannedArrayIter(_, _, _) => {
+          required[standard_array_type_declaration()] = true
+          required[standard_array_iterator_type_declaration()] = true
+        }
+        PlannedArrayIterHasNext(_)
+        | PlannedArrayIterNext(_, _)
+        | PlannedArrayIterNextOption(_, _, _) =>
+          required[standard_array_iterator_type_declaration()] = true
         _ => ()
       }
     }
@@ -2152,6 +2180,7 @@ fn wasmgc_value_type(
         }
       NominalType(declaration) => {
         if declaration == standard_fixed_array_type_declaration() ||
+          declaration == standard_array_entry_type_declaration() ||
           declaration == standard_map_entry_type_declaration() {
           return Some(WasmNullableEqRefValue)
         }
@@ -4247,6 +4276,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         | PlannedCircularBufferPeekBack(_, _)
         | PlannedArrayClear(_, _, _)
         | PlannedArrayIterNext(_, _)
+        | PlannedArrayIterNextOption(_, _, _)
         | PlannedFixedArrayGet(_, _, _)
         | PlannedFixedArrayGetUnchecked(_, _, _)
         | PlannedFixedArraySetUnchecked(_, _, _, _) => {
@@ -4353,8 +4383,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         | PlannedMapEntries(_, _, _)
         | PlannedMapIterHasNext(_, _, _, _)
         | PlannedMapKeyIterNext(_, _, _)
+        | PlannedMapKeyIterNextOption(_, _, _)
         | PlannedMapValueIterNext(_, _, _)
+        | PlannedMapValueIterNextOption(_, _, _)
         | PlannedMapEntryIterNext(_, _, _)
+        | PlannedMapEntryIterNextOption(_, _, _)
         | PlannedMapEntryKey(_, _, _)
         | PlannedMapEntryValue(_, _, _)
         | PlannedSetEmpty(_, _, _)
@@ -4367,7 +4400,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         | PlannedSetClear(_)
         | PlannedSetIter(_, _)
         | PlannedSetIterHasNext(_, _)
-        | PlannedSetIterNext(_, _) => {
+        | PlannedSetIterNext(_, _)
+        | PlannedSetIterNextOption(_, _) => {
           uses_map_runtime = true
           break
         }

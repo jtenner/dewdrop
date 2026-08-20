@@ -9,17 +9,13 @@ fn self_host_parser_u64_to_i32(value: U64) -> I32 {
 
 fn self_host_parser_compact(tokens: Array<SelfHostToken>) -> Array<SelfHostToken> {
   let output = Array::with_capacity(tokens.length())
-  while 0u32 {
-    index if index < tokens.length() => {
-      let token = tokens.get_unchecked(index)
-      if token.kind is SelfHostTokenKind::Newline {
-      } else {
-        output.push(token)
-      }
-      continue index + 1u32
+  for token in tokens {
+    if token.kind is SelfHostTokenKind::Newline {
+    } else {
+      output.push(token)
     }
-    _ => break output
   }
+  output
 }
 
 pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {

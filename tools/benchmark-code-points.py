@@ -37,9 +37,13 @@ open dew.std.text
 
 pub fn main() -> U32 {{
   {setup}
-  while 0u32 {{
-    total if points.has_next() => continue total + points.next()
-    total => break total
+  let mut total = 0u32
+  while points.next() {{
+    Option::Some(value) => {{
+      total = total + value
+      continue points.next()
+    }}
+    Option::None => break total
   }}
 }}
 """, expected

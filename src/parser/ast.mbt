@@ -173,6 +173,8 @@ pub enum ExpressionError {
   ExpectedWhileBodyNewline(@tokenizer.Token?, UInt64)
   ExpectedWhileArmArrow(@tokenizer.Token?, UInt64)
   ExpectedWhileArmNewline(@tokenizer.Token?, UInt64)
+  ExpectedForIn(@tokenizer.Token?, UInt64)
+  ExpectedForBody(@tokenizer.Token?, UInt64)
   ExpectedBreakValue(@tokenizer.Token?, UInt64)
   ExpectedContinueValue(@tokenizer.Token?, UInt64)
   ExpectedLambdaSyntax(DeclarationExpectation, @tokenizer.Token?, UInt64)
@@ -233,6 +235,8 @@ pub fn ExpressionError::offset(self : ExpressionError) -> UInt64 {
     | ExpectedWhileBodyNewline(token, fallback)
     | ExpectedWhileArmArrow(token, fallback)
     | ExpectedWhileArmNewline(token, fallback)
+    | ExpectedForIn(token, fallback)
+    | ExpectedForBody(token, fallback)
     | ExpectedBreakValue(token, fallback)
     | ExpectedContinueValue(token, fallback)
     | ExpectedLambdaSyntax(_, token, fallback) =>

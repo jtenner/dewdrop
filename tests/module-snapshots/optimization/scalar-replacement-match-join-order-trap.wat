@@ -13,17 +13,14 @@
     i32.div_s
   )
   (func (;2;) (type 3) (result i32)
-    (local i32 eqref i32)
+    (local i32 eqref i32 i32)
     i32.const 0
-    struct.new 0
-    local.set 1
+    local.set 3
     block ;; label = @1
       block ;; label = @2
         block ;; label = @3
           block ;; label = @4
-            local.get 1
-            ref.cast (ref 0)
-            struct.get 0 0
+            local.get 3
             br_table 0 (;@4;) 1 (;@3;) 2 (;@2;)
           end
           call 0

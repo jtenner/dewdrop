@@ -164,12 +164,14 @@
   )
   (func (;7;) (type 10) (param (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 5
     ref.cast (ref 2)
     call 3
   )
   (func (;8;) (type 11) (param (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 5
     ref.cast (ref 3)
     call 4

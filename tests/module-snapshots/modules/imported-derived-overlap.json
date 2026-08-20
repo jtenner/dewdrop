@@ -1,6 +1,6 @@
 {
   "errors": [
-    "library.dew:1:27: error: OverlappingTraitImpl(\n  18446462598732842219,\n  12884901888000,\n  12889196855297,\n  NominalImplTargetHead(12889196855296),\n  0,\n)\n  |\n1 | pub struct Item {} derive(Debug)\n  |                           ^\n  = fixture.dew:3:1: conflicting implementation is here"
+    "library.dew:1:27: error: OverlappingTraitImpl(\n  18446462598732842216,\n  12884901888000,\n  12889196855297,\n  NominalImplTargetHead(12889196855296),\n  0,\n)\n  |\n1 | pub struct Item {} derive(Debug)\n  |                           ^\n  = fixture.dew:3:1: conflicting implementation is here"
   ],
   "warnings": [],
   "output": null

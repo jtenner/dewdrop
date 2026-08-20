@@ -18,6 +18,7 @@
   )
   (func (;1;) (type 3) (param (ref 2))
     local.get 0
+    ref.cast (ref 2)
     struct.get 2 0
     i32.const 7
     i32.eq

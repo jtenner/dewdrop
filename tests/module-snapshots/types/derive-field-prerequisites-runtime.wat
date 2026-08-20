@@ -744,8 +744,10 @@
     i32.const 1
     if (result i32) ;; label = @1
       local.get 0
+      ref.cast (ref 6)
       struct.get 6 0
       local.get 1
+      ref.cast (ref 6)
       struct.get 6 0
       i32.eq
     else
@@ -756,8 +758,10 @@
     i32.const 1
     if (result i32) ;; label = @1
       local.get 0
+      ref.cast (ref 6)
       struct.get 6 0
       local.get 1
+      ref.cast (ref 6)
       struct.get 6 0
       i32.eq
     else
@@ -767,6 +771,7 @@
   (func (;10;) (type 23) (param (ref 6)) (result i64)
     i64.const -3750763034362895579
     local.get 0
+    ref.cast (ref 6)
     struct.get 6 0
     i64.extend_i32_s
     i64.xor
@@ -800,6 +805,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 6)
     struct.get 6 0
     call 3
     i32.const 1

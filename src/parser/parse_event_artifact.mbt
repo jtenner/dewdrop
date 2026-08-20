@@ -2760,6 +2760,16 @@ fn parse_write_expression_error(
       writer.write_string(name)
       parse_write_offset(writer, offset)
     }
+    ExpectedForIn(token, offset) => {
+      writer.write_byte(45)
+      parse_write_optional_token(writer, token)
+      parse_write_offset(writer, offset)
+    }
+    ExpectedForBody(token, offset) => {
+      writer.write_byte(46)
+      parse_write_optional_token(writer, token)
+      parse_write_offset(writer, offset)
+    }
   }
 }
 
@@ -2912,6 +2922,16 @@ fn parse_read_expression_error(
         parse_read_offset(reader, field + ".offset"),
       )
     44 => UnclosedArray(parse_read_offset(reader, field + ".offset"))
+    45 =>
+      ExpectedForIn(
+        parse_read_optional_token(reader, field + ".token"),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    46 =>
+      ExpectedForBody(
+        parse_read_optional_token(reader, field + ".token"),
+        parse_read_offset(reader, field + ".offset"),
+      )
     _ => {
       reader.fail(field, "unknown expression-error discriminant")
       MissingOperand(0UL)

@@ -1,0 +1,13 @@
+open dew.std.set
+
+pub fn main() -> Unit {
+  let iter = Set::singleton(1).iter()
+  match iter.next() {
+    Option::Some(value) => assert(value == 1, "first key")
+    Option::None => unreachable()
+  }
+  match iter.next() {
+    Option::Some(_) => unreachable()
+    Option::None => {}
+  }
+}

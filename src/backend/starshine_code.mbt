@@ -2,6 +2,7 @@
 pub enum StarshineProgramBinaryEmissionError {
   StarshineProgramCodeError(StarshineCodeEmissionError)
   StarshineProgramValidationError(@validate.ValidationError)
+  StarshineProgramOptimizationError(String)
   StarshineProgramEncodingError(@binary.EncodeError)
 } derive(Debug)
 
@@ -31,6 +32,13 @@ priv struct StarshineGenericSpecialization {
   specialization_shapes : @semantic.HirSpan
   specialization_evidence : @semantic.HirSpan
   specialization_abi_key : String
+}
+
+///|
+priv struct StarshineFieldLocation {
+  type_index : Int
+  field_index : Int
+  storage : @semantic.PlannedWasmStorageType
 }
 
 ///|
@@ -200,6 +208,29 @@ fn starshine_specialized_shape(
 }
 
 ///|
+fn starshine_specialized_implicit_shape(
+  lowering : @semantic.PlannedModuleLowering,
+  specialization : StarshineGenericSpecialization?,
+  fallback : @semantic.PlannedValueShape,
+) -> @semantic.PlannedValueShape {
+  let specialized = starshine_specialized_shape(
+    lowering, specialization, -1, fallback,
+  )
+  let specialization = match specialization {
+    Some(value) => value
+    None => return specialized
+  }
+  if specialized is @semantic.GenericPlannedValueShape &&
+    fallback is @semantic.GenericPlannedValueShape &&
+    specialization.generic_parameters.length == 1 &&
+    specialization.specialization_shapes.length == 1 {
+    specialization.shapes[specialization.specialization_shapes.start]
+  } else {
+    specialized
+  }
+}
+
+///|
 priv enum StarshineEmitTask {
   EmitStarshineExpression(@semantic.ExprId)
   EmitStarshineRawExpression(@semantic.ExprId)
@@ -308,6 +339,11 @@ priv enum StarshineEmitTask {
   FinishStarshinePackedEnumPayload(Int)
   FinishStarshineNominalResult(@semantic.DeclId)
   FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType, Bool)
+  FinishStarshinePolymorphicFieldGet(
+    Array[StarshineFieldLocation],
+    Int,
+    @semantic.PlannedValueShape
+  )
   FinishStarshineFieldSet(Int, Int, Bool)
   FinishStarshineUnitFieldSet
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
@@ -1486,6 +1522,40 @@ fn starshine_field_location(
 }
 
 ///|
+fn starshine_field_locations(
+  planned : @semantic.PlannedModuleWasmGCFragments,
+  program : @semantic.PlannedProgramWasmGCLink?,
+  owner_module : Int,
+  field : @semantic.FieldId,
+  shape : @semantic.PlannedValueShape,
+) -> Array[StarshineFieldLocation] {
+  let locations : Array[StarshineFieldLocation] = []
+  for type_ in planned.physical_types {
+    for index in 0..<type_.fields.length {
+      let planned_field = planned.fields[type_.fields.start + index]
+      match planned_field.role {
+        @semantic.WasmStructField(candidate)
+        | @semantic.WasmStructPayloadField(candidate) if candidate == field &&
+          starshine_shape_matches_storage(shape, planned_field.storage) => {
+          let type_index = match program {
+            Some(link) =>
+              link.physical_type_index(owner_module, type_.type_index)
+            None => type_.type_index
+          }
+          locations.push({
+            type_index,
+            field_index: planned_field.physical_index,
+            storage: planned_field.storage,
+          })
+        }
+        _ => ()
+      }
+    }
+  }
+  locations
+}
+
+///|
 fn starshine_struct_get_instruction(
   type_index : Int,
   field_index : Int,
@@ -1599,6 +1669,7 @@ fn starshine_precise_nominal_local_type_index(
     planned_local.nominal ==
     @semantic.standard_array_iterator_type_declaration() ||
     planned_local.nominal == @semantic.standard_map_type_declaration() ||
+    planned_local.nominal == @semantic.standard_array_entry_type_declaration() ||
     planned_local.nominal == @semantic.standard_map_entry_type_declaration() ||
     planned_local.nominal ==
     @semantic.standard_map_key_iterator_type_declaration() ||
@@ -3697,9 +3768,7 @@ fn starshine_body_locals(
           starshine_append_shape_value_types(body_local_types, value_shape)
         }
       }
-      @semantic.PlannedCaptureGet(_)
-      | @semantic.PlannedFieldGet(_, _, _)
-      | @semantic.PlannedModuleValueGet(_, _) =>
+      @semantic.PlannedCaptureGet(_) | @semantic.PlannedModuleValueGet(_, _) =>
         if lowering.expressions[expression].shape
           is @semantic.ProductPlannedValueShape(_) &&
           fixed_array_ref_scratch_index < 0 {
@@ -3707,6 +3776,42 @@ fn starshine_body_locals(
             body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
+      @semantic.PlannedFieldGet(field, _, _) => {
+        let source = lowering.expressions[expression]
+        let field_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          source.type_,
+          source.shape,
+        )
+        let owner_module = match program {
+          Some(link) =>
+            link.module_lookup
+            .get(@semantic.semantic_id_module(field))
+            .unwrap_or(
+              link.module_lookup
+              .get(@semantic.semantic_id_module(body.body))
+              .unwrap_or(0),
+            )
+          None => 0
+        }
+        let field_plan = match program {
+          Some(link) => link.modules[owner_module]
+          None => planned
+        }
+        if (
+            field_shape is @semantic.ProductPlannedValueShape(_) ||
+            starshine_field_locations(
+              field_plan, program, owner_module, field, field_shape,
+            ).length() >
+            1
+          ) &&
+          fixed_array_ref_scratch_index < 0 {
+          fixed_array_ref_scratch_index = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
+      }
       @semantic.PlannedCaptureSet(_, value) => {
         let value_source = lowering.expressions[value]
         let value_shape = starshine_specialized_shape(
@@ -3773,7 +3878,8 @@ fn starshine_body_locals(
       | @semantic.PlannedCircularBufferPeekBack(_, _)
       | @semantic.PlannedArrayClear(_, _, _)
       | @semantic.PlannedArrayIterHasNext(_)
-      | @semantic.PlannedArrayIterNext(_, _) => {
+      | @semantic.PlannedArrayIterNext(_, _)
+      | @semantic.PlannedArrayIterNextOption(_, _, _) => {
         if fixed_array_ref_scratch_index < 0 {
           fixed_array_ref_scratch_index = parameter_count +
             body_local_types.length()
@@ -3878,13 +3984,17 @@ fn starshine_body_locals(
       | @semantic.PlannedMapEntries(_, _, _)
       | @semantic.PlannedMapIterHasNext(_, _, _, _)
       | @semantic.PlannedMapKeyIterNext(_, _, _)
+      | @semantic.PlannedMapKeyIterNextOption(_, _, _)
       | @semantic.PlannedMapValueIterNext(_, _, _)
+      | @semantic.PlannedMapValueIterNextOption(_, _, _)
       | @semantic.PlannedMapEntryIterNext(_, _, _)
+      | @semantic.PlannedMapEntryIterNextOption(_, _, _)
       | @semantic.PlannedMapEntryKey(_, _, _)
       | @semantic.PlannedMapEntryValue(_, _, _)
       | @semantic.PlannedSetIter(_, _)
       | @semantic.PlannedSetIterHasNext(_, _)
-      | @semantic.PlannedSetIterNext(_, _) => {
+      | @semantic.PlannedSetIterNext(_, _)
+      | @semantic.PlannedSetIterNextOption(_, _) => {
         if map_ref_scratch_index < 0 {
           map_ref_scratch_index = parameter_count + body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
@@ -6409,8 +6519,8 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedFixedArrayMake(length, value, shape) => {
-            let element_shape = starshine_specialized_shape(
-              lowering, generic_specialization, -1, shape,
+            let element_shape = starshine_specialized_implicit_shape(
+              lowering, generic_specialization, shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -6421,8 +6531,8 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(length))
           }
           @semantic.PlannedFixedArrayLength(base, shape) => {
-            let element_shape = starshine_specialized_shape(
-              lowering, generic_specialization, -1, shape,
+            let element_shape = starshine_specialized_implicit_shape(
+              lowering, generic_specialization, shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -6432,8 +6542,8 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArrayGet(base, index, shape) => {
-            let element_shape = starshine_specialized_shape(
-              lowering, generic_specialization, -1, shape,
+            let element_shape = starshine_specialized_implicit_shape(
+              lowering, generic_specialization, shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -6444,8 +6554,8 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArrayGetUnchecked(base, index, shape) => {
-            let element_shape = starshine_specialized_shape(
-              lowering, generic_specialization, -1, shape,
+            let element_shape = starshine_specialized_implicit_shape(
+              lowering, generic_specialization, shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -6456,8 +6566,8 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArraySetUnchecked(base, index, value, shape) => {
-            let element_shape = starshine_specialized_shape(
-              lowering, generic_specialization, -1, shape,
+            let element_shape = starshine_specialized_implicit_shape(
+              lowering, generic_specialization, shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -7245,6 +7355,26 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
+          @semantic.PlannedArrayIterNextOption(base, element_type, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element_type, shape,
+            )
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
+            tasks.push(
+              FinishStarshineArray(
+                49,
+                Some(element_shape),
+                1,
+                fixed_array_ref_scratch_index,
+                map_ref_scratch_index,
+                fixed_array_i32_scratch_index,
+                -1,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
           @semantic.PlannedMapKeys(base, key_shape, value_shape) => {
             tasks.push(
               FinishStarshineHashIter(
@@ -7302,6 +7432,18 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
+          @semantic.PlannedMapKeyIterNextOption(base, key_shape, value_shape) => {
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
+            tasks.push(
+              FinishStarshineHashIter(
+                15, key_shape, value_shape, 1, map_ref_scratch_index, map_bucket_scratch_index,
+                map_entry_scratch_index, map_growth_index_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
           @semantic.PlannedMapValueIterNext(base, key_shape, value_shape) => {
             tasks.push(
               FinishStarshineHashIter(
@@ -7311,10 +7453,34 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
+          @semantic.PlannedMapValueIterNextOption(base, key_shape, value_shape) => {
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
+            tasks.push(
+              FinishStarshineHashIter(
+                16, key_shape, value_shape, 1, map_ref_scratch_index, map_bucket_scratch_index,
+                map_entry_scratch_index, map_growth_index_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
           @semantic.PlannedMapEntryIterNext(base, key_shape, value_shape) => {
             tasks.push(
               FinishStarshineHashIter(
                 7, key_shape, value_shape, 1, map_ref_scratch_index, map_bucket_scratch_index,
+                map_entry_scratch_index, map_growth_index_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedMapEntryIterNextOption(base, key_shape, value_shape) => {
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
+            tasks.push(
+              FinishStarshineHashIter(
+                17, key_shape, value_shape, 1, map_ref_scratch_index, map_bucket_scratch_index,
                 map_entry_scratch_index, map_growth_index_scratch_index,
               ),
             )
@@ -7360,6 +7526,18 @@ fn starshine_emit_body_instructions(
             tasks.push(
               FinishStarshineHashIter(
                 12, key_shape, key_shape, 1, map_ref_scratch_index, map_bucket_scratch_index,
+                map_entry_scratch_index, map_growth_index_scratch_index,
+              ),
+            )
+            tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedSetIterNextOption(base, key_shape) => {
+            if source.nominal != 0UL {
+              tasks.push(FinishStarshineNominalResult(source.nominal))
+            }
+            tasks.push(
+              FinishStarshineHashIter(
+                18, key_shape, key_shape, 1, map_ref_scratch_index, map_bucket_scratch_index,
                 map_entry_scratch_index, map_growth_index_scratch_index,
               ),
             )
@@ -8071,51 +8249,19 @@ fn starshine_emit_body_instructions(
               source.type_,
               source.shape,
             )
-            let (local_type_index, physical_index, storage) = match
-              starshine_field_location(field_plan, field, field_shape) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, expression))
+            let locations = starshine_field_locations(
+              field_plan, program, owner_module, field, field_shape,
+            )
+            if locations.is_empty() {
+              return Err(UnsupportedExpression(body.body, expression))
             }
-            let type_index = match program {
-              Some(link) =>
-                link.physical_type_index(owner_module, local_type_index)
-              None => local_type_index
-            }
+            let first_location = locations[0]
             let needs_cast = match lowering.expressions[base].kind {
               @semantic.PlannedDirectCall(_, _, _, arguments)
               | @semantic.PlannedTailCall(_, _, _, arguments) if arguments.length >
                 0 => true
               @semantic.PlannedFunctionValueCall(_, _, _) => true
-              @semantic.PlannedLocalGet(local_id) => {
-                let local_info = lowering.locals[body.locals.start + local_id]
-                (match local_info.kind {
-                  @semantic.ParameterLocal => false
-                  _ => true
-                }) &&
-                !(local_info.nominal != 0UL &&
-                local_info.nominal !=
-                @semantic.standard_fixed_array_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_array_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_array_iterator_type_declaration() &&
-                local_info.nominal != @semantic.standard_map_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_map_entry_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_map_key_iterator_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_map_value_iterator_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_map_entry_iterator_type_declaration() &&
-                local_info.nominal != @semantic.standard_set_type_declaration() &&
-                local_info.nominal !=
-                @semantic.standard_set_iterator_type_declaration() &&
-                (match lowering.type_layouts.layout_of(local_info.nominal) {
-                  Some(layout) => layout.generic_parameters.length > 0
-                  None => false
-                }))
-              }
+              @semantic.PlannedLocalGet(_) => true
               @semantic.PlannedBlockExpression(_)
               | @semantic.PlannedIfExpression(_, _, _)
               | @semantic.PlannedMatchExpression(_, _) => true
@@ -8128,11 +8274,22 @@ fn starshine_emit_body_instructions(
                 ),
               )
             }
-            tasks.push(
-              FinishStarshineFieldGet(
-                type_index, physical_index, storage, needs_cast,
-              ),
-            )
+            if locations.length() > 1 {
+              tasks.push(
+                FinishStarshinePolymorphicFieldGet(
+                  locations, fixed_array_ref_scratch_index, field_shape,
+                ),
+              )
+            } else {
+              tasks.push(
+                FinishStarshineFieldGet(
+                  first_location.type_index,
+                  first_location.field_index,
+                  first_location.storage,
+                  needs_cast,
+                ),
+              )
+            }
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFieldSet(field, base, value) => {
@@ -10510,6 +10667,52 @@ fn starshine_emit_body_instructions(
         output.push(
           starshine_struct_get_instruction(type_index, field_index, storage),
         )
+        results.push(output)
+      }
+      FinishStarshinePolymorphicFieldGet(locations, scratch, shape) => {
+        let output = results.pop().unwrap()
+        output.push(
+          @lib.Instruction::local_set(
+            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+          ),
+        )
+        let mut fallback : Array[@lib.Instruction] = [
+          @lib.Instruction::unreachable_(),
+        ]
+        let mut index = locations.length()
+        while index > 0 {
+          index -= 1
+          let location = locations[index]
+          let present : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+            ),
+            starshine_match_cast(location.type_index),
+            starshine_struct_get_instruction(
+              location.type_index,
+              location.field_index,
+              location.storage,
+            ),
+          ]
+          let next : Array[@lib.Instruction] = [
+            @lib.Instruction::local_get(
+              @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
+            ),
+            @lib.Instruction::ref_test(
+              false,
+              @lib.HeapType::new(
+                @lib.TypeIdx::new(location.type_index.reinterpret_as_uint()),
+              ),
+            ),
+            @lib.Instruction::if_(
+              starshine_block_type(shape),
+              present,
+              Some(fallback),
+            ),
+          ]
+          fallback = next
+        }
+        append_starshine_instructions(output, fallback)
         results.push(output)
       }
       FinishStarshineFieldSet(type_index, field_index, needs_cast) => {

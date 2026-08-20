@@ -6,7 +6,7 @@ test "code point iterators retain stable text module identities" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-          "main.dew", b"open dew.std.string\nopen dew.std.text\npub fn run() -> U32 {\n  let points = \"A\".code_points()\n  if points.has_next() { points.next() } else { 0u32 }\n}\n",
+          "main.dew", b"open dew.std.string\nopen dew.std.text\npub fn run() -> U32 {\n  let points = \"A\".code_points()\n  match points.next() {\n    Option::Some(value) => value\n    Option::None => 0u32\n  }\n}\n",
         ),
       ]),
     ]),

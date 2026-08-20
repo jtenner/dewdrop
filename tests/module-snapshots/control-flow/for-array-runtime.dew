@@ -1,0 +1,15 @@
+open dew.std.array
+open dew.std.wasi
+
+pub fn main() -> Unit {
+  let values = Array::new()
+  values.push(2)
+  values.push(3)
+  values.push(5)
+  let mut sum = 0
+  for value in values {
+    sum = sum + value
+  }
+  assert(sum == 10, "for visits each array element once")
+  wasi_fd_write(1u32, b"control-flow:for-array-runtime")
+}

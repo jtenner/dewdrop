@@ -71,11 +71,8 @@ impl<t> IndexedSet<U32, t> for Array<t> {
 }
 
 impl<t> Iter<t> for ArrayIter<t> {
-  fn has_next(self) -> Bool {
-    array_iter_has_next(self)
-  }
-  fn next(self) -> t {
-    array_iter_next(self)
+  fn next(self) -> Option<t> {
+    array_iter_next_option(self)
   }
 }
 
@@ -1048,35 +1045,29 @@ impl<t> ArrayEntry<t> {
 }
 
 impl<t> Iter<U32> for ArrayKeyIter<t> {
-  fn has_next(self) -> Bool {
-    self.index < array_length(self.values)
-  }
-  fn next(self) -> U32 {
+  fn next(self) -> Option<U32> {
     if self.index >= array_length(self.values) {
-      unreachable()
+      Option::None
     } else {
       let index = self.index
       self.index = index + 1u32
-      index
+      Option::Some(index)
     }
   }
 }
 
 impl<t> Iter<ArrayEntry<t>> for ArrayEntryIter<t> {
-  fn has_next(self) -> Bool {
-    self.index < array_length(self.values)
-  }
-  fn next(self) -> ArrayEntry<t> {
+  fn next(self) -> Option<ArrayEntry<t>> {
     if self.index >= array_length(self.values) {
-      unreachable()
+      Option::None
     } else {
       let index = self.index
       let value = array_get_unchecked(self.values, index)
       self.index = index + 1u32
-      ArrayEntry::{
+      Option::Some(ArrayEntry::{
         index: index
         value: value
-      }
+      })
     }
   }
 }
@@ -1234,3 +1225,5 @@ impl<t> Arena<t> {
     self.values
   }
 }
+
+builtin array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> = "dew_array_iter_next_option"

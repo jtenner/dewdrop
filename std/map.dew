@@ -39,6 +39,9 @@ impl<key, value> Map<key, value> {
   fn clear(self) -> Unit {
     map_clear(self)
   }
+  fn iter(self) -> MapEntryIter<key, value> {
+    map_entries(self)
+  }
 }
 
 impl<key, value> IndexedGet<key, value> for Map<key, value> {
@@ -96,28 +99,23 @@ impl<key, value> MapEntry<key, value> {
 }
 
 impl<key, value> Iter<key> for MapKeyIter<key, value> {
-  fn has_next(self) -> Bool {
-    map_key_iter_has_next(self)
-  }
-  fn next(self) -> key {
-    map_key_iter_next(self)
+  fn next(self) -> Option<key> {
+    map_key_iter_next_option(self)
   }
 }
 
 impl<key, value> Iter<value> for MapValueIter<key, value> {
-  fn has_next(self) -> Bool {
-    map_value_iter_has_next(self)
-  }
-  fn next(self) -> value {
-    map_value_iter_next(self)
+  fn next(self) -> Option<value> {
+    map_value_iter_next_option(self)
   }
 }
 
 impl<key, value> Iter<MapEntry<key, value>> for MapEntryIter<key, value> {
-  fn has_next(self) -> Bool {
-    map_entry_iter_has_next(self)
-  }
-  fn next(self) -> MapEntry<key, value> {
-    map_entry_iter_next(self)
+  fn next(self) -> Option<MapEntry<key, value>> {
+    map_entry_iter_next_option(self)
   }
 }
+
+builtin map_key_iter_next_option<key, value>(iter: MapKeyIter<key, value>) -> Option<key> = "dew_map_key_iter_next_option"
+builtin map_value_iter_next_option<key, value>(iter: MapValueIter<key, value>) -> Option<value> = "dew_map_value_iter_next_option"
+builtin map_entry_iter_next_option<key, value>(iter: MapEntryIter<key, value>) -> Option<MapEntry<key, value>> = "dew_map_entry_iter_next_option"

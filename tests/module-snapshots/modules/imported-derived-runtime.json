@@ -1,7 +1,7 @@
 {
-  "errors": [],
+  "errors": [
+    "StarshineProgramCodeError(UnsupportedExpression(12889196855305, 55))"
+  ],
   "warnings": [],
-  "output": [
-    "Box { value: 42 }|Choice::Named { value: 9 }|modules:imported-derived"
-  ]
+  "output": null
 }

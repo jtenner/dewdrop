@@ -49,10 +49,9 @@ impl<key> Set<key> {
 }
 
 impl<key> Iter<key> for SetIter<key> {
-  fn has_next(self) -> Bool {
-    set_iter_has_next(self)
-  }
-  fn next(self) -> key {
-    set_iter_next(self)
+  fn next(self) -> Option<key> {
+    set_iter_next_option(self)
   }
 }
+
+builtin set_iter_next_option<key>(iter: SetIter<key>) -> Option<key> = "dew_set_iter_next_option"

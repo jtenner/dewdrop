@@ -175,7 +175,7 @@ fn starshine_finish_hash_iter(
   entry_local : Int,
   _index_local : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
-  let set_operation = operation >= 10 && operation <= 12
+  let set_operation = (operation >= 10 && operation <= 12) || operation == 18
   let collection_declaration = if set_operation {
     @semantic.standard_set_type_declaration()
   } else {
@@ -187,10 +187,10 @@ fn starshine_finish_hash_iter(
     None => return Err(UnsupportedExpression(body_id, -501))
   }
   let iterator_declaration = match operation {
-    1 | 4 | 5 => @semantic.standard_map_key_iterator_type_declaration()
-    2 | 6 | 13 => @semantic.standard_map_value_iterator_type_declaration()
-    3 | 7 | 14 => @semantic.standard_map_entry_iterator_type_declaration()
-    10 | 11 | 12 => @semantic.standard_set_iterator_type_declaration()
+    1 | 4 | 5 | 15 => @semantic.standard_map_key_iterator_type_declaration()
+    2 | 6 | 13 | 16 => @semantic.standard_map_value_iterator_type_declaration()
+    3 | 7 | 14 | 17 => @semantic.standard_map_entry_iterator_type_declaration()
+    10 | 11 | 12 | 18 => @semantic.standard_set_iterator_type_declaration()
     _ => collection_declaration
   }
   let wrapper_type = starshine_emitted_type_index(
@@ -268,6 +268,96 @@ fn starshine_finish_hash_iter(
     ),
   )
   output.push(starshine_array_local_set(entry_local))
+  if operation >= 15 && operation <= 18 {
+    let success : Array[@lib.Instruction] = []
+    starshine_hash_iter_set_state_field(
+      success,
+      wrapper_type,
+      bucket_type,
+      iterator_local,
+      1,
+      [
+        starshine_array_local_get(entry_local),
+        starshine_match_cast(entry_type),
+        starshine_map_entry_get(entry_type, 0),
+      ],
+    )
+    append_starshine_instructions(
+      success,
+      starshine_hash_iter_state_field(
+        wrapper_type, bucket_type, iterator_local, 1,
+      ),
+    )
+    success.push(@lib.Instruction::ref_is_null())
+    let advance_bucket : Array[@lib.Instruction] = [
+      starshine_array_local_get(iterator_local),
+      starshine_match_cast(wrapper_type),
+    ]
+    append_starshine_instructions(
+      advance_bucket,
+      starshine_hash_iter_wrapper_field(wrapper_type, iterator_local, 1),
+    )
+    advance_bucket.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+    advance_bucket.push(@lib.Instruction::i32_add())
+    advance_bucket.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    success.push(
+      @lib.Instruction::if_(@lib.BlockType::void_(), advance_bucket, None),
+    )
+    let value : Array[@lib.Instruction] = []
+    let option_shape = if operation == 17 {
+      @semantic.planned_reference_shape()
+    } else {
+      let key_result = operation == 15 || operation == 18
+      let selected = if key_result { key_shape } else { value_shape }
+      let field = starshine_map_entry_field(selected, !key_result)
+      if field < 0 {
+        return Err(UnsupportedExpression(body_id, -504))
+      }
+      value.push(starshine_array_local_get(entry_local))
+      value.push(starshine_match_cast(entry_type))
+      value.push(starshine_map_entry_get(entry_type, field))
+      selected
+    }
+    if operation == 17 {
+      value.push(starshine_array_local_get(entry_local))
+    }
+    match
+      starshine_array_append_option(
+        success, planned, program, option_shape, true, value,
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    let failure : Array[@lib.Instruction] = []
+    match
+      starshine_array_append_option(
+        failure,
+        planned,
+        program,
+        option_shape,
+        false,
+        [],
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    output.push(starshine_array_local_get(entry_local))
+    output.push(@lib.Instruction::ref_is_null())
+    output.push(@lib.Instruction::i32_eqz())
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::eqref_null()),
+        success,
+        Some(failure),
+      ),
+    )
+    return Ok(output)
+  }
   output.push(starshine_array_local_get(entry_local))
   output.push(@lib.Instruction::ref_is_null())
   output.push(

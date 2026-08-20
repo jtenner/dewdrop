@@ -270,6 +270,7 @@
   )
   (func (;2;) (type 4) (param (ref 3)) (result i32)
     local.get 0
+    ref.cast (ref 3)
     struct.get 3 0
     struct.get 2 0
   )

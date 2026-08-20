@@ -1,0 +1,13 @@
+open dew.std.array
+
+pub fn main() -> Unit {
+  let keys = Array::make(1u32, 7).keys()
+  match keys.next() {
+    Option::Some(value) => assert(value == 0u32, "first key")
+    Option::None => unreachable()
+  }
+  match keys.next() {
+    Option::Some(_) => unreachable()
+    Option::None => {}
+  }
+}

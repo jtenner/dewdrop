@@ -6,18 +6,16 @@ fn empty_i32_map() -> Map<I32, I32> {
 }
 
 fn sum_keys(iter: MapKeyIter<I32, I32>, sum: I32) -> I32 {
-  if iter.has_next() {
-    sum_keys(iter, sum + iter.next())
-  } else {
-    sum
+  match iter.next() {
+    Option::Some(value) => sum_keys(iter, sum + value)
+    Option::None => sum
   }
 }
 
 fn sum_values(iter: MapValueIter<I32, I32>, sum: I32) -> I32 {
-  if iter.has_next() {
-    sum_values(iter, sum + iter.next())
-  } else {
-    sum
+  match iter.next() {
+    Option::Some(value) => sum_values(iter, sum + value)
+    Option::None => sum
   }
 }
 
@@ -26,19 +24,37 @@ fn combine_entry(entry: MapEntry<I32, I32>) -> I32 {
 }
 
 fn sum_entries(iter: MapEntryIter<I32, I32>, sum: I32) -> I32 {
-  if iter.has_next() {
-    let entry = iter.next()
-    sum_entries(iter, sum + combine_entry(entry))
-  } else {
-    sum
+  match iter.next() {
+    Option::Some(entry) => sum_entries(iter, sum + combine_entry(entry))
+    Option::None => sum
   }
 }
 
 fn string_value_lengths(iter: MapValueIter<I32, String>, sum: U32) -> U32 {
-  if iter.has_next() {
-    string_value_lengths(iter, sum + iter.next().byte_length())
-  } else {
-    sum
+  match iter.next() {
+    Option::Some(value) => string_value_lengths(iter, sum + value.byte_length())
+    Option::None => sum
+  }
+}
+
+fn empty_keys(iter: MapKeyIter<I32, I32>) -> Bool {
+  match iter.next() {
+    Option::Some(_) => false
+    Option::None => true
+  }
+}
+
+fn empty_values(iter: MapValueIter<I32, I32>) -> Bool {
+  match iter.next() {
+    Option::Some(_) => false
+    Option::None => true
+  }
+}
+
+fn empty_entries(iter: MapEntryIter<I32, I32>) -> Bool {
+  match iter.next() {
+    Option::Some(_) => false
+    Option::None => true
   }
 }
 
@@ -52,9 +68,9 @@ pub fn main() -> Unit {
   assert(sum_entries(values.entries(), 0) == 153, "map entry iterator preserves key/value pairing")
 
   let empty = empty_i32_map()
-  assert(!empty.keys().has_next(), "empty map key iterator")
-  assert(!empty.values().has_next(), "empty map value iterator")
-  assert(!empty.entries().has_next(), "empty map entry iterator")
+  assert(empty_keys(empty.keys()), "empty map key iterator")
+  assert(empty_values(empty.values()), "empty map value iterator")
+  assert(empty_entries(empty.entries()), "empty map entry iterator")
 
   let strings = Map::singleton(1, "one")
   strings.insert(2, "three")

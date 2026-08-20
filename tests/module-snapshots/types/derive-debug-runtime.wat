@@ -2839,6 +2839,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 33)
     struct.get 33 0
     call 19
     i32.const 1
@@ -2850,6 +2851,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 33)
     struct.get 33 1
     call 19
     i32.const 1
@@ -2978,6 +2980,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 38)
     struct.get 38 0
     call 33
     i32.const 1
@@ -2989,6 +2992,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 38)
     struct.get 38 1
     call 34
     i32.const 1
@@ -3018,6 +3022,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 39)
     struct.get 39 0
     call 27
     i32.const 1
@@ -3029,6 +3034,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 39)
     struct.get 39 1
     call 28
     i32.const 1
@@ -3332,6 +3338,7 @@
     call 1
     drop
     local.get 0
+    ref.cast (ref 37)
     struct.get 37 0
     call 19
     i32.const 1

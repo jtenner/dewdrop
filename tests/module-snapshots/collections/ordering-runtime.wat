@@ -23,27 +23,31 @@
   (type (;21;) (func (param i32 i32) (result (ref 8))))
   (type (;22;) (func (param i64 i64) (result (ref 8))))
   (type (;23;) (func (param f64 f64) (result (ref 8))))
-  (type (;24;) (sub (struct (field funcref))))
-  (type (;25;) (func (param eqref) (result eqref)))
-  (type (;26;) (func (param eqref i32) (result eqref)))
-  (type (;27;) (func (param eqref eqref) (result eqref)))
-  (type (;28;) (func (param eqref)))
-  (type (;29;) (func (param eqref i32)))
-  (type (;30;) (func (param eqref) (result i32)))
-  (type (;31;) (func (param eqref i32) (result i32)))
-  (type (;32;) (func (param eqref eqref i32) (result eqref)))
-  (type (;33;) (func (param eqref eqref eqref) (result eqref)))
-  (type (;34;) (func (param eqref eqref)))
-  (type (;35;) (func (param eqref eqref i32)))
-  (type (;36;) (func (param eqref eqref) (result i32)))
-  (type (;37;) (func (param eqref eqref i32) (result i32)))
-  (type (;38;) (func (param eqref eqref eqref i32) (result eqref)))
-  (type (;39;) (array (mut v128)))
-  (type (;40;) (struct (field (ref 39)) (field i32) (field i32)))
-  (type (;41;) (struct (field (ref 39)) (field i32) (field i32)))
-  (type (;42;) (struct (field (ref 39)) (field i32) (field i32)))
-  (type (;43;) (struct (field (mut (ref 39))) (field (mut i32)) (field (mut i32))))
-  (type (;44;) (struct (field (mut (ref 39))) (field (mut i32)) (field (mut i32))))
+  (type (;24;) (struct (field (mut eqref)) (field (mut i32)) (field (mut i32))))
+  (type (;25;) (struct (field eqref) (field (mut i32))))
+  (type (;26;) (sub (struct (field funcref))))
+  (type (;27;) (func (param eqref) (result eqref)))
+  (type (;28;) (func (param eqref i32) (result eqref)))
+  (type (;29;) (func (param eqref) (result (ref 24))))
+  (type (;30;) (func (param eqref eqref) (result eqref)))
+  (type (;31;) (func (param eqref)))
+  (type (;32;) (func (param eqref i32)))
+  (type (;33;) (func (param eqref) (result i32)))
+  (type (;34;) (func (param eqref i32) (result i32)))
+  (type (;35;) (func (param eqref eqref i32) (result eqref)))
+  (type (;36;) (func (param eqref eqref) (result (ref 24))))
+  (type (;37;) (func (param eqref eqref eqref) (result eqref)))
+  (type (;38;) (func (param eqref eqref)))
+  (type (;39;) (func (param eqref eqref i32)))
+  (type (;40;) (func (param eqref eqref) (result i32)))
+  (type (;41;) (func (param eqref eqref i32) (result i32)))
+  (type (;42;) (func (param eqref eqref eqref i32) (result eqref)))
+  (type (;43;) (array (mut v128)))
+  (type (;44;) (struct (field (ref 43)) (field i32) (field i32)))
+  (type (;45;) (struct (field (ref 43)) (field i32) (field i32)))
+  (type (;46;) (struct (field (ref 43)) (field i32) (field i32)))
+  (type (;47;) (struct (field (mut (ref 43))) (field (mut i32)) (field (mut i32))))
+  (type (;48;) (struct (field (mut (ref 43))) (field (mut i32)) (field (mut i32))))
   (export "main" (func 8))
   (func (;0;) (type 10) (result (ref 9))
     struct.new 9
@@ -242,10 +246,10 @@
     call 9
     call 1
     v128.const i32x4 0x7373656c 0x00000000 0x00000000 0x00000000
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 4
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -256,10 +260,10 @@
     call 9
     call 2
     v128.const i32x4 0x61757165 0x0000006c 0x00000000 0x00000000
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 5
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -270,10 +274,10 @@
     call 9
     call 3
     v128.const i32x4 0x61657267 0x00726574 0x00000000 0x00000000
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 7
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -284,10 +288,10 @@
     call 4
     call 3
     v128.const i32x4 0x65766572 0x20657372 0x7373656c 0x00000000
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 12
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -298,10 +302,10 @@
     call 4
     call 2
     v128.const i32x4 0x65766572 0x20657372 0x61757165 0x0000006c
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 13
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -312,10 +316,10 @@
     call 4
     call 1
     v128.const i32x4 0x65766572 0x20657372 0x61657267 0x00726574
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 15
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -326,10 +330,10 @@
     call 10
     call 1
     v128.const i32x4 0x20343669 0x706d6f63 0x74617261 0x0000726f
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 14
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1
@@ -340,10 +344,10 @@
     call 11
     call 3
     v128.const i32x4 0x20343666 0x706d6f63 0x74617261 0x0000726f
-    array.new_fixed 39 1
+    array.new_fixed 43 1
     i32.const 0
     i32.const 14
-    struct.new 40
+    struct.new 44
     drop
     i32.eqz
     if ;; label = @1

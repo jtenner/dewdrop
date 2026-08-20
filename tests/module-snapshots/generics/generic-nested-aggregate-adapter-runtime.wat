@@ -26,6 +26,7 @@
     call 2
     local.set 0
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     i32.const 42
     i32.eq
@@ -48,12 +49,14 @@
     f64.const 0x0p+0 (;=0;)
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 5
     struct.new 0
     ref.cast (ref 0)
   )
   (func (;2;) (type 4) (param (ref 0)) (result (ref 0))
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)

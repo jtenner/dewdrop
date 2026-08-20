@@ -167,30 +167,36 @@ impl String {
   fn code_points(self) -> StringCodePoints {
     string_code_points(self)
   }
+  fn iter(self) -> StringCodePoints {
+    string_code_points(self)
+  }
 }
 
 impl StringView {
   fn code_points(self) -> StringViewCodePoints {
     string_view_code_points(self)
   }
+  fn iter(self) -> StringViewCodePoints {
+    string_view_code_points(self)
+  }
 }
 
 impl Iter<U32> for StringCodePoints {
-  fn has_next(self) -> Bool {
-    string_code_points_has_next(self)
-  }
-
-  fn next(self) -> U32 {
-    string_code_points_next(self)
+  fn next(self) -> Option<U32> {
+    if string_code_points_has_next(self) {
+      Option::Some(string_code_points_next(self))
+    } else {
+      Option::None
+    }
   }
 }
 
 impl Iter<U32> for StringViewCodePoints {
-  fn has_next(self) -> Bool {
-    string_view_code_points_has_next(self)
-  }
-
-  fn next(self) -> U32 {
-    string_view_code_points_next(self)
+  fn next(self) -> Option<U32> {
+    if string_view_code_points_has_next(self) {
+      Option::Some(string_view_code_points_next(self))
+    } else {
+      Option::None
+    }
   }
 }

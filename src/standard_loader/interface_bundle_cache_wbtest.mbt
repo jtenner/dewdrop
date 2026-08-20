@@ -3,7 +3,12 @@ test "bootstrap and on-disk standard providers are byte identical" {
   let bootstrap = bootstrap_standard_library_sources()
   let on_disk = load(".").unwrap()
   assert_eq(bootstrap.paths, on_disk.paths)
-  assert_eq(bootstrap.sources, on_disk.sources)
+  assert_eq(bootstrap.sources.length(), on_disk.sources.length())
+  for index = 0; index < bootstrap.sources.length(); index = index + 1 {
+    if bootstrap.sources[index] != on_disk.sources[index] {
+      fail("bootstrap source differs: \{bootstrap.paths[index]}")
+    }
+  }
 }
 
 ///|

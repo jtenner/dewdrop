@@ -12,9 +12,16 @@ pub fn main() -> Unit {
   let values = values()
   values[0u32] = 11
   let entries = values.entries()
-  if entries.next().value() == 11 && entries.has_next() {
-    wasi_fd_write(1u32, b"collections:array-entries-runtime")
-  } else {
-    unreachable()
+  match entries.next() {
+    Option::Some(entry) =>
+      if entry.value() == 11 {
+        match entries.next() {
+          Option::Some(_) => wasi_fd_write(1u32, b"collections:array-entries-runtime")
+          Option::None => unreachable()
+        }
+      } else {
+        unreachable()
+      }
+    Option::None => unreachable()
   }
 }

@@ -433,6 +433,7 @@
   )
   (func (;8;) (type 14) (param (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 0
     call 4
   )

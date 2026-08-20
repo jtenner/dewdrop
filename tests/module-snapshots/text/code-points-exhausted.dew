@@ -1,0 +1,14 @@
+open dew.std.string
+open dew.std.text
+
+pub fn main() -> Unit {
+  let points = "A".code_points()
+  match points.next() {
+    Option::Some(value) => assert(value == 65u32, "first scalar")
+    Option::None => unreachable()
+  }
+  match points.next() {
+    Option::Some(_) => unreachable()
+    Option::None => {}
+  }
+}

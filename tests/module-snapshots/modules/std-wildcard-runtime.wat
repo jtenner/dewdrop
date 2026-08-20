@@ -1,67 +1,96 @@
 (module
   (rec
-    (type (;0;) (sub (struct (field funcref))))
+    (type (;0;) (struct (field (mut eqref)) (field (mut i32))))
   )
   (rec
-    (type (;1;) (sub (struct (field i32))))
+    (type (;1;) (struct))
   )
   (rec
-    (type (;2;) (struct (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref)))
+    (type (;2;) (struct (field (mut eqref)) (field (mut i32))))
   )
   (rec
-    (type (;3;) (struct (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref)))
+    (type (;3;) (struct (field (mut eqref)) (field (mut i32))))
   )
-  (type (;4;) (array (mut i32)))
-  (type (;5;) (array (mut i64)))
-  (type (;6;) (array (mut f32)))
-  (type (;7;) (array (mut f64)))
-  (type (;8;) (array (mut v128)))
-  (type (;9;) (array (mut eqref)))
-  (type (;10;) (array (mut i8)))
-  (type (;11;) (array (mut i16)))
-  (type (;12;) (func (param eqref) (result eqref)))
-  (type (;13;) (func (param eqref i32) (result eqref)))
-  (type (;14;) (func (param eqref eqref) (result eqref)))
-  (type (;15;) (func (param eqref)))
-  (type (;16;) (func (param eqref i32)))
-  (type (;17;) (func (param eqref) (result i32)))
-  (type (;18;) (func (param eqref i32) (result i32)))
-  (type (;19;) (func (param eqref eqref i32) (result eqref)))
-  (type (;20;) (func (param eqref eqref eqref) (result eqref)))
-  (type (;21;) (func (param eqref eqref)))
-  (type (;22;) (func (param eqref eqref i32)))
-  (type (;23;) (func (param eqref eqref) (result i32)))
-  (type (;24;) (func (param eqref eqref i32) (result i32)))
-  (type (;25;) (func (param eqref eqref eqref i32) (result eqref)))
-  (type (;26;) (func (param (ref 3) (ref 2) (ref 2)) (result (ref 1))))
-  (type (;27;) (func (param i32 i32 i32 i32) (result i32)))
-  (type (;28;) (func (param i32 i32 i32 i32) (result i32)))
-  (type (;29;) (func (param i32 eqref) (result i32)))
-  (type (;30;) (func (result i32)))
-  (type (;31;) (array (mut v128)))
-  (type (;32;) (struct (field (ref 31)) (field i32) (field i32)))
-  (type (;33;) (struct (field (ref 31)) (field i32) (field i32)))
-  (type (;34;) (struct (field (ref 31)) (field i32) (field i32)))
-  (type (;35;) (struct (field (mut (ref 31))) (field (mut i32)) (field (mut i32))))
-  (type (;36;) (struct (field (mut (ref 31))) (field (mut i32)) (field (mut i32))))
-  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 27)))
-  (import "wasi_snapshot_preview1" "fd_write" (func (;1;) (type 28)))
+  (rec
+    (type (;4;) (struct (field (mut eqref)) (field (mut i32))))
+  )
+  (rec
+    (type (;5;) (struct (field (mut eqref)) (field (mut i32)) (field (mut i32))))
+  )
+  (rec
+    (type (;6;) (struct (field eqref) (field (mut i32))))
+  )
+  (rec
+    (type (;7;) (sub (struct (field funcref))))
+  )
+  (rec
+    (type (;8;) (struct (field (mut eqref)) (field (mut i32))))
+  )
+  (rec
+    (type (;9;) (struct (field (mut eqref)) (field (mut i32))))
+  )
+  (rec
+    (type (;10;) (sub (struct (field i32))))
+  )
+  (rec
+    (type (;11;) (struct (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref)))
+  )
+  (rec
+    (type (;12;) (struct (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref)))
+  )
+  (type (;13;) (array (mut i32)))
+  (type (;14;) (array (mut i64)))
+  (type (;15;) (array (mut f32)))
+  (type (;16;) (array (mut f64)))
+  (type (;17;) (array (mut v128)))
+  (type (;18;) (array (mut eqref)))
+  (type (;19;) (array (mut i8)))
+  (type (;20;) (array (mut i16)))
+  (type (;21;) (func (param eqref) (result eqref)))
+  (type (;22;) (func (param eqref i32) (result eqref)))
+  (type (;23;) (func (param eqref) (result (ref 5))))
+  (type (;24;) (func (param eqref eqref) (result eqref)))
+  (type (;25;) (func (param eqref)))
+  (type (;26;) (func (param eqref i32)))
+  (type (;27;) (func (param eqref) (result i32)))
+  (type (;28;) (func (param eqref i32) (result i32)))
+  (type (;29;) (func (param eqref eqref i32) (result eqref)))
+  (type (;30;) (func (param eqref eqref) (result (ref 5))))
+  (type (;31;) (func (param eqref eqref eqref) (result eqref)))
+  (type (;32;) (func (param eqref eqref)))
+  (type (;33;) (func (param eqref eqref i32)))
+  (type (;34;) (func (param eqref eqref) (result i32)))
+  (type (;35;) (func (param eqref eqref i32) (result i32)))
+  (type (;36;) (func (param eqref eqref eqref i32) (result eqref)))
+  (type (;37;) (func (param (ref 12) (ref 11) (ref 11)) (result (ref 10))))
+  (type (;38;) (func (param i32 i32 i32 i32) (result i32)))
+  (type (;39;) (func (param i32 i32 i32 i32) (result i32)))
+  (type (;40;) (func (param i32 eqref) (result i32)))
+  (type (;41;) (func (result i32)))
+  (type (;42;) (array (mut v128)))
+  (type (;43;) (struct (field (ref 42)) (field i32) (field i32)))
+  (type (;44;) (struct (field (ref 42)) (field i32) (field i32)))
+  (type (;45;) (struct (field (ref 42)) (field i32) (field i32)))
+  (type (;46;) (struct (field (mut (ref 42))) (field (mut i32)) (field (mut i32))))
+  (type (;47;) (struct (field (mut (ref 42))) (field (mut i32)) (field (mut i32))))
+  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 38)))
+  (import "wasi_snapshot_preview1" "fd_write" (func (;1;) (type 39)))
   (memory (;0;) 1)
   (export "main" (func 3))
   (export "memory" (memory 0))
-  (func (;2;) (type 29) (param i32 eqref) (result i32)
-    (local (ref 33) (ref 31) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
+  (func (;2;) (type 40) (param i32 eqref) (result i32)
+    (local (ref 44) (ref 42) i32 i32 i32 i32 i32 i32 i32 v128 i32 i32)
     local.get 1
-    ref.cast (ref 33)
+    ref.cast (ref 44)
     local.set 2
     local.get 2
-    struct.get 33 0
+    struct.get 44 0
     local.set 3
     local.get 2
-    struct.get 33 1
+    struct.get 44 1
     local.set 4
     local.get 2
-    struct.get 33 2
+    struct.get 44 2
     local.set 5
     i32.const 0
     local.set 6
@@ -113,7 +142,7 @@
               local.get 9
               i32.const 4
               i32.shr_u
-              array.get 31
+              array.get 42
               v128.store
               i32.const 16
               local.get 8
@@ -126,7 +155,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 31
+              array.get 42
               v128.store
               i32.const 16
               local.get 8
@@ -139,7 +168,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 31
+              array.get 42
               v128.store
               i32.const 16
               local.get 8
@@ -152,7 +181,7 @@
               i32.add
               i32.const 4
               i32.shr_u
-              array.get 31
+              array.get 42
               v128.store
               local.get 8
               i32.const 64
@@ -175,14 +204,14 @@
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 31
+                array.get 42
                 local.set 11
               else
                 local.get 3
                 local.get 9
                 i32.const 4
                 i32.shr_u
-                array.get 31
+                array.get 42
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -196,7 +225,7 @@
                 i32.shr_u
                 i32.const 1
                 i32.add
-                array.get 31
+                array.get 42
                 v128.const i32x4 0x03020100 0x07060504 0x0b0a0908 0x0f0e0d0c
                 local.get 9
                 i32.const 15
@@ -225,7 +254,7 @@
             local.get 9
             i32.const 4
             i32.shr_u
-            array.get 31
+            array.get 42
             local.get 9
             i32.const 15
             i32.and
@@ -302,13 +331,13 @@
     end
     local.get 6
   )
-  (func (;3;) (type 30) (result i32)
+  (func (;3;) (type 41) (result i32)
     i32.const 1
     v128.const i32x4 0x646c6977 0x64726163 0x0000000a 0x00000000
-    array.new_fixed 31 1
+    array.new_fixed 42 1
     i32.const 0
     i32.const 9
-    struct.new 33
+    struct.new 44
     call 2
   )
 )

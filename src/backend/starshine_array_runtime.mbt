@@ -1231,6 +1231,97 @@ fn starshine_finish_array(
     )
     return Ok(output)
   }
+  if operation == 49 {
+    let element_shape = match shape {
+      Some(value) => value
+      None => return Err(UnsupportedExpression(body_id, -408))
+    }
+    if iterator_type < 0 || wrapper_local < 0 || index_local < 0 || carrier < 0 {
+      return Err(UnsupportedExpression(body_id, -408))
+    }
+    append_starshine_instructions(output, fragments[0])
+    output.push(starshine_array_local_set(wrapper_local))
+    let success : Array[@lib.Instruction] = []
+    append_starshine_instructions(
+      success,
+      starshine_array_iterator_field(iterator_type, wrapper_local, 1),
+    )
+    success.push(starshine_array_local_set(index_local))
+    let value : Array[@lib.Instruction] = []
+    append_starshine_instructions(
+      value,
+      starshine_array_iterator_field(iterator_type, wrapper_local, 0),
+    )
+    value.push(starshine_match_cast(wrapper_type))
+    value.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(0U),
+      ),
+    )
+    value.push(starshine_match_cast(array_type))
+    value.push(starshine_array_local_get(index_local))
+    value.push(
+      @lib.Instruction::array_get(
+        @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+      ),
+    )
+    success.push(starshine_array_local_get(wrapper_local))
+    success.push(starshine_match_cast(iterator_type))
+    success.push(starshine_array_local_get(index_local))
+    success.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
+    success.push(@lib.Instruction::i32_add())
+    success.push(
+      @lib.Instruction::struct_set(
+        @lib.TypeIdx::new(iterator_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    match
+      starshine_array_append_option(
+        success, planned, program, element_shape, true, value,
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    let failure : Array[@lib.Instruction] = []
+    match
+      starshine_array_append_option(
+        failure,
+        planned,
+        program,
+        element_shape,
+        false,
+        [],
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    append_starshine_instructions(
+      output,
+      starshine_array_iterator_field(iterator_type, wrapper_local, 1),
+    )
+    append_starshine_instructions(
+      output,
+      starshine_array_iterator_field(iterator_type, wrapper_local, 0),
+    )
+    output.push(starshine_match_cast(wrapper_type))
+    output.push(
+      @lib.Instruction::struct_get(
+        @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        @lib.U32::new(1U),
+      ),
+    )
+    output.push(@lib.Instruction::i32_lt_u())
+    output.push(
+      @lib.Instruction::if_(
+        @lib.BlockType::val_type(@lib.ValType::eqref_null()),
+        success,
+        Some(failure),
+      ),
+    )
+    return Ok(output)
+  }
   if operation == 13 || operation == 14 || operation == 31 || operation == 32 {
     if iterator_type < 0 ||
       wrapper_local < 0 ||

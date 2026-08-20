@@ -477,6 +477,7 @@
   )
   (func (;10;) (type 27) (param (ref 5) eqref eqref) (result i32)
     local.get 0
+    ref.cast (ref 5)
     struct.get 5 5
     ref.cast (ref 4)
     local.get 1
@@ -498,6 +499,7 @@
   )
   (func (;12;) (type 28) (param (ref 5)) (result i32)
     local.get 0
+    ref.cast (ref 5)
     struct.get 5 5
     ref.cast (ref 4)
     call 15
@@ -509,12 +511,14 @@
   )
   (func (;14;) (type 29) (param (ref 4) eqref eqref) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 5
     local.get 1
     ref.cast (ref 13)
     struct.get 13 0
     call_ref 12
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 5
     local.get 2
     ref.cast (ref 16)
@@ -524,9 +528,11 @@
   )
   (func (;15;) (type 30) (param (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 0
     call 4
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 0
     call 5
     i32.add

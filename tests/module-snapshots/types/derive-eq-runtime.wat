@@ -287,8 +287,10 @@
     i32.const 1
     if (result i32) ;; label = @1
       local.get 0
+      ref.cast (ref 3)
       struct.get 3 0
       local.get 1
+      ref.cast (ref 3)
       struct.get 3 0
       i32.eq
     else
@@ -296,8 +298,10 @@
     end
     if (result i32) ;; label = @1
       local.get 0
+      ref.cast (ref 3)
       struct.get 3 1
       local.get 1
+      ref.cast (ref 3)
       struct.get 3 1
       i32.eq
     else

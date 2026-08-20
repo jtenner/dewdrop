@@ -295,6 +295,7 @@
   )
   (func (;4;) (type 13) (param (ref 12)) (result eqref)
     local.get 0
+    ref.cast (ref 12)
     struct.get 12 0
   )
   (func (;5;) (type 14) (result i32)

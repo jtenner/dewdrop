@@ -29,6 +29,7 @@ enum StandardBuiltinOperation {
   ArrayIter
   ArrayIterHasNext
   ArrayIterNext
+  ArrayIterNextOption
   ArrayMake
   ArrayReserve
   ArrayShrinkToFit
@@ -106,10 +107,13 @@ enum StandardBuiltinOperation {
   MapEntries
   MapKeyIterHasNext
   MapKeyIterNext
+  MapKeyIterNextOption
   MapValueIterHasNext
   MapValueIterNext
+  MapValueIterNextOption
   MapEntryIterHasNext
   MapEntryIterNext
+  MapEntryIterNextOption
   MapEntryKey
   MapEntryValue
   SetEmpty
@@ -123,6 +127,7 @@ enum StandardBuiltinOperation {
   SetIter
   SetIterHasNext
   SetIterNext
+  SetIterNextOption
 } derive(Eq, Debug)
 
 ///|
@@ -219,6 +224,21 @@ pub fn standard_array_iterator_type_declaration() -> DeclId {
 }
 
 ///|
+pub fn standard_array_entry_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 51)
+}
+
+///|
+pub fn standard_array_key_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 52)
+}
+
+///|
+pub fn standard_array_entry_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(13), 53)
+}
+
+///|
 pub fn standard_array_index_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(13), 31)
 }
@@ -246,17 +266,18 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
     11 | 23 => ArrayPop
     12 | 28 => ArrayClear
     13 | 29 => ArrayIter
-    14 | 35 => ArrayIterHasNext
-    15 | 36 => ArrayIterNext
-    37 => ArrayMake
-    38 => ArrayReserve
-    39 => ArrayShrinkToFit
-    40 => ArrayTruncate
-    41 => ArrayCopy
-    42 => ArrayCopyWithin
-    43 => ArrayFill
-    44 => ArraySlice
-    45 => ArrayExtend
+    14 => ArrayIterHasNext
+    15 => ArrayIterNext
+    35 | 168 => ArrayIterNextOption
+    36 => ArrayMake
+    37 => ArrayReserve
+    38 => ArrayShrinkToFit
+    39 => ArrayTruncate
+    40 => ArrayCopy
+    41 => ArrayCopyWithin
+    42 => ArrayFill
+    43 => ArraySlice
+    44 => ArrayExtend
     _ => NoStandardBuiltinOperation
   }
 }
@@ -442,6 +463,7 @@ pub fn standard_map_method_declaration(name : String) -> DeclId {
     "empty" => 16
     "remove" => 17
     "clear" => 18
+    "iter" => 19
     _ => -1
   }
   if local_id < 0 {
@@ -453,32 +475,32 @@ pub fn standard_map_method_declaration(name : String) -> DeclId {
 
 ///|
 pub fn standard_map_entry_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 26)
-}
-
-///|
-pub fn standard_map_key_iterator_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(11), 27)
 }
 
 ///|
-pub fn standard_map_value_iterator_type_declaration() -> DeclId {
+pub fn standard_map_key_iterator_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(11), 28)
 }
 
 ///|
-pub fn standard_map_entry_iterator_type_declaration() -> DeclId {
+pub fn standard_map_value_iterator_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(11), 29)
 }
 
 ///|
+pub fn standard_map_entry_iterator_type_declaration() -> DeclId {
+  make_semantic_id(standard_library_module_id(11), 30)
+}
+
+///|
 pub fn standard_map_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 20)
+  make_semantic_id(standard_library_module_id(11), 21)
 }
 
 ///|
 pub fn standard_map_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 22)
+  make_semantic_id(standard_library_module_id(11), 23)
 }
 
 ///|
@@ -490,24 +512,27 @@ fn standard_map_operation(declaration : DeclId) -> StandardBuiltinOperation {
     1 | 9 => MapSingleton
     2 | 10 => MapLength
     3 | 11 => MapGet
-    4 | 12 | 20 => MapGetUnchecked
+    4 | 12 | 21 => MapGetUnchecked
     5 | 13 => MapInsert
-    6 | 14 | 22 => MapSet
+    6 | 14 | 23 => MapSet
     7 | 15 => MapContainsKey
-    16 | 23 => MapEmpty
-    17 | 24 => MapRemove
-    18 | 25 => MapClear
-    30 | 42 => MapKeys
-    31 | 43 => MapValues
-    32 | 44 => MapEntries
-    33 | 49 => MapKeyIterHasNext
-    34 | 50 => MapKeyIterNext
-    35 | 52 => MapValueIterHasNext
-    36 | 53 => MapValueIterNext
-    37 | 55 => MapEntryIterHasNext
-    38 | 56 => MapEntryIterNext
-    39 | 46 => MapEntryKey
-    40 | 47 => MapEntryValue
+    16 | 24 => MapEmpty
+    17 | 25 => MapRemove
+    18 | 26 => MapClear
+    31 | 43 => MapKeys
+    32 | 44 => MapValues
+    33 | 45 | 19 => MapEntries
+    34 => MapKeyIterHasNext
+    35 => MapKeyIterNext
+    50 | 55 => MapKeyIterNextOption
+    36 => MapValueIterHasNext
+    37 => MapValueIterNext
+    52 | 56 => MapValueIterNextOption
+    38 => MapEntryIterHasNext
+    39 => MapEntryIterNext
+    54 | 57 => MapEntryIterNextOption
+    40 | 47 => MapEntryKey
+    41 | 48 => MapEntryValue
     _ => NoStandardBuiltinOperation
   }
 }
@@ -558,8 +583,9 @@ fn standard_set_operation(declaration : DeclId) -> StandardBuiltinOperation {
     7 | 16 => SetRemove
     8 | 17 => SetClear
     19 | 23 => SetIter
-    20 | 25 => SetIterHasNext
-    21 | 26 => SetIterNext
+    20 => SetIterHasNext
+    21 => SetIterNext
+    25 | 26 => SetIterNextOption
     _ => NoStandardBuiltinOperation
   }
 }

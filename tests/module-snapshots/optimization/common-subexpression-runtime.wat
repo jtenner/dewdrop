@@ -12,14 +12,17 @@
   (export "main" (func 2))
   (func (;0;) (type 1) (param (ref 0)) (result i32)
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     i32.add
   )
   (func (;1;) (type 2) (param (ref 0)) (result i32)
     (local i32)
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     local.set 1
     local.get 1

@@ -386,6 +386,7 @@
   )
   (func (;5;) (type 11) (param (ref 5)) (result i32)
     local.get 0
+    ref.cast (ref 5)
     struct.get 5 0
   )
   (func (;6;) (type 14) (result i32)
@@ -413,6 +414,7 @@
   )
   (func (;7;) (type 15) (param (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 0
     call 4
   )

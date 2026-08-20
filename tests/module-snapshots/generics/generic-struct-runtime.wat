@@ -110,10 +110,12 @@
   )
   (func (;2;) (type 7) (param (ref 1)) (result i32)
     local.get 0
+    ref.cast (ref 1)
     struct.get 1 0
   )
   (func (;3;) (type 8) (param (ref 1)) (result i64)
     local.get 0
+    ref.cast (ref 1)
     struct.get 1 7
   )
   (func (;4;) (type 9) (param f64 eqref) (result (ref 1))
@@ -134,10 +136,12 @@
   )
   (func (;5;) (type 10) (param (ref 1)) (result f64)
     local.get 0
+    ref.cast (ref 1)
     struct.get 1 3
   )
   (func (;6;) (type 11) (param (ref 1)) (result eqref)
     local.get 0
+    ref.cast (ref 1)
     struct.get 1 11
   )
 )

@@ -1,24 +1,51 @@
 open dew.std.string
 open dew.std.text
 
+fn required_string_point(iter: StringCodePoints) -> U32 {
+  match iter.next() {
+    Option::Some(value) => value
+    Option::None => 0u32
+  }
+}
+
+fn string_exhausted(iter: StringCodePoints) -> Bool {
+  match iter.next() {
+    Option::Some(_) => false
+    Option::None => true
+  }
+}
+
+fn required_view_point(iter: StringViewCodePoints) -> U32 {
+  match iter.next() {
+    Option::Some(value) => value
+    Option::None => 0u32
+  }
+}
+
+fn view_exhausted(iter: StringViewCodePoints) -> Bool {
+  match iter.next() {
+    Option::Some(_) => false
+    Option::None => true
+  }
+}
+
 pub fn main() -> Unit {
   let points = "$¢€𐍈".code_points()
   let alias = points
-  assert(points.has_next(), "string has first")
-  assert(points.next() == 36u32, "ascii scalar")
-  assert(alias.next() == 162u32, "two-byte scalar and shared cursor")
-  assert(points.next() == 8364u32, "three-byte scalar")
-  assert(points.next() == 66376u32, "four-byte scalar")
-  assert(!points.has_next(), "string exhausted")
+  assert(required_string_point(points) == 36u32, "ascii scalar")
+  assert(required_string_point(alias) == 162u32, "two-byte scalar and shared cursor")
+  assert(required_string_point(points) == 8364u32, "three-byte scalar")
+  assert(required_string_point(points) == 66376u32, "four-byte scalar")
+  assert(string_exhausted(points), "string exhausted")
 
   let empty = "".code_points()
-  assert(!empty.has_next(), "empty string")
+  assert(string_exhausted(empty), "empty string")
 
   let source = "0$¢€𐍈z"
   let view = source.view(1u32, 10u32).code_points()
-  assert(view.next() == 36u32, "view ascii")
-  assert(view.next() == 162u32, "view two-byte")
-  assert(view.next() == 8364u32, "view three-byte")
-  assert(view.next() == 66376u32, "view four-byte")
-  assert(!view.has_next(), "view exhausted")
+  assert(required_view_point(view) == 36u32, "view ascii")
+  assert(required_view_point(view) == 162u32, "view two-byte")
+  assert(required_view_point(view) == 8364u32, "view three-byte")
+  assert(required_view_point(view) == 66376u32, "view four-byte")
+  assert(view_exhausted(view), "view exhausted")
 }

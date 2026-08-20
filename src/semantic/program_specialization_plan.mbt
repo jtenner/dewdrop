@@ -3050,6 +3050,55 @@ fn plan_program_wasmgc_fragments_for_root(
     lowering,
     options.emit_tests,
   )
+  for module_ in lowering.modules {
+    for expression in module_.expressions {
+      match expression.kind {
+        PlannedArrayIter(_, _, _)
+        | PlannedArrayIterHasNext(_)
+        | PlannedArrayIterNext(_, _)
+        | PlannedArrayIterNextOption(_, _, _) => {
+          program_roots[standard_array_type_declaration()] = true
+          program_roots[standard_array_iterator_type_declaration()] = true
+        }
+        PlannedMapKeys(_, _, _)
+        | PlannedMapKeyIterNext(_, _, _)
+        | PlannedMapKeyIterNextOption(_, _, _) => {
+          program_roots[standard_map_type_declaration()] = true
+          program_roots[standard_map_key_iterator_type_declaration()] = true
+        }
+        PlannedMapValues(_, _, _)
+        | PlannedMapValueIterNext(_, _, _)
+        | PlannedMapValueIterNextOption(_, _, _) => {
+          program_roots[standard_map_type_declaration()] = true
+          program_roots[standard_map_value_iterator_type_declaration()] = true
+        }
+        PlannedMapEntries(_, _, _)
+        | PlannedMapEntryIterNext(_, _, _)
+        | PlannedMapEntryIterNextOption(_, _, _) => {
+          program_roots[standard_map_type_declaration()] = true
+          program_roots[standard_map_entry_iterator_type_declaration()] = true
+          program_roots[standard_map_entry_type_declaration()] = true
+        }
+        PlannedMapIterHasNext(_, iterator, _, _) => {
+          program_roots[standard_map_type_declaration()] = true
+          let declaration = match iterator {
+            0 => standard_map_key_iterator_type_declaration()
+            1 => standard_map_value_iterator_type_declaration()
+            _ => standard_map_entry_iterator_type_declaration()
+          }
+          program_roots[declaration] = true
+        }
+        PlannedSetIter(_, _)
+        | PlannedSetIterHasNext(_, _)
+        | PlannedSetIterNext(_, _)
+        | PlannedSetIterNextOption(_, _) => {
+          program_roots[standard_set_type_declaration()] = true
+          program_roots[standard_set_iterator_type_declaration()] = true
+        }
+        _ => ()
+      }
+    }
+  }
   let generic_enum_instantiations = program_generic_enum_instantiations(
     analyzed, lowering,
   )

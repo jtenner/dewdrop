@@ -58,11 +58,6 @@ pub trait IndexedSet<index, value> {
   fn indexed_set(self, index: index, value: value) -> Unit
 }
 
-pub trait Iter<t> {
-  fn has_next(self) -> Bool
-  fn next(self) -> t
-}
-
 pub trait Hash {
   fn hash(self) -> U64
   fn hash_eq(self, right: Self) -> Bool

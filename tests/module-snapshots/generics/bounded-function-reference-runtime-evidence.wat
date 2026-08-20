@@ -72,6 +72,7 @@
   )
   (func (;3;) (type 17) (param (ref 0)) (result i32)
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
   )
   (func (;4;) (type 20) (param eqref) (result i32)

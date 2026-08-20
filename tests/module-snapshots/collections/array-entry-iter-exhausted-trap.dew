@@ -1,7 +1,0 @@
-open dew.std.array
-
-pub fn main() -> Unit {
-  let entries = Array::make(1u32, 7).entries()
-  entries.next().value()
-  entries.next().value()
-}

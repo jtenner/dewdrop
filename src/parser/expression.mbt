@@ -865,6 +865,16 @@ fn Parser::parse_expression_context(
                 values.push(expression)
                 mode = SeekingBinaryOperator
               }
+              @tokenizer.Keyword(@tokenizer.For) => {
+                self.consume_lookahead()
+                let expression = match self.parse_for_expression(offset) {
+                  Ok(value) => value
+                  Err(error) =>
+                    return Err(error.inside_parentheses_count(nested_groups))
+                }
+                values.push(expression)
+                mode = SeekingBinaryOperator
+              }
               @tokenizer.Keyword(@tokenizer.Break) => {
                 self.consume_lookahead()
                 let expression = match self.parse_break_expression(offset) {

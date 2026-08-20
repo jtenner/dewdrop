@@ -1,5 +1,7 @@
 {
-  "errors": [],
+  "errors": [
+    "StarshineProgramCodeError(UnsupportedExpression(12884901888002, 12))"
+  ],
   "warnings": [],
-  "output": []
+  "output": null
 }

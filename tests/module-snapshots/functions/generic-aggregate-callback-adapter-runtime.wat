@@ -75,6 +75,7 @@
     call 6
     local.set 2
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     local.set 3
     local.get 3
@@ -256,82 +257,9 @@
     struct.new 0
   )
   (func (;8;) (type 14) (param (ref 1) i32) (result (ref 1))
-    (local eqref eqref eqref eqref eqref)
     local.get 0
-    ref.cast (ref 1)
-    struct.get 1 0
-    i32.const 0
-    i32.eq
-    if (result eqref) ;; label = @1
-      i32.const 0
-      local.get 0
-      ref.cast (ref 2)
-      struct.get 2 1
-      local.set 3
-      ref.func 12
-      local.get 3
-      struct.new 26
-      struct.new 2
-    else
-      local.get 0
-      ref.cast (ref 1)
-      struct.get 1 0
-      i32.const 1
-      i32.eq
-      if (result eqref) ;; label = @2
-        i32.const 1
-        local.get 0
-        ref.cast (ref 3)
-        struct.get 3 1
-        local.set 2
-        ref.func 12
-        local.get 2
-        struct.new 26
-        struct.new 3
-      else
-        unreachable
-      end
-    end
-    ref.cast (ref 1)
     local.get 1
     call 4
-    local.set 4
-    local.get 4
-    ref.cast (ref 1)
-    struct.get 1 0
-    i32.const 0
-    i32.eq
-    if (result eqref) ;; label = @1
-      i32.const 0
-      local.get 4
-      ref.cast (ref 2)
-      struct.get 2 1
-      local.set 6
-      ref.func 13
-      local.get 6
-      struct.new 26
-      struct.new 2
-    else
-      local.get 4
-      ref.cast (ref 1)
-      struct.get 1 0
-      i32.const 1
-      i32.eq
-      if (result eqref) ;; label = @2
-        i32.const 1
-        local.get 4
-        ref.cast (ref 3)
-        struct.get 3 1
-        local.set 5
-        ref.func 13
-        local.get 5
-        struct.new 26
-        struct.new 3
-      else
-        unreachable
-      end
-    end
-    ref.cast (ref 1)
   )
   (func (;9;) (type 16)
     ref.func 0

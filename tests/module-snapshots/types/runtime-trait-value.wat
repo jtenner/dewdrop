@@ -385,10 +385,12 @@
   )
   (func (;4;) (type 9) (param (ref 4)) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 0
   )
   (func (;5;) (type 10) (param (ref 4) i32) (result i32)
     local.get 0
+    ref.cast (ref 4)
     struct.get 4 0
     local.get 1
     i32.add

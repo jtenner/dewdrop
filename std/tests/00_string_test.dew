@@ -11,13 +11,27 @@ test "String byte_length counts UTF8 bytes" {
   assert("aλ🌍".byte_length() == 7u32, "unexpected String byte length")
 }
 
+fn required_code_point(points: StringCodePoints) -> U32 {
+  match points.next() {
+    Option::Some(value) => value
+    Option::None => 0u32
+  }
+}
+
+fn code_points_exhausted(points: StringCodePoints) -> Bool {
+  match points.next() {
+    Option::Some(_) => false
+    Option::None => true
+  }
+}
+
 test "String code_points decodes UTF8 scalars without copying" {
   let points = "$¢€𐍈".code_points()
-  assert(points.next() == 36u32, "wrong ASCII scalar")
-  assert(points.next() == 162u32, "wrong two-byte scalar")
-  assert(points.next() == 8364u32, "wrong three-byte scalar")
-  assert(points.next() == 66376u32, "wrong four-byte scalar")
-  assert(!points.has_next(), "code-point iterator did not exhaust")
+  assert(required_code_point(points) == 36u32, "wrong ASCII scalar")
+  assert(required_code_point(points) == 162u32, "wrong two-byte scalar")
+  assert(required_code_point(points) == 8364u32, "wrong three-byte scalar")
+  assert(required_code_point(points) == 66376u32, "wrong four-byte scalar")
+  assert(code_points_exhausted(points), "code-point iterator did not exhaust")
 }
 
 test "String utf16_length counts UTF16 code units" {

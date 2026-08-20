@@ -5,8 +5,10 @@
   (export "main" (func 1))
   (func (;0;) (type 1) (param (ref 0)) (result i32)
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 0
     local.get 0
+    ref.cast (ref 0)
     struct.get 0 1
     i32.add
   )

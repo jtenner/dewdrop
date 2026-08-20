@@ -1,0 +1,12 @@
+open dew.std.array
+
+fn empty_i32_array() -> Array<I32> {
+  Array::new()
+}
+
+pub fn main() -> Unit {
+  match empty_i32_array().iter().next() {
+    Option::Some(_) => unreachable()
+    Option::None => {}
+  }
+}

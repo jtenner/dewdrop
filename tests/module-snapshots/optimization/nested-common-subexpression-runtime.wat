@@ -7,6 +7,7 @@
   (func (;0;) (type 2) (param (ref 1)) (result i32)
     (local (ref 0) i32 i32)
     local.get 0
+    ref.cast (ref 1)
     struct.get 1 0
     ref.cast (ref 0)
     local.set 1

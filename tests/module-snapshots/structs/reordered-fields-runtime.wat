@@ -269,8 +269,10 @@
   )
   (func (;2;) (type 3) (param (ref 2)) (result i32)
     local.get 0
+    ref.cast (ref 2)
     struct.get 2 0
     local.get 0
+    ref.cast (ref 2)
     struct.get 2 1
     i32.add
   )

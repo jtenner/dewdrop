@@ -9,15 +9,28 @@ fn values() -> Array<I32> {
   output
 }
 
+fn required_key(keys: ArrayKeyIter<I32>) -> U32 {
+  match keys.next() {
+    Option::Some(value) => value
+    Option::None => 4294967295u32
+  }
+}
+
+fn exhausted(keys: ArrayKeyIter<I32>) -> Bool {
+  match keys.next() {
+    Option::Some(_) => false
+    Option::None => true
+  }
+}
+
 pub fn main() -> Unit {
   let values = values()
   let keys = values.keys()
-  assert(keys.has_next(), "keys starts")
-  assert(keys.next() == 0u32, "keys zero")
+  assert(required_key(keys) == 0u32, "keys zero")
   values.push(4)
-  assert(keys.next() == 1u32, "keys one")
-  assert(keys.next() == 2u32, "keys two")
-  assert(keys.next() == 3u32, "keys observes push")
-  assert(!keys.has_next(), "keys exhausted")
+  assert(required_key(keys) == 1u32, "keys one")
+  assert(required_key(keys) == 2u32, "keys two")
+  assert(required_key(keys) == 3u32, "keys observes push")
+  assert(exhausted(keys), "keys exhausted")
   wasi_fd_write(1u32, b"collections:array-iterators-runtime")
 }
