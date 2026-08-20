@@ -1,0 +1,565 @@
+open dew.std.array
+open dew.std.option
+open dew.std.string
+
+fn self_host_derived_expression_list_block(
+  expressions: Array<SelfHostExpr>,
+  offset: U32,
+) -> SelfHostBlock {
+  let items = []
+  for expression in expressions {
+    items.push(SelfHostBlockItem::ExpressionItem(expression, offset))
+  }
+  SelfHostBlock::{
+    items: items
+    offset: offset
+  }
+}
+
+fn self_host_derived_debug_write(
+  value: Bytes,
+  offset: U32,
+) -> SelfHostExpr {
+  SelfHostExpr::CallExpr(
+    SelfHostExpr::NameExpr("__dew_debug_write", offset),
+    [
+      SelfHostExpr::U32Expr(1u64, offset),
+      SelfHostExpr::BytesExpr(value, offset),
+    ],
+    offset,
+  )
+}
+
+fn self_host_derived_debug_text(
+  value: String,
+  offset: U32,
+) -> SelfHostExpr {
+  self_host_derived_debug_write(value.as_bytes(), offset)
+}
+
+fn self_host_derived_debug_value(
+  value: SelfHostExpr,
+  offset: U32,
+) -> SelfHostExpr {
+  SelfHostExpr::CallExpr(
+    SelfHostExpr::NameExpr("debug", offset),
+    [value],
+    offset,
+  )
+}
+
+fn self_host_derived_field_label(
+  name: String,
+  first: Bool,
+) -> String {
+  if first {
+    name.concat(": ")
+  } else {
+    ", ".concat(name).concat(": ")
+  }
+}
+
+fn self_host_derived_struct_debug_body(
+  value: SelfHostStructDeclaration,
+  offset: U32,
+) -> SelfHostBlock {
+  let expressions = []
+  if value.fields.length() == 0u32 {
+    expressions.push(
+      self_host_derived_debug_text(value.name.concat(" {}"), offset),
+    )
+  } else {
+    expressions.push(
+      self_host_derived_debug_text(value.name.concat(" { "), offset),
+    )
+    let mut index = 0u32
+    for field in value.fields {
+      expressions.push(
+        self_host_derived_debug_text(
+          self_host_derived_field_label(field.name, index == 0u32),
+          offset,
+        ),
+      )
+      expressions.push(
+        self_host_derived_debug_value(
+          SelfHostExpr::FieldExpr(
+            SelfHostExpr::NameExpr("self", offset),
+            field.name,
+            offset,
+          ),
+          offset,
+        ),
+      )
+      index = index + 1u32
+    }
+    expressions.push(self_host_derived_debug_write(b" }", offset))
+  }
+  self_host_derived_expression_list_block(expressions, offset)
+}
+
+fn self_host_derived_format_variant_pattern(
+  enum_name: String,
+  variant: SelfHostEnumVariant,
+  variant_index: U32,
+  offset: U32,
+) -> (SelfHostPattern, Array<String>) {
+  let base = SelfHostPattern::QualifiedPattern(
+    SelfHostPattern::BindingPattern(enum_name, offset),
+    self_host_derived_enum_variant_name(variant),
+    offset,
+  )
+  let names = []
+  match variant {
+    SelfHostEnumVariant::UnitVariant(_, _) => (base, names)
+    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+      let patterns = []
+      let mut index = 0u32
+      for _ in types {
+        let name = self_host_derived_indexed_name(
+          "derive_debug_",
+          variant_index,
+          "_",
+          index,
+        )
+        names.push(name)
+        patterns.push(SelfHostPattern::BindingPattern(name, offset))
+        index = index + 1u32
+      }
+      (SelfHostPattern::TuplePattern(base, patterns, offset), names)
+    }
+    SelfHostEnumVariant::StructVariant(_, fields, _) => {
+      let patterns = []
+      let mut index = 0u32
+      for field in fields {
+        let name = self_host_derived_indexed_name(
+          "derive_debug_",
+          variant_index,
+          "_",
+          index,
+        )
+        names.push(name)
+        patterns.push(
+          SelfHostPatternField::{
+            name: field.name
+            pattern: SelfHostPattern::BindingPattern(name, offset)
+            offset: offset
+          },
+        )
+        index = index + 1u32
+      }
+      (
+        SelfHostPattern::StructPattern(base, patterns, Option::None, offset),
+        names,
+      )
+    }
+  }
+}
+
+fn self_host_derived_variant_prefix(
+  enum_name: String,
+  variant: SelfHostEnumVariant,
+) -> String {
+  enum_name.concat("::").concat(
+    self_host_derived_enum_variant_name(variant),
+  )
+}
+
+fn self_host_derived_debug_variant_body(
+  enum_name: String,
+  variant: SelfHostEnumVariant,
+  names: Array<String>,
+  offset: U32,
+) -> SelfHostBlock {
+  let prefix = self_host_derived_variant_prefix(enum_name, variant)
+  let expressions = []
+  match variant {
+    SelfHostEnumVariant::UnitVariant(_, _) => expressions.push(
+      self_host_derived_debug_text(prefix, offset),
+    )
+    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+      expressions.push(
+        self_host_derived_debug_text(prefix.concat("("), offset),
+      )
+      let mut index = 0u32
+      for _ in types {
+        if index > 0u32 {
+          expressions.push(self_host_derived_debug_write(b", ", offset))
+        }
+        expressions.push(
+          self_host_derived_debug_value(
+            SelfHostExpr::NameExpr(names[index], offset),
+            offset,
+          ),
+        )
+        index = index + 1u32
+      }
+      expressions.push(self_host_derived_debug_write(b")", offset))
+    }
+    SelfHostEnumVariant::StructVariant(_, fields, _) => if fields.length() == 0u32 {
+      expressions.push(
+        self_host_derived_debug_text(prefix.concat(" {}"), offset),
+      )
+    } else {
+      expressions.push(
+        self_host_derived_debug_text(prefix.concat(" { "), offset),
+      )
+      let mut index = 0u32
+      for field in fields {
+        expressions.push(
+          self_host_derived_debug_text(
+            self_host_derived_field_label(field.name, index == 0u32),
+            offset,
+          ),
+        )
+        expressions.push(
+          self_host_derived_debug_value(
+            SelfHostExpr::NameExpr(names[index], offset),
+            offset,
+          ),
+        )
+        index = index + 1u32
+      }
+      expressions.push(self_host_derived_debug_write(b" }", offset))
+    }
+  }
+  self_host_derived_expression_list_block(expressions, offset)
+}
+
+fn self_host_derived_debug_impl(
+  name: String,
+  parameters: Array<SelfHostTypeParameter>,
+  field_types: Array<SelfHostTypeExpr>,
+  body: SelfHostBlock,
+  offset: U32,
+) -> SelfHostImplDeclaration {
+  let target = self_host_derived_nominal_type(name, parameters, offset)
+  let ignored = SelfHostExpr::CallExpr(
+    SelfHostExpr::NameExpr("__dew_debug_ignore", offset),
+    [SelfHostExpr::BlockExpr(body)],
+    offset,
+  )
+  let method = SelfHostFunctionDeclaration::{
+    visibility: SelfHostDeclarationVisibility::ModuleVisible
+    name: "debug"
+    name_offset: offset
+    type_parameters: []
+    receiver: Option::Some(
+      SelfHostReceiverParameter::{
+        explicit_type: Option::None
+        offset: offset
+      },
+    )
+    parameters: []
+    return_type: SelfHostTypeExpr::NamedType("Unit", offset)
+    body: self_host_derived_expression_block(ignored, offset)
+    offset: offset
+  }
+  SelfHostImplDeclaration::{
+    foreign_: false
+    type_parameters: self_host_derived_trait_type_parameters(
+      parameters,
+      field_types,
+      "Debug",
+      offset,
+    )
+    trait_type: Option::Some(SelfHostTypeExpr::NamedType("Debug", offset))
+    target_type: target
+    methods: [method]
+    offset: offset
+  }
+}
+
+fn self_host_derived_show_append_text(
+  value: String,
+  offset: U32,
+) -> SelfHostExpr {
+  SelfHostExpr::CallExpr(
+    SelfHostExpr::NameExpr("show_append_text", offset),
+    [
+      SelfHostExpr::NameExpr("formatter", offset),
+      SelfHostExpr::StringExpr(value.as_bytes(), offset),
+    ],
+    offset,
+  )
+}
+
+fn self_host_derived_show_append_value(
+  value: SelfHostExpr,
+  offset: U32,
+) -> SelfHostExpr {
+  SelfHostExpr::CallExpr(
+    SelfHostExpr::NameExpr("show_append", offset),
+    [SelfHostExpr::NameExpr("formatter", offset), value],
+    offset,
+  )
+}
+
+fn self_host_derived_struct_show_body(
+  value: SelfHostStructDeclaration,
+  offset: U32,
+) -> SelfHostBlock {
+  let expressions = []
+  if value.fields.length() == 0u32 {
+    expressions.push(
+      self_host_derived_show_append_text(value.name.concat(" {}"), offset),
+    )
+  } else {
+    expressions.push(
+      self_host_derived_show_append_text(value.name.concat(" { "), offset),
+    )
+    let mut index = 0u32
+    for field in value.fields {
+      expressions.push(
+        self_host_derived_show_append_text(
+          self_host_derived_field_label(field.name, index == 0u32),
+          offset,
+        ),
+      )
+      expressions.push(
+        self_host_derived_show_append_value(
+          SelfHostExpr::FieldExpr(
+            SelfHostExpr::NameExpr("self", offset),
+            field.name,
+            offset,
+          ),
+          offset,
+        ),
+      )
+      index = index + 1u32
+    }
+    expressions.push(self_host_derived_show_append_text(" }", offset))
+  }
+  self_host_derived_expression_list_block(expressions, offset)
+}
+
+fn self_host_derived_show_variant_body(
+  enum_name: String,
+  variant: SelfHostEnumVariant,
+  names: Array<String>,
+  offset: U32,
+) -> SelfHostBlock {
+  let prefix = self_host_derived_variant_prefix(enum_name, variant)
+  let expressions = []
+  match variant {
+    SelfHostEnumVariant::UnitVariant(_, _) => expressions.push(
+      self_host_derived_show_append_text(prefix, offset),
+    )
+    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+      expressions.push(
+        self_host_derived_show_append_text(prefix.concat("("), offset),
+      )
+      let mut index = 0u32
+      for _ in types {
+        if index > 0u32 {
+          expressions.push(
+            self_host_derived_show_append_text(", ", offset),
+          )
+        }
+        expressions.push(
+          self_host_derived_show_append_value(
+            SelfHostExpr::NameExpr(names[index], offset),
+            offset,
+          ),
+        )
+        index = index + 1u32
+      }
+      expressions.push(self_host_derived_show_append_text(")", offset))
+    }
+    SelfHostEnumVariant::StructVariant(_, fields, _) => if fields.length() == 0u32 {
+      expressions.push(
+        self_host_derived_show_append_text(prefix.concat(" {}"), offset),
+      )
+    } else {
+      expressions.push(
+        self_host_derived_show_append_text(prefix.concat(" { "), offset),
+      )
+      let mut index = 0u32
+      for field in fields {
+        expressions.push(
+          self_host_derived_show_append_text(
+            self_host_derived_field_label(field.name, index == 0u32),
+            offset,
+          ),
+        )
+        expressions.push(
+          self_host_derived_show_append_value(
+            SelfHostExpr::NameExpr(names[index], offset),
+            offset,
+          ),
+        )
+        index = index + 1u32
+      }
+      expressions.push(self_host_derived_show_append_text(" }", offset))
+    }
+  }
+  self_host_derived_expression_list_block(expressions, offset)
+}
+
+fn self_host_derived_show_impl(
+  name: String,
+  parameters: Array<SelfHostTypeParameter>,
+  field_types: Array<SelfHostTypeExpr>,
+  body: SelfHostBlock,
+  offset: U32,
+) -> SelfHostImplDeclaration {
+  let target = self_host_derived_nominal_type(name, parameters, offset)
+  let method = SelfHostFunctionDeclaration::{
+    visibility: SelfHostDeclarationVisibility::ModuleVisible
+    name: "append_show"
+    name_offset: offset
+    type_parameters: []
+    receiver: Option::Some(
+      SelfHostReceiverParameter::{
+        explicit_type: Option::None
+        offset: offset
+      },
+    )
+    parameters: [
+      SelfHostFnParameter::{
+        name: "formatter"
+        type_: SelfHostTypeExpr::NamedType("ShowFormatter", offset)
+        offset: offset
+      },
+    ]
+    return_type: SelfHostTypeExpr::NamedType("Unit", offset)
+    body: body
+    offset: offset
+  }
+  SelfHostImplDeclaration::{
+    foreign_: false
+    type_parameters: self_host_derived_trait_type_parameters(
+      parameters,
+      field_types,
+      "Show",
+      offset,
+    )
+    trait_type: Option::Some(SelfHostTypeExpr::NamedType("Show", offset))
+    target_type: target
+    methods: [method]
+    offset: offset
+  }
+}
+
+fn self_host_derived_struct_debug_impl(
+  value: SelfHostStructDeclaration,
+  offset: U32,
+) -> SelfHostImplDeclaration {
+  self_host_derived_debug_impl(
+    value.name,
+    value.type_parameters,
+    self_host_derived_struct_field_types(value),
+    self_host_derived_struct_debug_body(value, offset),
+    offset,
+  )
+}
+
+fn self_host_derived_enum_debug_impl(
+  value: SelfHostEnumDeclaration,
+  offset: U32,
+) -> SelfHostImplDeclaration {
+  let arms = []
+  let mut index = 0u32
+  for variant in value.variants {
+    let (pattern, names) = self_host_derived_format_variant_pattern(
+      value.name,
+      variant,
+      index,
+      offset,
+    )
+    arms.push(
+      SelfHostPatternArm::{
+        pattern: pattern
+        guard_condition: Option::None
+        body: SelfHostExpr::BlockExpr(
+          self_host_derived_debug_variant_body(
+            value.name,
+            variant,
+            names,
+            offset,
+          ),
+        )
+        offset: offset
+      },
+    )
+    index = index + 1u32
+  }
+  let body = self_host_derived_expression_list_block(
+    [
+      SelfHostExpr::MatchExpr(
+        SelfHostExpr::NameExpr("self", offset),
+        arms,
+        offset,
+      ),
+    ],
+    offset,
+  )
+  self_host_derived_debug_impl(
+    value.name,
+    value.type_parameters,
+    self_host_derived_enum_field_types(value),
+    body,
+    offset,
+  )
+}
+
+fn self_host_derived_struct_show_impl(
+  value: SelfHostStructDeclaration,
+  offset: U32,
+) -> SelfHostImplDeclaration {
+  self_host_derived_show_impl(
+    value.name,
+    value.type_parameters,
+    self_host_derived_struct_field_types(value),
+    self_host_derived_struct_show_body(value, offset),
+    offset,
+  )
+}
+
+fn self_host_derived_enum_show_impl(
+  value: SelfHostEnumDeclaration,
+  offset: U32,
+) -> SelfHostImplDeclaration {
+  let arms = []
+  let mut index = 0u32
+  for variant in value.variants {
+    let (pattern, names) = self_host_derived_format_variant_pattern(
+      value.name,
+      variant,
+      index,
+      offset,
+    )
+    arms.push(
+      SelfHostPatternArm::{
+        pattern: pattern
+        guard_condition: Option::None
+        body: SelfHostExpr::BlockExpr(
+          self_host_derived_show_variant_body(
+            value.name,
+            variant,
+            names,
+            offset,
+          ),
+        )
+        offset: offset
+      },
+    )
+    index = index + 1u32
+  }
+  let body = self_host_derived_expression_list_block(
+    [
+      SelfHostExpr::MatchExpr(
+        SelfHostExpr::NameExpr("self", offset),
+        arms,
+        offset,
+      ),
+    ],
+    offset,
+  )
+  self_host_derived_show_impl(
+    value.name,
+    value.type_parameters,
+    self_host_derived_enum_field_types(value),
+    body,
+    offset,
+  )
+}

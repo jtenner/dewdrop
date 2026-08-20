@@ -68,4 +68,5 @@ name resolution. See
 [`self-host-body-name-resolution-2026-08-20.md`](self-host-body-name-resolution-2026-08-20.md).
 Full callable recipes, inferred module values, fields, variants, and
 implementation evidence remain for imported semantic resolution and inference.
-The next dependency phase is deterministic derive expansion.
+Derive expansion is now complete. The next dependency phase is imported
+callable, field, variant, and implementation recipes.

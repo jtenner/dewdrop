@@ -1,0 +1,147 @@
+open dew.std.option
+open dew.std.testing
+
+fn self_host_derive_method_name(
+  collected: SelfHostCollectedModule,
+  index: U32,
+) -> String {
+  collected.name(collected.methods[index].name)
+}
+
+fn self_host_derive_first_bound_name(
+  collected: SelfHostCollectedModule,
+  parameter: SelfHostCollectedGenericParameter,
+) -> String {
+  if parameter.bounds.length == 0u32 {
+    ""
+  } else {
+    let syntax = collected.type_syntax[
+      collected.generic_bounds[parameter.bounds.start]
+    ]
+    match syntax {
+      SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => collected.name(name)
+      _ => ""
+    }
+  }
+}
+
+test "derive expansion synthesizes Eq Ne Debug Hash and Show implementations" {
+  let collected = self_host_collect_bytes(
+    3100u64,
+    b"struct Item {\n  value: I32\n} derive(Eq, Debug, Hash, Show)\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "derive diagnostics")
+  assert(collected.derives.length() == 4u32, "retained requests")
+  assert(collected.impls.length() == 5u32, "derived implementation count")
+  assert(collected.methods.length() == 6u32, "derived method count")
+  assert(collected.bodies.length() == 6u32, "derived body count")
+  assert(self_host_derive_method_name(collected, 0u32) == "eq", "Eq method")
+  assert(self_host_derive_method_name(collected, 1u32) == "ne", "Ne method")
+  assert(
+    self_host_derive_method_name(collected, 2u32) == "debug",
+    "Debug method",
+  )
+  assert(
+    self_host_derive_method_name(collected, 3u32) == "hash",
+    "Hash method",
+  )
+  assert(
+    self_host_derive_method_name(collected, 4u32) == "hash_eq",
+    "Hash equality method",
+  )
+  assert(
+    self_host_derive_method_name(collected, 5u32) == "append_show",
+    "Show method",
+  )
+  assert(self_host_u32_equal(collected.declaration_at(1u32).offset, 36u32), "Eq offset")
+  assert(self_host_u32_equal(collected.declaration_at(2u32).offset, 36u32), "Ne offset")
+  assert(self_host_u32_equal(collected.declaration_at(3u32).offset, 40u32), "Debug offset")
+  assert(self_host_u32_equal(collected.declaration_at(4u32).offset, 47u32), "Hash offset")
+  assert(self_host_u32_equal(collected.declaration_at(5u32).offset, 53u32), "Show offset")
+}
+
+test "derived generic prerequisites follow used field parameters" {
+  let collected = self_host_collect_bytes(
+    3101u64,
+    b"struct Selected<a, b> {\n  value: a\n} derive(Eq, Debug, Hash, Show)\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "generic diagnostics")
+  assert(collected.impls.length() == 5u32, "generic implementation count")
+  let expected = ["Eq", "Eq", "Debug", "Hash", "Show"]
+  let mut implementation_index = 0u32
+  for implementation in collected.impls {
+    let parameters = collected.generic_parameters_of(
+      implementation.declaration,
+    )
+    assert(self_host_u32_equal(parameters.length, 2u32), "derived generic count")
+    let used = collected.generic_parameter_at(parameters.start)
+    let phantom = collected.generic_parameter_at(
+      self_host_u32_add(parameters.start, 1u32),
+    )
+    assert(self_host_u32_equal(used.bounds.length, 1u32), "used parameter prerequisite")
+    assert(self_host_u32_equal(phantom.bounds.length, 0u32), "phantom parameter prerequisite")
+    assert(
+      self_host_derive_first_bound_name(collected, used) ==
+        expected[implementation_index],
+      "derived prerequisite trait",
+    )
+    implementation_index = implementation_index + 1u32
+  }
+}
+
+test "existing generic bounds are retained without duplicates" {
+  let collected = self_host_collect_bytes(
+    3102u64,
+    b"struct Already<t: Eq + Debug + Hash + Show> {\n  value: t\n} derive(Eq, Debug, Hash, Show)\n",
+  )
+  assert(collected.impls.length() == 5u32, "bounded implementation count")
+  let expected = [4u32, 4u32, 4u32, 4u32, 4u32]
+  let mut index = 0u32
+  for implementation in collected.impls {
+    let parameters = collected.generic_parameters_of(
+      implementation.declaration,
+    )
+    assert(self_host_u32_equal(parameters.length, 1u32), "bounded generic count")
+    let parameter = collected.generic_parameter_at(parameters.start)
+    assert(
+      self_host_u32_equal(parameter.bounds.length, expected[index]),
+      "duplicate bound introduced",
+    )
+    index = index + 1u32
+  }
+}
+
+test "derived enum equality resolves generated patterns and locals" {
+  let collected = self_host_collect_bytes(
+    3103u64,
+    b"trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\ntrait Ne {\n  fn ne(self, right: Self) -> Bool\n}\nenum Choice<t> {\n  None\n  Some(t)\n  Named {\n    value: t\n  }\n} derive(Eq)\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "enum collection diagnostics")
+  assert(collected.impls.length() == 2u32, "enum Eq and Ne")
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "enum type diagnostics")
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 0u32, "enum name diagnostics")
+  assert(collected.pattern_arms.length() == 9u32, "generated equality arms")
+  assert(collected.patterns.length() > 9u32, "generated equality patterns")
+}
+
+test "unknown and duplicate derives do not synthesize extra implementations" {
+  let collected = self_host_collect_bytes(
+    3104u64,
+    b"struct Invalid {} derive(Display, Eq, Eq)\n",
+  )
+  assert(collected.diagnostics.length() == 2u32, "derive error count")
+  assert(collected.derives.length() == 1u32, "valid retained request count")
+  assert(collected.impls.length() == 2u32, "only Eq and Ne synthesized")
+}
+
+test "derived implementations keep source order against handwritten impls" {
+  let collected = self_host_collect_bytes(
+    3105u64,
+    b"impl Debug for Item {\n  fn debug(self) -> Unit {}\n}\nstruct Item {} derive(Debug)\n",
+  )
+  assert(collected.impls.length() == 2u32, "implementation order count")
+  assert(self_host_u32_equal(collected.declaration_at(0u32).offset, 0u32), "handwritten first")
+  assert(self_host_u32_equal(collected.declaration_at(2u32).offset, 74u32), "derived second")
+}

@@ -31,6 +31,13 @@ fn self_host_empty_derive_seen() -> Map<String, U32> {
   Map::empty()
 }
 
+struct SelfHostCollectedDeriveOffsets {
+  eq: Option<U32>
+  debug: Option<U32>
+  hash: Option<U32>
+  show: Option<U32>
+}
+
 fn self_host_test_declaration_name(index: U32) -> String {
   let builder = StringBuilder::new()
   builder.append("__dew_test_")
@@ -1320,8 +1327,12 @@ impl SelfHostCollectionBuilder {
     self,
     declaration: U64,
     derives: Array<SelfHostDeriveRequest>,
-  ) -> Unit {
+  ) -> SelfHostCollectedDeriveOffsets {
     let seen = self_host_empty_derive_seen()
+    let mut eq = Option::None
+    let mut debug = Option::None
+    let mut hash = Option::None
+    let mut show = Option::None
     for derive in derives {
       match seen.get(derive.name) {
         Option::Some(first) => self.diagnostics.push(
@@ -1353,9 +1364,24 @@ impl SelfHostCollectionBuilder {
                 offset: derive.offset
               },
             )
+            if !self_host_string_not_equal(derive.name, "Eq") {
+              eq = Option::Some(derive.offset)
+            } else if !self_host_string_not_equal(derive.name, "Debug") {
+              debug = Option::Some(derive.offset)
+            } else if !self_host_string_not_equal(derive.name, "Hash") {
+              hash = Option::Some(derive.offset)
+            } else {
+              show = Option::Some(derive.offset)
+            }
           }
         }
       }
+    }
+    SelfHostCollectedDeriveOffsets::{
+      eq: eq
+      debug: debug
+      hash: hash
+      show: show
     }
   }
 
@@ -1380,7 +1406,34 @@ impl SelfHostCollectionBuilder {
       value.fields,
       SelfHostBindingSpace::StructField,
     )
-    self.collect_derives(declaration.id, value.derives)
+    let derives = self.collect_derives(declaration.id, value.derives)
+    match derives.eq {
+      Option::Some(offset) => for implementation in self_host_derived_struct_eq_impls(
+        value,
+        offset,
+      ) {
+        self.collect_impl(implementation)
+      }
+      Option::None => {}
+    }
+    match derives.debug {
+      Option::Some(offset) => self.collect_impl(
+        self_host_derived_struct_debug_impl(value, offset),
+      )
+      Option::None => {}
+    }
+    match derives.hash {
+      Option::Some(offset) => self.collect_impl(
+        self_host_derived_struct_hash_impl(value, offset),
+      )
+      Option::None => {}
+    }
+    match derives.show {
+      Option::Some(offset) => self.collect_impl(
+        self_host_derived_struct_show_impl(value, offset),
+      )
+      Option::None => {}
+    }
   }
 
   fn collect_enum(self, value: SelfHostEnumDeclaration) -> Unit {
@@ -1456,7 +1509,34 @@ impl SelfHostCollectionBuilder {
         _ => {}
       }
     }
-    self.collect_derives(declaration.id, value.derives)
+    let derives = self.collect_derives(declaration.id, value.derives)
+    match derives.eq {
+      Option::Some(offset) => for implementation in self_host_derived_enum_eq_impls(
+        value,
+        offset,
+      ) {
+        self.collect_impl(implementation)
+      }
+      Option::None => {}
+    }
+    match derives.debug {
+      Option::Some(offset) => self.collect_impl(
+        self_host_derived_enum_debug_impl(value, offset),
+      )
+      Option::None => {}
+    }
+    match derives.hash {
+      Option::Some(offset) => self.collect_impl(
+        self_host_derived_enum_hash_impl(value, offset),
+      )
+      Option::None => {}
+    }
+    match derives.show {
+      Option::Some(offset) => self.collect_impl(
+        self_host_derived_enum_show_impl(value, offset),
+      )
+      Option::None => {}
+    }
   }
 
   fn collect_type_alias(self, value: SelfHostTypeAliasDeclaration) -> Unit {

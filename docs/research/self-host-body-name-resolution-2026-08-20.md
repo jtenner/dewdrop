@@ -89,6 +89,8 @@ import full callable recipes, fields, variants, implementation evidence, or
 inferred module-let types. Those belong to imported semantic recipes and
 inference.
 
-Derive requests are still collected but not expanded. The next phase is
-deterministic derive expansion and then inference, local unification, callable
-and member resolution, trait obligations, and evidence.
+Derive requests now expand into ordinary synthetic implementations and body
+HIR. See
+[`self-host-derive-expansion-2026-08-20.md`](self-host-derive-expansion-2026-08-20.md).
+The next phase is imported semantic recipes and then inference, local
+unification, callable and member resolution, trait obligations, and evidence.

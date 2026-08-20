@@ -62,14 +62,16 @@ support. Body names, imported value names, lexical scopes, pattern bindings,
 loop controls, and lambda captures are now ported. See
 [`self-host-body-name-resolution-2026-08-20.md`](self-host-body-name-resolution-2026-08-20.md).
 
-Derive requests are collected but are not expanded. Imported callable recipes,
-inference, trait evidence, flow, lowering, layouts, specialization, WasmGC
-planning, linking, encoding, and the Dew compiler driver remain to port.
+Derive requests now expand into ordinary Eq, Ne, Debug, Hash, and Show
+implementations. See
+[`self-host-derive-expansion-2026-08-20.md`](self-host-derive-expansion-2026-08-20.md).
+Imported callable recipes, inference, trait evidence, flow, lowering, layouts,
+specialization, WasmGC planning, linking, encoding, and the Dew compiler driver
+remain to port.
 
 ## Next phase
 
-1. Expand deterministic derive requests.
-2. Port imported callable, field, variant, and implementation recipes.
-3. Port inference and local unification.
-4. Add complete fingerprints and cache codecs to frozen interfaces when their
+1. Port imported callable, field, variant, and implementation recipes.
+2. Port inference and local unification.
+3. Add complete fingerprints and cache codecs to frozen interfaces when their
    dependent phases are available.

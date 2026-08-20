@@ -301,6 +301,17 @@ pub struct SelfHostCollectedModule {
 }
 
 impl SelfHostCollectedModule {
+  fn declaration_at(self, index: U32) -> SelfHostCollectedDeclaration {
+    self.declarations[index]
+  }
+
+  fn generic_parameter_at(
+    self,
+    index: U32,
+  ) -> SelfHostCollectedGenericParameter {
+    self.generic_parameters[index]
+  }
+
   fn find_name(self, name: String) -> Option<U32> {
     self.name_lookup.get(name)
   }

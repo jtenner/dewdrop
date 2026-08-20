@@ -10,6 +10,8 @@ python3 tools/generate_starshine_ffi_consumer.py --check
 parser_sources=(
   self_host/compiler/tokenizer.dew
   self_host/compiler/parser_ast.dew
+  self_host/compiler/parser_derive_core.dew
+  self_host/compiler/parser_derive_format.dew
   self_host/compiler/parser_core.dew
   self_host/compiler/parser_pattern.dew
   self_host/compiler/parser_expression.dew
@@ -53,7 +55,8 @@ tools/dew test \
   self_host/compiler/semantic_type_resolution_test.dew \
   self_host/compiler/semantic_module_interfaces_test.dew \
   self_host/compiler/semantic_program_interfaces_test.dew \
-  self_host/compiler/semantic_body_name_resolution_test.dew
+  self_host/compiler/semantic_body_name_resolution_test.dew \
+  self_host/compiler/semantic_derive_expansion_test.dew
 
 python3 tools/check-self-host-parser.py
 python3 tools/check-self-host-semantics.py

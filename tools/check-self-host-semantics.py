@@ -15,6 +15,8 @@ BATCH_SIZE = 12
 COMPILER_SOURCES = [
     "self_host/compiler/tokenizer.dew",
     "self_host/compiler/parser_ast.dew",
+    "self_host/compiler/parser_derive_core.dew",
+    "self_host/compiler/parser_derive_format.dew",
     "self_host/compiler/parser_core.dew",
     "self_host/compiler/parser_pattern.dew",
     "self_host/compiler/parser_expression.dew",
