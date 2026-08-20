@@ -1,0 +1,1228 @@
+open dew.std.array
+open dew.std.option
+
+fn self_host_empty_span_array() -> Array<SelfHostHirSpan> {
+  []
+}
+
+impl SelfHostTypeResolver {
+  fn ensure_normalization_slots(self) -> Unit {
+    let _ = while self.normalizations.length() {
+      length => if length < self.interner.types.length() {
+        self.normalizations.push(4294967295u32)
+        continue self.normalizations.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn ensure_substitution_slots(self) -> Unit {
+    let _ = while self.substitution_marks.length() {
+      length => if length < self.interner.types.length() {
+        self.substitution_marks.push(0u32)
+        self.substitution_values.push(4294967295u32)
+        continue self.substitution_marks.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn collect_alias_dependencies(self) -> Unit {
+    self.visit_marks = self_host_u32_slots(self.interner.types.length(), 0u32)
+    let mut alias_index = 0u32
+    for target in self.alias_target_types {
+      self.visit_generation = self.visit_generation + 1u32
+      if self.visit_generation == 0u32 {
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < self.visit_marks.length() {
+            self.visit_marks[current] = 0u32
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        index = 0u32
+        let _ = while index {
+          current => if current < self.alias_visit_marks.length() {
+            self.alias_visit_marks[current] = 0u32
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self.visit_generation = 1u32
+      }
+      self.visit_stack.clear()
+      self.visit_stack.push(target)
+      self.dependency_scratch.clear()
+      let _ = while self.visit_stack.length() {
+        length => if length > 0u32 {
+          let type_ = match self.visit_stack.pop() {
+            Option::Some(value) => value
+            Option::None => self.interner.error_type
+          }
+          if self.visit_marks[type_] != self.visit_generation {
+            self.visit_marks[type_] = self.visit_generation
+            match self.interner.types[type_] {
+              SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+                declaration,
+              ) {
+                Option::Some(dependency) => if self.alias_visit_marks[dependency] != self.visit_generation {
+                  self.alias_visit_marks[dependency] = self.visit_generation
+                  self.dependency_scratch.push(dependency)
+                }
+                Option::None => {}
+              }
+              SelfHostResolvedType::ProductType(fields) => {
+                let mut index = 0u32
+                let _ = while index {
+                  current => if current < fields.length {
+                    self.visit_stack.push(
+                      self.interner.arguments[fields.start + current],
+                    )
+                    continue current + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostResolvedType::AppliedType(base, arguments) => {
+                self.visit_stack.push(base)
+                let mut index = 0u32
+                let _ = while index {
+                  current => if current < arguments.length {
+                    self.visit_stack.push(
+                      self.interner.arguments[arguments.start + current],
+                    )
+                    continue current + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostResolvedType::FunctionType(parameters, result) => {
+                self.visit_stack.push(result)
+                let mut index = 0u32
+                let _ = while index {
+                  current => if current < parameters.length {
+                    self.visit_stack.push(
+                      self.interner.arguments[parameters.start + current],
+                    )
+                    continue current + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              _ => {}
+            }
+          }
+          continue self.visit_stack.length()
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self.sort_u32_values(self.dependency_scratch)
+      let start = self.alias_dependency_declarations.length()
+      for dependency in self.dependency_scratch {
+        self.alias_dependency_declarations.push(
+          self.collected.aliases[dependency].declaration,
+        )
+      }
+      self.alias_dependencies[alias_index] = SelfHostHirSpan::{
+        start: start
+        length: self.alias_dependency_declarations.length() - start
+      }
+      alias_index = alias_index + 1u32
+    }
+  }
+
+  fn sort_u32_values(self, values: Array<U32>) -> Unit {
+    let mut index = 1u32
+    let _ = while index {
+      current => if current < values.length() {
+        let value = values[current]
+        let destination = while current {
+          position => if position > 0u32 && values[position - 1u32] > value {
+            values[position] = values[position - 1u32]
+            continue position - 1u32
+          } else {
+            break position
+          }
+        }
+        values[destination] = value
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn alias_depends_on(
+    self,
+    source: U32,
+    target: U32,
+  ) -> Bool {
+    let declaration = self.collected.aliases[target].declaration
+    let dependencies = self.alias_dependencies[source]
+    let mut index = dependencies.start
+    let end = self_host_u32_add(dependencies.start, dependencies.length)
+    while index {
+      current => if current < end {
+        if self.alias_dependency_declarations[current] == declaration {
+          break true
+        }
+        continue current + 1u32
+      } else {
+        break false
+      }
+    }
+  }
+
+  fn alias_has_self_edge(self, alias_index: U32) -> Bool {
+    let declaration = self.collected.aliases[alias_index].declaration
+    let dependencies = self.alias_dependencies[alias_index]
+    let mut index = dependencies.start
+    let end = self_host_u32_add(dependencies.start, dependencies.length)
+    while index {
+      current => if current < end {
+        if self.alias_dependency_declarations[current] == declaration {
+          break true
+        }
+        continue current + 1u32
+      } else {
+        break false
+      }
+    }
+  }
+
+  fn alias_offset(self, alias_index: U32) -> U32 {
+    let declaration = self.collected.aliases[alias_index].declaration
+    match self.collected.declaration_reference(declaration) {
+      Option::Some(reference) => match reference {
+        SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
+        SelfHostCollectedDeclarationReference::Method(_) => 0u32
+      }
+      Option::None => 0u32
+    }
+  }
+
+  fn find_alias_cycles(self) -> Unit {
+    let alias_count = self.collected.aliases.length()
+    if alias_count == 0u32 {
+      return
+    }
+    let visited = self_host_bool_slots(alias_count, false)
+    let work_nodes = []
+    let work_finish = []
+    let finish_order = []
+    let mut start = 0u32
+    let _ = while start {
+      current_start => if current_start < alias_count {
+        if !visited[current_start] {
+          work_nodes.push(current_start)
+          work_finish.push(false)
+          let _ = while work_nodes.length() {
+            length => if length > 0u32 {
+              let item = match work_nodes.pop() {
+                Option::Some(value) => value
+                Option::None => 0u32
+              }
+              let finishing = match work_finish.pop() {
+                Option::Some(value) => value
+                Option::None => false
+              }
+              if finishing {
+                finish_order.push(item)
+              } else if !visited[item] {
+                visited[item] = true
+                work_nodes.push(item)
+                work_finish.push(true)
+                let dependencies = self.alias_dependencies[item]
+                let mut index = dependencies.length
+                let _ = while index {
+                  remaining => if self_host_u32_greater(remaining, 0u32) {
+                    let next = self_host_u32_subtract(remaining, 1u32)
+                    let declaration = self.alias_dependency_declarations[
+                      self_host_u32_add(dependencies.start, next)
+                    ]
+                    let dependency = match self.alias_indices.get(declaration) {
+                      Option::Some(value) => value
+                      Option::None => 0u32
+                    }
+                    if !visited[dependency] {
+                      work_nodes.push(dependency)
+                      work_finish.push(false)
+                    }
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              continue work_nodes.length()
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        continue current_start + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+
+    let assigned = self_host_bool_slots(alias_count, false)
+    let component = []
+    let mut order_index = finish_order.length()
+    let _ = while order_index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        let component_start = finish_order[next]
+        if !assigned[component_start] {
+          component.clear()
+          work_nodes.clear()
+          work_nodes.push(component_start)
+          assigned[component_start] = true
+          let _ = while work_nodes.length() {
+            length => if length > 0u32 {
+              let current = match work_nodes.pop() {
+                Option::Some(value) => value
+                Option::None => 0u32
+              }
+              component.push(current)
+              let mut candidate = 0u32
+              let _ = while candidate {
+                source => if source < alias_count {
+                  if !assigned[source] && self.alias_depends_on(source, current) {
+                    assigned[source] = true
+                    work_nodes.push(source)
+                  }
+                  continue source + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              continue work_nodes.length()
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let cyclic = component.length() > 1u32 ||
+            (component.length() == 1u32 && self.alias_has_self_edge(component[0u32]))
+          if cyclic {
+            self.sort_u32_values(component)
+            let cycle_start = self.alias_cycle_declarations.length()
+            let mut offset = 4294967295u32
+            for member in component {
+              self.alias_is_cyclic[member] = true
+              self.alias_cycle_declarations.push(
+                self.collected.aliases[member].declaration,
+              )
+              let member_offset = self.alias_offset(member)
+              if member_offset < offset {
+                offset = member_offset
+              }
+            }
+            let span = SelfHostHirSpan::{
+              start: cycle_start
+              length: self.alias_cycle_declarations.length() - cycle_start
+            }
+            self.alias_cycles.push(span)
+            self.diagnose(SelfHostTypeDiagnostic::AliasCycle(span, offset))
+          }
+        }
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.sort_alias_cycles()
+  }
+
+  fn sort_alias_cycles(self) -> Unit {
+    let sorted = self_host_empty_span_array()
+    let mut alias_index = 0u32
+    let _ = while alias_index {
+      current_alias => if current_alias < self.collected.aliases.length() {
+        let declaration = self.collected.aliases[current_alias].declaration
+        for cycle in self.alias_cycles {
+          if self.alias_cycle_declarations[cycle.start] == declaration {
+            sorted.push(cycle)
+          }
+        }
+        continue current_alias + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.alias_cycles.clear()
+    for cycle in sorted {
+      self.alias_cycles.push(cycle)
+    }
+  }
+
+  fn alias_parameter_argument(
+    self,
+    alias_index: U32,
+    parameter: U64,
+    arguments: Array<U32>,
+  ) -> Option<U32> {
+    let declaration = self.collected.aliases[alias_index].declaration
+    if self_host_semantic_id_module(parameter) != self.collected.module_id {
+      Option::None
+    } else {
+      let parameters = self.collected.generic_parameters_of(declaration)
+      let local = self_host_semantic_id_local(parameter)
+      if local < parameters.start || local >= self_host_u32_add(
+        parameters.start,
+        parameters.length,
+      ) {
+        Option::None
+      } else {
+        Option::Some(arguments[local - parameters.start])
+      }
+    }
+  }
+
+  fn push_substitution_task(
+    self,
+    type_: U32,
+    state: U32,
+    start: U32,
+  ) -> Unit {
+    self.substitution_types.push(type_)
+    self.substitution_states.push(state)
+    self.substitution_starts.push(start)
+  }
+
+  fn substitute_alias_target(
+    self,
+    alias_index: U32,
+    arguments: Array<U32>,
+  ) -> U32 {
+    self.substitution_generation = self.substitution_generation + 1u32
+    if self.substitution_generation == 0u32 {
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < self.substitution_marks.length() {
+          self.substitution_marks[current] = 0u32
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self.substitution_generation = 1u32
+    }
+    self.ensure_substitution_slots()
+    self.substitution_types.clear()
+    self.substitution_states.clear()
+    self.substitution_starts.clear()
+    self.substitution_results.clear()
+    self.push_substitution_task(self.alias_target_types[alias_index], 0u32, 0u32)
+    let _ = while self.substitution_types.length() {
+      length => if length > 0u32 {
+        let current = match self.substitution_types.pop() {
+          Option::Some(value) => value
+          Option::None => self.interner.error_type
+        }
+        let state = match self.substitution_states.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let result_start = match self.substitution_starts.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        if state == 0u32 {
+          if self.substitution_marks[current] == self.substitution_generation {
+            self.substitution_results.push(self.substitution_values[current])
+          } else {
+            match self.interner.types[current] {
+              SelfHostResolvedType::GenericParameterType(parameter) => {
+                let result = match self.alias_parameter_argument(
+                  alias_index,
+                  parameter,
+                  arguments,
+                ) {
+                  Option::Some(value) => value
+                  Option::None => current
+                }
+                self.substitution_marks[current] = self.substitution_generation
+                self.substitution_values[current] = result
+                self.substitution_results.push(result)
+              }
+              SelfHostResolvedType::ProductType(fields) => {
+                self.push_substitution_task(
+                  current,
+                  3u32,
+                  self.substitution_results.length(),
+                )
+                let mut index = fields.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.push_substitution_task(
+                      self.interner.arguments[fields.start + next],
+                      0u32,
+                      0u32,
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostResolvedType::AppliedType(base, span) => {
+                self.push_substitution_task(
+                  current,
+                  1u32,
+                  self.substitution_results.length(),
+                )
+                let mut index = span.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.push_substitution_task(
+                      self.interner.arguments[span.start + next],
+                      0u32,
+                      0u32,
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+                self.push_substitution_task(base, 0u32, 0u32)
+              }
+              SelfHostResolvedType::FunctionType(parameters, result) => {
+                self.push_substitution_task(
+                  current,
+                  2u32,
+                  self.substitution_results.length(),
+                )
+                self.push_substitution_task(result, 0u32, 0u32)
+                let mut index = parameters.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.push_substitution_task(
+                      self.interner.arguments[parameters.start + next],
+                      0u32,
+                      0u32,
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              _ => {
+                self.substitution_marks[current] = self.substitution_generation
+                self.substitution_values[current] = current
+                self.substitution_results.push(current)
+              }
+            }
+          }
+        } else if state == 1u32 {
+          let base = self.substitution_results[result_start]
+          self.application_scratch.clear()
+          let mut index = result_start + 1u32
+          let _ = while index {
+            current_index => if current_index < self.substitution_results.length() {
+              self.application_scratch.push(self.substitution_results[current_index])
+              continue current_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let result = self.interner.intern_applied(base, self.application_scratch)
+          self.ensure_substitution_slots()
+          self.substitution_marks[current] = self.substitution_generation
+          self.substitution_values[current] = result
+          self.substitution_results.truncate(result_start)
+          self.substitution_results.push(result)
+        } else if state == 2u32 {
+          let parameter_count = match self.interner.types[current] {
+            SelfHostResolvedType::FunctionType(parameters, _) => parameters.length
+            _ => 0u32
+          }
+          self.application_scratch.clear()
+          let mut index = 0u32
+          let _ = while index {
+            parameter_index => if parameter_index < parameter_count {
+              self.application_scratch.push(
+                self.substitution_results[result_start + parameter_index],
+              )
+              continue parameter_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let result = self.interner.intern_function(
+            self.application_scratch,
+            self.substitution_results[result_start + parameter_count],
+          )
+          self.ensure_substitution_slots()
+          self.substitution_marks[current] = self.substitution_generation
+          self.substitution_values[current] = result
+          self.substitution_results.truncate(result_start)
+          self.substitution_results.push(result)
+        } else {
+          self.application_scratch.clear()
+          let mut index = result_start
+          let _ = while index {
+            current_index => if current_index < self.substitution_results.length() {
+              self.application_scratch.push(self.substitution_results[current_index])
+              continue current_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let result = self.interner.intern_product(self.application_scratch)
+          self.ensure_substitution_slots()
+          self.substitution_marks[current] = self.substitution_generation
+          self.substitution_values[current] = result
+          self.substitution_results.truncate(result_start)
+          self.substitution_results.push(result)
+        }
+        continue self.substitution_types.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.substitution_results[0u32]
+  }
+
+  fn push_normalization_task(
+    self,
+    type_: U32,
+    state: U32,
+    start: U32,
+  ) -> Unit {
+    self.normalization_types.push(type_)
+    self.normalization_states.push(state)
+    self.normalization_starts.push(start)
+  }
+
+  fn can_expand_alias(self, alias_index: U32) -> Bool {
+    if self.alias_is_cyclic[alias_index] {
+      false
+    } else if self.alias_expansion_work < self.alias_expansion_limit {
+      self.alias_expansion_work = self.alias_expansion_work + 1u32
+      true
+    } else {
+      if !self.alias_expansion_limited[alias_index] {
+        self.alias_expansion_limited[alias_index] = true
+        self.diagnose(
+          SelfHostTypeDiagnostic::AliasExpansionLimit(
+            self.collected.aliases[alias_index].declaration,
+            self.alias_expansion_limit,
+            self.alias_offset(alias_index),
+          ),
+        )
+      }
+      false
+    }
+  }
+
+  fn finish_normal_product(
+    self,
+    original: U32,
+    result_start: U32,
+  ) -> Unit {
+    self.application_scratch.clear()
+    let mut poisoned = false
+    let mut index = result_start
+    let _ = while index {
+      current => if current < self.normalization_results.length() {
+        let value = self.normalization_results[current]
+        if value == self.interner.error_type {
+          poisoned = true
+        }
+        self.application_scratch.push(value)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let result = if poisoned {
+      self.interner.error_type
+    } else {
+      self.interner.intern_product(self.application_scratch)
+    }
+    self.ensure_normalization_slots()
+    self.normalizations[original] = result
+    if self.normalizations[result] == 4294967295u32 {
+      self.normalizations[result] = result
+    }
+    self.normalization_results.truncate(result_start)
+    self.normalization_results.push(result)
+  }
+
+  fn finish_normal_function(
+    self,
+    original: U32,
+    result_start: U32,
+    parameter_count: U32,
+  ) -> Unit {
+    self.application_scratch.clear()
+    let mut poisoned = false
+    let mut index = 0u32
+    let _ = while index {
+      parameter_index => if parameter_index < parameter_count {
+        let value = self.normalization_results[result_start + parameter_index]
+        if value == self.interner.error_type {
+          poisoned = true
+        }
+        self.application_scratch.push(value)
+        continue parameter_index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let result_type = self.normalization_results[result_start + parameter_count]
+    if result_type == self.interner.error_type {
+      poisoned = true
+    }
+    let result = if poisoned {
+      self.interner.error_type
+    } else {
+      self.interner.intern_function(self.application_scratch, result_type)
+    }
+    self.ensure_normalization_slots()
+    self.normalizations[original] = result
+    if self.normalizations[result] == 4294967295u32 {
+      self.normalizations[result] = result
+    }
+    self.normalization_results.truncate(result_start)
+    self.normalization_results.push(result)
+  }
+
+  fn finish_normal_application(
+    self,
+    original: U32,
+    result_start: U32,
+  ) -> Unit {
+    let base = self.normalization_results[result_start]
+    self.application_scratch.clear()
+    let mut poisoned = base == self.interner.error_type
+    let mut index = result_start + 1u32
+    let _ = while index {
+      current => if current < self.normalization_results.length() {
+        let value = self.normalization_results[current]
+        if value == self.interner.error_type {
+          poisoned = true
+        }
+        self.application_scratch.push(value)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let result = if poisoned {
+      self.interner.error_type
+    } else {
+      self.interner.intern_applied(base, self.application_scratch)
+    }
+    self.ensure_normalization_slots()
+    self.normalizations[original] = result
+    if self.normalizations[result] == 4294967295u32 {
+      self.normalizations[result] = result
+    }
+    self.normalization_results.truncate(result_start)
+    self.normalization_results.push(result)
+  }
+
+  fn finish_alias_arguments(
+    self,
+    original: U32,
+    result_start: U32,
+  ) -> Unit {
+    let alias_index = match self.interner.types[original] {
+      SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+        declaration,
+      ) {
+        Option::Some(value) => value
+        Option::None => 0u32
+      }
+      SelfHostResolvedType::AppliedType(base, _) => match self.interner.types[base] {
+        SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+          declaration,
+        ) {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        _ => 0u32
+      }
+      _ => 0u32
+    }
+    self.application_scratch.clear()
+    let mut poisoned = false
+    let mut index = result_start
+    let _ = while index {
+      current => if current < self.normalization_results.length() {
+        let value = self.normalization_results[current]
+        if value == self.interner.error_type {
+          poisoned = true
+        }
+        self.application_scratch.push(value)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.normalization_results.truncate(result_start)
+    if poisoned || !self.can_expand_alias(alias_index) {
+      self.normalizations[original] = self.interner.error_type
+      self.normalization_results.push(self.interner.error_type)
+    } else {
+      let instantiated = self.substitute_alias_target(
+        alias_index,
+        self.application_scratch,
+      )
+      self.ensure_normalization_slots()
+      self.push_normalization_task(original, 3u32, result_start)
+      self.push_normalization_task(instantiated, 0u32, 0u32)
+    }
+  }
+
+  fn normalize_type(self, root: U32) -> U32 {
+    self.ensure_normalization_slots()
+    if self.normalizations[root] != 4294967295u32 {
+      return self.normalizations[root]
+    }
+    self.normalization_types.clear()
+    self.normalization_states.clear()
+    self.normalization_starts.clear()
+    self.normalization_results.clear()
+    self.push_normalization_task(root, 0u32, 0u32)
+    let _ = while self.normalization_types.length() {
+      length => if length > 0u32 {
+        let current = match self.normalization_types.pop() {
+          Option::Some(value) => value
+          Option::None => self.interner.error_type
+        }
+        let state = match self.normalization_states.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let result_start = match self.normalization_starts.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        if state == 0u32 {
+          self.ensure_normalization_slots()
+          if self.normalizations[current] != 4294967295u32 {
+            self.normalization_results.push(self.normalizations[current])
+          } else {
+            match self.interner.types[current] {
+              SelfHostResolvedType::ErrorType => {
+                self.normalizations[current] = current
+                self.normalization_results.push(current)
+              }
+              SelfHostResolvedType::PrimitiveType(_) => {
+                self.normalizations[current] = current
+                self.normalization_results.push(current)
+              }
+              SelfHostResolvedType::GenericParameterType(_) => {
+                self.normalizations[current] = current
+                self.normalization_results.push(current)
+              }
+              SelfHostResolvedType::TraitType(_) => {
+                self.normalizations[current] = current
+                self.normalization_results.push(current)
+              }
+              SelfHostResolvedType::SelfType(_) => {
+                self.normalizations[current] = current
+                self.normalization_results.push(current)
+              }
+              SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+                declaration,
+              ) {
+                Option::Some(_) => if self.declaration_arity(declaration) == 0u32 {
+                  self.push_normalization_task(
+                    current,
+                    2u32,
+                    self.normalization_results.length(),
+                  )
+                } else {
+                  self.normalizations[current] = current
+                  self.normalization_results.push(current)
+                }
+                Option::None => {
+                  self.normalizations[current] = current
+                  self.normalization_results.push(current)
+                }
+              }
+              SelfHostResolvedType::ProductType(fields) => {
+                self.push_normalization_task(
+                  current,
+                  5u32,
+                  self.normalization_results.length(),
+                )
+                let mut index = fields.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.push_normalization_task(
+                      self.interner.arguments[fields.start + next],
+                      0u32,
+                      0u32,
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostResolvedType::AppliedType(base, span) => match self.interner.types[base] {
+                SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+                  declaration,
+                ) {
+                  Option::Some(_) => {
+                    self.push_normalization_task(
+                      current,
+                      2u32,
+                      self.normalization_results.length(),
+                    )
+                    let mut index = span.length
+                    let _ = while index {
+                      remaining => if remaining > 0u32 {
+                        let next = remaining - 1u32
+                        self.push_normalization_task(
+                          self.interner.arguments[span.start + next],
+                          0u32,
+                          0u32,
+                        )
+                        continue next
+                      } else {
+                        break self_host_semantic_unit()
+                      }
+                    }
+                  }
+                  Option::None => self.push_normal_application_tasks(
+                    current,
+                    base,
+                    span,
+                  )
+                }
+                _ => self.push_normal_application_tasks(current, base, span)
+              }
+              SelfHostResolvedType::FunctionType(parameters, result) => {
+                self.push_normalization_task(
+                  current,
+                  4u32,
+                  self.normalization_results.length(),
+                )
+                self.push_normalization_task(result, 0u32, 0u32)
+                let mut index = parameters.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.push_normalization_task(
+                      self.interner.arguments[parameters.start + next],
+                      0u32,
+                      0u32,
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+            }
+          }
+        } else if state == 1u32 {
+          self.finish_normal_application(current, result_start)
+        } else if state == 2u32 {
+          self.finish_alias_arguments(current, result_start)
+        } else if state == 3u32 {
+          let result = self.normalization_results[result_start]
+          self.normalizations[current] = result
+        } else if state == 4u32 {
+          let parameter_count = match self.interner.types[current] {
+            SelfHostResolvedType::FunctionType(parameters, _) => parameters.length
+            _ => 0u32
+          }
+          self.finish_normal_function(current, result_start, parameter_count)
+        } else {
+          self.finish_normal_product(current, result_start)
+        }
+        continue self.normalization_types.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.normalization_results[0u32]
+  }
+
+  fn push_normal_application_tasks(
+    self,
+    current: U32,
+    base: U32,
+    span: SelfHostHirSpan,
+  ) -> Unit {
+    self.push_normalization_task(
+      current,
+      1u32,
+      self.normalization_results.length(),
+    )
+    let mut index = span.length
+    let _ = while index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        self.push_normalization_task(
+          self.interner.arguments[span.start + next],
+          0u32,
+          0u32,
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.push_normalization_task(base, 0u32, 0u32)
+  }
+
+  fn normalize_signature_tables(self) -> Unit {
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < self.parameter_types.length() {
+        self.parameter_types[current] = self.normalize_type(
+          self.parameter_types[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.callable_return_types.length() {
+        self.callable_return_types[current] = self.normalize_type(
+          self.callable_return_types[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.lambda_parameter_types.length() {
+        self.lambda_parameter_types[current] = self.normalize_type(
+          self.lambda_parameter_types[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.lambda_return_types.length() {
+        self.lambda_return_types[current] = self.normalize_type(
+          self.lambda_return_types[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.field_types.length() {
+        self.field_types[current] = self.normalize_type(self.field_types[current])
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.signature_type_lists.length() {
+        self.signature_type_lists[current] = self.normalize_type(
+          self.signature_type_lists[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.impl_target_types.length() {
+        self.impl_trait_types[current] = match self.impl_trait_types[current] {
+          Option::Some(type_) => Option::Some(self.normalize_type(type_))
+          Option::None => Option::None
+        }
+        self.impl_target_types[current] = self.normalize_type(
+          self.impl_target_types[current],
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn resolve_callable_function_types(self) -> Unit {
+    let mut index = 0u32
+    for callable in self.collected.callables {
+      let parameters = self.collected.parameters_of(callable.declaration)
+      self.application_scratch.clear()
+      let mut parameter = parameters.start
+      let _ = while parameter {
+        current => if current < self_host_u32_add(
+          parameters.start,
+          parameters.length,
+        ) {
+          self.application_scratch.push(self.parameter_types[current])
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self.callable_function_types[index] = self.interner.intern_function(
+        self.application_scratch,
+        self.callable_return_types[index],
+      )
+      index = index + 1u32
+    }
+    index = 0u32
+    for lambda in self.collected.lambdas {
+      self.application_scratch.clear()
+      let mut parameter = lambda.parameters.start
+      let _ = while parameter {
+        current => if current < self_host_u32_add(
+          lambda.parameters.start,
+          lambda.parameters.length,
+        ) {
+          self.application_scratch.push(self.lambda_parameter_types[current])
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self.lambda_function_types[index] = self.interner.intern_function(
+        self.application_scratch,
+        self.lambda_return_types[index],
+      )
+      index = index + 1u32
+    }
+  }
+
+  fn normalize_aliases(self, requested_limit: Option<U32>) -> Unit {
+    let scaled = self.interner.types.length() * 64u32
+    self.alias_expansion_limit = match requested_limit {
+      Option::Some(value) => value
+      Option::None => if scaled > 4096u32 {
+        scaled
+      } else {
+        4096u32
+      }
+    }
+    self.ensure_normalization_slots()
+    self.normalize_signature_tables()
+    self.resolve_callable_function_types()
+  }
+
+  fn sort_diagnostics(self) -> Unit {
+    let mut index = 1u32
+    let _ = while index {
+      current => if current < self.diagnostics.length() {
+        let value = self.diagnostics[current]
+        let destination = while current {
+          position => if position > 0u32 && self.diagnostic_after(
+            self.diagnostics[position - 1u32],
+            value,
+          ) {
+            self.diagnostics[position] = self.diagnostics[position - 1u32]
+            continue position - 1u32
+          } else {
+            break position
+          }
+        }
+        self.diagnostics[destination] = value
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn diagnostic_after(
+    self,
+    left: SelfHostTypeDiagnostic,
+    right: SelfHostTypeDiagnostic,
+  ) -> Bool {
+    if left.offset() > right.offset() {
+      true
+    } else if left.offset() < right.offset() {
+      false
+    } else {
+      left.rank() > right.rank()
+    }
+  }
+
+  fn finish(self) -> SelfHostResolvedModuleTypes {
+    self.sort_diagnostics()
+    SelfHostResolvedModuleTypes::{
+      module_id: self.collected.module_id
+      types: self.interner.types
+      type_arguments: self.interner.arguments
+      syntax_types: self.syntax_types
+      declaration_types: self.declaration_types
+      generic_parameter_types: self.generic_parameter_types
+      generic_bound_types: self.generic_bound_types
+      parameter_types: self.parameter_types
+      callable_return_types: self.callable_return_types
+      callable_function_types: self.callable_function_types
+      lambda_parameter_types: self.lambda_parameter_types
+      lambda_return_types: self.lambda_return_types
+      lambda_function_types: self.lambda_function_types
+      explicit_call_type_arguments: self.explicit_call_type_arguments
+      field_types: self.field_types
+      variant_payloads: self.variant_payloads
+      signature_type_lists: self.signature_type_lists
+      alias_target_types: self.alias_target_types
+      impl_trait_types: self.impl_trait_types
+      impl_target_types: self.impl_target_types
+      alias_dependencies: self.alias_dependencies
+      alias_dependency_declarations: self.alias_dependency_declarations
+      alias_is_cyclic: self.alias_is_cyclic
+      alias_cycles: self.alias_cycles
+      alias_cycle_declarations: self.alias_cycle_declarations
+      alias_expansion_work: self.alias_expansion_work
+      alias_expansion_limit: self.alias_expansion_limit
+      diagnostics: self.diagnostics
+      error_type: self.interner.error_type
+      primitive_types: self.interner.primitive_types
+    }
+  }
+}
+
+fn self_host_resolve_module_types_with_alias_expansion_limit(
+  collected: SelfHostCollectedModule,
+  limit: Option<U32>,
+) -> SelfHostResolvedModuleTypes {
+  let resolver = SelfHostTypeResolver::new(collected)
+  resolver.resolve_signatures()
+  resolver.collect_alias_dependencies()
+  resolver.find_alias_cycles()
+  resolver.normalize_aliases(limit)
+  resolver.finish()
+}
+
+fn self_host_resolve_module_types(
+  collected: SelfHostCollectedModule,
+) -> SelfHostResolvedModuleTypes {
+  self_host_resolve_module_types_with_alias_expansion_limit(
+    collected,
+    Option::None,
+  )
+}

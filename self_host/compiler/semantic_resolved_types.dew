@@ -1,0 +1,586 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.string
+
+pub enum SelfHostPrimitiveType {
+  UnitType
+  BoolType
+  I32Type
+  U32Type
+  I64Type
+  U64Type
+  F32Type
+  F64Type
+  StringType
+  NeverType
+  I8Type
+  I16Type
+  U8Type
+  U16Type
+  BytesType
+  V128Type
+  Swar32Type
+  Swar64Type
+  I8x4Type
+  U8x4Type
+  I16x2Type
+  U16x2Type
+  I8x8Type
+  U8x8Type
+  I16x4Type
+  U16x4Type
+  I32x2Type
+  U32x2Type
+  I8x16Type
+  U8x16Type
+  I16x8Type
+  U16x8Type
+  I32x4Type
+  U32x4Type
+  I64x2Type
+  U64x2Type
+  F32x4Type
+  F64x2Type
+  StringViewType
+  StringBuilderType
+  BytesBuilderType
+}
+
+impl SelfHostPrimitiveType {
+  fn rank(self) -> U32 {
+    match self {
+      SelfHostPrimitiveType::UnitType => 0u32
+      SelfHostPrimitiveType::BoolType => 1u32
+      SelfHostPrimitiveType::I32Type => 2u32
+      SelfHostPrimitiveType::U32Type => 3u32
+      SelfHostPrimitiveType::I64Type => 4u32
+      SelfHostPrimitiveType::U64Type => 5u32
+      SelfHostPrimitiveType::F32Type => 6u32
+      SelfHostPrimitiveType::F64Type => 7u32
+      SelfHostPrimitiveType::StringType => 8u32
+      SelfHostPrimitiveType::NeverType => 9u32
+      SelfHostPrimitiveType::I8Type => 10u32
+      SelfHostPrimitiveType::I16Type => 11u32
+      SelfHostPrimitiveType::U8Type => 12u32
+      SelfHostPrimitiveType::U16Type => 13u32
+      SelfHostPrimitiveType::BytesType => 14u32
+      SelfHostPrimitiveType::V128Type => 15u32
+      SelfHostPrimitiveType::Swar32Type => 16u32
+      SelfHostPrimitiveType::Swar64Type => 17u32
+      SelfHostPrimitiveType::I8x4Type => 18u32
+      SelfHostPrimitiveType::U8x4Type => 19u32
+      SelfHostPrimitiveType::I16x2Type => 20u32
+      SelfHostPrimitiveType::U16x2Type => 21u32
+      SelfHostPrimitiveType::I8x8Type => 22u32
+      SelfHostPrimitiveType::U8x8Type => 23u32
+      SelfHostPrimitiveType::I16x4Type => 24u32
+      SelfHostPrimitiveType::U16x4Type => 25u32
+      SelfHostPrimitiveType::I32x2Type => 26u32
+      SelfHostPrimitiveType::U32x2Type => 27u32
+      SelfHostPrimitiveType::I8x16Type => 28u32
+      SelfHostPrimitiveType::U8x16Type => 29u32
+      SelfHostPrimitiveType::I16x8Type => 30u32
+      SelfHostPrimitiveType::U16x8Type => 31u32
+      SelfHostPrimitiveType::I32x4Type => 32u32
+      SelfHostPrimitiveType::U32x4Type => 33u32
+      SelfHostPrimitiveType::I64x2Type => 34u32
+      SelfHostPrimitiveType::U64x2Type => 35u32
+      SelfHostPrimitiveType::F32x4Type => 36u32
+      SelfHostPrimitiveType::F64x2Type => 37u32
+      SelfHostPrimitiveType::StringViewType => 38u32
+      SelfHostPrimitiveType::StringBuilderType => 39u32
+      SelfHostPrimitiveType::BytesBuilderType => 40u32
+    }
+  }
+}
+
+fn self_host_primitive_type_from_name(
+  name: String,
+) -> Option<SelfHostPrimitiveType> {
+  match name {
+    "Unit" => Option::Some(SelfHostPrimitiveType::UnitType)
+    "Bool" => Option::Some(SelfHostPrimitiveType::BoolType)
+    "I32" => Option::Some(SelfHostPrimitiveType::I32Type)
+    "U32" => Option::Some(SelfHostPrimitiveType::U32Type)
+    "I64" => Option::Some(SelfHostPrimitiveType::I64Type)
+    "U64" => Option::Some(SelfHostPrimitiveType::U64Type)
+    "F32" => Option::Some(SelfHostPrimitiveType::F32Type)
+    "F64" => Option::Some(SelfHostPrimitiveType::F64Type)
+    "String" => Option::Some(SelfHostPrimitiveType::StringType)
+    "Never" => Option::Some(SelfHostPrimitiveType::NeverType)
+    "I8" => Option::Some(SelfHostPrimitiveType::I8Type)
+    "I16" => Option::Some(SelfHostPrimitiveType::I16Type)
+    "U8" => Option::Some(SelfHostPrimitiveType::U8Type)
+    "U16" => Option::Some(SelfHostPrimitiveType::U16Type)
+    "Bytes" => Option::Some(SelfHostPrimitiveType::BytesType)
+    "V128" => Option::Some(SelfHostPrimitiveType::V128Type)
+    "Swar32" => Option::Some(SelfHostPrimitiveType::Swar32Type)
+    "Swar64" => Option::Some(SelfHostPrimitiveType::Swar64Type)
+    "I8x4" => Option::Some(SelfHostPrimitiveType::I8x4Type)
+    "U8x4" => Option::Some(SelfHostPrimitiveType::U8x4Type)
+    "I16x2" => Option::Some(SelfHostPrimitiveType::I16x2Type)
+    "U16x2" => Option::Some(SelfHostPrimitiveType::U16x2Type)
+    "I8x8" => Option::Some(SelfHostPrimitiveType::I8x8Type)
+    "U8x8" => Option::Some(SelfHostPrimitiveType::U8x8Type)
+    "I16x4" => Option::Some(SelfHostPrimitiveType::I16x4Type)
+    "U16x4" => Option::Some(SelfHostPrimitiveType::U16x4Type)
+    "I32x2" => Option::Some(SelfHostPrimitiveType::I32x2Type)
+    "U32x2" => Option::Some(SelfHostPrimitiveType::U32x2Type)
+    "I8x16" => Option::Some(SelfHostPrimitiveType::I8x16Type)
+    "U8x16" => Option::Some(SelfHostPrimitiveType::U8x16Type)
+    "I16x8" => Option::Some(SelfHostPrimitiveType::I16x8Type)
+    "U16x8" => Option::Some(SelfHostPrimitiveType::U16x8Type)
+    "I32x4" => Option::Some(SelfHostPrimitiveType::I32x4Type)
+    "U32x4" => Option::Some(SelfHostPrimitiveType::U32x4Type)
+    "I64x2" => Option::Some(SelfHostPrimitiveType::I64x2Type)
+    "U64x2" => Option::Some(SelfHostPrimitiveType::U64x2Type)
+    "F32x4" => Option::Some(SelfHostPrimitiveType::F32x4Type)
+    "F64x2" => Option::Some(SelfHostPrimitiveType::F64x2Type)
+    "StringView" => Option::Some(SelfHostPrimitiveType::StringViewType)
+    "StringBuilder" => Option::Some(SelfHostPrimitiveType::StringBuilderType)
+    "BytesBuilder" => Option::Some(SelfHostPrimitiveType::BytesBuilderType)
+    _ => Option::None
+  }
+}
+
+pub enum SelfHostResolvedType {
+  ErrorType
+  PrimitiveType(SelfHostPrimitiveType)
+  GenericParameterType(U64)
+  NominalType(U64)
+  TraitType(U64)
+  SelfType(U64)
+  ProductType(SelfHostHirSpan)
+  AppliedType(U32, SelfHostHirSpan)
+  FunctionType(SelfHostHirSpan, U32)
+}
+
+pub enum SelfHostTypeDiagnostic {
+  ReservedTypeName(U64, U32, U32)
+  UnknownType(U32, U64, U32)
+  UnknownTrait(U32, U64, U32)
+  ExpectedTraitType(U32, U64, U32)
+  TypeArityMismatch(U32, U32, U32, U64, U32)
+  TypeNotApplicable(U32, U64, U32)
+  SelfOutsideContext(U64, U32)
+  AliasCycle(SelfHostHirSpan, U32)
+  AliasExpansionLimit(U64, U32, U32)
+}
+
+impl SelfHostTypeDiagnostic {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostTypeDiagnostic::ReservedTypeName(_, _, offset) => offset
+      SelfHostTypeDiagnostic::UnknownType(_, _, offset) => offset
+      SelfHostTypeDiagnostic::UnknownTrait(_, _, offset) => offset
+      SelfHostTypeDiagnostic::ExpectedTraitType(_, _, offset) => offset
+      SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, offset) => offset
+      SelfHostTypeDiagnostic::TypeNotApplicable(_, _, offset) => offset
+      SelfHostTypeDiagnostic::SelfOutsideContext(_, offset) => offset
+      SelfHostTypeDiagnostic::AliasCycle(_, offset) => offset
+      SelfHostTypeDiagnostic::AliasExpansionLimit(_, _, offset) => offset
+    }
+  }
+
+  fn rank(self) -> U32 {
+    match self {
+      SelfHostTypeDiagnostic::ReservedTypeName(_, _, _) => 0u32
+      SelfHostTypeDiagnostic::UnknownType(_, _, _) => 1u32
+      SelfHostTypeDiagnostic::UnknownTrait(_, _, _) => 2u32
+      SelfHostTypeDiagnostic::ExpectedTraitType(_, _, _) => 3u32
+      SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, _) => 4u32
+      SelfHostTypeDiagnostic::TypeNotApplicable(_, _, _) => 5u32
+      SelfHostTypeDiagnostic::SelfOutsideContext(_, _) => 6u32
+      SelfHostTypeDiagnostic::AliasCycle(_, _) => 7u32
+      SelfHostTypeDiagnostic::AliasExpansionLimit(_, _, _) => 8u32
+    }
+  }
+}
+
+pub struct SelfHostResolvedModuleTypes {
+  module_id: U64
+  types: Array<SelfHostResolvedType>
+  type_arguments: Array<U32>
+  syntax_types: Array<U32>
+  declaration_types: Array<U32>
+  generic_parameter_types: Array<U32>
+  generic_bound_types: Array<U32>
+  parameter_types: Array<U32>
+  callable_return_types: Array<U32>
+  callable_function_types: Array<U32>
+  lambda_parameter_types: Array<U32>
+  lambda_return_types: Array<U32>
+  lambda_function_types: Array<U32>
+  explicit_call_type_arguments: Array<U32>
+  field_types: Array<U32>
+  variant_payloads: Array<SelfHostHirSpan>
+  signature_type_lists: Array<U32>
+  alias_target_types: Array<U32>
+  impl_trait_types: Array<Option<U32>>
+  impl_target_types: Array<U32>
+  alias_dependencies: Array<SelfHostHirSpan>
+  alias_dependency_declarations: Array<U64>
+  alias_is_cyclic: Array<Bool>
+  alias_cycles: Array<SelfHostHirSpan>
+  alias_cycle_declarations: Array<U64>
+  alias_expansion_work: U32
+  alias_expansion_limit: U32
+  diagnostics: Array<SelfHostTypeDiagnostic>
+  error_type: U32
+  primitive_types: Array<U32>
+}
+
+impl SelfHostResolvedModuleTypes {
+  fn primitive(self, primitive: SelfHostPrimitiveType) -> U32 {
+    self.primitive_types[primitive.rank()]
+  }
+
+  fn declaration_type(self, declaration: U64) -> U32 {
+    if self_host_semantic_id_module(declaration) != self.module_id {
+      self.error_type
+    } else {
+      let local = self_host_semantic_id_local(declaration)
+      if local >= self.declaration_types.length() {
+        self.error_type
+      } else {
+        self.declaration_types[local]
+      }
+    }
+  }
+
+  fn syntax_type(self, syntax: U32) -> U32 {
+    self.syntax_types[syntax]
+  }
+}
+
+fn self_host_empty_type_buckets() -> Map<U64, U32> {
+  Map::empty()
+}
+
+struct SelfHostResolvedTypeInterner {
+  types: Array<SelfHostResolvedType>
+  arguments: Array<U32>
+  buckets: Map<U64, U32>
+  next: Array<U32>
+  hashes: Array<U64>
+  primitive_types: Array<U32>
+  mut error_type: U32
+}
+
+fn self_host_type_hash_mix(hash: U64, value: U64) -> U64 {
+  (hash ^ value) * 1099511628211u64
+}
+
+impl SelfHostResolvedTypeInterner {
+  fn new() -> SelfHostResolvedTypeInterner {
+    let interner = SelfHostResolvedTypeInterner::{
+      types: []
+      arguments: []
+      buckets: self_host_empty_type_buckets()
+      next: []
+      hashes: []
+      primitive_types: []
+      error_type: 0u32
+    }
+    interner.error_type = interner.intern_simple(
+      SelfHostResolvedType::ErrorType,
+      1u64,
+    )
+    let primitives = [
+      SelfHostPrimitiveType::UnitType,
+      SelfHostPrimitiveType::BoolType,
+      SelfHostPrimitiveType::I32Type,
+      SelfHostPrimitiveType::U32Type,
+      SelfHostPrimitiveType::I64Type,
+      SelfHostPrimitiveType::U64Type,
+      SelfHostPrimitiveType::F32Type,
+      SelfHostPrimitiveType::F64Type,
+      SelfHostPrimitiveType::StringType,
+      SelfHostPrimitiveType::NeverType,
+      SelfHostPrimitiveType::I8Type,
+      SelfHostPrimitiveType::I16Type,
+      SelfHostPrimitiveType::U8Type,
+      SelfHostPrimitiveType::U16Type,
+      SelfHostPrimitiveType::BytesType,
+      SelfHostPrimitiveType::V128Type,
+      SelfHostPrimitiveType::Swar32Type,
+      SelfHostPrimitiveType::Swar64Type,
+      SelfHostPrimitiveType::I8x4Type,
+      SelfHostPrimitiveType::U8x4Type,
+      SelfHostPrimitiveType::I16x2Type,
+      SelfHostPrimitiveType::U16x2Type,
+      SelfHostPrimitiveType::I8x8Type,
+      SelfHostPrimitiveType::U8x8Type,
+      SelfHostPrimitiveType::I16x4Type,
+      SelfHostPrimitiveType::U16x4Type,
+      SelfHostPrimitiveType::I32x2Type,
+      SelfHostPrimitiveType::U32x2Type,
+      SelfHostPrimitiveType::I8x16Type,
+      SelfHostPrimitiveType::U8x16Type,
+      SelfHostPrimitiveType::I16x8Type,
+      SelfHostPrimitiveType::U16x8Type,
+      SelfHostPrimitiveType::I32x4Type,
+      SelfHostPrimitiveType::U32x4Type,
+      SelfHostPrimitiveType::I64x2Type,
+      SelfHostPrimitiveType::U64x2Type,
+      SelfHostPrimitiveType::F32x4Type,
+      SelfHostPrimitiveType::F64x2Type,
+      SelfHostPrimitiveType::StringViewType,
+      SelfHostPrimitiveType::StringBuilderType,
+      SelfHostPrimitiveType::BytesBuilderType,
+    ]
+    for primitive in primitives {
+      interner.primitive_types.push(
+        interner.intern_simple(
+          SelfHostResolvedType::PrimitiveType(primitive),
+          self_host_type_hash_mix(2u64, u32_into_u64(primitive.rank())),
+        ),
+      )
+    }
+    interner
+  }
+
+  fn insert(
+    self,
+    type_: SelfHostResolvedType,
+    hash: U64,
+  ) -> U32 {
+    let id = self.types.length()
+    let previous = match self.buckets.get(hash) {
+      Option::Some(value) => value
+      Option::None => 4294967295u32
+    }
+    self.types.push(type_)
+    self.hashes.push(hash)
+    self.next.push(previous)
+    self.buckets.set(hash, id)
+    id
+  }
+
+  fn simple_equal(
+    self,
+    left: SelfHostResolvedType,
+    right: SelfHostResolvedType,
+  ) -> Bool {
+    match left {
+      SelfHostResolvedType::ErrorType => right is SelfHostResolvedType::ErrorType
+      SelfHostResolvedType::PrimitiveType(value) => match right {
+        SelfHostResolvedType::PrimitiveType(other) => value.rank() == other.rank()
+        _ => false
+      }
+      SelfHostResolvedType::GenericParameterType(value) => match right {
+        SelfHostResolvedType::GenericParameterType(other) => value == other
+        _ => false
+      }
+      SelfHostResolvedType::NominalType(value) => match right {
+        SelfHostResolvedType::NominalType(other) => value == other
+        _ => false
+      }
+      SelfHostResolvedType::TraitType(value) => match right {
+        SelfHostResolvedType::TraitType(other) => value == other
+        _ => false
+      }
+      SelfHostResolvedType::SelfType(value) => match right {
+        SelfHostResolvedType::SelfType(other) => value == other
+        _ => false
+      }
+      _ => false
+    }
+  }
+
+  fn intern_simple(
+    self,
+    type_: SelfHostResolvedType,
+    hash: U64,
+  ) -> U32 {
+    let mut candidate = match self.buckets.get(hash) {
+      Option::Some(value) => value
+      Option::None => 4294967295u32
+    }
+    while candidate {
+      current => if current != 4294967295u32 {
+        if self.simple_equal(self.types[current], type_) {
+          break current
+        }
+        continue self.next[current]
+      } else {
+        break self.insert(type_, hash)
+      }
+    }
+  }
+
+  fn intern_primitive(self, primitive: SelfHostPrimitiveType) -> U32 {
+    self.primitive_types[primitive.rank()]
+  }
+
+  fn intern_generic(self, parameter: U64) -> U32 {
+    self.intern_simple(
+      SelfHostResolvedType::GenericParameterType(parameter),
+      self_host_type_hash_mix(3u64, parameter),
+    )
+  }
+
+  fn intern_nominal(self, declaration: U64) -> U32 {
+    self.intern_simple(
+      SelfHostResolvedType::NominalType(declaration),
+      self_host_type_hash_mix(4u64, declaration),
+    )
+  }
+
+  fn intern_trait(self, declaration: U64) -> U32 {
+    self.intern_simple(
+      SelfHostResolvedType::TraitType(declaration),
+      self_host_type_hash_mix(5u64, declaration),
+    )
+  }
+
+  fn intern_self(self, declaration: U64) -> U32 {
+    self.intern_simple(
+      SelfHostResolvedType::SelfType(declaration),
+      self_host_type_hash_mix(6u64, declaration),
+    )
+  }
+
+  fn span_matches(
+    self,
+    span: SelfHostHirSpan,
+    values: Array<U32>,
+  ) -> Bool {
+    if span.length != values.length() {
+      false
+    } else {
+      let mut equal = true
+      let _ = while 0u32 {
+        index => if index < span.length {
+          if self.arguments[span.start + index] != values[index] {
+            equal = false
+          }
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      equal
+    }
+  }
+
+  fn intern_product(self, fields: Array<U32>) -> U32 {
+    let mut hash = 7u64
+    for field in fields {
+      hash = self_host_type_hash_mix(hash, self.hashes[field])
+    }
+    hash = self_host_type_hash_mix(hash, u32_into_u64(fields.length()))
+    let mut candidate = match self.buckets.get(hash) {
+      Option::Some(value) => value
+      Option::None => 4294967295u32
+    }
+    while candidate {
+      current => if current != 4294967295u32 {
+        match self.types[current] {
+          SelfHostResolvedType::ProductType(span) => if self.span_matches(span, fields) {
+            break current
+          }
+          _ => {}
+        }
+        continue self.next[current]
+      } else {
+        let start = self.arguments.length()
+        for field in fields {
+          self.arguments.push(field)
+        }
+        break self.insert(
+          SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+            start: start
+            length: fields.length()
+          }),
+          hash,
+        )
+      }
+    }
+  }
+
+  fn intern_applied(
+    self,
+    base: U32,
+    arguments: Array<U32>,
+  ) -> U32 {
+    let mut hash = self_host_type_hash_mix(8u64, self.hashes[base])
+    for argument in arguments {
+      hash = self_host_type_hash_mix(hash, self.hashes[argument])
+    }
+    hash = self_host_type_hash_mix(hash, u32_into_u64(arguments.length()))
+    let mut candidate = match self.buckets.get(hash) {
+      Option::Some(value) => value
+      Option::None => 4294967295u32
+    }
+    while candidate {
+      current => if current != 4294967295u32 {
+        match self.types[current] {
+          SelfHostResolvedType::AppliedType(other_base, span) => if other_base == base && self.span_matches(span, arguments) {
+            break current
+          }
+          _ => {}
+        }
+        continue self.next[current]
+      } else {
+        let start = self.arguments.length()
+        for argument in arguments {
+          self.arguments.push(argument)
+        }
+        break self.insert(
+          SelfHostResolvedType::AppliedType(
+            base,
+            SelfHostHirSpan::{
+              start: start
+              length: arguments.length()
+            },
+          ),
+          hash,
+        )
+      }
+    }
+  }
+
+  fn intern_function(
+    self,
+    parameters: Array<U32>,
+    result: U32,
+  ) -> U32 {
+    let mut hash = self_host_type_hash_mix(9u64, self.hashes[result])
+    for parameter in parameters {
+      hash = self_host_type_hash_mix(hash, self.hashes[parameter])
+    }
+    hash = self_host_type_hash_mix(hash, u32_into_u64(parameters.length()))
+    let mut candidate = match self.buckets.get(hash) {
+      Option::Some(value) => value
+      Option::None => 4294967295u32
+    }
+    while candidate {
+      current => if current != 4294967295u32 {
+        match self.types[current] {
+          SelfHostResolvedType::FunctionType(span, other_result) => if other_result == result && self.span_matches(span, parameters) {
+            break current
+          }
+          _ => {}
+        }
+        continue self.next[current]
+      } else {
+        let start = self.arguments.length()
+        for parameter in parameters {
+          self.arguments.push(parameter)
+        }
+        break self.insert(
+          SelfHostResolvedType::FunctionType(
+            SelfHostHirSpan::{
+              start: start
+              length: parameters.length()
+            },
+            result,
+          ),
+          hash,
+        )
+      }
+    }
+  }
+}

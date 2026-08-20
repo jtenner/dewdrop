@@ -98,9 +98,15 @@ Wago.
 
 ## Next phase
 
-1. Expand collected derive requests into deterministic synthetic impl HIR.
-2. Port resolved type interning and signature resolution.
-3. Add alias dependency collection, SCC cycle diagnostics, and normalization.
-4. Port module interface freezing and imported type/trait scopes.
-5. Replace recursive body lowering with the production explicit task stack
-   before compiler stress and fixed-point work.
+Resolved type interning, local signature resolution, alias dependency analysis,
+SCC diagnostics, generic substitution, and transparent normalization are now
+ported. See
+[`self-host-type-resolution-2026-08-20.md`](self-host-type-resolution-2026-08-20.md).
+
+The next dependency tranche is:
+
+1. Port module interface freezing and imported type/trait scopes.
+2. Expand collected derive requests into deterministic synthetic impl HIR.
+3. Port body name resolution and imported value semantics.
+4. Replace recursive body lowering with the production explicit task stack
+   before broader compiler stress and fixed-point work.

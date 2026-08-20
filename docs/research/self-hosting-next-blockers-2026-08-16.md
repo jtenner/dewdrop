@@ -7,8 +7,11 @@ diagnostic rendering, Arena, BLAKE3, explicit UTF-8 codec, and standalone
 no-provider linker work is complete.
 
 The path, filesystem, process, SHA-256, UTF-8, Facet adapter, package-codec, and
-source-Bytes request tranches are now complete. The next work is the generated
-production Starshine object-model ABI and the compiler port.
+source-Bytes request tranches are complete. The generated production Starshine
+object-model ABI, tokenizer, parser, semantic collection, flat HIR, local type
+resolution, and alias normalization are also complete. The next compiler work is
+frozen interfaces, imported semantic scopes, derive expansion, and body name
+resolution.
 
 ## 1. P0: compiler host boundary
 

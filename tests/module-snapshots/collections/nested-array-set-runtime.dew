@@ -1,0 +1,15 @@
+open dew.std.array
+
+fn compute_value(scratch: Array<U32>) -> U32 {
+  scratch.push(9u32)
+  scratch[0u32]
+}
+
+pub fn main() -> Unit {
+  let target = [1u32]
+  let scratch = [0u32]
+  scratch.clear()
+  target[0u32] = compute_value(scratch)
+  assert(target[0u32] == 9u32, "nested array set lost its receiver")
+  assert(scratch.length() == 1u32, "nested value call did not run")
+}

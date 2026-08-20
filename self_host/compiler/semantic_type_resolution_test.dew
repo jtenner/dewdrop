@@ -1,0 +1,304 @@
+open dew.std.option
+open dew.std.string_builder
+open dew.std.testing
+
+test "type resolution canonicalizes primitives generics and applications" {
+  let collected = self_host_collect_bytes(
+    40u64,
+    b"struct Pair<t> {\n  first: t\n  second: I32\n}\nenum Result<t> {\n  Ok(t)\n}\nfn identity<t>(value: Pair<t>) -> Pair<t> {\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "diagnostics")
+  assert(
+    resolved.field_types[0u32] == resolved.generic_parameter_types[0u32],
+    "generic field",
+  )
+  assert(
+    resolved.field_types[1u32] == resolved.primitive(SelfHostPrimitiveType::I32Type),
+    "primitive field",
+  )
+  let parameters = collected.parameters_of(collected.declarations[2u32].id)
+  assert(
+    resolved.parameter_types[parameters.start] == resolved.callable_return_types[0u32],
+    "canonical application",
+  )
+  match resolved.types[resolved.parameter_types[parameters.start]] {
+    SelfHostResolvedType::AppliedType(base, arguments) => {
+      assert(arguments.length == 1u32, "argument count")
+      match resolved.types[base] {
+        SelfHostResolvedType::NominalType(declaration) => assert(
+          declaration == collected.declarations[0u32].id,
+          "Pair constructor",
+        )
+        _ => assert(false, "expected nominal base")
+      }
+    }
+    _ => assert(false, "expected applied type")
+  }
+  assert(
+    self_host_u32_equal(resolved.variant_payloads[0u32].length, 1u32),
+    "variant payload",
+  )
+}
+
+test "type resolution diagnoses unknown names and generic arity" {
+  let collected = self_host_collect_bytes(
+    41u64,
+    b"struct Box<t> {}\nfn bad<t>(a: Missing, b: Box, c: I32<String>, d: t<I32>, e: Unknown) -> Unit {}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let mut unknown = 0u32
+  let mut arity = 0u32
+  let mut not_applicable = 0u32
+  for diagnostic in resolved.diagnostics {
+    match diagnostic {
+      SelfHostTypeDiagnostic::UnknownType(_, _, _) => {
+        unknown = unknown + 1u32
+      }
+      SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, _) => {
+        arity = arity + 1u32
+      }
+      SelfHostTypeDiagnostic::TypeNotApplicable(_, _, _) => {
+        not_applicable = not_applicable + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(unknown == 2u32, "unknown count")
+  assert(arity == 2u32, "arity count")
+  assert(not_applicable == 1u32, "not applicable count")
+}
+
+test "trait and impl signatures resolve parent generic and Self scopes" {
+  let collected = self_host_collect_bytes(
+    42u64,
+    b"trait Convert<t> {\n  fn convert(self, value: t) -> Self\n}\nstruct Box<t> {\n  value: t\n}\nimpl<a> Convert<a> for Box<a> {\n  fn convert(self, value: a) -> a {\n    value\n  }\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "diagnostics")
+  match resolved.impl_trait_types[0u32] {
+    Option::Some(type_) => match resolved.types[type_] {
+      SelfHostResolvedType::AppliedType(base, _) => match resolved.types[base] {
+        SelfHostResolvedType::TraitType(declaration) => assert(
+          declaration == collected.declarations[0u32].id,
+          "trait constructor",
+        )
+        _ => assert(false, "expected trait")
+      }
+      _ => assert(false, "expected applied trait")
+    }
+    Option::None => assert(false, "missing trait")
+  }
+  let trait_parameters = collected.parameters_of(collected.methods[0u32].id)
+  match resolved.types[resolved.parameter_types[trait_parameters.start]] {
+    SelfHostResolvedType::SelfType(declaration) => assert(
+      declaration == collected.declarations[0u32].id,
+      "trait Self",
+    )
+    _ => assert(false, "expected Self")
+  }
+}
+
+test "function aliases normalize signatures canonically" {
+  let collected = self_host_collect_bytes(
+    43u64,
+    b"type Callback<t> = fn(t) -> t\nfn pass(value: Callback<I32>) -> fn(I32) -> I32 {\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "diagnostics")
+  assert(
+    resolved.parameter_types[0u32] == resolved.callable_return_types[0u32],
+    "normalized callback",
+  )
+  match resolved.types[resolved.parameter_types[0u32]] {
+    SelfHostResolvedType::FunctionType(parameters, result) => {
+      assert(parameters.length == 1u32, "parameter count")
+      assert(
+        resolved.type_arguments[parameters.start] == resolved.primitive(
+          SelfHostPrimitiveType::I32Type,
+        ),
+        "parameter type",
+      )
+      assert(
+        result == resolved.primitive(SelfHostPrimitiveType::I32Type),
+        "result type",
+      )
+    }
+    _ => assert(false, "expected function")
+  }
+}
+
+test "generic aliases substitute nested applications" {
+  let collected = self_host_collect_bytes(
+    44u64,
+    b"struct Pair<a, b> {}\ntype Left<t> = Pair<t, I32>\ntype Wrapped<u> = Left<Pair<u, u>>\nfn use(value: Wrapped<String>, again: Wrapped<String>) -> Left<String> {\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "diagnostics")
+  assert(
+    resolved.parameter_types[0u32] == resolved.parameter_types[1u32],
+    "canonical nested alias",
+  )
+  match resolved.types[resolved.parameter_types[0u32]] {
+    SelfHostResolvedType::AppliedType(_, outer) => {
+      match resolved.types[resolved.type_arguments[outer.start]] {
+        SelfHostResolvedType::AppliedType(_, inner) => {
+          assert(inner.length == 2u32, "inner pair")
+          assert(
+            resolved.type_arguments[inner.start] == resolved.primitive(
+              SelfHostPrimitiveType::StringType,
+            ),
+            "substituted String",
+          )
+        }
+        _ => assert(false, "expected nested Pair")
+      }
+    }
+    _ => assert(false, "expected outer Pair")
+  }
+}
+
+test "alias cycles are deterministic and poison transitive users" {
+  let collected = self_host_collect_bytes(
+    45u64,
+    b"type A = B\ntype B = C\ntype C = A\ntype Stable = I32\ntype SelfCycle = SelfCycle\ntype User = A\nfn use(value: User) -> Unit {}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.alias_cycles.length() == 2u32, "cycle count")
+  assert(
+    self_host_u32_equal(resolved.alias_cycles[0u32].length, 3u32),
+    "first cycle",
+  )
+  assert(
+    self_host_u32_equal(resolved.alias_cycles[1u32].length, 1u32),
+    "self cycle",
+  )
+  assert(resolved.alias_is_cyclic[0u32], "A cyclic")
+  assert(!resolved.alias_is_cyclic[3u32], "Stable acyclic")
+  assert(resolved.parameter_types[0u32] == resolved.error_type, "poison")
+}
+
+test "reserved names and trait expectations are diagnosed" {
+  let collected = self_host_collect_bytes(
+    46u64,
+    b"struct I32 {}\nstruct Display {}\nimpl Display for U32 {}\nimpl Missing for U32 {}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let mut reserved = 0u32
+  let mut expected_trait = 0u32
+  let mut unknown_trait = 0u32
+  for diagnostic in resolved.diagnostics {
+    match diagnostic {
+      SelfHostTypeDiagnostic::ReservedTypeName(_, _, _) => {
+        reserved = reserved + 1u32
+      }
+      SelfHostTypeDiagnostic::ExpectedTraitType(_, _, _) => {
+        expected_trait = expected_trait + 1u32
+      }
+      SelfHostTypeDiagnostic::UnknownTrait(_, _, _) => {
+        unknown_trait = unknown_trait + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(reserved == 1u32, "reserved count")
+  assert(expected_trait == 1u32, "expected trait count")
+  assert(unknown_trait == 1u32, "unknown trait count")
+}
+
+test "lambda signatures resolve in root generic context" {
+  let collected = self_host_collect_bytes(
+    47u64,
+    b"fn wrap<t>(value: t) -> t {\n  let callback = fn(item: t, transform: fn(t) -> I32) -> t {\n    item\n  }\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "diagnostics")
+  assert(resolved.lambda_parameter_types.length() == 2u32, "lambda parameters")
+  assert(
+    resolved.lambda_parameter_types[0u32] == resolved.generic_parameter_types[0u32],
+    "lambda generic",
+  )
+  assert(
+    resolved.lambda_return_types[0u32] == resolved.generic_parameter_types[0u32],
+    "lambda result",
+  )
+}
+
+fn self_host_cyclic_alias_source(count: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  let _ = while 0u32 {
+    index => if index < count {
+      builder.append("type Alias_")
+      builder.append_u32(index)
+      builder.append(" = Alias_")
+      builder.append_u32((index + 1u32) % count)
+      builder.append("\n")
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.finish().as_bytes()
+}
+
+test "alias SCC analysis remains iterative at depth 1024" {
+  let collected = self_host_collect_bytes(
+    48u64,
+    self_host_cyclic_alias_source(1024u32),
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.alias_cycles.length() == 1u32, "cycle count")
+  assert(
+    self_host_u32_equal(resolved.alias_cycles[0u32].length, 1024u32),
+    "cycle size",
+  )
+  assert(resolved.diagnostics.length() == 1u32, "diagnostic count")
+}
+
+fn self_host_acyclic_alias_source(count: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  builder.append("type Alias_0 = I32\n")
+  let _ = while 1u32 {
+    index => if index < count {
+      builder.append("type Alias_")
+      builder.append_u32(index)
+      builder.append(" = Alias_")
+      builder.append_u32(index - 1u32)
+      builder.append("\n")
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("fn use(value: Alias_")
+  builder.append_u32(count - 1u32)
+  builder.append(") -> I32 {\n  value\n}\n")
+  builder.finish().as_bytes()
+}
+
+test "alias normalization remains iterative at depth 1024" {
+  let collected = self_host_collect_bytes(
+    49u64,
+    self_host_acyclic_alias_source(1024u32),
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "diagnostics")
+  assert(resolved.alias_expansion_work == 1024u32, "expansion work")
+  assert(
+    resolved.parameter_types[0u32] == resolved.primitive(SelfHostPrimitiveType::I32Type),
+    "normalized type",
+  )
+}
+
+test "alias expansion limit emits one deterministic diagnostic" {
+  let collected = self_host_collect_bytes(
+    50u64,
+    b"type Count = I32\nfn use(value: Count) -> Count {\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types_with_alias_expansion_limit(
+    collected,
+    Option::Some(0u32),
+  )
+  assert(resolved.parameter_types[0u32] == resolved.error_type, "poison")
+  assert(resolved.diagnostics.length() == 1u32, "one diagnostic")
+}
