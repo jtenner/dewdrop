@@ -1,0 +1,211 @@
+open dew.std.option
+open dew.std.testing
+
+test "program manifests assign deterministic module and file identities" {
+  let program = self_host_collect_program_manifest(
+    200u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.first"
+          files: [
+            SelfHostManifestFile::{
+              path: "a.dew"
+              source: b"pub struct First {}\n"
+              test_only: false
+            },
+            SelfHostManifestFile::{
+              path: "b.dew"
+              source: b"pub fn value() -> I32 {\n  1\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.second"
+          files: [
+            SelfHostManifestFile::{
+              path: "main.dew"
+              source: b"pub struct Second {}\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  assert(program.diagnostics.length() == 0u32, "manifest diagnostics")
+  assert(program.modules.length() == 2u32, "module count")
+  let first = program.modules.at(0u32)
+  let second = program.modules.at(1u32)
+  assert(self_host_u64_equal(first.module_id, 200u64), "first module ID")
+  assert(self_host_u64_equal(second.module_id, 201u64), "second module ID")
+  assert(
+    self_host_u64_equal(
+      first.file_at(0u32),
+      self_host_make_file_id(200u64, 0u32),
+    ),
+    "first file ID",
+  )
+  assert(
+    self_host_u64_equal(
+      first.file_at(1u32),
+      self_host_make_file_id(200u64, 1u32),
+    ),
+    "second file ID",
+  )
+}
+
+test "program signature freezing resolves imported nominal signatures" {
+  let program = self_host_collect_program_manifest(
+    210u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.consumer"
+          files: [
+            SelfHostManifestFile::{
+              path: "consumer.dew"
+              source: b"open app.library\npub fn keep(value: Item<I32>) -> Item<I32> {\n  value\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.library"
+          files: [
+            SelfHostManifestFile::{
+              path: "library.dew"
+              source: b"pub struct Item<t> {}\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  assert(frozen.path_diagnostics.length() == 0u32, "path diagnostics")
+  assert(frozen.import_diagnostics.length() == 0u32, "import diagnostics")
+  let consumer_interface = frozen.interfaces.at(0u32)
+  assert(
+    consumer_interface.resolved_diagnostic_count() == 0u32,
+    "type diagnostics",
+  )
+  match consumer_interface.resolved_type_at(
+    consumer_interface.resolved_parameter_type(0u32),
+  ) {
+    SelfHostResolvedType::AppliedType(base, _) => match consumer_interface.resolved_type_at(
+      base,
+    ) {
+      SelfHostResolvedType::NominalType(declaration) => assert(
+        self_host_semantic_id_module(declaration) == 211u64,
+        "imported module identity",
+      )
+      _ => assert(false, "expected imported Item")
+    }
+    _ => assert(false, "expected applied Item")
+  }
+}
+
+test "two-stage signature freezing resolves cyclic module types" {
+  let program = self_host_collect_program_manifest(
+    220u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "cycle.a"
+          files: [
+            SelfHostManifestFile::{
+              path: "a.dew"
+              source: b"open cycle.b\npub struct A {}\npub fn from_b(value: B) -> B {\n  value\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "cycle.b"
+          files: [
+            SelfHostManifestFile::{
+              path: "b.dew"
+              source: b"open cycle.a\npub struct B {}\npub fn from_a(value: A) -> A {\n  value\n}\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  assert(frozen.import_diagnostics.length() == 0u32, "cycle import diagnostics")
+  let a = frozen.interfaces.at(0u32)
+  let b = frozen.interfaces.at(1u32)
+  assert(a.resolved_diagnostic_count() == 0u32, "cycle A diagnostics")
+  assert(b.resolved_diagnostic_count() == 0u32, "cycle B diagnostics")
+  match a.resolved_type_at(a.resolved_parameter_type(0u32)) {
+    SelfHostResolvedType::NominalType(declaration) => assert(
+      self_host_semantic_id_module(declaration) == 221u64,
+      "A imported B",
+    )
+    _ => assert(false, "expected B in A")
+  }
+  match b.resolved_type_at(b.resolved_parameter_type(0u32)) {
+    SelfHostResolvedType::NominalType(declaration) => assert(
+      self_host_semantic_id_module(declaration) == 220u64,
+      "B imported A",
+    )
+    _ => assert(false, "expected A in B")
+  }
+}
+
+test "program import diagnostics retain missing exact and wildcard paths" {
+  let program = self_host_collect_program_manifest(
+    230u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.main"
+          files: [
+            SelfHostManifestFile::{
+              path: "main.dew"
+              source: b"open missing.module\nopen missing.prefix.*\npub fn value() -> I32 {\n  1\n}\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  assert(frozen.path_diagnostics.length() == 2u32, "missing import count")
+}
+
+test "program manifests diagnose duplicate paths deterministically" {
+  let program = self_host_collect_program_manifest(
+    240u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.same"
+          files: [
+            SelfHostManifestFile::{
+              path: "same.dew"
+              source: b"pub struct First {}\n"
+              test_only: false
+            },
+            SelfHostManifestFile::{
+              path: "same.dew"
+              source: b"pub struct Second {}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "app.same"
+          files: []
+        },
+      ]
+    },
+  )
+  assert(program.diagnostics.length() == 2u32, "duplicate path count")
+}

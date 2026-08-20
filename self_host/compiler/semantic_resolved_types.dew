@@ -160,6 +160,8 @@ pub enum SelfHostTypeDiagnostic {
   ReservedTypeName(U64, U32, U32)
   UnknownType(U32, U64, U32)
   UnknownTrait(U32, U64, U32)
+  AmbiguousImportedType(U32, U64, U32)
+  AmbiguousImportedTrait(U32, U64, U32)
   ExpectedTraitType(U32, U64, U32)
   TypeArityMismatch(U32, U32, U32, U64, U32)
   TypeNotApplicable(U32, U64, U32)
@@ -174,6 +176,8 @@ impl SelfHostTypeDiagnostic {
       SelfHostTypeDiagnostic::ReservedTypeName(_, _, offset) => offset
       SelfHostTypeDiagnostic::UnknownType(_, _, offset) => offset
       SelfHostTypeDiagnostic::UnknownTrait(_, _, offset) => offset
+      SelfHostTypeDiagnostic::AmbiguousImportedType(_, _, offset) => offset
+      SelfHostTypeDiagnostic::AmbiguousImportedTrait(_, _, offset) => offset
       SelfHostTypeDiagnostic::ExpectedTraitType(_, _, offset) => offset
       SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, offset) => offset
       SelfHostTypeDiagnostic::TypeNotApplicable(_, _, offset) => offset
@@ -188,12 +192,14 @@ impl SelfHostTypeDiagnostic {
       SelfHostTypeDiagnostic::ReservedTypeName(_, _, _) => 0u32
       SelfHostTypeDiagnostic::UnknownType(_, _, _) => 1u32
       SelfHostTypeDiagnostic::UnknownTrait(_, _, _) => 2u32
-      SelfHostTypeDiagnostic::ExpectedTraitType(_, _, _) => 3u32
-      SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, _) => 4u32
-      SelfHostTypeDiagnostic::TypeNotApplicable(_, _, _) => 5u32
-      SelfHostTypeDiagnostic::SelfOutsideContext(_, _) => 6u32
-      SelfHostTypeDiagnostic::AliasCycle(_, _) => 7u32
-      SelfHostTypeDiagnostic::AliasExpansionLimit(_, _, _) => 8u32
+      SelfHostTypeDiagnostic::AmbiguousImportedType(_, _, _) => 3u32
+      SelfHostTypeDiagnostic::AmbiguousImportedTrait(_, _, _) => 4u32
+      SelfHostTypeDiagnostic::ExpectedTraitType(_, _, _) => 5u32
+      SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, _) => 6u32
+      SelfHostTypeDiagnostic::TypeNotApplicable(_, _, _) => 7u32
+      SelfHostTypeDiagnostic::SelfOutsideContext(_, _) => 8u32
+      SelfHostTypeDiagnostic::AliasCycle(_, _) => 9u32
+      SelfHostTypeDiagnostic::AliasExpansionLimit(_, _, _) => 10u32
     }
   }
 }
@@ -232,6 +238,18 @@ pub struct SelfHostResolvedModuleTypes {
 }
 
 impl SelfHostResolvedModuleTypes {
+  fn diagnostic_count(self) -> U32 {
+    self.diagnostics.length()
+  }
+
+  fn parameter_type(self, index: U32) -> U32 {
+    self.parameter_types[index]
+  }
+
+  fn type_at(self, index: U32) -> SelfHostResolvedType {
+    self.types[index]
+  }
+
   fn primitive(self, primitive: SelfHostPrimitiveType) -> U32 {
     self.primitive_types[primitive.rank()]
   }

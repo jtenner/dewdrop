@@ -1,0 +1,422 @@
+open dew.std.option
+open dew.std.testing
+
+fn self_host_test_freeze_interface(
+  module_id: U64,
+  path: String,
+  source: Bytes,
+) -> SelfHostFrozenModuleInterface {
+  let collected = self_host_collect_bytes(module_id, source)
+  let resolved = self_host_resolve_module_types(collected)
+  self_host_freeze_module_signature_interface(path, collected, resolved)
+}
+
+test "signature interfaces retain only public type declarations" {
+  let interface_ = self_host_test_freeze_interface(
+    101u64,
+    "app.library",
+    b"pub struct Item<t> {}\nstruct Hidden {}\npub trait Read {\n  fn read(self) -> I32\n}\npub type Count = I32\n",
+  )
+  assert(interface_.declaration_count() == 3u32, "public declaration count")
+  assert(
+    interface_.declaration_named(
+      "Item",
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    ) is Option::Some(_),
+    "Item missing",
+  )
+  assert(
+    interface_.declaration_named(
+      "Read",
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
+    ) is Option::Some(_),
+    "Read missing",
+  )
+  assert(
+    interface_.declaration_named(
+      "Hidden",
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    ) is Option::None,
+    "private type leaked",
+  )
+}
+
+test "open imports expose public types and traits" {
+  let consumer = self_host_collect_bytes(
+    102u64,
+    b"open app.library\npub fn keep(value: Item<I32>) -> Item<I32> {\n  value\n}\nimpl Read for Item<I32> {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(
+      103u64,
+      "app.library",
+      b"pub struct Item<t> {}\npub trait Read {}\n",
+    ),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  assert(scope.diagnostics.length() == 0u32, "scope diagnostics")
+  assert(scope.lookup_type("Item") is Option::Some(_), "opened type")
+  assert(scope.lookup_trait("Read") is Option::Some(_), "opened trait")
+}
+
+test "qualified imports retain aliases without opening names" {
+  let consumer = self_host_collect_bytes(
+    104u64,
+    b"import app.library as @api\npub fn keep(value: @api.Item) -> @api.Item {\n  value\n}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(
+      105u64,
+      "app.library",
+      b"pub struct Item {}\n",
+    ),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  assert(scope.lookup_alias("api") is Option::Some(1u32), "alias")
+  assert(scope.lookup_type("Item") is Option::None, "qualified import opened")
+  assert(
+    scope.lookup_module_type(1u32, "Item") is Option::Some(_),
+    "qualified type",
+  )
+}
+
+test "opened import collisions are deterministic" {
+  let consumer = self_host_collect_bytes(
+    106u64,
+    b"open app.first\nopen app.second\npub fn keep(value: Item) -> Unit {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(107u64, "app.first", b"pub struct Item {}\n"),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(108u64, "app.second", b"pub struct Item {}\n"),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.first", "app.second"],
+    interfaces,
+  )
+  assert(scope.type_is_ambiguous("Item"), "type ambiguity")
+  assert(scope.diagnostics.length() == 1u32, "ambiguity diagnostic")
+}
+
+test "opened imported signatures resolve canonical external types and traits" {
+  let consumer = self_host_collect_bytes(
+    112u64,
+    b"open app.library\npub struct Local {}\npub fn keep(value: Item<I32>) -> Item<I32> {\n  value\n}\nimpl Read for Local {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  let library = self_host_test_freeze_interface(
+    113u64,
+    "app.library",
+    b"pub struct Item<t> {}\npub trait Read {}\n",
+  )
+  interfaces.push(library)
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
+  assert(resolved.diagnostics.length() == 0u32, "type diagnostics")
+  match resolved.types[resolved.parameter_types[0u32]] {
+    SelfHostResolvedType::AppliedType(base, arguments) => {
+      assert(arguments.length == 1u32, "Item argument")
+      match resolved.types[base] {
+        SelfHostResolvedType::NominalType(declaration) => assert(
+          declaration == match library.declaration_named(
+            "Item",
+            SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+          ) {
+            Option::Some(value) => value
+            Option::None => 0u64
+          },
+          "external Item identity",
+        )
+        _ => assert(false, "expected imported nominal")
+      }
+    }
+    _ => assert(false, "expected imported application")
+  }
+  match resolved.impl_trait_types[0u32] {
+    Option::Some(type_) => match resolved.types[type_] {
+      SelfHostResolvedType::TraitType(_) => {}
+      _ => assert(false, "expected imported trait")
+    }
+    Option::None => assert(false, "missing imported trait")
+  }
+}
+
+test "qualified imported signatures resolve without opening names" {
+  let consumer = self_host_collect_bytes(
+    114u64,
+    b"import app.library as @api\npub struct Local {}\npub fn keep(value: @api.Item) -> @api.Item {\n  value\n}\nimpl @api.Read for Local {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(
+      115u64,
+      "app.library",
+      b"pub struct Item {}\npub trait Read {}\n",
+    ),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
+  assert(resolved.diagnostics.length() == 0u32, "qualified diagnostics")
+  assert(
+    resolved.parameter_types[0u32] == resolved.callable_return_types[0u32],
+    "qualified canonical type",
+  )
+  match resolved.impl_trait_types[0u32] {
+    Option::Some(type_) => match resolved.types[type_] {
+      SelfHostResolvedType::TraitType(_) => {}
+      _ => assert(false, "qualified trait type")
+    }
+    Option::None => assert(false, "qualified trait missing")
+  }
+}
+
+test "imported transparent aliases normalize consumer signatures" {
+  let consumer = self_host_collect_bytes(
+    116u64,
+    b"open app.library\npub fn keep(value: Count) -> Count {\n  value\n}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(
+      117u64,
+      "app.library",
+      b"pub type Count = I32\n",
+    ),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
+  assert(resolved.diagnostics.length() == 0u32, "alias diagnostics")
+  assert(
+    resolved.parameter_types[0u32] == resolved.primitive(
+      SelfHostPrimitiveType::I32Type,
+    ),
+    "imported alias normalization",
+  )
+}
+
+test "imported generic aliases substitute consumer arguments" {
+  let consumer = self_host_collect_bytes(
+    121u64,
+    b"open app.library\npub fn keep(value: Wrapped<I32>) -> Wrapped<I32> {\n  value\n}\npub fn callback(value: Callback<String>) -> fn(String) -> String {\n  value\n}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  let library = self_host_test_freeze_interface(
+    122u64,
+    "app.library",
+    b"pub struct Box<t> {}\npub type Wrapped<t> = Box<t>\npub type Callback<t> = fn(t) -> t\n",
+  )
+  interfaces.push(library)
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
+  assert(resolved.diagnostics.length() == 0u32, "generic alias diagnostics")
+  match resolved.types[resolved.parameter_types[0u32]] {
+    SelfHostResolvedType::AppliedType(base, arguments) => {
+      assert(arguments.length == 1u32, "Box argument")
+      match resolved.types[base] {
+        SelfHostResolvedType::NominalType(declaration) => assert(
+          declaration == match library.declaration_named(
+            "Box",
+            SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+          ) {
+            Option::Some(value) => value
+            Option::None => 0u64
+          },
+          "Box identity",
+        )
+        _ => assert(false, "expected imported Box")
+      }
+      assert(
+        resolved.type_arguments[arguments.start] == resolved.primitive(
+          SelfHostPrimitiveType::I32Type,
+        ),
+        "Wrapped argument",
+      )
+    }
+    _ => assert(false, "expected substituted Wrapped")
+  }
+  assert(
+    resolved.parameter_types[1u32] == resolved.callable_return_types[1u32],
+    "function alias",
+  )
+}
+
+test "imported generic aliases diagnose missing arguments" {
+  let consumer = self_host_collect_bytes(
+    123u64,
+    b"open app.library\npub fn bad(value: Wrapped) -> Unit {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(
+      124u64,
+      "app.library",
+      b"pub struct Box<t> {}\npub type Wrapped<t> = Box<t>\n",
+    ),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library"],
+    interfaces,
+  )
+  let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
+  assert(resolved.diagnostics.length() == 1u32, "arity diagnostic count")
+  match resolved.diagnostics[0u32] {
+    SelfHostTypeDiagnostic::TypeArityMismatch(_, 1u32, 0u32, _, _) => {}
+    _ => assert(false, "expected imported alias arity")
+  }
+}
+
+test "ambiguous opened imported types diagnose at use sites" {
+  let consumer = self_host_collect_bytes(
+    118u64,
+    b"open app.first\nopen app.second\npub fn keep(value: Item) -> Unit {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(119u64, "app.first", b"pub struct Item {}\n"),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(120u64, "app.second", b"pub struct Item {}\n"),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.first", "app.second"],
+    interfaces,
+  )
+  let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
+  assert(resolved.diagnostics.length() == 1u32, "ambiguity count")
+  match resolved.diagnostics[0u32] {
+    SelfHostTypeDiagnostic::AmbiguousImportedType(_, _, _) => {}
+    _ => assert(false, "expected imported ambiguity")
+  }
+}
+
+test "wildcard imports open matching module prefixes" {
+  let consumer = self_host_collect_bytes(
+    109u64,
+    b"open app.library.*\npub fn keep(left: Left, right: Right) -> Unit {}\n",
+  )
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  interfaces.push(
+    self_host_freeze_module_signature_interface(
+      "app.consumer",
+      consumer,
+      self_host_resolve_module_types(consumer),
+    ),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(110u64, "app.library.left", b"pub struct Left {}\n"),
+  )
+  interfaces.push(
+    self_host_test_freeze_interface(111u64, "app.library.right", b"pub struct Right {}\n"),
+  )
+  let scope = self_host_build_module_import_scope(
+    consumer,
+    0u32,
+    ["app.consumer", "app.library.left", "app.library.right"],
+    interfaces,
+  )
+  assert(scope.lookup_type("Left") is Option::Some(_), "Left missing")
+  assert(scope.lookup_type("Right") is Option::Some(_), "Right missing")
+}

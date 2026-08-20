@@ -52,19 +52,21 @@ and the focused type resolver suite passes after optimization.
 
 ## Current boundary
 
-This tranche resolves local module declarations only. Qualified and wildcard
-imports still require the module-interface and import-scope port. Nullable
-foreign-reference validation also remains with imported and standard semantic
-identity support.
+Signature-level module interfaces, qualified/open/wildcard imported types and
+traits, imported alias substitution, ambiguity diagnostics, and cyclic
+signature freezing are now ported. See
+[`self-host-module-interfaces-2026-08-20.md`](self-host-module-interfaces-2026-08-20.md).
 
-Derive requests are collected but are not expanded. Body names, inference,
-trait evidence, flow, lowering, layouts, specialization, WasmGC planning,
-linking, encoding, and the Dew compiler driver remain to port.
+Nullable foreign-reference validation still requires standard semantic identity
+support. Derive requests are collected but are not expanded. Body names,
+imported values and callables, inference, trait evidence, flow, lowering,
+layouts, specialization, WasmGC planning, linking, encoding, and the Dew
+compiler driver remain to port.
 
 ## Next phase
 
-1. Port frozen module interfaces and import scopes.
-2. Resolve qualified and wildcard imported types and traits.
-3. Port imported alias substitution and ambiguity diagnostics.
-4. Expand deterministic derive requests.
-5. Port body name resolution before inference.
+1. Expand deterministic derive requests.
+2. Port imported value and callable bindings.
+3. Port body name resolution before inference.
+4. Add full fields, variants, implementation evidence, fingerprints, and cache
+   codecs to frozen interfaces when their dependent phases are available.

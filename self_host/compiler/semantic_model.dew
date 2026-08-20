@@ -378,6 +378,18 @@ impl SelfHostCollectedModule {
     }
   }
 
+  fn file_at(self, index: U32) -> U64 {
+    self.files[index]
+  }
+
+  fn import_count(self) -> U32 {
+    self.imports.length()
+  }
+
+  fn import_at(self, index: U32) -> SelfHostCollectedImport {
+    self.imports[index]
+  }
+
   fn declaration_is_test_only(self, declaration: U64) -> Bool {
     if self_host_semantic_id_module(declaration) != self.module_id {
       false

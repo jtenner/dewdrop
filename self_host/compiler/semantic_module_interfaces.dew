@@ -1,0 +1,663 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.string
+
+fn self_host_interface_string_equal(left: String, right: String) -> Bool {
+  left == right
+}
+
+pub enum SelfHostFrozenInterfaceDeclarationKind {
+  FrozenTypeDeclaration
+  FrozenTraitDeclaration
+  FrozenValueDeclaration
+}
+
+pub struct SelfHostFrozenInterfaceDeclaration {
+  declaration: U64
+  name: String
+  kind: SelfHostFrozenInterfaceDeclarationKind
+  source_kind: SelfHostCollectedDeclKind
+  generic_parameter_count: U32
+  generic_parameters: SelfHostHirSpan
+  semantic_type: U32
+  location: SelfHostSourceLocation
+}
+
+pub struct SelfHostFrozenModuleInterface {
+  module_id: U64
+  path: String
+  resolved_types: SelfHostResolvedModuleTypes
+  declarations: Array<SelfHostFrozenInterfaceDeclaration>
+}
+
+pub struct SelfHostFrozenInterfaceList {
+  values: Array<SelfHostFrozenModuleInterface>
+}
+
+impl SelfHostFrozenInterfaceList {
+  fn new() -> SelfHostFrozenInterfaceList {
+    SelfHostFrozenInterfaceList::{
+      values: []
+    }
+  }
+
+  fn push(self, interface_: SelfHostFrozenModuleInterface) -> Unit {
+    self.values.push(interface_)
+  }
+
+  fn length(self) -> U32 {
+    self.values.length()
+  }
+
+  fn at(self, index: U32) -> SelfHostFrozenModuleInterface {
+    self.values[index]
+  }
+}
+
+impl SelfHostFrozenModuleInterface {
+  fn resolved_diagnostic_count(self) -> U32 {
+    self.resolved_types.diagnostic_count()
+  }
+
+  fn resolved_parameter_type(self, index: U32) -> U32 {
+    self.resolved_types.parameter_type(index)
+  }
+
+  fn resolved_type_at(self, index: U32) -> SelfHostResolvedType {
+    self.resolved_types.type_at(index)
+  }
+
+  fn declaration_count(self) -> U32 {
+    self.declarations.length()
+  }
+
+  fn declaration_at(self, index: U32) -> SelfHostFrozenInterfaceDeclaration {
+    self.declarations[index]
+  }
+
+  fn declaration_named(
+    self,
+    name: String,
+    kind: SelfHostFrozenInterfaceDeclarationKind,
+  ) -> Option<U64> {
+    let mut index = 0u32
+    while index {
+      current => if current < self.declaration_count() {
+        let declaration = self.declaration_at(current)
+        if self_host_interface_string_equal(declaration.name, name) &&
+          self_host_frozen_kind_equal(declaration.kind, kind) {
+          break Option::Some(declaration.declaration)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+}
+
+fn self_host_frozen_kind_equal(
+  left: SelfHostFrozenInterfaceDeclarationKind,
+  right: SelfHostFrozenInterfaceDeclarationKind,
+) -> Bool {
+  match left {
+    SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration => right is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration
+    SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration => right is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration
+    SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration => right is SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration
+  }
+}
+
+fn self_host_freeze_declaration_kind(
+  kind: SelfHostCollectedDeclKind,
+) -> Option<SelfHostFrozenInterfaceDeclarationKind> {
+  match kind {
+    SelfHostCollectedDeclKind::StructDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    )
+    SelfHostCollectedDeclKind::EnumDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    )
+    SelfHostCollectedDeclKind::TypeAliasDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    )
+    SelfHostCollectedDeclKind::ForeignTypeDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    )
+    SelfHostCollectedDeclKind::TraitDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
+    )
+    SelfHostCollectedDeclKind::BuiltinDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    )
+    SelfHostCollectedDeclKind::FunctionDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    )
+    SelfHostCollectedDeclKind::LetDecl => Option::Some(
+      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    )
+    _ => Option::None
+  }
+}
+
+fn self_host_alias_semantic_type(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  declaration: U64,
+) -> U32 {
+  let mut index = 0u32
+  while index {
+    current => if current < collected.aliases.length() {
+      if self_host_u64_equal(
+        collected.aliases[current].declaration,
+        declaration,
+      ) {
+        break resolved.alias_target_types[current]
+      }
+      continue current + 1u32
+    } else {
+      break resolved.error_type
+    }
+  }
+}
+
+fn self_host_freeze_module_signature_interface(
+  path: String,
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+) -> SelfHostFrozenModuleInterface {
+  let declarations = []
+  for declaration in collected.declarations {
+    if declaration.visibility is SelfHostSemanticVisibility::Public &&
+      !collected.declaration_is_test_only(declaration.id) &&
+      !self_host_u32_equal(declaration.name, 4294967295u32) {
+      match self_host_freeze_declaration_kind(declaration.kind) {
+        Option::Some(kind) => {
+          let semantic_type = if declaration.kind is SelfHostCollectedDeclKind::TypeAliasDecl {
+            self_host_alias_semantic_type(collected, resolved, declaration.id)
+          } else {
+            resolved.declaration_type(declaration.id)
+          }
+          let frozen = SelfHostFrozenInterfaceDeclaration::{
+            declaration: declaration.id
+            name: collected.name(declaration.name)
+            kind: kind
+            source_kind: declaration.kind
+            generic_parameter_count: collected.generic_parameters_of(
+              declaration.id,
+            ).length
+            generic_parameters: collected.generic_parameters_of(declaration.id)
+            semantic_type: semantic_type
+            location: SelfHostSourceLocation::{
+              file: collected.declaration_files[
+                self_host_semantic_id_local(declaration.id)
+              ]
+              offset: declaration.offset
+            }
+          }
+          declarations.push(frozen)
+        }
+        Option::None => {}
+      }
+    }
+  }
+  SelfHostFrozenModuleInterface::{
+    module_id: collected.module_id
+    path: path
+    resolved_types: resolved
+    declarations: declarations
+  }
+}
+
+pub enum SelfHostImportScopeDiagnostic {
+  UnavailableImportedInterface(U64, String, U64, U32)
+  DuplicateImportedAlias(U64, String, U64, U32)
+  AmbiguousImportedType(U64, String, U64, U64)
+  AmbiguousImportedTrait(U64, String, U64, U64)
+}
+
+pub struct SelfHostImportedDeclarationBinding {
+  declaration: U64
+  source_kind: SelfHostCollectedDeclKind
+  generic_parameter_count: U32
+  generic_parameters: SelfHostHirSpan
+  interface_index: U32
+  semantic_type: U32
+}
+
+pub struct SelfHostModuleImportScope {
+  module_id: U64
+  module_paths: Array<String>
+  declarations: Array<SelfHostImportedDeclarationBinding>
+  declaration_bindings: Map<U64, U32>
+  imported_interfaces: Array<U32>
+  type_bindings: Map<String, U32>
+  trait_bindings: Map<String, U32>
+  alias_bindings: Map<String, U32>
+  interfaces: SelfHostFrozenInterfaceList
+  diagnostics: Array<SelfHostImportScopeDiagnostic>
+}
+
+fn self_host_empty_u64_u32_map() -> Map<U64, U32> {
+  Map::empty()
+}
+
+fn self_host_empty_string_u32_map() -> Map<String, U32> {
+  Map::empty()
+}
+
+fn self_host_interface_resolved_types(
+  interfaces: SelfHostFrozenInterfaceList,
+  interface_index: U32,
+) -> SelfHostResolvedModuleTypes {
+  interfaces.at(interface_index).resolved_types
+}
+
+fn self_host_interface_slot_declaration_count(
+  interfaces: SelfHostFrozenInterfaceList,
+  interface_index: U32,
+) -> U32 {
+  interfaces.at(interface_index).declaration_count()
+}
+
+fn self_host_interface_slot_declaration(
+  interfaces: SelfHostFrozenInterfaceList,
+  interface_index: U32,
+  declaration_index: U32,
+) -> SelfHostFrozenInterfaceDeclaration {
+  interfaces.at(interface_index).declaration_at(declaration_index)
+}
+
+impl SelfHostModuleImportScope {
+  fn lookup_alias(self, name: String) -> Option<U32> {
+    match self.alias_bindings.get(name) {
+      Option::Some(value) => if value < 4294967294u32 {
+        Option::Some(value)
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn lookup_type(
+    self,
+    name: String,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    match self.type_bindings.get(name) {
+      Option::Some(index) => if index < 4294967294u32 {
+        Option::Some(self.declarations[index])
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn lookup_trait(
+    self,
+    name: String,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    match self.trait_bindings.get(name) {
+      Option::Some(index) => if index < 4294967294u32 {
+        Option::Some(self.declarations[index])
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn type_is_ambiguous(self, name: String) -> Bool {
+    match self.type_bindings.get(name) {
+      Option::Some(index) => index == 4294967294u32
+      Option::None => false
+    }
+  }
+
+  fn trait_is_ambiguous(self, name: String) -> Bool {
+    match self.trait_bindings.get(name) {
+      Option::Some(index) => index == 4294967294u32
+      Option::None => false
+    }
+  }
+
+  fn binding_for_declaration(
+    self,
+    declaration: U64,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    match self.declaration_bindings.get(declaration) {
+      Option::Some(index) => Option::Some(self.declarations[index])
+      Option::None => Option::None
+    }
+  }
+
+  fn lookup_module_declaration(
+    self,
+    interface_index: U32,
+    name: String,
+    kind: SelfHostFrozenInterfaceDeclarationKind,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    if interface_index >= self.interfaces.length() {
+      Option::None
+    } else {
+      let mut index = 0u32
+      let count = self_host_interface_slot_declaration_count(
+        self.interfaces,
+        interface_index,
+      )
+      while index {
+        current => if current < count {
+          let declaration = self_host_interface_slot_declaration(
+            self.interfaces,
+            interface_index,
+            current,
+          )
+          if self_host_interface_string_equal(declaration.name, name) &&
+            self_host_frozen_kind_equal(declaration.kind, kind) {
+            break self.binding_for_declaration(declaration.declaration)
+          }
+          continue current + 1u32
+        } else {
+          break Option::None
+        }
+      }
+    }
+  }
+
+  fn lookup_module_type(
+    self,
+    interface_index: U32,
+    name: String,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    self.lookup_module_declaration(
+      interface_index,
+      name,
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    )
+  }
+
+  fn lookup_module_trait(
+    self,
+    interface_index: U32,
+    name: String,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    self.lookup_module_declaration(
+      interface_index,
+      name,
+      SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
+    )
+  }
+}
+
+struct SelfHostImportScopeBuilder {
+  module_id: U64
+  module_paths: Array<String>
+  declarations: Array<SelfHostImportedDeclarationBinding>
+  declaration_bindings: Map<U64, U32>
+  imported_interfaces: Array<U32>
+  type_bindings: Map<String, U32>
+  trait_bindings: Map<String, U32>
+  alias_bindings: Map<String, U32>
+  interfaces: SelfHostFrozenInterfaceList
+  diagnostics: Array<SelfHostImportScopeDiagnostic>
+  imported: Array<Bool>
+  opened: Array<Bool>
+}
+
+impl SelfHostImportScopeBuilder {
+  fn new(
+    module_id: U64,
+    module_paths: Array<String>,
+    interfaces: SelfHostFrozenInterfaceList,
+  ) -> SelfHostImportScopeBuilder {
+    SelfHostImportScopeBuilder::{
+      module_id: module_id
+      module_paths: module_paths
+      declarations: []
+      declaration_bindings: self_host_empty_u64_u32_map()
+      imported_interfaces: []
+      type_bindings: self_host_empty_string_u32_map()
+      trait_bindings: self_host_empty_string_u32_map()
+      alias_bindings: self_host_empty_string_u32_map()
+      interfaces: interfaces
+      diagnostics: []
+      imported: self_host_bool_slots(module_paths.length(), false)
+      opened: self_host_bool_slots(module_paths.length(), false)
+    }
+  }
+
+  fn module_index(self, path: String) -> Option<U32> {
+    let mut index = 0u32
+    while index {
+      current => if current < self.module_paths.length() {
+        if self.module_paths[current] == path {
+          break Option::Some(current)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+
+  fn register_declaration(
+    self,
+    interface_index: U32,
+    declaration: SelfHostFrozenInterfaceDeclaration,
+  ) -> U32 {
+    match self.declaration_bindings.get(declaration.declaration) {
+      Option::Some(index) => index
+      Option::None => {
+        let index = self.declarations.length()
+        let binding = SelfHostImportedDeclarationBinding::{
+          declaration: declaration.declaration
+          source_kind: declaration.source_kind
+          generic_parameter_count: declaration.generic_parameter_count
+          generic_parameters: declaration.generic_parameters
+          interface_index: interface_index
+          semantic_type: declaration.semantic_type
+        }
+        self.declarations.push(binding)
+        self.declaration_bindings.set(declaration.declaration, index)
+        index
+      }
+    }
+  }
+
+  fn expose_declaration(
+    self,
+    interface_index: U32,
+    declaration: SelfHostFrozenInterfaceDeclaration,
+  ) -> Unit {
+    let table = if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+      self.trait_bindings
+    } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+      self.type_bindings
+    } else {
+      return
+    }
+    let index = self.register_declaration(interface_index, declaration)
+    match table.get(declaration.name) {
+      Option::None => table.set(declaration.name, index)
+      Option::Some(previous_index) => if previous_index < 4294967294u32 {
+        let previous = self.declarations[previous_index]
+        if !self_host_u64_equal(
+          previous.declaration,
+          declaration.declaration,
+        ) {
+          table.set(declaration.name, 4294967294u32)
+          if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+            self.diagnostics.push(
+              SelfHostImportScopeDiagnostic::AmbiguousImportedTrait(
+                self.module_id,
+                declaration.name,
+                previous.declaration,
+                declaration.declaration,
+              ),
+            )
+          } else {
+            self.diagnostics.push(
+              SelfHostImportScopeDiagnostic::AmbiguousImportedType(
+                self.module_id,
+                declaration.name,
+                previous.declaration,
+                declaration.declaration,
+              ),
+            )
+          }
+        }
+      }
+    }
+  }
+
+  fn import_interface(
+    self,
+    interface_index: U32,
+    open_names: Bool,
+  ) -> Unit {
+    if !self.imported[interface_index] {
+      self.imported[interface_index] = true
+      self.imported_interfaces.push(interface_index)
+      let mut index = 0u32
+      let count = self_host_interface_slot_declaration_count(
+        self.interfaces,
+        interface_index,
+      )
+      let _ = while index {
+        current => if current < count {
+          let declaration = self_host_interface_slot_declaration(
+            self.interfaces,
+            interface_index,
+            current,
+          )
+          let _ = self.register_declaration(interface_index, declaration)
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    if open_names && !self.opened[interface_index] {
+      self.opened[interface_index] = true
+      let mut index = 0u32
+      let count = self_host_interface_slot_declaration_count(
+        self.interfaces,
+        interface_index,
+      )
+      let _ = while index {
+        current => if current < count {
+          let declaration = self_host_interface_slot_declaration(
+            self.interfaces,
+            interface_index,
+            current,
+          )
+          self.expose_declaration(interface_index, declaration)
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+  }
+
+  fn add_alias(
+    self,
+    alias: String,
+    dependency: U32,
+    file: U64,
+    offset: U32,
+  ) -> Unit {
+    match self.alias_bindings.get(alias) {
+      Option::None => self.alias_bindings.set(alias, dependency)
+      Option::Some(previous) => if previous != dependency {
+        self.alias_bindings.set(alias, 4294967295u32)
+        self.diagnostics.push(
+          SelfHostImportScopeDiagnostic::DuplicateImportedAlias(
+            self.module_id,
+            alias,
+            file,
+            offset,
+          ),
+        )
+      }
+    }
+  }
+
+  fn finish(self) -> SelfHostModuleImportScope {
+    SelfHostModuleImportScope::{
+      module_id: self.module_id
+      module_paths: self.module_paths
+      declarations: self.declarations
+      declaration_bindings: self.declaration_bindings
+      imported_interfaces: self.imported_interfaces
+      type_bindings: self.type_bindings
+      trait_bindings: self.trait_bindings
+      alias_bindings: self.alias_bindings
+      interfaces: self.interfaces
+      diagnostics: self.diagnostics
+    }
+  }
+}
+
+fn self_host_wildcard_import_matches(
+  prefix: String,
+  candidate: String,
+) -> Bool {
+  candidate.starts_with(prefix.concat("."))
+}
+
+fn self_host_build_module_import_scope(
+  collected: SelfHostCollectedModule,
+  module_index: U32,
+  module_paths: Array<String>,
+  interfaces: SelfHostFrozenInterfaceList,
+) -> SelfHostModuleImportScope {
+  let builder = SelfHostImportScopeBuilder::new(
+    collected.module_id,
+    module_paths,
+    interfaces,
+  )
+  for import_ in collected.imports {
+    if import_.wildcard {
+      let mut dependency = 0u32
+      let _ = while dependency {
+        current => if current < module_paths.length() {
+          if current != module_index && self_host_wildcard_import_matches(
+            import_.path,
+            module_paths[current],
+          ) {
+            builder.import_interface(current, true)
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    } else {
+      match builder.module_index(import_.path) {
+        Option::Some(dependency) => {
+          match import_.import_alias {
+            Option::Some(alias) => builder.add_alias(
+              alias,
+              dependency,
+              import_.file,
+              import_.import_alias_offset,
+            )
+            Option::None => {}
+          }
+          builder.import_interface(dependency, import_.open_)
+        }
+        Option::None => builder.diagnostics.push(
+          SelfHostImportScopeDiagnostic::UnavailableImportedInterface(
+            collected.module_id,
+            import_.path,
+            import_.file,
+            import_.offset,
+          ),
+        )
+      }
+    }
+  }
+  builder.finish()
+}

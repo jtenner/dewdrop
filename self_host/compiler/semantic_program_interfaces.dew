@@ -1,0 +1,351 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+pub struct SelfHostManifestFile {
+  path: String
+  source: Bytes
+  test_only: Bool
+}
+
+pub struct SelfHostManifestModule {
+  path: String
+  files: Array<SelfHostManifestFile>
+}
+
+pub struct SelfHostProgramManifest {
+  modules: Array<SelfHostManifestModule>
+}
+
+pub enum SelfHostManifestDiagnostic {
+  EmptyModulePath(U32)
+  DuplicateModulePath(String, U32, U32)
+  EmptyFilePath(U32, U32)
+  DuplicateFilePath(String, U32, U32, U32)
+}
+
+fn self_host_wildcard_diagnostic_path(path: String) -> String {
+  path.concat(".*")
+}
+
+pub enum SelfHostProgramImportDiagnostic {
+  MissingImportedModule(U64, String, U64, U32)
+}
+
+pub struct SelfHostCollectedModuleList {
+  values: Array<SelfHostCollectedModule>
+}
+
+impl SelfHostCollectedModuleList {
+  fn new() -> SelfHostCollectedModuleList {
+    SelfHostCollectedModuleList::{
+      values: []
+    }
+  }
+
+  fn push(self, module_: SelfHostCollectedModule) -> Unit {
+    self.values.push(module_)
+  }
+
+  fn length(self) -> U32 {
+    self.values.length()
+  }
+
+  fn at(self, index: U32) -> SelfHostCollectedModule {
+    self.values[index]
+  }
+}
+
+pub struct SelfHostImportScopeList {
+  values: Array<SelfHostModuleImportScope>
+}
+
+impl SelfHostImportScopeList {
+  fn new() -> SelfHostImportScopeList {
+    SelfHostImportScopeList::{
+      values: []
+    }
+  }
+
+  fn push(self, scope: SelfHostModuleImportScope) -> Unit {
+    self.values.push(scope)
+  }
+
+  fn at(self, index: U32) -> SelfHostModuleImportScope {
+    self.values[index]
+  }
+}
+
+pub struct SelfHostCollectedProgram {
+  module_id_base: U64
+  module_paths: Array<String>
+  modules: SelfHostCollectedModuleList
+  diagnostics: Array<SelfHostManifestDiagnostic>
+}
+
+impl SelfHostCollectedProgram {
+  fn module_index(self, path: String) -> Option<U32> {
+    let mut index = 0u32
+    while index {
+      current => if current < self.module_paths.length() {
+        if self.module_paths[current] == path {
+          break Option::Some(current)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+}
+
+pub struct SelfHostFrozenSignatureProgram {
+  collected: SelfHostCollectedProgram
+  interfaces: SelfHostFrozenInterfaceList
+  import_scopes: SelfHostImportScopeList
+  import_diagnostics: Array<SelfHostImportScopeDiagnostic>
+  path_diagnostics: Array<SelfHostProgramImportDiagnostic>
+}
+
+fn self_host_manifest_module_file_count(
+  module_: SelfHostManifestModule,
+) -> U32 {
+  module_.files.length()
+}
+
+fn self_host_manifest_module_file(
+  module_: SelfHostManifestModule,
+  index: U32,
+) -> SelfHostManifestFile {
+  module_.files[index]
+}
+
+fn self_host_program_files_for_manifest_module(
+  module_id: U64,
+  module_: SelfHostManifestModule,
+) -> Array<SelfHostProgramFile> {
+  let files = []
+  let mut index = 0u32
+  let count = self_host_manifest_module_file_count(module_)
+  let _ = while index {
+    current => if current < count {
+      let file = self_host_manifest_module_file(module_, current)
+      files.push(SelfHostProgramFile::{
+        id: self_host_make_file_id(module_id, current)
+        path: file.path
+        source: file.source
+        test_only: file.test_only
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  files
+}
+
+fn self_host_collect_program_manifest(
+  module_id_base: U64,
+  manifest: SelfHostProgramManifest,
+) -> SelfHostCollectedProgram {
+  let module_paths = []
+  let modules = SelfHostCollectedModuleList::new()
+  let diagnostics = []
+  let mut module_index = 0u32
+  for module_ in manifest.modules {
+    if module_.path.byte_length() == 0u32 {
+      diagnostics.push(SelfHostManifestDiagnostic::EmptyModulePath(module_index))
+    }
+    let mut previous_module = 0u32
+    let _ = while previous_module {
+      previous => if previous < module_paths.length() {
+        if module_paths[previous] == module_.path {
+          diagnostics.push(
+            SelfHostManifestDiagnostic::DuplicateModulePath(
+              module_.path,
+              previous,
+              module_index,
+            ),
+          )
+          break self_host_semantic_unit()
+        }
+        continue previous + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let mut file_index = 0u32
+    let file_count = self_host_manifest_module_file_count(module_)
+    let _ = while file_index {
+      current_file => if current_file < file_count {
+        let file = self_host_manifest_module_file(module_, current_file)
+        if file.path.byte_length() == 0u32 {
+          diagnostics.push(
+            SelfHostManifestDiagnostic::EmptyFilePath(
+              module_index,
+              current_file,
+            ),
+          )
+        }
+        let mut previous_file = 0u32
+        let _ = while previous_file {
+          previous => if previous < current_file {
+            let candidate = self_host_manifest_module_file(module_, previous)
+            if candidate.path == file.path {
+              diagnostics.push(
+                SelfHostManifestDiagnostic::DuplicateFilePath(
+                  file.path,
+                  module_index,
+                  previous,
+                  current_file,
+                ),
+              )
+              break self_host_semantic_unit()
+            }
+            continue previous + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        continue current_file + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let module_id = module_id_base + u32_into_u64(module_index)
+    let files = self_host_program_files_for_manifest_module(module_id, module_)
+    let collected = self_host_collect_files(module_id, files)
+    module_paths.push(module_.path)
+    modules.push(collected)
+    module_index = module_index + 1u32
+  }
+  SelfHostCollectedProgram::{
+    module_id_base: module_id_base
+    module_paths: module_paths
+    modules: modules
+    diagnostics: diagnostics
+  }
+}
+
+fn self_host_collect_missing_import_diagnostics(
+  program: SelfHostCollectedProgram,
+) -> Array<SelfHostProgramImportDiagnostic> {
+  let diagnostics = []
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < program.modules.length() {
+      let module_ = program.modules.at(current)
+      let mut import_index = 0u32
+      let _ = while import_index {
+        current_import => if current_import < module_.import_count() {
+          let import_ = module_.import_at(current_import)
+          if import_.wildcard {
+          let mut matched = false
+          let mut candidate = 0u32
+          let _ = while candidate {
+            dependency => if dependency < program.module_paths.length() {
+              if dependency != current && self_host_wildcard_import_matches(
+                import_.path,
+                program.module_paths[dependency],
+              ) {
+                matched = true
+              }
+              continue dependency + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          if !matched {
+            diagnostics.push(
+              SelfHostProgramImportDiagnostic::MissingImportedModule(
+                module_.module_id,
+                self_host_wildcard_diagnostic_path(import_.path),
+                import_.file,
+                import_.offset,
+              ),
+            )
+          }
+          } else if program.module_index(import_.path) is Option::None {
+            diagnostics.push(
+              SelfHostProgramImportDiagnostic::MissingImportedModule(
+                module_.module_id,
+                import_.path,
+                import_.file,
+                import_.offset,
+              ),
+            )
+          }
+          continue current_import + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  diagnostics
+}
+
+fn self_host_freeze_program_signature_interfaces(
+  program: SelfHostCollectedProgram,
+) -> SelfHostFrozenSignatureProgram {
+  let provisional = SelfHostFrozenInterfaceList::new()
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < program.modules.length() {
+      let collected = program.modules.at(current)
+      let resolved = self_host_resolve_module_types(collected)
+      let interface_ = self_host_freeze_module_signature_interface(
+        program.module_paths[current],
+        collected,
+        resolved,
+      )
+      provisional.push(interface_)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  let scopes = SelfHostImportScopeList::new()
+  let import_diagnostics = []
+  module_index = 0u32
+  let _ = while module_index {
+    current => if current < program.modules.length() {
+      let collected = program.modules.at(current)
+      let scope = self_host_build_module_import_scope(
+        collected,
+        current,
+        program.module_paths,
+        provisional,
+      )
+      for diagnostic in scope.diagnostics {
+        import_diagnostics.push(diagnostic)
+      }
+      let resolved = self_host_resolve_module_types_with_imports(
+        collected,
+        scope,
+      )
+      let interface_ = self_host_freeze_module_signature_interface(
+        program.module_paths[current],
+        collected,
+        resolved,
+      )
+      scopes.push(scope)
+      interfaces.push(interface_)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostFrozenSignatureProgram::{
+    collected: program
+    interfaces: interfaces
+    import_scopes: scopes
+    import_diagnostics: import_diagnostics
+    path_diagnostics: self_host_collect_missing_import_diagnostics(program)
+  }
+}

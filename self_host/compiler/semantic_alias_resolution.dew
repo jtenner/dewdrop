@@ -597,6 +597,196 @@ impl SelfHostTypeResolver {
     self.substitution_results[0u32]
   }
 
+  fn imported_alias_parameter_argument(
+    self,
+    binding: SelfHostImportedDeclarationBinding,
+    parameter: U64,
+    arguments: Array<U32>,
+  ) -> Option<U32> {
+    if self_host_semantic_id_module(parameter) != self_host_semantic_id_module(
+      binding.declaration,
+    ) {
+      Option::None
+    } else {
+      let local = self_host_semantic_id_local(parameter)
+      let end = self_host_u32_add(
+        binding.generic_parameters.start,
+        binding.generic_parameters.length,
+      )
+      if local < binding.generic_parameters.start || local >= end {
+        Option::None
+      } else {
+        Option::Some(arguments[local - binding.generic_parameters.start])
+      }
+    }
+  }
+
+  fn substitute_imported_alias_target(
+    self,
+    binding: SelfHostImportedDeclarationBinding,
+    target: U32,
+    arguments: Array<U32>,
+  ) -> U32 {
+    self.substitution_types.clear()
+    self.substitution_states.clear()
+    self.substitution_starts.clear()
+    self.substitution_results.clear()
+    self.push_substitution_task(target, 0u32, 0u32)
+    let _ = while self.substitution_types.length() {
+      length => if length > 0u32 {
+        let current = match self.substitution_types.pop() {
+          Option::Some(value) => value
+          Option::None => self.interner.error_type
+        }
+        let state = match self.substitution_states.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let result_start = match self.substitution_starts.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        if state == 0u32 {
+          match self.interner.types[current] {
+            SelfHostResolvedType::GenericParameterType(parameter) => {
+              let result = match self.imported_alias_parameter_argument(
+                binding,
+                parameter,
+                arguments,
+              ) {
+                Option::Some(value) => value
+                Option::None => current
+              }
+              self.substitution_results.push(result)
+            }
+            SelfHostResolvedType::ProductType(fields) => {
+              self.push_substitution_task(
+                current,
+                3u32,
+                self.substitution_results.length(),
+              )
+              let mut index = fields.length
+              let _ = while index {
+                remaining => if remaining > 0u32 {
+                  let next = remaining - 1u32
+                  self.push_substitution_task(
+                    self.interner.arguments[fields.start + next],
+                    0u32,
+                    0u32,
+                  )
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostResolvedType::AppliedType(base, span) => {
+              self.push_substitution_task(
+                current,
+                1u32,
+                self.substitution_results.length(),
+              )
+              let mut index = span.length
+              let _ = while index {
+                remaining => if remaining > 0u32 {
+                  let next = remaining - 1u32
+                  self.push_substitution_task(
+                    self.interner.arguments[span.start + next],
+                    0u32,
+                    0u32,
+                  )
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self.push_substitution_task(base, 0u32, 0u32)
+            }
+            SelfHostResolvedType::FunctionType(parameters, result) => {
+              self.push_substitution_task(
+                current,
+                2u32,
+                self.substitution_results.length(),
+              )
+              self.push_substitution_task(result, 0u32, 0u32)
+              let mut index = parameters.length
+              let _ = while index {
+                remaining => if remaining > 0u32 {
+                  let next = remaining - 1u32
+                  self.push_substitution_task(
+                    self.interner.arguments[parameters.start + next],
+                    0u32,
+                    0u32,
+                  )
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            _ => self.substitution_results.push(current)
+          }
+        } else if state == 1u32 {
+          let base = self.substitution_results[result_start]
+          self.application_scratch.clear()
+          let mut index = result_start + 1u32
+          let _ = while index {
+            current_index => if current_index < self.substitution_results.length() {
+              self.application_scratch.push(self.substitution_results[current_index])
+              continue current_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let result = self.interner.intern_applied(base, self.application_scratch)
+          self.substitution_results.truncate(result_start)
+          self.substitution_results.push(result)
+        } else if state == 2u32 {
+          let parameter_count = match self.interner.types[current] {
+            SelfHostResolvedType::FunctionType(parameters, _) => parameters.length
+            _ => 0u32
+          }
+          self.application_scratch.clear()
+          let mut index = 0u32
+          let _ = while index {
+            parameter_index => if parameter_index < parameter_count {
+              self.application_scratch.push(
+                self.substitution_results[result_start + parameter_index],
+              )
+              continue parameter_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let result = self.interner.intern_function(
+            self.application_scratch,
+            self.substitution_results[result_start + parameter_count],
+          )
+          self.substitution_results.truncate(result_start)
+          self.substitution_results.push(result)
+        } else {
+          self.application_scratch.clear()
+          let mut index = result_start
+          let _ = while index {
+            current_index => if current_index < self.substitution_results.length() {
+              self.application_scratch.push(self.substitution_results[current_index])
+              continue current_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let result = self.interner.intern_product(self.application_scratch)
+          self.substitution_results.truncate(result_start)
+          self.substitution_results.push(result)
+        }
+        continue self.substitution_types.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.substitution_results[0u32]
+  }
+
   fn push_normalization_task(
     self,
     type_: U32,
@@ -1225,4 +1415,19 @@ fn self_host_resolve_module_types(
     collected,
     Option::None,
   )
+}
+
+fn self_host_resolve_module_types_with_imports(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostModuleImportScope,
+) -> SelfHostResolvedModuleTypes {
+  let resolver = SelfHostTypeResolver::new_with_imports(
+    collected,
+    Option::Some(imports),
+  )
+  resolver.resolve_signatures()
+  resolver.collect_alias_dependencies()
+  resolver.find_alias_cycles()
+  resolver.normalize_aliases(Option::None)
+  resolver.finish()
 }

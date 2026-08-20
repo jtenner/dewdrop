@@ -62,8 +62,55 @@ fn self_host_empty_alias_indices() -> Map<U64, U32> {
   Map::empty()
 }
 
+struct SelfHostImportedTypeMemo {
+  mut values: Array<U32>
+}
+
+impl SelfHostImportedTypeMemo {
+  fn new() -> SelfHostImportedTypeMemo {
+    SelfHostImportedTypeMemo::{
+      values: []
+    }
+  }
+
+  fn initialize(self, length: U32) -> Unit {
+    if self.values.length() == 0u32 {
+      self.values = self_host_u32_slots(length, 4294967295u32)
+    }
+  }
+
+  fn get(self, index: U32) -> U32 {
+    self.values[index]
+  }
+
+  fn set(self, index: U32, value: U32) -> Unit {
+    self.values[index] = value
+  }
+}
+
+struct SelfHostImportedTypeMemoList {
+  values: Array<SelfHostImportedTypeMemo>
+}
+
+impl SelfHostImportedTypeMemoList {
+  fn new() -> SelfHostImportedTypeMemoList {
+    SelfHostImportedTypeMemoList::{
+      values: []
+    }
+  }
+
+  fn push(self, memo: SelfHostImportedTypeMemo) -> Unit {
+    self.values.push(memo)
+  }
+
+  fn at(self, index: U32) -> SelfHostImportedTypeMemo {
+    self.values[index]
+  }
+}
+
 struct SelfHostTypeResolver {
   collected: SelfHostCollectedModule
+  imports: Option<SelfHostModuleImportScope>
   interner: SelfHostResolvedTypeInterner
   syntax_types: Array<U32>
   declaration_types: Array<U32>
@@ -94,6 +141,13 @@ struct SelfHostTypeResolver {
   expectation_tasks: Array<Bool>
   constructor_tasks: Array<Bool>
   application_scratch: Array<U32>
+  import_memos: SelfHostImportedTypeMemoList
+  import_task_interfaces: Array<U32>
+  import_task_types: Array<U32>
+  import_task_states: Array<U32>
+  import_task_starts: Array<U32>
+  import_results: Array<U32>
+  import_scratch: Array<U32>
   visit_stack: Array<U32>
   mut visit_marks: Array<U32>
   alias_visit_marks: Array<U32>
@@ -118,6 +172,13 @@ struct SelfHostTypeResolver {
 
 impl SelfHostTypeResolver {
   fn new(collected: SelfHostCollectedModule) -> SelfHostTypeResolver {
+    SelfHostTypeResolver::new_with_imports(collected, Option::None)
+  }
+
+  fn new_with_imports(
+    collected: SelfHostCollectedModule,
+    imports: Option<SelfHostModuleImportScope>,
+  ) -> SelfHostTypeResolver {
     let interner = SelfHostResolvedTypeInterner::new()
     let generic_parameter_types = []
     for parameter in collected.generic_parameters {
@@ -144,8 +205,24 @@ impl SelfHostTypeResolver {
       }
       declaration_types[self_host_semantic_id_local(declaration.id)] = resolved
     }
+    let import_memos = SelfHostImportedTypeMemoList::new()
+    match imports {
+      Option::Some(scope) => {
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < scope.interfaces.length() {
+            import_memos.push(SelfHostImportedTypeMemo::new())
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      Option::None => {}
+    }
     SelfHostTypeResolver::{
       collected: collected
+      imports: imports
       interner: interner
       syntax_types: self_host_u32_slots(collected.type_syntax.length(), 4294967295u32)
       declaration_types: declaration_types
@@ -176,6 +253,13 @@ impl SelfHostTypeResolver {
       expectation_tasks: []
       constructor_tasks: []
       application_scratch: []
+      import_memos: import_memos
+      import_task_interfaces: []
+      import_task_types: []
+      import_task_states: []
+      import_task_starts: []
+      import_results: []
+      import_scratch: []
       visit_stack: []
       visit_marks: []
       alias_visit_marks: self_host_u32_slots(collected.aliases.length(), 0u32)
@@ -263,8 +347,260 @@ impl SelfHostTypeResolver {
     if self_host_semantic_id_module(declaration) == self.collected.module_id {
       self.collected.generic_parameters_of(declaration).length
     } else {
-      0u32
+      match self.imports {
+        Option::Some(scope) => match scope.binding_for_declaration(declaration) {
+          Option::Some(binding) => binding.generic_parameter_count
+          Option::None => 0u32
+        }
+        Option::None => 0u32
+      }
     }
+  }
+
+  fn push_import_task(
+    self,
+    interface_index: U32,
+    type_: U32,
+    state: U32,
+    result_start: U32,
+  ) -> Unit {
+    self.import_task_interfaces.push(interface_index)
+    self.import_task_types.push(type_)
+    self.import_task_states.push(state)
+    self.import_task_starts.push(result_start)
+  }
+
+  fn import_interface_type(
+    self,
+    interface_index: U32,
+    root: U32,
+  ) -> U32 {
+    let scope = match self.imports {
+      Option::Some(value) => value
+      Option::None => {
+        return self.interner.error_type
+      }
+    }
+    let source_root = self_host_interface_resolved_types(
+      scope.interfaces,
+      interface_index,
+    )
+    let memo = self.import_memos.at(interface_index)
+    memo.initialize(source_root.types.length())
+    let cached = memo.get(root)
+    if cached != 4294967295u32 {
+      return cached
+    }
+    self.import_task_interfaces.clear()
+    self.import_task_types.clear()
+    self.import_task_states.clear()
+    self.import_task_starts.clear()
+    self.import_results.clear()
+    self.push_import_task(interface_index, root, 0u32, 0u32)
+    let _ = while self.import_task_types.length() {
+      length => if length > 0u32 {
+        let source_interface = match self.import_task_interfaces.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let source_type = match self.import_task_types.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let state = match self.import_task_states.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let result_start = match self.import_task_starts.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let source = self_host_interface_resolved_types(
+          scope.interfaces,
+          source_interface,
+        )
+        let source_memo = self.import_memos.at(source_interface)
+        source_memo.initialize(source.types.length())
+        let existing = source_memo.get(source_type)
+        if state == 0u32 && existing != 4294967295u32 {
+          self.import_results.push(existing)
+        } else if state == 0u32 {
+          match source.types[source_type] {
+            SelfHostResolvedType::ErrorType => {
+              source_memo.set(source_type, self.interner.error_type)
+              self.import_results.push(self.interner.error_type)
+            }
+            SelfHostResolvedType::PrimitiveType(primitive) => {
+              let imported = self.interner.intern_primitive(primitive)
+              source_memo.set(source_type, imported)
+              self.import_results.push(imported)
+            }
+            SelfHostResolvedType::GenericParameterType(parameter) => {
+              let imported = self.interner.intern_generic(parameter)
+              source_memo.set(source_type, imported)
+              self.import_results.push(imported)
+            }
+            SelfHostResolvedType::NominalType(declaration) => {
+              let imported = self.interner.intern_nominal(declaration)
+              source_memo.set(source_type, imported)
+              self.import_results.push(imported)
+            }
+            SelfHostResolvedType::TraitType(declaration) => {
+              let imported = self.interner.intern_trait(declaration)
+              source_memo.set(source_type, imported)
+              self.import_results.push(imported)
+            }
+            SelfHostResolvedType::SelfType(declaration) => {
+              let imported = self.interner.intern_self(declaration)
+              source_memo.set(source_type, imported)
+              self.import_results.push(imported)
+            }
+            SelfHostResolvedType::ProductType(fields) => {
+              self.push_import_task(
+                source_interface,
+                source_type,
+                3u32,
+                self.import_results.length(),
+              )
+              let mut index = fields.length
+              let _ = while index {
+                remaining => if remaining > 0u32 {
+                  let next = remaining - 1u32
+                  self.push_import_task(
+                    source_interface,
+                    source.type_arguments[fields.start + next],
+                    0u32,
+                    0u32,
+                  )
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostResolvedType::AppliedType(base, arguments) => {
+              self.push_import_task(
+                source_interface,
+                source_type,
+                1u32,
+                self.import_results.length(),
+              )
+              let mut index = arguments.length
+              let _ = while index {
+                remaining => if remaining > 0u32 {
+                  let next = remaining - 1u32
+                  self.push_import_task(
+                    source_interface,
+                    source.type_arguments[arguments.start + next],
+                    0u32,
+                    0u32,
+                  )
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self.push_import_task(source_interface, base, 0u32, 0u32)
+            }
+            SelfHostResolvedType::FunctionType(parameters, result) => {
+              self.push_import_task(
+                source_interface,
+                source_type,
+                2u32,
+                self.import_results.length(),
+              )
+              self.push_import_task(source_interface, result, 0u32, 0u32)
+              let mut index = parameters.length
+              let _ = while index {
+                remaining => if remaining > 0u32 {
+                  let next = remaining - 1u32
+                  self.push_import_task(
+                    source_interface,
+                    source.type_arguments[parameters.start + next],
+                    0u32,
+                    0u32,
+                  )
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+          }
+        } else if state == 1u32 {
+          let base = self.import_results[result_start]
+          self.import_scratch.clear()
+          let arguments = match source.types[source_type] {
+            SelfHostResolvedType::AppliedType(_, span) => span
+            _ => self_host_empty_hir_span(0u32)
+          }
+          let mut index = 0u32
+          let _ = while index {
+            current => if current < arguments.length {
+              self.import_scratch.push(
+                self.import_results[result_start + current + 1u32],
+              )
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let imported = self.interner.intern_applied(base, self.import_scratch)
+          source_memo.set(source_type, imported)
+          self.import_results.truncate(result_start)
+          self.import_results.push(imported)
+        } else if state == 2u32 {
+          let parameters = match source.types[source_type] {
+            SelfHostResolvedType::FunctionType(span, _) => span
+            _ => self_host_empty_hir_span(0u32)
+          }
+          self.import_scratch.clear()
+          let mut index = 0u32
+          let _ = while index {
+            current => if current < parameters.length {
+              self.import_scratch.push(
+                self.import_results[result_start + current],
+              )
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let imported = self.interner.intern_function(
+            self.import_scratch,
+            self.import_results[result_start + parameters.length],
+          )
+          source_memo.set(source_type, imported)
+          self.import_results.truncate(result_start)
+          self.import_results.push(imported)
+        } else {
+          let fields = match source.types[source_type] {
+            SelfHostResolvedType::ProductType(span) => span
+            _ => self_host_empty_hir_span(0u32)
+          }
+          self.import_scratch.clear()
+          let mut index = 0u32
+          let _ = while index {
+            current => if current < fields.length {
+              self.import_scratch.push(
+                self.import_results[result_start + current],
+              )
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let imported = self.interner.intern_product(self.import_scratch)
+          source_memo.set(source_type, imported)
+          self.import_results.truncate(result_start)
+          self.import_results.push(imported)
+        }
+        continue self.import_task_types.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.import_results[0u32]
   }
 
   fn constructor_arity(self, type_: U32) -> Option<U32> {
@@ -322,6 +658,35 @@ impl SelfHostTypeResolver {
       }
       Option::None => {}
     }
+    match self.imports {
+      Option::Some(scope) => {
+        match scope.lookup_type(spelling) {
+          Option::Some(binding) => {
+            return self.import_interface_type(
+              binding.interface_index,
+              binding.semantic_type,
+            )
+          }
+          Option::None => {}
+        }
+        match scope.lookup_trait(spelling) {
+          Option::Some(binding) => {
+            return self.import_interface_type(
+              binding.interface_index,
+              binding.semantic_type,
+            )
+          }
+          Option::None => {}
+        }
+        if scope.type_is_ambiguous(spelling) || scope.trait_is_ambiguous(spelling) {
+          self.diagnose(
+            SelfHostTypeDiagnostic::AmbiguousImportedType(name, owner, offset),
+          )
+          return self.interner.error_type
+        }
+      }
+      Option::None => {}
+    }
     self.diagnose(SelfHostTypeDiagnostic::UnknownType(name, owner, offset))
     self.interner.error_type
   }
@@ -339,7 +704,32 @@ impl SelfHostTypeResolver {
       Option::None => {}
     }
     let spelling = self.collected.name(name)
+    match self.imports {
+      Option::Some(scope) => {
+        match scope.lookup_trait(spelling) {
+          Option::Some(binding) => {
+            return self.import_interface_type(
+              binding.interface_index,
+              binding.semantic_type,
+            )
+          }
+          Option::None => {}
+        }
+        if scope.trait_is_ambiguous(spelling) {
+          self.diagnose(
+            SelfHostTypeDiagnostic::AmbiguousImportedTrait(name, owner, offset),
+          )
+          return self.interner.error_type
+        }
+      }
+      Option::None => {}
+    }
+    let imported_type = match self.imports {
+      Option::Some(scope) => scope.lookup_type(spelling) is Option::Some(_)
+      Option::None => false
+    }
     let non_trait = self.collected.type_bindings.contains_key(name) ||
+      imported_type ||
       self_host_primitive_type_from_name(spelling) is Option::Some(_) ||
       self.generic_parameter(owner, name) is Option::Some(_) ||
       spelling == "Self"
@@ -349,6 +739,107 @@ impl SelfHostTypeResolver {
       self.diagnose(SelfHostTypeDiagnostic::UnknownTrait(name, owner, offset))
     }
     self.interner.error_type
+  }
+
+  fn qualified_import_binding(
+    self,
+    module_alias: U32,
+    name: U32,
+    expect_trait: Bool,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    let scope = match self.imports {
+      Option::Some(value) => value
+      Option::None => {
+        return Option::None
+      }
+    }
+    let interface_index = match scope.lookup_alias(
+      self.collected.name(module_alias),
+    ) {
+      Option::Some(value) => value
+      Option::None => {
+        return Option::None
+      }
+    }
+    if expect_trait {
+      scope.lookup_module_trait(interface_index, self.collected.name(name))
+    } else {
+      match scope.lookup_module_type(interface_index, self.collected.name(name)) {
+        Option::Some(binding) => Option::Some(binding)
+        Option::None => scope.lookup_module_trait(
+          interface_index,
+          self.collected.name(name),
+        )
+      }
+    }
+  }
+
+  fn resolve_qualified_type(
+    self,
+    owner: U64,
+    module_alias: U32,
+    name: U32,
+    offset: U32,
+    name_offset: U32,
+    expect_trait: Bool,
+    constructor_position: Bool,
+  ) -> U32 {
+    let binding = match self.qualified_import_binding(
+      module_alias,
+      name,
+      expect_trait,
+    ) {
+      Option::Some(value) => value
+      Option::None => {
+        if expect_trait {
+          self.diagnose(
+            SelfHostTypeDiagnostic::UnknownTrait(name, owner, name_offset),
+          )
+        } else {
+          self.diagnose(
+            SelfHostTypeDiagnostic::UnknownType(name, owner, name_offset),
+          )
+        }
+        return self.interner.error_type
+      }
+    }
+    let type_ = self.import_interface_type(
+      binding.interface_index,
+      binding.semantic_type,
+    )
+    if constructor_position || expect_trait || type_ == self.interner.error_type {
+      type_
+    } else if binding.source_kind is SelfHostCollectedDeclKind::TypeAliasDecl &&
+      self_host_u32_greater(binding.generic_parameter_count, 0u32) {
+      self.diagnose(
+        SelfHostTypeDiagnostic::TypeArityMismatch(
+          type_,
+          binding.generic_parameter_count,
+          0u32,
+          owner,
+          offset,
+        ),
+      )
+      self.interner.error_type
+    } else {
+      match self.constructor_arity(type_) {
+        Option::Some(expected) => if expected == 0u32 {
+          type_
+        } else {
+          self.diagnose(
+            SelfHostTypeDiagnostic::TypeArityMismatch(
+              type_,
+              expected,
+              0u32,
+              owner,
+              offset,
+            ),
+          )
+          self.interner.error_type
+        }
+        Option::None => type_
+      }
+    }
   }
 
   fn resolve_named_type(
@@ -364,6 +855,29 @@ impl SelfHostTypeResolver {
       self.resolve_trait_named_type(owner, name, offset)
     } else {
       self.resolve_any_named_type(owner, self_owner, name, offset)
+    }
+    if !constructor_position && !expect_trait {
+      match self.imports {
+        Option::Some(scope) => match scope.lookup_type(
+          self.collected.name(name),
+        ) {
+          Option::Some(binding) => if binding.source_kind is SelfHostCollectedDeclKind::TypeAliasDecl &&
+            self_host_u32_greater(binding.generic_parameter_count, 0u32) {
+            self.diagnose(
+              SelfHostTypeDiagnostic::TypeArityMismatch(
+                type_,
+                binding.generic_parameter_count,
+                0u32,
+                owner,
+                offset,
+              ),
+            )
+            return self.interner.error_type
+          }
+          Option::None => {}
+        }
+        Option::None => {}
+      }
     }
     if constructor_position || expect_trait || type_ == self.interner.error_type {
       type_
@@ -401,6 +915,32 @@ impl SelfHostTypeResolver {
     self.constructor_tasks.push(constructor_position)
   }
 
+  fn imported_alias_binding(
+    self,
+    syntax: U32,
+  ) -> Option<SelfHostImportedDeclarationBinding> {
+    let binding = match self.collected.type_syntax[syntax] {
+      SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => match self.imports {
+        Option::Some(scope) => scope.lookup_type(self.collected.name(name))
+        Option::None => Option::None
+      }
+      SelfHostHirTypeSyntax::QualifiedTypeSyntax(module_alias, name, _, _) => self.qualified_import_binding(
+        module_alias,
+        name,
+        false,
+      )
+      _ => Option::None
+    }
+    match binding {
+      Option::Some(value) => if value.source_kind is SelfHostCollectedDeclKind::TypeAliasDecl {
+        Option::Some(value)
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
   fn finish_applied_type(
     self,
     owner: U64,
@@ -413,6 +953,51 @@ impl SelfHostTypeResolver {
     if base == self.interner.error_type {
       self.syntax_types[syntax] = base
       return
+    }
+    match self.imported_alias_binding(base_syntax) {
+      Option::Some(binding) => {
+        if !self_host_u32_equal(
+          binding.generic_parameter_count,
+          arguments.length,
+        ) {
+          self.diagnose(
+            SelfHostTypeDiagnostic::TypeArityMismatch(
+              base,
+              binding.generic_parameter_count,
+              arguments.length,
+              owner,
+              offset,
+            ),
+          )
+          self.syntax_types[syntax] = self.interner.error_type
+          return
+        }
+        self.application_scratch.clear()
+        let mut index = arguments.start
+        let end = self_host_u32_add(arguments.start, arguments.length)
+        let _ = while index {
+          current => if current < end {
+            self.application_scratch.push(
+              self.syntax_types[self.collected.type_arguments[current]],
+            )
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        let target = self.import_interface_type(
+          binding.interface_index,
+          binding.semantic_type,
+        )
+        let resolved = self.substitute_imported_alias_target(
+          binding,
+          target,
+          self.application_scratch,
+        )
+        self.syntax_types[syntax] = resolved
+        return
+      }
+      Option::None => {}
     }
     let expected = match self.constructor_arity(base) {
       Option::Some(value) => value
@@ -495,17 +1080,22 @@ impl SelfHostTypeResolver {
               constructor_position,
             )
           }
-          SelfHostHirTypeSyntax::QualifiedTypeSyntax(_, name, _, name_offset) => {
-            if current_expectation {
-              self.diagnose(
-                SelfHostTypeDiagnostic::UnknownTrait(name, owner, name_offset),
-              )
-            } else {
-              self.diagnose(
-                SelfHostTypeDiagnostic::UnknownType(name, owner, name_offset),
-              )
-            }
-            self.syntax_types[current] = self.interner.error_type
+          SelfHostHirTypeSyntax::QualifiedTypeSyntax(
+            module_alias,
+            name,
+            offset,
+            name_offset,
+          ) => {
+            let resolved = self.resolve_qualified_type(
+              owner,
+              module_alias,
+              name,
+              offset,
+              name_offset,
+              current_expectation,
+              constructor_position,
+            )
+            self.syntax_types[current] = resolved
           }
           SelfHostHirTypeSyntax::ProductTypeSyntax(fields, _) => if state == 0u32 {
             self.push_syntax_task(
