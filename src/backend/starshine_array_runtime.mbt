@@ -661,9 +661,7 @@ fn starshine_finish_array(
     carrier
   let output : Array[@lib.Instruction] = []
   if operation == 48 {
-    if carrier < 0 ||
-      backing_local < 0 ||
-      (fragments.length() > 0 && value_local < 0) {
+    if carrier < 0 {
       return Err(UnsupportedExpression(body_id, -417))
     }
     output.push(@lib.Instruction::i32_const(@lib.I32::new(fragments.length())))
@@ -672,6 +670,19 @@ fn starshine_finish_array(
         @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
       ),
     )
+    if fragments.length() == 0 {
+      output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+      output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+      output.push(
+        @lib.Instruction::struct_new(
+          @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
+        ),
+      )
+      return Ok(output)
+    }
+    if backing_local < 0 || value_local < 0 {
+      return Err(UnsupportedExpression(body_id, -417))
+    }
     output.push(starshine_array_local_set(backing_local))
     for index, fragment in fragments {
       append_starshine_instructions(output, fragment)

@@ -1,0 +1,24 @@
+open dew.std.array
+open dew.std.string
+
+struct MixedArrays {
+  names: Array<String>
+  numbers: Array<U32>
+}
+
+fn mixed_arrays_new() -> MixedArrays {
+  MixedArrays::{
+    names: []
+    numbers: []
+  }
+}
+
+pub fn main() -> Unit {
+  let value = mixed_arrays_new()
+  value.names.push("name")
+  value.numbers.push(7u32)
+  assert(value.names.length() == 1u32, "name length")
+  assert(value.numbers.length() == 1u32, "number length")
+  assert(value.names[0u32] == "name", "name value")
+  assert(value.numbers[0u32] == 7u32, "number value")
+}

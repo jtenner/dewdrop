@@ -3897,6 +3897,9 @@ fn starshine_body_locals(
         match lowering.expressions[expression].kind {
           @semantic.PlannedArrayLiteral(elements, element_type, shape) =>
             if elements.length > 0 {
+              map_key_local_indices[expression] = parameter_count +
+                body_local_types.length()
+              body_local_types.push(@lib.ValType::eqref_null())
               let element_shape = starshine_specialized_shape(
                 lowering, generic_specialization, element_type, shape,
               )
@@ -6300,9 +6303,6 @@ fn starshine_emit_body_instructions(
           @semantic.PlannedBlockExpression(block) =>
             tasks.push(EmitStarshineBlock(block))
           @semantic.PlannedIfExpression(condition, then_block, alternative) => {
-            if alternative < 0 {
-              return Err(UnsupportedExpression(body.body, expression))
-            }
             tasks.push(
               FinishStarshineIf(
                 starshine_specialized_shape(
@@ -6314,7 +6314,11 @@ fn starshine_emit_body_instructions(
                 match_result_local_indices[expression],
               ),
             )
-            tasks.push(EmitStarshineExpression(alternative))
+            if alternative < 0 {
+              tasks.push(EmitStarshineEmpty)
+            } else {
+              tasks.push(EmitStarshineExpression(alternative))
+            }
             tasks.push(EmitStarshineBlock(then_block))
             tasks.push(EmitStarshineExpression(condition))
           }
@@ -6600,7 +6604,7 @@ fn starshine_emit_body_instructions(
                   FinishStarshineArrayLiteral(
                     element_shape,
                     elements.length,
-                    map_ref_scratch_index,
+                    map_key_local_indices[expression],
                     map_value_local_indices[expression],
                     match_result_local_indices[expression],
                   ),
@@ -6612,7 +6616,7 @@ fn starshine_emit_body_instructions(
                     Some(element_shape),
                     elements.length,
                     fixed_array_ref_scratch_index,
-                    map_ref_scratch_index,
+                    map_key_local_indices[expression],
                     fixed_array_i32_scratch_index,
                     map_value_local_indices[expression],
                   ),

@@ -1,3 +1,15 @@
+impl Eq for Bytes {
+  fn eq(self, right: Bytes) -> Bool {
+    bytes_equals(self, right)
+  }
+}
+
+impl Ne for Bytes {
+  fn ne(self, right: Bytes) -> Bool {
+    !bytes_equals(self, right)
+  }
+}
+
 impl Hash for Bytes {
   fn hash(self) -> U64 {
     bytes_hash(self)

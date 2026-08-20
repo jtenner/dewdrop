@@ -133,7 +133,7 @@ let valid = bytes.is_valid_utf8()
 let checked_text = bytes.to_string() // traps when bytes are not strict UTF-8
 let byte_count = text.byte_length()
 let utf16_units = text.utf16_length()
-let same = text.equals("expected")
+let same = text == "expected" // String, StringView, and Bytes use content Eq/Ne
 let first_byte = bytes.byte_at(0u32)
 let view = text.view(2u32, 8u32) // shared start + length
 let shared = text.subarray(2u32, 10u32) // shared start + exclusive end

@@ -26,6 +26,14 @@ fn starshine_while_test_module(source : Bytes) -> @lib.Module {
 }
 
 ///|
+test "unit if without else emits an empty alternative" {
+  let module_ = starshine_while_test_module(
+    b"pub fn main() -> I32 {\n  let mut value = 1\n  if value == 1 {\n    value = 42\n  }\n  value\n}\n",
+  )
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "functional while emits scalar state break and continue" {
   let module_ = starshine_while_test_module(
     b"pub fn main() -> I32 {\n  while 10 {\n    0 => break 42\n    value => continue value - 1\n  }\n}\n",

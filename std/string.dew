@@ -1,3 +1,27 @@
+impl Eq for String {
+  fn eq(self, right: String) -> Bool {
+    string_equals(self, right)
+  }
+}
+
+impl Ne for String {
+  fn ne(self, right: String) -> Bool {
+    !string_equals(self, right)
+  }
+}
+
+impl Eq for StringView {
+  fn eq(self, right: StringView) -> Bool {
+    string_view_equals(self, right)
+  }
+}
+
+impl Ne for StringView {
+  fn ne(self, right: StringView) -> Bool {
+    !string_view_equals(self, right)
+  }
+}
+
 impl Hash for String {
   fn hash(self) -> U64 {
     string_hash(self)

@@ -73,6 +73,11 @@ test "String equality rejects different tails" {
   )
 }
 
+test "String equality operators use content" {
+  assert("same 🌍" == "same 🌍", "equal Strings differ with ==")
+  assert("left" != "right", "different Strings compare equal with !=")
+}
+
 test "String byte_at returns raw UTF8 bytes" {
   assert("λ".byte_at(0u32) == 206u8, "wrong UTF8 lead byte")
   assert("λ".byte_at(1u32) == 187u8, "wrong UTF8 continuation byte")
@@ -100,6 +105,14 @@ test "StringView equality handles different backing offsets" {
   let left = "prefix-shared-suffix".view(7u32, 6u32)
   let right = "xsharedy".view(1u32, 6u32)
   assert(left.equals(right), "equal StringViews must compare equal")
+}
+
+test "StringView equality operators use content" {
+  let left = "prefix-shared-suffix".view(7u32, 6u32)
+  let same = "xsharedy".view(1u32, 6u32)
+  let different = "xchange".view(1u32, 6u32)
+  assert(left == same, "equal StringViews differ with ==")
+  assert(left != different, "different StringViews compare equal with !=")
 }
 
 test "StringView slicing remains a shared normalized range" {
@@ -612,6 +625,11 @@ test "Bytes to_string validates and shares content" {
 test "Bytes equality handles embedded zeros and high bytes" {
   assert(b"\x00\xFFsame".equals(b"\x00\xFFsame"), "equal Bytes differ")
   assert(!b"\x00\xFFa".equals(b"\x00\xFFb"), "different Bytes compare equal")
+}
+
+test "Bytes equality operators use content" {
+  assert(b"\x00same" == b"\x00same", "equal Bytes differ with ==")
+  assert(b"\x00left" != b"\x00right", "different Bytes compare equal with !=")
 }
 
 test "Bytes byte_at reads arbitrary bytes" {
