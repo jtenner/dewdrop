@@ -70,6 +70,88 @@ test "imported selection resolves non-generic calls" {
   }
 }
 
+test "imported selection resolves overloads" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run(value: I32) -> I32 {\n  choose(value)\n}\n",
+    b"pub fn choose(value: I32) -> I32 {\n  value\n}\npub fn choose(value: I64) -> I64 {\n  value\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "overload imports")
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let parameter_receivers = imports.parameter_receivers
+  let implementations = imports.implementations
+  let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    parameter_receivers,
+    implementations,
+    fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
+    type_generic_spans,
+    module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "imported overload diagnostics")
+  let mut expression = hir_body.expressions.start
+  let end = self_host_u32_add(hir_body.expressions.start, hir_body.expressions.length)
+  let mut call = 4294967295u32
+  let _ = while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(_, _, _) => {
+          call = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+      assert(self_host_semantic_id_module(declaration) == 2601u64, "imported overload declaration")
+      let selected = match imports.callable(declaration) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      assert(
+        imports.parameter_type(selected.parameters.start) == resolved.primitive(
+          SelfHostPrimitiveType::I32Type,
+        ),
+        "imported I32 overload",
+      )
+    }
+    _ => assert(false, "imported overload target")
+  }
+}
+
 test "imported selection resolves generic calls" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\npub fn run(value: I32) -> I32 {\n  identity(value)\n}\n",

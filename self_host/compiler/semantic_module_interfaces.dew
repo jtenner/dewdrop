@@ -1124,6 +1124,13 @@ impl SelfHostImportScopeBuilder {
           previous.declaration,
           declaration.declaration,
         ) {
+          let same_interface_overload = declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration && previous.source_kind is SelfHostCollectedDeclKind::FunctionDecl && declaration.source_kind is SelfHostCollectedDeclKind::FunctionDecl && self_host_u32_equal(
+            previous.interface_index,
+            interface_index,
+          )
+          if same_interface_overload {
+            return
+          }
           table.set(declaration.name, 4294967294u32)
           if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
             self.diagnostics.push(
