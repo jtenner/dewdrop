@@ -1,0 +1,356 @@
+open dew.std.testing
+
+pub struct SelfHostUnificationTestTypes {
+  collected: SelfHostCollectedModule
+  resolved: SelfHostResolvedModuleTypes
+}
+
+fn self_host_unification_test_types() -> SelfHostUnificationTestTypes {
+  let collected = self_host_collect_bytes(
+    80u64,
+    b"struct Pair<a, b> {}\nstruct List<t> {}\nfn accept(value: Pair<I32, String>) -> Unit {}\n",
+  )
+  SelfHostUnificationTestTypes::{
+    collected: collected
+    resolved: self_host_resolve_module_types(collected)
+  }
+}
+
+test "local unification binds and unions body-local variables" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let first = solver.fresh_variable()
+  let second = solver.fresh_variable()
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  let origin = self_host_synthetic_type_origin(0u32, 1u32)
+  assert(solver.unify(first, second, origin), "union variables")
+  assert(solver.unify(second, i32, origin), "bind variable")
+  assert(solver.representative_type(first) == i32, "first representative")
+  assert(solver.representative_type(second) == i32, "second representative")
+  assert(solver.diagnostic_count() == 0u32, "diagnostics")
+}
+
+test "local unification decomposes resolved and inferred applications" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let first = solver.fresh_variable()
+  let second = solver.fresh_variable()
+  let pair = solver.resolved_type(
+    fixture.resolved.declaration_type(
+      fixture.collected.declaration_at(0u32).id,
+    ),
+  )
+  let inferred = solver.applied_type(pair, [first, second])
+  let declared = solver.resolved_type(fixture.resolved.parameter_types[0u32])
+  assert(
+    solver.unify(
+      inferred,
+      declared,
+      self_host_synthetic_type_origin(1u32, 2u32),
+    ),
+    "application unification",
+  )
+  assert(
+    solver.representative_type(first) == solver.resolved_type(
+      fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    ),
+    "first application argument",
+  )
+  assert(
+    solver.representative_type(second) == solver.resolved_type(
+      fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+    ),
+    "second application argument",
+  )
+}
+
+test "local unification decomposes products and functions" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let left = solver.fresh_variable()
+  let right = solver.fresh_variable()
+  let result = solver.fresh_variable()
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  let string = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+  )
+  let body_product = solver.product_type([left, right])
+  let expected_product = solver.product_type([i32, string])
+  assert(
+    solver.unify(
+      body_product,
+      expected_product,
+      self_host_synthetic_type_origin(2u32, 3u32),
+    ),
+    "product unification",
+  )
+  let body_function = solver.function_type([left, right], result)
+  let expected_function = solver.function_type([i32, string], i32)
+  assert(
+    solver.unify(
+      body_function,
+      expected_function,
+      self_host_synthetic_type_origin(3u32, 4u32),
+    ),
+    "function unification",
+  )
+  assert(solver.representative_type(result) == i32, "function result")
+}
+
+test "local unification reports one mismatch and poisons its variable" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let variable = solver.fresh_variable()
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  let string = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+  )
+  let origin = self_host_synthetic_type_origin(4u32, 5u32)
+  assert(solver.unify(variable, i32, origin), "initial binding")
+  assert(!solver.unify(variable, string, origin), "mismatch accepted")
+  assert(
+    solver.representative_type(variable) == solver.error_type(),
+    "mismatch poison",
+  )
+  assert(solver.diagnostic_count() == 1u32, "mismatch count")
+  match solver.diagnostic_at(0u32) {
+    SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(
+      actual,
+      expected,
+      diagnostic_origin,
+    ) => {
+      assert(actual == i32, "actual type")
+      assert(expected == string, "expected type")
+      assert(
+        self_host_type_origin_equal(diagnostic_origin, origin),
+        "mismatch origin",
+      )
+    }
+    _ => assert(false, "expected mismatch diagnostic")
+  }
+  assert(solver.unify(variable, string, origin), "poison recovery")
+  assert(solver.diagnostic_count() == 1u32, "duplicate mismatch")
+}
+
+test "local unification rejects infinite types with iterative occurs checking" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let variable = solver.fresh_variable()
+  let list = solver.resolved_type(
+    fixture.resolved.declaration_type(
+      fixture.collected.declaration_at(1u32).id,
+    ),
+  )
+  let recursive = solver.applied_type(list, [variable])
+  let origin = self_host_synthetic_type_origin(5u32, 6u32)
+  assert(!solver.unify(variable, recursive, origin), "infinite type accepted")
+  assert(
+    solver.representative_type(variable) == solver.error_type(),
+    "infinite type poison",
+  )
+  assert(solver.diagnostic_count() == 1u32, "infinite diagnostic")
+  match solver.diagnostic_at(0u32) {
+    SelfHostLocalInferenceDiagnostic::InfiniteLocalType(
+      _,
+      type_,
+      diagnostic_origin,
+    ) => {
+      assert(type_ == recursive, "recursive type")
+      assert(
+        self_host_type_origin_equal(diagnostic_origin, origin),
+        "infinite origin",
+      )
+    }
+    _ => assert(false, "expected infinite type diagnostic")
+  }
+}
+
+test "inference snapshots roll back bindings allocations and diagnostics" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let variable = solver.fresh_variable()
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  let string = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+  )
+  let origin = self_host_synthetic_type_origin(6u32, 7u32)
+  let type_count = solver.type_count()
+  let snapshot = solver.snapshot()
+  let temporary = solver.fresh_variable()
+  let _ = solver.applied_type(i32, [temporary])
+  assert(solver.unify(variable, i32, origin), "snapshot binding")
+  assert(!solver.unify(variable, string, origin), "snapshot mismatch")
+  assert(solver.diagnostic_count() == 1u32, "snapshot diagnostic")
+  solver.rollback(snapshot)
+  assert(solver.type_count() == type_count, "type rollback")
+  assert(solver.diagnostic_count() == 0u32, "diagnostic rollback")
+  assert(solver.has_unresolved_variable(variable), "binding rollback")
+  assert(solver.unify(variable, string, origin), "post rollback binding")
+  assert(solver.representative_type(variable) == string, "post rollback type")
+}
+
+test "nested inference snapshots commit and roll back in LIFO order" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let first = solver.fresh_variable()
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  let outer = solver.snapshot()
+  assert(
+    solver.unify(
+      first,
+      i32,
+      self_host_synthetic_type_origin(7u32, 8u32),
+    ),
+    "outer binding",
+  )
+  let inner = solver.snapshot()
+  let second = solver.fresh_variable()
+  assert(
+    solver.unify(
+      second,
+      i32,
+      self_host_synthetic_type_origin(8u32, 9u32),
+    ),
+    "inner binding",
+  )
+  solver.commit(inner)
+  solver.rollback(outer)
+  assert(solver.has_unresolved_variable(first), "outer rollback")
+  assert(solver.variable_count() == 1u32, "variable rollback")
+  assert(solver.snapshot_count() == 0u32, "snapshot cleanup")
+  assert(solver.undo_count() == 0u32, "undo cleanup")
+}
+
+test "zonking freezes bound applications and propagates poison" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let first = solver.fresh_variable()
+  let second = solver.fresh_variable()
+  let pair = solver.resolved_type(
+    fixture.resolved.declaration_type(
+      fixture.collected.declaration_at(0u32).id,
+    ),
+  )
+  let inferred = solver.applied_type(pair, [first, second])
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  let string = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+  )
+  assert(
+    solver.unify(
+      first,
+      i32,
+      self_host_synthetic_type_origin(9u32, 10u32),
+    ),
+    "first zonk binding",
+  )
+  assert(
+    solver.unify(
+      second,
+      string,
+      self_host_synthetic_type_origin(10u32, 11u32),
+    ),
+    "second zonk binding",
+  )
+  let frozen = solver.zonk_type(inferred)
+  assert(!solver.has_unresolved_variable(frozen), "unresolved frozen type")
+  match solver.type_term(frozen) {
+    SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+      assert(base == pair, "frozen base")
+      assert(solver.type_argument(arguments.start) == i32, "frozen first")
+      assert(
+        solver.type_argument(self_host_u32_add(arguments.start, 1u32)) ==
+          string,
+        "frozen second",
+      )
+    }
+    _ => assert(false, "expected frozen application")
+  }
+  let poisoned = solver.applied_type(pair, [solver.error_type(), second])
+  assert(solver.zonk_type(poisoned) == solver.error_type(), "poison zonk")
+}
+
+test "unification and occurs checking remain iterative at depth 1024" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let list = solver.resolved_type(
+    fixture.resolved.declaration_type(
+      fixture.collected.declaration_at(1u32).id,
+    ),
+  )
+  let variable = solver.fresh_variable()
+  let mut nested = variable
+  let _ = while 0u32 {
+    depth => if depth < 1024u32 {
+      nested = solver.applied_type(list, [nested])
+      continue depth + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(
+    !solver.unify(
+      variable,
+      nested,
+      self_host_synthetic_type_origin(11u32, 12u32),
+    ),
+    "deep infinite type accepted",
+  )
+  assert(
+    solver.representative_type(variable) == solver.error_type(),
+    "deep poison",
+  )
+}
+
+test "union-find remains iterative for 1024 equivalent variables" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let variables = []
+  let _ = while 0u32 {
+    index => if index < 1024u32 {
+      variables.push(solver.fresh_variable())
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let origin = self_host_synthetic_type_origin(12u32, 13u32)
+  let _ = while 1u32 {
+    index => if index < variables.length() {
+      assert(solver.unify(variables[0u32], variables[index], origin), "union")
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let i32 = solver.resolved_type(
+    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+  )
+  assert(
+    solver.unify(variables[variables.length() - 1u32], i32, origin),
+    "final binding",
+  )
+  let _ = while 0u32 {
+    index => if index < variables.length() {
+      assert(
+        solver.representative_type(variables[index]) == i32,
+        "union representative",
+      )
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}

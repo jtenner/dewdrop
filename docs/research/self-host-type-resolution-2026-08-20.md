@@ -73,6 +73,6 @@ WasmGC planning, linking, encoding, and the Dew compiler driver remain to port.
 
 ## Next phase
 
-1. Port local unification and body inference.
+1. Port body inference using the completed local unification solver.
 2. Add complete fingerprints and cache codecs to frozen interfaces when their
    dependent phases are available.

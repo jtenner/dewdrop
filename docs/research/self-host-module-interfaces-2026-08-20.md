@@ -69,5 +69,5 @@ name resolution. See
 Full callable, field, variant, and implementation recipes are now translated
 into consumer type arenas. See
 [`self-host-imported-semantics-2026-08-21.md`](self-host-imported-semantics-2026-08-21.md).
-Inferred module-value types remain dependent on body inference. The next
-dependency phase is local unification and body inference.
+Inferred module-value types remain dependent on body inference. Local
+unification is now complete; body inference is the next dependency phase.

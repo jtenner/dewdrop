@@ -92,5 +92,5 @@ inference. See
 Derive requests now expand into ordinary synthetic implementations and body
 HIR. See
 [`self-host-derive-expansion-2026-08-20.md`](self-host-derive-expansion-2026-08-20.md).
-The next phase is local unification and body inference, followed by callable
-and member resolution, trait obligations, and evidence selection.
+Local unification is now complete. The next phase is body inference, followed
+by callable and member resolution, trait obligations, and evidence selection.

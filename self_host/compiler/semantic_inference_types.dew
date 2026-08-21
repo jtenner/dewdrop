@@ -1,0 +1,131 @@
+pub enum SelfHostBodyTypeTerm {
+  BodyErrorType
+  BodyResolvedType(U32)
+  BodyVariableType(U32)
+  BodyProductType(SelfHostHirSpan)
+  BodyAppliedType(I32, SelfHostHirSpan)
+  BodyFunctionType(SelfHostHirSpan, I32)
+}
+
+pub enum SelfHostTypeConstraintOriginKind {
+  ExpressionTypeConstraint
+  PatternTypeConstraint
+  LocalTypeConstraint
+  ReturnTypeConstraint
+  CallTypeConstraint
+  OperatorTypeConstraint
+  SyntheticTypeConstraint
+}
+
+pub struct SelfHostTypeConstraintOrigin {
+  kind: SelfHostTypeConstraintOriginKind
+  source: U32
+  offset: U32
+}
+
+pub enum SelfHostLocalInferenceDiagnostic {
+  LocalTypeMismatch(I32, I32, SelfHostTypeConstraintOrigin)
+  InfiniteLocalType(U32, I32, SelfHostTypeConstraintOrigin)
+}
+
+impl SelfHostLocalInferenceDiagnostic {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(_, _, origin) => origin.offset
+      SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, origin) => origin.offset
+    }
+  }
+}
+
+fn self_host_expression_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_pattern_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::PatternTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_local_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::LocalTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_return_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::ReturnTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_call_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::CallTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_operator_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::OperatorTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_synthetic_type_origin(
+  source: U32,
+  offset: U32,
+) -> SelfHostTypeConstraintOrigin {
+  SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+    source: source
+    offset: offset
+  }
+}
+
+fn self_host_type_origin_equal(
+  left: SelfHostTypeConstraintOrigin,
+  right: SelfHostTypeConstraintOrigin,
+) -> Bool {
+  let kind_equal = match left.kind {
+    SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint
+    SelfHostTypeConstraintOriginKind::PatternTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::PatternTypeConstraint
+    SelfHostTypeConstraintOriginKind::LocalTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::LocalTypeConstraint
+    SelfHostTypeConstraintOriginKind::ReturnTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::ReturnTypeConstraint
+    SelfHostTypeConstraintOriginKind::CallTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::CallTypeConstraint
+    SelfHostTypeConstraintOriginKind::OperatorTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::OperatorTypeConstraint
+    SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+  }
+  kind_equal && left.source == right.source && left.offset == right.offset
+}

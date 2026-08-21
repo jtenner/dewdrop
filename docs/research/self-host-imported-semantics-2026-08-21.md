@@ -91,4 +91,6 @@ types still depend on module-value inference. Callable selection, member and
 operator resolution, implementation indexing, overlap checks, obligations, and
 evidence selection remain in the next inference tranche.
 
-The next dependency phase is local type unification and the body inference core.
+Local type unification has since landed. See
+[`self-host-local-unification-2026-08-21.md`](self-host-local-unification-2026-08-21.md).
+The next dependency phase is the basic body inference core.

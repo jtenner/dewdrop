@@ -70,4 +70,5 @@ still provided only by the MoonBit compiler. The Dew port now supplies the same
 synthetic HIR inputs required by those phases.
 
 Imported callable, field, variant, and implementation recipes have since
-landed. The next dependency phase is local unification and body inference.
+landed, and local unification is now complete. The next dependency phase is
+body inference.

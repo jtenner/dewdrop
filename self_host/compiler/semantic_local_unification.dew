@@ -1,0 +1,1514 @@
+open dew.std.array
+open dew.std.option
+
+fn self_host_body_u32_to_i32(value: U32) -> I32 {
+  value.into()
+}
+
+fn self_host_body_i32_to_u32(value: I32) -> U32 {
+  value.into()
+}
+
+pub struct SelfHostInferenceSnapshot {
+  undo_start: U32
+  variable_count: U32
+  type_count: U32
+  argument_count: U32
+  diagnostic_count: U32
+}
+
+fn self_host_inference_snapshot_equal(
+  left: SelfHostInferenceSnapshot,
+  right: SelfHostInferenceSnapshot,
+) -> Bool {
+  left.undo_start == right.undo_start &&
+    left.variable_count == right.variable_count &&
+    left.type_count == right.type_count &&
+    left.argument_count == right.argument_count &&
+    left.diagnostic_count == right.diagnostic_count
+}
+
+pub struct SelfHostLocalTypeSolver {
+  resolved: SelfHostResolvedModuleTypes
+  types: Array<SelfHostBodyTypeTerm>
+  type_arguments: Array<I32>
+  variable_parents: Array<U32>
+  variable_sizes: Array<U32>
+  variable_bindings: Array<I32>
+  variable_types: Array<I32>
+  diagnostics: Array<SelfHostLocalInferenceDiagnostic>
+  snapshots: Array<SelfHostInferenceSnapshot>
+  undo_kinds: Array<U32>
+  undo_indices: Array<U32>
+  undo_values: Array<I32>
+  unify_left: Array<I32>
+  unify_right: Array<I32>
+  occurs_stack: Array<I32>
+  occurs_local_marks: Array<U32>
+  occurs_resolved_marks: Array<U32>
+  mut occurs_generation: U32
+  zonk_task_types: Array<I32>
+  zonk_task_states: Array<U32>
+  zonk_result_starts: Array<U32>
+  zonk_results: Array<I32>
+  zonk_scratch: Array<I32>
+  zonk_marks: Array<U32>
+  zonk_values: Array<I32>
+  mut zonk_generation: U32
+}
+
+impl SelfHostLocalTypeSolver {
+  fn new(resolved: SelfHostResolvedModuleTypes) -> SelfHostLocalTypeSolver {
+    SelfHostLocalTypeSolver::{
+      resolved: resolved
+      types: [SelfHostBodyTypeTerm::BodyErrorType]
+      type_arguments: []
+      variable_parents: []
+      variable_sizes: []
+      variable_bindings: []
+      variable_types: []
+      diagnostics: []
+      snapshots: []
+      undo_kinds: []
+      undo_indices: []
+      undo_values: []
+      unify_left: []
+      unify_right: []
+      occurs_stack: []
+      occurs_local_marks: [0u32]
+      occurs_resolved_marks: []
+      occurs_generation: 0u32
+      zonk_task_types: []
+      zonk_task_states: []
+      zonk_result_starts: []
+      zonk_results: []
+      zonk_scratch: []
+      zonk_marks: [0u32]
+      zonk_values: [0i32]
+      zonk_generation: 0u32
+    }
+  }
+
+  fn reset(self) -> Unit {
+    if self.snapshots.length() != 0u32 {
+      return
+    }
+    self.types.clear()
+    self.types.push(SelfHostBodyTypeTerm::BodyErrorType)
+    self.type_arguments.clear()
+    self.variable_parents.clear()
+    self.variable_sizes.clear()
+    self.variable_bindings.clear()
+    self.variable_types.clear()
+    self.diagnostics.clear()
+    self.undo_kinds.clear()
+    self.undo_indices.clear()
+    self.undo_values.clear()
+    self.unify_left.clear()
+    self.unify_right.clear()
+    self.occurs_stack.clear()
+    self.occurs_local_marks.clear()
+    self.occurs_local_marks.push(0u32)
+    self.occurs_resolved_marks.clear()
+    self.occurs_generation = 0u32
+    self.zonk_task_types.clear()
+    self.zonk_task_states.clear()
+    self.zonk_result_starts.clear()
+    self.zonk_results.clear()
+    self.zonk_scratch.clear()
+    self.zonk_marks.clear()
+    self.zonk_marks.push(0u32)
+    self.zonk_values.clear()
+    self.zonk_values.push(0i32)
+    self.zonk_generation = 0u32
+  }
+
+  fn error_type(self) -> I32 {
+    0i32
+  }
+
+  fn diagnostic_count(self) -> U32 {
+    self.diagnostics.length()
+  }
+
+  fn diagnostic_at(self, index: U32) -> SelfHostLocalInferenceDiagnostic {
+    self.diagnostics[index]
+  }
+
+  fn type_count(self) -> U32 {
+    self.types.length()
+  }
+
+  fn variable_count(self) -> U32 {
+    self.variable_parents.length()
+  }
+
+  fn snapshot_count(self) -> U32 {
+    self.snapshots.length()
+  }
+
+  fn undo_count(self) -> U32 {
+    self.undo_kinds.length()
+  }
+
+  fn type_argument(self, index: U32) -> I32 {
+    self.type_arguments[index]
+  }
+
+  fn resolved_type(self, type_: U32) -> I32 {
+    if type_ == self.resolved.error_type {
+      self.error_type()
+    } else {
+      -self_host_body_u32_to_i32(type_) - 2i32
+    }
+  }
+
+  fn decoded_resolved_type(self, type_: I32) -> U32 {
+    self_host_body_i32_to_u32(-type_ - 2i32)
+  }
+
+  fn type_term(self, type_: I32) -> SelfHostBodyTypeTerm {
+    if type_ < -1i32 {
+      SelfHostBodyTypeTerm::BodyResolvedType(
+        self.decoded_resolved_type(type_),
+      )
+    } else if type_ >= 0i32 {
+      self.types[self_host_body_i32_to_u32(type_)]
+    } else {
+      SelfHostBodyTypeTerm::BodyErrorType
+    }
+  }
+
+  fn push_type_term(self, term: SelfHostBodyTypeTerm) -> I32 {
+    let id = self.types.length()
+    self.types.push(term)
+    self.occurs_local_marks.push(0u32)
+    self.zonk_marks.push(0u32)
+    self.zonk_values.push(0i32)
+    self_host_body_u32_to_i32(id)
+  }
+
+  fn fresh_variable(self) -> I32 {
+    let variable = self.variable_parents.length()
+    let type_ = self.push_type_term(
+      SelfHostBodyTypeTerm::BodyVariableType(variable),
+    )
+    self.variable_parents.push(variable)
+    self.variable_sizes.push(1u32)
+    self.variable_bindings.push(-1i32)
+    self.variable_types.push(type_)
+    type_
+  }
+
+  fn product_type(self, fields: Array<I32>) -> I32 {
+    let start = self.type_arguments.length()
+    for field in fields {
+      self.type_arguments.push(field)
+    }
+    self.push_type_term(
+      SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+        start: start
+        length: fields.length()
+      }),
+    )
+  }
+
+  fn applied_type(self, base: I32, arguments: Array<I32>) -> I32 {
+    let start = self.type_arguments.length()
+    for argument in arguments {
+      self.type_arguments.push(argument)
+    }
+    self.push_type_term(
+      SelfHostBodyTypeTerm::BodyAppliedType(
+        base,
+        SelfHostHirSpan::{
+          start: start
+          length: arguments.length()
+        },
+      ),
+    )
+  }
+
+  fn function_type(self, parameters: Array<I32>, result: I32) -> I32 {
+    let start = self.type_arguments.length()
+    for parameter in parameters {
+      self.type_arguments.push(parameter)
+    }
+    self.push_type_term(
+      SelfHostBodyTypeTerm::BodyFunctionType(
+        SelfHostHirSpan::{
+          start: start
+          length: parameters.length()
+        },
+        result,
+      ),
+    )
+  }
+
+  fn find_variable_root(self, variable: U32) -> U32 {
+    let root = while variable {
+      current => if self.variable_parents[current] != current {
+        continue self.variable_parents[current]
+      } else {
+        break current
+      }
+    }
+    if self.snapshots.length() == 0u32 {
+      let mut current = variable
+      let _ = while current {
+        candidate => if self.variable_parents[candidate] != candidate {
+          let next = self.variable_parents[candidate]
+          self.variable_parents[candidate] = root
+          continue next
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    root
+  }
+
+  fn representative_type(self, type_: I32) -> I32 {
+    let mut current = type_
+    while current {
+      type_id => match self.type_term(type_id) {
+        SelfHostBodyTypeTerm::BodyVariableType(variable) => {
+          let root = self.find_variable_root(variable)
+          let binding = self.variable_bindings[root]
+          if binding == -1i32 {
+            break self.variable_types[root]
+          } else {
+            continue binding
+          }
+        }
+        _ => break type_id
+      }
+    }
+  }
+
+  fn record_undo(self, kind: U32, index: U32, old_value: I32) -> Unit {
+    if self.snapshots.length() > 0u32 {
+      self.undo_kinds.push(kind)
+      self.undo_indices.push(index)
+      self.undo_values.push(old_value)
+    }
+  }
+
+  fn set_variable_parent(self, variable: U32, parent: U32) -> Unit {
+    self.record_undo(
+      0u32,
+      variable,
+      self_host_body_u32_to_i32(self.variable_parents[variable]),
+    )
+    self.variable_parents[variable] = parent
+  }
+
+  fn set_variable_size(self, variable: U32, size: U32) -> Unit {
+    self.record_undo(
+      1u32,
+      variable,
+      self_host_body_u32_to_i32(self.variable_sizes[variable]),
+    )
+    self.variable_sizes[variable] = size
+  }
+
+  fn set_variable_binding(self, variable: U32, binding: I32) -> Unit {
+    self.record_undo(2u32, variable, self.variable_bindings[variable])
+    self.variable_bindings[variable] = binding
+  }
+
+  fn union_variables(self, left: U32, right: U32) -> U32 {
+    let left_root = self.find_variable_root(left)
+    let right_root = self.find_variable_root(right)
+    if left_root == right_root {
+      return left_root
+    }
+    let mut larger = left_root
+    let mut smaller = right_root
+    if self.variable_sizes[left_root] < self.variable_sizes[right_root] {
+      larger = right_root
+      smaller = left_root
+    }
+    self.set_variable_parent(smaller, larger)
+    self.set_variable_size(
+      larger,
+      self.variable_sizes[larger] + self.variable_sizes[smaller],
+    )
+    larger
+  }
+
+  fn ensure_occurs_resolved_marks(self) -> Unit {
+    let _ = while self.occurs_resolved_marks.length() {
+      length => if length < self.resolved.types.length() {
+        self.occurs_resolved_marks.push(0u32)
+        continue length + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn next_occurs_generation(self) -> Unit {
+    if self.occurs_generation == 4294967295u32 {
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < self.occurs_local_marks.length() {
+          self.occurs_local_marks[current] = 0u32
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      index = 0u32
+      let _ = while index {
+        current => if current < self.occurs_resolved_marks.length() {
+          self.occurs_resolved_marks[current] = 0u32
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self.occurs_generation = 1u32
+    } else {
+      self.occurs_generation = self.occurs_generation + 1u32
+    }
+  }
+
+  fn occurs_in(self, variable_root: U32, type_: I32) -> Bool {
+    self.next_occurs_generation()
+    self.occurs_stack.clear()
+    self.occurs_stack.push(type_)
+    let _ = while self.occurs_stack.length() {
+      length => if length > 0u32 {
+        let popped = match self.occurs_stack.pop() {
+          Option::Some(value) => value
+          Option::None => self.error_type()
+        }
+        let current = self.representative_type(popped)
+        if current < -1i32 {
+          let resolved_id = self.decoded_resolved_type(current)
+          match self.resolved.types[resolved_id] {
+            SelfHostResolvedType::ProductType(fields) => {
+              self.ensure_occurs_resolved_marks()
+              if self.occurs_resolved_marks[resolved_id] != self.occurs_generation {
+                self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+                let mut index = fields.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.occurs_stack.push(
+                      self.resolved_type(
+                        self.resolved.type_arguments[
+                          self_host_u32_add(fields.start, next)
+                        ],
+                      ),
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+            }
+            SelfHostResolvedType::AppliedType(base, arguments) => {
+              self.ensure_occurs_resolved_marks()
+              if self.occurs_resolved_marks[resolved_id] != self.occurs_generation {
+                self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+                let mut index = arguments.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.occurs_stack.push(
+                      self.resolved_type(
+                        self.resolved.type_arguments[
+                          self_host_u32_add(arguments.start, next)
+                        ],
+                      ),
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+                self.occurs_stack.push(self.resolved_type(base))
+              }
+            }
+            SelfHostResolvedType::FunctionType(parameters, result) => {
+              self.ensure_occurs_resolved_marks()
+              if self.occurs_resolved_marks[resolved_id] != self.occurs_generation {
+                self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+                self.occurs_stack.push(self.resolved_type(result))
+                let mut index = parameters.length
+                let _ = while index {
+                  remaining => if remaining > 0u32 {
+                    let next = remaining - 1u32
+                    self.occurs_stack.push(
+                      self.resolved_type(
+                        self.resolved.type_arguments[
+                          self_host_u32_add(parameters.start, next)
+                        ],
+                      ),
+                    )
+                    continue next
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+            }
+            _ => {}
+          }
+        } else {
+          let local = self_host_body_i32_to_u32(current)
+          if self.occurs_local_marks[local] != self.occurs_generation {
+            self.occurs_local_marks[local] = self.occurs_generation
+            match self.types[local] {
+              SelfHostBodyTypeTerm::BodyVariableType(variable) => if self.find_variable_root(
+                variable,
+              ) == variable_root {
+                return true
+              }
+              SelfHostBodyTypeTerm::BodyProductType(fields) => self.push_local_span_reverse(
+                fields,
+                self.occurs_stack,
+              )
+              SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+                self.push_local_span_reverse(arguments, self.occurs_stack)
+                self.occurs_stack.push(base)
+              }
+              SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+                self.occurs_stack.push(result)
+                self.push_local_span_reverse(parameters, self.occurs_stack)
+              }
+              _ => {}
+            }
+          }
+        }
+        continue self.occurs_stack.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    false
+  }
+
+  fn push_local_span_reverse(
+    self,
+    span: SelfHostHirSpan,
+    output: Array<I32>,
+  ) -> Unit {
+    let mut index = span.length
+    let _ = while index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        output.push(
+          self.type_arguments[self_host_u32_add(span.start, next)],
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn poison_direct_variable(self, type_: I32) -> Unit {
+    if type_ >= 0i32 {
+      match self.types[self_host_body_i32_to_u32(type_)] {
+        SelfHostBodyTypeTerm::BodyVariableType(variable) => {
+          let root = self.find_variable_root(variable)
+          self.set_variable_binding(root, self.error_type())
+        }
+        _ => {}
+      }
+    }
+  }
+
+  fn poison_type(self, type_: I32) -> Unit {
+    self.poison_direct_variable(type_)
+  }
+
+  fn bind_variable(
+    self,
+    variable: U32,
+    other: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Bool {
+    let root = self.find_variable_root(variable)
+    let representative = self.representative_type(other)
+    match self.type_term(representative) {
+      SelfHostBodyTypeTerm::BodyVariableType(other_variable) => {
+        let _ = self.union_variables(root, other_variable)
+        true
+      }
+      _ => if self.occurs_in(root, representative) {
+        self.diagnostics.push(
+          SelfHostLocalInferenceDiagnostic::InfiniteLocalType(
+            root,
+            representative,
+            origin,
+          ),
+        )
+        self.set_variable_binding(root, self.error_type())
+        false
+      } else {
+        self.set_variable_binding(root, representative)
+        true
+      }
+    }
+  }
+
+  fn push_unification_pair(self, left: I32, right: I32) -> Unit {
+    self.unify_left.push(left)
+    self.unify_right.push(right)
+  }
+
+  fn push_body_span_pairs(
+    self,
+    left: SelfHostHirSpan,
+    right: SelfHostHirSpan,
+  ) -> Bool {
+    if left.length != right.length {
+      return false
+    }
+    let mut index = left.length
+    let _ = while index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        self.push_unification_pair(
+          self.type_arguments[self_host_u32_add(left.start, next)],
+          self.type_arguments[self_host_u32_add(right.start, next)],
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    true
+  }
+
+  fn push_resolved_span_pairs(
+    self,
+    left: SelfHostHirSpan,
+    right: SelfHostHirSpan,
+  ) -> Bool {
+    if left.length != right.length {
+      return false
+    }
+    let mut index = left.length
+    let _ = while index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        self.push_unification_pair(
+          self.resolved_type(
+            self.resolved.type_arguments[
+              self_host_u32_add(left.start, next)
+            ],
+          ),
+          self.resolved_type(
+            self.resolved.type_arguments[
+              self_host_u32_add(right.start, next)
+            ],
+          ),
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    true
+  }
+
+  fn push_mixed_span_pairs(
+    self,
+    body: SelfHostHirSpan,
+    resolved: SelfHostHirSpan,
+    body_on_left: Bool,
+  ) -> Bool {
+    if body.length != resolved.length {
+      return false
+    }
+    let mut index = body.length
+    let _ = while index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        let body_type = self.type_arguments[
+          self_host_u32_add(body.start, next)
+        ]
+        let resolved_type = self.resolved_type(
+          self.resolved.type_arguments[
+            self_host_u32_add(resolved.start, next)
+          ],
+        )
+        if body_on_left {
+          self.push_unification_pair(body_type, resolved_type)
+        } else {
+          self.push_unification_pair(resolved_type, body_type)
+        }
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    true
+  }
+
+  fn push_body_application_pairs(
+    self,
+    left_base: I32,
+    left_arguments: SelfHostHirSpan,
+    right_base: I32,
+    right_arguments: SelfHostHirSpan,
+  ) -> Bool {
+    if !self.push_body_span_pairs(left_arguments, right_arguments) {
+      false
+    } else {
+      self.push_unification_pair(left_base, right_base)
+      true
+    }
+  }
+
+  fn push_resolved_application_pairs(
+    self,
+    left_base: U32,
+    left_arguments: SelfHostHirSpan,
+    right_base: U32,
+    right_arguments: SelfHostHirSpan,
+  ) -> Bool {
+    if !self.push_resolved_span_pairs(left_arguments, right_arguments) {
+      false
+    } else {
+      self.push_unification_pair(
+        self.resolved_type(left_base),
+        self.resolved_type(right_base),
+      )
+      true
+    }
+  }
+
+  fn push_mixed_application_pairs(
+    self,
+    body_base: I32,
+    body_arguments: SelfHostHirSpan,
+    resolved_base: U32,
+    resolved_arguments: SelfHostHirSpan,
+    body_on_left: Bool,
+  ) -> Bool {
+    if !self.push_mixed_span_pairs(
+      body_arguments,
+      resolved_arguments,
+      body_on_left,
+    ) {
+      false
+    } else {
+      if body_on_left {
+        self.push_unification_pair(
+          body_base,
+          self.resolved_type(resolved_base),
+        )
+      } else {
+        self.push_unification_pair(
+          self.resolved_type(resolved_base),
+          body_base,
+        )
+      }
+      true
+    }
+  }
+
+  fn push_body_function_pairs(
+    self,
+    left_parameters: SelfHostHirSpan,
+    left_result: I32,
+    right_parameters: SelfHostHirSpan,
+    right_result: I32,
+  ) -> Bool {
+    if !self.push_body_span_pairs(left_parameters, right_parameters) {
+      false
+    } else {
+      self.push_unification_pair(left_result, right_result)
+      true
+    }
+  }
+
+  fn push_resolved_function_pairs(
+    self,
+    left_parameters: SelfHostHirSpan,
+    left_result: U32,
+    right_parameters: SelfHostHirSpan,
+    right_result: U32,
+  ) -> Bool {
+    if !self.push_resolved_span_pairs(left_parameters, right_parameters) {
+      false
+    } else {
+      self.push_unification_pair(
+        self.resolved_type(left_result),
+        self.resolved_type(right_result),
+      )
+      true
+    }
+  }
+
+  fn push_mixed_function_pairs(
+    self,
+    body_parameters: SelfHostHirSpan,
+    body_result: I32,
+    resolved_parameters: SelfHostHirSpan,
+    resolved_result: U32,
+    body_on_left: Bool,
+  ) -> Bool {
+    if !self.push_mixed_span_pairs(
+      body_parameters,
+      resolved_parameters,
+      body_on_left,
+    ) {
+      false
+    } else {
+      if body_on_left {
+        self.push_unification_pair(
+          body_result,
+          self.resolved_type(resolved_result),
+        )
+      } else {
+        self.push_unification_pair(
+          self.resolved_type(resolved_result),
+          body_result,
+        )
+      }
+      true
+    }
+  }
+
+  fn report_mismatch(
+    self,
+    left_original: I32,
+    right_original: I32,
+    left: I32,
+    right: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Bool {
+    self.diagnostics.push(
+      SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(
+        left,
+        right,
+        origin,
+      ),
+    )
+    self.poison_direct_variable(left_original)
+    self.poison_direct_variable(right_original)
+    false
+  }
+
+  fn unify(
+    self,
+    left: I32,
+    right: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Bool {
+    self.unify_left.clear()
+    self.unify_right.clear()
+    self.push_unification_pair(left, right)
+    let _ = while self.unify_left.length() {
+      length => if length > 0u32 {
+        let left_original = match self.unify_left.pop() {
+          Option::Some(value) => value
+          Option::None => self.error_type()
+        }
+        let right_original = match self.unify_right.pop() {
+          Option::Some(value) => value
+          Option::None => self.error_type()
+        }
+        let left_type = self.representative_type(left_original)
+        let right_type = self.representative_type(right_original)
+        if left_type == right_type {
+          continue self.unify_left.length()
+        }
+        match self.type_term(left_type) {
+          SelfHostBodyTypeTerm::BodyVariableType(variable) => {
+            if !self.bind_variable(variable, right_type, origin) {
+              return false
+            }
+            continue self.unify_left.length()
+          }
+          _ => {}
+        }
+        match self.type_term(right_type) {
+          SelfHostBodyTypeTerm::BodyVariableType(variable) => {
+            if !self.bind_variable(variable, left_type, origin) {
+              return false
+            }
+            continue self.unify_left.length()
+          }
+          _ => {}
+        }
+        if left_type == self.error_type() || right_type == self.error_type() {
+          continue self.unify_left.length()
+        }
+        let left_term = self.type_term(left_type)
+        let right_term = self.type_term(right_type)
+        let compatible = match left_term {
+          SelfHostBodyTypeTerm::BodyResolvedType(left_resolved) => match right_term {
+            SelfHostBodyTypeTerm::BodyResolvedType(right_resolved) => match self.resolved.types[
+              left_resolved
+            ] {
+              SelfHostResolvedType::ProductType(left_fields) => match self.resolved.types[
+                right_resolved
+              ] {
+                SelfHostResolvedType::ProductType(right_fields) => self.push_resolved_span_pairs(
+                  left_fields,
+                  right_fields,
+                )
+                _ => false
+              }
+              SelfHostResolvedType::AppliedType(left_base, left_arguments) => match self.resolved.types[
+                right_resolved
+              ] {
+                SelfHostResolvedType::AppliedType(right_base, right_arguments) => self.push_resolved_application_pairs(
+                  left_base,
+                  left_arguments,
+                  right_base,
+                  right_arguments,
+                )
+                _ => false
+              }
+              SelfHostResolvedType::FunctionType(left_parameters, left_result) => match self.resolved.types[
+                right_resolved
+              ] {
+                SelfHostResolvedType::FunctionType(
+                  right_parameters,
+                  right_result,
+                ) => self.push_resolved_function_pairs(
+                  left_parameters,
+                  left_result,
+                  right_parameters,
+                  right_result,
+                )
+                _ => false
+              }
+              _ => false
+            }
+            SelfHostBodyTypeTerm::BodyProductType(body_fields) => match self.resolved.types[
+              left_resolved
+            ] {
+              SelfHostResolvedType::ProductType(resolved_fields) => self.push_mixed_span_pairs(
+                body_fields,
+                resolved_fields,
+                false,
+              )
+              _ => false
+            }
+            SelfHostBodyTypeTerm::BodyAppliedType(body_base, body_arguments) => match self.resolved.types[
+              left_resolved
+            ] {
+              SelfHostResolvedType::AppliedType(
+                resolved_base,
+                resolved_arguments,
+              ) => self.push_mixed_application_pairs(
+                body_base,
+                body_arguments,
+                resolved_base,
+                resolved_arguments,
+                false,
+              )
+              _ => false
+            }
+            SelfHostBodyTypeTerm::BodyFunctionType(body_parameters, body_result) => match self.resolved.types[
+              left_resolved
+            ] {
+              SelfHostResolvedType::FunctionType(
+                resolved_parameters,
+                resolved_result,
+              ) => self.push_mixed_function_pairs(
+                body_parameters,
+                body_result,
+                resolved_parameters,
+                resolved_result,
+                false,
+              )
+              _ => false
+            }
+            _ => false
+          }
+          SelfHostBodyTypeTerm::BodyProductType(left_fields) => match right_term {
+            SelfHostBodyTypeTerm::BodyProductType(right_fields) => self.push_body_span_pairs(
+              left_fields,
+              right_fields,
+            )
+            SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => match self.resolved.types[
+              resolved_type
+            ] {
+              SelfHostResolvedType::ProductType(resolved_fields) => self.push_mixed_span_pairs(
+                left_fields,
+                resolved_fields,
+                true,
+              )
+              _ => false
+            }
+            _ => false
+          }
+          SelfHostBodyTypeTerm::BodyAppliedType(left_base, left_arguments) => match right_term {
+            SelfHostBodyTypeTerm::BodyAppliedType(
+              right_base,
+              right_arguments,
+            ) => self.push_body_application_pairs(
+              left_base,
+              left_arguments,
+              right_base,
+              right_arguments,
+            )
+            SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => match self.resolved.types[
+              resolved_type
+            ] {
+              SelfHostResolvedType::AppliedType(
+                resolved_base,
+                resolved_arguments,
+              ) => self.push_mixed_application_pairs(
+                left_base,
+                left_arguments,
+                resolved_base,
+                resolved_arguments,
+                true,
+              )
+              _ => false
+            }
+            _ => false
+          }
+          SelfHostBodyTypeTerm::BodyFunctionType(left_parameters, left_result) => match right_term {
+            SelfHostBodyTypeTerm::BodyFunctionType(
+              right_parameters,
+              right_result,
+            ) => self.push_body_function_pairs(
+              left_parameters,
+              left_result,
+              right_parameters,
+              right_result,
+            )
+            SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => match self.resolved.types[
+              resolved_type
+            ] {
+              SelfHostResolvedType::FunctionType(
+                resolved_parameters,
+                resolved_result,
+              ) => self.push_mixed_function_pairs(
+                left_parameters,
+                left_result,
+                resolved_parameters,
+                resolved_result,
+                true,
+              )
+              _ => false
+            }
+            _ => false
+          }
+          _ => false
+        }
+        if !compatible {
+          return self.report_mismatch(
+            left_original,
+            right_original,
+            left_type,
+            right_type,
+            origin,
+          )
+        }
+        continue self.unify_left.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    true
+  }
+
+  fn snapshot(self) -> SelfHostInferenceSnapshot {
+    let snapshot = SelfHostInferenceSnapshot::{
+      undo_start: self.undo_kinds.length()
+      variable_count: self.variable_parents.length()
+      type_count: self.types.length()
+      argument_count: self.type_arguments.length()
+      diagnostic_count: self.diagnostics.length()
+    }
+    self.snapshots.push(snapshot)
+    snapshot
+  }
+
+  fn restore_undo(self, start: U32) -> Unit {
+    let _ = while self.undo_kinds.length() {
+      length => if length > start {
+        let kind = match self.undo_kinds.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let index = match self.undo_indices.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let old_value = match self.undo_values.pop() {
+          Option::Some(value) => value
+          Option::None => 0i32
+        }
+        if kind == 0u32 {
+          self.variable_parents[index] = self_host_body_i32_to_u32(old_value)
+        } else if kind == 1u32 {
+          self.variable_sizes[index] = self_host_body_i32_to_u32(old_value)
+        } else {
+          self.variable_bindings[index] = old_value
+        }
+        continue length - 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn rollback(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
+    if self.snapshots.length() == 0u32 {
+      return
+    }
+    let top = self.snapshots[self.snapshots.length() - 1u32]
+    if !self_host_inference_snapshot_equal(top, snapshot) {
+      return
+    }
+    self.restore_undo(snapshot.undo_start)
+    self.variable_parents.truncate(snapshot.variable_count)
+    self.variable_sizes.truncate(snapshot.variable_count)
+    self.variable_bindings.truncate(snapshot.variable_count)
+    self.variable_types.truncate(snapshot.variable_count)
+    self.types.truncate(snapshot.type_count)
+    self.type_arguments.truncate(snapshot.argument_count)
+    self.occurs_local_marks.truncate(snapshot.type_count)
+    self.zonk_marks.truncate(snapshot.type_count)
+    self.zonk_values.truncate(snapshot.type_count)
+    self.diagnostics.truncate(snapshot.diagnostic_count)
+    let _ = self.snapshots.pop()
+    if self.snapshots.length() == 0u32 {
+      self.undo_kinds.clear()
+      self.undo_indices.clear()
+      self.undo_values.clear()
+    }
+  }
+
+  fn commit(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
+    if self.snapshots.length() == 0u32 {
+      return
+    }
+    let top = self.snapshots[self.snapshots.length() - 1u32]
+    if !self_host_inference_snapshot_equal(top, snapshot) {
+      return
+    }
+    let _ = self.snapshots.pop()
+    if self.snapshots.length() == 0u32 {
+      self.undo_kinds.clear()
+      self.undo_indices.clear()
+      self.undo_values.clear()
+    }
+  }
+
+  fn next_zonk_generation(self) -> Unit {
+    if self.zonk_generation == 4294967295u32 {
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < self.zonk_marks.length() {
+          self.zonk_marks[current] = 0u32
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self.zonk_generation = 1u32
+    } else {
+      self.zonk_generation = self.zonk_generation + 1u32
+    }
+  }
+
+  fn push_zonk_task(
+    self,
+    type_: I32,
+    state: U32,
+    result_start: U32,
+  ) -> Unit {
+    self.zonk_task_types.push(type_)
+    self.zonk_task_states.push(state)
+    self.zonk_result_starts.push(result_start)
+  }
+
+  fn zonk_type(self, root: I32) -> I32 {
+    if self.snapshots.length() > 0u32 {
+      return self.error_type()
+    }
+    let representative = self.representative_type(root)
+    if representative <= 0i32 {
+      return representative
+    }
+    match self.types[self_host_body_i32_to_u32(representative)] {
+      SelfHostBodyTypeTerm::BodyProductType(_) => {}
+      SelfHostBodyTypeTerm::BodyAppliedType(_, _) => {}
+      SelfHostBodyTypeTerm::BodyFunctionType(_, _) => {}
+      _ => {
+        return representative
+      }
+    }
+    self.next_zonk_generation()
+    self.zonk_task_types.clear()
+    self.zonk_task_states.clear()
+    self.zonk_result_starts.clear()
+    self.zonk_results.clear()
+    self.push_zonk_task(root, 0u32, 0u32)
+    let _ = while self.zonk_task_types.length() {
+      length => if length > 0u32 {
+        let source = match self.zonk_task_types.pop() {
+          Option::Some(value) => value
+          Option::None => self.error_type()
+        }
+        let state = match self.zonk_task_states.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let result_start = match self.zonk_result_starts.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        let current = self.representative_type(source)
+        if state == 0u32 {
+          if current < 0i32 {
+            self.zonk_results.push(current)
+          } else {
+            let local = self_host_body_i32_to_u32(current)
+            if self.zonk_marks[local] == self.zonk_generation {
+              self.zonk_results.push(self.zonk_values[local])
+            } else {
+              match self.types[local] {
+                SelfHostBodyTypeTerm::BodyProductType(fields) => {
+                  self.push_zonk_task(
+                    current,
+                    3u32,
+                    self.zonk_results.length(),
+                  )
+                  self.push_zonk_span(fields)
+                }
+                SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+                  self.push_zonk_task(
+                    current,
+                    1u32,
+                    self.zonk_results.length(),
+                  )
+                  self.push_zonk_span(arguments)
+                  self.push_zonk_task(base, 0u32, 0u32)
+                }
+                SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+                  self.push_zonk_task(
+                    current,
+                    2u32,
+                    self.zonk_results.length(),
+                  )
+                  self.push_zonk_task(result, 0u32, 0u32)
+                  self.push_zonk_span(parameters)
+                }
+                _ => {
+                  self.zonk_marks[local] = self.zonk_generation
+                  self.zonk_values[local] = current
+                  self.zonk_results.push(current)
+                }
+              }
+            }
+          }
+        } else if state == 1u32 {
+          self.finish_zonk_application(current, result_start)
+        } else if state == 2u32 {
+          self.finish_zonk_function(current, result_start)
+        } else {
+          self.finish_zonk_product(current, result_start)
+        }
+        continue self.zonk_task_types.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.zonk_results[0u32]
+  }
+
+  fn push_zonk_span(self, span: SelfHostHirSpan) -> Unit {
+    let mut index = span.length
+    let _ = while index {
+      remaining => if remaining > 0u32 {
+        let next = remaining - 1u32
+        self.push_zonk_task(
+          self.type_arguments[self_host_u32_add(span.start, next)],
+          0u32,
+          0u32,
+        )
+        continue next
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn finish_zonk_application(self, current: I32, result_start: U32) -> Unit {
+    let local = self_host_body_i32_to_u32(current)
+    let (original_base, original) = match self.types[local] {
+      SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => (base, arguments)
+      _ => (self.error_type(), self_host_empty_hir_span(0u32))
+    }
+    let base = self.zonk_results[result_start]
+    self.zonk_scratch.clear()
+    let mut poisoned = base == self.error_type()
+    let mut unchanged = base == original_base
+    let mut index = 0u32
+    let _ = while index {
+      offset => if offset < original.length {
+        let argument = self.zonk_results[
+          self_host_u32_add(result_start, offset + 1u32)
+        ]
+        if argument == self.error_type() {
+          poisoned = true
+        }
+        if argument != self.type_arguments[
+          self_host_u32_add(original.start, offset)
+        ] {
+          unchanged = false
+        }
+        self.zonk_scratch.push(argument)
+        continue offset + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let result = if poisoned {
+      self.error_type()
+    } else if unchanged {
+      current
+    } else {
+      self.applied_type(base, self.zonk_scratch)
+    }
+    self.zonk_marks[local] = self.zonk_generation
+    self.zonk_values[local] = result
+    self.zonk_results.truncate(result_start)
+    self.zonk_results.push(result)
+  }
+
+  fn finish_zonk_function(self, current: I32, result_start: U32) -> Unit {
+    let local = self_host_body_i32_to_u32(current)
+    let (parameters, original_result) = match self.types[local] {
+      SelfHostBodyTypeTerm::BodyFunctionType(values, result) => (values, result)
+      _ => (self_host_empty_hir_span(0u32), self.error_type())
+    }
+    self.zonk_scratch.clear()
+    let mut poisoned = false
+    let mut unchanged = true
+    let mut index = 0u32
+    let _ = while index {
+      offset => if offset < parameters.length {
+        let parameter = self.zonk_results[
+          self_host_u32_add(result_start, offset)
+        ]
+        if parameter == self.error_type() {
+          poisoned = true
+        }
+        if parameter != self.type_arguments[
+          self_host_u32_add(parameters.start, offset)
+        ] {
+          unchanged = false
+        }
+        self.zonk_scratch.push(parameter)
+        continue offset + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let frozen_result = self.zonk_results[
+      self_host_u32_add(result_start, parameters.length)
+    ]
+    if frozen_result == self.error_type() {
+      poisoned = true
+    }
+    if frozen_result != original_result {
+      unchanged = false
+    }
+    let result = if poisoned {
+      self.error_type()
+    } else if unchanged {
+      current
+    } else {
+      self.function_type(self.zonk_scratch, frozen_result)
+    }
+    self.zonk_marks[local] = self.zonk_generation
+    self.zonk_values[local] = result
+    self.zonk_results.truncate(result_start)
+    self.zonk_results.push(result)
+  }
+
+  fn finish_zonk_product(self, current: I32, result_start: U32) -> Unit {
+    let local = self_host_body_i32_to_u32(current)
+    let fields = match self.types[local] {
+      SelfHostBodyTypeTerm::BodyProductType(values) => values
+      _ => self_host_empty_hir_span(0u32)
+    }
+    self.zonk_scratch.clear()
+    let mut poisoned = false
+    let mut unchanged = true
+    let mut index = 0u32
+    let _ = while index {
+      offset => if offset < fields.length {
+        let field = self.zonk_results[
+          self_host_u32_add(result_start, offset)
+        ]
+        if field == self.error_type() {
+          poisoned = true
+        }
+        if field != self.type_arguments[
+          self_host_u32_add(fields.start, offset)
+        ] {
+          unchanged = false
+        }
+        self.zonk_scratch.push(field)
+        continue offset + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let result = if poisoned {
+      self.error_type()
+    } else if unchanged {
+      current
+    } else {
+      self.product_type(self.zonk_scratch)
+    }
+    self.zonk_marks[local] = self.zonk_generation
+    self.zonk_values[local] = result
+    self.zonk_results.truncate(result_start)
+    self.zonk_results.push(result)
+  }
+
+  fn has_unresolved_variable(self, root: I32) -> Bool {
+    let representative = self.representative_type(root)
+    if representative <= 0i32 {
+      return false
+    }
+    match self.types[self_host_body_i32_to_u32(representative)] {
+      SelfHostBodyTypeTerm::BodyVariableType(_) => {
+        return true
+      }
+      SelfHostBodyTypeTerm::BodyProductType(_) => {}
+      SelfHostBodyTypeTerm::BodyAppliedType(_, _) => {}
+      SelfHostBodyTypeTerm::BodyFunctionType(_, _) => {}
+      _ => {
+        return false
+      }
+    }
+    self.next_occurs_generation()
+    self.occurs_stack.clear()
+    self.occurs_stack.push(representative)
+    let _ = while self.occurs_stack.length() {
+      length => if length > 0u32 {
+        let popped = match self.occurs_stack.pop() {
+          Option::Some(value) => value
+          Option::None => self.error_type()
+        }
+        let current = self.representative_type(popped)
+        if current < -1i32 {
+          let resolved_id = self.decoded_resolved_type(current)
+          if self.occurs_resolved_type_unresolved(resolved_id) {
+            return true
+          }
+        } else {
+          let local = self_host_body_i32_to_u32(current)
+          if self.occurs_local_marks[local] != self.occurs_generation {
+            self.occurs_local_marks[local] = self.occurs_generation
+            match self.types[local] {
+              SelfHostBodyTypeTerm::BodyVariableType(_) => {
+                return true
+              }
+              SelfHostBodyTypeTerm::BodyProductType(fields) => self.push_local_span_reverse(
+                fields,
+                self.occurs_stack,
+              )
+              SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+                self.push_local_span_reverse(arguments, self.occurs_stack)
+                self.occurs_stack.push(base)
+              }
+              SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+                self.occurs_stack.push(result)
+                self.push_local_span_reverse(parameters, self.occurs_stack)
+              }
+              _ => {}
+            }
+          }
+        }
+        continue self.occurs_stack.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    false
+  }
+
+  fn occurs_resolved_type_unresolved(self, resolved_id: U32) -> Bool {
+    self.ensure_occurs_resolved_marks()
+    if self.occurs_resolved_marks[resolved_id] == self.occurs_generation {
+      false
+    } else {
+      self.occurs_resolved_marks[resolved_id] = self.occurs_generation
+      match self.resolved.types[resolved_id] {
+        SelfHostResolvedType::ProductType(fields) => {
+          let mut index = fields.length
+          let _ = while index {
+            remaining => if remaining > 0u32 {
+              let next = remaining - 1u32
+              self.occurs_stack.push(
+                self.resolved_type(
+                  self.resolved.type_arguments[
+                    self_host_u32_add(fields.start, next)
+                  ],
+                ),
+              )
+              continue next
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          false
+        }
+        SelfHostResolvedType::AppliedType(base, arguments) => {
+          let mut index = arguments.length
+          let _ = while index {
+            remaining => if remaining > 0u32 {
+              let next = remaining - 1u32
+              self.occurs_stack.push(
+                self.resolved_type(
+                  self.resolved.type_arguments[
+                    self_host_u32_add(arguments.start, next)
+                  ],
+                ),
+              )
+              continue next
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          self.occurs_stack.push(self.resolved_type(base))
+          false
+        }
+        SelfHostResolvedType::FunctionType(parameters, result) => {
+          self.occurs_stack.push(self.resolved_type(result))
+          let mut index = parameters.length
+          let _ = while index {
+            remaining => if remaining > 0u32 {
+              let next = remaining - 1u32
+              self.occurs_stack.push(
+                self.resolved_type(
+                  self.resolved.type_arguments[
+                    self_host_u32_add(parameters.start, next)
+                  ],
+                ),
+              )
+              continue next
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          false
+        }
+        _ => false
+      }
+    }
+  }
+}
