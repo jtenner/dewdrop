@@ -176,3 +176,87 @@ fn self_host_publish_basic_module_evidence(
     bodies: bodies
   }
 }
+
+fn self_host_publish_merged_body_evidence(
+  body: SelfHostHirBody,
+  job: SelfHostMergedInferenceJob,
+  inferred: SelfHostMergedModuleInference,
+  index: SelfHostModuleImplIndex,
+) -> SelfHostBasicBodyEvidence {
+  let expression_evidence = []
+  let evidence = []
+  let prerequisite_indices = []
+  let mut expression = 0u32
+  let _ = while expression {
+    current => if current < body.expressions.length {
+      let start = evidence.length()
+      let call_target = inferred.call_targets[
+        self_host_u32_add(job.call_targets.start, current)
+      ]
+      let operator_target = inferred.operator_targets[
+        self_host_u32_add(job.operator_targets.start, current)
+      ]
+      let mut selected = self_host_basic_evidence_target_declaration(call_target)
+      match self_host_basic_evidence_target_declaration(operator_target) {
+        Option::Some(value) => {
+          selected = Option::Some(value)
+        }
+        Option::None => {}
+      }
+      match selected {
+        Option::Some(declaration) => match self_host_basic_evidence_implementation_for_method(
+          index,
+          declaration,
+        ) {
+          Option::Some(implementation) => evidence.push(
+            SelfHostBasicTraitEvidence::{
+              implementation: implementation
+              prerequisites: self_host_empty_hir_span(0u32)
+            },
+          )
+          Option::None => {}
+        }
+        Option::None => {}
+      }
+      expression_evidence.push(SelfHostHirSpan::{
+        start: start
+        length: evidence.length() - start
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostBasicBodyEvidence::{
+    body: body.declaration
+    expression_evidence: expression_evidence
+    evidence: evidence
+    prerequisite_indices: prerequisite_indices
+  }
+}
+
+fn self_host_publish_merged_module_evidence(
+  collected: SelfHostCollectedModule,
+  inferred: SelfHostMergedModuleInference,
+  index: SelfHostModuleImplIndex,
+) -> SelfHostBasicModuleEvidence {
+  let bodies = []
+  let mut current = 0u32
+  let _ = while current {
+    body_index => if body_index < collected.bodies.length() {
+      bodies.push(self_host_publish_merged_body_evidence(
+        collected.bodies[body_index],
+        inferred.jobs[body_index],
+        inferred,
+        index,
+      ))
+      continue body_index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostBasicModuleEvidence::{
+    module_id: collected.module_id
+    bodies: bodies
+  }
+}

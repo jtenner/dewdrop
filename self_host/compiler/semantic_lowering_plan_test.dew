@@ -73,15 +73,20 @@ test "lowering plans direct calls" {
     b"fn add(value: I32) -> I32 {\n  value + 1\n}\nfn run() -> I32 {\n  add(1)\n}\n",
   )
   let mut saw_call = false
+  let mut saw_consumed = false
   for expression in planned.expressions {
     match expression.kind {
       SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
         saw_call = true
       }
+      SelfHostPlannedExpressionKind::PlannedConsumedExpression => {
+        saw_consumed = true
+      }
       _ => {}
     }
   }
   assert(saw_call, "direct call")
+  assert(saw_consumed, "consumed direct target")
 }
 
 test "lowering plans products and product fields" {
@@ -202,4 +207,155 @@ test "lowering retains lambda locals and captures" {
   }
   assert(saw_closure, "closure")
   assert(saw_capture, "capture get")
+}
+
+test "lowering retains nominal identities" {
+  let planned = self_host_lowering_test_plan(
+    b"struct Box {\n  value: I32\n}\nfn make() -> Box {\n  Box::{\n    value: 1\n  }\n}\n",
+  )
+  let declaration = planned.type_layouts.layouts[0u32].declaration
+  assert(
+    planned.bodies[0u32].root_shape is SelfHostPlannedValueShape::RefPlannedValueShape,
+    "nominal result shape",
+  )
+  let mut saw_nominal = false
+  for expression in planned.expressions {
+    if self_host_u64_equal(expression.nominal, declaration) {
+      saw_nominal = true
+    }
+  }
+  assert(saw_nominal, "nominal expression")
+}
+
+fn self_host_lowering_imported_test_plan(
+  source: Bytes,
+  library: Bytes,
+) -> SelfHostPlannedModuleLowering {
+  let fixture = self_host_imported_semantics_fixture(source, library)
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let resolved = imports.resolved
+  let names = self_host_resolve_module_names_with_imports(
+    collected,
+    imports.scope,
+  )
+  let module_values = self_host_infer_module_values_with_imports(
+    collected,
+    resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+  let basic = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+  self_host_plan_module_lowering_with_imports(
+    collected,
+    resolved,
+    self_host_plan_module_type_layouts(collected, resolved),
+    self_host_plan_module_initialization(collected, module_values),
+    self_host_plan_module_functions(collected, resolved),
+    names,
+    imports,
+    self_host_merge_module_inference(basic),
+    self_host_analyze_basic_module_flows_with_imports(
+      collected,
+      resolved,
+      basic,
+      imports.variants,
+    ),
+  )
+}
+
+test "lowering retains imported calls and nominal constructions" {
+  let planned = self_host_lowering_imported_test_plan(
+    b"open app.library\npub fn run(value: I32) -> Box {\n  make(value)\n}\n",
+    b"pub struct Box {\n  value: I32\n}\npub fn make(value: I32) -> Box {\n  Box::{\n    value: value\n  }\n}\n",
+  )
+  let mut saw_imported_call = false
+  let mut saw_imported_nominal = false
+  for expression in planned.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
+        saw_imported_call = !self_host_u64_equal(
+          self_host_semantic_id_module(declaration),
+          planned.module_id,
+        )
+      }
+      _ => {}
+    }
+    if !self_host_u64_equal(expression.nominal, 0u64) && !self_host_u64_equal(
+      self_host_semantic_id_module(expression.nominal),
+      planned.module_id,
+    ) {
+      saw_imported_nominal = true
+    }
+  }
+  assert(saw_imported_call, "imported direct call")
+  assert(saw_imported_nominal, "imported nominal")
+}
+
+test "lowering classifies builtin calls by exact identity" {
+  let planned = self_host_lowering_test_plan(
+    b"builtin identity(value: I32) -> I32 = \"test_identity\"\nfn run() -> I32 {\n  identity(1)\n}\n",
+  )
+  let mut saw_builtin = false
+  for expression in planned.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedBuiltinCall(
+        name,
+        _,
+        _,
+        _,
+        _,
+      ) => if self_host_bytes_equal(name, b"test_identity") {
+        saw_builtin = true
+      }
+      _ => {}
+    }
+  }
+  assert(saw_builtin, "builtin identity")
+}
+
+fn self_host_lowering_evidence_node_count(
+  body: SelfHostBasicBodyEvidence,
+) -> U32 {
+  body.evidence_count()
+}
+
+test "lowering retains selected trait evidence roots" {
+  let planned = self_host_lowering_test_plan(
+    b"trait Add {\n  fn add(self, right: Self) -> Self\n}\nstruct Box {\n  value: I32\n}\nimpl Add for Box {\n  fn add(self, right: Self) -> Self {\n    self\n  }\n}\nfn combine(left: Box, right: Box) -> Box {\n  left + right\n}\n",
+  )
+  let mut evidence_count = 0u32
+  let evidence_bodies = planned.evidence.bodies
+  for body in evidence_bodies {
+    evidence_count = self_host_u32_add(
+      evidence_count,
+      self_host_lowering_evidence_node_count(body),
+    )
+  }
+  assert(evidence_count > 0u32, "trait evidence")
 }

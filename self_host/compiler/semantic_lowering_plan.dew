@@ -2,6 +2,7 @@ open dew.std.option
 
 pub enum SelfHostPlannedExpressionKind {
   PlannedPoisonExpression
+  PlannedConsumedExpression
   PlannedI8Const(U64)
   PlannedI16Const(U64)
   PlannedI32Const(U64)
@@ -32,6 +33,7 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedPrefixExpression(SelfHostHirPrefixOperator, U32)
   PlannedBinaryExpression(SelfHostHirBinaryOperator, U32, U32)
   PlannedOperatorCall(U64, SelfHostHirBinaryOperator, U32, U32, SelfHostHirSpan)
+  PlannedBuiltinCall(Bytes, U64, U32, SelfHostHirSpan, SelfHostHirSpan)
   PlannedDirectCall(U64, U32, SelfHostHirSpan, SelfHostHirSpan)
   PlannedFunctionValueCall(U32, SelfHostHirSpan, U32)
   PlannedUnresolvedCall(U32, SelfHostHirSpan)
@@ -45,9 +47,15 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedIndexSet(U32, U32, U32, SelfHostBasicCallTarget)
 }
 
+pub struct SelfHostLoweringBuiltinRecipe {
+  declaration: U64
+  builtin_name: Bytes
+}
+
 pub struct SelfHostPlannedExpression {
   type_: I32
   shape: SelfHostPlannedValueShape
+  nominal: U64
   flow: SelfHostBodyFlowSummary
   kind: SelfHostPlannedExpressionKind
   offset: U32
@@ -107,6 +115,7 @@ pub struct SelfHostPlannedLocal {
   mutable_: Bool
   type_: I32
   shape: SelfHostPlannedValueShape
+  nominal: U64
   offset: U32
 }
 
@@ -117,6 +126,7 @@ pub struct SelfHostPlannedCapture {
   mutable_: Bool
   type_: I32
   shape: SelfHostPlannedValueShape
+  nominal: U64
   offset: U32
 }
 
@@ -172,6 +182,7 @@ pub struct SelfHostPlannedModuleLowering {
   pattern_children: Array<U32>
   arm_children: Array<U32>
   inferred: SelfHostMergedModuleInference
+  evidence: SelfHostBasicModuleEvidence
   flow_diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
 
@@ -200,9 +211,22 @@ fn self_host_lowering_module_value_declaration(
   }
 }
 
+fn self_host_lowering_builtin_name(
+  recipes: Array<SelfHostLoweringBuiltinRecipe>,
+  declaration: U64,
+) -> Option<Bytes> {
+  for recipe in recipes {
+    if self_host_u64_equal(recipe.declaration, declaration) {
+      return Option::Some(recipe.builtin_name)
+    }
+  }
+  Option::None
+}
+
 fn self_host_lowering_expression_kind(
   collected: SelfHostCollectedModule,
   names: SelfHostResolvedModuleNames,
+  builtin_recipes: Array<SelfHostLoweringBuiltinRecipe>,
   inferred: SelfHostMergedModuleInference,
   job: SelfHostMergedInferenceJob,
   source_expression_start: U32,
@@ -277,7 +301,24 @@ fn self_host_lowering_expression_kind(
       _ => SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right)
     }
     SelfHostHirExpr::CallExpr(target, arguments, _) => match call_target {
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, target, arguments, type_arguments)
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => match self_host_lowering_builtin_name(
+        builtin_recipes,
+        declaration,
+      ) {
+        Option::Some(builtin_name) => SelfHostPlannedExpressionKind::PlannedBuiltinCall(
+          builtin_name,
+          declaration,
+          target,
+          arguments,
+          type_arguments,
+        )
+        Option::None => SelfHostPlannedExpressionKind::PlannedDirectCall(
+          declaration,
+          target,
+          arguments,
+          type_arguments,
+        )
+      }
       SelfHostBasicCallTarget::FunctionValueBasicCallTarget(type_) => SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, type_)
       _ => SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments)
     }
@@ -313,6 +354,7 @@ fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
   SelfHostPlannedExpression::{
     type_: -1i32
     shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
+    nominal: 0u64
     flow: self_host_flow_empty()
     kind: SelfHostPlannedExpressionKind::PlannedPoisonExpression
     offset: 0u32
@@ -337,6 +379,7 @@ fn self_host_lowering_plan_expressions(
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
   names: SelfHostResolvedModuleNames,
+  builtin_recipes: Array<SelfHostLoweringBuiltinRecipe>,
   inferred: SelfHostMergedModuleInference,
   job: SelfHostMergedInferenceJob,
   source: SelfHostHirSpan,
@@ -358,10 +401,16 @@ fn self_host_lowering_plan_expressions(
           inferred,
           type_,
         )
+        nominal: self_host_lowering_body_nominal(
+          resolved,
+          inferred,
+          type_,
+        )
         flow: self_host_lowering_flow_at(flows, current)
         kind: self_host_lowering_expression_kind(
           collected,
           names,
+          builtin_recipes,
           inferred,
           job,
           source.start,
@@ -630,14 +679,55 @@ fn self_host_lowering_append_flow_diagnostics(
   }
 }
 
-fn self_host_plan_module_lowering(
+fn self_host_lowering_consume_expression_target(
+  expressions: Array<SelfHostPlannedExpression>,
+  target: U32,
+) -> Unit {
+  if target < expressions.length() {
+    let source = expressions[target]
+    expressions[target] = SelfHostPlannedExpression::{
+      type_: source.type_
+      shape: source.shape
+      nominal: source.nominal
+      flow: source.flow
+      kind: SelfHostPlannedExpressionKind::PlannedConsumedExpression
+      offset: source.offset
+    }
+  }
+}
+
+fn self_host_lowering_directize_targets(
+  expressions: Array<SelfHostPlannedExpression>,
+) -> Unit {
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < expressions.length() {
+      match expressions[current].kind {
+        SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+          self_host_lowering_consume_expression_target(expressions, target)
+        }
+        SelfHostPlannedExpressionKind::PlannedConstruct(target, _, _) => {
+          self_host_lowering_consume_expression_target(expressions, target)
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_plan_module_lowering_with_builtin_recipes(
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
   type_layouts: SelfHostPlannedModuleTypeLayouts,
   initialization: SelfHostPlannedModuleInitialization,
   functions: SelfHostPlannedModuleFunctions,
   names: SelfHostResolvedModuleNames,
+  builtin_recipes: Array<SelfHostLoweringBuiltinRecipe>,
   inferred: SelfHostMergedModuleInference,
+  evidence: SelfHostBasicModuleEvidence,
   flows: SelfHostAnalyzedModuleFlows,
 ) -> SelfHostPlannedModuleLowering {
   let expressions = self_host_lowering_expression_slots(
@@ -669,6 +759,7 @@ fn self_host_plan_module_lowering(
         collected,
         resolved,
         names,
+        builtin_recipes,
         inferred,
         job,
         source.expressions,
@@ -749,6 +840,7 @@ fn self_host_plan_module_lowering(
         collected,
         resolved,
         names,
+        builtin_recipes,
         inferred,
         job,
         source.body.expressions,
@@ -835,6 +927,7 @@ fn self_host_plan_module_lowering(
       offset: field.offset
     })
   }
+  self_host_lowering_directize_targets(expressions)
   SelfHostPlannedModuleLowering::{
     module_id: collected.module_id
     type_layouts: type_layouts
@@ -855,6 +948,7 @@ fn self_host_plan_module_lowering(
     pattern_children: collected.pattern_children
     arm_children: collected.arm_children
     inferred: inferred
+    evidence: evidence
     flow_diagnostics: flow_diagnostics
   }
 }
@@ -885,6 +979,11 @@ fn self_host_lowering_plan_locals(
         mutable_: source_local.mutable_
         type_: type_
         shape: self_host_planned_merged_body_value_shape(
+          resolved,
+          inferred,
+          type_,
+        )
+        nominal: self_host_lowering_body_nominal(
           resolved,
           inferred,
           type_,
@@ -932,6 +1031,11 @@ fn self_host_lowering_plan_captures(
           inferred,
           type_,
         )
+        nominal: self_host_lowering_body_nominal(
+          resolved,
+          inferred,
+          type_,
+        )
         offset: source_capture.offset
       })
       continue current + 1u32
@@ -943,4 +1047,138 @@ fn self_host_lowering_plan_captures(
     start: start
     length: output.length() - start
   }
+}
+
+fn self_host_lowering_resolved_nominal(
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+) -> U64 {
+  let mut current = root
+  while current {
+    type_ => match resolved.types[type_] {
+      SelfHostResolvedType::NominalType(declaration) => break declaration
+      SelfHostResolvedType::AppliedType(base, _) => continue base
+      _ => break 0u64
+    }
+  }
+}
+
+fn self_host_lowering_body_nominal(
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostMergedModuleInference,
+  root: I32,
+) -> U64 {
+  let mut current = root
+  while current {
+    type_ => if type_ < -1i32 {
+      break self_host_lowering_resolved_nominal(
+        resolved,
+        self_host_body_i32_to_u32(-type_ - 2i32),
+      )
+    } else if type_ < 0i32 {
+      break 0u64
+    } else {
+      let index = self_host_body_i32_to_u32(type_)
+      if index >= inferred.types.length() {
+        break 0u64
+      }
+      match inferred.types[index] {
+        SelfHostBodyTypeTerm::BodyAppliedType(base, _) => continue base
+        SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => break self_host_lowering_resolved_nominal(
+          resolved,
+          resolved_type,
+        )
+        _ => break 0u64
+      }
+    }
+  }
+}
+
+fn self_host_lowering_local_builtin_recipes(
+  collected: SelfHostCollectedModule,
+) -> Array<SelfHostLoweringBuiltinRecipe> {
+  let recipes = []
+  for value in collected.builtins {
+    recipes.push(SelfHostLoweringBuiltinRecipe::{
+      declaration: value.declaration
+      builtin_name: value.builtin_name
+    })
+  }
+  recipes
+}
+
+fn self_host_lowering_imported_builtin_recipes(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+) -> Array<SelfHostLoweringBuiltinRecipe> {
+  let recipes = self_host_lowering_local_builtin_recipes(collected)
+  for callable in imports.callables {
+    match callable.kind {
+      SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => {
+        recipes.push(SelfHostLoweringBuiltinRecipe::{
+          declaration: callable.declaration
+          builtin_name: name
+        })
+      }
+      _ => {}
+    }
+  }
+  recipes
+}
+
+fn self_host_plan_module_lowering(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  type_layouts: SelfHostPlannedModuleTypeLayouts,
+  initialization: SelfHostPlannedModuleInitialization,
+  functions: SelfHostPlannedModuleFunctions,
+  names: SelfHostResolvedModuleNames,
+  inferred: SelfHostMergedModuleInference,
+  flows: SelfHostAnalyzedModuleFlows,
+) -> SelfHostPlannedModuleLowering {
+  self_host_plan_module_lowering_with_builtin_recipes(
+    collected,
+    resolved,
+    type_layouts,
+    initialization,
+    functions,
+    names,
+    self_host_lowering_local_builtin_recipes(collected),
+    inferred,
+    self_host_publish_merged_module_evidence(
+      collected,
+      inferred,
+      self_host_index_module_implementations(collected, resolved),
+    ),
+    flows,
+  )
+}
+
+fn self_host_plan_module_lowering_with_imports(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  type_layouts: SelfHostPlannedModuleTypeLayouts,
+  initialization: SelfHostPlannedModuleInitialization,
+  functions: SelfHostPlannedModuleFunctions,
+  names: SelfHostResolvedModuleNames,
+  imports: SelfHostResolvedModuleImports,
+  inferred: SelfHostMergedModuleInference,
+  flows: SelfHostAnalyzedModuleFlows,
+) -> SelfHostPlannedModuleLowering {
+  self_host_plan_module_lowering_with_builtin_recipes(
+    collected,
+    resolved,
+    type_layouts,
+    initialization,
+    functions,
+    names,
+    self_host_lowering_imported_builtin_recipes(collected, imports),
+    inferred,
+    self_host_publish_merged_module_evidence(
+      collected,
+      inferred,
+      self_host_index_module_implementations_with_imports(collected, imports),
+    ),
+    flows,
+  )
 }

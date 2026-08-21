@@ -22,4 +22,4 @@ Implemented lowering covers:
 
 The artifact retains merged inference so later specialization and WasmGC planning can consume rebased type graphs and type-argument spans without reconstructing solver-local state.
 
-Remaining lowering work is standard builtin operation classification, imported lowering integration tests, concrete/bound evidence arena attachment, nominal/function structural lookup, and function-value directization.
+The completion tranche adds exact builtin identity classification, imported lowering coverage, nominal identities, selected evidence roots, and direct-call/constructor target consumption. See `self-host-lowering-completion-2026-08-21.md`.
