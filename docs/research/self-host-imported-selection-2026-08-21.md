@@ -13,12 +13,16 @@ Implemented behavior:
 - zonked imported call type arguments;
 - imported generic field selection;
 - imported field mutability and identity publication;
+- imported unit, tuple, and struct variant construction;
+- imported struct construction;
+- imported unit, tuple, struct, and struct-variant patterns;
+- imported object-field and pattern-field constraints;
 - declaration-owned imported generic parameter spans.
 
 The imported-recipe builder now publishes a deterministic declaration-to-generic-span map. This avoids trying to recover type generic ownership from a nominal type recipe.
 
 A test-generation exit status of 255 was initially mistaken for a backend aggregate failure. It was caused by buffered semantic diagnostics followed by the test generator's deliberate abort. Running the same source through `tools/dew check` exposed the diagnostics. Staging aggregate field reads and using result accessors fixed the compiler-shaped test source.
 
-Focused tests cover non-generic calls, arity failures, generic identity calls, and generic imported fields.
+Focused tests cover non-generic calls, arity failures, generic identity calls, generic imported fields, all imported construction forms, and all imported pattern forms.
 
-Imported methods, constructors, variants, patterns, overload sets, bounds, and selected implementation evidence remain in the next selection tranche.
+Imported methods, overload sets, bounds, and selected implementation evidence remain in the next selection tranche.

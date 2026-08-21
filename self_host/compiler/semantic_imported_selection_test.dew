@@ -13,6 +13,9 @@ test "imported selection resolves non-generic calls" {
   let generic_parameter_ids = imports.generic_parameter_ids
   let parameter_types = imports.parameter_types
   let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
   let type_generic_spans = imports.type_generic_spans
   let module_value_types = imports.module_value_types
   let names = self_host_resolve_module_names_with_imports(collected, scope)
@@ -24,6 +27,9 @@ test "imported selection resolves non-generic calls" {
     generic_parameter_ids,
     parameter_types,
     fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
     type_generic_spans,
     module_value_types,
   )
@@ -73,6 +79,9 @@ test "imported selection resolves generic calls" {
   let generic_parameter_ids = imports.generic_parameter_ids
   let parameter_types = imports.parameter_types
   let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
   let type_generic_spans = imports.type_generic_spans
   let module_value_types = imports.module_value_types
   let names = self_host_resolve_module_names_with_imports(collected, scope)
@@ -84,6 +93,9 @@ test "imported selection resolves generic calls" {
     generic_parameter_ids,
     parameter_types,
     fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
     type_generic_spans,
     module_value_types,
   )
@@ -127,6 +139,341 @@ test "imported selection resolves generic calls" {
   }
 }
 
+test "imported selection resolves generic tuple and unit variants" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn some() -> Maybe<I32> {\n  Maybe::Some(1)\n}\npub fn none() -> Maybe<I32> {\n  Maybe::None\n}\n",
+    b"pub enum Maybe<t> {\n  None\n  Some(t)\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
+    type_generic_spans,
+    module_value_types,
+  )
+  assert(inferred.bodies.length() == 2u32, "imported variant bodies")
+  let some_hir = collected.bodies[0u32]
+  let none_hir = collected.bodies[1u32]
+  let some_body = match inferred.body(some_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let none_body = match inferred.body(none_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(some_body.diagnostic_count() == 0u32, "imported tuple diagnostics")
+  assert(none_body.diagnostic_count() == 0u32, "imported unit diagnostics")
+  let mut expression = some_hir.expressions.start
+  let some_end = self_host_u32_add(some_hir.expressions.start, some_hir.expressions.length)
+  let mut call = 4294967295u32
+  let _ = while expression {
+    current => if current < some_end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(_, _, _) => {
+          call = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match some_body.call_target(some_hir, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+      assert(self_host_semantic_id_module(declaration) == 2601u64, "imported Some")
+      assert(arguments.length == 1u32, "imported Some arguments")
+    }
+    _ => assert(false, "imported Some target")
+  }
+  expression = none_hir.expressions.start
+  let none_end = self_host_u32_add(none_hir.expressions.start, none_hir.expressions.length)
+  let mut qualified = 4294967295u32
+  let _ = while expression {
+    current => if current < none_end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::QualifiedExpr(_, _, _) => {
+          qualified = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match none_body.expression_selection(none_hir, qualified) {
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      declaration,
+      kind,
+      arguments,
+    ) => {
+      assert(self_host_semantic_id_module(declaration) == 2601u64, "imported None")
+      assert(kind == 2u32, "imported unit kind")
+      assert(arguments.length == 1u32, "imported None arguments")
+    }
+    _ => assert(false, "imported None selection")
+  }
+}
+
+test "imported selection resolves tuple and unit variant patterns" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn read(value: Maybe<I32>) -> I32 {\n  match value {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\n",
+    b"pub enum Maybe<t> {\n  None\n  Some(t)\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
+    type_generic_spans,
+    module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "imported pattern diagnostics")
+  let mut selected = 0u32
+  let mut pattern = hir_body.patterns.start
+  let end = self_host_u32_add(hir_body.patterns.start, hir_body.patterns.length)
+  let _ = while pattern {
+    current => if current < end {
+      match body.pattern_constructor(hir_body, current) {
+        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+          declaration,
+          is_variant,
+          arguments,
+        ) => {
+          assert(is_variant, "imported pattern is variant")
+          assert(self_host_semantic_id_module(declaration) == 2601u64, "imported pattern declaration")
+          assert(arguments.length == 1u32, "imported pattern arguments")
+          selected = selected + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(selected == 2u32, "imported pattern constructors")
+}
+
+test "imported selection resolves struct and struct-variant construction" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn box() -> Box<I32> {\n  Box::{\n    item: 1\n  }\n}\npub fn message() -> Message<I32> {\n  Message::Data::{\n    item: 2\n  }\n}\n",
+    b"pub struct Box<t> {\n  item: t\n}\npub enum Message<t> {\n  Data {\n    item: t\n  }\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
+    type_generic_spans,
+    module_value_types,
+  )
+  assert(inferred.bodies.length() == 2u32, "imported construction bodies")
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current_body => if current_body < 2u32 {
+      let hir_body = collected.bodies[current_body]
+      let body = match inferred.body(hir_body.id) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      assert(body.diagnostic_count() == 0u32, "imported construction diagnostics")
+      let mut expression = hir_body.expressions.start
+      let end = self_host_u32_add(hir_body.expressions.start, hir_body.expressions.length)
+      let mut construction = 4294967295u32
+      let _ = while expression {
+        current => if current < end {
+          match collected.expressions[current] {
+            SelfHostHirExpr::ConstructExpr(_, _, _) => {
+              construction = current
+            }
+            _ => {}
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      match body.expression_selection(hir_body, construction) {
+        SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+          declaration,
+          arguments,
+        ) => {
+          assert(current_body == 0u32, "imported struct body")
+          assert(self_host_semantic_id_module(declaration) == 2601u64, "imported struct")
+          assert(arguments.length == 1u32, "imported struct arguments")
+        }
+        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+          declaration,
+          field_count,
+          arguments,
+        ) => {
+          assert(current_body == 1u32, "imported struct variant body")
+          assert(self_host_semantic_id_module(declaration) == 2601u64, "imported struct variant")
+          assert(field_count == 1u32, "imported struct variant fields")
+          assert(arguments.length == 1u32, "imported struct variant arguments")
+        }
+        _ => assert(false, "imported construction selection")
+      }
+      continue current_body + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+test "imported selection resolves struct and struct-variant patterns" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn box(value: Box<I32>) -> I32 {\n  match value {\n    Box {\n      item: result\n    } => result\n  }\n}\npub fn message(value: Message<I32>) -> I32 {\n  match value {\n    Message::Data {\n      item: result\n    } => result\n  }\n}\n",
+    b"pub struct Box<t> {\n  item: t\n}\npub enum Message<t> {\n  Data {\n    item: t\n  }\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
+    type_generic_spans,
+    module_value_types,
+  )
+  assert(inferred.bodies.length() == 2u32, "imported struct pattern bodies")
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current_body => if current_body < 2u32 {
+      let hir_body = collected.bodies[current_body]
+      let body = match inferred.body(hir_body.id) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      assert(body.diagnostic_count() == 0u32, "imported struct pattern diagnostics")
+      let mut selected = 0u32
+      let mut pattern = hir_body.patterns.start
+      let end = self_host_u32_add(hir_body.patterns.start, hir_body.patterns.length)
+      let _ = while pattern {
+        current => if current < end {
+          match body.pattern_constructor(hir_body, current) {
+            SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+              declaration,
+              is_variant,
+              arguments,
+            ) => {
+              assert(self_host_semantic_id_module(declaration) == 2601u64, "imported struct pattern declaration")
+              assert(is_variant == (current_body == 1u32), "imported struct pattern kind")
+              assert(arguments.length == 1u32, "imported struct pattern arguments")
+              selected = selected + 1u32
+            }
+            _ => {}
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      assert(selected == 1u32, "imported selected struct pattern")
+      continue current_body + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
 test "imported selection resolves generic fields" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\npub fn read(value: Box<I32>) -> I32 {\n  value.item\n}\n",
@@ -140,6 +487,9 @@ test "imported selection resolves generic fields" {
   let generic_parameter_ids = imports.generic_parameter_ids
   let parameter_types = imports.parameter_types
   let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
   let type_generic_spans = imports.type_generic_spans
   let module_value_types = imports.module_value_types
   let names = self_host_resolve_module_names_with_imports(collected, scope)
@@ -151,6 +501,9 @@ test "imported selection resolves generic fields" {
     generic_parameter_ids,
     parameter_types,
     fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
     type_generic_spans,
     module_value_types,
   )
@@ -207,6 +560,9 @@ test "imported selection diagnoses non-generic call arity" {
   let generic_parameter_ids = imports.generic_parameter_ids
   let parameter_types = imports.parameter_types
   let fields = imports.fields
+  let variants = imports.variants
+  let variant_payload_types = imports.variant_payload_types
+  let type_declaration_types = imports.type_declaration_types
   let type_generic_spans = imports.type_generic_spans
   let module_value_types = imports.module_value_types
   let names = self_host_resolve_module_names_with_imports(collected, scope)
@@ -218,6 +574,9 @@ test "imported selection diagnoses non-generic call arity" {
     generic_parameter_ids,
     parameter_types,
     fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
     type_generic_spans,
     module_value_types,
   )
