@@ -39,6 +39,27 @@ fn self_host_variant_find_call(
   }
 }
 
+fn self_host_variant_find_construction(
+  collected: SelfHostCollectedModule,
+  body: SelfHostHirBody,
+) -> U32 {
+  let mut expression = body.expressions.start
+  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::ConstructExpr(_, _, _) => {
+          return current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break 4294967295u32
+    }
+  }
+}
+
 fn self_host_variant_find_qualified(
   collected: SelfHostCollectedModule,
   body: SelfHostHirBody,
@@ -159,6 +180,37 @@ test "variant selection resolves tuple and unit constructors" {
   }
 }
 
+test "variant selection resolves struct variant construction" {
+  let (collected, resolved, names, inferred) = self_host_variant_infer_source(
+    878u64,
+    b"enum Message<t> {\n  Data {\n    value: t\n  }\n}\nfn make() -> Message<I32> {\n  Message::Data::{\n    value: 7\n  }\n}\n",
+  )
+  let _ = names.module_id
+  let hir_body = collected.bodies[0u32]
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostic_count() == 0u32, "struct variant construction diagnostics")
+  let expression = self_host_variant_find_construction(collected, hir_body)
+  match body.expression_selection(hir_body, expression) {
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      field_count,
+      arguments,
+    ) => {
+      assert(variant == collected.variants[0u32].id, "struct variant id")
+      assert(field_count == 1u32, "struct variant field count")
+      assert(arguments.length == 1u32, "struct variant arguments")
+      self_host_variant_assert_primitive(
+        body,
+        resolved,
+        body.expression_type_arguments[arguments.start],
+        SelfHostPrimitiveType::I32Type,
+        "struct variant I32",
+      )
+    }
+    _ => assert(false, "struct variant selection")
+  }
+}
+
 test "variant selection resolves tuple and unit patterns" {
   let (collected, resolved, _, inferred) = self_host_variant_infer_source(
     873u64,
@@ -196,6 +248,95 @@ test "variant selection resolves tuple and unit patterns" {
     }
   }
   assert(selected == 2u32, "two selected pattern constructors")
+}
+
+fn self_host_variant_assert_one_struct_pattern(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostBasicInferredModuleBodies,
+) -> Unit {
+  assert(inferred.bodies.length() == 1u32, "struct pattern body count")
+  let hir_body = collected.bodies[0u32]
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostic_count() == 0u32, "struct pattern diagnostics")
+  let mut selected = 0u32
+  let mut pattern = hir_body.patterns.start
+  let end = self_host_u32_add(hir_body.patterns.start, hir_body.patterns.length)
+  let _ = while pattern {
+    current => if current < end {
+      match body.pattern_constructor(hir_body, current) {
+        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+          _,
+          _,
+          arguments,
+        ) => {
+          selected = selected + 1u32
+          assert(arguments.length == 1u32, "struct pattern arguments")
+          self_host_variant_assert_primitive(
+            body,
+            resolved,
+            body.pattern_type_arguments[arguments.start],
+            SelfHostPrimitiveType::I32Type,
+            "struct pattern I32",
+          )
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(selected == 1u32, "selected struct pattern")
+}
+
+test "variant selection resolves struct patterns" {
+  let (collected, resolved, _, inferred) = self_host_variant_infer_source(
+    875u64,
+    b"struct Box<t> {\n  value: t\n}\nfn read(value: Box<I32>) -> I32 {\n  match value {\n    Box {\n      value: item\n    } => item\n  }\n}\n",
+  )
+  self_host_variant_assert_one_struct_pattern(collected, resolved, inferred)
+}
+
+test "variant selection resolves struct-variant patterns" {
+  let (collected, resolved, _, inferred) = self_host_variant_infer_source(
+    877u64,
+    b"enum Message<t> {\n  Data {\n    value: t\n  }\n}\nfn read(value: Message<I32>) -> I32 {\n  match value {\n    Message::Data {\n      value: item\n    } => item\n  }\n}\n",
+  )
+  self_host_variant_assert_one_struct_pattern(collected, resolved, inferred)
+}
+
+test "variant selection diagnoses struct pattern fields" {
+  let (collected, resolved, names, inferred) = self_host_variant_infer_source(
+    876u64,
+    b"struct Pair {\n  left: I32\n  right: I32\n}\nfn read(value: Pair) -> I32 {\n  match value {\n    Pair {\n      missing: _\n      ...\n    } => 0\n  }\n}\n",
+  )
+  let _ = collected.module_id
+  let _ = resolved.module_id
+  let _ = names.module_id
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let mut count = 0u32
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < body.diagnostic_count() {
+      match body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::UnknownPatternField(_, _, _) => {
+          count = count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(count == 1u32, "unknown pattern field diagnostic")
 }
 
 test "variant selection diagnoses pattern payload arity" {

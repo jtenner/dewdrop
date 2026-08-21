@@ -15,9 +15,9 @@ controls, lambda captures, deterministic derive expansion, imported semantic
 recipes, rollback-capable local unification, the basic per-body inference
 core, iterative generic signature instantiation, local direct callable and
 overload selection, local fields, struct construction, inherent methods, enum
-values, unit/tuple variant patterns, operators, and indexing are also complete.
-The next compiler work is imported selections, struct enum variants,
-struct/imported pattern selection, implementation
+values, all local enum construction forms, local unit/tuple/struct variant
+patterns, operators, and indexing are also complete. The next compiler work is
+imported callable/member/constructor/pattern selection, implementation
 coherence, trait evidence, lambda-family, and module-value inference.
 
 ## 1. P0: compiler host boundary
