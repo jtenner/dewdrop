@@ -1,0 +1,247 @@
+open dew.std.testing
+
+test "imported selection resolves non-generic calls" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run(value: I32) -> I64 {\n  widen(value)\n}\n",
+    b"pub fn widen(value: I32) -> I64 {\n  1i64\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    type_generic_spans,
+    module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "imported call diagnostics")
+  let mut expression = hir_body.expressions.start
+  let end = self_host_u32_add(hir_body.expressions.start, hir_body.expressions.length)
+  let mut call = 4294967295u32
+  let _ = while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(_, _, _) => {
+          call = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+      assert(self_host_semantic_id_module(declaration) == 2601u64, "imported declaration")
+      assert(arguments.length == 0u32, "imported type arguments")
+    }
+    _ => assert(false, "imported call target")
+  }
+}
+
+test "imported selection resolves generic calls" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run(value: I32) -> I32 {\n  identity(value)\n}\n",
+    b"pub fn identity<t>(value: t) -> t {\n  value\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    type_generic_spans,
+    module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "imported generic diagnostics")
+  let mut expression = hir_body.expressions.start
+  let end = self_host_u32_add(hir_body.expressions.start, hir_body.expressions.length)
+  let mut call = 4294967295u32
+  let _ = while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(_, _, _) => {
+          call = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+      assert(arguments.length == 1u32, "imported generic argument count")
+      let argument_type = body.call_type_argument(arguments.start)
+      match body.type_term(argument_type) {
+        SelfHostBodyTypeTerm::BodyResolvedType(type_) => assert(
+          type_ == resolved.primitive(SelfHostPrimitiveType::I32Type),
+          "imported generic I32",
+        )
+        _ => assert(false, "imported generic argument")
+      }
+    }
+    _ => assert(false, "imported generic call target")
+  }
+}
+
+test "imported selection resolves generic fields" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn read(value: Box<I32>) -> I32 {\n  value.item\n}\n",
+    b"pub struct Box<t> {\n  item: t\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    type_generic_spans,
+    module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "imported field diagnostics")
+  let mut expression = hir_body.expressions.start
+  let end = self_host_u32_add(hir_body.expressions.start, hir_body.expressions.length)
+  let mut field_expression = 4294967295u32
+  let _ = while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::FieldExpr(_, _, _) => {
+          field_expression = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match body.expression_selection(hir_body, field_expression) {
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_) => {
+      assert(self_host_semantic_id_module(field) == 2601u64, "imported field module")
+      assert(!mutable_, "imported field mutability")
+    }
+    _ => assert(false, "imported field selection")
+  }
+  match body.type_term(body.expression_type(hir_body, field_expression)) {
+    SelfHostBodyTypeTerm::BodyResolvedType(type_) => assert(
+      type_ == resolved.primitive(SelfHostPrimitiveType::I32Type),
+      "imported field I32",
+    )
+    _ => assert(false, "imported field type")
+  }
+}
+
+test "imported selection diagnoses non-generic call arity" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run() -> I64 {\n  widen()\n}\n",
+    b"pub fn widen(value: I32) -> I64 {\n  1i64\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let scope = imports.scope
+  let resolved = imports.resolved
+  let callables = imports.callables
+  let generic_parameter_ids = imports.generic_parameter_ids
+  let parameter_types = imports.parameter_types
+  let fields = imports.fields
+  let type_generic_spans = imports.type_generic_spans
+  let module_value_types = imports.module_value_types
+  let names = self_host_resolve_module_names_with_imports(collected, scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    fields,
+    type_generic_spans,
+    module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let mut count = 0u32
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < body.diagnostic_count() {
+      match body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => {
+          count = count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(count == 1u32, "imported arity diagnostic")
+}

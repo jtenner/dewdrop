@@ -51,6 +51,17 @@ def bytes_literal(data: bytes) -> str:
     return 'b"' + "".join(output) + '"'
 
 
+def bytes_expression(data: bytes) -> str:
+    chunk_size = 8192
+    if len(data) <= chunk_size:
+        return bytes_literal(data)
+    chunks = [
+        bytes_literal(data[start : start + chunk_size])
+        for start in range(0, len(data), chunk_size)
+    ]
+    return "semantic_corpus_source([" + ", ".join(chunks) + "])"
+
+
 def snapshot_result_path(source: Path) -> Path:
     for parent in source.parents:
         if parent == ROOT:
@@ -84,6 +95,13 @@ def render_test(batch: list[Path], start: int) -> str:
     parts = [
         "open dew.std.testing\n"
         "open dew.std.string_builder\n\n"
+        "fn semantic_corpus_source(parts: Array<Bytes>) -> Bytes {\n"
+        "  let mut output = b\"\"\n"
+        "  for part in parts {\n"
+        "    output = output.concat(part)\n"
+        "  }\n"
+        "  output\n"
+        "}\n\n"
         "fn semantic_corpus_first_diagnostic(\n"
         "  collected: SelfHostCollectedModule,\n"
         ") -> String {\n"
@@ -128,7 +146,7 @@ def render_test(batch: list[Path], start: int) -> str:
             "    SelfHostProgramFile::{\n"
             "      id: self_host_make_file_id(module_id, 0u32)\n"
             f'      path: "{relative}"\n'
-            f"      source: {bytes_literal(source.read_bytes())}\n"
+            f"      source: {bytes_expression(source.read_bytes())}\n"
             f"      test_only: {test_only}\n"
             "    },\n"
             "  ])\n"

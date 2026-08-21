@@ -16,8 +16,9 @@ recipes, rollback-capable local unification, the basic per-body inference
 core, iterative generic signature instantiation, local direct callable and
 overload selection, local fields, struct construction, inherent methods, enum
 values, all local enum construction forms, local unit/tuple/struct variant
-patterns, operators, and indexing are also complete. The next compiler work is
-imported callable/member/constructor/pattern selection, implementation
+patterns, operators, indexing, imported generic calls, and imported generic
+fields are also complete. The next compiler work is imported methods,
+constructors, variants, patterns, and overload sets, then implementation
 coherence, trait evidence, lambda-family, and module-value inference.
 
 ## 1. P0: compiler host boundary

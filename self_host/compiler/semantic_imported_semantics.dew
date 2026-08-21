@@ -55,6 +55,7 @@ pub struct SelfHostResolvedModuleImports {
   variant_payload_types: Array<U32>
   variant_spans: Map<U64, SelfHostHirSpan>
   type_declaration_types: Map<U64, U32>
+  type_generic_spans: Map<U64, SelfHostHirSpan>
   module_value_types: Map<U64, U32>
   callable_by_declaration: Map<U64, U32>
   implementation_by_declaration: Map<U64, U32>
@@ -106,6 +107,13 @@ impl SelfHostResolvedModuleImports {
 
   fn type_declaration_type(self, declaration: U64) -> Option<U32> {
     self.type_declaration_types.get(declaration)
+  }
+
+  fn type_generic_span(self, declaration: U64) -> SelfHostHirSpan {
+    match self.type_generic_spans.get(declaration) {
+      Option::Some(span) => span
+      Option::None => self_host_empty_hir_span(0u32)
+    }
   }
 
   fn module_value_type(self, declaration: U64) -> Option<U32> {
@@ -717,6 +725,7 @@ struct SelfHostImportedRecipeBuilder {
   variant_payload_types: Array<U32>
   variant_spans: Map<U64, SelfHostHirSpan>
   type_declaration_types: Map<U64, U32>
+  type_generic_spans: Map<U64, SelfHostHirSpan>
   module_value_types: Map<U64, U32>
   callable_by_declaration: Map<U64, U32>
   implementation_by_declaration: Map<U64, U32>
@@ -743,6 +752,7 @@ impl SelfHostImportedRecipeBuilder {
       variant_payload_types: []
       variant_spans: self_host_empty_u64_span_map()
       type_declaration_types: self_host_empty_u64_u32_map()
+      type_generic_spans: self_host_empty_u64_span_map()
       module_value_types: self_host_empty_u64_u32_map()
       callable_by_declaration: self_host_empty_u64_u32_map()
       implementation_by_declaration: self_host_empty_u64_u32_map()
@@ -879,6 +889,14 @@ impl SelfHostImportedRecipeBuilder {
       current => if current < interface_.declaration_count() {
         let declaration = interface_.declaration_at(current)
         if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+          let (generic_parameters, _) = self.copy_generic_parameters(
+            interface_index,
+            declaration.generic_parameters,
+          )
+          self.type_generic_spans.set(
+            declaration.declaration,
+            generic_parameters,
+          )
           self.type_declaration_types.set(
             declaration.declaration,
             self.importer.import_type(
@@ -1058,6 +1076,7 @@ impl SelfHostImportedRecipeBuilder {
       variant_payload_types: self.variant_payload_types
       variant_spans: self.variant_spans
       type_declaration_types: self.type_declaration_types
+      type_generic_spans: self.type_generic_spans
       module_value_types: self.module_value_types
       callable_by_declaration: self.callable_by_declaration
       implementation_by_declaration: self.implementation_by_declaration

@@ -44,6 +44,17 @@ def bytes_literal(data: bytes) -> str:
     return 'b"' + "".join(output) + '"'
 
 
+def bytes_expression(data: bytes) -> str:
+    chunk_size = 8192
+    if len(data) <= chunk_size:
+        return bytes_literal(data)
+    chunks = [
+        bytes_literal(data[start : start + chunk_size])
+        for start in range(0, len(data), chunk_size)
+    ]
+    return "parser_corpus_source([" + ", ".join(chunks) + "])"
+
+
 def valid_sources() -> list[Path]:
     sources = set(ROOT.glob("std/**/*.dew"))
     sources.update(ROOT.glob("self_host/**/*.dew"))
@@ -61,6 +72,13 @@ def render_test(batch: list[Path]) -> str:
     parts = [
         "open dew.std.string_builder\n"
         "open dew.std.testing\n\n"
+        "fn parser_corpus_source(parts: Array<Bytes>) -> Bytes {\n"
+        "  let mut output = b\"\"\n"
+        "  for part in parts {\n"
+        "    output = output.concat(part)\n"
+        "  }\n"
+        "  output\n"
+        "}\n\n"
         "fn parser_corpus_error(\n"
         "  module_: SelfHostParsedModule,\n"
         "  name: String,\n"
@@ -85,7 +103,7 @@ def render_test(batch: list[Path]) -> str:
         parts.append(
             f'\ntest "self-host parser corpus {relative}" {{\n'
             "  let error = parser_corpus_error(\n"
-            f"    self_host_parse_module({bytes_literal(source.read_bytes())}),\n"
+            f"    self_host_parse_module({bytes_expression(source.read_bytes())}),\n"
             f'    "{relative}",\n'
             "  )\n"
             "  assert(error.byte_length() == 0u32, error)\n"
