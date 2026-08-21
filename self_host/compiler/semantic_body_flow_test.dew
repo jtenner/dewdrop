@@ -96,6 +96,25 @@ test "body flow recognizes exhaustive bool matches" {
   )
 }
 
+test "body flow recognizes local enum exhaustiveness" {
+  let (_, complete) = self_host_flow_source(
+    976u64,
+    b"enum Maybe {\n  None\n  Some(I32)\n}\nfn read(value: Maybe) -> I32 {\n  match value {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(complete.bodies[0u32]) == 0u32,
+    "complete enum match",
+  )
+  let (_, missing) = self_host_flow_source(
+    977u64,
+    b"enum Maybe {\n  None\n  Some(I32)\n}\nfn read(value: Maybe) -> I32 {\n  match value {\n    Maybe::None => 0\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(missing.bodies[0u32]) == 1u32,
+    "missing enum variant",
+  )
+}
+
 test "body flow diagnoses functional loop arm fallthrough" {
   let (_, flows) = self_host_flow_source(
     974u64,
@@ -132,5 +151,41 @@ test "body flow diagnoses non-exhaustive and redundant match arms" {
   assert(
     self_host_flow_redundant_count(redundant.bodies[0u32]) == 1u32,
     "redundant arm",
+  )
+}
+
+test "body flow recognizes imported enum exhaustiveness" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nfn read(value: Maybe) -> I32 {\n  match value {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\n",
+    b"pub enum Maybe {\n  None\n  Some(I32)\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    imports.resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+  let flows = self_host_analyze_basic_module_flows_with_imports(
+    collected,
+    imports.resolved,
+    inferred,
+    imports.variants,
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "complete imported enum match",
   )
 }

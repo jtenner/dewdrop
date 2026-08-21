@@ -12,9 +12,9 @@ Implemented behavior:
 - block, conditional, match, functional-loop, logical short-circuit, call, construction, assignment, and index evaluation order;
 - unreachable block-item diagnostics;
 - functional-loop arm fallthrough diagnostics;
-- catch-all and Bool match exhaustiveness;
-- redundant catch-all and Bool arms;
+- catch-all, Bool, local enum, and imported enum match exhaustiveness;
+- redundant catch-all, Bool, and direct variant arms;
 - deterministic per-body and per-lambda expression, block, arm, and diagnostic output;
 - iterative alternative-pattern catch-all traversal.
 
-Enum coverage, imported enum domains, invalid-pattern suppression, and source-ordered final diagnostic merging remain to reach full MoonBit flow parity.
+Alternative-variant flattening, invalid-pattern suppression, missing-case publication, and source-ordered final diagnostic merging remain to reach full MoonBit flow parity.

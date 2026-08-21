@@ -40,6 +40,12 @@ pub struct SelfHostAnalyzedModuleFlows {
   lambdas: Array<SelfHostAnalyzedLambdaFlow>
 }
 
+enum SelfHostFlowCoverageDomain {
+  OpenFlowCoverageDomain
+  BoolFlowCoverageDomain
+  EnumFlowCoverageDomain(U64)
+}
+
 fn self_host_flow_empty() -> SelfHostBodyFlowSummary {
   SelfHostBodyFlowSummary::{
     falls_through: false
@@ -189,6 +195,7 @@ struct SelfHostBodyFlowAnalyzer {
   resolved: SelfHostResolvedModuleTypes
   body: SelfHostHirBody
   inferred: SelfHostBasicInferredBody
+  imported_variants: Array<SelfHostResolvedImportedVariant>
   expression_flows: Array<SelfHostBodyFlowSummary>
   block_flows: Array<SelfHostBodyFlowSummary>
   block_done: Array<Bool>
@@ -202,12 +209,14 @@ impl SelfHostBodyFlowAnalyzer {
     resolved: SelfHostResolvedModuleTypes,
     body: SelfHostHirBody,
     inferred: SelfHostBasicInferredBody,
+    imported_variants: Array<SelfHostResolvedImportedVariant>,
   ) -> SelfHostBodyFlowAnalyzer {
     SelfHostBodyFlowAnalyzer::{
       collected: collected
       resolved: resolved
       body: body
       inferred: inferred
+      imported_variants: imported_variants
       expression_flows: self_host_flow_slots(body.expressions.length)
       block_flows: self_host_flow_slots(body.blocks.length)
       block_done: self_host_module_value_bool_slots(body.blocks.length)
@@ -309,6 +318,76 @@ impl SelfHostBodyFlowAnalyzer {
     result
   }
 
+  fn resolved_coverage_domain(self, type_: U32) -> SelfHostFlowCoverageDomain {
+    let mut current = type_
+    while current {
+      candidate => match self.resolved.types[candidate] {
+        SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::BoolType) => {
+          break SelfHostFlowCoverageDomain::BoolFlowCoverageDomain
+        }
+        SelfHostResolvedType::NominalType(declaration) => {
+          break SelfHostFlowCoverageDomain::EnumFlowCoverageDomain(declaration)
+        }
+        SelfHostResolvedType::AppliedType(base, _) => continue base
+        _ => break SelfHostFlowCoverageDomain::OpenFlowCoverageDomain
+      }
+    }
+  }
+
+  fn coverage_domain(self, expression: U32) -> SelfHostFlowCoverageDomain {
+    let tasks = [self.inferred.expression_types[expression - self.body.expressions.start]]
+    while tasks.length() {
+      length => if self_host_u32_greater(length, 0u32) {
+        let type_ = match tasks.pop() {
+          Option::Some(value) => value
+          Option::None => 0i32
+        }
+        match self.inferred.type_term(type_) {
+          SelfHostBodyTypeTerm::BodyAppliedType(base, _) => tasks.push(base)
+          SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => {
+            break self.resolved_coverage_domain(resolved_type)
+          }
+          _ => break SelfHostFlowCoverageDomain::OpenFlowCoverageDomain
+        }
+        continue tasks.length()
+      } else {
+        break SelfHostFlowCoverageDomain::OpenFlowCoverageDomain
+      }
+    }
+  }
+
+  fn enum_variants(self, declaration: U64) -> Array<U64> {
+    let variants = []
+    for variant in self.collected.variants {
+      if self_host_u64_equal(variant.declaration, declaration) {
+        variants.push(variant.id)
+      }
+    }
+    for variant in self.imported_variants {
+      if self_host_u64_equal(variant.declaration, declaration) {
+        variants.push(variant.variant)
+      }
+    }
+    variants
+  }
+
+  fn pattern_variant(self, pattern: U32) -> Option<U64> {
+    if pattern < self.body.patterns.start || pattern >= self_host_u32_add(
+      self.body.patterns.start,
+      self.body.patterns.length,
+    ) {
+      return Option::None
+    }
+    match self.inferred.pattern_constructors[pattern - self.body.patterns.start] {
+      SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+        declaration,
+        _,
+        _,
+      ) => Option::Some(declaration)
+      _ => Option::None
+    }
+  }
+
   fn pattern_catches_all(self, pattern: U32) -> Bool {
     let tasks = [pattern]
     while tasks.length() {
@@ -366,10 +445,20 @@ impl SelfHostBodyFlowAnalyzer {
   fn arms_flow(
     self,
     expression: U32,
+    expected: U32,
     arms: SelfHostHirSpan,
     loop_: Bool,
     offset: U32,
   ) -> SelfHostBodyFlowSummary {
+    let domain = self.coverage_domain(expected)
+    let enum_variants = match domain {
+      SelfHostFlowCoverageDomain::EnumFlowCoverageDomain(declaration) => {
+        self.enum_variants(declaration)
+      }
+      _ => []
+    }
+    let covered_variants = self_host_module_value_bool_slots(enum_variants.length())
+    let mut covered_variant_count = 0u32
     let mut branches = self_host_flow_empty()
     let mut catch_all = false
     let mut covered_false = false
@@ -382,9 +471,32 @@ impl SelfHostBodyFlowAnalyzer {
         ]
         let info = self.collected.pattern_arms[arm]
         let bool_case = self.pattern_bool(info.pattern)
+        let variant = self.pattern_variant(info.pattern)
+        let mut variant_slot = 4294967295u32
+        match variant {
+          Option::Some(selected) => {
+            let mut variant_index = 0u32
+            let _ = while variant_index {
+              candidate => if candidate < enum_variants.length() {
+                if self_host_u64_equal(enum_variants[candidate], selected) {
+                  variant_slot = candidate
+                  break self_host_semantic_unit()
+                }
+                continue candidate + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          Option::None => {}
+        }
+        let redundant_variant = variant_slot != 4294967295u32 && covered_variants[
+          variant_slot
+        ]
         let redundant = catch_all ||
           (bool_case == 1u32 && covered_false) ||
-          (bool_case == 2u32 && covered_true)
+          (bool_case == 2u32 && covered_true) ||
+          redundant_variant
         if redundant {
           self.diagnostics.push(SelfHostBodyFlowDiagnostic::RedundantPatternArm(
             arm,
@@ -398,6 +510,11 @@ impl SelfHostBodyFlowAnalyzer {
             covered_false = true
           } else if bool_case == 2u32 {
             covered_true = true
+          } else if variant_slot != 4294967295u32 && !covered_variants[
+            variant_slot
+          ] {
+            covered_variants[variant_slot] = true
+            covered_variant_count = self_host_u32_add(covered_variant_count, 1u32)
           }
         }
         let flow = self.arm_flow(arm)
@@ -415,7 +532,18 @@ impl SelfHostBodyFlowAnalyzer {
         break self_host_semantic_unit()
       }
     }
-    let exhaustive = catch_all || (covered_false && covered_true)
+    let exhaustive = catch_all || match domain {
+      SelfHostFlowCoverageDomain::BoolFlowCoverageDomain => {
+        covered_false && covered_true
+      }
+      SelfHostFlowCoverageDomain::EnumFlowCoverageDomain(_) => {
+        self_host_u32_greater(enum_variants.length(), 0u32) && self_host_u32_equal(
+          covered_variant_count,
+          enum_variants.length(),
+        )
+      }
+      SelfHostFlowCoverageDomain::OpenFlowCoverageDomain => false
+    }
     if !exhaustive {
       if loop_ {
         self.diagnostics.push(
@@ -527,11 +655,11 @@ impl SelfHostBodyFlowAnalyzer {
           SelfHostHirExpr::MatchExpr(scrutinee, arms, offset) => {
             self_host_flow_sequence(
               self.expression_flow(scrutinee),
-              self.arms_flow(current, arms, false, offset),
+              self.arms_flow(current, scrutinee, arms, false, offset),
             )
           }
           SelfHostHirExpr::WhileExpr(initial, arms, offset) => {
-            let branches = self.arms_flow(current, arms, true, offset)
+            let branches = self.arms_flow(current, initial, arms, true, offset)
             let loop_flow = SelfHostBodyFlowSummary::{
               falls_through: branches.breaks
               returns: branches.returns
@@ -667,10 +795,11 @@ fn self_host_flow_lambda_body(
   }
 }
 
-fn self_host_analyze_basic_module_flows(
+fn self_host_analyze_basic_module_flows_internal(
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
   inferred: SelfHostBasicInferredModuleBodies,
+  imported_variants: Array<SelfHostResolvedImportedVariant>,
 ) -> SelfHostAnalyzedModuleFlows {
   let bodies = []
   let mut index = 0u32
@@ -682,6 +811,7 @@ fn self_host_analyze_basic_module_flows(
           resolved,
           collected.bodies[current],
           inferred.bodies[current],
+          imported_variants,
         ).finish(),
       )
       continue current + 1u32
@@ -698,6 +828,7 @@ fn self_host_analyze_basic_module_flows(
         resolved,
         self_host_flow_lambda_body(collected, collected.lambdas[current]),
         inferred.lambdas[current].body,
+        imported_variants,
       ).finish()
       lambdas.push(SelfHostAnalyzedLambdaFlow::{
         lambda: current
@@ -717,4 +848,31 @@ fn self_host_analyze_basic_module_flows(
     bodies: bodies
     lambdas: lambdas
   }
+}
+
+fn self_host_analyze_basic_module_flows(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostBasicInferredModuleBodies,
+) -> SelfHostAnalyzedModuleFlows {
+  self_host_analyze_basic_module_flows_internal(
+    collected,
+    resolved,
+    inferred,
+    [],
+  )
+}
+
+fn self_host_analyze_basic_module_flows_with_imports(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostBasicInferredModuleBodies,
+  imported_variants: Array<SelfHostResolvedImportedVariant>,
+) -> SelfHostAnalyzedModuleFlows {
+  self_host_analyze_basic_module_flows_internal(
+    collected,
+    resolved,
+    inferred,
+    imported_variants,
+  )
 }
