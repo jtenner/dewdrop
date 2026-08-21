@@ -115,10 +115,13 @@ test "basic body inference selects non-generic direct calls" {
     SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => expression
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration) => assert(
-      declaration == collected.callables[0u32].declaration,
-      "selected inc",
-    )
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => {
+      assert(
+        declaration == collected.callables[0u32].declaration,
+        "selected inc",
+      )
+      assert(type_arguments.length == 0u32, "non-generic call arguments")
+    }
     _ => assert(false, "selected direct target")
   }
   self_host_assert_basic_primitive(
@@ -127,6 +130,81 @@ test "basic body inference selects non-generic direct calls" {
     body.root_type,
     SelfHostPrimitiveType::I32Type,
     "direct call result",
+  )
+}
+
+test "basic body inference instantiates generic direct calls freshly" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    834u64,
+    b"fn identity<t>(value: t) -> t {\n  value\n}\nfn use() -> Bool {\n  let number = identity(1)\n  if number == 1 {\n    identity(true)\n  } else {\n    false\n  }\n}\n",
+  )
+  let body = inferred.bodies[1u32]
+  assert(body.diagnostics.length() == 0u32, "generic call diagnostics")
+  assert(body.call_type_arguments.length() == 2u32, "generic argument count")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.call_type_arguments[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "first generic call argument",
+  )
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.call_type_arguments[1u32],
+    SelfHostPrimitiveType::BoolType,
+    "second generic call argument",
+  )
+}
+
+test "basic body inference instantiates applied signatures" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    835u64,
+    b"struct Box<t> {}\nfn keep_box<t>(value: Box<t>) -> Box<t> {\n  value\n}\nfn use(boxed: Box<I32>) -> Box<I32> {\n  keep_box(boxed)\n}\n",
+  )
+  let body = inferred.bodies[1u32]
+  assert(body.diagnostics.length() == 0u32, "application instantiation diagnostics")
+  assert(body.call_type_arguments.length() == 1u32, "application generic arguments")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.call_type_arguments[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "application generic I32",
+  )
+}
+
+test "basic body inference instantiates product signatures" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    836u64,
+    b"fn choose<t>(value: (t, Bool), fallback: t) -> t {\n  fallback\n}\nfn use() -> I32 {\n  choose((1, true), 1)\n}\n",
+  )
+  let body = inferred.bodies[1u32]
+  assert(body.diagnostics.length() == 0u32, "product instantiation diagnostics")
+  assert(body.call_type_arguments.length() == 1u32, "product generic arguments")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.call_type_arguments[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "product generic I32",
+  )
+}
+
+test "basic body inference instantiates function signatures" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    837u64,
+    b"fn apply<t>(callback: fn(t) -> t, value: t) -> t {\n  callback(value)\n}\nfn use(callback: fn(I32) -> I32) -> I32 {\n  apply(callback, 1)\n}\n",
+  )
+  let body = inferred.bodies[1u32]
+  assert(body.diagnostics.length() == 0u32, "function instantiation diagnostics")
+  assert(body.call_type_arguments.length() == 1u32, "function generic arguments")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.call_type_arguments[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "function generic I32",
   )
 }
 
@@ -221,6 +299,69 @@ test "basic body inference constrains functional loop state and result" {
     body.control_result_types[0u32],
     SelfHostPrimitiveType::I32Type,
     "loop result I32",
+  )
+}
+
+fn self_host_deep_generic_call_source(depth: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  builder.append("struct Box<t> {}\nbuiltin consume<t>(value: ")
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < depth {
+      builder.append("Box<")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("t")
+  index = 0u32
+  let _ = while index {
+    current => if current < depth {
+      builder.append(">")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append(") -> t = \"consume\"\nfn use(value: ")
+  index = 0u32
+  let _ = while index {
+    current => if current < depth {
+      builder.append("Box<")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("I32")
+  index = 0u32
+  let _ = while index {
+    current => if current < depth {
+      builder.append(">")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append(") -> I32 {\n  consume(value)\n}\n")
+  builder.finish().as_bytes()
+}
+
+test "generic signature instantiation remains iterative at depth 1024" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    851u64,
+    self_host_deep_generic_call_source(1024u32),
+  )
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "deep generic diagnostics")
+  assert(body.call_type_arguments.length() == 1u32, "deep generic arguments")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.call_type_arguments[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "deep generic I32",
   )
 }
 

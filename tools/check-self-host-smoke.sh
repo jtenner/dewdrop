@@ -63,7 +63,8 @@ tools/dew test \
   self_host/compiler/semantic_derive_expansion_test.dew \
   self_host/compiler/semantic_imported_semantics_test.dew \
   self_host/compiler/semantic_local_unification_test.dew \
-  self_host/compiler/semantic_basic_body_inference_test.dew
+  self_host/compiler/semantic_basic_body_inference_test.dew \
+  self_host/compiler/semantic_callable_selection_test.dew
 
 python3 tools/check-self-host-parser.py
 python3 tools/check-self-host-semantics.py

@@ -37,7 +37,7 @@ The pass is iterative over the flat HIR arenas. It does not add recursive expres
 
 ## Layer boundary
 
-Unique non-generic local module-function calls are selected by this layer. Their parameter and result signatures constrain the call directly, and the result publishes the chosen declaration. Generic and overloaded module-function calls remain unsupported so the next callable-selection layer can instantiate signatures, test candidates under solver snapshots, resolve overloads, and validate bounds without choosing too early.
+Unique and overloaded local module-function calls are now selected by the callable-selection extension to this layer. Generic signatures are instantiated freshly, candidates are tested under solver snapshots, argument and expected-result types select overloads, and the result publishes the declaration plus zonked type arguments. Generic bounds remain for the trait-obligation layer.
 
 Object construction, enum construction, fields, qualified members, indexing, imported values, and trait-based operators are also retained as explicit unsupported roots. Their type variables are poisoned so they do not produce false secondary mismatch or unresolved diagnostics.
 
@@ -63,4 +63,4 @@ Focused tests cover:
 - mismatch and immutable-assignment diagnostics;
 - iterative inference across 1,024 sequential locals.
 
-The next semantic work is callable/member/operator selection and generic signature instantiation, followed by trait obligations, implementation evidence, lambda-family inference, module-value SCC inference, result compaction, and body flow.
+The next semantic work is member, method, constructor, indexing, and operator selection, followed by trait obligations, implementation evidence, lambda-family inference, module-value SCC inference, result compaction, and body flow.
