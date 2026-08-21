@@ -22,6 +22,30 @@ pub enum SelfHostBodyFlowDiagnostic {
   UnreachableBlockItem(U32, U32, U32)
 }
 
+fn self_host_body_flow_diagnostic_offset(
+  diagnostic: SelfHostBodyFlowDiagnostic,
+) -> U32 {
+  match diagnostic {
+    SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(_, _, offset) => offset
+    SelfHostBodyFlowDiagnostic::NonExhaustiveFunctionalLoop(_, _, offset) => offset
+    SelfHostBodyFlowDiagnostic::RedundantPatternArm(_, offset) => offset
+    SelfHostBodyFlowDiagnostic::FunctionalLoopArmFallsThrough(_, offset) => offset
+    SelfHostBodyFlowDiagnostic::UnreachableBlockItem(_, _, offset) => offset
+  }
+}
+
+fn self_host_body_flow_diagnostic_rank(
+  diagnostic: SelfHostBodyFlowDiagnostic,
+) -> U32 {
+  match diagnostic {
+    SelfHostBodyFlowDiagnostic::RedundantPatternArm(_, _) => 0u32
+    SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(_, _, _) => 1u32
+    SelfHostBodyFlowDiagnostic::NonExhaustiveFunctionalLoop(_, _, _) => 2u32
+    SelfHostBodyFlowDiagnostic::FunctionalLoopArmFallsThrough(_, _) => 3u32
+    SelfHostBodyFlowDiagnostic::UnreachableBlockItem(_, _, _) => 4u32
+  }
+}
+
 pub struct SelfHostAnalyzedBodyFlow {
   body: U64
   flow: SelfHostBodyFlowSummary
@@ -810,8 +834,44 @@ impl SelfHostBodyFlowAnalyzer {
     }
   }
 
+  fn sort_diagnostics(self) -> Unit {
+    let mut index = 1u32
+    let _ = while index {
+      current => if current < self.diagnostics.length() {
+        let value = self.diagnostics[current]
+        let value_offset = self_host_body_flow_diagnostic_offset(value)
+        let value_rank = self_host_body_flow_diagnostic_rank(value)
+        let destination = while current {
+          cursor => if self_host_u32_greater(cursor, 0u32) {
+            let previous = cursor - 1u32
+            let candidate = self.diagnostics[previous]
+            let candidate_offset = self_host_body_flow_diagnostic_offset(candidate)
+            let candidate_rank = self_host_body_flow_diagnostic_rank(candidate)
+            let after = self_host_u32_greater(candidate_offset, value_offset) ||
+              (self_host_u32_equal(candidate_offset, value_offset) && self_host_u32_greater(
+                candidate_rank,
+                value_rank,
+              ))
+            if after {
+              self.diagnostics[cursor] = candidate
+              continue previous
+            }
+            break cursor
+          } else {
+            break cursor
+          }
+        }
+        self.diagnostics[destination] = value
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
   fn finish(self) -> SelfHostAnalyzedBodyFlow {
     self.analyze_expressions()
+    self.sort_diagnostics()
     let root = match self.body.root {
       SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => {
         self.expression_flow(expression)

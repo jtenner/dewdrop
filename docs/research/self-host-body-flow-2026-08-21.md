@@ -18,4 +18,4 @@ Implemented behavior:
 - deterministic per-body and per-lambda expression, block, arm, and diagnostic output;
 - iterative alternative-pattern catch-all traversal.
 
-Alternative-variant flattening, invalid-pattern suppression, and source-ordered final diagnostic merging remain to reach full MoonBit flow parity.
+Diagnostics are now sorted by source offset and stable diagnostic rank. Alternative-variant flattening and invalid-pattern suppression remain to reach full MoonBit flow parity.
