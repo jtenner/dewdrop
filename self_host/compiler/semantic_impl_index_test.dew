@@ -1,0 +1,111 @@
+open dew.std.testing
+
+fn self_host_impl_index_source(source: Bytes) -> SelfHostModuleImplIndex {
+  let collected = self_host_collect_bytes(910u64, source)
+  let resolved = self_host_resolve_module_types(collected)
+  self_host_index_module_implementations(collected, resolved)
+}
+
+test "implementation index accepts distinct concrete heads" {
+  let index = self_host_impl_index_source(
+    b"pub trait Mark {}\npub struct Box<t> {}\nimpl Mark for Box<I32> {}\nimpl Mark for Box<I64> {}\n",
+  )
+  assert(index.implementations.length() == 2u32, "implementation count")
+  assert(index.diagnostic_count() == 0u32, "distinct implementation diagnostics")
+  assert(index.implementations[0u32].coherent, "first coherent")
+  assert(index.implementations[1u32].coherent, "second coherent")
+}
+
+test "implementation index diagnoses generic overlap" {
+  let index = self_host_impl_index_source(
+    b"pub trait Mark {}\npub struct Box<t> {}\nimpl<t> Mark for Box<t> {}\nimpl Mark for Box<I32> {}\n",
+  )
+  let mut overlap = 0u32
+  let mut diagnostic = 0u32
+  let _ = while diagnostic {
+    current => if current < index.diagnostic_count() {
+      match index.diagnostic_at(current) {
+        SelfHostImplIndexDiagnostic::OverlappingTraitImpl(_, _, _, _, _) => {
+          overlap = overlap + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(overlap == 1u32, "overlap diagnostic")
+  assert(!index.implementations[1u32].coherent, "overlap incoherent")
+}
+
+test "implementation index diagnoses duplicate inherent methods" {
+  let index = self_host_impl_index_source(
+    b"pub struct Box {}\nimpl Box {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Box {\n  fn value(self) -> I32 {\n    2\n  }\n}\n",
+  )
+  let mut duplicate = 0u32
+  let mut diagnostic = 0u32
+  let _ = while diagnostic {
+    current => if current < index.diagnostic_count() {
+      match index.diagnostic_at(current) {
+        SelfHostImplIndexDiagnostic::DuplicateInherentMethod(_, _, _, _) => {
+          duplicate = duplicate + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(duplicate == 1u32, "duplicate method diagnostic")
+}
+
+test "implementation index diagnoses orphan imported trait implementations" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nimpl Mark for Item {}\n",
+    b"pub trait Mark {}\npub struct Item {}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let scope = fixture.imports.scope
+  let resolved = self_host_resolve_module_types_with_imports(collected, scope)
+  let index = self_host_index_module_implementations(collected, resolved)
+  let mut orphan = 0u32
+  let mut diagnostic = 0u32
+  let _ = while diagnostic {
+    current => if current < index.diagnostic_count() {
+      match index.diagnostic_at(current) {
+        SelfHostImplIndexDiagnostic::OrphanTraitImpl(_, _, _, _) => {
+          orphan = orphan + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(orphan == 1u32, "orphan diagnostic")
+}
+
+test "implementation index rejects invalid target heads" {
+  let index = self_host_impl_index_source(
+    b"pub trait Mark {}\nimpl<t> Mark for t {}\n",
+  )
+  let mut invalid = 0u32
+  let mut diagnostic = 0u32
+  let _ = while diagnostic {
+    current => if current < index.diagnostic_count() {
+      match index.diagnostic_at(current) {
+        SelfHostImplIndexDiagnostic::InvalidImplTargetHead(_, _) => {
+          invalid = invalid + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(invalid == 1u32, "invalid target diagnostic")
+}

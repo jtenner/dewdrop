@@ -18,8 +18,10 @@ overload selection, local fields, struct construction, inherent methods, enum
 values, all local enum construction forms, local unit/tuple/struct variant
 patterns, operators, indexing, imported generic calls, and imported generic
 fields, constructors, variants, patterns, and generic inherent methods are also
-complete. The next compiler work is implementation coherence, trait evidence,
-lambda-family, and module-value inference.
+complete. Implementation-head indexing, orphan checks, overlap checks, and
+duplicate inherent-method checks are complete. The next compiler work is trait
+method conformance and dispatch, trait evidence, lambda-family, and module-value
+inference.
 
 ## 1. P0: compiler host boundary
 
