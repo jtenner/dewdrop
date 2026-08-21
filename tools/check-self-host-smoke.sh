@@ -39,6 +39,7 @@ semantic_sources=(
   self_host/compiler/semantic_module_value_dependencies.dew
   self_host/compiler/semantic_basic_body_inference.dew
   self_host/compiler/semantic_module_value_inference.dew
+  self_host/compiler/semantic_body_flow.dew
 )
 
 tools/dew test \
@@ -64,6 +65,7 @@ tools/dew test \
   self_host/compiler/semantic_body_name_resolution_test.dew \
   self_host/compiler/semantic_module_value_dependencies_test.dew \
   self_host/compiler/semantic_module_value_inference_test.dew \
+  self_host/compiler/semantic_body_flow_test.dew \
   self_host/compiler/semantic_derive_expansion_test.dew \
   self_host/compiler/semantic_imported_semantics_test.dew \
   self_host/compiler/semantic_imported_selection_test.dew \

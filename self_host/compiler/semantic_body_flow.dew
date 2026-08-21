@@ -1,0 +1,720 @@
+open dew.std.array
+
+pub struct SelfHostBodyFlowSummary {
+  falls_through: Bool
+  returns: Bool
+  breaks: Bool
+  continues: Bool
+  diverges: Bool
+}
+
+pub enum SelfHostBodyFlowDiagnostic {
+  NonExhaustiveMatch(U32, U32)
+  NonExhaustiveFunctionalLoop(U32, U32)
+  RedundantPatternArm(U32, U32)
+  FunctionalLoopArmFallsThrough(U32, U32)
+  UnreachableBlockItem(U32, U32, U32)
+}
+
+pub struct SelfHostAnalyzedBodyFlow {
+  body: U64
+  flow: SelfHostBodyFlowSummary
+  expression_flows: Array<SelfHostBodyFlowSummary>
+  block_flows: Array<SelfHostBodyFlowSummary>
+  arm_flows: Array<SelfHostBodyFlowSummary>
+  diagnostics: Array<SelfHostBodyFlowDiagnostic>
+}
+
+pub struct SelfHostAnalyzedLambdaFlow {
+  lambda: U32
+  flow: SelfHostBodyFlowSummary
+  expression_flows: Array<SelfHostBodyFlowSummary>
+  block_flows: Array<SelfHostBodyFlowSummary>
+  arm_flows: Array<SelfHostBodyFlowSummary>
+  diagnostics: Array<SelfHostBodyFlowDiagnostic>
+}
+
+pub struct SelfHostAnalyzedModuleFlows {
+  module_id: U64
+  bodies: Array<SelfHostAnalyzedBodyFlow>
+  lambdas: Array<SelfHostAnalyzedLambdaFlow>
+}
+
+fn self_host_flow_empty() -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: false
+    returns: false
+    breaks: false
+    continues: false
+    diverges: false
+  }
+}
+
+fn self_host_flow_falls_through() -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: true
+    returns: false
+    breaks: false
+    continues: false
+    diverges: false
+  }
+}
+
+fn self_host_flow_returns() -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: false
+    returns: true
+    breaks: false
+    continues: false
+    diverges: false
+  }
+}
+
+fn self_host_flow_breaks() -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: false
+    returns: false
+    breaks: true
+    continues: false
+    diverges: false
+  }
+}
+
+fn self_host_flow_continues() -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: false
+    returns: false
+    breaks: false
+    continues: true
+    diverges: false
+  }
+}
+
+fn self_host_flow_diverges() -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: false
+    returns: false
+    breaks: false
+    continues: false
+    diverges: true
+  }
+}
+
+fn self_host_flow_union(
+  left: SelfHostBodyFlowSummary,
+  right: SelfHostBodyFlowSummary,
+) -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: left.falls_through || right.falls_through
+    returns: left.returns || right.returns
+    breaks: left.breaks || right.breaks
+    continues: left.continues || right.continues
+    diverges: left.diverges || right.diverges
+  }
+}
+
+fn self_host_flow_sequence(
+  first: SelfHostBodyFlowSummary,
+  second: SelfHostBodyFlowSummary,
+) -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: first.falls_through && second.falls_through
+    returns: first.returns || (first.falls_through && second.returns)
+    breaks: first.breaks || (first.falls_through && second.breaks)
+    continues: first.continues || (first.falls_through && second.continues)
+    diverges: first.diverges || (first.falls_through && second.diverges)
+  }
+}
+
+fn self_host_flow_slots(length: U32) -> Array<SelfHostBodyFlowSummary> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(self_host_flow_empty())
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_flow_resolved_type_is_never(
+  resolved: SelfHostResolvedModuleTypes,
+  type_: U32,
+) -> Bool {
+  let mut current = type_
+  while current {
+    candidate => match resolved.types[candidate] {
+      SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::NeverType) => break true
+      SelfHostResolvedType::AppliedType(base, _) => continue base
+      _ => break false
+    }
+  }
+}
+
+fn self_host_flow_expression_is_never(
+  inferred: SelfHostBasicInferredBody,
+  resolved: SelfHostResolvedModuleTypes,
+  type_: I32,
+) -> Bool {
+  match inferred.type_term(type_) {
+    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => {
+      self_host_flow_resolved_type_is_never(resolved, resolved_type)
+    }
+    _ => false
+  }
+}
+
+fn self_host_flow_terminal(
+  inferred: SelfHostBasicInferredBody,
+  resolved: SelfHostResolvedModuleTypes,
+  body: SelfHostHirBody,
+  expression: U32,
+) -> SelfHostBodyFlowSummary {
+  if self_host_flow_expression_is_never(
+    inferred,
+    resolved,
+    inferred.expression_types[expression - body.expressions.start],
+  ) {
+    self_host_flow_diverges()
+  } else {
+    self_host_flow_falls_through()
+  }
+}
+
+struct SelfHostBodyFlowAnalyzer {
+  collected: SelfHostCollectedModule
+  resolved: SelfHostResolvedModuleTypes
+  body: SelfHostHirBody
+  inferred: SelfHostBasicInferredBody
+  expression_flows: Array<SelfHostBodyFlowSummary>
+  block_flows: Array<SelfHostBodyFlowSummary>
+  block_done: Array<Bool>
+  arm_flows: Array<SelfHostBodyFlowSummary>
+  diagnostics: Array<SelfHostBodyFlowDiagnostic>
+}
+
+impl SelfHostBodyFlowAnalyzer {
+  fn new(
+    collected: SelfHostCollectedModule,
+    resolved: SelfHostResolvedModuleTypes,
+    body: SelfHostHirBody,
+    inferred: SelfHostBasicInferredBody,
+  ) -> SelfHostBodyFlowAnalyzer {
+    SelfHostBodyFlowAnalyzer::{
+      collected: collected
+      resolved: resolved
+      body: body
+      inferred: inferred
+      expression_flows: self_host_flow_slots(body.expressions.length)
+      block_flows: self_host_flow_slots(body.blocks.length)
+      block_done: self_host_module_value_bool_slots(body.blocks.length)
+      arm_flows: self_host_flow_slots(body.pattern_arms.length)
+      diagnostics: []
+    }
+  }
+
+  fn expression_flow(self, expression: U32) -> SelfHostBodyFlowSummary {
+    self.expression_flows[expression - self.body.expressions.start]
+  }
+
+  fn sequence_children(self, children: SelfHostHirSpan) -> SelfHostBodyFlowSummary {
+    let mut result = self_host_flow_falls_through()
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < children.length {
+        result = self_host_flow_sequence(
+          result,
+          self.expression_flow(
+            self.collected.expression_children[
+              self_host_u32_add(children.start, current)
+            ],
+          ),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    result
+  }
+
+  fn block_item_offset(self, item: SelfHostHirBlockItem) -> U32 {
+    match item {
+      SelfHostHirBlockItem::LetItem(_, _, _, _, offset) => offset
+      SelfHostHirBlockItem::ReturnItem(_, offset) => offset
+      SelfHostHirBlockItem::ExpressionItem(_, offset) => offset
+    }
+  }
+
+  fn block_flow(self, block: U32) -> SelfHostBodyFlowSummary {
+    let slot = block - self.body.blocks.start
+    if self.block_done[slot] {
+      return self.block_flows[slot]
+    }
+    let info = self.collected.blocks[block]
+    let mut result = self_host_flow_falls_through()
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < info.items.length {
+        let item = self.collected.block_items[
+          self_host_u32_add(info.items.start, current)
+        ]
+        if !result.falls_through {
+          self.diagnostics.push(SelfHostBodyFlowDiagnostic::UnreachableBlockItem(
+            block,
+            current,
+            self.block_item_offset(item),
+          ))
+        } else {
+          let item_flow = match item {
+            SelfHostHirBlockItem::LetItem(_, _, _, value, _) => {
+              self.expression_flow(value)
+            }
+            SelfHostHirBlockItem::ExpressionItem(value, _) => {
+              self.expression_flow(value)
+            }
+            SelfHostHirBlockItem::ReturnItem(value, _) => {
+              self_host_flow_sequence(
+                self.expression_flow(value),
+                self_host_flow_returns(),
+              )
+            }
+          }
+          result = self_host_flow_sequence(result, item_flow)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.block_flows[slot] = result
+    self.block_done[slot] = true
+    result
+  }
+
+  fn arm_flow(self, arm: U32) -> SelfHostBodyFlowSummary {
+    let info = self.collected.pattern_arms[arm]
+    let result = if self_host_u32_equal(info.guard_condition, 4294967295u32) {
+      self.expression_flow(info.body)
+    } else {
+      self_host_flow_sequence(
+        self.expression_flow(info.guard_condition),
+        self.expression_flow(info.body),
+      )
+    }
+    self.arm_flows[arm - self.body.pattern_arms.start] = result
+    result
+  }
+
+  fn pattern_catches_all(self, pattern: U32) -> Bool {
+    let tasks = [pattern]
+    while tasks.length() {
+      length => if self_host_u32_greater(length, 0u32) {
+        let current = match tasks.pop() {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        match self.collected.patterns[current] {
+          SelfHostHirPattern::WildcardPattern(_) => {
+            return true
+          }
+          SelfHostHirPattern::BindingPattern(_, _) => {
+            return true
+          }
+          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+            let mut index = alternatives.length
+            let _ = while index {
+              alternative => if self_host_u32_greater(alternative, 0u32) {
+                let previous = alternative - 1u32
+                tasks.push(
+                  self.collected.pattern_children[
+                    self_host_u32_add(alternatives.start, previous)
+                  ],
+                )
+                continue previous
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            tasks.push(first)
+          }
+          _ => {}
+        }
+        continue tasks.length()
+      } else {
+        break false
+      }
+    }
+  }
+
+  fn pattern_bool(self, pattern: U32) -> U32 {
+    match self.collected.patterns[pattern] {
+      SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[
+        expression
+      ] {
+        SelfHostHirExpr::BoolExpr(false, _) => 1u32
+        SelfHostHirExpr::BoolExpr(true, _) => 2u32
+        _ => 0u32
+      }
+      _ => 0u32
+    }
+  }
+
+  fn arms_flow(
+    self,
+    expression: U32,
+    arms: SelfHostHirSpan,
+    loop_: Bool,
+    offset: U32,
+  ) -> SelfHostBodyFlowSummary {
+    let mut branches = self_host_flow_empty()
+    let mut catch_all = false
+    let mut covered_false = false
+    let mut covered_true = false
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arms.length {
+        let arm = self.collected.arm_children[
+          self_host_u32_add(arms.start, current)
+        ]
+        let info = self.collected.pattern_arms[arm]
+        let bool_case = self.pattern_bool(info.pattern)
+        let redundant = catch_all ||
+          (bool_case == 1u32 && covered_false) ||
+          (bool_case == 2u32 && covered_true)
+        if redundant {
+          self.diagnostics.push(SelfHostBodyFlowDiagnostic::RedundantPatternArm(
+            arm,
+            info.offset,
+          ))
+        }
+        if self_host_u32_equal(info.guard_condition, 4294967295u32) {
+          if self.pattern_catches_all(info.pattern) {
+            catch_all = true
+          } else if bool_case == 1u32 {
+            covered_false = true
+          } else if bool_case == 2u32 {
+            covered_true = true
+          }
+        }
+        let flow = self.arm_flow(arm)
+        if loop_ && flow.falls_through {
+          self.diagnostics.push(
+            SelfHostBodyFlowDiagnostic::FunctionalLoopArmFallsThrough(
+              arm,
+              info.offset,
+            ),
+          )
+        }
+        branches = self_host_flow_union(branches, flow)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let exhaustive = catch_all || (covered_false && covered_true)
+    if !exhaustive {
+      if loop_ {
+        self.diagnostics.push(
+          SelfHostBodyFlowDiagnostic::NonExhaustiveFunctionalLoop(
+            expression,
+            offset,
+          ),
+        )
+      } else {
+        self.diagnostics.push(SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(
+          expression,
+          offset,
+        ))
+      }
+      branches = self_host_flow_union(branches, self_host_flow_diverges())
+    }
+    branches
+  }
+
+  fn analyze_expressions(self) -> Unit {
+    let mut expression = self.body.expressions.start
+    let end = self_host_u32_add(
+      self.body.expressions.start,
+      self.body.expressions.length,
+    )
+    let _ = while expression {
+      current => if current < end {
+        let terminal = self_host_flow_terminal(
+          self.inferred,
+          self.resolved,
+          self.body,
+          current,
+        )
+        let flow = match self.collected.expressions[current] {
+          SelfHostHirExpr::I8Expr(_, _) => terminal
+          SelfHostHirExpr::I16Expr(_, _) => terminal
+          SelfHostHirExpr::I32Expr(_, _) => terminal
+          SelfHostHirExpr::I64Expr(_, _) => terminal
+          SelfHostHirExpr::U8Expr(_, _) => terminal
+          SelfHostHirExpr::U16Expr(_, _) => terminal
+          SelfHostHirExpr::U32Expr(_, _) => terminal
+          SelfHostHirExpr::U64Expr(_, _) => terminal
+          SelfHostHirExpr::F32Expr(_, _) => terminal
+          SelfHostHirExpr::F64Expr(_, _) => terminal
+          SelfHostHirExpr::BoolExpr(_, _) => terminal
+          SelfHostHirExpr::StringExpr(_, _) => terminal
+          SelfHostHirExpr::BytesExpr(_, _) => terminal
+          SelfHostHirExpr::NameExpr(_, _) => terminal
+          SelfHostHirExpr::ImportAliasExpr(_, _) => terminal
+          SelfHostHirExpr::LambdaExpr(_, _) => terminal
+          SelfHostHirExpr::ProductExpr(children, _) => self_host_flow_sequence(
+            self.sequence_children(children),
+            terminal,
+          )
+          SelfHostHirExpr::ArrayExpr(children, _) => self_host_flow_sequence(
+            self.sequence_children(children),
+            terminal,
+          )
+          SelfHostHirExpr::ObjectExpr(fields, _) => {
+            let mut prefix = self_host_flow_falls_through()
+            let mut field = 0u32
+            let _ = while field {
+              field_index => if field_index < fields.length {
+                let value = self.collected.object_fields[
+                  self_host_u32_add(fields.start, field_index)
+                ].value
+                prefix = self_host_flow_sequence(
+                  prefix,
+                  self.expression_flow(value),
+                )
+                continue field_index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self_host_flow_sequence(prefix, terminal)
+          }
+          SelfHostHirExpr::ConstructExpr(target, fields, _) => {
+            let mut prefix = self.expression_flow(target)
+            let mut field = 0u32
+            let _ = while field {
+              field_index => if field_index < fields.length {
+                let value = self.collected.object_fields[
+                  self_host_u32_add(fields.start, field_index)
+                ].value
+                prefix = self_host_flow_sequence(
+                  prefix,
+                  self.expression_flow(value),
+                )
+                continue field_index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self_host_flow_sequence(prefix, terminal)
+          }
+          SelfHostHirExpr::BlockExpr(block, _) => self.block_flow(block)
+          SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
+            let alternative_flow = if alternative == 4294967295u32 {
+              self_host_flow_falls_through()
+            } else {
+              self.expression_flow(alternative)
+            }
+            self_host_flow_sequence(
+              self.expression_flow(condition),
+              self_host_flow_union(self.block_flow(block), alternative_flow),
+            )
+          }
+          SelfHostHirExpr::MatchExpr(scrutinee, arms, offset) => {
+            self_host_flow_sequence(
+              self.expression_flow(scrutinee),
+              self.arms_flow(current, arms, false, offset),
+            )
+          }
+          SelfHostHirExpr::WhileExpr(initial, arms, offset) => {
+            let branches = self.arms_flow(current, arms, true, offset)
+            let loop_flow = SelfHostBodyFlowSummary::{
+              falls_through: branches.breaks
+              returns: branches.returns
+              breaks: false
+              continues: false
+              diverges: branches.diverges || branches.continues || branches.falls_through || (!branches.breaks && !branches.returns)
+            }
+            self_host_flow_sequence(self.expression_flow(initial), loop_flow)
+          }
+          SelfHostHirExpr::BreakExpr(value, _) => self_host_flow_sequence(
+            self.expression_flow(value),
+            self_host_flow_breaks(),
+          )
+          SelfHostHirExpr::ContinueExpr(value, _) => self_host_flow_sequence(
+            self.expression_flow(value),
+            self_host_flow_continues(),
+          )
+          SelfHostHirExpr::PrefixExpr(_, value, _) => self_host_flow_sequence(
+            self.expression_flow(value),
+            terminal,
+          )
+          SelfHostHirExpr::BinaryExpr(operator, left, right, _) => match operator {
+            SelfHostHirBinaryOperator::LogicalAnd => self_host_flow_sequence(
+              self.expression_flow(left),
+              self_host_flow_union(
+                terminal,
+                self_host_flow_sequence(self.expression_flow(right), terminal),
+              ),
+            )
+            SelfHostHirBinaryOperator::LogicalOr => self_host_flow_sequence(
+              self.expression_flow(left),
+              self_host_flow_union(
+                terminal,
+                self_host_flow_sequence(self.expression_flow(right), terminal),
+              ),
+            )
+            _ => self_host_flow_sequence(
+              self_host_flow_sequence(
+                self.expression_flow(left),
+                self.expression_flow(right),
+              ),
+              terminal,
+            )
+          }
+          SelfHostHirExpr::CallExpr(target, arguments, _) => self_host_flow_sequence(
+            self_host_flow_sequence(
+              self.expression_flow(target),
+              self.sequence_children(arguments),
+            ),
+            terminal,
+          )
+          SelfHostHirExpr::FieldExpr(base, _, _) => {
+            self_host_flow_sequence(self.expression_flow(base), terminal)
+          }
+          SelfHostHirExpr::QualifiedExpr(base, _, _) => {
+            self_host_flow_sequence(self.expression_flow(base), terminal)
+          }
+          SelfHostHirExpr::ProductFieldExpr(base, _, _, _) => {
+            self_host_flow_sequence(self.expression_flow(base), terminal)
+          }
+          SelfHostHirExpr::IndexExpr(base, index, _) => self_host_flow_sequence(
+            self_host_flow_sequence(
+              self.expression_flow(base),
+              self.expression_flow(index),
+            ),
+            terminal,
+          )
+          SelfHostHirExpr::AssignmentExpr(_, value, _) => self_host_flow_sequence(
+            self.expression_flow(value),
+            terminal,
+          )
+          SelfHostHirExpr::IndexSetExpr(base, index, value, _) => {
+            self_host_flow_sequence(
+              self_host_flow_sequence(
+                self_host_flow_sequence(
+                  self.expression_flow(base),
+                  self.expression_flow(index),
+                ),
+                self.expression_flow(value),
+              ),
+              terminal,
+            )
+          }
+        }
+        self.expression_flows[current - self.body.expressions.start] = flow
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn finish(self) -> SelfHostAnalyzedBodyFlow {
+    self.analyze_expressions()
+    let root = match self.body.root {
+      SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => {
+        self.expression_flow(expression)
+      }
+      SelfHostHirBodyRoot::BlockBodyRoot(block) => self.block_flow(block)
+    }
+    SelfHostAnalyzedBodyFlow::{
+      body: self.body.id
+      flow: root
+      expression_flows: self.expression_flows
+      block_flows: self.block_flows
+      arm_flows: self.arm_flows
+      diagnostics: self.diagnostics
+    }
+  }
+}
+
+fn self_host_flow_lambda_body(
+  collected: SelfHostCollectedModule,
+  lambda: SelfHostHirLambda,
+) -> SelfHostHirBody {
+  let root = collected.bodies[self_host_semantic_id_local(lambda.root_body)]
+  SelfHostHirBody::{
+    id: lambda.root_body
+    declaration: root.declaration
+    kind: root.kind
+    root: SelfHostHirBodyRoot::BlockBodyRoot(lambda.body.root)
+    expressions: lambda.body.expressions
+    expression_children: lambda.body.expression_children
+    blocks: lambda.body.blocks
+    block_items: lambda.body.block_items
+    patterns: lambda.body.patterns
+    pattern_children: lambda.body.pattern_children
+    pattern_arms: lambda.body.pattern_arms
+    arm_children: lambda.body.arm_children
+    object_fields: lambda.body.object_fields
+    pattern_fields: lambda.body.pattern_fields
+    offset: lambda.offset
+  }
+}
+
+fn self_host_analyze_basic_module_flows(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostBasicInferredModuleBodies,
+) -> SelfHostAnalyzedModuleFlows {
+  let bodies = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < collected.bodies.length() {
+      bodies.push(
+        SelfHostBodyFlowAnalyzer::new(
+          collected,
+          resolved,
+          collected.bodies[current],
+          inferred.bodies[current],
+        ).finish(),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let lambdas = []
+  index = 0u32
+  let _ = while index {
+    current => if current < collected.lambdas.length() {
+      let result = SelfHostBodyFlowAnalyzer::new(
+        collected,
+        resolved,
+        self_host_flow_lambda_body(collected, collected.lambdas[current]),
+        inferred.lambdas[current].body,
+      ).finish()
+      lambdas.push(SelfHostAnalyzedLambdaFlow::{
+        lambda: current
+        flow: result.flow
+        expression_flows: result.expression_flows
+        block_flows: result.block_flows
+        arm_flows: result.arm_flows
+        diagnostics: result.diagnostics
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostAnalyzedModuleFlows::{
+    module_id: collected.module_id
+    bodies: bodies
+    lambdas: lambdas
+  }
+}

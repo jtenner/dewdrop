@@ -1,0 +1,136 @@
+open dew.std.testing
+
+fn self_host_flow_source(
+  module_id: U64,
+  source: Bytes,
+) -> (
+  SelfHostCollectedModule,
+  SelfHostAnalyzedModuleFlows,
+) {
+  let collected = self_host_collect_bytes(module_id, source)
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
+  let flows = self_host_analyze_basic_module_flows(collected, resolved, inferred)
+  (collected, flows)
+}
+
+fn self_host_flow_has_unreachable(
+  flow: SelfHostAnalyzedBodyFlow,
+) -> Bool {
+  for diagnostic in flow.diagnostics {
+    match diagnostic {
+      SelfHostBodyFlowDiagnostic::UnreachableBlockItem(_, _, _) => {
+        return true
+      }
+      _ => {}
+    }
+  }
+  false
+}
+
+fn self_host_flow_non_exhaustive_count(
+  flow: SelfHostAnalyzedBodyFlow,
+) -> U32 {
+  let mut count = 0u32
+  for diagnostic in flow.diagnostics {
+    match diagnostic {
+      SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(_, _) => {
+        count = self_host_u32_add(count, 1u32)
+      }
+      _ => {}
+    }
+  }
+  count
+}
+
+fn self_host_flow_redundant_count(
+  flow: SelfHostAnalyzedBodyFlow,
+) -> U32 {
+  let mut count = 0u32
+  for diagnostic in flow.diagnostics {
+    match diagnostic {
+      SelfHostBodyFlowDiagnostic::RedundantPatternArm(_, _) => {
+        count = self_host_u32_add(count, 1u32)
+      }
+      _ => {}
+    }
+  }
+  count
+}
+
+fn self_host_flow_loop_fallthrough_count(
+  flow: SelfHostAnalyzedBodyFlow,
+) -> U32 {
+  let mut count = 0u32
+  for diagnostic in flow.diagnostics {
+    match diagnostic {
+      SelfHostBodyFlowDiagnostic::FunctionalLoopArmFallsThrough(_, _) => {
+        count = self_host_u32_add(count, 1u32)
+      }
+      _ => {}
+    }
+  }
+  count
+}
+
+test "body flow diagnoses unreachable block items" {
+  let (_, flows) = self_host_flow_source(
+    970u64,
+    b"fn run() -> I32 {\n  return 1\n  2\n}\n",
+  )
+  let flow = flows.bodies[0u32]
+  assert(flow.flow.returns, "body returns")
+  assert(!flow.flow.falls_through, "body does not fall through")
+  assert(self_host_flow_has_unreachable(flow), "unreachable item")
+}
+
+test "body flow recognizes exhaustive bool matches" {
+  let (_, flows) = self_host_flow_source(
+    971u64,
+    b"fn choose(value: Bool) -> I32 {\n  match value {\n    false => 0\n    true => 1\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "exhaustive bool match",
+  )
+}
+
+test "body flow diagnoses functional loop arm fallthrough" {
+  let (_, flows) = self_host_flow_source(
+    974u64,
+    b"fn finish(initial: I32) -> I32 {\n  while initial {\n    value => value\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_loop_fallthrough_count(flows.bodies[0u32]) == 1u32,
+    "loop arm fallthrough",
+  )
+}
+
+test "body flow analyzes lambda bodies" {
+  let (_, flows) = self_host_flow_source(
+    975u64,
+    b"fn make() -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value\n  }\n}\n",
+  )
+  assert(flows.lambdas.length() == 1u32, "lambda flow count")
+  assert(flows.lambdas[0u32].flow.falls_through, "lambda falls through")
+}
+
+test "body flow diagnoses non-exhaustive and redundant match arms" {
+  let (_, missing) = self_host_flow_source(
+    972u64,
+    b"fn choose(value: Bool) -> I32 {\n  match value {\n    true => 1\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(missing.bodies[0u32]) == 1u32,
+    "missing false",
+  )
+  let (_, redundant) = self_host_flow_source(
+    973u64,
+    b"fn choose(value: Bool) -> I32 {\n  match value {\n    _ => 1\n    true => 2\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_redundant_count(redundant.bodies[0u32]) == 1u32,
+    "redundant arm",
+  )
+}
