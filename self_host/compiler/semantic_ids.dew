@@ -29,3 +29,16 @@ fn self_host_semantic_id_local(id: U64) -> U32 {
 fn self_host_file_id_module(file: U64) -> U64 {
   self_host_semantic_id_module(file)
 }
+
+fn self_host_semantic_module_is_standard_package(module_id: U64) -> Bool {
+  module_id >= 4294901760u64 && module_id <= 4294967295u64
+}
+
+fn self_host_semantic_modules_share_package(
+  left: U64,
+  right: U64,
+) -> Bool {
+  left == right ||
+    (self_host_semantic_module_is_standard_package(left) &&
+    self_host_semantic_module_is_standard_package(right))
+}

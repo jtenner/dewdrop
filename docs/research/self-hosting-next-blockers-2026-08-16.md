@@ -11,9 +11,9 @@ source-Bytes request tranches are complete. The generated production Starshine
 object-model ABI, tokenizer, parser, semantic collection, flat HIR, local and
 imported type resolution, alias normalization, signature-level module
 interfaces, imported value names, lexical scopes, pattern bindings, loop
-controls, lambda captures, and deterministic derive expansion are also
-complete. The next compiler work is imported semantic recipes, inference, and
-local unification.
+controls, lambda captures, deterministic derive expansion, and imported
+semantic recipes are also complete. The next compiler work is local unification
+and body inference.
 
 ## 1. P0: compiler host boundary
 
@@ -188,7 +188,7 @@ The complete tokenizer and parser port finished on August 20, 2026. It parses th
 
 Semantic declaration collection and flat HIR finished on August 20, 2026.
 
-1. Port imported callable, field, variant, and implementation recipes.
-2. Port inference, flow, layouts, specialization, optimization, and backend phases in dependency order.
+1. Port local unification and body inference.
+2. Port flow, layouts, specialization, optimization, and backend phases in dependency order.
 3. Add the cache-disabled A→B→C harness.
 4. Restore BLAKE3-based persistent caches, including parser-event persistence, after byte identity is stable.

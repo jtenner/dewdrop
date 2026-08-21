@@ -389,9 +389,9 @@ to implement them to self-host:
 
 ## Proposed implementation order
 
-The linked Starshine ABI, product values, allocation-free `for`, tokenizer, full parser, packed semantic IDs, declaration collection, flat HIR, resolved type interning, local and imported signature resolution, alias SCC analysis, generic alias substitution, transparent normalization, signature-level module interfaces/imports, body name resolution, and deterministic derive expansion are complete.
+The linked Starshine ABI, product values, allocation-free `for`, tokenizer, full parser, packed semantic IDs, declaration collection, flat HIR, resolved type interning, local and imported signature resolution, alias SCC analysis, generic alias substitution, transparent normalization, signature-level module interfaces/imports, body name resolution, deterministic derive expansion, and imported callable, aggregate, module-value, and implementation recipes are complete.
 
-1. **Port semantic phases in dependency order.** Continue with imported semantic recipes; then inference, flow, layouts, specialization, optimization, and linking.
+1. **Port semantic phases in dependency order.** Continue with local unification and body inference; then flow, layouts, specialization, optimization, and linking.
 2. **Port backend calls to the linked direct Starshine object-model ABI.** Keep linker-owned composition deterministic.
 3. **Port cache codecs, loader, driver, and compiler-facing CLI.** Keep package acquisition and process launch outside if necessary. Parser-event persistence belongs to this cache tranche; the first fixed point uses the in-memory syntax graph.
 4. **Run the fixed point.** MoonBit Dewdrop builds A; A builds B; B builds C; B and C must be byte-identical.

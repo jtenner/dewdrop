@@ -71,6 +71,6 @@ Dew syntax graph directly and does not require that persistence format.
 
 Semantic collection and flat HIR landed later on August 20, 2026. See
 [`self-host-semantic-collection-2026-08-20.md`](self-host-semantic-collection-2026-08-20.md).
-Resolved types, alias normalization, module interfaces, body names, and derive
-expansion have since landed. The next phase is imported semantic recipes and
-body inference.
+Resolved types, alias normalization, module interfaces, body names, derive
+expansion, and imported semantic recipes have since landed. The next phase is
+local unification and body inference.

@@ -24,11 +24,71 @@ pub struct SelfHostFrozenInterfaceDeclaration {
   location: SelfHostSourceLocation
 }
 
+pub enum SelfHostFrozenInterfaceCallableKind {
+  FrozenBuiltinCallable(Bytes)
+  FrozenFunctionCallable
+  FrozenTraitCallable(U64)
+  FrozenImplCallable(U64)
+}
+
+pub struct SelfHostFrozenInterfaceField {
+  field: U64
+  declaration: U64
+  variant: Option<U64>
+  mutable_: Bool
+  name: String
+  type_: U32
+  location: SelfHostSourceLocation
+}
+
+pub struct SelfHostFrozenInterfaceVariant {
+  variant: U64
+  declaration: U64
+  kind: SelfHostCollectedVariantKind
+  name: String
+  payload_types: SelfHostHirSpan
+  location: SelfHostSourceLocation
+}
+
+pub struct SelfHostFrozenInterfaceParameter {
+  parameter: U64
+  name: String
+  type_: U32
+  receiver: Bool
+  location: SelfHostSourceLocation
+}
+
+pub struct SelfHostFrozenInterfaceCallable {
+  declaration: U64
+  name: String
+  kind: SelfHostFrozenInterfaceCallableKind
+  generic_parameters: SelfHostHirSpan
+  parameters: SelfHostHirSpan
+  result_type: U32
+  function_type: U32
+  location: SelfHostSourceLocation
+}
+
+pub struct SelfHostFrozenInterfaceImplementation {
+  declaration: U64
+  generic_parameters: SelfHostHirSpan
+  trait_type: Option<U32>
+  target_type: U32
+  location: SelfHostSourceLocation
+}
+
 pub struct SelfHostFrozenModuleInterface {
   module_id: U64
   path: String
   resolved_types: SelfHostResolvedModuleTypes
+  generic_parameter_bounds: Array<SelfHostHirSpan>
   declarations: Array<SelfHostFrozenInterfaceDeclaration>
+  fields: Array<SelfHostFrozenInterfaceField>
+  variants: Array<SelfHostFrozenInterfaceVariant>
+  variant_payload_types: Array<U32>
+  callables: Array<SelfHostFrozenInterfaceCallable>
+  parameters: Array<SelfHostFrozenInterfaceParameter>
+  implementations: Array<SelfHostFrozenInterfaceImplementation>
 }
 
 pub struct SelfHostFrozenInterfaceList {
@@ -68,12 +128,97 @@ impl SelfHostFrozenModuleInterface {
     self.resolved_types.type_at(index)
   }
 
+  fn resolved_type_count(self) -> U32 {
+    self.resolved_types.types.length()
+  }
+
+  fn resolved_type_argument(self, index: U32) -> U32 {
+    self.resolved_types.type_arguments[index]
+  }
+
+  fn resolved_generic_parameter_type(self, index: U32) -> U32 {
+    self.resolved_types.generic_parameter_types[index]
+  }
+
+  fn resolved_generic_bound_type(self, index: U32) -> U32 {
+    self.resolved_types.generic_bound_types[index]
+  }
+
+  fn generic_parameter_bound_at(self, index: U32) -> SelfHostHirSpan {
+    self.generic_parameter_bounds[index]
+  }
+
   fn declaration_count(self) -> U32 {
     self.declarations.length()
   }
 
   fn declaration_at(self, index: U32) -> SelfHostFrozenInterfaceDeclaration {
     self.declarations[index]
+  }
+
+  fn field_count(self) -> U32 {
+    self.fields.length()
+  }
+
+  fn field_at(self, index: U32) -> SelfHostFrozenInterfaceField {
+    self.fields[index]
+  }
+
+  fn variant_count(self) -> U32 {
+    self.variants.length()
+  }
+
+  fn variant_at(self, index: U32) -> SelfHostFrozenInterfaceVariant {
+    self.variants[index]
+  }
+
+  fn variant_payload_type(self, index: U32) -> U32 {
+    self.variant_payload_types[index]
+  }
+
+  fn callable_count(self) -> U32 {
+    self.callables.length()
+  }
+
+  fn callable_at(self, index: U32) -> SelfHostFrozenInterfaceCallable {
+    self.callables[index]
+  }
+
+  fn callable_named(
+    self,
+    name: String,
+  ) -> Option<SelfHostFrozenInterfaceCallable> {
+    let mut index = 0u32
+    while index {
+      current => if current < self.callable_count() {
+        let callable = self.callable_at(current)
+        if callable.name == name {
+          break Option::Some(callable)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+
+  fn parameter_count(self) -> U32 {
+    self.parameters.length()
+  }
+
+  fn parameter_at(self, index: U32) -> SelfHostFrozenInterfaceParameter {
+    self.parameters[index]
+  }
+
+  fn implementation_count(self) -> U32 {
+    self.implementations.length()
+  }
+
+  fn implementation_at(
+    self,
+    index: U32,
+  ) -> SelfHostFrozenInterfaceImplementation {
+    self.implementations[index]
   }
 
   fn declaration_named(
@@ -161,12 +306,263 @@ fn self_host_alias_semantic_type(
   }
 }
 
+fn self_host_frozen_exported_declaration(
+  exported: Map<U64, Bool>,
+  declaration: U64,
+) -> Bool {
+  exported.get(declaration) is Option::Some(_)
+}
+
+fn self_host_frozen_impl_trait_declaration(
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+) -> Option<U64> {
+  let mut current = root
+  while current {
+    type_ => match resolved.types[type_] {
+      SelfHostResolvedType::TraitType(declaration) => break Option::Some(
+        declaration,
+      )
+      SelfHostResolvedType::AppliedType(base, _) => continue base
+      _ => break Option::None
+    }
+  }
+}
+
+fn self_host_frozen_impl_target_is_owned(
+  resolved: SelfHostResolvedModuleTypes,
+  owner: U64,
+  root: U32,
+) -> Bool {
+  let mut current = root
+  while current {
+    type_ => match resolved.types[type_] {
+      SelfHostResolvedType::NominalType(declaration) => break self_host_semantic_modules_share_package(
+        owner,
+        self_host_semantic_id_module(declaration),
+      )
+      SelfHostResolvedType::PrimitiveType(_) => break self_host_semantic_module_is_standard_package(
+        owner,
+      )
+      SelfHostResolvedType::AppliedType(base, _) => continue base
+      SelfHostResolvedType::ErrorType => break true
+      _ => break false
+    }
+  }
+}
+
+fn self_host_frozen_trait_impl_is_owned(
+  resolved: SelfHostResolvedModuleTypes,
+  owner: U64,
+  trait_type: U32,
+  target_type: U32,
+) -> Bool {
+  match self_host_frozen_impl_trait_declaration(resolved, trait_type) {
+    Option::Some(declaration) => self_host_semantic_modules_share_package(
+      owner,
+      self_host_semantic_id_module(declaration),
+    ) || self_host_frozen_impl_target_is_owned(resolved, owner, target_type)
+    Option::None => true
+  }
+}
+
+fn self_host_frozen_impl_type_visible(
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+  exported: Map<U64, Bool>,
+) -> Bool {
+  let work = [root]
+  let mut visible = true
+  let _ = while work.length() {
+    length => if length > 0u32 {
+      let current = match work.pop() {
+        Option::Some(value) => value
+        Option::None => resolved.error_type
+      }
+      match resolved.types[current] {
+        SelfHostResolvedType::ErrorType => {
+          visible = false
+        }
+        SelfHostResolvedType::NominalType(declaration) => if self_host_semantic_id_module(
+          declaration,
+        ) == resolved.module_id && !self_host_frozen_exported_declaration(
+          exported,
+          declaration,
+        ) {
+          visible = false
+        }
+        SelfHostResolvedType::TraitType(declaration) => if self_host_semantic_id_module(
+          declaration,
+        ) == resolved.module_id && !self_host_frozen_exported_declaration(
+          exported,
+          declaration,
+        ) {
+          visible = false
+        }
+        SelfHostResolvedType::ProductType(fields) => {
+          let mut index = 0u32
+          let _ = while index {
+            current_field => if current_field < fields.length {
+              work.push(resolved.type_arguments[fields.start + current_field])
+              continue current_field + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        SelfHostResolvedType::AppliedType(base, arguments) => {
+          work.push(base)
+          let mut index = 0u32
+          let _ = while index {
+            current_argument => if current_argument < arguments.length {
+              work.push(
+                resolved.type_arguments[arguments.start + current_argument],
+              )
+              continue current_argument + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        SelfHostResolvedType::FunctionType(parameters, result) => {
+          work.push(result)
+          let mut index = 0u32
+          let _ = while index {
+            current_parameter => if current_parameter < parameters.length {
+              work.push(
+                resolved.type_arguments[parameters.start + current_parameter],
+              )
+              continue current_parameter + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        _ => {}
+      }
+      if visible {
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  visible
+}
+
+fn self_host_frozen_callable_kind(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> SelfHostFrozenInterfaceCallableKind {
+  match collected.declaration_reference(declaration) {
+    Option::Some(reference) => match reference {
+      SelfHostCollectedDeclarationReference::Method(method) => match method.kind {
+        SelfHostCollectedMethodKind::TraitMethodDecl => SelfHostFrozenInterfaceCallableKind::FrozenTraitCallable(
+          method.parent,
+        )
+        SelfHostCollectedMethodKind::ImplMethodDecl => SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(
+          method.parent,
+        )
+        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+      }
+      SelfHostCollectedDeclarationReference::TopLevel(declaration_info) => {
+        let mut index = 0u32
+        let mut builtin_name = Option::None
+        let _ = while index {
+          current => if current < collected.builtins.length() {
+            let candidate = collected.builtins[current]
+            if self_host_u64_equal(candidate.declaration, declaration_info.id) {
+              builtin_name = Option::Some(candidate.builtin_name)
+              break self_host_semantic_unit()
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        match builtin_name {
+          Option::Some(name) => SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(
+            name,
+          )
+          Option::None => SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+        }
+      }
+    }
+    Option::None => SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+  }
+}
+
+fn self_host_frozen_callable_name(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> String {
+  match collected.declaration_reference(declaration) {
+    Option::Some(reference) => match reference {
+      SelfHostCollectedDeclarationReference::TopLevel(value) => collected.name(
+        value.name,
+      )
+      SelfHostCollectedDeclarationReference::Method(value) => collected.name(
+        value.name,
+      )
+    }
+    Option::None => ""
+  }
+}
+
+fn self_host_frozen_declaration_offset(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> U32 {
+  match collected.declaration_reference(declaration) {
+    Option::Some(reference) => match reference {
+      SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
+      SelfHostCollectedDeclarationReference::Method(value) => value.offset
+    }
+    Option::None => 0u32
+  }
+}
+
+fn self_host_frozen_callable_exported(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+  exported_declarations: Map<U64, Bool>,
+  exported_implementations: Map<U64, Bool>,
+) -> Bool {
+  if collected.declaration_is_test_only(declaration) {
+    false
+  } else {
+    match collected.declaration_reference(declaration) {
+      Option::Some(reference) => match reference {
+        SelfHostCollectedDeclarationReference::TopLevel(value) => self_host_frozen_exported_declaration(
+          exported_declarations,
+          value.id,
+        )
+        SelfHostCollectedDeclarationReference::Method(method) => match method.kind {
+          SelfHostCollectedMethodKind::TraitMethodDecl => self_host_frozen_exported_declaration(
+            exported_declarations,
+            method.parent,
+          )
+          SelfHostCollectedMethodKind::ImplMethodDecl => self_host_frozen_exported_declaration(
+            exported_implementations,
+            method.parent,
+          )
+          SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => method.visibility is SelfHostSemanticVisibility::Public
+        }
+      }
+      Option::None => false
+    }
+  }
+}
+
 fn self_host_freeze_module_signature_interface(
   path: String,
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
 ) -> SelfHostFrozenModuleInterface {
   let declarations = []
+  let exported_declarations = self_host_empty_u64_bool_map()
   for declaration in collected.declarations {
     if declaration.visibility is SelfHostSemanticVisibility::Public &&
       !collected.declaration_is_test_only(declaration.id) &&
@@ -178,7 +574,8 @@ fn self_host_freeze_module_signature_interface(
           } else {
             resolved.declaration_type(declaration.id)
           }
-          let frozen = SelfHostFrozenInterfaceDeclaration::{
+          exported_declarations.set(declaration.id, true)
+          declarations.push(SelfHostFrozenInterfaceDeclaration::{
             declaration: declaration.id
             name: collected.name(declaration.name)
             kind: kind
@@ -194,18 +591,221 @@ fn self_host_freeze_module_signature_interface(
               ]
               offset: declaration.offset
             }
-          }
-          declarations.push(frozen)
+          })
         }
         Option::None => {}
       }
     }
   }
+  let fields = []
+  let mut field_index = 0u32
+  for field in collected.fields {
+    if self_host_frozen_exported_declaration(
+      exported_declarations,
+      field.declaration,
+    ) {
+      fields.push(SelfHostFrozenInterfaceField::{
+        field: field.id
+        declaration: field.declaration
+        variant: field.variant
+        mutable_: field.mutable_
+        name: collected.name(field.name)
+        type_: resolved.field_types[field_index]
+        location: SelfHostSourceLocation::{
+          file: collected.declaration_files[
+            self_host_semantic_id_local(field.declaration)
+          ]
+          offset: field.offset
+        }
+      })
+    }
+    field_index = field_index + 1u32
+  }
+  let variants = []
+  let variant_payload_types = []
+  let mut variant_index = 0u32
+  for variant in collected.variants {
+    if self_host_frozen_exported_declaration(
+      exported_declarations,
+      variant.declaration,
+    ) {
+      let payload_start = variant_payload_types.length()
+      let source_payload = resolved.variant_payloads[variant_index]
+      let mut payload_index = 0u32
+      let _ = while payload_index {
+        current => if current < source_payload.length {
+          variant_payload_types.push(
+            resolved.signature_type_lists[
+              self_host_u32_add(source_payload.start, current)
+            ],
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      variants.push(SelfHostFrozenInterfaceVariant::{
+        variant: variant.id
+        declaration: variant.declaration
+        kind: variant.kind
+        name: collected.name(variant.name)
+        payload_types: SelfHostHirSpan::{
+          start: payload_start
+          length: variant_payload_types.length() - payload_start
+        }
+        location: SelfHostSourceLocation::{
+          file: collected.declaration_files[
+            self_host_semantic_id_local(variant.declaration)
+          ]
+          offset: variant.offset
+        }
+      })
+    }
+    variant_index = variant_index + 1u32
+  }
+  let exported_implementations = self_host_empty_u64_bool_map()
+  let mut implementation_index = 0u32
+  for implementation in collected.impls {
+    if !implementation.foreign_ &&
+      !collected.declaration_is_test_only(implementation.declaration) &&
+      self_host_frozen_impl_type_visible(
+        resolved,
+        resolved.impl_target_types[implementation_index],
+        exported_declarations,
+      ) {
+      let trait_visible = match resolved.impl_trait_types[implementation_index] {
+        Option::Some(type_) => self_host_frozen_impl_type_visible(
+          resolved,
+          type_,
+          exported_declarations,
+        )
+        Option::None => true
+      }
+      let package_owned = match resolved.impl_trait_types[implementation_index] {
+        Option::Some(type_) => self_host_frozen_trait_impl_is_owned(
+          resolved,
+          collected.module_id,
+          type_,
+          resolved.impl_target_types[implementation_index],
+        )
+        Option::None => true
+      }
+      if trait_visible && package_owned {
+        exported_implementations.set(implementation.declaration, true)
+      }
+    }
+    implementation_index = implementation_index + 1u32
+  }
+  let generic_parameter_bounds = []
+  for parameter in collected.generic_parameters {
+    generic_parameter_bounds.push(parameter.bounds)
+  }
+  let parameters = []
+  let callables = []
+  let mut callable_index = 0u32
+  for callable in collected.callables {
+    if self_host_frozen_callable_exported(
+      collected,
+      callable.declaration,
+      exported_declarations,
+      exported_implementations,
+    ) {
+      let source_parameters = collected.parameters_of(callable.declaration)
+      let parameter_start = parameters.length()
+      let mut parameter_offset = 0u32
+      let _ = while parameter_offset {
+        current => if current < source_parameters.length {
+          let parameter_index = self_host_u32_add(
+            source_parameters.start,
+            current,
+          )
+          let parameter = collected.parameters[parameter_index]
+          parameters.push(SelfHostFrozenInterfaceParameter::{
+            parameter: parameter.id
+            name: collected.name(parameter.name)
+            type_: resolved.parameter_types[parameter_index]
+            receiver: parameter.kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
+            location: SelfHostSourceLocation::{
+              file: collected.declaration_files[
+                self_host_semantic_id_local(parameter.declaration)
+              ]
+              offset: parameter.offset
+            }
+          })
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let callable_name = self_host_frozen_callable_name(
+        collected,
+        callable.declaration,
+      )
+      let callable_offset = self_host_frozen_declaration_offset(
+        collected,
+        callable.declaration,
+      )
+      callables.push(SelfHostFrozenInterfaceCallable::{
+        declaration: callable.declaration
+        name: callable_name
+        kind: self_host_frozen_callable_kind(collected, callable.declaration)
+        generic_parameters: collected.generic_parameters_of(callable.declaration)
+        parameters: SelfHostHirSpan::{
+          start: parameter_start
+          length: parameters.length() - parameter_start
+        }
+        result_type: resolved.callable_return_types[callable_index]
+        function_type: resolved.callable_function_types[callable_index]
+        location: SelfHostSourceLocation::{
+          file: collected.declaration_files[
+            self_host_semantic_id_local(callable.declaration)
+          ]
+          offset: callable_offset
+        }
+      })
+    }
+    callable_index = callable_index + 1u32
+  }
+  let implementations = []
+  implementation_index = 0u32
+  for implementation in collected.impls {
+    if self_host_frozen_exported_declaration(
+      exported_implementations,
+      implementation.declaration,
+    ) {
+      let implementation_offset = self_host_frozen_declaration_offset(
+        collected,
+        implementation.declaration,
+      )
+      implementations.push(SelfHostFrozenInterfaceImplementation::{
+        declaration: implementation.declaration
+        generic_parameters: collected.generic_parameters_of(
+          implementation.declaration,
+        )
+        trait_type: resolved.impl_trait_types[implementation_index]
+        target_type: resolved.impl_target_types[implementation_index]
+        location: SelfHostSourceLocation::{
+          file: collected.declaration_files[
+            self_host_semantic_id_local(implementation.declaration)
+          ]
+          offset: implementation_offset
+        }
+      })
+    }
+    implementation_index = implementation_index + 1u32
+  }
   SelfHostFrozenModuleInterface::{
     module_id: collected.module_id
     path: path
     resolved_types: resolved
+    generic_parameter_bounds: generic_parameter_bounds
     declarations: declarations
+    fields: fields
+    variants: variants
+    variant_payload_types: variant_payload_types
+    callables: callables
+    parameters: parameters
+    implementations: implementations
   }
 }
 
@@ -241,6 +841,10 @@ pub struct SelfHostModuleImportScope {
 }
 
 fn self_host_empty_u64_u32_map() -> Map<U64, U32> {
+  Map::empty()
+}
+
+fn self_host_empty_u64_bool_map() -> Map<U64, Bool> {
   Map::empty()
 }
 

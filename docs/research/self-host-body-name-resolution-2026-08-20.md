@@ -84,13 +84,13 @@ fully stack-independent.
 
 ## Current boundary
 
-This phase records imported callable and module-value identities but does not yet
-import full callable recipes, fields, variants, implementation evidence, or
-inferred module-let types. Those belong to imported semantic recipes and
-inference.
+Imported callable, field, variant, and implementation recipes now resolve into
+the consumer type arena. Inferred module-let types remain dependent on body
+inference. See
+[`self-host-imported-semantics-2026-08-21.md`](self-host-imported-semantics-2026-08-21.md).
 
 Derive requests now expand into ordinary synthetic implementations and body
 HIR. See
 [`self-host-derive-expansion-2026-08-20.md`](self-host-derive-expansion-2026-08-20.md).
-The next phase is imported semantic recipes and then inference, local
-unification, callable and member resolution, trait obligations, and evidence.
+The next phase is local unification and body inference, followed by callable
+and member resolution, trait obligations, and evidence selection.
