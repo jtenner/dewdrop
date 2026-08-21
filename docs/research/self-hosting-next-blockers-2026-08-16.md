@@ -23,7 +23,7 @@ duplicate inherent-method checks, full local trait signature conformance,
 generic specialization ranking, and coherent local dispatch are complete. The
 imported implementation evidence merging is complete. The next compiler work
 is prerequisite and generic-bound evidence trees, lambda-family, and module-value
-inference.
+inference. Successful basic body result compaction is complete.
 
 ## 1. P0: compiler host boundary
 

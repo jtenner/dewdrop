@@ -1,0 +1,301 @@
+open dew.std.array
+
+struct SelfHostBasicCompaction {
+  source_types: Array<SelfHostBodyTypeTerm>
+  source_arguments: Array<I32>
+  marks: Array<Bool>
+  mapping: Array<I32>
+  stack: Array<I32>
+  types: Array<SelfHostBodyTypeTerm>
+  arguments: Array<I32>
+}
+
+impl SelfHostBasicCompaction {
+  fn new(body: SelfHostBasicInferredBody) -> SelfHostBasicCompaction {
+    SelfHostBasicCompaction::{
+      source_types: body.types
+      source_arguments: body.type_arguments
+      marks: self_host_inference_bool_slots(body.types.length())
+      mapping: self_host_inference_i32_slots(body.types.length(), -1i32)
+      stack: []
+      types: [SelfHostBodyTypeTerm::BodyErrorType]
+      arguments: []
+    }
+  }
+
+  fn mark(self, root: I32) -> Unit {
+    self.stack.push(root)
+    let _ = while self.stack.length() {
+      length => if self_host_u32_greater(length, 0u32) {
+        let type_ = match self.stack.pop() {
+          Option::Some(value) => value
+          Option::None => 0i32
+        }
+        if type_ > 0i32 {
+          let index = self_host_body_i32_to_u32(type_)
+          if index < self.marks.length() && !self.marks[index] {
+            self.marks[index] = true
+            match self.source_types[index] {
+              SelfHostBodyTypeTerm::BodyProductType(fields) => {
+                let mut field = fields.length
+                let _ = while field {
+                  current => if self_host_u32_greater(current, 0u32) {
+                    let previous = current - 1u32
+                    self.stack.push(
+                      self.source_arguments[
+                        self_host_u32_add(fields.start, previous)
+                      ],
+                    )
+                    continue previous
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+                self.stack.push(base)
+                let mut argument = arguments.length
+                let _ = while argument {
+                  current => if self_host_u32_greater(current, 0u32) {
+                    let previous = current - 1u32
+                    self.stack.push(
+                      self.source_arguments[
+                        self_host_u32_add(arguments.start, previous)
+                      ],
+                    )
+                    continue previous
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+                self.stack.push(result)
+                let mut parameter = parameters.length
+                let _ = while parameter {
+                  current => if self_host_u32_greater(current, 0u32) {
+                    let previous = current - 1u32
+                    self.stack.push(
+                      self.source_arguments[
+                        self_host_u32_add(parameters.start, previous)
+                      ],
+                    )
+                    continue previous
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              _ => {}
+            }
+          }
+        }
+        continue self.stack.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn remap(self, type_: I32) -> I32 {
+    if type_ > 0i32 {
+      self.mapping[self_host_body_i32_to_u32(type_)]
+    } else {
+      type_
+    }
+  }
+
+  fn mark_array(self, values: Array<I32>) -> Unit {
+    for value in values {
+      self.mark(value)
+    }
+  }
+
+  fn build(self) -> Unit {
+    if self_host_u32_greater(self.mapping.length(), 0u32) {
+      self.mapping[0u32] = 0i32
+    }
+    let mut old = 1u32
+    let _ = while old {
+      current => if current < self.source_types.length() {
+        if self.marks[current] {
+          let new_id = self_host_body_u32_to_i32(self.types.length())
+          self.mapping[current] = new_id
+          match self.source_types[current] {
+            SelfHostBodyTypeTerm::BodyVariableType(variable) => self.types.push(
+              SelfHostBodyTypeTerm::BodyVariableType(variable),
+            )
+            SelfHostBodyTypeTerm::BodyProductType(fields) => {
+              let start = self.arguments.length()
+              let mut index = 0u32
+              let _ = while index {
+                field => if field < fields.length {
+                  self.arguments.push(
+                    self.remap(
+                      self.source_arguments[
+                        self_host_u32_add(fields.start, field)
+                      ],
+                    ),
+                  )
+                  continue field + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self.types.push(SelfHostBodyTypeTerm::BodyProductType(
+                SelfHostHirSpan::{
+                  start: start
+                  length: fields.length
+                },
+              ))
+            }
+            SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+              let start = self.arguments.length()
+              let mut index = 0u32
+              let _ = while index {
+                argument => if argument < arguments.length {
+                  self.arguments.push(
+                    self.remap(
+                      self.source_arguments[
+                        self_host_u32_add(arguments.start, argument)
+                      ],
+                    ),
+                  )
+                  continue argument + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self.types.push(SelfHostBodyTypeTerm::BodyAppliedType(
+                self.remap(base),
+                SelfHostHirSpan::{
+                  start: start
+                  length: arguments.length
+                },
+              ))
+            }
+            SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+              let start = self.arguments.length()
+              let mut index = 0u32
+              let _ = while index {
+                parameter => if parameter < parameters.length {
+                  self.arguments.push(
+                    self.remap(
+                      self.source_arguments[
+                        self_host_u32_add(parameters.start, parameter)
+                      ],
+                    ),
+                  )
+                  continue parameter + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self.types.push(SelfHostBodyTypeTerm::BodyFunctionType(
+                SelfHostHirSpan::{
+                  start: start
+                  length: parameters.length
+                },
+                self.remap(result),
+              ))
+            }
+            _ => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn remap_array(self, source: Array<I32>) -> Array<I32> {
+    let result = []
+    for type_ in source {
+      result.push(self.remap(type_))
+    }
+    result
+  }
+
+  fn remap_diagnostics(
+    self,
+    source: Array<SelfHostBodyInferenceDiagnostic>,
+  ) -> Array<SelfHostBodyInferenceDiagnostic> {
+    source
+  }
+}
+
+fn self_host_compact_basic_type_count(
+  body: SelfHostBasicInferredBody,
+) -> U32 {
+  body.types.length()
+}
+
+fn self_host_basic_has_type_diagnostic(
+  body: SelfHostBasicInferredBody,
+) -> Bool {
+  for diagnostic in body.diagnostics {
+    match diagnostic {
+      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
+        return true
+      }
+      _ => {}
+    }
+  }
+  false
+}
+
+fn self_host_compact_basic_inferred_body(
+  body: SelfHostBasicInferredBody,
+) -> SelfHostBasicInferredBody {
+  if self_host_basic_has_type_diagnostic(body) {
+    return body
+  }
+  let compact = SelfHostBasicCompaction::new(body)
+  compact.mark(body.root_type)
+  compact.mark_array(body.expression_types)
+  compact.mark_array(body.local_types)
+  compact.mark_array(body.block_types)
+  compact.mark_array(body.pattern_types)
+  compact.mark_array(body.control_state_types)
+  compact.mark_array(body.control_result_types)
+  compact.mark_array(body.call_type_arguments)
+  compact.mark_array(body.expression_type_arguments)
+  compact.mark_array(body.pattern_type_arguments)
+  compact.build()
+  SelfHostBasicInferredBody::{
+    body: body.body
+    root_type: compact.remap(body.root_type)
+    types: compact.types
+    type_arguments: compact.arguments
+    expression_types: compact.remap_array(body.expression_types)
+    local_types: compact.remap_array(body.local_types)
+    block_types: compact.remap_array(body.block_types)
+    pattern_types: compact.remap_array(body.pattern_types)
+    control_state_types: compact.remap_array(body.control_state_types)
+    control_result_types: compact.remap_array(body.control_result_types)
+    call_targets: body.call_targets
+    operator_targets: body.operator_targets
+    expression_selections: body.expression_selections
+    object_field_targets: body.object_field_targets
+    pattern_constructors: body.pattern_constructors
+    call_type_arguments: compact.remap_array(body.call_type_arguments)
+    expression_type_arguments: compact.remap_array(body.expression_type_arguments)
+    pattern_type_arguments: compact.remap_array(body.pattern_type_arguments)
+    unsupported_expressions: body.unsupported_expressions
+    diagnostics: compact.remap_diagnostics(body.diagnostics)
+  }
+}
+
+fn self_host_compact_basic_module_bodies(
+  inferred: SelfHostBasicInferredModuleBodies,
+) -> SelfHostBasicInferredModuleBodies {
+  let bodies = []
+  for body in inferred.bodies {
+    bodies.push(self_host_compact_basic_inferred_body(body))
+  }
+  SelfHostBasicInferredModuleBodies::{
+    module_id: inferred.module_id
+    bodies: bodies
+  }
+}
