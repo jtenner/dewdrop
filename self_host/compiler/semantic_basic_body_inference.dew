@@ -11,6 +11,19 @@ pub enum SelfHostBodyInferenceDiagnostic {
   CallArgumentCountMismatch(U32, U64, U32, U32, U32)
   NoMatchingDirectCall(U32, U32, U32)
   AmbiguousDirectCall(U32, U32, U64, U64, U32, U32)
+  FieldAccessRequiresNominal(U32, U32)
+  UnknownFieldForType(U32, U64, U32, U32)
+  InvalidConstructionTarget(U32, U32)
+  UnknownConstructionField(U32, U32, U64, U32)
+  MissingConstructionField(U32, U32, U64, U32)
+  DuplicateConstructionField(U32, U32, U32)
+  NoMatchingMethod(U32, U32, U32)
+  AmbiguousMethod(U32, U32, U64, U64, U32, U32)
+  UnknownQualifiedMember(U32, U64, U32, U32)
+  ConstructionPayloadKindMismatch(U32, U64, U32)
+  ConstructionPayloadArityMismatch(U32, U64, U32, U32, U32)
+  NoMatchingOperator(U32, U32)
+  AmbiguousOperator(U32, U64, U64, U32, U32)
   UnresolvedExpressionType(U32, U32)
   UnresolvedLocalType(U64, U32, U32)
 }
@@ -27,6 +40,19 @@ impl SelfHostBodyInferenceDiagnostic {
       SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::AmbiguousDirectCall(_, _, _, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::UnknownFieldForType(_, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::UnknownConstructionField(_, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::MissingConstructionField(_, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::DuplicateConstructionField(_, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::UnknownQualifiedMember(_, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::ConstructionPayloadKindMismatch(_, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::ConstructionPayloadArityMismatch(_, _, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::AmbiguousOperator(_, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(_, _, offset) => offset
     }
@@ -38,6 +64,20 @@ enum SelfHostSignatureInstantiationTask {
   FinishSignatureProduct(U32, U32)
   FinishSignatureApplication(U32, U32)
   FinishSignatureFunction(U32, U32)
+}
+
+pub enum SelfHostBasicExpressionSelection {
+  NoBasicExpressionSelection
+  ErrorBasicExpressionSelection
+  FieldBasicExpressionSelection(U64, Bool)
+  StructConstructionBasicExpressionSelection(U64, SelfHostHirSpan)
+  VariantConstructionBasicExpressionSelection(U64, U32, SelfHostHirSpan)
+}
+
+pub enum SelfHostBasicObjectFieldTarget {
+  NoBasicObjectFieldTarget
+  ErrorBasicObjectFieldTarget
+  SelectedBasicObjectFieldTarget(U64)
 }
 
 pub enum SelfHostBasicCallTarget {
@@ -59,7 +99,11 @@ pub struct SelfHostBasicInferredBody {
   control_state_types: Array<I32>
   control_result_types: Array<I32>
   call_targets: Array<SelfHostBasicCallTarget>
+  operator_targets: Array<SelfHostBasicCallTarget>
+  expression_selections: Array<SelfHostBasicExpressionSelection>
+  object_field_targets: Array<SelfHostBasicObjectFieldTarget>
   call_type_arguments: Array<I32>
+  expression_type_arguments: Array<I32>
   unsupported_expressions: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
 }
@@ -75,6 +119,26 @@ impl SelfHostBasicInferredBody {
 
   fn call_target(self, body: SelfHostHirBody, expression: U32) -> SelfHostBasicCallTarget {
     self.call_targets[expression - body.expressions.start]
+  }
+
+  fn operator_target(self, body: SelfHostHirBody, expression: U32) -> SelfHostBasicCallTarget {
+    self.operator_targets[expression - body.expressions.start]
+  }
+
+  fn expression_selection(
+    self,
+    body: SelfHostHirBody,
+    expression: U32,
+  ) -> SelfHostBasicExpressionSelection {
+    self.expression_selections[expression - body.expressions.start]
+  }
+
+  fn object_field_target(
+    self,
+    body: SelfHostHirBody,
+    field: U32,
+  ) -> SelfHostBasicObjectFieldTarget {
+    self.object_field_targets[field - body.object_fields.start]
   }
 
   fn diagnostic_count(self) -> U32 {
@@ -149,12 +213,60 @@ fn self_host_inference_i32_slots(length: U32, value: I32) -> Array<I32> {
   slots
 }
 
+fn self_host_store_basic_call_target(
+  slots: Array<SelfHostBasicCallTarget>,
+  index: U32,
+  target: SelfHostBasicCallTarget,
+) -> Unit {
+  slots[index] = target
+}
+
+fn self_host_store_basic_expression_selection(
+  slots: Array<SelfHostBasicExpressionSelection>,
+  index: U32,
+  selection: SelfHostBasicExpressionSelection,
+) -> Unit {
+  slots[index] = selection
+}
+
 fn self_host_store_inference_type(
   slots: Array<I32>,
   index: U32,
   type_: I32,
 ) -> Unit {
   slots[index] = type_
+}
+
+fn self_host_inference_object_field_target_slots(
+  length: U32,
+) -> Array<SelfHostBasicObjectFieldTarget> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(SelfHostBasicObjectFieldTarget::NoBasicObjectFieldTarget)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
+}
+
+fn self_host_inference_expression_selection_slots(
+  length: U32,
+) -> Array<SelfHostBasicExpressionSelection> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(SelfHostBasicExpressionSelection::NoBasicExpressionSelection)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
 }
 
 fn self_host_inference_call_target_slots(
@@ -201,14 +313,26 @@ struct SelfHostBasicBodyInferencer {
   control_state_types: Array<I32>
   control_result_types: Array<I32>
   call_targets: Array<SelfHostBasicCallTarget>
+  operator_targets: Array<SelfHostBasicCallTarget>
+  expression_selections: Array<SelfHostBasicExpressionSelection>
+  object_field_targets: Array<SelfHostBasicObjectFieldTarget>
   unsupported_expressions: Array<Bool>
+  consumed_member_roots: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
   instantiation_tasks: Array<SelfHostSignatureInstantiationTask>
   instantiation_results: Array<I32>
   candidate_type_arguments: Array<I32>
   call_type_arguments: Array<I32>
+  expression_type_arguments: Array<I32>
   pending_direct_calls: Array<U32>
+  pending_method_calls: Array<U32>
+  pending_variant_calls: Array<U32>
+  pending_variant_values: Array<U32>
+  pending_operators: Array<U32>
+  pending_constructions: Array<U32>
+  pending_fields: Array<U32>
   mut instantiation_generics: SelfHostHirSpan
+  mut instantiation_method_generics: SelfHostHirSpan
   mut instantiation_self_owner: U64
   mut instantiation_self_type: I32
   mut callable_index: U32
@@ -254,14 +378,29 @@ impl SelfHostBasicBodyInferencer {
       control_state_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
       control_result_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
       call_targets: self_host_inference_call_target_slots(body.expressions.length)
+      operator_targets: self_host_inference_call_target_slots(body.expressions.length)
+      expression_selections: self_host_inference_expression_selection_slots(body.expressions.length)
+      object_field_targets: self_host_inference_object_field_target_slots(body.object_fields.length)
       unsupported_expressions: self_host_inference_bool_slots(body.expressions.length)
+      consumed_member_roots: self_host_inference_bool_slots(body.expressions.length)
       diagnostics: []
       instantiation_tasks: []
       instantiation_results: []
       candidate_type_arguments: []
       call_type_arguments: []
+      expression_type_arguments: []
       pending_direct_calls: []
+      pending_method_calls: []
+      pending_variant_calls: []
+      pending_variant_values: []
+      pending_operators: []
+      pending_constructions: []
+      pending_fields: []
       instantiation_generics: SelfHostHirSpan::{
+        start: 0u32
+        length: 0u32
+      }
+      instantiation_method_generics: SelfHostHirSpan::{
         start: 0u32
         length: 0u32
       }
@@ -339,6 +478,10 @@ impl SelfHostBasicBodyInferencer {
 
   fn begin_signature_instantiation(self, declaration: U64) -> Unit {
     self.instantiation_generics = self.collected.generic_parameters_of(declaration)
+    self.instantiation_method_generics = SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
     self.candidate_type_arguments.clear()
     let mut index = 0u32
     let _ = while index {
@@ -351,6 +494,133 @@ impl SelfHostBasicBodyInferencer {
     }
     self.instantiation_self_owner = 18446744073709551615u64
     self.instantiation_self_type = -1i32
+  }
+
+  fn begin_nominal_instantiation(
+    self,
+    declaration: U64,
+    type_: I32,
+  ) -> Bool {
+    self.instantiation_generics = self.collected.generic_parameters_of(declaration)
+    self.instantiation_method_generics = SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    self.candidate_type_arguments.clear()
+    self.instantiation_self_owner = declaration
+    self.instantiation_self_type = type_
+    let representative = self.solver.representative_type(type_)
+    match self.solver.type_term(representative) {
+      SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => match self.resolved.types[
+        resolved_type
+      ] {
+        SelfHostResolvedType::NominalType(owner) => if self_host_u64_equal(
+          owner,
+          declaration,
+        ) {
+          self_host_u32_equal(self.instantiation_generics.length, 0u32)
+        } else {
+          false
+        }
+        SelfHostResolvedType::AppliedType(base, arguments) => match self.resolved.types[
+          base
+        ] {
+          SelfHostResolvedType::NominalType(owner) => if self_host_u64_equal(
+            owner,
+            declaration,
+          ) && self_host_u32_equal(
+            arguments.length,
+            self.instantiation_generics.length,
+          ) {
+            let mut index = 0u32
+            let _ = while index {
+              current => if current < arguments.length {
+                self.candidate_type_arguments.push(
+                  self.solver.resolved_type(
+                    self.resolved.type_arguments[
+                      self_host_u32_add(arguments.start, current)
+                    ],
+                  ),
+                )
+                continue current + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            true
+          } else {
+            false
+          }
+          _ => false
+        }
+        _ => false
+      }
+      SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+        let base_representative = self.solver.representative_type(base)
+        match self.solver.type_term(base_representative) {
+          SelfHostBodyTypeTerm::BodyResolvedType(resolved_base) => match self.resolved.types[
+            resolved_base
+          ] {
+            SelfHostResolvedType::NominalType(owner) => if self_host_u64_equal(
+              owner,
+              declaration,
+            ) && self_host_u32_equal(
+              arguments.length,
+              self.instantiation_generics.length,
+            ) {
+              let mut index = 0u32
+              let _ = while index {
+                current => if current < arguments.length {
+                  self.candidate_type_arguments.push(
+                    self.solver.type_argument(
+                      self_host_u32_add(arguments.start, current),
+                    ),
+                  )
+                  continue current + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              true
+            } else {
+              false
+            }
+            _ => false
+          }
+          _ => false
+        }
+      }
+      _ => false
+    }
+  }
+
+  fn inspect_nominal_type(self, type_: I32) -> Option<U64> {
+    let representative = self.solver.representative_type(type_)
+    match self.solver.type_term(representative) {
+      SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => match self.resolved.types[
+        resolved_type
+      ] {
+        SelfHostResolvedType::NominalType(declaration) => Option::Some(declaration)
+        SelfHostResolvedType::AppliedType(base, _) => match self.resolved.types[base] {
+          SelfHostResolvedType::NominalType(declaration) => Option::Some(declaration)
+          _ => Option::None
+        }
+        _ => Option::None
+      }
+      SelfHostBodyTypeTerm::BodyAppliedType(base, _) => {
+        let base_representative = self.solver.representative_type(base)
+        match self.solver.type_term(base_representative) {
+          SelfHostBodyTypeTerm::BodyResolvedType(resolved_base) => match self.resolved.types[
+            resolved_base
+          ] {
+            SelfHostResolvedType::NominalType(declaration) => Option::Some(declaration)
+            _ => Option::None
+          }
+          _ => Option::None
+        }
+      }
+      _ => Option::None
+    }
   }
 
   fn collapse_instantiation_results(self, start: U32, result: I32) -> Unit {
@@ -471,6 +741,15 @@ impl SelfHostBasicBodyInferencer {
               ) {
                 self.instantiation_results.push(
                   self.candidate_type_arguments[local - self.instantiation_generics.start],
+                )
+              } else if local >= self.instantiation_method_generics.start && local < self_host_u32_add(
+                self.instantiation_method_generics.start,
+                self.instantiation_method_generics.length,
+              ) {
+                self.instantiation_results.push(
+                  self.candidate_type_arguments[
+                    self.instantiation_generics.length + local - self.instantiation_method_generics.start
+                  ],
                 )
               } else {
                 self.instantiation_results.push(self.solver.resolved_type(source))
@@ -773,6 +1052,7 @@ impl SelfHostBasicBodyInferencer {
             self.solver.fresh_variable()
           }
           SelfHostHirExpr::AssignmentExpr(_, _, _) => self.primitive(SelfHostPrimitiveType::UnitType)
+          SelfHostHirExpr::IndexSetExpr(_, _, _, _) => self.primitive(SelfHostPrimitiveType::UnitType)
           SelfHostHirExpr::PrefixExpr(SelfHostHirPrefixOperator::LogicalNot, _, _) => self.primitive(SelfHostPrimitiveType::BoolType)
           SelfHostHirExpr::BinaryExpr(operator, _, _, _) => match operator {
             SelfHostHirBinaryOperator::LogicalOr => self.primitive(SelfHostPrimitiveType::BoolType)
@@ -1397,7 +1677,966 @@ impl SelfHostBasicBodyInferencer {
     self.pending_direct_calls.clear()
   }
 
+  fn resolved_nominal_head(self, type_: U32) -> Option<U64> {
+    match self.resolved.types[type_] {
+      SelfHostResolvedType::NominalType(declaration) => Option::Some(declaration)
+      SelfHostResolvedType::AppliedType(base, _) => match self.resolved.types[base] {
+        SelfHostResolvedType::NominalType(declaration) => Option::Some(declaration)
+        _ => Option::None
+      }
+      _ => Option::None
+    }
+  }
+
+  fn begin_method_instantiation(
+    self,
+    implementation: U32,
+    method: U64,
+    receiver_type: I32,
+  ) -> I32 {
+    let implementation_declaration = self.collected.impls[implementation].declaration
+    self.instantiation_generics = self.collected.generic_parameters_of(
+      implementation_declaration,
+    )
+    self.instantiation_method_generics = self.collected.generic_parameters_of(method)
+    self.candidate_type_arguments.clear()
+    let total = self_host_u32_add(
+      self.instantiation_generics.length,
+      self.instantiation_method_generics.length,
+    )
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < total {
+        self.candidate_type_arguments.push(self.solver.fresh_variable())
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.instantiation_self_owner = implementation_declaration
+    self.instantiation_self_type = receiver_type
+    self.instantiate_signature_type(
+      self.resolved.impl_target_types[implementation],
+    )
+  }
+
+  fn method_candidate_viable(
+    self,
+    expression: U32,
+    receiver: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+    implementation: U32,
+    callable: U32,
+  ) -> Bool {
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    if self_host_u32_equal(parameters.length, 0u32) || !self_host_u32_equal(
+      self_host_u32_subtract(parameters.length, 1u32),
+      arguments.length,
+    ) {
+      return false
+    }
+    let snapshot = self.solver.snapshot()
+    let receiver_type = self.expression_type(receiver)
+    let target = self.begin_method_instantiation(
+      implementation,
+      declaration,
+      receiver_type,
+    )
+    let origin = self_host_call_type_origin(expression, offset)
+    let mut viable = self.solver.unify(receiver_type, target, origin)
+    if viable {
+      viable = self.solver.unify(
+        receiver_type,
+        self.instantiate_signature_type(
+          self.resolved.parameter_types[parameters.start],
+        ),
+        origin,
+      )
+    }
+    let mut index = 0u32
+    let _ = while index {
+      current => if viable && current < arguments.length {
+        viable = self.solver.unify(
+          self.expression_type(
+            self.collected.expression_children[
+              self_host_u32_add(arguments.start, current)
+            ],
+          ),
+          self.instantiate_signature_type(
+            self.resolved.parameter_types[
+              self_host_u32_add(parameters.start, current + 1u32)
+            ],
+          ),
+          origin,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if viable {
+      viable = self.solver.unify(
+        self.expression_type(expression),
+        self.instantiate_signature_type(
+          self.resolved.callable_return_types[callable],
+        ),
+        origin,
+      )
+    }
+    self.solver.rollback(snapshot)
+    viable
+  }
+
+  fn select_method_candidate(
+    self,
+    expression: U32,
+    target: U32,
+    receiver: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+    implementation: U32,
+    callable: U32,
+  ) -> Unit {
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    let receiver_type = self.expression_type(receiver)
+    let target_type = self.begin_method_instantiation(
+      implementation,
+      declaration,
+      receiver_type,
+    )
+    let origin = self_host_call_type_origin(expression, offset)
+    self.constrain(receiver_type, target_type, origin)
+    self.constrain_resolved_signature_evidence(
+      receiver_type,
+      self.resolved.impl_target_types[implementation],
+      origin,
+    )
+    self.constrain(
+      receiver_type,
+      self.instantiate_signature_type(
+        self.resolved.parameter_types[parameters.start],
+      ),
+      origin,
+    )
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arguments.length {
+        let signature_type = self.resolved.parameter_types[
+          self_host_u32_add(parameters.start, current + 1u32)
+        ]
+        let actual = self.expression_type(
+          self.collected.expression_children[
+            self_host_u32_add(arguments.start, current)
+          ],
+        )
+        self.constrain_assignable(
+          actual,
+          self.instantiate_signature_type(signature_type),
+          origin,
+        )
+        self.constrain_resolved_signature_evidence(actual, signature_type, origin)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.constrain(
+      self.expression_type(expression),
+      self.instantiate_signature_type(
+        self.resolved.callable_return_types[callable],
+      ),
+      origin,
+    )
+    let argument_start = self.call_type_arguments.length()
+    for type_argument in self.candidate_type_arguments {
+      self.call_type_arguments.push(type_argument)
+    }
+    self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      declaration,
+      SelfHostHirSpan::{
+        start: argument_start
+        length: self.candidate_type_arguments.length()
+      },
+    )
+    self.consumed_member_roots[self.expression_index(target)] = true
+    self.solver.poison_type(self.expression_type(target))
+  }
+
+  fn constrain_pending_method_call(self, expression: U32) -> Unit {
+    let (target, arguments, offset) = match self.collected.expressions[expression] {
+      SelfHostHirExpr::CallExpr(call_target, call_arguments, call_offset) => (
+        call_target,
+        call_arguments,
+        call_offset,
+      )
+      _ => {
+        return
+      }
+    }
+    let (receiver, name) = match self.collected.expressions[target] {
+      SelfHostHirExpr::FieldExpr(base, method_name, _) => (base, method_name)
+      _ => {
+        return
+      }
+    }
+    let receiver_declaration = match self.inspect_nominal_type(
+      self.expression_type(receiver),
+    ) {
+      Option::Some(value) => value
+      Option::None => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::NoMatchingMethod(
+            name,
+            expression,
+            offset,
+          ),
+        )
+        self.solver.poison_type(self.expression_type(expression))
+        self.solver.poison_type(self.expression_type(target))
+        return
+      }
+    }
+    let mut selected_impl = 4294967295u32
+    let mut selected_callable = 4294967295u32
+    let mut selected_declaration = 18446744073709551615u64
+    let mut second_declaration = 18446744073709551615u64
+    let mut viable_count = 0u32
+    let mut method_index = 0u32
+    let _ = while method_index {
+      current => if current < self.collected.methods.length() {
+        let method = self.collected.methods[current]
+        if self_host_u32_equal(method.name, name) {
+          let mut implementation = 0u32
+          let _ = while implementation {
+            impl_index => if impl_index < self.collected.impls.length() {
+              let impl_ = self.collected.impls[impl_index]
+              if self_host_u64_equal(impl_.declaration, method.parent) {
+                match impl_.trait_type {
+                  Option::None => match self.resolved_nominal_head(
+                    self.resolved.impl_target_types[impl_index],
+                  ) {
+                    Option::Some(declaration) => if self_host_u64_equal(
+                      declaration,
+                      receiver_declaration,
+                    ) {
+                      match self.local_callable_index_of_declaration(method.id) {
+                        Option::Some(callable) => if self.method_candidate_viable(
+                          expression,
+                          receiver,
+                          arguments,
+                          offset,
+                          impl_index,
+                          callable,
+                        ) {
+                          viable_count = viable_count + 1u32
+                          if self_host_u32_equal(viable_count, 1u32) {
+                            selected_impl = impl_index
+                            selected_callable = callable
+                            selected_declaration = method.id
+                          } else if self_host_u32_equal(viable_count, 2u32) {
+                            second_declaration = method.id
+                          }
+                        }
+                        Option::None => {}
+                      }
+                    }
+                    Option::None => {}
+                  }
+                  Option::Some(_) => {}
+                }
+              }
+              continue impl_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if self_host_u32_equal(viable_count, 1u32) {
+      self.select_method_candidate(
+        expression,
+        target,
+        receiver,
+        arguments,
+        offset,
+        selected_impl,
+        selected_callable,
+      )
+    } else {
+      self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::ErrorBasicCallTarget
+      self.solver.poison_type(self.expression_type(expression))
+      self.solver.poison_type(self.expression_type(target))
+      if self_host_u32_equal(viable_count, 0u32) {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::NoMatchingMethod(
+            name,
+            expression,
+            offset,
+          ),
+        )
+      } else {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::AmbiguousMethod(
+            name,
+            expression,
+            selected_declaration,
+            second_declaration,
+            viable_count,
+            offset,
+          ),
+        )
+      }
+    }
+  }
+
+  fn constrain_pending_method_calls(self) -> Unit {
+    for expression in self.pending_method_calls {
+      self.constrain_pending_method_call(expression)
+    }
+    self.pending_method_calls.clear()
+  }
+
+  fn is_local_variant_target(self, target: U32) -> Bool {
+    match self.names.expression_references[target] {
+      SelfHostBodyNameReference::VariantNameReference(_) => {
+        return true
+      }
+      _ => {}
+    }
+    match self.collected.expressions[target] {
+      SelfHostHirExpr::QualifiedExpr(base, _, _) => match self.names.expression_references[
+        base
+      ] {
+        SelfHostBodyNameReference::ModuleTypeNameReference(_) => true
+        _ => false
+      }
+      _ => false
+    }
+  }
+
+  fn local_variant_target(self, target: U32) -> Option<U32> {
+    match self.names.expression_references[target] {
+      SelfHostBodyNameReference::VariantNameReference(name) => {
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < self.collected.variants.length() {
+            if self_host_u32_equal(self.collected.variants[current].name, name) {
+              return Option::Some(current)
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      _ => {}
+    }
+    match self.collected.expressions[target] {
+      SelfHostHirExpr::QualifiedExpr(base, property, _) => match self.names.expression_references[
+        base
+      ] {
+        SelfHostBodyNameReference::ModuleTypeNameReference(declaration) => {
+          let mut index = 0u32
+          while index {
+            current => if current < self.collected.variants.length() {
+              let variant = self.collected.variants[current]
+              if self_host_u64_equal(variant.declaration, declaration) && self_host_u32_equal(
+                variant.name,
+                property,
+              ) {
+                return Option::Some(current)
+              }
+              continue current + 1u32
+            } else {
+              break Option::None
+            }
+          }
+        }
+        _ => Option::None
+      }
+      _ => Option::None
+    }
+  }
+
+  fn consume_variant_target(self, target: U32, expression: U32) -> Unit {
+    if !self_host_u32_equal(target, expression) {
+      self.consumed_member_roots[self.expression_index(target)] = true
+      self.solver.poison_type(self.expression_type(target))
+    }
+    match self.collected.expressions[target] {
+      SelfHostHirExpr::QualifiedExpr(base, _, _) => {
+        self.consumed_member_roots[self.expression_index(base)] = true
+        self.solver.poison_type(self.expression_type(base))
+      }
+      _ => {}
+    }
+  }
+
+  fn record_variant_selection(
+    self,
+    expression: U32,
+    variant: U32,
+    kind: U32,
+  ) -> SelfHostHirSpan {
+    let start = self.expression_type_arguments.length()
+    for type_argument in self.candidate_type_arguments {
+      self.expression_type_arguments.push(type_argument)
+    }
+    let arguments = SelfHostHirSpan::{
+      start: start
+      length: self.candidate_type_arguments.length()
+    }
+    let selection_index = self.expression_index(expression)
+    let variant_id = self.collected.variants[variant].id
+    let selection = SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant_id,
+      kind,
+      arguments,
+    )
+    self_host_store_basic_expression_selection(
+      self.expression_selections,
+      selection_index,
+      selection,
+    )
+    arguments
+  }
+
+  fn select_unit_variant_value(
+    self,
+    expression: U32,
+    variant_index: U32,
+    offset: U32,
+  ) -> Unit {
+    let variant = self.collected.variants[variant_index]
+    match variant.kind {
+      SelfHostCollectedVariantKind::UnitVariantDecl => {}
+      _ => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::ConstructionPayloadKindMismatch(
+            expression,
+            variant.id,
+            offset,
+          ),
+        )
+        self.fail_construction(expression)
+        return
+      }
+    }
+    let instance = self.begin_fresh_nominal_instantiation(variant.declaration)
+    self.constrain(
+      self.expression_type(expression),
+      instance,
+      self_host_expression_type_origin(expression, offset),
+    )
+    let _ = self.record_variant_selection(expression, variant_index, 2u32)
+    self.consume_variant_target(expression, expression)
+  }
+
+  fn select_tuple_variant_call(
+    self,
+    expression: U32,
+    target: U32,
+    arguments: SelfHostHirSpan,
+    variant_index: U32,
+    offset: U32,
+  ) -> Unit {
+    let variant = self.collected.variants[variant_index]
+    match variant.kind {
+      SelfHostCollectedVariantKind::TupleVariantDecl => {}
+      _ => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::ConstructionPayloadKindMismatch(
+            expression,
+            variant.id,
+            offset,
+          ),
+        )
+        self.fail_construction(expression)
+        self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::ErrorBasicCallTarget
+        return
+      }
+    }
+    let payload = self.resolved.variant_payloads[variant_index]
+    if !self_host_u32_equal(payload.length, arguments.length) {
+      self.diagnostics.push(
+        SelfHostBodyInferenceDiagnostic::ConstructionPayloadArityMismatch(
+          expression,
+          variant.id,
+          payload.length,
+          arguments.length,
+          offset,
+        ),
+      )
+      self.fail_construction(expression)
+      self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::ErrorBasicCallTarget
+      return
+    }
+    let instance = self.begin_fresh_nominal_instantiation(variant.declaration)
+    let origin = self_host_call_type_origin(expression, offset)
+    self.constrain(self.expression_type(expression), instance, origin)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arguments.length {
+        let signature_type = self.resolved.signature_type_lists[
+          self_host_u32_add(payload.start, current)
+        ]
+        let actual = self.expression_type(
+          self.collected.expression_children[
+            self_host_u32_add(arguments.start, current)
+          ],
+        )
+        self.constrain_assignable(
+          actual,
+          self.instantiate_signature_type(signature_type),
+          origin,
+        )
+        self.constrain_resolved_signature_evidence(actual, signature_type, origin)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let type_arguments = self.record_variant_selection(
+      expression,
+      variant_index,
+      1u32,
+    )
+    self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      variant.id,
+      type_arguments,
+    )
+    self.consume_variant_target(target, expression)
+  }
+
+  fn constrain_pending_variant_calls(self) -> Unit {
+    for expression in self.pending_variant_calls {
+      match self.collected.expressions[expression] {
+        SelfHostHirExpr::CallExpr(target, arguments, offset) => match self.local_variant_target(
+          target,
+        ) {
+          Option::Some(variant) => self.select_tuple_variant_call(
+            expression,
+            target,
+            arguments,
+            variant,
+            offset,
+          )
+          Option::None => {
+            self.mark_unsupported(expression)
+            self.solver.poison_type(self.expression_type(target))
+          }
+        }
+        _ => {}
+      }
+    }
+    self.pending_variant_calls.clear()
+  }
+
+  fn constrain_pending_variant_values(self) -> Unit {
+    for expression in self.pending_variant_values {
+      if !self.consumed_member_roots[self.expression_index(expression)] {
+        match self.local_variant_target(expression) {
+          Option::Some(variant) => self.select_unit_variant_value(
+            expression,
+            variant,
+            self_host_basic_expression_offset(self.collected.expressions[expression]),
+          )
+          Option::None => self.mark_unsupported(expression)
+        }
+      }
+    }
+    self.pending_variant_values.clear()
+  }
+
+  fn declaration_is_struct(self, declaration: U64) -> Bool {
+    if !self_host_u64_equal(
+      self_host_semantic_id_module(declaration),
+      self.collected.module_id,
+    ) {
+      return false
+    }
+    let local = self_host_semantic_id_local(declaration)
+    if local >= self.collected.declarations.length() {
+      return false
+    }
+    match self.collected.declarations[local].kind {
+      SelfHostCollectedDeclKind::StructDecl => true
+      _ => false
+    }
+  }
+
+  fn begin_fresh_nominal_instantiation(self, declaration: U64) -> I32 {
+    self.begin_signature_instantiation(declaration)
+    let base = self.solver.resolved_type(
+      self.resolved.declaration_type(declaration),
+    )
+    if self_host_u32_equal(self.candidate_type_arguments.length(), 0u32) {
+      base
+    } else {
+      self.solver.applied_type(base, self.candidate_type_arguments)
+    }
+  }
+
+  fn fail_construction(self, expression: U32) -> Unit {
+    self_host_store_basic_expression_selection(
+      self.expression_selections,
+      self.expression_index(expression),
+      SelfHostBasicExpressionSelection::ErrorBasicExpressionSelection,
+    )
+    self.solver.poison_type(self.expression_type(expression))
+  }
+
+  fn select_struct_construction(
+    self,
+    expression: U32,
+    target: U32,
+    fields: SelfHostHirSpan,
+    declaration: U64,
+    offset: U32,
+  ) -> Unit {
+    let instance_type = self.begin_fresh_nominal_instantiation(declaration)
+    let origin = self_host_expression_type_origin(expression, offset)
+    self.constrain(self.expression_type(expression), instance_type, origin)
+    let matched = self_host_inference_bool_slots(self.collected.fields.length())
+    let mut failed = false
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < fields.length {
+        let object_field_index = self_host_u32_add(fields.start, current)
+        let object_field = self.collected.object_fields[object_field_index]
+        let mut selected = 4294967295u32
+        let mut field_index = 0u32
+        let _ = while field_index {
+          candidate => if candidate < self.collected.fields.length() {
+            let field = self.collected.fields[candidate]
+            if self_host_u64_equal(field.declaration, declaration) && self_host_u32_equal(
+              field.name,
+              object_field.name,
+            ) {
+              match field.variant {
+                Option::None => {
+                  selected = candidate
+                  break self_host_semantic_unit()
+                }
+                Option::Some(_) => {}
+              }
+            }
+            continue candidate + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        if self_host_u32_equal(selected, 4294967295u32) {
+          failed = true
+          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
+          self.diagnostics.push(
+            SelfHostBodyInferenceDiagnostic::UnknownConstructionField(
+              expression,
+              object_field.name,
+              declaration,
+              object_field.offset,
+            ),
+          )
+        } else if matched[selected] {
+          failed = true
+          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
+          self.diagnostics.push(
+            SelfHostBodyInferenceDiagnostic::DuplicateConstructionField(
+              expression,
+              object_field.name,
+              object_field.offset,
+            ),
+          )
+        } else {
+          matched[selected] = true
+          let field = self.collected.fields[selected]
+          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(
+            field.id,
+          )
+          let signature_type = self.resolved.field_types[selected]
+          let expected = self.instantiate_signature_type(signature_type)
+          let actual = self.expression_type(object_field.value)
+          self.constrain_assignable(actual, expected, origin)
+          self.constrain_resolved_signature_evidence(
+            actual,
+            signature_type,
+            origin,
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.collected.fields.length() {
+        let field = self.collected.fields[current]
+        if self_host_u64_equal(field.declaration, declaration) {
+          match field.variant {
+            Option::None => if !matched[current] {
+              failed = true
+              self.diagnostics.push(
+                SelfHostBodyInferenceDiagnostic::MissingConstructionField(
+                  expression,
+                  field.name,
+                  declaration,
+                  offset,
+                ),
+              )
+            }
+            Option::Some(_) => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.solver.poison_type(self.expression_type(target))
+    if failed {
+      self.fail_construction(expression)
+    } else {
+      let argument_start = self.expression_type_arguments.length()
+      for type_argument in self.candidate_type_arguments {
+        self.expression_type_arguments.push(type_argument)
+      }
+      self_host_store_basic_expression_selection(
+        self.expression_selections,
+        self.expression_index(expression),
+        SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+          declaration,
+          SelfHostHirSpan::{
+            start: argument_start
+            length: self.candidate_type_arguments.length()
+          },
+        ),
+      )
+    }
+  }
+
+  fn constrain_pending_construction(self, expression: U32) -> Unit {
+    let (target, fields, offset) = match self.collected.expressions[expression] {
+      SelfHostHirExpr::ConstructExpr(value, object_fields, expression_offset) => (
+        value,
+        object_fields,
+        expression_offset,
+      )
+      _ => {
+        return
+      }
+    }
+    let declaration = match self.names.expression_references[target] {
+      SelfHostBodyNameReference::ModuleTypeNameReference(value) => value
+      _ => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(
+            expression,
+            offset,
+          ),
+        )
+        self.fail_construction(expression)
+        return
+      }
+    }
+    if !self.declaration_is_struct(declaration) {
+      self.diagnostics.push(
+        SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(
+          expression,
+          offset,
+        ),
+      )
+      self.fail_construction(expression)
+      return
+    }
+    self.select_struct_construction(
+      expression,
+      target,
+      fields,
+      declaration,
+      offset,
+    )
+  }
+
+  fn constrain_pending_constructions(self) -> Unit {
+    for expression in self.pending_constructions {
+      self.constrain_pending_construction(expression)
+    }
+    self.pending_constructions.clear()
+  }
+
+  fn select_field_expression(
+    self,
+    expression: U32,
+    base: U32,
+    name: U32,
+    offset: U32,
+  ) -> Bool {
+    let base_type = self.expression_type(base)
+    let representative = self.solver.representative_type(base_type)
+    match self.solver.type_term(representative) {
+      SelfHostBodyTypeTerm::BodyVariableType(_) => {
+        return false
+      }
+      SelfHostBodyTypeTerm::BodyErrorType => {
+        self_host_store_basic_expression_selection(
+          self.expression_selections,
+          self.expression_index(expression),
+          SelfHostBasicExpressionSelection::ErrorBasicExpressionSelection,
+        )
+        self.solver.poison_type(self.expression_type(expression))
+        return true
+      }
+      _ => {}
+    }
+    let declaration = match self.inspect_nominal_type(base_type) {
+      Option::Some(value) => value
+      Option::None => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(
+            expression,
+            offset,
+          ),
+        )
+        self_host_store_basic_expression_selection(
+          self.expression_selections,
+          self.expression_index(expression),
+          SelfHostBasicExpressionSelection::ErrorBasicExpressionSelection,
+        )
+        self.solver.poison_type(self.expression_type(expression))
+        return true
+      }
+    }
+    let mut field_index = 4294967295u32
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < self.collected.fields.length() {
+        let field = self.collected.fields[current]
+        if self_host_u64_equal(field.declaration, declaration) && self_host_u32_equal(field.name, name) {
+          match field.variant {
+            Option::None => {
+              field_index = current
+              break self_host_semantic_unit()
+            }
+            Option::Some(_) => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if self_host_u32_equal(field_index, 4294967295u32) {
+      self.diagnostics.push(
+        SelfHostBodyInferenceDiagnostic::UnknownFieldForType(
+          name,
+          declaration,
+          expression,
+          offset,
+        ),
+      )
+      self_host_store_basic_expression_selection(
+        self.expression_selections,
+        self.expression_index(expression),
+        SelfHostBasicExpressionSelection::ErrorBasicExpressionSelection,
+      )
+      self.solver.poison_type(self.expression_type(expression))
+      return true
+    }
+    if !self.begin_nominal_instantiation(declaration, base_type) {
+      return false
+    }
+    let field_type = self.instantiate_signature_type(
+      self.resolved.field_types[field_index],
+    )
+    self.constrain(
+      self.expression_type(expression),
+      field_type,
+      self_host_expression_type_origin(expression, offset),
+    )
+    let field = self.collected.fields[field_index]
+    self_host_store_basic_expression_selection(
+      self.expression_selections,
+      self.expression_index(expression),
+      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
+        field.id,
+        field.mutable_,
+      ),
+    )
+    true
+  }
+
+  fn constrain_pending_fields(self) -> Unit {
+    let mut pass = 0u32
+    let mut progress = true
+    let _ = while pass {
+      current_pass => if current_pass < self.pending_fields.length() && progress {
+        progress = false
+        for expression in self.pending_fields {
+          if !self.consumed_member_roots[self.expression_index(expression)] {
+            match self.expression_selections[self.expression_index(expression)] {
+              SelfHostBasicExpressionSelection::NoBasicExpressionSelection => match self.collected.expressions[
+                expression
+              ] {
+                SelfHostHirExpr::FieldExpr(base, name, offset) => if self.select_field_expression(
+                  expression,
+                  base,
+                  name,
+                  offset,
+                ) {
+                  progress = true
+                }
+                _ => {}
+              }
+              _ => {}
+            }
+          }
+        }
+        continue current_pass + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    for expression in self.pending_fields {
+      if !self.consumed_member_roots[self.expression_index(expression)] {
+        match self.expression_selections[self.expression_index(expression)] {
+          SelfHostBasicExpressionSelection::NoBasicExpressionSelection => self.mark_unsupported(
+            expression,
+          )
+          _ => {}
+        }
+      }
+    }
+    self.pending_fields.clear()
+  }
+
   fn constrain_call(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32) -> Unit {
+    if self.is_local_variant_target(target) {
+      self.consumed_member_roots[self.expression_index(target)] = true
+      match self.collected.expressions[target] {
+        SelfHostHirExpr::QualifiedExpr(base, _, _) => {
+          self.consumed_member_roots[self.expression_index(base)] = true
+        }
+        _ => {}
+      }
+      self.pending_variant_calls.push(expression)
+      return
+    }
+    match self.collected.expressions[target] {
+      SelfHostHirExpr::FieldExpr(_, _, _) => {
+        self.consumed_member_roots[self.expression_index(target)] = true
+        self.pending_method_calls.push(expression)
+        return
+      }
+      _ => {}
+    }
     match self.names.expression_references[target] {
       SelfHostBodyNameReference::ModuleValueNameReference(_) => {
         self.pending_direct_calls.push(expression)
@@ -1437,6 +2676,749 @@ impl SelfHostBasicBodyInferencer {
     self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::FunctionValueBasicCallTarget(
       target,
     )
+  }
+
+  fn binary_operator_trait_name(
+    self,
+    operator: SelfHostHirBinaryOperator,
+  ) -> Option<String> {
+    match operator {
+      SelfHostHirBinaryOperator::LogicalOr => Option::None
+      SelfHostHirBinaryOperator::LogicalAnd => Option::None
+      SelfHostHirBinaryOperator::BitOr => Option::Some("BitOr")
+      SelfHostHirBinaryOperator::BitXor => Option::Some("BitXor")
+      SelfHostHirBinaryOperator::BitAnd => Option::Some("BitAnd")
+      SelfHostHirBinaryOperator::Equal => Option::Some("Eq")
+      SelfHostHirBinaryOperator::NotEqual => Option::Some("Ne")
+      SelfHostHirBinaryOperator::Less => Option::Some("Lt")
+      SelfHostHirBinaryOperator::LessEqual => Option::Some("Lte")
+      SelfHostHirBinaryOperator::Greater => Option::Some("Gt")
+      SelfHostHirBinaryOperator::GreaterEqual => Option::Some("Gte")
+      SelfHostHirBinaryOperator::ShiftLeft => Option::Some("Shl")
+      SelfHostHirBinaryOperator::ShiftRight => Option::Some("Shr")
+      SelfHostHirBinaryOperator::Add => Option::Some("Add")
+      SelfHostHirBinaryOperator::Subtract => Option::Some("Sub")
+      SelfHostHirBinaryOperator::Multiply => Option::Some("Mul")
+      SelfHostHirBinaryOperator::Divide => Option::Some("Div")
+      SelfHostHirBinaryOperator::Remainder => Option::Some("Rem")
+      SelfHostHirBinaryOperator::Exponentiate => Option::Some("Pow")
+    }
+  }
+
+  fn binary_operator_method_name(
+    self,
+    operator: SelfHostHirBinaryOperator,
+  ) -> Option<String> {
+    match operator {
+      SelfHostHirBinaryOperator::LogicalOr => Option::None
+      SelfHostHirBinaryOperator::LogicalAnd => Option::None
+      SelfHostHirBinaryOperator::BitOr => Option::Some("bit_or")
+      SelfHostHirBinaryOperator::BitXor => Option::Some("bit_xor")
+      SelfHostHirBinaryOperator::BitAnd => Option::Some("bit_and")
+      SelfHostHirBinaryOperator::Equal => Option::Some("eq")
+      SelfHostHirBinaryOperator::NotEqual => Option::Some("ne")
+      SelfHostHirBinaryOperator::Less => Option::Some("lt")
+      SelfHostHirBinaryOperator::LessEqual => Option::Some("lte")
+      SelfHostHirBinaryOperator::Greater => Option::Some("gt")
+      SelfHostHirBinaryOperator::GreaterEqual => Option::Some("gte")
+      SelfHostHirBinaryOperator::ShiftLeft => Option::Some("shl")
+      SelfHostHirBinaryOperator::ShiftRight => Option::Some("shr")
+      SelfHostHirBinaryOperator::Add => Option::Some("add")
+      SelfHostHirBinaryOperator::Subtract => Option::Some("sub")
+      SelfHostHirBinaryOperator::Multiply => Option::Some("mul")
+      SelfHostHirBinaryOperator::Divide => Option::Some("div")
+      SelfHostHirBinaryOperator::Remainder => Option::Some("rem")
+      SelfHostHirBinaryOperator::Exponentiate => Option::Some("pow")
+    }
+  }
+
+  fn local_trait_named(self, spelling: String) -> Option<U64> {
+    match self.collected.find_name(spelling) {
+      Option::Some(name) => self.collected.trait_bindings.get(name)
+      Option::None => Option::None
+    }
+  }
+
+  fn resolved_trait_head(self, type_: U32) -> Option<U64> {
+    match self.resolved.types[type_] {
+      SelfHostResolvedType::TraitType(declaration) => Option::Some(declaration)
+      SelfHostResolvedType::AppliedType(base, _) => match self.resolved.types[base] {
+        SelfHostResolvedType::TraitType(declaration) => Option::Some(declaration)
+        _ => Option::None
+      }
+      _ => Option::None
+    }
+  }
+
+  fn constrain_binary_expression(
+    self,
+    expression: U32,
+    operator: SelfHostHirBinaryOperator,
+    left: U32,
+    right: U32,
+    offset: U32,
+  ) -> Unit {
+    let trait_name = self.binary_operator_trait_name(operator)
+    let method_name = self.binary_operator_method_name(operator)
+    match trait_name {
+      Option::Some(trait_spelling) => match method_name {
+        Option::Some(method_spelling) => match self.local_trait_named(
+          trait_spelling,
+        ) {
+          Option::Some(_) => match self.collected.find_name(method_spelling) {
+            Option::Some(_) => {
+              self.pending_operators.push(expression)
+              return
+            }
+            Option::None => {}
+          }
+          Option::None => {}
+        }
+        Option::None => {}
+      }
+      Option::None => {}
+    }
+    let origin = self_host_operator_type_origin(expression, offset)
+    match operator {
+      SelfHostHirBinaryOperator::LogicalOr => {
+        self.constrain(self.expression_type(left), self.primitive(SelfHostPrimitiveType::BoolType), origin)
+        self.constrain(self.expression_type(right), self.primitive(SelfHostPrimitiveType::BoolType), origin)
+      }
+      SelfHostHirBinaryOperator::LogicalAnd => {
+        self.constrain(self.expression_type(left), self.primitive(SelfHostPrimitiveType::BoolType), origin)
+        self.constrain(self.expression_type(right), self.primitive(SelfHostPrimitiveType::BoolType), origin)
+      }
+      SelfHostHirBinaryOperator::Equal => self.constrain(self.expression_type(left), self.expression_type(right), origin)
+      SelfHostHirBinaryOperator::NotEqual => self.constrain(self.expression_type(left), self.expression_type(right), origin)
+      SelfHostHirBinaryOperator::Less => self.constrain(self.expression_type(left), self.expression_type(right), origin)
+      SelfHostHirBinaryOperator::LessEqual => self.constrain(self.expression_type(left), self.expression_type(right), origin)
+      SelfHostHirBinaryOperator::Greater => self.constrain(self.expression_type(left), self.expression_type(right), origin)
+      SelfHostHirBinaryOperator::GreaterEqual => self.constrain(self.expression_type(left), self.expression_type(right), origin)
+      _ => {
+        self.constrain(self.expression_type(left), self.expression_type(right), origin)
+        self.constrain(self.expression_type(expression), self.expression_type(left), origin)
+      }
+    }
+  }
+
+  fn binary_operator_candidate_viable(
+    self,
+    expression: U32,
+    left: U32,
+    right: U32,
+    offset: U32,
+    implementation: U32,
+    callable: U32,
+  ) -> Bool {
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    if !self_host_u32_equal(parameters.length, 2u32) {
+      return false
+    }
+    let snapshot = self.solver.snapshot()
+    let left_type = self.expression_type(left)
+    let target = self.begin_method_instantiation(
+      implementation,
+      declaration,
+      left_type,
+    )
+    let origin = self_host_operator_type_origin(expression, offset)
+    let mut viable = self.solver.unify(left_type, target, origin)
+    if viable {
+      viable = self.solver.unify(left_type, self.expression_type(right), origin)
+    }
+    if viable {
+      viable = self.solver.unify(
+        left_type,
+        self.instantiate_signature_type(
+          self.resolved.parameter_types[parameters.start],
+        ),
+        origin,
+      )
+    }
+    if viable {
+      viable = self.solver.unify(
+        self.expression_type(right),
+        self.instantiate_signature_type(
+          self.resolved.parameter_types[
+            self_host_u32_add(parameters.start, 1u32)
+          ],
+        ),
+        origin,
+      )
+    }
+    if viable {
+      viable = self.solver.unify(
+        self.expression_type(expression),
+        self.instantiate_signature_type(
+          self.resolved.callable_return_types[callable],
+        ),
+        origin,
+      )
+    }
+    self.solver.rollback(snapshot)
+    viable
+  }
+
+  fn select_binary_operator_candidate(
+    self,
+    expression: U32,
+    left: U32,
+    right: U32,
+    offset: U32,
+    implementation: U32,
+    callable: U32,
+  ) -> Unit {
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    let left_type = self.expression_type(left)
+    let target = self.begin_method_instantiation(
+      implementation,
+      declaration,
+      left_type,
+    )
+    let origin = self_host_operator_type_origin(expression, offset)
+    self.constrain(left_type, target, origin)
+    self.constrain_resolved_signature_evidence(
+      left_type,
+      self.resolved.impl_target_types[implementation],
+      origin,
+    )
+    self.constrain(left_type, self.expression_type(right), origin)
+    self.constrain(
+      left_type,
+      self.instantiate_signature_type(
+        self.resolved.parameter_types[parameters.start],
+      ),
+      origin,
+    )
+    let right_signature = self.resolved.parameter_types[
+      self_host_u32_add(parameters.start, 1u32)
+    ]
+    self.constrain_assignable(
+      self.expression_type(right),
+      self.instantiate_signature_type(right_signature),
+      origin,
+    )
+    self.constrain_resolved_signature_evidence(
+      self.expression_type(right),
+      right_signature,
+      origin,
+    )
+    self.constrain(
+      self.expression_type(expression),
+      self.instantiate_signature_type(
+        self.resolved.callable_return_types[callable],
+      ),
+      origin,
+    )
+    let start = self.call_type_arguments.length()
+    for type_argument in self.candidate_type_arguments {
+      self.call_type_arguments.push(type_argument)
+    }
+    let target_index = self.expression_index(expression)
+    let selected_target = SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      declaration,
+      SelfHostHirSpan::{
+        start: start
+        length: self.candidate_type_arguments.length()
+      },
+    )
+    self_host_store_basic_call_target(
+      self.operator_targets,
+      target_index,
+      selected_target,
+    )
+    return
+  }
+
+  fn constrain_pending_binary_operator(self, expression: U32) -> Unit {
+    let (operator, left, right, offset) = match self.collected.expressions[expression] {
+      SelfHostHirExpr::BinaryExpr(value, left_expression, right_expression, expression_offset) => (
+        value,
+        left_expression,
+        right_expression,
+        expression_offset,
+      )
+      _ => {
+        return
+      }
+    }
+    let trait_declaration = match self.binary_operator_trait_name(operator) {
+      Option::Some(spelling) => match self.local_trait_named(spelling) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      Option::None => {
+        return
+      }
+    }
+    let method_name = match self.binary_operator_method_name(operator) {
+      Option::Some(spelling) => match self.collected.find_name(spelling) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      Option::None => {
+        return
+      }
+    }
+    let mut selected_impl = 4294967295u32
+    let mut selected_callable = 4294967295u32
+    let mut selected_declaration = 18446744073709551615u64
+    let mut second_declaration = 18446744073709551615u64
+    let mut viable_count = 0u32
+    let mut implementation = 0u32
+    let _ = while implementation {
+      current => if current < self.collected.impls.length() {
+        match self.resolved.impl_trait_types[current] {
+          Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
+            Option::Some(candidate_trait) => if self_host_u64_equal(
+              candidate_trait,
+              trait_declaration,
+            ) {
+              let impl_declaration = self.collected.impls[current].declaration
+              let mut method_index = 0u32
+              let _ = while method_index {
+                method_slot => if method_slot < self.collected.methods.length() {
+                  let method = self.collected.methods[method_slot]
+                  if self_host_u64_equal(method.parent, impl_declaration) && self_host_u32_equal(
+                    method.name,
+                    method_name,
+                  ) {
+                    match self.local_callable_index_of_declaration(method.id) {
+                      Option::Some(callable) => if self.binary_operator_candidate_viable(
+                        expression,
+                        left,
+                        right,
+                        offset,
+                        current,
+                        callable,
+                      ) {
+                        viable_count = viable_count + 1u32
+                        if self_host_u32_equal(viable_count, 1u32) {
+                          selected_impl = current
+                          selected_callable = callable
+                          selected_declaration = method.id
+                        } else if self_host_u32_equal(viable_count, 2u32) {
+                          second_declaration = method.id
+                        }
+                      }
+                      Option::None => {}
+                    }
+                  }
+                  continue method_slot + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            Option::None => {}
+          }
+          Option::None => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if self_host_u32_equal(viable_count, 1u32) {
+      self.select_binary_operator_candidate(
+        expression,
+        left,
+        right,
+        offset,
+        selected_impl,
+        selected_callable,
+      )
+    } else {
+      self_host_store_basic_call_target(
+        self.operator_targets,
+        self.expression_index(expression),
+        SelfHostBasicCallTarget::ErrorBasicCallTarget,
+      )
+      self.solver.poison_type(self.expression_type(expression))
+      if self_host_u32_equal(viable_count, 0u32) {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::NoMatchingOperator(
+            expression,
+            offset,
+          ),
+        )
+      } else {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::AmbiguousOperator(
+            expression,
+            selected_declaration,
+            second_declaration,
+            viable_count,
+            offset,
+          ),
+        )
+      }
+    }
+  }
+
+  fn index_trait_name(self, expression: U32) -> Option<String> {
+    match self.collected.expressions[expression] {
+      SelfHostHirExpr::IndexExpr(_, _, _) => Option::Some("IndexedGet")
+      SelfHostHirExpr::IndexSetExpr(_, _, _, _) => Option::Some("IndexedSet")
+      _ => Option::None
+    }
+  }
+
+  fn index_method_name(self, expression: U32) -> Option<String> {
+    match self.collected.expressions[expression] {
+      SelfHostHirExpr::IndexExpr(_, _, _) => Option::Some("indexed_get")
+      SelfHostHirExpr::IndexSetExpr(_, _, _, _) => Option::Some("indexed_set")
+      _ => Option::None
+    }
+  }
+
+  fn queue_index_operator(self, expression: U32) -> Bool {
+    let trait_name = self.index_trait_name(expression)
+    let method_name = self.index_method_name(expression)
+    match trait_name {
+      Option::Some(trait_spelling) => match method_name {
+        Option::Some(method_spelling) => match self.local_trait_named(
+          trait_spelling,
+        ) {
+          Option::Some(_) => match self.collected.find_name(method_spelling) {
+            Option::Some(_) => {
+              self.pending_operators.push(expression)
+              true
+            }
+            Option::None => false
+          }
+          Option::None => false
+        }
+        Option::None => false
+      }
+      Option::None => false
+    }
+  }
+
+  fn index_operator_candidate_viable(
+    self,
+    expression: U32,
+    offset: U32,
+    implementation: U32,
+    callable: U32,
+  ) -> Bool {
+    let (base, index, value, expected_parameters) = match self.collected.expressions[
+      expression
+    ] {
+      SelfHostHirExpr::IndexExpr(base_expression, index_expression, _) => (
+        base_expression,
+        index_expression,
+        4294967295u32,
+        2u32,
+      )
+      SelfHostHirExpr::IndexSetExpr(
+        base_expression,
+        index_expression,
+        value_expression,
+        _,
+      ) => (base_expression, index_expression, value_expression, 3u32)
+      _ => {
+        return false
+      }
+    }
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    if !self_host_u32_equal(parameters.length, expected_parameters) {
+      return false
+    }
+    let snapshot = self.solver.snapshot()
+    let base_type = self.expression_type(base)
+    let target = self.begin_method_instantiation(
+      implementation,
+      declaration,
+      base_type,
+    )
+    let origin = self_host_operator_type_origin(expression, offset)
+    let mut viable = self.solver.unify(base_type, target, origin)
+    if viable {
+      viable = self.solver.unify(
+        base_type,
+        self.instantiate_signature_type(
+          self.resolved.parameter_types[parameters.start],
+        ),
+        origin,
+      )
+    }
+    if viable {
+      viable = self.solver.unify(
+        self.expression_type(index),
+        self.instantiate_signature_type(
+          self.resolved.parameter_types[
+            self_host_u32_add(parameters.start, 1u32)
+          ],
+        ),
+        origin,
+      )
+    }
+    if viable && !self_host_u32_equal(value, 4294967295u32) {
+      viable = self.solver.unify(
+        self.expression_type(value),
+        self.instantiate_signature_type(
+          self.resolved.parameter_types[
+            self_host_u32_add(parameters.start, 2u32)
+          ],
+        ),
+        origin,
+      )
+    }
+    if viable {
+      viable = self.solver.unify(
+        self.expression_type(expression),
+        self.instantiate_signature_type(
+          self.resolved.callable_return_types[callable],
+        ),
+        origin,
+      )
+    }
+    self.solver.rollback(snapshot)
+    viable
+  }
+
+  fn select_index_operator_candidate(
+    self,
+    expression: U32,
+    offset: U32,
+    implementation: U32,
+    callable: U32,
+  ) -> Unit {
+    let (base, index, value) = match self.collected.expressions[expression] {
+      SelfHostHirExpr::IndexExpr(base_expression, index_expression, _) => (
+        base_expression,
+        index_expression,
+        4294967295u32,
+      )
+      SelfHostHirExpr::IndexSetExpr(
+        base_expression,
+        index_expression,
+        value_expression,
+        _,
+      ) => (base_expression, index_expression, value_expression)
+      _ => {
+        return
+      }
+    }
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    let base_type = self.expression_type(base)
+    let target = self.begin_method_instantiation(
+      implementation,
+      declaration,
+      base_type,
+    )
+    let origin = self_host_operator_type_origin(expression, offset)
+    self.constrain(base_type, target, origin)
+    self.constrain_resolved_signature_evidence(
+      base_type,
+      self.resolved.impl_target_types[implementation],
+      origin,
+    )
+    self.constrain(
+      base_type,
+      self.instantiate_signature_type(
+        self.resolved.parameter_types[parameters.start],
+      ),
+      origin,
+    )
+    let index_signature = self.resolved.parameter_types[
+      self_host_u32_add(parameters.start, 1u32)
+    ]
+    self.constrain_assignable(
+      self.expression_type(index),
+      self.instantiate_signature_type(index_signature),
+      origin,
+    )
+    self.constrain_resolved_signature_evidence(
+      self.expression_type(index),
+      index_signature,
+      origin,
+    )
+    if !self_host_u32_equal(value, 4294967295u32) {
+      let value_signature = self.resolved.parameter_types[
+        self_host_u32_add(parameters.start, 2u32)
+      ]
+      self.constrain_assignable(
+        self.expression_type(value),
+        self.instantiate_signature_type(value_signature),
+        origin,
+      )
+      self.constrain_resolved_signature_evidence(
+        self.expression_type(value),
+        value_signature,
+        origin,
+      )
+    }
+    self.constrain(
+      self.expression_type(expression),
+      self.instantiate_signature_type(
+        self.resolved.callable_return_types[callable],
+      ),
+      origin,
+    )
+    let start = self.call_type_arguments.length()
+    for type_argument in self.candidate_type_arguments {
+      self.call_type_arguments.push(type_argument)
+    }
+    let target_index = self.expression_index(expression)
+    let selected_target = SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      declaration,
+      SelfHostHirSpan::{
+        start: start
+        length: self.candidate_type_arguments.length()
+      },
+    )
+    self_host_store_basic_call_target(
+      self.operator_targets,
+      target_index,
+      selected_target,
+    )
+    return
+  }
+
+  fn constrain_pending_index_operator(self, expression: U32) -> Unit {
+    let offset = self_host_basic_expression_offset(
+      self.collected.expressions[expression],
+    )
+    let trait_declaration = match self.index_trait_name(expression) {
+      Option::Some(spelling) => match self.local_trait_named(spelling) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      Option::None => {
+        return
+      }
+    }
+    let method_name = match self.index_method_name(expression) {
+      Option::Some(spelling) => match self.collected.find_name(spelling) {
+        Option::Some(value) => value
+        Option::None => {
+          return
+        }
+      }
+      Option::None => {
+        return
+      }
+    }
+    let mut selected_impl = 4294967295u32
+    let mut selected_callable = 4294967295u32
+    let mut selected_declaration = 18446744073709551615u64
+    let mut second_declaration = 18446744073709551615u64
+    let mut viable_count = 0u32
+    let mut implementation = 0u32
+    let _ = while implementation {
+      current => if current < self.collected.impls.length() {
+        match self.resolved.impl_trait_types[current] {
+          Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
+            Option::Some(candidate_trait) => if self_host_u64_equal(
+              candidate_trait,
+              trait_declaration,
+            ) {
+              let impl_declaration = self.collected.impls[current].declaration
+              let mut method_index = 0u32
+              let _ = while method_index {
+                method_slot => if method_slot < self.collected.methods.length() {
+                  let method = self.collected.methods[method_slot]
+                  if self_host_u64_equal(method.parent, impl_declaration) && self_host_u32_equal(
+                    method.name,
+                    method_name,
+                  ) {
+                    match self.local_callable_index_of_declaration(method.id) {
+                      Option::Some(callable) => if self.index_operator_candidate_viable(
+                        expression,
+                        offset,
+                        current,
+                        callable,
+                      ) {
+                        viable_count = viable_count + 1u32
+                        if self_host_u32_equal(viable_count, 1u32) {
+                          selected_impl = current
+                          selected_callable = callable
+                          selected_declaration = method.id
+                        } else if self_host_u32_equal(viable_count, 2u32) {
+                          second_declaration = method.id
+                        }
+                      }
+                      Option::None => {}
+                    }
+                  }
+                  continue method_slot + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            Option::None => {}
+          }
+          Option::None => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if self_host_u32_equal(viable_count, 1u32) {
+      self.select_index_operator_candidate(
+        expression,
+        offset,
+        selected_impl,
+        selected_callable,
+      )
+    } else {
+      self_host_store_basic_call_target(
+        self.operator_targets,
+        self.expression_index(expression),
+        SelfHostBasicCallTarget::ErrorBasicCallTarget,
+      )
+      self.solver.poison_type(self.expression_type(expression))
+      if self_host_u32_equal(viable_count, 0u32) {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::NoMatchingOperator(
+            expression,
+            offset,
+          ),
+        )
+      } else {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::AmbiguousOperator(
+            expression,
+            selected_declaration,
+            second_declaration,
+            viable_count,
+            offset,
+          ),
+        )
+      }
+    }
+  }
+
+  fn constrain_pending_operators(self) -> Unit {
+    for expression in self.pending_operators {
+      match self.collected.expressions[expression] {
+        SelfHostHirExpr::BinaryExpr(_, _, _, _) => self.constrain_pending_binary_operator(
+          expression,
+        )
+        SelfHostHirExpr::IndexExpr(_, _, _) => self.constrain_pending_index_operator(
+          expression,
+        )
+        SelfHostHirExpr::IndexSetExpr(_, _, _, _) => self.constrain_pending_index_operator(
+          expression,
+        )
+        _ => {}
+      }
+    }
+    self.pending_operators.clear()
   }
 
   fn constrain_match(self, expression: U32, scrutinee: U32, arms: SelfHostHirSpan, offset: U32) -> Unit {
@@ -1558,26 +3540,13 @@ impl SelfHostBasicBodyInferencer {
             }
             _ => self.constrain(self.expression_type(current), self.expression_type(value), self_host_operator_type_origin(current, offset))
           }
-          SelfHostHirExpr::BinaryExpr(operator, left, right, _) => match operator {
-            SelfHostHirBinaryOperator::LogicalOr => {
-              self.constrain(self.expression_type(left), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
-              self.constrain(self.expression_type(right), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
-            }
-            SelfHostHirBinaryOperator::LogicalAnd => {
-              self.constrain(self.expression_type(left), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
-              self.constrain(self.expression_type(right), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
-            }
-            SelfHostHirBinaryOperator::Equal => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-            SelfHostHirBinaryOperator::NotEqual => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-            SelfHostHirBinaryOperator::Less => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-            SelfHostHirBinaryOperator::LessEqual => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-            SelfHostHirBinaryOperator::Greater => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-            SelfHostHirBinaryOperator::GreaterEqual => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-            _ => {
-              self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
-              self.constrain(self.expression_type(current), self.expression_type(left), self_host_operator_type_origin(current, offset))
-            }
-          }
+          SelfHostHirExpr::BinaryExpr(operator, left, right, _) => self.constrain_binary_expression(
+            current,
+            operator,
+            left,
+            right,
+            offset,
+          )
           SelfHostHirExpr::CallExpr(target, arguments, _) => self.constrain_call(current, target, arguments, offset)
           SelfHostHirExpr::MatchExpr(scrutinee, arms, _) => self.constrain_match(current, scrutinee, arms, offset)
           SelfHostHirExpr::WhileExpr(initial, arms, _) => self.constrain_while(current, initial, arms, offset)
@@ -1619,12 +3588,25 @@ impl SelfHostBasicBodyInferencer {
             self.constrain_assignable(self.expression_type(value), self.expression_type(target), self_host_expression_type_origin(current, offset))
           }
           SelfHostHirExpr::ObjectExpr(_, _) => self.mark_unsupported(current)
-          SelfHostHirExpr::ConstructExpr(_, _, _) => self.mark_unsupported(current)
-          SelfHostHirExpr::FieldExpr(_, _, _) => self.mark_unsupported(current)
-          SelfHostHirExpr::QualifiedExpr(_, _, _) => self.mark_unsupported(current)
-          SelfHostHirExpr::IndexExpr(_, _, _) => self.mark_unsupported(current)
-          SelfHostHirExpr::IndexSetExpr(_, _, _, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::ConstructExpr(_, _, _) => self.pending_constructions.push(current)
+          SelfHostHirExpr::FieldExpr(_, _, _) => self.pending_fields.push(current)
+          SelfHostHirExpr::QualifiedExpr(_, _, _) => match self.local_variant_target(current) {
+            Option::Some(_) => self.pending_variant_values.push(current)
+            Option::None => self.mark_unsupported(current)
+          }
+          SelfHostHirExpr::IndexExpr(_, _, _) => if !self.queue_index_operator(current) {
+            self.mark_unsupported(current)
+          }
+          SelfHostHirExpr::IndexSetExpr(_, _, _, _) => if !self.queue_index_operator(current) {
+            self.mark_unsupported(current)
+          }
           SelfHostHirExpr::ImportAliasExpr(_, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::NameExpr(_, _) => match self.names.expression_references[current] {
+            SelfHostBodyNameReference::VariantNameReference(_) => self.pending_variant_values.push(
+              current,
+            )
+            _ => {}
+          }
           _ => {}
         }
         continue current + 1u32
@@ -1760,6 +3742,7 @@ impl SelfHostBasicBodyInferencer {
     self.zonk_array(self.control_state_types)
     self.zonk_array(self.control_result_types)
     self.zonk_array(self.call_type_arguments)
+    self.zonk_array(self.expression_type_arguments)
     self.result_type = self.solver.zonk_type(self.result_type)
     let mut index = 0u32
     let _ = while index {
@@ -1787,7 +3770,7 @@ impl SelfHostBasicBodyInferencer {
               ),
             ),
           )
-        } else if self.solver.has_unresolved_variable(self.expression_types[current]) && !self.is_selected_direct_call_target(expression) {
+        } else if self.solver.has_unresolved_variable(self.expression_types[current]) && !self.is_selected_direct_call_target(expression) && !self.consumed_member_roots[current] {
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(
               expression,
@@ -1832,7 +3815,11 @@ impl SelfHostBasicBodyInferencer {
       control_state_types: self.control_state_types
       control_result_types: self.control_result_types
       call_targets: self.call_targets
+      operator_targets: self.operator_targets
+      expression_selections: self.expression_selections
+      object_field_targets: self.object_field_targets
       call_type_arguments: self.call_type_arguments
+      expression_type_arguments: self.expression_type_arguments
       unsupported_expressions: self.unsupported_expressions
       diagnostics: self.diagnostics
     }
@@ -1855,6 +3842,12 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_control_results()
     self.constrain_root()
     self.constrain_pending_direct_calls()
+    self.constrain_pending_variant_calls()
+    self.constrain_pending_variant_values()
+    self.constrain_pending_constructions()
+    self.constrain_pending_method_calls()
+    self.constrain_pending_operators()
+    self.constrain_pending_fields()
     self.finalize()
   }
 }

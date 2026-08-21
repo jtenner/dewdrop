@@ -13,9 +13,11 @@ imported type resolution, alias normalization, signature-level module
 interfaces, imported value names, lexical scopes, pattern bindings, loop
 controls, lambda captures, deterministic derive expansion, imported semantic
 recipes, rollback-capable local unification, the basic per-body inference
-core, iterative generic signature instantiation, and local direct callable and
-overload selection are also complete. The next compiler work is member,
-operator, trait-evidence, lambda-family, and module-value inference.
+core, iterative generic signature instantiation, local direct callable and
+overload selection, local fields, struct construction, inherent methods, enum
+values, operators, and indexing are also complete. The next compiler work is
+imported selections, struct enum variants, pattern selection, implementation
+coherence, trait evidence, lambda-family, and module-value inference.
 
 ## 1. P0: compiler host boundary
 
@@ -190,7 +192,7 @@ The complete tokenizer and parser port finished on August 20, 2026. It parses th
 
 Semantic declaration collection and flat HIR finished on August 20, 2026.
 
-1. Complete body inference: member/method/constructor/index/operator selection, trait obligations and evidence, lambda families, module-value SCCs, and result compaction.
+1. Complete body inference: imported selections, struct enum variants, variant/object patterns, implementation coherence, trait obligations and evidence, lambda families, module-value SCCs, and result compaction.
 2. Port flow, layouts, specialization, optimization, and backend phases in dependency order.
 3. Add the cache-disabled A→B→C harness.
 4. Restore BLAKE3-based persistent caches, including parser-event persistence, after byte identity is stable.

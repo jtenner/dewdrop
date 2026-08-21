@@ -1,0 +1,376 @@
+open dew.std.array
+open dew.std.option
+open dew.std.testing
+
+fn self_host_member_infer_source(
+  module_id: U64,
+  source: Bytes,
+) -> (
+  SelfHostCollectedModule,
+  SelfHostResolvedModuleTypes,
+  SelfHostResolvedModuleNames,
+  SelfHostBasicInferredModuleBodies,
+) {
+  let collected = self_host_collect_bytes(module_id, source)
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
+  (collected, resolved, names, inferred)
+}
+
+fn self_host_member_field_expression(
+  collected: SelfHostCollectedModule,
+  body: SelfHostHirBody,
+) -> U32 {
+  let mut expression = body.expressions.start
+  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::FieldExpr(_, _, _) => {
+          return current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break 4294967295u32
+    }
+  }
+}
+
+fn self_host_member_call_expression(
+  collected: SelfHostCollectedModule,
+  body: SelfHostHirBody,
+) -> U32 {
+  let mut expression = body.expressions.start
+  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(target, _, _) => match collected.expressions[target] {
+          SelfHostHirExpr::FieldExpr(_, _, _) => {
+            return current
+          }
+          _ => {}
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break 4294967295u32
+    }
+  }
+}
+
+fn self_host_member_construct_expression(
+  collected: SelfHostCollectedModule,
+  body: SelfHostHirBody,
+) -> U32 {
+  let mut expression = body.expressions.start
+  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::ConstructExpr(_, _, _) => {
+          return current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break 4294967295u32
+    }
+  }
+}
+
+fn self_host_member_assert_primitive(
+  body: SelfHostBasicInferredBody,
+  resolved: SelfHostResolvedModuleTypes,
+  type_: I32,
+  primitive: SelfHostPrimitiveType,
+  message: String,
+) -> Unit {
+  match body.type_term(type_) {
+    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+      resolved_type == resolved.primitive(primitive),
+      message,
+    )
+    _ => assert(false, message)
+  }
+}
+
+test "member selection resolves local fields" {
+  let (collected, resolved, _, inferred) = self_host_member_infer_source(
+    860u64,
+    b"struct Point {\n  x: I32\n  mut ready: Bool\n}\nfn read(point: Point) -> I32 {\n  point.x\n}\n",
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = inferred.bodies[0u32]
+  let field = self_host_member_field_expression(collected, hir_body)
+  assert(body.diagnostic_count() == 0u32, "field diagnostics")
+  self_host_member_assert_primitive(
+    body,
+    resolved,
+    body.expression_type(hir_body, field),
+    SelfHostPrimitiveType::I32Type,
+    "field type",
+  )
+  match body.expression_selection(hir_body, field) {
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(declaration, mutable_) => {
+      assert(declaration == collected.fields[0u32].id, "selected x field")
+      assert(!mutable_, "x immutable")
+    }
+    _ => assert(false, "field selection")
+  }
+}
+
+test "member selection substitutes generic field types" {
+  let (collected, resolved, _, inferred) = self_host_member_infer_source(
+    861u64,
+    b"struct Box<t> {\n  value: t\n}\nfn read(boxed: Box<I32>) -> I32 {\n  boxed.value\n}\n",
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = inferred.bodies[0u32]
+  let field = self_host_member_field_expression(collected, hir_body)
+  assert(body.diagnostic_count() == 0u32, "generic field diagnostics")
+  self_host_member_assert_primitive(
+    body,
+    resolved,
+    body.expression_type(hir_body, field),
+    SelfHostPrimitiveType::I32Type,
+    "generic field type",
+  )
+}
+
+test "member selection follows selected call results" {
+  let (collected, resolved, _, inferred) = self_host_member_infer_source(
+    862u64,
+    b"struct Box<t> {\n  value: t\n}\nfn keep(boxed: Box<I32>) -> Box<I32> {\n  boxed\n}\nfn read(boxed: Box<I32>) -> I32 {\n  keep(boxed).value\n}\n",
+  )
+  let hir_body = collected.bodies[1u32]
+  let body = inferred.bodies[1u32]
+  let field = self_host_member_field_expression(collected, hir_body)
+  assert(body.diagnostic_count() == 0u32, "call field diagnostics")
+  self_host_member_assert_primitive(
+    body,
+    resolved,
+    body.expression_type(hir_body, field),
+    SelfHostPrimitiveType::I32Type,
+    "call field type",
+  )
+}
+
+test "member selection resolves inherent methods" {
+  let (collected, resolved, _, inferred) = self_host_member_infer_source(
+    868u64,
+    b"struct Box {\n  value: I32\n}\nimpl Box {\n  fn get(self) -> I32 {\n    self.value\n  }\n}\nfn use(boxed: Box) -> I32 {\n  boxed.get()\n}\n",
+  )
+  let hir_body = collected.bodies[1u32]
+  let body = inferred.bodies[1u32]
+  let call = self_host_member_call_expression(collected, hir_body)
+  assert(body.diagnostic_count() == 0u32, "method diagnostics")
+  self_host_member_assert_primitive(
+    body,
+    resolved,
+    body.expression_type(hir_body, call),
+    SelfHostPrimitiveType::I32Type,
+    "method result",
+  )
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+      assert(declaration == collected.methods[0u32].id, "selected get method")
+      assert(arguments.length == 0u32, "method type arguments")
+    }
+    _ => assert(false, "method call target")
+  }
+}
+
+test "member selection instantiates impl and method generics" {
+  let (collected, resolved, _, inferred) = self_host_member_infer_source(
+    869u64,
+    b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn choose<u>(self, value: u) -> u {\n    value\n  }\n}\nfn use(boxed: Box<I32>) -> Bool {\n  boxed.choose(true)\n}\n",
+  )
+  let hir_body = collected.bodies[1u32]
+  let body = inferred.bodies[1u32]
+  let call = self_host_member_call_expression(collected, hir_body)
+  assert(body.diagnostic_count() == 0u32, "generic method diagnostics")
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+      assert(arguments.length == 2u32, "impl and method arguments")
+      self_host_member_assert_primitive(
+        body,
+        resolved,
+        body.call_type_arguments[arguments.start],
+        SelfHostPrimitiveType::I32Type,
+        "impl generic I32",
+      )
+      self_host_member_assert_primitive(
+        body,
+        resolved,
+        body.call_type_arguments[arguments.start + 1u32],
+        SelfHostPrimitiveType::BoolType,
+        "method generic Bool",
+      )
+    }
+    _ => assert(false, "generic method target")
+  }
+}
+
+test "member selection constructs local generic structs" {
+  let (collected, resolved, _, inferred) = self_host_member_infer_source(
+    865u64,
+    b"struct Box<t> {\n  value: t\n}\nfn make() -> Box<I32> {\n  Box::{\n    value: 1\n  }\n}\n",
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = inferred.bodies[0u32]
+  let construction = self_host_member_construct_expression(collected, hir_body)
+  assert(body.diagnostic_count() == 0u32, "construction diagnostics")
+  assert(body.expression_type_arguments.length() == 1u32, "construction type arguments")
+  self_host_member_assert_primitive(
+    body,
+    resolved,
+    body.expression_type_arguments[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "construction generic I32",
+  )
+  match body.expression_selection(hir_body, construction) {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+      declaration,
+      arguments,
+    ) => {
+      assert(declaration == collected.declarations[0u32].id, "constructed Box")
+      assert(arguments.length == 1u32, "selected construction arguments")
+    }
+    _ => assert(false, "construction selection")
+  }
+  match body.object_field_target(hir_body, hir_body.object_fields.start) {
+    SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(field) => assert(
+      field == collected.fields[0u32].id,
+      "construction field target",
+    )
+    _ => assert(false, "selected construction field")
+  }
+}
+
+test "member selection diagnoses construction fields" {
+  let (missing_collected, missing_resolved, missing_names, missing) = self_host_member_infer_source(
+    866u64,
+    b"struct Pair {\n  left: I32\n  right: I32\n}\nfn make() -> Pair {\n  Pair::{\n    left: 1\n  }\n}\n",
+  )
+  let (unknown_collected, unknown_resolved, unknown_names, unknown) = self_host_member_infer_source(
+    867u64,
+    b"struct Box {\n  value: I32\n}\nfn make() -> Box {\n  Box::{\n    other: 1\n  }\n}\n",
+  )
+  let _ = missing_resolved.module_id
+  let _ = missing_names.module_id
+  let _ = unknown_resolved.module_id
+  let _ = unknown_names.module_id
+  let missing_hir = missing_collected.bodies[0u32]
+  let unknown_hir = unknown_collected.bodies[0u32]
+  let missing_body = match missing.body(missing_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let unknown_body = match unknown.body(unknown_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let mut missing_count = 0u32
+  let mut unknown_count = 0u32
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < missing_body.diagnostic_count() {
+      match missing_body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::MissingConstructionField(_, _, _, _) => {
+          missing_count = missing_count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  index = 0u32
+  let _ = while index {
+    current => if current < unknown_body.diagnostic_count() {
+      match unknown_body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::UnknownConstructionField(_, _, _, _) => {
+          unknown_count = unknown_count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(missing_count == 1u32, "missing construction field")
+  assert(unknown_count == 1u32, "unknown construction field")
+}
+
+test "member selection diagnoses invalid and unknown fields" {
+  let (invalid_collected, invalid_resolved, invalid_names, invalid) = self_host_member_infer_source(
+    863u64,
+    b"fn read(value: I32) -> I32 {\n  value.missing\n}\n",
+  )
+  let (unknown_collected, unknown_resolved, unknown_names, unknown) = self_host_member_infer_source(
+    864u64,
+    b"struct Box {\n  value: I32\n}\nfn read(boxed: Box) -> I32 {\n  boxed.missing\n}\n",
+  )
+  let _ = invalid_resolved.module_id
+  let _ = invalid_names.module_id
+  let _ = unknown_resolved.module_id
+  let _ = unknown_names.module_id
+  let invalid_hir = invalid_collected.bodies[0u32]
+  let unknown_hir = unknown_collected.bodies[0u32]
+  let invalid_body = match invalid.body(invalid_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let unknown_body = match unknown.body(unknown_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let mut invalid_count = 0u32
+  let mut unknown_count = 0u32
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < invalid_body.diagnostic_count() {
+      match invalid_body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, _) => {
+          invalid_count = invalid_count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  index = 0u32
+  let _ = while index {
+    current => if current < unknown_body.diagnostic_count() {
+      match unknown_body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::UnknownFieldForType(_, _, _, _) => {
+          unknown_count = unknown_count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(invalid_count == 1u32, "invalid field diagnostic")
+  assert(unknown_count == 1u32, "unknown field diagnostic")
+}
