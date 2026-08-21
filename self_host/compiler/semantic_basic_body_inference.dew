@@ -370,6 +370,8 @@ struct SelfHostBasicImportedInputs {
   callables: Array<SelfHostResolvedImportedCallable>
   generic_parameter_ids: Array<U64>
   parameter_types: Array<U32>
+  parameter_receivers: Array<Bool>
+  implementations: Array<SelfHostResolvedImportedImplementation>
   fields: Array<SelfHostResolvedImportedField>
   variants: Array<SelfHostResolvedImportedVariant>
   variant_payload_types: Array<U32>
@@ -617,6 +619,52 @@ impl SelfHostBasicBodyInferencer {
     }
     self.instantiation_self_owner = 18446744073709551615u64
     self.instantiation_self_type = -1i32
+  }
+
+  fn begin_imported_method_instantiation(
+    self,
+    implementation: SelfHostResolvedImportedImplementation,
+    callable: SelfHostResolvedImportedCallable,
+    receiver_type: I32,
+  ) -> Unit {
+    self.imported_instantiation_generics.clear()
+    self.instantiation_generics = SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    self.instantiation_method_generics = SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    self.candidate_type_arguments.clear()
+    let mut index = 0u32
+    let total = self_host_u32_add(
+      implementation.generic_parameters.length,
+      callable.generic_parameters.length,
+    )
+    let _ = while index {
+      current => if current < total {
+        let parameter = if current < implementation.generic_parameters.length {
+          self.imported.generic_parameter_ids[
+            self_host_u32_add(implementation.generic_parameters.start, current)
+          ]
+        } else {
+          self.imported.generic_parameter_ids[
+            self_host_u32_add(
+              callable.generic_parameters.start,
+              current - implementation.generic_parameters.length,
+            )
+          ]
+        }
+        self.imported_instantiation_generics.push(parameter)
+        self.candidate_type_arguments.push(self.solver.fresh_variable())
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.instantiation_self_owner = implementation.declaration
+    self.instantiation_self_type = receiver_type
   }
 
   fn begin_fresh_imported_nominal_instantiation(
@@ -3179,6 +3227,262 @@ impl SelfHostBasicBodyInferencer {
     self.solver.poison_type(self.expression_type(target))
   }
 
+  fn imported_implementation(
+    self,
+    declaration: U64,
+  ) -> Option<SelfHostResolvedImportedImplementation> {
+    for implementation in self.imported.implementations {
+      if self_host_u64_equal(implementation.declaration, declaration) {
+        return Option::Some(implementation)
+      }
+    }
+    Option::None
+  }
+
+  fn imported_method_candidate_viable(
+    self,
+    expression: U32,
+    receiver: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+    implementation: SelfHostResolvedImportedImplementation,
+    callable: SelfHostResolvedImportedCallable,
+  ) -> Bool {
+    if !self_host_u32_equal(
+      callable.parameters.length,
+      self_host_u32_add(arguments.length, 1u32),
+    ) {
+      return false
+    }
+    let snapshot = self.solver.snapshot()
+    let receiver_type = self.expression_type(receiver)
+    self.begin_imported_method_instantiation(
+      implementation,
+      callable,
+      receiver_type,
+    )
+    let origin = self_host_call_type_origin(expression, offset)
+    let mut viable = self.solver.unify(
+      receiver_type,
+      self.instantiate_signature_type(
+        self.imported.parameter_types[callable.parameters.start],
+      ),
+      origin,
+    )
+    let mut index = 0u32
+    let _ = while index {
+      current => if viable && current < arguments.length {
+        viable = self.solver.unify(
+          self.expression_type(
+            self.collected.expression_children[
+              self_host_u32_add(arguments.start, current)
+            ],
+          ),
+          self.instantiate_signature_type(
+            self.imported.parameter_types[
+              self_host_u32_add(callable.parameters.start, current + 1u32)
+            ],
+          ),
+          origin,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if viable {
+      viable = self.solver.unify(
+        self.expression_type(expression),
+        self.instantiate_signature_type(callable.result_type),
+        origin,
+      )
+    }
+    self.solver.rollback(snapshot)
+    viable
+  }
+
+  fn select_imported_method_candidate(
+    self,
+    expression: U32,
+    target: U32,
+    receiver: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+    implementation: SelfHostResolvedImportedImplementation,
+    callable: SelfHostResolvedImportedCallable,
+  ) -> Unit {
+    let receiver_type = self.expression_type(receiver)
+    self.begin_imported_method_instantiation(
+      implementation,
+      callable,
+      receiver_type,
+    )
+    let origin = self_host_call_type_origin(expression, offset)
+    self.constrain(
+      receiver_type,
+      self.instantiate_signature_type(
+        self.imported.parameter_types[callable.parameters.start],
+      ),
+      origin,
+    )
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arguments.length {
+        self.constrain_assignable(
+          self.expression_type(
+            self.collected.expression_children[
+              self_host_u32_add(arguments.start, current)
+            ],
+          ),
+          self.instantiate_signature_type(
+            self.imported.parameter_types[
+              self_host_u32_add(callable.parameters.start, current + 1u32)
+            ],
+          ),
+          origin,
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.constrain(
+      self.expression_type(expression),
+      self.instantiate_signature_type(callable.result_type),
+      origin,
+    )
+    let start = self.call_type_arguments.length()
+    for type_argument in self.candidate_type_arguments {
+      self.call_type_arguments.push(type_argument)
+    }
+    self_host_store_basic_call_target(
+      self.call_targets,
+      self.expression_index(expression),
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(
+        callable.declaration,
+        SelfHostHirSpan::{
+          start: start
+          length: self.candidate_type_arguments.length()
+        },
+      ),
+    )
+    self.consumed_member_roots[self.expression_index(target)] = true
+    self.solver.poison_type(self.expression_type(target))
+  }
+
+  fn constrain_imported_method_call(
+    self,
+    expression: U32,
+    target: U32,
+    receiver: U32,
+    name: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+    receiver_declaration: U64,
+  ) -> Bool {
+    let method_name = self.collected.name(name)
+    let mut selected_callable = 4294967295u32
+    let mut selected_implementation = 4294967295u32
+    let mut first_declaration = 18446744073709551615u64
+    let mut second_declaration = 18446744073709551615u64
+    let mut count = 0u32
+    let mut callable_index = 0u32
+    let _ = while callable_index {
+      current => if current < self.imported.callables.length() {
+        let callable = self.imported.callables[current]
+        let candidate_name = callable.name
+        if self_host_basic_string_equal(candidate_name, method_name) {
+          match callable.kind {
+            SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(
+              implementation_declaration,
+            ) => match self.imported_implementation(implementation_declaration) {
+              Option::Some(implementation) => match implementation.trait_type {
+                Option::None => match self.resolved_nominal_head(
+                  implementation.target_type,
+                ) {
+                  Option::Some(owner) => if self_host_u64_equal(
+                    owner,
+                    receiver_declaration,
+                  ) && self.imported_method_candidate_viable(
+                    expression,
+                    receiver,
+                    arguments,
+                    offset,
+                    implementation,
+                    callable,
+                  ) {
+                    if self_host_u32_equal(count, 0u32) {
+                      selected_callable = current
+                      let mut implementation_index = 0u32
+                      let _ = while implementation_index {
+                        candidate => if candidate < self.imported.implementations.length() {
+                          if self_host_u64_equal(
+                            self.imported.implementations[candidate].declaration,
+                            implementation_declaration,
+                          ) {
+                            selected_implementation = candidate
+                            break self_host_semantic_unit()
+                          }
+                          continue candidate + 1u32
+                        } else {
+                          break self_host_semantic_unit()
+                        }
+                      }
+                      first_declaration = callable.declaration
+                    } else if self_host_u32_equal(count, 1u32) {
+                      second_declaration = callable.declaration
+                    }
+                    count = count + 1u32
+                  }
+                  Option::None => {}
+                }
+                Option::Some(_) => {}
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if self_host_u32_equal(count, 0u32) {
+      false
+    } else if self_host_u32_equal(count, 1u32) {
+      self.select_imported_method_candidate(
+        expression,
+        target,
+        receiver,
+        arguments,
+        offset,
+        self.imported.implementations[selected_implementation],
+        self.imported.callables[selected_callable],
+      )
+      true
+    } else {
+      self_host_store_basic_call_target(
+        self.call_targets,
+        self.expression_index(expression),
+        SelfHostBasicCallTarget::ErrorBasicCallTarget,
+      )
+      self.solver.poison_type(self.expression_type(expression))
+      self.solver.poison_type(self.expression_type(target))
+      self.diagnostics.push(
+        SelfHostBodyInferenceDiagnostic::AmbiguousMethod(
+          name,
+          expression,
+          first_declaration,
+          second_declaration,
+          count,
+          offset,
+        ),
+      )
+      true
+    }
+  }
+
   fn constrain_pending_method_call(self, expression: U32) -> Unit {
     let (target, arguments, offset) = match self.collected.expressions[expression] {
       SelfHostHirExpr::CallExpr(call_target, call_arguments, call_offset) => (
@@ -3272,6 +3576,17 @@ impl SelfHostBasicBodyInferencer {
       } else {
         break self_host_semantic_unit()
       }
+    }
+    if self_host_u32_equal(viable_count, 0u32) && self.constrain_imported_method_call(
+      expression,
+      target,
+      receiver,
+      name,
+      arguments,
+      offset,
+      receiver_declaration,
+    ) {
+      return
     }
     if self_host_u32_equal(viable_count, 1u32) {
       self.select_method_candidate(
@@ -5742,6 +6057,8 @@ fn self_host_infer_basic_module_bodies(
       callables: []
       generic_parameter_ids: []
       parameter_types: []
+      parameter_receivers: []
+      implementations: []
       fields: []
       variants: []
       variant_payload_types: []
@@ -5759,6 +6076,8 @@ fn self_host_infer_basic_module_bodies_with_imports(
   callables: Array<SelfHostResolvedImportedCallable>,
   generic_parameter_ids: Array<U64>,
   parameter_types: Array<U32>,
+  parameter_receivers: Array<Bool>,
+  implementations: Array<SelfHostResolvedImportedImplementation>,
   fields: Array<SelfHostResolvedImportedField>,
   variants: Array<SelfHostResolvedImportedVariant>,
   variant_payload_types: Array<U32>,
@@ -5774,6 +6093,8 @@ fn self_host_infer_basic_module_bodies_with_imports(
       callables: callables
       generic_parameter_ids: generic_parameter_ids
       parameter_types: parameter_types
+      parameter_receivers: parameter_receivers
+      implementations: implementations
       fields: fields
       variants: variants
       variant_payload_types: variant_payload_types

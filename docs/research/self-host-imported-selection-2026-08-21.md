@@ -17,6 +17,8 @@ Implemented behavior:
 - imported struct construction;
 - imported unit, tuple, struct, and struct-variant patterns;
 - imported object-field and pattern-field constraints;
+- imported generic inherent method selection;
+- imported method candidate rollback and deterministic ambiguity handling;
 - declaration-owned imported generic parameter spans.
 
 The imported-recipe builder now publishes a deterministic declaration-to-generic-span map. This avoids trying to recover type generic ownership from a nominal type recipe.
@@ -25,4 +27,4 @@ A test-generation exit status of 255 was initially mistaken for a backend aggreg
 
 Focused tests cover non-generic calls, arity failures, generic identity calls, generic imported fields, all imported construction forms, and all imported pattern forms.
 
-Imported methods, overload sets, bounds, and selected implementation evidence remain in the next selection tranche.
+Imported free-function overload sets, trait bounds, and selected implementation evidence remain in the next selection tranche.

@@ -30,6 +30,7 @@ pub struct SelfHostResolvedImportedVariant {
 
 pub struct SelfHostResolvedImportedCallable {
   declaration: U64
+  name: String
   kind: SelfHostFrozenInterfaceCallableKind
   generic_parameters: SelfHostHirSpan
   generic_bounds: SelfHostHirSpan
@@ -869,6 +870,7 @@ impl SelfHostImportedRecipeBuilder {
     let imported_index = self.callables.length()
     self.callables.push(SelfHostResolvedImportedCallable::{
       declaration: callable.declaration
+      name: callable.name
       kind: callable.kind
       generic_parameters: generic_parameters
       generic_bounds: generic_bounds
