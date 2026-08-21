@@ -1,0 +1,216 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+pub struct SelfHostInferredModuleValues {
+  module_id: U64
+  dependencies: SelfHostModuleValueDependencies
+  let_declarations: Array<U64>
+  let_types: Array<I32>
+  types: Array<SelfHostBodyTypeTerm>
+  type_arguments: Array<I32>
+  diagnostics: Array<SelfHostBodyInferenceDiagnostic>
+}
+
+impl SelfHostInferredModuleValues {
+  fn type_term(self, type_: I32) -> SelfHostBodyTypeTerm {
+    if type_ < -1i32 {
+      SelfHostBodyTypeTerm::BodyResolvedType(
+        self_host_body_i32_to_u32(-type_ - 2i32),
+      )
+    } else if type_ >= 0i32 {
+      self.types[self_host_body_i32_to_u32(type_)]
+    } else {
+      SelfHostBodyTypeTerm::BodyErrorType
+    }
+  }
+}
+
+fn self_host_module_value_body_index(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> Option<U32> {
+  let mut index = 0u32
+  while index {
+    current => if current < collected.bodies.length() {
+      if self_host_u64_equal(collected.bodies[current].declaration, declaration) {
+        break Option::Some(current)
+      }
+      continue current + 1u32
+    } else {
+      break Option::None
+    }
+  }
+}
+
+fn self_host_module_value_declaration_offset(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> U32 {
+  match collected.declaration_reference(declaration) {
+    Option::Some(reference) => match reference {
+      SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
+      SelfHostCollectedDeclarationReference::Method(value) => value.offset
+    }
+    Option::None => 0u32
+  }
+}
+
+fn self_host_module_value_type_slots() -> Map<U64, I32> {
+  Map::empty()
+}
+
+fn self_host_module_value_empty_inputs(
+  local_types: Map<U64, I32>,
+) -> SelfHostBasicImportedInputs {
+  SelfHostBasicImportedInputs::{
+    callables: []
+    generic_parameter_ids: []
+    parameter_types: []
+    parameter_receivers: []
+    implementations: []
+    fields: []
+    variants: []
+    variant_payload_types: []
+    type_declaration_types: self_host_basic_empty_type_declaration_map()
+    type_generic_spans: self_host_empty_u64_span_map()
+    module_value_types: self_host_basic_empty_type_declaration_map()
+    local_module_value_types: local_types
+  }
+}
+
+fn self_host_infer_module_values(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  names: SelfHostResolvedModuleNames,
+) -> SelfHostInferredModuleValues {
+  let dependencies = self_host_analyze_module_value_dependencies(collected, names)
+  let declarations = []
+  let let_types = self_host_inference_i32_slots(collected.lets.length(), 0i32)
+  let slots = self_host_module_value_type_slots()
+  let solver = SelfHostLocalTypeSolver::new(resolved)
+  let diagnostics = []
+  for value in collected.lets {
+    declarations.push(value.declaration)
+  }
+  for scc in dependencies.sccs {
+    let mut member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let declaration = dependencies.scc_declaration(
+          self_host_u32_add(scc.start, current),
+        )
+        slots[declaration] = solver.fresh_variable()
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let inferencers = []
+    member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let declaration = dependencies.scc_declaration(
+          self_host_u32_add(scc.start, current),
+        )
+        match self_host_module_value_body_index(collected, declaration) {
+          Option::Some(body_index) => {
+            let body = collected.bodies[body_index]
+            let inferencer = SelfHostBasicBodyInferencer::new_with_solver(
+              collected,
+              resolved,
+              names,
+              self_host_module_value_empty_inputs(slots),
+              body,
+              names.bodies[body_index],
+              solver,
+            )
+            inferencer.constrain_body()
+            let _ = solver.unify(
+              inferencer.result_type,
+              match slots.get(declaration) {
+                Option::Some(type_) => type_
+                Option::None => solver.error_type()
+              },
+              self_host_synthetic_type_origin(
+                self_host_semantic_id_local(declaration),
+                self_host_module_value_declaration_offset(collected, declaration),
+              ),
+            )
+            inferencers.push(inferencer)
+          }
+          Option::None => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let unresolved = self_host_module_value_bool_slots(scc.length)
+    member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let declaration = dependencies.scc_declaration(
+          self_host_u32_add(scc.start, current),
+        )
+        let slot = match slots.get(declaration) {
+          Option::Some(type_) => type_
+          Option::None => solver.error_type()
+        }
+        unresolved[current] = solver.has_unresolved_variable(slot)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let declaration = dependencies.scc_declaration(
+          self_host_u32_add(scc.start, current),
+        )
+        let slot = match slots.get(declaration) {
+          Option::Some(type_) => type_
+          Option::None => solver.error_type()
+        }
+        if unresolved[current] {
+          solver.poison_type(slot)
+          diagnostics.push(SelfHostBodyInferenceDiagnostic::UnresolvedModuleValue(
+            declaration,
+            self_host_module_value_declaration_offset(collected, declaration),
+          ))
+        }
+        match self_host_module_value_let_index(collected, declaration) {
+          Option::Some(let_index) => {
+            let_types[let_index] = solver.zonk_type(slot)
+          }
+          Option::None => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    inferencers.clear()
+  }
+  let mut solver_diagnostic = 0u32
+  let _ = while solver_diagnostic {
+    current => if current < solver.diagnostic_count() {
+      diagnostics.push(SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(
+        solver.diagnostic_at(current),
+      ))
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostInferredModuleValues::{
+    module_id: collected.module_id
+    dependencies: dependencies
+    let_declarations: declarations
+    let_types: let_types
+    types: solver.types
+    type_arguments: solver.type_arguments
+    diagnostics: diagnostics
+  }
+}
