@@ -1,0 +1,178 @@
+open dew.std.option
+
+pub struct SelfHostBasicTraitEvidence {
+  implementation: U64
+  prerequisites: SelfHostHirSpan
+}
+
+pub struct SelfHostBasicBodyEvidence {
+  body: U64
+  expression_evidence: Array<SelfHostHirSpan>
+  evidence: Array<SelfHostBasicTraitEvidence>
+  prerequisite_indices: Array<U32>
+}
+
+impl SelfHostBasicBodyEvidence {
+  fn expression_evidence_at(self, index: U32) -> SelfHostHirSpan {
+    self.expression_evidence[index]
+  }
+
+  fn evidence_at(self, index: U32) -> SelfHostBasicTraitEvidence {
+    self.evidence[index]
+  }
+
+  fn evidence_count(self) -> U32 {
+    self.evidence.length()
+  }
+}
+
+pub struct SelfHostBasicModuleEvidence {
+  module_id: U64
+  bodies: Array<SelfHostBasicBodyEvidence>
+}
+
+impl SelfHostBasicModuleEvidence {
+  fn evidence_body(self, declaration: U64) -> Option<SelfHostBasicBodyEvidence> {
+    for body in self.bodies {
+      if self_host_u64_equal(body.body, declaration) {
+        return Option::Some(body)
+      }
+    }
+    Option::None
+  }
+}
+
+fn self_host_basic_evidence_implementation_for_method(
+  index: SelfHostModuleImplIndex,
+  declaration: U64,
+) -> Option<U64> {
+  let mut method_index = 0u32
+  let _ = while method_index {
+    current => if current < index.methods.length() {
+      if self_host_u64_equal(index.methods[current].declaration, declaration) {
+        let mut implementation_index = 0u32
+        let _ = while implementation_index {
+          implementation => if implementation < index.implementations.length() {
+            let candidate = index.implementations[implementation]
+            let trait_implementation = candidate.kind is SelfHostIndexedImplKind::TraitIndexedImpl(_)
+            if trait_implementation && candidate.valid && candidate.coherent && current >= candidate.methods.start && current < self_host_u32_add(
+              candidate.methods.start,
+              candidate.methods.length,
+            ) {
+              return Option::Some(candidate.declaration)
+            }
+            continue implementation + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+fn self_host_basic_evidence_target_declaration(
+  target: SelfHostBasicCallTarget,
+) -> Option<U64> {
+  match target {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => Option::Some(
+      declaration,
+    )
+    _ => Option::None
+  }
+}
+
+fn self_host_publish_basic_body_evidence(
+  body: SelfHostHirBody,
+  inferred: SelfHostBasicInferredBody,
+  index: SelfHostModuleImplIndex,
+) -> SelfHostBasicBodyEvidence {
+  let expression_evidence = []
+  let evidence = []
+  let prerequisite_indices = []
+  let mut expression = 0u32
+  let _ = while expression {
+    current => if current < inferred.expression_types.length() {
+      let start = evidence.length()
+      let mut selected_implementation = Option::None
+      match self_host_basic_evidence_target_declaration(
+        inferred.call_targets[current],
+      ) {
+        Option::Some(declaration) => {
+          selected_implementation = self_host_basic_evidence_implementation_for_method(
+            index,
+            declaration,
+          )
+        }
+        Option::None => {}
+      }
+      match self_host_basic_evidence_target_declaration(
+        inferred.operator_targets[current],
+      ) {
+        Option::Some(declaration) => match self_host_basic_evidence_implementation_for_method(
+          index,
+          declaration,
+        ) {
+          Option::Some(implementation) => {
+            selected_implementation = Option::Some(implementation)
+          }
+          Option::None => {}
+        }
+        Option::None => {}
+      }
+      match selected_implementation {
+        Option::Some(implementation) => evidence.push(
+          SelfHostBasicTraitEvidence::{
+            implementation: implementation
+            prerequisites: self_host_empty_hir_span(0u32)
+          },
+        )
+        Option::None => {}
+      }
+      expression_evidence.push(SelfHostHirSpan::{
+        start: start
+        length: evidence.length() - start
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostBasicBodyEvidence::{
+    body: body.declaration
+    expression_evidence: expression_evidence
+    evidence: evidence
+    prerequisite_indices: prerequisite_indices
+  }
+}
+
+fn self_host_publish_basic_module_evidence(
+  collected: SelfHostCollectedModule,
+  inferred: SelfHostBasicInferredModuleBodies,
+  index: SelfHostModuleImplIndex,
+) -> SelfHostBasicModuleEvidence {
+  let bodies = []
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current => if current < collected.bodies.length() && current < inferred.bodies.length() {
+      bodies.push(
+        self_host_publish_basic_body_evidence(
+          collected.bodies[current],
+          inferred.bodies[current],
+          index,
+        ),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostBasicModuleEvidence::{
+    module_id: collected.module_id
+    bodies: bodies
+  }
+}

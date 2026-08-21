@@ -1,0 +1,74 @@
+open dew.std.array
+open dew.std.option
+open dew.std.testing
+
+test "body evidence publishes selected trait implementations" {
+  let collected = self_host_collect_bytes(
+    920u64,
+    b"trait Add {\n  fn add(self, right: Self) -> Self\n}\nstruct Box {\n  value: I32\n}\nimpl Add for Box {\n  fn add(self, right: Self) -> Self {\n    self\n  }\n}\nfn combine(left: Box, right: Box) -> Box {\n  left + right\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
+  let implementation_index = self_host_index_module_implementations(
+    collected,
+    resolved,
+  )
+  let published = self_host_publish_basic_module_evidence(
+    collected,
+    inferred,
+    implementation_index,
+  )
+  let hir_body = collected.bodies[1u32]
+  let body = match published.evidence_body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let expression = self_host_operator_find_binary(collected, hir_body)
+  let local_expression = self_host_u32_subtract(
+    expression,
+    hir_body.expressions.start,
+  )
+  let span = body.expression_evidence_at(local_expression)
+  assert(self_host_u32_equal(span.length, 1u32), "expression evidence")
+  let evidence = body.evidence_at(span.start)
+  assert(
+    self_host_u64_equal(
+      evidence.implementation,
+      implementation_index.implementations[0u32].declaration,
+    ),
+    "implementation evidence",
+  )
+}
+
+test "body evidence does not publish inherent methods as trait evidence" {
+  let collected = self_host_collect_bytes(
+    921u64,
+    b"struct Box {}\nimpl Box {\n  fn value(self) -> I32 {\n    1\n  }\n}\nfn run(value: Box) -> I32 {\n  value.value()\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
+  let implementation_index = self_host_index_module_implementations(
+    collected,
+    resolved,
+  )
+  let published = self_host_publish_basic_module_evidence(
+    collected,
+    inferred,
+    implementation_index,
+  )
+  let hir_body = collected.bodies[1u32]
+  let body = match published.evidence_body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(
+    self_host_u32_equal(body.evidence_count(), 0u32),
+    "no inherent evidence",
+  )
+}

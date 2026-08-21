@@ -68,6 +68,8 @@ tools/dew test \
   self_host/compiler/semantic_impl_index_test.dew \
   self_host/compiler/semantic_trait_evidence.dew \
   self_host/compiler/semantic_trait_evidence_test.dew \
+  self_host/compiler/semantic_body_evidence.dew \
+  self_host/compiler/semantic_body_evidence_test.dew \
   self_host/compiler/semantic_basic_body_inference_test.dew \
   self_host/compiler/semantic_callable_selection_test.dew \
   self_host/compiler/semantic_member_selection_test.dew \
