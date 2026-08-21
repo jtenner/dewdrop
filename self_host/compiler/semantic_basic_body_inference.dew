@@ -1505,10 +1505,16 @@ impl SelfHostBasicBodyInferencer {
     marks
   }
 
-  fn import_module_value_type(self, source: I32) -> I32 {
+  fn import_external_body_type(
+    self,
+    source: I32,
+    source_terms: Array<SelfHostBodyTypeTerm>,
+    source_arguments: Array<I32>,
+  ) -> I32 {
     if source <= 0i32 {
       return source
     }
+    self.module_value_import_cache.clear()
     self.module_value_import_tasks.clear()
     self.module_value_import_results.clear()
     self.module_value_import_tasks.push(
@@ -1527,7 +1533,7 @@ impl SelfHostBasicBodyInferencer {
             let local = self_host_body_i32_to_u32(type_)
             match self.module_value_import_cache.get(local) {
               Option::Some(imported) => self.module_value_import_results.push(imported)
-              Option::None => match self.imported.local_module_value_terms[local] {
+              Option::None => match source_terms[local] {
                 SelfHostBodyTypeTerm::BodyErrorType => {
                   self.module_value_import_results.push(self.solver.error_type())
                 }
@@ -1553,7 +1559,7 @@ impl SelfHostBasicBodyInferencer {
                       let previous = current - 1u32
                       self.module_value_import_tasks.push(
                         SelfHostModuleValueImportTask::VisitModuleValueType(
-                          self.imported.local_module_value_arguments[
+                          source_arguments[
                             self_host_u32_add(fields.start, previous)
                           ],
                         ),
@@ -1578,7 +1584,7 @@ impl SelfHostBasicBodyInferencer {
                       let previous = current - 1u32
                       self.module_value_import_tasks.push(
                         SelfHostModuleValueImportTask::VisitModuleValueType(
-                          self.imported.local_module_value_arguments[
+                          source_arguments[
                             self_host_u32_add(arguments.start, previous)
                           ],
                         ),
@@ -1609,7 +1615,7 @@ impl SelfHostBasicBodyInferencer {
                       let previous = current - 1u32
                       self.module_value_import_tasks.push(
                         SelfHostModuleValueImportTask::VisitModuleValueType(
-                          self.imported.local_module_value_arguments[
+                          source_arguments[
                             self_host_u32_add(parameters.start, previous)
                           ],
                         ),
@@ -1686,6 +1692,31 @@ impl SelfHostBasicBodyInferencer {
     match self.module_value_import_results.pop() {
       Option::Some(result) => result
       Option::None => self.solver.error_type()
+    }
+  }
+
+
+  fn import_module_value_type(self, source: I32) -> I32 {
+    self.import_external_body_type(
+      source,
+      self.imported.local_module_value_terms,
+      self.imported.local_module_value_arguments,
+    )
+  }
+
+  fn seed_capture_type(
+    self,
+    capture: U32,
+    source: I32,
+    source_terms: Array<SelfHostBodyTypeTerm>,
+    source_arguments: Array<I32>,
+  ) -> Unit {
+    if capture < self.capture_types.length() {
+      self.capture_types[capture] = self.import_external_body_type(
+        source,
+        source_terms,
+        source_arguments,
+      )
     }
   }
 
@@ -6546,6 +6577,36 @@ fn self_host_basic_inferred_body_local_type(
   }
 }
 
+fn self_host_basic_seed_capture_from_body(
+  inferencer: SelfHostBasicBodyInferencer,
+  capture: U32,
+  body: SelfHostBasicInferredBody,
+  local: U32,
+) -> Unit {
+  if local < body.local_types.length() {
+    inferencer.seed_capture_type(
+      capture,
+      body.local_types[local],
+      body.types,
+      body.type_arguments,
+    )
+  }
+}
+
+fn self_host_basic_seed_capture_from_lambda(
+  inferencer: SelfHostBasicBodyInferencer,
+  capture: U32,
+  lambda: SelfHostBasicInferredLambda,
+  local: U32,
+) -> Unit {
+  self_host_basic_seed_capture_from_body(
+    inferencer,
+    capture,
+    lambda.body,
+    local,
+  )
+}
+
 fn self_host_basic_body_local_source_type(
   bodies: Array<SelfHostBasicInferredBody>,
   body: U64,
@@ -6626,7 +6687,7 @@ fn self_host_infer_basic_module_bodies_with_inputs(
           break self_host_semantic_unit()
         }
       }
-      let inferred = SelfHostBasicBodyInferencer::new_lambda(
+      let inferencer = SelfHostBasicBodyInferencer::new_lambda(
         collected,
         resolved,
         names,
@@ -6634,7 +6695,42 @@ fn self_host_infer_basic_module_bodies_with_inputs(
         lambda,
         lambda_names,
         source_capture_types,
-      ).run()
+      )
+      capture = 0u32
+      let _ = while capture {
+        capture_index => if capture_index < lambda_names.captures.length {
+          let capture_info = names.captures[
+            self_host_u32_add(lambda_names.captures.start, capture_index)
+          ]
+          match capture_info.source {
+            SelfHostLambdaCaptureSource::BodyLocalCapture(body, local) => {
+              let body_index = self_host_semantic_id_local(body)
+              if body_index < bodies.length() {
+                self_host_basic_seed_capture_from_body(
+                  inferencer,
+                  capture_index,
+                  bodies[body_index],
+                  local,
+                )
+              }
+            }
+            SelfHostLambdaCaptureSource::LambdaLocalCapture(parent, local) => {
+              if parent < lambdas.length() {
+                self_host_basic_seed_capture_from_lambda(
+                  inferencer,
+                  capture_index,
+                  lambdas[parent],
+                  local,
+                )
+              }
+            }
+          }
+          continue capture_index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let inferred = inferencer.run()
       lambdas.push(SelfHostBasicInferredLambda::{
         lambda: lambda.id
         body: inferred

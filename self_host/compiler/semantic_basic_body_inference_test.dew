@@ -515,3 +515,26 @@ test "lambda capture routing preserves outer rigid types" {
     "capture mismatch diagnostic",
   )
 }
+
+test "lambda capture routing imports structural local types" {
+  let (_, _, _, inferred) = self_host_basic_infer_source(
+    852u64,
+    b"struct Box<t> {}\nbuiltin box<t>(value: t) -> Box<t> = \"box\"\nfn make() -> fn() -> Box<I32> {\n  let captured = box(true)\n  fn() -> Box<I32> {\n    captured\n  }\n}\n",
+  )
+  assert(
+    self_host_lambda_has_diagnostics(inferred.lambdas[0u32]),
+    "structural capture mismatch diagnostic",
+  )
+}
+
+test "nested lambda capture routing imports parent structural locals" {
+  let (_, _, _, inferred) = self_host_basic_infer_source(
+    853u64,
+    b"struct Box<t> {}\nbuiltin box<t>(value: t) -> Box<t> = \"box\"\nfn make() -> fn() -> fn() -> Box<I32> {\n  fn() -> fn() -> Box<I32> {\n    let captured = box(true)\n    fn() -> Box<I32> {\n      captured\n    }\n  }\n}\n",
+  )
+  assert(inferred.lambdas.length() == 2u32, "nested lambda count")
+  assert(
+    self_host_lambda_has_diagnostics(inferred.lambdas[1u32]),
+    "nested structural capture mismatch diagnostic",
+  )
+}
