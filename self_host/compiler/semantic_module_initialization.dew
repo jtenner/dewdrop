@@ -1,0 +1,205 @@
+open dew.std.option
+
+pub enum SelfHostPlannedModuleInitializationStepKind {
+  PlannedInitializeModuleValue(U64, U64, I32)
+  PlannedCyclicModuleValues(SelfHostHirSpan)
+}
+
+pub struct SelfHostPlannedModuleInitializationStep {
+  kind: SelfHostPlannedModuleInitializationStepKind
+  test_only: Bool
+  offset: U32
+}
+
+pub enum SelfHostModuleInitializationDiagnostic {
+  EagerModuleInitializationCycle(SelfHostHirSpan, U32)
+}
+
+pub struct SelfHostPlannedModuleInitialization {
+  module_id: U64
+  dependencies: SelfHostModuleValueDependencies
+  steps: Array<SelfHostPlannedModuleInitializationStep>
+  declaration_steps: Array<U32>
+  cycle_declarations: Array<U64>
+  diagnostics: Array<SelfHostModuleInitializationDiagnostic>
+}
+
+fn self_host_initialization_u32_slots(length: U32, value: U32) -> Array<U32> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(value)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
+}
+
+fn self_host_initialization_offset(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> U32 {
+  match collected.declaration_reference(declaration) {
+    Option::Some(reference) => match reference {
+      SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
+      SelfHostCollectedDeclarationReference::Method(value) => value.offset
+    }
+    Option::None => 0u32
+  }
+}
+
+fn self_host_initialization_scc_is_cyclic(
+  collected: SelfHostCollectedModule,
+  dependencies: SelfHostModuleValueDependencies,
+  scc: SelfHostHirSpan,
+) -> Bool {
+  if self_host_u32_greater(scc.length, 1u32) {
+    return true
+  }
+  if self_host_u32_equal(scc.length, 0u32) {
+    return false
+  }
+  let declaration = dependencies.scc_declaration(scc.start)
+  let let_index = match self_host_module_value_let_index(collected, declaration) {
+    Option::Some(value) => value
+    Option::None => {
+      return false
+    }
+  }
+  let edges = dependencies.dependency_span(let_index)
+  let mut edge = 0u32
+  while edge {
+    current => if current < edges.length {
+      if self_host_u64_equal(
+        dependencies.dependency_declaration(
+          self_host_u32_add(edges.start, current),
+        ),
+        declaration,
+      ) {
+        break true
+      }
+      continue current + 1u32
+    } else {
+      break false
+    }
+  }
+}
+
+fn self_host_initialization_scc_is_test_only(
+  collected: SelfHostCollectedModule,
+  dependencies: SelfHostModuleValueDependencies,
+  scc: SelfHostHirSpan,
+) -> Bool {
+  if self_host_u32_equal(scc.length, 0u32) {
+    return false
+  }
+  let mut member = 0u32
+  while member {
+    current => if current < scc.length {
+      if !collected.declaration_is_test_only(
+        dependencies.scc_declaration(self_host_u32_add(scc.start, current)),
+      ) {
+        break false
+      }
+      continue current + 1u32
+    } else {
+      break true
+    }
+  }
+}
+
+fn self_host_plan_module_initialization(
+  collected: SelfHostCollectedModule,
+  inferred: SelfHostInferredModuleValues,
+) -> SelfHostPlannedModuleInitialization {
+  let steps = []
+  let declaration_steps = self_host_initialization_u32_slots(
+    collected.declaration_locations.length(),
+    4294967295u32,
+  )
+  let cycle_declarations = []
+  let diagnostics = []
+  for scc in inferred.dependencies.sccs {
+    let step_index = steps.length()
+    if self_host_initialization_scc_is_cyclic(
+      collected,
+      inferred.dependencies,
+      scc,
+    ) {
+      let cycle_start = cycle_declarations.length()
+      let mut offset = 4294967295u32
+      let mut member = 0u32
+      let _ = while member {
+        current => if current < scc.length {
+          let declaration = inferred.dependencies.scc_declaration(
+            self_host_u32_add(scc.start, current),
+          )
+          cycle_declarations.push(declaration)
+          declaration_steps[self_host_semantic_id_local(declaration)] = step_index
+          let declaration_offset = self_host_initialization_offset(
+            collected,
+            declaration,
+          )
+          if declaration_offset < offset {
+            offset = declaration_offset
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let members = SelfHostHirSpan::{
+        start: cycle_start
+        length: cycle_declarations.length() - cycle_start
+      }
+      steps.push(SelfHostPlannedModuleInitializationStep::{
+        kind: SelfHostPlannedModuleInitializationStepKind::PlannedCyclicModuleValues(
+          members,
+        )
+        test_only: self_host_initialization_scc_is_test_only(
+          collected,
+          inferred.dependencies,
+          scc,
+        )
+        offset: offset
+      })
+      diagnostics.push(
+        SelfHostModuleInitializationDiagnostic::EagerModuleInitializationCycle(
+          members,
+          offset,
+        ),
+      )
+    } else if self_host_u32_equal(scc.length, 1u32) {
+      let declaration = inferred.dependencies.scc_declaration(scc.start)
+      let let_index = match self_host_module_value_let_index(collected, declaration) {
+        Option::Some(value) => value
+        Option::None => 0u32
+      }
+      let body = match self_host_module_value_body(collected, declaration) {
+        Option::Some(value) => value
+        Option::None => collected.bodies[0u32]
+      }
+      declaration_steps[self_host_semantic_id_local(declaration)] = step_index
+      steps.push(SelfHostPlannedModuleInitializationStep::{
+        kind: SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(
+          declaration,
+          body.id,
+          inferred.let_types[let_index],
+        )
+        test_only: collected.declaration_is_test_only(declaration)
+        offset: self_host_initialization_offset(collected, declaration)
+      })
+    }
+  }
+  SelfHostPlannedModuleInitialization::{
+    module_id: collected.module_id
+    dependencies: inferred.dependencies
+    steps: steps
+    declaration_steps: declaration_steps
+    cycle_declarations: cycle_declarations
+    diagnostics: diagnostics
+  }
+}

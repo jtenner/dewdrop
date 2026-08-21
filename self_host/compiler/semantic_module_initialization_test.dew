@@ -1,0 +1,84 @@
+open dew.std.string_builder
+open dew.std.testing
+
+fn self_host_initialization_chain(length: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      builder.append("let init_")
+      builder.append_u32(current)
+      if self_host_u32_add(current, 1u32) < length {
+        builder.append(" = init_")
+        builder.append_u32(self_host_u32_add(current, 1u32))
+      } else {
+        builder.append(" = 1")
+      }
+      builder.append("\n")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.finish().as_bytes()
+}
+
+fn self_host_initialization_source(
+  module_id: U64,
+  source: Bytes,
+) -> (
+  SelfHostCollectedModule,
+  SelfHostInferredModuleValues,
+  SelfHostPlannedModuleInitialization,
+) {
+  let collected = self_host_collect_bytes(module_id, source)
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let values = self_host_infer_module_values(collected, resolved, names)
+  let plan = self_host_plan_module_initialization(collected, values)
+  (collected, values, plan)
+}
+
+test "module initialization is dependency first" {
+  let (collected, _, plan) = self_host_initialization_source(
+    990u64,
+    b"let first = second + 1\nlet second = 2\n",
+  )
+  assert(plan.steps.length() == 2u32, "two steps")
+  match plan.steps[0u32].kind {
+    SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(
+      declaration,
+      _,
+      _,
+    ) => assert(
+      self_host_u64_equal(declaration, collected.lets[1u32].declaration),
+      "dependency first",
+    )
+    _ => assert(false, "eager step")
+  }
+}
+
+test "module initialization reports eager cycles" {
+  let (_, _, plan) = self_host_initialization_source(
+    991u64,
+    b"let first = second\nlet second = first\n",
+  )
+  assert(plan.steps.length() == 1u32, "one cycle step")
+  assert(plan.cycle_declarations.length() == 2u32, "two cycle values")
+  assert(plan.diagnostics.length() == 1u32, "cycle diagnostic")
+  match plan.steps[0u32].kind {
+    SelfHostPlannedModuleInitializationStepKind::PlannedCyclicModuleValues(
+      members,
+    ) => assert(members.length == 2u32, "cycle members")
+    _ => assert(false, "cycle step")
+  }
+}
+
+test "module initialization handles 1024 values iteratively" {
+  let (_, _, plan) = self_host_initialization_source(
+    992u64,
+    self_host_initialization_chain(1024u32),
+  )
+  assert(plan.steps.length() == 1024u32, "all initialization steps")
+  assert(plan.diagnostics.length() == 0u32, "chain diagnostics")
+}
