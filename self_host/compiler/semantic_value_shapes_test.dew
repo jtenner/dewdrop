@@ -1,0 +1,56 @@
+open dew.std.testing
+
+test "resolved value shapes classify primitives references and generics" {
+  let collected = self_host_collect_bytes(
+    995u64,
+    b"struct Box<t> {}\nfn use<t>(value: t, box: Box<I32>, count: I64) -> I32 {\n  1\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(
+    self_host_planned_resolved_value_shape(
+      resolved,
+      resolved.primitive(SelfHostPrimitiveType::I32Type),
+    ) is SelfHostPlannedValueShape::I32PlannedValueShape,
+    "I32 shape",
+  )
+  assert(
+    self_host_planned_resolved_value_shape(
+      resolved,
+      resolved.primitive(SelfHostPrimitiveType::I64Type),
+    ) is SelfHostPlannedValueShape::I64PlannedValueShape,
+    "I64 shape",
+  )
+  assert(
+    self_host_planned_resolved_value_shape(
+      resolved,
+      resolved.parameter_types[0u32],
+    ) is SelfHostPlannedValueShape::GenericPlannedValueShape,
+    "generic shape",
+  )
+  assert(
+    self_host_planned_resolved_value_shape(
+      resolved,
+      resolved.parameter_types[1u32],
+    ) is SelfHostPlannedValueShape::RefPlannedValueShape,
+    "nominal shape",
+  )
+}
+
+test "resolved value shapes retain product fields" {
+  let collected = self_host_collect_bytes(
+    996u64,
+    b"fn pair(value: (I32, String)) -> (I32, String) {\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  match self_host_planned_resolved_value_shape(
+    resolved,
+    resolved.parameter_types[0u32],
+  ) {
+    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+      assert(fields.length() == 2u32, "two fields")
+      assert(fields[0u32] is SelfHostPlannedValueShape::I32PlannedValueShape, "I32 field")
+      assert(fields[1u32] is SelfHostPlannedValueShape::RefPlannedValueShape, "ref field")
+    }
+    _ => assert(false, "product shape")
+  }
+}

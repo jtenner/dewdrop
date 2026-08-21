@@ -1,0 +1,142 @@
+open dew.std.option
+
+pub enum SelfHostPlannedValueShape {
+  ErrorPlannedValueShape
+  UnitPlannedValueShape
+  I8PlannedValueShape
+  I16PlannedValueShape
+  I32PlannedValueShape
+  I64PlannedValueShape
+  U8PlannedValueShape
+  U16PlannedValueShape
+  U32PlannedValueShape
+  U64PlannedValueShape
+  F32PlannedValueShape
+  F64PlannedValueShape
+  Swar32PlannedValueShape
+  Swar64PlannedValueShape
+  V128PlannedValueShape
+  RefPlannedValueShape
+  GenericPlannedValueShape
+  ProductPlannedValueShape(Array<SelfHostPlannedValueShape>)
+  NeverPlannedValueShape
+}
+
+enum SelfHostShapeTask {
+  VisitShapeType(U32)
+  FinishProductShape(U32)
+}
+
+fn self_host_primitive_value_shape(
+  primitive: SelfHostPrimitiveType,
+) -> SelfHostPlannedValueShape {
+  match primitive {
+    SelfHostPrimitiveType::UnitType => SelfHostPlannedValueShape::UnitPlannedValueShape
+    SelfHostPrimitiveType::BoolType => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPrimitiveType::I32Type => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPrimitiveType::I8Type => SelfHostPlannedValueShape::I8PlannedValueShape
+    SelfHostPrimitiveType::I16Type => SelfHostPlannedValueShape::I16PlannedValueShape
+    SelfHostPrimitiveType::I64Type => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostPrimitiveType::U8Type => SelfHostPlannedValueShape::U8PlannedValueShape
+    SelfHostPrimitiveType::U16Type => SelfHostPlannedValueShape::U16PlannedValueShape
+    SelfHostPrimitiveType::U32Type => SelfHostPlannedValueShape::U32PlannedValueShape
+    SelfHostPrimitiveType::U64Type => SelfHostPlannedValueShape::U64PlannedValueShape
+    SelfHostPrimitiveType::F32Type => SelfHostPlannedValueShape::F32PlannedValueShape
+    SelfHostPrimitiveType::F64Type => SelfHostPlannedValueShape::F64PlannedValueShape
+    SelfHostPrimitiveType::Swar32Type => SelfHostPlannedValueShape::Swar32PlannedValueShape
+    SelfHostPrimitiveType::I8x4Type => SelfHostPlannedValueShape::Swar32PlannedValueShape
+    SelfHostPrimitiveType::U8x4Type => SelfHostPlannedValueShape::Swar32PlannedValueShape
+    SelfHostPrimitiveType::I16x2Type => SelfHostPlannedValueShape::Swar32PlannedValueShape
+    SelfHostPrimitiveType::U16x2Type => SelfHostPlannedValueShape::Swar32PlannedValueShape
+    SelfHostPrimitiveType::Swar64Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::I8x8Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::U8x8Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::I16x4Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::U16x4Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::I32x2Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::U32x2Type => SelfHostPlannedValueShape::Swar64PlannedValueShape
+    SelfHostPrimitiveType::V128Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::I8x16Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::U8x16Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::I16x8Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::U16x8Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::I32x4Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::U32x4Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::I64x2Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::U64x2Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::F32x4Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::F64x2Type => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPrimitiveType::StringType => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPrimitiveType::BytesType => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPrimitiveType::StringViewType => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPrimitiveType::StringBuilderType => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPrimitiveType::BytesBuilderType => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPrimitiveType::NeverType => SelfHostPlannedValueShape::NeverPlannedValueShape
+  }
+}
+
+fn self_host_planned_resolved_value_shape(
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+) -> SelfHostPlannedValueShape {
+  let tasks = [SelfHostShapeTask::VisitShapeType(root)]
+  let results = []
+  let _ = while tasks.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let task = match tasks.pop() {
+        Option::Some(value) => value
+        Option::None => SelfHostShapeTask::VisitShapeType(resolved.error_type)
+      }
+      match task {
+        SelfHostShapeTask::VisitShapeType(type_) => match resolved.types[type_] {
+          SelfHostResolvedType::ErrorType => results.push(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+          SelfHostResolvedType::PrimitiveType(primitive) => results.push(self_host_primitive_value_shape(primitive))
+          SelfHostResolvedType::GenericParameterType(_) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
+          SelfHostResolvedType::SelfType(_) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
+          SelfHostResolvedType::NominalType(_) => results.push(SelfHostPlannedValueShape::RefPlannedValueShape)
+          SelfHostResolvedType::TraitType(_) => results.push(SelfHostPlannedValueShape::RefPlannedValueShape)
+          SelfHostResolvedType::FunctionType(_, _) => results.push(SelfHostPlannedValueShape::RefPlannedValueShape)
+          SelfHostResolvedType::AppliedType(base, _) => tasks.push(SelfHostShapeTask::VisitShapeType(base))
+          SelfHostResolvedType::ProductType(fields) => {
+            let start = results.length()
+            tasks.push(SelfHostShapeTask::FinishProductShape(start))
+            let mut field = fields.length
+            let _ = while field {
+              current => if self_host_u32_greater(current, 0u32) {
+                let previous = current - 1u32
+                tasks.push(SelfHostShapeTask::VisitShapeType(
+                  resolved.type_arguments[self_host_u32_add(fields.start, previous)],
+                ))
+                continue previous
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+        }
+        SelfHostShapeTask::FinishProductShape(start) => {
+          let fields = []
+          let mut index = start
+          let end = results.length()
+          let _ = while index {
+            current => if current < end {
+              fields.push(results[current])
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          results.truncate(start)
+          results.push(SelfHostPlannedValueShape::ProductPlannedValueShape(fields))
+        }
+      }
+      continue tasks.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match results.pop() {
+    Option::Some(shape) => shape
+    Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
+  }
+}
