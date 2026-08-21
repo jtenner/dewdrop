@@ -136,6 +136,17 @@ test "body flow recognizes local enum exhaustiveness" {
   self_host_assert_one_missing_variant(missing.bodies[0u32])
 }
 
+test "body flow suppresses coverage cascades after invalid patterns" {
+  let (_, flows) = self_host_flow_source(
+    978u64,
+    b"enum Maybe {\n  Some(I32)\n}\nfn read(value: Maybe) -> I32 {\n  match value {\n    Maybe::Some(_, _) => 0\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "invalid pattern suppresses coverage cascade",
+  )
+}
+
 test "body flow diagnoses functional loop arm fallthrough" {
   let (_, flows) = self_host_flow_source(
     974u64,

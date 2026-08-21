@@ -463,6 +463,57 @@ impl SelfHostBodyFlowAnalyzer {
     }
   }
 
+  fn pattern_has_error(self, pattern: U32) -> Bool {
+    for diagnostic in self.inferred.diagnostics {
+      match diagnostic {
+        SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(
+          candidate,
+          _,
+        ) => if self_host_u32_equal(candidate, pattern) {
+          return true
+        }
+        SelfHostBodyInferenceDiagnostic::PatternPayloadKindMismatch(
+          candidate,
+          _,
+          _,
+        ) => if self_host_u32_equal(candidate, pattern) {
+          return true
+        }
+        SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(
+          candidate,
+          _,
+          _,
+          _,
+        ) => if self_host_u32_equal(candidate, pattern) {
+          return true
+        }
+        SelfHostBodyInferenceDiagnostic::UnknownPatternField(
+          _,
+          candidate,
+          _,
+        ) => if self_host_u32_equal(candidate, pattern) {
+          return true
+        }
+        SelfHostBodyInferenceDiagnostic::MissingPatternField(
+          _,
+          candidate,
+          _,
+        ) => if self_host_u32_equal(candidate, pattern) {
+          return true
+        }
+        SelfHostBodyInferenceDiagnostic::MissingImportedPatternField(
+          _,
+          candidate,
+          _,
+        ) => if self_host_u32_equal(candidate, pattern) {
+          return true
+        }
+        _ => {}
+      }
+    }
+    false
+  }
+
   fn pattern_bool(self, pattern: U32) -> U32 {
     match self.collected.patterns[pattern] {
       SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[
@@ -493,6 +544,7 @@ impl SelfHostBodyFlowAnalyzer {
     }
     let covered_variants = self_host_module_value_bool_slots(enum_variants.length())
     let mut covered_variant_count = 0u32
+    let mut coverage_error = false
     let mut branches = self_host_flow_empty()
     let mut catch_all = false
     let mut covered_false = false
@@ -504,6 +556,9 @@ impl SelfHostBodyFlowAnalyzer {
           self_host_u32_add(arms.start, current)
         ]
         let info = self.collected.pattern_arms[arm]
+        if self.pattern_has_error(info.pattern) {
+          coverage_error = true
+        }
         let bool_case = self.pattern_bool(info.pattern)
         let variant = self.pattern_variant(info.pattern)
         let mut variant_slot = 4294967295u32
@@ -566,7 +621,7 @@ impl SelfHostBodyFlowAnalyzer {
         break self_host_semantic_unit()
       }
     }
-    let exhaustive = catch_all || match domain {
+    let exhaustive = coverage_error || catch_all || match domain {
       SelfHostFlowCoverageDomain::BoolFlowCoverageDomain => {
         covered_false && covered_true
       }
