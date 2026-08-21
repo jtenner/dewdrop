@@ -8,6 +8,7 @@ pub enum SelfHostBodyInferenceDiagnostic {
   InvalidAssignmentTarget(U32, U32)
   ImmutableAssignmentTarget(U32, U32)
   ReturnOutsideCallable(U32)
+  CallArgumentCountMismatch(U32, U64, U32, U32, U32)
   UnresolvedExpressionType(U32, U32)
   UnresolvedLocalType(U64, U32, U32)
 }
@@ -21,10 +22,18 @@ impl SelfHostBodyInferenceDiagnostic {
       SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(offset) => offset
+      SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(_, _, offset) => offset
     }
   }
+}
+
+pub enum SelfHostBasicCallTarget {
+  NoBasicCallTarget
+  ErrorBasicCallTarget
+  SelectedBasicCallTarget(U64)
+  FunctionValueBasicCallTarget(U32)
 }
 
 pub struct SelfHostBasicInferredBody {
@@ -38,6 +47,7 @@ pub struct SelfHostBasicInferredBody {
   pattern_types: Array<I32>
   control_state_types: Array<I32>
   control_result_types: Array<I32>
+  call_targets: Array<SelfHostBasicCallTarget>
   unsupported_expressions: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
 }
@@ -49,6 +59,10 @@ impl SelfHostBasicInferredBody {
 
   fn local_type(self, local: U32) -> I32 {
     self.local_types[local]
+  }
+
+  fn call_target(self, body: SelfHostHirBody, expression: U32) -> SelfHostBasicCallTarget {
+    self.call_targets[expression - body.expressions.start]
   }
 
   fn diagnostic_count(self) -> U32 {
@@ -123,6 +137,22 @@ fn self_host_inference_i32_slots(length: U32, value: I32) -> Array<I32> {
   slots
 }
 
+fn self_host_inference_call_target_slots(
+  length: U32,
+) -> Array<SelfHostBasicCallTarget> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(SelfHostBasicCallTarget::NoBasicCallTarget)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
+}
+
 fn self_host_inference_bool_slots(length: U32) -> Array<Bool> {
   let slots = []
   let mut index = 0u32
@@ -150,6 +180,7 @@ struct SelfHostBasicBodyInferencer {
   pattern_types: Array<I32>
   control_state_types: Array<I32>
   control_result_types: Array<I32>
+  call_targets: Array<SelfHostBasicCallTarget>
   unsupported_expressions: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
   mut callable_index: U32
@@ -194,6 +225,7 @@ impl SelfHostBasicBodyInferencer {
       pattern_types: self_host_inference_i32_slots(body.patterns.length, 0i32)
       control_state_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
       control_result_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
+      call_targets: self_host_inference_call_target_slots(body.expressions.length)
       unsupported_expressions: self_host_inference_bool_slots(body.expressions.length)
       diagnostics: []
       callable_index: callable_index
@@ -263,6 +295,56 @@ impl SelfHostBasicBodyInferencer {
     if !self.unsupported_expressions[index] {
       self.unsupported_expressions[index] = true
       self.solver.poison_type(self.expression_types[index])
+    }
+  }
+
+  fn unique_local_callable_index(self, name: U32) -> Option<U32> {
+    let binding = match self.collected.value_bindings.get(name) {
+      Option::Some(value) => value
+      Option::None => {
+        return Option::None
+      }
+    }
+    let candidate = self.collected.value_binding_candidates[binding.head]
+    match candidate.next {
+      Option::Some(_) => {
+        return Option::None
+      }
+      Option::None => {}
+    }
+    let declaration = candidate.declaration
+    let mut index = 0u32
+    while index {
+      current => if current < self.collected.callables.length() {
+        if self_host_u64_equal(
+          self.collected.callables[current].declaration,
+          declaration,
+        ) {
+          return Option::Some(current)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+
+  fn local_callable_function_type(self, name: U32) -> Option<I32> {
+    match self.unique_local_callable_index(name) {
+      Option::Some(index) => {
+        let declaration = self.collected.callables[index].declaration
+        let generics = self.collected.generic_parameters_of(declaration)
+        if self_host_u32_equal(generics.length, 0u32) {
+          Option::Some(
+            self.solver.resolved_type(
+              self.resolved.callable_function_types[index],
+            ),
+          )
+        } else {
+          Option::None
+        }
+      }
+      Option::None => Option::None
     }
   }
 
@@ -367,7 +449,10 @@ impl SelfHostBasicBodyInferencer {
           SelfHostHirExpr::BytesExpr(_, _) => self.primitive(SelfHostPrimitiveType::BytesType)
           SelfHostHirExpr::NameExpr(name, _) => match self.names.expression_references[current] {
             SelfHostBodyNameReference::LocalNameReference(local) => self.local_types[local]
-            SelfHostBodyNameReference::ModuleValueNameReference(_) => self.solver.fresh_variable()
+            SelfHostBodyNameReference::ModuleValueNameReference(_) => match self.local_callable_function_type(name) {
+              Option::Some(function_type) => function_type
+              Option::None => self.solver.fresh_variable()
+            }
             SelfHostBodyNameReference::ErrorNameReference => self.solver.error_type()
             _ => self.solver.fresh_variable()
           }
@@ -588,11 +673,87 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn constrain_direct_local_call(
+    self,
+    expression: U32,
+    target: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+  ) -> Bool {
+    let name = match self.collected.expressions[target] {
+      SelfHostHirExpr::NameExpr(value, _) => value
+      _ => {
+        return false
+      }
+    }
+    let callable = match self.unique_local_callable_index(name) {
+      Option::Some(value) => value
+      Option::None => {
+        return false
+      }
+    }
+    let declaration = self.collected.callables[callable].declaration
+    let generics = self.collected.generic_parameters_of(declaration)
+    if !self_host_u32_equal(generics.length, 0u32) {
+      return false
+    }
+    let parameters = self.collected.parameters_of(declaration)
+    if !self_host_u32_equal(parameters.length, arguments.length) {
+      self.diagnostics.push(
+        SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(
+          expression,
+          declaration,
+          parameters.length,
+          arguments.length,
+          offset,
+        ),
+      )
+      self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::ErrorBasicCallTarget
+      self.solver.poison_type(self.expression_type(expression))
+      return true
+    }
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < parameters.length {
+        self.constrain_assignable(
+          self.expression_type(
+            self.collected.expression_children[arguments.start + current],
+          ),
+          self.solver.resolved_type(
+            self.resolved.parameter_types[
+              self_host_u32_add(parameters.start, current)
+            ],
+          ),
+          self_host_call_type_origin(expression, offset),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.constrain(
+      self.expression_type(expression),
+      self.solver.resolved_type(self.resolved.callable_return_types[callable]),
+      self_host_call_type_origin(expression, offset),
+    )
+    self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      declaration,
+    )
+    true
+  }
+
   fn constrain_call(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32) -> Unit {
     match self.names.expression_references[target] {
       SelfHostBodyNameReference::ModuleValueNameReference(_) => {
-        self.mark_unsupported(expression)
-        self.solver.poison_type(self.expression_type(target))
+        if !self.constrain_direct_local_call(
+          expression,
+          target,
+          arguments,
+          offset,
+        ) {
+          self.mark_unsupported(expression)
+          self.solver.poison_type(self.expression_type(target))
+        }
         return
       }
       _ => {}
@@ -626,6 +787,9 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
+    self.call_targets[self.expression_index(expression)] = SelfHostBasicCallTarget::FunctionValueBasicCallTarget(
+      target,
+    )
   }
 
   fn constrain_match(self, expression: U32, scrutinee: U32, arms: SelfHostHirSpan, offset: U32) -> Unit {
@@ -993,6 +1157,7 @@ impl SelfHostBasicBodyInferencer {
       pattern_types: self.pattern_types
       control_state_types: self.control_state_types
       control_result_types: self.control_result_types
+      call_targets: self.call_targets
       unsupported_expressions: self.unsupported_expressions
       diagnostics: self.diagnostics
     }

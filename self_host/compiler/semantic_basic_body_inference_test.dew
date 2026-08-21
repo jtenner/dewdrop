@@ -97,23 +97,52 @@ test "basic body inference constrains function-value calls" {
   }
 }
 
-test "basic body inference defers direct call selection without false constraints" {
-  let (_, _, _, inferred) = self_host_basic_infer_source(
+test "basic body inference selects non-generic direct calls" {
+  let (collected, resolved, _, inferred) = self_host_basic_infer_source(
     831u64,
     b"fn inc(value: I32) -> I32 {\n  value + 1\n}\nfn use() -> I32 {\n  inc(4)\n}\n",
   )
+  let hir_body = collected.bodies[1u32]
   let body = inferred.bodies[1u32]
-  let mut unsupported = 0u32
-  let mut constraints = 0u32
+  assert(body.diagnostics.length() == 0u32, "direct call diagnostics")
+  let call = match hir_body.root {
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => match collected.block_items[
+      collected.blocks[block].items.start
+    ] {
+      SelfHostHirBlockItem::ExpressionItem(expression, _) => expression
+      _ => 4294967295u32
+    }
+    SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => expression
+  }
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration) => assert(
+      declaration == collected.callables[0u32].declaration,
+      "selected inc",
+    )
+    _ => assert(false, "selected direct target")
+  }
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.root_type,
+    SelfHostPrimitiveType::I32Type,
+    "direct call result",
+  )
+}
+
+test "basic body inference reports direct call arity mismatches" {
+  let (_, _, _, inferred) = self_host_basic_infer_source(
+    833u64,
+    b"fn inc(value: I32) -> I32 {\n  value + 1\n}\nfn use() -> I32 {\n  inc()\n}\n",
+  )
+  let body = inferred.bodies[1u32]
+  let mut arity = 0u32
   let mut index = 0u32
   let _ = while index {
     current => if current < self_host_basic_inference_diagnostic_count(body) {
       match self_host_basic_inference_diagnostic_at(body, current) {
-        SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => {
-          unsupported = unsupported + 1u32
-        }
-        SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
-          constraints = constraints + 1u32
+        SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => {
+          arity = arity + 1u32
         }
         _ => {}
       }
@@ -122,8 +151,7 @@ test "basic body inference defers direct call selection without false constraint
       break self_host_semantic_unit()
     }
   }
-  assert(unsupported == 1u32, "one deferred direct call")
-  assert(constraints == 0u32, "no false direct-call mismatch")
+  assert(arity == 1u32, "one arity diagnostic")
 }
 
 test "basic body inference constrains typed array literals" {

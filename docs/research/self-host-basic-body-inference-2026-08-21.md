@@ -20,6 +20,8 @@ It is the first body-inference layer. Callable overload selection, members, enum
 - product and typed Array literal constraints;
 - lexical local and parameter references;
 - function-value calls;
+- unique non-generic local function calls and published direct call targets;
+- direct-call arity diagnostics;
 - sequential `let` constraints;
 - explicit and trailing return constraints;
 - block result types;
@@ -35,7 +37,7 @@ The pass is iterative over the flat HIR arenas. It does not add recursive expres
 
 ## Layer boundary
 
-Direct module-function calls are marked unsupported by this basic layer. This avoids choosing an overload too early. The callable-selection layer will instantiate generic signatures, test candidates under solver snapshots, resolve overloads, validate arity and bounds, and publish call targets.
+Unique non-generic local module-function calls are selected by this layer. Their parameter and result signatures constrain the call directly, and the result publishes the chosen declaration. Generic and overloaded module-function calls remain unsupported so the next callable-selection layer can instantiate signatures, test candidates under solver snapshots, resolve overloads, and validate bounds without choosing too early.
 
 Object construction, enum construction, fields, qualified members, indexing, imported values, and trait-based operators are also retained as explicit unsupported roots. Their type variables are poisoned so they do not produce false secondary mismatch or unresolved diagnostics.
 
@@ -54,7 +56,7 @@ Focused tests cover:
 - parameters, literals, sequential lets, arithmetic, and trailing returns;
 - products, generated destructuring projections, and branches;
 - function-value calls;
-- deferred direct-call selection without false local constraints;
+- selected non-generic direct calls and arity failures;
 - typed Array literals;
 - match bindings and guards;
 - functional-loop state and result types;
