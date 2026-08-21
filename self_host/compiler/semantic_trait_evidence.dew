@@ -6,12 +6,113 @@ pub enum SelfHostTraitEvidenceSelection {
   SelectedTraitEvidenceSelection(U64, U32)
 }
 
+fn self_host_trait_evidence_resolved_body_type(
+  solver: SelfHostLocalTypeSolver,
+  type_: I32,
+) -> Option<U32> {
+  match solver.type_term(solver.representative_type(type_)) {
+    SelfHostBodyTypeTerm::BodyResolvedType(resolved) => Option::Some(resolved)
+    SelfHostBodyTypeTerm::BodyErrorType => Option::Some(0u32)
+    _ => Option::None
+  }
+}
+
+fn self_host_trait_evidence_candidate_bounds(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  index: SelfHostModuleImplIndex,
+  implementation: SelfHostIndexedImpl,
+  importer: SelfHostImplPatternImporter,
+  depth: U32,
+) -> Bool {
+  let local = self_host_u64_equal(
+    self_host_semantic_id_module(implementation.declaration),
+    collected.module_id,
+  )
+  let generic_count = importer.generic_types.length()
+  let mut generic_index = 0u32
+  let _ = while generic_index {
+    current => if current < generic_count {
+      let bounds = if local {
+        let generics = collected.generic_parameters_of(
+          implementation.declaration,
+        )
+        collected.generic_parameters[
+          self_host_u32_add(generics.start, current)
+        ].bounds
+      } else {
+        match imports.implementation(implementation.declaration) {
+          Option::Some(imported) => imports.generic_parameter_bounds[
+            self_host_u32_add(imported.generic_bounds.start, current)
+          ]
+          Option::None => self_host_empty_hir_span(0u32)
+        }
+      }
+      let mut bound_index = 0u32
+      let _ = while bound_index {
+        bound => if bound < bounds.length {
+          let source = if local {
+            imports.resolved.generic_bound_types[
+              self_host_u32_add(bounds.start, bound)
+            ]
+          } else {
+            imports.generic_bound_types[
+              self_host_u32_add(bounds.start, bound)
+            ]
+          }
+          let instantiated_bound = importer.import_type(source)
+          let target_resolved = self_host_trait_evidence_resolved_body_type(
+            importer.solver,
+            importer.generic_types[current],
+          )
+          let bound_resolved = self_host_trait_evidence_resolved_body_type(
+            importer.solver,
+            instantiated_bound,
+          )
+          match target_resolved {
+            Option::Some(target_type) => match bound_resolved {
+              Option::Some(bound_type) => match self_host_select_trait_evidence_at_depth(
+                collected,
+                imports,
+                index,
+                bound_type,
+                target_type,
+                depth + 1u32,
+              ) {
+                SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(_, _) => {}
+                _ => {
+                  return false
+                }
+              }
+              Option::None => {
+                return false
+              }
+            }
+            Option::None => {
+              return false
+            }
+          }
+          continue bound + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
 fn self_host_trait_evidence_candidate_matches(
   collected: SelfHostCollectedModule,
   imports: SelfHostResolvedModuleImports,
+  index: SelfHostModuleImplIndex,
   implementation: SelfHostIndexedImpl,
   trait_type: U32,
   target_type: U32,
+  depth: U32,
 ) -> Bool {
   let importer = SelfHostImplPatternImporter::new(imports.resolved)
   self_host_impl_add_any_generics(
@@ -25,32 +126,44 @@ fn self_host_trait_evidence_candidate_matches(
     Option::None => importer.solver.error_type()
   }
   let candidate_target = importer.import_type(implementation.target_type)
-  importer.solver.unify(
+  let origin = SelfHostTypeConstraintOrigin::{
+    kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+    source: 0u32
+    offset: 0u32
+  }
+  if !importer.solver.unify(
     candidate_trait,
     importer.solver.resolved_type(trait_type),
-    SelfHostTypeConstraintOrigin::{
-      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
-      source: 0u32
-      offset: 0u32
-    },
-  ) && importer.solver.unify(
+    origin,
+  ) || !importer.solver.unify(
     candidate_target,
     importer.solver.resolved_type(target_type),
-    SelfHostTypeConstraintOrigin::{
-      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
-      source: 0u32
-      offset: 0u32
-    },
-  )
+    origin,
+  ) {
+    false
+  } else {
+    self_host_trait_evidence_candidate_bounds(
+      collected,
+      imports,
+      index,
+      implementation,
+      importer,
+      depth,
+    )
+  }
 }
 
-fn self_host_select_trait_evidence(
+fn self_host_select_trait_evidence_at_depth(
   collected: SelfHostCollectedModule,
   imports: SelfHostResolvedModuleImports,
   index: SelfHostModuleImplIndex,
   trait_type: U32,
   target_type: U32,
+  depth: U32,
 ) -> SelfHostTraitEvidenceSelection {
+  if depth >= 64u32 {
+    return SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
+  }
   let trait_declaration = match self_host_impl_trait_head(
     imports.resolved,
     trait_type,
@@ -80,9 +193,11 @@ fn self_host_select_trait_evidence(
       if matching_trait && self_host_trait_evidence_candidate_matches(
         collected,
         imports,
+        index,
         implementation,
         trait_type,
         target_type,
+        depth,
       ) {
         if self_host_u32_greater(
           implementation.specificity,
@@ -118,4 +233,21 @@ fn self_host_select_trait_evidence(
       viable,
     )
   }
+}
+
+fn self_host_select_trait_evidence(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  index: SelfHostModuleImplIndex,
+  trait_type: U32,
+  target_type: U32,
+) -> SelfHostTraitEvidenceSelection {
+  self_host_select_trait_evidence_at_depth(
+    collected,
+    imports,
+    index,
+    trait_type,
+    target_type,
+    0u32,
+  )
 }

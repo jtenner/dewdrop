@@ -36,6 +36,42 @@ test "trait evidence selects imported concrete implementation" {
   }
 }
 
+test "trait evidence validates recursive implementation prerequisites" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run<u: Witness<Leaf>, v: Witness<I32>>(good: Box<Leaf>, bad: Box<I32>) -> Unit {\n}\n",
+    b"pub trait Base {}\npub trait Witness<t> {}\npub struct Leaf {}\npub struct Box<t> {}\nimpl Base for Leaf {}\nimpl<t: Base> Witness<t> for Box<t> {}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(
+    collected,
+    fixture.imports,
+  )
+  let good_bound = fixture.imports.resolved.generic_bound_types[0u32]
+  let bad_bound = fixture.imports.resolved.generic_bound_types[1u32]
+  let good_target = fixture.imports.resolved.parameter_types[0u32]
+  let bad_target = fixture.imports.resolved.parameter_types[1u32]
+  assert(
+    self_host_select_trait_evidence(
+      collected,
+      fixture.imports,
+      index,
+      good_bound,
+      good_target,
+    ) is SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(_, _),
+    "satisfied prerequisite",
+  )
+  assert(
+    self_host_select_trait_evidence(
+      collected,
+      fixture.imports,
+      index,
+      bad_bound,
+      bad_target,
+    ) is SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection,
+    "missing prerequisite",
+  )
+}
+
 test "trait evidence rejects a nonmatching target" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\n",
