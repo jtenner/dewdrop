@@ -33,6 +33,7 @@ semantic_sources=(
   self_host/compiler/semantic_program_interfaces.dew
   self_host/compiler/semantic_imported_semantics.dew
   self_host/compiler/semantic_value_shapes.dew
+  self_host/compiler/semantic_function_plan.dew
   self_host/compiler/semantic_type_layouts.dew
   self_host/compiler/semantic_inference_types.dew
   self_host/compiler/semantic_local_unification.dew
@@ -73,6 +74,7 @@ tools/dew test \
   self_host/compiler/semantic_derive_expansion_test.dew \
   self_host/compiler/semantic_imported_semantics_test.dew \
   self_host/compiler/semantic_value_shapes_test.dew \
+  self_host/compiler/semantic_function_plan_test.dew \
   self_host/compiler/semantic_type_layouts_test.dew \
   self_host/compiler/semantic_imported_selection_test.dew \
   self_host/compiler/semantic_local_unification_test.dew \

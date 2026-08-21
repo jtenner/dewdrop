@@ -1,0 +1,466 @@
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+pub enum SelfHostPlannedCallableKind {
+  PlannedBuiltinCallable(Bytes)
+  PlannedForeignCallable(Bytes, Bytes)
+  PlannedFunctionCallable(U64)
+  PlannedTraitMethodCallable(U64)
+  PlannedImplMethodCallable(U64, Option<U64>)
+}
+
+pub struct SelfHostPlannedParameter {
+  parameter: U64
+  declaration: U64
+  index: U32
+  receiver: Bool
+  type_: U32
+  shape: SelfHostPlannedValueShape
+  offset: U32
+}
+
+pub struct SelfHostPlannedCallable {
+  declaration: U64
+  name: Bytes
+  visibility: SelfHostSemanticVisibility
+  compiler_owned: Bool
+  is_test: Bool
+  is_test_entry: Bool
+  test_name: Bytes
+  kind: SelfHostPlannedCallableKind
+  owner_generic_parameters: SelfHostHirSpan
+  generic_parameters: SelfHostHirSpan
+  parameters: SelfHostHirSpan
+  has_receiver: Bool
+  self_type: U32
+  self_shape: SelfHostPlannedValueShape
+  result_type: U32
+  result_shape: SelfHostPlannedValueShape
+  offset: U32
+}
+
+pub struct SelfHostPlannedModuleFunctions {
+  module_id: U64
+  callables: Array<SelfHostPlannedCallable>
+  callable_by_declaration: Array<U32>
+  parameters: Array<SelfHostPlannedParameter>
+}
+
+fn self_host_function_plan_slots(length: U32) -> Array<U32> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
+}
+
+fn self_host_function_plan_body(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> Option<U64> {
+  for body in collected.bodies {
+    if self_host_u64_equal(body.declaration, declaration) {
+      return Option::Some(body.id)
+    }
+  }
+  Option::None
+}
+
+fn self_host_function_plan_builtin(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> Bytes {
+  for value in collected.builtins {
+    if self_host_u64_equal(value.declaration, declaration) {
+      return value.builtin_name
+    }
+  }
+  b""
+}
+
+fn self_host_function_plan_test_name(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> Bytes {
+  for value in collected.tests {
+    if self_host_u64_equal(value.declaration, declaration) {
+      return value.display_name
+    }
+  }
+  b""
+}
+
+fn self_host_function_plan_is_test_entry(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> Bool {
+  for value in collected.tests {
+    if self_host_u64_equal(value.declaration, declaration) {
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_function_plan_impl_target(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  declaration: U64,
+) -> U32 {
+  let mut index = 0u32
+  while index {
+    current => if current < collected.impls.length() {
+      if self_host_u64_equal(collected.impls[current].declaration, declaration) {
+        break resolved.impl_target_types[current]
+      }
+      continue current + 1u32
+    } else {
+      break resolved.error_type
+    }
+  }
+}
+
+fn self_host_function_plan_foreign_identity(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> (Bytes, Bytes) {
+  for function_ in collected.foreign_functions {
+    if self_host_u64_equal(function_.declaration, declaration) {
+      for library in collected.foreign_libraries {
+        if self_host_u64_equal(library.declaration, function_.library) {
+          return (library.logical_name, function_.export_name)
+        }
+      }
+    }
+  }
+  (b"", b"")
+}
+
+fn self_host_function_plan_representation_type(
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+  self_owner: U64,
+  self_type: U32,
+) -> U32 {
+  let mut current = root
+  while current {
+    type_ => match resolved.types[type_] {
+      SelfHostResolvedType::SelfType(owner) => if self_host_u64_equal(
+        owner,
+        self_owner,
+      ) && !self_host_u32_equal(self_type, resolved.error_type) {
+        break self_type
+      } else {
+        break type_
+      }
+      SelfHostResolvedType::AppliedType(base, _) => continue base
+      _ => break type_
+    }
+  }
+}
+
+pub struct SelfHostPlannedParameterSummary {
+  span: SelfHostHirSpan
+  has_receiver: Bool
+  receiver_type: U32
+}
+
+fn self_host_plan_callable_parameters(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  parameters: Array<SelfHostPlannedParameter>,
+  declaration: U64,
+  owner: U64,
+  self_type: U32,
+) -> SelfHostPlannedParameterSummary {
+  let source_parameters = collected.parameters_of(declaration)
+  let parameter_start = parameters.length()
+  let mut has_receiver = false
+  let mut receiver_type = resolved.error_type
+  let mut parameter = 0u32
+  let _ = while parameter {
+    index => if index < source_parameters.length {
+      let source_index = self_host_u32_add(source_parameters.start, index)
+      let source = collected.parameters[source_index]
+      let type_ = resolved.parameter_types[source_index]
+      let representation = self_host_function_plan_representation_type(
+        resolved,
+        type_,
+        owner,
+        self_type,
+      )
+      let shape = self_host_planned_resolved_value_shape(resolved, representation)
+      let receiver = source.kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
+      if receiver {
+        has_receiver = true
+        receiver_type = representation
+      }
+      parameters.push(SelfHostPlannedParameter::{
+        parameter: source.id
+        declaration: declaration
+        index: source.index
+        receiver: receiver
+        type_: type_
+        shape: shape
+        offset: source.offset
+      })
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostPlannedParameterSummary::{
+    span: SelfHostHirSpan::{
+      start: parameter_start
+      length: parameters.length() - parameter_start
+    }
+    has_receiver: has_receiver
+    receiver_type: receiver_type
+  }
+}
+
+fn self_host_push_planned_callable(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  callables: Array<SelfHostPlannedCallable>,
+  callable_by_declaration: Array<U32>,
+  callable_index: U32,
+  declaration: U64,
+  name: String,
+  visibility: SelfHostSemanticVisibility,
+  kind: SelfHostPlannedCallableKind,
+  owner_generics: SelfHostHirSpan,
+  self_type: U32,
+  parameter_summary: SelfHostPlannedParameterSummary,
+  result_type: U32,
+  result_shape: SelfHostPlannedValueShape,
+  offset: U32,
+) -> Unit {
+  let self_shape = if parameter_summary.has_receiver {
+    self_host_planned_resolved_value_shape(
+      resolved,
+      parameter_summary.receiver_type,
+    )
+  } else {
+    SelfHostPlannedValueShape::ErrorPlannedValueShape
+  }
+  let compiler_owned = self_host_semantic_id_module(declaration) >= 4294901760u64
+  let is_test_entry = self_host_function_plan_is_test_entry(collected, declaration)
+  let planned_visibility = if compiler_owned {
+    SelfHostSemanticVisibility::ModuleVisible
+  } else {
+    visibility
+  }
+  callable_by_declaration[self_host_semantic_id_local(declaration)] = callables.length()
+  callables.push(SelfHostPlannedCallable::{
+    declaration: declaration
+    name: name.as_bytes()
+    visibility: planned_visibility
+    compiler_owned: compiler_owned
+    is_test: collected.declaration_is_test_only(declaration) || is_test_entry
+    is_test_entry: is_test_entry
+    test_name: self_host_function_plan_test_name(collected, declaration)
+    kind: kind
+    owner_generic_parameters: owner_generics
+    generic_parameters: collected.generic_parameters_of(declaration)
+    parameters: parameter_summary.span
+    has_receiver: parameter_summary.has_receiver
+    self_type: self_type
+    self_shape: self_shape
+    result_type: result_type
+    result_shape: result_shape
+    offset: offset
+  })
+}
+
+fn self_host_append_planned_callable(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  callables: Array<SelfHostPlannedCallable>,
+  parameters: Array<SelfHostPlannedParameter>,
+  callable_by_declaration: Array<U32>,
+  callable_index: U32,
+  declaration: U64,
+  name: String,
+  visibility: SelfHostSemanticVisibility,
+  kind: SelfHostPlannedCallableKind,
+  owner: U64,
+  owner_generics: SelfHostHirSpan,
+  self_type: U32,
+  offset: U32,
+) -> Unit {
+  let parameter_summary = self_host_plan_callable_parameters(
+    collected,
+    resolved,
+    parameters,
+    declaration,
+    owner,
+    self_type,
+  )
+  let result_type = resolved.callable_return_types[callable_index]
+  let result_representation = self_host_function_plan_representation_type(
+    resolved,
+    result_type,
+    owner,
+    self_type,
+  )
+  let result_shape = self_host_planned_resolved_value_shape(
+    resolved,
+    result_representation,
+  )
+  self_host_push_planned_callable(
+    collected,
+    resolved,
+    callables,
+    callable_by_declaration,
+    callable_index,
+    declaration,
+    name,
+    visibility,
+    kind,
+    owner_generics,
+    self_type,
+    parameter_summary,
+    result_type,
+    result_shape,
+    offset,
+  )
+}
+
+fn self_host_plan_top_level_callable(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  callables: Array<SelfHostPlannedCallable>,
+  parameters: Array<SelfHostPlannedParameter>,
+  lookup: Array<U32>,
+  callable_index: U32,
+  declaration: U64,
+) -> Bool {
+  for value in collected.declarations {
+    if self_host_u64_equal(value.id, declaration) {
+      let kind = if value.kind is SelfHostCollectedDeclKind::BuiltinDecl {
+        SelfHostPlannedCallableKind::PlannedBuiltinCallable(
+          self_host_function_plan_builtin(collected, declaration),
+        )
+      } else {
+        SelfHostPlannedCallableKind::PlannedFunctionCallable(
+          match self_host_function_plan_body(collected, declaration) {
+            Option::Some(body) => body
+            Option::None => 0u64
+          },
+        )
+      }
+      let owner_generics = SelfHostHirSpan::{
+        start: 0u32
+        length: 0u32
+      }
+      self_host_append_planned_callable(
+        collected, resolved, callables, parameters, lookup, callable_index,
+        declaration, collected.name(value.name), value.visibility, kind,
+        declaration, owner_generics, resolved.error_type, value.offset,
+      )
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_plan_method_callable(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  callables: Array<SelfHostPlannedCallable>,
+  parameters: Array<SelfHostPlannedParameter>,
+  lookup: Array<U32>,
+  callable_index: U32,
+  declaration: U64,
+) -> Bool {
+  for value in collected.methods {
+    if self_host_u64_equal(value.id, declaration) {
+      let owner_generics = collected.generic_parameters_of(value.parent)
+      match value.kind {
+        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => {
+          let (library, export_name) = self_host_function_plan_foreign_identity(
+            collected,
+            declaration,
+          )
+          self_host_append_planned_callable(
+            collected, resolved, callables, parameters, lookup, callable_index,
+            declaration, collected.name(value.name), value.visibility,
+            SelfHostPlannedCallableKind::PlannedForeignCallable(
+              library,
+              export_name,
+            ),
+            value.parent, owner_generics, resolved.error_type, value.offset,
+          )
+        }
+        SelfHostCollectedMethodKind::TraitMethodDecl => {
+          self_host_append_planned_callable(
+            collected, resolved, callables, parameters, lookup, callable_index,
+            declaration, collected.name(value.name), value.visibility,
+            SelfHostPlannedCallableKind::PlannedTraitMethodCallable(value.parent),
+            value.parent, owner_generics, resolved.error_type, value.offset,
+          )
+        }
+        SelfHostCollectedMethodKind::ImplMethodDecl => {
+          let target = self_host_function_plan_impl_target(
+            collected,
+            resolved,
+            value.parent,
+          )
+          self_host_append_planned_callable(
+            collected, resolved, callables, parameters, lookup, callable_index,
+            declaration, collected.name(value.name), value.visibility,
+            SelfHostPlannedCallableKind::PlannedImplMethodCallable(
+              value.parent,
+              self_host_function_plan_body(collected, declaration),
+            ),
+            value.parent, owner_generics, target, value.offset,
+          )
+        }
+      }
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_plan_module_functions(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+) -> SelfHostPlannedModuleFunctions {
+  let callables = []
+  let parameters = []
+  let lookup = self_host_function_plan_slots(
+    collected.declaration_locations.length(),
+  )
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < collected.callables.length() {
+      let declaration = collected.callables[current].declaration
+      let top_level = self_host_plan_top_level_callable(
+        collected, resolved, callables, parameters, lookup, current, declaration,
+      )
+      if !top_level {
+        let _ = self_host_plan_method_callable(
+          collected, resolved, callables, parameters, lookup, current, declaration,
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostPlannedModuleFunctions::{
+    module_id: collected.module_id
+    callables: callables
+    callable_by_declaration: lookup
+    parameters: parameters
+  }
+}
