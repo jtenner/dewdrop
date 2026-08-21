@@ -101,3 +101,70 @@ test "trait evidence rejects a nonmatching target" {
     "nonmatching target",
   )
 }
+
+test "trait evidence tree publishes recursive prerequisites" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run<u: Witness<Leaf>>(good: Box<Leaf>) -> Unit {\n}\n",
+    b"pub trait Base {}\npub trait Witness<t> {}\npub struct Leaf {}\npub struct Box<t> {}\nimpl Base for Leaf {}\nimpl<t: Base> Witness<t> for Box<t> {}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(
+    collected,
+    fixture.imports,
+  )
+  let bound = fixture.imports.resolved.generic_bound_types[0u32]
+  let target = fixture.imports.resolved.parameter_types[0u32]
+  let tree = self_host_select_trait_evidence_tree(
+    collected,
+    fixture.imports,
+    index,
+    bound,
+    target,
+  )
+  match tree.root {
+    Option::Some(root) => {
+      assert(self_host_u32_equal(root, 1u32), "postorder root")
+      assert(tree.nodes.length() == 2u32, "root and prerequisite")
+      let root_node = tree.nodes[root]
+      assert(self_host_u32_equal(root_node.prerequisites.length, 1u32), "one prerequisite")
+      assert(
+        self_host_u32_equal(
+          tree.children[root_node.prerequisites.start],
+          0u32,
+        ),
+        "prerequisite child",
+      )
+      assert(self_host_u32_equal(root_node.arguments.length, 1u32), "generic argument")
+      match tree.arguments[root_node.arguments.start] {
+        SelfHostTraitEvidenceArgument::ShapeTraitEvidenceArgument(shape) => assert(
+          shape is SelfHostPlannedValueShape::RefPlannedValueShape,
+          "Leaf argument shape",
+        )
+      }
+    }
+    Option::None => assert(false, "expected evidence tree")
+  }
+}
+
+test "trait evidence tree rolls back missing prerequisites" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run<u: Witness<I32>>(bad: Box<I32>) -> Unit {\n}\n",
+    b"pub trait Base {}\npub trait Witness<t> {}\npub struct Box<t> {}\nimpl<t: Base> Witness<t> for Box<t> {}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(
+    collected,
+    fixture.imports,
+  )
+  let tree = self_host_select_trait_evidence_tree(
+    collected,
+    fixture.imports,
+    index,
+    fixture.imports.resolved.generic_bound_types[0u32],
+    fixture.imports.resolved.parameter_types[0u32],
+  )
+  assert(tree.root is Option::None, "missing root")
+  assert(tree.nodes.length() == 0u32, "rolled back nodes")
+  assert(tree.children.length() == 0u32, "rolled back children")
+  assert(tree.arguments.length() == 0u32, "rolled back arguments")
+}
