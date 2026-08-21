@@ -7,7 +7,7 @@
   "materialized_specializations": { "exact": 4 },
   "call_refs": { "min": 12, "max": 14 },
   "return_call_refs": { "exact": 0 },
-  "struct_news": { "min": 21, "max": 23 },
+  "struct_news": { "min": 15, "max": 17 },
   "array_news": { "max": 1 },
   "ref_casts": { "max": 66 },
   "ref_tests": { "exact": 7 }
