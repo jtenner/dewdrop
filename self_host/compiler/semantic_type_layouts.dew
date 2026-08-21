@@ -1,0 +1,342 @@
+open dew.std.option
+
+pub enum SelfHostPlannedNominalLayoutKind {
+  PlannedStructLayout(SelfHostHirSpan)
+  PlannedEnumLayout(SelfHostHirSpan)
+  PlannedForeignTypeLayout
+}
+
+pub struct SelfHostPlannedNominalLayout {
+  declaration: U64
+  visibility: SelfHostSemanticVisibility
+  generic_parameters: SelfHostHirSpan
+  test_only: Bool
+  kind: SelfHostPlannedNominalLayoutKind
+  offset: U32
+}
+
+pub struct SelfHostPlannedFieldLayout {
+  field: U64
+  declaration: U64
+  variant: Option<U64>
+  mutable_: Bool
+  name: String
+  index: U32
+  type_: U32
+  shape: SelfHostPlannedValueShape
+  offset: U32
+}
+
+pub enum SelfHostPlannedVariantPayloadLayout {
+  PlannedUnitVariantLayout
+  PlannedTupleVariantLayout(SelfHostHirSpan)
+  PlannedStructVariantLayout(SelfHostHirSpan)
+}
+
+pub struct SelfHostPlannedVariantLayout {
+  variant: U64
+  declaration: U64
+  tag: U32
+  payload: SelfHostPlannedVariantPayloadLayout
+  offset: U32
+}
+
+pub struct SelfHostPlannedModuleTypeLayouts {
+  module_id: U64
+  layouts: Array<SelfHostPlannedNominalLayout>
+  layout_by_declaration: Array<U32>
+  fields: Array<SelfHostPlannedFieldLayout>
+  variants: Array<SelfHostPlannedVariantLayout>
+  payload_types: Array<U32>
+  payload_shapes: Array<SelfHostPlannedValueShape>
+}
+
+fn self_host_layout_empty_span_slots(length: U32) -> Array<SelfHostHirSpan> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(SelfHostHirSpan::{
+        start: 0u32
+        length: 0u32
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_layout_u32_slots(length: U32, value: U32) -> Array<U32> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(value)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_layout_field_spans(
+  collected: SelfHostCollectedModule,
+) -> Array<SelfHostHirSpan> {
+  let spans = self_host_layout_empty_span_slots(
+    collected.declaration_locations.length(),
+  )
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < collected.fields.length() {
+      let field = collected.fields[current]
+      match field.variant {
+        Option::None => {
+          let declaration = self_host_semantic_id_local(field.declaration)
+          let span = spans[declaration]
+          if self_host_u32_equal(span.length, 0u32) {
+            spans[declaration] = SelfHostHirSpan::{
+              start: current
+              length: 1u32
+            }
+          } else {
+            spans[declaration] = SelfHostHirSpan::{
+              start: span.start
+              length: self_host_u32_add(span.length, 1u32)
+            }
+          }
+        }
+        Option::Some(_) => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  spans
+}
+
+fn self_host_layout_variant_spans(
+  collected: SelfHostCollectedModule,
+) -> Array<SelfHostHirSpan> {
+  let spans = self_host_layout_empty_span_slots(
+    collected.declaration_locations.length(),
+  )
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < collected.variants.length() {
+      let variant = collected.variants[current]
+      let declaration = self_host_semantic_id_local(variant.declaration)
+      let span = spans[declaration]
+      if self_host_u32_equal(span.length, 0u32) {
+        spans[declaration] = SelfHostHirSpan::{
+              start: current
+              length: 1u32
+            }
+      } else {
+        spans[declaration] = SelfHostHirSpan::{
+          start: span.start
+          length: self_host_u32_add(span.length, 1u32)
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  spans
+}
+
+fn self_host_layout_variant_field_spans(
+  collected: SelfHostCollectedModule,
+) -> Array<SelfHostHirSpan> {
+  let spans = self_host_layout_empty_span_slots(collected.variants.length())
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < collected.fields.length() {
+      let field = collected.fields[current]
+      match field.variant {
+        Option::Some(variant) => {
+          let slot = self_host_semantic_id_local(variant)
+          let span = spans[slot]
+          if self_host_u32_equal(span.length, 0u32) {
+            spans[slot] = SelfHostHirSpan::{
+              start: current
+              length: 1u32
+            }
+          } else {
+            spans[slot] = SelfHostHirSpan::{
+              start: span.start
+              length: self_host_u32_add(span.length, 1u32)
+            }
+          }
+        }
+        Option::None => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  spans
+}
+
+fn self_host_plan_module_type_layouts(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+) -> SelfHostPlannedModuleTypeLayouts {
+  let declaration_fields = self_host_layout_field_spans(collected)
+  let declaration_variants = self_host_layout_variant_spans(collected)
+  let variant_fields = self_host_layout_variant_field_spans(collected)
+  let declaration_field_counts = self_host_layout_u32_slots(
+    collected.declaration_locations.length(), 0u32,
+  )
+  let variant_field_counts = self_host_layout_u32_slots(
+    collected.variants.length(), 0u32,
+  )
+  let fields = []
+  let mut field_index = 0u32
+  let _ = while field_index {
+    current => if current < collected.fields.length() {
+      let field = collected.fields[current]
+      let index = match field.variant {
+        Option::Some(variant) => {
+          let slot = self_host_semantic_id_local(variant)
+          let value = variant_field_counts[slot]
+          variant_field_counts[slot] = self_host_u32_add(value, 1u32)
+          value
+        }
+        Option::None => {
+          let slot = self_host_semantic_id_local(field.declaration)
+          let value = declaration_field_counts[slot]
+          declaration_field_counts[slot] = self_host_u32_add(value, 1u32)
+          value
+        }
+      }
+      let type_ = resolved.field_types[current]
+      let shape = self_host_planned_resolved_value_shape(resolved, type_)
+      fields.push(SelfHostPlannedFieldLayout::{
+        field: field.id
+        declaration: field.declaration
+        variant: field.variant
+        mutable_: field.mutable_
+        name: collected.name(field.name)
+        index: index
+        type_: type_
+        shape: shape
+        offset: field.offset
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let variants = []
+  let payload_types = []
+  let payload_shapes = []
+  let mut variant_index = 0u32
+  let mut previous_declaration = 18446744073709551615u64
+  let mut tag = 0u32
+  let _ = while variant_index {
+    current => if current < collected.variants.length() {
+      let variant = collected.variants[current]
+      if !self_host_u64_equal(previous_declaration, variant.declaration) {
+        previous_declaration = variant.declaration
+        tag = 0u32
+      }
+      let payload = match variant.kind {
+        SelfHostCollectedVariantKind::UnitVariantDecl => {
+          SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout
+        }
+        SelfHostCollectedVariantKind::TupleVariantDecl => {
+          let source = resolved.variant_payloads[current]
+          let start = payload_types.length()
+          let mut item = 0u32
+          let _ = while item {
+            payload_index => if payload_index < source.length {
+              let type_ = resolved.signature_type_lists[
+                self_host_u32_add(source.start, payload_index)
+              ]
+              payload_types.push(type_)
+              payload_shapes.push(
+                self_host_planned_resolved_value_shape(resolved, type_),
+              )
+              continue payload_index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(
+            SelfHostHirSpan::{
+              start: start
+              length: payload_types.length() - start
+            },
+          )
+        }
+        SelfHostCollectedVariantKind::StructVariantDecl => {
+          SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(
+            variant_fields[current],
+          )
+        }
+      }
+      variants.push(SelfHostPlannedVariantLayout::{
+        variant: variant.id
+        declaration: variant.declaration
+        tag: tag
+        payload: payload
+        offset: variant.offset
+      })
+      tag = self_host_u32_add(tag, 1u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let layouts = []
+  let layout_by_declaration = self_host_layout_u32_slots(
+    collected.declaration_locations.length(), 4294967295u32,
+  )
+  for declaration in collected.declarations {
+    let kind = match declaration.kind {
+      SelfHostCollectedDeclKind::StructDecl => Option::Some(
+        SelfHostPlannedNominalLayoutKind::PlannedStructLayout(
+          declaration_fields[self_host_semantic_id_local(declaration.id)],
+        ),
+      )
+      SelfHostCollectedDeclKind::EnumDecl => Option::Some(
+        SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(
+          declaration_variants[self_host_semantic_id_local(declaration.id)],
+        ),
+      )
+      SelfHostCollectedDeclKind::ForeignTypeDecl => Option::Some(
+        SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout,
+      )
+      _ => Option::None
+    }
+    match kind {
+      Option::Some(layout_kind) => {
+        layout_by_declaration[self_host_semantic_id_local(declaration.id)] = layouts.length()
+        layouts.push(SelfHostPlannedNominalLayout::{
+          declaration: declaration.id
+          visibility: declaration.visibility
+          generic_parameters: collected.generic_parameters_of(declaration.id)
+          test_only: collected.declaration_is_test_only(declaration.id)
+          kind: layout_kind
+          offset: declaration.offset
+        })
+      }
+      Option::None => {}
+    }
+  }
+  SelfHostPlannedModuleTypeLayouts::{
+    module_id: collected.module_id
+    layouts: layouts
+    layout_by_declaration: layout_by_declaration
+    fields: fields
+    variants: variants
+    payload_types: payload_types
+    payload_shapes: payload_shapes
+  }
+}

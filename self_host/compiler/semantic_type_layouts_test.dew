@@ -1,0 +1,71 @@
+open dew.std.testing
+
+test "type layouts retain struct fields and shapes" {
+  let collected = self_host_collect_bytes(
+    1000u64,
+    b"struct Pair<t> {\n  left: I32\n  right: t\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let layouts = self_host_plan_module_type_layouts(collected, resolved)
+  assert(layouts.layouts.length() == 1u32, "one layout")
+  match layouts.layouts[0u32].kind {
+    SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) => assert(
+      fields.length == 2u32,
+      "two fields",
+    )
+    _ => assert(false, "struct layout")
+  }
+  assert(self_host_u32_equal(layouts.fields[0u32].index, 0u32), "first index")
+  assert(self_host_u32_equal(layouts.fields[1u32].index, 1u32), "second index")
+  assert(
+    layouts.fields[0u32].shape is SelfHostPlannedValueShape::I32PlannedValueShape,
+    "I32 field shape",
+  )
+  assert(
+    layouts.fields[1u32].shape is SelfHostPlannedValueShape::GenericPlannedValueShape,
+    "generic field shape",
+  )
+}
+
+test "type layouts retain enum tags and payload shapes" {
+  let collected = self_host_collect_bytes(
+    1001u64,
+    b"enum Message {\n  Empty\n  Count(I32)\n  Named {\n    value: String\n  }\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let layouts = self_host_plan_module_type_layouts(collected, resolved)
+  assert(layouts.variants.length() == 3u32, "three variants")
+  assert(self_host_u32_equal(layouts.variants[0u32].tag, 0u32), "tag zero")
+  assert(self_host_u32_equal(layouts.variants[1u32].tag, 1u32), "tag one")
+  assert(self_host_u32_equal(layouts.variants[2u32].tag, 2u32), "tag two")
+  match layouts.variants[1u32].payload {
+    SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
+      assert(payload.length == 1u32, "tuple payload")
+      assert(
+        layouts.payload_shapes[payload.start] is SelfHostPlannedValueShape::I32PlannedValueShape,
+        "payload shape",
+      )
+    }
+    _ => assert(false, "tuple variant")
+  }
+  match layouts.variants[2u32].payload {
+    SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(fields) => assert(
+      fields.length == 1u32,
+      "struct payload",
+    )
+    _ => assert(false, "struct variant")
+  }
+}
+
+test "type layouts include foreign nominal references" {
+  let collected = self_host_collect_bytes(
+    1002u64,
+    b"foreign type Handle\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let layouts = self_host_plan_module_type_layouts(collected, resolved)
+  match layouts.layouts[0u32].kind {
+    SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => {}
+    _ => assert(false, "foreign layout")
+  }
+}
