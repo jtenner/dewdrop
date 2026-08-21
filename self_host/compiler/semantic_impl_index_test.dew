@@ -16,27 +16,35 @@ test "implementation index accepts distinct concrete heads" {
   assert(index.implementations[1u32].coherent, "second coherent")
 }
 
-test "implementation index diagnoses generic overlap" {
+test "implementation index ranks strict generic specialization" {
   let index = self_host_impl_index_source(
     b"pub trait Mark {}\npub struct Box<t> {}\nimpl<t> Mark for Box<t> {}\nimpl Mark for Box<I32> {}\n",
   )
+  assert(index.diagnostic_count() == 0u32, "specialization diagnostics")
+  assert(index.implementations[0u32].coherent, "general coherent")
+  assert(index.implementations[1u32].coherent, "specific coherent")
+  assert(
+    self_host_u32_equal(index.implementations[1u32].specificity, 1u32),
+    "specificity",
+  )
+}
+
+test "implementation index diagnoses equivalent generic overlap" {
+  let index = self_host_impl_index_source(
+    b"pub trait Mark {}\npub struct Box<t> {}\nimpl<t> Mark for Box<t> {}\nimpl<u> Mark for Box<u> {}\n",
+  )
   let mut overlap = 0u32
-  let mut diagnostic = 0u32
-  let _ = while diagnostic {
-    current => if current < index.diagnostic_count() {
-      match index.diagnostic_at(current) {
-        SelfHostImplIndexDiagnostic::OverlappingTraitImpl(_, _, _, _, _) => {
-          overlap = overlap + 1u32
-        }
-        _ => {}
+  for diagnostic in index.diagnostics {
+    match diagnostic {
+      SelfHostImplIndexDiagnostic::OverlappingTraitImpl(_, _, _, _, _) => {
+        overlap = overlap + 1u32
       }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
+      _ => {}
     }
   }
   assert(overlap == 1u32, "overlap diagnostic")
-  assert(!index.implementations[1u32].coherent, "overlap incoherent")
+  assert(!index.implementations[0u32].coherent, "first overlap incoherent")
+  assert(!index.implementations[1u32].coherent, "second overlap incoherent")
 }
 
 test "implementation index diagnoses duplicate inherent methods" {
@@ -109,6 +117,53 @@ test "implementation index diagnoses trait method shape mismatches" {
   }
   assert(receiver == 1u32, "receiver mismatch")
   assert(arity == 1u32, "parameter mismatch")
+}
+
+test "implementation index validates substituted trait method signatures" {
+  let valid = self_host_impl_index_source(
+    b"pub trait Convert<t> {\n  fn convert<u>(self, input: u) -> t\n}\npub struct Box<t> {}\nimpl<t> Convert<t> for Box<t> {\n  fn convert<u>(self, input: u) -> t {\n    self_host_semantic_unit()\n  }\n}\n",
+  )
+  let mismatch = self_host_impl_index_source(
+    b"pub trait Read {\n  fn read(self, input: I32) -> I32\n}\npub struct Box {}\nimpl Read for Box {\n  fn read(self, input: String) -> String {\n    input\n  }\n}\n",
+  )
+  let mut parameter_mismatch = 0u32
+  let mut return_mismatch = 0u32
+  for diagnostic in mismatch.diagnostics {
+    match diagnostic {
+      SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(_, _, _, _) => {
+        parameter_mismatch = parameter_mismatch + 1u32
+      }
+      SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(_, _, _) => {
+        return_mismatch = return_mismatch + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(valid.diagnostic_count() == 0u32, "substituted signature")
+  assert(parameter_mismatch == 1u32, "parameter type mismatch")
+  assert(return_mismatch == 1u32, "return type mismatch")
+}
+
+test "implementation index publishes coherent method dispatch" {
+  let index = self_host_impl_index_source(
+    b"pub trait Read {\n  fn read(self) -> I32\n}\npub struct Box {}\nimpl Read for Box {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Box {\n  fn clear(self) -> Unit {\n  }\n}\n",
+  )
+  assert(index.diagnostic_count() == 0u32, "dispatch diagnostics")
+  assert(index.methods.length() == 2u32, "indexed methods")
+  assert(index.method_dispatch.length() == 2u32, "method dispatch")
+  assert(index.trait_method_dispatch.length() == 1u32, "trait dispatch")
+  assert(
+    index.methods[index.trait_method_dispatch[0u32].method_index].requirement is Option::Some(_),
+    "trait requirement",
+  )
+}
+
+test "implementation index omits incoherent method dispatch" {
+  let index = self_host_impl_index_source(
+    b"pub trait Read {\n  fn read(self) -> I32\n}\npub struct Box {}\nimpl Read for Box {\n  fn read(self) -> String {\n    \"bad\"\n  }\n}\n",
+  )
+  assert(index.method_dispatch.length() == 0u32, "incoherent dispatch")
+  assert(index.trait_method_dispatch.length() == 0u32, "incoherent trait dispatch")
 }
 
 test "implementation index diagnoses orphan imported trait implementations" {

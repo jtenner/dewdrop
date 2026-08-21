@@ -12,14 +12,39 @@ pub enum SelfHostIndexedImplKind {
   TraitIndexedImpl(U64)
 }
 
+pub struct SelfHostIndexedImplMethod {
+  declaration: U64
+  requirement: Option<U64>
+  instance: Bool
+}
+
+pub struct SelfHostIndexedMethodDispatch {
+  target_head: SelfHostImplTargetHead
+  name: U32
+  inherent: Bool
+  instance: Bool
+  implementation: U32
+  method_index: U32
+}
+
+pub struct SelfHostIndexedTraitMethodDispatch {
+  trait_declaration: U64
+  name: U32
+  instance: Bool
+  implementation: U32
+  method_index: U32
+}
+
 pub struct SelfHostIndexedImpl {
   declaration: U64
   kind: SelfHostIndexedImplKind
   target_head: SelfHostImplTargetHead
   trait_type: Option<U32>
   target_type: U32
+  methods: SelfHostHirSpan
   valid: Bool
   coherent: Bool
+  specificity: U32
 }
 
 pub enum SelfHostImplIndexDiagnostic {
@@ -33,6 +58,8 @@ pub enum SelfHostImplIndexDiagnostic {
   TraitMethodReceiverMismatch(U64, U64, U32)
   TraitMethodParameterCountMismatch(U64, U64, U32, U32, U32)
   TraitMethodGenericParameterCountMismatch(U64, U64, U32, U32, U32)
+  TraitMethodParameterTypeMismatch(U64, U64, U32, U32)
+  TraitMethodReturnTypeMismatch(U64, U64, U32)
   DuplicateInherentMethod(U32, U64, U64, U32)
 }
 
@@ -49,6 +76,8 @@ impl SelfHostImplIndexDiagnostic {
       SelfHostImplIndexDiagnostic::TraitMethodReceiverMismatch(_, _, offset) => offset
       SelfHostImplIndexDiagnostic::TraitMethodParameterCountMismatch(_, _, _, _, offset) => offset
       SelfHostImplIndexDiagnostic::TraitMethodGenericParameterCountMismatch(_, _, _, _, offset) => offset
+      SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(_, _, _, offset) => offset
+      SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(_, _, offset) => offset
       SelfHostImplIndexDiagnostic::DuplicateInherentMethod(_, _, _, offset) => offset
     }
   }
@@ -57,6 +86,9 @@ impl SelfHostImplIndexDiagnostic {
 pub struct SelfHostModuleImplIndex {
   module_id: U64
   implementations: Array<SelfHostIndexedImpl>
+  methods: Array<SelfHostIndexedImplMethod>
+  method_dispatch: Array<SelfHostIndexedMethodDispatch>
+  trait_method_dispatch: Array<SelfHostIndexedTraitMethodDispatch>
   diagnostics: Array<SelfHostImplIndexDiagnostic>
 }
 
@@ -518,6 +550,43 @@ fn self_host_impl_patterns_overlap(
   )
 }
 
+fn self_host_impl_pattern_matches(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  general: SelfHostIndexedImpl,
+  specific: SelfHostIndexedImpl,
+) -> Bool {
+  let importer = SelfHostImplPatternImporter::new(resolved)
+  self_host_impl_add_local_generics(importer, collected, general.declaration)
+  let general_trait = match general.trait_type {
+    Option::Some(type_) => importer.import_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  let general_target = importer.import_type(general.target_type)
+  let specific_trait = match specific.trait_type {
+    Option::Some(type_) => importer.solver.resolved_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  let specific_target = importer.solver.resolved_type(specific.target_type)
+  importer.solver.unify(
+    general_trait,
+    specific_trait,
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  ) && importer.solver.unify(
+    general_target,
+    specific_target,
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  )
+}
+
 fn self_host_impl_method_duplicate(
   collected: SelfHostCollectedModule,
   left: U64,
@@ -562,8 +631,28 @@ fn self_host_impl_mark_incoherent(
     target_head: value.target_head
     trait_type: value.trait_type
     target_type: value.target_type
+    methods: value.methods
     valid: value.valid
     coherent: false
+    specificity: value.specificity
+  }
+}
+
+fn self_host_impl_add_specificity(
+  implementations: Array<SelfHostIndexedImpl>,
+  index: U32,
+) -> Unit {
+  let value = implementations[index]
+  implementations[index] = SelfHostIndexedImpl::{
+    declaration: value.declaration
+    kind: value.kind
+    target_head: value.target_head
+    trait_type: value.trait_type
+    target_type: value.target_type
+    methods: value.methods
+    valid: value.valid
+    coherent: value.coherent
+    specificity: self_host_u32_add(value.specificity, 1u32)
   }
 }
 
@@ -579,14 +668,290 @@ fn self_host_impl_method_has_receiver(
   }
 }
 
+struct SelfHostImplTypeContext {
+  owner_parameters: SelfHostHirSpan
+  owner_arguments: SelfHostHirSpan
+  method_parameters: SelfHostHirSpan
+  method_arguments: SelfHostHirSpan
+  self_owner: U64
+  self_type: U32
+}
+
+fn self_host_impl_generic_relative(
+  collected: SelfHostCollectedModule,
+  span: SelfHostHirSpan,
+  parameter: U64,
+) -> Option<U32> {
+  let mut index = 0u32
+  while index {
+    current => if current < span.length {
+      let candidate = collected.generic_parameters[
+        self_host_u32_add(span.start, current)
+      ].id
+      if self_host_u64_equal(candidate, parameter) {
+        break Option::Some(current)
+      }
+      continue current + 1u32
+    } else {
+      break Option::None
+    }
+  }
+}
+
+fn self_host_impl_substitute_type(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+  context: SelfHostImplTypeContext,
+) -> U32 {
+  let mut current = root
+  let mut remaining = resolved.types.length() + 1u32
+  while remaining {
+    count => if self_host_u32_greater(count, 0u32) {
+      let next = match resolved.types[current] {
+        SelfHostResolvedType::GenericParameterType(parameter) => match self_host_impl_generic_relative(
+          collected,
+          context.owner_parameters,
+          parameter,
+        ) {
+          Option::Some(relative) => if relative < context.owner_arguments.length {
+            resolved.type_arguments[
+              self_host_u32_add(context.owner_arguments.start, relative)
+            ]
+          } else {
+            current
+          }
+          Option::None => match self_host_impl_generic_relative(
+            collected,
+            context.method_parameters,
+            parameter,
+          ) {
+            Option::Some(relative) => if relative < context.method_arguments.length {
+              resolved.generic_parameter_types[
+                self_host_u32_add(context.method_arguments.start, relative)
+              ]
+            } else {
+              current
+            }
+            Option::None => current
+          }
+        }
+        SelfHostResolvedType::SelfType(owner) => if self_host_u64_equal(
+          owner,
+          context.self_owner,
+        ) {
+          context.self_type
+        } else {
+          current
+        }
+        _ => current
+      }
+      if self_host_u32_equal(next, current) {
+        break current
+      }
+      current = next
+      continue count - 1u32
+    } else {
+      break current
+    }
+  }
+}
+
+fn self_host_impl_signature_types_equal(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  left_root: U32,
+  left_context: SelfHostImplTypeContext,
+  right_root: U32,
+  right_context: SelfHostImplTypeContext,
+) -> Bool {
+  let left_stack = [left_root]
+  let right_stack = [right_root]
+  while left_stack.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let left_source = match left_stack.pop() {
+        Option::Some(value) => value
+        Option::None => {
+          return false
+        }
+      }
+      let right_source = match right_stack.pop() {
+        Option::Some(value) => value
+        Option::None => {
+          return false
+        }
+      }
+      let left = self_host_impl_substitute_type(
+        collected,
+        resolved,
+        left_source,
+        left_context,
+      )
+      let right = self_host_impl_substitute_type(
+        collected,
+        resolved,
+        right_source,
+        right_context,
+      )
+      if !self_host_u32_equal(left, right) {
+        match resolved.types[left] {
+          SelfHostResolvedType::ErrorType => {}
+          SelfHostResolvedType::AppliedType(left_base, left_arguments) => match resolved.types[right] {
+            SelfHostResolvedType::AppliedType(right_base, right_arguments) => {
+              if !self_host_u32_equal(
+                left_arguments.length,
+                right_arguments.length,
+              ) {
+                return false
+              }
+              left_stack.push(left_base)
+              right_stack.push(right_base)
+              let mut index = left_arguments.length
+              let _ = while index {
+                current => if self_host_u32_greater(current, 0u32) {
+                  let previous = current - 1u32
+                  left_stack.push(
+                    resolved.type_arguments[
+                      self_host_u32_add(left_arguments.start, previous)
+                    ],
+                  )
+                  right_stack.push(
+                    resolved.type_arguments[
+                      self_host_u32_add(right_arguments.start, previous)
+                    ],
+                  )
+                  continue previous
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostResolvedType::ErrorType => {}
+            _ => {
+              return false
+            }
+          }
+          SelfHostResolvedType::ProductType(left_fields) => match resolved.types[right] {
+            SelfHostResolvedType::ProductType(right_fields) => {
+              if !self_host_u32_equal(left_fields.length, right_fields.length) {
+                return false
+              }
+              let mut index = left_fields.length
+              let _ = while index {
+                current => if self_host_u32_greater(current, 0u32) {
+                  let previous = current - 1u32
+                  left_stack.push(
+                    resolved.type_arguments[
+                      self_host_u32_add(left_fields.start, previous)
+                    ],
+                  )
+                  right_stack.push(
+                    resolved.type_arguments[
+                      self_host_u32_add(right_fields.start, previous)
+                    ],
+                  )
+                  continue previous
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostResolvedType::ErrorType => {}
+            _ => {
+              return false
+            }
+          }
+          SelfHostResolvedType::FunctionType(left_parameters, left_result) => match resolved.types[right] {
+            SelfHostResolvedType::FunctionType(right_parameters, right_result) => {
+              if !self_host_u32_equal(
+                left_parameters.length,
+                right_parameters.length,
+              ) {
+                return false
+              }
+              left_stack.push(left_result)
+              right_stack.push(right_result)
+              let mut index = left_parameters.length
+              let _ = while index {
+                current => if self_host_u32_greater(current, 0u32) {
+                  let previous = current - 1u32
+                  left_stack.push(
+                    resolved.type_arguments[
+                      self_host_u32_add(left_parameters.start, previous)
+                    ],
+                  )
+                  right_stack.push(
+                    resolved.type_arguments[
+                      self_host_u32_add(right_parameters.start, previous)
+                    ],
+                  )
+                  continue previous
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostResolvedType::ErrorType => {}
+            _ => {
+              return false
+            }
+          }
+          _ => match resolved.types[right] {
+            SelfHostResolvedType::ErrorType => {}
+            _ => {
+              return false
+            }
+          }
+        }
+      }
+      continue left_stack.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_u32_equal(right_stack.length(), 0u32)
+}
+
+fn self_host_impl_callable_index(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> Option<U32> {
+  let mut index = 0u32
+  while index {
+    current => if current < collected.callables.length() {
+      if self_host_u64_equal(
+        collected.callables[current].declaration,
+        declaration,
+      ) {
+        break Option::Some(current)
+      }
+      continue current + 1u32
+    } else {
+      break Option::None
+    }
+  }
+}
+
 fn self_host_check_trait_impl_methods(
   collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
   implementations: Array<SelfHostIndexedImpl>,
   implementation_index: U32,
   trait_declaration: U64,
   diagnostics: Array<SelfHostImplIndexDiagnostic>,
 ) -> Unit {
   let implementation = implementations[implementation_index]
+  let trait_type = match implementation.trait_type {
+    Option::Some(value) => value
+    Option::None => 0u32
+  }
+  let trait_arguments = match resolved.types[trait_type] {
+    SelfHostResolvedType::AppliedType(_, arguments) => arguments
+    _ => self_host_empty_hir_span(0u32)
+  }
+  let trait_owner_parameters = collected.generic_parameters_of(
+    trait_declaration,
+  )
   let mut method_index = 0u32
   let _ = while method_index {
     current => if current < collected.methods.length() {
@@ -685,10 +1050,11 @@ fn self_host_check_trait_impl_methods(
             }
             let method_generics = collected.generic_parameters_of(method.id)
             let trait_generics = collected.generic_parameters_of(trait_method.id)
-            if !self_host_u32_equal(
+            let generics_match = self_host_u32_equal(
               method_generics.length,
               trait_generics.length,
-            ) {
+            )
+            if !generics_match {
               self_host_impl_mark_incoherent(implementations, implementation_index)
               diagnostics.push(
                 SelfHostImplIndexDiagnostic::TraitMethodGenericParameterCountMismatch(
@@ -699,6 +1065,91 @@ fn self_host_check_trait_impl_methods(
                   method.offset,
                 ),
               )
+            }
+            if method_receiver == trait_receiver && generics_match && self_host_u32_equal(
+              method_parameters.length,
+              trait_parameters.length,
+            ) {
+              let trait_context = SelfHostImplTypeContext::{
+                owner_parameters: trait_owner_parameters
+                owner_arguments: trait_arguments
+                method_parameters: trait_generics
+                method_arguments: method_generics
+                self_owner: trait_declaration
+                self_type: implementation.target_type
+              }
+              let implementation_context = SelfHostImplTypeContext::{
+                owner_parameters: self_host_empty_hir_span(0u32)
+                owner_arguments: self_host_empty_hir_span(0u32)
+                method_parameters: self_host_empty_hir_span(0u32)
+                method_arguments: self_host_empty_hir_span(0u32)
+                self_owner: implementation.declaration
+                self_type: implementation.target_type
+              }
+              let mut parameter_index = 0u32
+              let _ = while parameter_index {
+                parameter => if parameter < trait_parameters.length {
+                  let trait_parameter_type = resolved.parameter_types[
+                    self_host_u32_add(trait_parameters.start, parameter)
+                  ]
+                  let implementation_parameter_type = resolved.parameter_types[
+                    self_host_u32_add(method_parameters.start, parameter)
+                  ]
+                  if !self_host_impl_signature_types_equal(
+                    collected,
+                    resolved,
+                    trait_parameter_type,
+                    trait_context,
+                    implementation_parameter_type,
+                    implementation_context,
+                  ) {
+                    self_host_impl_mark_incoherent(
+                      implementations,
+                      implementation_index,
+                    )
+                    diagnostics.push(
+                      SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(
+                        method.id,
+                        trait_method.id,
+                        parameter,
+                        method.offset,
+                      ),
+                    )
+                  }
+                  continue parameter + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              match self_host_impl_callable_index(collected, trait_method.id) {
+                Option::Some(trait_callable) => match self_host_impl_callable_index(
+                  collected,
+                  method.id,
+                ) {
+                  Option::Some(method_callable) => if !self_host_impl_signature_types_equal(
+                    collected,
+                    resolved,
+                    resolved.callable_return_types[trait_callable],
+                    trait_context,
+                    resolved.callable_return_types[method_callable],
+                    implementation_context,
+                  ) {
+                    self_host_impl_mark_incoherent(
+                      implementations,
+                      implementation_index,
+                    )
+                    diagnostics.push(
+                      SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(
+                        method.id,
+                        trait_method.id,
+                        method.offset,
+                      ),
+                    )
+                  }
+                  Option::None => {}
+                }
+                Option::None => {}
+              }
             }
           }
         }
@@ -806,8 +1257,10 @@ fn self_host_index_module_implementations(
         target_head: target_head
         trait_type: resolved.impl_trait_types[current]
         target_type: target_type
+        methods: self_host_empty_hir_span(0u32)
         valid: valid
         coherent: valid
+        specificity: 0u32
       })
       continue current + 1u32
     } else {
@@ -822,6 +1275,7 @@ fn self_host_index_module_implementations(
         match implementation.kind {
           SelfHostIndexedImplKind::TraitIndexedImpl(trait_declaration) => self_host_check_trait_impl_methods(
             collected,
+            resolved,
             implementations,
             current,
             trait_declaration,
@@ -858,16 +1312,38 @@ fn self_host_index_module_implementations(
                   left_impl,
                   right_impl,
                 ) {
-                  self_host_impl_mark_incoherent(implementations, right_index)
-                  diagnostics.push(
-                    SelfHostImplIndexDiagnostic::OverlappingTraitImpl(
-                      right_impl.declaration,
-                      left_impl.declaration,
-                      left_trait,
-                      right_impl.target_head,
-                      self_host_impl_declaration_offset(collected, right_impl.declaration),
-                    ),
+                  let left_matches_right = self_host_impl_pattern_matches(
+                    collected,
+                    resolved,
+                    left_impl,
+                    right_impl,
                   )
+                  let right_matches_left = self_host_impl_pattern_matches(
+                    collected,
+                    resolved,
+                    right_impl,
+                    left_impl,
+                  )
+                  if left_matches_right && !right_matches_left {
+                    self_host_impl_add_specificity(implementations, right_index)
+                  } else if right_matches_left && !left_matches_right {
+                    self_host_impl_add_specificity(implementations, left_index)
+                  } else {
+                    self_host_impl_mark_incoherent(implementations, left_index)
+                    self_host_impl_mark_incoherent(implementations, right_index)
+                    diagnostics.push(
+                      SelfHostImplIndexDiagnostic::OverlappingTraitImpl(
+                        right_impl.declaration,
+                        left_impl.declaration,
+                        left_trait,
+                        right_impl.target_head,
+                        self_host_impl_declaration_offset(
+                          collected,
+                          right_impl.declaration,
+                        ),
+                      ),
+                    )
+                  }
                 }
                 _ => {}
               }
@@ -904,9 +1380,98 @@ fn self_host_index_module_implementations(
       break self_host_semantic_unit()
     }
   }
+  let methods = []
+  let method_dispatch = []
+  let trait_method_dispatch = []
+  index = 0u32
+  let _ = while index {
+    current => if current < implementations.length() {
+      let implementation = implementations[current]
+      let method_start = methods.length()
+      let mut collected_method_index = 0u32
+      let _ = while collected_method_index {
+        method_offset => if method_offset < collected.methods.length() {
+          let method = collected.methods[method_offset]
+          if self_host_u64_equal(method.parent, implementation.declaration) {
+            let requirement = match implementation.kind {
+              SelfHostIndexedImplKind::TraitIndexedImpl(trait_declaration) => {
+                let mut found = Option::None
+                for candidate in collected.methods {
+                  if self_host_u64_equal(candidate.parent, trait_declaration) && self_host_u32_equal(
+                    candidate.name,
+                    method.name,
+                  ) {
+                    found = Option::Some(candidate.id)
+                  }
+                }
+                found
+              }
+              SelfHostIndexedImplKind::InherentIndexedImpl => Option::None
+            }
+            let indexed_method = SelfHostIndexedImplMethod::{
+              declaration: method.id
+              requirement: requirement
+              instance: self_host_impl_method_has_receiver(collected, method.id)
+            }
+            let indexed_method_index = methods.length()
+            methods.push(indexed_method)
+            if implementation.valid && implementation.coherent {
+              let inherent = implementation.kind is SelfHostIndexedImplKind::InherentIndexedImpl
+              let publish = inherent || requirement is Option::Some(_)
+              if publish {
+                method_dispatch.push(SelfHostIndexedMethodDispatch::{
+                  target_head: implementation.target_head
+                  name: method.name
+                  inherent: inherent
+                  instance: indexed_method.instance
+                  implementation: current
+                  method_index: indexed_method_index
+                })
+                match implementation.kind {
+                  SelfHostIndexedImplKind::TraitIndexedImpl(trait_declaration) => trait_method_dispatch.push(
+                    SelfHostIndexedTraitMethodDispatch::{
+                      trait_declaration: trait_declaration
+                      name: method.name
+                      instance: indexed_method.instance
+                      implementation: current
+                      method_index: indexed_method_index
+                    },
+                  )
+                  SelfHostIndexedImplKind::InherentIndexedImpl => {}
+                }
+              }
+            }
+          }
+          continue method_offset + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      implementations[current] = SelfHostIndexedImpl::{
+        declaration: implementation.declaration
+        kind: implementation.kind
+        target_head: implementation.target_head
+        trait_type: implementation.trait_type
+        target_type: implementation.target_type
+        methods: SelfHostHirSpan::{
+          start: method_start
+          length: methods.length() - method_start
+        }
+        valid: implementation.valid
+        coherent: implementation.coherent
+        specificity: implementation.specificity
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
   SelfHostModuleImplIndex::{
     module_id: collected.module_id
     implementations: implementations
+    methods: methods
+    method_dispatch: method_dispatch
+    trait_method_dispatch: trait_method_dispatch
     diagnostics: diagnostics
   }
 }
