@@ -166,6 +166,22 @@ test "implementation index omits incoherent method dispatch" {
   assert(index.trait_method_dispatch.length() == 0u32, "incoherent trait dispatch")
 }
 
+test "implementation index merges imported evidence and dispatch" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run(value: Box) -> I32 {\n  value.mark()\n}\n",
+    b"pub trait Mark {\n  fn mark(self) -> I32\n}\npub struct Box {}\nimpl Mark for Box {\n  fn mark(self) -> I32 {\n    1\n  }\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(
+    collected,
+    fixture.imports,
+  )
+  assert(index.implementations.length() == 1u32, "imported implementation")
+  assert(index.methods.length() == 1u32, "imported method")
+  assert(index.method_dispatch.length() == 1u32, "imported dispatch")
+  assert(index.trait_method_dispatch.length() == 1u32, "imported trait dispatch")
+}
+
 test "implementation index diagnoses orphan imported trait implementations" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\nimpl Mark for Item {}\n",

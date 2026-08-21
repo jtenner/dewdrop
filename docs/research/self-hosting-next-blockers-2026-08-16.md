@@ -21,8 +21,8 @@ fields, constructors, variants, patterns, and generic inherent methods are also
 complete. Implementation-head indexing, orphan checks, overlap checks, and
 duplicate inherent-method checks, full local trait signature conformance,
 generic specialization ranking, and coherent local dispatch are complete. The
-next compiler work is imported implementation merging, trait evidence,
-lambda-family, and module-value
+imported implementation evidence merging is complete. The next compiler work
+is trait obligations and selected evidence, lambda-family, and module-value
 inference.
 
 ## 1. P0: compiler host boundary

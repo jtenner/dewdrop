@@ -587,6 +587,140 @@ fn self_host_impl_pattern_matches(
   )
 }
 
+fn self_host_impl_add_imported_generics(
+  importer: SelfHostImplPatternImporter,
+  imports: SelfHostResolvedModuleImports,
+  declaration: U64,
+) -> Unit {
+  importer.clear_generics()
+  match imports.implementation(declaration) {
+    Option::Some(implementation) => {
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < implementation.generic_parameters.length {
+          importer.add_generic(
+            imports.generic_parameter_ids[
+              self_host_u32_add(
+                implementation.generic_parameters.start,
+                current,
+              )
+            ],
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    Option::None => {}
+  }
+}
+
+fn self_host_impl_add_any_generics(
+  importer: SelfHostImplPatternImporter,
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  declaration: U64,
+) -> Unit {
+  if self_host_u64_equal(
+    self_host_semantic_id_module(declaration),
+    collected.module_id,
+  ) {
+    self_host_impl_add_local_generics(importer, collected, declaration)
+  } else {
+    self_host_impl_add_imported_generics(importer, imports, declaration)
+  }
+}
+
+fn self_host_impl_patterns_overlap_with_imports(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  left: SelfHostIndexedImpl,
+  right: SelfHostIndexedImpl,
+) -> Bool {
+  let importer = SelfHostImplPatternImporter::new(imports.resolved)
+  self_host_impl_add_any_generics(
+    importer,
+    collected,
+    imports,
+    left.declaration,
+  )
+  let left_trait = match left.trait_type {
+    Option::Some(type_) => importer.import_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  let left_target = importer.import_type(left.target_type)
+  self_host_impl_add_any_generics(
+    importer,
+    collected,
+    imports,
+    right.declaration,
+  )
+  let right_trait = match right.trait_type {
+    Option::Some(type_) => importer.import_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  let right_target = importer.import_type(right.target_type)
+  importer.solver.unify(
+    left_trait,
+    right_trait,
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  ) && importer.solver.unify(
+    left_target,
+    right_target,
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  )
+}
+
+fn self_host_impl_pattern_matches_with_imports(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  general: SelfHostIndexedImpl,
+  specific: SelfHostIndexedImpl,
+) -> Bool {
+  let importer = SelfHostImplPatternImporter::new(imports.resolved)
+  self_host_impl_add_any_generics(
+    importer,
+    collected,
+    imports,
+    general.declaration,
+  )
+  let general_trait = match general.trait_type {
+    Option::Some(type_) => importer.import_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  let general_target = importer.import_type(general.target_type)
+  let specific_trait = match specific.trait_type {
+    Option::Some(type_) => importer.solver.resolved_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  importer.solver.unify(
+    general_trait,
+    specific_trait,
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  ) && importer.solver.unify(
+    general_target,
+    importer.solver.resolved_type(specific.target_type),
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  )
+}
+
 fn self_host_impl_method_duplicate(
   collected: SelfHostCollectedModule,
   left: U64,
@@ -1474,4 +1608,239 @@ fn self_host_index_module_implementations(
     trait_method_dispatch: trait_method_dispatch
     diagnostics: diagnostics
   }
+}
+
+fn self_host_impl_intern_imported_name(
+  collected: SelfHostCollectedModule,
+  name: String,
+) -> U32 {
+  match collected.find_name(name) {
+    Option::Some(existing) => existing
+    Option::None => {
+      let created = collected.names.length()
+      collected.names.push(name)
+      collected.name_lookup.set(name, created)
+      created
+    }
+  }
+}
+
+fn self_host_index_module_implementations_with_imports(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+) -> SelfHostModuleImplIndex {
+  let index = self_host_index_module_implementations(
+    collected,
+    imports.resolved,
+  )
+  let local_count = index.implementations.length()
+  let mut imported_index = 0u32
+  let _ = while imported_index {
+    current => if current < imports.implementations.length() {
+      let imported = imports.implementations[current]
+      let target_head = self_host_impl_target_head(
+        imports.resolved,
+        imported.target_type,
+      )
+      if !(target_head is SelfHostImplTargetHead::ErrorImplTargetHead) {
+        let kind = match imported.trait_type {
+          Option::Some(trait_type) => match self_host_impl_trait_head(
+            imports.resolved,
+            trait_type,
+          ) {
+            Option::Some(trait_declaration) => SelfHostIndexedImplKind::TraitIndexedImpl(
+              trait_declaration,
+            )
+            Option::None => SelfHostIndexedImplKind::TraitIndexedImpl(0u64)
+          }
+          Option::None => SelfHostIndexedImplKind::InherentIndexedImpl
+        }
+        let method_start = index.methods.length()
+        let implementation_slot = index.implementations.length()
+        let mut callable_index = 0u32
+        let _ = while callable_index {
+          callable_slot => if callable_slot < imports.callables.length() {
+            let callable = imports.callables[callable_slot]
+            let owner = match callable.kind {
+              SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(value) => Option::Some(
+                value,
+              )
+              _ => Option::None
+            }
+            match owner {
+              Option::Some(value) => if self_host_u64_equal(
+                value,
+                imported.declaration,
+              ) {
+                let instance = if self_host_u32_greater(
+                  callable.parameters.length,
+                  0u32,
+                ) {
+                  imports.parameter_receivers[callable.parameters.start]
+                } else {
+                  false
+                }
+                let method_slot = index.methods.length()
+                index.methods.push(SelfHostIndexedImplMethod::{
+                  declaration: callable.declaration
+                  requirement: Option::None
+                  instance: instance
+                })
+                let name = self_host_impl_intern_imported_name(
+                  collected,
+                  callable.name,
+                )
+                let inherent = kind is SelfHostIndexedImplKind::InherentIndexedImpl
+                index.method_dispatch.push(SelfHostIndexedMethodDispatch::{
+                  target_head: target_head
+                  name: name
+                  inherent: inherent
+                  instance: instance
+                  implementation: implementation_slot
+                  method_index: method_slot
+                })
+                match kind {
+                  SelfHostIndexedImplKind::TraitIndexedImpl(trait_declaration) => index.trait_method_dispatch.push(
+                    SelfHostIndexedTraitMethodDispatch::{
+                      trait_declaration: trait_declaration
+                      name: name
+                      instance: instance
+                      implementation: implementation_slot
+                      method_index: method_slot
+                    },
+                  )
+                  SelfHostIndexedImplKind::InherentIndexedImpl => {}
+                }
+              }
+              Option::None => {}
+            }
+            continue callable_slot + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        index.implementations.push(SelfHostIndexedImpl::{
+          declaration: imported.declaration
+          kind: kind
+          target_head: target_head
+          trait_type: imported.trait_type
+          target_type: imported.target_type
+          methods: SelfHostHirSpan::{
+            start: method_start
+            length: index.methods.length() - method_start
+          }
+          valid: true
+          coherent: true
+          specificity: 0u32
+        })
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut right_index = local_count
+  let _ = while right_index {
+    right_slot => if right_slot < index.implementations.length() {
+      let right = index.implementations[right_slot]
+      let mut left_index = 0u32
+      let _ = while left_index {
+        left_slot => if left_slot < right_slot {
+          let left = index.implementations[left_slot]
+          let same_trait = match left.kind {
+            SelfHostIndexedImplKind::TraitIndexedImpl(left_trait) => match right.kind {
+              SelfHostIndexedImplKind::TraitIndexedImpl(right_trait) => self_host_u64_equal(
+                left_trait,
+                right_trait,
+              )
+              _ => false
+            }
+            _ => false
+          }
+          if left.valid && left.coherent && right.valid && right.coherent && same_trait && self_host_impl_heads_equal(
+            left.target_head,
+            right.target_head,
+          ) && self_host_impl_patterns_overlap_with_imports(
+            collected,
+            imports,
+            left,
+            right,
+          ) {
+            let left_matches_right = self_host_impl_pattern_matches_with_imports(
+              collected,
+              imports,
+              left,
+              right,
+            )
+            let right_matches_left = self_host_impl_pattern_matches_with_imports(
+              collected,
+              imports,
+              right,
+              left,
+            )
+            if left_matches_right && !right_matches_left {
+              self_host_impl_add_specificity(
+                index.implementations,
+                right_slot,
+              )
+            } else if right_matches_left && !left_matches_right {
+              self_host_impl_add_specificity(
+                index.implementations,
+                left_slot,
+              )
+            } else {
+              self_host_impl_mark_incoherent(
+                index.implementations,
+                left_slot,
+              )
+              self_host_impl_mark_incoherent(
+                index.implementations,
+                right_slot,
+              )
+              let trait_declaration = match right.kind {
+                SelfHostIndexedImplKind::TraitIndexedImpl(value) => value
+                _ => 0u64
+              }
+              index.diagnostics.push(
+                SelfHostImplIndexDiagnostic::OverlappingTraitImpl(
+                  right.declaration,
+                  left.declaration,
+                  trait_declaration,
+                  right.target_head,
+                  0u32,
+                ),
+              )
+            }
+          }
+          continue left_slot + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue right_slot + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let retained_methods = []
+  for dispatch in index.method_dispatch {
+    if index.implementations[dispatch.implementation].coherent {
+      retained_methods.push(dispatch)
+    }
+  }
+  index.method_dispatch.clear()
+  for dispatch in retained_methods {
+    index.method_dispatch.push(dispatch)
+  }
+  let retained_trait_methods = []
+  for dispatch in index.trait_method_dispatch {
+    if index.implementations[dispatch.implementation].coherent {
+      retained_trait_methods.push(dispatch)
+    }
+  }
+  index.trait_method_dispatch.clear()
+  for dispatch in retained_trait_methods {
+    index.trait_method_dispatch.push(dispatch)
+  }
+  index
 }
