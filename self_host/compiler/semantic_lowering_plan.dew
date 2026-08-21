@@ -1,0 +1,946 @@
+open dew.std.option
+
+pub enum SelfHostPlannedExpressionKind {
+  PlannedPoisonExpression
+  PlannedI8Const(U64)
+  PlannedI16Const(U64)
+  PlannedI32Const(U64)
+  PlannedI64Const(U64)
+  PlannedU8Const(U64)
+  PlannedU16Const(U64)
+  PlannedU32Const(U64)
+  PlannedU64Const(U64)
+  PlannedF32Const(F32)
+  PlannedF64Const(F64)
+  PlannedBoolConst(Bool)
+  PlannedStringConst(Bytes)
+  PlannedBytesConst(Bytes)
+  PlannedLocalGet(U32)
+  PlannedCaptureGet(U32)
+  PlannedModuleValueGet(U64)
+  PlannedProductNew(SelfHostHirSpan)
+  PlannedArrayLiteral(SelfHostHirSpan)
+  PlannedLambdaClosure(U32)
+  PlannedObjectNew(SelfHostHirSpan)
+  PlannedConstruct(U32, SelfHostHirSpan, SelfHostBasicExpressionSelection)
+  PlannedBlockExpression(U32)
+  PlannedIfExpression(U32, U32, U32)
+  PlannedMatchExpression(U32, SelfHostHirSpan)
+  PlannedWhileExpression(U32, U32, SelfHostHirSpan)
+  PlannedBreakExpression(U32, U32)
+  PlannedContinueExpression(U32, U32)
+  PlannedPrefixExpression(SelfHostHirPrefixOperator, U32)
+  PlannedBinaryExpression(SelfHostHirBinaryOperator, U32, U32)
+  PlannedOperatorCall(U64, SelfHostHirBinaryOperator, U32, U32, SelfHostHirSpan)
+  PlannedDirectCall(U64, U32, SelfHostHirSpan, SelfHostHirSpan)
+  PlannedFunctionValueCall(U32, SelfHostHirSpan, U32)
+  PlannedUnresolvedCall(U32, SelfHostHirSpan)
+  PlannedFieldGet(U64, U32, Bool)
+  PlannedUnresolvedField(U32, U32)
+  PlannedProductField(U32, U32, U32)
+  PlannedIndexGet(U32, U32, SelfHostBasicCallTarget)
+  PlannedLocalSet(U32, U32)
+  PlannedCaptureSet(U32, U32)
+  PlannedFieldSet(U64, U32, U32)
+  PlannedIndexSet(U32, U32, U32, SelfHostBasicCallTarget)
+}
+
+pub struct SelfHostPlannedExpression {
+  type_: I32
+  shape: SelfHostPlannedValueShape
+  flow: SelfHostBodyFlowSummary
+  kind: SelfHostPlannedExpressionKind
+  offset: U32
+}
+
+pub enum SelfHostPlannedBlockItemKind {
+  PlannedLetItem(U32, Bool, U32)
+  PlannedReturnItem(U32)
+  PlannedExpressionItem(U32)
+}
+
+pub struct SelfHostPlannedBlockItem {
+  kind: SelfHostPlannedBlockItemKind
+  offset: U32
+}
+
+pub struct SelfHostPlannedBlock {
+  items: SelfHostHirSpan
+  flow: SelfHostBodyFlowSummary
+  offset: U32
+}
+
+pub struct SelfHostPlannedObjectField {
+  field: U64
+  value: U32
+  offset: U32
+}
+
+pub struct SelfHostPlannedPattern {
+  type_: I32
+  shape: SelfHostPlannedValueShape
+  source: SelfHostHirPattern
+  reference: SelfHostBodyPatternReference
+  selected_constructor: SelfHostBasicPatternConstructor
+  offset: U32
+}
+
+pub struct SelfHostPlannedPatternField {
+  name: String
+  pattern: U32
+  offset: U32
+}
+
+pub struct SelfHostPlannedPatternArm {
+  pattern: U32
+  guard_condition: U32
+  body: U32
+  flow: SelfHostBodyFlowSummary
+  offset: U32
+}
+
+pub struct SelfHostPlannedLocal {
+  body: U64
+  lambda: U32
+  local_id: U32
+  kind: SelfHostBodyLocalKind
+  mutable_: Bool
+  type_: I32
+  shape: SelfHostPlannedValueShape
+  offset: U32
+}
+
+pub struct SelfHostPlannedCapture {
+  lambda: U32
+  capture: U32
+  source: SelfHostLambdaCaptureSource
+  mutable_: Bool
+  type_: I32
+  shape: SelfHostPlannedValueShape
+  offset: U32
+}
+
+pub struct SelfHostPlannedBodyLowering {
+  body: U64
+  declaration: U64
+  kind: SelfHostHirBodyKind
+  root: SelfHostHirBodyRoot
+  root_type: I32
+  root_shape: SelfHostPlannedValueShape
+  result_shape: SelfHostPlannedValueShape
+  flow: SelfHostBodyFlowSummary
+  locals: SelfHostHirSpan
+  expressions: SelfHostHirSpan
+  blocks: SelfHostHirSpan
+  patterns: SelfHostHirSpan
+  pattern_arms: SelfHostHirSpan
+}
+
+pub struct SelfHostPlannedLambdaLowering {
+  lambda: U32
+  root_body: U64
+  root: SelfHostHirBodyRoot
+  root_type: I32
+  root_shape: SelfHostPlannedValueShape
+  result_shape: SelfHostPlannedValueShape
+  flow: SelfHostBodyFlowSummary
+  locals: SelfHostHirSpan
+  captures: SelfHostHirSpan
+  expressions: SelfHostHirSpan
+  blocks: SelfHostHirSpan
+  patterns: SelfHostHirSpan
+  pattern_arms: SelfHostHirSpan
+}
+
+pub struct SelfHostPlannedModuleLowering {
+  module_id: U64
+  type_layouts: SelfHostPlannedModuleTypeLayouts
+  initialization: SelfHostPlannedModuleInitialization
+  functions: SelfHostPlannedModuleFunctions
+  bodies: Array<SelfHostPlannedBodyLowering>
+  lambdas: Array<SelfHostPlannedLambdaLowering>
+  locals: Array<SelfHostPlannedLocal>
+  captures: Array<SelfHostPlannedCapture>
+  expressions: Array<SelfHostPlannedExpression>
+  blocks: Array<SelfHostPlannedBlock>
+  block_items: Array<SelfHostPlannedBlockItem>
+  object_fields: Array<SelfHostPlannedObjectField>
+  patterns: Array<SelfHostPlannedPattern>
+  pattern_fields: Array<SelfHostPlannedPatternField>
+  pattern_arms: Array<SelfHostPlannedPatternArm>
+  expression_children: Array<U32>
+  pattern_children: Array<U32>
+  arm_children: Array<U32>
+  inferred: SelfHostMergedModuleInference
+  flow_diagnostics: Array<SelfHostBodyFlowDiagnostic>
+}
+
+fn self_host_lowering_flow_at(
+  flows: Array<SelfHostBodyFlowSummary>,
+  index: U32,
+) -> SelfHostBodyFlowSummary {
+  if index < flows.length() {
+    flows[index]
+  } else {
+    self_host_flow_empty()
+  }
+}
+
+fn self_host_lowering_module_value_declaration(
+  collected: SelfHostCollectedModule,
+  name: U32,
+) -> U64 {
+  match collected.value_bindings.get(name) {
+    Option::Some(binding) => if binding.kind is SelfHostCollectedDeclKind::LetDecl {
+      collected.value_binding_candidates[binding.head].declaration
+    } else {
+      0u64
+    }
+    Option::None => 0u64
+  }
+}
+
+fn self_host_lowering_expression_kind(
+  collected: SelfHostCollectedModule,
+  names: SelfHostResolvedModuleNames,
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  source_expression_start: U32,
+  expression: U32,
+  relative: U32,
+) -> SelfHostPlannedExpressionKind {
+  let call_target = inferred.call_targets[
+    self_host_u32_add(job.call_targets.start, relative)
+  ]
+  let selection = inferred.expression_selections[
+    self_host_u32_add(job.expression_selections.start, relative)
+  ]
+  let operator_target = inferred.operator_targets[
+    self_host_u32_add(job.operator_targets.start, relative)
+  ]
+  match collected.expressions[expression] {
+    SelfHostHirExpr::I8Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI8Const(value)
+    SelfHostHirExpr::I16Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI16Const(value)
+    SelfHostHirExpr::I32Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI32Const(value)
+    SelfHostHirExpr::I64Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI64Const(value)
+    SelfHostHirExpr::U8Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU8Const(value)
+    SelfHostHirExpr::U16Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU16Const(value)
+    SelfHostHirExpr::U32Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU32Const(value)
+    SelfHostHirExpr::U64Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU64Const(value)
+    SelfHostHirExpr::F32Expr(value, _) => SelfHostPlannedExpressionKind::PlannedF32Const(value)
+    SelfHostHirExpr::F64Expr(value, _) => SelfHostPlannedExpressionKind::PlannedF64Const(value)
+    SelfHostHirExpr::BoolExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBoolConst(value)
+    SelfHostHirExpr::StringExpr(value, _) => SelfHostPlannedExpressionKind::PlannedStringConst(value)
+    SelfHostHirExpr::BytesExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBytesConst(value)
+    SelfHostHirExpr::NameExpr(_, _) => match names.expression_references[expression] {
+      SelfHostBodyNameReference::LocalNameReference(local) => SelfHostPlannedExpressionKind::PlannedLocalGet(local)
+      SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => SelfHostPlannedExpressionKind::PlannedCaptureGet(capture)
+      SelfHostBodyNameReference::ModuleValueNameReference(name) => SelfHostPlannedExpressionKind::PlannedModuleValueGet(
+        self_host_lowering_module_value_declaration(collected, name),
+      )
+      SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => SelfHostPlannedExpressionKind::PlannedModuleValueGet(declaration)
+      _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    }
+    SelfHostHirExpr::ImportAliasExpr(_, _) => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    SelfHostHirExpr::ProductExpr(children, _) => SelfHostPlannedExpressionKind::PlannedProductNew(children)
+    SelfHostHirExpr::ArrayExpr(children, _) => SelfHostPlannedExpressionKind::PlannedArrayLiteral(children)
+    SelfHostHirExpr::LambdaExpr(lambda, _) => SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda)
+    SelfHostHirExpr::ObjectExpr(fields, _) => SelfHostPlannedExpressionKind::PlannedObjectNew(fields)
+    SelfHostHirExpr::ConstructExpr(target, fields, _) => SelfHostPlannedExpressionKind::PlannedConstruct(target, fields, selection)
+    SelfHostHirExpr::BlockExpr(block, _) => SelfHostPlannedExpressionKind::PlannedBlockExpression(block)
+    SelfHostHirExpr::IfExpr(condition, then_block, else_expression, _) => SelfHostPlannedExpressionKind::PlannedIfExpression(condition, then_block, else_expression)
+    SelfHostHirExpr::MatchExpr(value, arms, _) => SelfHostPlannedExpressionKind::PlannedMatchExpression(value, arms)
+    SelfHostHirExpr::WhileExpr(initial, arms, _) => SelfHostPlannedExpressionKind::PlannedWhileExpression(
+      names.expression_controls[expression],
+      initial,
+      arms,
+    )
+    SelfHostHirExpr::BreakExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBreakExpression(
+      names.transfer_targets[expression],
+      value,
+    )
+    SelfHostHirExpr::ContinueExpr(value, _) => SelfHostPlannedExpressionKind::PlannedContinueExpression(
+      names.transfer_targets[expression],
+      value,
+    )
+    SelfHostHirExpr::PrefixExpr(operator, operand, _) => SelfHostPlannedExpressionKind::PlannedPrefixExpression(operator, operand)
+    SelfHostHirExpr::BinaryExpr(operator, left, right, _) => match operator_target {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+        SelfHostPlannedExpressionKind::PlannedOperatorCall(
+          declaration,
+          operator,
+          left,
+          right,
+          arguments,
+        )
+      }
+      _ => SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right)
+    }
+    SelfHostHirExpr::CallExpr(target, arguments, _) => match call_target {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, target, arguments, type_arguments)
+      SelfHostBasicCallTarget::FunctionValueBasicCallTarget(type_) => SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, type_)
+      _ => SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments)
+    }
+    SelfHostHirExpr::FieldExpr(base, name, _) => match selection {
+      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_) => SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, mutable_)
+      _ => SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name)
+    }
+    SelfHostHirExpr::QualifiedExpr(_, _, _) => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    SelfHostHirExpr::ProductFieldExpr(base, index, count, _) => SelfHostPlannedExpressionKind::PlannedProductField(base, index, count)
+    SelfHostHirExpr::IndexExpr(base, index, _) => SelfHostPlannedExpressionKind::PlannedIndexGet(base, index, call_target)
+    SelfHostHirExpr::AssignmentExpr(target, value, _) => match collected.expressions[target] {
+      SelfHostHirExpr::NameExpr(_, _) => match names.expression_references[target] {
+        SelfHostBodyNameReference::LocalNameReference(local) => SelfHostPlannedExpressionKind::PlannedLocalSet(local, value)
+        SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => SelfHostPlannedExpressionKind::PlannedCaptureSet(capture, value)
+        _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+      }
+      SelfHostHirExpr::FieldExpr(base, _, _) => match inferred.expression_selections[
+        self_host_u32_add(
+          job.expression_selections.start,
+          target - source_expression_start,
+        )
+      ] {
+        SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _) => SelfHostPlannedExpressionKind::PlannedFieldSet(field, base, value)
+        _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+      }
+      _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    }
+    SelfHostHirExpr::IndexSetExpr(base, index, value, _) => SelfHostPlannedExpressionKind::PlannedIndexSet(base, index, value, call_target)
+  }
+}
+
+fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
+  SelfHostPlannedExpression::{
+    type_: -1i32
+    shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
+    flow: self_host_flow_empty()
+    kind: SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    offset: 0u32
+  }
+}
+
+fn self_host_lowering_expression_slots(length: U32) -> Array<SelfHostPlannedExpression> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(self_host_lowering_error_expression())
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_lowering_plan_expressions(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  names: SelfHostResolvedModuleNames,
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  source: SelfHostHirSpan,
+  flows: Array<SelfHostBodyFlowSummary>,
+  output: Array<SelfHostPlannedExpression>,
+) -> Unit {
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < source.length {
+      let expression = self_host_u32_add(source.start, current)
+      let type_ = inferred.expression_types[
+        self_host_u32_add(job.expression_types.start, current)
+      ]
+      let source_expression = collected.expressions[expression]
+      output[expression] = SelfHostPlannedExpression::{
+        type_: type_
+        shape: self_host_planned_merged_body_value_shape(
+          resolved,
+          inferred,
+          type_,
+        )
+        flow: self_host_lowering_flow_at(flows, current)
+        kind: self_host_lowering_expression_kind(
+          collected,
+          names,
+          inferred,
+          job,
+          source.start,
+          expression,
+          current,
+        )
+        offset: self_host_basic_expression_offset(source_expression)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_lowering_plan_block_item(
+  source: SelfHostHirBlockItem,
+  local: U32,
+) -> SelfHostPlannedBlockItem {
+  match source {
+    SelfHostHirBlockItem::LetItem(mutable_, _, value, _, offset) => {
+      SelfHostPlannedBlockItem::{
+        kind: SelfHostPlannedBlockItemKind::PlannedLetItem(
+          local,
+          mutable_,
+          value,
+        )
+        offset: offset
+      }
+    }
+    SelfHostHirBlockItem::ReturnItem(value, offset) => SelfHostPlannedBlockItem::{
+      kind: SelfHostPlannedBlockItemKind::PlannedReturnItem(value)
+      offset: offset
+    }
+    SelfHostHirBlockItem::ExpressionItem(value, offset) => SelfHostPlannedBlockItem::{
+      kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(value)
+      offset: offset
+    }
+  }
+}
+
+fn self_host_lowering_plan_job_structures(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  names: SelfHostResolvedModuleNames,
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  source_blocks: SelfHostHirSpan,
+  source_block_items: SelfHostHirSpan,
+  source_patterns: SelfHostHirSpan,
+  source_pattern_arms: SelfHostHirSpan,
+  block_flows: Array<SelfHostBodyFlowSummary>,
+  arm_flows: Array<SelfHostBodyFlowSummary>,
+  blocks: Array<SelfHostPlannedBlock>,
+  block_items: Array<SelfHostPlannedBlockItem>,
+  patterns: Array<SelfHostPlannedPattern>,
+  pattern_arms: Array<SelfHostPlannedPatternArm>,
+) -> Unit {
+  let mut block = 0u32
+  let _ = while block {
+    current => if current < source_blocks.length {
+      let index = self_host_u32_add(source_blocks.start, current)
+      let source = collected.blocks[index]
+      blocks[index] = SelfHostPlannedBlock::{
+        items: source.items
+        flow: self_host_lowering_flow_at(block_flows, current)
+        offset: source.offset
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut item = 0u32
+  let _ = while item {
+    current => if current < source_block_items.length {
+      let index = self_host_u32_add(source_block_items.start, current)
+      block_items[index] = self_host_lowering_plan_block_item(
+        collected.block_items[index],
+        names.block_item_locals[index],
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut pattern = 0u32
+  let _ = while pattern {
+    current => if current < source_patterns.length {
+      let index = self_host_u32_add(source_patterns.start, current)
+      let type_ = inferred.pattern_types[
+        self_host_u32_add(job.pattern_types.start, current)
+      ]
+      let source_pattern = collected.patterns[index]
+      patterns[index] = SelfHostPlannedPattern::{
+        type_: type_
+        shape: self_host_planned_merged_body_value_shape(
+          resolved,
+          inferred,
+          type_,
+        )
+        source: source_pattern
+        reference: names.pattern_references[index]
+        selected_constructor: inferred.pattern_constructors[
+          self_host_u32_add(job.pattern_constructors.start, current)
+        ]
+        offset: self_host_hir_pattern_offset(source_pattern)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut arm = 0u32
+  let _ = while arm {
+    current => if current < source_pattern_arms.length {
+      let index = self_host_u32_add(source_pattern_arms.start, current)
+      let source = collected.pattern_arms[index]
+      pattern_arms[index] = SelfHostPlannedPatternArm::{
+        pattern: source.pattern
+        guard_condition: source.guard_condition
+        body: source.body
+        flow: self_host_lowering_flow_at(arm_flows, current)
+        offset: source.offset
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_lowering_block_slots(length: U32) -> Array<SelfHostPlannedBlock> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(SelfHostPlannedBlock::{
+        items: SelfHostHirSpan::{
+          start: 0u32
+          length: 0u32
+        }
+        flow: self_host_flow_empty()
+        offset: 0u32
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_lowering_block_item_slots(length: U32) -> Array<SelfHostPlannedBlockItem> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(SelfHostPlannedBlockItem::{
+        kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(0u32)
+        offset: 0u32
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_lowering_pattern_slots(length: U32) -> Array<SelfHostPlannedPattern> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(SelfHostPlannedPattern::{
+        type_: -1i32
+        shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
+        source: SelfHostHirPattern::WildcardPattern(0u32)
+        reference: SelfHostBodyPatternReference::NoPatternReference
+        selected_constructor: SelfHostBasicPatternConstructor::NoBasicPatternConstructor
+        offset: 0u32
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_lowering_arm_slots(length: U32) -> Array<SelfHostPlannedPatternArm> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(SelfHostPlannedPatternArm::{
+        pattern: 0u32
+        guard_condition: 0u32
+        body: 0u32
+        flow: self_host_flow_empty()
+        offset: 0u32
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_lowering_object_field_slots(length: U32) -> Array<SelfHostPlannedObjectField> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(SelfHostPlannedObjectField::{
+        field: 0u64
+        value: 0u32
+        offset: 0u32
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_lowering_plan_object_fields(
+  collected: SelfHostCollectedModule,
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  source: SelfHostHirSpan,
+  output: Array<SelfHostPlannedObjectField>,
+) -> Unit {
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < source.length {
+      let index = self_host_u32_add(source.start, current)
+      let field = match inferred.object_field_targets[
+        self_host_u32_add(job.object_field_targets.start, current)
+      ] {
+        SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(value) => value
+        _ => 0u64
+      }
+      let source_field = collected.object_fields[index]
+      output[index] = SelfHostPlannedObjectField::{
+        field: field
+        value: source_field.value
+        offset: source_field.offset
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_lowering_append_flow_diagnostics(
+  output: Array<SelfHostBodyFlowDiagnostic>,
+  source: Array<SelfHostBodyFlowDiagnostic>,
+) -> Unit {
+  for diagnostic in source {
+    output.push(diagnostic)
+  }
+}
+
+fn self_host_plan_module_lowering(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  type_layouts: SelfHostPlannedModuleTypeLayouts,
+  initialization: SelfHostPlannedModuleInitialization,
+  functions: SelfHostPlannedModuleFunctions,
+  names: SelfHostResolvedModuleNames,
+  inferred: SelfHostMergedModuleInference,
+  flows: SelfHostAnalyzedModuleFlows,
+) -> SelfHostPlannedModuleLowering {
+  let expressions = self_host_lowering_expression_slots(
+    collected.expressions.length(),
+  )
+  let blocks = self_host_lowering_block_slots(collected.blocks.length())
+  let block_items = self_host_lowering_block_item_slots(
+    collected.block_items.length(),
+  )
+  let object_fields = self_host_lowering_object_field_slots(
+    collected.object_fields.length(),
+  )
+  let patterns = self_host_lowering_pattern_slots(collected.patterns.length())
+  let pattern_arms = self_host_lowering_arm_slots(
+    collected.pattern_arms.length(),
+  )
+  let bodies = []
+  let lambdas = []
+  let locals = []
+  let captures = []
+  let flow_diagnostics = []
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current => if current < collected.bodies.length() {
+      let source = collected.bodies[current]
+      let job = inferred.jobs[current]
+      let flow = flows.bodies[current]
+      self_host_lowering_plan_expressions(
+        collected,
+        resolved,
+        names,
+        inferred,
+        job,
+        source.expressions,
+        flow.expression_flows,
+        expressions,
+      )
+      self_host_lowering_plan_job_structures(
+        collected,
+        resolved,
+        names,
+        inferred,
+        job,
+        source.blocks,
+        source.block_items,
+        source.patterns,
+        source.pattern_arms,
+        flow.block_flows,
+        flow.arm_flows,
+        blocks,
+        block_items,
+        patterns,
+        pattern_arms,
+      )
+      self_host_lowering_plan_object_fields(
+        collected,
+        inferred,
+        job,
+        source.object_fields,
+        object_fields,
+      )
+      let planned_locals = self_host_lowering_plan_locals(
+        resolved,
+        inferred,
+        job,
+        names,
+        names.bodies[current].locals,
+        source.id,
+        4294967295u32,
+        locals,
+      )
+      let root_shape = self_host_planned_merged_body_value_shape(
+        resolved,
+        inferred,
+        job.root_type,
+      )
+      bodies.push(SelfHostPlannedBodyLowering::{
+        body: source.id
+        declaration: source.declaration
+        kind: source.kind
+        root: source.root
+        root_type: job.root_type
+        root_shape: root_shape
+        result_shape: root_shape
+        flow: flow.flow
+        locals: planned_locals
+        expressions: source.expressions
+        blocks: source.blocks
+        patterns: source.patterns
+        pattern_arms: source.pattern_arms
+      })
+      self_host_lowering_append_flow_diagnostics(
+        flow_diagnostics,
+        flow.diagnostics,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let body_job_count = collected.bodies.length()
+  let mut lambda_index = 0u32
+  let _ = while lambda_index {
+    current => if current < collected.lambdas.length() {
+      let source = collected.lambdas[current]
+      let job = inferred.jobs[self_host_u32_add(body_job_count, current)]
+      let flow = flows.lambdas[current]
+      self_host_lowering_plan_expressions(
+        collected,
+        resolved,
+        names,
+        inferred,
+        job,
+        source.body.expressions,
+        flow.expression_flows,
+        expressions,
+      )
+      self_host_lowering_plan_job_structures(
+        collected,
+        resolved,
+        names,
+        inferred,
+        job,
+        source.body.blocks,
+        source.body.block_items,
+        source.body.patterns,
+        source.body.pattern_arms,
+        flow.block_flows,
+        flow.arm_flows,
+        blocks,
+        block_items,
+        patterns,
+        pattern_arms,
+      )
+      self_host_lowering_plan_object_fields(
+        collected,
+        inferred,
+        job,
+        source.body.object_fields,
+        object_fields,
+      )
+      let planned_locals = self_host_lowering_plan_locals(
+        resolved,
+        inferred,
+        job,
+        names,
+        names.lambdas[current].locals,
+        source.root_body,
+        source.id,
+        locals,
+      )
+      let planned_captures = self_host_lowering_plan_captures(
+        resolved,
+        inferred,
+        job,
+        names,
+        names.lambdas[current].captures,
+        source.id,
+        captures,
+      )
+      let root_shape = self_host_planned_merged_body_value_shape(
+        resolved,
+        inferred,
+        job.root_type,
+      )
+      lambdas.push(SelfHostPlannedLambdaLowering::{
+        lambda: source.id
+        root_body: source.root_body
+        root: SelfHostHirBodyRoot::BlockBodyRoot(source.body.root)
+        root_type: job.root_type
+        root_shape: root_shape
+        result_shape: root_shape
+        flow: flow.flow
+        locals: planned_locals
+        captures: planned_captures
+        expressions: source.body.expressions
+        blocks: source.body.blocks
+        patterns: source.body.patterns
+        pattern_arms: source.body.pattern_arms
+      })
+      self_host_lowering_append_flow_diagnostics(
+        flow_diagnostics,
+        flow.diagnostics,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let pattern_fields = []
+  for field in collected.pattern_fields {
+    pattern_fields.push(SelfHostPlannedPatternField::{
+      name: collected.name(field.name)
+      pattern: field.pattern
+      offset: field.offset
+    })
+  }
+  SelfHostPlannedModuleLowering::{
+    module_id: collected.module_id
+    type_layouts: type_layouts
+    initialization: initialization
+    functions: functions
+    bodies: bodies
+    lambdas: lambdas
+    locals: locals
+    captures: captures
+    expressions: expressions
+    blocks: blocks
+    block_items: block_items
+    object_fields: object_fields
+    patterns: patterns
+    pattern_fields: pattern_fields
+    pattern_arms: pattern_arms
+    expression_children: collected.expression_children
+    pattern_children: collected.pattern_children
+    arm_children: collected.arm_children
+    inferred: inferred
+    flow_diagnostics: flow_diagnostics
+  }
+}
+
+fn self_host_lowering_plan_locals(
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  names: SelfHostResolvedModuleNames,
+  source: SelfHostHirSpan,
+  body: U64,
+  lambda: U32,
+  output: Array<SelfHostPlannedLocal>,
+) -> SelfHostHirSpan {
+  let start = output.length()
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < source.length {
+      let source_local = names.locals[self_host_u32_add(source.start, current)]
+      let type_ = inferred.local_types[
+        self_host_u32_add(job.local_types.start, current)
+      ]
+      output.push(SelfHostPlannedLocal::{
+        body: body
+        lambda: lambda
+        local_id: source_local.id
+        kind: source_local.kind
+        mutable_: source_local.mutable_
+        type_: type_
+        shape: self_host_planned_merged_body_value_shape(
+          resolved,
+          inferred,
+          type_,
+        )
+        offset: source_local.offset
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostHirSpan::{
+    start: start
+    length: output.length() - start
+  }
+}
+
+fn self_host_lowering_plan_captures(
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  names: SelfHostResolvedModuleNames,
+  source: SelfHostHirSpan,
+  lambda: U32,
+  output: Array<SelfHostPlannedCapture>,
+) -> SelfHostHirSpan {
+  let start = output.length()
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < source.length {
+      let source_capture = names.captures[
+        self_host_u32_add(source.start, current)
+      ]
+      let type_ = inferred.capture_types[
+        self_host_u32_add(job.capture_types.start, current)
+      ]
+      output.push(SelfHostPlannedCapture::{
+        lambda: lambda
+        capture: current
+        source: source_capture.source
+        mutable_: source_capture.mutable_
+        type_: type_
+        shape: self_host_planned_merged_body_value_shape(
+          resolved,
+          inferred,
+          type_,
+        )
+        offset: source_capture.offset
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostHirSpan::{
+    start: start
+    length: output.length() - start
+  }
+}
