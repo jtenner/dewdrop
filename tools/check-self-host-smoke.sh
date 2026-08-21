@@ -43,6 +43,7 @@ semantic_sources=(
   self_host/compiler/semantic_basic_body_inference.dew
   self_host/compiler/semantic_module_value_inference.dew
   self_host/compiler/semantic_inference_merge.dew
+  self_host/compiler/semantic_body_value_shapes.dew
   self_host/compiler/semantic_module_initialization.dew
   self_host/compiler/semantic_body_flow.dew
 )
@@ -88,6 +89,7 @@ tools/dew test \
   self_host/compiler/semantic_inference_compaction.dew \
   self_host/compiler/semantic_inference_compaction_test.dew \
   self_host/compiler/semantic_inference_merge_test.dew \
+  self_host/compiler/semantic_body_value_shapes_test.dew \
   self_host/compiler/semantic_basic_body_inference_test.dew \
   self_host/compiler/semantic_callable_selection_test.dew \
   self_host/compiler/semantic_member_selection_test.dew \
