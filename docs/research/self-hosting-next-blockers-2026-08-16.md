@@ -201,6 +201,6 @@ The complete tokenizer and parser port finished on August 20, 2026. It parses th
 Semantic declaration collection and flat HIR finished on August 20, 2026.
 
 1. Complete body inference: prerequisite evidence trees and final deterministic lambda/body result merging and rebasing.
-2. Complete missing-case flow publication and diagnostic merging, then port layouts, specialization, optimization, and backend phases in dependency order.
+2. Complete final flow diagnostic ordering, then port layouts, specialization, optimization, and backend phases in dependency order.
 3. Add the cache-disabled A→B→C harness.
 4. Restore BLAKE3-based persistent caches, including parser-event persistence, after byte identity is stable.

@@ -35,7 +35,7 @@ fn self_host_flow_non_exhaustive_count(
   let mut count = 0u32
   for diagnostic in flow.diagnostics {
     match diagnostic {
-      SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(_, _) => {
+      SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(_, _, _) => {
         count = self_host_u32_add(count, 1u32)
       }
       _ => {}
@@ -72,6 +72,26 @@ fn self_host_flow_loop_fallthrough_count(
     }
   }
   count
+}
+
+fn self_host_assert_one_missing_bool_false(
+  flow: SelfHostAnalyzedBodyFlow,
+) -> Unit {
+  assert(flow.missing_cases.length() == 1u32, "one missing Bool case")
+  match flow.missing_cases[0u32] {
+    SelfHostMissingPatternCase::MissingBoolCase(false) => {}
+    _ => assert(false, "missing false case")
+  }
+}
+
+fn self_host_assert_one_missing_variant(
+  flow: SelfHostAnalyzedBodyFlow,
+) -> Unit {
+  assert(flow.missing_cases.length() == 1u32, "one missing variant")
+  match flow.missing_cases[0u32] {
+    SelfHostMissingPatternCase::MissingVariantCase(_) => {}
+    _ => assert(false, "missing variant case")
+  }
 }
 
 test "body flow diagnoses unreachable block items" {
@@ -113,6 +133,7 @@ test "body flow recognizes local enum exhaustiveness" {
     self_host_flow_non_exhaustive_count(missing.bodies[0u32]) == 1u32,
     "missing enum variant",
   )
+  self_host_assert_one_missing_variant(missing.bodies[0u32])
 }
 
 test "body flow diagnoses functional loop arm fallthrough" {
@@ -144,6 +165,7 @@ test "body flow diagnoses non-exhaustive and redundant match arms" {
     self_host_flow_non_exhaustive_count(missing.bodies[0u32]) == 1u32,
     "missing false",
   )
+  self_host_assert_one_missing_bool_false(missing.bodies[0u32])
   let (_, redundant) = self_host_flow_source(
     973u64,
     b"fn choose(value: Bool) -> I32 {\n  match value {\n    _ => 1\n    true => 2\n  }\n}\n",

@@ -8,9 +8,15 @@ pub struct SelfHostBodyFlowSummary {
   diverges: Bool
 }
 
+pub enum SelfHostMissingPatternCase {
+  MissingCatchAllCase
+  MissingBoolCase(Bool)
+  MissingVariantCase(U64)
+}
+
 pub enum SelfHostBodyFlowDiagnostic {
-  NonExhaustiveMatch(U32, U32)
-  NonExhaustiveFunctionalLoop(U32, U32)
+  NonExhaustiveMatch(U32, SelfHostHirSpan, U32)
+  NonExhaustiveFunctionalLoop(U32, SelfHostHirSpan, U32)
   RedundantPatternArm(U32, U32)
   FunctionalLoopArmFallsThrough(U32, U32)
   UnreachableBlockItem(U32, U32, U32)
@@ -22,6 +28,7 @@ pub struct SelfHostAnalyzedBodyFlow {
   expression_flows: Array<SelfHostBodyFlowSummary>
   block_flows: Array<SelfHostBodyFlowSummary>
   arm_flows: Array<SelfHostBodyFlowSummary>
+  missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
 
@@ -31,6 +38,7 @@ pub struct SelfHostAnalyzedLambdaFlow {
   expression_flows: Array<SelfHostBodyFlowSummary>
   block_flows: Array<SelfHostBodyFlowSummary>
   arm_flows: Array<SelfHostBodyFlowSummary>
+  missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
 
@@ -200,6 +208,7 @@ struct SelfHostBodyFlowAnalyzer {
   block_flows: Array<SelfHostBodyFlowSummary>
   block_done: Array<Bool>
   arm_flows: Array<SelfHostBodyFlowSummary>
+  missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
 
@@ -221,6 +230,7 @@ impl SelfHostBodyFlowAnalyzer {
       block_flows: self_host_flow_slots(body.blocks.length)
       block_done: self_host_module_value_bool_slots(body.blocks.length)
       arm_flows: self_host_flow_slots(body.pattern_arms.length)
+      missing_cases: []
       diagnostics: []
     }
   }
@@ -545,16 +555,64 @@ impl SelfHostBodyFlowAnalyzer {
       SelfHostFlowCoverageDomain::OpenFlowCoverageDomain => false
     }
     if !exhaustive {
+      let missing_start = self.missing_cases.length()
+      match domain {
+        SelfHostFlowCoverageDomain::BoolFlowCoverageDomain => {
+          if !covered_false {
+            self.missing_cases.push(
+              SelfHostMissingPatternCase::MissingBoolCase(false),
+            )
+          }
+          if !covered_true {
+            self.missing_cases.push(
+              SelfHostMissingPatternCase::MissingBoolCase(true),
+            )
+          }
+        }
+        SelfHostFlowCoverageDomain::EnumFlowCoverageDomain(_) => {
+          let mut variant = 0u32
+          let _ = while variant {
+            current => if current < enum_variants.length() {
+              if !covered_variants[current] {
+                self.missing_cases.push(
+                  SelfHostMissingPatternCase::MissingVariantCase(
+                    enum_variants[current],
+                  ),
+                )
+              }
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          if self_host_u32_equal(enum_variants.length(), 0u32) {
+            self.missing_cases.push(
+              SelfHostMissingPatternCase::MissingCatchAllCase,
+            )
+          }
+        }
+        SelfHostFlowCoverageDomain::OpenFlowCoverageDomain => {
+          self.missing_cases.push(
+            SelfHostMissingPatternCase::MissingCatchAllCase,
+          )
+        }
+      }
+      let missing = SelfHostHirSpan::{
+        start: missing_start
+        length: self.missing_cases.length() - missing_start
+      }
       if loop_ {
         self.diagnostics.push(
           SelfHostBodyFlowDiagnostic::NonExhaustiveFunctionalLoop(
             expression,
+            missing,
             offset,
           ),
         )
       } else {
         self.diagnostics.push(SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(
           expression,
+          missing,
           offset,
         ))
       }
@@ -766,6 +824,7 @@ impl SelfHostBodyFlowAnalyzer {
       expression_flows: self.expression_flows
       block_flows: self.block_flows
       arm_flows: self.arm_flows
+      missing_cases: self.missing_cases
       diagnostics: self.diagnostics
     }
   }
@@ -836,6 +895,7 @@ fn self_host_analyze_basic_module_flows_internal(
         expression_flows: result.expression_flows
         block_flows: result.block_flows
         arm_flows: result.arm_flows
+        missing_cases: result.missing_cases
         diagnostics: result.diagnostics
       })
       continue current + 1u32
