@@ -18,4 +18,4 @@ Implemented behavior:
 - deterministic per-body and per-lambda expression, block, arm, and diagnostic output;
 - iterative alternative-pattern catch-all traversal.
 
-Diagnostics are sorted by source offset and stable diagnostic rank. Invalid constructor and payload patterns now suppress secondary coverage diagnostics. Alternative-variant flattening remains to reach full MoonBit flow parity.
+Diagnostics are sorted by source offset and stable diagnostic rank. Invalid constructor and payload patterns suppress secondary coverage diagnostics. Alternative Bool and enum patterns are flattened iteratively for exhaustiveness and redundancy checks.

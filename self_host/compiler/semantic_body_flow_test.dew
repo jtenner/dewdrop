@@ -116,6 +116,25 @@ test "body flow recognizes exhaustive bool matches" {
   )
 }
 
+test "body flow flattens alternative pattern coverage" {
+  let (_, bool_flows) = self_host_flow_source(
+    979u64,
+    b"fn choose(value: Bool) -> I32 {\n  match value {\n    false, true => 1\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(bool_flows.bodies[0u32]) == 0u32,
+    "alternative Bool coverage",
+  )
+  let (_, enum_flows) = self_host_flow_source(
+    980u64,
+    b"enum Choice {\n  First\n  Second\n}\nfn read(value: Choice) -> I32 {\n  match value {\n    Choice::First, Choice::Second => 0\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(enum_flows.bodies[0u32]) == 0u32,
+    "alternative enum coverage",
+  )
+}
+
 test "body flow recognizes local enum exhaustiveness" {
   let (_, complete) = self_host_flow_source(
     976u64,

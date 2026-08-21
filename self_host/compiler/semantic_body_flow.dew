@@ -1,4 +1,9 @@
 open dew.std.array
+open dew.std.string
+
+fn self_host_flow_string_equal(left: String, right: String) -> Bool {
+  left == right
+}
 
 pub struct SelfHostBodyFlowSummary {
   falls_through: Bool
@@ -514,16 +519,111 @@ impl SelfHostBodyFlowAnalyzer {
     false
   }
 
-  fn pattern_bool(self, pattern: U32) -> U32 {
-    match self.collected.patterns[pattern] {
-      SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[
-        expression
-      ] {
-        SelfHostHirExpr::BoolExpr(false, _) => 1u32
-        SelfHostHirExpr::BoolExpr(true, _) => 2u32
-        _ => 0u32
+  fn pattern_covers_bool(self, pattern: U32, value: Bool) -> Bool {
+    let tasks = [pattern]
+    while tasks.length() {
+      length => if self_host_u32_greater(length, 0u32) {
+        let current = match tasks.pop() {
+          Option::Some(item) => item
+          Option::None => 0u32
+        }
+        match self.collected.patterns[current] {
+          SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[
+            expression
+          ] {
+            SelfHostHirExpr::BoolExpr(candidate, _) => if candidate == value {
+              return true
+            }
+            _ => {}
+          }
+          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+            tasks.push(first)
+            let mut index = 0u32
+            let _ = while index {
+              candidate => if candidate < alternatives.length {
+                tasks.push(self.collected.pattern_children[
+                  self_host_u32_add(alternatives.start, candidate)
+                ])
+                continue candidate + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          _ => {}
+        }
+        continue tasks.length()
+      } else {
+        break false
       }
-      _ => 0u32
+    }
+  }
+
+  fn qualified_pattern_matches_variant(
+    self,
+    pattern: U32,
+    variant: U64,
+  ) -> Bool {
+    let pattern_name = match self.collected.patterns[pattern] {
+      SelfHostHirPattern::QualifiedPattern(_, name, _) => name
+      _ => {
+        return false
+      }
+    }
+    for candidate in self.collected.variants {
+      if self_host_u64_equal(candidate.id, variant) {
+        return self_host_u32_equal(candidate.name, pattern_name)
+      }
+    }
+    let name = self.collected.name(pattern_name)
+    for candidate in self.imported_variants {
+      if self_host_u64_equal(candidate.variant, variant) {
+        let candidate_name = candidate.name
+        return self_host_flow_string_equal(candidate_name, name)
+      }
+    }
+    false
+  }
+
+  fn pattern_covers_variant(self, pattern: U32, variant: U64) -> Bool {
+    let tasks = [pattern]
+    while tasks.length() {
+      length => if self_host_u32_greater(length, 0u32) {
+        let current = match tasks.pop() {
+          Option::Some(item) => item
+          Option::None => 0u32
+        }
+        match self.collected.patterns[current] {
+          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+            tasks.push(first)
+            let mut index = 0u32
+            let _ = while index {
+              candidate => if candidate < alternatives.length {
+                tasks.push(self.collected.pattern_children[
+                  self_host_u32_add(alternatives.start, candidate)
+                ])
+                continue candidate + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          _ => match self.pattern_variant(current) {
+            Option::Some(candidate) => if self_host_u64_equal(candidate, variant) {
+              return true
+            }
+            Option::None => if self.qualified_pattern_matches_variant(
+              current,
+              variant,
+            ) {
+              return true
+            }
+          }
+        }
+        continue tasks.length()
+      } else {
+        break false
+      }
     }
   }
 
@@ -559,17 +659,28 @@ impl SelfHostBodyFlowAnalyzer {
         if self.pattern_has_error(info.pattern) {
           coverage_error = true
         }
-        let bool_case = self.pattern_bool(info.pattern)
-        let variant = self.pattern_variant(info.pattern)
-        let mut variant_slot = 4294967295u32
-        match variant {
-          Option::Some(selected) => {
+        let catches_all = self.pattern_catches_all(info.pattern)
+        let covers_false = self.pattern_covers_bool(info.pattern, false)
+        let covers_true = self.pattern_covers_bool(info.pattern, true)
+        let mut useful = coverage_error || (catches_all && !catch_all)
+        match domain {
+          SelfHostFlowCoverageDomain::BoolFlowCoverageDomain => {
+            if covers_false && !covered_false {
+              useful = true
+            }
+            if covers_true && !covered_true {
+              useful = true
+            }
+          }
+          SelfHostFlowCoverageDomain::EnumFlowCoverageDomain(_) => {
             let mut variant_index = 0u32
             let _ = while variant_index {
               candidate => if candidate < enum_variants.length() {
-                if self_host_u64_equal(enum_variants[candidate], selected) {
-                  variant_slot = candidate
-                  break self_host_semantic_unit()
+                if self.pattern_covers_variant(
+                  info.pattern,
+                  enum_variants[candidate],
+                ) && !covered_variants[candidate] {
+                  useful = true
                 }
                 continue candidate + 1u32
               } else {
@@ -577,33 +688,45 @@ impl SelfHostBodyFlowAnalyzer {
               }
             }
           }
-          Option::None => {}
+          SelfHostFlowCoverageDomain::OpenFlowCoverageDomain => {
+            if !catches_all {
+              useful = true
+            }
+          }
         }
-        let redundant_variant = variant_slot != 4294967295u32 && covered_variants[
-          variant_slot
-        ]
-        let redundant = catch_all ||
-          (bool_case == 1u32 && covered_false) ||
-          (bool_case == 2u32 && covered_true) ||
-          redundant_variant
-        if redundant {
+        if catch_all || !useful {
           self.diagnostics.push(SelfHostBodyFlowDiagnostic::RedundantPatternArm(
             arm,
             info.offset,
           ))
         }
         if self_host_u32_equal(info.guard_condition, 4294967295u32) {
-          if self.pattern_catches_all(info.pattern) {
+          if catches_all {
             catch_all = true
-          } else if bool_case == 1u32 {
+          }
+          if covers_false {
             covered_false = true
-          } else if bool_case == 2u32 {
+          }
+          if covers_true {
             covered_true = true
-          } else if variant_slot != 4294967295u32 && !covered_variants[
-            variant_slot
-          ] {
-            covered_variants[variant_slot] = true
-            covered_variant_count = self_host_u32_add(covered_variant_count, 1u32)
+          }
+          let mut variant_index = 0u32
+          let _ = while variant_index {
+            candidate => if candidate < enum_variants.length() {
+              if !covered_variants[candidate] && self.pattern_covers_variant(
+                info.pattern,
+                enum_variants[candidate],
+              ) {
+                covered_variants[candidate] = true
+                covered_variant_count = self_host_u32_add(
+                  covered_variant_count,
+                  1u32,
+                )
+              }
+              continue candidate + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
           }
         }
         let flow = self.arm_flow(arm)
