@@ -270,6 +270,7 @@ fn self_host_compact_basic_inferred_body(
     type_arguments: compact.arguments
     expression_types: compact.remap_array(body.expression_types)
     local_types: compact.remap_array(body.local_types)
+    capture_types: compact.remap_array(body.capture_types)
     block_types: compact.remap_array(body.block_types)
     pattern_types: compact.remap_array(body.pattern_types)
     control_state_types: compact.remap_array(body.control_state_types)
@@ -294,8 +295,16 @@ fn self_host_compact_basic_module_bodies(
   for body in inferred.bodies {
     bodies.push(self_host_compact_basic_inferred_body(body))
   }
+  let lambdas = []
+  for lambda in inferred.lambdas {
+    lambdas.push(SelfHostBasicInferredLambda::{
+      lambda: lambda.lambda
+      body: self_host_compact_basic_inferred_body(lambda.body)
+    })
+  }
   SelfHostBasicInferredModuleBodies::{
     module_id: inferred.module_id
     bodies: bodies
+    lambdas: lambdas
   }
 }

@@ -442,3 +442,76 @@ test "basic body inference reports mismatches bounds and mutability" {
   assert(immutable == 1u32, "immutable assignment")
   assert(range == 0u32, "no numeric range diagnostic")
 }
+
+fn self_host_assert_capture_free_lambda(
+  lambda: SelfHostBasicInferredLambda,
+  resolved: SelfHostResolvedModuleTypes,
+) -> Unit {
+  let body = lambda.body
+  assert(body.diagnostics.length() == 0u32, "lambda diagnostics")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.root_type,
+    SelfHostPrimitiveType::I32Type,
+    "lambda result I32",
+  )
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.local_types[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "lambda parameter I32",
+  )
+}
+
+test "basic inference constrains capture-free lambda bodies" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    849u64,
+    b"fn make() -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value + 1\n  }\n}\n",
+  )
+  assert(inferred.lambdas.length() == 1u32, "lambda count")
+  self_host_assert_capture_free_lambda(inferred.lambdas[0u32], resolved)
+}
+
+fn self_host_assert_lambda_capture_type(
+  lambda: SelfHostBasicInferredLambda,
+  resolved: SelfHostResolvedModuleTypes,
+) -> Unit {
+  let body = lambda.body
+  assert(body.diagnostics.length() == 0u32, "capture lambda diagnostics")
+  assert(body.capture_types.length() == 1u32, "one capture type")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.capture_types[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "capture I32",
+  )
+}
+
+test "basic lambda inference publishes constrained capture types" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    850u64,
+    b"fn make(seed: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    seed + value\n  }\n}\n",
+  )
+  assert(inferred.lambdas.length() == 1u32, "capture lambda count")
+  self_host_assert_lambda_capture_type(inferred.lambdas[0u32], resolved)
+}
+
+fn self_host_lambda_has_diagnostics(
+  lambda: SelfHostBasicInferredLambda,
+) -> Bool {
+  lambda.body.diagnostics.length() > 0u32
+}
+
+test "lambda capture routing preserves outer rigid types" {
+  let (_, _, _, inferred) = self_host_basic_infer_source(
+    851u64,
+    b"fn make(seed: Bool) -> fn() -> I32 {\n  fn() -> I32 {\n    seed\n  }\n}\n",
+  )
+  assert(
+    self_host_lambda_has_diagnostics(inferred.lambdas[0u32]),
+    "capture mismatch diagnostic",
+  )
+}

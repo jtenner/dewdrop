@@ -124,6 +124,7 @@ pub struct SelfHostBasicInferredBody {
   type_arguments: Array<I32>
   expression_types: Array<I32>
   local_types: Array<I32>
+  capture_types: Array<I32>
   block_types: Array<I32>
   pattern_types: Array<I32>
   control_state_types: Array<I32>
@@ -219,9 +220,15 @@ fn self_host_basic_inference_diagnostic_at(
   body.diagnostics[index]
 }
 
+pub struct SelfHostBasicInferredLambda {
+  lambda: U32
+  body: SelfHostBasicInferredBody
+}
+
 pub struct SelfHostBasicInferredModuleBodies {
   module_id: U64
   bodies: Array<SelfHostBasicInferredBody>
+  lambdas: Array<SelfHostBasicInferredLambda>
 }
 
 impl SelfHostBasicInferredModuleBodies {
@@ -411,6 +418,7 @@ struct SelfHostBasicBodyInferencer {
   solver: SelfHostLocalTypeSolver
   expression_types: Array<I32>
   local_types: Array<I32>
+  capture_types: Array<I32>
   block_types: Array<I32>
   pattern_types: Array<I32>
   control_state_types: Array<I32>
@@ -441,11 +449,13 @@ struct SelfHostBasicBodyInferencer {
   module_value_import_tasks: Array<SelfHostModuleValueImportTask>
   module_value_import_results: Array<I32>
   module_value_import_cache: Map<U32, I32>
+  mut capture_span: SelfHostHirSpan
   mut instantiation_generics: SelfHostHirSpan
   mut instantiation_method_generics: SelfHostHirSpan
   mut instantiation_self_owner: U64
   mut instantiation_self_type: I32
   mut callable_index: U32
+  mut lambda_index: U32
   mut declared_return_type: I32
   mut result_type: I32
 }
@@ -505,6 +515,7 @@ impl SelfHostBasicBodyInferencer {
       solver: solver
       expression_types: self_host_inference_i32_slots(body.expressions.length, 0i32)
       local_types: self_host_inference_i32_slots(name_info.locals.length, 0i32)
+      capture_types: []
       block_types: self_host_inference_i32_slots(body.blocks.length, 0i32)
       pattern_types: self_host_inference_i32_slots(body.patterns.length, 0i32)
       control_state_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
@@ -535,6 +546,10 @@ impl SelfHostBasicBodyInferencer {
       module_value_import_tasks: []
       module_value_import_results: []
       module_value_import_cache: self_host_basic_empty_module_value_import_cache()
+      capture_span: SelfHostHirSpan::{
+        start: 0u32
+        length: 0u32
+      }
       instantiation_generics: SelfHostHirSpan::{
         start: 0u32
         length: 0u32
@@ -546,9 +561,71 @@ impl SelfHostBasicBodyInferencer {
       instantiation_self_owner: 18446744073709551615u64
       instantiation_self_type: -1i32
       callable_index: callable_index
+      lambda_index: 4294967295u32
       declared_return_type: 0i32
       result_type: 0i32
     }
+  }
+
+  fn new_lambda(
+    collected: SelfHostCollectedModule,
+    resolved: SelfHostResolvedModuleTypes,
+    names: SelfHostResolvedModuleNames,
+    imported: SelfHostBasicImportedInputs,
+    lambda: SelfHostHirLambda,
+    lambda_names: SelfHostResolvedLambdaNames,
+    source_capture_types: Array<I32>,
+  ) -> SelfHostBasicBodyInferencer {
+    let root_body = collected.bodies[self_host_semantic_id_local(lambda.root_body)]
+    let body = SelfHostHirBody::{
+      id: lambda.root_body
+      declaration: root_body.declaration
+      kind: root_body.kind
+      root: SelfHostHirBodyRoot::BlockBodyRoot(lambda.body.root)
+      expressions: lambda.body.expressions
+      expression_children: lambda.body.expression_children
+      blocks: lambda.body.blocks
+      block_items: lambda.body.block_items
+      patterns: lambda.body.patterns
+      pattern_children: lambda.body.pattern_children
+      pattern_arms: lambda.body.pattern_arms
+      arm_children: lambda.body.arm_children
+      object_fields: lambda.body.object_fields
+      pattern_fields: lambda.body.pattern_fields
+      offset: lambda.offset
+    }
+    let name_info = SelfHostResolvedBodyNames::{
+      body: lambda.root_body
+      locals: lambda_names.locals
+      controls: lambda_names.controls
+      diagnostics: lambda_names.diagnostics
+    }
+    let inferencer = SelfHostBasicBodyInferencer::new(
+      collected,
+      resolved,
+      names,
+      imported,
+      body,
+      name_info,
+    )
+    inferencer.callable_index = 4294967295u32
+    inferencer.lambda_index = lambda.id
+    inferencer.capture_span = lambda_names.captures
+    let mut capture = 0u32
+    let _ = while capture {
+      current => if current < lambda_names.captures.length {
+        let source_type = source_capture_types[current]
+        if source_type < -1i32 {
+          inferencer.capture_types.push(source_type)
+        } else {
+          inferencer.capture_types.push(inferencer.solver.fresh_variable())
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    inferencer
   }
 
   fn expression_index(self, expression: U32) -> U32 {
@@ -1363,7 +1440,18 @@ impl SelfHostBasicBodyInferencer {
       current => if current < self.name_info.locals.length {
         let info = self.names.locals[self.name_info.locals.start + current]
         let type_ = match info.kind {
-          SelfHostBodyLocalKind::ParameterLocal => if self_host_u32_greater(
+          SelfHostBodyLocalKind::ParameterLocal => if self.lambda_index != 4294967295u32 {
+            if self_host_u32_greater(
+              self.resolved.lambda_parameter_types.length(),
+              info.source,
+            ) {
+              self.solver.resolved_type(
+                self.resolved.lambda_parameter_types[info.source],
+              )
+            } else {
+              self.solver.error_type()
+            }
+          } else if self_host_u32_greater(
             self.resolved.parameter_types.length(),
             info.source,
           ) {
@@ -1643,6 +1731,14 @@ impl SelfHostBasicBodyInferencer {
           SelfHostHirExpr::BytesExpr(_, _) => self.primitive(SelfHostPrimitiveType::BytesType)
           SelfHostHirExpr::NameExpr(name, _) => match self.names.expression_references[current] {
             SelfHostBodyNameReference::LocalNameReference(local) => self.local_types[local]
+            SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => if capture >= self.capture_span.start && capture < self_host_u32_add(
+              self.capture_span.start,
+              self.capture_span.length,
+            ) {
+              self.capture_types[capture - self.capture_span.start]
+            } else {
+              self.solver.error_type()
+            }
             SelfHostBodyNameReference::ModuleValueNameReference(_) => match self.local_callable_function_type(name) {
               Option::Some(function_type) => function_type
               Option::None => match self_host_module_value_declaration(self.collected, name) {
@@ -6233,7 +6329,7 @@ impl SelfHostBasicBodyInferencer {
       SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => self.expression_type(expression)
       SelfHostHirBodyRoot::BlockBodyRoot(block) => self.block_type(block)
     }
-    if self.callable_index != 4294967295u32 {
+    if self.callable_index != 4294967295u32 || self.lambda_index != 4294967295u32 {
       let mut root_expression = 4294967295u32
       match self.body.root {
         SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => {
@@ -6312,6 +6408,7 @@ impl SelfHostBasicBodyInferencer {
   fn finalize(self) -> SelfHostBasicInferredBody {
     self.zonk_array(self.expression_types)
     self.zonk_array(self.local_types)
+    self.zonk_array(self.capture_types)
     self.zonk_array(self.block_types)
     self.zonk_array(self.pattern_types)
     self.zonk_array(self.control_state_types)
@@ -6386,6 +6483,7 @@ impl SelfHostBasicBodyInferencer {
       type_arguments: self.solver.type_arguments
       expression_types: self.expression_types
       local_types: self.local_types
+      capture_types: self.capture_types
       block_types: self.block_types
       pattern_types: self.pattern_types
       control_state_types: self.control_state_types
@@ -6409,7 +6507,9 @@ impl SelfHostBasicBodyInferencer {
     self.initialize_expressions()
     self.initialize_blocks()
     self.initialize_patterns()
-    self.declared_return_type = if self.callable_index == 4294967295u32 {
+    self.declared_return_type = if self.lambda_index != 4294967295u32 {
+      self.solver.resolved_type(self.resolved.lambda_return_types[self.lambda_index])
+    } else if self.callable_index == 4294967295u32 {
       self.solver.error_type()
     } else {
       self.solver.resolved_type(self.resolved.callable_return_types[self.callable_index])
@@ -6432,6 +6532,43 @@ impl SelfHostBasicBodyInferencer {
   fn run(self) -> SelfHostBasicInferredBody {
     self.constrain_body()
     self.finalize()
+  }
+}
+
+fn self_host_basic_inferred_body_local_type(
+  body: SelfHostBasicInferredBody,
+  local: U32,
+) -> I32 {
+  if local < body.local_types.length() {
+    body.local_types[local]
+  } else {
+    0i32
+  }
+}
+
+fn self_host_basic_body_local_source_type(
+  bodies: Array<SelfHostBasicInferredBody>,
+  body: U64,
+  local: U32,
+) -> I32 {
+  let index = self_host_semantic_id_local(body)
+  if index < bodies.length() {
+    self_host_basic_inferred_body_local_type(bodies[index], local)
+  } else {
+    0i32
+  }
+}
+
+fn self_host_basic_lambda_local_source_type(
+  lambdas: Array<SelfHostBasicInferredLambda>,
+  lambda: U32,
+  local: U32,
+) -> I32 {
+  if lambda < lambdas.length() {
+    let inferred_lambda = lambdas[lambda]
+    self_host_basic_inferred_body_local_type(inferred_lambda.body, local)
+  } else {
+    0i32
   }
 }
 
@@ -6462,9 +6599,55 @@ fn self_host_infer_basic_module_bodies_with_inputs(
       break self_host_semantic_unit()
     }
   }
+  let lambdas = []
+  index = 0u32
+  let _ = while index {
+    current => if current < collected.lambdas.length() {
+      let lambda = collected.lambdas[current]
+      let lambda_names = names.lambdas[current]
+      let source_capture_types = []
+      let mut capture = 0u32
+      let _ = while capture {
+        capture_index => if capture_index < lambda_names.captures.length {
+          let capture_info = names.captures[
+            self_host_u32_add(lambda_names.captures.start, capture_index)
+          ]
+          let source_type = match capture_info.source {
+            SelfHostLambdaCaptureSource::BodyLocalCapture(body, local) => {
+              self_host_basic_body_local_source_type(bodies, body, local)
+            }
+            SelfHostLambdaCaptureSource::LambdaLocalCapture(parent, local) => {
+              self_host_basic_lambda_local_source_type(lambdas, parent, local)
+            }
+          }
+          source_capture_types.push(source_type)
+          continue capture_index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let inferred = SelfHostBasicBodyInferencer::new_lambda(
+        collected,
+        resolved,
+        names,
+        imported,
+        lambda,
+        lambda_names,
+        source_capture_types,
+      ).run()
+      lambdas.push(SelfHostBasicInferredLambda::{
+        lambda: lambda.id
+        body: inferred
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
   SelfHostBasicInferredModuleBodies::{
     module_id: collected.module_id
     bodies: bodies
+    lambdas: lambdas
   }
 }
 
