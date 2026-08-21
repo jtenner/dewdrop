@@ -1,0 +1,1050 @@
+open dew.std.array
+open dew.std.option
+
+pub enum SelfHostBodyInferenceDiagnostic {
+  BodyConstraintDiagnostic(SelfHostLocalInferenceDiagnostic)
+  NumericLiteralOutOfRange(U32, SelfHostPrimitiveType, U32)
+  UnsupportedExpressionInference(U32, U32)
+  InvalidAssignmentTarget(U32, U32)
+  ImmutableAssignmentTarget(U32, U32)
+  ReturnOutsideCallable(U32)
+  UnresolvedExpressionType(U32, U32)
+  UnresolvedLocalType(U64, U32, U32)
+}
+
+impl SelfHostBodyInferenceDiagnostic {
+  fn offset(self) -> U32 {
+    match self {
+      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(diagnostic) => diagnostic.offset()
+      SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(_, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(offset) => offset
+      SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(_, _, offset) => offset
+    }
+  }
+}
+
+pub struct SelfHostBasicInferredBody {
+  body: U64
+  root_type: I32
+  types: Array<SelfHostBodyTypeTerm>
+  type_arguments: Array<I32>
+  expression_types: Array<I32>
+  local_types: Array<I32>
+  block_types: Array<I32>
+  pattern_types: Array<I32>
+  control_state_types: Array<I32>
+  control_result_types: Array<I32>
+  unsupported_expressions: Array<Bool>
+  diagnostics: Array<SelfHostBodyInferenceDiagnostic>
+}
+
+impl SelfHostBasicInferredBody {
+  fn expression_type(self, body: SelfHostHirBody, expression: U32) -> I32 {
+    self.expression_types[expression - body.expressions.start]
+  }
+
+  fn local_type(self, local: U32) -> I32 {
+    self.local_types[local]
+  }
+
+  fn diagnostic_count(self) -> U32 {
+    self.diagnostics.length()
+  }
+
+  fn diagnostic_at(self, index: U32) -> SelfHostBodyInferenceDiagnostic {
+    self.diagnostics[index]
+  }
+
+  fn type_term(self, type_: I32) -> SelfHostBodyTypeTerm {
+    if type_ < -1i32 {
+      SelfHostBodyTypeTerm::BodyResolvedType(
+        self_host_body_i32_to_u32(-type_ - 2i32),
+      )
+    } else if type_ >= 0i32 {
+      self.types[self_host_body_i32_to_u32(type_)]
+    } else {
+      SelfHostBodyTypeTerm::BodyErrorType
+    }
+  }
+}
+
+fn self_host_basic_inference_diagnostic_count(
+  body: SelfHostBasicInferredBody,
+) -> U32 {
+  body.diagnostics.length()
+}
+
+fn self_host_basic_inference_diagnostic_at(
+  body: SelfHostBasicInferredBody,
+  index: U32,
+) -> SelfHostBodyInferenceDiagnostic {
+  body.diagnostics[index]
+}
+
+pub struct SelfHostBasicInferredModuleBodies {
+  module_id: U64
+  bodies: Array<SelfHostBasicInferredBody>
+}
+
+impl SelfHostBasicInferredModuleBodies {
+  fn body(self, body: U64) -> Option<SelfHostBasicInferredBody> {
+    if self_host_semantic_id_module(body) != self.module_id {
+      Option::None
+    } else {
+      let index = self_host_semantic_id_local(body)
+      if index < self.bodies.length() {
+        Option::Some(self.bodies[index])
+      } else {
+        Option::None
+      }
+    }
+  }
+}
+
+fn self_host_basic_expression_offset(expression: SelfHostHirExpr) -> U32 {
+  expression.offset()
+}
+
+fn self_host_inference_i32_slots(length: U32, value: I32) -> Array<I32> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(value)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
+}
+
+fn self_host_inference_bool_slots(length: U32) -> Array<Bool> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
+}
+
+struct SelfHostBasicBodyInferencer {
+  collected: SelfHostCollectedModule
+  resolved: SelfHostResolvedModuleTypes
+  names: SelfHostResolvedModuleNames
+  body: SelfHostHirBody
+  name_info: SelfHostResolvedBodyNames
+  solver: SelfHostLocalTypeSolver
+  expression_types: Array<I32>
+  local_types: Array<I32>
+  block_types: Array<I32>
+  pattern_types: Array<I32>
+  control_state_types: Array<I32>
+  control_result_types: Array<I32>
+  unsupported_expressions: Array<Bool>
+  diagnostics: Array<SelfHostBodyInferenceDiagnostic>
+  mut callable_index: U32
+  mut declared_return_type: I32
+  mut result_type: I32
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn new(
+    collected: SelfHostCollectedModule,
+    resolved: SelfHostResolvedModuleTypes,
+    names: SelfHostResolvedModuleNames,
+    body: SelfHostHirBody,
+    name_info: SelfHostResolvedBodyNames,
+  ) -> SelfHostBasicBodyInferencer {
+    let mut callable_index = 4294967295u32
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < collected.callables.length() {
+        if self_host_u64_equal(
+          collected.callables[current].declaration,
+          body.declaration,
+        ) {
+          callable_index = current
+          break self_host_semantic_unit()
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    SelfHostBasicBodyInferencer::{
+      collected: collected
+      resolved: resolved
+      names: names
+      body: body
+      name_info: name_info
+      solver: SelfHostLocalTypeSolver::new(resolved)
+      expression_types: self_host_inference_i32_slots(body.expressions.length, 0i32)
+      local_types: self_host_inference_i32_slots(name_info.locals.length, 0i32)
+      block_types: self_host_inference_i32_slots(body.blocks.length, 0i32)
+      pattern_types: self_host_inference_i32_slots(body.patterns.length, 0i32)
+      control_state_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
+      control_result_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
+      unsupported_expressions: self_host_inference_bool_slots(body.expressions.length)
+      diagnostics: []
+      callable_index: callable_index
+      declared_return_type: 0i32
+      result_type: 0i32
+    }
+  }
+
+  fn expression_index(self, expression: U32) -> U32 {
+    expression - self.body.expressions.start
+  }
+
+  fn block_index(self, block: U32) -> U32 {
+    block - self.body.blocks.start
+  }
+
+  fn pattern_index(self, pattern: U32) -> U32 {
+    pattern - self.body.patterns.start
+  }
+
+  fn expression_type(self, expression: U32) -> I32 {
+    self.expression_types[self.expression_index(expression)]
+  }
+
+  fn block_type(self, block: U32) -> I32 {
+    self.block_types[self.block_index(block)]
+  }
+
+  fn pattern_type(self, pattern: U32) -> I32 {
+    self.pattern_types[self.pattern_index(pattern)]
+  }
+
+  fn primitive(self, primitive: SelfHostPrimitiveType) -> I32 {
+    self.solver.resolved_type(self.resolved.primitive(primitive))
+  }
+
+  fn constrain(
+    self,
+    left: I32,
+    right: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Unit {
+    let _ = self.solver.unify(left, right, origin)
+  }
+
+  fn is_primitive(self, type_: I32, primitive: SelfHostPrimitiveType) -> Bool {
+    let representative = self.solver.representative_type(type_)
+    match self.solver.type_term(representative) {
+      SelfHostBodyTypeTerm::BodyResolvedType(resolved) => resolved == self.resolved.primitive(primitive)
+      _ => false
+    }
+  }
+
+  fn constrain_assignable(
+    self,
+    actual: I32,
+    expected: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Unit {
+    if !self.is_primitive(actual, SelfHostPrimitiveType::NeverType) {
+      self.constrain(actual, expected, origin)
+    }
+  }
+
+  fn mark_unsupported(self, expression: U32) -> Unit {
+    let index = self.expression_index(expression)
+    if !self.unsupported_expressions[index] {
+      self.unsupported_expressions[index] = true
+      self.solver.poison_type(self.expression_types[index])
+    }
+  }
+
+  fn initialize_locals(self) -> Unit {
+    let mut local = 0u32
+    let _ = while local {
+      current => if current < self.name_info.locals.length {
+        let info = self.names.locals[self.name_info.locals.start + current]
+        self.local_types[current] = match info.kind {
+          SelfHostBodyLocalKind::ParameterLocal => if self_host_u32_greater(
+            self.resolved.parameter_types.length(),
+            info.source,
+          ) {
+            self.solver.resolved_type(self.resolved.parameter_types[info.source])
+          } else {
+            self.solver.error_type()
+          }
+          SelfHostBodyLocalKind::LetLocal => self.solver.fresh_variable()
+          SelfHostBodyLocalKind::PatternLocal => self.solver.fresh_variable()
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn initialize_controls(self) -> Unit {
+    let mut control = 0u32
+    let _ = while control {
+      current => if current < self.name_info.controls.length {
+        self.control_state_types[current] = self.solver.fresh_variable()
+        self.control_result_types[current] = self.solver.fresh_variable()
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn negative_boundary_literals(self) -> Array<Bool> {
+    let marks = self_host_inference_bool_slots(self.body.expressions.length)
+    let mut expression = self.body.expressions.start
+    let end = self.body.expressions.start + self.body.expressions.length
+    let _ = while expression {
+      current => if current < end {
+        match self.collected.expressions[current] {
+          SelfHostHirExpr::PrefixExpr(SelfHostHirPrefixOperator::Negative, operand, _) => {
+            if operand >= self.body.expressions.start && operand < end {
+              marks[self.expression_index(operand)] = true
+            }
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    marks
+  }
+
+  fn initialize_expressions(self) -> Unit {
+    let negated = self.negative_boundary_literals()
+    let mut expression = self.body.expressions.start
+    let end = self.body.expressions.start + self.body.expressions.length
+    let _ = while expression {
+      current => if current < end {
+        let type_ = match self.collected.expressions[current] {
+          SelfHostHirExpr::I8Expr(value, offset) => if value <= 127u64 || (value == 128u64 && negated[self.expression_index(current)]) {
+            self.primitive(SelfHostPrimitiveType::I8Type)
+          } else {
+            self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(current, SelfHostPrimitiveType::I8Type, offset))
+            self.solver.error_type()
+          }
+          SelfHostHirExpr::I16Expr(value, offset) => if value <= 32767u64 || (value == 32768u64 && negated[self.expression_index(current)]) {
+            self.primitive(SelfHostPrimitiveType::I16Type)
+          } else {
+            self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(current, SelfHostPrimitiveType::I16Type, offset))
+            self.solver.error_type()
+          }
+          SelfHostHirExpr::I32Expr(value, offset) => if value <= 2147483647u64 || (value == 2147483648u64 && negated[self.expression_index(current)]) {
+            self.primitive(SelfHostPrimitiveType::I32Type)
+          } else {
+            self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(current, SelfHostPrimitiveType::I32Type, offset))
+            self.solver.error_type()
+          }
+          SelfHostHirExpr::I64Expr(value, offset) => if value <= 9223372036854775807u64 || (value == 9223372036854775808u64 && negated[self.expression_index(current)]) {
+            self.primitive(SelfHostPrimitiveType::I64Type)
+          } else {
+            self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(current, SelfHostPrimitiveType::I64Type, offset))
+            self.solver.error_type()
+          }
+          SelfHostHirExpr::U8Expr(_, _) => self.primitive(SelfHostPrimitiveType::U8Type)
+          SelfHostHirExpr::U16Expr(_, _) => self.primitive(SelfHostPrimitiveType::U16Type)
+          SelfHostHirExpr::U32Expr(_, _) => self.primitive(SelfHostPrimitiveType::U32Type)
+          SelfHostHirExpr::U64Expr(_, _) => self.primitive(SelfHostPrimitiveType::U64Type)
+          SelfHostHirExpr::F32Expr(_, _) => self.primitive(SelfHostPrimitiveType::F32Type)
+          SelfHostHirExpr::F64Expr(_, _) => self.primitive(SelfHostPrimitiveType::F64Type)
+          SelfHostHirExpr::BoolExpr(_, _) => self.primitive(SelfHostPrimitiveType::BoolType)
+          SelfHostHirExpr::StringExpr(_, _) => self.primitive(SelfHostPrimitiveType::StringType)
+          SelfHostHirExpr::BytesExpr(_, _) => self.primitive(SelfHostPrimitiveType::BytesType)
+          SelfHostHirExpr::NameExpr(name, _) => match self.names.expression_references[current] {
+            SelfHostBodyNameReference::LocalNameReference(local) => self.local_types[local]
+            SelfHostBodyNameReference::ModuleValueNameReference(_) => self.solver.fresh_variable()
+            SelfHostBodyNameReference::ErrorNameReference => self.solver.error_type()
+            _ => self.solver.fresh_variable()
+          }
+          SelfHostHirExpr::ProductExpr(fields, _) => {
+            let types = []
+            let mut index = 0u32
+            let _ = while index {
+              field => if field < fields.length {
+                types.push(self.expression_type(self.collected.expression_children[fields.start + field]))
+                continue field + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self.solver.product_type(types)
+          }
+          SelfHostHirExpr::ArrayExpr(_, _) => {
+            let element = self.solver.fresh_variable()
+            match self.collected.lookup_type("Array") {
+              Option::Some(declaration) => self.solver.applied_type(
+                self.solver.resolved_type(self.resolved.declaration_type(declaration)),
+                [element],
+              )
+              Option::None => self.solver.applied_type(self.solver.fresh_variable(), [element])
+            }
+          }
+          SelfHostHirExpr::LambdaExpr(lambda, _) => if lambda < self.resolved.lambda_function_types.length() {
+            self.solver.resolved_type(self.resolved.lambda_function_types[lambda])
+          } else {
+            self.solver.error_type()
+          }
+          SelfHostHirExpr::IfExpr(_, _, alternative, _) => if alternative == 4294967295u32 {
+            self.primitive(SelfHostPrimitiveType::UnitType)
+          } else {
+            self.solver.fresh_variable()
+          }
+          SelfHostHirExpr::AssignmentExpr(_, _, _) => self.primitive(SelfHostPrimitiveType::UnitType)
+          SelfHostHirExpr::PrefixExpr(SelfHostHirPrefixOperator::LogicalNot, _, _) => self.primitive(SelfHostPrimitiveType::BoolType)
+          SelfHostHirExpr::BinaryExpr(operator, _, _, _) => match operator {
+            SelfHostHirBinaryOperator::LogicalOr => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::LogicalAnd => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::Equal => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::NotEqual => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::Less => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::LessEqual => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::Greater => self.primitive(SelfHostPrimitiveType::BoolType)
+            SelfHostHirBinaryOperator::GreaterEqual => self.primitive(SelfHostPrimitiveType::BoolType)
+            _ => self.solver.fresh_variable()
+          }
+          SelfHostHirExpr::WhileExpr(_, _, _) => {
+            let control = self.names.expression_controls[current]
+            if control != 4294967295u32 && control < self.control_result_types.length() {
+              self.control_result_types[control]
+            } else {
+              self.solver.error_type()
+            }
+          }
+          SelfHostHirExpr::BreakExpr(_, _) => self.primitive(SelfHostPrimitiveType::NeverType)
+          SelfHostHirExpr::ContinueExpr(_, _) => self.primitive(SelfHostPrimitiveType::NeverType)
+          _ => self.solver.fresh_variable()
+        }
+        self.expression_types[self.expression_index(current)] = type_
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn initialize_blocks(self) -> Unit {
+    let unit = self.primitive(SelfHostPrimitiveType::UnitType)
+    let never = self.primitive(SelfHostPrimitiveType::NeverType)
+    let mut block = self.body.blocks.start
+    let end = self.body.blocks.start + self.body.blocks.length
+    let _ = while block {
+      current => if current < end {
+        let data = self.collected.blocks[current]
+        let type_ = if self_host_u32_equal(data.items.length, 0u32) {
+          unit
+        } else {
+          let last_item = self_host_u32_subtract(
+            self_host_u32_add(data.items.start, data.items.length),
+            1u32,
+          )
+          match self.collected.block_items[last_item] {
+            SelfHostHirBlockItem::LetItem(_, _, _, _, _) => unit
+            SelfHostHirBlockItem::ReturnItem(_, _) => never
+            SelfHostHirBlockItem::ExpressionItem(expression, _) => self.expression_type(expression)
+          }
+        }
+        self.block_types[self.block_index(current)] = type_
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let mut expression = self.body.expressions.start
+    let expression_end = self.body.expressions.start + self.body.expressions.length
+    let _ = while expression {
+      current => if current < expression_end {
+        match self.collected.expressions[current] {
+          SelfHostHirExpr::BlockExpr(block_id, _) => {
+            self.expression_types[self.expression_index(current)] = self.block_type(block_id)
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn initialize_patterns(self) -> Unit {
+    let mut pattern = self.body.patterns.start
+    let end = self.body.patterns.start + self.body.patterns.length
+    let _ = while pattern {
+      current => if current < end {
+        let type_ = match self.collected.patterns[current] {
+          SelfHostHirPattern::BindingPattern(_, _) => match self.names.pattern_references[current] {
+            SelfHostBodyPatternReference::PatternBindingReference(local) => self.local_types[local]
+            _ => self.solver.fresh_variable()
+          }
+          SelfHostHirPattern::LiteralPattern(expression, _) => self.expression_type(expression)
+          SelfHostHirPattern::TuplePattern(_, children, _) => {
+            let fields = []
+            let mut index = 0u32
+            let _ = while index {
+              child => if child < children.length {
+                fields.push(self.pattern_type(self.collected.pattern_children[children.start + child]))
+                continue child + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            self.solver.product_type(fields)
+          }
+          _ => self.solver.fresh_variable()
+        }
+        self.pattern_types[self.pattern_index(current)] = type_
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_patterns(self) -> Unit {
+    let mut pattern = self.body.patterns.start
+    let end = self.body.patterns.start + self.body.patterns.length
+    let _ = while pattern {
+      current => if current < end {
+        match self.collected.patterns[current] {
+          SelfHostHirPattern::AlternativePattern(_, children, offset) => {
+            let mut index = 0u32
+            let _ = while index {
+              child => if child < children.length {
+                let child_pattern = self.collected.pattern_children[children.start + child]
+                self.constrain(
+                  self.pattern_type(child_pattern),
+                  self.pattern_type(current),
+                  self_host_pattern_type_origin(current, offset),
+                )
+                continue child + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostHirPattern::WildcardPattern(_) => {}
+          SelfHostHirPattern::BindingPattern(_, _) => {}
+          SelfHostHirPattern::RestPattern(_) => {}
+          SelfHostHirPattern::LiteralPattern(_, _) => {}
+          SelfHostHirPattern::TuplePattern(_, _, _) => {}
+          _ => self.solver.poison_type(self.pattern_type(current))
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_block_items(self) -> Unit {
+    let unit = self.primitive(SelfHostPrimitiveType::UnitType)
+    let mut item = self.body.block_items.start
+    let end = self.body.block_items.start + self.body.block_items.length
+    let _ = while item {
+      current => if current < end {
+        match self.collected.block_items[current] {
+          SelfHostHirBlockItem::LetItem(_, _, name_offset, value, _) => {
+            let local = self.names.block_item_locals[current]
+            if local != 4294967295u32 && local < self.local_types.length() {
+              self.constrain(
+                self.local_types[local],
+                self.expression_type(value),
+                self_host_local_type_origin(local, name_offset),
+              )
+            }
+          }
+          SelfHostHirBlockItem::ReturnItem(value, offset) => if self.callable_index == 4294967295u32 {
+            self.diagnostics.push(SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(offset))
+          } else if value == 4294967295u32 {
+            self.constrain(unit, self.declared_return_type, self_host_return_type_origin(current, offset))
+          } else {
+            self.constrain_assignable(
+              self.expression_type(value),
+              self.declared_return_type,
+              self_host_return_type_origin(value, offset),
+            )
+          }
+          SelfHostHirBlockItem::ExpressionItem(_, _) => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_call(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32) -> Unit {
+    match self.names.expression_references[target] {
+      SelfHostBodyNameReference::ModuleValueNameReference(_) => {
+        self.mark_unsupported(expression)
+        self.solver.poison_type(self.expression_type(target))
+        return
+      }
+      _ => {}
+    }
+    let parameters = []
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arguments.length {
+        parameters.push(self.solver.fresh_variable())
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let function_type = self.solver.function_type(parameters, self.expression_type(expression))
+    self.constrain(
+      self.expression_type(target),
+      function_type,
+      self_host_call_type_origin(expression, offset),
+    )
+    index = 0u32
+    let _ = while index {
+      current => if current < arguments.length {
+        self.constrain_assignable(
+          self.expression_type(self.collected.expression_children[arguments.start + current]),
+          parameters[current],
+          self_host_call_type_origin(expression, offset),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_match(self, expression: U32, scrutinee: U32, arms: SelfHostHirSpan, offset: U32) -> Unit {
+    let expected = self.expression_type(scrutinee)
+    let result = self.expression_type(expression)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arms.length {
+        let arm = self.collected.pattern_arms[self.collected.arm_children[arms.start + current]]
+        self.constrain(self.pattern_type(arm.pattern), expected, self_host_pattern_type_origin(arm.pattern, arm.offset))
+        if !self_host_u32_equal(arm.guard_condition, 4294967295u32) {
+          self.constrain(
+            self.expression_type(arm.guard_condition),
+            self.primitive(SelfHostPrimitiveType::BoolType),
+            self_host_expression_type_origin(arm.guard_condition, arm.offset),
+          )
+        }
+        self.constrain_assignable(
+          self.expression_type(arm.body),
+          result,
+          self_host_expression_type_origin(expression, offset),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_while(self, expression: U32, initial: U32, arms: SelfHostHirSpan, offset: U32) -> Unit {
+    let control = self.names.expression_controls[expression]
+    if control == 4294967295u32 || control >= self.control_state_types.length() {
+      self.solver.poison_type(self.expression_type(expression))
+      return
+    }
+    let state = self.control_state_types[control]
+    self.constrain(self.expression_type(initial), state, self_host_expression_type_origin(expression, offset))
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arms.length {
+        let arm = self.collected.pattern_arms[self.collected.arm_children[arms.start + current]]
+        self.constrain(self.pattern_type(arm.pattern), state, self_host_pattern_type_origin(arm.pattern, arm.offset))
+        if !self_host_u32_equal(arm.guard_condition, 4294967295u32) {
+          self.constrain(
+            self.expression_type(arm.guard_condition),
+            self.primitive(SelfHostPrimitiveType::BoolType),
+            self_host_expression_type_origin(arm.guard_condition, arm.offset),
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_transfer(self, expression: U32, value: U32, break_: Bool, offset: U32) -> Unit {
+    let control = self.names.transfer_targets[expression]
+    if control != 4294967295u32 && control < self.control_state_types.length() {
+      let expected = if break_ {
+        self.control_result_types[control]
+      } else {
+        self.control_state_types[control]
+      }
+      self.constrain_assignable(
+        self.expression_type(value),
+        expected,
+        self_host_expression_type_origin(expression, offset),
+      )
+    }
+  }
+
+  fn constrain_expressions(self) -> Unit {
+    let mut expression = self.body.expressions.start
+    let end = self.body.expressions.start + self.body.expressions.length
+    let _ = while expression {
+      current => if current < end {
+        let offset = self_host_basic_expression_offset(
+          self.collected.expressions[current],
+        )
+        match self.collected.expressions[current] {
+          SelfHostHirExpr::ArrayExpr(elements, _) => {
+            let representative = self.solver.representative_type(self.expression_type(current))
+            let element_type = match self.solver.type_term(representative) {
+              SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => if arguments.length == 1u32 {
+                self.solver.type_argument(arguments.start)
+              } else {
+                self.solver.error_type()
+              }
+              _ => self.solver.error_type()
+            }
+            let mut index = 0u32
+            let _ = while index {
+              item => if item < elements.length {
+                self.constrain(
+                  self.expression_type(self.collected.expression_children[elements.start + item]),
+                  element_type,
+                  self_host_expression_type_origin(current, offset),
+                )
+                continue item + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
+            self.constrain(self.expression_type(condition), self.primitive(SelfHostPrimitiveType::BoolType), self_host_expression_type_origin(condition, offset))
+            if alternative == 4294967295u32 {
+              self.constrain(self.expression_type(current), self.primitive(SelfHostPrimitiveType::UnitType), self_host_expression_type_origin(current, offset))
+            } else {
+              self.constrain_assignable(self.block_type(block), self.expression_type(current), self_host_expression_type_origin(current, offset))
+              self.constrain_assignable(self.expression_type(alternative), self.expression_type(current), self_host_expression_type_origin(current, offset))
+            }
+          }
+          SelfHostHirExpr::PrefixExpr(operator, value, _) => match operator {
+            SelfHostHirPrefixOperator::LogicalNot => {
+              self.constrain(self.expression_type(value), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
+              self.constrain(self.expression_type(current), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
+            }
+            _ => self.constrain(self.expression_type(current), self.expression_type(value), self_host_operator_type_origin(current, offset))
+          }
+          SelfHostHirExpr::BinaryExpr(operator, left, right, _) => match operator {
+            SelfHostHirBinaryOperator::LogicalOr => {
+              self.constrain(self.expression_type(left), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
+              self.constrain(self.expression_type(right), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
+            }
+            SelfHostHirBinaryOperator::LogicalAnd => {
+              self.constrain(self.expression_type(left), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
+              self.constrain(self.expression_type(right), self.primitive(SelfHostPrimitiveType::BoolType), self_host_operator_type_origin(current, offset))
+            }
+            SelfHostHirBinaryOperator::Equal => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+            SelfHostHirBinaryOperator::NotEqual => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+            SelfHostHirBinaryOperator::Less => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+            SelfHostHirBinaryOperator::LessEqual => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+            SelfHostHirBinaryOperator::Greater => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+            SelfHostHirBinaryOperator::GreaterEqual => self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+            _ => {
+              self.constrain(self.expression_type(left), self.expression_type(right), self_host_operator_type_origin(current, offset))
+              self.constrain(self.expression_type(current), self.expression_type(left), self_host_operator_type_origin(current, offset))
+            }
+          }
+          SelfHostHirExpr::CallExpr(target, arguments, _) => self.constrain_call(current, target, arguments, offset)
+          SelfHostHirExpr::MatchExpr(scrutinee, arms, _) => self.constrain_match(current, scrutinee, arms, offset)
+          SelfHostHirExpr::WhileExpr(initial, arms, _) => self.constrain_while(current, initial, arms, offset)
+          SelfHostHirExpr::BreakExpr(value, _) => self.constrain_transfer(current, value, true, offset)
+          SelfHostHirExpr::ContinueExpr(value, _) => self.constrain_transfer(current, value, false, offset)
+          SelfHostHirExpr::ProductFieldExpr(base, index, arity, _) => {
+            if index < arity && arity >= 2u32 && arity <= 32u32 {
+              let fields = []
+              let mut field = 0u32
+              let _ = while field {
+                slot => if slot < arity {
+                  fields.push(self.solver.fresh_variable())
+                  continue slot + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self.constrain(self.expression_type(base), self.solver.product_type(fields), self_host_expression_type_origin(current, offset))
+              self.constrain(self.expression_type(current), fields[index], self_host_expression_type_origin(current, offset))
+            } else {
+              self.solver.poison_type(self.expression_type(current))
+            }
+          }
+          SelfHostHirExpr::AssignmentExpr(target, value, _) => {
+            let mutable_ = match self.names.expression_references[target] {
+              SelfHostBodyNameReference::LocalNameReference(local) => self.names.locals[self.name_info.locals.start + local].mutable_
+              SelfHostBodyNameReference::ErrorNameReference => false
+              _ => {
+                self.diagnostics.push(SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(current, offset))
+                false
+              }
+            }
+            if !mutable_ {
+              match self.names.expression_references[target] {
+                SelfHostBodyNameReference::LocalNameReference(_) => self.diagnostics.push(SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(current, offset))
+                _ => {}
+              }
+            }
+            self.constrain_assignable(self.expression_type(value), self.expression_type(target), self_host_expression_type_origin(current, offset))
+          }
+          SelfHostHirExpr::ObjectExpr(_, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::ConstructExpr(_, _, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::FieldExpr(_, _, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::QualifiedExpr(_, _, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::IndexExpr(_, _, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::IndexSetExpr(_, _, _, _) => self.mark_unsupported(current)
+          SelfHostHirExpr::ImportAliasExpr(_, _) => self.mark_unsupported(current)
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_control_results(self) -> Unit {
+    let has_break = self_host_inference_bool_slots(self.name_info.controls.length)
+    let mut expression = self.body.expressions.start
+    let end = self.body.expressions.start + self.body.expressions.length
+    let _ = while expression {
+      current => if current < end {
+        match self.collected.expressions[current] {
+          SelfHostHirExpr::BreakExpr(_, _) => {
+            let control = self.names.transfer_targets[current]
+            if control != 4294967295u32 && control < has_break.length() {
+              has_break[control] = true
+            }
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let mut control = 0u32
+    let _ = while control {
+      current => if current < has_break.length() {
+        if !has_break[current] {
+          self.constrain(
+            self.control_result_types[current],
+            self.primitive(SelfHostPrimitiveType::NeverType),
+            self_host_synthetic_type_origin(current, self.body.offset),
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_root(self) -> Unit {
+    self.result_type = match self.body.root {
+      SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => self.expression_type(expression)
+      SelfHostHirBodyRoot::BlockBodyRoot(block) => self.block_type(block)
+    }
+    if self.callable_index != 4294967295u32 {
+      let mut root_expression = 4294967295u32
+      match self.body.root {
+        SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => {
+          root_expression = expression
+        }
+        SelfHostHirBodyRoot::BlockBodyRoot(block) => {
+          let items = self.collected.blocks[block].items
+          if self_host_u32_greater(items.length, 0u32) {
+            let last_item = self_host_u32_subtract(
+              self_host_u32_add(items.start, items.length),
+              1u32,
+            )
+            match self.collected.block_items[last_item] {
+              SelfHostHirBlockItem::ExpressionItem(expression, _) => {
+                root_expression = expression
+              }
+              _ => {}
+            }
+          }
+        }
+      }
+      if root_expression == 4294967295u32 {
+        self.constrain_assignable(
+          self.result_type,
+          self.declared_return_type,
+          self_host_return_type_origin(self_host_semantic_id_local(self.body.id), self.body.offset),
+        )
+      } else if !self.is_primitive(self.declared_return_type, SelfHostPrimitiveType::UnitType) {
+        self.constrain_assignable(
+          self.expression_type(root_expression),
+          self.declared_return_type,
+          self_host_return_type_origin(root_expression, self.body.offset),
+        )
+      }
+    }
+  }
+
+  fn zonk_array(self, values: Array<I32>) -> Unit {
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < values.length() {
+        values[current] = self.solver.zonk_type(values[current])
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn finalize(self) -> SelfHostBasicInferredBody {
+    self.zonk_array(self.expression_types)
+    self.zonk_array(self.local_types)
+    self.zonk_array(self.block_types)
+    self.zonk_array(self.pattern_types)
+    self.zonk_array(self.control_state_types)
+    self.zonk_array(self.control_result_types)
+    self.result_type = self.solver.zonk_type(self.result_type)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < self.solver.diagnostic_count() {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(
+            self.solver.diagnostic_at(current),
+          ),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.expression_types.length() {
+        let expression = self.body.expressions.start + current
+        if self.unsupported_expressions[current] {
+          self.diagnostics.push(
+            SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(
+              expression,
+              self_host_basic_expression_offset(
+                self.collected.expressions[expression],
+              ),
+            ),
+          )
+        } else if self.solver.has_unresolved_variable(self.expression_types[current]) {
+          self.diagnostics.push(
+            SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(
+              expression,
+              self_host_basic_expression_offset(
+                self.collected.expressions[expression],
+              ),
+            ),
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
+      current => if current < self.local_types.length() {
+        if self.solver.has_unresolved_variable(self.local_types[current]) {
+          let info = self.names.locals[self.name_info.locals.start + current]
+          self.diagnostics.push(
+            SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(
+              self.body.id,
+              current,
+              info.offset,
+            ),
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    SelfHostBasicInferredBody::{
+      body: self.body.id
+      root_type: self.result_type
+      types: self.solver.types
+      type_arguments: self.solver.type_arguments
+      expression_types: self.expression_types
+      local_types: self.local_types
+      block_types: self.block_types
+      pattern_types: self.pattern_types
+      control_state_types: self.control_state_types
+      control_result_types: self.control_result_types
+      unsupported_expressions: self.unsupported_expressions
+      diagnostics: self.diagnostics
+    }
+  }
+
+  fn run(self) -> SelfHostBasicInferredBody {
+    self.initialize_locals()
+    self.initialize_controls()
+    self.initialize_expressions()
+    self.initialize_blocks()
+    self.initialize_patterns()
+    self.declared_return_type = if self.callable_index == 4294967295u32 {
+      self.solver.error_type()
+    } else {
+      self.solver.resolved_type(self.resolved.callable_return_types[self.callable_index])
+    }
+    self.constrain_patterns()
+    self.constrain_block_items()
+    self.constrain_expressions()
+    self.constrain_control_results()
+    self.constrain_root()
+    self.finalize()
+  }
+}
+
+fn self_host_infer_basic_module_bodies(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  names: SelfHostResolvedModuleNames,
+) -> SelfHostBasicInferredModuleBodies {
+  let bodies = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < collected.bodies.length() {
+      let body = collected.bodies[current]
+      let name_info = names.bodies[current]
+      bodies.push(
+        SelfHostBasicBodyInferencer::new(
+          collected,
+          resolved,
+          names,
+          body,
+          name_info,
+        ).run(),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostBasicInferredModuleBodies::{
+    module_id: collected.module_id
+    bodies: bodies
+  }
+}

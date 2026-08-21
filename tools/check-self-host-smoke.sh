@@ -36,6 +36,7 @@ semantic_sources=(
   self_host/compiler/semantic_local_unification.dew
   self_host/compiler/semantic_body_names.dew
   self_host/compiler/semantic_body_name_resolution.dew
+  self_host/compiler/semantic_basic_body_inference.dew
 )
 
 tools/dew test \
@@ -61,7 +62,8 @@ tools/dew test \
   self_host/compiler/semantic_body_name_resolution_test.dew \
   self_host/compiler/semantic_derive_expansion_test.dew \
   self_host/compiler/semantic_imported_semantics_test.dew \
-  self_host/compiler/semantic_local_unification_test.dew
+  self_host/compiler/semantic_local_unification_test.dew \
+  self_host/compiler/semantic_basic_body_inference_test.dew
 
 python3 tools/check-self-host-parser.py
 python3 tools/check-self-host-semantics.py

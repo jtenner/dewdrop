@@ -1,0 +1,275 @@
+open dew.std.string_builder
+open dew.std.testing
+
+fn self_host_basic_infer_source(
+  module_id: U64,
+  source: Bytes,
+) -> (
+  SelfHostCollectedModule,
+  SelfHostResolvedModuleTypes,
+  SelfHostResolvedModuleNames,
+  SelfHostBasicInferredModuleBodies,
+) {
+  let collected = self_host_collect_bytes(module_id, source)
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
+  (collected, resolved, names, inferred)
+}
+
+fn self_host_assert_basic_primitive(
+  body: SelfHostBasicInferredBody,
+  resolved: SelfHostResolvedModuleTypes,
+  type_: I32,
+  primitive: SelfHostPrimitiveType,
+  message: String,
+) -> Unit {
+  match body.type_term(type_) {
+    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+      resolved_type == resolved.primitive(primitive),
+      message,
+    )
+    _ => assert(false, message)
+  }
+}
+
+test "basic body inference resolves literals parameters lets and returns" {
+  let (collected, resolved, names, inferred) = self_host_basic_infer_source(
+    81u64,
+    b"fn next(value: I32) -> I32 {\n  let result = value + 1\n  result\n}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "collection diagnostics")
+  assert(resolved.diagnostics.length() == 0u32, "type diagnostics")
+  assert(names.diagnostics.length() == 0u32, "name diagnostics")
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "inference diagnostics")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.root_type,
+    SelfHostPrimitiveType::I32Type,
+    "root I32",
+  )
+  assert(body.local_types.length() == 2u32, "parameter and let locals")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.local_types[1u32],
+    SelfHostPrimitiveType::I32Type,
+    "let I32",
+  )
+}
+
+test "basic body inference handles products destructuring and branches" {
+  let (collected, resolved, names, inferred) = self_host_basic_infer_source(
+    82u64,
+    b"fn choose(flag: Bool) -> I32 {\n  let pair = (1, true)\n  let (first, _) = pair\n  if flag {\n    first\n  } else {\n    4\n  }\n}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "collection diagnostics")
+  assert(resolved.diagnostics.length() == 0u32, "type diagnostics")
+  assert(names.diagnostics.length() == 0u32, "name diagnostics")
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "product inference diagnostics")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.root_type,
+    SelfHostPrimitiveType::I32Type,
+    "branch result I32",
+  )
+}
+
+test "basic body inference constrains function-value calls" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    83u64,
+    b"fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {\n  callback(value)\n}\n",
+  )
+  assert(inferred.bodies.length() == 1u32, "body count")
+  for body in inferred.bodies {
+    assert(body.diagnostics.length() == 0u32, "call inference diagnostics")
+    self_host_assert_basic_primitive(
+      body,
+      resolved,
+      body.root_type,
+      SelfHostPrimitiveType::I32Type,
+      "call result I32",
+    )
+  }
+}
+
+test "basic body inference defers direct call selection without false constraints" {
+  let (_, _, _, inferred) = self_host_basic_infer_source(
+    831u64,
+    b"fn inc(value: I32) -> I32 {\n  value + 1\n}\nfn use() -> I32 {\n  inc(4)\n}\n",
+  )
+  let body = inferred.bodies[1u32]
+  let mut unsupported = 0u32
+  let mut constraints = 0u32
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < self_host_basic_inference_diagnostic_count(body) {
+      match self_host_basic_inference_diagnostic_at(body, current) {
+        SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => {
+          unsupported = unsupported + 1u32
+        }
+        SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
+          constraints = constraints + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(unsupported == 1u32, "one deferred direct call")
+  assert(constraints == 0u32, "no false direct-call mismatch")
+}
+
+test "basic body inference constrains typed array literals" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    832u64,
+    b"struct Array<t> {}\nfn values() -> Array<I32> {\n  [1, 2, 3]\n}\n",
+  )
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "array diagnostics")
+  match body.type_term(body.root_type) {
+    SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => {
+      assert(arguments.length == 1u32, "array argument count")
+      self_host_assert_basic_primitive(
+        body,
+        resolved,
+        body.type_arguments[arguments.start],
+        SelfHostPrimitiveType::I32Type,
+        "array element I32",
+      )
+    }
+    SelfHostBodyTypeTerm::BodyResolvedType(type_) => match resolved.types[type_] {
+      SelfHostResolvedType::AppliedType(_, arguments) => assert(
+        arguments.length == 1u32,
+        "resolved array argument count",
+      )
+      _ => assert(false, "expected resolved array")
+    }
+    _ => assert(false, "expected array application")
+  }
+}
+
+test "basic body inference constrains match patterns and guards" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    84u64,
+    b"fn select(value: I32, ready: Bool) -> I32 {\n  match value {\n    item if ready => item\n    _ => 0\n  }\n}\n",
+  )
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "match diagnostics")
+  assert(body.pattern_types.length() == 2u32, "pattern count")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.root_type,
+    SelfHostPrimitiveType::I32Type,
+    "match result I32",
+  )
+}
+
+test "basic body inference constrains functional loop state and result" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    85u64,
+    b"fn finish(initial: I32) -> I32 {\n  while initial {\n    value if value == 0 => break value\n    value => continue value - 1\n  }\n}\n",
+  )
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "loop diagnostics")
+  assert(body.control_state_types.length() == 1u32, "control count")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.control_state_types[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "loop state I32",
+  )
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.control_result_types[0u32],
+    SelfHostPrimitiveType::I32Type,
+    "loop result I32",
+  )
+}
+
+fn self_host_basic_deep_local_source(count: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  builder.append("fn deep(initial: I32) -> I32 {\n")
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < count {
+      builder.append("  let value_")
+      builder.append_u32(current)
+      builder.append(" = ")
+      if current == 0u32 {
+        builder.append("initial")
+      } else {
+        builder.append("value_")
+        builder.append_u32(current - 1u32)
+      }
+      builder.append("\n")
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.append("  value_")
+  builder.append_u32(count - 1u32)
+  builder.append("\n}\n")
+  builder.finish().as_bytes()
+}
+
+test "basic body inference remains iterative for 1024 sequential locals" {
+  let (_, resolved, _, inferred) = self_host_basic_infer_source(
+    852u64,
+    self_host_basic_deep_local_source(1024u32),
+  )
+  let body = inferred.bodies[0u32]
+  assert(body.local_types.length() == 1025u32, "deep local count")
+  assert(body.diagnostics.length() == 0u32, "deep inference diagnostics")
+  self_host_assert_basic_primitive(
+    body,
+    resolved,
+    body.root_type,
+    SelfHostPrimitiveType::I32Type,
+    "deep root I32",
+  )
+}
+
+test "basic body inference reports mismatches bounds and mutability" {
+  let (_, _, _, inferred) = self_host_basic_infer_source(
+    86u64,
+    b"fn bad(value: I32) -> I32 {\n  let fixed = 1\n  fixed = true\n  true\n}\n",
+  )
+  let body = inferred.bodies[0u32]
+  let mut mismatch = 0u32
+  let mut immutable = 0u32
+  let mut range = 0u32
+  let mut diagnostic_index = 0u32
+  let _ = while diagnostic_index {
+    current => if current < self_host_basic_inference_diagnostic_count(body) {
+      match self_host_basic_inference_diagnostic_at(body, current) {
+        SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
+          mismatch = mismatch + 1u32
+        }
+        SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _) => {
+          immutable = immutable + 1u32
+        }
+        SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(_, _, _) => {
+          range = range + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(mismatch > 0u32, "type mismatch")
+  assert(immutable == 1u32, "immutable assignment")
+  assert(range == 0u32, "no numeric range diagnostic")
+}
