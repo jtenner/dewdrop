@@ -1,0 +1,117 @@
+open dew.std.string_builder
+open dew.std.testing
+
+fn self_host_module_value_chain_source(length: U32) -> Bytes {
+  let builder = StringBuilder::new()
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      builder.append("let value")
+      builder.append_u64(u32_into_u64(current))
+      builder.append(" = ")
+      if self_host_u32_equal(current + 1u32, length) {
+        builder.append("1\n")
+      } else {
+        builder.append("value")
+        builder.append_u64(u32_into_u64(current + 1u32))
+        builder.append("\n")
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  builder.finish().as_bytes()
+}
+
+test "module value dependencies are deduplicated and dependency first" {
+  let collected = self_host_collect_bytes(
+    940u64,
+    b"let first = second + second\nlet second = 1\nlet third = first + second\nlet fourth = third\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  let dependencies = self_host_analyze_module_value_dependencies(
+    collected,
+    names,
+  )
+  assert(
+    self_host_u32_equal(dependencies.dependency_span(0u32).length, 1u32),
+    "deduplicated",
+  )
+  assert(
+    self_host_u32_equal(dependencies.dependency_span(1u32).length, 0u32),
+    "leaf",
+  )
+  assert(
+    self_host_u32_equal(dependencies.dependency_span(2u32).length, 2u32),
+    "two dependencies",
+  )
+  assert(dependencies.scc_count() == 4u32, "SCC count")
+  assert(
+    self_host_u64_equal(
+      dependencies.scc_declaration(dependencies.scc_at(0u32).start),
+      collected.lets[1u32].declaration,
+    ),
+    "dependency-first schedule",
+  )
+}
+
+test "module value dependencies retain cyclic members in source order" {
+  let collected = self_host_collect_bytes(
+    941u64,
+    b"let first = second\nlet second = first\nlet self = self\nlet independent = 1\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  let dependencies = self_host_analyze_module_value_dependencies(
+    collected,
+    names,
+  )
+  assert(dependencies.scc_count() == 3u32, "cyclic SCC count")
+  let mut mutual = false
+  let mut single_self = false
+  let mut scc_index = 0u32
+  let _ = while scc_index {
+    current => if current < dependencies.scc_count() {
+      let scc = dependencies.scc_at(current)
+      if self_host_u32_equal(scc.length, 2u32) {
+        mutual = self_host_u64_equal(
+          dependencies.scc_declaration(scc.start),
+          collected.lets[0u32].declaration,
+        ) && self_host_u64_equal(
+          dependencies.scc_declaration(self_host_u32_add(scc.start, 1u32)),
+          collected.lets[1u32].declaration,
+        )
+      } else if self_host_u32_equal(scc.length, 1u32) && self_host_u64_equal(
+        dependencies.scc_declaration(scc.start),
+        collected.lets[2u32].declaration,
+      ) {
+        single_self = true
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(mutual, "mutual cycle")
+  assert(single_self, "self cycle")
+}
+
+test "module value SCC analysis remains iterative for 1024 dependencies" {
+  let collected = self_host_collect_bytes(
+    942u64,
+    self_host_module_value_chain_source(1024u32),
+  )
+  let names = self_host_resolve_module_names(collected)
+  let dependencies = self_host_analyze_module_value_dependencies(
+    collected,
+    names,
+  )
+  assert(dependencies.scc_count() == 1024u32, "deep SCC count")
+  assert(
+    self_host_u64_equal(
+      dependencies.scc_declaration(dependencies.scc_at(0u32).start),
+      collected.lets[1023u32].declaration,
+    ),
+    "deep dependency-first schedule",
+  )
+}
