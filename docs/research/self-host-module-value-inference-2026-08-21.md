@@ -15,4 +15,4 @@ Implemented behavior:
 - frozen module-value type terms and argument spans;
 - iterative 1,024-value dependency-chain coverage.
 
-The basic body inferencer now accepts an existing solver and a local module-value type map. It also imports frozen product, application, and function type graphs into independent function solvers through an explicit task stack. Local functions can now consume primitive and applied module-value types. Imported module-value inference, final body-job merging, and lambda-family inference remain next.
+The basic body inferencer now accepts an existing solver and a local module-value type map. It also imports frozen product, application, and function type graphs into independent function solvers through an explicit task stack. Local functions can now consume primitive and applied module-value types. Module-value SCC inference also receives imported calls, fields, variants, implementations, and imported module-value recipes before independent function inference. Final body-job merging and lambda-family inference remain next.

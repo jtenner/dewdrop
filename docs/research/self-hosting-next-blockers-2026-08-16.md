@@ -22,10 +22,10 @@ complete. Implementation-head indexing, orphan checks, overlap checks, and
 duplicate inherent-method checks, full local trait signature conformance,
 generic specialization ranking, and coherent local dispatch are complete. The
 imported implementation evidence merging is complete. The next compiler work
-is prerequisite and generic-bound evidence trees, imported module-value
-inference, and lambda-family inference. Module-value dependency SCC scheduling,
-shared-SCC inference, frozen graph import into function solvers, and successful
-basic body result compaction are complete.
+is prerequisite and generic-bound evidence trees, lambda-family inference, and
+final body-job merging. Module-value dependency SCC scheduling, shared-SCC
+inference with imported selections, frozen graph import into function solvers,
+and successful basic body result compaction are complete.
 
 ## 1. P0: compiler host boundary
 
@@ -200,7 +200,7 @@ The complete tokenizer and parser port finished on August 20, 2026. It parses th
 
 Semantic declaration collection and flat HIR finished on August 20, 2026.
 
-1. Complete body inference: prerequisite evidence trees, imported module-value inference, lambda families, and final deterministic result merging.
+1. Complete body inference: prerequisite evidence trees, lambda families, and final deterministic result merging.
 2. Port flow, layouts, specialization, optimization, and backend phases in dependency order.
 3. Add the cache-disabled A→B→C harness.
 4. Restore BLAKE3-based persistent caches, including parser-event persistence, after byte identity is stable.

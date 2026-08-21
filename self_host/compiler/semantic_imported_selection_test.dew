@@ -794,3 +794,47 @@ test "imported selection diagnoses non-generic call arity" {
   }
   assert(count == 1u32, "imported arity diagnostic")
 }
+
+fn self_host_assert_imported_module_value_body(
+  body: SelfHostBasicInferredBody,
+  resolved: SelfHostResolvedModuleTypes,
+) -> Unit {
+  assert(body.diagnostic_count() == 0u32, "imported module value diagnostics")
+  match body.type_term(body.root_type) {
+    SelfHostBodyTypeTerm::BodyResolvedType(type_) => assert(
+      type_ == resolved.primitive(SelfHostPrimitiveType::I64Type),
+      "imported module value result",
+    )
+    _ => assert(false, "imported module value result")
+  }
+}
+
+test "module values use imported calls before function inference" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nlet widened = widen(1)\npub fn read() -> I64 {\n  widened\n}\n",
+    b"pub fn widen(value: I32) -> I64 {\n  1i64\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    imports.resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+  self_host_assert_imported_module_value_body(
+    inferred.bodies[1u32],
+    imports.resolved,
+  )
+}

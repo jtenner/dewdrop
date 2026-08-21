@@ -6524,6 +6524,32 @@ fn self_host_infer_basic_module_bodies_with_imports(
   type_generic_spans: Map<U64, SelfHostHirSpan>,
   module_value_types: Map<U64, U32>,
 ) -> SelfHostBasicInferredModuleBodies {
+  let values = self_host_infer_module_values_with_imports(
+    collected,
+    resolved,
+    names,
+    callables,
+    generic_parameter_ids,
+    parameter_types,
+    parameter_receivers,
+    implementations,
+    fields,
+    variants,
+    variant_payload_types,
+    type_declaration_types,
+    type_generic_spans,
+    module_value_types,
+  )
+  let local_module_value_types = self_host_basic_empty_local_module_value_map()
+  let mut value = 0u32
+  let _ = while value {
+    current => if current < values.let_declarations.length() {
+      local_module_value_types[values.let_declarations[current]] = values.let_types[current]
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
   self_host_infer_basic_module_bodies_with_inputs(
     collected,
     resolved,
@@ -6540,9 +6566,9 @@ fn self_host_infer_basic_module_bodies_with_imports(
       type_declaration_types: type_declaration_types
       type_generic_spans: type_generic_spans
       module_value_types: module_value_types
-      local_module_value_types: self_host_basic_empty_local_module_value_map()
-      local_module_value_terms: []
-      local_module_value_arguments: []
+      local_module_value_types: local_module_value_types
+      local_module_value_terms: values.types
+      local_module_value_arguments: values.type_arguments
       local_module_value_types_are_solver_local: false
     },
   )
