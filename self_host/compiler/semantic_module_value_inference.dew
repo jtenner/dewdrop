@@ -76,6 +76,9 @@ fn self_host_module_value_empty_inputs(
     type_generic_spans: self_host_empty_u64_span_map()
     module_value_types: self_host_basic_empty_type_declaration_map()
     local_module_value_types: local_types
+    local_module_value_terms: []
+    local_module_value_arguments: []
+    local_module_value_types_are_solver_local: true
   }
 }
 
