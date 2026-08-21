@@ -1,0 +1,67 @@
+open dew.std.testing
+
+test "trait evidence selects imported concrete implementation" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run(value: Box) -> I32 {\n  value.mark()\n}\n",
+    b"pub trait Mark {\n  fn mark(self) -> I32\n}\npub struct Box {}\nimpl Mark for Box {\n  fn mark(self) -> I32 {\n    1\n  }\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(
+    collected,
+    fixture.imports,
+  )
+  let implementation = index.implementations[0u32]
+  let trait_type = match implementation.trait_type {
+    Option::Some(value) => value
+    Option::None => 0u32
+  }
+  match self_host_select_trait_evidence(
+    collected,
+    fixture.imports,
+    index,
+    trait_type,
+    implementation.target_type,
+  ) {
+    SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(
+      declaration,
+      specificity,
+    ) => {
+      assert(
+        self_host_u64_equal(declaration, implementation.declaration),
+        "selected implementation",
+      )
+      assert(self_host_u32_equal(specificity, 0u32), "specificity")
+    }
+    _ => assert(false, "expected selected evidence")
+  }
+}
+
+test "trait evidence rejects a nonmatching target" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\n",
+    b"pub trait Mark {}\npub struct Box {}\nimpl Mark for Box {}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(
+    collected,
+    fixture.imports,
+  )
+  let implementation = index.implementations[0u32]
+  let trait_type = match implementation.trait_type {
+    Option::Some(value) => value
+    Option::None => 0u32
+  }
+  let i32_type = fixture.imports.resolved.primitive(
+    SelfHostPrimitiveType::I32Type,
+  )
+  assert(
+    self_host_select_trait_evidence(
+      collected,
+      fixture.imports,
+      index,
+      trait_type,
+      i32_type,
+    ) is SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection,
+    "nonmatching target",
+  )
+}

@@ -1,0 +1,121 @@
+open dew.std.option
+
+pub enum SelfHostTraitEvidenceSelection {
+  NoTraitEvidenceSelection
+  AmbiguousTraitEvidenceSelection(U64, U64, U32)
+  SelectedTraitEvidenceSelection(U64, U32)
+}
+
+fn self_host_trait_evidence_candidate_matches(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  implementation: SelfHostIndexedImpl,
+  trait_type: U32,
+  target_type: U32,
+) -> Bool {
+  let importer = SelfHostImplPatternImporter::new(imports.resolved)
+  self_host_impl_add_any_generics(
+    importer,
+    collected,
+    imports,
+    implementation.declaration,
+  )
+  let candidate_trait = match implementation.trait_type {
+    Option::Some(type_) => importer.import_type(type_)
+    Option::None => importer.solver.error_type()
+  }
+  let candidate_target = importer.import_type(implementation.target_type)
+  importer.solver.unify(
+    candidate_trait,
+    importer.solver.resolved_type(trait_type),
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  ) && importer.solver.unify(
+    candidate_target,
+    importer.solver.resolved_type(target_type),
+    SelfHostTypeConstraintOrigin::{
+      kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+      source: 0u32
+      offset: 0u32
+    },
+  )
+}
+
+fn self_host_select_trait_evidence(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  index: SelfHostModuleImplIndex,
+  trait_type: U32,
+  target_type: U32,
+) -> SelfHostTraitEvidenceSelection {
+  let trait_declaration = match self_host_impl_trait_head(
+    imports.resolved,
+    trait_type,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      return SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
+    }
+  }
+  let target_head = self_host_impl_target_head(imports.resolved, target_type)
+  let mut selected = 18446744073709551615u64
+  let mut second = 18446744073709551615u64
+  let mut selected_specificity = 0u32
+  let mut viable = 0u32
+  for implementation in index.implementations {
+    if implementation.valid && implementation.coherent && self_host_impl_heads_equal(
+      implementation.target_head,
+      target_head,
+    ) {
+      let matching_trait = match implementation.kind {
+        SelfHostIndexedImplKind::TraitIndexedImpl(candidate) => self_host_u64_equal(
+          candidate,
+          trait_declaration,
+        )
+        SelfHostIndexedImplKind::InherentIndexedImpl => false
+      }
+      if matching_trait && self_host_trait_evidence_candidate_matches(
+        collected,
+        imports,
+        implementation,
+        trait_type,
+        target_type,
+      ) {
+        if self_host_u32_greater(
+          implementation.specificity,
+          selected_specificity,
+        ) || self_host_u32_equal(viable, 0u32) {
+          selected = implementation.declaration
+          second = 18446744073709551615u64
+          selected_specificity = implementation.specificity
+          viable = 1u32
+        } else if self_host_u32_equal(
+          implementation.specificity,
+          selected_specificity,
+        ) {
+          if self_host_u32_equal(viable, 1u32) {
+            second = implementation.declaration
+          }
+          viable = self_host_u32_add(viable, 1u32)
+        }
+      }
+    }
+  }
+  if self_host_u32_equal(viable, 0u32) {
+    SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
+  } else if self_host_u32_equal(viable, 1u32) {
+    SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(
+      selected,
+      selected_specificity,
+    )
+  } else {
+    SelfHostTraitEvidenceSelection::AmbiguousTraitEvidenceSelection(
+      selected,
+      second,
+      viable,
+    )
+  }
+}

@@ -22,7 +22,7 @@ complete. Implementation-head indexing, orphan checks, overlap checks, and
 duplicate inherent-method checks, full local trait signature conformance,
 generic specialization ranking, and coherent local dispatch are complete. The
 imported implementation evidence merging is complete. The next compiler work
-is trait obligations and selected evidence, lambda-family, and module-value
+is recursive trait obligations and evidence publication, lambda-family, and module-value
 inference.
 
 ## 1. P0: compiler host boundary
