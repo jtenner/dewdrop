@@ -24,6 +24,9 @@ pub enum SelfHostBodyInferenceDiagnostic {
   ConstructionPayloadArityMismatch(U32, U64, U32, U32, U32)
   NoMatchingOperator(U32, U32)
   AmbiguousOperator(U32, U64, U64, U32, U32)
+  InvalidPatternConstructor(U32, U32)
+  PatternPayloadKindMismatch(U32, U64, U32)
+  PatternPayloadArityMismatch(U32, U32, U32, U32)
   UnresolvedExpressionType(U32, U32)
   UnresolvedLocalType(U64, U32, U32)
 }
@@ -53,6 +56,9 @@ impl SelfHostBodyInferenceDiagnostic {
       SelfHostBodyInferenceDiagnostic::ConstructionPayloadArityMismatch(_, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::AmbiguousOperator(_, _, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(_, offset) => offset
+      SelfHostBodyInferenceDiagnostic::PatternPayloadKindMismatch(_, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(_, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(_, _, offset) => offset
     }
@@ -72,6 +78,12 @@ pub enum SelfHostBasicExpressionSelection {
   FieldBasicExpressionSelection(U64, Bool)
   StructConstructionBasicExpressionSelection(U64, SelfHostHirSpan)
   VariantConstructionBasicExpressionSelection(U64, U32, SelfHostHirSpan)
+}
+
+pub enum SelfHostBasicPatternConstructor {
+  NoBasicPatternConstructor
+  ErrorBasicPatternConstructor
+  SelectedBasicPatternConstructor(U64, Bool, SelfHostHirSpan)
 }
 
 pub enum SelfHostBasicObjectFieldTarget {
@@ -102,8 +114,10 @@ pub struct SelfHostBasicInferredBody {
   operator_targets: Array<SelfHostBasicCallTarget>
   expression_selections: Array<SelfHostBasicExpressionSelection>
   object_field_targets: Array<SelfHostBasicObjectFieldTarget>
+  pattern_constructors: Array<SelfHostBasicPatternConstructor>
   call_type_arguments: Array<I32>
   expression_type_arguments: Array<I32>
+  pattern_type_arguments: Array<I32>
   unsupported_expressions: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
 }
@@ -131,6 +145,14 @@ impl SelfHostBasicInferredBody {
     expression: U32,
   ) -> SelfHostBasicExpressionSelection {
     self.expression_selections[expression - body.expressions.start]
+  }
+
+  fn pattern_constructor(
+    self,
+    body: SelfHostHirBody,
+    pattern: U32,
+  ) -> SelfHostBasicPatternConstructor {
+    self.pattern_constructors[pattern - body.patterns.start]
   }
 
   fn object_field_target(
@@ -213,6 +235,14 @@ fn self_host_inference_i32_slots(length: U32, value: I32) -> Array<I32> {
   slots
 }
 
+fn self_host_store_basic_pattern_constructor(
+  slots: Array<SelfHostBasicPatternConstructor>,
+  index: U32,
+  constructor: SelfHostBasicPatternConstructor,
+) -> Unit {
+  slots[index] = constructor
+}
+
 fn self_host_store_basic_call_target(
   slots: Array<SelfHostBasicCallTarget>,
   index: U32,
@@ -235,6 +265,22 @@ fn self_host_store_inference_type(
   type_: I32,
 ) -> Unit {
   slots[index] = type_
+}
+
+fn self_host_inference_pattern_constructor_slots(
+  length: U32,
+) -> Array<SelfHostBasicPatternConstructor> {
+  let slots = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      slots.push(SelfHostBasicPatternConstructor::NoBasicPatternConstructor)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  slots
 }
 
 fn self_host_inference_object_field_target_slots(
@@ -316,14 +362,17 @@ struct SelfHostBasicBodyInferencer {
   operator_targets: Array<SelfHostBasicCallTarget>
   expression_selections: Array<SelfHostBasicExpressionSelection>
   object_field_targets: Array<SelfHostBasicObjectFieldTarget>
+  pattern_constructors: Array<SelfHostBasicPatternConstructor>
   unsupported_expressions: Array<Bool>
   consumed_member_roots: Array<Bool>
+  consumed_pattern_roots: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
   instantiation_tasks: Array<SelfHostSignatureInstantiationTask>
   instantiation_results: Array<I32>
   candidate_type_arguments: Array<I32>
   call_type_arguments: Array<I32>
   expression_type_arguments: Array<I32>
+  pattern_type_arguments: Array<I32>
   pending_direct_calls: Array<U32>
   pending_method_calls: Array<U32>
   pending_variant_calls: Array<U32>
@@ -381,14 +430,17 @@ impl SelfHostBasicBodyInferencer {
       operator_targets: self_host_inference_call_target_slots(body.expressions.length)
       expression_selections: self_host_inference_expression_selection_slots(body.expressions.length)
       object_field_targets: self_host_inference_object_field_target_slots(body.object_fields.length)
+      pattern_constructors: self_host_inference_pattern_constructor_slots(body.patterns.length)
       unsupported_expressions: self_host_inference_bool_slots(body.expressions.length)
       consumed_member_roots: self_host_inference_bool_slots(body.expressions.length)
+      consumed_pattern_roots: self_host_inference_bool_slots(body.patterns.length)
       diagnostics: []
       instantiation_tasks: []
       instantiation_results: []
       candidate_type_arguments: []
       call_type_arguments: []
       expression_type_arguments: []
+      pattern_type_arguments: []
       pending_direct_calls: []
       pending_method_calls: []
       pending_variant_calls: []
@@ -1148,7 +1200,10 @@ impl SelfHostBasicBodyInferencer {
             _ => self.solver.fresh_variable()
           }
           SelfHostHirPattern::LiteralPattern(expression, _) => self.expression_type(expression)
-          SelfHostHirPattern::TuplePattern(_, children, _) => {
+          SelfHostHirPattern::TuplePattern(base, children, _) => if self_host_u32_equal(
+            base,
+            4294967295u32,
+          ) {
             let fields = []
             let mut index = 0u32
             let _ = while index {
@@ -1160,10 +1215,301 @@ impl SelfHostBasicBodyInferencer {
               }
             }
             self.solver.product_type(fields)
+          } else {
+            self.solver.fresh_variable()
           }
           _ => self.solver.fresh_variable()
         }
         self.pattern_types[self.pattern_index(current)] = type_
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn local_pattern_variant_target(
+    self,
+    base: U32,
+    expected: I32,
+  ) -> Option<U32> {
+    let expected_owner = self.inspect_nominal_type(expected)
+    match self.collected.patterns[base] {
+      SelfHostHirPattern::BindingPattern(name, _) => match self.names.pattern_references[
+        base
+      ] {
+        SelfHostBodyPatternReference::PatternVariantReference(_) => {
+          let mut found = 4294967295u32
+          let mut count = 0u32
+          let mut index = 0u32
+          let _ = while index {
+            current => if current < self.collected.variants.length() {
+              let variant = self.collected.variants[current]
+              if self_host_u32_equal(variant.name, name) {
+                let owner_matches = match expected_owner {
+                  Option::Some(owner) => self_host_u64_equal(
+                    owner,
+                    variant.declaration,
+                  )
+                  Option::None => true
+                }
+                if owner_matches {
+                  found = current
+                  count = count + 1u32
+                }
+              }
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          if self_host_u32_equal(count, 1u32) {
+            Option::Some(found)
+          } else {
+            Option::None
+          }
+        }
+        _ => Option::None
+      }
+      SelfHostHirPattern::QualifiedPattern(root, property, _) => match self.names.pattern_references[
+        root
+      ] {
+        SelfHostBodyPatternReference::PatternTypeReference(declaration) => {
+          let mut index = 0u32
+          while index {
+            current => if current < self.collected.variants.length() {
+              let variant = self.collected.variants[current]
+              if self_host_u64_equal(variant.declaration, declaration) && self_host_u32_equal(
+                variant.name,
+                property,
+              ) {
+                return Option::Some(current)
+              }
+              continue current + 1u32
+            } else {
+              break Option::None
+            }
+          }
+        }
+        _ => Option::None
+      }
+      _ => Option::None
+    }
+  }
+
+  fn record_pattern_constructor(
+    self,
+    pattern: U32,
+    variant: U32,
+    payload: Bool,
+  ) -> Unit {
+    let start = self.pattern_type_arguments.length()
+    for type_argument in self.candidate_type_arguments {
+      self.pattern_type_arguments.push(type_argument)
+    }
+    let constructor = SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+      self.collected.variants[variant].id,
+      payload,
+      SelfHostHirSpan::{
+        start: start
+        length: self.candidate_type_arguments.length()
+      },
+    )
+    self_host_store_basic_pattern_constructor(
+      self.pattern_constructors,
+      self.pattern_index(pattern),
+      constructor,
+    )
+  }
+
+  fn fail_pattern_constructor(self, pattern: U32) -> Unit {
+    self_host_store_basic_pattern_constructor(
+      self.pattern_constructors,
+      self.pattern_index(pattern),
+      SelfHostBasicPatternConstructor::ErrorBasicPatternConstructor,
+    )
+    self.solver.poison_type(self.pattern_type(pattern))
+  }
+
+  fn select_unit_variant_pattern(self, pattern: U32, offset: U32) -> Unit {
+    let expected = self.pattern_type(pattern)
+    let variant_index = match self.local_pattern_variant_target(
+      pattern,
+      expected,
+    ) {
+      Option::Some(value) => value
+      Option::None => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(
+            pattern,
+            offset,
+          ),
+        )
+        self.fail_pattern_constructor(pattern)
+        return
+      }
+    }
+    let variant = self.collected.variants[variant_index]
+    match variant.kind {
+      SelfHostCollectedVariantKind::UnitVariantDecl => {}
+      _ => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::PatternPayloadKindMismatch(
+            pattern,
+            variant.id,
+            offset,
+          ),
+        )
+        self.fail_pattern_constructor(pattern)
+        return
+      }
+    }
+    if !self.begin_nominal_instantiation(variant.declaration, expected) {
+      self.fail_pattern_constructor(pattern)
+      return
+    }
+    self.record_pattern_constructor(pattern, variant_index, false)
+  }
+
+  fn select_tuple_variant_pattern(
+    self,
+    pattern: U32,
+    base: U32,
+    children: SelfHostHirSpan,
+    offset: U32,
+  ) -> Unit {
+    let expected = self.pattern_type(pattern)
+    self_host_store_inference_type(
+      self.pattern_types,
+      self.pattern_index(base),
+      expected,
+    )
+    let variant_index = match self.local_pattern_variant_target(base, expected) {
+      Option::Some(value) => value
+      Option::None => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(
+            pattern,
+            offset,
+          ),
+        )
+        self.fail_pattern_constructor(pattern)
+        return
+      }
+    }
+    let variant = self.collected.variants[variant_index]
+    match variant.kind {
+      SelfHostCollectedVariantKind::TupleVariantDecl => {}
+      _ => {
+        self.diagnostics.push(
+          SelfHostBodyInferenceDiagnostic::PatternPayloadKindMismatch(
+            pattern,
+            variant.id,
+            offset,
+          ),
+        )
+        self.fail_pattern_constructor(pattern)
+        return
+      }
+    }
+    let payload = self.resolved.variant_payloads[variant_index]
+    if !self_host_u32_equal(payload.length, children.length) {
+      self.diagnostics.push(
+        SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(
+          pattern,
+          payload.length,
+          children.length,
+          offset,
+        ),
+      )
+    }
+    if !self.begin_nominal_instantiation(variant.declaration, expected) {
+      self.fail_pattern_constructor(pattern)
+      return
+    }
+    self.record_pattern_constructor(pattern, variant_index, true)
+    let limit = if children.length < payload.length {
+      children.length
+    } else {
+      payload.length
+    }
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < limit {
+        let child = self.collected.pattern_children[
+          self_host_u32_add(children.start, current)
+        ]
+        self.constrain(
+          self.pattern_type(child),
+          self.instantiate_signature_type(
+            self.resolved.signature_type_lists[
+              self_host_u32_add(payload.start, current)
+            ],
+          ),
+          self_host_pattern_type_origin(pattern, offset),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn constrain_variant_patterns(self) -> Unit {
+    let mut pattern = self.body.patterns.start
+    let end = self_host_u32_add(self.body.patterns.start, self.body.patterns.length)
+    let _ = while pattern {
+      current => if current < end {
+        match self.collected.patterns[current] {
+          SelfHostHirPattern::TuplePattern(base, _, _) => if !self_host_u32_equal(
+            base,
+            4294967295u32,
+          ) {
+            self.consumed_pattern_roots[self.pattern_index(base)] = true
+          }
+          SelfHostHirPattern::StructPattern(base, _, _, _, _) => {
+            self.consumed_pattern_roots[self.pattern_index(base)] = true
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    pattern = self.body.patterns.start
+    let _ = while pattern {
+      current => if current < end {
+        match self.collected.patterns[current] {
+          SelfHostHirPattern::TuplePattern(base, children, offset) => if !self_host_u32_equal(
+            base,
+            4294967295u32,
+          ) {
+            self.select_tuple_variant_pattern(
+              current,
+              base,
+              children,
+              offset,
+            )
+          }
+          SelfHostHirPattern::BindingPattern(_, offset) => if !self.consumed_pattern_roots[
+            self.pattern_index(current)
+          ] {
+            match self.names.pattern_references[current] {
+              SelfHostBodyPatternReference::PatternVariantReference(_) => self.select_unit_variant_pattern(
+                current,
+                offset,
+              )
+              _ => {}
+            }
+          }
+          SelfHostHirPattern::QualifiedPattern(_, _, offset) => if !self.consumed_pattern_roots[
+            self.pattern_index(current)
+          ] {
+            self.select_unit_variant_pattern(current, offset)
+          }
+          _ => {}
+        }
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
@@ -1198,6 +1544,8 @@ impl SelfHostBasicBodyInferencer {
           SelfHostHirPattern::RestPattern(_) => {}
           SelfHostHirPattern::LiteralPattern(_, _) => {}
           SelfHostHirPattern::TuplePattern(_, _, _) => {}
+          SelfHostHirPattern::QualifiedPattern(_, _, _) => {}
+          SelfHostHirPattern::StructPattern(_, _, _, _, _) => {}
           _ => self.solver.poison_type(self.pattern_type(current))
         }
         continue current + 1u32
@@ -3743,6 +4091,7 @@ impl SelfHostBasicBodyInferencer {
     self.zonk_array(self.control_result_types)
     self.zonk_array(self.call_type_arguments)
     self.zonk_array(self.expression_type_arguments)
+    self.zonk_array(self.pattern_type_arguments)
     self.result_type = self.solver.zonk_type(self.result_type)
     let mut index = 0u32
     let _ = while index {
@@ -3818,8 +4167,10 @@ impl SelfHostBasicBodyInferencer {
       operator_targets: self.operator_targets
       expression_selections: self.expression_selections
       object_field_targets: self.object_field_targets
+      pattern_constructors: self.pattern_constructors
       call_type_arguments: self.call_type_arguments
       expression_type_arguments: self.expression_type_arguments
+      pattern_type_arguments: self.pattern_type_arguments
       unsupported_expressions: self.unsupported_expressions
       diagnostics: self.diagnostics
     }
@@ -3848,6 +4199,7 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_pending_method_calls()
     self.constrain_pending_operators()
     self.constrain_pending_fields()
+    self.constrain_variant_patterns()
     self.finalize()
   }
 }

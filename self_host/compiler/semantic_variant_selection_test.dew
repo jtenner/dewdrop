@@ -159,6 +159,77 @@ test "variant selection resolves tuple and unit constructors" {
   }
 }
 
+test "variant selection resolves tuple and unit patterns" {
+  let (collected, resolved, _, inferred) = self_host_variant_infer_source(
+    873u64,
+    b"enum Maybe<t> {\n  None\n  Some(t)\n}\nfn read(value: Maybe<I32>) -> I32 {\n  match value {\n    Maybe::Some(item) => item\n    Maybe::None => 0\n  }\n}\n",
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostic_count() == 0u32, "variant pattern diagnostics")
+  let mut selected = 0u32
+  let mut pattern = hir_body.patterns.start
+  let end = self_host_u32_add(hir_body.patterns.start, hir_body.patterns.length)
+  let _ = while pattern {
+    current => if current < end {
+      match body.pattern_constructor(hir_body, current) {
+        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+          _,
+          _,
+          arguments,
+        ) => {
+          selected = selected + 1u32
+          assert(arguments.length == 1u32, "pattern generic arguments")
+          self_host_variant_assert_primitive(
+            body,
+            resolved,
+            body.pattern_type_arguments[arguments.start],
+            SelfHostPrimitiveType::I32Type,
+            "pattern generic I32",
+          )
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(selected == 2u32, "two selected pattern constructors")
+}
+
+test "variant selection diagnoses pattern payload arity" {
+  let (collected, resolved, names, inferred) = self_host_variant_infer_source(
+    874u64,
+    b"enum Maybe {\n  Some(I32)\n}\nfn read(value: Maybe) -> I32 {\n  match value {\n    Maybe::Some(_, _) => 0\n  }\n}\n",
+  )
+  let _ = resolved.module_id
+  let _ = names.module_id
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let mut count = 0u32
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < body.diagnostic_count() {
+      match body.diagnostic_at(current) {
+        SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(_, _, _, _) => {
+          count = count + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(count == 1u32, "pattern arity diagnostic")
+}
+
 test "variant selection diagnoses payload kind and arity" {
   let (kind_collected, kind_resolved, kind_names, kind_mismatch) = self_host_variant_infer_source(
     871u64,
