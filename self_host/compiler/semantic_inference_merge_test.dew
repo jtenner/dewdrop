@@ -1,0 +1,97 @@
+open dew.std.testing
+
+fn self_host_merge_test_body(
+  body: U64,
+  term: SelfHostBodyTypeTerm,
+  target: SelfHostBasicCallTarget,
+) -> SelfHostBasicInferredBody {
+  SelfHostBasicInferredBody::{
+    body: body
+    root_type: 0i32
+    types: [term]
+    type_arguments: [0i32]
+    expression_types: [0i32]
+    local_types: [0i32]
+    capture_types: []
+    block_types: [0i32]
+    pattern_types: [0i32]
+    control_state_types: []
+    control_result_types: []
+    call_targets: [target]
+    operator_targets: [SelfHostBasicCallTarget::NoBasicCallTarget]
+    expression_selections: [SelfHostBasicExpressionSelection::NoBasicExpressionSelection]
+    object_field_targets: []
+    pattern_constructors: [SelfHostBasicPatternConstructor::NoBasicPatternConstructor]
+    call_type_arguments: [0i32]
+    expression_type_arguments: []
+    pattern_type_arguments: []
+    unsupported_expressions: [false]
+    diagnostics: []
+  }
+}
+
+test "module inference merge rebases body and lambda type graphs" {
+  let body = self_host_merge_test_body(
+    self_host_make_semantic_id(3000u64, 0u32),
+    SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+      start: 0u32
+      length: 1u32
+    }),
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      7u64,
+      SelfHostHirSpan::{
+        start: 0u32
+        length: 1u32
+      },
+    ),
+  )
+  let lambda_body = self_host_merge_test_body(
+    self_host_make_semantic_id(3000u64, 1u32),
+    SelfHostBodyTypeTerm::BodyAppliedType(
+      -2i32,
+      SelfHostHirSpan::{
+        start: 0u32
+        length: 1u32
+      },
+    ),
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      8u64,
+      SelfHostHirSpan::{
+        start: 0u32
+        length: 1u32
+      },
+    ),
+  )
+  let merged = self_host_merge_module_inference(
+    SelfHostBasicInferredModuleBodies::{
+      module_id: 3000u64
+      bodies: [body]
+      lambdas: [SelfHostBasicInferredLambda::{
+        lambda: 0u32
+        body: lambda_body
+      }]
+    },
+  )
+  assert(merged.jobs.length() == 2u32, "two jobs")
+  assert(merged.types.length() == 2u32, "two types")
+  let body_root = merged.jobs[0u32].root_type
+  let lambda_root = merged.jobs[1u32].root_type
+  assert(self_host_u32_equal(self_host_body_i32_to_u32(body_root), 0u32), "body root")
+  assert(self_host_u32_equal(self_host_body_i32_to_u32(lambda_root), 1u32), "lambda root rebased")
+  match merged.types[1u32] {
+    SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+      assert(self_host_u32_equal(self_host_body_i32_to_u32(-base - 2i32), 0u32), "rigid base")
+      assert(self_host_u32_equal(arguments.start, 1u32), "argument span")
+      let argument = merged.type_arguments[1u32]
+      assert(self_host_u32_equal(self_host_body_i32_to_u32(argument), 1u32), "argument rebased")
+    }
+    _ => assert(false, "applied type")
+  }
+  match merged.call_targets[1u32] {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => assert(
+      self_host_u32_equal(arguments.start, 1u32),
+      "call arguments rebased",
+    )
+    _ => assert(false, "selected call")
+  }
+}

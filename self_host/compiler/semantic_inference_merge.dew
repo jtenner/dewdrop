@@ -1,0 +1,356 @@
+pub enum SelfHostMergedInferenceJobKind {
+  MergedBodyInferenceJob(U64)
+  MergedLambdaInferenceJob(U32)
+}
+
+pub struct SelfHostMergedInferenceJob {
+  kind: SelfHostMergedInferenceJobKind
+  root_type: I32
+  types: SelfHostHirSpan
+  type_arguments: SelfHostHirSpan
+  expression_types: SelfHostHirSpan
+  local_types: SelfHostHirSpan
+  capture_types: SelfHostHirSpan
+  block_types: SelfHostHirSpan
+  pattern_types: SelfHostHirSpan
+  control_state_types: SelfHostHirSpan
+  control_result_types: SelfHostHirSpan
+  call_targets: SelfHostHirSpan
+  operator_targets: SelfHostHirSpan
+  expression_selections: SelfHostHirSpan
+  object_field_targets: SelfHostHirSpan
+  pattern_constructors: SelfHostHirSpan
+  call_type_arguments: SelfHostHirSpan
+  expression_type_arguments: SelfHostHirSpan
+  pattern_type_arguments: SelfHostHirSpan
+  diagnostics: SelfHostHirSpan
+}
+
+pub struct SelfHostMergedModuleInference {
+  module_id: U64
+  jobs: Array<SelfHostMergedInferenceJob>
+  types: Array<SelfHostBodyTypeTerm>
+  type_arguments: Array<I32>
+  expression_types: Array<I32>
+  local_types: Array<I32>
+  capture_types: Array<I32>
+  block_types: Array<I32>
+  pattern_types: Array<I32>
+  control_state_types: Array<I32>
+  control_result_types: Array<I32>
+  call_targets: Array<SelfHostBasicCallTarget>
+  operator_targets: Array<SelfHostBasicCallTarget>
+  expression_selections: Array<SelfHostBasicExpressionSelection>
+  object_field_targets: Array<SelfHostBasicObjectFieldTarget>
+  pattern_constructors: Array<SelfHostBasicPatternConstructor>
+  call_type_arguments: Array<I32>
+  expression_type_arguments: Array<I32>
+  pattern_type_arguments: Array<I32>
+  unsupported_expressions: Array<Bool>
+  diagnostics: Array<SelfHostBodyInferenceDiagnostic>
+}
+
+fn self_host_merge_span(start: U32, length: U32) -> SelfHostHirSpan {
+  SelfHostHirSpan::{
+    start: start
+    length: length
+  }
+}
+
+fn self_host_merge_type(type_: I32, base: U32) -> I32 {
+  if type_ >= 0i32 {
+    type_ + self_host_body_u32_to_i32(base)
+  } else {
+    type_
+  }
+}
+
+fn self_host_merge_type_span(span: SelfHostHirSpan, base: U32) -> SelfHostHirSpan {
+  SelfHostHirSpan::{
+    start: self_host_u32_add(span.start, base)
+    length: span.length
+  }
+}
+
+fn self_host_merge_type_term(
+  term: SelfHostBodyTypeTerm,
+  type_base: U32,
+  argument_base: U32,
+) -> SelfHostBodyTypeTerm {
+  match term {
+    SelfHostBodyTypeTerm::BodyErrorType => SelfHostBodyTypeTerm::BodyErrorType
+    SelfHostBodyTypeTerm::BodyResolvedType(type_) => SelfHostBodyTypeTerm::BodyResolvedType(type_)
+    SelfHostBodyTypeTerm::BodyVariableType(variable) => SelfHostBodyTypeTerm::BodyVariableType(
+      self_host_u32_add(variable, type_base),
+    )
+    SelfHostBodyTypeTerm::BodyProductType(arguments) => SelfHostBodyTypeTerm::BodyProductType(
+      self_host_merge_type_span(arguments, argument_base),
+    )
+    SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => SelfHostBodyTypeTerm::BodyAppliedType(
+      self_host_merge_type(base, type_base),
+      self_host_merge_type_span(arguments, argument_base),
+    )
+    SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => SelfHostBodyTypeTerm::BodyFunctionType(
+      self_host_merge_type_span(parameters, argument_base),
+      self_host_merge_type(result, type_base),
+    )
+  }
+}
+
+fn self_host_merge_call_target(
+  target: SelfHostBasicCallTarget,
+  argument_base: U32,
+) -> SelfHostBasicCallTarget {
+  match target {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(
+        declaration,
+        self_host_merge_type_span(arguments, argument_base),
+      )
+    }
+    _ => target
+  }
+}
+
+fn self_host_merge_expression_selection(
+  selection: SelfHostBasicExpressionSelection,
+  argument_base: U32,
+) -> SelfHostBasicExpressionSelection {
+  match selection {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+      declaration,
+      arguments,
+    ) => SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+      declaration,
+      self_host_merge_type_span(arguments, argument_base),
+    )
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      tag,
+      arguments,
+    ) => SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      tag,
+      self_host_merge_type_span(arguments, argument_base),
+    )
+    _ => selection
+  }
+}
+
+fn self_host_merge_pattern_constructor(
+  constructor: SelfHostBasicPatternConstructor,
+  argument_base: U32,
+) -> SelfHostBasicPatternConstructor {
+  match constructor {
+    SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+      declaration,
+      imported,
+      arguments,
+    ) => SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+      declaration,
+      imported,
+      self_host_merge_type_span(arguments, argument_base),
+    )
+    _ => constructor
+  }
+}
+
+fn self_host_merge_local_diagnostic(
+  diagnostic: SelfHostLocalInferenceDiagnostic,
+  type_base: U32,
+) -> SelfHostLocalInferenceDiagnostic {
+  match diagnostic {
+    SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, origin) => {
+      SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(
+        self_host_merge_type(left, type_base),
+        self_host_merge_type(right, type_base),
+        origin,
+      )
+    }
+    SelfHostLocalInferenceDiagnostic::InfiniteLocalType(variable, type_, origin) => {
+      SelfHostLocalInferenceDiagnostic::InfiniteLocalType(
+        self_host_u32_add(variable, type_base),
+        self_host_merge_type(type_, type_base),
+        origin,
+      )
+    }
+  }
+}
+
+fn self_host_merge_diagnostic(
+  diagnostic: SelfHostBodyInferenceDiagnostic,
+  type_base: U32,
+) -> SelfHostBodyInferenceDiagnostic {
+  match diagnostic {
+    SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(local) => {
+      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(
+        self_host_merge_local_diagnostic(local, type_base),
+      )
+    }
+    _ => diagnostic
+  }
+}
+
+fn self_host_merge_type_array(
+  target: Array<I32>,
+  source: Array<I32>,
+  type_base: U32,
+) -> SelfHostHirSpan {
+  let start = target.length()
+  for type_ in source {
+    target.push(self_host_merge_type(type_, type_base))
+  }
+  self_host_merge_span(start, target.length() - start)
+}
+
+fn self_host_merge_inference_job(
+  target: SelfHostMergedModuleInference,
+  kind: SelfHostMergedInferenceJobKind,
+  source: SelfHostBasicInferredBody,
+) -> Unit {
+  let type_base = target.types.length()
+  let type_argument_base = target.type_arguments.length()
+  for type_ in source.type_arguments {
+    target.type_arguments.push(self_host_merge_type(type_, type_base))
+  }
+  for term in source.types {
+    target.types.push(
+      self_host_merge_type_term(term, type_base, type_argument_base),
+    )
+  }
+  let expression_types = self_host_merge_type_array(
+    target.expression_types, source.expression_types, type_base,
+  )
+  let local_types = self_host_merge_type_array(
+    target.local_types, source.local_types, type_base,
+  )
+  let capture_types = self_host_merge_type_array(
+    target.capture_types, source.capture_types, type_base,
+  )
+  let block_types = self_host_merge_type_array(
+    target.block_types, source.block_types, type_base,
+  )
+  let pattern_types = self_host_merge_type_array(
+    target.pattern_types, source.pattern_types, type_base,
+  )
+  let control_state_types = self_host_merge_type_array(
+    target.control_state_types, source.control_state_types, type_base,
+  )
+  let control_result_types = self_host_merge_type_array(
+    target.control_result_types, source.control_result_types, type_base,
+  )
+  let call_argument_base = target.call_type_arguments.length()
+  let call_type_arguments = self_host_merge_type_array(
+    target.call_type_arguments, source.call_type_arguments, type_base,
+  )
+  let expression_argument_base = target.expression_type_arguments.length()
+  let expression_type_arguments = self_host_merge_type_array(
+    target.expression_type_arguments, source.expression_type_arguments, type_base,
+  )
+  let pattern_argument_base = target.pattern_type_arguments.length()
+  let pattern_type_arguments = self_host_merge_type_array(
+    target.pattern_type_arguments, source.pattern_type_arguments, type_base,
+  )
+  let call_start = target.call_targets.length()
+  for value in source.call_targets {
+    target.call_targets.push(
+      self_host_merge_call_target(value, call_argument_base),
+    )
+  }
+  let operator_start = target.operator_targets.length()
+  for value in source.operator_targets {
+    target.operator_targets.push(
+      self_host_merge_call_target(value, call_argument_base),
+    )
+  }
+  let selection_start = target.expression_selections.length()
+  for value in source.expression_selections {
+    target.expression_selections.push(
+      self_host_merge_expression_selection(value, expression_argument_base),
+    )
+  }
+  let field_start = target.object_field_targets.length()
+  for value in source.object_field_targets {
+    target.object_field_targets.push(value)
+  }
+  let constructor_start = target.pattern_constructors.length()
+  for value in source.pattern_constructors {
+    target.pattern_constructors.push(
+      self_host_merge_pattern_constructor(value, pattern_argument_base),
+    )
+  }
+  let unsupported_start = target.unsupported_expressions.length()
+  for value in source.unsupported_expressions {
+    target.unsupported_expressions.push(value)
+  }
+  let diagnostic_start = target.diagnostics.length()
+  for value in source.diagnostics {
+    target.diagnostics.push(self_host_merge_diagnostic(value, type_base))
+  }
+  target.jobs.push(SelfHostMergedInferenceJob::{
+    kind: kind
+    root_type: self_host_merge_type(source.root_type, type_base)
+    types: self_host_merge_span(type_base, source.types.length())
+    type_arguments: self_host_merge_span(type_argument_base, source.type_arguments.length())
+    expression_types: expression_types
+    local_types: local_types
+    capture_types: capture_types
+    block_types: block_types
+    pattern_types: pattern_types
+    control_state_types: control_state_types
+    control_result_types: control_result_types
+    call_targets: self_host_merge_span(call_start, source.call_targets.length())
+    operator_targets: self_host_merge_span(operator_start, source.operator_targets.length())
+    expression_selections: self_host_merge_span(selection_start, source.expression_selections.length())
+    object_field_targets: self_host_merge_span(field_start, source.object_field_targets.length())
+    pattern_constructors: self_host_merge_span(constructor_start, source.pattern_constructors.length())
+    call_type_arguments: call_type_arguments
+    expression_type_arguments: expression_type_arguments
+    pattern_type_arguments: pattern_type_arguments
+    diagnostics: self_host_merge_span(diagnostic_start, source.diagnostics.length())
+  })
+  let _ = unsupported_start
+}
+
+fn self_host_merge_module_inference(
+  inferred: SelfHostBasicInferredModuleBodies,
+) -> SelfHostMergedModuleInference {
+  let target = SelfHostMergedModuleInference::{
+    module_id: inferred.module_id
+    jobs: []
+    types: []
+    type_arguments: []
+    expression_types: []
+    local_types: []
+    capture_types: []
+    block_types: []
+    pattern_types: []
+    control_state_types: []
+    control_result_types: []
+    call_targets: []
+    operator_targets: []
+    expression_selections: []
+    object_field_targets: []
+    pattern_constructors: []
+    call_type_arguments: []
+    expression_type_arguments: []
+    pattern_type_arguments: []
+    unsupported_expressions: []
+    diagnostics: []
+  }
+  for body in inferred.bodies {
+    self_host_merge_inference_job(
+      target,
+      SelfHostMergedInferenceJobKind::MergedBodyInferenceJob(body.body),
+      body,
+    )
+  }
+  for lambda in inferred.lambdas {
+    self_host_merge_inference_job(
+      target,
+      SelfHostMergedInferenceJobKind::MergedLambdaInferenceJob(lambda.lambda),
+      lambda.body,
+    )
+  }
+  target
+}
