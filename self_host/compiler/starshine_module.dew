@@ -1801,6 +1801,14 @@ fn self_host_emit_linked_i32_expression(
   Result::Ok(self_host_semantic_unit())
 }
 
+fn self_host_linked_eqref_value_type() -> StarshineRef0 {
+  StarshineFfi.ffi_lib_ValType_ref_null(
+    StarshineFfi.ffi_lib_HeapType_abs(
+      StarshineFfi.ffi_lib_AbsHeapType_eq(),
+    ),
+  )
+}
+
 fn self_host_linked_scalar_storage_value_type(
   storage: SelfHostPlannedWasmStorageType,
 ) -> Option<StarshineRef0> {
@@ -1817,7 +1825,12 @@ fn self_host_linked_scalar_storage_value_type(
     SelfHostPlannedWasmStorageType::WasmF64Storage => Option::Some(
       StarshineFfi.ffi_lib_ValType_f64(),
     )
-    _ => Option::None
+    SelfHostPlannedWasmStorageType::WasmV128Storage => Option::Some(
+      StarshineFfi.ffi_lib_ValType_v128(),
+    )
+    SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => Option::Some(
+      self_host_linked_eqref_value_type(),
+    )
   }
 }
 
@@ -1845,6 +1858,29 @@ fn self_host_linked_physical_field_at(
   index: U32,
 ) -> SelfHostPlannedWasmField {
   module_.fields[index]
+}
+
+fn self_host_linked_enum_base_type_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+) -> Option<U32> {
+  for linked_type in link.types {
+    let module_ = link.fragments.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(
+      module_,
+      linked_type.fragment_index,
+    )
+    match physical.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(candidate) => if self_host_u64_equal(
+        candidate,
+        declaration,
+      ) {
+        return Option::Some(linked_type.type_index)
+      }
+      _ => {}
+    }
+  }
+  Option::None
 }
 
 fn self_host_linked_append_physical_types(
@@ -1903,14 +1939,47 @@ fn self_host_linked_append_physical_types(
         break self_host_semantic_unit()
       }
     }
+    let component = StarshineFfi.ffi_lib_CompType_struct_(fields)
+    let subtype = match physical.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {
+        let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+        StarshineFfi.ffi_lib_SubType_new(
+          0i32,
+          supers,
+          component,
+          wasm_ref_null(),
+        )
+      }
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
+        declaration,
+        _,
+        _,
+      ) => match self_host_linked_enum_base_type_index(link, declaration) {
+        Option::Some(base) => {
+          let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+          StarshineFfi.ffi_ffi_bridge_type_indices_push(
+            supers,
+            StarshineFfi.ffi_lib_TypeIdx_new(base.into()),
+          )
+          StarshineFfi.ffi_lib_SubType_new(
+            1i32,
+            supers,
+            component,
+            wasm_ref_null(),
+          )
+        }
+        Option::None => {
+          return Result::Err("linked enum subtype has no base type")
+        }
+      }
+      _ => StarshineFfi.ffi_lib_SubType_comp_type(
+        component,
+        wasm_ref_null(),
+      )
+    }
     StarshineFfi.ffi_ffi_bridge_rec_types_push(
       rec_types,
-      StarshineFfi.ffi_lib_RecType_new(
-        StarshineFfi.ffi_lib_SubType_comp_type(
-          StarshineFfi.ffi_lib_CompType_struct_(fields),
-          wasm_ref_null(),
-        ),
-      ),
+      StarshineFfi.ffi_lib_RecType_new(subtype),
     )
   }
   Result::Ok(self_host_semantic_unit())
@@ -1937,9 +2006,14 @@ fn self_host_linked_i32_append_value_type(
       values,
       StarshineFfi.ffi_lib_ValType_f64(),
     )
-    _ => {
-      return false
-    }
+    SelfHostPlannedWasmValueType::WasmV128Value => StarshineFfi.ffi_ffi_bridge_val_types_push(
+      values,
+      StarshineFfi.ffi_lib_ValType_v128(),
+    )
+    SelfHostPlannedWasmValueType::WasmNullableEqRefValue => StarshineFfi.ffi_ffi_bridge_val_types_push(
+      values,
+      self_host_linked_eqref_value_type(),
+    )
   }
   true
 }
@@ -2001,9 +2075,16 @@ fn self_host_linked_scalar_append_local_type(
       locals,
       StarshineFfi.ffi_lib_ValType_f64(),
     )
-    _ => {
-      return false
-    }
+    SelfHostPlannedValueShape::V128PlannedValueShape => StarshineFfi.ffi_lib_Locals_push(
+      locals,
+      StarshineFfi.ffi_lib_ValType_v128(),
+    )
+    SelfHostPlannedValueShape::UnitPlannedValueShape => {}
+    SelfHostPlannedValueShape::NeverPlannedValueShape => {}
+    _ => StarshineFfi.ffi_lib_Locals_push(
+      locals,
+      self_host_linked_eqref_value_type(),
+    )
   }
   true
 }

@@ -5,7 +5,7 @@
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
   "wasm_sha256": "4962d9f6508efee18831f8327998bdd6d50ac1b91991daca6c2554685ab397fc",
   "available_export_count": 3369,
-  "binding_count": 139,
+  "binding_count": 144,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "891fddd38c9f16bb7eae64acfcc49193ffdb87f27076af270cbe7608b8c6a45c",
+    "prefix_sha256": "485a1e8f08bcc64fb5197828c35bd70d4a68cd1a3f7da5567173a1072629e316",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -1141,6 +1141,46 @@
       "internal_name": "ffi_lib_Instruction_struct_set",
       "export_name": "Instruction::struct_set",
       "signature": "((ref 0), i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2782,
+      "function_index": 3116,
+      "internal_name": "ffi_lib_AbsHeapType_eq",
+      "export_name": "AbsHeapType::eq",
+      "signature": "() -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2429,
+      "function_index": 2763,
+      "internal_name": "ffi_lib_HeapType_abs",
+      "export_name": "HeapType::abs",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1503,
+      "function_index": 1830,
+      "internal_name": "ffi_lib_ValType_ref_null",
+      "export_name": "ValType::ref_null",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1497,
+      "function_index": 1824,
+      "internal_name": "ffi_lib_ValType_v128",
+      "export_name": "ValType::v128",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1690,
+      "function_index": 2017,
+      "internal_name": "ffi_lib_SubType_new",
+      "export_name": "SubType::new",
+      "signature": "(i32, (ref 140), (ref 0), (ref null 910)) -> (ref 0)",
       "status": "bound"
     }
   ]

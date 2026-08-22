@@ -4197,14 +4197,14 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn local_variant_target(self, target: U32) -> Option<U32> {
+  fn local_variant_target(self, target: U32) -> U32 {
     match self.names.expression_references[target] {
       SelfHostBodyNameReference::VariantNameReference(name) => {
         let mut index = 0u32
         let _ = while index {
           current => if current < self.collected.variants.length() {
             if self_host_u32_equal(self.collected.variants[current].name, name) {
-              return Option::Some(current)
+              return current
             }
             continue current + 1u32
           } else {
@@ -4227,17 +4227,17 @@ impl SelfHostBasicBodyInferencer {
                 variant.name,
                 property,
               ) {
-                return Option::Some(current)
+                return current
               }
               continue current + 1u32
             } else {
-              break Option::None
+              break 4294967295u32
             }
           }
         }
-        _ => Option::None
+        _ => 4294967295u32
       }
-      _ => Option::None
+      _ => 4294967295u32
     }
   }
 
@@ -4538,27 +4538,29 @@ impl SelfHostBasicBodyInferencer {
   fn constrain_pending_variant_calls(self) -> Unit {
     for expression in self.pending_variant_calls {
       match self.collected.expressions[expression] {
-        SelfHostHirExpr::CallExpr(target, arguments, offset) => match self.local_variant_target(
-          target,
-        ) {
-          Option::Some(variant) => self.select_tuple_variant_call(
-            expression,
-            target,
-            arguments,
-            variant,
-            offset,
-          )
-          Option::None => match self.imported_variant_target(target) {
-            Option::Some(variant) => self.select_imported_tuple_variant_call(
+        SelfHostHirExpr::CallExpr(target, arguments, offset) => {
+          let local_variant = self.local_variant_target(target)
+          if !self_host_u32_equal(local_variant, 4294967295u32) {
+            self.select_tuple_variant_call(
               expression,
               target,
               arguments,
-              variant,
+              local_variant,
               offset,
             )
-            Option::None => {
-              self.mark_unsupported(expression)
-              self.solver.poison_type(self.expression_type(target))
+          } else {
+            match self.imported_variant_target(target) {
+              Option::Some(variant) => self.select_imported_tuple_variant_call(
+                expression,
+                target,
+                arguments,
+                variant,
+                offset,
+              )
+              Option::None => {
+                self.mark_unsupported(expression)
+                self.solver.poison_type(self.expression_type(target))
+              }
             }
           }
         }
@@ -4571,13 +4573,15 @@ impl SelfHostBasicBodyInferencer {
   fn constrain_pending_variant_values(self) -> Unit {
     for expression in self.pending_variant_values {
       if !self.consumed_member_roots[self.expression_index(expression)] {
-        match self.local_variant_target(expression) {
-          Option::Some(variant) => self.select_unit_variant_value(
+        let local_variant = self.local_variant_target(expression)
+        if !self_host_u32_equal(local_variant, 4294967295u32) {
+          self.select_unit_variant_value(
             expression,
-            variant,
+            local_variant,
             self_host_basic_expression_offset(self.collected.expressions[expression]),
           )
-          Option::None => match self.imported_variant_target(expression) {
+        } else {
+          match self.imported_variant_target(expression) {
             Option::Some(variant) => self.select_imported_unit_variant_value(
               expression,
               variant,
@@ -4954,8 +4958,8 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
-    match self.local_variant_target(target) {
-      Option::Some(variant_index) => {
+    let variant_index = self.local_variant_target(target)
+    if !self_host_u32_equal(variant_index, 4294967295u32) {
         let variant = self.collected.variants[variant_index]
         match variant.kind {
           SelfHostCollectedVariantKind::StructVariantDecl => self.select_struct_construction(
@@ -4978,8 +4982,6 @@ impl SelfHostBasicBodyInferencer {
         }
         return
       }
-      Option::None => {}
-    }
     match self.imported_variant_target(target) {
       Option::Some(variant) => {
         match variant.kind {
@@ -6289,9 +6291,13 @@ impl SelfHostBasicBodyInferencer {
             self.pending_constructions.push(current)
           }
           SelfHostHirExpr::FieldExpr(_, _, _) => self.pending_fields.push(current)
-          SelfHostHirExpr::QualifiedExpr(_, _, _) => match self.local_variant_target(current) {
-            Option::Some(_) => self.pending_variant_values.push(current)
-            Option::None => match self.imported_variant_target(current) {
+          SelfHostHirExpr::QualifiedExpr(_, _, _) => if !self_host_u32_equal(
+            self.local_variant_target(current),
+            4294967295u32,
+          ) {
+            self.pending_variant_values.push(current)
+          } else {
+            match self.imported_variant_target(current) {
               Option::Some(_) => self.pending_variant_values.push(current)
               Option::None => self.mark_unsupported(current)
             }

@@ -47,6 +47,13 @@ fn self_host_wasmgc_field_count(
   module_.fields.length()
 }
 
+fn self_host_wasmgc_field_at(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmField {
+  module_.fields[index]
+}
+
 test "WasmGC fragments materialize specialized scalar signatures" {
   let plan = self_host_wasmgc_test_plan(
     b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn run() -> I32 {\n  identity(42)\n}\n",
@@ -73,7 +80,7 @@ test "WasmGC fragments plan nominal struct and enum families" {
   )
   let module_ = plan.modules[0u32]
   assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 4u32), "struct enum base and variants")
-  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 2u32), "struct fields")
+  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 3u32), "struct and variant fields")
   let struct_type = self_host_wasmgc_physical_type_at(module_, 0u32)
   match struct_type.kind {
     SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(_) => {}
@@ -83,6 +90,15 @@ test "WasmGC fragments plan nominal struct and enum families" {
   match enum_type.kind {
     SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {}
     _ => assert(false, "enum base")
+  }
+  let ready_type = self_host_wasmgc_physical_type_at(module_, 3u32)
+  assert(self_host_u32_equal(ready_type.fields.length, 1u32), "tuple variant field span")
+  match self_host_wasmgc_field_at(module_, ready_type.fields.start).role {
+    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(_, index) => assert(
+      self_host_u32_equal(index, 0u32),
+      "tuple variant field index",
+    )
+    _ => assert(false, "tuple variant field role")
   }
 }
 

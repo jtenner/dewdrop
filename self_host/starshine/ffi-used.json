@@ -139,6 +139,11 @@
     "Mut::var_",
     "Instruction::struct_new",
     "Instruction::struct_get",
-    "Instruction::struct_set"
+    "Instruction::struct_set",
+    "AbsHeapType::eq",
+    "HeapType::abs",
+    "ValType::ref_null",
+    "ValType::v128",
+    "SubType::new"
   ]
 }

@@ -37,6 +37,7 @@ pub struct SelfHostPlannedWasmPhysicalType {
 
 pub enum SelfHostPlannedWasmFieldRole {
   WasmStructField(U64)
+  WasmVariantPayloadField(U64, U32)
   WasmClosureEntryField
   WasmCaptureCellValueField(U32)
   WasmLambdaCaptureField(U32, U32)
@@ -213,6 +214,56 @@ fn self_host_wasmgc_plan_types(
             let source = module_.type_layouts.variants[
               self_host_u32_add(variants.start, current)
             ]
+            let field_start = fields.length()
+            match source.payload {
+              SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout => {}
+              SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
+                let mut item = 0u32
+                let _ = while item {
+                  payload_index => if payload_index < payload.length {
+                    fields.push(SelfHostPlannedWasmField::{
+                      role: SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(
+                        source.variant,
+                        payload_index,
+                      )
+                      declaration: source.variant
+                      physical_index: payload_index
+                      storage: self_host_wasmgc_storage_type(
+                        module_.type_layouts.payload_shapes[
+                          self_host_u32_add(payload.start, payload_index)
+                        ],
+                      )
+                      mutable_: false
+                      offset: source.offset
+                    })
+                    continue payload_index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(payload) => {
+                let mut item = 0u32
+                let _ = while item {
+                  payload_index => if payload_index < payload.length {
+                    let field = module_.type_layouts.fields[
+                      self_host_u32_add(payload.start, payload_index)
+                    ]
+                    fields.push(SelfHostPlannedWasmField::{
+                      role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
+                      declaration: field.field
+                      physical_index: payload_index
+                      storage: self_host_wasmgc_storage_type(field.shape)
+                      mutable_: field.mutable_
+                      offset: field.offset
+                    })
+                    continue payload_index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+            }
             physical_types.push(SelfHostPlannedWasmPhysicalType::{
               kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
                 layout.declaration,
@@ -221,8 +272,8 @@ fn self_host_wasmgc_plan_types(
               )
               type_index: physical_types.length()
               fields: SelfHostHirSpan::{
-                start: fields.length()
-                length: 0u32
+                start: field_start
+                length: fields.length() - field_start
               }
               offset: source.offset
             })
