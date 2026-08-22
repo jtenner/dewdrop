@@ -1,5 +1,6 @@
 open dew.std.bytes
 open dew.std.bytes_builder
+open dew.std.option
 open dew.std.result
 open dew.std.wasm.intrinsics
 
@@ -11,7 +12,9 @@ fn self_host_i32_to_u8(value: I32) -> U8 {
   value.into()
 }
 
-pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
+fn self_host_encode_i32_function(
+  instructions: StarshineRef125,
+) -> Result<Bytes, String> {
   let parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
   let results = StarshineFfi.ffi_ffi_bridge_val_types_new()
   StarshineFfi.ffi_ffi_bridge_val_types_push(
@@ -27,21 +30,12 @@ pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
   let rec_types = StarshineFfi.ffi_ffi_bridge_rec_types_new()
   StarshineFfi.ffi_ffi_bridge_rec_types_push(rec_types, rec_type)
   let type_section = StarshineFfi.ffi_lib_TypeSec_new(rec_types)
-
   let type_indices = StarshineFfi.ffi_ffi_bridge_type_indices_new()
   StarshineFfi.ffi_ffi_bridge_type_indices_push(
     type_indices,
     StarshineFfi.ffi_lib_TypeIdx_new(0i32),
   )
   let function_section = StarshineFfi.ffi_lib_FuncSec_new(type_indices)
-
-  let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
-  StarshineFfi.ffi_ffi_bridge_instructions_push(
-    instructions,
-    StarshineFfi.ffi_lib_Instruction_i32_const(
-      StarshineFfi.ffi_lib_I32_new(value),
-    ),
-  )
   let expression = StarshineFfi.ffi_lib_Expr_new(instructions)
   let function_ = StarshineFfi.ffi_lib_Func_new(
     StarshineFfi.ffi_lib_Locals_empty(),
@@ -50,7 +44,6 @@ pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
   let functions = StarshineFfi.ffi_ffi_bridge_funcs_new()
   StarshineFfi.ffi_ffi_bridge_funcs_push(functions, function_)
   let code_section = StarshineFfi.ffi_lib_CodeSec_new(functions)
-
   let module_ = StarshineFfi.ffi_lib_Module_with_code_sec(
     StarshineFfi.ffi_lib_Module_with_func_sec(
       StarshineFfi.ffi_lib_Module_with_type_sec(
@@ -62,11 +55,11 @@ pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
     code_section,
   )
   if StarshineFfi.ffi_ffi_bridge_validate_module(module_) == 0i32 {
-    Result::Err("Starshine rejected the smoke compiler output module")
+    Result::Err("Starshine rejected the self-host output module")
   } else {
     let encoded = StarshineFfi.ffi_ffi_bridge_encode_module(module_)
     if StarshineFfi.ffi_ffi_bridge_EncodedModule_is_ok(encoded) == 0i32 {
-      Result::Err("Starshine could not encode the smoke compiler output module")
+      Result::Err("Starshine could not encode the self-host output module")
     } else {
       let length = self_host_i32_to_u32(
         StarshineFfi.ffi_ffi_bridge_EncodedModule_byte_length(encoded),
@@ -74,19 +67,29 @@ pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
       let output = BytesBuilder::with_capacity(length)
       while 0u32 {
         index if index < length => {
-          let byte = self_host_i32_to_u8(
+          output.append_byte(self_host_i32_to_u8(
             StarshineFfi.ffi_ffi_bridge_EncodedModule_byte_at(
               encoded,
               index.into(),
             ),
-          )
-          output.append_byte(byte)
+          ))
           continue index + 1u32
         }
         _ => break Result::Ok(output.finish())
       }
     }
   }
+}
+
+pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
+  let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    instructions,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(value),
+    ),
+  )
+  self_host_encode_i32_function(instructions)
 }
 
 fn self_host_u64_to_i32(value: U64) -> I32 {
@@ -123,10 +126,21 @@ fn self_host_linked_root_expression(
   }
 }
 
-fn self_host_linked_i32_main_value(
+struct SelfHostLinkedRootExpression {
+  module_index: U32
+  expression: U32
+}
+
+enum SelfHostLinkedI32EmitTask {
+  VisitLinkedI32Expression(U32)
+  EmitLinkedI32Prefix(SelfHostHirPrefixOperator)
+  EmitLinkedI32Binary(SelfHostHirBinaryOperator)
+}
+
+fn self_host_linked_i32_main_expression(
   link: SelfHostPlannedProgramWasmGCLink,
   root_module: U64,
-) -> Result<I32, String> {
+) -> Result<SelfHostLinkedRootExpression, String> {
   let mut module_index = 0u32
   let mut found_module = Option::None
   let lowering_modules = link.fragments.specialization.lowering.modules
@@ -187,21 +201,149 @@ fn self_host_linked_i32_main_value(
   if expression_index >= module_.expressions.length() {
     return Result::Err("linked main expression is outside its arena")
   }
-  match module_.expressions[expression_index].kind {
-    SelfHostPlannedExpressionKind::PlannedI32Const(value) => Result::Ok(
-      self_host_u64_to_i32(value),
-    )
-    _ => Result::Err("linked main expression is not an I32 constant")
+  Result::Ok(SelfHostLinkedRootExpression::{
+    module_index: owner
+    expression: expression_index
+  })
+}
+
+fn self_host_emit_linked_i32_binary(
+  instructions: StarshineRef125,
+  operator: SelfHostHirBinaryOperator,
+) -> Bool {
+  match operator {
+    SelfHostHirBinaryOperator::BitOr => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_or())
+    SelfHostHirBinaryOperator::BitXor => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_xor())
+    SelfHostHirBinaryOperator::BitAnd => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_and())
+    SelfHostHirBinaryOperator::Equal => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_eq())
+    SelfHostHirBinaryOperator::NotEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_ne())
+    SelfHostHirBinaryOperator::Less => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_lt_s())
+    SelfHostHirBinaryOperator::LessEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_le_s())
+    SelfHostHirBinaryOperator::Greater => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_gt_s())
+    SelfHostHirBinaryOperator::GreaterEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_ge_s())
+    SelfHostHirBinaryOperator::ShiftLeft => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_shl())
+    SelfHostHirBinaryOperator::ShiftRight => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_shr_s())
+    SelfHostHirBinaryOperator::Add => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_add())
+    SelfHostHirBinaryOperator::Subtract => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_sub())
+    SelfHostHirBinaryOperator::Multiply => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_mul())
+    SelfHostHirBinaryOperator::Divide => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_div_s())
+    SelfHostHirBinaryOperator::Remainder => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_rem_s())
+    _ => {
+      return false
+    }
   }
+  true
+}
+
+fn self_host_emit_linked_i32_expression(
+  module_: SelfHostPlannedModuleLowering,
+  root: U32,
+  instructions: StarshineRef125,
+) -> Result<Unit, String> {
+  let tasks = [SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(root)]
+  let _ = while tasks.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let task = match tasks.pop() {
+        Option::Some(value) => value
+        Option::None => SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(4294967295u32)
+      }
+      match task {
+        SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(expression) => {
+          if expression >= module_.expressions.length() {
+            return Result::Err("linked I32 expression is outside its arena")
+          }
+          match module_.expressions[expression].kind {
+            SelfHostPlannedExpressionKind::PlannedI32Const(value) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+              instructions,
+              StarshineFfi.ffi_lib_Instruction_i32_const(
+                StarshineFfi.ffi_lib_I32_new(self_host_u64_to_i32(value)),
+              ),
+            )
+            SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+              let mut constant = 0i32
+              if value {
+                constant = 1i32
+              }
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                instructions,
+                StarshineFfi.ffi_lib_Instruction_i32_const(
+                  StarshineFfi.ffi_lib_I32_new(constant),
+                ),
+              )
+            }
+            SelfHostPlannedExpressionKind::PlannedPrefixExpression(operator, operand) => {
+              match operator {
+                SelfHostHirPrefixOperator::Positive => tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(operand))
+                SelfHostHirPrefixOperator::Negative => {
+                  StarshineFfi.ffi_ffi_bridge_instructions_push(
+                    instructions,
+                    StarshineFfi.ffi_lib_Instruction_i32_const(
+                      StarshineFfi.ffi_lib_I32_new(0i32),
+                    ),
+                  )
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(operator))
+                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(operand))
+                }
+                SelfHostHirPrefixOperator::LogicalNot => {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(operator))
+                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(operand))
+                }
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right) => {
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(operator))
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(right))
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(left))
+            }
+            _ => {
+              return Result::Err("linked main expression is outside the I32 emitter subset")
+            }
+          }
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(operator) => match operator {
+          SelfHostHirPrefixOperator::Negative => StarshineFfi.ffi_ffi_bridge_instructions_push(
+            instructions,
+            StarshineFfi.ffi_lib_Instruction_i32_sub(),
+          )
+          SelfHostHirPrefixOperator::LogicalNot => StarshineFfi.ffi_ffi_bridge_instructions_push(
+            instructions,
+            StarshineFfi.ffi_lib_Instruction_i32_eqz(),
+          )
+          SelfHostHirPrefixOperator::Positive => {}
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(operator) => if !self_host_emit_linked_i32_binary(
+          instructions,
+          operator,
+        ) {
+          return Result::Err("linked I32 binary operator is unsupported")
+        }
+      }
+      continue tasks.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Result::Ok(self_host_semantic_unit())
 }
 
 pub fn build_self_host_linked_i32_module(
   link: SelfHostPlannedProgramWasmGCLink,
   root_module: U64,
 ) -> Result<Bytes, String> {
-  match self_host_linked_i32_main_value(link, root_module) {
-    Result::Ok(value) => build_self_host_i32_module(value)
+  match self_host_linked_i32_main_expression(link, root_module) {
     Result::Err(error) => Result::Err(error)
+    Result::Ok(selected) => {
+      let modules = link.fragments.specialization.lowering.modules
+      let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
+      match self_host_emit_linked_i32_expression(
+        modules[selected.module_index],
+        selected.expression,
+        instructions,
+      ) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(_) => self_host_encode_i32_function(instructions)
+      }
+    }
   }
 }
 
