@@ -137,6 +137,11 @@ struct SelfHostLinkedRootExpression {
   body_index: U32
 }
 
+struct SelfHostLinkedWasmFieldLink {
+  type_index: U32
+  field_index: U32
+}
+
 struct SelfHostLinkedI32LoopLink {
   control: U32
   state_slot: U32
@@ -155,6 +160,9 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedF32Binary(SelfHostHirBinaryOperator, StarshineRef125)
   EmitLinkedF64Binary(SelfHostHirBinaryOperator, StarshineRef125)
   EmitLinkedI32Call(U32, StarshineRef125)
+  EmitLinkedStructNew(U32, StarshineRef125)
+  EmitLinkedStructGet(U32, U32, StarshineRef125)
+  EmitLinkedStructSet(U32, U32, StarshineRef125)
   EmitLinkedI32If(StarshineRef125, StarshineRef125, StarshineRef125, Bool)
   EmitLinkedI32Loop(StarshineRef125, StarshineRef125, StarshineRef125)
   EmitLinkedI32Break(U32, U32, StarshineRef125)
@@ -205,6 +213,67 @@ fn self_host_linked_i32_loop_link(
   for link in links {
     if self_host_u32_equal(link.control, control) {
       return Option::Some(link)
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_struct_type_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+) -> Option<U32> {
+  for linked_type in link.types {
+    let module_ = link.fragments.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(
+      module_,
+      linked_type.fragment_index,
+    )
+    match physical.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(candidate) => if self_host_u64_equal(
+        candidate,
+        declaration,
+      ) {
+        return Option::Some(linked_type.type_index)
+      }
+      _ => {}
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_struct_field(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: U64,
+) -> Option<SelfHostLinkedWasmFieldLink> {
+  for linked_type in link.types {
+    let module_ = link.fragments.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(
+      module_,
+      linked_type.fragment_index,
+    )
+    let mut relative = 0u32
+    let _ = while relative {
+      current => if current < physical.fields.length {
+        let source = self_host_linked_physical_field_at(
+          module_,
+          self_host_u32_add(physical.fields.start, current),
+        )
+        match source.role {
+          SelfHostPlannedWasmFieldRole::WasmStructField(candidate) => if self_host_u64_equal(
+            candidate,
+            field,
+          ) {
+            return Option::Some(SelfHostLinkedWasmFieldLink::{
+              type_index: linked_type.type_index
+              field_index: source.physical_index
+            })
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
   Option::None
@@ -979,6 +1048,139 @@ fn self_host_emit_linked_i32_expression(
                 depth,
               )
             }
+            SelfHostPlannedExpressionKind::PlannedConstruct(
+              _,
+              fields,
+              selection,
+            ) => match selection {
+              SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+                declaration,
+                _,
+              ) => match self_host_linked_struct_type_index(link, declaration) {
+                Option::Some(type_index) => {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(
+                    type_index,
+                    destination,
+                  ))
+                  let mut linked_position = 4294967295u32
+                  let mut linked_module = 0u32
+                  let mut linked_fragment = 0u32
+                  for linked_type in link.types {
+                    if self_host_u32_equal(linked_type.type_index, type_index) {
+                      linked_position = linked_type.type_index
+                      linked_module = linked_type.module_index
+                      linked_fragment = linked_type.fragment_index
+                    }
+                  }
+                  if self_host_u32_equal(linked_position, 4294967295u32) {
+                    return Result::Err("linked struct constructor type is missing")
+                  }
+                  let physical_module = link.fragments.modules[linked_module]
+                  let physical = self_host_linked_physical_type_at(
+                    physical_module,
+                    linked_fragment,
+                  )
+                  let mut field_position = physical.fields.length
+                  let _ = while field_position {
+                    current => if self_host_u32_greater(current, 0u32) {
+                      let previous = current - 1u32
+                      let physical_field = self_host_linked_physical_field_at(
+                        physical_module,
+                        self_host_u32_add(physical.fields.start, previous),
+                      )
+                      let mut found = 4294967295u32
+                      let mut source_position = 0u32
+                      let _ = while source_position {
+                        source => if source < fields.length {
+                          let object_index = self_host_u32_add(fields.start, source)
+                          if object_index < module_.object_fields.length() && self_host_u64_equal(
+                            module_.object_fields[object_index].field,
+                            physical_field.declaration,
+                          ) {
+                            found = module_.object_fields[object_index].value
+                          }
+                          continue source + 1u32
+                        } else {
+                          break self_host_semantic_unit()
+                        }
+                      }
+                      if self_host_u32_equal(found, 4294967295u32) {
+                        return Result::Err("linked struct constructor field is missing")
+                      }
+                      self_host_linked_i32_schedule_expression(
+                        tasks,
+                        expression_depths,
+                        found,
+                        destination,
+                        depth,
+                      )
+                      continue previous
+                    } else {
+                      break self_host_semantic_unit()
+                    }
+                  }
+                }
+                Option::None => {
+                  return Result::Err("linked struct constructor has no physical type")
+                }
+              }
+              _ => {
+                return Result::Err("linked constructor is outside the struct subset")
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedFieldGet(
+              field,
+              base,
+              _,
+            ) => match self_host_linked_struct_field(link, field) {
+              Option::Some(field_link) => {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
+                  field_link.type_index,
+                  field_link.field_index,
+                  destination,
+                ))
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
+                  base,
+                  destination,
+                  depth,
+                )
+              }
+              Option::None => {
+                return Result::Err("linked struct field read has no physical field")
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedFieldSet(
+              field,
+              base,
+              value,
+            ) => match self_host_linked_struct_field(link, field) {
+              Option::Some(field_link) => {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructSet(
+                  field_link.type_index,
+                  field_link.field_index,
+                  destination,
+                ))
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
+                  value,
+                  destination,
+                  depth,
+                )
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
+                  base,
+                  destination,
+                  depth,
+                )
+              }
+              Option::None => {
+                return Result::Err("linked struct field write has no physical field")
+              }
+            }
             SelfHostPlannedExpressionKind::PlannedDirectCall(
               declaration,
               _,
@@ -1202,6 +1404,37 @@ fn self_host_emit_linked_i32_expression(
         ) => if !self_host_emit_linked_f64_binary(destination, operator) {
           return Result::Err("linked F64 binary operator is unsupported")
         }
+        SelfHostLinkedI32EmitTask::EmitLinkedStructNew(
+          type_index,
+          destination,
+        ) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_struct_new(
+            StarshineFfi.ffi_lib_TypeIdx_new(type_index.into()),
+          ),
+        )
+        SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
+          type_index,
+          field_index,
+          destination,
+        ) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_struct_get(
+            StarshineFfi.ffi_lib_TypeIdx_new(type_index.into()),
+            field_index.into(),
+          ),
+        )
+        SelfHostLinkedI32EmitTask::EmitLinkedStructSet(
+          type_index,
+          field_index,
+          destination,
+        ) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_struct_set(
+            StarshineFfi.ffi_lib_TypeIdx_new(type_index.into()),
+            field_index.into(),
+          ),
+        )
         SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
           function_index,
           destination,
@@ -1568,6 +1801,121 @@ fn self_host_emit_linked_i32_expression(
   Result::Ok(self_host_semantic_unit())
 }
 
+fn self_host_linked_scalar_storage_value_type(
+  storage: SelfHostPlannedWasmStorageType,
+) -> Option<StarshineRef0> {
+  match storage {
+    SelfHostPlannedWasmStorageType::WasmI32Storage => Option::Some(
+      StarshineFfi.ffi_lib_ValType_i32(),
+    )
+    SelfHostPlannedWasmStorageType::WasmI64Storage => Option::Some(
+      StarshineFfi.ffi_lib_ValType_i64(),
+    )
+    SelfHostPlannedWasmStorageType::WasmF32Storage => Option::Some(
+      StarshineFfi.ffi_lib_ValType_f32(),
+    )
+    SelfHostPlannedWasmStorageType::WasmF64Storage => Option::Some(
+      StarshineFfi.ffi_lib_ValType_f64(),
+    )
+    _ => Option::None
+  }
+}
+
+fn self_host_linked_physical_type_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.physical_types.length()
+}
+
+fn self_host_linked_physical_type_at(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmPhysicalType {
+  module_.physical_types[index]
+}
+
+fn self_host_linked_physical_field_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.fields.length()
+}
+
+fn self_host_linked_physical_field_at(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmField {
+  module_.fields[index]
+}
+
+fn self_host_linked_append_physical_types(
+  link: SelfHostPlannedProgramWasmGCLink,
+  rec_types: StarshineRef180,
+) -> Result<Unit, String> {
+  for linked_type in link.types {
+    let fragment_module = link.fragments.modules[linked_type.module_index]
+    if !self_host_u32_greater(
+      self_host_linked_physical_type_count(fragment_module),
+      linked_type.fragment_index,
+    ) {
+      return Result::Err("linked physical type is outside its arena")
+    }
+    let physical = self_host_linked_physical_type_at(
+      fragment_module,
+      linked_type.fragment_index,
+    )
+    let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+    let mut field = 0u32
+    let _ = while field {
+      current => if current < physical.fields.length {
+        let source_index = self_host_u32_add(physical.fields.start, current)
+        if !self_host_u32_greater(
+          self_host_linked_physical_field_count(fragment_module),
+          source_index,
+        ) {
+          return Result::Err("linked physical field is outside its arena")
+        }
+        let source = self_host_linked_physical_field_at(
+          fragment_module,
+          source_index,
+        )
+        let value_type = match self_host_linked_scalar_storage_value_type(
+          source.storage,
+        ) {
+          Option::Some(value) => value
+          Option::None => {
+            return Result::Err("linked reference field type is not emitted yet")
+          }
+        }
+        let mutable_ = if source.mutable_ {
+          StarshineFfi.ffi_lib_Mut_var_()
+        } else {
+          StarshineFfi.ffi_lib_Mut_const_()
+        }
+        StarshineFfi.ffi_ffi_bridge_field_types_push(
+          fields,
+          StarshineFfi.ffi_lib_FieldType_new(
+            StarshineFfi.ffi_lib_StorageType_val_type(value_type),
+            mutable_,
+          ),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    StarshineFfi.ffi_ffi_bridge_rec_types_push(
+      rec_types,
+      StarshineFfi.ffi_lib_RecType_new(
+        StarshineFfi.ffi_lib_SubType_comp_type(
+          StarshineFfi.ffi_lib_CompType_struct_(fields),
+          wasm_ref_null(),
+        ),
+      ),
+    )
+  }
+  Result::Ok(self_host_semantic_unit())
+}
+
 fn self_host_linked_i32_append_value_type(
   values: StarshineRef46,
   value: SelfHostPlannedWasmValueType,
@@ -1633,7 +1981,7 @@ fn self_host_linked_i32_body(
 }
 
 fn self_host_linked_scalar_append_local_type(
-  locals: StarshineRef358,
+  locals: StarshineRef348,
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
   match self_host_specialization_canonical_scalar(shape) {
@@ -1663,7 +2011,7 @@ fn self_host_linked_scalar_append_local_type(
 fn self_host_linked_scalar_locals(
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
-) -> Result<StarshineRef358, String> {
+) -> Result<StarshineRef348, String> {
   let locals = StarshineFfi.ffi_lib_Locals_empty()
   let mut local = 0u32
   let _ = while local {
@@ -1764,6 +2112,12 @@ pub fn build_self_host_linked_i32_module(
         return Result::Err("linked I32 imports are not emitted yet")
       }
       let rec_types = StarshineFfi.ffi_ffi_bridge_rec_types_new()
+      match self_host_linked_append_physical_types(link, rec_types) {
+        Result::Err(error) => {
+          return Result::Err(error)
+        }
+        Result::Ok(_) => {}
+      }
       let type_indices = StarshineFfi.ffi_ffi_bridge_type_indices_new()
       let functions = StarshineFfi.ffi_ffi_bridge_funcs_new()
       for linked_function in link.functions {
@@ -1803,7 +2157,10 @@ pub fn build_self_host_linked_i32_module(
         StarshineFfi.ffi_ffi_bridge_type_indices_push(
           type_indices,
           StarshineFfi.ffi_lib_TypeIdx_new(
-            self_host_u32_to_i32(linked_function.function_index),
+            self_host_u32_to_i32(self_host_u32_add(
+              link.types.length(),
+              linked_function.function_index,
+            )),
           ),
         )
         let body_id = match fragment.kind {

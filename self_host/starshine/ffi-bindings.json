@@ -1,11 +1,11 @@
 {
   "version": 1,
   "provider": "starshine",
-  "submodule_revision": "de60811c40ba58d98e6848b91096e92d60bfcb7f",
+  "submodule_revision": "af50e1de1ee0864ecea9eafed3534488b505f57c",
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
-  "wasm_sha256": "de463e75cd716cc55f5af547d4edf3c60a2d5d049833d8415c5b92628b08c448",
-  "available_export_count": 3367,
-  "binding_count": 129,
+  "wasm_sha256": "4962d9f6508efee18831f8327998bdd6d50ac1b91991daca6c2554685ab397fc",
+  "available_export_count": 3369,
+  "binding_count": 139,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -21,13 +21,13 @@
     },
     {
       "path": "src/ffi_bridge/pkg.generated.mbti",
-      "sha256": "90cc4235e1fd7edbd308d14a698b15f8462b6a9d751ed573c4333342f7a9a188"
+      "sha256": "93947e2f924aec360d47480c842faf244a4fb34a2ef4a1abcd2fbeda90d23406"
     }
   ],
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "f1f3a9e22758330c1c8711da440f1770e97eb91bc4af81aa30088523518499f3",
+    "prefix_sha256": "891fddd38c9f16bb7eae64acfcc49193ffdb87f27076af270cbe7608b8c6a45c",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -68,7 +68,7 @@
       "function_index": 2022,
       "internal_name": "ffi_lib_SubType_comp_type",
       "export_name": "SubType::comp_type",
-      "signature": "((ref 0), (ref null 922)) -> (ref 0)",
+      "signature": "((ref 0), (ref null 910)) -> (ref 0)",
       "status": "bound"
     },
     {
@@ -180,7 +180,7 @@
       "function_index": 2133,
       "internal_name": "ffi_lib_Locals_empty",
       "export_name": "Locals::empty",
-      "signature": "() -> (ref 358)",
+      "signature": "() -> (ref 348)",
       "status": "bound"
     },
     {
@@ -188,7 +188,7 @@
       "function_index": 2783,
       "internal_name": "ffi_lib_Func_new",
       "export_name": "Func::new",
-      "signature": "((ref 358), (ref 125)) -> (ref 0)",
+      "signature": "((ref 348), (ref 125)) -> (ref 0)",
       "status": "bound"
     },
     {
@@ -256,11 +256,11 @@
       "status": "bound"
     },
     {
-      "ordinal": 3306,
-      "function_index": 3678,
+      "ordinal": 3308,
+      "function_index": 3681,
       "internal_name": "ffi_ffi_bridge_encode_module",
       "export_name": "ffi_bridge::encode_module",
-      "signature": "((ref 207)) -> (ref 3865)",
+      "signature": "((ref 207)) -> (ref 3858)",
       "status": "bound"
     },
     {
@@ -268,7 +268,7 @@
       "function_index": 3657,
       "internal_name": "ffi_ffi_bridge_EncodedModule_is_ok",
       "export_name": "EncodedModule::is_ok",
-      "signature": "((ref 3865)) -> i32",
+      "signature": "((ref 3858)) -> i32",
       "status": "bound"
     },
     {
@@ -276,7 +276,7 @@
       "function_index": 3658,
       "internal_name": "ffi_ffi_bridge_EncodedModule_byte_length",
       "export_name": "EncodedModule::byte_length",
-      "signature": "((ref 3865)) -> i32",
+      "signature": "((ref 3858)) -> i32",
       "status": "bound"
     },
     {
@@ -284,7 +284,7 @@
       "function_index": 3659,
       "internal_name": "ffi_ffi_bridge_EncodedModule_byte_at",
       "export_name": "EncodedModule::byte_at",
-      "signature": "((ref 3865), i32) -> i32",
+      "signature": "((ref 3858), i32) -> i32",
       "status": "bound"
     },
     {
@@ -484,7 +484,7 @@
       "function_index": 2109,
       "internal_name": "ffi_lib_Locals_single",
       "export_name": "Locals::single",
-      "signature": "(i32, (ref 0)) -> (ref 358)",
+      "signature": "(i32, (ref 0)) -> (ref 348)",
       "status": "bound"
     },
     {
@@ -644,7 +644,7 @@
       "function_index": 2117,
       "internal_name": "ffi_lib_Locals_push",
       "export_name": "Locals::push",
-      "signature": "((ref 358), (ref 0)) -> Unit",
+      "signature": "((ref 348), (ref 0)) -> Unit",
       "status": "bound"
     },
     {
@@ -1061,6 +1061,86 @@
       "internal_name": "ffi_lib_Instruction_f64_neg",
       "export_name": "Instruction::f64_neg",
       "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3307,
+      "function_index": 3680,
+      "internal_name": "ffi_ffi_bridge_field_types_new",
+      "export_name": "ffi_bridge::field_types_new",
+      "signature": "() -> (ref 1009)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3306,
+      "function_index": 3678,
+      "internal_name": "ffi_ffi_bridge_field_types_push",
+      "export_name": "ffi_bridge::field_types_push",
+      "signature": "((ref 1009), (ref 1007)) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2496,
+      "function_index": 2830,
+      "internal_name": "ffi_lib_CompType_struct_",
+      "export_name": "CompType::struct_",
+      "signature": "((ref 1009)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1714,
+      "function_index": 2041,
+      "internal_name": "ffi_lib_StorageType_val_type",
+      "export_name": "StorageType::val_type",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2451,
+      "function_index": 2785,
+      "internal_name": "ffi_lib_FieldType_new",
+      "export_name": "FieldType::new",
+      "signature": "((ref 0), i32) -> (ref 1007)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1753,
+      "function_index": 2080,
+      "internal_name": "ffi_lib_Mut_const_",
+      "export_name": "Mut::const_",
+      "signature": "() -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1752,
+      "function_index": 2079,
+      "internal_name": "ffi_lib_Mut_var_",
+      "export_name": "Mut::var_",
+      "signature": "() -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1899,
+      "function_index": 2233,
+      "internal_name": "ffi_lib_Instruction_struct_new",
+      "export_name": "Instruction::struct_new",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1902,
+      "function_index": 2236,
+      "internal_name": "ffi_lib_Instruction_struct_get",
+      "export_name": "Instruction::struct_get",
+      "signature": "((ref 0), i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1895,
+      "function_index": 2229,
+      "internal_name": "ffi_lib_Instruction_struct_set",
+      "export_name": "Instruction::struct_set",
+      "signature": "((ref 0), i32) -> (ref 0)",
       "status": "bound"
     }
   ]

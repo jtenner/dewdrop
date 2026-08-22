@@ -129,6 +129,16 @@
     "Instruction::f64_sub",
     "Instruction::f64_mul",
     "Instruction::f64_div",
-    "Instruction::f64_neg"
+    "Instruction::f64_neg",
+    "ffi_bridge::field_types_new",
+    "ffi_bridge::field_types_push",
+    "CompType::struct_",
+    "StorageType::val_type",
+    "FieldType::new",
+    "Mut::const_",
+    "Mut::var_",
+    "Instruction::struct_new",
+    "Instruction::struct_get",
+    "Instruction::struct_set"
   ]
 }
