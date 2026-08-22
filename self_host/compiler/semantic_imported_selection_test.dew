@@ -305,6 +305,69 @@ test "imported selection resolves generic inherent methods" {
   }
 }
 
+test "imported generic methods constrain ordinary arguments" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn replace(value: Box<I32>) -> I32 {\n  value.replace(7)\n}\n",
+    b"pub struct Box<t> {\n  item: t\n}\nimpl<t> Box<t> {\n  fn replace(self, value: t) -> t {\n    value\n  }\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let names = self_host_resolve_module_names_with_imports(
+    collected,
+    imports.scope,
+  )
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    imports.resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "imported method argument diagnostics")
+  let mut expression = hir_body.expressions.start
+  let end = self_host_u32_add(
+    hir_body.expressions.start,
+    hir_body.expressions.length,
+  )
+  let mut call = 4294967295u32
+  let _ = while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(_, arguments, _) => if arguments.length == 1u32 {
+          call = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => assert(
+      arguments.length == 1u32,
+      "imported method argument type",
+    )
+    _ => assert(false, "imported method argument target")
+  }
+}
+
 test "imported selection resolves generic tuple and unit variants" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\npub fn some() -> Maybe<I32> {\n  Maybe::Some(1)\n}\npub fn none() -> Maybe<I32> {\n  Maybe::None\n}\n",

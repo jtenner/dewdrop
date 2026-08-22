@@ -540,6 +540,10 @@ impl SelfHostLocalTypeSolver {
         let _ = self.union_variables(root, other_variable)
         true
       }
+      SelfHostBodyTypeTerm::BodyErrorType => {
+        self.set_variable_binding(root, self.error_type())
+        true
+      }
       _ => if self.occurs_in(root, representative) {
         self.diagnostics.push(
           SelfHostLocalInferenceDiagnostic::InfiniteLocalType(

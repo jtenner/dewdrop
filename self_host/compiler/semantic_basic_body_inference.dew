@@ -3875,12 +3875,11 @@ impl SelfHostBasicBodyInferencer {
     let mut index = 0u32
     let _ = while index {
       current => if current < arguments.length {
+        let argument_expression = self.collected.expression_children[
+          self_host_u32_add(arguments.start, current)
+        ]
         self.constrain_assignable(
-          self.expression_type(
-            self.collected.expression_children[
-              self_host_u32_add(arguments.start, current)
-            ],
-          ),
+          self.expression_type(argument_expression),
           self.instantiate_signature_type(
             self.imported.parameter_types[
               self_host_u32_add(callable.parameters.start, current + 1u32)

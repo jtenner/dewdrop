@@ -172,6 +172,25 @@ test "local unification reports one mismatch and poisons its variable" {
   assert(solver.diagnostic_count() == 1u32, "duplicate mismatch")
 }
 
+test "local unification converts the unbound sentinel to the error type" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let variable = solver.fresh_variable()
+  assert(
+    solver.unify(
+      variable,
+      -1i32,
+      self_host_synthetic_type_origin(5u32, 6u32),
+    ),
+    "sentinel recovery",
+  )
+  assert(
+    solver.representative_type(variable) == solver.error_type(),
+    "sentinel error type",
+  )
+  assert(solver.diagnostic_count() == 0u32, "sentinel diagnostics")
+}
+
 test "local unification rejects infinite types with iterative occurs checking" {
   let fixture = self_host_unification_test_types()
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)

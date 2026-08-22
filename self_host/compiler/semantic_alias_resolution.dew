@@ -1262,47 +1262,57 @@ impl SelfHostTypeResolver {
 
   fn resolve_callable_function_types(self) -> Unit {
     let mut index = 0u32
-    for callable in self.collected.callables {
-      let parameters = self.collected.parameters_of(callable.declaration)
-      self.application_scratch.clear()
-      let mut parameter = parameters.start
-      let _ = while parameter {
-        current => if current < self_host_u32_add(
-          parameters.start,
-          parameters.length,
-        ) {
-          self.application_scratch.push(self.parameter_types[current])
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
+    let _ = while index {
+      current_callable => if current_callable < self.collected.callables.length() {
+        let callable = self.collected.callables[current_callable]
+        let parameters = self.collected.parameters_of(callable.declaration)
+        self.application_scratch.clear()
+        let mut parameter = parameters.start
+        let _ = while parameter {
+          current => if current < self_host_u32_add(
+            parameters.start,
+            parameters.length,
+          ) {
+            self.application_scratch.push(self.parameter_types[current])
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
+        self.callable_function_types[current_callable] = self.interner.intern_function(
+          self.application_scratch,
+          self.callable_return_types[current_callable],
+        )
+        continue current_callable + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      self.callable_function_types[index] = self.interner.intern_function(
-        self.application_scratch,
-        self.callable_return_types[index],
-      )
-      index = index + 1u32
     }
     index = 0u32
-    for lambda in self.collected.lambdas {
-      self.application_scratch.clear()
-      let mut parameter = lambda.parameters.start
-      let _ = while parameter {
-        current => if current < self_host_u32_add(
-          lambda.parameters.start,
-          lambda.parameters.length,
-        ) {
-          self.application_scratch.push(self.lambda_parameter_types[current])
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
+    let _ = while index {
+      current_lambda => if current_lambda < self.collected.lambdas.length() {
+        let lambda = self.collected.lambdas[current_lambda]
+        self.application_scratch.clear()
+        let mut parameter = lambda.parameters.start
+        let _ = while parameter {
+          current => if current < self_host_u32_add(
+            lambda.parameters.start,
+            lambda.parameters.length,
+          ) {
+            self.application_scratch.push(self.lambda_parameter_types[current])
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
+        self.lambda_function_types[current_lambda] = self.interner.intern_function(
+          self.application_scratch,
+          self.lambda_return_types[current_lambda],
+        )
+        continue current_lambda + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      self.lambda_function_types[index] = self.interner.intern_function(
-        self.application_scratch,
-        self.lambda_return_types[index],
-      )
-      index = index + 1u32
     }
   }
 
