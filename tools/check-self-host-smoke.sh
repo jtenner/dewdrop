@@ -161,6 +161,7 @@ run_compiler() {
   grep -Fq 'i32.const -2147483648' "$wat"
   test "$(grep -Fc 'if (result i32)' "$wat")" -ge 2
   grep -Fq 'return' "$wat"
+  grep -Fq 'unreachable' "$wat"
   grep -Fq 'i32.const 3' "$wat"
   test "$(grep -Fc 'i32.add' "$wat")" -ge 2
 }

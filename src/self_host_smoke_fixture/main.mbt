@@ -45,7 +45,7 @@ fn main {
         files: [
           {
             logical_path: "src/main.dew",
-            source: b"fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\nfn twice(value: I32) -> I32 {\n  add(value, value)\n}\nfn is_large(value: U32) -> Bool {\n  value > 2147483648u32\n}\nfn choose(value: I32) -> I32 {\n  if value == 70 && true {\n    return value + 3\n  } else {\n    0\n  }\n}\npub fn main() -> I32 {\n  let value = twice(35)\n  choose(value)\n}\n",
+            source: b"fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\nfn twice(value: I32) -> I32 {\n  add(value, value)\n}\nfn is_large(value: U32) -> Bool {\n  value > 2147483648u32\n}\nfn bool_value(value: Bool) -> I32 {\n  match value {\n    true => 1\n    false => 0\n  }\n}\nfn choose(value: I32) -> I32 {\n  if value == 70 && true {\n    return value + 3\n  } else {\n    0\n  }\n}\npub fn main() -> I32 {\n  let value = twice(35)\n  choose(value)\n}\n",
           },
         ],
       },

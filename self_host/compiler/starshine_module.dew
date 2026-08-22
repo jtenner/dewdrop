@@ -143,6 +143,7 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedI32Binary(SelfHostHirBinaryOperator, Bool, StarshineRef125)
   EmitLinkedI32Call(U32, StarshineRef125)
   EmitLinkedI32If(StarshineRef125, StarshineRef125, StarshineRef125)
+  VisitLinkedI32MatchArms(SelfHostHirSpan, U32, U32, StarshineRef125)
   VisitLinkedI32Block(U32, StarshineRef125)
   EmitLinkedI32LocalSet(U32, StarshineRef125)
   EmitLinkedI32Return(StarshineRef125)
@@ -292,6 +293,56 @@ fn self_host_linked_i32_unsigned_shape(
     SelfHostPlannedValueShape::U32PlannedValueShape => true
     _ => false
   }
+}
+
+fn self_host_linked_i32_scratch_count(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+) -> U32 {
+  let mut count = 0u32
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < body.expressions.length {
+      let expression = self_host_u32_add(body.expressions.start, current)
+      match module_.expressions[expression].kind {
+        SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
+          count = self_host_u32_add(count, 1u32)
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  count
+}
+
+fn self_host_linked_i32_scratch_slot(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expression: U32,
+) -> U32 {
+  let mut count = 0u32
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < body.expressions.length {
+      let candidate = self_host_u32_add(body.expressions.start, current)
+      if self_host_u32_equal(candidate, expression) {
+        return self_host_u32_add(body.locals.length, count)
+      }
+      match module_.expressions[candidate].kind {
+        SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
+          count = self_host_u32_add(count, 1u32)
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_u32_add(body.locals.length, count)
 }
 
 fn self_host_linked_i32_local_slot(
@@ -552,6 +603,30 @@ fn self_host_emit_linked_i32_expression(
                 return Result::Err("linked if result is outside the I32 emitter subset")
               }
             }
+            SelfHostPlannedExpressionKind::PlannedMatchExpression(
+              value,
+              arms,
+            ) => {
+              let scratch = self_host_linked_i32_scratch_slot(
+                module_,
+                body,
+                expression,
+              )
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
+                arms,
+                0u32,
+                scratch,
+                destination,
+              ))
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
+                scratch,
+                destination,
+              ))
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                value,
+                destination,
+              ))
+            }
             SelfHostPlannedExpressionKind::PlannedDirectCall(
               declaration,
               _,
@@ -705,6 +780,139 @@ fn self_host_emit_linked_i32_expression(
             alternative,
           ),
         )
+        SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
+          arms,
+          arm_offset,
+          scratch,
+          destination,
+        ) => {
+          if arm_offset >= arms.length {
+            return Result::Err("linked I32 match has no remaining arm")
+          }
+          let child_index = self_host_u32_add(arms.start, arm_offset)
+          if child_index >= module_.arm_children.length() {
+            return Result::Err("linked I32 match arm is outside its child arena")
+          }
+          let arm_index = module_.arm_children[child_index]
+          if arm_index >= module_.pattern_arms.length() {
+            return Result::Err("linked I32 match arm is outside its arena")
+          }
+          let arm = module_.pattern_arms[arm_index]
+          if !self_host_u32_greater(
+            module_.patterns.length(),
+            arm.pattern,
+          ) {
+            return Result::Err("linked I32 match pattern is outside its arena")
+          }
+          let pattern = module_.patterns[arm.pattern]
+          let mut condition = 4294967295u32
+          let mut catch_all = false
+          match pattern.source {
+            SelfHostHirPattern::WildcardPattern(_) => {
+              catch_all = true
+            }
+            SelfHostHirPattern::BindingPattern(_, _) => {
+              catch_all = true
+              match pattern.reference {
+                SelfHostBodyPatternReference::PatternBindingReference(local) => match self_host_linked_i32_local_slot(
+                  module_,
+                  body,
+                  local,
+                ) {
+                  Option::Some(slot) => {
+                    StarshineFfi.ffi_ffi_bridge_instructions_push(
+                      destination,
+                      StarshineFfi.ffi_lib_Instruction_local_get(
+                        StarshineFfi.ffi_lib_LocalIdx_new(scratch.into()),
+                      ),
+                    )
+                    StarshineFfi.ffi_ffi_bridge_instructions_push(
+                      destination,
+                      StarshineFfi.ffi_lib_Instruction_local_set(
+                        StarshineFfi.ffi_lib_LocalIdx_new(slot.into()),
+                      ),
+                    )
+                  }
+                  Option::None => {
+                    return Result::Err("linked I32 pattern binding has no physical slot")
+                  }
+                }
+                _ => {
+                  return Result::Err("linked I32 binding pattern has no local")
+                }
+              }
+            }
+            SelfHostHirPattern::LiteralPattern(expression, _) => {
+              condition = expression
+            }
+            _ => {
+              return Result::Err("linked I32 pattern is outside the scalar subset")
+            }
+          }
+          if catch_all && self_host_u32_equal(
+            arm.guard_condition,
+            4294967295u32,
+          ) {
+            tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+              arm.body,
+              destination,
+            ))
+          } else {
+            let consequent = StarshineFfi.ffi_ffi_bridge_instructions_new()
+            let alternative = StarshineFfi.ffi_ffi_bridge_instructions_new()
+            tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32If(
+              destination,
+              consequent,
+              alternative,
+            ))
+            let next_arm = self_host_u32_add(arm_offset, 1u32)
+            if next_arm < arms.length {
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
+                arms,
+                next_arm,
+                scratch,
+                alternative,
+              ))
+            } else {
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                alternative,
+                StarshineFfi.ffi_lib_Instruction_unreachable_(),
+              )
+            }
+            tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+              arm.body,
+              consequent,
+            ))
+            if catch_all {
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                arm.guard_condition,
+                destination,
+              ))
+            } else {
+              if !self_host_u32_equal(
+                arm.guard_condition,
+                4294967295u32,
+              ) {
+                return Result::Err("linked literal match guards are not emitted yet")
+              }
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(
+                SelfHostHirBinaryOperator::Equal,
+                false,
+                destination,
+              ))
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                condition,
+                destination,
+              ))
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                destination,
+                StarshineFfi.ffi_lib_Instruction_local_get(
+                  StarshineFfi.ffi_lib_LocalIdx_new(scratch.into()),
+                ),
+              )
+            }
+          }
+        }
         SelfHostLinkedI32EmitTask::VisitLinkedI32Block(
           block_index,
           destination,
@@ -868,7 +1076,10 @@ fn self_host_linked_i32_declared_local_count(
       break self_host_semantic_unit()
     }
   }
-  count
+  self_host_u32_add(
+    count,
+    self_host_linked_i32_scratch_count(module_, body),
+  )
 }
 
 fn self_host_encode_linked_i32_module(

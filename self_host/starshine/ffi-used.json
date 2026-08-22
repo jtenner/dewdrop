@@ -67,6 +67,7 @@
     "Instruction::call",
     "BlockType::val_type",
     "ffi_bridge::instruction_if",
-    "Instruction::return_"
+    "Instruction::return_",
+    "Instruction::unreachable_"
   ]
 }
