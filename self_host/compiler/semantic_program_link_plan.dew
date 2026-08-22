@@ -1,0 +1,321 @@
+open dew.std.option
+
+pub struct SelfHostPlannedProgramWasmType {
+  module_index: U32
+  fragment_index: U32
+  type_index: U32
+}
+
+pub struct SelfHostPlannedProgramWasmFunction {
+  module_index: U32
+  fragment_index: U32
+  declaration: U64
+  specialization: U32
+  function_index: U32
+  imported: Bool
+}
+
+pub struct SelfHostPlannedProgramInitializer {
+  module_index: U32
+  declaration: U64
+  body: U64
+  shape: SelfHostPlannedValueShape
+  test_only: Bool
+  global_index: U32
+  order: U32
+}
+
+pub struct SelfHostPlannedProgramSpecializedCallLink {
+  caller_body: U64
+  caller_specialization: U32
+  expression: U32
+  function_index: U32
+}
+
+pub enum SelfHostProgramWasmGCLinkDiagnostic {
+  MissingLinkedSpecialization(U64, U32)
+  MissingLinkedCallTarget(U64, U32)
+}
+
+pub struct SelfHostPlannedProgramWasmGCLink {
+  fragments: SelfHostPlannedProgramWasmGCFragments
+  types: Array<SelfHostPlannedProgramWasmType>
+  module_type_bases: Array<U32>
+  functions: Array<SelfHostPlannedProgramWasmFunction>
+  specialized_calls: Array<SelfHostPlannedProgramSpecializedCallLink>
+  initializers: Array<SelfHostPlannedProgramInitializer>
+  imported_function_count: U32
+  defined_function_count: U32
+  global_count: U32
+  diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>
+}
+
+fn self_host_program_link_u32_slots(
+  length: U32,
+) -> Array<U32> {
+  let values = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < length {
+      values.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values
+}
+
+fn self_host_program_link_is_imported(
+  function_: SelfHostPlannedWasmFunctionFragment,
+) -> Bool {
+  function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _)
+}
+
+fn self_host_program_link_is_emitted(
+  function_: SelfHostPlannedWasmFunctionFragment,
+) -> Bool {
+  if function_.elided {
+    false
+  } else {
+    match function_.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
+      _ => true
+    }
+  }
+}
+
+fn self_host_program_link_function(
+  functions: Array<SelfHostPlannedProgramWasmFunction>,
+  declaration: U64,
+  specialization: U32,
+) -> Option<U32> {
+  for function_ in functions {
+    if self_host_u64_equal(function_.declaration, declaration) &&
+      self_host_u32_equal(function_.specialization, specialization) {
+      return Option::Some(function_.function_index)
+    }
+  }
+  Option::None
+}
+
+fn self_host_program_link_fragment_function_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.functions.length()
+}
+
+fn self_host_program_link_fragment_function(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmFunctionFragment {
+  module_.functions[index]
+}
+
+fn self_host_program_link_physical_type_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.physical_types.length()
+}
+
+fn self_host_program_link_initialization_count(
+  module_: SelfHostPlannedModuleLowering,
+) -> U32 {
+  module_.initialization.steps.length()
+}
+
+fn self_host_program_link_initialization_step(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> SelfHostPlannedModuleInitializationStep {
+  module_.initialization.steps[index]
+}
+
+fn self_host_program_link_append_function_class(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  imported: Bool,
+  functions: Array<SelfHostPlannedProgramWasmFunction>,
+) -> U32 {
+  let start = functions.length()
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < fragments.modules.length() {
+      let module_ = fragments.modules[current_module]
+      let mut fragment_index = 0u32
+      let _ = while fragment_index {
+        current => if current < self_host_program_link_fragment_function_count(module_) {
+          let function_ = self_host_program_link_fragment_function(module_, current)
+          if self_host_program_link_is_emitted(function_) &&
+            self_host_program_link_is_imported(function_) == imported {
+            functions.push(SelfHostPlannedProgramWasmFunction::{
+              module_index: current_module
+              fragment_index: current
+              declaration: function_.declaration
+              specialization: function_.specialization
+              function_index: functions.length()
+              imported: imported
+            })
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  functions.length() - start
+}
+
+fn self_host_program_link_types(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  types: Array<SelfHostPlannedProgramWasmType>,
+  module_bases: Array<U32>,
+) -> Unit {
+  for scc in fragments.specialization.lowering.graph.sccs {
+    let mut member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let module_index = fragments.specialization.lowering.graph.scc_modules[
+          self_host_u32_add(scc.start, current)
+        ]
+        module_bases[module_index] = types.length()
+        let module_ = fragments.modules[module_index]
+        let mut fragment = 0u32
+        let _ = while fragment {
+          type_index => if type_index < self_host_program_link_physical_type_count(module_) {
+            types.push(SelfHostPlannedProgramWasmType::{
+              module_index: module_index
+              fragment_index: type_index
+              type_index: types.length()
+            })
+            continue type_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+}
+
+fn self_host_program_link_initializers(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  emit_tests: Bool,
+) -> Array<SelfHostPlannedProgramInitializer> {
+  let initializers = []
+  for scc in fragments.specialization.lowering.graph.sccs {
+    let mut member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let module_index = fragments.specialization.lowering.graph.scc_modules[
+          self_host_u32_add(scc.start, current)
+        ]
+        let module_ = fragments.specialization.lowering.modules[module_index]
+        let step_count = self_host_program_link_initialization_count(module_)
+        let mut step_index = 0u32
+        let _ = while step_index {
+          current_step => if current_step < step_count {
+            let step = self_host_program_link_initialization_step(
+              module_,
+              current_step,
+            )
+            if !step.test_only || emit_tests {
+              match step.kind {
+              SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(
+                declaration,
+                body,
+                type_,
+              ) => initializers.push(SelfHostPlannedProgramInitializer::{
+                module_index: module_index
+                declaration: declaration
+                body: body
+                shape: self_host_planned_merged_body_value_shape(
+                  module_.resolved_types,
+                  module_.inferred,
+                  type_,
+                )
+                test_only: step.test_only
+                global_index: initializers.length()
+                order: initializers.length()
+              })
+                _ => {}
+              }
+            }
+            continue current_step + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  initializers
+}
+
+fn self_host_plan_program_wasmgc_link(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  emit_tests: Bool,
+) -> SelfHostPlannedProgramWasmGCLink {
+  let types = []
+  let module_type_bases = self_host_program_link_u32_slots(
+    fragments.modules.length(),
+  )
+  self_host_program_link_types(fragments, types, module_type_bases)
+  let functions = []
+  let imported_count = self_host_program_link_append_function_class(
+    fragments,
+    true,
+    functions,
+  )
+  let defined_count = self_host_program_link_append_function_class(
+    fragments,
+    false,
+    functions,
+  )
+  let diagnostics = []
+  let specialized_calls = []
+  for call in fragments.specialization.calls {
+    match self_host_program_link_function(
+      functions,
+      call.target,
+      call.target_specialization,
+    ) {
+      Option::Some(function_index) => specialized_calls.push(
+        SelfHostPlannedProgramSpecializedCallLink::{
+          caller_body: call.caller_body
+          caller_specialization: call.caller_specialization
+          expression: call.expression
+          function_index: function_index
+        },
+      )
+      Option::None => diagnostics.push(
+        SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedCallTarget(
+          call.target,
+          call.target_specialization,
+        ),
+      )
+    }
+  }
+  let initializers = self_host_program_link_initializers(fragments, emit_tests)
+  SelfHostPlannedProgramWasmGCLink::{
+    fragments: fragments
+    types: types
+    module_type_bases: module_type_bases
+    functions: functions
+    specialized_calls: specialized_calls
+    initializers: initializers
+    imported_function_count: imported_count
+    defined_function_count: defined_count
+    global_count: initializers.length()
+    diagnostics: diagnostics
+  }
+}

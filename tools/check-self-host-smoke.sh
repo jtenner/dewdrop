@@ -51,6 +51,7 @@ semantic_sources=(
   self_host/compiler/semantic_program_lowering.dew
   self_host/compiler/semantic_program_specialization.dew
   self_host/compiler/semantic_wasmgc_fragment_plan.dew
+  self_host/compiler/semantic_program_link_plan.dew
   self_host/compiler/semantic_body_flow.dew
 )
 
@@ -98,6 +99,7 @@ tools/dew test \
   self_host/compiler/semantic_program_lowering_test.dew \
   self_host/compiler/semantic_program_specialization_test.dew \
   self_host/compiler/semantic_wasmgc_fragment_plan_test.dew \
+  self_host/compiler/semantic_program_link_plan_test.dew \
   self_host/compiler/semantic_basic_body_inference_test.dew \
   self_host/compiler/semantic_callable_selection_test.dew \
   self_host/compiler/semantic_member_selection_test.dew \

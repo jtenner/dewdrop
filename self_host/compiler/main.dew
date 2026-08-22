@@ -20,7 +20,7 @@ fn self_host_error(process: WasiProcess, message: String) -> U32 {
 
 fn self_host_compile_request_semantic_plan(
   request: SelfHostCompileRequest,
-) -> Result<SelfHostPlannedProgramWasmGCFragments, String> {
+) -> Result<SelfHostPlannedProgramWasmGCLink, String> {
   let collected = self_host_collect_program_manifest(7200u64, request.manifest)
   if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
     return Result::Err("compile request manifest is invalid")
@@ -33,11 +33,14 @@ fn self_host_compile_request_semantic_plan(
   match collected.module_index(request.root_module) {
     Option::None => Result::Err("compile request root module is missing")
     Option::Some(_) => Result::Ok(
-      self_host_plan_program_wasmgc_fragments(
-        self_host_plan_program_specialization(
-          self_host_plan_program_lowering(frozen),
-          request.test_mode,
+      self_host_plan_program_wasmgc_link(
+        self_host_plan_program_wasmgc_fragments(
+          self_host_plan_program_specialization(
+            self_host_plan_program_lowering(frozen),
+            request.test_mode,
+          ),
         ),
+        request.test_mode,
       ),
     )
   }
