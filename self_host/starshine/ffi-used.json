@@ -56,6 +56,12 @@
     "Instruction::i32_xor",
     "Instruction::i32_shl",
     "Instruction::i32_shr_s",
-    "Instruction::i32_shr_u"
+    "Instruction::i32_shr_u",
+    "Locals::single",
+    "LocalIdx::new",
+    "Instruction::local_get",
+    "Instruction::local_set",
+    "Instruction::local_tee",
+    "Instruction::drop"
   ]
 }

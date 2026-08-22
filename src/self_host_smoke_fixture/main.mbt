@@ -45,7 +45,7 @@ fn main {
         files: [
           {
             logical_path: "src/main.dew",
-            source: b"pub fn main() -> I32 {\n  73\n}\n",
+            source: b"pub fn main() -> I32 {\n  let value = 70\n  value + 3\n}\n",
           },
         ],
       },

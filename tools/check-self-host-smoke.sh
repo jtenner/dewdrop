@@ -147,7 +147,13 @@ run_compiler() {
     "$work/$stage/compiler.wasm" \
     "$work/$stage/request.bin"
   wasm-tools validate --features all "$work/$stage/output.wasm"
-  wasm-tools print "$work/$stage/output.wasm" | grep -Fq 'i32.const 73'
+  local wat="$work/$stage/output.wat"
+  wasm-tools print "$work/$stage/output.wasm" > "$wat"
+  grep -Fq 'i32.const 70' "$wat"
+  grep -Fq 'local.set 0' "$wat"
+  grep -Fq 'local.get 0' "$wat"
+  grep -Fq 'i32.const 3' "$wat"
+  grep -Fq 'i32.add' "$wat"
 }
 
 build_compiler a

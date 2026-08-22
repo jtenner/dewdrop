@@ -433,7 +433,7 @@ fn self_host_lowering_plan_block_item(
   local: U32,
 ) -> SelfHostPlannedBlockItem {
   match source {
-    SelfHostHirBlockItem::LetItem(mutable_, _, value, _, offset) => {
+    SelfHostHirBlockItem::LetItem(mutable_, _, _, value, offset) => {
       SelfHostPlannedBlockItem::{
         kind: SelfHostPlannedBlockItemKind::PlannedLetItem(
           local,
