@@ -105,6 +105,17 @@ test "body flow diagnoses unreachable block items" {
   assert(self_host_flow_has_unreachable(flow), "unreachable item")
 }
 
+test "body flow handles a return without a value" {
+  let (_, flows) = self_host_flow_source(
+    981u64,
+    b"fn stop() -> Unit {\n  return\n}\n",
+  )
+  let flow = flows.bodies[0u32]
+  assert(flow.flow.returns, "bare return returns")
+  assert(!flow.flow.falls_through, "bare return does not fall through")
+  assert(!self_host_flow_has_unreachable(flow), "bare return reachable")
+}
+
 test "body flow recognizes exhaustive bool matches" {
   let (_, flows) = self_host_flow_source(
     971u64,

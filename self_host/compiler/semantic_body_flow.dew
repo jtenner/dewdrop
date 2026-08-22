@@ -265,7 +265,11 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn expression_flow(self, expression: U32) -> SelfHostBodyFlowSummary {
-    self.expression_flows[expression - self.body.expressions.start]
+    if self_host_u32_equal(expression, 4294967295u32) {
+      self_host_flow_falls_through()
+    } else {
+      self.expression_flows[expression - self.body.expressions.start]
+    }
   }
 
   fn sequence_children(self, children: SelfHostHirSpan) -> SelfHostBodyFlowSummary {
