@@ -1,0 +1,763 @@
+open dew.std.option
+
+struct SelfHostSpecializationShapeTask {
+  shape: SelfHostPlannedValueShape
+  finish: Bool
+  start: U32
+}
+
+struct SelfHostSpecializationShapePair {
+  left: SelfHostPlannedValueShape
+  right: SelfHostPlannedValueShape
+}
+
+pub struct SelfHostProgramSpecializationRequest {
+  declaration: U64
+  shapes: SelfHostHirSpan
+}
+
+pub struct SelfHostProgramSpecializedCall {
+  caller_body: U64
+  caller_specialization: U32
+  expression: U32
+  target: U64
+  target_specialization: U32
+}
+
+pub struct SelfHostProgramSpecializationPlan {
+  lowering: SelfHostPlannedProgramLowering
+  reachable_declarations: Array<U64>
+  requests: Array<SelfHostProgramSpecializationRequest>
+  shapes: Array<SelfHostPlannedValueShape>
+  calls: Array<SelfHostProgramSpecializedCall>
+}
+
+struct SelfHostProgramCallRecipe {
+  target: U64
+  arguments: SelfHostHirSpan
+}
+
+fn self_host_specialization_canonical_scalar(
+  shape: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  match shape {
+    SelfHostPlannedValueShape::I8PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::I16PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::U8PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::U16PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::U32PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::Swar32PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostPlannedValueShape::U64PlannedValueShape => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostPlannedValueShape::Swar64PlannedValueShape => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostPlannedValueShape::RefPlannedValueShape => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedValueShape::GenericPlannedValueShape => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedValueShape::ErrorPlannedValueShape => SelfHostPlannedValueShape::RefPlannedValueShape
+    _ => shape
+  }
+}
+
+fn self_host_specialization_canonical_shape(
+  root: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  let tasks = [SelfHostSpecializationShapeTask::{
+    shape: root
+    finish: false
+    start: 0u32
+  }]
+  let results = []
+  let _ = while tasks.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let task = match tasks.pop() {
+        Option::Some(value) => value
+        Option::None => SelfHostSpecializationShapeTask::{
+          shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
+          finish: false
+          start: 0u32
+        }
+      }
+      if task.finish {
+        let fields = []
+        let end = results.length()
+        let mut index = task.start
+        let _ = while index {
+          current => if current < end {
+            fields.push(results[current])
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        results.truncate(task.start)
+        results.push(SelfHostPlannedValueShape::ProductPlannedValueShape(fields))
+      } else {
+        match task.shape {
+          SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+            let start = results.length()
+            tasks.push(SelfHostSpecializationShapeTask::{
+              shape: task.shape
+              finish: true
+              start: start
+            })
+            let mut field = fields.length()
+            let _ = while field {
+              current => if self_host_u32_greater(current, 0u32) {
+                let previous = current - 1u32
+                tasks.push(SelfHostSpecializationShapeTask::{
+                  shape: fields[previous]
+                  finish: false
+                  start: 0u32
+                })
+                continue previous
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          _ => results.push(self_host_specialization_canonical_scalar(task.shape))
+        }
+      }
+      continue tasks.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match results.pop() {
+    Option::Some(value) => value
+    Option::None => SelfHostPlannedValueShape::RefPlannedValueShape
+  }
+}
+
+fn self_host_specialization_shapes_equal(
+  left: SelfHostPlannedValueShape,
+  right: SelfHostPlannedValueShape,
+) -> Bool {
+  let work = [SelfHostSpecializationShapePair::{
+    left: left
+    right: right
+  }]
+  let _ = while work.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let pair = match work.pop() {
+        Option::Some(value) => value
+        Option::None => SelfHostSpecializationShapePair::{
+          left: SelfHostPlannedValueShape::ErrorPlannedValueShape
+          right: SelfHostPlannedValueShape::UnitPlannedValueShape
+        }
+      }
+      let canonical_left = self_host_specialization_canonical_scalar(pair.left)
+      let canonical_right = self_host_specialization_canonical_scalar(pair.right)
+      match canonical_left {
+        SelfHostPlannedValueShape::ProductPlannedValueShape(left_fields) => match canonical_right {
+          SelfHostPlannedValueShape::ProductPlannedValueShape(right_fields) => {
+            if !self_host_u32_equal(left_fields.length(), right_fields.length()) {
+              return false
+            }
+            let mut field = 0u32
+            let _ = while field {
+              current => if current < left_fields.length() {
+                work.push(SelfHostSpecializationShapePair::{
+                  left: left_fields[current]
+                  right: right_fields[current]
+                })
+                continue current + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          _ => {
+            return false
+          }
+        }
+        SelfHostPlannedValueShape::UnitPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::UnitPlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::NeverPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::NeverPlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::I32PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::I32PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::I64PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::I64PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::F32PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::F32PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::F64PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::F64PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::V128PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::V128PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::RefPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::RefPlannedValueShape) {
+          return false
+        }
+        _ => {
+          return false
+        }
+      }
+      continue work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
+fn self_host_program_specialization_callable(
+  module_: SelfHostPlannedModuleLowering,
+  declaration: U64,
+) -> Option<SelfHostPlannedCallable> {
+  for callable in module_.functions.callables {
+    if self_host_u64_equal(callable.declaration, declaration) {
+      return Option::Some(callable)
+    }
+  }
+  Option::None
+}
+
+fn self_host_program_specialization_callable_generics(
+  callable: SelfHostPlannedCallable,
+) -> SelfHostHirSpan {
+  if self_host_u32_greater(callable.owner_generic_parameters.length, 0u32) {
+    callable.owner_generic_parameters
+  } else {
+    callable.generic_parameters
+  }
+}
+
+fn self_host_program_specialization_callable_body(
+  callable: SelfHostPlannedCallable,
+) -> Option<U64> {
+  match callable.kind {
+    SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => Option::Some(body)
+    SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => body
+    _ => Option::None
+  }
+}
+
+fn self_host_program_specialization_body(
+  module_: SelfHostPlannedModuleLowering,
+  body: U64,
+) -> Option<SelfHostPlannedBodyLowering> {
+  for candidate in module_.bodies {
+    if self_host_u64_equal(candidate.body, body) {
+      return Option::Some(candidate)
+    }
+  }
+  Option::None
+}
+
+fn self_host_program_specialization_add_reachable(
+  reachable: Array<U64>,
+  declaration: U64,
+) -> Bool {
+  if self_host_u64_equal(declaration, 0u64) {
+    return false
+  }
+  for existing in reachable {
+    if self_host_u64_equal(existing, declaration) {
+      return false
+    }
+  }
+  reachable.push(declaration)
+  true
+}
+
+fn self_host_program_specialization_call_recipe(
+  kind: SelfHostPlannedExpressionKind,
+) -> Option<SelfHostProgramCallRecipe> {
+  match kind {
+    SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, arguments, _) => Option::Some(
+      SelfHostProgramCallRecipe::{
+        target: target
+        arguments: arguments
+      },
+    )
+    SelfHostPlannedExpressionKind::PlannedOperatorCall(target, _, _, _, arguments) => Option::Some(
+      SelfHostProgramCallRecipe::{
+        target: target
+        arguments: arguments
+      },
+    )
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, target, _, arguments, _) => Option::Some(
+      SelfHostProgramCallRecipe::{
+        target: target
+        arguments: arguments
+      },
+    )
+    SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, target) => match target {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => Option::Some(
+        SelfHostProgramCallRecipe::{
+          target: declaration
+          arguments: arguments
+        },
+      )
+      _ => Option::None
+    }
+    SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, target) => match target {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => Option::Some(
+        SelfHostProgramCallRecipe::{
+          target: declaration
+          arguments: arguments
+        },
+      )
+      _ => Option::None
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_program_specialization_resolved_type(
+  module_: SelfHostPlannedModuleLowering,
+  type_: I32,
+) -> Option<U32> {
+  if type_ < -1i32 {
+    Option::Some(self_host_body_i32_to_u32(-type_ - 2i32))
+  } else if type_ >= 0i32 {
+    let index = self_host_body_i32_to_u32(type_)
+    if index < module_.inferred.types.length() {
+      match module_.inferred.types[index] {
+        SelfHostBodyTypeTerm::BodyResolvedType(value) => Option::Some(value)
+        _ => Option::None
+      }
+    } else {
+      Option::None
+    }
+  } else {
+    Option::None
+  }
+}
+
+fn self_host_program_specialization_argument_shape(
+  module_: SelfHostPlannedModuleLowering,
+  caller: Option<SelfHostPlannedCallable>,
+  caller_shapes: SelfHostHirSpan,
+  shapes: Array<SelfHostPlannedValueShape>,
+  type_: I32,
+) -> SelfHostPlannedValueShape {
+  let fallback = self_host_planned_merged_body_value_shape(
+    module_.resolved_types,
+    module_.inferred,
+    type_,
+  )
+  match caller {
+    Option::Some(callable) => {
+      let generics = self_host_program_specialization_callable_generics(callable)
+      match self_host_program_specialization_resolved_type(module_, type_) {
+        Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
+          match module_.resolved_types.types[resolved_type] {
+            SelfHostResolvedType::GenericParameterType(parameter) => {
+              let local = self_host_semantic_id_local(parameter)
+              if local >= generics.start &&
+                local < self_host_u32_add(generics.start, generics.length) {
+                let relative = local - generics.start
+                if relative < caller_shapes.length {
+                  return shapes[self_host_u32_add(caller_shapes.start, relative)]
+                }
+              }
+            }
+            _ => {}
+          }
+        }
+        Option::None => {}
+      }
+      if self_host_u32_equal(caller_shapes.length, 1u32) {
+        match fallback {
+          SelfHostPlannedValueShape::GenericPlannedValueShape => {
+            return shapes[caller_shapes.start]
+          }
+          SelfHostPlannedValueShape::ErrorPlannedValueShape => {
+            return shapes[caller_shapes.start]
+          }
+          _ => {}
+        }
+      }
+      fallback
+    }
+    Option::None => fallback
+  }
+}
+
+fn self_host_program_specialization_request_matches(
+  request: SelfHostProgramSpecializationRequest,
+  requests_shapes: Array<SelfHostPlannedValueShape>,
+  declaration: U64,
+  candidates: Array<SelfHostPlannedValueShape>,
+) -> Bool {
+  if !self_host_u64_equal(request.declaration, declaration) ||
+    !self_host_u32_equal(request.shapes.length, candidates.length()) {
+    return false
+  }
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < request.shapes.length {
+      if !self_host_specialization_shapes_equal(
+        requests_shapes[self_host_u32_add(request.shapes.start, current)],
+        candidates[current],
+      ) {
+        return false
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
+fn self_host_program_specialization_add_request(
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  declaration: U64,
+  candidates: Array<SelfHostPlannedValueShape>,
+) -> U32 {
+  let mut request_index = 0u32
+  while request_index {
+    current => if current < requests.length() {
+      if self_host_program_specialization_request_matches(
+        requests[current],
+        shapes,
+        declaration,
+        candidates,
+      ) {
+        break current
+      }
+      continue current + 1u32
+    } else {
+      let start = shapes.length()
+      for candidate in candidates {
+        shapes.push(self_host_specialization_canonical_shape(candidate))
+      }
+      requests.push(SelfHostProgramSpecializationRequest::{
+        declaration: declaration
+        shapes: SelfHostHirSpan::{
+          start: start
+          length: candidates.length()
+        }
+      })
+      break requests.length() - 1u32
+    }
+  }
+}
+
+fn self_host_program_specialization_record_call(
+  calls: Array<SelfHostProgramSpecializedCall>,
+  caller_body: U64,
+  caller_specialization: U32,
+  expression: U32,
+  target: U64,
+  target_specialization: U32,
+) -> Unit {
+  for call in calls {
+    if self_host_u64_equal(call.caller_body, caller_body) &&
+      self_host_u32_equal(call.caller_specialization, caller_specialization) &&
+      self_host_u32_equal(call.expression, expression) {
+      return
+    }
+  }
+  calls.push(SelfHostProgramSpecializedCall::{
+    caller_body: caller_body
+    caller_specialization: caller_specialization
+    expression: expression
+    target: target
+    target_specialization: target_specialization
+  })
+}
+
+fn self_host_program_specialization_mark_nominal(
+  reachable: Array<U64>,
+  expression: SelfHostPlannedExpression,
+) -> Unit {
+  if !self_host_u64_equal(expression.nominal, 0u64) {
+    let _ = self_host_program_specialization_add_reachable(
+      reachable,
+      expression.nominal,
+    )
+  }
+  match expression.kind {
+    SelfHostPlannedExpressionKind::PlannedConstruct(_, _, selection) => match selection {
+      SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(declaration, _) => {
+        let _ = self_host_program_specialization_add_reachable(reachable, declaration)
+      }
+      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(variant, _, _) => {
+        let _ = self_host_program_specialization_add_reachable(reachable, variant)
+      }
+      _ => {}
+    }
+    _ => {}
+  }
+}
+
+fn self_host_program_specialization_expression(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> SelfHostPlannedExpression {
+  module_.expressions[index]
+}
+
+fn self_host_program_specialization_call_type_argument(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> I32 {
+  module_.inferred.call_type_arguments[index]
+}
+
+fn self_host_program_specialization_scan_body(
+  lowering: SelfHostPlannedProgramLowering,
+  module_index: U32,
+  body: SelfHostPlannedBodyLowering,
+  caller: Option<SelfHostPlannedCallable>,
+  caller_specialization: U32,
+  caller_shapes: SelfHostHirSpan,
+  reachable: Array<U64>,
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  calls: Array<SelfHostProgramSpecializedCall>,
+) -> Unit {
+  let module_ = lowering.modules[module_index]
+  let mut expression_offset = 0u32
+  let _ = while expression_offset {
+    current => if current < body.expressions.length {
+      let expression_index = self_host_u32_add(body.expressions.start, current)
+      let expression = self_host_program_specialization_expression(
+        module_,
+        expression_index,
+      )
+      self_host_program_specialization_mark_nominal(reachable, expression)
+      match self_host_program_specialization_call_recipe(expression.kind) {
+        Option::Some(recipe) => {
+          self_host_program_specialization_add_reachable(reachable, recipe.target)
+          if self_host_u32_greater(recipe.arguments.length, 0u32) {
+            let candidate_shapes = []
+            let mut argument = 0u32
+            let _ = while argument {
+              argument_offset => if argument_offset < recipe.arguments.length {
+                let type_ = self_host_program_specialization_call_type_argument(
+                  module_,
+                  self_host_u32_add(recipe.arguments.start, argument_offset),
+                )
+                candidate_shapes.push(
+                  self_host_program_specialization_argument_shape(
+                    module_,
+                    caller,
+                    caller_shapes,
+                    shapes,
+                    type_,
+                  ),
+                )
+                continue argument_offset + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            let request = self_host_program_specialization_add_request(
+              requests,
+              shapes,
+              recipe.target,
+              candidate_shapes,
+            )
+            self_host_program_specialization_record_call(
+              calls,
+              body.body,
+              caller_specialization,
+              expression_index,
+              recipe.target,
+              request,
+            )
+          }
+        }
+        Option::None => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_plan_program_specialization(
+  lowering: SelfHostPlannedProgramLowering,
+  emit_tests: Bool,
+) -> SelfHostProgramSpecializationPlan {
+  let reachable = []
+  let declaration_work = []
+  let requests = []
+  let shapes = []
+  let calls = []
+  let scanned_bodies = []
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < lowering.modules.length() {
+      let module_ = lowering.modules[current_module]
+      for callable in module_.functions.callables {
+        let root = (callable.visibility is SelfHostSemanticVisibility::Public || !callable.compiler_owned) &&
+          (!callable.is_test || emit_tests)
+        if root && self_host_program_specialization_add_reachable(
+          reachable,
+          callable.declaration,
+        ) {
+          declaration_work.push(callable.declaration)
+        }
+      }
+      for step in module_.initialization.steps {
+        if !step.test_only || emit_tests {
+          match step.kind {
+            SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(_, body_id, _) => match self_host_program_specialization_body(
+              module_,
+              body_id,
+            ) {
+              Option::Some(body) => {
+                self_host_program_specialization_scan_body(
+                  lowering,
+                  current_module,
+                  body,
+                  Option::None,
+                  4294967295u32,
+                  SelfHostHirSpan::{
+                    start: 0u32
+                    length: 0u32
+                  },
+                  reachable,
+                  requests,
+                  shapes,
+                  calls,
+                )
+                scanned_bodies.push(body.body)
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut work_index = 0u32
+  let _ = while work_index {
+    current => if current < declaration_work.length() {
+      let declaration = declaration_work[current]
+      match lowering.index.declaration_owner(declaration) {
+        Option::Some(owner) => {
+          let module_ = lowering.modules[owner]
+          match self_host_program_specialization_callable(module_, declaration) {
+            Option::Some(callable) => if self_host_u32_equal(
+              self_host_program_specialization_callable_generics(callable).length,
+              0u32,
+            ) {
+              match self_host_program_specialization_callable_body(callable) {
+                Option::Some(body_id) => {
+                  let mut already_scanned = false
+                  for scanned in scanned_bodies {
+                    if self_host_u64_equal(scanned, body_id) {
+                      already_scanned = true
+                    }
+                  }
+                  if !already_scanned {
+                    match self_host_program_specialization_body(module_, body_id) {
+                      Option::Some(body) => {
+                        self_host_program_specialization_scan_body(
+                          lowering,
+                          owner,
+                          body,
+                          Option::Some(callable),
+                          4294967295u32,
+                          SelfHostHirSpan::{
+                            start: 0u32
+                            length: 0u32
+                          },
+                          reachable,
+                          requests,
+                          shapes,
+                          calls,
+                        )
+                        scanned_bodies.push(body_id)
+                      }
+                      Option::None => {}
+                    }
+                  }
+                }
+                Option::None => {}
+              }
+            }
+            Option::None => {}
+          }
+        }
+        Option::None => {}
+      }
+      let mut candidate = 0u32
+      let _ = while candidate {
+        next => if next < reachable.length() {
+          let value = reachable[next]
+          let mut queued = false
+          for existing in declaration_work {
+            if self_host_u64_equal(existing, value) {
+              queued = true
+            }
+          }
+          if !queued {
+            declaration_work.push(value)
+          }
+          continue next + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut request_index = 0u32
+  let _ = while request_index {
+    current => if current < requests.length() {
+      let request = requests[current]
+      match lowering.index.declaration_owner(request.declaration) {
+        Option::Some(owner) => {
+          let module_ = lowering.modules[owner]
+          match self_host_program_specialization_callable(
+            module_,
+            request.declaration,
+          ) {
+            Option::Some(callable) => match self_host_program_specialization_callable_body(callable) {
+              Option::Some(body_id) => match self_host_program_specialization_body(module_, body_id) {
+                Option::Some(body) => self_host_program_specialization_scan_body(
+                  lowering,
+                  owner,
+                  body,
+                  Option::Some(callable),
+                  current,
+                  request.shapes,
+                  reachable,
+                  requests,
+                  shapes,
+                  calls,
+                )
+                Option::None => {}
+              }
+              Option::None => {}
+            }
+            Option::None => {}
+          }
+        }
+        Option::None => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostProgramSpecializationPlan::{
+    lowering: lowering
+    reachable_declarations: reachable
+    requests: requests
+    shapes: shapes
+    calls: calls
+  }
+}

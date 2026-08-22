@@ -1,0 +1,206 @@
+open dew.std.option
+open dew.std.testing
+
+fn self_host_specialization_test_plan(
+  source: Bytes,
+) -> SelfHostProgramSpecializationPlan {
+  self_host_plan_program_specialization(
+    self_host_program_lowering_test_manifest([
+      SelfHostManifestModule::{
+        path: "app.main"
+        files: [
+          SelfHostManifestFile::{
+            path: "main.dew"
+            source: source
+            test_only: false
+          },
+        ]
+      },
+    ]),
+    false,
+  )
+}
+
+fn self_host_specialization_request_shape(
+  plan: SelfHostProgramSpecializationPlan,
+  request: U32,
+  argument: U32,
+) -> SelfHostPlannedValueShape {
+  let selected = plan.requests[request]
+  plan.shapes[self_host_u32_add(selected.shapes.start, argument)]
+}
+
+fn self_host_specialization_callable_count(
+  module_: SelfHostPlannedModuleLowering,
+) -> U32 {
+  module_.functions.callables.length()
+}
+
+fn self_host_specialization_callable_at(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> SelfHostPlannedCallable {
+  module_.functions.callables[index]
+}
+
+fn self_host_specialization_request_named(
+  plan: SelfHostProgramSpecializationPlan,
+  name: Bytes,
+) -> Option<U32> {
+  let root = plan.lowering.modules[0u32]
+  let mut declaration = 0u64
+  let mut callable_index = 0u32
+  let callable_count = self_host_specialization_callable_count(root)
+  let _ = while callable_index {
+    current => if current < callable_count {
+      let callable = self_host_specialization_callable_at(root, current)
+      if self_host_bytes_equal(callable.name, name) {
+        declaration = callable.declaration
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut index = 0u32
+  while index {
+    current => if current < plan.requests.length() {
+      if self_host_u64_equal(plan.requests[current].declaration, declaration) {
+        break Option::Some(current)
+      }
+      continue current + 1u32
+    } else {
+      break Option::None
+    }
+  }
+}
+
+test "program specialization materializes concrete generic call shapes" {
+  let plan = self_host_specialization_test_plan(
+    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn run() -> I32 {\n  identity(42)\n}\n",
+  )
+  let request = match self_host_specialization_request_named(plan, b"identity") {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "identity request")
+      0u32
+    }
+  }
+  let selected_request = plan.requests[request]
+  assert(
+    self_host_u32_equal(selected_request.shapes.length, 1u32),
+    "one generic",
+  )
+  match self_host_specialization_request_shape(plan, request, 0u32) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    _ => assert(false, "i32 specialization")
+  }
+  assert(plan.calls.length() == 1u32, "one specialized call")
+}
+
+test "program specialization canonicalizes and deduplicates scalar carriers" {
+  let plan = self_host_specialization_test_plan(
+    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn first() -> I8 {\n  identity(1i8)\n}\npub fn second() -> U32 {\n  identity(2u32)\n}\n",
+  )
+  assert(plan.requests.length() == 1u32, "one canonical request")
+  assert(plan.calls.length() == 2u32, "two call sites")
+  match self_host_specialization_request_shape(plan, 0u32, 0u32) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    _ => assert(false, "canonical i32")
+  }
+}
+
+test "program specialization closes transitive generic calls" {
+  let plan = self_host_specialization_test_plan(
+    b"fn identity<t>(value: t) -> t {\n  value\n}\nfn wrap<t>(value: t) -> t {\n  identity(value)\n}\npub fn run() -> I64 {\n  wrap(42i64)\n}\n",
+  )
+  let identity = match self_host_specialization_request_named(plan, b"identity") {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "transitive identity")
+      0u32
+    }
+  }
+  let wrap = match self_host_specialization_request_named(plan, b"wrap") {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "wrap request")
+      0u32
+    }
+  }
+  match self_host_specialization_request_shape(plan, wrap, 0u32) {
+    SelfHostPlannedValueShape::I64PlannedValueShape => {}
+    _ => assert(false, "wrap i64")
+  }
+  match self_host_specialization_request_shape(plan, identity, 0u32) {
+    SelfHostPlannedValueShape::I64PlannedValueShape => {}
+    _ => assert(false, "identity i64")
+  }
+  let mut saw_transitive = false
+  for call in plan.calls {
+    if self_host_u32_equal(call.caller_specialization, wrap) &&
+      self_host_u32_equal(call.target_specialization, identity) {
+      saw_transitive = true
+    }
+  }
+  assert(saw_transitive, "transitive call edge")
+}
+
+test "program specialization follows imported generic calls" {
+  let lowering = self_host_program_lowering_test_manifest([
+    SelfHostManifestModule::{
+      path: "app.main"
+      files: [
+        SelfHostManifestFile::{
+          path: "main.dew"
+          source: b"open app.library\npub fn run() -> I32 {\n  identity(7)\n}\n"
+          test_only: false
+        },
+      ]
+    },
+    SelfHostManifestModule::{
+      path: "app.library"
+      files: [
+        SelfHostManifestFile::{
+          path: "library.dew"
+          source: b"pub fn identity<t>(value: t) -> t {\n  value\n}\n"
+          test_only: false
+        },
+      ]
+    },
+  ])
+  let plan = self_host_plan_program_specialization(lowering, false)
+  assert(plan.requests.length() == 1u32, "imported request")
+  let request = plan.requests[0u32]
+  assert(
+    self_host_semantic_id_module(request.declaration) == 5101u64,
+    "library target",
+  )
+  match self_host_specialization_request_shape(plan, 0u32, 0u32) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    _ => assert(false, "imported i32")
+  }
+}
+
+test "program specialization retains canonical product shape trees" {
+  let shape = self_host_specialization_canonical_shape(
+    SelfHostPlannedValueShape::ProductPlannedValueShape([
+      SelfHostPlannedValueShape::I8PlannedValueShape,
+      SelfHostPlannedValueShape::U64PlannedValueShape,
+    ]),
+  )
+  match shape {
+    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+      assert(fields.length() == 2u32, "product fields")
+      match fields[0u32] {
+        SelfHostPlannedValueShape::I32PlannedValueShape => {}
+        _ => assert(false, "product first")
+      }
+      match fields[1u32] {
+        SelfHostPlannedValueShape::I64PlannedValueShape => {}
+        _ => assert(false, "product second")
+      }
+    }
+    _ => assert(false, "product shape")
+  }
+}

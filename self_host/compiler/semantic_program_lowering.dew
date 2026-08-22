@@ -1,0 +1,466 @@
+open dew.std.option
+
+pub struct SelfHostProgramLoweringIndex {
+  module_ids: Array<U64>
+}
+
+impl SelfHostProgramLoweringIndex {
+  fn module_index(self, module_id: U64) -> Option<U32> {
+    let mut index = 0u32
+    while index {
+      current => if current < self.module_ids.length() {
+        if self_host_u64_equal(self.module_ids[current], module_id) {
+          break Option::Some(current)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+
+  fn declaration_owner(self, declaration: U64) -> Option<U32> {
+    self.module_index(self_host_semantic_id_module(declaration))
+  }
+
+  fn body_owner(self, body: U64) -> Option<U32> {
+    self.module_index(self_host_semantic_id_module(body))
+  }
+}
+
+pub struct SelfHostProgramModuleGraph {
+  dependencies: Array<SelfHostHirSpan>
+  dependency_modules: Array<U32>
+  sccs: Array<SelfHostHirSpan>
+  scc_modules: Array<U32>
+  module_scc: Array<U32>
+}
+
+pub struct SelfHostPlannedProgramLowering {
+  modules: Array<SelfHostPlannedModuleLowering>
+  index: SelfHostProgramLoweringIndex
+  graph: SelfHostProgramModuleGraph
+  elided_trait_wrappers: Array<U64>
+}
+
+fn self_host_program_imported_interface_count(
+  scope: SelfHostModuleImportScope,
+) -> U32 {
+  scope.imported_interfaces.length()
+}
+
+fn self_host_program_imported_interface(
+  scope: SelfHostModuleImportScope,
+  index: U32,
+) -> U32 {
+  scope.imported_interfaces[index]
+}
+
+fn self_host_program_module_dependencies(
+  frozen: SelfHostFrozenSignatureProgram,
+) -> (Array<SelfHostHirSpan>, Array<U32>) {
+  let spans = []
+  let values = []
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < frozen.collected.modules.length() {
+      let scope = frozen.import_scopes.at(current)
+      let imported_count = self_host_program_imported_interface_count(scope)
+      let start = values.length()
+      let mut candidate = 0u32
+      let _ = while candidate {
+        dependency => if dependency < frozen.collected.modules.length() {
+          let mut present = false
+          let mut imported_index = 0u32
+          let _ = while imported_index {
+            imported => if imported < imported_count {
+              if self_host_u32_equal(
+                self_host_program_imported_interface(scope, imported),
+                dependency,
+              ) {
+                present = true
+              }
+              continue imported + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          if present && !self_host_u32_equal(dependency, current) {
+            values.push(dependency)
+          }
+          continue dependency + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      spans.push(SelfHostHirSpan::{
+        start: start
+        length: values.length() - start
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  (spans, values)
+}
+
+fn self_host_program_module_reachable(
+  root: U32,
+  target: U32,
+  dependencies: Array<SelfHostHirSpan>,
+  values: Array<U32>,
+) -> Bool {
+  if self_host_u32_equal(root, target) {
+    return true
+  }
+  let seen = []
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < dependencies.length() {
+      seen.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let work = [root]
+  let _ = while work.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let current = match work.pop() {
+        Option::Some(value) => value
+        Option::None => root
+      }
+      if current < seen.length() && !seen[current] {
+        seen[current] = true
+        let span = dependencies[current]
+        let mut dependency = 0u32
+        let _ = while dependency {
+          offset => if offset < span.length {
+            let next = values[self_host_u32_add(span.start, offset)]
+            if self_host_u32_equal(next, target) {
+              return true
+            }
+            if next < seen.length() && !seen[next] {
+              work.push(next)
+            }
+            continue offset + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      continue work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  false
+}
+
+fn self_host_plan_program_module_graph(
+  frozen: SelfHostFrozenSignatureProgram,
+) -> SelfHostProgramModuleGraph {
+  let (dependencies, dependency_modules) = self_host_program_module_dependencies(
+    frozen,
+  )
+  let module_count = dependencies.length()
+  let provisional_sccs = []
+  let provisional_modules = []
+  let module_scc = []
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < module_count {
+      module_scc.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut seed = 0u32
+  let _ = while seed {
+    current_seed => if current_seed < module_count {
+      if self_host_u32_equal(module_scc[current_seed], 4294967295u32) {
+        let scc_index = provisional_sccs.length()
+        let start = provisional_modules.length()
+        let mut candidate = current_seed
+        let _ = while candidate {
+          current => if current < module_count {
+            if self_host_u32_equal(module_scc[current], 4294967295u32) &&
+              self_host_program_module_reachable(
+                current_seed,
+                current,
+                dependencies,
+                dependency_modules,
+              ) && self_host_program_module_reachable(
+                current,
+                current_seed,
+                dependencies,
+                dependency_modules,
+              ) {
+              module_scc[current] = scc_index
+              provisional_modules.push(current)
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        provisional_sccs.push(SelfHostHirSpan::{
+          start: start
+          length: provisional_modules.length() - start
+        })
+      }
+      continue current_seed + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let emitted = []
+  let mut scc_index = 0u32
+  let _ = while scc_index {
+    current => if current < provisional_sccs.length() {
+      emitted.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let sccs = []
+  let scc_modules = []
+  let ordered_module_scc = []
+  let mut module_slot = 0u32
+  let _ = while module_slot {
+    current => if current < module_count {
+      ordered_module_scc.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut emitted_count = 0u32
+  let _ = while emitted_count {
+    count => if count < provisional_sccs.length() {
+      let mut selected = 4294967295u32
+      let mut candidate_scc = 0u32
+      let _ = while candidate_scc {
+        current_scc => if current_scc < provisional_sccs.length() {
+          if !emitted[current_scc] {
+            let mut ready = true
+            let members = provisional_sccs[current_scc]
+            let mut member = 0u32
+            let _ = while member {
+              member_offset => if member_offset < members.length {
+                let module_ = provisional_modules[
+                  self_host_u32_add(members.start, member_offset)
+                ]
+                let deps = dependencies[module_]
+                let mut dependency = 0u32
+                let _ = while dependency {
+                  dependency_offset => if dependency_offset < deps.length {
+                    let dependency_module = dependency_modules[
+                      self_host_u32_add(deps.start, dependency_offset)
+                    ]
+                    let dependency_scc = module_scc[dependency_module]
+                    if !self_host_u32_equal(dependency_scc, current_scc) &&
+                      !emitted[dependency_scc] {
+                      ready = false
+                    }
+                    continue dependency_offset + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+                continue member_offset + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            if ready {
+              selected = current_scc
+              break self_host_semantic_unit()
+            }
+          }
+          continue current_scc + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      if self_host_u32_equal(selected, 4294967295u32) {
+        let mut fallback = 0u32
+        let _ = while fallback {
+          current => if current < emitted.length() {
+            if !emitted[current] {
+              selected = current
+              break self_host_semantic_unit()
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      emitted[selected] = true
+      let ordered_scc = sccs.length()
+      let start = scc_modules.length()
+      let members = provisional_sccs[selected]
+      let mut member = 0u32
+      let _ = while member {
+        current => if current < members.length {
+          let module_ = provisional_modules[
+            self_host_u32_add(members.start, current)
+          ]
+          scc_modules.push(module_)
+          ordered_module_scc[module_] = ordered_scc
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      sccs.push(SelfHostHirSpan::{
+        start: start
+        length: scc_modules.length() - start
+      })
+      continue count + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostProgramModuleGraph::{
+    dependencies: dependencies
+    dependency_modules: dependency_modules
+    sccs: sccs
+    scc_modules: scc_modules
+    module_scc: ordered_module_scc
+  }
+}
+
+fn self_host_infer_program_module_bodies(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  names: SelfHostResolvedModuleNames,
+) -> SelfHostBasicInferredModuleBodies {
+  self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    imports.resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+}
+
+fn self_host_infer_program_module_values(
+  collected: SelfHostCollectedModule,
+  imports: SelfHostResolvedModuleImports,
+  names: SelfHostResolvedModuleNames,
+) -> SelfHostInferredModuleValues {
+  self_host_infer_module_values_with_imports(
+    collected,
+    imports.resolved,
+    names,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+}
+
+fn self_host_plan_program_lowering(
+  frozen: SelfHostFrozenSignatureProgram,
+) -> SelfHostPlannedProgramLowering {
+  let graph = self_host_plan_program_module_graph(frozen)
+  let slots = []
+  let mut slot = 0u32
+  let _ = while slot {
+    current => if current < frozen.collected.modules.length() {
+      slots.push(Option::None)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  for scc in graph.sccs {
+    let mut member = 0u32
+    let _ = while member {
+      current => if current < scc.length {
+        let module_index = graph.scc_modules[
+          self_host_u32_add(scc.start, current)
+        ]
+        let collected = frozen.collected.modules.at(module_index)
+        let imports = self_host_resolve_module_imports(
+          frozen.interfaces.at(module_index).resolved_types,
+          frozen.import_scopes.at(module_index),
+        )
+        let names = self_host_resolve_module_names_with_imports(
+          collected,
+          imports.scope,
+        )
+        let module_values = self_host_infer_program_module_values(
+          collected,
+          imports,
+          names,
+        )
+        let basic = self_host_infer_program_module_bodies(
+          collected,
+          imports,
+          names,
+        )
+        let planned = self_host_plan_module_lowering_with_imports(
+          collected,
+          imports.resolved,
+          self_host_plan_module_type_layouts(collected, imports.resolved),
+          self_host_plan_module_initialization(collected, module_values),
+          self_host_plan_module_functions(collected, imports.resolved),
+          names,
+          imports,
+          self_host_merge_module_inference(basic),
+          self_host_analyze_basic_module_flows_with_imports(
+            collected,
+            imports.resolved,
+            basic,
+            imports.variants,
+          ),
+        )
+        slots[module_index] = Option::Some(planned)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  let modules = []
+  let module_ids = []
+  for value in slots {
+    match value {
+      Option::Some(module_) => {
+        module_ids.push(module_.module_id)
+        modules.push(module_)
+      }
+      Option::None => {}
+    }
+  }
+  SelfHostPlannedProgramLowering::{
+    modules: modules
+    index: SelfHostProgramLoweringIndex::{
+      module_ids: module_ids
+    }
+    graph: graph
+    elided_trait_wrappers: []
+  }
+}

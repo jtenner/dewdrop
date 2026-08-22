@@ -164,6 +164,7 @@ pub struct SelfHostPlannedLambdaLowering {
 
 pub struct SelfHostPlannedModuleLowering {
   module_id: U64
+  resolved_types: SelfHostResolvedModuleTypes
   type_layouts: SelfHostPlannedModuleTypeLayouts
   initialization: SelfHostPlannedModuleInitialization
   functions: SelfHostPlannedModuleFunctions
@@ -930,6 +931,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
   self_host_lowering_directize_targets(expressions)
   SelfHostPlannedModuleLowering::{
     module_id: collected.module_id
+    resolved_types: resolved
     type_layouts: type_layouts
     initialization: initialization
     functions: functions
