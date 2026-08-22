@@ -162,6 +162,9 @@ run_compiler() {
   test "$(grep -Fc 'if (result i32)' "$wat")" -ge 2
   grep -Fq 'return' "$wat"
   grep -Fq 'unreachable' "$wat"
+  grep -Fq 'loop' "$wat"
+  grep -Fq 'br 2' "$wat"
+  grep -Fq 'br 1' "$wat"
   grep -Fq 'i32.const 3' "$wat"
   test "$(grep -Fc 'i32.add' "$wat")" -ge 2
 }

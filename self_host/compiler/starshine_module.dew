@@ -137,17 +137,71 @@ struct SelfHostLinkedRootExpression {
   body_index: U32
 }
 
+struct SelfHostLinkedI32LoopLink {
+  control: U32
+  state_slot: U32
+  block_depth: U32
+  loop_depth: U32
+}
+
 enum SelfHostLinkedI32EmitTask {
   VisitLinkedI32Expression(U32, StarshineRef125)
   EmitLinkedI32Prefix(SelfHostHirPrefixOperator, StarshineRef125)
   EmitLinkedI32Binary(SelfHostHirBinaryOperator, Bool, StarshineRef125)
   EmitLinkedI32Call(U32, StarshineRef125)
-  EmitLinkedI32If(StarshineRef125, StarshineRef125, StarshineRef125)
-  VisitLinkedI32MatchArms(SelfHostHirSpan, U32, U32, StarshineRef125)
+  EmitLinkedI32If(StarshineRef125, StarshineRef125, StarshineRef125, Bool)
+  EmitLinkedI32Loop(StarshineRef125, StarshineRef125, StarshineRef125)
+  EmitLinkedI32Break(U32, U32, StarshineRef125)
+  EmitLinkedI32Continue(U32, U32, StarshineRef125)
+  VisitLinkedI32MatchArms(SelfHostHirSpan, U32, U32, StarshineRef125, U32, Bool)
   VisitLinkedI32Block(U32, StarshineRef125)
   EmitLinkedI32LocalSet(U32, StarshineRef125)
   EmitLinkedI32Return(StarshineRef125)
   EmitLinkedI32Drop(StarshineRef125)
+}
+
+fn self_host_linked_i32_schedule_expression(
+  tasks: Array<SelfHostLinkedI32EmitTask>,
+  depths: Array<U32>,
+  expression: U32,
+  instructions: StarshineRef125,
+  depth: U32,
+) -> Unit {
+  if expression < depths.length() {
+    depths[expression] = depth
+  }
+  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+    expression,
+    instructions,
+  ))
+}
+
+fn self_host_linked_i32_schedule_block(
+  tasks: Array<SelfHostLinkedI32EmitTask>,
+  depths: Array<U32>,
+  block: U32,
+  instructions: StarshineRef125,
+  depth: U32,
+) -> Unit {
+  if block < depths.length() {
+    depths[block] = depth
+  }
+  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Block(
+    block,
+    instructions,
+  ))
+}
+
+fn self_host_linked_i32_loop_link(
+  links: Array<SelfHostLinkedI32LoopLink>,
+  control: U32,
+) -> Option<SelfHostLinkedI32LoopLink> {
+  for link in links {
+    if self_host_u32_equal(link.control, control) {
+      return Option::Some(link)
+    }
+  }
+  Option::None
 }
 
 fn self_host_linked_i32_main_expression(
@@ -308,6 +362,9 @@ fn self_host_linked_i32_scratch_count(
         SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
           count = self_host_u32_add(count, 1u32)
         }
+        SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) => {
+          count = self_host_u32_add(count, 1u32)
+        }
         _ => {}
       }
       continue current + 1u32
@@ -333,6 +390,9 @@ fn self_host_linked_i32_scratch_slot(
       }
       match module_.expressions[candidate].kind {
         SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
+          count = self_host_u32_add(count, 1u32)
+        }
+        SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) => {
           count = self_host_u32_add(count, 1u32)
         }
         _ => {}
@@ -393,6 +453,8 @@ fn self_host_linked_i32_push_arguments(
   arguments: SelfHostHirSpan,
   instructions: StarshineRef125,
   tasks: Array<SelfHostLinkedI32EmitTask>,
+  expression_depths: Array<U32>,
+  depth: U32,
 ) -> Result<Unit, String> {
   let mut argument = arguments.length
   let _ = while argument {
@@ -402,10 +464,13 @@ fn self_host_linked_i32_push_arguments(
       if child >= module_.expression_children.length() {
         return Result::Err("linked I32 call argument is outside its arena")
       }
-      tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+      self_host_linked_i32_schedule_expression(
+        tasks,
+        expression_depths,
         module_.expression_children[child],
         instructions,
-      ))
+        depth,
+      )
       continue previous
     } else {
       break self_host_semantic_unit()
@@ -422,12 +487,25 @@ fn self_host_emit_linked_i32_expression(
   instructions: StarshineRef125,
 ) -> Result<Unit, String> {
   let tasks = []
+  let expression_depths = self_host_program_link_u32_slots(
+    module_.expressions.length(),
+  )
+  let block_depths = self_host_program_link_u32_slots(module_.blocks.length())
+  let loop_links = []
   match body.root {
-    SelfHostHirBodyRoot::ExpressionBodyRoot(root) => tasks.push(
-      SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(root, instructions),
+    SelfHostHirBodyRoot::ExpressionBodyRoot(root) => self_host_linked_i32_schedule_expression(
+      tasks,
+      expression_depths,
+      root,
+      instructions,
+      0u32,
     )
-    SelfHostHirBodyRoot::BlockBodyRoot(root) => tasks.push(
-      SelfHostLinkedI32EmitTask::VisitLinkedI32Block(root, instructions),
+    SelfHostHirBodyRoot::BlockBodyRoot(root) => self_host_linked_i32_schedule_block(
+      tasks,
+      block_depths,
+      root,
+      instructions,
+      0u32,
     )
   }
   let _ = while tasks.length() {
@@ -448,6 +526,14 @@ fn self_host_emit_linked_i32_expression(
             return Result::Err("linked I32 expression is outside its arena")
           }
           let planned = module_.expressions[expression]
+          let depth = if expression < expression_depths.length() && !self_host_u32_equal(
+            expression_depths[expression],
+            4294967295u32,
+          ) {
+            expression_depths[expression]
+          } else {
+            0u32
+          }
           match planned.kind {
             SelfHostPlannedExpressionKind::PlannedI8Const(value) => StarshineFfi.ffi_ffi_bridge_instructions_push(
               destination,
@@ -499,11 +585,12 @@ fn self_host_emit_linked_i32_expression(
             }
             SelfHostPlannedExpressionKind::PlannedPrefixExpression(operator, operand) => {
               match operator {
-                SelfHostHirPrefixOperator::Positive => tasks.push(
-                  SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
-                    operand,
-                    destination,
-                  ),
+                SelfHostHirPrefixOperator::Positive => self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
+                  operand,
+                  destination,
+                  depth,
                 )
                 SelfHostHirPrefixOperator::Negative => {
                   StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -516,20 +603,26 @@ fn self_host_emit_linked_i32_expression(
                     operator,
                     destination,
                   ))
-                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_linked_i32_schedule_expression(
+                    tasks,
+                    expression_depths,
                     operand,
                     destination,
-                  ))
+                    depth,
+                  )
                 }
                 SelfHostHirPrefixOperator::LogicalNot => {
                   tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(
                     operator,
                     destination,
                   ))
-                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_linked_i32_schedule_expression(
+                    tasks,
+                    expression_depths,
                     operand,
                     destination,
-                  ))
+                    depth,
+                  )
                 }
               }
             }
@@ -558,20 +651,24 @@ fn self_host_emit_linked_i32_expression(
                   slot,
                   destination,
                 ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   value,
                   destination,
-                ))
+                  depth,
+                )
               }
               Option::None => {
                 return Result::Err("linked I32 local write has no physical slot")
               }
             }
-            SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => tasks.push(
-              SelfHostLinkedI32EmitTask::VisitLinkedI32Block(
-                block,
-                destination,
-              ),
+            SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => self_host_linked_i32_schedule_block(
+              tasks,
+              block_depths,
+              block,
+              destination,
+              depth,
             )
             SelfHostPlannedExpressionKind::PlannedIfExpression(
               condition,
@@ -585,19 +682,29 @@ fn self_host_emit_linked_i32_expression(
                   destination,
                   consequent,
                   alternative,
+                  true,
                 ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   else_expression,
                   alternative,
-                ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Block(
+                  self_host_u32_add(depth, 1u32),
+                )
+                self_host_linked_i32_schedule_block(
+                  tasks,
+                  block_depths,
                   then_block,
                   consequent,
-                ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_u32_add(depth, 1u32),
+                )
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   condition,
                   destination,
-                ))
+                  depth,
+                )
               }
               _ => {
                 return Result::Err("linked if result is outside the I32 emitter subset")
@@ -617,15 +724,97 @@ fn self_host_emit_linked_i32_expression(
                 0u32,
                 scratch,
                 destination,
+                depth,
+                true,
               ))
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
                 scratch,
                 destination,
               ))
-              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+              self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
                 value,
                 destination,
+                depth,
+              )
+            }
+            SelfHostPlannedExpressionKind::PlannedWhileExpression(
+              control,
+              initial,
+              arms,
+            ) => {
+              let scratch = self_host_linked_i32_scratch_slot(
+                module_,
+                body,
+                expression,
+              )
+              let outer_body = StarshineFfi.ffi_ffi_bridge_instructions_new()
+              let loop_body = StarshineFfi.ffi_ffi_bridge_instructions_new()
+              loop_links.push(SelfHostLinkedI32LoopLink::{
+                control: control
+                state_slot: scratch
+                block_depth: depth
+                loop_depth: self_host_u32_add(depth, 1u32)
+              })
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Loop(
+                destination,
+                outer_body,
+                loop_body,
               ))
+              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
+                arms,
+                0u32,
+                scratch,
+                loop_body,
+                self_host_u32_add(depth, 2u32),
+                false,
+              ))
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
+                scratch,
+                destination,
+              ))
+              self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
+                initial,
+                destination,
+                depth,
+              )
+            }
+            SelfHostPlannedExpressionKind::PlannedBreakExpression(
+              control,
+              value,
+            ) => {
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Break(
+                control,
+                depth,
+                destination,
+              ))
+              self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
+                value,
+                destination,
+                depth,
+              )
+            }
+            SelfHostPlannedExpressionKind::PlannedContinueExpression(
+              control,
+              value,
+            ) => {
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Continue(
+                control,
+                depth,
+                destination,
+              ))
+              self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
+                value,
+                destination,
+                depth,
+              )
             }
             SelfHostPlannedExpressionKind::PlannedDirectCall(
               declaration,
@@ -649,6 +838,8 @@ fn self_host_emit_linked_i32_expression(
                   arguments,
                   destination,
                   tasks,
+                  expression_depths,
+                  depth,
                 ) {
                   Result::Err(error) => {
                     return Result::Err(error)
@@ -674,15 +865,22 @@ fn self_host_emit_linked_i32_expression(
                   destination,
                   consequent,
                   alternative,
+                  true,
                 ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   right,
                   consequent,
-                ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_u32_add(depth, 1u32),
+                )
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   left,
                   destination,
-                ))
+                  depth,
+                )
               }
               SelfHostHirBinaryOperator::LogicalOr => {
                 let consequent = StarshineFfi.ffi_ffi_bridge_instructions_new()
@@ -697,15 +895,22 @@ fn self_host_emit_linked_i32_expression(
                   destination,
                   consequent,
                   alternative,
+                  true,
                 ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   right,
                   alternative,
-                ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_u32_add(depth, 1u32),
+                )
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   left,
                   destination,
-                ))
+                  depth,
+                )
               }
               _ => {
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(
@@ -715,14 +920,20 @@ fn self_host_emit_linked_i32_expression(
                   ),
                   destination,
                 ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   right,
                   destination,
-                ))
-                tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  depth,
+                )
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
                   left,
                   destination,
-                ))
+                  depth,
+                )
               }
             }
             _ => {
@@ -770,21 +981,105 @@ fn self_host_emit_linked_i32_expression(
           destination,
           consequent,
           alternative,
-        ) => StarshineFfi.ffi_ffi_bridge_instructions_push(
-          destination,
-          StarshineFfi.ffi_ffi_bridge_instruction_if(
+          result_,
+        ) => {
+          let block_type = if result_ {
             StarshineFfi.ffi_lib_BlockType_val_type(
               StarshineFfi.ffi_lib_ValType_i32(),
+            )
+          } else {
+            StarshineFfi.ffi_lib_BlockType_void_()
+          }
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_ffi_bridge_instruction_if(
+              block_type,
+              consequent,
+              alternative,
             ),
-            consequent,
-            alternative,
-          ),
-        )
+          )
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Loop(
+          destination,
+          outer_body,
+          loop_body,
+        ) => {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            outer_body,
+            StarshineFfi.ffi_lib_Instruction_loop_(
+              StarshineFfi.ffi_lib_BlockType_void_(),
+              StarshineFfi.ffi_lib_Expr_new(loop_body),
+            ),
+          )
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            outer_body,
+            StarshineFfi.ffi_lib_Instruction_unreachable_(),
+          )
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_block(
+              StarshineFfi.ffi_lib_BlockType_val_type(
+                StarshineFfi.ffi_lib_ValType_i32(),
+              ),
+              StarshineFfi.ffi_lib_Expr_new(outer_body),
+            ),
+          )
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Break(
+          control,
+          depth,
+          destination,
+        ) => match self_host_linked_i32_loop_link(loop_links, control) {
+          Option::Some(link_) => {
+            let relative = self_host_u32_subtract(
+              self_host_u32_subtract(depth, link_.block_depth),
+              1u32,
+            )
+            StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_br(
+                StarshineFfi.ffi_lib_LabelIdx_new(relative.into()),
+              ),
+            )
+          }
+          Option::None => {
+            return Result::Err("linked I32 break has no loop target")
+          }
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Continue(
+          control,
+          depth,
+          destination,
+        ) => match self_host_linked_i32_loop_link(loop_links, control) {
+          Option::Some(link_) => {
+            StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_local_set(
+                StarshineFfi.ffi_lib_LocalIdx_new(link_.state_slot.into()),
+              ),
+            )
+            let relative = self_host_u32_subtract(
+              self_host_u32_subtract(depth, link_.loop_depth),
+              1u32,
+            )
+            StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_br(
+                StarshineFfi.ffi_lib_LabelIdx_new(relative.into()),
+              ),
+            )
+          }
+          Option::None => {
+            return Result::Err("linked I32 continue has no loop target")
+          }
+        }
         SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
           arms,
           arm_offset,
           scratch,
           destination,
+          depth,
+          result_,
         ) => {
           if arm_offset >= arms.length {
             return Result::Err("linked I32 match has no remaining arm")
@@ -853,10 +1148,13 @@ fn self_host_emit_linked_i32_expression(
             arm.guard_condition,
             4294967295u32,
           ) {
-            tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+            self_host_linked_i32_schedule_expression(
+              tasks,
+              expression_depths,
               arm.body,
               destination,
-            ))
+              depth,
+            )
           } else {
             let consequent = StarshineFfi.ffi_ffi_bridge_instructions_new()
             let alternative = StarshineFfi.ffi_ffi_bridge_instructions_new()
@@ -864,6 +1162,7 @@ fn self_host_emit_linked_i32_expression(
               destination,
               consequent,
               alternative,
+              result_,
             ))
             let next_arm = self_host_u32_add(arm_offset, 1u32)
             if next_arm < arms.length {
@@ -872,6 +1171,8 @@ fn self_host_emit_linked_i32_expression(
                 next_arm,
                 scratch,
                 alternative,
+                self_host_u32_add(depth, 1u32),
+                result_,
               ))
             } else {
               StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -879,15 +1180,21 @@ fn self_host_emit_linked_i32_expression(
                 StarshineFfi.ffi_lib_Instruction_unreachable_(),
               )
             }
-            tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+            self_host_linked_i32_schedule_expression(
+              tasks,
+              expression_depths,
               arm.body,
               consequent,
-            ))
+              self_host_u32_add(depth, 1u32),
+            )
             if catch_all {
-              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+              self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
                 arm.guard_condition,
                 destination,
-              ))
+                depth,
+              )
             } else {
               if !self_host_u32_equal(
                 arm.guard_condition,
@@ -900,10 +1207,13 @@ fn self_host_emit_linked_i32_expression(
                 false,
                 destination,
               ))
-              tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+              self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
                 condition,
                 destination,
-              ))
+                depth,
+              )
               StarshineFfi.ffi_ffi_bridge_instructions_push(
                 destination,
                 StarshineFfi.ffi_lib_Instruction_local_get(
@@ -921,6 +1231,14 @@ fn self_host_emit_linked_i32_expression(
             return Result::Err("linked I32 block is outside its arena")
           }
           let block = module_.blocks[block_index]
+          let depth = if block_index < block_depths.length() && !self_host_u32_equal(
+            block_depths[block_index],
+            4294967295u32,
+          ) {
+            block_depths[block_index]
+          } else {
+            0u32
+          }
           let mut item = block.items.length
           let _ = while item {
             current => if self_host_u32_greater(current, 0u32) {
@@ -940,10 +1258,13 @@ fn self_host_emit_linked_i32_expression(
                       slot,
                       destination,
                     ))
-                    tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                    self_host_linked_i32_schedule_expression(
+                      tasks,
+                      expression_depths,
                       value,
                       destination,
-                    ))
+                      depth,
+                    )
                   }
                   Option::None => {
                     return Result::Err("linked I32 let has no physical slot")
@@ -953,10 +1274,13 @@ fn self_host_emit_linked_i32_expression(
                   tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Return(
                     destination,
                   ))
-                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_linked_i32_schedule_expression(
+                    tasks,
+                    expression_depths,
                     value,
                     destination,
-                  ))
+                    depth,
+                  )
                 }
                 SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => {
                   if !self_host_u32_equal(
@@ -967,10 +1291,13 @@ fn self_host_emit_linked_i32_expression(
                       destination,
                     ))
                   }
-                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                  self_host_linked_i32_schedule_expression(
+                    tasks,
+                    expression_depths,
                     value,
                     destination,
-                  ))
+                    depth,
+                  )
                 }
               }
               continue previous

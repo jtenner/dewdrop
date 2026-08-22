@@ -68,6 +68,11 @@
     "BlockType::val_type",
     "ffi_bridge::instruction_if",
     "Instruction::return_",
-    "Instruction::unreachable_"
+    "Instruction::unreachable_",
+    "BlockType::void_",
+    "Instruction::block",
+    "Instruction::loop_",
+    "LabelIdx::new",
+    "Instruction::br"
   ]
 }
