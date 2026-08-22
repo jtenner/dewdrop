@@ -1,0 +1,127 @@
+open dew.std.testing
+
+fn self_host_wasmgc_test_plan(
+  source: Bytes,
+) -> SelfHostPlannedProgramWasmGCFragments {
+  self_host_plan_program_wasmgc_fragments(
+    self_host_specialization_test_plan(source),
+  )
+}
+
+fn self_host_wasmgc_function_value(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmValueType {
+  module_.function_value_types[index]
+}
+
+fn self_host_wasmgc_function_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.functions.length()
+}
+
+fn self_host_wasmgc_function_at(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmFunctionFragment {
+  module_.functions[index]
+}
+
+fn self_host_wasmgc_physical_type_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.physical_types.length()
+}
+
+fn self_host_wasmgc_physical_type_at(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmPhysicalType {
+  module_.physical_types[index]
+}
+
+fn self_host_wasmgc_field_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.fields.length()
+}
+
+test "WasmGC fragments materialize specialized scalar signatures" {
+  let plan = self_host_wasmgc_test_plan(
+    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn run() -> I32 {\n  identity(42)\n}\n",
+  )
+  let module_ = plan.modules[0u32]
+  assert(self_host_u32_equal(self_host_wasmgc_function_count(module_), 3u32), "base and specialization functions")
+  let specialized = self_host_wasmgc_function_at(module_, 2u32)
+  assert(self_host_u32_equal(specialized.specialization, 0u32), "specialization identity")
+  assert(self_host_u32_equal(specialized.parameters.length, 1u32), "specialized parameter")
+  assert(self_host_u32_equal(specialized.results.length, 1u32), "specialized result")
+  match self_host_wasmgc_function_value(module_, specialized.parameters.start) {
+    SelfHostPlannedWasmValueType::WasmI32Value => {}
+    _ => assert(false, "i32 parameter")
+  }
+  match self_host_wasmgc_function_value(module_, specialized.results.start) {
+    SelfHostPlannedWasmValueType::WasmI32Value => {}
+    _ => assert(false, "i32 result")
+  }
+}
+
+test "WasmGC fragments plan nominal struct and enum families" {
+  let plan = self_host_wasmgc_test_plan(
+    b"struct Point {\n  x: I32\n  y: I64\n}\nenum State {\n  Idle\n  Ready(I32)\n}\npub fn run() -> I32 {\n  1\n}\n",
+  )
+  let module_ = plan.modules[0u32]
+  assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 4u32), "struct enum base and variants")
+  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 2u32), "struct fields")
+  let struct_type = self_host_wasmgc_physical_type_at(module_, 0u32)
+  match struct_type.kind {
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(_) => {}
+    _ => assert(false, "struct type")
+  }
+  let enum_type = self_host_wasmgc_physical_type_at(module_, 1u32)
+  match enum_type.kind {
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {}
+    _ => assert(false, "enum base")
+  }
+}
+
+test "WasmGC fragments retain imported generic specialization ownership" {
+  let lowering = self_host_program_lowering_test_manifest([
+    SelfHostManifestModule::{
+      path: "app.main"
+      files: [
+        SelfHostManifestFile::{
+          path: "main.dew"
+          source: b"open app.library\npub fn run() -> I64 {\n  identity(9i64)\n}\n"
+          test_only: false
+        },
+      ]
+    },
+    SelfHostManifestModule::{
+      path: "app.library"
+      files: [
+        SelfHostManifestFile::{
+          path: "library.dew"
+          source: b"pub fn identity<t>(value: t) -> t {\n  value\n}\n"
+          test_only: false
+        },
+      ]
+    },
+  ])
+  let plan = self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(lowering, false),
+  )
+  let consumer = plan.modules[0u32]
+  let library = plan.modules[1u32]
+  assert(self_host_u32_equal(self_host_wasmgc_function_count(consumer), 1u32), "consumer function")
+  assert(self_host_u32_equal(self_host_wasmgc_function_count(library), 2u32), "library base and specialization")
+  let specialized = self_host_wasmgc_function_at(library, 1u32)
+  match self_host_wasmgc_function_value(
+    library,
+    specialized.parameters.start,
+  ) {
+    SelfHostPlannedWasmValueType::WasmI64Value => {}
+    _ => assert(false, "imported i64 specialization")
+  }
+}
