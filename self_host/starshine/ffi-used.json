@@ -64,6 +64,8 @@
     "Instruction::local_tee",
     "Instruction::drop",
     "FuncIdx::new",
-    "Instruction::call"
+    "Instruction::call",
+    "BlockType::val_type",
+    "ffi_bridge::instruction_if"
   ]
 }

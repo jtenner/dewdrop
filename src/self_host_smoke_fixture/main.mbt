@@ -45,7 +45,7 @@ fn main {
         files: [
           {
             logical_path: "src/main.dew",
-            source: b"fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\nfn twice(value: I32) -> I32 {\n  add(value, value)\n}\npub fn main() -> I32 {\n  let value = twice(35)\n  value + 3\n}\n",
+            source: b"fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\nfn twice(value: I32) -> I32 {\n  add(value, value)\n}\npub fn main() -> I32 {\n  let value = twice(35)\n  if value == 70 {\n    value + 3\n  } else {\n    0\n  }\n}\n",
           },
         ],
       },
