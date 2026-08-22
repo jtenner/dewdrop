@@ -5,7 +5,7 @@
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
   "wasm_sha256": "0219099077cf0c410f1d32d28aa837cfb4bc3bbad93479c2c888584fa5ed6726",
   "available_export_count": 3366,
-  "binding_count": 62,
+  "binding_count": 64,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "447abbcdffaa2599d6cb2684d7b4991e65ac17a8ce19dcd876c0f949ee351037",
+    "prefix_sha256": "b99b2d11d48992f058aee10009afe4d0a42afa102fd51ddcc33e0dc774438322",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -525,6 +525,22 @@
       "internal_name": "ffi_lib_Instruction_drop",
       "export_name": "Instruction::drop",
       "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2445,
+      "function_index": 2779,
+      "internal_name": "ffi_lib_FuncIdx_new",
+      "export_name": "FuncIdx::new",
+      "signature": "(i32) -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2379,
+      "function_index": 2713,
+      "internal_name": "ffi_lib_Instruction_call",
+      "export_name": "Instruction::call",
+      "signature": "(i32) -> (ref 0)",
       "status": "bound"
     }
   ]

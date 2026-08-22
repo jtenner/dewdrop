@@ -141,6 +141,7 @@ enum SelfHostLinkedI32EmitTask {
   VisitLinkedI32Expression(U32)
   EmitLinkedI32Prefix(SelfHostHirPrefixOperator)
   EmitLinkedI32Binary(SelfHostHirBinaryOperator)
+  EmitLinkedI32Call(U32)
   VisitLinkedI32Block(U32)
   EmitLinkedI32LocalSet(U32)
   EmitLinkedI32Drop
@@ -271,9 +272,58 @@ fn self_host_linked_i32_local_slot(
   Option::None
 }
 
+fn self_host_linked_i32_call_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  caller_body: U64,
+  caller_specialization: U32,
+  expression: U32,
+  declaration: U64,
+) -> Option<U32> {
+  for call in link.specialized_calls {
+    if self_host_u64_equal(call.caller_body, caller_body) &&
+      self_host_u32_equal(call.caller_specialization, caller_specialization) &&
+      self_host_u32_equal(call.expression, expression) {
+      return Option::Some(call.function_index)
+    }
+  }
+  for function_ in link.functions {
+    if self_host_u64_equal(function_.declaration, declaration) &&
+      self_host_u32_equal(function_.specialization, 4294967295u32) {
+      return Option::Some(function_.function_index)
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_i32_push_arguments(
+  module_: SelfHostPlannedModuleLowering,
+  arguments: SelfHostHirSpan,
+  tasks: Array<SelfHostLinkedI32EmitTask>,
+) -> Result<Unit, String> {
+  let mut argument = arguments.length
+  let _ = while argument {
+    current => if self_host_u32_greater(current, 0u32) {
+      let previous = current - 1u32
+      let child = self_host_u32_add(arguments.start, previous)
+      if child >= module_.expression_children.length() {
+        return Result::Err("linked I32 call argument is outside its arena")
+      }
+      tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+        module_.expression_children[child],
+      ))
+      continue previous
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Result::Ok(self_host_semantic_unit())
+}
+
 fn self_host_emit_linked_i32_expression(
+  link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
+  caller_specialization: U32,
   instructions: StarshineRef125,
 ) -> Result<Unit, String> {
   let tasks = []
@@ -365,6 +415,37 @@ fn self_host_emit_linked_i32_expression(
             SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => tasks.push(
               SelfHostLinkedI32EmitTask::VisitLinkedI32Block(block),
             )
+            SelfHostPlannedExpressionKind::PlannedDirectCall(
+              declaration,
+              _,
+              arguments,
+              _,
+            ) => match self_host_linked_i32_call_index(
+              link,
+              body.body,
+              caller_specialization,
+              expression,
+              declaration,
+            ) {
+              Option::Some(function_index) => {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
+                  function_index,
+                ))
+                match self_host_linked_i32_push_arguments(
+                  module_,
+                  arguments,
+                  tasks,
+                ) {
+                  Result::Err(error) => {
+                    return Result::Err(error)
+                  }
+                  Result::Ok(_) => {}
+                }
+              }
+              Option::None => {
+                return Result::Err("linked I32 call has no physical function")
+              }
+            }
             SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right) => {
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(operator))
               tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(right))
@@ -392,6 +473,14 @@ fn self_host_emit_linked_i32_expression(
         ) {
           return Result::Err("linked I32 binary operator is unsupported")
         }
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Call(function_index) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          instructions,
+          StarshineFfi.ffi_lib_Instruction_call(
+            StarshineFfi.ffi_lib_FuncIdx_new(
+              self_host_u32_to_i32(function_index),
+            ),
+          ),
+        )
         SelfHostLinkedI32EmitTask::VisitLinkedI32Block(block_index) => {
           if block_index >= module_.blocks.length() {
             return Result::Err("linked I32 block is outside its arena")
@@ -457,28 +546,226 @@ fn self_host_emit_linked_i32_expression(
   Result::Ok(self_host_semantic_unit())
 }
 
+fn self_host_linked_i32_append_value_type(
+  values: StarshineRef46,
+  value: SelfHostPlannedWasmValueType,
+) -> Bool {
+  match value {
+    SelfHostPlannedWasmValueType::WasmI32Value => StarshineFfi.ffi_ffi_bridge_val_types_push(
+      values,
+      StarshineFfi.ffi_lib_ValType_i32(),
+    )
+    _ => {
+      return false
+    }
+  }
+  true
+}
+
+fn self_host_linked_i32_append_value_types(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  span: SelfHostHirSpan,
+  values: StarshineRef46,
+) -> Bool {
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < span.length {
+      let source = self_host_u32_add(span.start, current)
+      if source >= module_.function_value_types.length() ||
+        !self_host_linked_i32_append_value_type(
+          values,
+          module_.function_value_types[source],
+        ) {
+        return false
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
+fn self_host_linked_i32_body(
+  module_: SelfHostPlannedModuleLowering,
+  body: U64,
+) -> Option<SelfHostPlannedBodyLowering> {
+  for candidate in module_.bodies {
+    if self_host_u64_equal(candidate.body, body) {
+      return Option::Some(candidate)
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_i32_declared_local_count(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+) -> U32 {
+  let mut count = 0u32
+  let mut local = 0u32
+  let _ = while local {
+    current => if current < body.locals.length {
+      let source = self_host_u32_add(body.locals.start, current)
+      if source < module_.locals.length() && !(
+        module_.locals[source].kind is SelfHostBodyLocalKind::ParameterLocal
+      ) {
+        count = self_host_u32_add(count, 1u32)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  count
+}
+
+fn self_host_encode_linked_i32_module(
+  module_: StarshineRef207,
+) -> Result<Bytes, String> {
+  if StarshineFfi.ffi_ffi_bridge_validate_module(module_) == 0i32 {
+    Result::Err("Starshine rejected the linked self-host output module")
+  } else {
+    let encoded = StarshineFfi.ffi_ffi_bridge_encode_module(module_)
+    if StarshineFfi.ffi_ffi_bridge_EncodedModule_is_ok(encoded) == 0i32 {
+      Result::Err("Starshine could not encode the linked self-host output module")
+    } else {
+      let length = self_host_i32_to_u32(
+        StarshineFfi.ffi_ffi_bridge_EncodedModule_byte_length(encoded),
+      )
+      let output = BytesBuilder::with_capacity(length)
+      while 0u32 {
+        index if index < length => {
+          output.append_byte(self_host_i32_to_u8(
+            StarshineFfi.ffi_ffi_bridge_EncodedModule_byte_at(
+              encoded,
+              index.into(),
+            ),
+          ))
+          continue index + 1u32
+        }
+        _ => break Result::Ok(output.finish())
+      }
+    }
+  }
+}
+
 pub fn build_self_host_linked_i32_module(
   link: SelfHostPlannedProgramWasmGCLink,
   root_module: U64,
 ) -> Result<Bytes, String> {
   match self_host_linked_i32_main_expression(link, root_module) {
     Result::Err(error) => Result::Err(error)
-    Result::Ok(selected) => {
-      let modules = link.fragments.specialization.lowering.modules
-      let module_ = modules[selected.module_index]
-      let body = module_.bodies[selected.body_index]
-      let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
-      match self_host_emit_linked_i32_expression(
-        module_,
-        body,
-        instructions,
-      ) {
-        Result::Err(error) => Result::Err(error)
-        Result::Ok(_) => self_host_encode_i32_function(
+    Result::Ok(_) => {
+      if self_host_u32_greater(link.imported_function_count, 0u32) {
+        return Result::Err("linked I32 imports are not emitted yet")
+      }
+      let rec_types = StarshineFfi.ffi_ffi_bridge_rec_types_new()
+      let type_indices = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+      let functions = StarshineFfi.ffi_ffi_bridge_funcs_new()
+      for linked_function in link.functions {
+        let fragment_module = link.fragments.modules[linked_function.module_index]
+        if !self_host_u32_greater(
+          fragment_module.functions.length(),
+          linked_function.fragment_index,
+        ) {
+          return Result::Err("linked I32 function fragment is outside its arena")
+        }
+        let fragment = fragment_module.functions[linked_function.fragment_index]
+        let parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
+        let results = StarshineFfi.ffi_ffi_bridge_val_types_new()
+        if !self_host_linked_i32_append_value_types(
+          fragment_module,
+          fragment.parameters,
+          parameters,
+        ) || !self_host_linked_i32_append_value_types(
+          fragment_module,
+          fragment.results,
+          results,
+        ) {
+          return Result::Err("linked function signature is outside the I32 emitter subset")
+        }
+        let function_type = StarshineFfi.ffi_lib_CompType_func(
+          parameters,
+          results,
+        )
+        let subtype = StarshineFfi.ffi_lib_SubType_comp_type(
+          function_type,
+          wasm_ref_null(),
+        )
+        StarshineFfi.ffi_ffi_bridge_rec_types_push(
+          rec_types,
+          StarshineFfi.ffi_lib_RecType_new(subtype),
+        )
+        StarshineFfi.ffi_ffi_bridge_type_indices_push(
+          type_indices,
+          StarshineFfi.ffi_lib_TypeIdx_new(
+            self_host_u32_to_i32(linked_function.function_index),
+          ),
+        )
+        let body_id = match fragment.kind {
+          SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(value) => value
+          _ => {
+            return Result::Err("linked function has no I32 body emitter")
+          }
+        }
+        let lowering_module = link.fragments.specialization.lowering.modules[
+          linked_function.module_index
+        ]
+        let body = match self_host_linked_i32_body(lowering_module, body_id) {
+          Option::Some(value) => value
+          Option::None => {
+            return Result::Err("linked function body is missing")
+          }
+        }
+        let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
+        match self_host_emit_linked_i32_expression(
+          link,
+          lowering_module,
+          body,
+          linked_function.specialization,
           instructions,
-          body.locals.length,
+        ) {
+          Result::Err(error) => {
+            return Result::Err(error)
+          }
+          Result::Ok(_) => {}
+        }
+        let local_count = self_host_linked_i32_declared_local_count(
+          lowering_module,
+          body,
+        )
+        let locals = if self_host_u32_equal(local_count, 0u32) {
+          StarshineFfi.ffi_lib_Locals_empty()
+        } else {
+          StarshineFfi.ffi_lib_Locals_single(
+            local_count.into(),
+            StarshineFfi.ffi_lib_ValType_i32(),
+          )
+        }
+        StarshineFfi.ffi_ffi_bridge_funcs_push(
+          functions,
+          StarshineFfi.ffi_lib_Func_new(
+            locals,
+            StarshineFfi.ffi_lib_Expr_new(instructions),
+          ),
         )
       }
+      let type_section = StarshineFfi.ffi_lib_TypeSec_new(rec_types)
+      let function_section = StarshineFfi.ffi_lib_FuncSec_new(type_indices)
+      let code_section = StarshineFfi.ffi_lib_CodeSec_new(functions)
+      self_host_encode_linked_i32_module(
+        StarshineFfi.ffi_lib_Module_with_code_sec(
+          StarshineFfi.ffi_lib_Module_with_func_sec(
+            StarshineFfi.ffi_lib_Module_with_type_sec(
+              StarshineFfi.ffi_ffi_bridge_module_new(),
+              type_section,
+            ),
+            function_section,
+          ),
+          code_section,
+        ),
+      )
     }
   }
 }

@@ -62,6 +62,8 @@
     "Instruction::local_get",
     "Instruction::local_set",
     "Instruction::local_tee",
-    "Instruction::drop"
+    "Instruction::drop",
+    "FuncIdx::new",
+    "Instruction::call"
   ]
 }

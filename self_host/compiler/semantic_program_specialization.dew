@@ -271,7 +271,7 @@ fn self_host_program_specialization_call_recipe(
   kind: SelfHostPlannedExpressionKind,
 ) -> Option<SelfHostProgramCallRecipe> {
   match kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, arguments, _) => Option::Some(
+    SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, _, arguments) => Option::Some(
       SelfHostProgramCallRecipe::{
         target: target
         arguments: arguments

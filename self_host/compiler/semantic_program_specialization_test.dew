@@ -75,6 +75,14 @@ fn self_host_specialization_request_named(
   }
 }
 
+test "program specialization ignores ordinary value argument spans" {
+  let plan = self_host_specialization_test_plan(
+    b"fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\npub fn run() -> I32 {\n  add(20, 22)\n}\n",
+  )
+  assert(plan.requests.length() == 0u32, "no generic requests")
+  assert(plan.calls.length() == 0u32, "no specialized calls")
+}
+
 test "program specialization materializes concrete generic call shapes" {
   let plan = self_host_specialization_test_plan(
     b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn run() -> I32 {\n  identity(42)\n}\n",
