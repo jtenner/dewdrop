@@ -147,7 +147,13 @@ struct SelfHostLinkedI32LoopLink {
 enum SelfHostLinkedI32EmitTask {
   VisitLinkedI32Expression(U32, StarshineRef125)
   EmitLinkedI32Prefix(SelfHostHirPrefixOperator, StarshineRef125)
+  EmitLinkedI64Prefix(SelfHostHirPrefixOperator, StarshineRef125)
+  EmitLinkedF32Prefix(SelfHostHirPrefixOperator, StarshineRef125)
+  EmitLinkedF64Prefix(SelfHostHirPrefixOperator, StarshineRef125)
   EmitLinkedI32Binary(SelfHostHirBinaryOperator, Bool, StarshineRef125)
+  EmitLinkedI64Binary(SelfHostHirBinaryOperator, Bool, StarshineRef125)
+  EmitLinkedF32Binary(SelfHostHirBinaryOperator, StarshineRef125)
+  EmitLinkedF64Binary(SelfHostHirBinaryOperator, StarshineRef125)
   EmitLinkedI32Call(U32, StarshineRef125)
   EmitLinkedI32If(StarshineRef125, StarshineRef125, StarshineRef125, Bool)
   EmitLinkedI32Loop(StarshineRef125, StarshineRef125, StarshineRef125)
@@ -331,6 +337,111 @@ fn self_host_emit_linked_i32_binary(
     } else {
       StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i32_rem_s())
     }
+    _ => {
+      return false
+    }
+  }
+  true
+}
+
+fn self_host_u64_to_i64(value: U64) -> I64 {
+  value.into()
+}
+
+fn self_host_emit_linked_i64_binary(
+  instructions: StarshineRef125,
+  operator: SelfHostHirBinaryOperator,
+  unsigned_: Bool,
+) -> Bool {
+  match operator {
+    SelfHostHirBinaryOperator::BitOr => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_or())
+    SelfHostHirBinaryOperator::BitXor => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_xor())
+    SelfHostHirBinaryOperator::BitAnd => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_and())
+    SelfHostHirBinaryOperator::Equal => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_eq())
+    SelfHostHirBinaryOperator::NotEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_ne())
+    SelfHostHirBinaryOperator::Less => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_lt_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_lt_s())
+    }
+    SelfHostHirBinaryOperator::LessEqual => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_le_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_le_s())
+    }
+    SelfHostHirBinaryOperator::Greater => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_gt_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_gt_s())
+    }
+    SelfHostHirBinaryOperator::GreaterEqual => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_ge_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_ge_s())
+    }
+    SelfHostHirBinaryOperator::ShiftLeft => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_shl())
+    SelfHostHirBinaryOperator::ShiftRight => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_shr_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_shr_s())
+    }
+    SelfHostHirBinaryOperator::Add => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_add())
+    SelfHostHirBinaryOperator::Subtract => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_sub())
+    SelfHostHirBinaryOperator::Multiply => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_mul())
+    SelfHostHirBinaryOperator::Divide => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_div_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_div_s())
+    }
+    SelfHostHirBinaryOperator::Remainder => if unsigned_ {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_rem_u())
+    } else {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_i64_rem_s())
+    }
+    _ => {
+      return false
+    }
+  }
+  true
+}
+
+fn self_host_emit_linked_f32_binary(
+  instructions: StarshineRef125,
+  operator: SelfHostHirBinaryOperator,
+) -> Bool {
+  match operator {
+    SelfHostHirBinaryOperator::Equal => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_eq())
+    SelfHostHirBinaryOperator::NotEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_ne())
+    SelfHostHirBinaryOperator::Less => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_lt())
+    SelfHostHirBinaryOperator::LessEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_le())
+    SelfHostHirBinaryOperator::Greater => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_gt())
+    SelfHostHirBinaryOperator::GreaterEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_ge())
+    SelfHostHirBinaryOperator::Add => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_add())
+    SelfHostHirBinaryOperator::Subtract => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_sub())
+    SelfHostHirBinaryOperator::Multiply => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_mul())
+    SelfHostHirBinaryOperator::Divide => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f32_div())
+    _ => {
+      return false
+    }
+  }
+  true
+}
+
+fn self_host_emit_linked_f64_binary(
+  instructions: StarshineRef125,
+  operator: SelfHostHirBinaryOperator,
+) -> Bool {
+  match operator {
+    SelfHostHirBinaryOperator::Equal => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_eq())
+    SelfHostHirBinaryOperator::NotEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_ne())
+    SelfHostHirBinaryOperator::Less => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_lt())
+    SelfHostHirBinaryOperator::LessEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_le())
+    SelfHostHirBinaryOperator::Greater => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_gt())
+    SelfHostHirBinaryOperator::GreaterEqual => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_ge())
+    SelfHostHirBinaryOperator::Add => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_add())
+    SelfHostHirBinaryOperator::Subtract => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_sub())
+    SelfHostHirBinaryOperator::Multiply => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_mul())
+    SelfHostHirBinaryOperator::Divide => StarshineFfi.ffi_ffi_bridge_instructions_push(instructions, StarshineFfi.ffi_lib_Instruction_f64_div())
     _ => {
       return false
     }
@@ -571,6 +682,30 @@ fn self_host_emit_linked_i32_expression(
                 StarshineFfi.ffi_lib_I32_new(self_host_u64_to_i32(value)),
               ),
             )
+            SelfHostPlannedExpressionKind::PlannedI64Const(value) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_i64_const(
+                StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value)),
+              ),
+            )
+            SelfHostPlannedExpressionKind::PlannedU64Const(value) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_i64_const(
+                StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value)),
+              ),
+            )
+            SelfHostPlannedExpressionKind::PlannedF32Const(value) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_f32_const(
+                StarshineFfi.ffi_lib_F32_new(value),
+              ),
+            )
+            SelfHostPlannedExpressionKind::PlannedF64Const(value) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+              destination,
+              StarshineFfi.ffi_lib_Instruction_f64_const(
+                StarshineFfi.ffi_lib_F64_new(value),
+              ),
+            )
             SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
               let mut constant = 0i32
               if value {
@@ -593,16 +728,44 @@ fn self_host_emit_linked_i32_expression(
                   depth,
                 )
                 SelfHostHirPrefixOperator::Negative => {
-                  StarshineFfi.ffi_ffi_bridge_instructions_push(
-                    destination,
-                    StarshineFfi.ffi_lib_Instruction_i32_const(
-                      StarshineFfi.ffi_lib_I32_new(0i32),
-                    ),
-                  )
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(
-                    operator,
-                    destination,
-                  ))
+                  match self_host_specialization_canonical_scalar(planned.shape) {
+                    SelfHostPlannedValueShape::I64PlannedValueShape => {
+                      StarshineFfi.ffi_ffi_bridge_instructions_push(
+                        destination,
+                        StarshineFfi.ffi_lib_Instruction_i64_const(
+                          StarshineFfi.ffi_lib_I64_new(0i64),
+                        ),
+                      )
+                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI64Prefix(
+                        operator,
+                        destination,
+                      ))
+                    }
+                    SelfHostPlannedValueShape::F32PlannedValueShape => tasks.push(
+                      SelfHostLinkedI32EmitTask::EmitLinkedF32Prefix(
+                        operator,
+                        destination,
+                      ),
+                    )
+                    SelfHostPlannedValueShape::F64PlannedValueShape => tasks.push(
+                      SelfHostLinkedI32EmitTask::EmitLinkedF64Prefix(
+                        operator,
+                        destination,
+                      ),
+                    )
+                    _ => {
+                      StarshineFfi.ffi_ffi_bridge_instructions_push(
+                        destination,
+                        StarshineFfi.ffi_lib_Instruction_i32_const(
+                          StarshineFfi.ffi_lib_I32_new(0i32),
+                        ),
+                      )
+                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(
+                        operator,
+                        destination,
+                      ))
+                    }
+                  }
                   self_host_linked_i32_schedule_expression(
                     tasks,
                     expression_depths,
@@ -913,13 +1076,33 @@ fn self_host_emit_linked_i32_expression(
                 )
               }
               _ => {
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(
-                  operator,
-                  self_host_linked_i32_unsigned_shape(
-                    module_.expressions[left].shape,
-                  ),
-                  destination,
-                ))
+                let left_shape = module_.expressions[left].shape
+                match self_host_specialization_canonical_scalar(left_shape) {
+                  SelfHostPlannedValueShape::I64PlannedValueShape => tasks.push(
+                    SelfHostLinkedI32EmitTask::EmitLinkedI64Binary(
+                      operator,
+                      left_shape is SelfHostPlannedValueShape::U64PlannedValueShape,
+                      destination,
+                    ),
+                  )
+                  SelfHostPlannedValueShape::F32PlannedValueShape => tasks.push(
+                    SelfHostLinkedI32EmitTask::EmitLinkedF32Binary(
+                      operator,
+                      destination,
+                    ),
+                  )
+                  SelfHostPlannedValueShape::F64PlannedValueShape => tasks.push(
+                    SelfHostLinkedI32EmitTask::EmitLinkedF64Binary(
+                      operator,
+                      destination,
+                    ),
+                  )
+                  _ => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(
+                    operator,
+                    self_host_linked_i32_unsigned_shape(left_shape),
+                    destination,
+                  ))
+                }
                 self_host_linked_i32_schedule_expression(
                   tasks,
                   expression_depths,
@@ -955,6 +1138,36 @@ fn self_host_emit_linked_i32_expression(
           )
           SelfHostHirPrefixOperator::Positive => {}
         }
+        SelfHostLinkedI32EmitTask::EmitLinkedI64Prefix(
+          operator,
+          destination,
+        ) => match operator {
+          SelfHostHirPrefixOperator::Negative => StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_sub(),
+          )
+          _ => {}
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedF32Prefix(
+          operator,
+          destination,
+        ) => match operator {
+          SelfHostHirPrefixOperator::Negative => StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f32_neg(),
+          )
+          _ => {}
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedF64Prefix(
+          operator,
+          destination,
+        ) => match operator {
+          SelfHostHirPrefixOperator::Negative => StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f64_neg(),
+          )
+          _ => {}
+        }
         SelfHostLinkedI32EmitTask::EmitLinkedI32Binary(
           operator,
           unsigned_,
@@ -965,6 +1178,29 @@ fn self_host_emit_linked_i32_expression(
           unsigned_,
         ) {
           return Result::Err("linked I32 binary operator is unsupported")
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedI64Binary(
+          operator,
+          unsigned_,
+          destination,
+        ) => if !self_host_emit_linked_i64_binary(
+          destination,
+          operator,
+          unsigned_,
+        ) {
+          return Result::Err("linked I64 binary operator is unsupported")
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedF32Binary(
+          operator,
+          destination,
+        ) => if !self_host_emit_linked_f32_binary(destination, operator) {
+          return Result::Err("linked F32 binary operator is unsupported")
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedF64Binary(
+          operator,
+          destination,
+        ) => if !self_host_emit_linked_f64_binary(destination, operator) {
+          return Result::Err("linked F64 binary operator is unsupported")
         }
         SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
           function_index,
@@ -1341,6 +1577,18 @@ fn self_host_linked_i32_append_value_type(
       values,
       StarshineFfi.ffi_lib_ValType_i32(),
     )
+    SelfHostPlannedWasmValueType::WasmI64Value => StarshineFfi.ffi_ffi_bridge_val_types_push(
+      values,
+      StarshineFfi.ffi_lib_ValType_i64(),
+    )
+    SelfHostPlannedWasmValueType::WasmF32Value => StarshineFfi.ffi_ffi_bridge_val_types_push(
+      values,
+      StarshineFfi.ffi_lib_ValType_f32(),
+    )
+    SelfHostPlannedWasmValueType::WasmF64Value => StarshineFfi.ffi_ffi_bridge_val_types_push(
+      values,
+      StarshineFfi.ffi_lib_ValType_f64(),
+    )
     _ => {
       return false
     }
@@ -1382,6 +1630,72 @@ fn self_host_linked_i32_body(
     }
   }
   Option::None
+}
+
+fn self_host_linked_scalar_append_local_type(
+  locals: StarshineRef358,
+  shape: SelfHostPlannedValueShape,
+) -> Bool {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => StarshineFfi.ffi_lib_Locals_push(
+      locals,
+      StarshineFfi.ffi_lib_ValType_i32(),
+    )
+    SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_lib_Locals_push(
+      locals,
+      StarshineFfi.ffi_lib_ValType_i64(),
+    )
+    SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_lib_Locals_push(
+      locals,
+      StarshineFfi.ffi_lib_ValType_f32(),
+    )
+    SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_lib_Locals_push(
+      locals,
+      StarshineFfi.ffi_lib_ValType_f64(),
+    )
+    _ => {
+      return false
+    }
+  }
+  true
+}
+
+fn self_host_linked_scalar_locals(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+) -> Result<StarshineRef358, String> {
+  let locals = StarshineFfi.ffi_lib_Locals_empty()
+  let mut local = 0u32
+  let _ = while local {
+    current => if current < body.locals.length {
+      let source = self_host_u32_add(body.locals.start, current)
+      if source < module_.locals.length() && !(
+        module_.locals[source].kind is SelfHostBodyLocalKind::ParameterLocal
+      ) && !self_host_linked_scalar_append_local_type(
+        locals,
+        module_.locals[source].shape,
+      ) {
+        return Result::Err("linked local type is outside the scalar subset")
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let scratch_count = self_host_linked_i32_scratch_count(module_, body)
+  let mut scratch = 0u32
+  let _ = while scratch {
+    current => if current < scratch_count {
+      StarshineFfi.ffi_lib_Locals_push(
+        locals,
+        StarshineFfi.ffi_lib_ValType_i32(),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Result::Ok(locals)
 }
 
 fn self_host_linked_i32_declared_local_count(
@@ -1520,17 +1834,14 @@ pub fn build_self_host_linked_i32_module(
           }
           Result::Ok(_) => {}
         }
-        let local_count = self_host_linked_i32_declared_local_count(
+        let locals = match self_host_linked_scalar_locals(
           lowering_module,
           body,
-        )
-        let locals = if self_host_u32_equal(local_count, 0u32) {
-          StarshineFfi.ffi_lib_Locals_empty()
-        } else {
-          StarshineFfi.ffi_lib_Locals_single(
-            local_count.into(),
-            StarshineFfi.ffi_lib_ValType_i32(),
-          )
+        ) {
+          Result::Ok(value) => value
+          Result::Err(error) => {
+            return Result::Err(error)
+          }
         }
         StarshineFfi.ffi_ffi_bridge_funcs_push(
           functions,
