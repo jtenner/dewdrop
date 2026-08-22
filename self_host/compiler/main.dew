@@ -95,24 +95,30 @@ pub fn main() -> U32 {
                     } else {
                       match self_host_compile_request_semantic_plan(request) {
                         Result::Err(error) => self_host_error(process, error)
-                        Result::Ok(_plan) => match request.root_source() {
-                        Option::None => self_host_error(process, "root module has no source file")
-                        Option::Some(source) => match parse_self_host_i32_source(source) {
-                        Result::Err(error) => self_host_error(process, error)
-                        Result::Ok(value) =>
-                          match build_self_host_i32_module(value) {
+                        Result::Ok(plan) => match request.root_module_index() {
+                          Option::None => self_host_error(process, "root module is missing")
+                          Option::Some(root_index) => match build_self_host_linked_root_i32_module(
+                            plan,
+                            root_index,
+                          ) {
                             Result::Err(error) => self_host_error(process, error)
-                            Result::Ok(output) =>
-                              match relative_path(request.output_path) {
-                                Result::Err(_) =>
-                                  self_host_error(process, "output path is not relative")
-                                Result::Ok(output_path) =>
-                                  match fs_write_file(filesystem, output_path, output) {
-                                    Result::Err(_) =>
-                                      self_host_error(process, "cannot write output module")
-                                    Result::Ok(_) => 0u32
-                                  }
+                            Result::Ok(output) => match relative_path(request.output_path) {
+                              Result::Err(_) => self_host_error(
+                                process,
+                                "output path is not relative",
+                              )
+                              Result::Ok(output_path) => match fs_write_file(
+                                filesystem,
+                                output_path,
+                                output,
+                              ) {
+                                Result::Err(_) => self_host_error(
+                                  process,
+                                  "cannot write output module",
+                                )
+                                Result::Ok(_) => 0u32
                               }
+                            }
                           }
                         }
                       }
@@ -125,5 +131,4 @@ pub fn main() -> U32 {
       }
     }
   }
-}
 }

@@ -53,6 +53,23 @@ fn self_host_request_manifest_file(
 }
 
 impl SelfHostCompileRequest {
+  fn root_module_index(self) -> Option<U32> {
+    let root = self.root_module
+    let mut module_index = 0u32
+    let module_count = self_host_request_manifest_module_count(self.manifest)
+    while module_index {
+      current => if current < module_count {
+        let module_ = self_host_request_manifest_module(self.manifest, current)
+        if module_.path == root {
+          break Option::Some(current)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+
   fn root_source(self) -> Option<Bytes> {
     let root = self.root_module
     let mut module_index = 0u32

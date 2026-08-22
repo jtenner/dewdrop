@@ -88,3 +88,131 @@ pub fn build_self_host_i32_module(value: I32) -> Result<Bytes, String> {
     }
   }
 }
+
+fn self_host_u64_to_i32(value: U64) -> I32 {
+  value.into()
+}
+
+fn self_host_linked_root_expression(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+) -> Option<U32> {
+  match body.root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => Option::Some(expression)
+    SelfHostHirBodyRoot::BlockBodyRoot(block_index) => {
+      if block_index >= module_.blocks.length() {
+        return Option::None
+      }
+      let block = module_.blocks[block_index]
+      if self_host_u32_equal(block.items.length, 0u32) {
+        return Option::None
+      }
+      let item_index = self_host_u32_add(
+        block.items.start,
+        self_host_u32_subtract(block.items.length, 1u32),
+      )
+      if item_index >= module_.block_items.length() {
+        return Option::None
+      }
+      match module_.block_items[item_index].kind {
+        SelfHostPlannedBlockItemKind::PlannedExpressionItem(expression) => Option::Some(expression)
+        SelfHostPlannedBlockItemKind::PlannedReturnItem(expression) => Option::Some(expression)
+        _ => Option::None
+      }
+    }
+  }
+}
+
+fn self_host_linked_i32_main_value(
+  link: SelfHostPlannedProgramWasmGCLink,
+  root_module: U64,
+) -> Result<I32, String> {
+  let mut module_index = 0u32
+  let mut found_module = Option::None
+  let lowering_modules = link.fragments.specialization.lowering.modules
+  let _ = while module_index {
+    current => if current < lowering_modules.length() {
+      if self_host_u64_equal(lowering_modules[current].module_id, root_module) {
+        found_module = Option::Some(current)
+        break self_host_semantic_unit()
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let owner = match found_module {
+    Option::Some(value) => value
+    Option::None => {
+      return Result::Err("linked root module is missing")
+    }
+  }
+  let module_ = lowering_modules[owner]
+  let mut body_id = Option::None
+  let functions = module_.functions.callables
+  for callable in functions {
+    if self_host_bytes_equal(callable.name, b"main") {
+      match callable.kind {
+        SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => {
+          body_id = Option::Some(body)
+        }
+        _ => {}
+      }
+    }
+  }
+  let selected_body = match body_id {
+    Option::Some(value) => value
+    Option::None => {
+      return Result::Err("linked root module has no main function")
+    }
+  }
+  let mut body = Option::None
+  for candidate in module_.bodies {
+    if self_host_u64_equal(candidate.body, selected_body) {
+      body = Option::Some(candidate)
+    }
+  }
+  let selected = match body {
+    Option::Some(value) => value
+    Option::None => {
+      return Result::Err("linked main function has no body")
+    }
+  }
+  let expression_index = match self_host_linked_root_expression(module_, selected) {
+    Option::Some(value) => value
+    Option::None => {
+      return Result::Err("linked main body is not a scalar expression")
+    }
+  }
+  if expression_index >= module_.expressions.length() {
+    return Result::Err("linked main expression is outside its arena")
+  }
+  match module_.expressions[expression_index].kind {
+    SelfHostPlannedExpressionKind::PlannedI32Const(value) => Result::Ok(
+      self_host_u64_to_i32(value),
+    )
+    _ => Result::Err("linked main expression is not an I32 constant")
+  }
+}
+
+pub fn build_self_host_linked_i32_module(
+  link: SelfHostPlannedProgramWasmGCLink,
+  root_module: U64,
+) -> Result<Bytes, String> {
+  match self_host_linked_i32_main_value(link, root_module) {
+    Result::Ok(value) => build_self_host_i32_module(value)
+    Result::Err(error) => Result::Err(error)
+  }
+}
+
+pub fn build_self_host_linked_root_i32_module(
+  link: SelfHostPlannedProgramWasmGCLink,
+  root_index: U32,
+) -> Result<Bytes, String> {
+  let modules = link.fragments.specialization.lowering.modules
+  if root_index >= modules.length() {
+    Result::Err("linked root module index is outside its arena")
+  } else {
+    build_self_host_linked_i32_module(link, modules[root_index].module_id)
+  }
+}
