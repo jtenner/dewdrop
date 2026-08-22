@@ -18,9 +18,63 @@ struct SelfHostRequestReader {
 
 pub struct SelfHostCompileRequest {
   output_path: String
-  source: Bytes
+  root_module: String
+  manifest: SelfHostProgramManifest
   starshine_provider: Bytes
   compiler_fingerprint: Bytes
+  test_mode: Bool
+  default_preamble: Bool
+}
+
+fn self_host_request_manifest_module_count(
+  manifest: SelfHostProgramManifest,
+) -> U32 {
+  manifest.modules.length()
+}
+
+fn self_host_request_manifest_module(
+  manifest: SelfHostProgramManifest,
+  index: U32,
+) -> SelfHostManifestModule {
+  manifest.modules[index]
+}
+
+fn self_host_request_manifest_file_count(
+  module_: SelfHostManifestModule,
+) -> U32 {
+  module_.files.length()
+}
+
+fn self_host_request_manifest_file(
+  module_: SelfHostManifestModule,
+  index: U32,
+) -> SelfHostManifestFile {
+  module_.files[index]
+}
+
+impl SelfHostCompileRequest {
+  fn root_source(self) -> Option<Bytes> {
+    let root = self.root_module
+    let mut module_index = 0u32
+    let module_count = self_host_request_manifest_module_count(self.manifest)
+    let _ = while module_index {
+      current => if current < module_count {
+        let module_ = self_host_request_manifest_module(self.manifest, current)
+        if module_.path == root && self_host_u32_greater(
+          self_host_request_manifest_file_count(module_),
+          0u32,
+        ) {
+          return Option::Some(
+            self_host_request_manifest_file(module_, 0u32).source,
+          )
+        }
+        continue current + 1u32
+      } else {
+        break self_host_unit()
+      }
+    }
+    Option::None
+  }
 }
 
 fn self_host_reader_fail(reader: SelfHostRequestReader, message: String) -> Unit {
@@ -179,11 +233,12 @@ pub fn decode_self_host_compile_request(
   } else {
   }
   let mut total_files = 0u32
-  let mut root_source = Option::None
+  let manifest_modules = []
   while 0u32 {
     module_index if module_index < module_count => {
       let module_name = self_host_reader_string(reader, 255u32, "module name")
       let file_count = self_host_reader_count(reader, 4096u32, "file count")
+      let manifest_files = []
       if file_count == 0u32 || total_files > 65536u32 - file_count {
         self_host_reader_fail(reader, "compile request file count is outside its bound")
       } else {
@@ -191,16 +246,21 @@ pub fn decode_self_host_compile_request(
       }
       while 0u32 {
         file_index if file_index < file_count => {
-          let _logical_path = self_host_reader_string(reader, 4096u32, "logical path")
+          let logical_path = self_host_reader_string(reader, 4096u32, "logical path")
           let source = self_host_reader_bytes(reader, 16777216u32, "source")
-          if module_name.equals(root_module) && root_source is Option::None {
-            root_source = Option::Some(source)
-          } else {
-          }
+          manifest_files.push(SelfHostManifestFile::{
+            path: logical_path
+            source: source
+            test_only: false
+          })
           continue file_index + 1u32
         }
         _ => break self_host_unit()
       }
+      manifest_modules.push(SelfHostManifestModule::{
+        path: module_name
+        files: manifest_files
+      })
       continue module_index + 1u32
     }
     _ => break self_host_unit()
@@ -215,8 +275,8 @@ pub fn decode_self_host_compile_request(
   }
   self_host_reader_expect(reader, 0u32, "optimization mode")
   self_host_reader_expect(reader, 0u32, "diagnostics mode")
-  let _test_mode = self_host_reader_bool(reader, "test mode")
-  let _default_preamble = self_host_reader_bool(reader, "default preamble")
+  let test_mode = self_host_reader_bool(reader, "test mode")
+  let default_preamble = self_host_reader_bool(reader, "default preamble")
   self_host_reader_expect(reader, 0u32, "cache policy")
   let _cache_report = self_host_reader_bool(reader, "cache report")
   let compiler_fingerprint = self_host_reader_bytes(
@@ -232,19 +292,25 @@ pub fn decode_self_host_compile_request(
   }
   match reader.error {
     Option::Some(error) => Result::Err(error)
-    Option::None =>
-      match root_source {
-        Option::None => Result::Err("root module has no source file")
-        Option::Some(source) =>
-          match starshine {
-            Option::None => Result::Err("compile request has no starshine provider")
-            Option::Some(provider) => Result::Ok(SelfHostCompileRequest::{
-              output_path: output_path
-              source: source
-              starshine_provider: provider
-              compiler_fingerprint: compiler_fingerprint
-            })
+    Option::None => match starshine {
+      Option::None => Result::Err("compile request has no starshine provider")
+      Option::Some(provider) => {
+        let request = SelfHostCompileRequest::{
+          output_path: output_path
+          root_module: root_module
+          manifest: SelfHostProgramManifest::{
+            modules: manifest_modules
           }
+          starshine_provider: provider
+          compiler_fingerprint: compiler_fingerprint
+          test_mode: test_mode
+          default_preamble: default_preamble
+        }
+        match request.root_source() {
+          Option::Some(_) => Result::Ok(request)
+          Option::None => Result::Err("root module has no source file")
+        }
       }
+    }
   }
 }

@@ -3,6 +3,7 @@ open dew.std.bytes
 open dew.std.fixed_array
 open dew.std.fs
 open dew.std.fs.wasi
+open dew.std.option
 open dew.std.path
 open dew.std.process
 open dew.std.process.wasi
@@ -15,6 +16,31 @@ fn self_host_error(process: WasiProcess, message: String) -> U32 {
     "self-host smoke: ".concat(message).concat("\n").as_bytes(),
   )
   1u32
+}
+
+fn self_host_compile_request_semantic_plan(
+  request: SelfHostCompileRequest,
+) -> Result<SelfHostPlannedProgramWasmGCFragments, String> {
+  let collected = self_host_collect_program_manifest(7200u64, request.manifest)
+  if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
+    return Result::Err("compile request manifest is invalid")
+  }
+  let frozen = self_host_freeze_program_signature_interfaces(collected)
+  if self_host_u32_greater(frozen.import_diagnostics.length(), 0u32) ||
+    self_host_u32_greater(frozen.path_diagnostics.length(), 0u32) {
+    return Result::Err("compile request imports are invalid")
+  }
+  match collected.module_index(request.root_module) {
+    Option::None => Result::Err("compile request root module is missing")
+    Option::Some(_) => Result::Ok(
+      self_host_plan_program_wasmgc_fragments(
+        self_host_plan_program_specialization(
+          self_host_plan_program_lowering(frozen),
+          request.test_mode,
+        ),
+      ),
+    )
+  }
 }
 
 fn self_host_fingerprint_matches(
@@ -64,7 +90,11 @@ pub fn main() -> U32 {
                     ) {
                       self_host_error(process, "compiler fingerprint mismatch")
                     } else {
-                      match parse_self_host_i32_source(request.source) {
+                      match self_host_compile_request_semantic_plan(request) {
+                        Result::Err(error) => self_host_error(process, error)
+                        Result::Ok(_plan) => match request.root_source() {
+                        Option::None => self_host_error(process, "root module has no source file")
+                        Option::Some(source) => match parse_self_host_i32_source(source) {
                         Result::Err(error) => self_host_error(process, error)
                         Result::Ok(value) =>
                           match build_self_host_i32_module(value) {
@@ -81,6 +111,7 @@ pub fn main() -> U32 {
                                   }
                               }
                           }
+                        }
                       }
                     }
                   }
@@ -91,4 +122,5 @@ pub fn main() -> U32 {
       }
     }
   }
+}
 }
