@@ -145,6 +145,7 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedI32If(StarshineRef125, StarshineRef125, StarshineRef125)
   VisitLinkedI32Block(U32, StarshineRef125)
   EmitLinkedI32LocalSet(U32, StarshineRef125)
+  EmitLinkedI32Return(StarshineRef125)
   EmitLinkedI32Drop(StarshineRef125)
 }
 
@@ -617,12 +618,15 @@ fn self_host_emit_linked_i32_expression(
                     return Result::Err("linked I32 let has no physical slot")
                   }
                 }
-                SelfHostPlannedBlockItemKind::PlannedReturnItem(value) => tasks.push(
-                  SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
+                SelfHostPlannedBlockItemKind::PlannedReturnItem(value) => {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Return(
+                    destination,
+                  ))
+                  tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
                     value,
                     destination,
-                  ),
-                )
+                  ))
+                }
                 SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => {
                   if !self_host_u32_equal(
                     previous,
@@ -652,6 +656,10 @@ fn self_host_emit_linked_i32_expression(
           StarshineFfi.ffi_lib_Instruction_local_set(
             StarshineFfi.ffi_lib_LocalIdx_new(slot.into()),
           ),
+        )
+        SelfHostLinkedI32EmitTask::EmitLinkedI32Return(destination) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_return_(),
         )
         SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(destination) => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,

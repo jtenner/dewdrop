@@ -66,6 +66,7 @@
     "FuncIdx::new",
     "Instruction::call",
     "BlockType::val_type",
-    "ffi_bridge::instruction_if"
+    "ffi_bridge::instruction_if",
+    "Instruction::return_"
   ]
 }
