@@ -23,6 +23,9 @@ pub enum SelfHostPlannedWasmPhysicalTypeKind {
   PlannedWasmForeignMarkerType(U64)
   PlannedWasmEnumBaseType(U64)
   PlannedWasmEnumSubtypeType(U64, U64, U32)
+  PlannedWasmClosureType
+  PlannedWasmCaptureCellType(U32)
+  PlannedWasmLambdaClosureType(U32)
 }
 
 pub struct SelfHostPlannedWasmPhysicalType {
@@ -32,7 +35,15 @@ pub struct SelfHostPlannedWasmPhysicalType {
   offset: U32
 }
 
+pub enum SelfHostPlannedWasmFieldRole {
+  WasmStructField(U64)
+  WasmClosureEntryField
+  WasmCaptureCellValueField(U32)
+  WasmLambdaCaptureField(U32, U32)
+}
+
 pub struct SelfHostPlannedWasmField {
+  role: SelfHostPlannedWasmFieldRole
   declaration: U64
   physical_index: U32
   storage: SelfHostPlannedWasmStorageType
@@ -44,6 +55,7 @@ pub enum SelfHostPlannedWasmFunctionKind {
   PlannedWasmImportedFunction(Bytes, Bytes)
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmDefinedFunction(U64)
+  PlannedWasmDefinedLambdaFunction(U32)
   PlannedWasmSignatureOnlyFunction
 }
 
@@ -65,6 +77,10 @@ pub struct SelfHostPlannedModuleWasmGCFragments {
   function_value_types: Array<SelfHostPlannedWasmValueType>
   type_index_by_declaration: Array<U32>
   function_by_declaration: Array<U32>
+  closure_type_index: U32
+  capture_cell_type_indices: Array<U32>
+  lambda_closure_type_indices: Array<U32>
+  lambda_function_indices: Array<U32>
 }
 
 pub struct SelfHostPlannedProgramWasmGCFragments {
@@ -148,6 +164,7 @@ fn self_host_wasmgc_plan_types(
               self_host_u32_add(field_span.start, current)
             ]
             fields.push(SelfHostPlannedWasmField::{
+              role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
               declaration: source.field
               physical_index: current
               storage: self_host_wasmgc_storage_type(source.shape)
@@ -314,6 +331,112 @@ fn self_host_wasmgc_append_function(
   })
 }
 
+fn self_host_wasmgc_plan_closures(
+  module_: SelfHostPlannedModuleLowering,
+  physical_types: Array<SelfHostPlannedWasmPhysicalType>,
+  fields: Array<SelfHostPlannedWasmField>,
+  capture_cell_indices: Array<U32>,
+  lambda_type_indices: Array<U32>,
+) -> U32 {
+  if self_host_u32_equal(module_.lambdas.length(), 0u32) {
+    return 4294967295u32
+  }
+  let closure_index = physical_types.length()
+  let closure_field = fields.length()
+  fields.push(SelfHostPlannedWasmField::{
+    role: SelfHostPlannedWasmFieldRole::WasmClosureEntryField
+    declaration: 0u64
+    physical_index: 0u32
+    storage: SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+    mutable_: false
+    offset: 0u32
+  })
+  physical_types.push(SelfHostPlannedWasmPhysicalType::{
+    kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmClosureType
+    type_index: closure_index
+    fields: SelfHostHirSpan::{
+      start: closure_field
+      length: 1u32
+    }
+    offset: 0u32
+  })
+  let mut local_index = 0u32
+  let _ = while local_index {
+    current => if current < module_.locals.length() {
+      let local = module_.locals[current]
+      if local.mutable_ {
+        let type_index = physical_types.length()
+        let field_start = fields.length()
+        fields.push(SelfHostPlannedWasmField::{
+          role: SelfHostPlannedWasmFieldRole::WasmCaptureCellValueField(current)
+          declaration: 0u64
+          physical_index: 0u32
+          storage: self_host_wasmgc_storage_type(local.shape)
+          mutable_: true
+          offset: local.offset
+        })
+        physical_types.push(SelfHostPlannedWasmPhysicalType::{
+          kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(current)
+          type_index: type_index
+          fields: SelfHostHirSpan::{
+            start: field_start
+            length: 1u32
+          }
+          offset: local.offset
+        })
+        capture_cell_indices[current] = type_index
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut lambda_index = 0u32
+  let _ = while lambda_index {
+    current => if current < module_.lambdas.length() {
+      let lambda = module_.lambdas[current]
+      let type_index = physical_types.length()
+      let field_start = fields.length()
+      let mut capture = 0u32
+      let _ = while capture {
+        current_capture => if current_capture < lambda.captures.length {
+          let source = module_.captures[
+            self_host_u32_add(lambda.captures.start, current_capture)
+          ]
+          fields.push(SelfHostPlannedWasmField::{
+            role: SelfHostPlannedWasmFieldRole::WasmLambdaCaptureField(
+              lambda.lambda,
+              current_capture,
+            )
+            declaration: 0u64
+            physical_index: current_capture + 1u32
+            storage: self_host_wasmgc_storage_type(source.shape)
+            mutable_: false
+            offset: source.offset
+          })
+          continue current_capture + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      physical_types.push(SelfHostPlannedWasmPhysicalType::{
+        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(lambda.lambda)
+        type_index: type_index
+        fields: SelfHostHirSpan::{
+          start: field_start
+          length: fields.length() - field_start
+        }
+        offset: 0u32
+      })
+      lambda_type_indices[current] = type_index
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  closure_index
+}
+
 fn self_host_plan_program_wasmgc_fragments(
   specialization: SelfHostProgramSpecializationPlan,
 ) -> SelfHostPlannedProgramWasmGCFragments {
@@ -332,7 +455,23 @@ fn self_host_plan_program_wasmgc_fragments(
       let function_lookup = self_host_wasmgc_u32_slots(
         source.functions.callable_by_declaration.length(),
       )
+      let capture_cell_indices = self_host_wasmgc_u32_slots(
+        source.locals.length(),
+      )
+      let lambda_type_indices = self_host_wasmgc_u32_slots(
+        source.lambdas.length(),
+      )
+      let lambda_function_indices = self_host_wasmgc_u32_slots(
+        source.lambdas.length(),
+      )
       self_host_wasmgc_plan_types(source, physical_types, fields, type_lookup)
+      let closure_type_index = self_host_wasmgc_plan_closures(
+        source,
+        physical_types,
+        fields,
+        capture_cell_indices,
+        lambda_type_indices,
+      )
       for callable in source.functions.callables {
         let function_index = functions.length()
         self_host_wasmgc_append_function(
@@ -345,6 +484,14 @@ fn self_host_plan_program_wasmgc_fragments(
           value_types,
         )
         function_lookup[self_host_semantic_id_local(callable.declaration)] = function_index
+      }
+      let mut lambda_index = 0u32
+      let _ = while lambda_index {
+        lambda => if lambda < source.lambdas.length() {
+          continue lambda + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
       let mut request_index = 0u32
       let _ = while request_index {
@@ -380,6 +527,10 @@ fn self_host_plan_program_wasmgc_fragments(
         function_value_types: value_types
         type_index_by_declaration: type_lookup
         function_by_declaration: function_lookup
+        closure_type_index: closure_type_index
+        capture_cell_type_indices: capture_cell_indices
+        lambda_closure_type_indices: lambda_type_indices
+        lambda_function_indices: lambda_function_indices
       })
       continue current + 1u32
     } else {

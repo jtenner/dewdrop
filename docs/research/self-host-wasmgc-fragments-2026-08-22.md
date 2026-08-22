@@ -14,6 +14,8 @@ It adds:
 - elided generic base functions;
 - concrete scalar specialization function clones;
 - local and imported specialization ownership;
+- common closure base and per-lambda closure type recipes;
+- mutable local capture-cell type recipes;
 - declaration-indexed type and function lookup slots.
 
-This is the ABI and nominal-type foundation. Lambda closure types, capture cells, trait dictionaries, recursive physical SCCs, runtime dependencies, module globals, body instruction emission, and final index assignment remain in later fragment/link tranches.
+This is the ABI and nominal-type foundation. Lambda entry function ABI publication exposed an optimized aggregate cast defect and is intentionally not published yet. Trait dictionaries, recursive physical SCCs, runtime dependencies, module globals, body instruction emission, and final index assignment remain in later fragment/link tranches.

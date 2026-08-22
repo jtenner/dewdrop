@@ -149,6 +149,7 @@ pub struct SelfHostPlannedBodyLowering {
 pub struct SelfHostPlannedLambdaLowering {
   lambda: U32
   root_body: U64
+  parameter_count: U32
   root: SelfHostHirBodyRoot
   root_type: I32
   root_shape: SelfHostPlannedValueShape
@@ -899,6 +900,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
       lambdas.push(SelfHostPlannedLambdaLowering::{
         lambda: source.id
         root_body: source.root_body
+        parameter_count: source.parameters.length
         root: SelfHostHirBodyRoot::BlockBodyRoot(source.body.root)
         root_type: job.root_type
         root_shape: root_shape

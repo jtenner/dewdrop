@@ -125,3 +125,57 @@ test "WasmGC fragments retain imported generic specialization ownership" {
     _ => assert(false, "imported i64 specialization")
   }
 }
+
+test "WasmGC fragments plan lambda closure types and entry functions" {
+  let plan = self_host_wasmgc_test_plan(
+    b"fn make(seed: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    seed + value\n  }\n}\n",
+  )
+  let module_ = plan.modules[0u32]
+  assert(!self_host_u32_equal(module_.closure_type_index, 4294967295u32), "closure base")
+  assert(self_host_u32_equal(module_.lambda_closure_type_indices.length(), 1u32), "lambda type slot")
+  assert(self_host_u32_equal(module_.lambda_function_indices.length(), 1u32), "lambda function slot")
+  assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 2u32), "closure type family")
+  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 2u32), "entry and capture fields")
+  assert(self_host_u32_equal(self_host_wasmgc_function_count(module_), 1u32), "named function")
+  assert(
+    self_host_u32_equal(module_.lambda_function_indices[0u32], 4294967295u32),
+    "lambda entry pending",
+  )
+}
+
+fn self_host_wasmgc_capture_cell_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.capture_cell_type_indices.length()
+}
+
+fn self_host_wasmgc_capture_cell_at(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> U32 {
+  module_.capture_cell_type_indices[index]
+}
+
+test "WasmGC fragments plan mutable local capture cells" {
+  let plan = self_host_wasmgc_test_plan(
+    b"fn make(seed: I32) -> fn() -> I32 {\n  let mut value = seed\n  fn() -> I32 {\n    value = value + 1\n    value\n  }\n}\n",
+  )
+  let module_ = plan.modules[0u32]
+  let mut saw_cell = false
+  let mut cell = 0u32
+  let count = self_host_wasmgc_capture_cell_count(module_)
+  let _ = while cell {
+    current => if current < count {
+      if !self_host_u32_equal(
+        self_host_wasmgc_capture_cell_at(module_, current),
+        4294967295u32,
+      ) {
+        saw_cell = true
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(saw_cell, "mutable capture cell")
+}
