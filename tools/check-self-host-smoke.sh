@@ -157,7 +157,9 @@ run_compiler() {
   grep -Fq 'local.set 0' "$wat"
   grep -Fq 'i32.const 70' "$wat"
   grep -Fq 'i32.eq' "$wat"
-  grep -Fq 'if (result i32)' "$wat"
+  grep -Fq 'i32.gt_u' "$wat"
+  grep -Fq 'i32.const -2147483648' "$wat"
+  test "$(grep -Fc 'if (result i32)' "$wat")" -ge 2
   grep -Fq 'return' "$wat"
   grep -Fq 'i32.const 3' "$wat"
   test "$(grep -Fc 'i32.add' "$wat")" -ge 2
