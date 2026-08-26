@@ -35,7 +35,7 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedOperatorCall(U64, SelfHostHirBinaryOperator, U32, U32, SelfHostHirSpan)
   PlannedBuiltinCall(Bytes, U64, U32, SelfHostHirSpan, SelfHostHirSpan)
   PlannedDirectCall(U64, U32, SelfHostHirSpan, SelfHostHirSpan)
-  PlannedFunctionValueCall(U32, SelfHostHirSpan, U32)
+  PlannedFunctionValueCall(U32, SelfHostHirSpan, I32)
   PlannedUnresolvedCall(U32, SelfHostHirSpan)
   PlannedFieldGet(U64, U32, Bool)
   PlannedUnresolvedField(U32, U32)
@@ -58,6 +58,8 @@ pub struct SelfHostPlannedExpression {
   nominal: U64
   flow: SelfHostBodyFlowSummary
   kind: SelfHostPlannedExpressionKind
+  call_type_arguments: SelfHostHirSpan
+  source_name: U32
   offset: U32
 }
 
@@ -80,8 +82,19 @@ pub struct SelfHostPlannedBlock {
 
 pub struct SelfHostPlannedObjectField {
   field: U64
+  name: U32
   value: U32
   offset: U32
+}
+
+pub struct SelfHostPlannedNamedField {
+  declaration: U64
+  name: String
+}
+
+pub struct SelfHostPlannedNamedVariant {
+  declaration: U64
+  name: String
 }
 
 pub struct SelfHostPlannedPattern {
@@ -165,6 +178,7 @@ pub struct SelfHostPlannedLambdaLowering {
 
 pub struct SelfHostPlannedModuleLowering {
   module_id: U64
+  names: Array<String>
   resolved_types: SelfHostResolvedModuleTypes
   type_layouts: SelfHostPlannedModuleTypeLayouts
   initialization: SelfHostPlannedModuleInitialization
@@ -177,6 +191,8 @@ pub struct SelfHostPlannedModuleLowering {
   blocks: Array<SelfHostPlannedBlock>
   block_items: Array<SelfHostPlannedBlockItem>
   object_fields: Array<SelfHostPlannedObjectField>
+  named_fields: Array<SelfHostPlannedNamedField>
+  named_variants: Array<SelfHostPlannedNamedVariant>
   patterns: Array<SelfHostPlannedPattern>
   pattern_fields: Array<SelfHostPlannedPatternField>
   pattern_arms: Array<SelfHostPlannedPatternArm>
@@ -223,6 +239,27 @@ fn self_host_lowering_builtin_name(
     }
   }
   Option::None
+}
+
+fn self_host_lowering_function_value_type(
+  inferred: SelfHostMergedModuleInference,
+  job: SelfHostMergedInferenceJob,
+  source_expression_start: U32,
+  target: U32,
+) -> I32 {
+  if target < source_expression_start {
+    return 0i32
+  }
+  let relative = target - source_expression_start
+  if relative >= job.expression_types.length {
+    return 0i32
+  }
+  let index = self_host_u32_add(job.expression_types.start, relative)
+  if index >= inferred.expression_types.length() {
+    0i32
+  } else {
+    inferred.expression_types[index]
+  }
 }
 
 fn self_host_lowering_expression_kind(
@@ -321,7 +358,16 @@ fn self_host_lowering_expression_kind(
           type_arguments,
         )
       }
-      SelfHostBasicCallTarget::FunctionValueBasicCallTarget(type_) => SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, type_)
+      SelfHostBasicCallTarget::FunctionValueBasicCallTarget(_) => SelfHostPlannedExpressionKind::PlannedFunctionValueCall(
+        target,
+        arguments,
+        self_host_lowering_function_value_type(
+          inferred,
+          job,
+          source_expression_start,
+          target,
+        ),
+      )
       _ => SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments)
     }
     SelfHostHirExpr::FieldExpr(base, name, _) => match selection {
@@ -352,6 +398,18 @@ fn self_host_lowering_expression_kind(
   }
 }
 
+fn self_host_lowering_target_type_arguments(
+  target: SelfHostBasicCallTarget,
+) -> SelfHostHirSpan {
+  match target {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => arguments
+    _ => SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+  }
+}
+
 fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
   SelfHostPlannedExpression::{
     type_: -1i32
@@ -359,6 +417,11 @@ fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
     nominal: 0u64
     flow: self_host_flow_empty()
     kind: SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    call_type_arguments: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    source_name: 4294967295u32
     offset: 0u32
   }
 }
@@ -396,6 +459,18 @@ fn self_host_lowering_plan_expressions(
         self_host_u32_add(job.expression_types.start, current)
       ]
       let source_expression = collected.expressions[expression]
+      let call_target = inferred.call_targets[
+        self_host_u32_add(job.call_targets.start, current)
+      ]
+      let operator_target = inferred.operator_targets[
+        self_host_u32_add(job.operator_targets.start, current)
+      ]
+      let selected_target = match source_expression {
+        SelfHostHirExpr::BinaryExpr(_, _, _, _) => operator_target
+        SelfHostHirExpr::IndexExpr(_, _, _) => operator_target
+        SelfHostHirExpr::IndexSetExpr(_, _, _, _) => operator_target
+        _ => call_target
+      }
       output[expression] = SelfHostPlannedExpression::{
         type_: type_
         shape: self_host_planned_merged_body_value_shape(
@@ -419,6 +494,15 @@ fn self_host_lowering_plan_expressions(
           expression,
           current,
         )
+        call_type_arguments: self_host_lowering_target_type_arguments(
+          selected_target,
+        )
+        source_name: match source_expression {
+          SelfHostHirExpr::NameExpr(name, _) => name
+          SelfHostHirExpr::FieldExpr(_, name, _) => name
+          SelfHostHirExpr::QualifiedExpr(_, name, _) => name
+          _ => 4294967295u32
+        }
         offset: self_host_basic_expression_offset(source_expression)
       }
       continue current + 1u32
@@ -631,6 +715,7 @@ fn self_host_lowering_object_field_slots(length: U32) -> Array<SelfHostPlannedOb
     current => if current < length {
       values.push(SelfHostPlannedObjectField::{
         field: 0u64
+        name: 4294967295u32
         value: 0u32
         offset: 0u32
       })
@@ -662,6 +747,7 @@ fn self_host_lowering_plan_object_fields(
       let source_field = collected.object_fields[index]
       output[index] = SelfHostPlannedObjectField::{
         field: field
+        name: source_field.name
         value: source_field.value
         offset: source_field.offset
       }
@@ -693,6 +779,8 @@ fn self_host_lowering_consume_expression_target(
       nominal: source.nominal
       flow: source.flow
       kind: SelfHostPlannedExpressionKind::PlannedConsumedExpression
+      call_type_arguments: source.call_type_arguments
+      source_name: source.source_name
       offset: source.offset
     }
   }
@@ -922,6 +1010,20 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
       break self_host_semantic_unit()
     }
   }
+  let named_fields = []
+  for field in collected.fields {
+    named_fields.push(SelfHostPlannedNamedField::{
+      declaration: field.id
+      name: collected.name(field.name)
+    })
+  }
+  let named_variants = []
+  for variant in collected.variants {
+    named_variants.push(SelfHostPlannedNamedVariant::{
+      declaration: variant.id
+      name: collected.name(variant.name)
+    })
+  }
   let pattern_fields = []
   for field in collected.pattern_fields {
     pattern_fields.push(SelfHostPlannedPatternField::{
@@ -933,6 +1035,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
   self_host_lowering_directize_targets(expressions)
   SelfHostPlannedModuleLowering::{
     module_id: collected.module_id
+    names: collected.names
     resolved_types: resolved
     type_layouts: type_layouts
     initialization: initialization
@@ -945,6 +1048,8 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
     blocks: blocks
     block_items: block_items
     object_fields: object_fields
+    named_fields: named_fields
+    named_variants: named_variants
     patterns: patterns
     pattern_fields: pattern_fields
     pattern_arms: pattern_arms

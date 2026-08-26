@@ -1,5 +1,5 @@
 ///|
-test "production emission scalarizes Option traffic in for loops" {
+test "debug emission preserves Option traffic in for loops" {
   let program = @semantic.collect_program_manifest(
     2668UL,
     @semantic.ProgramManifest::new([
@@ -25,8 +25,8 @@ test "production emission scalarizes Option traffic in for loops" {
   let function_index = link.function_of(declaration).unwrap().function_index
   let unoptimized = emit_starshine_program_module(lowering, link).unwrap()
   let bytes = emit_starshine_program_binary(lowering, link).unwrap()
-  let optimized = @binary.decode_module(bytes).unwrap()
-  assert_eq(@validate.validate_module(optimized), Ok(()))
+  let emitted = @binary.decode_module(bytes).unwrap()
+  assert_eq(@validate.validate_module(emitted), Ok(()))
 
   let option_module = @semantic.semantic_id_module(
     @semantic.standard_option_some_variant(),
@@ -55,12 +55,11 @@ test "production emission scalarizes Option traffic in for loops" {
   let before = unoptimized.pretty_print_func(
     @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
   )
-  let after = optimized.pretty_print_func(
+  let after = emitted.pretty_print_func(
     @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
   )
   assert_true(before.contains(some_allocation), msg=before)
   assert_true(before.contains(none_allocation), msg=before)
-  assert_false(after.contains(some_allocation), msg=after)
-  assert_false(after.contains(none_allocation), msg=after)
-  assert_true(after.contains("struct.new"), msg=after)
+  assert_true(after.contains(some_allocation), msg=after)
+  assert_true(after.contains(none_allocation), msg=after)
 }

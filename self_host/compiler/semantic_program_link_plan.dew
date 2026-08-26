@@ -1,3 +1,4 @@
+open dew.std.bytes
 open dew.std.option
 
 pub struct SelfHostPlannedProgramWasmType {
@@ -72,6 +73,18 @@ fn self_host_program_link_is_imported(
   function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _)
 }
 
+fn self_host_program_link_is_runtime_builtin(name: Bytes) -> Bool {
+  name.starts_with(b"dew_string_") ||
+  name.starts_with(b"dew_bytes_") ||
+  name.starts_with(b"dew_array_") ||
+  name.starts_with(b"dew_map_") ||
+  (name.starts_with(b"dew_debug_") &&
+    !name.equals(b"dew_debug_ignore") &&
+    !name.equals(b"dew_debug_dispatch")) ||
+  name.starts_with(b"dew_wasi_") ||
+  name.starts_with(b"dew_bench_wasi_")
+}
+
 fn self_host_program_link_is_emitted(
   function_: SelfHostPlannedWasmFunctionFragment,
 ) -> Bool {
@@ -79,6 +92,7 @@ fn self_host_program_link_is_emitted(
     false
   } else {
     match function_.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => self_host_program_link_is_runtime_builtin(name)
       SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
       _ => true
     }
@@ -145,7 +159,15 @@ fn self_host_program_link_append_function_class(
       let _ = while fragment_index {
         current => if current < self_host_program_link_fragment_function_count(module_) {
           let function_ = self_host_program_link_fragment_function(module_, current)
-          if self_host_program_link_is_emitted(function_) &&
+          let forced_wasi_import = match function_.kind {
+            SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(
+              library,
+              field,
+            ) => library.equals(b"wasi_snapshot_preview1") &&
+              (field.equals(b"fd_write") || field.equals(b"fd_read"))
+            _ => false
+          }
+          if (self_host_program_link_is_emitted(function_) || forced_wasi_import) &&
             self_host_program_link_is_imported(function_) == imported {
             functions.push(SelfHostPlannedProgramWasmFunction::{
               module_index: current_module

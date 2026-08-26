@@ -14,6 +14,7 @@ const wasmPath = resolve(wasmArgument);
 const requestPath = resolve(requestArgument);
 const workingDirectory = dirname(requestPath);
 const requestName = basename(requestPath);
+process.chdir(workingDirectory);
 const wasi = new WASI({
   version: "preview1",
   args: [wasmPath, requestName],
@@ -32,7 +33,16 @@ try {
       },
     },
   });
-  wasi.initialize(instance);
+  if (typeof wasi.initialize === "function") {
+    wasi.initialize(instance);
+  } else if (
+    typeof wasi.setMemory === "function" &&
+    instance.exports.memory instanceof WebAssembly.Memory
+  ) {
+    wasi.setMemory(instance.exports.memory);
+  } else {
+    throw new Error("WASI runtime cannot initialize the module memory");
+  }
   if (typeof instance.exports.__dew_init === "function") {
     instance.exports.__dew_init();
   }

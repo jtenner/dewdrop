@@ -5,5 +5,4 @@ import {
   "jtenner/starshine/lib",
   "jtenner/starshine/validate",
   "jtenner/starshine/binary",
-  "jtenner/starshine/passes",
 }

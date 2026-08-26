@@ -7,6 +7,7 @@ pub enum SelfHostPlannedWasmValueType {
   WasmF64Value
   WasmV128Value
   WasmNullableEqRefValue
+  WasmNullableFuncRefValue
 }
 
 pub enum SelfHostPlannedWasmStorageType {
@@ -16,6 +17,7 @@ pub enum SelfHostPlannedWasmStorageType {
   WasmF64Storage
   WasmV128Storage
   WasmNullableEqRefStorage
+  WasmNullableFuncRefStorage
 }
 
 pub enum SelfHostPlannedWasmPhysicalTypeKind {
@@ -122,9 +124,9 @@ fn self_host_wasmgc_append_shape(
   shape: SelfHostPlannedValueShape,
 ) -> Unit {
   match shape {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => for field in fields {
-      self_host_wasmgc_append_shape(output, field)
-    }
+    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => output.push(
+      SelfHostPlannedWasmValueType::WasmNullableEqRefValue,
+    )
     _ => match self_host_wasmgc_value_type(shape) {
       Option::Some(value) => output.push(value)
       Option::None => {}
@@ -382,6 +384,50 @@ fn self_host_wasmgc_append_function(
   })
 }
 
+fn self_host_wasmgc_append_lambda_function(
+  module_: SelfHostPlannedModuleLowering,
+  lambda: SelfHostPlannedLambdaLowering,
+  functions: Array<SelfHostPlannedWasmFunctionFragment>,
+  value_types: Array<SelfHostPlannedWasmValueType>,
+) -> Unit {
+  let parameter_start = value_types.length()
+  value_types.push(SelfHostPlannedWasmValueType::WasmNullableEqRefValue)
+  let mut parameter = 0u32
+  let _ = while parameter {
+    current => if current < lambda.parameter_count {
+      let local_index = self_host_u32_add(lambda.locals.start, current)
+      if local_index < module_.locals.length() {
+        self_host_wasmgc_append_shape(
+          value_types,
+          module_.locals[local_index].shape,
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let result_start = value_types.length()
+  self_host_wasmgc_append_shape(value_types, lambda.result_shape)
+  functions.push(SelfHostPlannedWasmFunctionFragment::{
+    declaration: lambda.root_body
+    kind: SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
+      lambda.lambda,
+    )
+    parameters: SelfHostHirSpan::{
+      start: parameter_start
+      length: result_start - parameter_start
+    }
+    results: SelfHostHirSpan::{
+      start: result_start
+      length: value_types.length() - result_start
+    }
+    specialization: 4294967295u32
+    elided: false
+    offset: 0u32
+  })
+}
+
 fn self_host_wasmgc_plan_closures(
   module_: SelfHostPlannedModuleLowering,
   physical_types: Array<SelfHostPlannedWasmPhysicalType>,
@@ -389,16 +435,13 @@ fn self_host_wasmgc_plan_closures(
   capture_cell_indices: Array<U32>,
   lambda_type_indices: Array<U32>,
 ) -> U32 {
-  if self_host_u32_equal(module_.lambdas.length(), 0u32) {
-    return 4294967295u32
-  }
   let closure_index = physical_types.length()
   let closure_field = fields.length()
   fields.push(SelfHostPlannedWasmField::{
     role: SelfHostPlannedWasmFieldRole::WasmClosureEntryField
     declaration: 0u64
     physical_index: 0u32
-    storage: SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+    storage: SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
     mutable_: false
     offset: 0u32
   })
@@ -448,6 +491,14 @@ fn self_host_wasmgc_plan_closures(
       let lambda = module_.lambdas[current]
       let type_index = physical_types.length()
       let field_start = fields.length()
+      fields.push(SelfHostPlannedWasmField::{
+        role: SelfHostPlannedWasmFieldRole::WasmClosureEntryField
+        declaration: 0u64
+        physical_index: 0u32
+        storage: SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
+        mutable_: false
+        offset: 0u32
+      })
       let mut capture = 0u32
       let _ = while capture {
         current_capture => if current_capture < lambda.captures.length {
@@ -539,6 +590,13 @@ fn self_host_plan_program_wasmgc_fragments(
       let mut lambda_index = 0u32
       let _ = while lambda_index {
         lambda => if lambda < source.lambdas.length() {
+          lambda_function_indices[lambda] = functions.length()
+          self_host_wasmgc_append_lambda_function(
+            source,
+            source.lambdas[lambda],
+            functions,
+            value_types,
+          )
           continue lambda + 1u32
         } else {
           break self_host_semantic_unit()

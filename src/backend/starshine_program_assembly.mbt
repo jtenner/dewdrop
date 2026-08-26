@@ -1305,17 +1305,6 @@ pub fn emit_starshine_program_binary(
     Ok(_) => ()
     Err(error) => return Err(StarshineProgramValidationError(error))
   }
-  let module_ = match
-    @passes.run_hot_pipeline(module_, @passes.HotPipelineOptions::new(), [
-      "heap2local",
-    ]) {
-    Ok(value) => value
-    Err(error) => return Err(StarshineProgramOptimizationError(error))
-  }
-  match @validate.validate_module(module_) {
-    Ok(_) => ()
-    Err(error) => return Err(StarshineProgramValidationError(error))
-  }
   match @binary.encode_module(module_) {
     Ok(bytes) => Ok(bytes)
     Err(error) => Err(StarshineProgramEncodingError(error))

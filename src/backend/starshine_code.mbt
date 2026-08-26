@@ -2,7 +2,6 @@
 pub enum StarshineProgramBinaryEmissionError {
   StarshineProgramCodeError(StarshineCodeEmissionError)
   StarshineProgramValidationError(@validate.ValidationError)
-  StarshineProgramOptimizationError(String)
   StarshineProgramEncodingError(@binary.EncodeError)
 } derive(Debug)
 

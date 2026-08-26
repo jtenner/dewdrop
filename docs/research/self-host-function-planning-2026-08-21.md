@@ -15,4 +15,4 @@ Implemented behavior:
 - visibility and compiler-owned classification;
 - test-only, test-entry, display-name, body, and source-offset metadata.
 
-A Starshine `heap2local` validation defect was isolated to matching the large `SelfHostCollectedDeclarationReference` result inside compiler-shaped callable construction. The planner avoids that unsafe temporary by scanning the compact top-level and method arenas directly. This keeps production optimization enabled and produces valid Wasm.
+A Starshine `heap2local` validation defect was isolated to matching the large `SelfHostCollectedDeclarationReference` result inside compiler-shaped callable construction. The planner avoids that unsafe temporary by scanning the compact top-level and method arenas directly. Current Dew assembly does not run Starshine module optimization; self-host artifacts are validated, unoptimized debug modules.

@@ -4,5 +4,5 @@ import {
   "jtenner/starshine/lib",
   "jtenner/starshine/binary",
   "jtenner/starshine/validate",
-  "jtenner/starshine/passes",
+  "jtenner/starshine/rume",
 }

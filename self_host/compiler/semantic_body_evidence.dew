@@ -13,6 +13,10 @@ pub struct SelfHostBasicBodyEvidence {
 }
 
 impl SelfHostBasicBodyEvidence {
+  fn expression_evidence_count(self) -> U32 {
+    self.expression_evidence.length()
+  }
+
   fn expression_evidence_at(self, index: U32) -> SelfHostHirSpan {
     self.expression_evidence[index]
   }

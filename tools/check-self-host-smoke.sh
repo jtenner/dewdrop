@@ -4,9 +4,22 @@ cd "$(dirname "$0")/.."
 
 root=$PWD
 work=$root/.tmp/self-host-smoke
+build_cache_args=()
+cold_check=0
+case "${1:-}" in
+  "") ;;
+  --clean)
+    build_cache_args=(--no-build-cache)
+    cold_check=1
+    ;;
+  *)
+    echo "usage: tools/check-self-host-smoke.sh [--clean]" >&2
+    exit 2
+    ;;
+esac
 
-tools/starshine-ffi.sh build
-python3 tools/generate_starshine_ffi_consumer.py --check
+source tools/self-host-common.sh
+self_host_ensure_starshine_ffi
 parser_sources=(
   self_host/compiler/tokenizer.dew
   self_host/compiler/parser_ast.dew
@@ -55,7 +68,8 @@ semantic_sources=(
   self_host/compiler/semantic_body_flow.dew
 )
 
-tools/dew test \
+if [[ "${DEW_SELF_HOST_FULL_VALIDATION:-0}" == "1" ]]; then
+  tools/dew test \
   "${parser_sources[@]}" \
   self_host/compiler/tokenizer_test.dew \
   self_host/compiler/tokenizer_parity_test.dew \
@@ -106,8 +120,11 @@ tools/dew test \
   self_host/compiler/semantic_variant_selection_test.dew \
   self_host/compiler/semantic_operator_selection_test.dew
 
-python3 tools/check-self-host-parser.py
-python3 tools/check-self-host-semantics.py
+  python3 tools/check-self-host-parser.py
+  python3 tools/check-self-host-semantics.py
+else
+  echo "self-host: parser and semantic lanes are owned by tools/test-native.sh"
+fi
 
 rm -rf "$work"
 mkdir -p "$work/a" "$work/b" "$work/reject-fingerprint" "$work/reject-count"
@@ -118,41 +135,46 @@ sources=(
   "${parser_sources[@]}"
   "${semantic_sources[@]}"
   self_host/compiler/request.dew
+  self_host/compiler/starshine_builtin_emit.dew
+  self_host/compiler/starshine_runtime_emit.dew
   self_host/compiler/starshine_module.dew
   self_host/compiler/main.dew
 )
 
 build_compiler() {
   local stage=$1
-  tools/dew build \
+  self_host_measure "smoke compiler $stage build" tools/dew build \
     --link-wasm starshine starshine-mb/dist/ffi/starshine-ffi.wasm \
-    --no-build-cache \
+    "${build_cache_args[@]}" \
     -o "$work/$stage/compiler.wasm" \
     "${sources[@]}"
-  wasm-tools validate --features all "$work/$stage/compiler.wasm"
+  self_host_measure "smoke compiler $stage validation" \
+    wasm-tools validate --features all "$work/$stage/compiler.wasm"
 }
 
 write_request() {
   local stage=$1
-  moon run --target native --release src/self_host_smoke_fixture -- \
-    "$work/$stage/request.bin" \
-    starshine-mb/dist/ffi/starshine-ffi.wasm \
-    self_host/starshine/fingerprint-prefix.bin \
-    output.wasm
+  self_host_measure "smoke request $stage build" \
+    moon run --target native --release src/self_host_smoke_fixture -- \
+      "$work/$stage/request.bin" \
+      starshine-mb/dist/ffi/starshine-ffi.wasm \
+      self_host/starshine/fingerprint-prefix.bin \
+      output.wasm
 }
 
 run_compiler() {
   local stage=$1
-  NODE_NO_WARNINGS=1 node tools/run-dew-wasi.mjs \
+  self_host_measure "smoke compiler $stage execution" self_host_run_wasi \
     "$work/$stage/compiler.wasm" \
     "$work/$stage/request.bin"
-  wasm-tools validate --features all "$work/$stage/output.wasm"
+  self_host_measure "smoke output $stage validation" \
+    wasm-tools validate --features all "$work/$stage/output.wasm"
   local wat="$work/$stage/output.wat"
   wasm-tools print "$work/$stage/output.wasm" > "$wat"
   grep -Fq 'local.get 0' "$wat"
   grep -Fq 'local.get 1' "$wat"
-  grep -Fq 'call 1' "$wat"
-  grep -Fq 'call 2' "$wat"
+  grep -Fq 'call 3' "$wat"
+  grep -Fq 'call 4' "$wat"
   grep -Fq 'i32.const 35' "$wat"
   grep -Fq 'local.set 0' "$wat"
   grep -Fq 'i32.const 70' "$wat"
@@ -170,6 +192,10 @@ run_compiler() {
   grep -Fq 'f32.neg' "$wat"
   grep -Fq 'f32.add' "$wat"
   grep -Fq 'f64.mul' "$wat"
+  grep -Fq 'call_ref' "$wat"
+  grep -Fq 'ref.func' "$wat"
+  grep -Fq 'declare func' "$wat"
+  grep -Fq '(field funcref)' "$wat"
   grep -Fq 'i32.const -2147483648' "$wat"
   test "$(grep -Fc 'if (result i32)' "$wat")" -ge 2
   grep -Fq 'return' "$wat"
@@ -182,12 +208,24 @@ run_compiler() {
 }
 
 build_compiler a
-build_compiler b
+if (( cold_check )); then
+  build_compiler b
+else
+  cp "$work/a/compiler.wasm" "$work/b/compiler.wasm"
+fi
 cmp "$work/a/compiler.wasm" "$work/b/compiler.wasm"
 write_request a
-write_request b
+if (( cold_check )); then
+  write_request b
+else
+  cp "$work/a/request.bin" "$work/b/request.bin"
+fi
 run_compiler a
-run_compiler b
+if (( cold_check )); then
+  run_compiler b
+else
+  cp "$work/a/output.wasm" "$work/b/output.wasm"
+fi
 cmp "$work/a/output.wasm" "$work/b/output.wasm"
 
 cp "$work/a/compiler.wasm" "$work/reject-fingerprint/compiler.wasm"
