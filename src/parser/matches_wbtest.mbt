@@ -152,6 +152,30 @@ test "match arms combine rest patterns alternatives and guards" {
 }
 
 ///|
+test "match arms accept return expressions" {
+  let parsed = parse_test_expression(
+    b"match value {\n  Ok(item) => return None\n  Err(_) => ()\n}",
+  )
+  match parsed {
+    Ok(MatchExpr(_, arms, _)) => {
+      match arms[0].body {
+        BlockExpr({ items: [ReturnItem(Some(NameExpr("None", _)), _)], .. }) => ()
+        _ => fail("expected return expression block")
+      }
+    }
+    _ => fail("expected match return expression")
+  }
+}
+
+///|
+test "bare return is an expression" {
+  assert_eq(
+    parse_test_expression(b"return"),
+    Ok(BlockExpr({ items: [ReturnItem(None, 0UL)], offset: 0UL })),
+  )
+}
+
+///|
 test "match arms accept expression and reusable block bodies" {
   match
     parse_test_expression(

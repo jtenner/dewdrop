@@ -180,6 +180,108 @@ test "variant selection resolves tuple and unit constructors" {
   }
 }
 
+test "variant selection infers unqualified constructors from context" {
+  let (collected, resolved, names, inferred) = self_host_variant_infer_source(
+    879u64,
+    b"enum Small {\n  None\n  Some(I32)\n}\nenum Wide {\n  None\n  Some(I64)\n}\nfn small() -> Small {\n  Some(1)\n}\nfn wide() -> Wide {\n  Some(2i64)\n}\nfn read(value: Small) -> I32 {\n  match value {\n    Some(item) => item\n    None => 0\n  }\n}\n",
+  )
+  let _ = resolved.module_id
+  let _ = names.module_id
+  let small_hir = collected.bodies[0u32]
+  let wide_hir = collected.bodies[1u32]
+  let read_hir = collected.bodies[2u32]
+  let small_body = match inferred.body(small_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let wide_body = match inferred.body(wide_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  let read_body = match inferred.body(read_hir.id) {
+    Option::Some(value) => value
+    Option::None => {
+      return
+    }
+  }
+  assert(small_body.diagnostic_count() == 0u32, "unqualified Small diagnostics")
+  assert(wide_body.diagnostic_count() == 0u32, "unqualified Wide diagnostics")
+  assert(read_body.diagnostic_count() == 0u32, "unqualified pattern diagnostics")
+  let small_call = self_host_variant_find_call(collected, small_hir)
+  let wide_call = self_host_variant_find_call(collected, wide_hir)
+  match small_body.expression_selection(small_hir, small_call) {
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      _,
+      _,
+    ) => assert(variant == collected.variants[1u32].id, "unqualified Small::Some")
+    _ => assert(false, "unqualified Small selection")
+  }
+  match wide_body.expression_selection(wide_hir, wide_call) {
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      _,
+      _,
+    ) => assert(variant == collected.variants[3u32].id, "unqualified Wide::Some")
+    _ => assert(false, "unqualified Wide selection")
+  }
+  let mut selected = 0u32
+  let mut pattern = read_hir.patterns.start
+  let end = self_host_u32_add(read_hir.patterns.start, read_hir.patterns.length)
+  let _ = while pattern {
+    current => if current < end {
+      match read_body.pattern_constructor(read_hir, current) {
+        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+          variant,
+          _,
+          _,
+        ) => {
+          assert(
+            variant == collected.variants[0u32].id ||
+              variant == collected.variants[1u32].id,
+            "unqualified pattern owner",
+          )
+          selected = selected + 1u32
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(selected == 2u32, "unqualified selected patterns")
+}
+
+test "return expressions and unqualified constructors infer from context" {
+  let (collected, resolved, names, inferred) = self_host_variant_infer_source(
+    889u64,
+    b"enum Result<t, e> {\n  Ok(t)\n  Err(e)\n}\nenum Option<t> {\n  Some(t)\n  None\n}\nenum Unique {\n  Only(I32)\n}\nfn sample(value: Result<I32, String>) -> Option<I32> {\n  match value {\n    Ok(val) => return None\n    Err(_) => ()\n  }\n  Some(42)\n}\nfn unique_without_context() -> Unit {\n  let selected = Only(1)\n  ()\n}\n",
+  )
+  let _ = resolved.module_id
+  let _ = names.module_id
+  let body = match inferred.body(collected.bodies[0u32].id) {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "missing inferred body")
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "return constructor diagnostics")
+  let unique_body = match inferred.body(collected.bodies[1u32].id) {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "missing unique inferred body")
+      return
+    }
+  }
+  assert(unique_body.diagnostic_count() == 0u32, "unique constructor diagnostics")
+}
+
 test "variant selection resolves struct variant construction" {
   let (collected, resolved, names, inferred) = self_host_variant_infer_source(
     878u64,

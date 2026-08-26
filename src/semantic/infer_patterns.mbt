@@ -527,53 +527,77 @@ fn BasicBodyInferencer::variant_payload_type(
 }
 
 ///|
+priv enum SelectedValueVariant {
+  SelectedLocalValueVariant(Int)
+  SelectedImportedValueVariant(ResolvedImportedVariant)
+  NoSelectedValueVariant
+}
+
+///|
 fn BasicBodyInferencer::select_value_variant(
   self : BasicBodyInferencer,
   name : NameId,
   expected : BodyTypeId,
   expression : ExprId,
   offset : UInt64,
-) -> Int {
+) -> SelectedValueVariant {
   if self.inspect_nominal_type(expected) {
-    let selected = self.variant_index_in_declaration(
-      self.call_scratch.nominal_declaration,
-      name,
-    )
-    if selected < 0 {
-      self.diagnose(UnknownVariantValue(name, expression, offset))
+    let declaration = self.call_scratch.nominal_declaration
+    if semantic_id_module(declaration) == self.collected.module_id {
+      let selected = self.variant_index_in_declaration(declaration, name)
+      if selected >= 0 {
+        return SelectedLocalValueVariant(selected)
+      }
+    } else {
+      match self.imported_variant_named(declaration, name) {
+        Some(variant) => return SelectedImportedValueVariant(variant)
+        None => ()
+      }
     }
-    return selected
+    self.diagnose(UnknownVariantValue(name, expression, offset))
+    return NoSelectedValueVariant
   }
-  let mut first = -1
-  let mut second = -1
+  let mut selected = NoSelectedValueVariant
+  let mut first = 0UL
+  let mut second = 0UL
   let mut count = 0
   for index, variant in self.collected.variants {
     if variant.name == name {
       count += 1
-      if first < 0 {
-        first = index
-      } else if second < 0 {
-        second = index
+      if count == 1 {
+        selected = SelectedLocalValueVariant(index)
+        first = variant.id
+      } else if count == 2 {
+        second = variant.id
       }
     }
   }
+  match self.imports {
+    Some(imports) =>
+      for variant in imports.variants {
+        if variant.name == self.collected.name(name) &&
+          self.imported_pattern_variant_is_visible(variant.declaration) {
+          count += 1
+          if count == 1 {
+            selected = SelectedImportedValueVariant(variant)
+            first = variant.variant
+          } else if count == 2 {
+            second = variant.variant
+          }
+        }
+      }
+    None => ()
+  }
   if count == 1 {
-    first
+    selected
   } else if count == 0 {
     self.diagnose(UnknownVariantValue(name, expression, offset))
-    -1
+    NoSelectedValueVariant
   } else {
     self.diagnose(
-      AmbiguousVariantValue(
-        name,
-        expression,
-        self.collected.variants[first].id,
-        self.collected.variants[second].id,
-        count,
-        offset,
-      ),
+      AmbiguousVariantValue(name, expression, first, second, count, offset),
     )
-    -1
+    NoSelectedValueVariant
   }
 }
 

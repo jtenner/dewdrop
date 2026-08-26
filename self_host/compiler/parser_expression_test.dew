@@ -24,6 +24,21 @@ test "self-host parser parses calls fields and indexes" {
   }
 }
 
+test "self-host parser applies prefix operators after postfix calls" {
+  match self_host_parse_expression_source(b"!function.name.equals(\"main\")") {
+    Result::Ok(SelfHostExpr::PrefixExpr(
+      SelfHostPrefixOperator::LogicalNot,
+      SelfHostExpr::CallExpr(
+        SelfHostExpr::FieldExpr(_, "equals", _),
+        arguments,
+        _,
+      ),
+      _,
+    )) => assert(arguments.length() == 1u32, "wrong prefixed call arity")
+    _ => assert(false, "prefix bound before postfix call")
+  }
+}
+
 test "self-host parser parses multiline indexes" {
   assert(
     self_host_parse_expression_source(b"values[\n  index\n]") is Result::Ok(SelfHostExpr::IndexExpr(_, _, _)),
@@ -55,6 +70,34 @@ test "self-host parser parses if match and while" {
     self_host_parse_expression_source(b"while state {\n  value => break value\n}") is Result::Ok(SelfHostExpr::WhileExpr(_, _, _)),
     "while failed",
   )
+}
+
+test "self-host parser parses return expressions in match arms" {
+  match self_host_parse_expression_source(
+    b"match value {\n  Ok(item) => return None\n  Err(_) => ()\n}",
+  ) {
+    Result::Ok(SelfHostExpr::MatchExpr(_, arms, _)) => match arms[0u32].body {
+      SelfHostExpr::BlockExpr(block) => match block.items[0u32] {
+        SelfHostBlockItem::ReturnItem(
+          Option::Some(SelfHostExpr::NameExpr("None", _)),
+          _,
+        ) => {}
+        _ => assert(false, "return expression item failed")
+      }
+      _ => assert(false, "return expression block failed")
+    }
+    _ => assert(false, "match return expression failed")
+  }
+}
+
+test "self-host parser parses bare return expressions" {
+  match self_host_parse_expression_source(b"return") {
+    Result::Ok(SelfHostExpr::BlockExpr(block)) => match block.items[0u32] {
+      SelfHostBlockItem::ReturnItem(Option::None, _) => {}
+      _ => assert(false, "bare return item failed")
+    }
+    _ => assert(false, "bare return expression failed")
+  }
 }
 
 test "self-host parser desugars if-is bindings" {

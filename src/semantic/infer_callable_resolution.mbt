@@ -768,19 +768,24 @@ fn BasicBodyInferencer::prepare_call(
           }
         VariantNameReference(_) => {
           self.consume_member_root(target)
-          let variant_index = self.select_value_variant(
+          match self.select_value_variant(
             name,
             self.expression_type(expression),
             expression,
             offset,
-          )
-          if variant_index < 0 {
-            self.call_targets[call_slot] = ErrorInferredCallTarget
-            self.fail_expression_selection(expression)
-          } else {
-            self.infer_tuple_variant_call(
-              call_slot, expression, arguments, variant_index, offset,
-            )
+          ) {
+            SelectedLocalValueVariant(variant_index) =>
+              self.infer_tuple_variant_call(
+                call_slot, expression, arguments, variant_index, offset,
+              )
+            SelectedImportedValueVariant(variant) =>
+              self.infer_imported_tuple_variant_call(
+                call_slot, expression, arguments, variant, offset,
+              )
+            NoSelectedValueVariant => {
+              self.call_targets[call_slot] = ErrorInferredCallTarget
+              self.fail_expression_selection(expression)
+            }
           }
         }
         _ => self.record_invalid_call(call_slot, expression, offset)
