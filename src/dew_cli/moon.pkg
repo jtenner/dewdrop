@@ -12,3 +12,11 @@ import {
 }
 
 pkgtype(kind: "executable")
+
+options(
+  link: {
+    "native": {
+      "cc-flags": "-fwrapv -fno-strict-aliasing -Og -pipe",
+    },
+  },
+)

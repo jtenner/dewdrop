@@ -54,7 +54,8 @@ pub fn InterfaceBundlePolicy::for_compilation(
   root_module_index : Int,
 ) -> InterfaceBundlePolicy {
   {
-    enabled: @sys.get_env_var("DEW_INTERFACE_CACHE").unwrap_or("1") != "0",
+    enabled: cache_platform_supported() &&
+      @sys.get_env_var("DEW_INTERFACE_CACHE").unwrap_or("1") != "0",
     store_on_miss: loaded.cacheable,
     root_module_index,
     include_dependencies: loaded.dependency_fingerprint != "",

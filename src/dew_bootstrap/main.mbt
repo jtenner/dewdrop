@@ -317,35 +317,21 @@ fn bootstrap_compile(
   let prepared = bootstrap_prepare_compile_arguments(repository, expanded)
   let fingerprint = bootstrap_compiler_fingerprint(repository)
   @sys.set_env_var("DEW_COMPILER_FINGERPRINT", fingerprint)
+  let host = repository + "/tools/run-dew-cli-host.sh"
   if command == "build" {
     let plan = bootstrap_build_cache_plan(repository, prepared, fingerprint)
     if bootstrap_build_cache_restore(plan) {
       return 0
     }
     let result = bootstrap_run_process(
-      [
-        "moon",
-        "run",
-        "--target",
-        "native",
-        "--release",
-        "src/dew_cli",
-        "--",
-        command,
-        ..plan.arguments,
-      ],
+      [host, command, ..plan.arguments],
     )
     if result == 0 {
       bootstrap_build_cache_publish(plan)
     }
     return result
   }
-  bootstrap_run_process(
-    [
-      "moon", "run", "--target", "native", "--release", "src/dew_cli", "--", command,
-      ..prepared,
-    ],
-  )
+  bootstrap_run_process([host, command, ..prepared])
 }
 
 ///|
@@ -525,7 +511,9 @@ fn bootstrap_run_command(repository : String, arguments : Array[String]) -> Int 
   if result != 0 {
     return result
   }
-  let executed = bootstrap_run_process(["node", "tools/dew-run.mjs", temporary])
+  let executed = bootstrap_run_process([
+    "node", "--no-liftoff", "tools/dew-run.mjs", temporary,
+  ])
   @fs.remove_file(temporary) catch {
     _ => ()
   }
@@ -597,7 +585,7 @@ fn bootstrap_test_command(
     ".tmp/dew-test-\{bootstrap_process_id()}.wasm",
   )
   let compile : Array[String] = [
-    "moon", "run", "--target", "native", "--release", "src/dew_test_gen", "--", wasm,
+    "moon", "run", "--target", "native", "--release", "-j", "8", "src/dew_test_gen", "--", wasm,
     root,
   ]
   for module_ in modules {
@@ -613,7 +601,8 @@ fn bootstrap_test_command(
   }
   let executed = bootstrap_run_process(
     [
-      "node", "tools/dew-test/run.mjs", "--wasm", wasm, "--label", "Dew tests", ..runner,
+      "node", "--no-liftoff", "tools/dew-test/run.mjs", "--wasm", wasm, "--label",
+      "Dew tests", ..runner,
     ],
   )
   @fs.remove_file(wasm) catch {
