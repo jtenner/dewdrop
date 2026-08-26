@@ -809,9 +809,7 @@ fn BodyFlowAnalyzer::analyze_coverage(
 ///|
 fn block_item_offset(item : HirBlockItem) -> UInt64 {
   match item {
-    HirLetItem(_, _, _, _, offset)
-    | HirReturnItem(_, offset)
-    | HirExpressionItem(_, offset) => offset
+    HirLetItem(_, _, _, _, offset) | HirExpressionItem(_, offset) => offset
   }
 }
 
@@ -837,12 +835,6 @@ fn BodyFlowAnalyzer::block_flow(
     let item_flow = match item {
       HirLetItem(_, _, _, value, _) | HirExpressionItem(value, _) =>
         self.expression_flow(value)
-      HirReturnItem(value, _) =>
-        if value < 0 {
-          flow(flow_returns)
-        } else {
-          flow_sequence(self.expression_flow(value), flow(flow_returns))
-        }
     }
     summary = flow_sequence(summary, item_flow)
   }
@@ -1003,6 +995,12 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
         self.match_flow(expression, scrutinee, arms, offset)
       HirWhileExpr(initial, arms, offset) =>
         self.while_flow(expression, initial, arms, offset)
+      HirReturnExpr(value, _) =>
+        if value < 0 {
+          flow(flow_returns)
+        } else {
+          flow_sequence(self.expression_flow(value), flow(flow_returns))
+        }
       HirBreakExpr(value, _) =>
         flow_sequence(self.expression_flow(value), flow(flow_breaks))
       HirContinueExpr(value, _) =>

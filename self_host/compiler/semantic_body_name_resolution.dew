@@ -1531,6 +1531,13 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
+      SelfHostHirExpr::ReturnExpr(value, _) => if value != 4294967295u32 {
+        self.push_task(
+          self_host_name_task_visit_expression,
+          value,
+          self_host_name_expect_value,
+        )
+      }
       SelfHostHirExpr::BreakExpr(value, offset) => {
         let target = if self.control_stack.length() > 0u32 {
           self.control_stack[self.control_stack.length() - 1u32]
@@ -1756,13 +1763,6 @@ impl SelfHostBodyNameResolver {
     match self.collected.block_items[item] {
       SelfHostHirBlockItem::LetItem(_, _, _, value, _) => {
         self.push_task(self_host_name_task_bind_let, item, 0u32)
-        self.push_task(
-          self_host_name_task_visit_expression,
-          value,
-          self_host_name_expect_value,
-        )
-      }
-      SelfHostHirBlockItem::ReturnItem(value, _) => if value != 4294967295u32 {
         self.push_task(
           self_host_name_task_visit_expression,
           value,

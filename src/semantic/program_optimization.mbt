@@ -23,7 +23,6 @@ fn program_effect_summary_block_is_discardable(
   for index in 0..<items.length {
     let expression = match module_.block_items[items.start + index].kind {
       PlannedLetItem(_, _, value) | PlannedExpressionItem(value) => value
-      PlannedReturnItem(value) => if value < 0 { continue } else { value }
       PlannedElidedLetItem(_) => continue
     }
     if !program_effect_summary_expression_is_discardable(
@@ -245,8 +244,7 @@ fn transparent_callback_root_expression(
       }
       let tail = match
         module_.block_items[items.start + items.length - 1].kind {
-        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
-          expression
+        PlannedExpressionItem(expression) => expression
         _ => return -1
       }
       if tail < 0 {
@@ -275,7 +273,9 @@ fn transparent_callback_root_expression(
         let expression = match module_.block_items[items.start + index].kind {
           PlannedLetItem(_, _, value) | PlannedExpressionItem(value) => value
           PlannedElidedLetItem(_) => continue
-          PlannedReturnItem(_) => return -1
+        }
+        if module_.expressions[expression].kind is PlannedReturnExpression(_) {
+          return -1
         }
         if !program_effect_summary_expression_is_discardable(
             module_, expression, summaries, 0,
@@ -486,8 +486,7 @@ fn generic_parameter_selector_root_expression(
         return -1
       }
       match module_.block_items[items.start].kind {
-        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
-          expression
+        PlannedExpressionItem(expression) => expression
         _ => -1
       }
     }
@@ -826,8 +825,7 @@ fn runtime_trait_block_result_expression(
     return -1
   }
   match module_.block_items[items.start + items.length - 1].kind {
-    PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
-      expression
+    PlannedExpressionItem(expression) => expression
     _ => -1
   }
 }
@@ -4235,7 +4233,7 @@ fn cse_program_field_extractions(
                 None => ()
               }
             }
-            PlannedReturnItem(value) | PlannedExpressionItem(value) =>
+            PlannedExpressionItem(value) =>
               if value >= 0 {
                 ignore(
                   program_cse_rewrite_field_from_local(
@@ -5422,8 +5420,11 @@ fn scalar_replace_program_struct_field_reads(
             let (candidate_expression, exits) = match
               module_.block_items[items.start + candidate].kind {
               PlannedLetItem(_, _, value) | PlannedExpressionItem(value) =>
-                (value, false)
-              PlannedReturnItem(value) => (value, true)
+                (
+                  value,
+                  module_.expressions[value].kind
+                  is PlannedReturnExpression(_),
+                )
               PlannedElidedLetItem(_) => continue
             }
             if candidate_expression < 0 ||
@@ -7754,15 +7755,19 @@ fn mark_tail_position_block(
   }
   for index in 0..<items.length {
     match module_.block_items[items.start + index].kind {
-      PlannedReturnItem(value) if value >= 0 =>
-        mark_tail_position_expression(
-          module_,
-          value,
-          declaration,
-          result_shape,
-          false,
-          depth + 1,
-        )
+      PlannedExpressionItem(expression) =>
+        match module_.expressions[expression].kind {
+          PlannedReturnExpression(value) if value >= 0 =>
+            mark_tail_position_expression(
+              module_,
+              value,
+              declaration,
+              result_shape,
+              false,
+              depth + 1,
+            )
+          _ => ()
+        }
       _ => ()
     }
   }

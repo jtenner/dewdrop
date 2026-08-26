@@ -109,7 +109,6 @@ pub struct HirObjectField {
 ///|
 pub enum HirBlockItem {
   HirLetItem(Bool, NameId, UInt64, ExprId, UInt64)
-  HirReturnItem(ExprId, UInt64)
   HirExpressionItem(ExprId, UInt64)
 } derive(Eq, Debug)
 
@@ -224,6 +223,7 @@ pub enum HirExpr {
   HirIfExpr(ExprId, BlockId, ExprId, UInt64)
   HirMatchExpr(ExprId, HirSpan, UInt64)
   HirWhileExpr(ExprId, HirSpan, UInt64)
+  HirReturnExpr(ExprId, UInt64)
   HirBreakExpr(ExprId, UInt64)
   HirContinueExpr(ExprId, UInt64)
   HirPrefixExpr(HirPrefixOperator, ExprId, UInt64)
@@ -263,6 +263,7 @@ pub fn HirExpr::offset(self : HirExpr) -> UInt64 {
     | HirIfExpr(_, _, _, offset)
     | HirMatchExpr(_, _, offset)
     | HirWhileExpr(_, _, offset)
+    | HirReturnExpr(_, offset)
     | HirBreakExpr(_, offset)
     | HirContinueExpr(_, offset)
     | HirPrefixExpr(_, _, offset)

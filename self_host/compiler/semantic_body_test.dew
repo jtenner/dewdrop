@@ -120,11 +120,16 @@ test "semantic function blocks lower contiguous let and return items" {
     _ => assert(false, "missing let item")
   }
   match collected.block_items[self_host_u32_add(items.start, 1u32)] {
-    SelfHostHirBlockItem::ReturnItem(value, _) => assert(
-      value < 4294967295u32,
-      "return value",
-    )
-    _ => assert(false, "missing return item")
+    SelfHostHirBlockItem::ExpressionItem(expression, _) => match collected.expressions[
+      expression
+    ] {
+      SelfHostHirExpr::ReturnExpr(value, _) => assert(
+        value < 4294967295u32,
+        "return value",
+      )
+      _ => assert(false, "missing return expression")
+    }
+    _ => assert(false, "missing return expression item")
   }
 }
 

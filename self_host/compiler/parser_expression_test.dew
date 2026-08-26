@@ -77,14 +77,11 @@ test "self-host parser parses return expressions in match arms" {
     b"match value {\n  Ok(item) => return None\n  Err(_) => ()\n}",
   ) {
     Result::Ok(SelfHostExpr::MatchExpr(_, arms, _)) => match arms[0u32].body {
-      SelfHostExpr::BlockExpr(block) => match block.items[0u32] {
-        SelfHostBlockItem::ReturnItem(
-          Option::Some(SelfHostExpr::NameExpr("None", _)),
-          _,
-        ) => {}
-        _ => assert(false, "return expression item failed")
-      }
-      _ => assert(false, "return expression block failed")
+      SelfHostExpr::ReturnExpr(
+        Option::Some(SelfHostExpr::NameExpr("None", _)),
+        _,
+      ) => {}
+      _ => assert(false, "return expression failed")
     }
     _ => assert(false, "match return expression failed")
   }
@@ -92,10 +89,7 @@ test "self-host parser parses return expressions in match arms" {
 
 test "self-host parser parses bare return expressions" {
   match self_host_parse_expression_source(b"return") {
-    Result::Ok(SelfHostExpr::BlockExpr(block)) => match block.items[0u32] {
-      SelfHostBlockItem::ReturnItem(Option::None, _) => {}
-      _ => assert(false, "bare return item failed")
-    }
+    Result::Ok(SelfHostExpr::ReturnExpr(Option::None, _)) => {}
     _ => assert(false, "bare return expression failed")
   }
 }

@@ -531,14 +531,9 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         }
       }
       match value {
-        Option::Some(return_value) => {
-          let items = self_host_empty_block_items()
-          items.push(SelfHostBlockItem::ReturnItem(return_value, token.offset))
-          Option::Some(SelfHostExpr::BlockExpr(SelfHostBlock::{
-            items: items
-            offset: token.offset
-          }))
-        }
+        Option::Some(return_value) => Option::Some(
+          SelfHostExpr::ReturnExpr(return_value, token.offset),
+        )
         Option::None => Option::None
       }
     }

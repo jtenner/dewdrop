@@ -1079,6 +1079,11 @@ fn parse_write_expr(writer : @cache_binary.Writer, value : Expr) -> Unit {
       parse_write_pattern_arms(writer, arms)
       parse_write_offset(writer, offset)
     }
+    ReturnExpr(value, offset) => {
+      writer.write_byte(35)
+      parse_write_optional_expr(writer, value)
+      parse_write_offset(writer, offset)
+    }
     BreakExpr(value, offset) => {
       writer.write_byte(23)
       parse_write_expr(writer, value)
@@ -1359,6 +1364,11 @@ fn parse_read_expr(
         reader.read_count(32, field + ".arity"),
         parse_read_offset(reader, field + ".offset"),
       )
+    35 =>
+      ReturnExpr(
+        parse_read_optional_expr(reader, field + ".value", depth + 1),
+        parse_read_offset(reader, field + ".offset"),
+      )
     _ => {
       reader.fail(field, "unknown expression discriminant")
       BoolExpr(false, 0UL)
@@ -1378,11 +1388,6 @@ fn parse_write_block_item(
       writer.write_string(name)
       parse_write_offset(writer, name_offset)
       parse_write_expr(writer, expression)
-      parse_write_offset(writer, offset)
-    }
-    ReturnItem(expression, offset) => {
-      writer.write_byte(1)
-      parse_write_optional_expr(writer, expression)
       parse_write_offset(writer, offset)
     }
     AssignmentItem(target, value, offset) => {
@@ -1420,11 +1425,11 @@ fn parse_read_block_item(
         parse_read_expr(reader, field + ".value", depth + 1),
         parse_read_offset(reader, field + ".offset"),
       )
-    1 =>
-      ReturnItem(
-        parse_read_optional_expr(reader, field + ".value", depth + 1),
-        parse_read_offset(reader, field + ".offset"),
-      )
+    1 => {
+      let value = parse_read_optional_expr(reader, field + ".value", depth + 1)
+      let offset = parse_read_offset(reader, field + ".offset")
+      ExpressionItem(ReturnExpr(value, offset), offset)
+    }
     2 =>
       AssignmentItem(
         parse_read_expr(reader, field + ".target", depth + 1),

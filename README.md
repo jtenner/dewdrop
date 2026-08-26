@@ -651,6 +651,26 @@ You can compute a package's canonical integrity value with:
 tools/dew package-integrity path/to/dew.json
 ```
 
+## Publishing a package
+
+Sign in to the registry once on each computer:
+
+```sh
+tools/dew login
+tools/dew whoami
+```
+
+Your permanent public username owns the matching package scope automatically. For example, the user `@jtenner` can publish package names such as `@jtenner/hello` without an administrator grant. Existing reserved scopes and scopes owned by another user remain protected.
+
+Test the package before publishing because published versions are immutable:
+
+```sh
+tools/dew test --manifest path/to/dew.json
+tools/dew publish --manifest path/to/dew.json
+```
+
+The registry creates your matching scope during the first successful publish. An administrator must grant any additional team or organization scope.
+
 ## Multi-module programs
 
 Most beginners should begin with one module. When you need explicit multi-module compiler inputs, a `dew.modules.json` graph names the root module and lists modules and files in deterministic order:

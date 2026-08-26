@@ -28,6 +28,7 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedIfExpression(U32, U32, U32)
   PlannedMatchExpression(U32, SelfHostHirSpan)
   PlannedWhileExpression(U32, U32, SelfHostHirSpan)
+  PlannedReturnExpression(U32)
   PlannedBreakExpression(U32, U32)
   PlannedContinueExpression(U32, U32)
   PlannedPrefixExpression(SelfHostHirPrefixOperator, U32)
@@ -58,6 +59,9 @@ pub struct SelfHostPlannedExpression {
   nominal: U64
   flow: SelfHostBodyFlowSummary
   kind: SelfHostPlannedExpressionKind
+  selection: SelfHostBasicExpressionSelection
+  reference: SelfHostBodyNameReference
+  call_target: SelfHostBasicCallTarget
   call_type_arguments: SelfHostHirSpan
   source_name: U32
   offset: U32
@@ -65,7 +69,6 @@ pub struct SelfHostPlannedExpression {
 
 pub enum SelfHostPlannedBlockItemKind {
   PlannedLetItem(U32, Bool, U32)
-  PlannedReturnItem(U32)
   PlannedExpressionItem(U32)
 }
 
@@ -318,6 +321,7 @@ fn self_host_lowering_expression_kind(
       initial,
       arms,
     )
+    SelfHostHirExpr::ReturnExpr(value, _) => SelfHostPlannedExpressionKind::PlannedReturnExpression(value)
     SelfHostHirExpr::BreakExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBreakExpression(
       names.transfer_targets[expression],
       value,
@@ -417,6 +421,9 @@ fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
     nominal: 0u64
     flow: self_host_flow_empty()
     kind: SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    selection: SelfHostBasicExpressionSelection::NoBasicExpressionSelection
+    reference: SelfHostBodyNameReference::NoNameReference
+    call_target: SelfHostBasicCallTarget::NoBasicCallTarget
     call_type_arguments: SelfHostHirSpan::{
       start: 0u32
       length: 0u32
@@ -494,6 +501,11 @@ fn self_host_lowering_plan_expressions(
           expression,
           current,
         )
+        selection: inferred.expression_selections[
+          self_host_u32_add(job.expression_selections.start, current)
+        ]
+        reference: names.expression_references[expression]
+        call_target: selected_target
         call_type_arguments: self_host_lowering_target_type_arguments(
           selected_target,
         )
@@ -526,10 +538,6 @@ fn self_host_lowering_plan_block_item(
         )
         offset: offset
       }
-    }
-    SelfHostHirBlockItem::ReturnItem(value, offset) => SelfHostPlannedBlockItem::{
-      kind: SelfHostPlannedBlockItemKind::PlannedReturnItem(value)
-      offset: offset
     }
     SelfHostHirBlockItem::ExpressionItem(value, offset) => SelfHostPlannedBlockItem::{
       kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(value)
@@ -779,6 +787,9 @@ fn self_host_lowering_consume_expression_target(
       nominal: source.nominal
       flow: source.flow
       kind: SelfHostPlannedExpressionKind::PlannedConsumedExpression
+      selection: source.selection
+      reference: source.reference
+      call_target: source.call_target
       call_type_arguments: source.call_type_arguments
       source_name: source.source_name
       offset: source.offset

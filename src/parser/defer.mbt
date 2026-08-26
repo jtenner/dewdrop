@@ -188,6 +188,35 @@ fn defer_transform_expression(
         offset,
       )
     }
+    ReturnExpr(value, offset) => {
+      let items : Array[BlockItem] = []
+      match value {
+        Some(source) => {
+          let name = deferred_result_name(offset)
+          items.push(
+            LetItem(
+              false,
+              name,
+              offset,
+              defer_transform_expression(source, cleanups, loop_depth),
+              offset,
+            ),
+          )
+          append_deferred_cleanups(items, cleanups)
+          items.push(
+            ExpressionItem(
+              ReturnExpr(Some(NameExpr(name, offset)), offset),
+              offset,
+            ),
+          )
+        }
+        None => {
+          append_deferred_cleanups(items, cleanups)
+          items.push(ExpressionItem(ReturnExpr(None, offset), offset))
+        }
+      }
+      BlockExpr({ items, offset })
+    }
     BreakExpr(value, offset) => {
       let transformed = defer_transform_expression(value, cleanups, loop_depth)
       if loop_depth == 0 {
@@ -294,23 +323,28 @@ fn defer_transform_block_item(
           offset,
         ),
       )
-    ReturnItem(Some(value), offset) => {
-      let name = deferred_result_name(offset)
+    ExpressionItem(ReturnExpr(Some(value), return_offset), offset) => {
+      let name = deferred_result_name(return_offset)
       output.push(
         LetItem(
           false,
           name,
-          offset,
+          return_offset,
           defer_transform_expression(value, cleanups, loop_depth),
-          offset,
+          return_offset,
         ),
       )
       append_deferred_cleanups(output, cleanups)
-      output.push(ReturnItem(Some(NameExpr(name, offset)), offset))
+      output.push(
+        ExpressionItem(
+          ReturnExpr(Some(NameExpr(name, return_offset)), return_offset),
+          offset,
+        ),
+      )
     }
-    ReturnItem(None, offset) => {
+    ExpressionItem(ReturnExpr(None, return_offset), offset) => {
       append_deferred_cleanups(output, cleanups)
-      output.push(ReturnItem(None, offset))
+      output.push(ExpressionItem(ReturnExpr(None, return_offset), offset))
     }
     AssignmentItem(target, value, offset) =>
       output.push(
@@ -348,7 +382,7 @@ fn finalize_deferred_block(
     return { items, offset }
   }
   match items[items.length() - 1] {
-    ReturnItem(_, _) => { items, offset }
+    ExpressionItem(ReturnExpr(_, _), _) => { items, offset }
     ExpressionItem(CallExpr(NameExpr("unreachable", _), [], _), _) =>
       { items, offset }
     ExpressionItem(BreakExpr(_, _), _)
@@ -430,12 +464,11 @@ fn deferred_block_dispose_offset(block : Block, name : String) -> UInt64? {
           shadowed = true
         }
       }
-      ReturnItem(Some(value), _) | ExpressionItem(value, _) =>
+      ExpressionItem(value, _) =>
         match deferred_expression_dispose_offset(value, name) {
           Some(offset) => return Some(offset)
           None => ()
         }
-      ReturnItem(None, _) => ()
       AssignmentItem(target, value, _) | IndexSetItem(target, value, _) => {
         match deferred_expression_dispose_offset(target, name) {
           Some(offset) => return Some(offset)
@@ -566,8 +599,10 @@ fn deferred_expression_dispose_offset(
     | QualifiedExpr(scrutinee, _, _)
     | ProductFieldExpr(scrutinee, _, _, _) =>
       deferred_expression_dispose_offset(scrutinee, name)
-    BreakExpr(value, _) | ContinueExpr(value, _) =>
-      deferred_expression_dispose_offset(value, name)
+    ReturnExpr(Some(value), _)
+    | BreakExpr(value, _)
+    | ContinueExpr(value, _) => deferred_expression_dispose_offset(value, name)
+    ReturnExpr(None, _) => None
     BinaryExpr(_, left, right, _) | IndexExpr(left, right, _) =>
       match deferred_expression_dispose_offset(left, name) {
         Some(offset) => Some(offset)
@@ -622,14 +657,11 @@ fn deferred_block_escape_offset(block : Block, name : String) -> UInt64? {
           shadowed = true
         }
       }
-      ReturnItem(Some(NameExpr(value, offset)), _) if value == name =>
-        return Some(offset)
-      ReturnItem(Some(value), _) | ExpressionItem(value, _) =>
+      ExpressionItem(value, _) =>
         match deferred_expression_escape_offset(value, name) {
           Some(offset) => return Some(offset)
           None => ()
         }
-      ReturnItem(None, _) => ()
       AssignmentItem(target, value, _) | IndexSetItem(target, value, _) => {
         match deferred_expression_escape_offset(target, name) {
           Some(offset) => return Some(offset)
@@ -652,6 +684,9 @@ fn deferred_expression_escape_offset(
 ) -> UInt64? {
   match expression {
     LambdaExpr(_, _, _, _) => None
+    ReturnExpr(Some(NameExpr(value, offset)), _) if value == name => Some(offset)
+    ReturnExpr(Some(value), _) => deferred_expression_escape_offset(value, name)
+    ReturnExpr(None, _) => None
     BlockExpr(block) => deferred_block_escape_offset(block, name)
     IfExpr(condition, then_block, alternative, _) => {
       match deferred_expression_escape_offset(condition, name) {
@@ -707,11 +742,8 @@ fn deferred_using_violation(
       None => continue
     }
     let dispose_offset = match item {
-      LetItem(_, _, _, value, _)
-      | ReturnItem(Some(value), _)
-      | ExpressionItem(value, _) =>
+      LetItem(_, _, _, value, _) | ExpressionItem(value, _) =>
         deferred_expression_dispose_offset(value, name)
-      ReturnItem(None, _) => None
       AssignmentItem(target, value, _) | IndexSetItem(target, value, _) =>
         match deferred_expression_dispose_offset(target, name) {
           Some(offset) => Some(offset)
@@ -723,13 +755,8 @@ fn deferred_using_violation(
       None => ()
     }
     let escape_offset = match item {
-      ReturnItem(Some(NameExpr(value, offset)), _) if value == name =>
-        Some(offset)
-      ReturnItem(Some(value), _) | ExpressionItem(value, _) =>
+      ExpressionItem(value, _) | LetItem(_, _, _, value, _) =>
         deferred_expression_escape_offset(value, name)
-      LetItem(_, _, _, value, _) =>
-        deferred_expression_escape_offset(value, name)
-      ReturnItem(None, _) => None
       AssignmentItem(target, value, _) | IndexSetItem(target, value, _) =>
         match deferred_expression_escape_offset(target, name) {
           Some(offset) => Some(offset)

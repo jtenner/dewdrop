@@ -1798,7 +1798,9 @@ fn BasicBodyInferencer::initialize_expression_types(
           self.solver.error_type()
         }
       }
-      HirBreakExpr(_, _) | HirContinueExpr(_, _) => self.primitive(NeverType)
+      HirReturnExpr(_, _)
+      | HirBreakExpr(_, _)
+      | HirContinueExpr(_, _) => self.primitive(NeverType)
       HirCallExpr(_, _, _) => {
         self.call_expressions.push(expression)
         self.call_targets.push(NoInferredCallTarget)
@@ -1879,7 +1881,6 @@ fn BasicBodyInferencer::initialize_block_types(
   self : BasicBodyInferencer,
 ) -> Unit {
   let unit = self.primitive(UnitType)
-  let never = self.primitive(NeverType)
   for
     block in self.body.blocks.start..<(self.body.blocks.start +
     self.body.blocks.length) {
@@ -1892,7 +1893,6 @@ fn BasicBodyInferencer::initialize_block_types(
         1]
       match item {
         HirLetItem(_, _, _, _, _) => unit
-        HirReturnItem(_, _) => never
         HirExpressionItem(expression, _) => self.expression_type(expression)
       }
     }
@@ -2359,7 +2359,6 @@ fn BasicBodyInferencer::constrain_name_expressions(
 fn BasicBodyInferencer::constrain_block_items(
   self : BasicBodyInferencer,
 ) -> Unit {
-  let unit = self.primitive(UnitType)
   for
     item in self.body.block_items.start..<(self.body.block_items.start +
     self.body.block_items.length) {
@@ -2372,22 +2371,6 @@ fn BasicBodyInferencer::constrain_block_items(
           local_type_origin(local_id, name_offset),
         )
       }
-      HirReturnItem(value, offset) =>
-        if self.callable_index < 0 {
-          self.diagnose(ReturnOutsideCallable(offset))
-        } else if value >= 0 {
-          self.constrain_expression_assignable(
-            value,
-            self.declared_return_type,
-            return_type_origin(value, offset),
-          )
-        } else {
-          self.constrain(
-            unit,
-            self.declared_return_type,
-            return_type_origin(-1, offset),
-          )
-        }
       HirExpressionItem(_, _) => ()
     }
   }
@@ -2761,6 +2744,23 @@ fn BasicBodyInferencer::constrain_expressions(
         }
       }
       HirLambdaExpr(_, _) => ()
+      HirReturnExpr(value, offset) => {
+        if self.lambda < 0 && self.callable_index < 0 {
+          self.diagnose(ReturnOutsideCallable(offset))
+        } else if value >= 0 {
+          self.constrain_expression_assignable(
+            value,
+            self.declared_return_type,
+            return_type_origin(value, offset),
+          )
+        } else {
+          self.constrain(
+            self.primitive(UnitType),
+            self.declared_return_type,
+            return_type_origin(-1, offset),
+          )
+        }
+      }
       HirBreakExpr(value, offset) =>
         self.constrain_transfer_expression(expression, value, true, offset)
       HirContinueExpr(value, offset) =>

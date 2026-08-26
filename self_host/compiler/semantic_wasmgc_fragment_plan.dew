@@ -119,6 +119,43 @@ fn self_host_wasmgc_storage_type(
   }
 }
 
+fn self_host_wasmgc_field_storage_type(
+  module_: SelfHostPlannedModuleLowering,
+  field: SelfHostPlannedFieldLayout,
+) -> SelfHostPlannedWasmStorageType {
+  let shape = if field.shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
+    self_host_planned_resolved_value_shape(
+      module_.resolved_types,
+      field.type_,
+    )
+  } else {
+    field.shape
+  }
+  self_host_wasmgc_storage_type(shape)
+}
+
+fn self_host_wasmgc_payload_storage_type(
+  module_: SelfHostPlannedModuleLowering,
+  payload: SelfHostHirSpan,
+  index: U32,
+) -> SelfHostPlannedWasmStorageType {
+  let shape = module_.type_layouts.payload_shapes[
+    self_host_u32_add(payload.start, index)
+  ]
+  if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
+    self_host_wasmgc_storage_type(
+      self_host_planned_resolved_value_shape(
+        module_.resolved_types,
+        module_.type_layouts.payload_types[
+          self_host_u32_add(payload.start, index)
+        ],
+      ),
+    )
+  } else {
+    self_host_wasmgc_storage_type(shape)
+  }
+}
+
 fn self_host_wasmgc_append_shape(
   output: Array<SelfHostPlannedWasmValueType>,
   shape: SelfHostPlannedValueShape,
@@ -170,7 +207,7 @@ fn self_host_wasmgc_plan_types(
               role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
               declaration: source.field
               physical_index: current
-              storage: self_host_wasmgc_storage_type(source.shape)
+              storage: self_host_wasmgc_field_storage_type(module_, source)
               mutable_: source.mutable_
               offset: source.offset
             })
@@ -230,10 +267,10 @@ fn self_host_wasmgc_plan_types(
                       )
                       declaration: source.variant
                       physical_index: payload_index
-                      storage: self_host_wasmgc_storage_type(
-                        module_.type_layouts.payload_shapes[
-                          self_host_u32_add(payload.start, payload_index)
-                        ],
+                      storage: self_host_wasmgc_payload_storage_type(
+                        module_,
+                        payload,
+                        payload_index,
                       )
                       mutable_: false
                       offset: source.offset
@@ -255,7 +292,7 @@ fn self_host_wasmgc_plan_types(
                       role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
                       declaration: field.field
                       physical_index: payload_index
-                      storage: self_host_wasmgc_storage_type(field.shape)
+                      storage: self_host_wasmgc_field_storage_type(module_, field)
                       mutable_: field.mutable_
                       offset: field.offset
                     })

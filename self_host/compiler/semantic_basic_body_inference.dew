@@ -1859,6 +1859,7 @@ impl SelfHostBasicBodyInferencer {
               self.solver.error_type()
             }
           }
+          SelfHostHirExpr::ReturnExpr(_, _) => self.primitive(SelfHostPrimitiveType::NeverType)
           SelfHostHirExpr::BreakExpr(_, _) => self.primitive(SelfHostPrimitiveType::NeverType)
           SelfHostHirExpr::ContinueExpr(_, _) => self.primitive(SelfHostPrimitiveType::NeverType)
           _ => self.solver.fresh_variable()
@@ -1877,7 +1878,6 @@ impl SelfHostBasicBodyInferencer {
 
   fn initialize_blocks(self) -> Unit {
     let unit = self.primitive(SelfHostPrimitiveType::UnitType)
-    let never = self.primitive(SelfHostPrimitiveType::NeverType)
     let mut block = self.body.blocks.start
     let end = self.body.blocks.start + self.body.blocks.length
     let _ = while block {
@@ -1892,7 +1892,6 @@ impl SelfHostBasicBodyInferencer {
           )
           match self.collected.block_items[last_item] {
             SelfHostHirBlockItem::LetItem(_, _, _, _, _) => unit
-            SelfHostHirBlockItem::ReturnItem(_, _) => never
             SelfHostHirBlockItem::ExpressionItem(expression, _) => self.expression_type(expression)
           }
         }
@@ -2853,7 +2852,6 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn constrain_block_items(self) -> Unit {
-    let unit = self.primitive(SelfHostPrimitiveType::UnitType)
     let mut item = self.body.block_items.start
     let end = self.body.block_items.start + self.body.block_items.length
     let _ = while item {
@@ -2868,17 +2866,6 @@ impl SelfHostBasicBodyInferencer {
                 self_host_local_type_origin(local, name_offset),
               )
             }
-          }
-          SelfHostHirBlockItem::ReturnItem(value, offset) => if self.callable_index == 4294967295u32 {
-            self.diagnostics.push(SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(offset))
-          } else if value == 4294967295u32 {
-            self.constrain(unit, self.declared_return_type, self_host_return_type_origin(current, offset))
-          } else {
-            self.constrain_assignable(
-              self.expression_type(value),
-              self.declared_return_type,
-              self_host_return_type_origin(value, offset),
-            )
           }
           SelfHostHirBlockItem::ExpressionItem(_, _) => {}
         }
@@ -6262,6 +6249,23 @@ impl SelfHostBasicBodyInferencer {
                 break self_host_semantic_unit()
               }
             }
+          }
+          SelfHostHirExpr::ReturnExpr(value, _) => if self.callable_index == 4294967295u32 && self.lambda_index == 4294967295u32 {
+            self.diagnostics.push(
+              SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(offset),
+            )
+          } else if value == 4294967295u32 {
+            self.constrain(
+              self.primitive(SelfHostPrimitiveType::UnitType),
+              self.declared_return_type,
+              self_host_return_type_origin(current, offset),
+            )
+          } else {
+            self.constrain_assignable(
+              self.expression_type(value),
+              self.declared_return_type,
+              self_host_return_type_origin(value, offset),
+            )
           }
           SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
             self.constrain(self.expression_type(condition), self.primitive(SelfHostPrimitiveType::BoolType), self_host_expression_type_origin(condition, offset))

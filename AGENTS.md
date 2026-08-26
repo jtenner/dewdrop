@@ -7,6 +7,7 @@
 - Store research notes in `docs/research/*.md`.
 - Update and organize documentation with every commit; keep it consistent with the implementation.
 - Design for modularity and performance. Runtime performance is the highest priority, followed by a low memory footprint.
+- Measure all compiler related activities as you do them. Things that take longer than half a minute should be considered bugs.
 - Do not add custom compiler intrinsics unless they map directly onto a web assembly instruction.
 - All versions and codecs are version 1. Dewdrop is not released yet, so breaking format changes do not break a released format.
 - Use `tools/test-native.sh` for routine native tests. Use `tools/test-integration-native.sh` for complete compiler/backend integration cases, `tools/test-stress-native.sh` for large compiler stress tests, and `tools/test-starshine-native.sh` for the full pinned Starshine test suite. A raw workspace-wide `moon test` is not the routine Dewdrop lane.

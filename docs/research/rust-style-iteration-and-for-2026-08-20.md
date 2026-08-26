@@ -53,7 +53,7 @@ Starshine `heap2local` already handled one non-escaping struct allocation stored
 
 The pass now scalarizes those cases. It replaces the variant object with tag and payload locals, preserves branch-prefix effects and constructor-field evaluation order, and rewrites exact field reads. Escaping values and unsupported mixed uses remain heap objects.
 
-Production Dew binary emission runs the focused Starshine `heap2local` pass. A backend regression compiles an Array `for` loop and verifies that the unoptimized function contains the exact `Option::Some<I32>` and `Option::None` allocations while the production binary does not. The iterator cursor allocation remains visible and occurs once per loop, not once per element.
+The focused Starshine `heap2local` pass can remove this traffic, but current Dew binary emission does not run Starshine module optimization. The backend regression now verifies that validated debug encoding preserves the expected `Option::Some<I32>` and `Option::None` allocations. The iterator cursor allocation remains visible and occurs once per loop, not once per element.
 
 ## Backend corrections
 

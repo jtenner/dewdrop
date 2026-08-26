@@ -147,7 +147,8 @@ test "defer evaluates return values before cleanup" {
         is ExpressionItem(CallExpr(NameExpr(_, _), [], _), _),
       )
       assert_true(
-        declaration.body.items[3] is ReturnItem(Some(NameExpr(_, _)), _),
+        declaration.body.items[3]
+        is ExpressionItem(ReturnExpr(Some(NameExpr(_, _)), _), _),
       )
     }
     _ => fail("expected deferred return function")
@@ -335,8 +336,8 @@ test "reusable blocks preserve lets returns expressions and tail lookup" {
       match declaration.body.items[1] {
         ExpressionItem(IfExpr(_, nested, None, _), _) =>
           match nested.items[0] {
-            ReturnItem(Some(NameExpr("current", _)), _) => ()
-            _ => fail("expected nested block return")
+            ExpressionItem(ReturnExpr(Some(NameExpr("current", _)), _), _) => ()
+            _ => fail("expected nested block return expression")
           }
         _ => fail("expected if expression block item")
       }

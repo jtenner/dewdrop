@@ -296,7 +296,6 @@ impl SelfHostBodyFlowAnalyzer {
   fn block_item_offset(self, item: SelfHostHirBlockItem) -> U32 {
     match item {
       SelfHostHirBlockItem::LetItem(_, _, _, _, offset) => offset
-      SelfHostHirBlockItem::ReturnItem(_, offset) => offset
       SelfHostHirBlockItem::ExpressionItem(_, offset) => offset
     }
   }
@@ -327,12 +326,6 @@ impl SelfHostBodyFlowAnalyzer {
             }
             SelfHostHirBlockItem::ExpressionItem(value, _) => {
               self.expression_flow(value)
-            }
-            SelfHostHirBlockItem::ReturnItem(value, _) => {
-              self_host_flow_sequence(
-                self.expression_flow(value),
-                self_host_flow_returns(),
-              )
             }
           }
           result = self_host_flow_sequence(result, item_flow)
@@ -933,6 +926,14 @@ impl SelfHostBodyFlowAnalyzer {
             }
             self_host_flow_sequence(self.expression_flow(initial), loop_flow)
           }
+          SelfHostHirExpr::ReturnExpr(value, _) => self_host_flow_sequence(
+            if self_host_u32_equal(value, 4294967295u32) {
+              self_host_flow_falls_through()
+            } else {
+              self.expression_flow(value)
+            },
+            self_host_flow_returns(),
+          )
           SelfHostHirExpr::BreakExpr(value, _) => self_host_flow_sequence(
             self.expression_flow(value),
             self_host_flow_breaks(),

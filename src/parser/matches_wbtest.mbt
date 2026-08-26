@@ -159,8 +159,8 @@ test "match arms accept return expressions" {
   match parsed {
     Ok(MatchExpr(_, arms, _)) => {
       match arms[0].body {
-        BlockExpr({ items: [ReturnItem(Some(NameExpr("None", _)), _)], .. }) => ()
-        _ => fail("expected return expression block")
+        ReturnExpr(Some(NameExpr("None", _)), _) => ()
+        _ => fail("expected return expression")
       }
     }
     _ => fail("expected match return expression")
@@ -169,10 +169,7 @@ test "match arms accept return expressions" {
 
 ///|
 test "bare return is an expression" {
-  assert_eq(
-    parse_test_expression(b"return"),
-    Ok(BlockExpr({ items: [ReturnItem(None, 0UL)], offset: 0UL })),
-  )
+  assert_eq(parse_test_expression(b"return"), Ok(ReturnExpr(None, 0UL)))
 }
 
 ///|

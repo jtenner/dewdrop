@@ -208,6 +208,48 @@ fn self_host_append_cleanups(
   }
 }
 
+fn self_host_append_return_expression(
+  items: Array<SelfHostBlockItem>,
+  cleanups: Array<SelfHostDeferredCleanup>,
+  value: Option<SelfHostExpr>,
+  offset: U32,
+) -> Unit {
+  match value {
+    Option::Some(expression) => if cleanups.length() == 0u32 {
+      items.push(
+        SelfHostBlockItem::ExpressionItem(
+          SelfHostExpr::ReturnExpr(Option::Some(expression), offset),
+          offset,
+        ),
+      )
+    } else {
+      let name = self_host_product_name("$defer_result_", offset)
+      items.push(
+        SelfHostBlockItem::LetItem(false, name, offset, expression, offset),
+      )
+      self_host_append_cleanups(items, cleanups)
+      items.push(
+        SelfHostBlockItem::ExpressionItem(
+          SelfHostExpr::ReturnExpr(
+            Option::Some(SelfHostExpr::NameExpr(name, offset)),
+            offset,
+          ),
+          offset,
+        ),
+      )
+    }
+    Option::None => {
+      self_host_append_cleanups(items, cleanups)
+      items.push(
+        SelfHostBlockItem::ExpressionItem(
+          SelfHostExpr::ReturnExpr(Option::None, offset),
+          offset,
+        ),
+      )
+    }
+  }
+}
+
 fn self_host_register_cleanup(
   items: Array<SelfHostBlockItem>,
   cleanups: Array<SelfHostDeferredCleanup>,
@@ -248,7 +290,7 @@ fn self_host_finalize_deferred_block(
   } else {
   }
   match items.get_unchecked(items.length() - 1u32) {
-    SelfHostBlockItem::ReturnItem(_, _) => {}
+    SelfHostBlockItem::ExpressionItem(SelfHostExpr::ReturnExpr(_, _), _) => {}
     SelfHostBlockItem::ExpressionItem(
       SelfHostExpr::BreakExpr(_, _),
       _,
@@ -670,56 +712,6 @@ fn self_host_parse_block_after_left(
           break Option::None
         } else {
         }
-      } else if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Return) {
-        parser.index = parser.index + 1u32
-        if self_host_parser_consume_newline(parser) {
-          self_host_append_cleanups(items, cleanups)
-          items.push(
-            SelfHostBlockItem::ReturnItem(Option::None, token.offset),
-          )
-          self_host_parser_skip_newlines(parser)
-          continue 0u32
-        } else {
-          let value = match self_host_parse_expression_context(
-            parser,
-            0u32,
-            false,
-          ) {
-            Option::Some(value) => value
-            Option::None => break Option::None
-          }
-          if cleanups.length() == 0u32 {
-            items.push(
-              SelfHostBlockItem::ReturnItem(
-                Option::Some(value),
-                token.offset,
-              ),
-            )
-          } else {
-            let name = self_host_product_name(
-              "$defer_result_",
-              token.offset,
-            )
-            items.push(
-              SelfHostBlockItem::LetItem(
-                false,
-                name,
-                token.offset,
-                value,
-                token.offset,
-              ),
-            )
-            self_host_append_cleanups(items, cleanups)
-            items.push(
-              SelfHostBlockItem::ReturnItem(
-                Option::Some(
-                  SelfHostExpr::NameExpr(name, token.offset),
-                ),
-                token.offset,
-              ),
-            )
-          }
-        }
       } else {
         let expression = match self_host_parse_expression_context(
           parser,
@@ -774,9 +766,18 @@ fn self_host_parse_block_after_left(
             }
           }
         } else {
-          items.push(
-            SelfHostBlockItem::ExpressionItem(expression, token.offset),
-          )
+          match expression {
+            SelfHostExpr::ReturnExpr(value, return_offset) =>
+              self_host_append_return_expression(
+                items,
+                cleanups,
+                value,
+                return_offset,
+              )
+            _ => items.push(
+              SelfHostBlockItem::ExpressionItem(expression, token.offset),
+            )
+          }
         }
       }
       if !self_host_parser_finish_line(parser) {

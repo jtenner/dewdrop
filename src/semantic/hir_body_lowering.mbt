@@ -249,7 +249,8 @@ fn CollectionBuilder::visit_expr_source(
       }
       self.schedule_expr(scrutinee)
     }
-    @parser.BreakExpr(value, _)
+    @parser.ReturnExpr(Some(value), _)
+    | @parser.BreakExpr(value, _)
     | @parser.ContinueExpr(value, _)
     | @parser.PrefixExpr(_, value, _)
     | @parser.FieldExpr(value, _, _)
@@ -259,6 +260,8 @@ fn CollectionBuilder::visit_expr_source(
       self.push_body_task(body_finish_expr, source_index, start, 0)
       self.schedule_expr(value)
     }
+    @parser.ReturnExpr(None, offset) =>
+      ignore(self.emit_expr(HirReturnExpr(-1, offset)))
     @parser.BinaryExpr(_, left, right, _) | @parser.IndexExpr(left, right, _) => {
       let start = self.body_expr_results.length()
       self.push_body_task(body_finish_expr, source_index, start, 0)
@@ -368,6 +371,11 @@ fn CollectionBuilder::finish_expr_source(
         offset,
       )
     }
+    @parser.ReturnExpr(value, offset) =>
+      HirReturnExpr(
+        if value is Some(_) { self.body_expr_results[first_start] } else { -1 },
+        offset,
+      )
     @parser.BreakExpr(_, offset) =>
       HirBreakExpr(self.body_expr_results[first_start], offset)
     @parser.ContinueExpr(_, offset) =>
@@ -457,8 +465,6 @@ fn CollectionBuilder::visit_block_source(
     index -= 1
     match source.items[index] {
       @parser.LetItem(_, _, _, value, _) => self.schedule_expr(value)
-      @parser.ReturnItem(Some(value), _) => self.schedule_expr(value)
-      @parser.ReturnItem(None, _) => ()
       @parser.AssignmentItem(target, value, _) => {
         self.schedule_expr(value)
         self.schedule_expr(target)
@@ -499,17 +505,6 @@ fn CollectionBuilder::finish_block_source(
           ),
         )
         result_index += 1
-      }
-      @parser.ReturnItem(value, offset) => {
-        let value = match value {
-          Some(_) => {
-            let result = self.body_expr_results[result_index]
-            result_index += 1
-            result
-          }
-          None => -1
-        }
-        self.block_items.push(HirReturnItem(value, offset))
       }
       @parser.AssignmentItem(_, _, offset) => {
         let expression = self.expressions.length()

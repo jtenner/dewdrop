@@ -280,9 +280,17 @@ fn self_host_program_specialization_add_reachable(
 }
 
 fn self_host_program_specialization_call_recipe(
-  kind: SelfHostPlannedExpressionKind,
+  expression: SelfHostPlannedExpression,
 ) -> Option<SelfHostProgramCallRecipe> {
-  match kind {
+  match expression.call_target {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+      return Option::Some(SelfHostProgramCallRecipe::{
+        target: declaration
+      })
+    }
+    _ => {}
+  }
+  match expression.kind {
     SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, _, _) => Option::Some(
       SelfHostProgramCallRecipe::{
         target: target
@@ -889,6 +897,67 @@ fn self_host_program_specialization_argument_nominal(
   0u64
 }
 
+fn self_host_program_specialization_receiver_type_argument_shape(
+  module_: SelfHostPlannedModuleLowering,
+  expression: SelfHostPlannedExpression,
+  argument: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  let target = match expression.kind {
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(value, _) => value
+    _ => {
+      return Option::None
+    }
+  }
+  if target >= module_.expressions.length() {
+    return Option::None
+  }
+  let base = match module_.expressions[target].kind {
+    SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, _) => value
+    SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
+      target,
+      0u32,
+    ) {
+      target - 1u32
+    } else {
+      return Option::None
+    }
+    _ => {
+      return Option::None
+    }
+  }
+  if base >= module_.expressions.length() {
+    return Option::None
+  }
+  match self_host_program_specialization_resolved_type(
+    module_,
+    module_.expressions[base].type_,
+  ) {
+    Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
+      match module_.resolved_types.types[resolved_type] {
+        SelfHostResolvedType::AppliedType(_, arguments) => if argument < arguments.length {
+          let index = self_host_u32_add(arguments.start, argument)
+          if index < module_.resolved_types.type_arguments.length() {
+            Option::Some(
+              self_host_planned_resolved_value_shape(
+                module_.resolved_types,
+                module_.resolved_types.type_arguments[index],
+              ),
+            )
+          } else {
+            Option::None
+          }
+        } else {
+          Option::None
+        }
+        _ => Option::None
+      }
+    } else {
+      Option::None
+    }
+    Option::None => Option::None
+  }
+}
+
 fn self_host_program_specialization_scan_body(
   lowering: SelfHostPlannedProgramLowering,
   module_index: U32,
@@ -916,7 +985,7 @@ fn self_host_program_specialization_scan_body(
         reachable_seen,
         expression,
       )
-      match self_host_program_specialization_call_recipe(expression.kind) {
+      match self_host_program_specialization_call_recipe(expression) {
         Option::Some(recipe) => {
           let target = self_host_program_specialization_evidence_target(
             lowering,
@@ -941,15 +1010,21 @@ fn self_host_program_specialization_scan_body(
                     module_,
                     self_host_u32_add(type_arguments.start, argument_offset),
                   )
-                  candidate_shapes.push(
-                    self_host_program_specialization_argument_shape(
+                  let candidate_shape = match self_host_program_specialization_receiver_type_argument_shape(
+                    module_,
+                    expression,
+                    argument_offset,
+                  ) {
+                    Option::Some(shape) => shape
+                    Option::None => self_host_program_specialization_argument_shape(
                       module_,
                       caller,
                       caller_shapes,
                       shapes,
                       type_,
-                    ),
-                  )
+                    )
+                  }
+                  candidate_shapes.push(candidate_shape)
                   continue argument_offset + 1u32
                 } else {
                   break self_host_semantic_unit()
@@ -1112,7 +1187,16 @@ fn self_host_program_specialization_scan_body(
                           let argument_index = module_.expression_children[
                             self_host_u32_add(arguments.start, 1u32)
                           ]
-                          module_.expressions[argument_index].shape
+                          let argument_expression = module_.expressions[
+                            argument_index
+                          ]
+                          self_host_program_specialization_argument_shape(
+                            module_,
+                            caller,
+                            caller_shapes,
+                            shapes,
+                            argument_expression.type_,
+                          )
                         }
                         let request = self_host_program_specialization_add_request(
                           requests,

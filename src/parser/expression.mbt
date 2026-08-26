@@ -893,12 +893,7 @@ fn Parser::parse_expression_context(
                         }
                     }
                 }
-                values.push(
-                  BlockExpr({
-                    items: [ReturnItem(value, offset)],
-                    offset,
-                  }),
-                )
+                values.push(ReturnExpr(value, offset))
                 mode = SeekingBinaryOperator
               }
               @tokenizer.Keyword(@tokenizer.Break) => {

@@ -174,8 +174,8 @@ fn self_host_select_trait_evidence_at_depth(
     }
   }
   let target_head = self_host_impl_target_head(imports.resolved, target_type)
-  let mut selected = 18446744073709551615u64
-  let mut second = 18446744073709551615u64
+  let mut selected_declaration = 18446744073709551615u64
+  let mut second_declaration = 18446744073709551615u64
   let mut selected_specificity = 0u32
   let mut viable = 0u32
   for implementation in index.implementations {
@@ -203,8 +203,8 @@ fn self_host_select_trait_evidence_at_depth(
           implementation.specificity,
           selected_specificity,
         ) || self_host_u32_equal(viable, 0u32) {
-          selected = implementation.declaration
-          second = 18446744073709551615u64
+          selected_declaration = implementation.declaration
+          second_declaration = 18446744073709551615u64
           selected_specificity = implementation.specificity
           viable = 1u32
         } else if self_host_u32_equal(
@@ -212,7 +212,7 @@ fn self_host_select_trait_evidence_at_depth(
           selected_specificity,
         ) {
           if self_host_u32_equal(viable, 1u32) {
-            second = implementation.declaration
+            second_declaration = implementation.declaration
           }
           viable = self_host_u32_add(viable, 1u32)
         }
@@ -223,13 +223,13 @@ fn self_host_select_trait_evidence_at_depth(
     SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
   } else if self_host_u32_equal(viable, 1u32) {
     SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(
-      selected,
+      selected_declaration,
       selected_specificity,
     )
   } else {
     SelfHostTraitEvidenceSelection::AmbiguousTraitEvidenceSelection(
-      selected,
-      second,
+      selected_declaration,
+      second_declaration,
       viable,
     )
   }

@@ -127,7 +127,6 @@ fn self_host_linked_root_expression(
       }
       match module_.block_items[item_index].kind {
         SelfHostPlannedBlockItemKind::PlannedExpressionItem(expression) => Option::Some(expression)
-        SelfHostPlannedBlockItemKind::PlannedReturnItem(expression) => Option::Some(expression)
         _ => Option::None
       }
     }
@@ -292,7 +291,6 @@ fn self_host_linked_block_result_shape(
     } else {
       SelfHostPlannedValueShape::UnitPlannedValueShape
     }
-    SelfHostPlannedBlockItemKind::PlannedReturnItem(_) => SelfHostPlannedValueShape::NeverPlannedValueShape
     _ => SelfHostPlannedValueShape::UnitPlannedValueShape
   }
 }
@@ -411,7 +409,6 @@ fn self_host_linked_if_result_shape(
             planned_then_shape
           }
         }
-        SelfHostPlannedBlockItemKind::PlannedReturnItem(_) => SelfHostPlannedValueShape::NeverPlannedValueShape
         _ => planned_then_shape
       }
     } else {
@@ -2631,41 +2628,63 @@ fn self_host_linked_unresolved_get_result_shape(
   }
   match module_.expressions[expression].kind {
     SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
-      match module_.expressions[target].kind {
-        SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name) => if base < module_.expressions.length() &&
-          name < self_host_linked_module_name_count(module_) &&
-          self_host_linked_module_name_at(module_, name) == "get_unchecked" {
-          let direct_owner = self_host_linked_type_owner_module_id(
-            link,
-            module_,
-            module_.expressions[base].type_,
-          )
-          let owner = if self_host_u64_equal(direct_owner, 0u64) {
-            self_host_linked_expression_container_owner_module_id(
-              link,
-              module_,
-              body,
-              base,
-            )
-          } else {
-            direct_owner
-          }
-          let argument = if self_host_u64_equal(owner, 7205u64) {
-            1u32
-          } else {
-            0u32
-          }
-          self_host_linked_expression_container_argument_shape(
+      let name = module_.expressions[target].source_name
+      let base = match module_.expressions[target].kind {
+        SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, _) => value
+        SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
+          target,
+          0u32,
+        ) {
+          target - 1u32
+        } else {
+          return Option::None
+        }
+        _ => {
+          return Option::None
+        }
+      }
+      if base < module_.expressions.length() &&
+        name < self_host_linked_module_name_count(module_) &&
+        self_host_linked_module_name_at(module_, name) == "get_unchecked" {
+        let direct_owner = self_host_linked_type_owner_module_id(
+          link,
+          module_,
+          module_.expressions[base].type_,
+        )
+        let owner = if self_host_u64_equal(direct_owner, 0u64) {
+          self_host_linked_expression_container_owner_module_id(
             link,
             module_,
             body,
             base,
-            argument,
           )
         } else {
-          Option::None
+          direct_owner
         }
-        _ => Option::None
+        let argument = if self_host_u64_equal(owner, 7205u64) {
+          1u32
+        } else {
+          0u32
+        }
+        match self_host_linked_expression_container_argument_shape(
+          link,
+          module_,
+          body,
+          base,
+          argument,
+        ) {
+          Option::Some(shape) => Option::Some(shape)
+          Option::None => if self_host_u64_equal(
+            module_.expressions[base].nominal,
+            0u64,
+          ) {
+            Option::Some(SelfHostPlannedValueShape::I32PlannedValueShape)
+          } else {
+            Option::None
+          }
+        }
+      } else {
+        Option::None
       }
     } else {
       Option::None
@@ -4086,9 +4105,6 @@ fn self_host_linked_scoped_match_result_shape(
                             _ => {}
                           }
                         }
-                      }
-                      SelfHostPlannedBlockItemKind::PlannedReturnItem(_) => {
-                        falls_through = false
                       }
                       _ => {}
                     }
@@ -6854,8 +6870,89 @@ fn self_host_linked_i32_push_arguments(
   Result::Ok(self_host_semantic_unit())
 }
 
+fn self_host_linked_canonical_field(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  expression: U32,
+) -> Option<SelfHostLinkedWasmFieldLink> {
+  match canonical {
+    Option::Some(plan) => match self_host_body_plan_expression(
+      plan,
+      expression,
+    ) {
+      Option::Some(planned) => if planned.selected_type_index != 4294967295u32 &&
+        planned.selected_field_index != 4294967295u32 {
+        return Option::Some(SelfHostLinkedWasmFieldLink::{
+          type_index: planned.selected_type_index
+          field_index: planned.selected_field_index
+        })
+      }
+      Option::None => {}
+    }
+    Option::None => {}
+  }
+  Option::None
+}
+
+fn self_host_linked_planned_call_index(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  expression: U32,
+) -> Option<U32> {
+  match canonical {
+    Option::Some(plan) => match self_host_body_plan_expression(
+      plan,
+      expression,
+    ) {
+      Option::Some(planned) => if planned.call_function_index != 4294967295u32 {
+        Option::Some(
+          self_host_linked_physical_function_index(
+            planned.call_function_index,
+          ),
+        )
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+    Option::None => Option::None
+  }
+}
+
+fn self_host_linked_canonical_call_index(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  link: SelfHostPlannedProgramWasmGCLink,
+  body: SelfHostPlannedBodyLowering,
+  caller_specialization: U32,
+  expression: U32,
+  declaration: U64,
+) -> Option<U32> {
+  match canonical {
+    Option::Some(plan) => match self_host_body_plan_expression(
+      plan,
+      expression,
+    ) {
+      Option::Some(planned) => if planned.call_function_index != 4294967295u32 {
+        return Option::Some(
+          self_host_linked_physical_function_index(
+            planned.call_function_index,
+          ),
+        )
+      }
+      Option::None => {}
+    }
+    Option::None => {}
+  }
+  self_host_linked_i32_call_index(
+    link,
+    body.body,
+    caller_specialization,
+    expression,
+    declaration,
+  )
+}
+
 fn self_host_emit_linked_i32_expression(
   link: SelfHostPlannedProgramWasmGCLink,
+  body_plan: SelfHostPlannedProgramWasmBodyPlan,
   function_value_signatures: Array<SelfHostLinkedFunctionValueSignature>,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
@@ -6863,6 +6960,12 @@ fn self_host_emit_linked_i32_expression(
   caller_specialization: U32,
   instructions: StarshineRef45,
 ) -> Result<Unit, String> {
+  let canonical_body_plan = self_host_program_wasm_body_plan_for_identity(
+    body_plan,
+    module_.module_id,
+    body.body,
+    caller_specialization,
+  )
   let tasks = []
   let expression_depths = self_host_program_link_u32_slots(
     module_.expressions.length(),
@@ -7474,6 +7577,20 @@ fn self_host_emit_linked_i32_expression(
                 depth,
               )
             }
+            SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => {
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Return(
+                destination,
+              ))
+              if !self_host_u32_equal(value, 4294967295u32) {
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
+                  value,
+                  destination,
+                  depth,
+                )
+              }
+            }
             SelfHostPlannedExpressionKind::PlannedBreakExpression(
               control,
               value,
@@ -7715,13 +7832,19 @@ fn self_host_emit_linked_i32_expression(
               field,
               base,
               _,
-            ) => match self_host_linked_struct_field_for_base(
-              link,
-              module_,
-              body,
-              field,
-              base,
+            ) => match match self_host_linked_canonical_field(
+              canonical_body_plan,
+              expression,
             ) {
+              Option::Some(value) => Option::Some(value)
+              Option::None => self_host_linked_struct_field_for_base(
+                link,
+                module_,
+                body,
+                field,
+                base,
+              )
+            } {
               Option::Some(field_link) => {
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
                   field_link.type_index,
@@ -7779,9 +7902,10 @@ fn self_host_emit_linked_i32_expression(
               target,
               arguments,
               _,
-            ) => match self_host_linked_i32_call_index(
+            ) => match self_host_linked_canonical_call_index(
+              canonical_body_plan,
               link,
-              body.body,
+              body,
               caller_specialization,
               expression,
               declaration,
@@ -9222,6 +9346,47 @@ fn self_host_emit_linked_i32_expression(
             ) => {
               if target >= module_.expressions.length() {
                 return Result::Err("linked unresolved call target is outside its arena")
+              }
+              match self_host_linked_planned_call_index(
+                canonical_body_plan,
+                expression,
+              ) {
+                Option::Some(function_index) => {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
+                    function_index,
+                    destination,
+                  ))
+                  match self_host_linked_i32_push_arguments(
+                    module_,
+                    arguments,
+                    destination,
+                    tasks,
+                    expression_depths,
+                    depth,
+                  ) {
+                    Result::Err(error) => {
+                      return Result::Err(error)
+                    }
+                    Result::Ok(_) => {}
+                  }
+                  if self_host_u32_greater(
+                    self_host_linked_physical_function_parameter_count(
+                      link,
+                      function_index,
+                    ),
+                    arguments.length,
+                  ) && self_host_u32_greater(target, 0u32) {
+                    self_host_linked_i32_schedule_expression(
+                      tasks,
+                      expression_depths,
+                      target - 1u32,
+                      destination,
+                      depth,
+                    )
+                  }
+                  continue tasks.length()
+                }
+                Option::None => {}
               }
               match module_.expressions[target].kind {
                 SelfHostPlannedExpressionKind::PlannedUnresolvedField(
@@ -11807,20 +11972,6 @@ fn self_host_emit_linked_i32_expression(
                     return Result::Err("linked I32 let has no physical slot")
                   }
                 }
-                SelfHostPlannedBlockItemKind::PlannedReturnItem(value) => {
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Return(
-                    destination,
-                  ))
-                  if !self_host_u32_equal(value, 4294967295u32) {
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      value,
-                      destination,
-                      depth,
-                    )
-                  }
-                }
                 SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => {
                   if !self_host_u32_equal(
                     previous,
@@ -13549,7 +13700,6 @@ fn self_host_linked_function_returns_array_element(
       }
       match module_.block_items[item].kind {
         SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => value
-        SelfHostPlannedBlockItemKind::PlannedReturnItem(value) => value
         _ => {
           return false
         }
@@ -16956,12 +17106,19 @@ fn self_host_linked_append_map_write_scratch(
 
 fn self_host_linked_scalar_locals(
   link: SelfHostPlannedProgramWasmGCLink,
+  body_plan: SelfHostPlannedProgramWasmBodyPlan,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
   expected_result_shape: SelfHostPlannedValueShape,
   caller_specialization: U32,
 ) -> Result<StarshineRef293, String> {
   let locals = StarshineFfi.ffi_lib_Locals_empty()
+  let canonical_body_plan = self_host_program_wasm_body_plan_for_identity(
+    body_plan,
+    module_.module_id,
+    body.body,
+    caller_specialization,
+  )
   let mut local = 0u32
   let _ = while local {
     current => if current < body.locals.length {
@@ -17285,7 +17442,7 @@ fn self_host_linked_scalar_locals(
             body,
             planned_local.local_id,
           )
-          let local_shape = match product_field_shape {
+          let recovered_local_shape = match product_field_shape {
             Option::Some(shape) => shape
             Option::None => match field_initializer_shape {
               Option::Some(shape) => shape
@@ -17364,6 +17521,25 @@ fn self_host_linked_scalar_locals(
             }
             }
             }
+          }
+          let local_shape = match canonical_body_plan {
+            Option::Some(canonical) => if current < canonical.locals.length() {
+              let canonical_shape = self_host_body_carrier_shape(
+                canonical.locals[current],
+              )
+              if self_host_specialization_canonical_scalar(canonical_shape) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
+                recovered_local_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
+              ) && !(
+                self_host_specialization_canonical_scalar(recovered_local_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+              ) {
+                recovered_local_shape
+              } else {
+                canonical_shape
+              }
+            } else {
+              recovered_local_shape
+            }
+            Option::None => recovered_local_shape
           }
           if !self_host_linked_scalar_append_local_type(locals, local_shape) {
             return Result::Err("linked local type is outside the scalar subset")
@@ -17690,6 +17866,12 @@ fn build_self_host_linked_i32_module(
   link: SelfHostPlannedProgramWasmGCLink,
   root_module: U64,
 ) -> Result<Bytes, String> {
+  let body_plan = self_host_plan_program_wasm_bodies(link)
+  if self_host_u32_greater(body_plan.diagnostics.length(), 0u32) {
+    return Result::Err(
+      self_host_program_wasm_body_plan_error_report(body_plan),
+    )
+  }
   match self_host_linked_i32_main_expression(link, root_module) {
     Result::Err(error) => Result::Err(error)
     Result::Ok(_) => {
@@ -17920,6 +18102,7 @@ fn build_self_host_linked_i32_module(
             let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
+              body_plan,
               function_value_signatures,
               lowering_module,
               body,
@@ -17939,6 +18122,7 @@ fn build_self_host_linked_i32_module(
             }
             let locals = match self_host_linked_scalar_locals(
               link,
+              body_plan,
               lowering_module,
               body,
               self_host_linked_specialized_function_result_shape(
@@ -18004,6 +18188,7 @@ fn build_self_host_linked_i32_module(
             let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
+              body_plan,
               function_value_signatures,
               lowering_module,
               body,
@@ -18023,6 +18208,7 @@ fn build_self_host_linked_i32_module(
             }
             let locals = match self_host_linked_scalar_locals(
               link,
+              body_plan,
               lowering_module,
               body,
               self_host_linked_specialized_function_result_shape(
@@ -18072,6 +18258,7 @@ fn build_self_host_linked_i32_module(
             let initializer_instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
+              body_plan,
               function_value_signatures,
               lowering_module,
               body,
@@ -18094,6 +18281,7 @@ fn build_self_host_linked_i32_module(
             )
             let initializer_locals = match self_host_linked_scalar_locals(
               link,
+              body_plan,
               lowering_module,
               body,
               initializer.shape,

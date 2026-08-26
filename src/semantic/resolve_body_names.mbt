@@ -1222,6 +1222,10 @@ fn BodyNameResolver::schedule_expression_children(
       self.push_task(name_task_enter_control, control, 0)
       self.push_task(name_task_visit_expression, initial, name_expect_value)
     }
+    HirReturnExpr(value, _) =>
+      if value >= 0 {
+        self.push_task(name_task_visit_expression, value, name_expect_value)
+      }
     HirBreakExpr(value, offset) => {
       let target = if self.control_stack.length() > 0 {
         self.control_stack[self.control_stack.length() - 1]
@@ -1353,10 +1357,6 @@ fn BodyNameResolver::visit_block_items(
       self.push_task(name_task_bind_let, item, 0)
       self.push_task(name_task_visit_expression, value, name_expect_value)
     }
-    HirReturnItem(value, _) =>
-      if value >= 0 {
-        self.push_task(name_task_visit_expression, value, name_expect_value)
-      }
     HirExpressionItem(value, _) =>
       self.push_task(name_task_visit_expression, value, name_expect_value)
   }

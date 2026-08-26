@@ -2,6 +2,13 @@
 pub enum StarshineProgramBinaryEmissionError {
   StarshineProgramCodeError(StarshineCodeEmissionError)
   StarshineProgramValidationError(@validate.ValidationError)
+  StarshineProgramMappedValidationError(
+    @validate.ValidationError,
+    @semantic.DeclId,
+    @semantic.BodyId,
+    Bytes,
+    String
+  )
   StarshineProgramEncodingError(@binary.EncodeError)
 } derive(Debug)
 
@@ -358,6 +365,7 @@ priv enum StarshineEmitTask {
     Bool,
     @semantic.PlannedValueShape
   )
+  FinishStarshineReturn
   FinishStarshineIf(@semantic.PlannedValueShape, Int)
   FinishStarshinePrefix(
     @semantic.HirPrefixOperator,
@@ -1224,19 +1232,24 @@ fn starshine_finish_program_call(
   if fragments.length() + runtime_evidence_length == function_.parameters.length {
     for parameter_index, fragment in fragments {
       append_starshine_instructions(output, fragment)
-      let needs_cast = if cross_module_or_specialized {
-        starshine_program_argument_needs_nominal_cast(
-          lowering, expression, parameter_index,
-        )
-      } else if starshine_program_parameter_is_external_nominal(
-          planned, function_, parameter_index,
-        ) {
+      let needs_cast = starshine_program_argument_needs_nominal_cast(
+        lowering,
+        expression,
+        parameter_index,
+      ) ||
+      (
+        !cross_module_or_specialized &&
+        starshine_program_parameter_is_external_nominal(
+          planned,
+          function_,
+          parameter_index,
+        ) &&
         starshine_program_local_external_argument_needs_nominal_cast(
-          lowering, expression, parameter_index,
+          lowering,
+          expression,
+          parameter_index,
         )
-      } else {
-        false
-      }
+      )
       if needs_cast {
         starshine_append_program_argument_cast(
           planned, function_, parameter_index, output,
@@ -3118,8 +3131,7 @@ fn starshine_body_has_linear_local_lifetimes(
   for item in items.start..<(items.start + items.length) {
     let root = match lowering.block_items[item].kind {
       @semantic.PlannedLetItem(_, _, expression)
-      | @semantic.PlannedExpressionItem(expression)
-      | @semantic.PlannedReturnItem(expression) => expression
+      | @semantic.PlannedExpressionItem(expression) => expression
       @semantic.PlannedElidedLetItem(_) => -1
     }
     if root >= 0 {
@@ -3176,8 +3188,7 @@ fn starshine_body_local_live_ranges(
             initializer
           }
           @semantic.PlannedLetItem(_, _, expression)
-          | @semantic.PlannedExpressionItem(expression)
-          | @semantic.PlannedReturnItem(expression) => expression
+          | @semantic.PlannedExpressionItem(expression) => expression
           @semantic.PlannedElidedLetItem(_) => -1
         }
         if root >= expression_cursor && root < expression_positions.length() {
@@ -8164,6 +8175,14 @@ fn starshine_emit_body_instructions(
             }
             tasks.push(EmitStarshineExpression(initial))
           }
+          @semantic.PlannedReturnExpression(value) => {
+            if value < 0 {
+              results.push([@lib.Instruction::return_()])
+            } else {
+              tasks.push(FinishStarshineReturn)
+              tasks.push(EmitStarshineExpression(value))
+            }
+          }
           @semantic.PlannedBreakExpression(control, value) => {
             let value_source = lowering.expressions[value]
             tasks.push(
@@ -8441,12 +8460,6 @@ fn starshine_emit_body_instructions(
             @semantic.PlannedLetItem(_, _, expression)
             | @semantic.PlannedExpressionItem(expression) =>
               tasks.push(EmitStarshineExpression(expression))
-            @semantic.PlannedReturnItem(expression) =>
-              if expression < 0 {
-                tasks.push(EmitStarshineEmpty)
-              } else {
-                tasks.push(EmitStarshineExpression(expression))
-              }
             @semantic.PlannedElidedLetItem(_) => tasks.push(EmitStarshineEmpty)
           }
         }
@@ -8702,8 +8715,6 @@ fn starshine_emit_body_instructions(
               )
             }
             @semantic.PlannedElidedLetItem(_) => ()
-            @semantic.PlannedReturnItem(_) =>
-              output.push(@lib.Instruction::return_())
             @semantic.PlannedExpressionItem(expression) =>
               if index + 1 < source.items.length {
                 starshine_append_shape_drops(
@@ -11196,6 +11207,11 @@ fn starshine_emit_body_instructions(
             starshine_control_transfer_label(control, break_),
           ),
         )
+        results.push(output)
+      }
+      FinishStarshineReturn => {
+        let output = results.pop().unwrap()
+        output.push(@lib.Instruction::return_())
         results.push(output)
       }
       FinishStarshineIf(shape, result_local) => {
